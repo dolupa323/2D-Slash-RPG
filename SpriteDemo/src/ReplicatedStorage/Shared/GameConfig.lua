@@ -1,5 +1,6 @@
 -- Central config: sprite atlases (from sprite-gen manifest.json) + combat stats.
 -- Keep this the single source of truth; client and server both require it.
+-- (commit/push test)
 
 local GameConfig = {}
 
