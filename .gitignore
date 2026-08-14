@@ -1,0 +1,11 @@
+# sprite-gen is its own separate open-source git repository (cloned from
+# aldegad/sprite-gen) — kept out of this repo entirely so its upstream history
+# stays independent and pullable.
+sprite-gen/
+
+# Rojo binary — download separately, not project source.
+SpriteDemo/rojo.exe
+
+# Ephemeral local dev logs.
+SpriteDemo/*.log
+SpriteDemo/**/*.log

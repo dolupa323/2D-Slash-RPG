@@ -1,0 +1,21 @@
+{
+  "name": "SpriteDemo",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedFirst": {
+      "$path": "src/ReplicatedFirst",
+      "$ignoreUnknownInstances": true
+    },
+    "ReplicatedStorage": {
+      "Shared": { "$path": "src/ReplicatedStorage/Shared" },
+      "$ignoreUnknownInstances": true
+    },
+    "ServerScriptService": {
+      "$path": "src/ServerScriptService",
+      "$ignoreUnknownInstances": true
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": { "$path": "src/StarterPlayer/StarterPlayerScripts" }
+    }
+  }
+}
