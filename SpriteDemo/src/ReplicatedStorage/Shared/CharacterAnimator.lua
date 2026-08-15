@@ -1,3 +1,4 @@
+-- (test comment)
 -- Thin wrapper over Packages.SpriteClip2.ImageSprite: one ImageSprite per named
 -- state (idle/attack/jump/wave), all sharing one ImageLabel adornee. Switching
 -- state = stop the old ImageSprite, play the new one. SpriteClip2 self-drives
