@@ -1,34 +1,36 @@
--- MapleStory-style side-scroller action RPG client (fully client-authoritative
--- prototype — no server sync). Player has real gravity/jump physics and only
--- moves left/right on a single ground platform. Enemies walk the same ground
--- line toward the player's X and use Nature2D purely for horizontal overlap
--- separation (SetPosition each frame, not ApplyForce — see the note above the
--- Nature2D section for why). Animation is driven by SpriteClip2 through the
--- CharacterAnimator wrapper.
+-- MapleStory-style side-scroller action RPG client — full rewrite per the
+-- approved server-authoritative multiplayer plan, Phases 1-8 + the
+-- client-side prediction amendment (input lag fix).
 --
--- IMPORTANT: Nature2D writes GuiObject.Position in absolute screen-pixel
--- offsets (UDim2.new(0, x, 0, y)), and only lines up correctly for objects
--- parented DIRECTLY to the ScreenGui (see Nature2D RigidBody:Render()). So
--- every physics-driven sprite (enemies) is a direct child of screenGui, not
--- nested inside the decorative Arena background frame.
+-- Responsibilities left on the client: capture input (keyboard/gamepad/
+-- touch, via InputController), predict the LOCAL player's own movement
+-- immediately (PhysicsStep, reconciled against server snapshots), interpolate
+-- every OTHER entity from the server's interest-filtered WorldSnapshot, and
+-- render all of it through pooled GUI instances (EntityPool). All game-state
+-- truth (positions, hp, AI, combat, spawning) lives on the server.
 
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 local CharacterAnimator = require(ReplicatedStorage.Shared.CharacterAnimator)
-local Nature2D = require(ReplicatedStorage.Packages.Nature2D)
+local PhysicsStep = require(ReplicatedStorage.Shared.PhysicsStep)
+local Camera = require(script.Parent.Render.Camera)
+local EntityPool = require(script.Parent.Render.EntityPool)
+local InputController = require(script.Parent.Input.InputController)
+local TouchControls = require(script.Parent.Input.TouchControls)
+local NetworkClient = require(script.Parent.Net.NetworkClient)
 
 local CELL = GameConfig.CELL_WIDTH
-local ARENA = GameConfig.Arena
+local WORLD = GameConfig.World
 local playerCfg = GameConfig.Player
 local enemyCfg = GameConfig.Enemy
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-local camera = workspace.CurrentCamera
+local cameraObj = workspace.CurrentCamera
 
 -- ===== Root GUI =====
 local screenGui = Instance.new("ScreenGui")
@@ -39,29 +41,37 @@ screenGui.Parent = playerGui
 
 -- ViewportSize can briefly report a stale/tiny value on the very first tick
 -- of a LocalScript; wait for a real one before laying out screen-space UI.
--- Bounded, not infinite: some Studio window states never report a real size
--- (observed stuck at (1,1) in one session), which would otherwise hang the
--- whole script before anything is ever drawn. Fall back to a sane default.
+-- Bounded by wall-clock time via task.wait, not by counting RenderStepped
+-- events: RenderStepped only fires once real frames are being presented, and
+-- some window states never reach that point (observed ViewportSize stuck at
+-- (1,1) with zero RenderStepped firings for the whole session) — waiting on
+-- RenderStepped:Wait() in that case blocks forever, since the loop can never
+-- re-check its own exit condition. task.wait is driven by the task
+-- scheduler/Heartbeat instead, which keeps running regardless.
 do
-	local waited = 0
-	while (camera.ViewportSize.X < 100 or camera.ViewportSize.Y < 100) and waited < 3 do
-		RunService.RenderStepped:Wait()
-		waited += 1
+	local start = os.clock()
+	while (cameraObj.ViewportSize.X < 100 or cameraObj.ViewportSize.Y < 100) and os.clock() - start < 2 do
+		task.wait(0.1)
 	end
 end
-local viewport = camera.ViewportSize
+local viewport = cameraObj.ViewportSize
 if viewport.X < 100 or viewport.Y < 100 then
 	viewport = Vector2.new(1280, 720)
 end
 
--- The arena fills the entire screen — this is the whole game, not a HUD
--- panel floating over a 3D world (the 3D world has been removed entirely:
--- no Baseplate/Terrain/character, see the one-time Studio setup).
-ARENA.width = viewport.X
-ARENA.height = viewport.Y
-local arenaTopLeft = Vector2.new(0, 0)
+-- designHeight = WORLD.height: the game's vertical extent (sky to ground)
+-- always maps to exactly the device's actual viewport height, uniformly
+-- scaling X, Y, and sprite sizes together (see Camera.lua) — this is the fix
+-- for landscape-mobile viewports being too short to show the 720-world-px
+-- design height 1:1, which previously pushed the ground/characters below
+-- the visible area entirely.
+local camera = Camera.new(WORLD.width, WORLD.height, viewport, WORLD.height)
+cameraObj:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+	camera:setViewport(cameraObj.ViewportSize)
+end)
 
--- Opaque full-screen backdrop so nothing but this 2D game is ever visible.
+-- Opaque full-screen backdrop (sky fallback color, shows through if the
+-- background art hasn't loaded yet, or above/beyond its top edge).
 local backdrop = Instance.new("Frame")
 backdrop.Name = "Backdrop"
 backdrop.Size = UDim2.new(1, 0, 1, 0)
@@ -70,30 +80,65 @@ backdrop.BorderSizePixel = 0
 backdrop.ZIndex = 0
 backdrop.Parent = screenGui
 
--- ===== Ground platform =====
-local GROUND_THICKNESS = 40
-local GROUND_Y = ARENA.height - 100 -- top surface of the ground, in absolute screen px
-local GRAVITY = 2200 -- px/sec^2
-local JUMP_VELOCITY = -950 -- px/sec (negative = up)
+-- Desert canyon backdrop art, tiled across the world width, scrolling
+-- slower than the foreground (backgroundParallaxFactor) for a basic depth
+-- cue. Sized/positioned every frame alongside ground — see the main loop.
+local background = Instance.new("ImageLabel")
+background.Name = "Background"
+background.Image = WORLD.backgroundAssetId
+background.ScaleType = Enum.ScaleType.Tile
+background.BackgroundTransparency = 1
+background.BorderSizePixel = 0
+background.ZIndex = 1
+background.Parent = screenGui
 
-local ground = Instance.new("Frame")
-ground.Name = "Ground"
-ground.Position = UDim2.new(0, 0, 0, GROUND_Y)
-ground.Size = UDim2.new(1, 0, 0, GROUND_THICKNESS)
-ground.BackgroundColor3 = Color3.fromRGB(90, 140, 70)
-ground.BorderSizePixel = 0
-ground.ZIndex = 1
-ground.Parent = screenGui
+-- One ImageLabel per standable surface in WORLD.platforms (base ground +
+-- elevated one-way platforms, each a dedicated rock-chunk piece from
+-- WORLD.platformTextures). Count is small and fixed, so plain instances
+-- created once up front are simpler than pooling.
+local platformLabels = {}
+for _, platform in ipairs(WORLD.platforms) do
+	local tex = WORLD.platformTextures[platform.texture]
+	local label = Instance.new("ImageLabel")
+	label.Name = "Platform"
+	label.Image = tex.assetId
+	label.ScaleType = tex.tile and Enum.ScaleType.Tile or Enum.ScaleType.Fit
+	label.BackgroundTransparency = 1
+	label.BorderSizePixel = 0
+	label.ZIndex = 1
+	label.Parent = screenGui
+	table.insert(platformLabels, label)
+end
 
--- headOffsetPx: distance from the sprite box's TOP edge down to the visual
--- character's head (box_size * visualTopPad — see GameConfig). The bar sits
--- just above that, not a fixed distance above the (mostly empty) box top.
-local function createHealthBar(parent, width, headOffsetPx)
+-- Purely cosmetic set dressing on top of the platforms (crates, barrels,
+-- banners, ...) — same instancing pattern as platforms, never touched by
+-- physics, just drawn above the terrain (ZIndex 2 > platforms' 1).
+local decorationLabels = {}
+for _, deco in ipairs(WORLD.decorations) do
+	local tex = WORLD.decorationTextures[deco.texture]
+	local label = Instance.new("ImageLabel")
+	label.Name = "Decoration"
+	label.Image = tex.assetId
+	label.ScaleType = Enum.ScaleType.Fit
+	label.BackgroundTransparency = 1
+	label.BorderSizePixel = 0
+	label.ZIndex = 2
+	label.Parent = screenGui
+	table.insert(decorationLabels, label)
+end
+
+-- Sized/positioned entirely with Scale-relative UDim2 components anchored to
+-- the PARENT sprite's current (dynamically-scaled) size — this is what lets
+-- the health bar auto-track the sprite's size every frame without needing
+-- its own per-frame update code. topPadRatio is the same visualTopPad ratio
+-- GameConfig already tracks (fraction of the sprite box's height down to the
+-- drawn character's head), reused directly as a Y-scale offset.
+local function createHealthBar(parent, topPadRatio)
 	local barHeight = 6
 	local bg = Instance.new("Frame")
 	bg.Name = "HealthBar"
-	bg.Size = UDim2.new(0, width, 0, barHeight)
-	bg.Position = UDim2.new(0.5, -width / 2, 0, headOffsetPx - barHeight - 6)
+	bg.Size = UDim2.new(1, 0, 0, barHeight)
+	bg.Position = UDim2.new(0, 0, topPadRatio, -barHeight - 6)
 	bg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 	bg.BorderSizePixel = 0
 	bg.ZIndex = 6
@@ -110,19 +155,19 @@ local function createHealthBar(parent, width, headOffsetPx)
 	return fill
 end
 
-local function setSpriteCenter(imageLabel, centerX, centerY, size)
-	imageLabel.Position = UDim2.new(0, centerX - size / 2, 0, centerY - size / 2)
+-- worldX/worldY -> this sprite's screen Position (top-left) AND Size, via
+-- the camera's uniform scale. Size is recomputed every frame (not just set
+-- once at creation) because the scale itself can change — window resize on
+-- PC, or an orientation change on mobile.
+local function setSpriteWorldCenter(imageLabel, worldX, worldY, baseSize)
+	local scale = camera:getScale()
+	local displaySize = baseSize * scale
+	local screenX, screenY = camera:worldToScreen(worldX, worldY)
+	imageLabel.Size = UDim2.new(0, displaySize, 0, displaySize)
+	imageLabel.Position = UDim2.new(0, screenX - displaySize / 2, 0, screenY - displaySize / 2)
 end
 
--- How far each sprite box must be pushed DOWN past the naive "box bottom on
--- the ground" position so the visually-drawn feet (not the transparent
--- padding below them) actually touch the ground line.
-local playerGroundOffset = playerCfg.displaySize * playerCfg.visualBottomPad
-local enemyGroundOffset = enemyCfg.displaySize * enemyCfg.visualBottomPad
-local playerHeadOffset = playerCfg.displaySize * playerCfg.visualTopPad
-local enemyHeadOffset = enemyCfg.displaySize * enemyCfg.visualTopPad
-
--- ===== Player sprite (direct child of screenGui, manually positioned) =====
+-- ===== Local player sprite =====
 local heroSprite = Instance.new("ImageLabel")
 heroSprite.Name = "HeroSprite"
 heroSprite.Image = playerCfg.assetId
@@ -132,10 +177,42 @@ heroSprite.Size = UDim2.new(0, playerCfg.displaySize, 0, playerCfg.displaySize)
 heroSprite.ZIndex = 10
 heroSprite.Parent = screenGui
 
-local heroHealthFill = createHealthBar(heroSprite, playerCfg.displaySize, playerHeadOffset)
+local heroHealthFill = createHealthBar(heroSprite, playerCfg.visualTopPad)
 local heroAnimator = CharacterAnimator.new(heroSprite, playerCfg.states, playerCfg.assetId, CELL, CELL)
 
--- ===== HUD =====
+-- ===== Pooled visuals for other players/enemies (Phase 7) =====
+local function createPlayerBundle()
+	local sprite = Instance.new("ImageLabel")
+	sprite.Image = playerCfg.assetId
+	sprite.ScaleType = Enum.ScaleType.Crop
+	sprite.BackgroundTransparency = 1
+	sprite.Size = UDim2.new(0, playerCfg.displaySize, 0, playerCfg.displaySize)
+	sprite.ZIndex = 9
+	sprite.Parent = screenGui
+
+	local healthFill = createHealthBar(sprite, playerCfg.visualTopPad)
+	local animator = CharacterAnimator.new(sprite, playerCfg.states, playerCfg.assetId, CELL, CELL)
+	return { sprite = sprite, animator = animator, healthFill = healthFill }
+end
+
+local function createEnemyBundle()
+	local sprite = Instance.new("ImageLabel")
+	sprite.Image = enemyCfg.assetId
+	sprite.ScaleType = Enum.ScaleType.Crop
+	sprite.BackgroundTransparency = 1
+	sprite.Size = UDim2.new(0, enemyCfg.displaySize, 0, enemyCfg.displaySize)
+	sprite.ZIndex = 5
+	sprite.Parent = screenGui
+
+	local healthFill = createHealthBar(sprite, enemyCfg.visualTopPad)
+	local animator = CharacterAnimator.new(sprite, enemyCfg.states, enemyCfg.assetId, CELL, CELL)
+	return { sprite = sprite, animator = animator, healthFill = healthFill, lastAttackTick = 0 }
+end
+
+local playerPool = EntityPool.new(createPlayerBundle)
+local enemyPool = EntityPool.new(createEnemyBundle)
+
+-- ===== HUD (driven by the server-replicated local player state) =====
 local hud = Instance.new("Frame")
 hud.Name = "HUD"
 hud.AnchorPoint = Vector2.new(0.5, 0)
@@ -183,228 +260,167 @@ xpBarFill.BorderSizePixel = 0
 xpBarFill.ZIndex = 21
 xpBarFill.Parent = xpBarBg
 
--- ===== Player state (client-authoritative) =====
--- playerX/playerY are the character's CENTER in absolute screen pixels.
-local playerX, playerY = ARENA.width / 2, GROUND_Y - playerCfg.displaySize / 2 + playerGroundOffset
-local velocityY = 0
-local grounded = true
-local facingLeft = false
-local hp, maxHp = playerCfg.maxHp, playerCfg.maxHp
-local level, xp, xpToNext = 1, 0, playerCfg.xpToLevel(1)
-local lastAttackTime = 0
+-- ===== Input + networking (Phase 8: keyboard/gamepad/touch all funnel
+-- through InputController's signals — this script never touches
+-- UserInputService directly) =====
+local inputController = InputController.new()
+local networkClient = NetworkClient.new(inputController)
+TouchControls.setup(screenGui, inputController)
 
-local function refreshHud()
-	levelLabel.Text = string.format("Lv.%d", level)
-	hpBarFill.Size = UDim2.new(math.clamp(hp / maxHp, 0, 1), 0, 1, 0)
-	heroHealthFill.Size = UDim2.new(math.clamp(hp / maxHp, 0, 1), 0, 1, 0)
-	xpBarFill.Size = UDim2.new(math.clamp(xp / xpToNext, 0, 1), 0, 1, 0)
-end
-refreshHud()
-
-local function grantXp(amount)
-	xp += amount
-	while xp >= xpToNext do
-		xp -= xpToNext
-		level += 1
-		maxHp += 15
-		hp = maxHp
-		xpToNext = playerCfg.xpToLevel(level)
-	end
-	refreshHud()
-end
-
-local function damagePlayer(amount)
-	hp = math.max(0, hp - amount)
-	if hp <= 0 then
-		hp = maxHp -- simple respawn in place
-	end
-	refreshHud()
-end
-
--- ===== Nature2D engine =====
--- Used ONLY to resolve horizontal overlap between enemies standing on the
--- same ground line (Runner.CollisionResponse nudges vertex positions apart
--- by a bounded penetration-depth amount). Movement itself is computed by us
--- and applied via body:SetPosition() every frame, NOT via ApplyForce:
--- Nature2D's Verlet integration runs on a fixed 60Hz internal step with no dt
--- scaling (RigidBody:Update ignores its dt argument), so any continuously
--- applied force accumulates without bound. SetPosition resets a body's
--- velocity to zero on every call (oldPos snaps to pos), sidestepping that
--- entirely.
-local engine = Nature2D.init(screenGui)
-engine:CreateCanvas(arenaTopLeft, Vector2.new(ARENA.width, ARENA.height), ground)
-engine:SetPhysicalProperty("Gravity", Vector2.new(0, 0))
-engine:SetPhysicalProperty("Friction", 0.2)
-engine:SetPhysicalProperty("AirFriction", 0.2)
-engine:Start()
-
--- ===== Enemies (ground-walkers, X-axis chase only) =====
-local enemies = {} -- id -> { sprite, animator, body, hp, maxHp, healthFill, lastContactTime }
-local nextEnemyId = 1
-local spawnTimer = 0
-
-local function countAlive()
-	local n = 0
-	for _ in pairs(enemies) do
-		n += 1
-	end
-	return n
-end
-
-local function spawnEnemy()
-	local size = enemyCfg.displaySize
-	local x = math.random(size, ARENA.width - size)
-	local y = GROUND_Y - size / 2 + enemyGroundOffset
-
-	local sprite = Instance.new("ImageLabel")
-	sprite.Name = "Enemy_" .. tostring(nextEnemyId)
-	sprite.Image = enemyCfg.assetId
-	sprite.ScaleType = Enum.ScaleType.Crop
-	sprite.BackgroundTransparency = 1
-	sprite.Size = UDim2.new(0, size, 0, size)
-	sprite.Position = UDim2.new(0, x - size / 2, 0, y - size / 2)
-	sprite.ZIndex = 5
-	sprite.Parent = screenGui
-
-	local healthFill = createHealthBar(sprite, size, enemyHeadOffset)
-	local animator = CharacterAnimator.new(sprite, enemyCfg.states, enemyCfg.assetId, CELL, CELL)
-
-	local body = engine:Create("RigidBody", {
-		Object = sprite,
-		Mass = 1,
-		Collidable = true,
-		Anchored = false,
-		Gravity = Vector2.new(0, 0),
-		KeepInCanvas = true,
-		CanRotate = false, -- ground-walkers must stay upright; the earlier SAT crash (now patched at the root) was unrelated to this
-	})
-
-	local id = nextEnemyId
-	nextEnemyId += 1
-	enemies[id] = {
-		sprite = sprite,
-		animator = animator,
-		body = body,
-		hp = enemyCfg.maxHp,
-		maxHp = enemyCfg.maxHp,
-		healthFill = healthFill,
-		lastContactTime = 0,
-	}
-end
-
-local function killEnemy(id)
-	local enemy = enemies[id]
-	if not enemy then return end
-	enemy.animator:destroy()
-	enemy.body:Destroy()
-	enemy.sprite:Destroy()
-	enemies[id] = nil
-	grantXp(enemyCfg.xpReward)
-end
-
--- ===== Input =====
-local pressed = {}
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
-	pressed[input.KeyCode] = true
-
-	if input.KeyCode == Enum.KeyCode.Space then
-		if grounded then
-			velocityY = JUMP_VELOCITY
-			grounded = false
-			heroAnimator:playOnce("jump")
-		end
-	elseif input.KeyCode == Enum.KeyCode.F then
-		local now = os.clock()
-		if (now - lastAttackTime) >= playerCfg.attackCooldown and heroAnimator:playOnce("attack") then
-			lastAttackTime = now
-			local facingDx = facingLeft and -1 or 1
-			local hitX = playerX + facingDx * (playerCfg.attackRange / 2)
-
-			for id, enemy in pairs(enemies) do
-				local center = enemy.body:GetCenter()
-				local dist = Vector2.new(center.X - hitX, center.Y - playerY).Magnitude
-				if dist <= playerCfg.attackRange then
-					enemy.hp -= playerCfg.attackDamage
-					if enemy.hp <= 0 then
-						killEnemy(id)
-					else
-						enemy.healthFill.Size = UDim2.new(math.clamp(enemy.hp / enemy.maxHp, 0, 1), 0, 1, 0)
-					end
-				end
-			end
-		end
-	elseif input.KeyCode == Enum.KeyCode.E then
-		heroAnimator:playOnce("wave")
-	end
+inputController.JumpPressed.Event:Connect(function()
+	heroAnimator:playOnce("jump")
+end)
+inputController.AttackPressed.Event:Connect(function()
+	heroAnimator:playOnce("attack")
+	networkClient:requestAttack() -- server enforces cooldown/range; this is fire-and-forget
+end)
+inputController.WavePressed.Event:Connect(function()
+	heroAnimator:playOnce("wave")
+	networkClient:requestWave()
 end)
 
-UserInputService.InputEnded:Connect(function(input)
-	pressed[input.KeyCode] = false
-end)
+-- ===== Local player prediction state =====
+-- Matches ServerScriptService/Simulation/PlayerState.create's initial values
+-- so there's no visible snap on the very first frame before any snapshot
+-- has arrived.
+local half = playerCfg.displaySize / 2
+local groundOffset = playerCfg.displaySize * playerCfg.visualBottomPad
+local predicted = {
+	x = WORLD.width / 2,
+	y = WORLD.groundY - half + groundOffset,
+	velocityY = 0,
+	grounded = true,
+	facingLeft = false,
+	moveX = 0,
+	jumpRequested = false,
+}
+
+-- Reconciliation tuning: small drift is pulled back gently (invisible);
+-- anything larger than RECONCILE_SNAP_DISTANCE (bigger than prediction error
+-- should ever realistically get under normal latency) snaps immediately —
+-- that's a real desync (initial sync, respawn, packet loss burst), not
+-- something worth smoothing over.
+local RECONCILE_PULL_RATE = 0.15
+local RECONCILE_SNAP_DISTANCE = 150
 
 -- ===== Main loop =====
 RunService.RenderStepped:Connect(function(dt)
-	-- horizontal movement (left/right only, MapleStory-style)
-	local dx = 0
-	if pressed[Enum.KeyCode.A] or pressed[Enum.KeyCode.Left] then dx -= 1 end
-	if pressed[Enum.KeyCode.D] or pressed[Enum.KeyCode.Right] then dx += 1 end
+	networkClient:update(dt)
 
-	local half = playerCfg.displaySize / 2
-	if dx ~= 0 then
-		playerX = math.clamp(playerX + dx * playerCfg.moveSpeed * dt, half, ARENA.width - half)
-		facingLeft = dx < 0
-		heroAnimator:setFacing(facingLeft)
-		if grounded then
-			heroAnimator:setLoopState("idle") -- no dedicated walk cycle yet
-		end
-	elseif grounded then
-		heroAnimator:setLoopState("idle")
-	end
+	-- 1) advance local prediction immediately from current input
+	predicted.moveX = inputController:GetMoveAxis()
+	predicted.jumpRequested = inputController:PollJumpForPrediction()
+	PhysicsStep.update(predicted, dt)
 
-	-- gravity + jump arc
-	velocityY += GRAVITY * dt
-	playerY += velocityY * dt
-	if playerY >= GROUND_Y - half + playerGroundOffset then
-		playerY = GROUND_Y - half + playerGroundOffset
-		velocityY = 0
-		grounded = true
-	else
-		grounded = false
-	end
-
-	setSpriteCenter(heroSprite, playerX, playerY, playerCfg.displaySize)
-
-	-- enemy spawn
-	spawnTimer += dt
-	if spawnTimer >= enemyCfg.spawnIntervalSeconds and countAlive() < enemyCfg.maxAlive then
-		spawnTimer = 0
-		spawnEnemy()
-	end
-
-	-- enemy AI + contact damage (X-axis chase, Y pinned to the ground)
-	local now = os.clock()
-	local enemyHalf = enemyCfg.displaySize / 2
-	local enemyY = GROUND_Y - enemyHalf + enemyGroundOffset
-	for id, enemy in pairs(enemies) do
-		local center = enemy.body:GetCenter()
-		local dist = Vector2.new(playerX - center.X, playerY - center.Y).Magnitude
-
-		if dist <= enemyCfg.aggroRange and math.abs(playerX - center.X) > 2 then
-			local dirX = playerX > center.X and 1 or -1
-			local step = math.min(enemyCfg.moveSpeed * dt, math.abs(playerX - center.X))
-			local newX = center.X + dirX * step
-			enemy.body:SetPosition(newX - enemyHalf, enemyY - enemyHalf)
-			enemy.animator:setFacing(dirX < 0)
-		end
-
-		if dist <= 40 and (now - enemy.lastContactTime) >= enemyCfg.contactCooldown then
-			enemy.lastContactTime = now
-			enemy.animator:playOnce("attack")
-			damagePlayer(enemyCfg.contactDamage)
+	-- 2) reconcile against the server's last known truth for us
+	local serverState = networkClient:getLocalState()
+	if serverState then
+		local errX = serverState.x - predicted.x
+		local errY = serverState.y - predicted.y
+		local errMag = math.sqrt(errX * errX + errY * errY)
+		if errMag > RECONCILE_SNAP_DISTANCE then
+			predicted.x, predicted.y, predicted.velocityY = serverState.x, serverState.y, 0
 		else
-			enemy.animator:setLoopState("idle")
+			predicted.x += errX * RECONCILE_PULL_RATE
+			predicted.y += errY * RECONCILE_PULL_RATE
 		end
 	end
+
+	-- 3) render local player from the (now-corrected) prediction — zero
+	-- input-to-screen latency regardless of network conditions
+	heroAnimator:setFacing(predicted.facingLeft)
+	if predicted.grounded then
+		heroAnimator:setLoopState("idle") -- no dedicated walk cycle yet
+	end
+	camera:follow(predicted.x)
+	setSpriteWorldCenter(heroSprite, predicted.x, predicted.y, playerCfg.displaySize)
+
+	if serverState then
+		heroHealthFill.Size = UDim2.new(math.clamp(serverState.hp / serverState.maxHp, 0, 1), 0, 1, 0)
+		levelLabel.Text = string.format("Lv.%d", serverState.level)
+		hpBarFill.Size = UDim2.new(math.clamp(serverState.hp / serverState.maxHp, 0, 1), 0, 1, 0)
+		xpBarFill.Size = UDim2.new(math.clamp(serverState.xp / serverState.xpToNext, 0, 1), 0, 1, 0)
+	end
+
+	do
+		local scale = camera:getScale()
+		for i, platform in ipairs(WORLD.platforms) do
+			local tex = WORLD.platformTextures[platform.texture]
+			local label = platformLabels[i]
+			local worldWidth = platform.x2 - platform.x1
+			local screenX, screenY = camera:worldToScreen(platform.x1, platform.y)
+			label.Position = UDim2.new(0, screenX, 0, screenY)
+			if tex.tile then
+				label.Size = UDim2.new(0, worldWidth * scale, 0, WORLD.groundThickness * scale)
+				local tileSize = tex.tileWorldSize * scale
+				label.TileSize = UDim2.new(0, tileSize, 0, tileSize)
+			else
+				-- Aspect-preserving: derive height from the piece's native
+				-- aspect ratio so the rock art isn't stretched/squashed.
+				label.Size = UDim2.new(0, worldWidth * scale, 0, (worldWidth / tex.aspectRatio) * scale)
+			end
+		end
+	end
+
+	do
+		local scale = camera:getScale()
+		for i, deco in ipairs(WORLD.decorations) do
+			local tex = WORLD.decorationTextures[deco.texture]
+			local label = decorationLabels[i]
+			local worldWidth = deco.x2 - deco.x1
+			local screenX, screenY = camera:worldToScreen(deco.x1, deco.y)
+			label.Position = UDim2.new(0, screenX, 0, screenY)
+			label.Size = UDim2.new(0, worldWidth * scale, 0, (worldWidth / tex.aspectRatio) * scale)
+		end
+	end
+
+	do
+		-- Parallax: same uniform Y-scale as everything else, but X uses only
+		-- a fraction of the camera's offset, so the backdrop art scrolls
+		-- slower than the foreground — reads as "further away."
+		local scale = camera:getScale()
+		local bgScreenX = (0 - camera.x * WORLD.backgroundParallaxFactor) * scale + camera.viewport.X / 2
+		local bgScreenY = 0
+		background.Position = UDim2.new(0, bgScreenX, 0, bgScreenY)
+		background.Size = UDim2.new(0, WORLD.width * scale, 0, WORLD.height * scale)
+		local tileHeight = WORLD.height * scale
+		local tileWidth = tileHeight * WORLD.backgroundAspectRatio
+		background.TileSize = UDim2.new(0, tileWidth, 0, tileHeight)
+	end
+
+	-- other players (interpolated, pooled)
+	local now = os.clock()
+	local localUserIdStr = tostring(player.UserId)
+	local interpolatedPlayers = networkClient:getInterpolatedPlayers(now)
+	local seenPlayers = {}
+	for userIdStr, state in pairs(interpolatedPlayers) do
+		if userIdStr ~= localUserIdStr then
+			seenPlayers[userIdStr] = true
+			local bundle = playerPool:acquire(userIdStr)
+			bundle.animator:setFacing(state.facingLeft)
+			bundle.animator:setLoopState("idle") -- jump anim for remote players deferred to a later polish pass
+			bundle.healthFill.Size = UDim2.new(math.clamp(state.hp / state.maxHp, 0, 1), 0, 1, 0)
+			setSpriteWorldCenter(bundle.sprite, state.x, state.y, playerCfg.displaySize)
+		end
+	end
+	playerPool:releaseUnseen(seenPlayers)
+
+	-- enemies (interpolated, pooled)
+	local interpolatedEnemies = networkClient:getInterpolatedEnemies(now)
+	local seenEnemies = {}
+	for idStr, enemy in pairs(interpolatedEnemies) do
+		seenEnemies[idStr] = true
+		local bundle = enemyPool:acquire(idStr)
+		bundle.animator:setFacing(enemy.facingLeft)
+		bundle.healthFill.Size = UDim2.new(math.clamp(enemy.hp / enemy.maxHp, 0, 1), 0, 1, 0)
+		setSpriteWorldCenter(bundle.sprite, enemy.x, enemy.y, enemyCfg.displaySize)
+
+		if enemy.attackTick and enemy.attackTick ~= bundle.lastAttackTick then
+			bundle.lastAttackTick = enemy.attackTick
+			bundle.animator:playOnce("attack")
+		else
+			bundle.animator:setLoopState("idle")
+		end
+	end
+	enemyPool:releaseUnseen(seenEnemies)
 end)
