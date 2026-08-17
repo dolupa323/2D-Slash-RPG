@@ -1,0 +1,17 @@
+local sceneManager = require(script.Parent.SceneManager)
+local scene = require(script.Parent.Parent.Classes.Public.Scene)
+
+return function()
+	local newScene = scene.new()
+	describe(":Get()", function()
+		it("should get a scene", function()
+			expect(sceneManager:Get(newScene.Id).Id).to.equal(newScene.Id)
+		end)
+	end)
+	describe(":FindByName()", function()
+		it("should find a scene", function()
+			newScene:SetName("MyScene")
+			expect(sceneManager:FindByName("MyScene").Id).to.equal(newScene.Id)
+		end)
+	end)
+end

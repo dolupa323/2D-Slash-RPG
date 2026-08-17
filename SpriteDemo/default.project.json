@@ -8,6 +8,10 @@
     },
     "ReplicatedStorage": {
       "Shared": { "$path": "src/ReplicatedStorage/Shared" },
+      "packages": {
+        "$className": "Folder",
+        "UpsideEngine": { "$path": "Packages/UpsideEngine" }
+      },
       "$ignoreUnknownInstances": true
     },
     "ServerScriptService": {

@@ -1,0 +1,246 @@
+local upsideEngine = script.Parent.Parent.Parent
+
+local objectEnvironment = require(upsideEngine.Classes.Internal.ObjectEnvironment)
+local shaderEnvironment = require(upsideEngine.Classes.Internal.ShaderEnvironment)
+local camera = require(upsideEngine.Classes.Internal.Camera)
+local baseObject = require(upsideEngine.Classes.Internal.BaseObject)
+
+local soundEnvironment = require(upsideEngine.Classes.Internal.SoundEnvironment)
+local lightingEnvironment = require(upsideEngine.Classes.Internal.LightingEnvironment)
+local particleEnvironment = require(upsideEngine.Classes.Internal.ParticleEnvironment)
+
+local sceneManager = require(upsideEngine.Services).SceneManager
+local util = require(upsideEngine.Lib.Util)
+
+local scene = {}
+scene.__index = scene
+
+local function intersect(a, b, c, d)
+	local r, s = (b - a), (d - c)
+	d = r.X * s.Y - r.Y * s.X
+
+	local u = ((c.X - a.X) * r.Y - (c.Y - a.Y) * r.X) / d
+	local t = ((c.X - a.X) * s.Y - (c.Y - a.Y) * s.X) / d
+
+	return (0 <= u and u <= 1 and 0 <= t and t <= 1) and a + t * r
+end
+
+local function intersectRayCircle(a, b, center, radius)
+	local eps = 1e-6
+	local d = b - a
+	local f = a - center
+
+	local a_coef = d.X * d.X + d.Y * d.Y
+	local b_coef = 2 * (f.X * d.X + f.Y * d.Y)
+	local c_coef = f.X * f.X + f.Y * f.Y - radius * radius
+
+	if a_coef <= eps then
+		return nil
+	end
+
+	local disc = b_coef * b_coef - 4 * a_coef * c_coef
+	if disc < 0 then
+		return nil
+	end
+
+	local sqrtDisc = math.sqrt(disc)
+	local t1 = (-b_coef - sqrtDisc) / (2 * a_coef)
+	local t2 = (-b_coef + sqrtDisc) / (2 * a_coef)
+
+	local t = math.huge
+	if t1 >= 0 and t1 <= 1 and t1 < t then
+		t = t1
+	end
+	if t2 >= 0 and t2 <= 1 and t2 < t then
+		t = t2
+	end
+
+	if t == math.huge then
+		return nil
+	end
+
+	return a + d * t
+end
+
+--[[={
+	@link Scene.md
+}=]]
+
+function scene.new(): Scene
+	local self = baseObject.new("Folder")
+	self:SetClassName(script.Name)
+
+	local instance = self.Instance
+	local gameFrame = Instance.new("Frame")
+	gameFrame.Name = "GameFrame"
+	gameFrame.Parent = instance
+	gameFrame.BorderSizePixel = 0
+	gameFrame.Size = UDim2.fromScale(1, 1)
+	gameFrame.Position = UDim2.fromScale(0.5, 0.5)
+	gameFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+	gameFrame.BackgroundTransparency = 1
+
+	self.Gravity = Vector2.new(0, 9.81 * 4)
+	self.OnlyTrackVisible = false
+	self.Camera = camera.new(self)
+	self.LightingEnvironment = lightingEnvironment.new(self)
+	self.ParticleEnvironment = particleEnvironment.new()
+	self.SoundEnvironment = soundEnvironment.new()
+	self.ShaderEnvironment = shaderEnvironment.new()
+	self.Objects = objectEnvironment.new()
+
+	sceneManager.Scenes[self.Id] = self
+	self:On("Destroy", function()
+		sceneManager.Scenes[self.Id] = nil
+		sceneManager.ActiveScenes[self.Id] = nil
+	end)
+
+	return setmetatable(self, scene)
+end
+
+--[[={
+	@desc Enables the scene, which will make it process physics, lights, sounds and sprites
+	@link array.link
+}=]]
+
+function scene:Enable()
+	local instance = self.Instance
+	instance.GameFrame.Visible = true
+	instance.Lighting.Visible = true
+
+	sceneManager.ActiveScenes[self.Id] = self
+	sceneManager:Fire("SceneLoaded", self)
+end
+
+--[[={
+	@desc Disables the scene
+	@link array.link
+}=]]
+
+function scene:Disable()
+	local instance = self.Instance
+	instance.GameFrame.Visible = false
+	instance.Lighting.Visible = false
+
+	sceneManager.ActiveScenes[self.Id] = nil
+	sceneManager:Fire("SceneUnloaded", self)
+end
+
+--[[={
+	@desc Gets all the objects with the provided tags in the scene
+	@link array.link
+}=]]
+
+function scene:GetTaggedObjects(tag: string): Array<string>
+	local Taggeds = {}
+
+	for _, object in self.Objects do
+		if object:HasTag(tag) then
+			table.insert(Taggeds, object)
+		end
+	end
+
+	return Taggeds
+end
+
+--[[={
+	@desc Casts a ray using the Raycast2dParams. If it finds an elegible object a Raycast2dResult is returned containing the results of the operations
+	@link /documentation/datatypes/Raycast2DResult.html
+}=]]
+
+function scene:Raycast(info: Raycast2dParams): Raycast2dResult
+	local isBlackList = info.FilterType == "Blacklist"
+	local intersections = {}
+
+	local from, to = info.From, info.To
+	info.List = info.List or {}
+
+	local blacklistSet
+	if isBlackList then
+		blacklistSet = {}
+		for key, value in info.List do
+			if type(key) == "number" then
+				blacklistSet[value.Id] = true
+			else
+				blacklistSet[key] = true
+			end
+		end
+	end
+
+	local targetList = isBlackList and self.Objects or info.List
+
+	from = Vector3.new(from.X, from.Y)
+	to = Vector3.new(to.X, to.Y)
+
+	local function pushIntersection(normal, position, object)
+		table.insert(intersections, {
+			Object = object,
+			Position = UDim2.fromOffset(position.X, position.Y),
+			Distance = (from - position).Magnitude,
+			Normal = UDim2.fromOffset(normal.X, normal.Y),
+		})
+	end
+
+	for _, object in targetList do
+		if isBlackList and blacklistSet[object.Id] or not object:IsA("PhysicalObject") then
+			continue
+		end
+
+		local shape = object.Shape:lower()
+		local instance = object.Instance
+		local absPos = instance.AbsolutePosition
+		local absSize = instance.AbsoluteSize
+
+		if shape == "circle" then
+			local centre = absPos + (absSize / 2)
+			local radius = ((absSize.X + absSize.Y) / 2) * object.HitboxScale
+			centre = Vector3.new(centre.X, centre.Y, 0)
+
+			local position = intersectRayCircle(from, to, centre, radius)
+			if not position then
+				continue
+			end
+
+			local normal = (position - centre).Unit
+			pushIntersection(normal, position, object)
+		else
+			local corners = util.GetCorners(object)
+			local n = #corners
+
+			for i = 1, n do
+				local current = corners[i]
+				local nextCorner = corners[i % n + 1]
+				local position = intersect(current, nextCorner, from, to)
+
+				if not position then
+					continue
+				end
+
+				local edge = nextCorner - current
+				local normal = edge.Unit
+				pushIntersection(normal, position, object)
+			end
+		end
+	end
+
+	table.sort(intersections, function(a, b)
+		return a.Distance < b.Distance
+	end)
+
+	return intersections[1]
+end
+
+--[[={
+	@desc This class is useful to have a workspace and manage your project more easily
+	@about
+		@OnlyTrackVisible This property defines whether physics should be calculated only for visible objects
+		@Objects This environment stores all the objects in the scene
+		@Camera The scene camera
+		@Gravity The scene gravity
+		@ParticleEnvironment This is the ParticleEnvironment of the scene
+		@LightingEnvironment This is the LightingEnvironment of the scene
+		@SoundEnvironment This is the SoundEnvironment of the scene
+		@ShaderEnvironment This is the ShaderEnvironment of the scene
+}=]]
+
+return setmetatable(scene, baseObject)

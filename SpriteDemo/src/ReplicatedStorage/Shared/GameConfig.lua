@@ -15,110 +15,136 @@ GameConfig.World = {
 	width = 4000,
 	height = 720,
 	groundMargin = 100, -- px from World.height up to the ground's top surface
-	groundThickness = 100, -- purely cosmetic (physics uses groundY, not this) — sized to read as a real dirt path once textured, not a thin line
-	-- Desert-village dirt path tile (sprite-gen, runs/town/ground_tile.png),
-	-- rendered ScaleType.Tile so it repeats across the whole World.width.
-	groundTextureAssetId = "rbxassetid://126676116585222",
-	groundTileWorldSize = 128, -- world px per texture repeat
-	-- Desert canyon backdrop (sprite-gen, runs/town/background.png, source
-	-- 1665x945px). Rendered ScaleType.Tile at its native aspect ratio,
-	-- scrolling at backgroundParallaxFactor of the foreground camera speed
-	-- for a basic depth cue (mountains "further away" than the ground line).
-	backgroundAssetId = "rbxassetid://123964520230006",
-	backgroundAspectRatio = 1665 / 945,
-	backgroundParallaxFactor = 0.4,
+	groundChunkWidth = 100, -- world px per repeated ground piece (see platforms loop below)
+	-- Legacy Fantasy - High Forest asset pack (C:\YJS\Roblox\Legacy-Fantasy -
+	-- High Forest 2.3, license confirmed by the user) — replaces the
+	-- hand-generated desert theme entirely. Two-layer parallax sky, same
+	-- viewport-anchored infinite-tile technique the desert background was
+	-- fixed to use (see backgroundParallaxFactor/midgroundParallaxFactor).
+	skyAssetId = "rbxassetid://117452104173020", -- Background/Background.png
+	skyAspectRatio = 480 / 272,
+	backgroundParallaxFactor = 0.15,
+	-- Trees/Background.png: distant pine silhouette band, already
+	-- semi-transparent near its own top edge (fades into the sky rather
+	-- than a hard line) and has real detail all the way to its bottom edge
+	-- (checked via row-variance sampling), so unlike the old desert
+	-- background there's no plain/undetailed strip to worry about.
+	midgroundAssetId = "rbxassetid://85970701016589", -- Trees/Background.png
+	midgroundAspectRatio = 896 / 256,
+	midgroundParallaxFactor = 0.4,
 }
 GameConfig.World.groundY = GameConfig.World.height - GameConfig.World.groundMargin
 
--- Dedicated pixel-art terrain pieces (sprite-gen, runs/town/platform_*.png),
--- each a standalone rock chunk on a transparent background with its flat
--- top surface drawn near the top edge of the image (so anchoring the
--- image's top-left to a platform's collision y lines the art up with the
--- collision surface). aspectRatio = native width/height, used to size each
--- instance without distortion (see HeroSpriteDemo.client.lua render loop).
+-- Forest terrain pieces, cropped from the asset pack's sheets (Tiles.png /
+-- Buildings.png / Props-Rocks.png) down to individual alpha-tight PNGs —
+-- same crop-tight convention proven out on the desert platform pieces, so
+-- each piece's visible art matches its collision box. aspectRatio = native
+-- width/height of the cropped file (see HeroSpriteDemo.client.lua render
+-- loop, which is fully asset-agnostic and needed zero changes for this
+-- swap — only this data and the two background layers changed).
 GameConfig.World.platformTextures = {
-	-- Base ground is the one tiled (repeating strip) surface; everything
-	-- else below is a single non-tiled rock-chunk image.
-	ground      = { assetId = GameConfig.World.groundTextureAssetId, tile = true, tileWorldSize = GameConfig.World.groundTileWorldSize },
-	wide        = { assetId = "rbxassetid://117308572215729", aspectRatio = 1536 / 1024 }, -- wide flat-top slab
-	narrow      = { assetId = "rbxassetid://97422024651159", aspectRatio = 1254 / 1254 }, -- small ledge
-	rock        = { assetId = "rbxassetid://95288075916163", aspectRatio = 1254 / 1254 }, -- small floating stepping-stone
-	pillar      = { assetId = "rbxassetid://127620933867297", aspectRatio = 1024 / 1536 }, -- tall tower-base column
-	ledgeTiny   = { assetId = "rbxassetid://83399260685924", aspectRatio = 1254 / 1254 }, -- tiniest stepping-stone
-	arch        = { assetId = "rbxassetid://131166177161247", aspectRatio = 1122 / 1402 }, -- tall rock arch with a hole
-	bridge      = { assetId = "rbxassetid://124027933378741", aspectRatio = 1774 / 887 }, -- long rope/plank bridge span
-	towerWall   = { assetId = "rbxassetid://96259290062678", aspectRatio = 1536 / 1024 }, -- big architectural block (door/banner)
-	stairsLedge = { assetId = "rbxassetid://103051054584210", aspectRatio = 1536 / 1024 }, -- flat-top with carved side stairs
+	grassGround   = { assetId = "rbxassetid://96017270758916", aspectRatio = 82 / 75 }, -- Tiles.png grass-top block, repeated edge-to-edge for the base ground
+	wide          = { assetId = "rbxassetid://96017270758916", aspectRatio = 82 / 75 }, -- same grass block, used standalone as an elevated platform
+	narrow        = { assetId = "rbxassetid://95193251023688", aspectRatio = 48 / 75 },
+	rock          = { assetId = "rbxassetid://98685309326616", aspectRatio = 62 / 77 }, -- Props-Rocks.png mossy boulder
+	rockSmall     = { assetId = "rbxassetid://120743987225209", aspectRatio = 42 / 34 },
+	pillar        = { assetId = "rbxassetid://104740070526011", aspectRatio = 66 / 178 }, -- Tiles.png tree trunk (with beehives built into the art)
+	floatPlank    = { assetId = "rbxassetid://139293238298132", aspectRatio = 60 / 30 }, -- mossy wood plank
+	bridge        = { assetId = "rbxassetid://87174825337257", aspectRatio = 88 / 48 }, -- rope bridge
+	cabinWall     = { assetId = "rbxassetid://79448280022903", aspectRatio = 112 / 112 }, -- Buildings.png log-cabin wall block
+	rockRamp      = { assetId = "rbxassetid://98847297990632", aspectRatio = 135 / 171 }, -- Buildings.png rock mound + wood ramp, big dramatic anchor
 }
 
--- Decorative-only pieces placed on top of platforms — never checked by
--- PhysicsStep, purely visual (see the separate decorations render loop in
--- HeroSpriteDemo.client.lua). Same {x1,x2,y,texture} shape as platforms for
--- consistency, but y here just anchors the image's top edge, no collision
--- meaning.
+-- Decorative-only pieces placed on top of platforms/ground — never checked
+-- by PhysicsStep, purely visual.
 GameConfig.World.decorationTextures = {
-	crate   = { assetId = "rbxassetid://106620797064599", aspectRatio = 1254 / 1254 },
-	barrel  = { assetId = "rbxassetid://110601090532278", aspectRatio = 1774 / 887 },
-	pot     = { assetId = "rbxassetid://118065835463325", aspectRatio = 1254 / 1254 },
-	banner  = { assetId = "rbxassetid://97226640538443", aspectRatio = 1254 / 1254 },
-	lantern = { assetId = "rbxassetid://97722818056545", aspectRatio = 1254 / 1254 },
-	ladder  = { assetId = "rbxassetid://117108973768517", aspectRatio = 1254 / 1254 },
+	treeGreen   = { assetId = "rbxassetid://89220370547945", aspectRatio = 107 / 368 },
+	treeGolden  = { assetId = "rbxassetid://98113748459298", aspectRatio = 107 / 368 },
+	treeDark    = { assetId = "rbxassetid://111981113942878", aspectRatio = 107 / 368 },
+	treeRed     = { assetId = "rbxassetid://131173993375495", aspectRatio = 107 / 368 },
+	treeYellow  = { assetId = "rbxassetid://107450307411619", aspectRatio = 107 / 368 },
+	bushGreen   = { assetId = "rbxassetid://99000623975742", aspectRatio = 123 / 42 },
+	bushOlive   = { assetId = "rbxassetid://73323813253099", aspectRatio = 123 / 42 },
+	bushDark    = { assetId = "rbxassetid://102733838106259", aspectRatio = 123 / 42 },
+	bushDarker  = { assetId = "rbxassetid://128292360855433", aspectRatio = 123 / 42 },
+	beehive     = { assetId = "rbxassetid://94049444649646", aspectRatio = 47 / 63 },
+	mushroom    = { assetId = "rbxassetid://100577971224293", aspectRatio = 40 / 56 },
+	chest       = { assetId = "rbxassetid://93605319180565", aspectRatio = 44 / 36 },
+	flowerPurple = { assetId = "rbxassetid://128519321835276", aspectRatio = 24 / 26 },
 }
 
--- Standable surfaces, composed as a deliberate journey rather than a
--- mechanical repeat of the same shapes: town-gate tower -> stair climb ->
--- bridge-and-arch sky walk -> clear ground market square at spawn (kept
--- free of platforms so it reads as a hub) -> twin towers -> a descending
--- stair-down finish. All ten terrain pieces get used, several more than
--- once, the way a real hand-built level reuses a kit of parts. Vertical
--- rises stay within ~100-160px (jumpVelocity/gravity give ~205px max
--- single-jump height); horizontal gaps are sized for how far you actually
--- travel while falling/jumping at moveSpeed, not just eyeballed.
-GameConfig.World.platforms = {
-	{ x1 = 0, x2 = GameConfig.World.width, y = GameConfig.World.groundY, texture = "ground" }, -- base ground
+-- Standable surfaces. The base ground is built from many grassGround chunks
+-- placed edge-to-edge (loop below) rather than one repeating tile — the
+-- source art is a single organic rock/grass chunk, not a designed
+-- seamless-tile, so ScaleType.Tile would show visible seams; placing
+-- discrete Fit-scaled chunks side by side (exactly like every other
+-- platform piece) sidesteps that entirely and even reads as a nicer,
+-- slightly organic cobbled path. Elevated pieces above it form the same
+-- kind of journey as the previous desert layout: cabin-wall entrance ->
+-- climb via rock/trunk -> plank-and-bridge sky walk -> clear ground
+-- clearing at spawn -> a second cluster with the rock-ramp anchor ->
+-- descent back to ground. Vertical rises stay within ~100-160px
+-- (jumpVelocity/gravity give ~205px max single-jump height); horizontal
+-- gaps are sized for how far you actually travel while falling/jumping.
+GameConfig.World.platforms = {}
+for x = 0, GameConfig.World.width - 1, GameConfig.World.groundChunkWidth do
+	table.insert(GameConfig.World.platforms, {
+		x1 = x,
+		x2 = x + GameConfig.World.groundChunkWidth,
+		y = GameConfig.World.groundY,
+		texture = "grassGround",
+	})
+end
 
-	-- Town-gate tower climbing into a bridge-and-arch sky walk (x 100-1730)
-	{ x1 = 100, x2 = 400, y = 540, texture = "towerWall" }, -- entrance anchor
-	{ x1 = 430, x2 = 510, y = 460, texture = "ledgeTiny" },
-	{ x1 = 510, x2 = 780, y = 460, texture = "wide" },
-	{ x1 = 780, x2 = 980, y = 350, texture = "stairsLedge" },
-	{ x1 = 980, x2 = 1130, y = 250, texture = "pillar" }, -- tower top
-	{ x1 = 1130, x2 = 1530, y = 250, texture = "bridge" }, -- long span at tower-top height
-	{ x1 = 1530, x2 = 1730, y = 250, texture = "arch" }, -- dramatic arch continuing the walk
+local elevatedPlatforms = {
+	-- Forest-gate climb into a plank-and-bridge sky walk (x 100-1150)
+	{ x1 = 100, x2 = 220, y = 540, texture = "cabinWall" }, -- entrance anchor
+	{ x1 = 250, x2 = 330, y = 460, texture = "rockSmall" },
+	{ x1 = 330, x2 = 460, y = 460, texture = "wide" },
+	{ x1 = 460, x2 = 550, y = 350, texture = "pillar" }, -- tree-trunk climb
+	{ x1 = 550, x2 = 650, y = 350, texture = "wide" },
+	{ x1 = 650, x2 = 950, y = 250, texture = "floatPlank" }, -- long flat plank walk
+	{ x1 = 950, x2 = 1150, y = 250, texture = "bridge" }, -- rope bridge continuing at the same height
 
-	-- One stepping-stone down, then a clear run of ground (x 1790-2300,
-	-- spawn sits at width/2 = 2000) kept free of platforms as a market hub
-	{ x1 = 1790, x2 = 1890, y = 420, texture = "rock" },
-	{ x1 = 2050, x2 = 2150, y = 520, texture = "narrow" }, -- optional side step, doesn't block the hub
+	-- Descent, then a clear run of ground (spawn sits at width/2 = 2000)
+	-- kept free of platforms so it reads as a clearing
+	{ x1 = 1200, x2 = 1280, y = 340, texture = "rockSmall" },
+	{ x1 = 1350, x2 = 1430, y = 440, texture = "narrow" },
 
-	-- Twin towers, a different pillar/arch mix than the first climb (x 2300-3250)
-	{ x1 = 2300, x2 = 2600, y = 460, texture = "towerWall" },
-	{ x1 = 2600, x2 = 2750, y = 350, texture = "pillar" },
-	{ x1 = 2750, x2 = 2950, y = 350, texture = "arch" },
-	{ x1 = 2950, x2 = 3250, y = 460, texture = "towerWall" },
+	-- Second cluster around the rock-ramp anchor (x 2500-3100)
+	{ x1 = 2500, x2 = 2620, y = 460, texture = "cabinWall" },
+	{ x1 = 2620, x2 = 2700, y = 350, texture = "pillar" },
+	{ x1 = 2700, x2 = 2900, y = 350, texture = "rockRamp" },
+	{ x1 = 2900, x2 = 3100, y = 460, texture = "cabinWall" },
 
-	-- Stair-down finish back toward ground (x 3300-3900)
-	{ x1 = 3300, x2 = 3500, y = 560, texture = "stairsLedge" },
-	{ x1 = 3520, x2 = 3600, y = 600, texture = "ledgeTiny" },
-	{ x1 = 3650, x2 = 3750, y = 560, texture = "rock" },
-	{ x1 = 3750, x2 = 3900, y = 600, texture = "wide" }, -- resting landmark near the world edge
+	-- Descent finish back to ground (x 3150-3720)
+	{ x1 = 3150, x2 = 3250, y = 560, texture = "rockSmall" },
+	{ x1 = 3300, x2 = 3380, y = 600, texture = "narrow" },
+	{ x1 = 3430, x2 = 3550, y = 560, texture = "rock" },
+	{ x1 = 3600, x2 = 3720, y = 600, texture = "wide" }, -- resting landmark near the world edge
 }
+for _, platform in ipairs(elevatedPlatforms) do
+	table.insert(GameConfig.World.platforms, platform)
+end
 
--- Set dressing on top of the platforms above — purely cosmetic, two of
--- each prop so both towers/zones feel dressed rather than one-off.
+-- Set dressing — trees for tall background-scale scenery, bushes as
+-- ground-level filler, small props scattered for detail.
 GameConfig.World.decorations = {
-	{ x1 = 150, x2 = 210, y = 540, texture = "crate" }, -- gate tower
-	{ x1 = 220, x2 = 280, y = 540, texture = "barrel" },
-	{ x1 = 405, x2 = 465, y = 540, texture = "ladder" }, -- leaning up toward the ledge above
-	{ x1 = 1260, x2 = 1330, y = 250, texture = "lantern" }, -- hanging on the bridge
-	{ x1 = 1610, x2 = 1680, y = 250, texture = "banner" }, -- on the arch
-	{ x1 = 1950, x2 = 2010, y = GameConfig.World.groundY, texture = "pot" }, -- market square, ground level
-	{ x1 = 2160, x2 = 2220, y = GameConfig.World.groundY, texture = "crate" },
-	{ x1 = 2330, x2 = 2390, y = 460, texture = "ladder" }, -- second tower
-	{ x1 = 2810, x2 = 2880, y = 350, texture = "banner" }, -- second arch
-	{ x1 = 3060, x2 = 3120, y = 460, texture = "pot" },
-	{ x1 = 3360, x2 = 3420, y = 560, texture = "lantern" }, -- stair-down finish
-	{ x1 = 3670, x2 = 3730, y = 560, texture = "barrel" },
+	{ x1 = 500, x2 = 600, y = GameConfig.World.groundY, texture = "treeGreen" },
+	{ x1 = 1700, x2 = 1800, y = GameConfig.World.groundY, texture = "treeGolden" },
+	{ x1 = 2350, x2 = 2450, y = GameConfig.World.groundY, texture = "treeDark" },
+	{ x1 = 3050, x2 = 3150, y = GameConfig.World.groundY, texture = "treeRed" },
+	{ x1 = 3750, x2 = 3850, y = GameConfig.World.groundY, texture = "treeYellow" },
+	{ x1 = 150, x2 = 270, y = GameConfig.World.groundY, texture = "bushGreen" },
+	{ x1 = 1050, x2 = 1170, y = GameConfig.World.groundY, texture = "bushOlive" },
+	{ x1 = 1900, x2 = 2020, y = GameConfig.World.groundY, texture = "bushDark" },
+	{ x1 = 2750, x2 = 2870, y = GameConfig.World.groundY, texture = "bushDarker" },
+	{ x1 = 380, x2 = 420, y = GameConfig.World.groundY, texture = "mushroom" },
+	{ x1 = 1950, x2 = 2000, y = GameConfig.World.groundY, texture = "chest" }, -- near spawn
+	{ x1 = 2050, x2 = 2075, y = GameConfig.World.groundY, texture = "flowerPurple" },
+	{ x1 = 680, x2 = 720, y = 250, texture = "beehive" }, -- hanging near the plank walk
+	{ x1 = 2950, x2 = 2990, y = 350, texture = "beehive" }, -- second cluster
+	{ x1 = 3350, x2 = 3390, y = 600, texture = "mushroom" }, -- descent finish
 }
 
 -- Shared by server PhysicsStep and (for now, until Phase 3 fully lands)

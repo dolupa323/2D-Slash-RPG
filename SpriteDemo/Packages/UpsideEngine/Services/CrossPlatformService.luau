@@ -1,0 +1,212 @@
+local UserInputService = game:GetService("UserInputService")
+local upsideEngine = script.Parent.Parent
+local classes = upsideEngine.Classes
+
+local character = require(script.Parent.Parent.Classes.Public.Character)
+local eventEmitter = require(classes.Internal.EventEmitter)
+local crossPlatformService = {}
+crossPlatformService.__index = crossPlatformService
+
+local function disconnectCharacter(self)
+	if self.CharacterDestroyConnection then
+		self.CharacterDestroyConnection:Disconnect()
+		self.CharacterDestroyConnection = nil
+	end
+end
+
+local function bindCharacter(self, targetCharacter)
+	disconnectCharacter(self)
+	self.Character = targetCharacter
+
+	if not targetCharacter then
+		return
+	end
+
+	self.CharacterDestroyConnection = targetCharacter:On("Destroy", function()
+		if self.Character ~= targetCharacter then
+			return
+		end
+
+		disconnectCharacter(self)
+		self.Character = nil
+		self:Fire("CharacterDestroy", targetCharacter)
+	end)
+end
+
+function crossPlatformService.new()
+	local self = eventEmitter.new()
+	self:SetClassName("CrossPlatformService")
+
+	self.DefaultControllersEnabled = true
+	self.SideView = true
+	self.StickSensibility = 1
+	self.CharacterDestroyConnection = nil
+
+	self.Configs = {
+		Keyboard = {
+			W = "Up",
+			A = "Left",
+			S = "Down",
+			D = "Right",
+
+			Up = "Up",
+			Left = "Left",
+			Down = "Down",
+			Right = "Right",
+			Space = "Up",
+			E = "Interact",
+		},
+		Gamepad = {
+			ButtonA = "Up",
+			ButtonX = "Interact",
+			Thumbstick1 = {
+				Up = "Up",
+				Left = "Left",
+				Down = "Down",
+				Right = "Right",
+			},
+		},
+		Mobile = {
+			JumpButton = "Up",
+			Thumbstick1 = {
+				Up = "Up",
+				Left = "Left",
+				Down = "Down",
+				Right = "Right",
+			},
+		},
+	}
+
+	bindCharacter(self, character.new())
+
+	return setmetatable(self, crossPlatformService)
+end
+
+--[[={
+	@desc Detects the current device type based on user input capabilities
+	@link string.link
+}=]]
+
+function crossPlatformService:DetectCurrentDevice(): string
+	if UserInputService.TouchEnabled then
+		return "Mobile"
+	elseif UserInputService.GamepadEnabled then
+		return "Gamepad"
+	else
+		return "Keyboard"
+	end
+end
+
+--[[={
+	@desc Returns the current key for a specific action based on the current device (Mobile, Gamepad, or Keyboard)
+	@link string.link
+}=]]
+
+function crossPlatformService:GetTargetActionKey(action: string): string?
+	local device = self:DetectCurrentDevice()
+	for key, mappedAction in self.Configs[device] or {} do
+		if mappedAction == action then
+			return key
+		end
+	end
+
+	return nil
+end
+
+--[[={
+	@desc Assigns an action to a device key, example:
+	```lua
+	CrossPlatformService:SetDeviceKey("Keyboard", "Space", "Up")
+	```
+	@link void.link
+}=]]
+
+function crossPlatformService:SetDeviceKey(device: string, key: string, action: string)
+	self.Configs[device][key] = action
+end
+
+--[[={
+	@desc Sets the entire configuration of a device, example:
+	```lua
+	CrossPlatformService:SetDeviceConfig("Keyboard", {
+		W = "Up",
+		A = "Left",
+		S = "Down",
+		D = "Right",
+
+		Up = "Up",
+		Left = "Left",
+		Down = "Down",
+		Right = "Right",
+		Space = "Up",
+	})
+	```
+	@link void.link
+}=]]
+
+function crossPlatformService:SetDeviceConfig(device: string, controls: Dictionary<string, string>)
+	self.Configs[device] = controls
+end
+
+--[[={
+	@desc Sets the player character
+	@link void.link
+}=]]
+
+function crossPlatformService:SetPlayerCharacter(character: Character)
+	bindCharacter(self, character)
+end
+
+--[[={
+	@desc This class is used to make the controls functional in any device (Keyboards, Mobiles, Gamepads), this service vinculate actions 
+	to specified keys, and also provides a movement system for the player character which can be disabled with the `DefaultControllersEnabled`
+	property, here is an example to make our player jumps in every device:
+```lua
+--  								Device,	    Key, 	Action
+CrossPlatformService:SetDeviceKey("Keyboard", "Space", "Up")
+CrossPlatformService:SetDeviceKey("Mobile", "JumpButton", "Up")
+CrossPlatformService:SetDeviceKey("Gamepad", "ButtonA", "Up")
+```
+
+
+But this is not limited only to movement actions, you can also assign other kind of actions, for example:
+
+
+```lua
+CrossPlatformService:SetDeviceKey("Keyboard", "E", "Collect")
+CrossPlatformService:SetDeviceKey("Mobile", "JumpButton", "Collect")
+CrossPlatformService:SetDeviceKey("Gamepad", "ButtonA", "Collect")
+```
+
+
+We assigned an action for our devices but how can we detect when an action is triggered? well we can listen to three events
+"InputBegin", "InputChange", "InputEnd", example of use:
+
+
+```lua
+-- If the movement belongs to a stick, the second parameter will give the current position of the stick
+CrossPlatformService:On("InputBegin", function(inputObject)
+	local character = CrossPlatformService.Character
+
+	if inputObject.Action == "Up" then
+		character:Jump(150)
+	end
+end)
+```
+
+	@about
+		@DefaultControllersEnabled Defines if the default movement system is enabled
+		@SideView Defines if the character is going to be seen from the side or from the top
+		@Character This is the character which is going to be tracked by the camera
+		@StickSensibility This is the sensibility of the sticks in mobile and in game controllers
+		@Configs This table stores the default controllers
+	@events
+		@InputBegin Params -> [UpsideEngineInput](/documentation/datatypes/UpsideEngineInput.html) 
+		Fired when one of the keys/sticks in the configuration is pressed/moved
+		@InputChange Params -> [UpsideEngineInput](/documentation/datatypes/UpsideEngineInput.html) 
+		Fired when the an active input change its value, for example the position of a stick
+		@InputEnd Params -> [UpsideEngineInput](/documentation/datatypes/UpsideEngineInput.html) 
+		Fired when one of the keys/sticks in the configuration finish to be pressed/moved
+}=]]
+
+return setmetatable(crossPlatformService, eventEmitter).new()

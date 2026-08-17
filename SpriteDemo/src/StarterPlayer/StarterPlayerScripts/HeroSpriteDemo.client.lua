@@ -80,20 +80,30 @@ backdrop.BorderSizePixel = 0
 backdrop.ZIndex = 0
 backdrop.Parent = screenGui
 
--- Desert canyon backdrop art, tiled across the world width, scrolling
--- slower than the foreground (backgroundParallaxFactor) for a basic depth
--- cue. Sized/positioned every frame alongside ground — see the main loop.
-local background = Instance.new("ImageLabel")
-background.Name = "Background"
-background.Image = WORLD.backgroundAssetId
-background.ScaleType = Enum.ScaleType.Tile
-background.BackgroundTransparency = 1
-background.BorderSizePixel = 0
-background.ZIndex = 1
-background.Parent = screenGui
+-- Two-layer forest sky parallax, tiled across the viewport (not the world
+-- width — see the per-frame update block for why), scrolling at different
+-- fractions of the camera's offset for depth: sky barely moves, the distant
+-- pine silhouette moves a bit more, both slower than the foreground.
+local sky = Instance.new("ImageLabel")
+sky.Name = "Sky"
+sky.Image = WORLD.skyAssetId
+sky.ScaleType = Enum.ScaleType.Tile
+sky.BackgroundTransparency = 1
+sky.BorderSizePixel = 0
+sky.ZIndex = 1
+sky.Parent = screenGui
+
+local midground = Instance.new("ImageLabel")
+midground.Name = "Midground"
+midground.Image = WORLD.midgroundAssetId
+midground.ScaleType = Enum.ScaleType.Tile
+midground.BackgroundTransparency = 1
+midground.BorderSizePixel = 0
+midground.ZIndex = 1
+midground.Parent = screenGui
 
 -- One ImageLabel per standable surface in WORLD.platforms (base ground +
--- elevated one-way platforms, each a dedicated rock-chunk piece from
+-- elevated one-way platforms, each a dedicated piece from
 -- WORLD.platformTextures). Count is small and fixed, so plain instances
 -- created once up front are simpler than pooling.
 local platformLabels = {}
@@ -102,7 +112,7 @@ for _, platform in ipairs(WORLD.platforms) do
 	local label = Instance.new("ImageLabel")
 	label.Name = "Platform"
 	label.Image = tex.assetId
-	label.ScaleType = tex.tile and Enum.ScaleType.Tile or Enum.ScaleType.Fit
+	label.ScaleType = Enum.ScaleType.Fit
 	label.BackgroundTransparency = 1
 	label.BorderSizePixel = 0
 	label.ZIndex = 1
@@ -350,15 +360,9 @@ RunService.RenderStepped:Connect(function(dt)
 			local worldWidth = platform.x2 - platform.x1
 			local screenX, screenY = camera:worldToScreen(platform.x1, platform.y)
 			label.Position = UDim2.new(0, screenX, 0, screenY)
-			if tex.tile then
-				label.Size = UDim2.new(0, worldWidth * scale, 0, WORLD.groundThickness * scale)
-				local tileSize = tex.tileWorldSize * scale
-				label.TileSize = UDim2.new(0, tileSize, 0, tileSize)
-			else
-				-- Aspect-preserving: derive height from the piece's native
-				-- aspect ratio so the rock art isn't stretched/squashed.
-				label.Size = UDim2.new(0, worldWidth * scale, 0, (worldWidth / tex.aspectRatio) * scale)
-			end
+			-- Aspect-preserving: derive height from the piece's native
+			-- aspect ratio so the art isn't stretched/squashed.
+			label.Size = UDim2.new(0, worldWidth * scale, 0, (worldWidth / tex.aspectRatio) * scale)
 		end
 	end
 
@@ -377,15 +381,27 @@ RunService.RenderStepped:Connect(function(dt)
 	do
 		-- Parallax: same uniform Y-scale as everything else, but X uses only
 		-- a fraction of the camera's offset, so the backdrop art scrolls
-		-- slower than the foreground — reads as "further away."
+		-- slower than the foreground — reads as "further away." Anchored to
+		-- the viewport (not the world width): the frame always spans
+		-- viewport.X + one tile of overhang, positioned by a phase offset
+		-- (offset mod tileWidth) that never leaves it short of covering the
+		-- screen, even near the world's edges (a world-width-sized frame
+		-- used to fall short there, exposing a gap — see git history).
 		local scale = camera:getScale()
-		local bgScreenX = (0 - camera.x * WORLD.backgroundParallaxFactor) * scale + camera.viewport.X / 2
-		local bgScreenY = 0
-		background.Position = UDim2.new(0, bgScreenX, 0, bgScreenY)
-		background.Size = UDim2.new(0, WORLD.width * scale, 0, WORLD.height * scale)
-		local tileHeight = WORLD.height * scale
-		local tileWidth = tileHeight * WORLD.backgroundAspectRatio
-		background.TileSize = UDim2.new(0, tileWidth, 0, tileHeight)
+
+		local skyTileHeight = WORLD.height * scale
+		local skyTileWidth = skyTileHeight * WORLD.skyAspectRatio
+		local skyPhase = (camera.x * WORLD.backgroundParallaxFactor * scale) % skyTileWidth
+		sky.Position = UDim2.new(0, -skyPhase, 0, 0)
+		sky.Size = UDim2.new(0, camera.viewport.X + skyTileWidth, 0, skyTileHeight)
+		sky.TileSize = UDim2.new(0, skyTileWidth, 0, skyTileHeight)
+
+		local midTileHeight = WORLD.height * scale
+		local midTileWidth = midTileHeight * WORLD.midgroundAspectRatio
+		local midPhase = (camera.x * WORLD.midgroundParallaxFactor * scale) % midTileWidth
+		midground.Position = UDim2.new(0, -midPhase, 0, 0)
+		midground.Size = UDim2.new(0, camera.viewport.X + midTileWidth, 0, midTileHeight)
+		midground.TileSize = UDim2.new(0, midTileWidth, 0, midTileHeight)
 	end
 
 	-- other players (interpolated, pooled)
