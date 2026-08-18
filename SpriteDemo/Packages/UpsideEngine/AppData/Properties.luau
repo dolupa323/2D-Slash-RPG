@@ -57,6 +57,8 @@ local props = {
 		"Size",
 		"Image",
 		"SizeConstraint",
+		"BackgroundTransparency",
+		"BackgroundColor3",
 	},
 }
 

@@ -88,6 +88,17 @@ end
 
 function request:Accept(): BaseObject
 	local content = self.Content
+	
+	-- 로컬 플레이어 본인 캐릭터의 경우, 서버로부터 들어오는 복제 업데이트(위치/속도 덮어쓰기)를 무시하여
+	-- 서버-클라이언트 간의 피드백 루프 및 물리 버그(초고속 낙하 등) 방지
+	if not isServer and players.LocalPlayer then
+		local crossPlatformService = require(script.Parent.Parent.Parent.Services.CrossPlatformService)
+		local character = crossPlatformService.Character
+		if character and content.ObjectId == character.Id then
+			return character
+		end
+	end
+
 	local class = classes[content.ClassName]
 
 	local playerData = networking.PlayersData[self.ClientId] or {}
