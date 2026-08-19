@@ -1,5 +1,5 @@
 -- Client-side initialization script for the Upside Engine based 2D Game.
-local Players = game:GetService("Players")
+-- 탑다운(top-down) 시점으로 전환: 중력 없음, 4방향(상/하/좌/우) 자유 이동, 점프 없음.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local packages = ReplicatedStorage.packages
 
@@ -7,244 +7,250 @@ local packages = ReplicatedStorage.packages
 local UpsideEngine = require(packages.UpsideEngine)
 local crossPlatformService = UpsideEngine.GetService("CrossPlatformService")
 local networkingService = UpsideEngine.GetService("NetworkingService")
+local sceneManager = UpsideEngine.GetService("SceneManager")
+local pluginSupportService = UpsideEngine.GetService("PluginSupportService")
 
-local localPlayer = Players.LocalPlayer
+local localPlayer = game:GetService("Players").LocalPlayer
 local playerGui = localPlayer:WaitForChild("PlayerGui")
 
-print("Initializing Upside Engine Client...")
+print("Initializing Upside Engine Client (Top-Down)...")
 
--- 1. Setup screen GUI
+-- 공식 "Plugin Scripts" 가이드(tutorials/plugin-guide/PluginScripts.html) 순서:
+-- LoadPluginContent → FindByName → (캐릭터 준비) → SetPlayerCharacter/SetSubject → Enable → Parent
+pluginSupportService:LoadPluginContent()
+
+local clientScene = sceneManager:FindByName("ForestGround")
+assert(clientScene, "ForestGround scene not found — Tilemap Editor에서 씬이 저장되었는지 확인하세요")
+clientScene.OnlyTrackVisible = false
+clientScene.Gravity = Vector2.zero -- 탑다운은 중력이 없다 (Physics.luau: sideView 여부와 무관하게 매 프레임 Gravity가 가속도에 더해짐)
+
+-- ReplicatedStorage.UpsideEngineDB 저장 스냅샷 + 플러그인 프리뷰 잔재 때문에 두 가지 문제가
+-- 반복적으로 발생한다: (1) 예전 횡스크롤 타일(ForestTileset48)이 계속 되살아남, (2) 같은
+-- place_tiles 호출이 누적되며 타일이 중복 생성됨. scene.Objects(엔진 등록 목록)뿐 아니라
+-- GameFrame 밑 raw Instance까지 전부 훑어서, 등록된 건 object:Destroy()(등록 해제까지 처리),
+-- 미등록 유령 Instance는 raw Instance:Destroy()로 제거한다.
+do
+	local LEGACY_TILE_IMAGES = {
+		["rbxassetid://121002521524084"] = true, -- ForestTileset48 (횡스크롤용, 폐기)
+	}
+	local gameFrame = clientScene.Instance:FindFirstChild("GameFrame")
+	if gameFrame then
+		local instanceToObject = {}
+		for _, object in clientScene.Objects do
+			if object.Instance then
+				instanceToObject[object.Instance] = object
+			end
+		end
+
+		local function destroyTile(inst)
+			local obj = instanceToObject[inst]
+			if obj then
+				obj:Destroy()
+			else
+				inst:Destroy()
+			end
+		end
+
+		-- 마을 설계 범위(TopdownVillage48 144px 그리드, x:-720~720 y:-576~576) 밖에 있는
+		-- TopdownVillage48 타일은 전부 예전 세대(288px 그리드 등)의 유령 잔재다. 플러그인이
+		-- ReplicatedStorage 저장 스냅샷을 계속 되살려서(Edit 모드에서 지워도, DB를 직접 지워도
+		-- 재현됨) 근본 차단이 안 되므로, 범위 밖이면 무조건 제거하는 안전장치를 둔다.
+		local TOWN_BOUNDS = { minX = -750, maxX = 750, minY = -600, maxY = 600 }
+		local TOPDOWN_TILE_IMAGE_FOR_BOUNDS = "rbxassetid://137290334262963"
+
+		local seen = {}
+		local removedLegacy, removedDup, removedOOB = 0, 0, 0
+		for _, inst in ipairs(gameFrame:GetChildren()) do
+			if inst:IsA("ImageLabel") then
+				local img = tostring(inst.Image)
+				if LEGACY_TILE_IMAGES[img] then
+					destroyTile(inst)
+					removedLegacy += 1
+				elseif img == TOPDOWN_TILE_IMAGE_FOR_BOUNDS
+					and (inst.Position.X.Offset < TOWN_BOUNDS.minX or inst.Position.X.Offset > TOWN_BOUNDS.maxX
+						or inst.Position.Y.Offset < TOWN_BOUNDS.minY or inst.Position.Y.Offset > TOWN_BOUNDS.maxY) then
+					destroyTile(inst)
+					removedOOB += 1
+				else
+					local key = img .. ":" .. tostring(inst.Position)
+					if seen[key] then
+						destroyTile(inst)
+						removedDup += 1
+					else
+						seen[key] = true
+					end
+				end
+			end
+		end
+		if removedLegacy > 0 or removedDup > 0 or removedOOB > 0 then
+			warn(string.format("Cleaned up tiles: %d legacy, %d duplicate, %d out-of-bounds", removedLegacy, removedDup, removedOOB))
+		end
+
+		-- Tilemap Editor 플러그인/place_tiles가 타일 크기를 세션마다 다르게(288/48/1728 등)
+		-- 캐싱해서 굽는 문제가 있어(TileSize·Scale 설정을 여러 번 정확히 맞춰도 재현됨),
+		-- TopdownVillage48 타일은 실제 위치(Position, AnchorPoint 0.5,0.5라 크기 조정해도
+		-- 안 밀림)는 항상 정확하므로 크기만 여기서 강제로 144x144로 통일한다.
+		-- (도트게임 비율에 맞게 288→144로 축소. 타일 그리드 배치 간격도 144로 맞춰야 함.)
+		local TOPDOWN_TILE_IMAGE = "rbxassetid://137290334262963"
+		local TOPDOWN_TILE_SIZE = UDim2.fromOffset(144, 144)
+		local TOPDOWN_RECT_SIZE = Vector2.new(48, 48) -- 타일셋 원본 셀 크기(48x48). ImageRectSize도
+		-- 같은 캐싱 버그로 8x8/24x24/48x48이 뒤섞여 저장돼있어(정상은 48x48뿐), 절반만 잘린 크롭이
+		-- 늘어나 보이는 문제(바위가 반원으로 보이는 등)의 원인이었다. 크기와 함께 강제 통일한다.
+		local fixedSize, fixedRect = 0, 0
+		for _, inst in ipairs(gameFrame:GetChildren()) do
+			if inst:IsA("ImageLabel") and tostring(inst.Image) == TOPDOWN_TILE_IMAGE then
+				if inst.Size ~= TOPDOWN_TILE_SIZE then
+					inst.Size = TOPDOWN_TILE_SIZE
+					fixedSize += 1
+				end
+				if inst.ImageRectSize ~= TOPDOWN_RECT_SIZE then
+					inst.ImageRectSize = TOPDOWN_RECT_SIZE
+					fixedRect += 1
+				end
+			end
+		end
+		if fixedRect > 0 then
+			warn(string.format("Force-corrected %d tile(s) ImageRectSize to 48x48 (plugin crop caching bug)", fixedRect))
+		end
+		if fixedSize > 0 then
+			warn(string.format("Force-corrected %d tile(s) to 144x144 (plugin size caching bug)", fixedSize))
+		end
+
+		-- place_tiles가 오브젝트 ID를 재사용하면서 CanCollide 플래그가 예전 세대(Wall/Tree 등)
+		-- 값 그대로 남는 버그가 있어(이미지/좌표는 새 타일로 맞게 갱신되는데 CanCollide만 stale),
+		-- 잔디/길 타일이 충돌 판정을 갖고 있어 캐릭터가 안 보이는 벽에 막히는 원인이 됐다.
+		-- ImageRectOffset(타일 종류의 유일하게 신뢰 가능한 값)을 기준으로 CanCollide를 강제 재계산한다.
+		local fixedCollide = 0
+		for _, object in clientScene.Objects do
+			if object.Instance and object.Instance:IsA("ImageLabel") and tostring(object.Instance.Image) == TOPDOWN_TILE_IMAGE then
+				local offsetX = object.Instance.ImageRectOffset.X
+				local shouldCollide = (offsetX == 96 or offsetX == 144) -- Tree=96, Rock=144 / Grass=0, Path=48
+				if object.CanCollide ~= shouldCollide then
+					object.CanCollide = shouldCollide
+					fixedCollide += 1
+				end
+			end
+		end
+		if fixedCollide > 0 then
+			warn(string.format("Force-corrected %d tile(s) CanCollide flag (plugin ID-reuse bug)", fixedCollide))
+		end
+	end
+end
+
+-- hero2_topdown (sprite-gen) 4방향 idle + walk, 4x1 투명 스트립
+local IDLE_DOWN  = "rbxassetid://129109122585098"
+local IDLE_UP    = "rbxassetid://99515823518400"
+local IDLE_LEFT  = "rbxassetid://121785879926631"
+local IDLE_RIGHT = "rbxassetid://101916963029894"
+local WALK_DOWN  = "rbxassetid://81811293830731"
+local WALK_UP    = "rbxassetid://133393514503980"
+local WALK_LEFT  = "rbxassetid://91501355997148"
+local WALK_RIGHT = "rbxassetid://97282194751054"
+
+-- Create the local player's 2D Character
+local character = UpsideEngine.new("Character")
+character:SetScene(clientScene)
+character:Load(IDLE_DOWN)
+character.SecondsPerFrame = 0.125
+local SPAWN_POSITION = UDim2.fromOffset(0, 0)
+character.Instance.Position = SPAWN_POSITION
+character.Instance.Size = UDim2.fromOffset(200, 200)
+character.Instance.ImageRectSize = Vector2.new(256, 256)
+character.Instance.BackgroundTransparency = 1
+character.Instance.BorderSizePixel = 0
+character.Instance.ZIndex = 10
+character.Mass = 50
+character.WalkSpeed = 90
+
+-- 엔진 기본 컨트롤러(CrossPlatformTracker.luau)가 요구하는 정확한 이름:
+--   이동 중: "up" / "down" / "left" / "right"
+--   정지 시: "idle_up" / "idle_down" / "idle_left" / "idle_right" (기본값은 idle_down)
+character:SetSpriteSheet("idle_down",  IDLE_DOWN, Vector2.new(4, 1))
+character:SetSpriteSheet("idle_up",    IDLE_UP, Vector2.new(4, 1))
+character:SetSpriteSheet("idle_left",  IDLE_LEFT, Vector2.new(4, 1))
+character:SetSpriteSheet("idle_right", IDLE_RIGHT, Vector2.new(4, 1))
+character:SetSpriteSheet("down",  WALK_DOWN, Vector2.new(4, 1))
+character:SetSpriteSheet("up",    WALK_UP, Vector2.new(4, 1))
+character:SetSpriteSheet("left",  WALK_LEFT, Vector2.new(4, 1))
+character:SetSpriteSheet("right", WALK_RIGHT, Vector2.new(4, 1))
+character:SetSpriteSheet("attack", "rbxassetid://104005922638812", Vector2.new(4, 1)) -- TODO: 탑다운용 attack 애니메이션은 추후 제작
+
+character:Play("idle_down")
+
+-- DefaultControllersEnabled=true + SideView=false → 엔진이 8방향 정규화 이동/애니메이션 전환을
+-- 자체 처리한다 (Physics.luau: sideView=false면 Y축에도 마찰 적용, 점프 로직 자체가 비활성화됨).
+crossPlatformService.SideView = false
+crossPlatformService.DefaultControllersEnabled = true
+crossPlatformService:SetPlayerCharacter(character)
+clientScene.Camera:SetSubject(character)
+clientScene.Camera.FollowSubject = true
+
+clientScene:Enable()
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "UpsideGameGui"
 screenGui.IgnoreGuiInset = true
 screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 screenGui.Parent = playerGui
-
--- 2. Create the Client 2D Scene
-local clientScene = UpsideEngine.new("Scene")
 clientScene.Instance.Parent = screenGui
-clientScene:SetName("ClientWorld")
-clientScene:Enable()
 
--- 3. 서버로부터 복제되는 오브젝트(바닥, 플랫폼, 장애물, 광원 등) 수신 리스너를 최상단에 배치
--- (소켓 동기화 시점에 발생하는 초기 복제 이벤트를 놓치지 않도록 방지)
+-- 서버로부터 복제되는 오브젝트(장애물, 광원 등) 수신 리스너
 networkingService:On("Build", function(object)
 	print("Client: Received server object replication for class:", object.ClassName, "Name:", object.Name)
 	if object:IsA("Scene") then
-		return -- Scene 자체는 로컬 씬에 포함하지 않음
+		return
 	end
-	-- 복제된 오브젝트를 로컬 씬에 부착하여 물리 및 렌더링에 반영
 	object:SetScene(clientScene)
 end)
 
--- 4. Setup Parallax Background layers
--- Sky layer
-local skyParallax = UpsideEngine.new("Parallax")
-skyParallax:SetScene(clientScene)
-skyParallax:SetTexture("rbxassetid://117452104173020")
-skyParallax.LockToCamera = true
-skyParallax.CanvasSize = Vector2.new(1.2, 1.2)
-skyParallax.Instance.Size = UDim2.fromScale(1, 1)
-skyParallax.Instance.ZIndex = 1
+-- TODO(multiplayer): NetworkingService:ReplicateOnChange(character)는 Instance.Changed마다
+-- (이동 중이면 사실상 매 프레임) 무거운 diff+전송 로직을 동기 실행해서 "가다 멈추다" 프레임
+-- 끊김의 원인이었다 (ReplicationPerSecond=15 설정이 존재하지만 ReplicateOnChange 내부에서
+-- 실제로 쓰이지 않는 엔진 자체의 스로틀링 누락). 지금은 싱글플레이 테스트 단계라 꺼둔다.
+-- 나중에 멀티플레이가 실제로 필요해지면 직접 스로틀링한 Replicate() 호출로 재도입한다.
+-- networkingService:ReplicateOnChange(character)
 
--- Midground layer (distant forest tree tops)
-local midgroundParallax = UpsideEngine.new("Parallax")
-midgroundParallax:SetScene(clientScene)
-midgroundParallax:SetTexture("rbxassetid://85970701016589")
-midgroundParallax.LockToCamera = true
-midgroundParallax.CanvasSize = Vector2.new(1.8, 1.8)
-midgroundParallax.Instance.Size = UDim2.fromScale(1, 1)
-midgroundParallax.Instance.ZIndex = 2
-
--- 숲 마을 텍스처 애셋 (sprite-gen으로 hero2 픽셀아트 스타일에 맞춰 신규 제작)
-local FOREST_GROUND_TEXTURE = "rbxassetid://81674042410848" -- 잔디/흙 바닥 타일 (Tile 반복)
-local FOREST_PLANK_TEXTURE = "rbxassetid://94974255066165"  -- 원웨이 나무 발판
-
--- Create solid local Ground & Platforms (5000px wide floor)
-local mainFloor = UpsideEngine.new("PhysicalObject")
-mainFloor.Anchored = true
-mainFloor:SetScene(clientScene)
-mainFloor.Instance.BackgroundTransparency = 1
-mainFloor.Instance.Image = FOREST_GROUND_TEXTURE
-mainFloor.Instance.ScaleType = Enum.ScaleType.Tile
-mainFloor.Instance.TileSize = UDim2.fromOffset(128, 128)
-mainFloor.Instance.ZIndex = 5
-mainFloor.Instance.Size = UDim2.fromOffset(5000, 200)
-mainFloor.Instance.Position = UDim2.fromOffset(-1000, 700)
-mainFloor.Name = "MainFloor"
-
-local mainPlatform = UpsideEngine.new("PhysicalObject")
-mainPlatform.Anchored = true
-mainPlatform:SetScene(clientScene)
-mainPlatform.Instance.BackgroundTransparency = 1
-mainPlatform.Instance.Image = FOREST_PLANK_TEXTURE
-mainPlatform.Instance.ScaleType = Enum.ScaleType.Stretch
-mainPlatform.Instance.ZIndex = 5
-mainPlatform.Instance.Size = UDim2.fromOffset(800, 40)
-mainPlatform.Instance.Position = UDim2.fromOffset(100, 520)
-mainPlatform.Name = "MainPlatform"
-
--- 4. Create the local player's 2D Character
-local character = UpsideEngine.new("Character")
-character:SetScene(clientScene)
-character:Load("rbxassetid://87915890865614") -- Idle 4x1 투명 스트립 사전 로드
-character.SecondsPerFrame = 0.125               -- 2D 프레임 애니메이션 속도 (8 FPS)
-character.Instance.Position = UDim2.fromOffset(400, 400)
-character.Instance.Size = UDim2.fromOffset(200, 200)
-character.Instance.ImageRectSize = Vector2.new(256, 256)
-character.Instance.BackgroundTransparency = 1  -- 캐릭터 뒤의 회색 상자를 투명하게 처리
-character.Instance.BorderSizePixel = 0          -- 테두리 제거
-character.Instance.ZIndex = 10                 -- 배경(ZIndex 1~2)보다 앞에 그려지도록 설정
-character.Mass = 50
-character.WalkSpeed = 90
-character.JumpPower = 130
-
--- Configure animations matching transparent 4x1 motion strips (Vector2.new(4, 1))
--- Idle 4x1 transparent strips (direction-specific, generated via the sprite-gen pipeline)
-character:SetSpriteSheet("idle_right", "rbxassetid://87915890865614", Vector2.new(4, 1))
-character:SetSpriteSheet("idle_left",  "rbxassetid://101212687717690", Vector2.new(4, 1))
-
--- Attack 4x1 transparent strips (direction-specific)
-character:SetSpriteSheet("attack",      "rbxassetid://104005922638812", Vector2.new(4, 1))
-character:SetSpriteSheet("attack_left", "rbxassetid://111284342400551", Vector2.new(4, 1))
-
--- Jump 4x1 transparent strips (direction-specific)
-character:SetSpriteSheet("jump",      "rbxassetid://124534863903204", Vector2.new(4, 1))
-character:SetSpriteSheet("jump_left", "rbxassetid://138428010395893", Vector2.new(4, 1))
-
--- Walk 4x1 transparent strips, generated via the sprite-gen pipeline (anchor-locked to the idle reference, rescaled to match idle's body scale)
-character:SetSpriteSheet("right",      "rbxassetid://109335894403589", Vector2.new(4, 1))
-character:SetSpriteSheet("left",       "rbxassetid://85148768814567", Vector2.new(4, 1))
-
-character:Play("idle_right")
-
--- 5. Link controls and camera follow via CrossPlatformService
-crossPlatformService.SideView = true
-crossPlatformService.DefaultControllersEnabled = false -- 디폴트 컨트롤러 비활성화 후 직접 폴링
-crossPlatformService:SetPlayerCharacter(character)
-
--- 카메라 직접 제어를 위해 자동 추적 비활성화 (지터링 방지)
-clientScene.Camera.FollowSubject = false
-clientScene.Camera.Smoothness = 0.15
-
--- 6. Setup replication to other clients
-networkingService:ReplicateOnChange(character)
-
--- 7. 폴링(Polling) 기반 초강력 키보드 입력 처리 및 애니메이션 스테이트 머신 제어
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
-local isFacingRight = true
-local lastAnim = ""
-local isPlayingOneShot = false -- 원샷(공격, 점프, 하단점프) 애니메이션 재생 중 여부
+crossPlatformService:SetDeviceKey("Keyboard", "F", "Attack")
 
-local function playAnim(name, isOneShot)
-	if isPlayingOneShot and not isOneShot then return end
-	if lastAnim == name then return end
-	lastAnim = name
+local isPlayingOneShot = false
+
+local function playOneShot(name)
+	if isPlayingOneShot then return end
+	isPlayingOneShot = true
 	character:Play(name)
-	if isOneShot then
-		isPlayingOneShot = true
-		task.delay(0.4, function()
-			isPlayingOneShot = false
-			lastAnim = ""
-		end)
-	end
+	task.delay(0.4, function()
+		isPlayingOneShot = false
+	end)
 end
 
-RunService.Heartbeat:Connect(function(dt)
+crossPlatformService:On("InputBegin", function(input)
+	if input.Action == "Attack" then
+		playOneShot("attack")
+	end
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		playOneShot("attack")
+	end
+end)
+
+RunService.Heartbeat:Connect(function()
 	if not character or not character.Instance then return end
 
 	local posX = character.Instance.Position.X.Offset
 	local posY = character.Instance.Position.Y.Offset
 
-	-- 1) 공격 키 처리 (F 키 또는 마우스 좌클릭)
-	local attackPressed = UserInputService:IsKeyDown(Enum.KeyCode.F) or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
-	if attackPressed then
-		playAnim(isFacingRight and "attack" or "attack_left", true)
-	end
-
-	-- 2) 좌우 이동 키 상태 확인 및 속도 반영
-	local moveX = 0
-	if UserInputService:IsKeyDown(Enum.KeyCode.D) or UserInputService:IsKeyDown(Enum.KeyCode.Right) then
-		moveX = 1
-		isFacingRight = true
-	elseif UserInputService:IsKeyDown(Enum.KeyCode.A) or UserInputService:IsKeyDown(Enum.KeyCode.Left) then
-		moveX = -1
-		isFacingRight = false
-	end
-
-	if moveX ~= 0 then
-		character.Velocity = Vector2.new(moveX * character.WalkSpeed * 5, character.Velocity.Y)
-		if isFacingRight then
-			playAnim("right")
-		else
-			playAnim("left")
-		end
-	else
-		character.Velocity = Vector2.new(0, character.Velocity.Y)
-		if isFacingRight then
-			playAnim("idle_right")
-		else
-			playAnim("idle_left")
-		end
-	end
-
-	-- 3) 점프 및 하단 플랫폼 통과 처리 (W, Space, Up / S + Space)
-	local jumpPressed = UserInputService:IsKeyDown(Enum.KeyCode.Space) or UserInputService:IsKeyDown(Enum.KeyCode.W) or UserInputService:IsKeyDown(Enum.KeyCode.Up)
-	local downPressed = UserInputService:IsKeyDown(Enum.KeyCode.S) or UserInputService:IsKeyDown(Enum.KeyCode.Down)
-
-	if jumpPressed then
-		if downPressed and character.IsGrounded then
-			-- 하단점프 (S + Space): 현재 딛고 있는 플랫폼의 충돌을 일시 해제하여 아래로 통과
-			for id, _ in character.Collisions do
-				local obj = clientScene.Objects:Get(id)
-				if obj and obj.Name:match("Platform") then
-					print("Dropping down from platform:", obj.Name)
-					character.CollisionBlacklist[id] = true
-					character.IsGrounded = false
-					playAnim("down_jump", true)
-					task.delay(0.3, function()
-						character.CollisionBlacklist[id] = nil
-					end)
-					break
-				end
-			end
-		elseif character.IsGrounded then
-			print("Triggering jump!")
-			character:Jump(character.JumpPower)
-			playAnim(isFacingRight and "jump" or "jump_left", true)
-		end
-	end
-
-	-- 4) 낙하 및 맵 탈출 방지 (자동 리셋 및 R키 수동 리셋)
-	if posY > 850 or posX < -100 or posX > 2600 or UserInputService:IsKeyDown(Enum.KeyCode.R) then
-		print(string.format("Resetting character from (%.1f, %.1f) to (400, 400)", posX, posY))
-		character.Instance.Position = UDim2.fromOffset(400, 400)
+	-- 맵 밖으로 나가거나 R키를 누르면 스폰 지점으로 리셋 (탑다운은 낙사 개념이 없음)
+	if math.abs(posX) > 3000 or math.abs(posY) > 3000 or UserInputService:IsKeyDown(Enum.KeyCode.R) then
+		character.Instance.Position = SPAWN_POSITION
 		character.Velocity = Vector2.zero
 	end
-
-	-- 5) 수동 카메라 제어 (물리 엔진 미세 진동으로 인한 화면 지터링 방지)
-	local resolution = workspace.CurrentCamera.ViewportSize
-	local center = resolution / 2
-	
-	-- X좌표는 캐릭터를 스무스하게 추적
-	local targetCamX = center.X + (center.X - posX)
-	-- Y좌표는 캐릭터가 높은 위치로 이동하거나 낙하할 때만 부드럽게 따라가며, 미세 틱 진동은 스무딩(Lerp)하여 화면 튕김을 완전 방지
-	local currentCamPos = clientScene.Camera.Instance.Position
-	local currentCamY = currentCamPos.Y.Offset
-	local targetCamY = center.Y + (center.Y - posY)
-	
-	-- 미세 튕김 방지를 위해 매 프레임 Lerp 적용
-	local alpha = 0.15 -- 부드러운 트래킹 강도 (지터링 필터링)
-	local newCamY = currentCamY + (targetCamY - currentCamY) * alpha
-	local newCamX = currentCamPos.X.Offset + (targetCamX - currentCamPos.X.Offset) * alpha
-	
-	clientScene.Camera:SetPosition(UDim2.fromOffset(newCamX, newCamY))
-
-	-- 6) 배경 패럴랙스 스크롤 업데이트 (움직임 시 착시 방지 및 입체감 제공)
-	skyParallax.Offset = Vector2.new(posX * 0.15, 0)
-	midgroundParallax.Offset = Vector2.new(posX * 0.45, 0)
 end)
 
 print("Upside Engine Client Initialization Complete.")

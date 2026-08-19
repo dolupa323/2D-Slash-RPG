@@ -183,9 +183,15 @@ local function animationPlayer(character, sideView)
 	end
 
 	animation = if animation == "idle" then defaultIdle else animation
-	if lastAction == "left" or lastAction == "right" then
-		animation = `idle_{lastAction}`
-	end
+	-- BUGFIX(local): the previous unconditional "if lastAction was left/right,
+	-- force idle_{lastAction}" here was redundant with the action=="none" branch
+	-- above (which already generalizes idle_{lastAction} to all 4 directions) AND
+	-- it incorrectly fired when switching directly from one active direction to a
+	-- NEW active direction (not going idle at all) whenever the previous direction
+	-- happened to be left/right — e.g. holding Left then switching to Down would
+	-- get its freshly-computed "down" animation overwritten back to "idle_left".
+	-- Removed; the action=="none" branch above already covers the intended
+	-- (side-view and top-down) "show idle facing last direction" behavior.
 	lastAction = action
 
 	character:Play(animation)
