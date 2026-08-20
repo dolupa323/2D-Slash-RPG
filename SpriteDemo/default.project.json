@@ -7,7 +7,7 @@
       "$ignoreUnknownInstances": true
     },
     "ReplicatedStorage": {
-      "Shared": { "$path": "src/ReplicatedStorage/Shared" },
+      "shared": { "$path": "src/shared" },
       "packages": {
         "$className": "Folder",
         "UpsideEngine": { "$path": "Packages/UpsideEngine" }
@@ -15,11 +15,13 @@
       "$ignoreUnknownInstances": true
     },
     "ServerScriptService": {
-      "$path": "src/ServerScriptService",
+      "server": { "$path": "src/server" },
       "$ignoreUnknownInstances": true
     },
     "StarterPlayer": {
-      "StarterPlayerScripts": { "$path": "src/StarterPlayer/StarterPlayerScripts" }
+      "StarterPlayerScripts": {
+        "client": { "$path": "src/client" }
+      }
     }
   }
 }
