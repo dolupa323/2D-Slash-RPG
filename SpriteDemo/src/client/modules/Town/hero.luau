@@ -6,18 +6,23 @@ local packages = ReplicatedStorage:WaitForChild("packages")
 local UpsideEngine = require(packages:WaitForChild("UpsideEngine"))
 local CrossPlatformService = UpsideEngine.GetService("CrossPlatformService")
 
--- hero2_topdown (sprite-gen) 4방향 idle + walk. 원본 256x256 칸에서 캐릭터가 실제로 그려진
--- 영역(94,151,163,240 + 여유 8px)만 남기고 다시 크롭한 69x89 프레임 사용 — Instance.Size나
--- HitboxScale로 우회하지 않고 이미지 자체의 투명 여백을 제거한 것이 근본 해결책이었다.
-local IDLE_DOWN = "rbxassetid://94223352968956"
-local IDLE_UP = "rbxassetid://85612115830214"
-local IDLE_LEFT = "rbxassetid://134458246440596"
-local IDLE_RIGHT = "rbxassetid://87042318259786"
-local WALK_DOWN = "rbxassetid://84053810163197"
-local WALK_UP = "rbxassetid://91088062123550"
-local WALK_LEFT = "rbxassetid://98827223717513"
-local WALK_RIGHT = "rbxassetid://122458851573145"
-local FRAME_SIZE = Vector2.new(69, 89)
+-- Ninja Adventure Asset Pack(CC0, pixel-boy)의 NinjaGreen 캐릭터. 팩 README에는 그리드
+-- 문서가 없어서, Preview/Push.gif(상자를 미는 4방향 애니메이션)로 방향을 실측 검증했다:
+-- 상자가 캐릭터 기준 아래/위/왼쪽/오른쪽 중 어디에 있는지로 각 프레임의 실제 방향을 알아낸 뒤
+-- (프레임0-3=아래, 4-7=위, 8-11=왼쪽, 12-15=오른쪽), 그 포즈들을 Separate/Walk.png,Idle.png의
+-- 4x4 그리드와 대조했다. 결과: 방향은 "행"이 아니라 "열" 기준이다 — 열0=아래(정면), 열1=위
+-- (뒤통수만 보임), 열2=왼쪽, 열3=오른쪽(얼굴 비대칭 위치로 왼쪽/오른쪽 구분 확인). 행은
+-- 걷기/숨쉬기 애니메이션 프레임(0~3)이다. 이 사실을 바탕으로 각 열을 다시 잘라 방향별
+-- 4프레임 가로 스트립(128x32)으로 새로 만들었다.
+local IDLE_DOWN = "rbxassetid://121539012222072"
+local IDLE_LEFT = "rbxassetid://74299535482049"
+local IDLE_RIGHT = "rbxassetid://114783849777960"
+local IDLE_UP = "rbxassetid://127592117956655"
+local WALK_DOWN = "rbxassetid://102062913335734"
+local WALK_LEFT = "rbxassetid://74190271824272"
+local WALK_RIGHT = "rbxassetid://85077734646819"
+local WALK_UP = "rbxassetid://120535248659777"
+local FRAME_SIZE = Vector2.new(32, 32)
 
 local exports = {}
 
@@ -31,17 +36,15 @@ function exports.load(scene: Scene)
 	hero.SecondsPerFrame = 0.125
 	hero.Mass = 50
 	hero.WalkSpeed = 90
-	-- 69x89 프레임 안에서 캐릭터 그림 자체는 53x73만 차지한다(걷기 애니메이션 팔다리가
-	-- 안 잘리게 상하좌우 8px씩 여백을 일부러 남겨서 크롭했기 때문 — 실측 확인, 추측 아님).
-	-- 화면 크기는 그대로 두고 충돌 판정만 실제 그림 크기 비율(~0.8)로 줄인다.
-	hero.HitboxScale = 0.8
+	-- 캐릭터 그림이 32x32 프레임을 거의 꽉 채우므로 여백이 크지 않다. 그래도 타일(96px)
+	-- 대비 캐릭터가 과도하게 크면 충돌 판정이 타일 한 칸 앞에서 미리 멈추는 문제가
+	-- 있었으므로(실측 확인됨), 약간의 여유를 두고 0.85로 설정한다.
+	hero.HitboxScale = 0.85
 
 	local instance = hero.Instance
 	instance.Position = UDim2.fromOffset(0, 0)
-	-- 2배 확대(138x178)였을 때 타일(96px)보다 훨씬 커서 충돌 판정이 타일 한 칸만큼 미리
-	-- 멈추는 문제가 있었다(실측: 캐릭터 절반 높이 89px만큼 여유 공간 발생, 위/아래 대칭 확인).
-	-- 원본 픽셀 크기(69x89) 그대로 써서 타일 크기(96)에 맞춘다.
-	instance.Size = UDim2.fromOffset(FRAME_SIZE.X, FRAME_SIZE.Y)
+	-- 원본 32x32를 2배로 표시(64x64) — 타일(96px)보다 작아서 충돌 오버슈트 문제를 피한다.
+	instance.Size = UDim2.fromOffset(FRAME_SIZE.X * 2, FRAME_SIZE.Y * 2)
 	instance.ImageRectSize = FRAME_SIZE
 	instance.BackgroundTransparency = 1
 	instance.BorderSizePixel = 0
