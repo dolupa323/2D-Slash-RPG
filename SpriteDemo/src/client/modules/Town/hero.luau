@@ -1,4 +1,4 @@
--- SpaceFighter 예제의 modules/game/spaceship.luau 패턴을 재활용:
+-- SpaceFighter 예제의 modules/game/spaceship.luau 패턴을 재활용 (동기화 테스트용 주석 수정):
 -- 플레이어가 조작하는 "유일한" 오브젝트는 스크립트에서 새로 만들지 않고, Scene Manager
 -- 플러그인으로 씬에 미리 배치해둔 뒤 scene.Objects:FindByName()으로 찾아서 쓴다.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
