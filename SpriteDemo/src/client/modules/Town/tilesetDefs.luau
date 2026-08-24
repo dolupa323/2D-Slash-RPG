@@ -1,63 +1,61 @@
--- Tile Palette 플러그인을 거치지 않고 코드에서 직접 타일을 그리기 위한 타일셋 정의.
--- 각 시트는 한 번 업로드해둔 스프라이트시트 rbxassetid이고, tiles 테이블의 index는
--- 그 시트 안에서 왼쪽부터 몇 번째 칸인지(0부터 시작)를 뜻한다. 실제 표시는
--- Instance.ImageRectOffset = Vector2.new(index * cellSize, 0)로 잘라서 쓴다.
-return {
-	ninja = {
-		assetId = "rbxassetid://129250509070949",
-		cellSize = 16,
-		displaySize = 64,
-		tiles = {
-			grass = 0,
-			path = 1,
-			dark_grass = 2,
-			pink_ground = 3,
-			snow_ground = 4,
-			rock = 5,
-			rock_white = 6,
-			boulder = 7,
-			flower_sunflower = 8,
-			flower_rose = 9,
-			bush = 10,
-			bush_spiky = 11,
-			gem_orange = 12,
-			gem_blue = 13,
-			gem_purple = 14,
-			gem_green = 15,
-			twig = 16,
-		},
-	},
-	villageProps = {
-		assetId = "rbxassetid://134959819808100",
-		cellSize = 68,
+-- 횡스크롤 개편(GandalfHardcore FREE Platformer Assets 사용)으로 이전 탑다운 타일셋 정의를
+-- 전부 교체했다. 시트 안 index는 왼쪽부터 몇 번째 칸인지(0부터).
+-- 마을 소품(집/나무/동상/텐트/잔디)은 GandalfHardcore FREE Platformer Assets의 초록 계열
+-- 원본 PNG를 그대로(또는 여백만 트리밍) 업로드한 단일 이미지라 격자가 아니다 — cellWidth/
+-- cellHeight로 원본 픽셀 크기를 지정하고 tiles.sprite=0 하나만 쓴다(가로 스트립 인덱싱 재사용,
+-- index=0이라 오프셋은 항상 0,0). displayWidth/Height를 안 주면 tiles.luau가 원본 크기 그대로
+-- 그린다 — 96px 바닥 그리드와 같은 팩 소스라 스케일이 서로 맞는다.
+local forestTilesetDefs = require(script.Parent.forestTilesetDefs)
+
+local defs = {
+	platformer = {
+		assetId = "rbxassetid://117577572195700",
+		cellSize = 96,
 		displaySize = 96,
 		tiles = {
-			torii = 0,
-			well = 1,
-			fence = 2,
+			ground = 0,
 		},
 	},
-	villageGen = {
-		assetId = "rbxassetid://94540380141996",
-		cellSize = 112,
-		displaySize = 128,
-		tiles = {
-			tree = 0,
-			stump = 1,
-			kiln = 2,
-			workbench = 3,
-			fence = 4,
-		},
+	house = {
+		assetId = "rbxassetid://117188002902354",
+		cellWidth = 184,
+		cellHeight = 224,
+		tiles = { sprite = 0 },
 	},
-	groundDetail = {
-		assetId = "rbxassetid://118115108764221",
-		cellSize = 16,
-		displaySize = 48,
-		tiles = {
-			path = 0,
-			crack1 = 1,
-			crack2 = 2,
-			sprout = 3,
-		},
+	treePine = {
+		assetId = "rbxassetid://108038629877772",
+		cellWidth = 255,
+		cellHeight = 201,
+		tiles = { sprite = 0 },
+	},
+	treeApple = {
+		assetId = "rbxassetid://73449893654515",
+		cellWidth = 255,
+		cellHeight = 201,
+		tiles = { sprite = 0 },
+	},
+	tallGrass = {
+		assetId = "rbxassetid://71895812296115",
+		cellWidth = 96,
+		cellHeight = 32,
+		tiles = { sprite = 0 },
+	},
+	statue = {
+		assetId = "rbxassetid://70502093178468",
+		cellWidth = 48,
+		cellHeight = 64,
+		tiles = { sprite = 0 },
+	},
+	tent = {
+		assetId = "rbxassetid://75978400474079",
+		cellWidth = 64,
+		cellHeight = 64,
+		tiles = { sprite = 0 },
 	},
 }
+
+for name, def in forestTilesetDefs do
+	defs[name] = def
+end
+
+return defs

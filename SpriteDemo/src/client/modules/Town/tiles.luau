@@ -15,6 +15,7 @@ local mapData = require(script.Parent.mapData)
 -- 없앤 배치로 재현 자체가 안 되는 것까지 확인함). 코드로 직접 배치하므로 격자 사이에 이미
 -- 여백을 둘 수 있지만, 방어적으로 판정 크기도 살짝 줄여둔다.
 local COLLIDER_HITBOX_SCALE = 0.9
+local GRID_CELL = 96
 
 local function buildTile(entry, defaultZIndex)
 	local def = tilesetDefs[entry.tileset]
@@ -22,20 +23,40 @@ local function buildTile(entry, defaultZIndex)
 	local index = def.tiles[entry.tile]
 	assert(index, string.format("tileset '%s'에 '%s' 타일이 없습니다", entry.tileset, entry.tile))
 
+	-- cellWidth/cellHeight가 없는 (기존) 정사각 타일셋은 cellSize로 폴백 — 바닥 타일 동작은
+	-- 그대로 유지된다. 마을 소품처럼 원본 비율 그대로 쓰는 단일 이미지는 cellWidth/Height를
+	-- 직접 지정한다(tilesetDefs.luau 참고).
+	local cellWidth = def.cellWidth or def.cellSize
+	local cellHeight = def.cellHeight or def.cellSize
+
+	-- 바닥 타일은 격자 칸 크기와 정확히 같은 크기로 이어붙이면 소수점 반올림 때문에 타일
+	-- 사이에 1px짜리 실금이 생길 수 있어서(실측 확인됨), 시각적으로는 격자 칸보다 살짝
+	-- 크게(+2px) 그려서 옆 타일과 겹치게 만든다 — 겹친 부분은 같은 이미지라 티가 안 난다.
+	local width = entry.displayWidth or entry.displaySize or (entry.isGround and (GRID_CELL + 2)) or def.displayWidth or def.displaySize or cellWidth
+	local height = entry.displayHeight or entry.displaySize or (entry.isGround and (GRID_CELL + 2)) or def.displayHeight or def.displaySize or cellHeight
+
 	local canCollide = entry.canCollide or false
 	local object = UpsideEngine.new(canCollide and "PhysicalObject" or "StaticObject")
 	object.Anchored = true
 	if canCollide then
 		object.CanCollide = true
-		object.HitboxScale = COLLIDER_HITBOX_SCALE
+		if entry.isGround then
+			-- 위에서 시각적으로만 2px 키운 걸 그대로 두면 충돌 판정도 같이 커져서 옆 바닥
+			-- 타일과 판정이 겹친다 — MCP로 직접 Play해서 좌우 이동이 전혀 안 되는 걸
+			-- 확인하고 원인을 찾았다: 캐릭터가 타일 경계에 있을 때 양쪽 바닥의 겹친 판정에
+			-- 동시에 끼어서 속도는 정상인데 위치가 전혀 안 바뀌었다. 판정 크기만 그리드
+			-- 칸(96)에 정확히 맞도록 축소해서 시각적 겹침과 충돌 판정을 분리한다.
+			object.HitboxScale = GRID_CELL / width
+		else
+			-- 장식(decor)은 CanCollide=false 이웃과 맞닿을 수 있어 경계 지터 방지용으로 줄인다.
+			object.HitboxScale = COLLIDER_HITBOX_SCALE
+		end
 	end
-
-	local size = entry.displaySize or def.displaySize
 	local instance = object.Instance
 	instance.Image = def.assetId
-	instance.ImageRectSize = Vector2.new(def.cellSize, def.cellSize)
-	instance.ImageRectOffset = Vector2.new(index * def.cellSize, 0)
-	instance.Size = UDim2.fromOffset(size, size)
+	instance.ImageRectSize = Vector2.new(cellWidth, cellHeight)
+	instance.ImageRectOffset = Vector2.new(index * cellWidth, 0)
+	instance.Size = UDim2.fromOffset(width, height)
 	instance.Position = UDim2.fromOffset(entry.x, entry.y)
 	instance.BackgroundTransparency = 1
 	instance.BorderSizePixel = 0
@@ -49,6 +70,7 @@ exports.objects = {}
 
 function exports.load(scene: Scene)
 	for _, entry in mapData.ground do
+		entry.isGround = true
 		local object = buildTile(entry, 1)
 		object:SetScene(scene)
 		table.insert(exports.objects, object)
