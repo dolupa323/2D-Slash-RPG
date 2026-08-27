@@ -45,6 +45,10 @@ function exports.load(scene: Scene)
 	-- Physics.luau는 SideView 값과 무관하게 중력을 항상 적용한다(GravityScale만 참고).
 	-- 탑다운은 중력이 없어야 하므로 이 오브젝트만 중력을 끈다.
 	hero.GravityScale = 0
+	-- 32x32 프레임 안에서 실제 캐릭터 실루엣은 픽셀 측정 결과 가운데 15x15 정도만 차지한다
+	-- (나머지는 투명 여백). 기본 Hitbox는 프레임 전체 크기를 기준으로 잡혀서 여백까지 충돌
+	-- 판정에 들어가므로, HitboxScale로 충돌 박스만 시각적 크기보다 작게 줄인다.
+	hero.HitboxScale = 0.5
 
 	local instance = hero.Instance
 	instance.Image = IDLE_DOWN
