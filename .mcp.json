@@ -9,6 +9,13 @@
       "type": "stdio",
       "command": "C:\\Users\\tjrwl\\Downloads\\upside-engine-mcp.exe",
       "args": ["--stdio"]
+    },
+    "pixellab": {
+      "type": "http",
+      "url": "https://api.pixellab.ai/mcp",
+      "headers": {
+        "Authorization": "Bearer 6bdccb41-6d83-4e9d-a596-5dd143b7c5d4"
+      }
     }
   }
 }
