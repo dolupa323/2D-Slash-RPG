@@ -1,0 +1,44 @@
+{
+  "kind": "warrior-base-equipment-set",
+  "version": 1,
+  "canvas": {
+    "width": 256,
+    "height": 256,
+    "anchor": "bottom-center"
+  },
+  "style": "chibi fantasy warrior pixel art, front-facing slight top-down RPG view",
+  "normalized_dir": "normalized",
+  "layers": [
+    {
+      "slot": "body",
+      "file": "normalized/base_body.png",
+      "description": "Base warrior body without equipment"
+    },
+    {
+      "slot": "boots",
+      "file": "normalized/boots_basic.png",
+      "description": "Basic brown leather boots overlay"
+    },
+    {
+      "slot": "armor",
+      "file": "normalized/armor_basic.png",
+      "description": "Basic iron armor overlay"
+    },
+    {
+      "slot": "helmet",
+      "file": "normalized/helmet_basic.png",
+      "description": "Basic iron helmet overlay"
+    },
+    {
+      "slot": "weapon",
+      "file": "normalized/weapon_sword_basic.png",
+      "description": "Basic iron sword overlay"
+    }
+  ],
+  "preview": "normalized/preview_equipped_basic.png",
+  "notes": [
+    "Original generated images are preserved in this directory root.",
+    "Normalized images are 256x256 RGBA PNG files with alpha.",
+    "Helmet alignment is usable as a first draft, but it does not fully cover the base hair silhouette."
+  ]
+}
