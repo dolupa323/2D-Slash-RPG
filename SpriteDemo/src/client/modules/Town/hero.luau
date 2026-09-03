@@ -148,10 +148,8 @@ function exports.start(scene: Scene)
 			facing = "right"
 		elseif velocity.X < -RUN_SPEED_THRESHOLD then
 			facing = "left"
-			moving = true
 		elseif velocity.X > RUN_SPEED_THRESHOLD then
 			facing = "right"
-			moving = true
 		end
 
 		local nextAnimation = animationFor(hero, facing, moving)
