@@ -1,5 +1,5 @@
 -- SpaceFighter 예제의 modules/globals/camera.luau 패턴을 재활용.
--- SpaceFighter는 고정 카메라(FollowSubject=false)지만, 저희는 탑다운 RPG라 캐릭터를
+-- SpaceFighter는 고정 카메라ㅇ(FollowSubject=false)지만, 저희는 탑다운 RPG라 캐릭터를
 -- 따라가야 하므로 FollowSubject=true로 바꾸고 start()에서 Subject를 잡아준다.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local packages = ReplicatedStorage:WaitForChild("packages")
