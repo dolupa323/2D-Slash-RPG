@@ -1,6 +1,13 @@
 -- SpaceFighter 예제의 src/server/main.server.luau 부트스트랩 패턴을 재활용.
 local replicatedStorage = game:WaitForChild("ReplicatedStorage")
 local setup = require(replicatedStorage.shared.util.setup)
+
+-- 로블록스 기본 3D 캐릭터/TouchGui에 기대지 않는다(CrossPlatformService:Fire로 커스텀
+-- 모바일 버튼(client/modules/globals/mobileControls.luau)이 직접 입력을 넣어준다).
+-- 이 2D 게임엔 3D 캐릭터가 필요 없으므로 계속 꺼둔다.
+local Players = game:GetService("Players")
+Players.CharacterAutoLoads = false
+
 local modulesFolder = script.Parent:FindFirstChild("modules")
 local modules = modulesFolder and setup.getModulesByPath(modulesFolder) or {}
 

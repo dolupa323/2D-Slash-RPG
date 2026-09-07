@@ -20,7 +20,8 @@
     },
     "StarterPlayer": {
       "StarterPlayerScripts": {
-        "client": { "$path": "src/client" }
+        "client": { "$path": "src/client" },
+        "$ignoreUnknownInstances": true
       }
     }
   }

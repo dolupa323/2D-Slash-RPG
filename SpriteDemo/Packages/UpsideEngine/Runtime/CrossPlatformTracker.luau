@@ -150,9 +150,14 @@ local function mobileSetup()
 	end)
 end
 
-if uis.TouchEnabled then
-	coroutine.wrap(pcall)(mobileSetup)
-end
+-- BUGFIX(local): mobileSetup()은 로블록스 기본 3D 캐릭터가 만들어주는 TouchGui에 기대는데,
+-- 이 프로젝트는 CharacterAutoLoads=false라 TouchGui가 절대 생기지 않는다. 그래서 이 함수를
+-- 켜두면 WaitForChild("TouchGui")가 영원히 멈춰서 매번 "Infinite yield possible" 경고만
+-- 찍었다. 자체 모바일 버튼(client/modules/globals/mobileControls.luau)이 CrossPlatformService
+-- 를 직접 Fire해서 대체하므로 이 경로는 더 이상 필요 없어 비활성화한다.
+-- if uis.TouchEnabled then
+-- 	coroutine.wrap(pcall)(mobileSetup)
+-- end
 
 game.StarterPlayer.DevTouchMovementMode = Enum.DevTouchMovementMode.Thumbstick
 inputSetup(uis, inputDetector)
@@ -179,7 +184,13 @@ local function animationPlayer(character, sideView)
 	if action == lastAction then --or sideView and character.IsJumping and lastAction == "up" then
 		return
 	elseif action == "none" and not lastAction:match("idle") then
-		animation = ("idle_%s"):format(lastAction)
+		-- BUGFIX(local): lastAction은 접속 직후 ""(한 번도 입력 없음)로 시작한다. 이 값을 그대로
+		-- ("idle_%s"):format(lastAction)에 넣으면 "idle_"(방향 없는 이름)가 만들어지는데, 어떤
+		-- 캐릭터의 SHEETS에도 없는 이름이라 character:Play("idle_")가 SpritePlayer에서 매 프레임
+		-- 조용히 스킵되고, lastAction이 "none"으로 저장돼버려서 입력이 들어오기 전까진 영원히
+		-- Instance.Image가 비어있게 된다(접속 직후 캐릭터가 안 보이는 버그). lastAction이 아직
+		-- 없을 때는 일반 "idle"로 폴백시켜 아래에서 defaultIdle로 정규화되게 한다.
+		animation = if lastAction == "" then "idle" else ("idle_%s"):format(lastAction)
 	end
 
 	animation = if animation == "idle" then defaultIdle else animation

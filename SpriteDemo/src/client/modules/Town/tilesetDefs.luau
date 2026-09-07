@@ -58,4 +58,10 @@ for name, def in forestTilesetDefs do
 	defs[name] = def
 end
 
+-- Tiled 변환기(tools/tiled_to_mapdata.py)가 tilesetDefs.generated.luau를 덮어쓴다.
+local generated = require(script.Parent["tilesetDefs.generated"])
+for name, def in generated do
+	defs[name] = def
+end
+
 return defs

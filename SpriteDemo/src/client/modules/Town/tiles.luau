@@ -52,10 +52,21 @@ local function buildTile(entry, defaultZIndex)
 			object.HitboxScale = COLLIDER_HITBOX_SCALE
 		end
 	end
+	-- Tiled에서 온 타일셋은 def.columns로 여러 줄 시트를 쓴다(가로로 다 못 채우면 다음 줄로).
+	-- 기존 수작업 타일셋(columns 없음)은 그대로 한 줄 가정을 유지한다 — 동작 안 바뀜.
+	local offsetX, offsetY
+	if def.columns then
+		local col = index % def.columns
+		local row = index // def.columns
+		offsetX, offsetY = col * cellWidth, row * cellHeight
+	else
+		offsetX, offsetY = index * cellWidth, 0
+	end
+
 	local instance = object.Instance
 	instance.Image = def.assetId
 	instance.ImageRectSize = Vector2.new(cellWidth, cellHeight)
-	instance.ImageRectOffset = Vector2.new(index * cellWidth, 0)
+	instance.ImageRectOffset = Vector2.new(offsetX, offsetY)
 	instance.Size = UDim2.fromOffset(width, height)
 	instance.Position = UDim2.fromOffset(entry.x, entry.y)
 	instance.BackgroundTransparency = 1
@@ -69,6 +80,7 @@ local exports = {}
 exports.objects = {}
 
 function exports.load(scene: Scene)
+	-- 레거시 2단(ground/decor) 필드 — 손으로 짠 맵에서 계속 쓸 수 있게 유지.
 	for _, entry in mapData.ground do
 		entry.isGround = true
 		local object = buildTile(entry, 1)
@@ -80,6 +92,20 @@ function exports.load(scene: Scene)
 		local object = buildTile(entry, 5)
 		object:SetScene(scene)
 		table.insert(exports.objects, object)
+	end
+
+	-- Tiled 변환기(tools/tiled_to_mapdata.py)가 만드는 N-레이어 구조. 레이어 이름별
+	-- zIndex는 변환기 쪽 LAYER_ZINDEX 테이블에서 이미 확정되어 mapData에 박혀 온다.
+	for _, layer in mapData.layers or {} do
+		local isGroundLayer = layer.name:lower() == "ground"
+		for _, entry in layer.entries do
+			if isGroundLayer then
+				entry.isGround = true
+			end
+			local object = buildTile(entry, layer.zIndex)
+			object:SetScene(scene)
+			table.insert(exports.objects, object)
+		end
 	end
 end
 

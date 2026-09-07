@@ -11,7 +11,12 @@
 -- 플러그인으로 직접 배치하는 쪽으로 전환. 이 파일은 이제 빈 배열만 유지한다(tiles.luau가
 -- 형식을 기대하므로 구조는 남겨둔다). 캐릭터가 밟는 바닥 높이(y=191)는 hero.luau의
 -- GROUND_TOP_Y 상수에 그대로 남아있다 — 시각적 바닥 타일이 없어도 그 높이에서 멈춘다.
+-- Tiled 변환기(tools/tiled_to_mapdata.py)가 mapData.generated.luau를 덮어쓴다 —
+-- 그 파일의 `layers`를 여기 병합해서 tiles.luau가 그대로 소비한다.
+local generated = require(script.Parent["mapData.generated"])
+
 return {
 	ground = {},
 	decor = {},
+	layers = generated.layers,
 }
