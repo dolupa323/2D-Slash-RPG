@@ -46,6 +46,7 @@ function exports.load(scene: Scene)
 	hero.Anchored = false
 	hero.HitboxScale = 0.6
 	hero.GravityScale = 0
+	hero.WalkSpeed = 80 -- default is 150; slowed down further
 	hero.SecondsPerFrame = SECONDS_PER_FRAME
 
 	local instance = hero.Instance
