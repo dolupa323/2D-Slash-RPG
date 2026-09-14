@@ -18,7 +18,7 @@ Per-tile "canCollide" is read from a Tiled custom bool property named
 Property > bool). Missing property defaults to False.
 
 Usage:
-    python tiled_to_mapdata.py --map path/to/map.json --out-dir <SpriteDemo>/src/client/modules/Town
+    python tiled_to_mapdata.py --map path/to/map.json --out-dir <SpriteDemo>/src/client/modules/village
     python tiled_to_mapdata.py --map map.json --out-dir . --asset-map assets.json
 
 --asset-map is an optional JSON file: {"<tiled-tileset-name>": "rbxassetid://123..."}
