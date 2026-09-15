@@ -74,7 +74,15 @@ function buildRequests(requests)
 
 		if clientId == 0 then
 			pendingRequest:Accept()
-		elseif authorityType == "Client" or (isServer and isNewObject) then
+		elseif authorityType == "Client" or isNewObject then
+			-- BUGFIX(local): "새 오브젝트는 통과시켜준다" 예외가 원래 `isServer and
+			-- isNewObject`라 서버에서만 적용됐다. 그래서 클라이언트→서버 첫 홉은
+			-- 통과(서버가 승인)했지만, 서버가 그걸 다른 클라이언트들에게 브로드캐스트할
+			-- 때 각 클라이언트 입장에서는 isServer가 false라 이 예외를 못 받고,
+			-- authorityType(아무도 설정 안 해서 항상 기본값 "Server")만 남아 조건이
+			-- 항상 거짓이 됐다 — 결과적으로 플레이어 캐릭터 같은 클라이언트 소유
+			-- 오브젝트가 다른 클라이언트 화면에 전혀 안 나타나는 버그였다. isServer
+			-- 조건을 빼서 "처음 보는 오브젝트는 어느 realm이든 일단 통과"로 통일한다.
 			networkingService:Fire("ReplicationRequest", pendingRequest)
 		end
 	end

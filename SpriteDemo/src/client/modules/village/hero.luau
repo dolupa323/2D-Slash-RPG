@@ -42,51 +42,62 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local packages = ReplicatedStorage:WaitForChild("packages")
 local UpsideEngine = require(packages:WaitForChild("UpsideEngine"))
 local CrossPlatformService = UpsideEngine.GetService("CrossPlatformService")
+local NetworkingService = UpsideEngine.GetService("NetworkingService")
 
-local CELL = Vector2.new(128, 72)
-local DISPLAY_SCALE = 90 / CELL.Y -- 캐릭터 크기 축소 요청: 실측 높이 117.6px -> 90px
+-- 2026-09-15: 캐릭터를 talchar(가면 캐릭터)에서 "Warrior"(사무라이) 시트로 교체.
+-- Source: Assets/character/talchar/three/Warrior/{idle,jump,run}_{left,right}.png
+-- (원본 4480x1800, 7x5칸, 셀 640x360 — 로블록스 데칼 업로드가 1024x1024로 강제
+-- 축소되는 걸 확인했으므로(위 이력 참고) 5x7칸, 셀 192x108, 전체 960x756로 다시
+-- 패킹해서 1024 이하로 올렸다.)
+local CELL = Vector2.new(192, 108)
+local DISPLAY_SCALE = 105 / CELL.Y -- 캐릭터 크기 축소 요청: 130px -> 105px
 local RUN_SPEED_THRESHOLD = 20
 local AIR_SPEED_THRESHOLD = 90
 local SPAWN_POSITION = UDim2.fromOffset(0, 0)
 
 -- 상태+방향당 시트 이미지 하나. 프레임 전환은 ImageRectOffset만 바꾼다(재다운로드 없음).
 local SHEETS = {
-	idle_left = "rbxassetid://95889205116414",
-	idle_right = "rbxassetid://128191018293807",
-	jump_left = "rbxassetid://128031828795179",
-	jump_right = "rbxassetid://89346281016673",
-	run_left = "rbxassetid://138593483530939",
-	run_right = "rbxassetid://140173495359769",
+	idle_left = "rbxassetid://135408426447552",
+	idle_right = "rbxassetid://91491363836712",
+	jump_left = "rbxassetid://131553753197052",
+	jump_right = "rbxassetid://71319291970754",
+	run_left = "rbxassetid://134239558167604",
+	run_right = "rbxassetid://95749792955818",
 }
 
+-- (실측 이력 3) 로블록스가 "4096 업로드 지원"이라고 홍보했지만, 실제 데칼 업로드
+-- 경로는 2026년 중반 기준으로도 여전히 1024x1024로 강제 축소된다(개발자 포럼 다수
+-- 보고 + 우리 자체 Play 테스트로 재확인: 4032x1620으로 올렸다가 예전과 똑같이
+-- 여러 프레임이 겹쳐 보이는 버그 재현됨). 그래서 6장 전부 1024 이하 기준(5x7칸,
+-- 셀 192x108)으로 통일한다.
+--
 -- 상태+방향별 그리드: cols(한 줄에 몇 칸), frames(총 프레임 수). 셀 크기는 6장 전부
--- CELL(128x72)로 통일. run만 loopStart/loopEnd가 따로 있다 — 도입부(가속)를 한 번
--- 재생한 뒤 실제 반복 구간만 계속 도는데, 이 반복 구간을 "몇 번째 줄"처럼 눈대중으로
--- 추측하지 않고 원본 GIF 36프레임 전체를 프레임간 픽셀 차이로 분석해서 실제로 자세가
--- 10프레임 주기로 되풀이되는 구간을 직접 찾았다(예: right는 15번째~24번째 GIF
--- 프레임이 25번째~34번째와 거의 동일 — 10프레임 주기). 우리 셀 번호는 GIF 프레임
--- 번호보다 1 작으므로(셀1=GIF프레임2) 그만큼 보정해서 넣었다. left/right가 완전히
--- 대칭으로 그려진 게 아니라 주기 구간이 서로 다르다 — left는 12~22번째 GIF 프레임,
--- right는 15~24번째 GIF 프레임에서 반복된다.
+-- CELL(192x108)로 통일. run의 loopStart/loopEnd는 Warrior 전용 참고 자료(22.gif —
+-- run_left와 동일한 애니메이션, 36프레임)를 프레임간 픽셀 차이로 분석해서 찾았다.
+-- run_left는 22.gif에서 15~22번째 프레임이 8프레임 주기로 가장 깨끗하게 반복되고
+-- (우리 셀 번호=GIF 프레임-1이므로 14~21), run_right는 참고 GIF가 없어서 자체
+-- run_right.png의 35프레임을 같은 방식으로 직접 분석했더니 동일하게 14~21에서
+-- 반복됐다(두 방향이 서로 다른 방법으로 같은 결과가 나와 교차검증됨).
 local GRID = {
-	idle_left = { cols = 7, frames = 35 },
-	idle_right = { cols = 7, frames = 35 },
-	jump_left = { cols = 7, frames = 35 },
-	jump_right = { cols = 7, frames = 35 },
-	run_left = { cols = 7, frames = 35, loopStart = 11, loopEnd = 21 }, -- GIF 프레임 12~22
-	run_right = { cols = 7, frames = 35, loopStart = 14, loopEnd = 23 }, -- GIF 프레임 15~24
+	idle_left = { cols = 5, frames = 35 },
+	idle_right = { cols = 5, frames = 35 },
+	jump_left = { cols = 5, frames = 35 },
+	jump_right = { cols = 5, frames = 35 },
+	run_left = { cols = 5, frames = 35, loopStart = 14, loopEnd = 21 },
+	run_right = { cols = 5, frames = 35, loopStart = 14, loopEnd = 21 },
 }
 
 -- idle: 35장 * 1/12s ≈ 2.9s/루프.
--- run: 도입부 재생 후 실측으로 찾은 반복 구간(약 10~11장)을 계속 반복 — 10장 * 1/35s
---      ≈ 0.29s/사이클.
+-- run: 도입부(1~13) 재생 후 반복 구간(14~21, 8장)만 계속 반복 — 1/14s(0.57s)는 너무
+--      빨랐고 1/10s(0.8s)/1/8s(1s)는 너무 느렸다. 8장 * 1/12s ≈ 0.67s/사이클로 그
+--      사이로 좁혔다.
 -- jump: 상승+하강 35장을 한 번에 잇는 시퀀스라 전체 공중 체공을 커버해야 함 —
 --       35장 * 1/30s ≈ 1.17s. LOOPING=false라 재생이 끝나면 마지막 프레임에서
 --       멈춰 착지까지 유지된다.
 local SECONDS_PER_FRAME = {
 	idle = 1 / 12,
 	jump = 1 / 30,
-	run = 1 / 35,
+	run = 1 / 12,
 }
 local LOOPING = { idle = true, jump = false, run = true }
 
@@ -139,6 +150,16 @@ function exports.load(scene: Scene)
 	CrossPlatformService.DefaultControllersEnabled = true
 	CrossPlatformService:SetPlayerCharacter(hero)
 
+	-- 이 hero는 이 클라이언트 로컬에서만 만들어지는 오브젝트라, 이 호출이 없으면 서버도
+	-- 다른 플레이어도 내 캐릭터의 존재 자체를 모른다(맵 타일은 ReplicatedStorage에 담긴
+	-- 정적 데이터를 각자 독립적으로 읽어서 그리는 거라 별개 — 실시간으로 서로 위치/
+	-- 애니메이션을 주고받는 건 NetworkingService를 거쳐야 한다). ReplicateOnChange는
+	-- instance.Changed(Position/Image/ImageRectOffset 등)에 물려서, 매초
+	-- ReplicationPerSecond(기본 15)회 한도로 서버 경유 브로드캐스트한다 — 서버·다른
+	-- 클라이언트 쪽에서 이 요청을 승인/수신하는 리스너는
+	-- server/modules/replication.luau, client/modules/globals/replication.luau에 있다.
+	NetworkingService:ReplicateOnChange(hero)
+
 	exports.hero = hero
 end
 
@@ -165,6 +186,8 @@ function exports.start(scene: Scene)
 		local frameClock = 0
 		local elapsed = 0
 		local yHistory = {} -- {t, y} 샘플들, 최근 POSITION_WINDOW초 분량만 유지
+		local lastY = nil
+		local lastElapsed = nil
 
 		-- 포물선 정점에서는 estimatedVelocityY가 순간적으로 0 근처를 지나간다. 매 프레임
 		-- 속도만으로 상태를 다시 판단하면 정점에서 "착지했다"고 착각해 idle/run으로
@@ -189,7 +212,16 @@ function exports.start(scene: Scene)
 		local phaseFall = false
 		local fallStartTime = 0
 
-		local function stateFor(moving: boolean, estimatedVelocityY: number, currentTime: number): string
+		-- idle은 "동작 사이 중간 경유지"가 아니라 "일정 시간 입력이 없었을 때"만 들어가야
+		-- 한다. moving이 단 한 프레임이라도 false면 바로 idle로 튀어버리면, 착지 직후
+		-- run 키를 누르고 있어도 잠깐씩 idle이 끼어들거나(입력 폴링 타이밍), 원래
+		-- 자연스러운 동작 흐름(jump→run 직행 등)이 전부 idle을 거쳐가는 것처럼 보인다.
+		-- 그래서 idle 진입에만 디바운스를 걸고, run/jump로의 전환은 기존처럼 즉시
+		-- 이루어지게 한다 — moving이 true가 되는 즉시 idleSince를 지워서 취소한다.
+		local IDLE_DELAY = 0.5
+		local idleSince = nil
+
+		local function stateFor(moving: boolean, estimatedVelocityY: number, currentTime: number, instantVelocityY: number): string
 			if grounded then
 				if estimatedVelocityY < -AIR_SPEED_THRESHOLD then
 					grounded = false
@@ -200,21 +232,38 @@ function exports.start(scene: Scene)
 					phaseFall = true
 					fallStartTime = currentTime
 				end
+				-- 착지 판정은 평균(estimatedVelocityY, POSITION_WINDOW=0.12s 스무딩)이 아니라
+				-- 직전 1프레임 변화량(instantVelocityY)으로 본다 — 평균은 정점 오판 방지엔
+				-- 좋지만, 실제로 착지한 뒤에도 문턱 아래로 내려가기까지 최대 0.12s가 걸려서
+				-- 착지→run 전환이 눈에 띄게 느려 보이는 원인이었다. Position 자체는 멈추면
+				-- 완전히 고정된다는 게 이미 확인됐으니 1프레임 델타로도 신뢰할 수 있다.
 				if
 					phaseFall
 					and currentTime - fallStartTime > MIN_FALL_DURATION
-					and math.abs(estimatedVelocityY) < SETTLE_THRESHOLD
+					and math.abs(instantVelocityY) < SETTLE_THRESHOLD
 				then
 					grounded = true
 				end
 			end
 
 			if not grounded then
+				idleSince = nil
 				return "jump"
 			end
 
 			if moving then
+				idleSince = nil
 				return "run"
+			end
+
+			-- 정지 후보 상태: IDLE_DELAY가 지나기 전까지는 currentState를 그대로 유지해서
+			-- (예: 착지 직후라면 jump 마지막 프레임, 달리다 멈췄다면 run) 애니메이션이
+			-- 중간에 끊기지 않게 하고, 시간이 다 지나야 실제로 idle로 넘어간다.
+			if not idleSince then
+				idleSince = currentTime
+			end
+			if currentTime - idleSince < IDLE_DELAY then
+				return currentState
 			end
 
 			return "idle"
@@ -229,6 +278,9 @@ function exports.start(scene: Scene)
 				yHistory = {}
 				grounded = true
 				phaseFall = false
+				lastY = nil
+				lastElapsed = nil
+				idleSince = nil
 			end
 
 			local currentY = instance.Position.Y.Offset
@@ -243,6 +295,16 @@ function exports.start(scene: Scene)
 			if span > 0 then
 				estimatedVelocityY = (currentY - oldest.y) / span
 			end
+
+			local instantVelocityY = 0
+			if lastY and lastElapsed then
+				local instantSpan = elapsed - lastElapsed
+				if instantSpan > 0 then
+					instantVelocityY = (currentY - lastY) / instantSpan
+				end
+			end
+			lastY = currentY
+			lastElapsed = elapsed
 
 			local velocity = hero.Velocity or Vector2.zero
 			local leftHeld = UserInputService:IsKeyDown(Enum.KeyCode.A) or UserInputService:IsKeyDown(Enum.KeyCode.Left)
@@ -264,7 +326,7 @@ function exports.start(scene: Scene)
 				facing = "right"
 			end
 
-			local nextStateName = stateFor(moving, estimatedVelocityY, elapsed)
+			local nextStateName = stateFor(moving, estimatedVelocityY, elapsed, instantVelocityY)
 			if nextStateName ~= currentState then
 				currentState = nextStateName
 				currentFrame = 1
@@ -290,6 +352,20 @@ function exports.start(scene: Scene)
 			instance.Image = SHEETS[currentState .. "_" .. facing]
 			instance.ImageRectSize = CELL
 			instance.ImageRectOffset = Vector2.new(col * CELL.X, row * CELL.Y)
+
+			-- BUGFIX(local): CrossPlatformService:SetPlayerCharacter(hero)가 내부적으로
+			-- CrossPlatformTracker의 자동 애니메이션 시스템(animationPlayer)을 매 프레임
+			-- 돌리는데, 이게 우리가 부른 적도 없는 hero:Play(...)를 자기 마음대로 호출해서
+			-- hero.IsPlaying을 계속 true로 만든다. 그런데 NetworkingService.luau의
+			-- getInstanceData()는 "object:IsA(Sprite)이고 IsPlaying이면 ImageRectOffset을
+			-- 복제 데이터에서 아예 뺀다"고 되어 있다(엔진 자체 SetSpriteSheet/Play 시스템을
+			-- 쓸 때 프레임 진행을 각 클라이언트가 알아서 로컬로 재생하게 하려는 용도) —
+			-- 우리는 그 시스템을 안 쓰고 직접 ImageRectOffset을 계산해서 넣는데 IsPlaying만
+			-- 남의 손에 true로 켜져서, 다른 플레이어에게 위치는 복제되는데 애니메이션
+			-- 프레임(ImageRectOffset)만 통째로 빠지는 원인이었다. CrossPlatformTracker가
+			-- 우리보다 먼저 이 프레임에 Heartbeat를 도니, 우리 쪽에서 매 프레임 마지막에
+			-- 다시 꺼서 무효화한다.
+			hero.IsPlaying = false
 		end)
 	end)
 end
