@@ -9,6 +9,11 @@ local CrossPlatformService = UpsideEngine.GetService("CrossPlatformService")
 local exports = {}
 
 function exports.load(scene: Scene)
+	-- sceneLoader.luau(unloadModules)는 unload() 호출 시 scene을 안 넘겨준다(load/start만
+	-- 넘김) — 이 프로젝트 다른 전역 모듈들(hud.luau, hero.luau 등)도 전부 load 시점에
+	-- 필요한 값을 모듈에 캐싱해뒀다가 unload에서 그 캐시를 쓰는 방식이라 같은 패턴을 쓴다.
+	exports.camera = scene.Camera
+
 	local sceneInstance = scene.Instance :: Folder
 	scene.Camera.FollowSubject = false
 	scene.Camera:SetPosition(UDim2.fromScale(0.5, 0.5))
@@ -26,7 +31,10 @@ function exports.start(scene: Scene)
 end
 
 function exports.unload(scene: Scene)
-	scene.Camera.FollowSubject = false
+	if exports.camera then
+		exports.camera.FollowSubject = false
+		exports.camera = nil
+	end
 end
 
 return exports
