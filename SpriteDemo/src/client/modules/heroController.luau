@@ -52,7 +52,10 @@ local packages = ReplicatedStorage:WaitForChild("packages")
 local UpsideEngine = require(packages:WaitForChild("UpsideEngine"))
 local CrossPlatformService = UpsideEngine.GetService("CrossPlatformService")
 local NetworkingService = UpsideEngine.GetService("NetworkingService")
+local SceneManager = UpsideEngine.GetService("SceneManager")
 local travelState = require(script.Parent.travelState)
+local damageNumbers = require(script.Parent.damageNumbers)
+local camera = require(script.Parent.globals.camera)
 
 -- 서버 권위 몬스터(server/modules/sproutGrub.luau)가 어그로/피격 판정을 하려면 이
 -- 히어로가 어디 있는지, 언제 공격했는지를 알아야 한다 — 서버는 히어로를 직접 안 만드니까
@@ -61,6 +64,10 @@ local travelState = require(script.Parent.travelState)
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local reportPositionRemote = Remotes:WaitForChild("ReportHeroPosition")
 local reportAttackRemote = Remotes:WaitForChild("ReportHeroAttack")
+-- 몬스터가 서버 권위(server/modules/sproutGrub.luau)라 "맞았다" 판정 자체는 서버가 하고,
+-- 실제 Health 차감은 이 클라이언트가 자기 로컬 히어로에 대고 해야 한다(히어로는
+-- client-authoritative 오브젝트라 서버가 직접 필드를 건드릴 수 없음).
+local monsterAttackedRemote = Remotes:WaitForChild("MonsterAttackedPlayer")
 
 -- 2026-09-15: 캐릭터를 talchar(가면 캐릭터)에서 "Warrior"(사무라이) 시트로 교체.
 -- Source: Assets/character/talchar/three/Warrior/{idle,jump,run}_{left,right}.png
@@ -87,6 +94,9 @@ local AIR_SPEED_THRESHOLD = 90
 local DEFAULT_SPAWN_POSITION = UDim2.fromOffset(0, 0)
 local SPAWN_NAME = "Spawn"
 local PORTAL_PREFIX = "Portal_"
+-- 죽었을 때 리스폰할 "가장 가까운 마을" — 지금은 마을이 하나뿐이라 고정값이지만,
+-- 나중에 마을이 여러 개면 죽은 위치 기준으로 가장 가까운 마을을 찾도록 확장하면 된다.
+local TOWN_SCENE_NAME = "village"
 
 local function findObjectByName(scene: Scene, name: string)
 	for _, object in scene.Objects do
@@ -175,6 +185,16 @@ local SECONDS_PER_FRAME = {
 	run = 1 / 12,
 	attack = 1 / 40,
 }
+-- (실측 버그 이력) OpenMMO(github.com/Julian-adv/OpenMMO) COMBAT.md 참고 — 판정은
+-- "애니메이션이 끝나야" 나가는 게 아니라 스윙의 "임팩트 시점"(그 프로젝트 기준 전체
+-- 길이의 약 40%)에 딱 맞춰 나가야 한다. 처음엔 사이클이 끝나는 시점(35프레임째)에
+-- 판정을 신고했는데, 그러면 실제 캐릭터가 칼을 휘두르는 시점(애니메이션 중간)과 데미지
+-- 표시 시점(애니메이션 끝)이 완전히 어긋나 보였다. 35장 중 약 40% 지점인 15번째
+-- 프레임으로 옮긴다.
+local ATTACK_IMPACT_FRAME = 15
+-- (Phase 1 전투 타격감, ROADMAP.md) 임팩트 판정을 한 프레임(점)이 아니라 몇 프레임짜리
+-- 구간으로 넓힌다 — 아래 ATTACK_IMPACT_WINDOW_FRAMES 프레임 동안 계속 신고.
+local ATTACK_IMPACT_WINDOW_FRAMES = 3
 local LOOPING = { idle = true, jump = false, run = true, attack = false }
 
 local exports = {}
@@ -221,6 +241,11 @@ function exports.load(scene: Scene)
 	hero.HitboxScale = 0.28
 	hero.WalkSpeed = 80
 	hero.JumpPower = 150 -- 기본값
+	-- 임시로 체력을 크게 올려둔다(테스트 중 몬스터한테 죽어서 자꾸 마을로 튕기면
+	-- 재현/디버깅이 끊겨서 불편하다는 요청) — 밸런싱 확정되면 원래 값(Character
+	-- 기본 100)으로 되돌릴 것.
+	hero.MaxHealth = 1000
+	hero.Health = 1000
 
 	local instance = hero.Instance
 	instance.AnchorPoint = Vector2.new(0.5, 1) -- 발밑 중앙 기준(바닥에 닿는 지점 고정)
@@ -265,6 +290,78 @@ function exports.start(scene: Scene)
 		return
 	end
 
+	-- (실측 버그 이력) 처음엔 여기에 히트스탑(맞는 순간 애니메이션 잠깐 정지) + 넉백
+	-- (맞은 반대 방향으로 velocity 임펄스)을 같이 넣었는데, 넉백이 velocity.X를 바꿔서
+	-- "키를 안 누르고 있을 때 velocity로 facing을 정하는" 로직(아래 stateFor 근처)이
+	-- 넉백 방향으로 캐릭터를 휙 돌려버렸다 — 몬스터를 마주보고 공격 중에 맞으면 순간
+	-- 반대로 돌아서서, 그 상태로 나가는 다음 공격 신고가 엉뚱한 방향(facing)으로 서버에
+	-- 전달돼 사거리 판정을 통과 못 해 데미지 숫자도 안 뜨는 연쇄 버그였다. 이 구현에서는
+	-- 히트스탑/넉백 둘 다 불필요하다고 판단해서 제거하고, 대신 맞았을 때 캐릭터가 아주
+	-- 잠깐 회색으로 깜빡이는 것만 넣는다.
+	local HIT_FLASH_COLOR = Color3.fromRGB(120, 120, 120)
+	local HIT_FLASH_BLINK_INTERVAL = 0.06
+	local HIT_FLASH_BLINK_COUNT = 3
+	local hitFlashToken = 0
+
+	local function playHitFlash()
+		hitFlashToken += 1
+		local token = hitFlashToken
+		task.spawn(function()
+			for i = 1, HIT_FLASH_BLINK_COUNT do
+				if hitFlashToken ~= token then
+					return
+				end
+				hero.Instance.ImageColor3 = HIT_FLASH_COLOR
+				task.wait(HIT_FLASH_BLINK_INTERVAL)
+				if hitFlashToken ~= token then
+					return
+				end
+				hero.Instance.ImageColor3 = Color3.new(1, 1, 1)
+				if i < HIT_FLASH_BLINK_COUNT then
+					task.wait(HIT_FLASH_BLINK_INTERVAL)
+				end
+			end
+		end)
+	end
+
+	-- 몬스터(서버 권위)가 "너 맞았다"고 알려주면, 그 데미지를 내 로컬 히어로에 직접 적용한다.
+	exports.monsterAttackedConnection = monsterAttackedRemote.OnClientEvent:Connect(function(damage, _attackerX)
+		if typeof(damage) ~= "number" then
+			return
+		end
+		hero:UpdateHealth(math.max(hero.Health - damage, 0))
+		damageNumbers.Show(hero.Instance, damage, Color3.fromRGB(255, 70, 70))
+		-- Phase 1 전투 타격감(ROADMAP.md) — 맞았을 때 화면이 살짝 흔들리는 피드백.
+		camera.Shake(0.2, 6)
+		playHitFlash()
+	end)
+
+	-- (실측 버그 이력) 사망 시 "이 씬의 Spawn" 지점만 찾고, 없으면 그냥 (0,0)으로
+	-- 텔레포트했다 — 그런데 사냥터(Backfield)엔 애초에 Spawn 오브젝트가 없어서(안전
+	-- 지대가 아니니까), 몬스터한테 죽으면 사냥터 한복판의 임의 좌표(0,0)로 떨어지곤
+	-- 했다. 그 자리가 지형과 안 맞으면 계속 낙하 리셋을 반복하며 "튀는" 것처럼 보였다.
+	-- 원래 정한 규칙(세션 초반 설계)대로 되돌린다: 죽으면 "가장 가까운 마을"로
+	-- 리스폰한다 — 지금 씬에 Spawn이 있으면(마을처럼 안전지대인 씬) 그대로 쓰고,
+	-- 없으면(사냥터 등) 마을 씬으로 이동시켜서 그 씬의 Spawn을 쓰게 한다(포탈과 똑같은
+	-- 방식 — scene:Enable()이 sceneLoader.luau의 씬 전환을 그대로 태운다).
+	exports.deathConnection = hero:On("Died", function()
+		hero.Health = hero.MaxHealth
+
+		local spawnObject = findObjectByName(scene, SPAWN_NAME)
+		if spawnObject then
+			hero.Instance.Position = spawnObject.Instance.Position
+			return
+		end
+
+		local townScene = SceneManager:FindByName(TOWN_SCENE_NAME)
+		if townScene then
+			townScene:Enable()
+		else
+			warn(('heroController: "%s" 마을 씬을 찾을 수 없어서 안전 좌표로 대체합니다.'):format(TOWN_SCENE_NAME))
+			hero.Instance.Position = DEFAULT_SPAWN_POSITION
+		end
+	end)
+
 	-- 모바일 방향 버튼(mobileControls.luau)은 실제 키보드를 누르는 게 아니라
 	-- CrossPlatformService:Fire("InputBegin"/"InputEnd", {Action=...})를 직접 호출한다
 	-- (PC 키보드도 엔진 내부적으로 Runtime/CrossPlatformTracker.luau의 inputDetector를
@@ -280,13 +377,22 @@ function exports.start(scene: Scene)
 	-- attackState.active는 "지금 공격 애니메이션 재생 중인가"를 나타내는 별도 플래그다.
 	-- 클로저 밖(task.spawn Heartbeat)에서도 읽어야 해서 테이블로 감싼다.
 	local attackState = { active = false }
+	-- 공격 사거리를 서버가 "정면 방향"으로 판정하려면 현재 바라보는 방향을 같이 신고해야
+	-- 한다. facing 자체는 아래 애니메이션 루프(task.spawn) 안에서만 계산되는 로컬
+	-- 변수라 이 바깥(onInputBegin)에서 못 읽는다 — 테이블로 감싸서 애니메이션 루프가
+	-- 매 프레임 갱신하고 여기서는 그 최신값만 읽는다.
+	local facingState = { value = "right" }
 	local function onInputBegin(input)
 		local action = input.Action and input.Action:lower()
 		if action == "attack" then
+			-- (실측 버그 이력) 예전엔 여기서 키를 누르는 "그 즉시" 서버에 공격 판정을
+			-- 신고했다 — 그러면 F를 광속 연타할 때 애니메이션은 한 번만 재생되는데
+			-- 판정(서버 데미지)은 누른 횟수만큼 들어가는 버그가 생겼다. 실제 판정
+			-- 신고는 아래 애니메이션 루프에서 스윙 사이클의 "임팩트 프레임"(위
+			-- ATTACK_IMPACT_FRAME 주석 참고 — OpenMMO 방식)에서 한 사이클당 딱 한 번만
+			-- 하도록 옮겼다 — 여기서는 스윙을 "시작"만 시킨다.
 			heldActions.attack = true
 			attackState.active = true
-			local position = hero.Instance.Position
-			reportAttackRemote:FireServer(position.X.Offset, position.Y.Offset)
 			return
 		end
 		if action and heldActions[action] ~= nil then
@@ -323,6 +429,8 @@ function exports.start(scene: Scene)
 		-- 죽인다(NetworkingService 자체 리플리케이션 주기인 15Hz보다 살짝 낮음).
 		local REPORT_INTERVAL = 1 / 10
 		local reportClock = 0
+		-- 이번 스윙 사이클에서 임팩트 프레임 판정을 이미 신고했는지(사이클당 한 번만).
+		local impactFired = false
 
 		-- 포물선 정점에서는 estimatedVelocityY가 순간적으로 0 근처를 지나간다. 매 프레임
 		-- 속도만으로 상태를 다시 판단하면 정점에서 "착지했다"고 착각해 idle/run으로
@@ -467,6 +575,7 @@ function exports.start(scene: Scene)
 			elseif velocity.X > RUN_SPEED_THRESHOLD then
 				facing = "right"
 			end
+			facingState.value = facing
 
 			local nextStateName = stateFor(moving, estimatedVelocityY, elapsed, instantVelocityY)
 			-- 공격은 이동/점프 판정과 별개로 "누른 순간 한 번" 우선 재생되는 오버레이
@@ -500,6 +609,9 @@ function exports.start(scene: Scene)
 				currentState = nextStateName
 				currentFrame = 1
 				frameClock = 0
+				if nextStateName == "attack" then
+					impactFired = false
+				end
 			else
 				frameClock += delta
 				while frameClock >= SECONDS_PER_FRAME[currentState] do
@@ -508,15 +620,34 @@ function exports.start(scene: Scene)
 				end
 			end
 
+			-- OpenMMO 방식(위 ATTACK_IMPACT_FRAME 주석 참고): 판정은 사이클이 끝날 때가
+			-- 아니라 스윙 중간의 "임팩트 프레임"에서 이루어진다. Cheruton은 판정을 "점"이
+			-- 아니라 "몇 프레임짜리 구간"으로 켜두는데(실제 히트박스가 여러 프레임 동안
+			-- 켜져 있음), 우리도 임팩트 프레임 근처 ATTACK_IMPACT_WINDOW_FRAMES 프레임
+			-- 구간 동안 매 프레임 신고해서 프레임 드롭/렉으로 정확히 그 한 프레임을
+			-- 건너뛰어도 맞도록 관대하게 만든다 — 서버(sproutGrub.luau)가 같은 스윙 안의
+			-- 중복 신고를 쿨다운으로 걸러서 데미지가 중복 적용되지는 않는다.
+			if
+				currentState == "attack"
+				and currentFrame >= ATTACK_IMPACT_FRAME
+				and currentFrame < ATTACK_IMPACT_FRAME + ATTACK_IMPACT_WINDOW_FRAMES
+			then
+				impactFired = true
+				local position = hero.Instance.Position
+				reportAttackRemote:FireServer(position.X.Offset, position.Y.Offset, facingState.value)
+			end
+
 			local grid = GRID[currentState .. "_" .. facing]
 			local loopEnd = grid.loopEnd or grid.frames
 			local loopStart = grid.loopStart or 1
 			if currentFrame > loopEnd then
 				if currentState == "attack" then
 					if heldActions.attack then
-						-- F를 계속 누르고 있으면 한 번 다 재생된 즉시 처음부터 다시(연속 공격).
+						-- F를 계속 누르고 있으면 한 번 다 재생된 즉시 처음부터 다시(연속
+						-- 공격) — 다음 사이클의 임팩트 판정을 다시 받을 수 있게 리셋.
 						currentFrame = 1
 						frameClock = 0
+						impactFired = false
 					else
 						-- 뗐으면 오버레이 해제 — 다음 프레임의 stateFor 결과(idle/run/jump)로 복귀.
 						attackState.active = false
@@ -567,6 +698,14 @@ function exports.unload(scene: Scene)
 	if exports.replicationConnection then
 		exports.replicationConnection:Disconnect()
 		exports.replicationConnection = nil
+	end
+	if exports.monsterAttackedConnection then
+		exports.monsterAttackedConnection:Disconnect()
+		exports.monsterAttackedConnection = nil
+	end
+	if exports.deathConnection then
+		exports.deathConnection:Disconnect()
+		exports.deathConnection = nil
 	end
 	-- 참조만 지우면 Roblox Instance(스프라이트)는 이전 씬의 GameFrame 안에 그대로
 	-- 남아있는다 — 명시적으로 Destroy해야 실제로 사라진다.

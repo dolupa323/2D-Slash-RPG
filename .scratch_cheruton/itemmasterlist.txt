@@ -1,0 +1,113 @@
+{
+  "item_spawn": {
+    "tutorial": {
+      "ItemIndexes": 3,
+      "ItemName1": "Gold",
+      "ItemChance1": 80,
+      "ItemMinQ1": 2,
+      "ItemMaxQ1": 5,
+      "ItemType1": "Money",
+      "ItemName2": "Potion Tube",
+      "ItemChance2": 100,
+      "ItemMinQ2": 1,
+      "ItemMaxQ2": 2,
+      "ItemType2": "Consum",
+      "ItemName3": null,
+      "ItemChance3": null,
+      "ItemMinQ3": null,
+      "ItemMaxQ3": null,
+      "ItemType3": null
+    }
+  },
+  "item_masterlist": {
+    "Iron Sword": {
+      "ItemType": "Weapons",
+      "ItemAtk": 6,
+      "ItemDef": null,
+      "StatHeal": null,
+      "HealVal": null,
+      "ItemValue": 40,
+      "ItemDetails": null,
+      "ItemPNG": "res://Props/ItemIcons/iron_sword.png"
+    },
+    "Bronze Sword": {
+      "ItemType": "Weapons",
+      "ItemAtk": 13,
+      "ItemDef": null,
+      "StatHeal": null,
+      "HealVal": null,
+      "ItemValue": 60,
+      "ItemDetails": null,
+      "ItemPNG": "res://Props/ItemIcons/bronze_sword.png"
+    },
+    "Bronze Armor": {
+      "ItemType": "Apparel",
+      "ItemAtk": null,
+      "ItemDef": 15,
+      "StatHeal": null,
+      "HealVal": null,
+      "ItemValue": 60,
+      "ItemDetails": null,
+      "ItemPNG": "res://Props/ItemIcons/bronze_armor.png"
+    },
+    "Potion Tube": {
+      "ItemType": "Consum",
+      "ItemAtk": null,
+      "ItemDef": null,
+      "StatHeal": "HP",
+      "HealVal": 20,
+      "ItemValue": 30,
+      "ItemDetails": null,
+      "ItemPNG": "res://Props/ItemIcons/potion_tube.png"
+    },
+    "Wine": {
+      "ItemType": "Consum",
+      "ItemAtk": null,
+      "ItemDef": null,
+      "StatHeal": "HP",
+      "HealVal": 75,
+      "ItemValue": 130,
+      "ItemDetails": null,
+      "ItemPNG": "res://Props/ItemIcons/wine.png"
+    },
+    "Potion Jug": {
+      "ItemType": "Consum",
+      "ItemAtk": null,
+      "ItemDef": null,
+      "StatHeal": "HP",
+      "HealVal": 50,
+      "ItemValue": 80,
+      "ItemDetails": null,
+      "ItemPNG": "res://Props/ItemIcons/potion_jug.png"
+    },
+    "Noodles": {
+      "ItemType": "Consum",
+      "ItemAtk": null,
+      "ItemDef": null,
+      "StatHeal": "HP",
+      "HealVal": 30,
+      "ItemValue": 50,
+      "ItemDetails": null,
+      "ItemPNG": "res://Props/ItemIcons/noodles.png"
+    },
+    "Iron Armor": {
+      "ItemType": "Apparel",
+      "ItemAtk": null,
+      "ItemDef": 8,
+      "StatHeal": null,
+      "HealVal": null,
+      "ItemValue": 50,
+      "ItemDetails": null,
+      "ItemPNG": "res://Props/ItemIcons/iron_armor.png"
+    }
+  },
+  "item_shop": {
+    "stage1": {
+      "Item1": "Iron Sword",
+      "Item2": "Potion Tube",
+      "Item3": "Bronze Sword",
+      "Item4": "Bronze Armor",
+      "Item5": "Iron Armor"
+    }
+  }
+}

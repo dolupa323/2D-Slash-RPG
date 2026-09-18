@@ -107,21 +107,26 @@ function exports.load(scene: Scene)
 		createButton(pad, action, position, LABEL[action])
 	end
 
-	-- 상호작용 버튼(포탈 타기 등) — 방향 패드와 겹치지 않게 화면 하단 중앙에 별도로 둔다.
-	createButton(
-		screenGui,
-		"Interact",
-		UDim2.new(0.5, 0, 1, -24),
-		"✋",
-		Vector2.new(0.5, 1)
-	)
+	-- (실측 버그 이력) 상호작용 버튼을 화면 하단 "중앙"에 뒀더니 시야 한복판이라 잘
+	-- 안 보인다는 요청 — 기본공격 버튼과 같은 화면 오른쪽 하단으로 옮기고, 두 버튼이
+	-- 겹치지 않게 위아래로 쌓는다(상호작용이 위, 공격이 아래).
+	local INTERACT_GAP = 16
 
-	-- 기본공격 버튼 — 상호작용 버튼 옆(화면 오른쪽 하단)에 배치.
+	-- 기본공격 버튼 — 화면 오른쪽 하단 모서리.
 	createButton(
 		screenGui,
 		"Attack",
 		UDim2.new(1, -24, 1, -24),
 		"⚔",
+		Vector2.new(1, 1)
+	)
+
+	-- 상호작용 버튼(포탈 타기 등) — 공격 버튼 바로 위.
+	createButton(
+		screenGui,
+		"Interact",
+		UDim2.new(1, -24, 1, -24 - BUTTON_SIZE - INTERACT_GAP),
+		"✋",
 		Vector2.new(1, 1)
 	)
 

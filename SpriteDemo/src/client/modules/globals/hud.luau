@@ -112,6 +112,20 @@ local function createFillOverlay(image: string, parent: Instance, scale: number,
 	return mask, label, trackWidth
 end
 
+-- (Phase 1 전투 타격감, ROADMAP.md — Cheruton HealthBarMob.gd 이중 바 패턴을 플레이어
+-- HUD에도 동일 적용) monsterHealthBar.luau와 같은 개념: 뒤쪽(slow)은 맞은 직후에도 잠깐
+-- 그대로 있다가 천천히 줄어들고, 앞쪽(fast)은 즉시 반영된다. 여기서는 이미지 트랙을
+-- 재활용하는 createFillOverlay를 두 번 겹쳐 부른다 — 먼저 부른 게 아래(slow), 나중에
+-- 부른 게 위(fast)에 오도록 ZIndex를 붙인다.
+local function createDualFillOverlay(image: string, parent: Instance, scale: number, track, fastColor: Color3, slowColor: Color3)
+	local slowMask, slowLabel = createFillOverlay(image, parent, scale, track, slowColor)
+	slowLabel:Destroy() -- 라벨은 fast 쪽 것 하나만 있으면 된다(둘 다 있으면 텍스트가 겹쳐 두꺼워 보임).
+	slowMask.ZIndex = 1 -- fast(기본 ZIndex 2)보다 확실히 뒤로.
+
+	local fastMask, label, trackWidth = createFillOverlay(image, parent, scale, track, fastColor)
+	return fastMask, slowMask, label, trackWidth
+end
+
 local exports = {}
 
 function exports.load(scene: Scene)
@@ -156,7 +170,10 @@ function exports.load(scene: Scene)
 	portraitLevelLabel.ZIndex = 2
 	portraitLevelLabel.Parent = charFrame
 
-	local hpMask, hpLabel, hpMaxWidth = createFillOverlay(CHAR_UI_ASSET, charFrame, charScale, HP_TRACK, Color3.fromRGB(255, 70, 60))
+	local hpMask, hpSlowMask, hpLabel, hpMaxWidth = createDualFillOverlay(
+		CHAR_UI_ASSET, charFrame, charScale, HP_TRACK,
+		Color3.fromRGB(255, 70, 60), Color3.fromRGB(255, 210, 120)
+	)
 	-- 마나는 하얀색에 가까운 옅은 노란색으로.
 	local mpMask, mpLabel, mpMaxWidth = createFillOverlay(CHAR_UI_ASSET, charFrame, charScale, MP_TRACK, Color3.fromRGB(255, 250, 205))
 
@@ -168,7 +185,13 @@ function exports.load(scene: Scene)
 	screenGui.Parent = playerGui
 	exports.screenGui = screenGui
 
-	exports.connection = RunService.Heartbeat:Connect(function()
+	-- (Phase 1 전투 타격감) 뒤쪽(주황) 바가 목표치까지 내려가는 데 걸리는 시간 —
+	-- monsterHealthBar.luau와 동일하게 1.5초.
+	local SLOW_FILL_DURATION = 1.5
+	local slowFillScale = 1
+	local lastHealth = nil
+
+	exports.connection = RunService.Heartbeat:Connect(function(delta)
 		local character = CrossPlatformService.Character
 		if not character then
 			return
@@ -176,8 +199,29 @@ function exports.load(scene: Scene)
 
 		local health = character.Health or 0
 		local maxHealth = character.MaxHealth or 1
-		hpMask.Size = UDim2.fromOffset(hpMaxWidth * math.clamp(health / maxHealth, 0, 1), hpMask.Size.Y.Offset)
+		local targetScale = math.clamp(health / maxHealth, 0, 1)
+
+		-- 앞쪽(빨강)은 새 값으로 즉시 스냅.
+		hpMask.Size = UDim2.fromOffset(hpMaxWidth * targetScale, hpMask.Size.Y.Offset)
 		hpLabel.Text = ("%d / %d"):format(math.floor(health + 0.5), maxHealth)
+
+		if lastHealth == nil then
+			slowFillScale = targetScale
+		elseif health > lastHealth then
+			-- 회복은 뒤쪽 바도 즉시 따라 올려서 어색한 역방향 애니메이션을 피한다.
+			slowFillScale = targetScale
+		end
+		lastHealth = health
+
+		-- 뒤쪽(주황, "방금 깎여나간 만큼"을 보여주는 잔상)은 목표치를 향해 천천히
+		-- 줄어든다 — 절대 목표치보다 먼저 내려가지 않게 아래로만 보정.
+		if slowFillScale > targetScale then
+			local step = delta / SLOW_FILL_DURATION
+			slowFillScale = math.max(slowFillScale - step, targetScale)
+		else
+			slowFillScale = targetScale
+		end
+		hpSlowMask.Size = UDim2.fromOffset(hpMaxWidth * slowFillScale, hpSlowMask.Size.Y.Offset)
 
 		-- 마나 소비/회복 콘텐츠가 아직 없어서 필드가 없으면 항상 가득 찬 것으로 표시.
 		local mana = character.Mana or character.MaxMana or 100

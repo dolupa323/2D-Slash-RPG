@@ -1,0 +1,975 @@
+.gitignore
+Cheruton v1.0/AutoLoad/DataResource.gd
+Cheruton v1.0/AutoLoad/SceneControl/SceneControl.gd
+Cheruton v1.0/AutoLoad/SceneControl/SceneControl.tscn
+Cheruton v1.0/AutoLoad/SceneControl/SceneControl.tscn.orig
+Cheruton v1.0/Data/item-masterlist.json
+Cheruton v1.0/Data/player-data.json
+Cheruton v1.0/Data/player-data.json.orig
+Cheruton v1.0/Display/Dialouge/README.md
+Cheruton v1.0/Display/Dialouge/Sounds/Blip_select 35 (1).wav
+Cheruton v1.0/Display/Dialouge/Sounds/moneyGIrl.wav
+Cheruton v1.0/Display/Dialouge/Sprites/Dialogbase.png
+Cheruton v1.0/Display/Dialouge/Sprites/dialog-background.png
+Cheruton v1.0/Display/Dialouge/Sprites/dialogtes.png
+Cheruton v1.0/Display/Dialouge/Sprites/menu_section_9patch.png
+Cheruton v1.0/Display/Dialouge/Sprites/next-indicator.png
+Cheruton v1.0/Display/Dialouge/dialog.gd
+Cheruton v1.0/Display/Dialouge/dialog.tscn
+Cheruton v1.0/Display/Font/AbrilFatface-Regular.ttf
+Cheruton v1.0/Display/Font/UAV-OSD-Mono-13.ttf
+Cheruton v1.0/Display/Font/Wilson hawk italic.ttf
+Cheruton v1.0/Display/Font/Wilson hawk.ttf
+Cheruton v1.0/Display/Font/eight-bit-dragon.otf
+Cheruton v1.0/Display/LoadScrn/LoadScrn.gd
+Cheruton v1.0/Display/LoadScrn/LoadScrn.tscn
+Cheruton v1.0/Display/MainMenu/MainMenu.gd
+Cheruton v1.0/Display/MainMenu/MainMenu.gd.orig
+Cheruton v1.0/Display/MainMenu/MainMenu.tscn
+Cheruton v1.0/Display/MainMenu/MainMenu.tscn.orig
+Cheruton v1.0/Display/MainMenu/Sprites/MainMenu3.json
+Cheruton v1.0/Display/MainMenu/Sprites/MainMenuBase.png
+Cheruton v1.0/Display/MainMenu/Sprites/MainMenuback.png
+Cheruton v1.0/Display/MainMenu/Sprites/MainMenubackcloud.png
+Cheruton v1.0/Display/MainMenu/Sprites/MainMenuexampl2.png
+Cheruton v1.0/Display/MainMenu/Sprites/MainMenuexample1.png
+Cheruton v1.0/Display/MainMenu/Sprites/MainMenuselect.png
+Cheruton v1.0/Display/MainMenu/Sprites/MainMenuword1.png
+Cheruton v1.0/Display/MainMenu/Sprites/MainMenuword2.png
+Cheruton v1.0/Display/MainMenu/Sprites_Fonts/Cheruton.png
+Cheruton v1.0/Display/MainMenu/Sprites_Fonts/Cheruton.png.import
+Cheruton v1.0/Display/MouseDesign/arrow.png
+Cheruton v1.0/Display/MouseDesign/arrow.png.import
+Cheruton v1.0/Display/MouseDesign/beam.png
+Cheruton v1.0/Display/MouseDesign/beam.png.import
+Cheruton v1.0/Display/Pause/Pause.gd
+Cheruton v1.0/Display/Pause/Pause.tscn
+Cheruton v1.0/Display/Pause/Sprites/Base/baseUIBackgroundg.png
+Cheruton v1.0/Display/Pause/Sprites/Icons/Key.png
+Cheruton v1.0/Display/Pause/Sprites/Icons/apparel.png
+Cheruton v1.0/Display/Pause/Sprites/Icons/coin.png
+Cheruton v1.0/Display/Pause/Sprites/Icons/consum.png
+Cheruton v1.0/Display/Pause/Sprites/Icons/exit.png
+Cheruton v1.0/Display/Pause/Sprites/Icons/misc.png
+Cheruton v1.0/Display/Pause/Sprites/Icons/weapons.png
+Cheruton v1.0/Display/Pause/Sprites/Slots/HorizontalTabDeSelect.png
+Cheruton v1.0/Display/Pause/Sprites/Slots/HorizontalTabSelect.png
+Cheruton v1.0/Display/Pause/Sprites/Slots/Scroll.png
+Cheruton v1.0/Display/Pause/Sprites/Slots/empty_attack.png
+Cheruton v1.0/Display/Pause/Sprites/Slots/empty_defense.png
+Cheruton v1.0/Display/Pause/Sprites/Slots/equippedIcons.png
+Cheruton v1.0/Display/Pause/Sprites/Slots/itemEquipped.png
+Cheruton v1.0/Display/Pause/Sprites/Slots/itemFramel.png
+Cheruton v1.0/Display/Pause/Sprites/Slots/itemSelected.png
+Cheruton v1.0/Display/Pause/Sprites/Slots/itemSlot.png
+Cheruton v1.0/Display/Pause/Sprites/Slots/statsSlot.png
+Cheruton v1.0/Display/Pause/Sprites/Slots/vertTabDeselected.png
+Cheruton v1.0/Display/Pause/Sprites/Slots/vertTabSelected.png
+Cheruton v1.0/Display/Pause/sound/SFX_UI_Pause.mp3
+Cheruton v1.0/Display/Pause/sound/SFX_UI_Resume.mp3
+Cheruton v1.0/Display/PopUpGui/PopUpGui.gd
+Cheruton v1.0/Display/PopUpGui/PopUpGui.tscn
+Cheruton v1.0/Display/PopUpGui/basePopUp.gd
+Cheruton v1.0/Display/PopUpGui/emptyPopUpgui.gd
+Cheruton v1.0/Display/PopUpGui/guiStateMachine.gd
+Cheruton v1.0/Display/Settings/Settings.gd
+Cheruton v1.0/Display/Settings/Settings.gd.orig
+Cheruton v1.0/Display/Settings/Settings.tscn
+Cheruton v1.0/Display/Settings/Sprites/Bars/bar_progress.png
+Cheruton v1.0/Display/Settings/Sprites/Bars/bar_under.png
+Cheruton v1.0/Display/Settings/Sprites/Base/SettingsBase.png
+Cheruton v1.0/Display/Settings/Sprites/Slots/HorizontalTabDeSelect.png
+Cheruton v1.0/Display/Settings/Sprites/Slots/HorizontalTabSelect.png
+Cheruton v1.0/Display/Settings/Sprites/Slots/vertTabDeselected.png
+Cheruton v1.0/Display/Settings/Sprites/Slots/vertTabSelected.png
+Cheruton v1.0/Display/Settings/control_btn.tscn
+Cheruton v1.0/Display/Settings/control_label.tscn
+Cheruton v1.0/Display/Shop/Shop.gd
+Cheruton v1.0/Display/Shop/Shop.tscn
+Cheruton v1.0/Display/Shop/Sprites/Base/baseUIBackgroundg.png
+Cheruton v1.0/Display/Shop/Sprites/Icons/Key.png
+Cheruton v1.0/Display/Shop/Sprites/Icons/apparel.png
+Cheruton v1.0/Display/Shop/Sprites/Icons/coin.png
+Cheruton v1.0/Display/Shop/Sprites/Icons/consum.png
+Cheruton v1.0/Display/Shop/Sprites/Icons/exit.png
+Cheruton v1.0/Display/Shop/Sprites/Icons/misc.png
+Cheruton v1.0/Display/Shop/Sprites/Icons/weapons.png
+Cheruton v1.0/Display/Shop/Sprites/Slots/HorizontalTabDeSelect.png
+Cheruton v1.0/Display/Shop/Sprites/Slots/HorizontalTabSelect.png
+Cheruton v1.0/Display/Shop/Sprites/Slots/Scroll.png
+Cheruton v1.0/Display/Shop/Sprites/Slots/itemEquipped.png
+Cheruton v1.0/Display/Shop/Sprites/Slots/itemFramel.png
+Cheruton v1.0/Display/Shop/Sprites/Slots/itemSelected.png
+Cheruton v1.0/Display/Shop/Sprites/Slots/itemSlot.png
+Cheruton v1.0/Display/Shop/Sprites/Slots/statsSlot.png
+Cheruton v1.0/Display/Shop/Sprites/Slots/vertTabDeselected.png
+Cheruton v1.0/Display/Shop/Sprites/Slots/vertTabSelected.png
+Cheruton v1.0/Effects/ColorDodge/ColorDodge.shader
+Cheruton v1.0/Effects/Dust/DashDust/DashDust.tscn
+Cheruton v1.0/Effects/Dust/DashDust/dash_dust.json
+Cheruton v1.0/Effects/Dust/DashDust/dash_dust.png
+Cheruton v1.0/Effects/Dust/JumpDust/jumpDust.tres
+Cheruton v1.0/Effects/Dust/JumpDust/jumpDust.tscn
+Cheruton v1.0/Effects/Dust/RunDust/runDust.gd
+Cheruton v1.0/Effects/Dust/RunDust/runDust.tres
+Cheruton v1.0/Effects/Dust/RunDust/runDust.tscn
+Cheruton v1.0/Effects/Dust/dustTemplate.tres
+Cheruton v1.0/Effects/Fire/Fire.tscn
+Cheruton v1.0/Effects/Fire/fire.shader
+Cheruton v1.0/Effects/Fog/Fog.tscn
+Cheruton v1.0/Effects/Fog/fog_default.shader
+Cheruton v1.0/Effects/HouseSmoke/houseSmoke.tscn
+Cheruton v1.0/Effects/HouseSmoke/smoke.png
+Cheruton v1.0/Effects/Lava/Lava.tscn
+Cheruton v1.0/Effects/Lava/lava.shader
+Cheruton v1.0/Effects/MobHit/HitFx.tscn
+Cheruton v1.0/Effects/MobHit/Sprites/Circle.png
+Cheruton v1.0/Effects/MobHit/Sprites/HitFx_Mob.json
+Cheruton v1.0/Effects/MobHit/Sprites/HitFx_Mob.png
+Cheruton v1.0/Effects/Outline/outline.shader
+Cheruton v1.0/Effects/Rain/Rain.tscn
+Cheruton v1.0/Effects/Rain/the-cloud.jpg
+Cheruton v1.0/Effects/Rain/the-cloud.jpg.import
+Cheruton v1.0/Effects/Scrolling/scrolling.shader
+Cheruton v1.0/Effects/ShockWave/ShockWave.shader
+Cheruton v1.0/Effects/SolidColor/SolidColor.shader
+Cheruton v1.0/Effects/SolidColor/pink.tres
+Cheruton v1.0/Effects/Transition/Sprites/fromCenter.png
+Cheruton v1.0/Effects/Transition/Transition.shader
+Cheruton v1.0/Effects/Water/Transparent_bg.png
+Cheruton v1.0/Effects/Water/Water.shader
+Cheruton v1.0/Effects/Water/Water.tscn
+Cheruton v1.0/Effects/Water/WaterSprite.gd
+Cheruton v1.0/Effects/White/blinkWhite.shader
+Cheruton v1.0/Effects/White/blinkWhite.tres
+Cheruton v1.0/Effects/Wind/Grass_Bush_material.tres
+Cheruton v1.0/Effects/Wind/Wind.shader
+Cheruton v1.0/Effects/WormHole/WormHole.shader
+Cheruton v1.0/Effects/white_screen.png
+Cheruton v1.0/Effects/white_screen.png.import
+Cheruton v1.0/Enemy/Boss/spiderBossIK/Sprites/Enemy_Boss_Spider_backlegback.png
+Cheruton v1.0/Enemy/Boss/spiderBossIK/Sprites/Enemy_Boss_Spider_backlegfront..png
+Cheruton v1.0/Enemy/Boss/spiderBossIK/Sprites/Enemy_Boss_Spider_backlegmid.png
+Cheruton v1.0/Enemy/Boss/spiderBossIK/Sprites/Enemy_Boss_Spider_butt.png
+Cheruton v1.0/Enemy/Boss/spiderBossIK/Sprites/Enemy_Boss_Spider_head.png
+Cheruton v1.0/Enemy/Boss/spiderBossIK/Sprites/Enemy_Boss_Spider_legback.png
+Cheruton v1.0/Enemy/Boss/spiderBossIK/Sprites/Enemy_Boss_Spider_legfront.png
+Cheruton v1.0/Enemy/Boss/spiderBossIK/Sprites/Enemy_Boss_Spider_legmid.png
+Cheruton v1.0/Enemy/Boss/spiderBossIK/Sprites/Roar_wave_light_orange.png
+Cheruton v1.0/Enemy/Boss/spiderBossIK/acidProjectile/acidProjectile.gd
+Cheruton v1.0/Enemy/Boss/spiderBossIK/acidProjectile/acidProjectile.tscn
+Cheruton v1.0/Enemy/Boss/spiderBossIK/debugLabel.gd
+Cheruton v1.0/Enemy/Boss/spiderBossIK/scream.gd
+Cheruton v1.0/Enemy/Boss/spiderBossIK/spiderBossIK.gd
+Cheruton v1.0/Enemy/Boss/spiderBossIK/spiderBossIK.tscn
+Cheruton v1.0/Enemy/Boss/spiderBossIK/spiderLeg.gd
+Cheruton v1.0/Enemy/Boss/spiderBossIK/spiderLeg.tscn
+Cheruton v1.0/Enemy/Boss/spiderBossIK/spiderLegController.gd
+Cheruton v1.0/Enemy/Boss/spiderBossIK/states/idle.gd
+Cheruton v1.0/Enemy/Boss/spiderBossIK/states/jumpAttack.gd
+Cheruton v1.0/Enemy/Boss/spiderBossIK/states/run.gd
+Cheruton v1.0/Enemy/Boss/spiderBossIK/states/spiderBossStateMachine.gd
+Cheruton v1.0/Enemy/Boss/spiderBossIK/states/stabAttack.gd
+Cheruton v1.0/Enemy/Boss/spiderBossIK/states/stepBack.gd
+Cheruton v1.0/Enemy/Boss/spiderBossIK/webShoot.gd
+Cheruton v1.0/Enemy/DamageVal/DamageVal.gd
+Cheruton v1.0/Enemy/DamageVal/DamageVal.tscn
+Cheruton v1.0/Enemy/Enemy.gd
+Cheruton v1.0/Enemy/Mobs/Furball/Furball.gd
+Cheruton v1.0/Enemy/Mobs/Furball/Furball.tscn
+Cheruton v1.0/Enemy/Mobs/Furball/Sound/death1.ogg
+Cheruton v1.0/Enemy/Mobs/Furball/Sound/sfx_boss_death.mp3
+Cheruton v1.0/Enemy/Mobs/Furball/Sprites/Enemy_Furball_22fps.json
+Cheruton v1.0/Enemy/Mobs/Furball/Sprites/Enemy_Furball_22fps.png
+Cheruton v1.0/Enemy/Mobs/Furball/States/attack.gd
+Cheruton v1.0/Enemy/Mobs/Furball/States/dead.gd
+Cheruton v1.0/Enemy/Mobs/Furball/States/fall.gd
+Cheruton v1.0/Enemy/Mobs/Furball/States/hit .gd
+Cheruton v1.0/Enemy/Mobs/Furball/States/idle.gd
+Cheruton v1.0/Enemy/Mobs/Furball/States/search.gd
+Cheruton v1.0/Enemy/Mobs/Furball/States/sleep.gd
+Cheruton v1.0/Enemy/Mobs/Furball/States/states.gd
+Cheruton v1.0/Enemy/Mobs/Furball/hurtBox.gd
+Cheruton v1.0/Enemy/Mobs/MobHealth/HealthBarMob.gd
+Cheruton v1.0/Enemy/Mobs/MobHealth/HealthBarMob.tscn
+Cheruton v1.0/Enemy/Mobs/MobHealth/UI-MobHealthBar.png
+Cheruton v1.0/Enemy/Mobs/MobHealth/UI-MobHealthBarFill.png
+Cheruton v1.0/Enemy/StateEnemy.gd
+Cheruton v1.0/General/stateMachine.gd
+Cheruton v1.0/LICENSE.txt
+Cheruton v1.0/Levels/Cave0/Cave0.gd
+Cheruton v1.0/Levels/Cave0/Cave0.tscn
+Cheruton v1.0/Levels/Cave0/Sprites/Cave.png
+Cheruton v1.0/Levels/Cave0/Sprites/Cave_Bg.png
+Cheruton v1.0/Levels/Cave0/Sprites/Cave_Parralax.png
+Cheruton v1.0/Levels/Cave0/Sprites/Cave_Parralax2.png
+Cheruton v1.0/Levels/Cave0/Sprites/MoneyGirl_Hanging.png
+Cheruton v1.0/Levels/Cave1/Cave1.gd
+Cheruton v1.0/Levels/Cave1/Cave1.tscn
+Cheruton v1.0/Levels/Grasslands0/Glove/DetectionArea.gd
+Cheruton v1.0/Levels/Grasslands0/Glove/Glove.gd
+Cheruton v1.0/Levels/Grasslands0/Glove/Glove.tscn
+Cheruton v1.0/Levels/Grasslands0/Glove/GloveArea.gd
+Cheruton v1.0/Levels/Grasslands0/Grasslands0.gd
+Cheruton v1.0/Levels/Grasslands0/Grasslands0.tscn
+Cheruton v1.0/Levels/Grasslands0/KeysHint/KeyHint.gd
+Cheruton v1.0/Levels/Grasslands0/KeysHint/KeyHint.tscn
+Cheruton v1.0/Levels/Grasslands0/KeysHint/KeyHintArea.gd
+Cheruton v1.0/Levels/Grasslands0/KeysHint/KeyHintArea.tscn
+Cheruton v1.0/Levels/Grasslands0/KeysHint/Sprites/LeftClick.png
+Cheruton v1.0/Levels/Grasslands0/KeysHint/Sprites/Mouse.png
+Cheruton v1.0/Levels/Grasslands0/KeysHint/Sprites/RightClick.png
+Cheruton v1.0/Levels/Grasslands0/KeysHint/Sprites/UI_HintKeys.png
+Cheruton v1.0/Levels/Grasslands0/KeysHint/Sprites/arrow.png
+Cheruton v1.0/Levels/Grasslands0/KeysHint/Sprites/plus.png
+Cheruton v1.0/Levels/Grasslands0/Npcs/Furball/FurballNPC.gd
+Cheruton v1.0/Levels/Grasslands0/Npcs/Furball/FurballNPC.tscn
+Cheruton v1.0/Levels/Grasslands0/PoleCatchParticles/PoleCatchParticlesDown.tscn
+Cheruton v1.0/Levels/Grasslands0/PoleCatchParticles/PoleCatchParticlesUP.tscn
+Cheruton v1.0/Levels/Grasslands0/Sounds/Impact_Finishing_Blow.wav
+Cheruton v1.0/Levels/Grasslands0/Sounds/Wind_Whoosh_Long_3.wav
+Cheruton v1.0/Levels/Grasslands0/Sounds/switch_1.wav
+Cheruton v1.0/Levels/Grasslands0/Sounds/switch_2.wav
+Cheruton v1.0/Levels/Grasslands0/Sprites/Grasslands-Glove.png
+Cheruton v1.0/Levels/Grasslands0/Sprites/Grasslands-WitchHut.json
+Cheruton v1.0/Levels/Grasslands0/Sprites/Grasslands-WitchHutForeground.png
+Cheruton v1.0/Levels/Grasslands0/Sprites/Grasslands_WitchHut.json
+Cheruton v1.0/Levels/Grasslands0/Sprites/Grasslands_WitchHut.png
+Cheruton v1.0/Levels/Grasslands0/Sprites/MC - Pole.png
+Cheruton v1.0/Levels/Grasslands0/Sprites/PureBlack.png
+Cheruton v1.0/Levels/Grasslands0/Sprites/PureWhite.png
+Cheruton v1.0/Levels/Grasslands0/Sprites/WitchHut_Explosion.json
+Cheruton v1.0/Levels/Grasslands0/Sprites/WitchHut_Explosion.png
+Cheruton v1.0/Levels/Grasslands0/Sprites/circleLight.png
+Cheruton v1.0/Levels/Grasslands0/Stories/Baked/Grasslands0Dialog.tres
+Cheruton v1.0/Levels/Grasslands0/Stories/Raw/Grasslands0DialogRaw.tres
+Cheruton v1.0/Levels/Grasslands0/WitchHut.gd
+Cheruton v1.0/Levels/Grasslands0/WitchHut.tscn
+Cheruton v1.0/Levels/Grasslands0/WitchHutExplosion/WitchHutExplosion.gd
+Cheruton v1.0/Levels/Grasslands0/WitchHutExplosion/WitchHutExplosion.tscn
+Cheruton v1.0/Levels/Grasslands0/WitchHutExplosion/wallbreak_wood.wav
+Cheruton v1.0/Levels/Grasslands0/fallingRock/Rock.png
+Cheruton v1.0/Levels/Grasslands0/fallingRock/fallingRock.gd
+Cheruton v1.0/Levels/Grasslands0/fallingRock/fallingRock.tscn
+Cheruton v1.0/Levels/Grasslands0/fallingRock/rockThrow.wav
+Cheruton v1.0/Levels/Grasslands0/teleportZone.gd
+Cheruton v1.0/Levels/Grasslands1/Grasslands1.gd
+Cheruton v1.0/Levels/Grasslands1/Grasslands1.tscn
+Cheruton v1.0/Levels/Grasslands2/Cannon/Cannon.tscn
+Cheruton v1.0/Levels/Grasslands2/Cannon/Sprites/Grasslands-Cannon.png
+Cheruton v1.0/Levels/Grasslands2/Cannon/Sprites/Grasslands-Cannon_base.png
+Cheruton v1.0/Levels/Grasslands2/Grasslands2.gd
+Cheruton v1.0/Levels/Grasslands2/Grasslands2.tscn
+Cheruton v1.0/Levels/Grasslands2/Stories/Baked/Grasslands2Dialog.tres
+Cheruton v1.0/Levels/Grasslands2/Stories/Raw/Grassslands2DialogRaw.tres
+Cheruton v1.0/Levels/Hometown/Hometown.gd
+Cheruton v1.0/Levels/Hometown/Hometown.tscn
+Cheruton v1.0/Levels/Hometown/Hometown.tscn.orig
+Cheruton v1.0/Levels/Hometown/HometownNight.gd
+Cheruton v1.0/Levels/Hometown/HometownNight.tscn
+Cheruton v1.0/Levels/Hometown/NPCs/buff/18fps_limitPallete_PIL_HomeTown_NPC_buff.json
+Cheruton v1.0/Levels/Hometown/NPCs/buff/18fps_limitPallete_PIL_HomeTown_NPC_buff.png
+Cheruton v1.0/Levels/Hometown/NPCs/buff/buff.gd
+Cheruton v1.0/Levels/Hometown/NPCs/buff/buff.tscn
+Cheruton v1.0/Levels/Hometown/NPCs/captain/23fps_limitPallete_PIL_HomeTown_NPC_captain.json
+Cheruton v1.0/Levels/Hometown/NPCs/captain/23fps_limitPallete_PIL_HomeTown_NPC_captain.png
+Cheruton v1.0/Levels/Hometown/NPCs/captain/captain.gd
+Cheruton v1.0/Levels/Hometown/NPCs/captain/captain.tscn
+Cheruton v1.0/Levels/Hometown/NPCs/cat/18fps_limitPallete_PIL_HomeTown_NPC_cat.json
+Cheruton v1.0/Levels/Hometown/NPCs/cat/18fps_limitPallete_PIL_HomeTown_NPC_cat.png
+Cheruton v1.0/Levels/Hometown/NPCs/cat/cat.gd
+Cheruton v1.0/Levels/Hometown/NPCs/cat/cat.tscn
+Cheruton v1.0/Levels/Hometown/NPCs/chad/22fps_limitPallete_PIL_HomeTown_NPC_chad.json
+Cheruton v1.0/Levels/Hometown/NPCs/chad/22fps_limitPallete_PIL_HomeTown_NPC_chad.png
+Cheruton v1.0/Levels/Hometown/NPCs/chad/chad.gd
+Cheruton v1.0/Levels/Hometown/NPCs/chad/chad.tscn
+Cheruton v1.0/Levels/Hometown/NPCs/clgirl/22fps_limitPallete_PIL_HomeTown_NPC_clgirl.json
+Cheruton v1.0/Levels/Hometown/NPCs/clgirl/22fps_limitPallete_PIL_HomeTown_NPC_clgirl.png
+Cheruton v1.0/Levels/Hometown/NPCs/clgirl/clgirl.gd
+Cheruton v1.0/Levels/Hometown/NPCs/clgirl/clgirl.gd.orig
+Cheruton v1.0/Levels/Hometown/NPCs/clgirl/clgirl.tscn
+Cheruton v1.0/Levels/Hometown/NPCs/coolboy/18fps_limitPallete_PIL_HomeTown_NPC_coolboy.json
+Cheruton v1.0/Levels/Hometown/NPCs/coolboy/18fps_limitPallete_PIL_HomeTown_NPC_coolboy.png
+Cheruton v1.0/Levels/Hometown/NPCs/coolboy/coolboy.gd
+Cheruton v1.0/Levels/Hometown/NPCs/coolboy/coolboy.tscn
+Cheruton v1.0/Levels/Hometown/NPCs/genericgirl/18fps_limitPallete_PIL_HomeTown_NPC_genericgirl.json
+Cheruton v1.0/Levels/Hometown/NPCs/genericgirl/18fps_limitPallete_PIL_HomeTown_NPC_genericgirl.png
+Cheruton v1.0/Levels/Hometown/NPCs/genericgirl/genericgirl.gd
+Cheruton v1.0/Levels/Hometown/NPCs/genericgirl/genericgirl.tscn
+Cheruton v1.0/Levels/Hometown/NPCs/gramps/22fps_limitPallete_PIL_HomeTown_NPC_gramps.json
+Cheruton v1.0/Levels/Hometown/NPCs/gramps/22fps_limitPallete_PIL_HomeTown_NPC_gramps.png
+Cheruton v1.0/Levels/Hometown/NPCs/gramps/22fps_limitPallete_PIL_HomeTown_NPC_gramps_normals_n_n.png
+Cheruton v1.0/Levels/Hometown/NPCs/gramps/gramps.gd
+Cheruton v1.0/Levels/Hometown/NPCs/gramps/gramps.tscn
+Cheruton v1.0/Levels/Hometown/NPCs/loli/20fps_limitPallete_PIL_HomeTown_NPC_loli.json
+Cheruton v1.0/Levels/Hometown/NPCs/loli/20fps_limitPallete_PIL_HomeTown_NPC_loli.png
+Cheruton v1.0/Levels/Hometown/NPCs/loli/loli.gd
+Cheruton v1.0/Levels/Hometown/NPCs/loli/loli.tscn
+Cheruton v1.0/Levels/Hometown/NPCs/movingNPC.gd
+Cheruton v1.0/Levels/Hometown/NPCs/playerDetectionArea.gd
+Cheruton v1.0/Levels/Hometown/NPCs/playerDetectionArea.tscn
+Cheruton v1.0/Levels/Hometown/NPCs/staticNPC.gd
+Cheruton v1.0/Levels/Hometown/NPCs/whippersnapper/22fps_limitPallete_PIL_HomeTown_NPC_whippersnapper.json
+Cheruton v1.0/Levels/Hometown/NPCs/whippersnapper/22fps_limitPallete_PIL_HomeTown_NPC_whippersnapper.png
+Cheruton v1.0/Levels/Hometown/NPCs/whippersnapper/whippersnapper.gd
+Cheruton v1.0/Levels/Hometown/NPCs/whippersnapper/whippersnapper.tscn
+Cheruton v1.0/Levels/Hometown/Resources/Hometown.tres
+Cheruton v1.0/Levels/Hometown/Resources/Hometown_buildings.tres
+Cheruton v1.0/Levels/Hometown/Resources/Hometown_buildings_night.tres
+Cheruton v1.0/Levels/Hometown/Resources/Hometown_foregroundt.tres
+Cheruton v1.0/Levels/Hometown/Resources/Hometown_props.tres
+Cheruton v1.0/Levels/Hometown/Sprites/Grasslands.png
+Cheruton v1.0/Levels/Hometown/Sprites/Grasslands_n.png
+Cheruton v1.0/Levels/Hometown/Sprites/HomeTown-BuidingsNightALL_n.png
+Cheruton v1.0/Levels/Hometown/Sprites/HomeTown-PortalGlyphs.png
+Cheruton v1.0/Levels/Hometown/Sprites/HomeTown-Portal_shadows.png
+Cheruton v1.0/Levels/Hometown/Sprites/HomeTown-YourHouse-Shadows.png
+Cheruton v1.0/Levels/Hometown/Sprites/HomeTown_foreground.png
+Cheruton v1.0/Levels/Hometown/Sprites/Hometown_BuidingsALL.png
+Cheruton v1.0/Levels/Hometown/Sprites/Hometown_BuidingsNightALL.png
+Cheruton v1.0/Levels/Hometown/Sprites/Hometown_ForegroundALL.png
+Cheruton v1.0/Levels/Hometown/Sprites/Hometown_Portal.png
+Cheruton v1.0/Levels/Hometown/Sprites/Hometown_Portal_BlackCircle.png
+Cheruton v1.0/Levels/Hometown/Sprites/Hometown_Portal_rocks.png
+Cheruton v1.0/Levels/Hometown/Sprites/Hometown_Portal_shadows.png
+Cheruton v1.0/Levels/Hometown/Sprites/Hometown_Portal_symbol.png
+Cheruton v1.0/Levels/Hometown/Sprites/Hometown_checkpoint_stands.png
+Cheruton v1.0/Levels/Hometown/Sprites/PureWhite_Roar.png
+Cheruton v1.0/Levels/Hometown/Sprites/line.png
+Cheruton v1.0/Levels/Hometown/Stories/Baked/HometownDialog.tres
+Cheruton v1.0/Levels/Hometown/Stories/Raw/HometownDialogRaw.tres
+Cheruton v1.0/Levels/Hometown/homeTownPortal.tscn
+Cheruton v1.0/Levels/NPCdialogTemplate.res
+Cheruton v1.0/Levels/commonLevelAssets/CinematicBlackBars/CinematicBlackBars.png
+Cheruton v1.0/Levels/commonLevelAssets/DeathZone.tscn
+Cheruton v1.0/Levels/commonLevelAssets/Expressions/Surprised/Expressions - Surprised.png
+Cheruton v1.0/Levels/commonLevelAssets/Expressions/Surprised/Surprised.gd
+Cheruton v1.0/Levels/commonLevelAssets/Expressions/Surprised/Surprised.tscn
+Cheruton v1.0/Levels/commonLevelAssets/GrassLandTileMap.tscn
+Cheruton v1.0/Levels/commonLevelAssets/GrassLandTilemaps/FlyingPoleColliders.tscn
+Cheruton v1.0/Levels/commonLevelAssets/GrassLandTilemaps/GrassLandTileMapProps.tscn
+Cheruton v1.0/Levels/commonLevelAssets/GrassLandTrees/GrassLandsTree1/GrasslandsTree1.png
+Cheruton v1.0/Levels/commonLevelAssets/GrassLandTrees/GrassLandsTree1/grassLandTree1.tscn
+Cheruton v1.0/Levels/commonLevelAssets/GrassLandTrees/GrassLandsTree2/GrasslandsTree2.png
+Cheruton v1.0/Levels/commonLevelAssets/GrassLandTrees/GrassLandsTree2/grassLandTree2.tscn
+Cheruton v1.0/Levels/commonLevelAssets/GrassLandTrees/GrassLandsTree3/GrasslandsTree3.png
+Cheruton v1.0/Levels/commonLevelAssets/GrassLandTrees/GrassLandsTree3/grassLandTree3.tscn
+Cheruton v1.0/Levels/commonLevelAssets/GrassLandTrees/GrasslandsBackTree1/GrasslandsBackTree1.png
+Cheruton v1.0/Levels/commonLevelAssets/GrassLandTrees/GrasslandsBackTree1/GrasslandsBackTree1.tscn
+Cheruton v1.0/Levels/commonLevelAssets/InvisibleTiles.tscn
+Cheruton v1.0/Levels/commonLevelAssets/LeaveParticles/Leaf.png
+Cheruton v1.0/Levels/commonLevelAssets/LeaveParticles/leave_particles.shader
+Cheruton v1.0/Levels/commonLevelAssets/LeaveParticles/leave_particles_material.tres
+Cheruton v1.0/Levels/commonLevelAssets/LeaveParticles/leaves.tscn
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/MoneyGirlShot.gd
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/MoneyGirlShot.tscn
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/Sounds/Cast.wav
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/Sounds/ChargeStaff.wav
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/Sounds/poke.wav
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/Sprites/22fps_limitPallete_PIL_HomeTown_NPC_moneygirl.json
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/Sprites/22fps_limitPallete_PIL_HomeTown_NPC_moneygirl.png
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/Sprites/MoneyGirlStaffFloor.png
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/Sprites/Moneygirl_hit.json
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/Sprites/Moneygirl_hit.png
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/Sprites/Moneygirl_projectile.json
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/Sprites/Moneygirl_projectile.png
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/Sprites/Moneygirl_staff_explode.json
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/Sprites/Moneygirl_staff_explode.png
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/hurtBox.gd
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/moneyGirlStaff.gd
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/moneyGirlStaff.tscn
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/moneygirl.gd
+Cheruton v1.0/Levels/commonLevelAssets/MoneyGirl/moneygirl.tscn
+Cheruton v1.0/Levels/commonLevelAssets/Props/Chest/Chest.gd
+Cheruton v1.0/Levels/commonLevelAssets/Props/Chest/Chest.tscn
+Cheruton v1.0/Levels/commonLevelAssets/Props/Chest/ref.gif
+Cheruton v1.0/Levels/commonLevelAssets/Props/Chest/ref1.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/Chest/ref2.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/Chest/ref3.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/Chest/ref4.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/Chest/ref5.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/Chest/ref6.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/Flag/Flag.tscn
+Cheruton v1.0/Levels/commonLevelAssets/Props/Flag/Sprites/Grasslands-Flag.json
+Cheruton v1.0/Levels/commonLevelAssets/Props/Flag/Sprites/Grasslands-Flag.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/SavePoint/SavePoint.gd
+Cheruton v1.0/Levels/commonLevelAssets/Props/SavePoint/SavePoint.tscn
+Cheruton v1.0/Levels/commonLevelAssets/Props/SavePoint/Sprites/Props-Savepoint.json
+Cheruton v1.0/Levels/commonLevelAssets/Props/SavePoint/Sprites/Props-Savepoint.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/SavePoint/Sprites/SavePopUp - Base.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/SavePoint/Sprites/Sound/SFX_UI_Saved.wav
+Cheruton v1.0/Levels/commonLevelAssets/Props/bouncePad/bouncePad.tscn
+Cheruton v1.0/Levels/commonLevelAssets/Props/bouncePad/sprites/General-Assets.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/fallingPlatforms/body.gd
+Cheruton v1.0/Levels/commonLevelAssets/Props/fallingPlatforms/fallingPlatform.gd
+Cheruton v1.0/Levels/commonLevelAssets/Props/fallingPlatforms/fallingPlatform.tscn
+Cheruton v1.0/Levels/commonLevelAssets/Props/grapplePoint/Sprites/Props-HookPoint_rope.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/grapplePoint/Sprites/Props-HookPoint_rope_end.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/grapplePoint/Sprites/Props_HookPoint.json
+Cheruton v1.0/Levels/commonLevelAssets/Props/grapplePoint/Sprites/Props_HookPoint.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/grapplePoint/grapplePoint.gd
+Cheruton v1.0/Levels/commonLevelAssets/Props/grapplePoint/grapplePoint.tscn
+Cheruton v1.0/Levels/commonLevelAssets/Props/laser/laser.gd
+Cheruton v1.0/Levels/commonLevelAssets/Props/laser/laser.tscn
+Cheruton v1.0/Levels/commonLevelAssets/Props/movingPlatforms/Props_Grasslands_MovingPlatform.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/movingPlatforms/movingPlatform0.gd
+Cheruton v1.0/Levels/commonLevelAssets/Props/movingPlatforms/movingPlatform0.tscn
+Cheruton v1.0/Levels/commonLevelAssets/Props/movingTrap/movingTrap0.gd
+Cheruton v1.0/Levels/commonLevelAssets/Props/movingTrap/movingTrap0.tscn
+Cheruton v1.0/Levels/commonLevelAssets/Props/spike0/Sprites/Props-Vines.json
+Cheruton v1.0/Levels/commonLevelAssets/Props/spike0/Sprites/Props-Vines.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/spike0/spike0.gd
+Cheruton v1.0/Levels/commonLevelAssets/Props/spike0/spike0.tscn
+Cheruton v1.0/Levels/commonLevelAssets/Props/spike1/Sprites/Props-Vines1.json
+Cheruton v1.0/Levels/commonLevelAssets/Props/spike1/Sprites/Props-Vines1.png
+Cheruton v1.0/Levels/commonLevelAssets/Props/spike1/spike1.tscn
+Cheruton v1.0/Levels/commonLevelAssets/Ray/Ray.tscn
+Cheruton v1.0/Levels/commonLevelAssets/Ray/Sprites/Grasslands_SunRay.png
+Cheruton v1.0/Levels/commonLevelAssets/TeleportZone/TeleportZone.tscn
+Cheruton v1.0/Levels/commonLevelAssets/grassLandsParralaxBg/Sprites/Grasslands_clouds.png
+Cheruton v1.0/Levels/commonLevelAssets/grassLandsParralaxBg/Sprites/Grasslands_clouds2.png
+Cheruton v1.0/Levels/commonLevelAssets/grassLandsParralaxBg/Sprites/Grasslands_hill.png
+Cheruton v1.0/Levels/commonLevelAssets/grassLandsParralaxBg/Sprites/Grasslands_mountain.png
+Cheruton v1.0/Levels/commonLevelAssets/grassLandsParralaxBg/Sprites/Grasslands_mountain2.png
+Cheruton v1.0/Levels/commonLevelAssets/grassLandsParralaxBg/Sprites/Grasslands_sky.png
+Cheruton v1.0/Levels/commonLevelAssets/grassLandsParralaxBg/grassLandsParallaxBg.tscn
+Cheruton v1.0/Levels/commonLevelAssets/worldt_env.res
+Cheruton v1.0/Levels/levels.gd
+Cheruton v1.0/Levels/spiderBosstestBench/SpiderbossTestScene.gd
+Cheruton v1.0/Levels/spiderBosstestBench/SpiderbossTestScene.tscn
+Cheruton v1.0/Levels/squeaky-dog-toy.aiff
+Cheruton v1.0/Levels/testBench2/testBench2.gd
+Cheruton v1.0/Levels/testBench2/testBench2.tscn
+Cheruton v1.0/Music/Background/Chiptune _-Clavi, Wurly & CP-(Album) _Every Morning_.wav
+Cheruton v1.0/Music/Background/Relax.mp3
+Cheruton v1.0/Music/Background/Time Trip.wav
+Cheruton v1.0/Music/SFX/Attack_Enemy_Impact_1.wav
+Cheruton v1.0/Music/SFX/Attack_Enemy_Impact_2.wav
+Cheruton v1.0/Music/SFX/Attack_Enemy_Impact_3.wav
+Cheruton v1.0/Music/SFX/Attack_Enemy_Impact_4.wav
+Cheruton v1.0/Music/SFX/ButtonClick.wav
+Cheruton v1.0/Music/SFX/ConsumUsed.wav
+Cheruton v1.0/Music/SFX/MouseOver.wav
+Cheruton v1.0/Music/SFX/MouseSelect.wav
+Cheruton v1.0/Music/SFX/NFF-menu-05-a.wav
+Cheruton v1.0/Music/SFX/NFF-menu-05-b.wav
+Cheruton v1.0/Music/SFX/Trash.wav
+Cheruton v1.0/Music/SFX/selling_item.ogg
+Cheruton v1.0/Music/default_bus_layout.tres
+Cheruton v1.0/Player/Camera/camera_shake.gd
+Cheruton v1.0/Player/Camera/camera_shake.tscn
+Cheruton v1.0/Player/Inventory/101.tscn
+Cheruton v1.0/Player/Inventory/Inventory.gd
+Cheruton v1.0/Player/Inventory/Inventory.gd.orig
+Cheruton v1.0/Player/Inventory/Inventory.tscn
+Cheruton v1.0/Player/Inventory/Sprites/Base/baseUIBackgroundg.png
+Cheruton v1.0/Player/Inventory/Sprites/Icons/Key.png
+Cheruton v1.0/Player/Inventory/Sprites/Icons/apparel.png
+Cheruton v1.0/Player/Inventory/Sprites/Icons/coin.png
+Cheruton v1.0/Player/Inventory/Sprites/Icons/consum.png
+Cheruton v1.0/Player/Inventory/Sprites/Icons/exit.png
+Cheruton v1.0/Player/Inventory/Sprites/Icons/misc.png
+Cheruton v1.0/Player/Inventory/Sprites/Icons/weapons.png
+Cheruton v1.0/Player/Inventory/Sprites/Slots/HorizontalTabDeSelect.png
+Cheruton v1.0/Player/Inventory/Sprites/Slots/HorizontalTabDeSelect.png.import
+Cheruton v1.0/Player/Inventory/Sprites/Slots/HorizontalTabSelect.png
+Cheruton v1.0/Player/Inventory/Sprites/Slots/HorizontalTabSelect.png.import
+Cheruton v1.0/Player/Inventory/Sprites/Slots/Scroll.png
+Cheruton v1.0/Player/Inventory/Sprites/Slots/Scroll.png.import
+Cheruton v1.0/Player/Inventory/Sprites/Slots/empty_attack.png
+Cheruton v1.0/Player/Inventory/Sprites/Slots/empty_attack.png.import
+Cheruton v1.0/Player/Inventory/Sprites/Slots/empty_defense.png
+Cheruton v1.0/Player/Inventory/Sprites/Slots/empty_defense.png.import
+Cheruton v1.0/Player/Inventory/Sprites/Slots/equippedIcons.png
+Cheruton v1.0/Player/Inventory/Sprites/Slots/equippedIcons.png.import
+Cheruton v1.0/Player/Inventory/Sprites/Slots/itemEquipped.png
+Cheruton v1.0/Player/Inventory/Sprites/Slots/itemFramel.png
+Cheruton v1.0/Player/Inventory/Sprites/Slots/itemFramel.png.import
+Cheruton v1.0/Player/Inventory/Sprites/Slots/itemSelected.png
+Cheruton v1.0/Player/Inventory/Sprites/Slots/itemSlot.png
+Cheruton v1.0/Player/Inventory/Sprites/Slots/itemSlot.png.import
+Cheruton v1.0/Player/Inventory/Sprites/Slots/statsSlot.png
+Cheruton v1.0/Player/Inventory/Sprites/Slots/statsSlot.png.import
+Cheruton v1.0/Player/Inventory/Sprites/Slots/vertTabDeselected.png
+Cheruton v1.0/Player/Inventory/Sprites/Slots/vertTabDeselected.png.import
+Cheruton v1.0/Player/Inventory/Sprites/Slots/vertTabSelected.png
+Cheruton v1.0/Player/Inventory/Sprites/Slots/vertTabSelected.png.import
+Cheruton v1.0/Player/Inventory/Wilson hawk.ttf
+Cheruton v1.0/Player/PlayerBody/FlyingSword/HitParticles.tscn
+Cheruton v1.0/Player/PlayerBody/FlyingSword/flyingSword.gd
+Cheruton v1.0/Player/PlayerBody/FlyingSword/flyingSword.tscn
+Cheruton v1.0/Player/PlayerBody/FlyingSword/hurtBox.gd
+Cheruton v1.0/Player/PlayerBody/GhostImage/GhostImage.tscn
+Cheruton v1.0/Player/PlayerBody/Hook/freeRope.gd
+Cheruton v1.0/Player/PlayerBody/Hook/freeRope.tscn
+Cheruton v1.0/Player/PlayerBody/Hook/grappleHook.gd
+Cheruton v1.0/Player/PlayerBody/Hook/grappleHook.tscn
+Cheruton v1.0/Player/PlayerBody/Hook/link_retract_curve.tres
+Cheruton v1.0/Player/PlayerBody/Hook/rope.gd
+Cheruton v1.0/Player/PlayerBody/Hook/trailSmoke_unused.gd
+Cheruton v1.0/Player/PlayerBody/Sounds/Natural_Whoosh_1.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/Natural_Whoosh_2.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/Natural_Whoosh_3.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/dash.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/debris_dirt_hard_01.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/debris_dirt_hard_02.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/debris_dirt_hard_03.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/debris_dirt_hard_04.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/debris_dirt_hard_05.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/debris_dirt_hard_06.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/debris_dirt_hard_07.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/debris_dirt_soft_01.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/debris_dirt_soft_02.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/debris_dirt_soft_03.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/debris_dirt_soft_04.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/debris_dirt_soft_05.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/debris_dirt_soft_06.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/flying_sword.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/flying_sword_hit.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/flying_sword_recover.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/hook.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/platform_unit_return_01.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/platform_unit_return_02.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/platform_unit_return_03.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/platform_unit_return_04.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/platform_unit_return_05.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/platform_unit_return_06.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/platform_unit_return_07.wav
+Cheruton v1.0/Player/PlayerBody/Sounds/slide_down.wav
+Cheruton v1.0/Player/PlayerBody/Sprites/MC - FlyingSword.json
+Cheruton v1.0/Player/PlayerBody/Sprites/MC - FlyingSword.png
+Cheruton v1.0/Player/PlayerBody/Sprites/MC - General_24fps.json
+Cheruton v1.0/Player/PlayerBody/Sprites/MC-hooktip.png
+Cheruton v1.0/Player/PlayerBody/Sprites/MC_General.json
+Cheruton v1.0/Player/PlayerBody/Sprites/MC_General.png
+Cheruton v1.0/Player/PlayerBody/States/combat/attack_ground.gd
+Cheruton v1.0/Player/PlayerBody/States/combat/hit.gd
+Cheruton v1.0/Player/PlayerBody/States/debug/stateLabel.gd
+Cheruton v1.0/Player/PlayerBody/States/motion/air/air.gd
+Cheruton v1.0/Player/PlayerBody/States/motion/air/dash.gd
+Cheruton v1.0/Player/PlayerBody/States/motion/air/fall.gd
+Cheruton v1.0/Player/PlayerBody/States/motion/air/hook.gd
+Cheruton v1.0/Player/PlayerBody/States/motion/air/jump.gd
+Cheruton v1.0/Player/PlayerBody/States/motion/ground/idle.gd
+Cheruton v1.0/Player/PlayerBody/States/motion/ground/onGround.gd
+Cheruton v1.0/Player/PlayerBody/States/motion/ground/run.gd
+Cheruton v1.0/Player/PlayerBody/States/motion/ground/slide.gd
+Cheruton v1.0/Player/PlayerBody/States/motion/ground/slide_curve.tres
+Cheruton v1.0/Player/PlayerBody/States/motion/ground/wallSlide.gd
+Cheruton v1.0/Player/PlayerBody/States/motion/motion.gd
+Cheruton v1.0/Player/PlayerBody/States/others/talk.gd
+Cheruton v1.0/Player/PlayerBody/States/state.gd
+Cheruton v1.0/Player/PlayerBody/hurtBox.gd
+Cheruton v1.0/Player/PlayerBody/playerBody.gd
+Cheruton v1.0/Player/PlayerBody/playerBody.tscn
+Cheruton v1.0/Player/PlayerBody/playerStateMachine.gd
+Cheruton v1.0/Player/Stats/DataStat/DataStat.gd
+Cheruton v1.0/Player/Stats/DataStat/DataStat.tscn
+Cheruton v1.0/Player/Stats/DataStat/bar_progress.png
+Cheruton v1.0/Player/Stats/DataStat/bar_under.png
+Cheruton v1.0/Player/Stats/ExpBar/ExpBar.gd
+Cheruton v1.0/Player/Stats/ExpBar/ExpBar.tscn
+Cheruton v1.0/Player/Stats/ExpBar/expbar_bg.png
+Cheruton v1.0/Player/Stats/ExpBar/expbar_bg.png.import
+Cheruton v1.0/Player/Stats/ExpBar/expbar_fill.png
+Cheruton v1.0/Player/Stats/ExpBar/expbar_fill.png.import
+Cheruton v1.0/Player/Stats/HealthBar/HealthBar.gd
+Cheruton v1.0/Player/Stats/HealthBar/HealthBar.png
+Cheruton v1.0/Player/Stats/HealthBar/HealthBar.tscn
+Cheruton v1.0/Player/Stats/HealthBar/HealthBarFill.png
+Cheruton v1.0/Player/Stats/HealthBar/Heart.json
+Cheruton v1.0/Player/Stats/HealthBar/Heart.png
+Cheruton v1.0/Player/Stats/HealthBar/Heart.png.import
+Cheruton v1.0/Player/Stats/HealthBar/playerhealthbar_fill.png
+Cheruton v1.0/Player/Stats/HealthBar/playerhealthbar_fill.png.import
+Cheruton v1.0/Props/ItemIcons/bronze_armor.png
+Cheruton v1.0/Props/ItemIcons/bronze_sword.png
+Cheruton v1.0/Props/ItemIcons/iron_armor.png
+Cheruton v1.0/Props/ItemIcons/iron_sword.png
+Cheruton v1.0/Props/ItemIcons/noodles.png
+Cheruton v1.0/Props/ItemIcons/potion_flask.png
+Cheruton v1.0/Props/ItemIcons/potion_jug.png
+Cheruton v1.0/Props/ItemIcons/potion_tube.png
+Cheruton v1.0/Props/ItemIcons/wine.png
+Cheruton v1.0/Props/MouseIcons/UI_Cursor.png
+Cheruton v1.0/addons/EXP-System-Dialog/Dialog Editor/Dialog_Editor.tscn
+Cheruton v1.0/addons/EXP-System-Dialog/Dialog Editor/Editor/Editor.tscn
+Cheruton v1.0/addons/EXP-System-Dialog/Dialog Editor/Editor/editor.gd
+Cheruton v1.0/addons/EXP-System-Dialog/Dialog Editor/Nodes/Line/Line_Node.tscn
+Cheruton v1.0/addons/EXP-System-Dialog/Dialog Editor/Nodes/Line/icon_distraction_free.svg
+Cheruton v1.0/addons/EXP-System-Dialog/Dialog Editor/Nodes/Line/line_node.gd
+Cheruton v1.0/addons/EXP-System-Dialog/Dialog Editor/dialog_editor.gd
+Cheruton v1.0/addons/EXP-System-Dialog/Reference_StoryReader/EXP_StoryReader.gd
+Cheruton v1.0/addons/EXP-System-Dialog/Resource_BakedStory/EXP_BakedStory.gd
+Cheruton v1.0/addons/EXP-System-Dialog/Resource_EditorStory/EXP_EditorStory.gd
+Cheruton v1.0/addons/EXP-System-Dialog/Resource_NodeTemplate/EXP_NodeTemplate.gd
+Cheruton v1.0/addons/EXP-System-Dialog/Story Editor/Dialog Record/Dialog_Record.tscn
+Cheruton v1.0/addons/EXP-System-Dialog/Story Editor/Dialog Record/dialog_record.gd
+Cheruton v1.0/addons/EXP-System-Dialog/Story Editor/Rename Record Box/Rename_Record_Box.tscn
+Cheruton v1.0/addons/EXP-System-Dialog/Story Editor/Rename Record Box/rename_record_box.gd
+Cheruton v1.0/addons/EXP-System-Dialog/Story Editor/Story_Editor.tscn
+Cheruton v1.0/addons/EXP-System-Dialog/Story Editor/story_editor.gd
+Cheruton v1.0/addons/EXP-System-Dialog/plugin.cfg
+Cheruton v1.0/addons/EXP-System-Dialog/plugin.gd
+Cheruton v1.0/addons/aseprite_importer/LICENSE
+Cheruton v1.0/addons/aseprite_importer/classes/AsepriteImportData.gd
+Cheruton v1.0/addons/aseprite_importer/classes/AsepriteImporter.gd
+Cheruton v1.0/addons/aseprite_importer/classes/EditorTheme.gd
+Cheruton v1.0/addons/aseprite_importer/interface/Main.gd
+Cheruton v1.0/addons/aseprite_importer/interface/Main.tscn
+Cheruton v1.0/addons/aseprite_importer/interface/icons/dark_icon.png
+Cheruton v1.0/addons/aseprite_importer/interface/icons/dark_icon.png.import
+Cheruton v1.0/addons/aseprite_importer/interface/icons/light_icon.png
+Cheruton v1.0/addons/aseprite_importer/interface/icons/light_icon.png.import
+Cheruton v1.0/addons/aseprite_importer/interface/import_menu/JSONImportMenu.gd
+Cheruton v1.0/addons/aseprite_importer/interface/import_menu/JSONImportMenu.tscn
+Cheruton v1.0/addons/aseprite_importer/interface/import_menu/SelectAnimationPlayerMenu.gd
+Cheruton v1.0/addons/aseprite_importer/interface/import_menu/SelectAnimationPlayerMenu.tscn
+Cheruton v1.0/addons/aseprite_importer/interface/import_menu/SelectNodeDialog.gd
+Cheruton v1.0/addons/aseprite_importer/interface/import_menu/SelectNodeDialog.tscn
+Cheruton v1.0/addons/aseprite_importer/interface/import_menu/SelectSpriteMenu.gd
+Cheruton v1.0/addons/aseprite_importer/interface/import_menu/SelectSpriteMenu.tscn
+Cheruton v1.0/addons/aseprite_importer/interface/import_menu/TagsMenu.gd
+Cheruton v1.0/addons/aseprite_importer/interface/import_menu/TagsMenu.tscn
+Cheruton v1.0/addons/aseprite_importer/interface/spritesheet_inspector/ColorMenuItem.gd
+Cheruton v1.0/addons/aseprite_importer/interface/spritesheet_inspector/ColorMenuItem.tscn
+Cheruton v1.0/addons/aseprite_importer/interface/spritesheet_inspector/SettingsMenu.gd
+Cheruton v1.0/addons/aseprite_importer/interface/spritesheet_inspector/SpritesheetInspector.gd
+Cheruton v1.0/addons/aseprite_importer/interface/spritesheet_inspector/SpritesheetInspector.tscn
+Cheruton v1.0/addons/aseprite_importer/interface/spritesheet_inspector/SpritesheetView.gd
+Cheruton v1.0/addons/aseprite_importer/interface/spritesheet_inspector/SpritesheetView.tscn
+Cheruton v1.0/addons/aseprite_importer/interface/spritesheet_inspector/godot_button/godot_hover.png
+Cheruton v1.0/addons/aseprite_importer/interface/spritesheet_inspector/godot_button/godot_hover.png.import
+Cheruton v1.0/addons/aseprite_importer/interface/spritesheet_inspector/godot_button/godot_normal.png
+Cheruton v1.0/addons/aseprite_importer/interface/spritesheet_inspector/godot_button/godot_normal.png.import
+Cheruton v1.0/addons/aseprite_importer/interface/spritesheet_inspector/godot_button/godot_pressed.png
+Cheruton v1.0/addons/aseprite_importer/interface/spritesheet_inspector/godot_button/godot_pressed.png.import
+Cheruton v1.0/addons/aseprite_importer/plugin.cfg
+Cheruton v1.0/addons/aseprite_importer/plugin.gd
+Cheruton v1.0/export_presets.cfg
+Cheruton v1.0/icon.png
+Cheruton v1.0/icon.png.import
+Cheruton v1.0/project.godot
+LICENSE
+LICENSE_CC_BY_NC_ND_4.0
+LICENSE_GNU_GPL_3.0
+README.md
+README.md.orig
+README_BACKUP_63.md
+README_BASE_63.md
+README_LOCAL_63.md
+README_REMOTE_63.md
+Sprites/1.png
+Sprites/DASH_1080.mp4
+Sprites/Enemies/Enemy_Boss_Spider.aseprite
+Sprites/Enemies/Enemy_Mob_Furball.aseprite
+Sprites/Enemies/spiderboss name references/Enemy_Boss_Spider_backlegback.png
+Sprites/Enemies/spiderboss name references/Enemy_Boss_Spider_backlegfront..png
+Sprites/Enemies/spiderboss name references/Enemy_Boss_Spider_backlegmid..png
+Sprites/Enemies/spiderboss name references/Enemy_Boss_Spider_butt.png
+Sprites/Enemies/spiderboss name references/Enemy_Boss_Spider_head.png
+Sprites/Enemies/spiderboss name references/Enemy_Boss_Spider_legback.png
+Sprites/Enemies/spiderboss name references/Enemy_Boss_Spider_legfront.png
+Sprites/Enemies/spiderboss name references/Enemy_Boss_Spider_legmid.png
+Sprites/Environment/Cave/Cave.aseprite
+Sprites/Environment/Grasslands/Grasslands-Mountain.aseprite
+Sprites/Environment/Grasslands/Grasslands.aseprite
+Sprites/Environment/Grasslands/Grasslands_Bonfire.aseprite
+Sprites/Environment/Grasslands/Grasslands_Cannon.aseprite
+Sprites/Environment/Grasslands/Grasslands_Chest.aseprite
+Sprites/Environment/Grasslands/Grasslands_Flag.aseprite
+Sprites/Environment/Grasslands/Grasslands_Glove.aseprite
+Sprites/Environment/Grasslands/Grasslands_Mountain.aseprite
+Sprites/Environment/Grasslands/Grasslands_SunRay.aseprite
+Sprites/Environment/Grasslands/Grasslands_WitchHut.aseprite
+Sprites/Environment/HomeTown/Hometown_Blacksmith.aseprite
+Sprites/Environment/HomeTown/Hometown_Bridge.aseprite
+Sprites/Environment/HomeTown/Hometown_BridgeCheckpoints.aseprite
+Sprites/Environment/HomeTown/Hometown_BuidingsALL.aseprite
+Sprites/Environment/HomeTown/Hometown_BuildingShadows.aseprite
+Sprites/Environment/HomeTown/Hometown_ForegroundALL.aseprite
+Sprites/Environment/HomeTown/Hometown_House0.aseprite
+Sprites/Environment/HomeTown/Hometown_House1.aseprite
+Sprites/Environment/HomeTown/Hometown_House2.aseprite
+Sprites/Environment/HomeTown/Hometown_House3.aseprite
+Sprites/Environment/HomeTown/Hometown_House4.aseprite
+Sprites/Environment/HomeTown/Hometown_Portal.aseprite
+Sprites/Environment/HomeTown/Hometown_Portal_BlackCircle.aseprite
+Sprites/Environment/HomeTown/Hometown_Tower.aseprite
+Sprites/Environment/Props/Props_BouncePad.aseprite
+Sprites/Environment/Props/Props_HookPoint.aseprite
+Sprites/Environment/Props/Props_SavePoint.aseprite
+Sprites/Environment/Props/Props_Vines0.aseprite
+Sprites/Environment/Props/Props_Vines1.aseprite
+Sprites/FX/Charge/Charge_MoneyGirl.aseprite
+Sprites/FX/CinematicBlackBars.png
+Sprites/FX/Dust/dash_dust.aseprite
+Sprites/FX/Explosions/Explosion_Cannon.aseprite
+Sprites/FX/Explosions/Explosion_MoneyGirl.aseprite
+Sprites/FX/Explosions/Explosion_WitchHut.aseprite
+Sprites/FX/HitFx/HitFx_Mob.aseprite
+Sprites/FX/HitFx/HitFx_MoneyGirl.aseprite
+Sprites/FX/HitFx/line.png
+Sprites/FX/Projectiles/Projectile_FlyingSword.aseprite
+Sprites/FX/Projectiles/Projectile_MoneyGirlSpell.aseprite
+Sprites/FX/Roar/HollowKnights_roar.png
+Sprites/FX/Roar/HollowKnights_roar_purewhite.png
+Sprites/FX/vignette.png
+Sprites/Illustrations/1/072e5f67da206c837e4b8348b3e63953.png
+Sprites/Illustrations/1/27dcc9c0173d1eaf2a4c64aebe6fe242.jpg
+Sprites/Illustrations/1/5ii2e7uwj6q11.png
+Sprites/Illustrations/1/5vagvcdotbc31.png
+Sprites/Illustrations/1/8f24f4a23b86087b6998fc8710376209.jpg
+Sprites/Illustrations/1/ENXfMcbW4AIPpuv.png
+Sprites/Illustrations/1/EZPD2wGXQAAw8It.jpg
+Sprites/Illustrations/1/Face1.aseprite
+Sprites/Illustrations/1/Face1.png
+Sprites/Illustrations/1/Face2.png
+Sprites/Illustrations/1/PjZq619xRzqCRgVwjiYmqihqD_f46kZ2PvyrWRpXoc0.png
+Sprites/Illustrations/1/download.jpg
+Sprites/Illustrations/1/hair.jpg
+Sprites/Illustrations/1/images (1).jpg
+Sprites/Illustrations/1/images (2).jpg
+Sprites/Illustrations/1/images (3).jpg
+Sprites/Illustrations/1/images.jpg
+Sprites/Illustrations/1/megumin-best-and-worst-traits-feature.jpg
+Sprites/Illustrations/1/vibtc89t5wg41.mp4
+Sprites/Illustrations/1/yno8mxjbp1501.jpg
+Sprites/Illustrations/2/-FSQiKUVO5t2LrZQkKmkPwbdYHKy34nHWtsjzwFUtzc.jpg
+Sprites/Illustrations/2/0fb9edc3747472940212eb0b6339b4d6.jpg
+Sprites/Illustrations/2/26a3554e8882d0c05b5cec4f1f81a6b8.jpg
+Sprites/Illustrations/2/316894942.jpg
+Sprites/Illustrations/2/5N6nxqbt14Jx8t_mXUUrwcySfh43F074PlGSCFedeyo.jpg
+Sprites/Illustrations/2/623f838c172d8f87cc2ac2590b5ed4f4.jpg
+Sprites/Illustrations/2/63952745_p0_master1200.jpg
+Sprites/Illustrations/2/79962462_p0_master1200.jpg
+Sprites/Illustrations/2/BuffDUCKS.txt
+Sprites/Illustrations/2/DTGzlVyX4AA5t1E.png
+Sprites/Illustrations/2/DU3cV34W4AEzF-G.png
+Sprites/Illustrations/2/DV6nikiWsAAZJ4T.png
+Sprites/Illustrations/2/DVXF_X0XkAAOp0q.png
+Sprites/Illustrations/2/DxW3htpV4AAzCwj.png
+Sprites/Illustrations/2/EICpap-VAAEqzZ1.jpg
+Sprites/Illustrations/2/EO42bwOWkAEER-u.png
+Sprites/Illustrations/2/EVuLmkHU4AAl4jR.jpg
+Sprites/Illustrations/2/EW_cRRTU4AEdcKi.jpg
+Sprites/Illustrations/2/EX0CYncUwAAtb_1.jpg
+Sprites/Illustrations/2/EawgrtEX0AM-Zlo.jpg
+Sprites/Illustrations/2/EfPS_QmUYAANueq.png
+Sprites/Illustrations/2/EgA0NVFX0AAlreT.png
+Sprites/Illustrations/2/F-56ph8QFy0PSXWpgM510ERbHQiHK9EqAYf6pXNzkl8.png
+Sprites/Illustrations/2/Face200px.aseprite
+Sprites/Illustrations/2/Face200px.gif
+Sprites/Illustrations/2/Face200px2.aseprite
+Sprites/Illustrations/2/Face200px2.gif
+Sprites/Illustrations/2/Face200px3.aseprite
+Sprites/Illustrations/2/Face200px3.gif
+Sprites/Illustrations/2/Face200px4.gif
+Sprites/Illustrations/2/Face200px5.gif
+Sprites/Illustrations/2/Face200px6.gif
+Sprites/Illustrations/2/Face200px7.png
+Sprites/Illustrations/2/Face200px8.png
+Sprites/Illustrations/2/Ghostblade.full.2356313.jpg
+Sprites/Illustrations/2/Guatemala.png
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/1080x360
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/1f1e8-1f1e6.svg
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/6-3SXjE4_400x400.png
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/6-3SXjE4_x96.png
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/ASAXX44H_x96.jpg
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/D41tCBOW4AEt1IO
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/DrehlXVVsAAtDpn
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/DxLSg6hVYAAj5Fc
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/DxNt01rW0AAyg0n
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/DxQ7SoYXQAEIls7
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/DxW3htpV4AAzCwj
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/EBhZWo2WkAAHO9Q
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/ECLECFIW4AIwUuZ
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/EClAN4KW4AUv6kG
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/EJQnbrGUwAIg6F9
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/EJqxWs6WoAUQu7U
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/EMY3UUlX0AA0Fih
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/EO42bwOWkAEER-u
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/EO46O0WWoAEgVVa
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/EYds2G2XQAAn8EX
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/O247Phbx_x96.jpg
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/TDAFY5Wa_x96.png
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/_r
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/_r(1)
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/_r(2)
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/analytics.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/bundle.NetworkInstrument.8d89bf05.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/bundle.TweetMediaDetail.2109ba75.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/bundle.UserProfile.ba487975.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/default_profile_bigger.png
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/en.83cf1715.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/loader.AbsolutePower.3f7c2da5.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/loader.AppModules.55dc8885.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/loader.DMDrawer.71b5f9f5.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/loader.ExploreSidebar.8965c365.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/loader.NewTweetsPill.d8b177d5.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/loader.SideNav.fe8b7825.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/loader.TimelineRenderer.9f00dc25.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/loader.Typeahead.81d05ef5.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/loader.WideLayout.3c6bb3c5.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/main.63dc6ac5.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/ondemand.BranchSdk.e3445e85.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/ondemand.Dropdown.a62663a5.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/ondemand.ProfileSidebar.313263d5.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/ondemand.emoji.en.68ed22e5.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/polyfills.931ce165.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/sharedCore.effccb95.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/shared_bundle.DirectMessages_bundle.TweetMediaDetail_bundle.UserAvatar.a1e82845.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/shared_bundle.Explore_loader.ExploreSidebar.b9cd30f5.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/shared_loader.DMDrawer_bundle.Compose_bundle.RichTextCompose_bundle.DirectMessages_bundle.DMRichTextCompose_b.99556555.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/shared_loader.DMDrawer_bundle.DirectMessages_bundle.DMRichTextCompose.eb9dba55.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/shared_ondemand.EmojiPickerData_ondemand.EmojiPicker.3e673d75.js.download
+Sprites/Illustrations/2/Media Tweets by Tommi Laurila (@PxTommi) _ Twitter_files/vendors_main.e7e20d65.js.download
+Sprites/Illustrations/2/OLDFACe.aseprite
+Sprites/Illustrations/2/a7bhmtd0s5j51.jpg
+Sprites/Illustrations/2/aneta-angulos.jpg
+Sprites/Illustrations/2/bb6b3f4ebd55c9cee0adeaefcbf91da2.jpg
+Sprites/Illustrations/2/ddmpirp-d4e06c29-7532-4853-8aa2-de96f1859531.png
+Sprites/Illustrations/2/download (1).jpg
+Sprites/Illustrations/2/download (2).jpg
+Sprites/Illustrations/2/download.jpg
+Sprites/Illustrations/2/download.png
+Sprites/Illustrations/2/eyes.png
+Sprites/Illustrations/2/face.png
+Sprites/Illustrations/2/fantasy-art-cirilla-fiona-elen-riannon-the-witcher-3-wild-hunt-the-witcher-wallpaper-preview.jpg
+Sprites/Illustrations/2/gammut_mask_wagon_night_by_drawmachine01_daehi2k-fullview.jpg
+Sprites/Illustrations/2/images (1).jpg
+Sprites/Illustrations/2/images (2).jpg
+Sprites/Illustrations/2/images (3).jpg
+Sprites/Illustrations/2/images.jpg
+Sprites/Illustrations/2/images2.jpg
+Sprites/Illustrations/2/lighhitng2.jpg
+Sprites/Illustrations/2/man-holding-light-torch.jpg
+Sprites/Illustrations/2/mngn7tsqqlz21.png
+Sprites/Illustrations/2/ops wrong lihghintg.jpg
+Sprites/Illustrations/2/qj8r455owhl51.jpg
+Sprites/Illustrations/2/stock-photo-tourist-holiday-girl-next-to-pyramid-egypt-1504254938.jpg
+Sprites/Illustrations/2/student reference.jpg
+Sprites/Illustrations/2/tomb-raider-definitive-edition-lara-croft-torch-cave-1440x960.jpg
+Sprites/Illustrations/2/yande.re 453220 sample aeolian ghostblade topless wlop.jpg
+Sprites/Illustrations/3/6NxPudqIWf1FgiYIttxD80hIfemlth3ecglHVifsCM8.png
+Sprites/Illustrations/3/rsz_tomb_raider_edit.webp
+Sprites/Illustrations/3/tomb-raider-standard-edition_pdp_3840x2160_en_WW-980x620.jpg
+Sprites/Illustrations/3/webtoon_음양사.png
+Sprites/Items/Armor/Armor-GreenSamurai_Arvin.aseprite
+Sprites/MC/MC-hooktip.aseprite
+Sprites/MC/MC_Arm.aseprite
+Sprites/MC/MC_General.aseprite
+Sprites/NORMALMAP.png
+Sprites/Npcs/Addy.aseprite
+Sprites/Npcs/Expressions_Surprised.aseprite
+Sprites/Npcs/HomeTown/HomeTown_NPCDesigns.aseprite
+Sprites/Npcs/HomeTown/Hometown_NPC_buff.aseprite
+Sprites/Npcs/HomeTown/Hometown_NPC_captain.aseprite
+Sprites/Npcs/HomeTown/Hometown_NPC_cat.aseprite
+Sprites/Npcs/HomeTown/Hometown_NPC_chad.aseprite
+Sprites/Npcs/HomeTown/Hometown_NPC_clgirl.aseprite
+Sprites/Npcs/HomeTown/Hometown_NPC_coolboy.aseprite
+Sprites/Npcs/HomeTown/Hometown_NPC_genericgirl.aseprite
+Sprites/Npcs/HomeTown/Hometown_NPC_gramps.aseprite
+Sprites/Npcs/HomeTown/Hometown_NPC_loli.aseprite
+Sprites/Npcs/HomeTown/Hometown_NPC_moneygirl.aseprite
+Sprites/Npcs/HomeTown/Hometown_NPC_whippersnapper.aseprite
+Sprites/OldAesprite/18fps_limitPallete_PIL_HomeTown_NPC_cat.aseprite
+Sprites/OldAesprite/23fps_limitPallete_PIL_HomeTown_NPC_captain.aseprite
+Sprites/OldAesprite/24fps mc attack.aseprite
+Sprites/OldAesprite/24fps_MC.aseprite
+Sprites/OldAesprite/24fps_MCs.aseprite
+Sprites/OldAesprite/Background.aseprite
+Sprites/OldAesprite/Enemy_Furball.aseprite
+Sprites/OldAesprite/Enemy_Furball_22fps.aseprite
+Sprites/OldAesprite/Faces.aseprite
+Sprites/OldAesprite/GingerBreadLogo.aseprite
+Sprites/OldAesprite/Grasslands-Bigtree.aseprite
+Sprites/OldAesprite/Grasslands-Clouds.aseprite
+Sprites/OldAesprite/Grasslands-Ferns.aseprite
+Sprites/OldAesprite/Grasslands-Giantrock.aseprite
+Sprites/OldAesprite/Grasslands-Mountain (2).aseprite
+Sprites/OldAesprite/Grasslands-Mountain - Copy.aseprite
+Sprites/OldAesprite/Grasslands-Tree.aseprite
+Sprites/OldAesprite/Grasslands.aseprite
+Sprites/OldAesprite/HomeTown-House2.aseprite
+Sprites/OldAesprite/HomeTown-House2save.aseprite
+Sprites/OldAesprite/HomeTown-YourHouseold.aseprite
+Sprites/OldAesprite/HomeTown.aseprite
+Sprites/OldAesprite/HomeTown_NPCS_save.aseprite
+Sprites/OldAesprite/HomeTown_NPC_captain_save.aseprite
+Sprites/OldAesprite/HomeTown_NPC_studygirl.aseprite
+Sprites/OldAesprite/MC - General - savebefore new air.aseprite
+Sprites/OldAesprite/MC - General.aseprite
+Sprites/OldAesprite/MC - General24fpsNEW.aseprite
+Sprites/OldAesprite/MC - Generalasdasave.aseprite
+Sprites/OldAesprite/MC - Generalsave before new attack.aseprite
+Sprites/OldAesprite/MC-Attacks.aseprite
+Sprites/OldAesprite/MC-General.aseprite
+Sprites/OldAesprite/MC-Generalold.aseprite
+Sprites/OldAesprite/MC-Generalv2 save.aseprite
+Sprites/OldAesprite/MC-Scarf.aseprite
+Sprites/OldAesprite/MC.aseprite
+Sprites/OldAesprite/MCattackbackup.aseprite
+Sprites/OldAesprite/MCbackup.aseprite
+Sprites/OldAesprite/MainMenu.aseprite
+Sprites/OldAesprite/MainMenu2.aseprite
+Sprites/OldAesprite/MainMenu2save.aseprite
+Sprites/OldAesprite/MainMenu3old.aseprite
+Sprites/OldAesprite/Mcgeneral.aseprite
+Sprites/OldAesprite/MountainRefer.aseprite
+Sprites/OldAesprite/Mountain_sace.aseprite
+Sprites/OldAesprite/Mountainold.aseprite
+Sprites/OldAesprite/NPC-Gramps.aseprite
+Sprites/OldAesprite/OLDgrasslands.aseprite
+Sprites/OldAesprite/Referenceheavyattack.aseprite
+Sprites/OldAesprite/Saitama.aseprite
+Sprites/OldAesprite/TitleScreen.aseprite
+Sprites/OldAesprite/attackrefer.aseprite
+Sprites/OldAesprite/attackrefer2.aseprite
+Sprites/OldAesprite/baclupmc.aseprite
+Sprites/OldAesprite/gramps.aseprite
+Sprites/OldAesprite/grayscalestudy.aseprite
+Sprites/OldAesprite/ground_attack_reference..aseprite
+Sprites/OldAesprite/mc backup.aseprite
+Sprites/OldAesprite/mountain save.aseprite
+Sprites/OldAesprite/mountain_reference.aseprite
+Sprites/OldAesprite/npc boy.aseprite
+Sprites/OldAesprite/npcs/HomeTown_NPC_buffl.aseprite
+Sprites/OldAesprite/npcs/HomeTown_NPC_captain.aseprite
+Sprites/OldAesprite/npcs/HomeTown_NPC_cat.aseprite
+Sprites/OldAesprite/npcs/HomeTown_NPC_chad.aseprite
+Sprites/OldAesprite/npcs/HomeTown_NPC_clgirl.aseprite
+Sprites/OldAesprite/npcs/HomeTown_NPC_coolboy.aseprite
+Sprites/OldAesprite/npcs/HomeTown_NPC_genericgirl.aseprite
+Sprites/OldAesprite/npcs/HomeTown_NPC_gramps.aseprite
+Sprites/OldAesprite/npcs/HomeTown_NPC_loli.aseprite
+Sprites/OldAesprite/npcs/HomeTown_NPC_moneygirl.aseprite
+Sprites/OldAesprite/npcs/HomeTown_NPC_whippersnapper.aseprite
+Sprites/OldAesprite/npcs/MainMenusaveaseprite.aseprite
+Sprites/Scenes/Grasslands0/Grasslands0-Interaction0.aseprite
+Sprites/Scenes/Grasslands0/Grasslands0-Interaction1.aseprite
+Sprites/Scenes/Grasslands0/Grasslands0-Interaction2.aseprite
+Sprites/Scenes/Grasslands0/Grasslands0-interaction3.aseprite
+Sprites/UI/Gameplay.aseprite
+Sprites/UI/Gameplay.png
+Sprites/UI/SplashDown_ThumbNail.aseprite
+Sprites/UI/UI_Cursor.aseprite
+Sprites/UI/UI_Dialog.aseprite
+Sprites/UI/UI_HealthBar.aseprite
+Sprites/UI/UI_HintKeys.aseprite
+Sprites/UI/UI_InventoryAndShop.aseprite
+Sprites/UI/UI_MainMenu.aseprite
+Sprites/UI/UI_MainMenu.gif
+Sprites/UI/UI_MobHealthBar.aseprite
+Sprites/UI/mainmenu1080.aseprite
+Sprites/UI/mainmenu1080.png
+Sprites/UI/mainmenu1080below.aseprite
+Sprites/UI/mainmenu1080below.gif
+Sprites/UI/qrcode.png
+Sprites/expresssoins.png
+Sprites/sparkle burst at 39.mp4
+StoryDump.docx
+mouse_effects.txt
+theosound.txt
+~$oryDump.docx

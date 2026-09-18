@@ -35,7 +35,30 @@ local function ensureRemotes()
 		reportAttack.Parent = remotes
 	end
 
-	return reportPosition, reportAttack
+	-- 반대 방향(서버 -> 클라): 몬스터가 플레이어를 때렸다고 서버가 판정하면, 그 플레이어의
+	-- 히어로 Health를 깎는 건 클라이언트 자신만 할 수 있다(히어로는 client-authoritative
+	-- 오브젝트라 서버가 직접 필드를 건드릴 수 없음) — 그래서 "너 맞았다"만 알려주고
+	-- 실제 UpdateHealth 호출은 heroController.luau가 자기 로컬 히어로에 대고 한다.
+	local monsterAttackedPlayer = remotes:FindFirstChild("MonsterAttackedPlayer")
+	if not monsterAttackedPlayer then
+		monsterAttackedPlayer = Instance.new("RemoteEvent")
+		monsterAttackedPlayer.Name = "MonsterAttackedPlayer"
+		monsterAttackedPlayer.Parent = remotes
+	end
+
+	-- (실측 버그 이력) 서버가 죽은 몬스터를 Destroy()해도 그건 서버 쪽 Lua 오브젝트에만
+	-- 일어나는 일이라, 클라이언트가 이미 리플리케이트해서 로컬에 만들어둔 사본은 아무
+	-- 신호도 못 받고 그대로 남는다(체력바까지 같이 유령처럼 계속 보임/희미한 채로
+	-- 멈춤). NetworkingService에는 "이 오브젝트 없어졌다"를 알려주는 자동 매커니즘이
+	-- 없어서(플레이어가 나갈 때만 자동 정리됨), 이 전용 이벤트로 직접 알려준다.
+	local monsterDespawned = remotes:FindFirstChild("MonsterDespawned")
+	if not monsterDespawned then
+		monsterDespawned = Instance.new("RemoteEvent")
+		monsterDespawned.Name = "MonsterDespawned"
+		monsterDespawned.Parent = remotes
+	end
+
+	return reportPosition, reportAttack, monsterAttackedPlayer, monsterDespawned
 end
 
 -- UserId -> Vector2(화면 좌표계 Position.Offset)
@@ -52,12 +75,33 @@ function exports.GetPositions()
 end
 
 -- 여러 몬스터 모듈이 각자 구독할 수 있게 리스너 목록에 추가한다.
-function exports.OnAttack(callback: (Player, number, number) -> ())
+function exports.OnAttack(callback: (Player, number, number, string) -> ())
 	table.insert(attackListeners, callback)
 end
 
+-- 몬스터 모듈이 "이 플레이어가 방금 맞았다"고 알릴 때 쓴다. attackerX는 넉백 방향
+-- 계산용(플레이어 클라이언트가 "나보다 몬스터가 왼쪽/오른쪽 어디 있었는지" 알아야
+-- 반대쪽으로 밀려나는 연출을 넣을 수 있다) — Phase 1 전투 타격감(ROADMAP.md).
+function exports.NotifyPlayerHit(player: Player, damage: number, attackerX: number?)
+	if not exports.monsterAttackedPlayerRemote then
+		return
+	end
+	exports.monsterAttackedPlayerRemote:FireClient(player, damage, attackerX)
+end
+
+-- 몬스터 모듈이 "이 몬스터(Id)는 이제 완전히 없앨 것"이라고 모든 클라이언트에 알릴 때
+-- 쓴다 — 죽는 페이드 애니메이션이 다 끝난 뒤, 실제로 Destroy()하기 직전에 호출해야 한다.
+function exports.NotifyMonsterDespawned(monsterId: string)
+	if not exports.monsterDespawnedRemote then
+		return
+	end
+	exports.monsterDespawnedRemote:FireAllClients(monsterId)
+end
+
 function exports.load()
-	local reportPosition, reportAttack = ensureRemotes()
+	local reportPosition, reportAttack, monsterAttackedPlayer, monsterDespawned = ensureRemotes()
+	exports.monsterAttackedPlayerRemote = monsterAttackedPlayer
+	exports.monsterDespawnedRemote = monsterDespawned
 
 	reportPosition.OnServerEvent:Connect(function(player: Player, x, y)
 		if typeof(x) ~= "number" or typeof(y) ~= "number" then
@@ -66,12 +110,15 @@ function exports.load()
 		positions[player.UserId] = Vector2.new(x, y)
 	end)
 
-	reportAttack.OnServerEvent:Connect(function(player: Player, x, y)
+	reportAttack.OnServerEvent:Connect(function(player: Player, x, y, facing)
 		if typeof(x) ~= "number" or typeof(y) ~= "number" then
 			return
 		end
+		if facing ~= "left" and facing ~= "right" then
+			facing = "right"
+		end
 		for _, callback in attackListeners do
-			task.spawn(callback, player, x, y)
+			task.spawn(callback, player, x, y, facing)
 		end
 	end)
 

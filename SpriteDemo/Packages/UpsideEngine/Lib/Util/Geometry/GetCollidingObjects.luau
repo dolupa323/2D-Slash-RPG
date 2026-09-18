@@ -99,6 +99,21 @@ return function(objects, object, velocity)
 			continue
 		end
 
+		-- CanCollide=false인 상대는 겹쳐도 실제로 밀어내면 안 된다(예: 죽지 않는 몬스터
+		-- 위에 서있을 수 있어야 함). 그런데 여기서 CanCollide 체크 없이 무조건
+		-- velocity를 깎아버리면, 그 뒤에 검사하는 "진짜" 충돌 대상(바닥 등)의 moveVector
+		-- 계산이 이미 오염된 velocity 기준으로 이루어져서 위아래로 미세하게 계속
+		-- 튕기는 지터가 생긴다(실측 확인: CanCollide=false 몬스터와 겹친 상태에서만
+		-- 플레이어 Y좌표가 초당 3~4회 왕복). CanCollide=false 쌍은 이벤트 발생용으로만
+		-- collisions에 기록하고, velocity/moveVector 보정에는 관여시키지 않는다.
+		if not object.CanCollide or not other.CanCollide then
+			table.insert(collisions, {
+				object = other,
+				moveVector = Vector2.zero,
+			})
+			continue
+		end
+
 		local totalMass = object.Mass + other.Mass
 		local ratio = if other.Anchored then 1 elseif totalMass == 0 then 0.5 else other.Mass / totalMass
 		moveVector *= ratio
