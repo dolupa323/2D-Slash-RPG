@@ -53,21 +53,19 @@ local UpsideEngine = require(packages:WaitForChild("UpsideEngine"))
 local CrossPlatformService = UpsideEngine.GetService("CrossPlatformService")
 local NetworkingService = UpsideEngine.GetService("NetworkingService")
 local SceneManager = UpsideEngine.GetService("SceneManager")
+local scenes = require(ReplicatedStorage.shared.config.scenes)
 local travelState = require(script.Parent.travelState)
 local damageNumbers = require(script.Parent.damageNumbers)
 local camera = require(script.Parent.globals.camera)
 
--- 서버 권위 몬스터(server/modules/sproutGrub.luau)가 어그로/피격 판정을 하려면 이
+-- 서버 권위 몬스터(server/services/monsterAI.luau)가 어그로/피격 판정을 하려면 이
 -- 히어로가 어디 있는지, 언제 공격했는지를 알아야 한다 — 서버는 히어로를 직접 안 만드니까
 -- (client-authoritative) 기본적으로 좌표를 모른다. server/modules/heroTracking.luau가
 -- 만들어둔 전용 RemoteEvent로 직접 알려준다.
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local reportPositionRemote = Remotes:WaitForChild("ReportHeroPosition")
-local reportAttackRemote = Remotes:WaitForChild("ReportHeroAttack")
--- 몬스터가 서버 권위(server/modules/sproutGrub.luau)라 "맞았다" 판정 자체는 서버가 하고,
+local Net = require(ReplicatedStorage.shared.net.net)
+-- 몬스터가 서버 권위(server/services/monsterAI.luau)라 "맞았다" 판정 자체는 서버가 하고,
 -- 실제 Health 차감은 이 클라이언트가 자기 로컬 히어로에 대고 해야 한다(히어로는
 -- client-authoritative 오브젝트라 서버가 직접 필드를 건드릴 수 없음).
-local monsterAttackedRemote = Remotes:WaitForChild("MonsterAttackedPlayer")
 
 -- 2026-09-15: 캐릭터를 talchar(가면 캐릭터)에서 "Warrior"(사무라이) 시트로 교체.
 -- Source: Assets/character/talchar/three/Warrior/{idle,jump,run}_{left,right}.png
@@ -96,7 +94,7 @@ local SPAWN_NAME = "Spawn"
 local PORTAL_PREFIX = "Portal_"
 -- 죽었을 때 리스폰할 "가장 가까운 마을" — 지금은 마을이 하나뿐이라 고정값이지만,
 -- 나중에 마을이 여러 개면 죽은 위치 기준으로 가장 가까운 마을을 찾도록 확장하면 된다.
-local TOWN_SCENE_NAME = "village"
+local TOWN_SCENE_NAME = scenes.TOWN
 
 local function findObjectByName(scene: Scene, name: string)
 	for _, object in scene.Objects do
@@ -237,15 +235,14 @@ function exports.load(scene: Scene)
 	hero:SetScene(scene)
 
 	hero.Anchored = false
+	-- 플레이어끼리는 물리적으로 부딪히지 않고 서로 지나쳐 다닌다(엔진 사본의 GetCollidingObjects.shouldSkip가 이 플래그를 본다).
+	-- 이 필드는 복제되지 않아도 되도록 로컬 히어로에만 걸고, 판정은 "이 히어로 vs 다른 Character" 양방향으로 스킵한다.
+	hero.SkipCharacterCollisions = true
 	-- 캔버스(300x420)에 세이프 마진(28/39px)이 커서 실제 그림은 그보다 작다 — 실측 후 조정 예정.
 	hero.HitboxScale = 0.28
 	hero.WalkSpeed = 80
 	hero.JumpPower = 150 -- 기본값
-	-- 임시로 체력을 크게 올려둔다(테스트 중 몬스터한테 죽어서 자꾸 마을로 튕기면
-	-- 재현/디버깅이 끊겨서 불편하다는 요청) — 밸런싱 확정되면 원래 값(Character
-	-- 기본 100)으로 되돌릴 것.
-	hero.MaxHealth = 1000
-	hero.Health = 1000
+	-- 최대 체력은 레벨에 따라 playerStats.luau가 채워준다(테스트용 임시 1000 제거됨).
 
 	local instance = hero.Instance
 	instance.AnchorPoint = Vector2.new(0.5, 1) -- 발밑 중앙 기준(바닥에 닿는 지점 고정)
@@ -306,17 +303,26 @@ function exports.start(scene: Scene)
 	local function playHitFlash()
 		hitFlashToken += 1
 		local token = hitFlashToken
+		-- (실측 버그 이력) 깜빡이는 도중에 씬이 바뀌면 hero가 Destroy되어 hero.Instance가 nil이 돼서
+		-- "attempt to index nil with 'ImageColor3'"이 났다 — 시작 시점의 Instance를 잡아두고
+		-- 매번 아직 살아있는지 확인한다.
+		local target = hero.Instance
+		local function setColor(color: Color3): boolean
+			if hitFlashToken ~= token or not target or not target.Parent then
+				return false
+			end
+			target.ImageColor3 = color
+			return true
+		end
 		task.spawn(function()
 			for i = 1, HIT_FLASH_BLINK_COUNT do
-				if hitFlashToken ~= token then
+				if not setColor(HIT_FLASH_COLOR) then
 					return
 				end
-				hero.Instance.ImageColor3 = HIT_FLASH_COLOR
 				task.wait(HIT_FLASH_BLINK_INTERVAL)
-				if hitFlashToken ~= token then
+				if not setColor(Color3.new(1, 1, 1)) then
 					return
 				end
-				hero.Instance.ImageColor3 = Color3.new(1, 1, 1)
 				if i < HIT_FLASH_BLINK_COUNT then
 					task.wait(HIT_FLASH_BLINK_INTERVAL)
 				end
@@ -325,15 +331,23 @@ function exports.start(scene: Scene)
 	end
 
 	-- 몬스터(서버 권위)가 "너 맞았다"고 알려주면, 그 데미지를 내 로컬 히어로에 직접 적용한다.
-	exports.monsterAttackedConnection = monsterAttackedRemote.OnClientEvent:Connect(function(damage, _attackerX)
-		if typeof(damage) ~= "number" then
+	exports.monsterAttackedConnection = Net.OnClient("PlayerHealthChanged", function(health, maxHealth, damage, died)
+		-- 체력의 진실은 서버다(피해/회복/사망 판정 전부). 서버가 계산한 결과를 그대로 반영하고, 맞았으면 연출만 재생한다.
+		if typeof(health) ~= "number" or typeof(maxHealth) ~= "number" then
 			return
 		end
-		hero:UpdateHealth(math.max(hero.Health - damage, 0))
-		damageNumbers.Show(hero.Instance, damage, Color3.fromRGB(255, 70, 70))
-		-- Phase 1 전투 타격감(ROADMAP.md) — 맞았을 때 화면이 살짝 흔들리는 피드백.
-		camera.Shake(0.2, 6)
-		playHitFlash()
+		hero.MaxHealth = maxHealth
+		if typeof(damage) == "number" and damage > 0 then
+			damageNumbers.Show(hero.Instance, damage, Color3.fromRGB(255, 70, 70))
+			-- Phase 1 전투 타격감(ROADMAP.md) — 맞았을 때 화면이 살짝 흔들리는 피드백.
+			camera.Shake(0.2, 6)
+			playHitFlash()
+		end
+		if died then
+			-- 서버가 사망을 판정했다 — 리스폰 연출(deathConnection 핸들러)을 실행한다.
+			hero:UpdateHealth(0)
+		end
+		hero.Health = health
 	end)
 
 	-- (실측 버그 이력) 사망 시 "이 씬의 Spawn" 지점만 찾고, 없으면 그냥 (0,0)으로
@@ -416,6 +430,9 @@ function exports.start(scene: Scene)
 	-- 즉시 끝난다).
 	task.spawn(function()
 		preloadAllFrames()
+		-- 로딩 화면(loadingScreen.luau/sceneLoader.luau)이 "히어로 애니메이션 시트가 전부
+		-- 받아졌는가"를 확인하는 용도 — 안 받아진 상태로 재생하면 첫 동작이 깜빡인다.
+		exports.animationReady = true
 
 		local facing = "right"
 		local currentState = "idle"
@@ -425,10 +442,6 @@ function exports.start(scene: Scene)
 		local yHistory = {} -- {t, y} 샘플들, 최근 POSITION_WINDOW초 분량만 유지
 		local lastY = nil
 		local lastElapsed = nil
-		-- 서버 몬스터 AI가 쓸 위치 신고 — 매 프레임 보낼 필요는 없어서 10Hz 정도로
-		-- 죽인다(NetworkingService 자체 리플리케이션 주기인 15Hz보다 살짝 낮음).
-		local REPORT_INTERVAL = 1 / 10
-		local reportClock = 0
 		-- 이번 스윙 사이클에서 임팩트 프레임 판정을 이미 신고했는지(사이클당 한 번만).
 		local impactFired = false
 
@@ -515,12 +528,6 @@ function exports.start(scene: Scene)
 		exports.connection = RunService.Heartbeat:Connect(function(delta)
 			local instance = hero.Instance
 			elapsed += delta
-
-			reportClock += delta
-			if reportClock >= REPORT_INTERVAL then
-				reportClock -= REPORT_INTERVAL
-				reportPositionRemote:FireServer(instance.Position.X.Offset, instance.Position.Y.Offset)
-			end
 
 			if instance.Position.Y.Offset >= 1000 then
 				hero.Velocity = Vector2.zero
@@ -625,7 +632,7 @@ function exports.start(scene: Scene)
 			-- 아니라 "몇 프레임짜리 구간"으로 켜두는데(실제 히트박스가 여러 프레임 동안
 			-- 켜져 있음), 우리도 임팩트 프레임 근처 ATTACK_IMPACT_WINDOW_FRAMES 프레임
 			-- 구간 동안 매 프레임 신고해서 프레임 드롭/렉으로 정확히 그 한 프레임을
-			-- 건너뛰어도 맞도록 관대하게 만든다 — 서버(sproutGrub.luau)가 같은 스윙 안의
+			-- 건너뛰어도 맞도록 관대하게 만든다 — 서버(monsterAI.luau)가 같은 스윙 안의
 			-- 중복 신고를 쿨다운으로 걸러서 데미지가 중복 적용되지는 않는다.
 			if
 				currentState == "attack"
@@ -633,8 +640,7 @@ function exports.start(scene: Scene)
 				and currentFrame < ATTACK_IMPACT_FRAME + ATTACK_IMPACT_WINDOW_FRAMES
 			then
 				impactFired = true
-				local position = hero.Instance.Position
-				reportAttackRemote:FireServer(position.X.Offset, position.Y.Offset, facingState.value)
+				Net.FireServer("ReportHeroAttack", facingState.value)
 			end
 
 			local grid = GRID[currentState .. "_" .. facing]
@@ -714,6 +720,7 @@ function exports.unload(scene: Scene)
 		exports.hero = nil
 	end
 	exports.spawnPosition = nil
+	exports.animationReady = false
 end
 
 return exports

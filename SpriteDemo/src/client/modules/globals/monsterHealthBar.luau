@@ -1,4 +1,4 @@
--- 서버 권위 몬스터(server/modules/sproutGrub.luau)는 서버에서 만들어지고 오브젝트
+-- 서버 권위 몬스터(server/services/monsterAI.luau)는 서버에서 만들어지고 오브젝트
 -- 필드(Position/Image/Health 등)만 복제되기 때문에, 화면에 보이는 체력바나 데미지
 -- 숫자 같은 "순전히 각 클라이언트 로컬에만 있으면 되는" 장식 UI는 서버가 만들 수 없다
 -- (서버가 Instance 자식을 붙여도 그 자식 트리는 복제 대상이 아니다 — 복제되는 건
@@ -8,32 +8,25 @@
 -- 그 오브젝트의 Instance에 자식으로 붙인다. 부모(몬스터 스프라이트)에 직접 매달아두면
 -- 좌표 계산 없이 카메라를 따라 저절로 같이 움직인다.
 --
--- (실측 버그 이력) 원래는 sproutGrub.luau가 심어둔 커스텀 필드 MonsterKind로 몬스터인지
+-- (실측 버그 이력) 원래는 monsterAI.luau가 심어둔 커스텀 필드 MonsterKind로 몬스터인지
 -- 구분하려 했는데, 실제로 리플리케이트된 클라이언트 사본에서 이 필드가 항상 nil로
 -- 왔다(Position/Image/Health 등 표준 필드는 정상 복제되는데 커스텀 필드만 안 됨 —
 -- 정확한 엔진 내부 원인은 더 조사 필요). 대신 "실제로 화면에 정상 복제되고 있는 걸
 -- 이미 확인한" 이미지(스프라이트 시트 rbxassetid)로 식별한다 — 몬스터는 상태에 따라
 -- SHEETS의 6개 이미지 중 하나를 쓰므로 그 6개 중 하나인지로 판정한다.
-local MONSTER_SHEET_IMAGES = {
-	["rbxassetid://92264999271413"] = true, -- walk_left
-	["rbxassetid://100223635620373"] = true, -- walk_right
-	["rbxassetid://98419651702250"] = true, -- attack_left
-	["rbxassetid://93586067969223"] = true, -- attack_right
-	["rbxassetid://107018587663153"] = true, -- hit_left
-	["rbxassetid://121503629119574"] = true, -- hit_right
-}
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local packages = ReplicatedStorage:WaitForChild("packages")
 local UpsideEngine = require(packages:WaitForChild("UpsideEngine"))
 local NetworkingService = UpsideEngine.GetService("NetworkingService")
+local monsters = require(ReplicatedStorage.shared.data.monsters)
+local Net = require(ReplicatedStorage.shared.net.net)
+-- 몬스터 스프라이트 시트 이미지 집합(shared/data/monsters.luau의 모든 몬스터 정의에서 자동 수집).
+local MONSTER_SHEET_IMAGES = monsters.allSheetImages()
 local uiTheme = require(ReplicatedStorage.shared.util.uiTheme)
 local damageNumbers = require(script.Parent.Parent.damageNumbers)
 local camera = require(script.Parent.camera)
 
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local monsterDespawnedRemote = Remotes:WaitForChild("MonsterDespawned")
 
 local BAR_WIDTH = 64
 local BAR_HEIGHT = 5 -- 기존 8px는 너무 두꺼웠다.
@@ -44,19 +37,34 @@ local exports = {}
 -- object.Id -> { object, fill, lastHealth }
 local tracked = {}
 
+-- 로딩 화면(sceneLoader.luau)이 쓰는 준비 상태 조회: 체력바까지 붙은 몬스터 수, 그리고
+-- 미리 받아둬야 할 몬스터 스프라이트 시트 목록.
+function exports.GetTrackedCount(): number
+	local count = 0
+	for _ in tracked do
+		count += 1
+	end
+	return count
+end
+
+function exports.GetSheetImages(): { string }
+	local list = {}
+	for id in MONSTER_SHEET_IMAGES do
+		table.insert(list, id)
+	end
+	return list
+end
+
 local function attach(object)
 	if tracked[object.Id] then
 		return
 	end
 	local instance = object.Instance
-	if not instance or not MONSTER_SHEET_IMAGES[instance.Image] then
+	-- "Build"는 몬스터뿐 아니라 리플리케이트되는 모든 오브젝트(서버 씬 Folder 등)에 뜬다 —
+	-- ImageLabel이 아니면 .Image 접근 자체가 에러라 먼저 걸러야 한다.
+	if not instance or not instance:IsA("ImageLabel") or not MONSTER_SHEET_IMAGES[instance.Image] then
 		return
 	end
-
-	-- TEMP DEBUG: 플레이어가 몬스터에 물리적으로 부딪히는 버그 진단 — 클라이언트에
-	-- 복제된 몬스터의 CanCollide가 실제로 false인지 확인.
-	instance:SetAttribute("DBG_CanCollide", tostring(object.CanCollide))
-	instance:SetAttribute("DBG_Anchored", tostring(object.Anchored))
 
 	local track = Instance.new("Frame")
 	track.Name = "MonsterHealthBarTrack"
@@ -137,7 +145,7 @@ function exports.load()
 	-- Destroy()하기 직전에 쏴주는 이 신호를 받으면 로컬 사본을 통째로 Destroy()해서
 	-- 스프라이트+체력바를 한 번에 없앤다(체력바는 Instance 자식이라 부모가 Destroy되면
 	-- 같이 사라짐).
-	exports.despawnConnection = monsterDespawnedRemote.OnClientEvent:Connect(function(monsterId)
+	exports.despawnConnection = Net.OnClient("MonsterDespawned", function(monsterId)
 		-- tracked에 없더라도(예: attach()가 어떤 이유로든 못 걸렸던 경우) PlayersData[0]에는
 		-- 여전히 남아있을 수 있으니 그쪽도 확인한다 — 방어적으로 이중 확인.
 		local data = tracked[monsterId]
@@ -156,12 +164,29 @@ function exports.load()
 		-- (Runtime/Networking.luau의 onPlayerLeave 참고) — 여기서도 똑같이 한다.
 		NetworkingService.ReplicationTarget[object] = nil
 		object:Destroy()
+		NetworkingService.PlayersData[0][monsterId] = nil -- Destroy된 사본이 엔진 목록에 남아 다음 동기화 때 다시 쓰이지 않게.
 	end)
 
 	-- 느린 바가 목표치까지 내려가는 데 걸리는 시간(Cheruton HealthBarMob.gd와 동일하게 1.5초).
 	local SLOW_FILL_DURATION = 1.5
 
+	-- (실측 버그 이력) 첫 스폰 몬스터가 간헐적으로 체력바 없이 나왔다 — Build 이벤트는 오브젝트가
+	-- "막 만들어진" 순간 한 번만 뜨는데, 그 시점엔 아직 Image 등 필드가 다 채워지기 전이라
+	-- 몬스터 판별(attach의 Image 검사)이 실패하고 그대로 영영 놓쳤다. 이벤트에만 의존하지
+	-- 않고 일정 주기로 복제된 오브젝트 전체를 다시 훑는다(attach는 이미 붙은 건 건너뛰므로
+	-- 반복해도 안전) — 체력바가 붙어있어야 할 몬스터인데 빠졌으면 이 스캔이 붙여준다.
+	local SCAN_INTERVAL = 0.25
+	local scanClock = 0
+
 	exports.connection = RunService.Heartbeat:Connect(function(delta)
+		scanClock += delta
+		if scanClock >= SCAN_INTERVAL then
+			scanClock = 0
+			for _, object in NetworkingService.PlayersData[0] do
+				attach(object)
+			end
+		end
+
 		for id, data in tracked do
 			local object = data.object
 			local health = object.Health or 0

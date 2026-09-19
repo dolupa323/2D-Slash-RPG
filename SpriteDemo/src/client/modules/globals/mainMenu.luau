@@ -11,6 +11,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local uiTheme = require(ReplicatedStorage.shared.util.uiTheme)
 local inventory = require(script.Parent.inventory)
+local equipment = require(script.Parent.equipment)
+local settings = require(script.Parent.settings)
 
 local BUTTON_HEIGHT = 48
 local GAP = 8
@@ -23,12 +25,16 @@ local FEATURES = {
 	{ name = "Inventory", asset = "rbxassetid://89646071035947", native = Vector2.new(124, 113), onClick = function()
 		inventory.toggle()
 	end },
-	{ name = "Equipment", asset = "rbxassetid://102091863177348", native = Vector2.new(119, 111) },
+	{ name = "Equipment", asset = "rbxassetid://102091863177348", native = Vector2.new(119, 111), onClick = function()
+		equipment.toggle()
+	end },
 	{ name = "Skill", asset = "rbxassetid://100133287894479", native = Vector2.new(113, 110) },
 	{ name = "Quest", asset = "rbxassetid://84502147161347", native = Vector2.new(119, 107) },
 	{ name = "Map", asset = "rbxassetid://119686382125867", native = Vector2.new(110, 109) },
 	{ name = "Friends", asset = "rbxassetid://73979622489116", native = Vector2.new(121, 115) },
-	{ name = "Setting", asset = "rbxassetid://122626414536642", native = Vector2.new(114, 111) },
+	{ name = "Setting", asset = "rbxassetid://122626414536642", native = Vector2.new(114, 111), onClick = function()
+		settings.toggle()
+	end },
 	{ name = "Shop", asset = "rbxassetid://83427562032639", native = Vector2.new(117, 116) },
 }
 
@@ -66,7 +72,8 @@ function exports.load(scene: Scene)
 	menuButton.Parent = root
 	-- 버튼 자신에게 걸면 AnchorPoint(1, 1) = 우하단 코너를 중심으로 크기만 줄고
 	-- Position은 안 바뀌어서, 화면 우하단 코너에 고정된 채 스케일된다.
-	uiTheme.applyResponsiveScale(menuButton)
+	uiTheme.applyResponsiveScale(menuButton, Vector2.new(60, 60))
+	uiTheme.AddPressFeedback(menuButton)
 
 	local featuresList = Instance.new("Frame")
 	featuresList.Name = "Features"
@@ -77,7 +84,7 @@ function exports.load(scene: Scene)
 	featuresList.BackgroundTransparency = 1
 	featuresList.Visible = false
 	featuresList.Parent = root
-	uiTheme.applyResponsiveScale(featuresList)
+	uiTheme.applyResponsiveScale(featuresList, Vector2.new(60, 520))
 
 	local listLayout = Instance.new("UIListLayout")
 	listLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -97,6 +104,7 @@ function exports.load(scene: Scene)
 		button.BackgroundTransparency = 1
 		button.Image = feature.asset
 		button.Parent = featuresList
+		uiTheme.AddPressFeedback(button)
 
 		if feature.onClick then
 			button.Activated:Connect(feature.onClick)

@@ -10,6 +10,12 @@ local Workspace = game:GetService("Workspace")
 
 local uiTheme = {}
 
+-- 반응형 기준: 세로 800px에서 1배. (예전엔 기준이 1080이라 일반 PC 창(세로 700~900)에서 UI가
+-- 0.65~0.85배로 너무 작게 나왔다.) 큰 모니터에서 지나치게 커지지 않게 상한을 둔다.
+local REFERENCE_HEIGHT = 800
+local MIN_SCALE = 0.55
+local MAX_SCALE = 1.6
+
 -- 게임 UI 글씨체 — Caesar Dressing(숫자/영문용, 한글 미지원 확인됨). 지금 UI에 실제로
 -- 표시되는 텍스트는 전부 숫자(HP/MP/EXP 수치, 레벨)라 한글이 필요 없어서, 한글은 그냥
 -- 로블록스 기본 대체 폰트로 두고 이 폰트로 통일한다. 나중에 실제 한글 문구를 표시할
@@ -20,19 +26,25 @@ uiTheme.Font = Font.fromId(12187368843)
 -- 1080px) 대비 현재 뷰포트 비율만큼 UIScale을 적용한다. root(GuiObject) 밑에 있는 모든
 -- 자식이 이 비율로 같이 커지고 작아진다. 극단적인 화면(초소형/초대형)에서 너무 작아지거나
 -- 커지지 않도록 0.6~1.4배로 clamp.
-function uiTheme.applyResponsiveScale(root: Instance, referenceHeight: number?)
-	referenceHeight = referenceHeight or 1080
-
+function uiTheme.applyResponsiveScale(root: Instance, designSize: Vector2?)
 	local uiScale = Instance.new("UIScale")
 	uiScale.Parent = root
 
 	local function update()
 		local camera = Workspace.CurrentCamera
-		local viewportY = camera and camera.ViewportSize.Y or referenceHeight
-		if viewportY <= 0 then
-			viewportY = referenceHeight
+		local viewport = camera and camera.ViewportSize or Vector2.new(1920, REFERENCE_HEIGHT)
+		if viewport.Y <= 0 or viewport.X <= 0 then
+			viewport = Vector2.new(1920, REFERENCE_HEIGHT)
 		end
-		uiScale.Scale = math.clamp(viewportY / referenceHeight, 0.6, 1.4)
+
+		local scale = math.clamp(viewport.Y / REFERENCE_HEIGHT, MIN_SCALE, MAX_SCALE)
+		-- designSize(이 UI가 1배일 때 차지하는 픽셀 크기)를 주면, 어떤 화면 비율에서도 화면 밖으로
+		-- 넘치지 않게 가로/세로 여유(각 96%/92%)에 맞춰 추가로 줄인다 — 최소 배율보다 더 작아지더라도
+		-- "화면에 다 보이는 것"이 우선이다.
+		if designSize then
+			scale = math.min(scale, viewport.X * 0.96 / designSize.X, viewport.Y * 0.92 / designSize.Y)
+		end
+		uiScale.Scale = scale
 	end
 
 	update()
@@ -53,6 +65,55 @@ function uiTheme.applyResponsiveScale(root: Instance, referenceHeight: number?)
 	Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(hookCamera)
 
 	return uiScale
+end
+
+-- 버튼 눌림/호버 피드백 — 누르는 동안 어두워졌다가 떼면 원래대로, 마우스를 올리면 살짝
+-- 밝아진다(누르지 않는 상태와 눌린 상태가 한눈에 구분되도록). target이 이미지 계열
+-- (ImageButton/ImageLabel)이면 ImageColor3를, 아니면 BackgroundColor3를 바꾼다. 원래 색은
+-- 등록 시점 값을 기억해뒀다가 복원한다. 클릭 판정 자체는 건드리지 않는다.
+local PRESS_DARKEN = 0.6
+local HOVER_BRIGHTEN = 1.0 -- 1이면 원본 그대로(어두워진 상태와 비교해 눌림만 강조).
+local FEEDBACK_TWEEN = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+local function isPointerInput(input: InputObject): boolean
+	return input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
+end
+
+function uiTheme.AddPressFeedback(button: GuiButton, target: GuiObject?)
+	local object = target or button
+	local property = if object:IsA("ImageButton") or object:IsA("ImageLabel") then "ImageColor3" else "BackgroundColor3"
+	local baseColor: Color3 = object[property]
+	local pressed = false
+	local hovering = false
+
+	local function apply()
+		local color = baseColor
+		if pressed then
+			color = baseColor:Lerp(Color3.new(0, 0, 0), 1 - PRESS_DARKEN)
+		elseif hovering then
+			color = baseColor:Lerp(Color3.new(1, 1, 1), 0.18)
+		end
+		TweenService:Create(object, FEEDBACK_TWEEN, { [property] = color }):Play()
+	end
+
+	button.InputBegan:Connect(function(input)
+		if isPointerInput(input) then
+			pressed = true
+			apply()
+		elseif input.UserInputType == Enum.UserInputType.MouseMovement then
+			hovering = true
+			apply()
+		end
+	end)
+	button.InputEnded:Connect(function(input)
+		if isPointerInput(input) then
+			pressed = false
+			apply()
+		elseif input.UserInputType == Enum.UserInputType.MouseMovement then
+			hovering = false
+			apply()
+		end
+	end)
 end
 
 uiTheme.Color = {
@@ -285,7 +346,14 @@ function uiTheme.mkSlot(props)
 		end
 	end)
 
+	uiTheme.AddPressFeedback(button, slot)
+
 	return { frame = slot, icon = icon, count = count, button = button }
+end
+
+-- 아이콘 이미지가 없는 아이템/장비를 칸에 표시할 때 쓰는 이름 앞 두 글자(한글 UTF-8 안전).
+function uiTheme.ShortName(name: string): string
+	return name:sub(1, (utf8.offset(name, 3) or #name + 1) - 1)
 end
 
 return uiTheme

@@ -13,6 +13,12 @@ local NetworkingService = UpsideEngine.GetService("NetworkingService")
 local AuthorityService = UpsideEngine.GetService("AuthorityService")
 local CrossPlatformService = UpsideEngine.GetService("CrossPlatformService")
 
+local Net = require(ReplicatedStorage.shared.net.net)
+
+-- 서버가 지우라고 한 캐릭터의 Id. 지운 뒤에 이미 전송 중이던 늦은 갱신이 도착하면 엔진이 그걸 "처음 보는 새 오브젝트"로 만들어
+-- 버려서(유령) 이 Id의 요청은 Accept하지 않고 무시한다.
+local removedObjectIds = {}
+
 local exports = {}
 
 function exports.load(scene: Scene)
@@ -20,7 +26,26 @@ function exports.load(scene: Scene)
 		return
 	end
 
+	-- 서버가 "이 캐릭터 사본은 더 이상 유효하지 않다"고 알리면(플레이어가 씬을 옮기거나 캐릭터를 새로 만든 경우) 로컬 사본을 지운다
+	-- — 안 지우면 마지막 위치에 멈춘 유령 캐릭터가 남는다. ReplicationTarget 대기 항목을 먼저 지워야 Destroy 뒤 보간 단계에서 안 터진다.
+	exports.removeConnection = Net.OnClient("RemoveReplicated", function(userId, objectId)
+		removedObjectIds[objectId] = true
+		local objects = NetworkingService.PlayersData[userId]
+		local object = objects and objects[objectId]
+		if not object then
+			return
+		end
+		NetworkingService.ReplicationTarget[object] = nil
+		objects[objectId] = nil
+		object:Destroy()
+	end)
+
 	exports.connection = NetworkingService:On("ReplicationRequest", function(request)
+		local content = request.Content
+		if content and removedObjectIds[content.ObjectId] then
+			return
+		end
+
 		local object = request:Accept()
 		if not object then
 			return

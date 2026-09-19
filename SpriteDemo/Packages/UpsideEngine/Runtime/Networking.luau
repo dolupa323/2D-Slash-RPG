@@ -45,14 +45,49 @@ function endpoints.sync(client, pending)
 	buildRequests(pending)
 end
 
+-- (프로젝트 패치: 관심 영역/relevancy) networkingService.RelevancyFilter(player, request) -> boolean 이 설정돼 있으면,
+-- 서버가 각 클라이언트에게 보내는 복제 데이터에서 "이 플레이어에게 필요 없는 오브젝트"를 뺀다(예: 다른 씬에 있는
+-- 몬스터). 필터가 없으면(nil) 예전처럼 전부 보낸다. data는 { [clientId] = { [objectId] = request } } 형태다.
+local function filterForPlayer(player, data)
+	local filter = networkingService.RelevancyFilter
+	if not filter then
+		return data
+	end
+
+	local filtered = {}
+	for clientId, objects in data do
+		local kept = {}
+		for objectId, request in objects do
+			if filter(player, request) then
+				kept[objectId] = request
+			end
+		end
+		if next(kept) then
+			filtered[clientId] = kept
+		end
+	end
+	return filtered
+end
+
 function endpoints.requestServerData(client)
 	for retries = 1, 4 do
 		local data = table.clone(requestsCache)
 		data[client.UserId] = nil
 
-		socket:FireClient(client, "sync", data)
+		socket:FireClient(client, "sync", filterForPlayer(client, data))
 		task.wait(0.5)
 	end
+end
+
+-- 서버가 이 플레이어의 관심 영역이 바뀌었을 때(예: 씬 이동) 호출한다 — 캐시된 전체 내용을 필터를 거쳐 다시 보내서, 새로
+-- 관심 영역에 들어온 오브젝트가 완전한 내용(diff가 아닌 전체)으로 도착하게 한다.
+function networkingService:ResyncClient(player)
+	if not isServer then
+		return
+	end
+	local data = table.clone(requestsCache)
+	data[player.UserId] = nil
+	socket:FireClient(player, "sync", filterForPlayer(player, data))
 end
 
 function buildRequests(requests)
@@ -172,7 +207,10 @@ local function sendServerRequests(requests)
 			end
 		end
 
-		socket:FireClient(player, "sync", data)
+		data = filterForPlayer(player, data)
+		if next(data) then
+			socket:FireClient(player, "sync", data)
+		end
 	end
 end
 

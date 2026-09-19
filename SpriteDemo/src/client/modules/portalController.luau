@@ -32,6 +32,8 @@ local UpsideEngine = require(packages:WaitForChild("UpsideEngine"))
 local CrossPlatformService = UpsideEngine.GetService("CrossPlatformService")
 local SceneManager = UpsideEngine.GetService("SceneManager")
 local travelState = require(script.Parent.travelState)
+local loadingScreen = require(script.Parent.loadingScreen)
+local Net = require(ReplicatedStorage.shared.net.net)
 
 local PORTAL_PREFIX = "Portal_"
 
@@ -97,23 +99,28 @@ function exports.load(scene: Scene)
 
 			for _, portal in portals do
 				if portal.occupied then
-					local destinationScene = SceneManager:FindByName(portal.destination)
-					if destinationScene then
-						-- 도착한 씬의 heroController.luau가 이 값을 읽어서
-						-- "Portal_<currentSceneName>"(되돌아가는 포탈) 위치에 스폰시킨다.
-						travelState.fromScene = currentSceneName
-						destinationScene:Enable()
-					else
-						warn(
-							('portal: 목적지 씬 "%s"을(를) 찾을 수 없습니다(아직 안 만들어졌을 수 있음) — "%s"'):format(
-								portal.destination,
-								portal.object.Name
-							)
-						)
-					end
+					-- 씬 이동은 서버가 승인한다(서버가 지금 씬과 포탈 위치를 검증). 승인되면 아래 TravelApproved 핸들러가
+					-- 실제 전환을 한다 — 여기서 직접 씬을 바꾸지 않는다.
+					Net.FireServer("RequestTravel", portal.destination)
 					break
 				end
 			end
+		end)
+	)
+
+	table.insert(
+		connections,
+		Net.OnClient("TravelApproved", function(destination)
+			local destinationScene = SceneManager:FindByName(destination)
+			if not destinationScene then
+				warn(('portal: 서버가 승인한 목적지 씬 "%s"을(를) 찾을 수 없습니다'):format(tostring(destination)))
+				return
+			end
+			-- 도착한 씬의 heroController.luau가 이 값을 읽어서 "Portal_<currentSceneName>"(되돌아가는 포탈) 위치에 스폰시킨다.
+			travelState.fromScene = currentSceneName
+			-- 씬 전환이 실제로 일어나기 전에 미리 화면을 가려서 전환 순간의 깜빡임을 막는다.
+			loadingScreen.Show()
+			destinationScene:Enable()
 		end)
 	)
 

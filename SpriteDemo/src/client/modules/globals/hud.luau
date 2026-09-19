@@ -1,22 +1,14 @@
--- 체력/마나/경험치/레벨 HUD. mobileControls.luau와 동일하게 Scene/GameFrame 밖의 자체
--- ScreenGui(화면 고정, 카메라 패닝에 안 움직임)로 만든다.
+-- 플레이어 상태 HUD. 두 부분:
+--  1) 화면 왼쪽 위의 장식 틀(Assets/.../ui/gui.png — 동그란 초상 칸 + 체력/도력 막대 창 두 개, 막대 창은
+--     투명하게 뚫려 있다). 뚫린 창 "뒤"에서 막대를 채워 넣고 그 위를 틀 이미지가 덮는 방식이라, 막대가
+--     창 밖으로 넘쳐도 틀에 가려 깔끔하다. 동그란 칸에는 경지(레벨) 숫자를 쓴다.
+--  2) 화면 맨 아래를 가로로 꽉 채우는 아주 얇은 경험치 막대.
+-- 모든 막대는 값이 바뀔 때 즉시 점프하지 않고 부드럽게 차오르거나 줄어든다. 체력은 몬스터 체력바처럼
+-- 이중 바(앞쪽은 빠르게, 뒤쪽 주황 잔상은 1.5초에 걸쳐 천천히 따라 내려옴)로 그린다.
 --
--- char ui.png/exp.png는 초상화(또는 레벨 원)와 막대 틀이 하나로 그려진 이미지다 —
--- 이미지를 자르거나 일부만 쓰지 않고 원본 그대로 통째로 표시한다.
---
--- 채움(Fill)은 색칠된 도형을 새로 그려서 겹치는 대신, 같은 이미지의 트랙 부분을
--- ImageRectOffset/ImageRectSize로 그대로 한 번 더 잘라와서 색만 입힌(ImageColor3) 뒤,
--- 그 위에 겹쳐서 값만큼만 보이게 클리핑하는 방식을 쓴다 — 이렇게 하면 채워지는 부분이
--- 트랙 원본과 완전히 같은 픽셀(둥근 테두리, 하이라이트/음영까지)이라 이질감 없이
--- 자연스럽게 안착한다. 트랙의 실제 픽셀 좌표는 PIL로 실측(밝기 경계 스캔) 후 가장자리
--- 안티에일리어싱을 감안해 각 방향 +2px 여백을 더했다 — 실측치 그대로 쓰면 배경이
--- 테두리처럼 살짝 비치는 문제가 있었다. 레벨 숫자 원은 x:[5,61] y:[3,55].
---
--- 반응형: 화면 해상도(모바일/PC)가 달라져도 같은 비율로 보이도록 uiTheme.
--- applyResponsiveScale로 루트에 UIScale을 걸어둔다.
---
--- HP/MP/EXP 숫자 표기는 막대 높이와 무관하게 항상 같은 글씨 크기(TextSize 고정)로
--- 통일하고, 색은 검은색으로 표기한다.
+-- 이미지 준비: 원본(1672x941)의 투명 여백을 잘라내고 가로 1024로 줄여 올렸다(로블록스 업로드 1024 상한).
+-- 아래 좌표는 전부 그 1024x453 이미지 기준 픽셀이고(PIL로 뚫린 창/동그란 칸을 실측), DISPLAY_SCALE로
+-- 화면 크기에 맞춰 환산한다.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -25,105 +17,101 @@ local UpsideEngine = require(packages:WaitForChild("UpsideEngine"))
 local CrossPlatformService = UpsideEngine.GetService("CrossPlatformService")
 local uiTheme = require(ReplicatedStorage.shared.util.uiTheme)
 
-local DISPLAY_WIDTH = 320
+-- (실측 버그 이력) 폰트 경로 문자열("rbxasset://fonts/families/GothicA1.json")은 Studio에서 로드 실패("Temp read failed")했고,
+-- Enum.Font.GothicA1은 존재하지 않는 열거형이라 클라이언트 전체가 로드 에러로 멈췄다. 확실히 존재하는 기본 열거형 폰트로 둔다
+-- (한글은 로블록스가 자동으로 대체 글꼴로 그린다).
+local HUD_FONT = Font.fromEnum(Enum.Font.SourceSansBold)
 
--- 2026-09-16: char ui.png가 다시 새 이미지로 교체됨(339x106, 더 단순한 평면 디자인 —
--- 원형 초상 + 위/아래 둥근 막대 두 개, 트랙 안쪽은 밋밋한 크림색 사각형이라 이전
--- 이미지보다 측정이 훨씬 쉬웠음). PIL로 재실측 + 안전 여백(각 방향 +2px, 이유는 위
--- createFillOverlay 설명 참고).
-local CHAR_UI_ASSET = "rbxassetid://131285376650204"
-local CHAR_UI_NATIVE = Vector2.new(339, 106)
-local HP_TRACK = { x = 94, y = 29, w = 233, h = 26 }
-local MP_TRACK = { x = 91, y = 71, w = 220, h = 18 }
+local FRAME_ASSET = "rbxassetid://92620503060435"
+local FRAME_NATIVE = Vector2.new(1024, 453)
+local DISPLAY_WIDTH = 320 -- 처음 420은 너무 커서 줄였다(화면 배율은 uiTheme.applyResponsiveScale이 따로 맞춘다).
+local DISPLAY_SCALE = DISPLAY_WIDTH / FRAME_NATIVE.X
+local DISPLAY_HEIGHT = math.floor(FRAME_NATIVE.Y * DISPLAY_SCALE)
 
--- char ui.png 안의 초상화 원 위치 — 원래 직업 가면 사진을 넣으려던 자리인데, 그 대신
--- 여기에 레벨 숫자를 큼직하게 표시한다. PIL로 실측: 원은 중심 (52, 57), 지름 약 72px.
-local PORTRAIT_RECT = { x = 16, y = 21, w = 72, h = 72 }
+-- 뚫린 막대 창(x, y, w, h)과 동그란 초상 칸(중심, 지름) — 1024x453 이미지 기준.
+local HP_WINDOW = { x = 447, y = 136, w = 466, h = 27 }
+local MP_WINDOW = { x = 446, y = 194, w = 467, h = 27 }
+local CIRCLE = { cx = 187, cy = 148, d = 156 }
+-- 막대를 창보다 이만큼(이미지 픽셀) 넉넉하게 깔아, 창 가장자리(둥근 끝)에 빈틈이 안 생기게 한다.
+local BLEED = 8
 
-local EXP_ASSET = "rbxassetid://76982575040834"
-local EXP_NATIVE = Vector2.new(399, 57)
-local EXP_TRACK = { x = 56, y = 21, w = 331, h = 16 }
+local EXP_BAR_HEIGHT = 5
 
-local TEXT_SIZE = 16
-local TEXT_COLOR = Color3.new(0, 0, 0)
+local TRACK_BACK = Color3.fromRGB(28, 18, 14) -- 창 안쪽 빈 부분 바탕(틀 색과 어울리는 어두운 갈색)
+local TEXT_LIGHT = Color3.fromRGB(255, 255, 255)
+local GOLD = Color3.fromRGB(150, 95, 10)
 
-local function createOverlayFrame(parent: Instance, layoutOrder: number, image: string, native: Vector2)
-	local scale = DISPLAY_WIDTH / native.X
-	local displayHeight = native.Y * scale
+local HP_COLOR = Color3.fromRGB(226, 60, 50)
+local HP_TRAIL_COLOR = Color3.fromRGB(255, 200, 110)
+local MP_COLOR = Color3.fromRGB(255, 250, 205)
+local EXP_COLOR = Color3.fromRGB(170, 220, 60)
 
-	local frame = Instance.new("ImageLabel")
-	frame.Name = "Frame"
-	frame.BackgroundTransparency = 1
-	frame.Image = image
-	frame.Size = UDim2.fromOffset(DISPLAY_WIDTH, displayHeight)
-	frame.LayoutOrder = layoutOrder
-	frame.Parent = parent
+local SLOW_FILL_DURATION = 1.5
+-- 값이 바뀔 때 막대가 목표를 따라가는 속도(클수록 빠름) — 지수 보간.
+local FILL_SPEED = 9
 
-	return frame, scale
+local function d(v: number): number
+	return v * DISPLAY_SCALE
 end
 
--- 값에 따라 채워지는 막대. Fill은 새로 그린 도형이 아니라 "같은 이미지의 트랙 부분을
--- 한 번 더 잘라와 색을 입힌 것"이라 트랙 원본과 픽셀 단위로 동일하다 — mask(클리핑용
--- 컨테이너) 안에 트랙 전체 너비로 깔아두고, mask의 너비만 값에 따라 줄여서 오른쪽이
--- 잘려 보이게 하는 방식으로 "채워지는" 효과를 낸다. 외곽선/별도 도형 없음.
-local function createFillOverlay(image: string, parent: Instance, scale: number, track, tintColor: Color3)
-	local trackWidth = track.w * scale
-	local trackHeight = track.h * scale
-
-	-- 이 프로젝트 ScreenGui는 ZIndexBehavior가 Global이라 부모 ImageLabel(기본 ZIndex 1)
-	-- 보다 낮으면 이미지 뒤로 숨는다 — 반드시 부모보다 높은 값을 줘야 한다.
-	local mask = Instance.new("Frame")
-	mask.Name = "FillMask"
-	mask.Position = UDim2.fromOffset(track.x * scale, track.y * scale)
-	mask.Size = UDim2.fromOffset(trackWidth, trackHeight)
-	mask.BackgroundTransparency = 1
-	mask.ClipsDescendants = true
-	mask.ZIndex = 2
-	mask.Parent = parent
-	-- 실측해보니 이미지 안쪽 트랙 자체가 거의 각진 사각형이다(둥근 정도가 2px 수준).
-	-- 트랙 높이의 절반(알약) 반경으로 둥글렸더니 네 모서리에서 실제 트랙 영역을 너무
-	-- 많이 깎아내서 배경이 초승달 모양으로 드러났다 — 원본 트랙의 미세한 라운드에
-	-- 맞춰 아주 작은 반경만 준다.
-	uiTheme.AddCorner(mask, 2)
-
-	local fill = Instance.new("ImageLabel")
-	fill.Name = "Fill"
-	fill.BackgroundTransparency = 1
-	fill.Image = image
-	fill.ImageRectOffset = Vector2.new(track.x, track.y)
-	fill.ImageRectSize = Vector2.new(track.w, track.h)
-	fill.ImageColor3 = tintColor
-	fill.Size = UDim2.fromOffset(trackWidth, trackHeight)
-	fill.ZIndex = 2
-	fill.Parent = mask
-
+local function makeLabel(parent: Instance, text: string, size: number, position: UDim2, boxSize: UDim2, color: Color3, align: Enum.TextXAlignment)
 	local label = Instance.new("TextLabel")
-	label.Name = "Label"
 	label.BackgroundTransparency = 1
-	label.Position = UDim2.fromOffset(track.x * scale, track.y * scale)
-	label.Size = UDim2.fromOffset(trackWidth, trackHeight)
-	label.FontFace = uiTheme.Font
-	label.TextSize = TEXT_SIZE
-	label.TextColor3 = TEXT_COLOR
-	label.Text = ""
-	label.ZIndex = 3
+	label.Position = position
+	label.Size = boxSize
+	label.FontFace = HUD_FONT
+	label.TextSize = size
+	label.TextColor3 = color
+	label.TextStrokeColor3 = Color3.new(0, 0, 0)
+	label.TextStrokeTransparency = if color.R + color.G + color.B < 1.2 then 1 else 0.4
+	label.TextXAlignment = align
+	label.TextYAlignment = Enum.TextYAlignment.Center
+	label.Text = text
 	label.Parent = parent
-
-	return mask, label, trackWidth
+	return label
 end
 
--- (Phase 1 전투 타격감, ROADMAP.md — Cheruton HealthBarMob.gd 이중 바 패턴을 플레이어
--- HUD에도 동일 적용) monsterHealthBar.luau와 같은 개념: 뒤쪽(slow)은 맞은 직후에도 잠깐
--- 그대로 있다가 천천히 줄어들고, 앞쪽(fast)은 즉시 반영된다. 여기서는 이미지 트랙을
--- 재활용하는 createFillOverlay를 두 번 겹쳐 부른다 — 먼저 부른 게 아래(slow), 나중에
--- 부른 게 위(fast)에 오도록 ZIndex를 붙인다.
-local function createDualFillOverlay(image: string, parent: Instance, scale: number, track, fastColor: Color3, slowColor: Color3)
-	local slowMask, slowLabel = createFillOverlay(image, parent, scale, track, slowColor)
-	slowLabel:Destroy() -- 라벨은 fast 쪽 것 하나만 있으면 된다(둘 다 있으면 텍스트가 겹쳐 두꺼워 보임).
-	slowMask.ZIndex = 1 -- fast(기본 ZIndex 2)보다 확실히 뒤로.
+local function makeFill(track: Frame, color: Color3, zIndex: number)
+	local fill = Instance.new("Frame")
+	fill.BackgroundColor3 = color
+	fill.BorderSizePixel = 0
+	fill.Size = UDim2.fromScale(0, 1)
+	fill.ZIndex = zIndex
+	fill.Parent = track
+	uiTheme.AddCorner(fill, "full")
 
-	local fastMask, label, trackWidth = createFillOverlay(image, parent, scale, track, fastColor)
-	return fastMask, slowMask, label, trackWidth
+	-- 위는 밝고 아래는 살짝 어둡게 — 납작한 색면이 아니라 막대다운 입체감.
+	local gradient = Instance.new("UIGradient")
+	gradient.Rotation = 90
+	gradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(175, 175, 175)),
+	})
+	gradient.Parent = fill
+	return fill
+end
+
+-- 막대(어두운 바탕 + 뒤쪽 잔상(선택) + 앞쪽 채움 + 수치 글자). rect는 트랙이 차지할 위치/크기.
+local function makeBar(parent: Instance, position: UDim2, size: UDim2, color: Color3, trailColor: Color3?, zIndex: number)
+	local track = Instance.new("Frame")
+	track.BackgroundColor3 = TRACK_BACK
+	track.BorderSizePixel = 0
+	track.Position = position
+	track.Size = size
+	track.ClipsDescendants = true
+	track.ZIndex = zIndex
+	track.Parent = parent
+	uiTheme.AddCorner(track, "full")
+
+	local trail = if trailColor then makeFill(track, trailColor, zIndex + 1) else nil
+	local fill = makeFill(track, color, zIndex + 2)
+	return { track = track, fill = fill, trail = trail }
+end
+
+-- 창 위치(1024x453 기준) → 넉넉하게 넘치는 트랙 위치/크기(화면 픽셀).
+local function bleedRect(window)
+	return UDim2.fromOffset(d(window.x - BLEED), d(window.y - BLEED / 2)),
+		UDim2.fromOffset(d(window.w + BLEED * 2), d(window.h + BLEED))
 end
 
 local exports = {}
@@ -137,59 +125,84 @@ function exports.load(scene: Scene)
 	local screenGui = Instance.new("ScreenGui")
 	screenGui.Name = "HUD"
 	screenGui.ResetOnSpawn = false
-	-- IgnoreGuiInset을 안 켠다(기본값 false) — 로블록스 기본 상단 메뉴바 영역과 안 겹치게.
+	-- IgnoreGuiInset을 안 켠다(기본값 false) — 왼쪽 위의 로블록스 기본 메뉴 버튼 영역과 안 겹치게.
 
 	local root = Instance.new("Frame")
 	root.Name = "HUDRoot"
 	root.AnchorPoint = Vector2.new(0, 0)
-	root.Position = UDim2.fromOffset(24, 24)
-	root.AutomaticSize = Enum.AutomaticSize.XY
-	root.Size = UDim2.fromOffset(0, 0)
+	root.Position = UDim2.fromOffset(12, 8)
+	root.Size = UDim2.fromOffset(DISPLAY_WIDTH, DISPLAY_HEIGHT)
 	root.BackgroundTransparency = 1
 	root.Parent = screenGui
+	uiTheme.applyResponsiveScale(root, Vector2.new(DISPLAY_WIDTH + 24, DISPLAY_HEIGHT + 16))
 
-	uiTheme.applyResponsiveScale(root)
+	-- 막대는 틀 이미지(ZIndex 10) "뒤"(낮은 ZIndex)에 깔고, 수치/레벨 글자는 틀 위(ZIndex 20)에 얹는다.
+	local hpPos, hpSize = bleedRect(HP_WINDOW)
+	local mpPos, mpSize = bleedRect(MP_WINDOW)
+	local hpBar = makeBar(root, hpPos, hpSize, HP_COLOR, HP_TRAIL_COLOR, 1)
+	local mpBar = makeBar(root, mpPos, mpSize, MP_COLOR, nil, 1)
 
-	local layout = Instance.new("UIListLayout")
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Padding = UDim.new(0, 4)
-	layout.Parent = root
+	local frame = Instance.new("ImageLabel")
+	frame.Name = "Frame"
+	frame.Image = FRAME_ASSET
+	frame.BackgroundTransparency = 1
+	frame.Size = UDim2.fromScale(1, 1)
+	frame.ZIndex = 10
+	frame.Parent = root
 
-	local charFrame, charScale = createOverlayFrame(root, 1, CHAR_UI_ASSET, CHAR_UI_NATIVE)
+	-- 수치는 막대 창 정중앙에(창 안의 실제 보이는 영역 기준). 어두운 바탕 위라 흰 글씨 + 외곽선.
+	local function windowLabel(window)
+		local label = makeLabel(
+			root, "", 10,
+			UDim2.fromOffset(d(window.x), d(window.y)), UDim2.fromOffset(d(window.w), d(window.h)),
+			TEXT_LIGHT, Enum.TextXAlignment.Center
+		)
+		label.ZIndex = 20
+		return label
+	end
+	local hpLabel = windowLabel(HP_WINDOW)
+	local mpLabel = windowLabel(MP_WINDOW)
 
-	-- 원래 직업 가면 사진을 넣으려던 초상화 원 자리에 레벨 숫자를 큼직하게 표시.
-	local portraitLevelLabel = Instance.new("TextLabel")
-	portraitLevelLabel.Name = "PortraitLevelLabel"
-	portraitLevelLabel.BackgroundTransparency = 1
-	portraitLevelLabel.Position = UDim2.fromOffset(PORTRAIT_RECT.x * charScale, PORTRAIT_RECT.y * charScale)
-	portraitLevelLabel.Size = UDim2.fromOffset(PORTRAIT_RECT.w * charScale, PORTRAIT_RECT.h * charScale)
-	portraitLevelLabel.FontFace = uiTheme.Font
-	portraitLevelLabel.TextScaled = true
-	portraitLevelLabel.TextColor3 = TEXT_COLOR
-	portraitLevelLabel.Text = "1"
-	portraitLevelLabel.ZIndex = 2
-	portraitLevelLabel.Parent = charFrame
-
-	local hpMask, hpSlowMask, hpLabel, hpMaxWidth = createDualFillOverlay(
-		CHAR_UI_ASSET, charFrame, charScale, HP_TRACK,
-		Color3.fromRGB(255, 70, 60), Color3.fromRGB(255, 210, 120)
+	-- 동그란 초상 칸에 "Lv." + 경지(레벨) 숫자.
+	local circleLeft = d(CIRCLE.cx - CIRCLE.d / 2)
+	local circleTop = d(CIRCLE.cy - CIRCLE.d / 2)
+	local circleSize = d(CIRCLE.d)
+	local lvLabel = makeLabel(
+		root, "Lv.", 9, UDim2.fromOffset(circleLeft, circleTop + circleSize * 0.2), UDim2.fromOffset(circleSize, circleSize * 0.2),
+		Color3.fromRGB(70, 45, 20), Enum.TextXAlignment.Center
 	)
-	-- 마나는 하얀색에 가까운 옅은 노란색으로.
-	local mpMask, mpLabel, mpMaxWidth = createFillOverlay(CHAR_UI_ASSET, charFrame, charScale, MP_TRACK, Color3.fromRGB(255, 250, 205))
+	lvLabel.ZIndex = 20
+	local levelLabel = makeLabel(
+		root, "1", 22, UDim2.fromOffset(circleLeft, circleTop + circleSize * 0.38), UDim2.fromOffset(circleSize, circleSize * 0.4),
+		GOLD, Enum.TextXAlignment.Center
+	)
+	levelLabel.ZIndex = 20
 
-	local expFrame, expScale = createOverlayFrame(root, 2, EXP_ASSET, EXP_NATIVE)
-	-- 경험치는 연두색(yellow-green)으로.
-	local expMask, expLabel, expMaxWidth = createFillOverlay(EXP_ASSET, expFrame, expScale, EXP_TRACK, Color3.fromRGB(170, 220, 60))
-	-- 레벨 숫자는 이제 초상화 원 쪽(portraitLevelLabel)에서만 표시한다.
+	-- 경험치: 화면 맨 아래를 가로로 꽉 채우는 아주 얇은 막대. 안에 글씨 대신, 수치는 막대 바로 위 오른쪽 끝에 작게.
+	local expTrack = makeBar(screenGui, UDim2.new(0, 0, 1, -EXP_BAR_HEIGHT), UDim2.new(1, 0, 0, EXP_BAR_HEIGHT), EXP_COLOR, nil, 1)
+	expTrack.track.BackgroundTransparency = 0.8
+	local expLabel = makeLabel(
+		screenGui, "", 11, UDim2.new(1, -168, 1, -EXP_BAR_HEIGHT - 16), UDim2.fromOffset(160, 14), TEXT_LIGHT, Enum.TextXAlignment.Right
+	)
 
 	screenGui.Parent = playerGui
 	exports.screenGui = screenGui
 
-	-- (Phase 1 전투 타격감) 뒤쪽(주황) 바가 목표치까지 내려가는 데 걸리는 시간 —
-	-- monsterHealthBar.luau와 동일하게 1.5초.
-	local SLOW_FILL_DURATION = 1.5
-	local slowFillScale = 1
+	-- 화면에 보이는 값(부드럽게 움직이는 쪽). 목표값 쪽으로 매 프레임 조금씩 다가간다.
+	local shown = { hp = nil, hpTrail = nil, mp = nil, exp = nil }
 	local lastHealth = nil
+
+	local function approach(current: number?, target: number, delta: number): number
+		if current == nil then
+			return target -- 처음에는 애니메이션 없이 바로(로딩 직후 0에서 차오르는 어색함 방지).
+		end
+		local alpha = 1 - math.exp(-FILL_SPEED * delta)
+		local nextValue = current + (target - current) * alpha
+		if math.abs(target - nextValue) < 0.002 then
+			return target
+		end
+		return nextValue
+	end
 
 	exports.connection = RunService.Heartbeat:Connect(function(delta)
 		local character = CrossPlatformService.Character
@@ -197,44 +210,40 @@ function exports.load(scene: Scene)
 			return
 		end
 
+		levelLabel.Text = tostring(character.Level or 1)
+
+		-- 체력: 앞쪽은 빠르게 목표로, 뒤쪽 잔상은 맞았을 때만 1.5초에 걸쳐 따라 내려온다(회복은 같이 올라감).
 		local health = character.Health or 0
-		local maxHealth = character.MaxHealth or 1
-		local targetScale = math.clamp(health / maxHealth, 0, 1)
-
-		-- 앞쪽(빨강)은 새 값으로 즉시 스냅.
-		hpMask.Size = UDim2.fromOffset(hpMaxWidth * targetScale, hpMask.Size.Y.Offset)
-		hpLabel.Text = ("%d / %d"):format(math.floor(health + 0.5), maxHealth)
-
-		if lastHealth == nil then
-			slowFillScale = targetScale
-		elseif health > lastHealth then
-			-- 회복은 뒤쪽 바도 즉시 따라 올려서 어색한 역방향 애니메이션을 피한다.
-			slowFillScale = targetScale
+		local maxHealth = math.max(character.MaxHealth or 1, 1)
+		local hpTarget = math.clamp(health / maxHealth, 0, 1)
+		shown.hp = approach(shown.hp, hpTarget, delta)
+		if shown.hpTrail == nil or (lastHealth ~= nil and health > lastHealth) then
+			shown.hpTrail = shown.hp
 		end
 		lastHealth = health
-
-		-- 뒤쪽(주황, "방금 깎여나간 만큼"을 보여주는 잔상)은 목표치를 향해 천천히
-		-- 줄어든다 — 절대 목표치보다 먼저 내려가지 않게 아래로만 보정.
-		if slowFillScale > targetScale then
-			local step = delta / SLOW_FILL_DURATION
-			slowFillScale = math.max(slowFillScale - step, targetScale)
+		if shown.hpTrail > shown.hp then
+			shown.hpTrail = math.max(shown.hpTrail - delta / SLOW_FILL_DURATION, shown.hp)
 		else
-			slowFillScale = targetScale
+			shown.hpTrail = shown.hp
 		end
-		hpSlowMask.Size = UDim2.fromOffset(hpMaxWidth * slowFillScale, hpSlowMask.Size.Y.Offset)
+		hpBar.fill.Size = UDim2.fromScale(shown.hp, 1)
+		hpBar.trail.Size = UDim2.fromScale(shown.hpTrail, 1)
+		hpLabel.Text = ("%d / %d"):format(math.floor(health + 0.5), maxHealth)
 
-		-- 마나 소비/회복 콘텐츠가 아직 없어서 필드가 없으면 항상 가득 찬 것으로 표시.
-		local mana = character.Mana or character.MaxMana or 100
+		-- 도력: 소비/회복 콘텐츠가 아직 없어서 필드가 없으면 항상 가득 찬 것으로 표시.
 		local maxMana = character.MaxMana or 100
-		mpMask.Size = UDim2.fromOffset(mpMaxWidth * math.clamp(mana / maxMana, 0, 1), mpMask.Size.Y.Offset)
+		local mana = character.Mana or maxMana
+		shown.mp = approach(shown.mp, math.clamp(mana / maxMana, 0, 1), delta)
+		mpBar.fill.Size = UDim2.fromScale(shown.mp, 1)
 		mpLabel.Text = ("%d / %d"):format(mana, maxMana)
 
+		-- 경험치: 얻을 때마다 부드럽게 차오른다(레벨업으로 값이 크게 줄면 그냥 바로 따라 내려감).
 		local experience = character.Experience or 0
-		local maxExperience = character.MaxExperience or 100
-		expMask.Size = UDim2.fromOffset(expMaxWidth * math.clamp(experience / maxExperience, 0, 1), expMask.Size.Y.Offset)
-		expLabel.Text = ("%d / %d"):format(experience, maxExperience)
-
-		portraitLevelLabel.Text = tostring(character.Level or 1)
+		local maxExperience = math.max(character.MaxExperience or 100, 1)
+		local expTarget = math.clamp(experience / maxExperience, 0, 1)
+		shown.exp = approach(shown.exp, expTarget, delta)
+		expTrack.fill.Size = UDim2.fromScale(shown.exp, 1)
+		expLabel.Text = ("경험치 %d / %d (%.1f%%)"):format(experience, maxExperience, expTarget * 100)
 	end)
 end
 

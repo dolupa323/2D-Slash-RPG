@@ -19,6 +19,8 @@ function networkingService.new()
 	self.PlayersData = { [0] = {} }
 	self.Pending = {}
 	self.Cache = {}
+	-- (프로젝트 패치) 서버 전용: function(player, request) -> boolean. 설정하면 이 플레이어에게 필요 없는 오브젝트의 복제를 생략한다.
+	self.RelevancyFilter = nil
 
 	return setmetatable(self, networkingService)
 end

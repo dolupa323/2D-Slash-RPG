@@ -17,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local packages = ReplicatedStorage:WaitForChild("packages")
 local UpsideEngine = require(packages:WaitForChild("UpsideEngine"))
 local CrossPlatformService = UpsideEngine.GetService("CrossPlatformService")
+local uiTheme = require(ReplicatedStorage.shared.util.uiTheme)
 
 -- 모듈이 require될 때 한 번만 실행되면 되고(플랫폼과 무관하게 항상 적용돼야 함), PC에서도
 -- 필요하므로 TouchEnabled 가드가 있는 exports.load 밖(module 최상단)에 둔다.
@@ -106,29 +107,36 @@ function exports.load(scene: Scene)
 	for action, position in LAYOUT do
 		createButton(pad, action, position, LABEL[action])
 	end
+	-- 화면 크기에 맞춰 방향 패드 전체를 같이 키우고 줄인다(왼쪽 아래 모서리 고정).
+	uiTheme.applyResponsiveScale(pad, Vector2.new(BUTTON_SIZE * 3 + 24, BUTTON_SIZE * 3 + 24))
 
 	-- (실측 버그 이력) 상호작용 버튼을 화면 하단 "중앙"에 뒀더니 시야 한복판이라 잘
 	-- 안 보인다는 요청 — 기본공격 버튼과 같은 화면 오른쪽 하단으로 옮기고, 두 버튼이
 	-- 겹치지 않게 위아래로 쌓는다(상호작용이 위, 공격이 아래).
 	local INTERACT_GAP = 16
 
-	-- 기본공격 버튼 — 화면 오른쪽 하단 모서리.
-	createButton(
+	-- 오른쪽 최하단 모서리는 메뉴 버튼(mainMenu.luau, 높이 약 48)이 차지하므로 그 위에 쌓는다.
+	local MENU_CLEARANCE = 84
+
+	-- 기본공격 버튼.
+	local attackButton = createButton(
 		screenGui,
 		"Attack",
-		UDim2.new(1, -24, 1, -24),
+		UDim2.new(1, -24, 1, -MENU_CLEARANCE),
 		"⚔",
 		Vector2.new(1, 1)
 	)
+	uiTheme.applyResponsiveScale(attackButton, Vector2.new(BUTTON_SIZE + 24, BUTTON_SIZE + MENU_CLEARANCE))
 
 	-- 상호작용 버튼(포탈 타기 등) — 공격 버튼 바로 위.
-	createButton(
+	local interactButton = createButton(
 		screenGui,
 		"Interact",
-		UDim2.new(1, -24, 1, -24 - BUTTON_SIZE - INTERACT_GAP),
+		UDim2.new(1, -24, 1, -MENU_CLEARANCE - BUTTON_SIZE - INTERACT_GAP),
 		"✋",
 		Vector2.new(1, 1)
 	)
+	uiTheme.applyResponsiveScale(interactButton, Vector2.new(BUTTON_SIZE + 24, BUTTON_SIZE * 2 + MENU_CLEARANCE + INTERACT_GAP))
 
 	screenGui.Parent = playerGui
 	exports.screenGui = screenGui

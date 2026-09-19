@@ -21,7 +21,22 @@ local function isFar(objectA, objectB)
 	return dx * dx + dy * dy > sumR * sumR
 end
 
+-- ClassNameHistory가 없는 오브젝트(플러그인이 만든 일부 오브젝트)에서도 안전하게 Character 여부를 본다.
+local function isCharacter(object)
+	local history = object.ClassNameHistory
+	return type(history) == "string" and string.find(history, "Character", 1, true) ~= nil
+end
+
 local function shouldSkip(object, other)
+	-- (프로젝트 패치) SkipCharacterCollisions가 켜진 오브젝트(로컬 플레이어 캐릭터)는 다른 Character(다른 플레이어의 사본/몬스터)와
+	-- 물리 충돌하지 않는다 — 플레이어끼리 부딪혀서 못 움직이면 안 된다. 양방향으로 본다(다른 플레이어 사본을 시뮬레이션할 때도 스킵).
+	if
+		(object.SkipCharacterCollisions and isCharacter(other))
+		or (other.SkipCharacterCollisions and isCharacter(object))
+	then
+		return true
+	end
+
 	return object.Id == other.Id
 		or other.CollisionGroup ~= object.CollisionGroup
 		or other.CollisionBlacklist[object.Id]
