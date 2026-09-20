@@ -54,6 +54,7 @@ local CrossPlatformService = UpsideEngine.GetService("CrossPlatformService")
 local NetworkingService = UpsideEngine.GetService("NetworkingService")
 local SceneManager = UpsideEngine.GetService("SceneManager")
 local scenes = require(ReplicatedStorage.shared.config.scenes)
+local balance = require(ReplicatedStorage.shared.config.balance)
 local travelState = require(script.Parent.travelState)
 local damageNumbers = require(script.Parent.damageNumbers)
 local camera = require(script.Parent.globals.camera)
@@ -73,7 +74,7 @@ local Net = require(ReplicatedStorage.shared.net.net)
 -- 축소되는 걸 확인했으므로(위 이력 참고) 5x7칸, 셀 192x108, 전체 960x756로 다시
 -- 패킹해서 1024 이하로 올렸다.)
 local CELL = Vector2.new(192, 108)
-local DISPLAY_SCALE = 105 / CELL.Y -- 캐릭터 크기 축소 요청: 130px -> 105px
+local DISPLAY_SCALE = balance.HERO_HEIGHT / CELL.Y -- 표시 높이는 shared/config/balance.luau의 HERO_HEIGHT(서버 포탈 판정과 공유)
 local RUN_SPEED_THRESHOLD = 20
 local AIR_SPEED_THRESHOLD = 90
 -- 씬마다 바닥 높이가 다른데 이 좌표 하나를 모든 씬에 그대로 썼더니, 그 씬 바닥과 안
@@ -133,14 +134,14 @@ end
 
 -- 상태+방향당 시트 이미지 하나. 프레임 전환은 ImageRectOffset만 바꾼다(재다운로드 없음).
 local SHEETS = {
-	idle_left = "rbxassetid://135408426447552",
-	idle_right = "rbxassetid://91491363836712",
-	jump_left = "rbxassetid://131553753197052",
-	jump_right = "rbxassetid://71319291970754",
-	run_left = "rbxassetid://134239558167604",
-	run_right = "rbxassetid://95749792955818",
-	attack_left = "rbxassetid://95787153802362",
-	attack_right = "rbxassetid://115783148562938",
+	idle_left = "rbxassetid://129227783963898",
+	idle_right = "rbxassetid://101551876863669",
+	jump_left = "rbxassetid://130535607802787",
+	jump_right = "rbxassetid://112491597301305",
+	run_left = "rbxassetid://136474391432915",
+	run_right = "rbxassetid://134866890500394",
+	attack_left = "rbxassetid://79462817990211",
+	attack_right = "rbxassetid://115389384281087",
 }
 
 -- (실측 이력 3) 로블록스가 "4096 업로드 지원"이라고 홍보했지만, 실제 데칼 업로드
@@ -161,8 +162,12 @@ local GRID = {
 	idle_right = { cols = 5, frames = 35 },
 	jump_left = { cols = 5, frames = 35 },
 	jump_right = { cols = 5, frames = 35 },
-	run_left = { cols = 5, frames = 35, loopStart = 14, loopEnd = 21 },
-	run_right = { cols = 5, frames = 35, loopStart = 14, loopEnd = 21 },
+	-- (실측) 교체된 run 원본(2026-09-20 21시)은 35프레임 안에 "서 있는 자세"(1~6)와 "멈추는 자세"(33~35)가 같이 들어 있어서 전체를
+	-- 반복하면 달리는 도중에 멈춰 서는 동작이 끼어들었다. 원본에서 달리기 구간만 골라 시트를 다시 만들었다: 출발(원본 7~10, 몸이
+	-- 기울어지기 시작) 4장 + 반복 구간(원본 19~28) 10장 = 14프레임. 반복 구간은 프레임 자세 차이를 재서 이음새가 가장 매끄러운
+	-- 구간(28→19 차이 0.13 < 연속 프레임 평균 0.25, 발 높이 차이 0)을 골랐다. 그래서 1~4는 출발, 5~14를 계속 반복한다.
+	run_left = { cols = 5, frames = 14, loopStart = 5, loopEnd = 14 },
+	run_right = { cols = 5, frames = 14, loopStart = 5, loopEnd = 14 },
 	attack_left = { cols = 5, frames = 35 },
 	attack_right = { cols = 5, frames = 35 },
 }
@@ -239,7 +244,18 @@ function exports.load(scene: Scene)
 	-- 이 필드는 복제되지 않아도 되도록 로컬 히어로에만 걸고, 판정은 "이 히어로 vs 다른 Character" 양방향으로 스킵한다.
 	hero.SkipCharacterCollisions = true
 	-- 캔버스(300x420)에 세이프 마진(28/39px)이 커서 실제 그림은 그보다 작다 — 실측 후 조정 예정.
-	hero.HitboxScale = 0.28
+	-- (실측 이력) 시트 프레임 아래쪽에 발밑 빈 여백이 있어서(발은 프레임 높이의 약 77% 지점) 기본 히트박스(스프라이트 한가운데 작은
+	-- 사각형)로는 발이 땅에서 떠 보였다. 히트박스를 "발이 닿는 선"을 직접 정의한다(발 위치에서 HERO_GROUND_SINK만큼 위) —
+	-- Hitbox 꼭짓점은 히트박스 크기(HitboxScale=1이면 스프라이트 전체 크기)에 대한 비율이다. 가로는 몸통 폭, 세로는 발(아래)에서
+	-- 머리 근처(위)까지. 이제 발 위치를 바꾸려면 balance.HERO_FEET_FRACTION만 고치면 된다.
+	hero.HitboxScale = 1
+	local feet = balance.HERO_FEET_FRACTION - balance.HERO_GROUND_SINK
+	hero.Hitbox = {
+		Vector3.new(0.36, 0.30),
+		Vector3.new(0.64, 0.30),
+		Vector3.new(0.64, feet),
+		Vector3.new(0.36, feet),
+	}
 	hero.WalkSpeed = 80
 	hero.JumpPower = 150 -- 기본값
 	-- 최대 체력은 레벨에 따라 playerStats.luau가 채워준다(테스트용 임시 1000 제거됨).
