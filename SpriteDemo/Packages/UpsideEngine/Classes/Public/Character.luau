@@ -108,7 +108,10 @@ function character:Jump(jumpPower: number?)
 	end
 
 	jumpPower = jumpPower or self.JumpPower
-	self.Velocity -= Vector2.new(0, jumpPower * JUMP_SCALE)
+	-- (프로젝트 패치) 누적(-=)이 아니라 세로 속도를 "설정"한다. 물체 옆에 붙어 점프를 반복하면 Collision 이벤트가 점프 직후
+	-- IsJumping/IsGrounded 판정을 흔들어 Jump()가 연속 호출되는데, 누적이면 속도가 겹겹이 쌓여 비정상적으로 높이 뛴다.
+	-- 설정이면 몇 번 호출돼도 항상 같은 높이다.
+	self.Velocity = Vector2.new(self.Velocity.X, -jumpPower * JUMP_SCALE)
 	self.IsGrounded = false
 	self.IsJumping = true
 

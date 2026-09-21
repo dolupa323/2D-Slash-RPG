@@ -73,8 +73,23 @@ local Net = require(ReplicatedStorage.shared.net.net)
 -- (원본 4480x1800, 7x5칸, 셀 640x360 — 로블록스 데칼 업로드가 1024x1024로 강제
 -- 축소되는 걸 확인했으므로(위 이력 참고) 5x7칸, 셀 192x108, 전체 960x756로 다시
 -- 패킹해서 1024 이하로 올렸다.)
-local CELL = Vector2.new(192, 108)
-local DISPLAY_SCALE = balance.HERO_HEIGHT / CELL.Y -- 표시 높이는 shared/config/balance.luau의 HERO_HEIGHT(서버 포탈 판정과 공유)
+-- (2026-09-21) 여백 제거 재패킹: 원본 셀(640x360)에서 8장(idle/run/jump/attack × left/right) 모든 프레임이 공통으로 쓰는 영역
+-- 하나(원본 좌표 x119~521, y9~301, 402x292)만 잘라 0.5배로 줄여서 셀 201x146, 5열 7행(1005x1022)으로 패킹했다.
+-- 자르는 영역과 배율이 8장 전부 같아서 동작마다 캐릭터 크기/위치가 어긋나지 않는다. 아래 SOURCE_*/CROP_* 값이 그 재패킹 정보다.
+local SOURCE_CELL = Vector2.new(640, 360)
+local CROP_ORIGIN = Vector2.new(119, 9)
+local CROP_SIZE = Vector2.new(402, 292)
+local SHEET_SCALE = 0.5
+local CELL = Vector2.new(201, 146)
+-- 표시 높이는 shared/config/balance.luau의 HERO_HEIGHT(서버 포탈 판정과 공유) — 원본 셀 높이(360)가 HERO_HEIGHT로 그려지는 배율이다.
+local DISPLAY_SCALE = (balance.HERO_HEIGHT / SOURCE_CELL.Y) / SHEET_SCALE
+-- 원본 셀 기준 비율(0~1)을 잘라낸 셀 기준 비율로 바꾼다. 발/히트박스 기준을 원본 셀 기준(balance)으로 그대로 유지하기 위함.
+local function cropX(fraction: number): number
+	return (fraction * SOURCE_CELL.X - CROP_ORIGIN.X) / CROP_SIZE.X
+end
+local function cropY(fraction: number): number
+	return (fraction * SOURCE_CELL.Y - CROP_ORIGIN.Y) / CROP_SIZE.Y
+end
 local RUN_SPEED_THRESHOLD = 20
 local AIR_SPEED_THRESHOLD = 90
 -- 씬마다 바닥 높이가 다른데 이 좌표 하나를 모든 씬에 그대로 썼더니, 그 씬 바닥과 안
@@ -134,24 +149,24 @@ end
 
 -- 상태+방향당 시트 이미지 하나. 프레임 전환은 ImageRectOffset만 바꾼다(재다운로드 없음).
 local SHEETS = {
-	idle_left = "rbxassetid://129227783963898",
-	idle_right = "rbxassetid://101551876863669",
-	jump_left = "rbxassetid://130535607802787",
-	jump_right = "rbxassetid://112491597301305",
-	run_left = "rbxassetid://136474391432915",
-	run_right = "rbxassetid://134866890500394",
-	attack_left = "rbxassetid://79462817990211",
-	attack_right = "rbxassetid://115389384281087",
+	idle_left = "rbxassetid://125978364062469",
+	idle_right = "rbxassetid://88691154774337",
+	jump_left = "rbxassetid://118478223792511",
+	jump_right = "rbxassetid://112648425237557",
+	run_left = "rbxassetid://92559091238466",
+	run_right = "rbxassetid://99006572890082",
+	attack_left = "rbxassetid://72748617035670",
+	attack_right = "rbxassetid://75324279649553",
 }
 
 -- (실측 이력 3) 로블록스가 "4096 업로드 지원"이라고 홍보했지만, 실제 데칼 업로드
 -- 경로는 2026년 중반 기준으로도 여전히 1024x1024로 강제 축소된다(개발자 포럼 다수
 -- 보고 + 우리 자체 Play 테스트로 재확인: 4032x1620으로 올렸다가 예전과 똑같이
 -- 여러 프레임이 겹쳐 보이는 버그 재현됨). 그래서 6장 전부 1024 이하 기준(5x7칸,
--- 셀 192x108)으로 통일한다.
+-- 셀 CELL(201x146, 위 재패킹 참고)로 통일한다.
 --
 -- 상태+방향별 그리드: cols(한 줄에 몇 칸), frames(총 프레임 수). 셀 크기는 6장 전부
--- CELL(192x108)로 통일. run의 loopStart/loopEnd는 Warrior 전용 참고 자료(22.gif —
+-- CELL로 통일. run의 loopStart/loopEnd는 Warrior 전용 참고 자료(22.gif —
 -- run_left와 동일한 애니메이션, 36프레임)를 프레임간 픽셀 차이로 분석해서 찾았다.
 -- run_left는 22.gif에서 15~22번째 프레임이 8프레임 주기로 가장 깨끗하게 반복되고
 -- (우리 셀 번호=GIF 프레임-1이므로 14~21), run_right는 참고 GIF가 없어서 자체
@@ -251,17 +266,18 @@ function exports.load(scene: Scene)
 	hero.HitboxScale = 1
 	local feet = balance.HERO_FEET_FRACTION - balance.HERO_GROUND_SINK
 	hero.Hitbox = {
-		Vector3.new(0.36, 0.30),
-		Vector3.new(0.64, 0.30),
-		Vector3.new(0.64, feet),
-		Vector3.new(0.36, feet),
+		Vector3.new(cropX(0.36), cropY(0.30)),
+		Vector3.new(cropX(0.64), cropY(0.30)),
+		Vector3.new(cropX(0.64), cropY(feet)),
+		Vector3.new(cropX(0.36), cropY(feet)),
 	}
 	hero.WalkSpeed = 80
 	hero.JumpPower = 150 -- 기본값
 	-- 최대 체력은 레벨에 따라 playerStats.luau가 채워준다(테스트용 임시 1000 제거됨).
 
 	local instance = hero.Instance
-	instance.AnchorPoint = Vector2.new(0.5, 1) -- 발밑 중앙 기준(바닥에 닿는 지점 고정)
+	-- 발밑 중앙 기준(바닥에 닿는 지점 고정) — 잘라낸 셀 안에서 원본 셀의 하단 중앙이 있던 자리
+	instance.AnchorPoint = Vector2.new(cropX(0.5), cropY(1))
 	-- ScaleType 기본값은 Tile이다 — 이전엔 ImageRectSize가 항상 Vector2.zero(크롭 없음)라
 	-- 안 드러났지만, 지금처럼 실제로 640x360 하위 영역을 크롭해서 쓰면 그 조각을 작은
 	-- Size 박스 안에 원본 픽셀 크기 그대로 반복 타일링해버린다(캐릭터가 여러 개로
@@ -481,6 +497,7 @@ function exports.start(scene: Scene)
 		local SETTLE_THRESHOLD = 10
 		local MIN_FALL_DURATION = 0.15
 		local grounded = true
+		local wasJumping = false
 		local phaseFall = false
 		local fallStartTime = 0
 
@@ -599,6 +616,21 @@ function exports.start(scene: Scene)
 				facing = "right"
 			end
 			facingState.value = facing
+
+			-- (실측 버그 이력) 제자리에서 점프를 계속 반복하면 착지하자마자 다시 뜨기 때문에 "수직으로 멈춘" 순간이 없어
+			-- grounded가 true로 돌아오지 않았고, 점프 상태가 끝나지 않은 채 시트 마지막 프레임(서 있는 자세)에 고정됐다.
+			-- 엔진이 점프를 시작시킨 순간(hero.IsJumping이 false→true)을 새 점프의 시작으로 보고 상태/프레임을 처음부터 다시 잡는다.
+			local jumpingNow = hero.IsJumping == true
+			if jumpingNow and not wasJumping then
+				grounded = false
+				phaseFall = false
+				idleSince = nil
+				if currentState == "jump" then
+					currentFrame = 1
+					frameClock = 0
+				end
+			end
+			wasJumping = jumpingNow
 
 			local nextStateName = stateFor(moving, estimatedVelocityY, elapsed, instantVelocityY)
 			-- 공격은 이동/점프 판정과 별개로 "누른 순간 한 번" 우선 재생되는 오버레이

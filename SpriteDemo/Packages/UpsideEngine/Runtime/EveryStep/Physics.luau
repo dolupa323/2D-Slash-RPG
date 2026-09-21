@@ -149,7 +149,11 @@ return function(scene, deltaTime)
 			if mv.X > 0 then posX = math.max(posX, mv.X) else negX = math.min(negX, mv.X) end
 			if mv.Y > 0 then
 				posY = math.max(posY, mv.Y)
-				grounded = true
+				-- (프로젝트 패치) 물체 옆면/모서리에 붙어 부딪힐 때도 밀어내는 벡터에 위쪽(Y) 성분이 섞여 나와서, 공중인데도 "땅에 닿음"으로
+				-- 판정돼 점프를 연속으로 할 수 있었다(2단/3단 점프). 밀어내는 방향이 X보다 Y가 더 클 때(=위에서 밟았을 때)만 땅으로 본다.
+				if math.abs(mv.Y) > math.abs(mv.X) then
+					grounded = true
+				end
 			else
 				negY = math.min(negY, mv.Y)
 			end
