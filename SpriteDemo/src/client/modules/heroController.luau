@@ -74,13 +74,21 @@ local Net = require(ReplicatedStorage.shared.net.net)
 -- 축소되는 걸 확인했으므로(위 이력 참고) 5x7칸, 셀 192x108, 전체 960x756로 다시
 -- 패킹해서 1024 이하로 올렸다.)
 -- (2026-09-21) 여백 제거 재패킹: 원본 셀(640x360)에서 8장(idle/run/jump/attack × left/right) 모든 프레임이 공통으로 쓰는 영역
--- 하나(원본 좌표 x119~521, y9~301, 402x292)만 잘라 0.5배로 줄여서 셀 201x146, 5열 7행(1005x1022)으로 패킹했다.
--- 자르는 영역과 배율이 8장 전부 같아서 동작마다 캐릭터 크기/위치가 어긋나지 않는다. 아래 SOURCE_*/CROP_* 값이 그 재패킹 정보다.
+-- 하나만 잘라 배율을 줄여서 재패킹했다. 자르는 영역과 배율이 8장 전부 같아서 동작마다 캐릭터 크기/위치가 어긋나지 않는다.
+-- (2026-09-23) Source: Assets/character/talchar/three/assets/characters/Warrior/{idle,jump,run,attack}_{left,right}.png —
+-- 지브리 화풍으로 다시 그려진 애니메이션 시트로 전면 교체(원본 포맷은 동일: 4480x1800, 7x5칸, 셀 640x360).
+-- attack 시트의 칼 이펙트(흰 궤적)가 잘리지 않게 프레임별로 가장 큰 덩어리만 남기는 이전 방식(clean) 대신 작은
+-- 먼지만 제거하는 방식으로 바꿔서 이펙트를 보존했다. run 루프는 새 시트를 프레임간 색차로 재분석해서 다시
+-- 골랐다(출발 4장 + 반복 10장 = 14장, 이전과 같은 구조).
+-- (2026-09-23 재작업) jump 시트만 다시 교체됐는데, 새 jump가 기존 공통 크롭(y6~315)보다 위아래로 더 크게
+-- 그려져 있어서(위 0, 아래 329) 8장 전체를 그 새 jump까지 포함한 공통 바운딩 박스(원본 좌표 x97~543, y0~335,
+-- 446x335)로 다시 잘라 0.436배로 줄여 셀 194x146, 5열 7행(970x1022, run만 970x438)으로 재패킹하고 8장 전부
+-- 재업로드했다 — 크롭 범위가 8장 전부 같아야 동작 전환 시 캐릭터 위치가 어긋나지 않는다.
 local SOURCE_CELL = Vector2.new(640, 360)
-local CROP_ORIGIN = Vector2.new(119, 9)
-local CROP_SIZE = Vector2.new(402, 292)
-local SHEET_SCALE = 0.5
-local CELL = Vector2.new(201, 146)
+local CROP_ORIGIN = Vector2.new(97, 0)
+local CROP_SIZE = Vector2.new(446, 335)
+local SHEET_SCALE = 0.43582089552238806
+local CELL = Vector2.new(194, 146)
 -- 표시 높이는 shared/config/balance.luau의 HERO_HEIGHT(서버 포탈 판정과 공유) — 원본 셀 높이(360)가 HERO_HEIGHT로 그려지는 배율이다.
 local DISPLAY_SCALE = (balance.HERO_HEIGHT / SOURCE_CELL.Y) / SHEET_SCALE
 -- 원본 셀 기준 비율(0~1)을 잘라낸 셀 기준 비율로 바꾼다. 발/히트박스 기준을 원본 셀 기준(balance)으로 그대로 유지하기 위함.
@@ -149,38 +157,33 @@ end
 
 -- 상태+방향당 시트 이미지 하나. 프레임 전환은 ImageRectOffset만 바꾼다(재다운로드 없음).
 local SHEETS = {
-	idle_left = "rbxassetid://125978364062469",
-	idle_right = "rbxassetid://88691154774337",
-	jump_left = "rbxassetid://118478223792511",
-	jump_right = "rbxassetid://112648425237557",
-	run_left = "rbxassetid://92559091238466",
-	run_right = "rbxassetid://99006572890082",
-	attack_left = "rbxassetid://72748617035670",
-	attack_right = "rbxassetid://75324279649553",
+	idle_left = "rbxassetid://110529298310920",
+	idle_right = "rbxassetid://80876106769787",
+	jump_left = "rbxassetid://130472943772842",
+	jump_right = "rbxassetid://113019377729876",
+	run_left = "rbxassetid://117889476234934",
+	run_right = "rbxassetid://98894628883278",
+	attack_left = "rbxassetid://134007969055321",
+	attack_right = "rbxassetid://114561966773641",
 }
 
 -- (실측 이력 3) 로블록스가 "4096 업로드 지원"이라고 홍보했지만, 실제 데칼 업로드
 -- 경로는 2026년 중반 기준으로도 여전히 1024x1024로 강제 축소된다(개발자 포럼 다수
 -- 보고 + 우리 자체 Play 테스트로 재확인: 4032x1620으로 올렸다가 예전과 똑같이
--- 여러 프레임이 겹쳐 보이는 버그 재현됨). 그래서 6장 전부 1024 이하 기준(5x7칸,
--- 셀 CELL(201x146, 위 재패킹 참고)로 통일한다.
+-- 여러 프레임이 겹쳐 보이는 버그 재현됨). 그래서 8장 전부 1024 이하 기준(5x7칸,
+-- 셀 CELL(194x146, 위 재패킹 참고)로 통일한다.
 --
--- 상태+방향별 그리드: cols(한 줄에 몇 칸), frames(총 프레임 수). 셀 크기는 6장 전부
--- CELL로 통일. run의 loopStart/loopEnd는 Warrior 전용 참고 자료(22.gif —
--- run_left와 동일한 애니메이션, 36프레임)를 프레임간 픽셀 차이로 분석해서 찾았다.
--- run_left는 22.gif에서 15~22번째 프레임이 8프레임 주기로 가장 깨끗하게 반복되고
--- (우리 셀 번호=GIF 프레임-1이므로 14~21), run_right는 참고 GIF가 없어서 자체
--- run_right.png의 35프레임을 같은 방식으로 직접 분석했더니 동일하게 14~21에서
--- 반복됐다(두 방향이 서로 다른 방법으로 같은 결과가 나와 교차검증됨).
+-- 상태+방향별 그리드: cols(한 줄에 몇 칸), frames(총 프레임 수). 셀 크기는 8장 전부
+-- CELL로 통일. run의 loopStart/loopEnd는 run_left/right 시트를 프레임간 색차 분석으로
+-- 각각 독립적으로 구해서 같은 구간(출발 9~12, 반복 13~22)이 나온 것을 교차검증했다.
 local GRID = {
 	idle_left = { cols = 5, frames = 35 },
 	idle_right = { cols = 5, frames = 35 },
 	jump_left = { cols = 5, frames = 35 },
 	jump_right = { cols = 5, frames = 35 },
-	-- (실측) 교체된 run 원본(2026-09-20 21시)은 35프레임 안에 "서 있는 자세"(1~6)와 "멈추는 자세"(33~35)가 같이 들어 있어서 전체를
-	-- 반복하면 달리는 도중에 멈춰 서는 동작이 끼어들었다. 원본에서 달리기 구간만 골라 시트를 다시 만들었다: 출발(원본 7~10, 몸이
-	-- 기울어지기 시작) 4장 + 반복 구간(원본 19~28) 10장 = 14프레임. 반복 구간은 프레임 자세 차이를 재서 이음새가 가장 매끄러운
-	-- 구간(28→19 차이 0.13 < 연속 프레임 평균 0.25, 발 높이 차이 0)을 골랐다. 그래서 1~4는 출발, 5~14를 계속 반복한다.
+	-- (2026-09-23 재분석) 새 run 시트도 35프레임 안에 서 있는/멈추는 자세가 섞여 있어 프레임간 색차로 다시 분석했다: 출발(원본
+	-- 9~12) 4장 + 반복 구간(원본 13~22) 10장 = 14프레임. 반복 구간은 22→13 이음새 차이(0.27)가 인접 프레임 평균차(0.4~0.5)보다
+	-- 뚜렷이 작은 구간을 탐색해서 골랐다. 그래서 1~4는 출발, 5~14를 계속 반복한다.
 	run_left = { cols = 5, frames = 14, loopStart = 5, loopEnd = 14 },
 	run_right = { cols = 5, frames = 14, loopStart = 5, loopEnd = 14 },
 	attack_left = { cols = 5, frames = 35 },
