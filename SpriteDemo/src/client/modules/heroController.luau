@@ -161,8 +161,8 @@ local SHEETS = {
 	idle_right = "rbxassetid://80876106769787",
 	jump_left = "rbxassetid://130472943772842",
 	jump_right = "rbxassetid://113019377729876",
-	run_left = "rbxassetid://117889476234934",
-	run_right = "rbxassetid://98894628883278",
+	run_left = "rbxassetid://138525219327008",
+	run_right = "rbxassetid://103601155867489",
 	attack_left = "rbxassetid://134007969055321",
 	attack_right = "rbxassetid://114561966773641",
 }
@@ -174,18 +174,17 @@ local SHEETS = {
 -- 셀 CELL(194x146, 위 재패킹 참고)로 통일한다.
 --
 -- 상태+방향별 그리드: cols(한 줄에 몇 칸), frames(총 프레임 수). 셀 크기는 8장 전부
--- CELL로 통일. run의 loopStart/loopEnd는 run_left/right 시트를 프레임간 색차 분석으로
--- 각각 독립적으로 구해서 같은 구간(출발 9~12, 반복 13~22)이 나온 것을 교차검증했다.
+-- CELL로 통일. run의 loopStart/loopEnd는 run_left/right 시트를 프레임간 색차 분석으로 구한다.
 local GRID = {
 	idle_left = { cols = 5, frames = 35 },
 	idle_right = { cols = 5, frames = 35 },
 	jump_left = { cols = 5, frames = 35 },
 	jump_right = { cols = 5, frames = 35 },
-	-- (2026-09-23 재분석) 새 run 시트도 35프레임 안에 서 있는/멈추는 자세가 섞여 있어 프레임간 색차로 다시 분석했다: 출발(원본
-	-- 9~12) 4장 + 반복 구간(원본 13~22) 10장 = 14프레임. 반복 구간은 22→13 이음새 차이(0.27)가 인접 프레임 평균차(0.4~0.5)보다
-	-- 뚜렷이 작은 구간을 탐색해서 골랐다. 그래서 1~4는 출발, 5~14를 계속 반복한다.
-	run_left = { cols = 5, frames = 14, loopStart = 5, loopEnd = 14 },
-	run_right = { cols = 5, frames = 14, loopStart = 5, loopEnd = 14 },
+	-- (2026-09-24 재교체) run 시트가 다시 교체됐다. 35프레임 안에서 프레임간 색차로 재분석: 출발(원본 14~17) 4장 +
+	-- 반복 구간(원본 18~25) 8장 = 12프레임. 반복 구간은 8프레임 주기 보행 사이클 중 25→18 이음새 차이(0.28)가 가장
+	-- 작은 구간을 탐색해서 골랐다(발 높이 차이 0). 그래서 1~4는 출발, 5~12를 계속 반복한다.
+	run_left = { cols = 5, frames = 12, loopStart = 5, loopEnd = 12 },
+	run_right = { cols = 5, frames = 12, loopStart = 5, loopEnd = 12 },
 	attack_left = { cols = 5, frames = 35 },
 	attack_right = { cols = 5, frames = 35 },
 }

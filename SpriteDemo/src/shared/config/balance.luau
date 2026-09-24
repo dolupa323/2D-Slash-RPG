@@ -24,7 +24,7 @@ balance.ATTACK_COOLDOWN = 0.6
 
 -- 히어로 스프라이트의 화면 표시 크기(px). 클라이언트 heroController가 이 높이로 그리고(가로는 시트 프레임 비율 192:108),
 -- 서버의 포탈 이동 승인 판정도 같은 크기를 쓴다 — 캐릭터 크기를 바꿀 땐 HERO_HEIGHT 하나만 고치면 둘 다 따라간다.
-balance.HERO_HEIGHT = 160
+balance.HERO_HEIGHT = 135
 balance.HERO_WIDTH = math.floor(balance.HERO_HEIGHT * 192 / 108 + 0.5)
 -- 시트 프레임 안에서 발이 있는 세로 위치(프레임 높이 대비, 위=0 → 아래=1). 히어로 히트박스의 바닥(땅에 닿는 선)을 여기에 맞춘다.
 balance.HERO_FEET_FRACTION = 0.767
