@@ -217,6 +217,53 @@ local ATTACK_IMPACT_FRAME = 15
 local ATTACK_IMPACT_WINDOW_FRAMES = 3
 local LOOPING = { idle = true, jump = false, run = true, attack = false }
 
+-- (2026-09-28 테스트) 도트 스킨: "ghibli"(위의 지브리 시트) / "pixel"(코드로 그린 도트 워리어) 중 하나를 고른다.
+-- 도트 시트는 에셋 없이 파이썬 코드로 픽셀을 찍어 만들었다(Assets/character/talchar/three/assets/characters/Warrior_pixel,
+-- 생성 스크립트 pixel_warrior.py). 원본 셀 96x54에 발바닥을 셀 높이의 76.7% 지점(y=41)에 맞춰 그렸기 때문에
+-- balance.HERO_FEET_FRACTION/히트박스 계산을 지브리 스킨과 똑같이 공유한다. 업로드 시 도트가 뭉개지지 않게 2배
+-- 정수 확대(nearest)해서 셀 192x108로 올렸고, 화면에서도 ResampleMode.Pixelated로 그린다. 각 동작 8프레임.
+local HERO_SKIN = "ghibli"
+local IS_PIXEL_SKIN = HERO_SKIN == "pixel"
+if IS_PIXEL_SKIN then
+	SOURCE_CELL = Vector2.new(96, 54)
+	CROP_ORIGIN = Vector2.new(0, 0)
+	CROP_SIZE = Vector2.new(96, 54)
+	SHEET_SCALE = 2
+	CELL = Vector2.new(192, 108)
+	DISPLAY_SCALE = (balance.HERO_HEIGHT / SOURCE_CELL.Y) / SHEET_SCALE
+	SHEETS = {
+		idle_left = "rbxassetid://74302487210108",
+		idle_right = "rbxassetid://104251956813759",
+		jump_left = "rbxassetid://82732311514429",
+		jump_right = "rbxassetid://133304408919706",
+		run_left = "rbxassetid://95059218609793",
+		run_right = "rbxassetid://118293754540645",
+		attack_left = "rbxassetid://113382477767612",
+		attack_right = "rbxassetid://128732334502457",
+	}
+	GRID = {
+		idle_left = { cols = 5, frames = 8 },
+		idle_right = { cols = 5, frames = 8 },
+		jump_left = { cols = 5, frames = 8 },
+		jump_right = { cols = 5, frames = 8 },
+		run_left = { cols = 5, frames = 8 },
+		run_right = { cols = 5, frames = 8 },
+		attack_left = { cols = 5, frames = 8 },
+		attack_right = { cols = 5, frames = 8 },
+	}
+	-- 8프레임 기준으로 지브리와 비슷한 체감 길이가 되게 맞춘다: idle 1.3s/루프, run 0.67s/사이클,
+	-- jump 약 1.1s(체공 커버), attack 약 0.67s(서버 ATTACK_COOLDOWN 0.6s보다 길게).
+	SECONDS_PER_FRAME = {
+		idle = 1 / 6,
+		jump = 1 / 7,
+		run = 1 / 12,
+		attack = 1 / 12,
+	}
+	-- 4번째 프레임이 칼 궤적이 가장 큰 임팩트 프레임.
+	ATTACK_IMPACT_FRAME = 4
+	ATTACK_IMPACT_WINDOW_FRAMES = 2
+end
+
 local exports = {}
 
 -- hero.IsGrounded와 hero.Velocity.Y 둘 다 신뢰할 수 없다(실측 확인: Position.Y가
@@ -285,6 +332,8 @@ function exports.load(scene: Scene)
 	-- Size 박스 안에 원본 픽셀 크기 그대로 반복 타일링해버린다(캐릭터가 여러 개로
 	-- 겹쳐 보이는 원인). Stretch로 명시해서 크롭된 한 프레임을 Size 박스에 맞게 늘린다.
 	instance.ScaleType = Enum.ScaleType.Stretch
+	-- 도트 스킨은 확대 시 픽셀이 번지지 않게 최근접 샘플링으로 그린다.
+	instance.ResampleMode = if IS_PIXEL_SKIN then Enum.ResamplerMode.Pixelated else Enum.ResamplerMode.Default
 	instance.Image = SHEETS.idle_right
 	instance.Position = spawnPosition
 	instance.Size = UDim2.fromOffset(CELL.X * DISPLAY_SCALE, CELL.Y * DISPLAY_SCALE)

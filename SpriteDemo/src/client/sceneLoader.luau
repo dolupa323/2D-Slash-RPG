@@ -69,7 +69,8 @@ end
 -- 준비되기도 전에 화면이 바로 보이고 게임이 진행돼서 "될 때도 안 될 때도 있는" 타이밍
 -- 문제가 계속 났다 — 블랙아웃으로 가려둔 채 준비가 다 된 걸 확인한 뒤에 걷어낸다.
 local loadingScreen = require(modules.loadingScreen)
-local heroController = require(modules.heroController)
+-- (2026-09-28) 탑다운 전환: 횡스크롤 heroController 대신 탑다운 도트 아이(topDownHero)를 쓴다.
+local heroController = require(modules.topDownHero)
 local playerStats = require(modules.globals.playerStats)
 local monsterHealthBar = require(modules.globals.monsterHealthBar)
 local ContentProvider = game:GetService("ContentProvider")
@@ -163,9 +164,15 @@ sceneManager:On("SceneLoaded", function(scene)
 end)
 
 -- Load scenes from the plugin if they were created using it.
+-- (예전 횡스크롤 씬들 — 지금은 켜지 않지만 서버/포탈 코드가 이름으로 찾을 수 있게 불러는 둔다.)
 loadingScreen.Show()
 pluginSupportService:LoadPluginContent()
-local myPluginScene = sceneManager:FindByName(scenes.TOWN)
-myPluginScene:Enable()
+
+-- 탑다운 만두 마을은 플러그인 없이 코드로 만든다(그림·배치는 modules/town/map.luau가 채운다).
+-- 위에서 내려다보는 시점이라 중력을 끈다.
+local townScene = upsideEngine.new("Scene")
+townScene:SetName(scenes.TOWN)
+townScene.Gravity = Vector2.zero
+townScene:Enable()
 
 return {}
