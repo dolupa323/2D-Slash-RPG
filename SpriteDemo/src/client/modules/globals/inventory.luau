@@ -1,40 +1,33 @@
--- 인벤토리 슬롯 그리드. HUD와 마찬가지로 Scene 밖의 자체 ScreenGui로 화면에 고정한다.
---
--- 에셋(2번째로 받은 세트): Assets/character/talchar/three/ui/{big ui, x}.png.
--- big ui.png(482x341)는 인벤토리/장비/퀘스트 등 여러 패널이 공용으로 쓰는 나무 액자
--- 배경(안쪽은 빈 양피지) — 슬롯 그리드는 안쪽 빈 공간에 코드로 그린다(uiTheme.mkSlot).
--- 안쪽 양피지 영역은 PIL로 실측: x:[44,462] y:[47,308] (네이티브 해상도 기준, 패널을
--- 그대로 1:1로 쓰므로 배율 계산 없이 이 좌표를 그대로 쓴다). x.png(90x83)는 닫기 버튼.
---
--- 예전엔 이 모듈 안에 가방 아이콘 토글 버튼이 있었지만, 이제 mainMenu.luau의 확장형
--- 메뉴(가방/장비/퀘스트 등 버튼들이 메뉴 버튼에서 좌르륵 펼쳐지는 방식)가 그 역할을
--- 대신하므로 exports.toggle()만 노출하고 자체 토글 버튼은 만들지 않는다.
+-- 인벤토리(가방) — 에셋 공방 UI 탭 "가방" 예시 화면 + 탭(2026-09-29).
+--  위: "가방" 제목판, 탭 5개(장비·소비·기타·캐시·중요 — 누르면 그 탭 아이템만), 오른쪽 위 닫기.
+--  왼쪽: 6x4 칸(탭마다 칸이 따로). 칸을 누르면 선택 → 오른쪽에 큰 아이콘·이름·설명 + [장착/사용] [버리기].
+--  드래그 앤 드롭: 칸을 누른 채 끌어서 다른 칸에 놓으면 자리 바꾸기(같은 아이템이면 합치기) — 서버(MoveItem)가 처리.
+--  버리기: 서버(DropItem)가 가방에서 빼서 발밑 땅에 떨어뜨린다(월드 드랍 — 같은 씬 누구나 주울 수 있고, 시간이 지나면 사라짐).
+--  중요 물품은 버릴 수 없다. 왼쪽 아래 골드. 물약은 [사용]으로 먹는다(서버 UseItem — 체력 회복, 1개 줄임).
+-- HUD의 가방 버튼이 exports.toggle()을 부른다. 서버 데이터 캐시(인벤토리·골드·장비)는 UI와 별개로 유지된다.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local uiTheme = require(ReplicatedStorage.shared.util.uiTheme)
+local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
 local popupManager = require(script.Parent.Parent.popupManager)
 local items = require(ReplicatedStorage.shared.data.items)
 local balance = require(ReplicatedStorage.shared.config.balance)
 local Net = require(ReplicatedStorage.shared.net.net)
-local TweenService = game:GetService("TweenService")
+local UI = require(script.Parent.Parent.ui.pixelUI)
 
-local PANEL_ASSET = "rbxassetid://118251374996221"
-local PANEL_NATIVE = Vector2.new(482, 341)
-local INNER = { x = 44, y = 47, w = 418, h = 261 } -- 양피지 안쪽 영역(나무 액자 제외)
-
-local CLOSE_ASSET = "rbxassetid://86025600185150"
-local CLOSE_NATIVE = Vector2.new(90, 83)
-
+local C = UI.colors
 local COLUMNS = balance.INVENTORY_COLUMNS
 local ROWS = balance.INVENTORY_ROWS
-local SLOT_COUNT = COLUMNS * ROWS
-local SLOT_SIZE = 48
-local SLOT_GAP = 8
-
--- 슬롯은 양피지 배경 위에 놓이므로 진한 어두운 옻칠색 대신 반투명 밝은 갈색 계열로.
-local SLOT_BG = Color3.fromRGB(210, 195, 165)
-local SLOT_BORDER = Color3.fromRGB(120, 95, 60)
-local SLOT_HOVER_BORDER = Color3.fromRGB(170, 40, 30)
+local SLOT_COUNT = balance.INVENTORY_SLOTS
+local TABS = balance.INVENTORY_TABS
+local TAB_NAMES = balance.INVENTORY_TAB_NAMES
+local SLOT = 22 -- 칸 크기(도트)
+local STEP = 24
+local PANEL_W, PANEL_H = 300, 190
+local GRID_Y = 32
+local INFO_X = 14 + COLUMNS * STEP + 8 -- 설명 영역 왼쪽
+local INFO_W = PANEL_W - INFO_X - 10
+local DRAG_START = 6 -- 이만큼(px) 끌면 드래그 시작
 
 local exports = {}
 
@@ -43,11 +36,51 @@ local cachedInventory = nil
 local cachedEquipment = {}
 local cachedGold = 0
 local goldListeners = {}
+local equipmentListeners = {}
 
-
-local function fireEquipAction(action, arg)
-	Net.FireServer("EquipAction", action, arg)
+-- 글자 폭에 맞춰 줄바꿈(도트 글씨는 자동 줄바꿈이 없다).
+local function wrap(text: string, maxWidth: number): string
+	local lines, line = {}, ""
+	for _, code in utf8.codes(text) do
+		local ch = utf8.char(code)
+		if UI.Text.Measure(line .. ch, "body") > maxWidth then
+			table.insert(lines, line)
+			line = if ch == " " then "" else ch
+		else
+			line ..= ch
+		end
+	end
+	table.insert(lines, line)
+	return table.concat(lines, "\n")
 end
+
+local function entryAt(tab: string, index: number)
+	for _, e in cachedInventory or {} do
+		if e.Tab == tab and e.Slot == index then
+			return e
+		end
+	end
+	return nil
+end
+
+-- 아이템 그림: 전용 이미지(Icon) > 키트 아이콘(KitIcon) > 이름 첫 글자. size = 칸 안 그림 크기(12 또는 24)
+local function drawItem(parent: Instance, def, x: number, y: number, size: number)
+	if def.Icon and def.Icon ~= "" then
+		local img = Instance.new("ImageLabel")
+		img.BackgroundTransparency = 1
+		img.Image = def.Icon
+		img.ResampleMode = Enum.ResamplerMode.Pixelated
+		img.Position = UDim2.fromOffset(x, y)
+		img.Size = UDim2.fromOffset(size, size)
+		img.ZIndex = 6
+		img.Parent = parent
+	elseif def.KitIcon and def.KitIcon ~= "" then
+		UI.Icon(parent, def.KitIcon, x, y, size).ZIndex = 6
+	else
+		UI.Label(parent, utf8.char(utf8.codepoint(def.Name, 1)), x, y, { Color = C.ink, ZIndex = 6 })
+	end
+end
+exports.DrawItem = drawItem
 
 function exports.load(scene: Scene)
 	if exports.screenGui then
@@ -60,152 +93,245 @@ function exports.load(scene: Scene)
 	screenGui.ResetOnSpawn = false
 	screenGui.IgnoreGuiInset = true
 
-	-- 화면 전체 크기를 그대로 유지하는(스케일 안 걸린) 순수 기준 프레임 — 패널의
-	-- Scale 기반 중앙 정렬(0.5, 0.5)이 이 프레임의 실제 화면 크기를 기준으로 계산돼야
-	-- 하므로, 여기엔 UIScale을 걸지 않는다.
-	local root = Instance.new("Frame")
-	root.Name = "Root"
-	root.Size = UDim2.fromScale(1, 1)
-	root.BackgroundTransparency = 1
-	root.Parent = screenGui
+	-- 화면 가운데 고정 + 정수 배율
+	local holder = Instance.new("Frame")
+	holder.Name = "Holder"
+	holder.BackgroundTransparency = 1
+	holder.AnchorPoint = Vector2.new(0.5, 0.5)
+	holder.Position = UDim2.fromScale(0.5, 0.5)
+	holder.Size = UDim2.fromOffset(PANEL_W, PANEL_H)
+	holder.Parent = screenGui
+	UI.Scale(holder)
 
-	local panel = Instance.new("ImageLabel")
-	panel.Name = "Panel"
-	panel.AnchorPoint = Vector2.new(0.5, 0.5)
-	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromOffset(PANEL_NATIVE.X, PANEL_NATIVE.Y)
-	panel.BackgroundTransparency = 1
-	panel.Image = PANEL_ASSET
-	panel.Visible = false -- 기본은 닫힌 상태
-	panel.Parent = root
+	local panel = UI.Panel(holder, 0, 0, PANEL_W, PANEL_H)
+	UI.TitleTag(panel, "가방", PANEL_W / 2, -13)
+	UI.Button(panel, PANEL_W - 26, 6, 20, 20, { Color = "white", Icon = "close", OnClick = function()
+		popupManager.Close("Inventory")
+	end })
 
-	-- panel 자신에게 UIScale을 걸면 panel의 AnchorPoint(0.5, 0.5)를 중심으로 크기만
-	-- 줄어들고(자식들도 같이) Position은 안 바뀌므로, 화면 중앙에 그대로 고정된 채
-	-- 해상도에 맞게 커지고 작아진다.
-	uiTheme.applyResponsiveScale(panel, PANEL_NATIVE)
-
-	local gridWidth = COLUMNS * SLOT_SIZE + (COLUMNS - 1) * SLOT_GAP
-	local gridHeight = ROWS * SLOT_SIZE + (ROWS - 1) * SLOT_GAP
-
-	local grid = Instance.new("Frame")
-	grid.Name = "Grid"
-	grid.BackgroundTransparency = 1
-	grid.Position = UDim2.fromOffset(INNER.x + (INNER.w - gridWidth) / 2, INNER.y + (INNER.h - gridHeight) / 2)
-	grid.Size = UDim2.fromOffset(gridWidth, gridHeight)
-	grid.Parent = panel
-
-	local gridLayout = Instance.new("UIGridLayout")
-	gridLayout.CellSize = UDim2.fromOffset(SLOT_SIZE, SLOT_SIZE)
-	gridLayout.CellPadding = UDim2.fromOffset(SLOT_GAP, SLOT_GAP)
-	gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	gridLayout.Parent = grid
-
+	local tab = TABS[1]
+	local selected = nil
 	local slots = {}
-	for index = 1, SLOT_COUNT do
-		local slot = uiTheme.mkSlot({
-			Name = "Slot" .. index,
-			Parent = grid,
-			LayoutOrder = index,
-			BackgroundColor3 = SLOT_BG,
-			BackgroundTransparency = 0.25,
-			StrokeColor = SLOT_BORDER,
-			HoverStrokeColor = SLOT_HOVER_BORDER,
-		})
-		-- 아이콘 이미지가 없는 아이템을 위한 글자 자리표시자.
-		local placeholder = Instance.new("TextLabel")
-		placeholder.Name = "Placeholder"
-		placeholder.BackgroundTransparency = 1
-		placeholder.Size = UDim2.fromScale(1, 1)
-		placeholder.FontFace = uiTheme.Font
-		placeholder.TextSize = 20
-		placeholder.TextColor3 = Color3.fromRGB(70, 45, 20)
-		placeholder.Text = ""
-		placeholder.ZIndex = 2
-		placeholder.Parent = slot.frame
-		slot.placeholder = placeholder
-		slots[index] = slot
+	local refresh
+
+	-- 탭
+	local tabParts = {}
+	local tx = 12
+	for _, key in TABS do
+		local label = TAB_NAMES[key]
+		local w = UI.Text.Measure(label, "body") + 14
+		local part = UI.Part(panel, "tab_off", tx, 8, w, 18, "ImageButton")
+		UI.Label(part, label, 7, 4, { Color = C.ink })
+		part.Activated:Connect(function()
+			tab = key
+			selected = nil
+			refresh()
+		end)
+		tabParts[key] = part
+		tx += w + 2
 	end
 
-	-- 인벤토리 칸을 누르면 장비면 착용(서버가 검증하고 교체/이동까지 처리).
-	for index, slot in slots do
-		slot.button.Activated:Connect(function()
-			local entry = nil
-			for _, e in cachedInventory or {} do
-				if e.Slot == index then
-					entry = e
+	-- 설명 영역
+	local bigSlot = UI.Part(panel, "slot", INFO_X, GRID_Y, 40, 40)
+	local bigContent = Instance.new("Frame")
+	bigContent.BackgroundTransparency = 1
+	bigContent.Size = UDim2.fromScale(1, 1)
+	bigContent.Parent = bigSlot
+	local nameLabel = UI.Label(panel, "", INFO_X, GRID_Y + 44, { Font = "title", Color = C.pinkD })
+	local descLabel = UI.Label(panel, "", INFO_X, GRID_Y + 64, { Color = C.ink })
+	local actionButton = UI.Button(panel, INFO_X, PANEL_H - 36, 56, 24, { Color = "pink", Text = "장착" })
+	local dropButton = UI.Button(panel, INFO_X + 60, PANEL_H - 36, 60, 24, { Color = "white", Text = "버리기" })
+
+	-- 착용 중인 장비(무기·방어구) — 누르면 해제되어 장비 탭 빈 칸으로 돌아간다
+	local EQUIP_Y = GRID_Y + ROWS * STEP + 4
+	UI.Label(panel, "착용", 14, EQUIP_Y + 5, { Color = C.ink })
+	local equipSlots = {}
+	for i, slotName in { "Weapon", "Armor" } do
+		local ui = UI.Slot(panel, 40 + (i - 1) * STEP, EQUIP_Y, SLOT)
+		local content = Instance.new("Frame")
+		content.BackgroundTransparency = 1
+		content.Size = UDim2.fromScale(1, 1)
+		content.Parent = ui.Instance
+		ui.Instance.Activated:Connect(function()
+			if cachedEquipment[slotName] then
+				Net.FireServer("EquipAction", "Unequip", slotName)
+			end
+		end)
+		equipSlots[slotName] = content
+	end
+	local function drawEquipment()
+		for slotName, content in equipSlots do
+			content:ClearAllChildren()
+			local def = cachedEquipment[slotName] and items[cachedEquipment[slotName]]
+			if def then
+				drawItem(content, def, 5, 5, 12)
+			end
+		end
+	end
+	exports.drawEquipment = drawEquipment
+
+	-- 골드
+	UI.Icon(panel, "coin", 14, PANEL_H - 30)
+	local goldLabel = UI.Label(panel, tostring(cachedGold), 30, PANEL_H - 29, { Color = C.ink })
+	exports.goldLabel = goldLabel
+
+	local function showInfo()
+		local entry = selected and entryAt(tab, selected)
+		local def = entry and items[entry.ItemId]
+		for i, s in slots do
+			s.ui:SetSelected(i == selected)
+		end
+		bigContent:ClearAllChildren()
+		if not def then
+			nameLabel:SetText("")
+			descLabel:SetText(if selected then "빈 칸이에요." else "칸을 눌러 아이템을\n살펴보세요.\n끌어서 자리를\n바꿀 수 있어요.")
+			actionButton:SetEnabled(false)
+			dropButton:SetEnabled(false)
+			return
+		end
+		drawItem(bigContent, def, 8, 8, 24)
+		nameLabel:SetText(def.Name)
+		descLabel:SetText(wrap(def.Description or "", INFO_W))
+		actionButton:SetText(if def.EquipSlot then "장착" else "사용")
+		actionButton:SetEnabled(def.EquipSlot ~= nil or def.Heal ~= nil) -- 장비는 장착, 물약(Heal)은 사용
+		dropButton:SetEnabled(not def.NoDrop)
+	end
+
+	refresh = function()
+		drawEquipment()
+		for key, part in tabParts do
+			part.ImageRectOffset = UI.RectOffset(if key == tab then "tab_on" else "tab_off")
+		end
+		for index, slot in slots do
+			slot.content:ClearAllChildren()
+			local entry = entryAt(tab, index)
+			local def = entry and items[entry.ItemId]
+			if def then
+				drawItem(slot.content, def, 5, 5, 12)
+				if entry.Count > 1 then
+					local count = UI.Label(slot.content, tostring(entry.Count), 0, 11, { Color = C.ink, ZIndex = 7 })
+					count.Frame.Position = UDim2.fromOffset(SLOT - 1 - count.Width, 11)
 				end
 			end
-			local def = entry and items[entry.ItemId]
-			if def and def.EquipSlot then
-				fireEquipAction("Equip", index)
+		end
+		showInfo()
+	end
+	exports.refresh = refresh
+
+	-- 칸 + 드래그 앤 드롭
+	local drag = nil -- { from, startPos, ghost }
+	local function pointOf(input: InputObject): Vector2
+		local inset = GuiService:GetGuiInset()
+		return Vector2.new(input.Position.X, input.Position.Y) + inset -- IgnoreGuiInset 화면 좌표로
+	end
+	local function slotAt(point: Vector2): number?
+		for index, slot in slots do
+			local p, s = slot.ui.Instance.AbsolutePosition, slot.ui.Instance.AbsoluteSize
+			if point.X >= p.X and point.X < p.X + s.X and point.Y >= p.Y and point.Y < p.Y + s.Y then
+				return index
+			end
+		end
+		return nil
+	end
+	for index = 1, SLOT_COUNT do
+		local col = (index - 1) % COLUMNS
+		local row = (index - 1) // COLUMNS
+		local ui = UI.Slot(panel, 14 + col * STEP, GRID_Y + row * STEP, SLOT)
+		local content = Instance.new("Frame")
+		content.BackgroundTransparency = 1
+		content.Size = UDim2.fromScale(1, 1)
+		content.Parent = ui.Instance
+		slots[index] = { ui = ui, content = content }
+		ui.Instance.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				drag = { from = index, startPos = pointOf(input), ghost = nil }
 			end
 		end)
 	end
 
-	local goldLabel = Instance.new("TextLabel")
-	goldLabel.Name = "GoldLabel"
-	goldLabel.BackgroundTransparency = 1
-	goldLabel.Position = UDim2.fromOffset(INNER.x + 16, INNER.y + 8)
-	goldLabel.Size = UDim2.fromOffset(160, 22)
-	goldLabel.FontFace = uiTheme.Font
-	goldLabel.TextSize = 16
-	goldLabel.TextColor3 = Color3.fromRGB(120, 80, 10)
-	goldLabel.TextXAlignment = Enum.TextXAlignment.Left
-	goldLabel.Text = ("골드  %d"):format(cachedGold)
-	goldLabel.Parent = panel
-	exports.goldLabel = goldLabel
+	exports.inputChanged = UserInputService.InputChanged:Connect(function(input)
+		if not drag or not (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			return
+		end
+		local point = pointOf(input)
+		if not drag.ghost then
+			local entry = entryAt(tab, drag.from)
+			if not entry or (point - drag.startPos).Magnitude < DRAG_START then
+				return
+			end
+			-- 끌기 시작: 손가락/마우스를 따라다니는 아이템 그림
+			local ghost = Instance.new("Frame")
+			ghost.Name = "DragGhost"
+			ghost.BackgroundTransparency = 1
+			ghost.AnchorPoint = Vector2.new(0.5, 0.5)
+			ghost.Size = UDim2.fromOffset(SLOT, SLOT)
+			ghost.ZIndex = 50
+			ghost.Parent = screenGui
+			local scale = Instance.new("UIScale")
+			scale.Scale = UI.CurrentScale()
+			scale.Parent = ghost
+			UI.Part(ghost, "slot_selected", 0, 0, SLOT, SLOT).ZIndex = 50
+			drawItem(ghost, items[entry.ItemId], 5, 5, 12)
+			drag.ghost = ghost
+		end
+		drag.ghost.Position = UDim2.fromOffset(point.X, point.Y)
+	end)
 
-	-- 나무 액자 테두리 위가 아니라 안쪽 양피지 영역 안에 완전히 들어오도록, INNER
-	-- 사각형 기준으로 우상단에서 살짝 안쪽으로 띄워서 배치한다.
-	local closeScale = 30 / CLOSE_NATIVE.Y
-	local closeSize = Vector2.new(CLOSE_NATIVE.X * closeScale, CLOSE_NATIVE.Y * closeScale)
-	local closeButton = Instance.new("ImageButton")
-	closeButton.Name = "CloseButton"
-	closeButton.Position = UDim2.fromOffset(INNER.x + INNER.w - closeSize.X - 6, INNER.y + 6)
-	closeButton.Size = UDim2.fromOffset(closeSize.X, closeSize.Y)
-	closeButton.BackgroundTransparency = 1
-	closeButton.Image = CLOSE_ASSET
-	closeButton.Parent = panel
-	uiTheme.AddPressFeedback(closeButton)
+	exports.inputEnded = UserInputService.InputEnded:Connect(function(input)
+		if not drag or not (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+			return
+		end
+		local d = drag
+		drag = nil
+		if d.ghost then
+			d.ghost:Destroy()
+			local to = slotAt(pointOf(input))
+			if to and to ~= d.from then
+				Net.FireServer("MoveItem", tab, d.from, to)
+				selected = to
+			end
+		else
+			selected = d.from -- 끌지 않고 뗐으면 선택
+			showInfo()
+		end
+	end)
 
-	closeButton.Activated:Connect(function()
-		popupManager.Close("Inventory")
+	actionButton.Instance.Activated:Connect(function()
+		local entry = selected and entryAt(tab, selected)
+		local def = entry and items[entry.ItemId]
+		if def and def.EquipSlot then
+			Net.FireServer("EquipAction", "Equip", selected)
+		elseif def and def.Heal then
+			Net.FireServer("UseItem", tab, selected) -- 물약: 서버가 체력 회복 + 1개 줄임
+		end
+	end)
+	dropButton.Instance.Activated:Connect(function()
+		local entry = selected and entryAt(tab, selected)
+		local def = entry and items[entry.ItemId]
+		if def and not def.NoDrop then
+			Net.FireServer("DropItem", tab, selected)
+		end
 	end)
 
 	screenGui.Parent = playerGui
 	exports.screenGui = screenGui
 	popupManager.Register("Inventory", screenGui, panel)
 	exports.panel = panel
-	exports.slots = slots
+	refresh()
 
-	-- 방금 만든 UI에 캐시된 인벤토리를 즉시 채운다(씬을 옮기면 UI는 새로 만들어지지만 캐시는
-	-- 모듈에 남아있다).
-	exports.applyInventory(cachedInventory)
-	-- 리스너와 서버 조회는 세션 동안 한 번만 건다 — UI가 씬마다 다시 만들어져도 서버가 보낸
-	-- 갱신을 놓치지 않게, 이벤트는 UI가 아니라 이 모듈이 항상 받아서 캐시에 반영한다
-	-- (Punch-RPG의 InventoryController처럼 "클라이언트 캐시"와 "UI"를 분리하는 구조).
+	-- 리스너와 서버 조회는 세션 동안 한 번만 건다(UI가 씬마다 다시 만들어져도 갱신을 놓치지 않게).
 	if not exports.listening then
 		exports.listening = true
 		task.spawn(function()
-			exports.remoteConnection = Net.OnClient("InventoryUpdated", function(inventoryData)
+			Net.OnClient("InventoryUpdated", function(inventoryData)
 				exports.applyInventory(inventoryData)
 			end)
-
-			exports.goldConnection = Net.OnClient("GoldUpdated", function(gold)
+			Net.OnClient("GoldUpdated", function(gold)
 				exports.applyGold(gold)
 			end)
-
-			exports.equipmentConnection = Net.OnClient("EquipmentUpdated", function(equipment)
+			Net.OnClient("EquipmentUpdated", function(equipment)
 				exports.applyEquipment(equipment)
 			end)
-
-			-- 아이템 획득 알림(왼쪽 아래에 "+ 새싹 조각 x1"이 잠깐 떴다 사라짐).
-			exports.acquiredConnection = Net.OnClient("ItemAcquired", function(itemId, count)
-				exports.showAcquired(itemId, count)
-			end)
-
-			-- 접속 직후 서버가 쏜 InventoryUpdated는 이 리스너가 붙기 전에 지나갔을 수 있어서,
-			-- 현재 값을 서버에서 직접 받아 캐시를 채운다.
 			local ok, data = pcall(function()
 				return Net.Invoke("GetPlayerData")
 			end)
@@ -218,7 +344,7 @@ function exports.load(scene: Scene)
 	end
 end
 
--- mainMenu.luau의 가방 버튼이 호출해서 패널을 열고/닫는다.
+-- HUD의 가방 버튼이 호출해서 패널을 열고/닫는다.
 function exports.toggle()
 	if not exports.panel then
 		return
@@ -226,41 +352,25 @@ function exports.toggle()
 	popupManager.Toggle("Inventory")
 end
 
--- inventoryData: 서버가 주는 촘촘한 배열 { { Slot = number, ItemId = string, Count = number }, ... }.
--- 비어있는 칸은 목록에 없다.
-function exports.applyInventory(inventoryData: { { Slot: number, ItemId: string, Count: number } }?)
+-- inventoryData: 서버가 주는 촘촘한 배열 { { Tab, Slot, ItemId, Count }, ... }. 비어있는 칸은 목록에 없다.
+local inventoryListeners = {}
+function exports.applyInventory(inventoryData)
 	cachedInventory = inventoryData
-	local slots = exports.slots
-	if not slots then
-		return
+	if exports.refresh then
+		exports.refresh()
 	end
-
-	local bySlot = {}
-	if inventoryData then
-		for _, entry in inventoryData do
-			bySlot[entry.Slot] = entry
-		end
-	end
-
-	for index, slot in slots do
-		local entry = bySlot[index]
-		local def = entry and items[entry.ItemId]
-		if entry and def then
-			slot.icon.Image = def.Icon
-			slot.count.Text = entry.Count > 1 and tostring(entry.Count) or ""
-			-- 아이콘 이미지가 아직 없으면(Icon = "") 이름 앞 두 글자로 대신 표시한다.
-			slot.placeholder.Text = if def.Icon == "" then uiTheme.ShortName(def.Name) else ""
-		else
-			slot.icon.Image = ""
-			slot.count.Text = ""
-			slot.placeholder.Text = ""
-		end
+	for _, callback in inventoryListeners do
+		callback(cachedInventory)
 	end
 end
 
--- equipment: { Weapon = ItemId?, Armor = ItemId? }. 장비 UI는 equipment.luau(장비 탭)가 그리고,
--- 이 모듈은 서버가 보낸 값을 캐시해서 그쪽에 알려주기만 한다.
-local equipmentListeners = {}
+-- 가게 창 등이 가방 내용을 읽고 바뀔 때 알림받는다
+function exports.getInventory()
+	return cachedInventory or {}
+end
+function exports.onInventoryChanged(callback)
+	table.insert(inventoryListeners, callback)
+end
 
 function exports.getGold()
 	return cachedGold
@@ -273,13 +383,14 @@ end
 function exports.applyGold(gold)
 	cachedGold = gold or 0
 	if exports.goldLabel then
-		exports.goldLabel.Text = ("골드  %d"):format(cachedGold)
+		exports.goldLabel:SetText(tostring(cachedGold))
 	end
 	for _, callback in goldListeners do
 		callback(cachedGold)
 	end
 end
 
+-- equipment: { Weapon = ItemId?, Armor = ItemId? } — 장비 UI(equipment.luau)에 알려주기만 한다.
 function exports.getEquipment()
 	return cachedEquipment
 end
@@ -290,57 +401,32 @@ end
 
 function exports.applyEquipment(equipment)
 	cachedEquipment = equipment or {}
+	if exports.drawEquipment then
+		exports.drawEquipment()
+	end
 	for _, callback in equipmentListeners do
 		callback(cachedEquipment)
 	end
-end
-
--- 획득 알림 토스트 — 화면 왼쪽 아래에 쌓였다가 2초 뒤 사라진다.
-function exports.showAcquired(itemId: string, count: number)
-	local gui = exports.screenGui
-	local def = if itemId == "Gold" then { Name = "골드" } else items[itemId]
-	if not gui or not def then
-		return
-	end
-
-	exports.toastCount = (exports.toastCount or 0) + 1
-	local label = Instance.new("TextLabel")
-	label.Name = "AcquiredToast"
-	label.AnchorPoint = Vector2.new(0, 1)
-	label.Position = UDim2.new(0, 24, 1, -140 - ((exports.toastCount - 1) % 4) * 26)
-	label.Size = UDim2.fromOffset(260, 24)
-	label.BackgroundTransparency = 1
-	label.FontFace = uiTheme.Font
-	label.TextSize = 18
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.TextColor3 = Color3.fromRGB(255, 244, 190)
-	label.TextStrokeTransparency = 0.3
-	label.Text = ("+ %s x%d"):format(def.Name, count)
-	label.Parent = gui
-
-	task.delay(1.6, function()
-		local tween = TweenService:Create(label, TweenInfo.new(0.4), { TextTransparency = 1, TextStrokeTransparency = 1 })
-		tween:Play()
-		tween.Completed:Connect(function()
-			label:Destroy()
-		end)
-	end)
 end
 
 function exports.start(scene: Scene) end
 
 function exports.unload(scene: Scene)
 	popupManager.Unregister("Inventory")
-
+	for _, key in { "inputChanged", "inputEnded" } do
+		if exports[key] then
+			exports[key]:Disconnect()
+			exports[key] = nil
+		end
+	end
 	if exports.screenGui then
 		exports.screenGui:Destroy()
 		exports.screenGui = nil
 	end
-
 	exports.panel = nil
 	exports.goldLabel = nil
-	exports.slots = nil
-
+	exports.refresh = nil
+	exports.drawEquipment = nil
 end
 
 return exports

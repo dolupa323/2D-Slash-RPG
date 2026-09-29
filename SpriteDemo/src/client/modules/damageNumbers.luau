@@ -6,8 +6,10 @@
 -- 대상 오브젝트(히어로/몬스터)의 Instance에 직접 자식으로 매다는 방식을 쓴다 — 그러면
 -- 화면 좌표를 우리가 직접 계산할 필요 없이, 부모(캐릭터 스프라이트)가 카메라를 따라
 -- 움직이는 대로 자동으로 같이 따라간다.
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local uiTheme = require(ReplicatedStorage.shared.util.uiTheme)
+-- (2026-09-29) 글씨를 우리 도트 글꼴(ui/pixelText, 제목 16px)로 바꿨다 — 진보라 그림자, 캐릭터 배율(PIXEL_SCALE)로 크게.
+local pixelText = require(script.Parent.ui.pixelText)
+local PIXEL_SCALE = 2
+local SHADOW = Color3.fromRGB(59, 42, 79)
 
 -- (Phase 1 전투 타격감, ROADMAP.md — Cheruton DamageVal.gd 패턴 참고) Cheruton은
 -- 알파 페이드를 전혀 안 쓰고 "스케일"만으로 등장/소멸을 표현한다: 0.2초 동안 확
@@ -25,26 +27,17 @@ local END_SCALE = 0.2
 
 local exports = {}
 
--- color: Color3, amount: number
-function exports.Show(anchorInstance: GuiObject, amount: number, color: Color3)
-	local label = Instance.new("TextLabel")
-	label.Name = "DamageNumber"
-	label.Text = "-" .. tostring(amount)
-	label.FontFace = uiTheme.Font
-	label.TextColor3 = color
-	label.TextStrokeColor3 = Color3.new(0, 0, 0)
-	label.TextStrokeTransparency = 0.3
-	label.TextScaled = false
-	label.TextSize = 22
-	label.BackgroundTransparency = 1
-	label.AnchorPoint = Vector2.new(0.5, 1)
-	label.Position = UDim2.new(0.5, 0, 0, 0)
-	label.Size = UDim2.fromOffset(100, 30)
-	label.ZIndex = 50
-	label.Parent = anchorInstance
+-- color: Color3, amount: number(숫자면 "-숫자", 글자면 그대로 — 예: "+15 EXP")
+function exports.Show(anchorInstance: GuiObject, amount: number | string, color: Color3)
+	local text = if typeof(amount) == "number" then "-" .. tostring(amount) else tostring(amount)
+	local glyphs = pixelText.new(anchorInstance, {
+		Name = "DamageNumber", Text = text, Font = "title", Color = color, Shadow = SHADOW,
+		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, 0), ZIndex = 9500, -- 씬 화면은 ZIndex 전역 정렬 — 모든 월드 그림 위로
+	})
+	local label = glyphs.Frame
 
 	local scale = Instance.new("UIScale")
-	scale.Scale = START_SCALE
+	scale.Scale = START_SCALE * PIXEL_SCALE
 	scale.Parent = label
 
 	local sidewaysSpeed = (math.random() * 2 - 1) * SIDEWAYS_SPEED_RANGE
@@ -62,12 +55,12 @@ function exports.Show(anchorInstance: GuiObject, amount: number, color: Color3)
 			label.Position = UDim2.new(0.5, x, 0, y)
 
 			if elapsed < POP_DURATION then
-				scale.Scale = START_SCALE + (POP_SCALE - START_SCALE) * (elapsed / POP_DURATION)
+				scale.Scale = (START_SCALE + (POP_SCALE - START_SCALE) * (elapsed / POP_DURATION)) * PIXEL_SCALE
 			elseif elapsed < POP_DURATION + HOLD_DURATION then
-				scale.Scale = POP_SCALE
+				scale.Scale = POP_SCALE * PIXEL_SCALE
 			else
 				local t = math.clamp((elapsed - POP_DURATION - HOLD_DURATION) / SHRINK_DURATION, 0, 1)
-				scale.Scale = POP_SCALE + (END_SCALE - POP_SCALE) * t
+				scale.Scale = (POP_SCALE + (END_SCALE - POP_SCALE) * t) * PIXEL_SCALE
 			end
 		end
 

@@ -45,8 +45,14 @@ end
 playerGui.ChildAdded:Connect(destroyStrayClone)
 
 -- Unload modules from the current scene.
+-- 공방에서 만든 탑다운 씬("town_<키>")은 전부 modules/town 폴더 하나를 같이 쓴다.
+local townWorld = require(replicatedStorage.shared.data.townWorld)
+local function moduleFolder(scene)
+	return modules:WaitForChild(if townWorld.KeyOf(scene.Name) then "town" else scene.Name)
+end
+
 local function unloadModules(scene)
-	local path = modules:WaitForChild(scene.Name)
+	local path = moduleFolder(scene)
 	local sceneModules = setup.getModulesByPath(path)
 
 	setup.run(globalModules, "unload")
@@ -55,7 +61,7 @@ end
 
 -- Load and start modules for the new scene.
 local function loadModules(scene)
-	local path = modules:WaitForChild(scene.Name)
+	local path = moduleFolder(scene)
 	local sceneModules = setup.getModulesByPath(path)
 
 	setup.run(globalModules, "load", scene)
@@ -168,11 +174,14 @@ end)
 loadingScreen.Show()
 pluginSupportService:LoadPluginContent()
 
--- 탑다운 만두 마을은 플러그인 없이 코드로 만든다(그림·배치는 modules/town/map.luau가 채운다).
--- 위에서 내려다보는 시점이라 중력을 끈다.
-local townScene = upsideEngine.new("Scene")
-townScene:SetName(scenes.TOWN)
-townScene.Gravity = Vector2.zero
-townScene:Enable()
+-- 탑다운 씬들은 플러그인 없이 코드로 만든다 — 에셋 공방 맵 탭에서 만든 씬 전부(townWorld.generated).
+-- 그림·배치는 씬이 켜질 때 modules/town이 채운다. 위에서 내려다보는 시점이라 중력을 끈다.
+-- 공방에서 ⭐로 고른 시작 씬(scenes.TOWN)을 켠다. 다른 씬은 포탈로 넘어갈 때 켜진다.
+for key in townWorld.data.scenes do
+	local townScene = upsideEngine.new("Scene")
+	townScene:SetName(townWorld.SceneName(key))
+	townScene.Gravity = Vector2.zero
+end
+sceneManager:FindByName(scenes.TOWN):Enable()
 
 return {}

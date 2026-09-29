@@ -36,9 +36,19 @@ balance.HERO_GROUND_SINK = 0.19
 -- 씬 이동(포탈) 승인: 서버가 플레이어 위치와 포탈이 이만큼(px) 여유를 두고 겹치면 승인한다.
 balance.TRAVEL_PORTAL_PADDING = 60
 
--- 인벤토리 칸 수(클라이언트 UI 그리드도 이 값으로 그린다).
-balance.INVENTORY_COLUMNS = 4
+-- 인벤토리: 탭(장비·소비·기타·캐시·중요)마다 칸이 따로 있다. 탭당 칸 수(클라이언트 UI 그리드도 이 값으로 그린다).
+balance.INVENTORY_TABS = { "Equip", "Use", "Etc", "Cash", "Key" }
+balance.INVENTORY_TAB_NAMES = { Equip = "장비", Use = "소비", Etc = "기타", Cash = "캐시", Key = "중요" }
+balance.INVENTORY_COLUMNS = 6
 balance.INVENTORY_ROWS = 4
 balance.INVENTORY_SLOTS = balance.INVENTORY_COLUMNS * balance.INVENTORY_ROWS
+
+-- 월드 드랍(땅에 버려진 아이템): 이 시간(초)이 지나면 사라진다. 줍기 거리(도트, 발 기준) — 서버는 복제 지연만큼 여유를 더 준다.
+balance.WORLD_DROP_LIFETIME = 90
+balance.PICKUP_RANGE = 20
+balance.PICKUP_PAD = 16
+
+-- 탑다운 전투(서버 권위): 공격 판정 최소 간격(초) — 클라이언트 공격 동작(4장 x 0.08초 + 쉬는 0.1초)보다 약간 짧게.
+balance.TOWN_ATTACK_COOLDOWN = 0.35
 
 return balance

@@ -9,7 +9,25 @@ local balance = require(ReplicatedStorage.shared.config.balance)
 
 local exports = {}
 
-exports.CURRENT_VERSION = 1
+exports.CURRENT_VERSION = 3
+
+local STARTER_GOLD = 300 -- 처음 시작할 때 주는 골드(v3부터 — 기존 플레이어도 v3로 올라갈 때 한 번 받는다)
+
+-- 처음 시작할 때 가방에 넣어 주는 물건(v2부터 — 기존 플레이어도 v2로 올라갈 때 한 번 받는다)
+local STARTER_ITEMS = {
+	{ Tab = "Equip", Slot = 1, ItemId = "WoodenSword", Count = 1 },
+	{ Tab = "Equip", Slot = 2, ItemId = "LeafArmor", Count = 1 },
+	{ Tab = "Use", Slot = 1, ItemId = "RedPotion", Count = 5 },
+	{ Tab = "Etc", Slot = 1, ItemId = "SproutFragment", Count = 3 },
+	{ Tab = "Key", Slot = 1, ItemId = "RainbowEgg", Count = 1 },
+}
+local function starterItems()
+	local list = {}
+	for _, e in STARTER_ITEMS do
+		table.insert(list, table.clone(e))
+	end
+	return list
+end
 
 function exports.default()
 	return {
@@ -18,12 +36,14 @@ function exports.default()
 		Experience = 0,
 		MaxExperience = balance.maxExperienceFor(1),
 		Health = balance.maxHealthFor(1),
-		Gold = 0,
-		-- { { Slot = number, ItemId = string, Count = number }, ... } — 빈 칸이 있는 숫자 키 테이블은 DataStore가
-		-- 안전하게 저장하지 못해서 슬롯 번호를 값 안에 넣은 촘촘한 배열로 둔다.
-		Inventory = {},
+		Gold = STARTER_GOLD,
+		-- { { Tab = string, Slot = number, ItemId = string, Count = number }, ... } — 탭(장비·소비·기타·캐시·중요)마다
+		-- 칸 번호가 따로 있다. 빈 칸이 있는 숫자 키 테이블은 DataStore가 안전하게 저장하지 못해서 칸 번호를 값 안에 넣은 촘촘한 배열로 둔다.
+		Inventory = starterItems(),
 		-- { Weapon = ItemId?, Armor = ItemId? } — 착용 중인 장비(비어 있으면 키 없음).
 		Equipment = {},
+		-- 도감: { [종류 id] = true } — 한 번이라도 쓰러뜨린 몬스터
+		Dex = {},
 	}
 end
 
@@ -37,6 +57,33 @@ local migrations = {
 		data.Gold = data.Gold or 0
 		data.Inventory = data.Inventory or {}
 		data.Equipment = data.Equipment or {}
+	end,
+	-- v1 → v2: 가방이 탭(장비·소비·기타·캐시·중요)으로 나뉜다 — 기존 아이템을 종류별 탭으로 옮겨 칸을 1번부터 다시 매긴다.
+	-- 도감(Dex) 추가, 시작 물건 지급.
+	[2] = function(data)
+		local items = require(ReplicatedStorage.shared.data.items)
+		local nextSlot = {}
+		local moved = {}
+		for _, e in data.Inventory or {} do
+			local def = items[e.ItemId]
+			if def then
+				local tab = def.Tab or "Etc"
+				nextSlot[tab] = (nextSlot[tab] or 0) + 1
+				table.insert(moved, { Tab = tab, Slot = nextSlot[tab], ItemId = e.ItemId, Count = e.Count })
+			end
+		end
+		for _, e in STARTER_ITEMS do
+			nextSlot[e.Tab] = (nextSlot[e.Tab] or 0) + 1
+			if nextSlot[e.Tab] <= balance.INVENTORY_SLOTS then
+				table.insert(moved, { Tab = e.Tab, Slot = nextSlot[e.Tab], ItemId = e.ItemId, Count = e.Count })
+			end
+		end
+		data.Inventory = moved
+		data.Dex = data.Dex or {}
+	end,
+	-- v2 → v3: 가게(포션 상점)가 생겨서 시작 골드를 준다.
+	[3] = function(data)
+		data.Gold = (data.Gold or 0) + STARTER_GOLD
 	end,
 }
 

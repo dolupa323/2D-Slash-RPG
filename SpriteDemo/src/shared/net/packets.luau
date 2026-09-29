@@ -50,7 +50,8 @@ local packets = {
 	RequestTravel = {
 		Kind = "Event",
 		Direction = "ClientToServer",
-		Args = { t.oneOf(scenes.TOWN, scenes.HUNTING_GROUND) },
+		-- 목적지 씬 이름. 탑다운 씬이 여러 개라 이름 목록을 고정하지 않고, 실제로 갈 수 있는지는 서버 travelService가 포탈 위치로 검증한다.
+		Args = { t.string },
 		RateLimit = { PerSecond = 2, Burst = 3 },
 	},
 	-- 공격은 "바라보는 방향"(의도)만 보낸다. 공격 위치는 서버가 알고 있는 캐릭터 위치를 쓰고, 공격 간격도 서버가 검증한다.
@@ -65,6 +66,69 @@ local packets = {
 		Direction = "ClientToServer",
 		Args = { t.oneOf("Equip", "Unequip"), t.either(t.number, t.string) }, -- 동작, 인벤토리 슬롯 번호 또는 장비 슬롯 이름
 		RateLimit = { PerSecond = 5, Burst = 5 },
+	},
+	-- ===== 탑다운 씬(온라인 공유) =====
+	-- 지금 씬의 몬스터·월드 드랍 전체 목록(씬에 들어왔을 때 한 번). 돌려주는 값: { scene, monsters, drops }
+	GetTownState = {
+		Kind = "Function",
+		Direction = "ClientToServer",
+		Args = {},
+		RateLimit = { PerSecond = 2, Burst = 4 },
+	},
+	-- 기본 공격: 바라보는 방향만 보낸다(공격 동작의 판정 프레임에). 위치는 서버가 아는 위치, 간격도 서버가 검증한다.
+	TownAttack = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.oneOf("up", "down", "left", "right") },
+		RateLimit = { PerSecond = 6, Burst = 6 },
+	},
+	-- 가방: 같은 탭 안에서 칸 옮기기(드래그 앤 드롭) — 탭, 보낸 칸, 받는 칸. 받는 칸에 아이템이 있으면 서로 바꾸고, 같은 아이템이면 합친다.
+	MoveItem = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.oneOf("Equip", "Use", "Etc", "Cash", "Key"), t.number, t.number },
+		RateLimit = { PerSecond = 8, Burst = 10 },
+	},
+	-- 가방: 버리기(탭, 칸) → 서버가 가방에서 빼고 발밑에 월드 드랍으로 떨어뜨린다.
+	DropItem = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.oneOf("Equip", "Use", "Etc", "Cash", "Key"), t.number },
+		RateLimit = { PerSecond = 3, Burst = 5 },
+	},
+	-- 가게(NPC 근처에서만 — 서버가 지금 씬의 그 가게 NPC와 거리를 확인): 사기(가게 id, 아이템, 개수) / 팔기(탭, 칸, 개수)
+	ShopBuy = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.string, t.string, t.number },
+		RateLimit = { PerSecond = 5, Burst = 6 },
+	},
+	ShopSell = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.oneOf("Equip", "Use", "Etc", "Cash", "Key"), t.number, t.number },
+		RateLimit = { PerSecond = 5, Burst = 6 },
+	},
+	-- 소비 아이템 사용(탭, 칸) — 물약: 서버가 체력을 회복하고 1개 줄인다(체력이 가득하면 안 쓴다).
+	UseItem = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.oneOf("Equip", "Use", "Etc", "Cash", "Key"), t.number },
+		RateLimit = { PerSecond = 4, Burst = 4 },
+	},
+	-- 땅의 아이템 줍기(드랍 id) — 서버가 같은 씬·거리·가방 자리를 검증한다. 먼저 주운 사람이 가져간다.
+	PickupDrop = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.number },
+		RateLimit = { PerSecond = 5, Burst = 6 },
+	},
+	-- 치료사에게 회복 요청: 서버가 지금 씬에 치료사가 있고 플레이어가 그 가까이에 있는지 확인한 뒤 체력을 가득 채운다.
+	RequestHeal = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = {},
+		RateLimit = { PerSecond = 1, Burst = 2 },
 	},
 	GetPlayerData = {
 		Kind = "Function",
@@ -85,6 +149,17 @@ local packets = {
 	ItemAcquired = { Kind = "Event", Direction = "ServerToClient", Doc = "itemId, count" },
 	EquipmentUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "{ Weapon=ItemId?, Armor=ItemId? }" },
 	GoldUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "gold" },
+	-- 탑다운 씬 공유 상태(같은 씬 플레이어에게만 보낸다 — 첫 인자는 항상 씬 키: 씬을 옮기는 순간 늦게 온 것은 버린다)
+	TownMonsterMoves = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, { {id, x, y, facingLeft, moving} } (10Hz)" },
+	TownMonsterSpawned = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, { id, row, level, hp, maxHp, x, y }" },
+	TownMonsterHit = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, id, hp, damage, attackerUserId, weaponId" },
+	TownMonsterDied = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, id" },
+	WorldDropSpawned = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, { id, itemId, count, x, y, expiresIn }" },
+	WorldDropRemoved = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, id, pickedByUserId?" },
+	-- 도감: 처음 쓰러뜨린 몬스터(종류 줄 번호) — "새 친구!" 팝업 + 알림
+	DexDiscovered = { Kind = "Event", Direction = "ServerToClient", Doc = "row" },
+	-- 짧은 알림(화면 위 토스트): 가방이 가득 찼어요 등
+	Notify = { Kind = "Event", Direction = "ServerToClient", Doc = "text" },
 }
 
 return packets

@@ -5,6 +5,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local uiTheme = require(ReplicatedStorage.shared.util.uiTheme)
+local pixelText = require(script.Parent.ui.pixelText)
 
 local GOLD = Color3.fromRGB(255, 214, 90)
 local GOLD_LIGHT = Color3.fromRGB(255, 244, 190)
@@ -26,7 +27,7 @@ local function spawnSparkle(anchor: GuiObject)
 	sparkle.BackgroundColor3 = if math.random() < 0.5 then GOLD else GOLD_LIGHT
 	sparkle.BorderSizePixel = 0
 	sparkle.Rotation = math.random(0, 45)
-	sparkle.ZIndex = 46
+	sparkle.ZIndex = 9400
 	sparkle.Parent = anchor
 	uiTheme.AddCorner(sparkle, 2)
 
@@ -43,38 +44,34 @@ local function spawnSparkle(anchor: GuiObject)
 	end)
 end
 
+-- (2026-09-29) "LEVEL UP!" 글씨를 우리 도트 글꼴(제목 16px, 금색 + 갈색 그림자)로. 캐릭터 배율(2)보다 조금 크게.
+local PIXEL_SCALE = 2
 local function spawnText(anchor: GuiObject)
-	local label = Instance.new("TextLabel")
-	label.Name = "LevelUpText"
-	label.Text = "LEVEL UP!"
-	label.FontFace = uiTheme.Font
-	label.TextColor3 = GOLD
-	label.TextStrokeColor3 = Color3.fromRGB(120, 60, 0)
-	label.TextStrokeTransparency = 0.2
-	label.TextSize = 30
-	label.BackgroundTransparency = 1
-	label.AnchorPoint = Vector2.new(0.5, 1)
-	label.Position = UDim2.new(0.5, 0, 0, -20)
-	label.Size = UDim2.fromOffset(200, 40)
-	label.ZIndex = 60
-	label.Parent = anchor
+	local glyphs = pixelText.new(anchor, {
+		Name = "LevelUpText", Text = "LEVEL UP!", Font = "title", Color = GOLD, Shadow = Color3.fromRGB(120, 60, 0),
+		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -20), ZIndex = 9600, -- 씬 화면은 ZIndex 전역 정렬 — 모든 월드 그림 위로
+	})
+	local label = glyphs.Frame
 
 	local scale = Instance.new("UIScale")
-	scale.Scale = 0.3
+	scale.Scale = 0.3 * PIXEL_SCALE
 	scale.Parent = label
 
-	-- 팝업(커지며 등장) → 잠깐 유지하며 위로 떠오름 → 투명해지며 사라짐.
-	TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1.15 }):Play()
+	-- 팝업(커지며 등장) → 잠깐 유지하며 위로 떠오름 → 깜빡이며 사라짐(도트 글씨라 반투명 대신 깜빡임).
+	TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1.15 * PIXEL_SCALE }):Play()
 	TweenService:Create(label, TweenInfo.new(TEXT_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 		Position = UDim2.new(0.5, 0, 0, -20 - TEXT_RISE),
 	}):Play()
 
 	task.delay(TEXT_DURATION * 0.6, function()
-		local fadeInfo = TweenInfo.new(TEXT_DURATION * 0.4)
-		TweenService:Create(label, fadeInfo, { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
-		task.delay(fadeInfo.Time + 0.05, function()
-			label:Destroy()
-		end)
+		for i = 1, 6 do
+			if not label.Parent then
+				return
+			end
+			label.Visible = i % 2 == 0
+			task.wait(TEXT_DURATION * 0.4 / 6)
+		end
+		label:Destroy()
 	end)
 end
 

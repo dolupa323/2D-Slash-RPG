@@ -61,6 +61,17 @@ function exports.GetHeroObjectId(userId: number): string?
 	return heroObjectIds[userId]
 end
 
+-- 지금 그 씬에 있는 플레이어 목록(탑다운 씬 공유 상태를 그 씬 사람들에게만 보낼 때)
+function exports.PlayersInScene(sceneName: string): { Player }
+	local list = {}
+	for _, player in Players:GetPlayers() do
+		if playerScenes[player.UserId] == sceneName then
+			table.insert(list, player)
+		end
+	end
+	return list
+end
+
 function exports.GetPosition(userId: number): Vector2?
 	return positions[userId]
 end

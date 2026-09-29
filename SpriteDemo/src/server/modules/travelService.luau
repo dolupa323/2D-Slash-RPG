@@ -8,12 +8,36 @@ local Net = require(ReplicatedStorage.shared.net.net)
 local scenes = require(ReplicatedStorage.shared.config.scenes)
 local balance = require(ReplicatedStorage.shared.config.balance)
 
+local townWorld = require(ReplicatedStorage.shared.data.townWorld)
 local sceneBootstrap = require(script.Parent.sceneBootstrap)
 local heroTracking = require(script.Parent.heroTracking)
 local UpsideEngine = require(ReplicatedStorage:WaitForChild("packages"):WaitForChild("UpsideEngine"))
 local NetworkingService = UpsideEngine.GetService("NetworkingService")
 
 local PORTAL_PREFIX = "Portal_"
+-- 탑다운 씬 포탈 판정 여유(도트): 발이 포탈 칸에서 이만큼 벗어나 있어도 인정(복제 지연 보정).
+local TOWN_PORTAL_PAD = 12
+
+-- 탑다운 씬(공방에서 만든 씬) 사이 이동 검증: 지금 씬에 목적지로 가는 포탈이 있고, 서버가 아는 발 위치가 그 포탈 칸 근처인가.
+-- 서버가 아는 위치는 캐릭터 Position(화면 px = 도트 × scale, 발 기준)이다.
+local function townTravelAllowed(currentScene: string, destination: string, position: Vector2): boolean
+	local fromKey = townWorld.KeyOf(currentScene)
+	local toKey = townWorld.KeyOf(destination)
+	if not fromKey or not toKey then
+		return false
+	end
+	local scale = townWorld.data.scale
+	local x, y = position.X / scale, position.Y / scale
+	for _, p in townWorld.Get(fromKey).portals do
+		if p.to == toKey
+			and x > p.x0 - TOWN_PORTAL_PAD and x < p.x1 + TOWN_PORTAL_PAD
+			and y > p.y0 - TOWN_PORTAL_PAD and y < p.y1 + TOWN_PORTAL_PAD
+		then
+			return true
+		end
+	end
+	return false
+end
 
 local exports = {}
 
@@ -40,6 +64,16 @@ function exports.load()
 		local currentScene = heroTracking.GetPlayerScene(player.UserId)
 		local position = heroTracking.GetPosition(player.UserId)
 		if not currentScene or not position or currentScene == destination then
+			return
+		end
+
+		if townWorld.KeyOf(currentScene) or townWorld.KeyOf(destination) then
+			if not townTravelAllowed(currentScene, destination, position) then
+				return
+			end
+			heroTracking.SetPlayerScene(player.UserId, destination)
+			NetworkingService:ResyncClient(player)
+			Net.FireClient("TravelApproved", player, destination)
 			return
 		end
 

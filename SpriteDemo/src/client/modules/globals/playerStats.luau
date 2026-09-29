@@ -59,6 +59,18 @@ function exports.load(scene: Scene)
 	currentStats = nil
 	lastAppliedCharacter = nil
 
+	-- 서버가 체력을 바꾸면(치료사 회복·레벨업 등) 내 hero에 반영 — HUD 체력 게이지가 따라간다.
+	exports.healthConnection = Net.OnClient("PlayerHealthChanged", function(health, maxHealth)
+		local hero = CrossPlatformService.Character
+		if hero and typeof(health) == "number" and typeof(maxHealth) == "number" then
+			hero.MaxHealth = maxHealth
+			hero.Health = math.min(health, maxHealth)
+		end
+		if stats then
+			stats.Health = health
+		end
+	end)
+
 	exports.applyConnection = RunService.Heartbeat:Connect(function()
 		local character = CrossPlatformService.Character
 		if stats and character and character ~= lastAppliedCharacter then
@@ -113,6 +125,10 @@ function exports.unload(scene: Scene)
 	if exports.statsConnection then
 		exports.statsConnection:Disconnect()
 		exports.statsConnection = nil
+	end
+	if exports.healthConnection then
+		exports.healthConnection:Disconnect()
+		exports.healthConnection = nil
 	end
 	exports.started = nil
 end

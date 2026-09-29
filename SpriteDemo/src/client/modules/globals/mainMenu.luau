@@ -40,8 +40,12 @@ local FEATURES = {
 
 local exports = {}
 
+-- (2026-09-29) 도트 UI HUD(hud.luau)의 오른쪽 아래 설정·도감·가방 버튼으로 바뀌어서 이 확장형 메뉴는 끈다.
+-- 다시 켜려면 ENABLED를 true로. (장비창은 지금 이 메뉴에서만 열린다 — 새 UI에 장비 버튼이 생기면 그쪽으로 옮긴다.)
+local ENABLED = false
+
 function exports.load(scene: Scene)
-	if exports.screenGui then
+	if exports.screenGui or not ENABLED then
 		return
 	end
 

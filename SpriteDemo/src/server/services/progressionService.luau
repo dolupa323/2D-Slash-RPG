@@ -40,6 +40,23 @@ function exports.AddExperience(player: Player, amount: number)
 	end
 end
 
+-- 체력 회복(물약·치료사). 실제로 오른 양을 돌려준다(이미 가득이면 0).
+function exports.Heal(player: Player, amount: number): number
+	local data = persistence.Get(player)
+	if not data or amount <= 0 then
+		return 0
+	end
+	local maxHealth = balance.maxHealthFor(data.Level)
+	local before = data.Health or maxHealth
+	data.Health = math.min(before + amount, maxHealth)
+	local healed = data.Health - before
+	if healed > 0 then
+		persistence.MarkDirty(player)
+		Net.FireClient("PlayerHealthChanged", player, data.Health, maxHealth, 0, false)
+	end
+	return healed
+end
+
 -- 플레이어가 피해를 입는다(몬스터 공격 등). 체력의 진실은 서버 세션이다 — 계산 결과만 클라이언트에 알린다.
 -- 체력이 0이 되면 사망 처리: 서버가 체력을 가득 채워 리스폰 상태로 만들고, 클라이언트에는 died=true로 알려
 -- 클라이언트가 리스폰 연출(이동)을 수행하게 한다(리스폰 위치/씬 결정도 C3에서 서버로 옮길 예정).

@@ -1,14 +1,18 @@
--- 탑다운 만두 마을("town" 씬) 이미지 에셋.
--- 원본: SpriteDemo/assets/bunvillage/*.png — 에셋 공방(C:/YJS/Roblox/dino-workshop)의
--- tools/export_roblox.mjs가 만든다. 다시 내보내면 이미지가 바뀌므로 다시 업로드하고 여기 id를 갈아끼운다.
--- 맵 좌표/아틀라스 위치는 shared/data/townMap.generated.luau(같이 생성됨)에 있다.
+-- 탑다운 씬 이미지 에셋 + 화면 배율.
+-- 원본 이미지: SpriteDemo/assets/bunvillage/*.png — 에셋 공방(C:/YJS/Roblox/dino-workshop)의
+-- tools/export_roblox.mjs가 만들고, 업로드한 id는 tools/write_asset_ids.mjs가 townAssets.generated.luau에 쓴다.
+-- 배율(바닥·오브젝트·몬스터·캐릭터)도 공방 규칙(js/world.js)에서 내보낸 값을 그대로 쓴다 — 여기서 따로 고치지 않는다.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ids = require(script.Parent["townAssets.generated"])
+local world = require(ReplicatedStorage.shared.data["townWorld.generated"])
+
 return {
-	-- 도트 1칸을 화면 몇 px로 그릴지(모든 town 그림 공통).
-	SCALE = 4,
-	-- 캐릭터·몬스터만 작게(도트 1칸 = 화면 2px, 맵은 4px). 정수라 도트가 고르게 유지된다.
-	CHAR_SCALE = 2,
-	GROUND = "rbxassetid://76695281295139", -- 바닥 전체 768x544
-	OBJECTS = "rbxassetid://120898895182802", -- 오브젝트 아틀라스 512x101
-	MONSTERS = "rbxassetid://111715006576215", -- 몬스터 시트 512x720(종마다 한 줄: 대기R4 걷기R4 대기L4 걷기L4)
-	PLAYER = "rbxassetid://111238952859606", -- 도트 아이 48x96(줄: 아래·위·왼·오, 칸: 서기·걸음1·걸음2)
+	SCALE = world.scale, -- 바닥 1도트 = 화면 px
+	CHAR_SCALE = world.charScale, -- 캐릭터 1도트 = 화면 px
+	MONSTER_SCALE = world.monsterScale, -- 몬스터 1도트 = 화면 px
+	OBJECTS = ids.OBJECTS, -- 오브젝트 아틀라스
+	MONSTERS = ids.MONSTERS, -- 몬스터 시트(종마다 한 줄: 대기R4 걷기R4 대기L4 걷기L4)
+	PLAYER = ids.PLAYER, -- 플레이어(줄: 아래·위·왼·오, 칸: 걷기4 + 공격4)
+	NPCS = ids.NPCS, -- NPC 시트(역할마다 한 줄, 대기 2장)
+	GROUNDS = ids.GROUNDS, -- 씬 키 → 바닥 이미지
 }
