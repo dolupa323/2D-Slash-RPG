@@ -1,8 +1,8 @@
 -- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/write_asset_ids.mjs).
 -- 원본 이미지: SpriteDemo/assets/bunvillage/
 return {
-	OBJECTS = "rbxassetid://113664647533723",
-	MONSTERS = "rbxassetid://95131960706435",
+	OBJECTS = "rbxassetid://105058303922871",
+	MONSTERS = "rbxassetid://101849248890678",
 	PLAYER = "rbxassetid://86179253758306",
 	NPCS = "rbxassetid://82900258240345",
 	GROUNDS = {

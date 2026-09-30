@@ -79,9 +79,9 @@ function exports.MonsterImage(parent: Instance, row: number, x: number, y: numbe
 	local img = Instance.new("ImageLabel")
 	img.Name = "Monster"
 	img.BackgroundTransparency = 1
-	img.Image = townAssets.MONSTERS
+	img.Image = townAssets.MONSTER_SHEETS[townWorld.MonsterSheet(row)]
 	img.ImageRectSize = Vector2.new(SHEET.cellW, SHEET.cellH)
-	img.ImageRectOffset = Vector2.new(0, (row - 1) * SHEET.cellH)
+	img.ImageRectOffset = townWorld.MonsterFrameOffset(row, 0)
 	img.ResampleMode = Enum.ResamplerMode.Pixelated
 	img.Position = UDim2.fromOffset(x, y)
 	img.Size = UDim2.fromOffset(SHEET.cellW * scale, SHEET.cellH * scale)

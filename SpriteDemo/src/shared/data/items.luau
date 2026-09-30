@@ -22,6 +22,7 @@ local items = {
 		Vfx = { core = Color3.fromRGB(231, 196, 154), edge = Color3.fromRGB(255, 244, 224) },
 		Description = "단단한 나무로 깎아 만든 검. 공격력 +5.",
 		KitIcon = "sword_wood",
+		WorldIcon = "sword_wood_world", -- 착용 모습(에셋 공방 도트 편집 → 무기에서 따로 고친다)
 		Icon = "",
 	},
 	LeafArmor = {

@@ -11,7 +11,8 @@ return {
 	CHAR_SCALE = world.charScale, -- 캐릭터 1도트 = 화면 px
 	MONSTER_SCALE = world.monsterScale, -- 몬스터 1도트 = 화면 px
 	OBJECTS = ids.OBJECTS, -- 오브젝트 아틀라스
-	MONSTERS = ids.MONSTERS, -- 몬스터 시트(종마다 한 줄: 대기R4 걷기R4 대기L4 걷기L4)
+	MONSTERS = ids.MONSTERS, -- 몬스터 시트 1장째(종마다 대기R4 걷기R4 대기L4 걷기L4)
+	MONSTER_SHEETS = ids.MONSTER_SHEETS or { ids.MONSTERS }, -- 몬스터 시트 전부(1024px 한계로 여러 장) — townWorld.MonsterSheet(row)로 고른다
 	PLAYER = ids.PLAYER, -- 플레이어(줄: 아래·위·왼·오, 칸: 걷기4 + 공격4)
 	NPCS = ids.NPCS, -- NPC 시트(역할마다 한 줄, 대기 2장)
 	GROUNDS = ids.GROUNDS, -- 씬 키 → 바닥 이미지

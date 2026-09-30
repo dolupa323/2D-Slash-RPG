@@ -9,6 +9,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local townAssets = require(ReplicatedStorage.shared.config.townAssets)
+local townWorld = require(ReplicatedStorage.shared.data.townWorld)
 local Net = require(ReplicatedStorage.shared.net.net)
 local map = require(script.Parent.map)
 local damageNumbers = require(script.Parent.Parent.damageNumbers)
@@ -67,7 +68,8 @@ local function makeMonster(gameFrame: Instance, w)
 end
 
 local function apply(m, w)
-	m.row = w.row - 1
+	m.row = w.row
+	m.label.Image = townAssets.MONSTER_SHEETS[townWorld.MonsterSheet(w.row)]
 	m.x, m.y, m.tx, m.ty = w.x, w.y, w.x, w.y
 	m.hp, m.maxHp = w.hp, w.maxHp
 	m.moving, m.dead = false, false
@@ -187,7 +189,7 @@ function exports.load(scene: Scene)
 				frame += 8
 			end
 			local label = m.label
-			label.ImageRectOffset = Vector2.new(frame * CELL.X, m.row * CELL.Y)
+			label.ImageRectOffset = townWorld.MonsterFrameOffset(m.row, frame)
 			-- 공방 편집기와 같은 기준: 발(그림자 아래끝)이 pos보다 1도트 아래.
 			label.Position = UDim2.fromOffset(math.round(m.x * S), math.round((m.y + 1) * S))
 			label.ZIndex = map.ZIndexFor(m.y)

@@ -1,6 +1,6 @@
 -- 몬스터 도감 — 에셋 공방 UI 탭 "몬스터 도감" 예시 화면 그대로(도트 UI).
---  패널 360x216, 위 "몬스터 도감" 제목판, 오른쪽 위 발견 수(12/31) 알약 + 닫기, 속성 탭(전체·불·풀·물),
---  8x4 칸: 한 번이라도 쓰러뜨린 몬스터는 그림, 아직이면 회색 그림자. 칸 아래 번호, 누르면 아래에 이름·속성·레벨 범위.
+--  패널 360x238, 위 "몬스터 도감" 제목판, 오른쪽 위 발견 수 알약 + 닫기, 속성 탭(전체·불·풀·물),
+--  페이지당 8x4 칸: 한 번이라도 쓰러뜨린 몬스터는 그림, 아직이면 회색 그림자.
 -- 발견 목록은 서버 저장 데이터(Dex)에서 받고, 처음 쓰러뜨리면 서버가 DexDiscovered로 알려준다.
 -- HUD의 도감 버튼 / "새 친구!" 팝업의 [도감 보기]가 exports.toggle() / open()을 부른다.
 local Players = game:GetService("Players")
@@ -8,12 +8,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage.shared.net.net)
 local monsterLevels = require(ReplicatedStorage.shared.config.monsterLevels)
 local townWorld = require(ReplicatedStorage.shared.data.townWorld)
+local townAssets = require(ReplicatedStorage.shared.config.townAssets)
 local popupManager = require(script.Parent.Parent.popupManager)
 local UI = require(script.Parent.Parent.ui.pixelUI)
 local notify = require(script.Parent.notify)
 
 local C = UI.colors
-local PW, PH = 360, 216
+local PW, PH = 360, 238
 local COLS, ROWS = 8, 4
 local species = townWorld.data.species
 local TABS = {
@@ -62,9 +63,23 @@ function exports.load(scene: Scene)
 	local infoLabel = UI.Label(panel, "칸을 눌러 몬스터를 살펴보세요.", 12, PH - 16, { Color = C.ink })
 
 	local tabKey = nil
+	local page = 1
 	local tabParts = {}
 	local cells = {}
 	local refresh
+	local pageLabel = UI.Label(panel, "", 171, 205, { Color = C.ink })
+	local prev = UI.Part(panel, "tab_off", 137, 202, 27, 18, "ImageButton")
+	UI.Label(prev, "<", 10, 4, { Color = C.ink })
+	prev.Activated:Connect(function()
+		page = math.max(1, page - 1)
+		refresh()
+	end)
+	local next = UI.Part(panel, "tab_off", 199, 202, 27, 18, "ImageButton")
+	UI.Label(next, ">", 10, 4, { Color = C.ink })
+	next.Activated:Connect(function()
+		page += 1
+		refresh()
+	end)
 
 	-- 속성 탭
 	local tx = 10
@@ -79,13 +94,14 @@ function exports.load(scene: Scene)
 		UI.Label(part, t.label, lx, 4, { Color = C.ink })
 		part.Activated:Connect(function()
 			tabKey = t.key
+			page = 1
 			refresh()
 		end)
 		table.insert(tabParts, { part = part, key = t.key })
 		tx += w + 2
 	end
 
-	-- 칸 8x4
+	-- 한 페이지의 칸 8x4
 	for i = 1, COLS * ROWS do
 		local c, r = (i - 1) % COLS, (i - 1) // COLS
 		local slot = UI.Slot(panel, 12 + c * 42, 32 + r * 42, 40)
@@ -120,14 +136,20 @@ function exports.load(scene: Scene)
 				table.insert(rows, row)
 			end
 		end
+		local pageCount = math.max(1, math.ceil(#rows / (COLS * ROWS)))
+		page = math.min(page, pageCount)
+		pageLabel:SetText(("%d/%d"):format(page, pageCount))
+		prev.Visible = page > 1
+		next.Visible = page < pageCount
 		for i, cell in cells do
-			local row = rows[i]
+			local row = rows[(page - 1) * COLS * ROWS + i]
 			cell.row = row
 			cell.slot:SetSelected(false)
 			if row then
 				local seen = discovered[species[row].id] == true
 				cell.img.Visible = true
-				cell.img.ImageRectOffset = Vector2.new(0, (row - 1) * townWorld.data.monsterSheet.cellH)
+				cell.img.Image = townAssets.MONSTER_SHEETS[townWorld.MonsterSheet(row)]
+				cell.img.ImageRectOffset = townWorld.MonsterFrameOffset(row, 0)
 				-- 아직 못 만난 몬스터는 회색 그림자
 				cell.img.ImageColor3 = if seen then Color3.new(1, 1, 1) else Color3.fromRGB(90, 78, 110)
 				cell.img.ImageTransparency = if seen then 0 else 0.55

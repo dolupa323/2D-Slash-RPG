@@ -7,6 +7,24 @@ local PREFIX = "town_"
 local exports = {}
 exports.data = world
 
+-- 몬스터 종 번호(1부터)와 프레임 번호(0부터)를 공방 아틀라스 좌표로 변환한다.
+-- 이전 시트는 speciesPerRow가 없어 한 줄에 한 종이며, 새 시트는 두 종씩 배치한다.
+function exports.MonsterFrameOffset(row: number, frame: number): Vector2
+	local sheet = world.monsterSheet
+	local perRow = sheet.speciesPerRow or 1
+	local index = (row - 1) % (sheet.perSheet or math.huge)
+	return Vector2.new(
+		((index % perRow) * sheet.cols + frame) * sheet.cellW,
+		math.floor(index / perRow) * sheet.cellH
+	)
+end
+
+-- 몬스터 종 번호가 들어 있는 시트 번호(1부터) — 종이 많아 시트가 여러 장이면 townAssets.MONSTER_SHEETS[이 번호]
+function exports.MonsterSheet(row: number): number
+	local per = world.monsterSheet.perSheet
+	return if per then (row - 1) // per + 1 else 1
+end
+
 function exports.SceneName(key: string): string
 	return PREFIX .. key
 end

@@ -110,7 +110,8 @@ end
 local function update(v, character, dt: number, clock: number)
 	local instance = character.Instance
 	local def = items[character.WeaponId or ""]
-	local kit = def and (def.WorldIcon or def.KitIcon)
+	-- 착용 모습(WorldIcon)이 키트에 아직 없으면(도트 UI 키트 재업로드 전) 아이콘으로 대신한다
+	local kit = def and (if def.WorldIcon and UI.Has("icon_" .. def.WorldIcon) then def.WorldIcon else def.KitIcon)
 	if not instance or not instance.Parent or not kit or kit == "" then
 		if v.img then
 			v.img.Visible = false

@@ -80,6 +80,11 @@ function exports.Part(parent: Instance, name: string, x: number, y: number, w: n
 	return img
 end
 
+-- 키트에 그 부품이 있는가(새 부품을 아직 업로드하기 전에도 안전하게 대체하려고)
+function exports.Has(name: string): boolean
+	return kit.rects[name] ~= nil
+end
+
 -- 부품 그림 위치(같은 크기 부품끼리 그림만 바꿀 때 — 예: 탭 켜짐/꺼짐)
 function exports.RectOffset(name: string): Vector2
 	local r = kit.rects[name]
