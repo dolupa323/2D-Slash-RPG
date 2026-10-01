@@ -21,6 +21,11 @@ function exports.load()
 		end
 	end)
 
+	-- 가방 드래그 앤 드롭: 같은 탭 안에서 칸 옮기기(빈 칸이면 이동, 아이템이 있으면 맞바꾸기, 같은 아이템이면 합치기)
+	Net.OnServer("MoveItem", function(player: Player, tab: string, from: number, to: number)
+		inventoryService.Move(player, tab, from, to)
+	end)
+
 	Net.OnServer("GetPlayerData", function(player: Player)
 		return persistence.Load(player)
 	end)

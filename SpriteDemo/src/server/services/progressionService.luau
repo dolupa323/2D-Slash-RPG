@@ -6,6 +6,9 @@ local Net = require(ReplicatedStorage.shared.net.net)
 local persistence = require(script.Parent.persistence)
 local scenes = require(ReplicatedStorage.shared.config.scenes)
 local heroTracking = require(script.Parent.Parent.modules.heroTracking)
+local townWorld = require(ReplicatedStorage.shared.data.townWorld)
+local UpsideEngine = require(ReplicatedStorage:WaitForChild("packages"):WaitForChild("UpsideEngine"))
+local NetworkingService = UpsideEngine.GetService("NetworkingService")
 
 local exports = {}
 
@@ -71,9 +74,20 @@ function exports.DamagePlayer(player: Player, amount: number)
 	data.Health = if died then maxHealth else newHealth
 	persistence.MarkDirty(player)
 	if died then
-		-- 사망하면 리스폰 씬(마을)을 서버가 정한다 — 서버가 아는 플레이어 씬을 바로 마을로 바꾼다. 클라이언트는 died 신호를 받고
-		-- 그 씬으로 리스폰 연출(이동)을 한다.
-		heroTracking.SetPlayerScene(player.UserId, scenes.TOWN)
+		-- 사망 페널티(GAME_DESIGN §7): 지금 레벨 필요 경험치의 5% + 가진 골드의 5%. 레벨은 내려가지 않는다.
+		local lostExp = math.min(data.Experience, math.floor(data.MaxExperience * balance.DEATH_EXP_LOSS))
+		data.Experience -= lostExp
+		local lostGold = math.floor((data.Gold or 0) * balance.DEATH_GOLD_LOSS)
+		data.Gold = (data.Gold or 0) - lostGold
+		Net.FireClient("StatsUpdated", player, data.Level, data.Experience, data.MaxExperience, false)
+		Net.FireClient("GoldUpdated", player, data.Gold)
+		Net.FireClient("Notify", player, ("쓰러졌어요… 경험치 %d, 골드 %d를 잃었어요"):format(lostExp, lostGold))
+		-- 리스폰 씬을 서버가 정한다: 탑다운 씬이면 시작 씬(회복소가 있는 마을), 예전 사이드뷰 씬이면 예전 마을.
+		-- 클라이언트는 died 신호를 받고 그 씬의 시작 위치(⭐)로 옮긴다.
+		local current = heroTracking.GetPlayerScene(player.UserId)
+		local respawn = if townWorld.KeyOf(current) then townWorld.StartSceneName() else scenes.TOWN
+		heroTracking.SetPlayerScene(player.UserId, respawn)
+		NetworkingService:ResyncClient(player)
 	end
 	Net.FireClient("PlayerHealthChanged", player, data.Health, maxHealth, amount, died)
 end

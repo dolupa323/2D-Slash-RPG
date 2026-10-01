@@ -85,6 +85,12 @@ function exports.Has(name: string): boolean
 	return kit.rects[name] ~= nil
 end
 
+-- 부품 원래 크기(도트)
+function exports.Size(name: string): Vector2
+	local r = kit.rects[name]
+	return Vector2.new(r.w, r.h)
+end
+
 -- 부품 그림 위치(같은 크기 부품끼리 그림만 바꿀 때 — 예: 탭 켜짐/꺼짐)
 function exports.RectOffset(name: string): Vector2
 	local r = kit.rects[name]

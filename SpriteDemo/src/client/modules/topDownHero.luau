@@ -31,6 +31,7 @@ local map = require(script.Parent.town.map)
 local travelState = require(script.Parent.travelState)
 local loadingScreen = require(script.Parent.loadingScreen)
 local combat = require(ReplicatedStorage.shared.config.combat)
+local damageNumbers = require(script.Parent.damageNumbers)
 
 local world = map.world
 local S = map.S
@@ -195,6 +196,47 @@ function exports.start(scene: Scene)
 		target:Enable()
 	end)
 
+	-- 몬스터에게 맞음: 머리 위 빨간 숫자. 쓰러짐(died): 서버가 시작 씬으로 옮겼으니 그 씬의 시작 위치(⭐)로 간다.
+	exports.healthConnection = Net.OnClient("PlayerHealthChanged", function(health, maxHealth, damage, died)
+		if damage and damage > 0 and hero.Instance then
+			damageNumbers.Show(hero.Instance, damage, Color3.fromRGB(255, 90, 90))
+			-- 피격 연출: 붉게 물들며 3번 깜빡(0.36초)
+			local instance = hero.Instance
+			exports.hitToken = (exports.hitToken or 0) + 1
+			local token = exports.hitToken
+			task.spawn(function()
+				for i = 1, 6 do
+					if not instance.Parent or exports.hitToken ~= token then
+						return
+					end
+					local on = i % 2 == 1
+					instance.ImageColor3 = if on then Color3.fromRGB(255, 120, 120) else Color3.new(1, 1, 1)
+					instance.ImageTransparency = if on then 0.35 else 0
+					task.wait(0.06)
+				end
+				instance.ImageColor3 = Color3.new(1, 1, 1)
+				instance.ImageTransparency = 0
+			end)
+		end
+		if not died then
+			return
+		end
+		travelState.fromScene = nil -- 포탈 없이 도착 → 시작 위치
+		local destination = townWorld.StartSceneName()
+		local target = SceneManager:FindByName(destination)
+		if target == scene then
+			-- 이미 시작 씬이면 그 자리에서 시작 위치로 옮긴다
+			exports.pos = findSpawn(map.data)
+			exports.portalArmed = portalAt(map.data, exports.pos) == nil
+			if hero.Instance then
+				hero.Instance.Position = UDim2.fromOffset(exports.pos.X * S, exports.pos.Y * S)
+			end
+		elseif target then
+			loadingScreen.Show()
+			target:Enable()
+		end
+	end)
+
 	task.spawn(function()
 		ContentProvider:PreloadAsync({ townAssets.PLAYER })
 		exports.animationReady = true
@@ -286,7 +328,7 @@ function exports.start(scene: Scene)
 end
 
 function exports.unload(scene: Scene)
-	for _, key in { "connection", "inputBeginConnection", "inputEndConnection", "replicationConnection", "travelConnection" } do
+	for _, key in { "connection", "inputBeginConnection", "inputEndConnection", "replicationConnection", "travelConnection", "healthConnection" } do
 		if exports[key] then
 			exports[key]:Disconnect()
 			exports[key] = nil

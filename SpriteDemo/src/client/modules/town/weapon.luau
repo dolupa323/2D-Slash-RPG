@@ -16,7 +16,6 @@ local UI = require(script.Parent.Parent.ui.pixelUI)
 
 local S = map.S
 local CS = townAssets.CHAR_SCALE -- 캐릭터 1도트 = 화면 px(VFX 도트도 이 크기)
-local ICON = 12 -- 아이콘 크기(도트)
 local BOB = 1 -- 둥실 높이(바닥 도트)
 local BOB_SPEED = 2.2
 local FOLLOW = 10 -- 방향을 바꿀 때 등 뒤 자리로 옮겨 가는 빠르기
@@ -41,7 +40,8 @@ local views = {} -- 캐릭터 오브젝트 -> { img, kit, offset, phase }
 local slashFlip = false
 
 local function makeImage(gameFrame: Instance, kit: string): ImageLabel
-	local img = UI.Part(gameFrame, "icon_" .. kit, 0, 0, ICON * CS, ICON * CS)
+	local size = UI.Size("icon_" .. kit) * CS -- 그림 자기 크기 그대로(착용 나무 검 16x16, 아이콘 12x12)
+	local img = UI.Part(gameFrame, "icon_" .. kit, 0, 0, size.X, size.Y)
 	img.Name = "Weapon"
 	img.AnchorPoint = Vector2.new(0.5, 0.5)
 	return img

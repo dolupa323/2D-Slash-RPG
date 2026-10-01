@@ -37,8 +37,20 @@ local heroObjectIds = {}
 
 -- 플레이어의 씬을 바꾼다. 씬이 바뀌면 서로 다른 씬에 있게 된 플레이어들의 캐릭터 사본을 상대 클라이언트에서 지운다 —
 -- 안 지우면 마지막 위치에 멈춘 유령 캐릭터가 남는다(둘이 접속해 한 명이 포탈을 탔을 때 실측).
+-- 씬이 바뀔 때 알림을 받는다(예: 몬스터 기여도 초기화) — callback(userId, 이전 씬 이름?, 새 씬 이름)
+local sceneChangedCallbacks = {}
+function exports.OnSceneChanged(callback: (number, string?, string) -> ())
+	table.insert(sceneChangedCallbacks, callback)
+end
+
 function exports.SetPlayerScene(userId: number, sceneName: string)
+	local previous = playerScenes[userId]
 	playerScenes[userId] = sceneName
+	if previous ~= sceneName then
+		for _, callback in sceneChangedCallbacks do
+			task.spawn(callback, userId, previous, sceneName)
+		end
+	end
 	for _, other in Players:GetPlayers() do
 		if other.UserId == userId then
 			continue

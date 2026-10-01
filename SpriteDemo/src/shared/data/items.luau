@@ -85,6 +85,27 @@ local items = {
 		KitIcon = "sprout",
 		Icon = "",
 	},
+	-- (불씨·물방울 조각은 M1 시험용 속성 재료 — 지금은 드롭하지 않는다. 이미 가진 가방이 깨지지 않게 정의만 남김)
+	EmberShard = {
+		Name = "불씨 조각",
+		Tab = "Etc",
+		Type = "Material",
+		StackMax = 99,
+		SellPrice = 3,
+		Description = "불 몬스터에게서 떨어진 따뜻한 조각.",
+		KitIcon = "fire", -- 전용 아이콘이 생기기 전까지 속성 아이콘
+		Icon = "",
+	},
+	DewShard = {
+		Name = "물방울 조각",
+		Tab = "Etc",
+		Type = "Material",
+		StackMax = 99,
+		SellPrice = 3,
+		Description = "물 몬스터에게서 떨어진 말랑한 조각.",
+		KitIcon = "water", -- 전용 아이콘이 생기기 전까지 속성 아이콘
+		Icon = "",
+	},
 	GrubSap = {
 		Name = "벌레 수액",
 		Tab = "Etc",
@@ -93,6 +114,64 @@ local items = {
 		SellPrice = 5,
 		Description = "끈적하고 달콤한 수액. 드물게 얻을 수 있다.",
 		KitIcon = "sap",
+		Icon = "",
+	},
+	-- ===== 맺음 방울(포획 도구, shared/config/capture.luau) — 가방 "소비" 탭(방울 주머니가 생기기 전까지) =====
+	Bell1 = {
+		Name = "흐린 방울",
+		Tab = "Use",
+		Type = "Bell",
+		Tier = 1,
+		StackMax = 99,
+		Price = 30,
+		SellPrice = 10,
+		Description = "흐린 맺음석을 깎아 만든 수수한 방울.",
+		KitIcon = "bell_1",
+		Icon = "",
+	},
+	Bell2 = {
+		Name = "맑은 방울",
+		Tab = "Use",
+		Type = "Bell",
+		Tier = 2,
+		StackMax = 99,
+		Price = 80,
+		SellPrice = 30,
+		Description = "맑은 맺음석으로 만든 투명한 소리의 방울.",
+		KitIcon = "bell_2",
+		Icon = "",
+	},
+	Bell3 = {
+		Name = "빛나는 방울",
+		Tab = "Use",
+		Type = "Bell",
+		Tier = 3,
+		StackMax = 99,
+		SellPrice = 75,
+		Description = "빛나는 맺음석으로 만든 금빛 방울.",
+		KitIcon = "bell_3",
+		Icon = "",
+	},
+	Bell4 = {
+		Name = "별빛 방울",
+		Tab = "Use",
+		Type = "Bell",
+		Tier = 4,
+		StackMax = 99,
+		SellPrice = 200,
+		Description = "별빛 맺음석으로 만든 방울.",
+		KitIcon = "bell_4",
+		Icon = "",
+	},
+	Bell5 = {
+		Name = "무지개 방울",
+		Tab = "Use",
+		Type = "Bell",
+		Tier = 5,
+		StackMax = 99,
+		SellPrice = 500,
+		Description = "무지개 맺음석으로 만든 가장 귀한 방울.",
+		KitIcon = "bell_5",
 		Icon = "",
 	},
 	-- ===== 중요 =====
@@ -107,5 +186,15 @@ local items = {
 		NoDrop = true, -- 중요 물품은 버릴 수 없다
 	},
 }
+
+-- 몬스터 재료(종마다 하나, 에셋 공방에서 생성) — Mat_<종 id>
+do
+	local ok, materials = pcall(require, script.Parent:FindFirstChild("materials.generated"))
+	if ok and typeof(materials) == "table" then
+		for id, def in materials do
+			items[id] = def
+		end
+	end
+end
 
 return items

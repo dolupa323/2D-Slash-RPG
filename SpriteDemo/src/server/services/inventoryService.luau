@@ -140,6 +140,43 @@ function exports.Take(player: Player, tab: string, slot: number)
 	return { ItemId = entry.ItemId, Count = entry.Count }
 end
 
+-- 그 아이템을 모두 합쳐 몇 개 가졌나
+function exports.CountItem(player: Player, itemId: string): number
+	local data = persistence.Get(player)
+	local n = 0
+	for _, entry in data and data.Inventory or {} do
+		if entry.ItemId == itemId then
+			n += entry.Count
+		end
+	end
+	return n
+end
+
+-- 아이템 id로 count개를 뺀다(여러 칸에 나뉘어 있어도). 모자라면 아무것도 안 빼고 false.
+function exports.TakeItem(player: Player, itemId: string, count: number): boolean
+	local data = persistence.Get(player)
+	if not data or count <= 0 or exports.CountItem(player, itemId) < count then
+		return false
+	end
+	local remaining = count
+	for i = #data.Inventory, 1, -1 do
+		local entry = data.Inventory[i]
+		if remaining <= 0 then
+			break
+		end
+		if entry.ItemId == itemId then
+			local n = math.min(entry.Count, remaining)
+			entry.Count -= n
+			remaining -= n
+			if entry.Count <= 0 then
+				table.remove(data.Inventory, i)
+			end
+		end
+	end
+	push(player, data)
+	return true
+end
+
 -- 칸에서 개수만큼 빼낸다(팔기·사용). 실제로 뺀 { ItemId, Count }를 돌려준다(없으면 nil).
 function exports.Remove(player: Player, tab: string, slot: number, count: number)
 	local data = persistence.Get(player)

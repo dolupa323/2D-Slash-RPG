@@ -6,4 +6,10 @@ return {
 		title = "포션 상점",
 		goods = { "RedPotion", "OrangePotion", "WhitePotion" },
 	},
+	-- 잡화 상점: 낮은 등급 맺음 방울을 직접 판다(높은 등급은 맺음석 세공 — M6)
+	merchant = {
+		npc = "merchant",
+		title = "잡화 상점",
+		goods = { "Bell1", "Bell2" },
+	},
 }

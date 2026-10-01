@@ -4,6 +4,8 @@
 --  드래그 앤 드롭: 칸을 누른 채 끌어서 다른 칸에 놓으면 자리 바꾸기(같은 아이템이면 합치기) — 서버(MoveItem)가 처리.
 --  버리기: 서버(DropItem)가 가방에서 빼서 발밑 땅에 떨어뜨린다(월드 드랍 — 같은 씬 누구나 주울 수 있고, 시간이 지나면 사라짐).
 --  중요 물품은 버릴 수 없다. 왼쪽 아래 골드. 물약은 [사용]으로 먹는다(서버 UseItem — 체력 회복, 1개 줄임).
+--  소비 아이템(방울·물약)은 [1][2][3]으로 소비 단축칸(globals/quickslots.luau)에 놓는다 — 전투 중 숫자키/터치로 바로 쓴다.
+--  방울 상세 설명에는 그 방울의 "기본 포획률"만 나온다(종합 확률 = 기본 + 레벨 보정 + 체력 보정 — 서버만 계산, 화면엔 안 나옴).
 -- HUD의 가방 버튼이 exports.toggle()을 부른다. 서버 데이터 캐시(인벤토리·골드·장비)는 UI와 별개로 유지된다.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,6 +16,7 @@ local items = require(ReplicatedStorage.shared.data.items)
 local balance = require(ReplicatedStorage.shared.config.balance)
 local Net = require(ReplicatedStorage.shared.net.net)
 local UI = require(script.Parent.Parent.ui.pixelUI)
+local capture = require(ReplicatedStorage.shared.config.capture)
 
 local C = UI.colors
 local COLUMNS = balance.INVENTORY_COLUMNS
@@ -23,7 +26,7 @@ local TABS = balance.INVENTORY_TABS
 local TAB_NAMES = balance.INVENTORY_TAB_NAMES
 local SLOT = 22 -- 칸 크기(도트)
 local STEP = 24
-local PANEL_W, PANEL_H = 300, 190
+local PANEL_W, PANEL_H = 300, 226 -- (방울 확률 설명·단축칸 버튼 자리 때문에 190 → 226)
 local GRID_Y = 32
 local INFO_X = 14 + COLUMNS * STEP + 8 -- 설명 영역 왼쪽
 local INFO_W = PANEL_W - INFO_X - 10
@@ -140,6 +143,18 @@ function exports.load(scene: Scene)
 	local nameLabel = UI.Label(panel, "", INFO_X, GRID_Y + 44, { Font = "title", Color = C.pinkD })
 	local descLabel = UI.Label(panel, "", INFO_X, GRID_Y + 64, { Color = C.ink })
 	local actionButton = UI.Button(panel, INFO_X, PANEL_H - 36, 56, 24, { Color = "pink", Text = "장착" })
+	-- 소비 단축칸에 놓기 [1][2][3]
+	local quickLabel = UI.Label(panel, "단축칸", INFO_X, PANEL_H - 56, { Color = C.ink })
+	local quickButtons = {}
+	for i = 1, 3 do
+		quickButtons[i] = UI.Button(panel, INFO_X + 44 + (i - 1) * 24, PANEL_H - 60, 20, 20, { Color = "white", Text = tostring(i), OnClick = function()
+			local entry = selected and entryAt(tab, selected)
+			local def = entry and items[entry.ItemId]
+			if def and def.Tab == "Use" then
+				require(script.Parent.quickslots).set(i, entry.ItemId)
+			end
+		end })
+	end
 	local dropButton = UI.Button(panel, INFO_X + 60, PANEL_H - 36, 60, 24, { Color = "white", Text = "버리기" })
 
 	-- 착용 중인 장비(무기·방어구) — 누르면 해제되어 장비 탭 빈 칸으로 돌아간다
@@ -187,11 +202,25 @@ function exports.load(scene: Scene)
 			descLabel:SetText(if selected then "빈 칸이에요." else "칸을 눌러 아이템을\n살펴보세요.\n끌어서 자리를\n바꿀 수 있어요.")
 			actionButton:SetEnabled(false)
 			dropButton:SetEnabled(false)
+			for _, b in quickButtons do
+				b:SetEnabled(false)
+			end
 			return
 		end
+		for _, b in quickButtons do
+			b:SetEnabled(def.Tab == "Use")
+		end
+		quickLabel.Frame.Visible = def.Tab == "Use"
 		drawItem(bigContent, def, 8, 8, 24)
 		nameLabel:SetText(def.Name)
-		descLabel:SetText(wrap(def.Description or "", INFO_W))
+		local desc = def.Description or ""
+		if def.Type == "Bell" and def.Tier then
+			-- 방울: 그 방울이 가진 기본 포획률만(종합 확률은 레벨·체력 보정이 더해져 서버가 계산 — 보여 주지 않음)
+			desc = wrap(desc, INFO_W) .. ("\n\n기본 포획률 %d%%"):format(math.floor(capture.BaseRate(def.Tier) * 100 + 0.5))
+		else
+			desc = wrap(desc, INFO_W)
+		end
+		descLabel:SetText(desc)
 		actionButton:SetText(if def.EquipSlot then "장착" else "사용")
 		actionButton:SetEnabled(def.EquipSlot ~= nil or def.Heal ~= nil) -- 장비는 장착, 물약(Heal)은 사용
 		dropButton:SetEnabled(not def.NoDrop)
@@ -220,19 +249,32 @@ function exports.load(scene: Scene)
 
 	-- 칸 + 드래그 앤 드롭
 	local drag = nil -- { from, startPos, ghost }
+	-- 좌표는 입력 좌표(InputObject.Position) 그대로 쓴다. 상단바 보정을 직접 계산하면 엔진 버전에 따라 어긋나서(놓은 칸보다 한 칸
+	-- 아래에 들어가던 버그), 놓은 칸은 PlayerGui:GetGuiObjectsAtPosition으로 "그 점 아래에 있는 칸"을 물어본다.
+	-- 끌고 다니는 그림도 상단바를 비켜 앉는 별도 화면(IgnoreGuiInset = false)에 붙여 입력 좌표와 같은 기준으로 맞춘다.
 	local function pointOf(input: InputObject): Vector2
-		local inset = GuiService:GetGuiInset()
-		return Vector2.new(input.Position.X, input.Position.Y) + inset -- IgnoreGuiInset 화면 좌표로
+		return Vector2.new(input.Position.X, input.Position.Y)
 	end
+	local slotOf = {} -- 칸 ImageButton → 번호
 	local function slotAt(point: Vector2): number?
-		for index, slot in slots do
-			local p, s = slot.ui.Instance.AbsolutePosition, slot.ui.Instance.AbsoluteSize
-			if point.X >= p.X and point.X < p.X + s.X and point.Y >= p.Y and point.Y < p.Y + s.Y then
-				return index
+		for _, obj in playerGui:GetGuiObjectsAtPosition(point.X, point.Y) do
+			local cur = obj
+			while cur and cur ~= screenGui do
+				if slotOf[cur] then
+					return slotOf[cur]
+				end
+				cur = cur.Parent
 			end
 		end
 		return nil
 	end
+	local dragGui = Instance.new("ScreenGui")
+	dragGui.Name = "InventoryDrag"
+	dragGui.ResetOnSpawn = false
+	dragGui.IgnoreGuiInset = false
+	dragGui.DisplayOrder = 200
+	dragGui.Parent = playerGui
+	exports.dragGui = dragGui
 	for index = 1, SLOT_COUNT do
 		local col = (index - 1) % COLUMNS
 		local row = (index - 1) // COLUMNS
@@ -242,6 +284,7 @@ function exports.load(scene: Scene)
 		content.Size = UDim2.fromScale(1, 1)
 		content.Parent = ui.Instance
 		slots[index] = { ui = ui, content = content }
+		slotOf[ui.Instance] = index
 		ui.Instance.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 				drag = { from = index, startPos = pointOf(input), ghost = nil }
@@ -266,7 +309,7 @@ function exports.load(scene: Scene)
 			ghost.AnchorPoint = Vector2.new(0.5, 0.5)
 			ghost.Size = UDim2.fromOffset(SLOT, SLOT)
 			ghost.ZIndex = 50
-			ghost.Parent = screenGui
+			ghost.Parent = dragGui
 			local scale = Instance.new("UIScale")
 			scale.Scale = UI.CurrentScale()
 			scale.Parent = ghost
@@ -422,6 +465,10 @@ function exports.unload(scene: Scene)
 	if exports.screenGui then
 		exports.screenGui:Destroy()
 		exports.screenGui = nil
+	end
+	if exports.dragGui then
+		exports.dragGui:Destroy()
+		exports.dragGui = nil
 	end
 	exports.panel = nil
 	exports.goldLabel = nil

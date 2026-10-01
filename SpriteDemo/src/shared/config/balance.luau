@@ -9,6 +9,10 @@ balance.MAX_HEALTH_PER_LEVEL = 20
 balance.BASE_ATTACK = 10
 balance.BASE_DEFENSE = 0
 
+-- 사망 페널티(GAME_DESIGN §7): 지금 레벨 필요 경험치의 5% + 가진 골드의 5%를 잃는다. 레벨은 내려가지 않는다.
+balance.DEATH_EXP_LOSS = 0.05
+balance.DEATH_GOLD_LOSS = 0.05
+
 function balance.maxHealthFor(level: number): number
 	return balance.BASE_MAX_HEALTH + (level - 1) * balance.MAX_HEALTH_PER_LEVEL
 end

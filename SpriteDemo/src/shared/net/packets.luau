@@ -76,6 +76,27 @@ local packets = {
 		RateLimit = { PerSecond = 2, Burst = 4 },
 	},
 	-- 기본 공격: 바라보는 방향만 보낸다(공격 동작의 판정 프레임에). 위치는 서버가 아는 위치, 간격도 서버가 검증한다.
+	-- 펫(M3): 상자 번호에 대한 행동 — Add(함께 다니기) · Remove(상자로) · Lead(대표로 = 파티 1번) · Release(놓아주기, 사라짐)
+	PetAction = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.oneOf("Add", "Remove", "Lead", "Release"), t.number },
+		RateLimit = { PerSecond = 6, Burst = 6 },
+	},
+	-- 소비 단축칸에 아이템 놓기(칸 번호 1~3, 아이템 id 또는 ""=비우기) — 서버가 소비 아이템인지 검사
+	SetQuickSlot = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.number, t.string },
+		RateLimit = { PerSecond = 6, Burst = 6 },
+	},
+	-- 소비 단축칸 쓰기(칸 번호, 바라보는 방향) — 물약: 회복 / 방울: 그 방향으로 던지기(포획 시도)
+	UseQuickSlot = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.number, t.oneOf("up", "down", "left", "right") },
+		RateLimit = { PerSecond = 6, Burst = 6 },
+	},
 	TownAttack = {
 		Kind = "Event",
 		Direction = "ClientToServer",
@@ -153,11 +174,19 @@ local packets = {
 	TownMonsterMoves = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, { {id, x, y, facingLeft, moving} } (10Hz)" },
 	TownMonsterSpawned = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, { id, row, level, hp, maxHp, x, y }" },
 	TownMonsterHit = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, id, hp, damage, attackerUserId, weaponId" },
+	TownMonsterAttack = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, id — 몬스터가 반격하는 순간(연출용, 피해는 PlayerHealthChanged)" },
 	TownMonsterDied = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, id" },
 	WorldDropSpawned = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, { id, itemId, count, x, y, expiresIn }" },
 	WorldDropRemoved = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, id, pickedByUserId?" },
 	-- 도감: 처음 쓰러뜨린 몬스터(종류 줄 번호) — "새 친구!" 팝업 + 알림
 	DexDiscovered = { Kind = "Event", Direction = "ServerToClient", Doc = "row" },
+	-- 포획(M2): 방울 던지기(같은 씬 모두에게 날아가는 연출) / 맞은 몬스터의 포획 결과(연출 — 결과는 capture.RevealTime(딸랑 횟수) 뒤 적용)
+	BellThrown = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, userId, x, y, dirX, dirY, distance, tier, hitMonsterId(0 = 빗나감)" },
+	TownCapture = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, id, tier, result(\"success\"|\"fail\"|\"blocked\"), dings(딸랑 횟수 0~3)" },
+	-- 펫 상자·파티가 바뀜(잡음·편성·놓아주기)
+	PetsUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "{ Box, Party, Paid }" },
+	-- 소비 단축칸 1·2·3(아이템 id, 빈 칸 = "")
+	QuickSlotsUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "{ id1, id2, id3 }" },
 	-- 짧은 알림(화면 위 토스트): 가방이 가득 찼어요 등
 	Notify = { Kind = "Event", Direction = "ServerToClient", Doc = "text" },
 }
