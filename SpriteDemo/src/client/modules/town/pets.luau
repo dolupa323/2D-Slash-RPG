@@ -3,7 +3,8 @@
 --  다른 사람 펫: 대표 펫(파티 1번) 한 마리만 보인다 — 내 캐릭터 필드 PetLead("종줄:방울등급")를 캐릭터 복제가 실어 보내고,
 --   다른 사람 화면이 그 캐릭터 발자취를 따라 그린다.
 --  그림: 몬스터 시트(대기 4장 · 걷기 4장, 왼쪽 보면 L 칸) 그대로 + 목에 맺은 방울(도트 UI 키트 icon_bell_<등급>).
---  펫은 맞지 않는다(전투 판정 없음). 스킬(패시브 추가타)은 M4.
+--  펫은 맞지 않는다(전투 판정 없음). 스킬(패시브 추가타, M4) 연출은 town/petFx.luau — PetPosition으로 펫 자리를 묻는다.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UpsideEngine = require(ReplicatedStorage:WaitForChild("packages"):WaitForChild("UpsideEngine"))
@@ -125,6 +126,17 @@ local function update(group, gameFrame: Instance, character, isMine: boolean, fe
 	end
 end
 
+-- 그 사람의 파티 slot번 펫이 지금 보이는 자리(도트) — 내 펫은 전부, 다른 사람은 대표(1번)만 보인다. 없으면 nil.
+function exports.PetPosition(userId: number, slot: number): Vector2?
+	for _, group in groups do
+		if group.userId == userId then
+			local v = group.pets[slot]
+			return v and Vector2.new(v.x, v.y)
+		end
+	end
+	return nil
+end
+
 function exports.load(scene: Scene)
 	local d = map.Use(scene)
 	if not d then
@@ -151,17 +163,17 @@ function exports.load(scene: Scene)
 			end
 			if heroModule.pos then
 				seen[mine] = true
-				groups[mine] = groups[mine] or { trail = {}, pets = {} }
+				groups[mine] = groups[mine] or { trail = {}, pets = {}, userId = Players.LocalPlayer.UserId }
 				update(groups[mine], gameFrame, mine, true, heroModule.pos, dt)
 			end
 		end
 		local myId = mine and mine.Id
-		for _, objects in NetworkingService.PlayersData do
+		for userId, objects in NetworkingService.PlayersData do
 			for _, other in objects do
 				local instance = other.Instance
 				if other.Id ~= myId and instance and instance:IsDescendantOf(gameFrame) then
 					seen[other] = true
-					groups[other] = groups[other] or { trail = {}, pets = {} }
+					groups[other] = groups[other] or { trail = {}, pets = {}, userId = userId }
 					local feet = Vector2.new(instance.Position.X.Offset, instance.Position.Y.Offset) / S
 					update(groups[other], gameFrame, other, false, feet, dt)
 				end

@@ -32,6 +32,7 @@ local WALK_FRAME_TIME = 0.15
 local FOLLOW = 12 -- 서버 위치를 따라가는 빠르기(클수록 바로 붙음)
 local MY_HIT = Color3.fromRGB(255, 230, 90)
 local OTHER_HIT = Color3.fromRGB(255, 255, 255)
+local MY_PET_HIT = Color3.fromRGB(140, 220, 255) -- 내 펫 스킬 피해(맞음 이펙트는 town/petFx)
 
 local exports = {}
 local byId = {}
@@ -282,6 +283,17 @@ local function flash(label: ImageLabel)
 	end)
 end
 
+-- 몬스터 발 위치(화면 px)와 몸 가운데까지 높이 — 펫 스킬 연출(town/petFx)이 쓴다. 없거나 쓰러졌으면 nil.
+function exports.Feet(id: number): Vector2?
+	local m = byId[id]
+	if not m or m.dead then
+		return nil
+	end
+	local p = m.label.Position
+	return Vector2.new(p.X.Offset, p.Y.Offset)
+end
+exports.BODY_PX = CELL.Y * CS / 2
+
 function exports.load(scene: Scene)
 	local d = map.Use(scene)
 	if not d then
@@ -316,21 +328,24 @@ function exports.load(scene: Scene)
 		end
 		apply(byId[w.id] or makeMonster(gameFrame, w), w)
 	end))
-	table.insert(conns, Net.OnClient("TownMonsterHit", function(sceneKey, id, hp, damage, attacker, weaponId)
+	table.insert(conns, Net.OnClient("TownMonsterHit", function(sceneKey, id, hp, damage, attacker, source)
 		local m = mine(sceneKey) and byId[id]
 		if not m then
 			return
 		end
-		-- 맞은 몬스터 몸 위에 무기에 맞는 베기 VFX(town/weapon.luau)
+		-- 맞은 몬스터 몸 위에 무기에 맞는 베기 VFX(town/weapon.luau). 펫 스킬("pet:<종>")은 town/petFx가 그 펫 이펙트를 그린다.
+		local byPet = typeof(source) == "string" and string.sub(source, 1, 4) == "pet:"
 		local p = m.label.Position
-		weapon.HitSlash(Vector2.new(p.X.Offset, p.Y.Offset - CELL.Y * CS / 2), weaponId)
+		if not byPet then
+			weapon.HitSlash(Vector2.new(p.X.Offset, p.Y.Offset - CELL.Y * CS / 2), source)
+		end
 		m.hp = hp
 		m.bar:SetRatio(hp / m.maxHp)
 		if m.hint then
 			m.hint.Visible = hp > 0 and hp / m.maxHp <= capture.HINT_HP
 		end
 		m.bar.Instance.Visible = true
-		damageNumbers.Show(m.label, damage, if attacker == myId then MY_HIT else OTHER_HIT)
+		damageNumbers.Show(m.label, damage, if attacker ~= myId then OTHER_HIT elseif byPet then MY_PET_HIT else MY_HIT)
 		flash(m.label)
 	end))
 	-- 반격: 공격하는 순간 몸을 살짝 키웠다 돌아오며 앞으로 튀어 나간다(서버가 플레이어 피해를 따로 준다)

@@ -11,6 +11,7 @@
 --  반격: 맞은 몬스터는 때린 사람을 쫓아가 공격한다(combat.MONSTER_*). 집에서 너무 멀어지거나, 한동안 안 맞거나,
 --   그 사람이 씬을 떠나면 포기하고 돌아간다. 피해는 progressionService.DamagePlayer(사망 페널티·리스폰 포함).
 --  combat.MONSTER_RESPAWN초 뒤 같은 구역에 새 레벨로 다시 나타남.
+--  펫 스킬(M4, server/modules/petSkills.luau): OnPlayerAttack 훅으로 공격 직후를 받고, Damage로 같은 규칙(기여도·반격·처치)의 피해를 준다.
 -- 같은 씬 플레이어에게만 보낸다(첫 인자 = 씬 키): 위치 10Hz(TownMonsterMoves), 피격/죽음/등장은 즉시.
 -- 플레이어가 없는 씬은 움직이지 않는다(서버 부담).
 local Players = game:GetService("Players")
@@ -396,6 +397,66 @@ function exports.ThrowBell(player: Player, itemId: string, facing: string): bool
 	return true
 end
 
+-- 피해 주기(플레이어 공격 · 펫 스킬 공용): 기여도(실제로 깎은 체력만) · 반격 · 피격 알림 · 처치까지.
+-- source = 맞은 몬스터 위 연출 구분(무기 id → 베기 VFX, "pet:<종 id>" → 펫 스킬 맞음 이펙트)
+local function dealDamage(key: string, st, m, player: Player, amount: number, now: number, source: string)
+	local dealt = math.min(m.hp, amount) -- 마지막 한 방이 넘쳐도 기여도는 최대 체력까지
+	m.hp -= dealt
+	local e = m.damageBy[player.UserId]
+	if not e then
+		e = { dmg = 0, first = now }
+		m.damageBy[player.UserId] = e
+	end
+	e.dmg += dealt
+	m.target = nil
+	m.wait = 0.6
+	-- 반격: 쫓는 사람이 없으면 이 사람을 쫓고, 맞을 때마다 포기 시간을 늘린다
+	if not m.aggro then
+		m.aggro = player.UserId
+		m.nextAttack = now + 0.5
+	end
+	m.aggroUntil = now + combat.MONSTER_AGGRO_TIME
+	toScene(key, "TownMonsterHit", m.id, m.hp, amount, player.UserId, source)
+	if m.hp <= 0 then
+		kill(key, st, m)
+	end
+end
+
+local attackHooks = {}
+
+-- 공격 직후 부를 함수 등록: fn(player, 씬 키, 발 위치(도트 Vector2), 바라보는 방향, 이번에 맞은 몬스터 id 목록)
+function exports.OnPlayerAttack(fn)
+	table.insert(attackHooks, fn)
+end
+
+-- 이 씬의 살아 있는(맞을 수 있는) 몬스터 목록 { m } — 읽기만 할 것(id, x, y)
+function exports.Living(key: string)
+	local st = scenes[key]
+	local list = {}
+	if st then
+		for _, m in st.monsters do
+			if not m.dead and not m.capturing then
+				table.insert(list, m)
+			end
+		end
+	end
+	return list
+end
+
+-- 펫 스킬 피해: 그 플레이어가 아직 그 씬에 있고 몬스터가 살아 있을 때만. 준 피해만큼 그 플레이어 기여도.
+function exports.Damage(key: string, monsterId: number, player: Player, amount: number, source: string): boolean
+	local st = scenes[key]
+	local m = st and st.monsters[monsterId]
+	if not m or m.dead or m.capturing or not player.Parent then
+		return false
+	end
+	if townWorld.KeyOf(heroTracking.GetPlayerScene(player.UserId)) ~= key then
+		return false
+	end
+	dealDamage(key, st, m, player, amount, os.clock(), source)
+	return true
+end
+
 -- 바라보는 방향 앞 사각형(발 기준) — 클라이언트 topDownHero의 공격 범위와 같은 수치
 local function attackBox(x: number, y: number, facing: string)
 	local reach, half = combat.ATTACK_REACH, combat.ATTACK_WIDTH / 2
@@ -447,29 +508,16 @@ function exports.load()
 		local damage = inventoryService.GetAttackDamage(player)
 		local data = persistence.Get(player)
 		local weaponId = data and data.Equipment and data.Equipment.Weapon or "" -- 맞은 몬스터 위 베기 VFX를 무기에 맞게
+		local hitIds = {}
 		for _, m in st.monsters do
 			if not m.dead and not m.capturing and m.x >= x0 and m.x <= x1 and m.y >= y0 and m.y <= y1 then
-				local dealt = math.min(m.hp, damage) -- 기여도는 실제로 깎은 체력만(마지막 한 방이 넘쳐도 최대 체력까지)
-				m.hp -= dealt
-				local e = m.damageBy[player.UserId]
-				if not e then
-					e = { dmg = 0, first = now }
-					m.damageBy[player.UserId] = e
-				end
-				e.dmg += dealt
-				m.target = nil
-				m.wait = 0.6
-				-- 반격: 쫓는 사람이 없으면 이 사람을 쫓고, 맞을 때마다 포기 시간을 늘린다
-				if not m.aggro then
-					m.aggro = player.UserId
-					m.nextAttack = now + 0.5
-				end
-				m.aggroUntil = now + combat.MONSTER_AGGRO_TIME
-				toScene(key, "TownMonsterHit", m.id, m.hp, damage, player.UserId, weaponId)
-				if m.hp <= 0 then
-					kill(key, st, m)
-				end
+				table.insert(hitIds, m.id)
+				dealDamage(key, st, m, player, damage, now, weaponId)
 			end
+		end
+		-- 펫 스킬 등(공격 1번마다 발동 판정 — 헛손질이어도)
+		for _, fn in attackHooks do
+			task.spawn(fn, player, key, feet, facing, hitIds)
 		end
 	end)
 

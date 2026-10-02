@@ -73,7 +73,15 @@
 - 소환: 내 펫 전부를 내 화면에서 따라다니게(클라 계산). 다른 사람에겐 대표(파티 1번) 1마리만 — 캐릭터 필드로 대표 펫 정보 복제.
 - 확인: 2인 테스트로 내 화면 4마리/상대 화면 1마리.
 
-### M4. 패시브 스킬 ⬜  (그림: 5패턴 VFX, 속성 색)
+### M4. 패시브 스킬 ✅ (코드 2026-10-01 — Studio 확인 대기)
+- 한 일: 공방 `tools/export_fx.mjs`(종마다 고른 이펙트 팩 장면 → `assets/fx/fx1~4.png` 1024 시트 + `shared/data/petSkills.generated.luau`) ·
+  `tools/write_fx_ids.mjs` → `shared/config/fxAssets.generated.luau`(업로드 완료) · `shared/config/petSkills.luau`(패턴 확률·배율·거리, Power/Damage/SkillOf) ·
+  `townMonsters` 피해 함수 하나로(dealDamage — 기여도·반격·처치) + OnPlayerAttack 훅 · Living · Damage ·
+  서버 `petSkillService.luau`(공격마다 파티 펫별 쿨타임 0.8초·확률 → PetSkill 연출 + 피해 source "pet:<종>" / buff는 체력 덜 찼을 때만 회복) ·
+  packets PetSkill · 클라 `town/petFx.luau`(패턴별 연출: 펫 자리에서 날아감·둘레·회전·내리꽂기·버프, 맞은 몬스터에 그 종 맞음 이펙트) ·
+  `town/monsters.luau`(펫 피해는 베기 없이 하늘색 숫자, Feet) · `town/pets.luau`(PetPosition).
+- 이펙트를 바꾸려면: 공방 `js/monsterFx.js` PICK 수정 → `node tools/export_fx.mjs` → fx 시트 다시 업로드 → `write_fx_ids.mjs`.
+- 남은 것: 스킬 수치 초안 사용자 확인, 다른 사람 화면에서는 대표 펫 외 펫 스킬이 주인 발에서 나가 보임(펫이 안 보이므로).
 - 공격 1회마다 서버가 파티 펫별 발동 판정 → 피해(주인 기여도에 합산) → 씬에 연출 이벤트.
 - 5패턴(투사체·주변 원형·회전·낙하·버프) 구현, 종별 스킬 표(우선 [제안] 자동 배정 → 사용자 확인).
 - 공방: 무기 도감처럼 "스킬 도감/미리보기" 탭 추가(패턴·VFX 확인용).

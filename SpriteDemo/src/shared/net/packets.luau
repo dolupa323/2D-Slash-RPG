@@ -173,7 +173,7 @@ local packets = {
 	-- 탑다운 씬 공유 상태(같은 씬 플레이어에게만 보낸다 — 첫 인자는 항상 씬 키: 씬을 옮기는 순간 늦게 온 것은 버린다)
 	TownMonsterMoves = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, { {id, x, y, facingLeft, moving} } (10Hz)" },
 	TownMonsterSpawned = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, { id, row, level, hp, maxHp, x, y }" },
-	TownMonsterHit = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, id, hp, damage, attackerUserId, weaponId" },
+	TownMonsterHit = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, id, hp, damage, attackerUserId, source(무기 id | \"pet:<종 id>\")" },
 	TownMonsterAttack = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, id — 몬스터가 반격하는 순간(연출용, 피해는 PlayerHealthChanged)" },
 	TownMonsterDied = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, id" },
 	WorldDropSpawned = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, { id, itemId, count, x, y, expiresIn }" },
@@ -183,6 +183,8 @@ local packets = {
 	-- 포획(M2): 방울 던지기(같은 씬 모두에게 날아가는 연출) / 맞은 몬스터의 포획 결과(연출 — 결과는 capture.RevealTime(딸랑 횟수) 뒤 적용)
 	BellThrown = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, userId, x, y, dirX, dirY, distance, tier, hitMonsterId(0 = 빗나감)" },
 	TownCapture = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, id, tier, result(\"success\"|\"fail\"|\"blocked\"), dings(딸랑 횟수 0~3)" },
+	-- 펫 스킬 발동(M4, 같은 씬 모두에게 연출용 — 피해는 TownMonsterHit "pet:<종 id>", 회복은 PlayerHealthChanged). x, y = 대상 몬스터(없으면 주인 발) 위치(도트)
+	PetSkill = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, ownerUserId, partySlot, speciesId, pattern, targetMonsterId(0 = 없음), x, y" },
 	-- 펫 상자·파티가 바뀜(잡음·편성·놓아주기)
 	PetsUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "{ Box, Party, Paid }" },
 	-- 소비 단축칸 1·2·3(아이템 id, 빈 칸 = "")
