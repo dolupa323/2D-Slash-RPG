@@ -9,8 +9,18 @@ exports.data = world
 
 -- 몬스터 종 번호(1부터)와 프레임 번호(0부터)를 공방 아틀라스 좌표로 변환한다.
 -- 이전 시트는 speciesPerRow가 없어 한 줄에 한 종이며, 새 시트는 두 종씩 배치한다.
+-- 「오문 닌자전」 시트(sheet.block이 있음): 종마다 block x block 덩어리, 덩어리 안 = 열(방향: 아래 0 · 위 1 · 왼 2 · 오 3) × 줄(걷기 장).
+--  frame = 방향 * 4 + 걷기 장(0~3). 방향을 모르면 0(아래 보기 첫 장).
 function exports.MonsterFrameOffset(row: number, frame: number): Vector2
 	local sheet = world.monsterSheet
+	if sheet.block then
+		local index = row - 1
+		local dir, step = (frame // 4) % 4, frame % 4
+		return Vector2.new(
+			(index % sheet.perRow) * sheet.block + dir * sheet.cellW,
+			(index // sheet.perRow) * sheet.block + step * sheet.cellH
+		)
+	end
 	local perRow = sheet.speciesPerRow or 1
 	local index = (row - 1) % (sheet.perSheet or math.huge)
 	return Vector2.new(

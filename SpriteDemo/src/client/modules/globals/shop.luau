@@ -19,6 +19,8 @@ local PW, PH = 300, 190
 local ROWS = 6
 local ROW_H = 21
 local LIST_Y = 30
+local COIN_X = 170 -- 줄 안 엽전 아이콘 자리(그 오른쪽이 값, 맨 오른쪽이 버튼 둘)
+local NAME_W = COIN_X - 36 - 4 -- 물건 이름 자리 폭
 local SELL_TABS = { Equip = true, Use = true, Etc = true, Cash = true }
 
 local exports = {}
@@ -43,7 +45,7 @@ function exports.load(scene: Scene)
 	titleHolder.BackgroundTransparency = 1
 	titleHolder.Size = UDim2.fromOffset(PW, 0)
 	titleHolder.Parent = panel
-	UI.Button(panel, PW - 26, 6, 20, 20, { Color = "white", Icon = "close", OnClick = function()
+	UI.Button(panel, PW - 26, 6, 20, 20, { Color = "plain", Icon = "close", OnClick = function()
 		exports.close()
 	end })
 
@@ -77,11 +79,11 @@ function exports.load(scene: Scene)
 	UI.Icon(panel, "coin", 14, PH - 26)
 	local goldLabel = UI.Label(panel, "", 30, PH - 25, { Color = C.ink })
 	local pageLabel = UI.Label(panel, "", PW - 60, PH - 25, { Color = C.ink })
-	local prev = UI.Button(panel, PW - 92, PH - 30, 22, 20, { Color = "white", Text = "<", OnClick = function()
+	local prev = UI.Button(panel, PW - 92, PH - 30, 22, 20, { Color = "plain", Text = "<", OnClick = function()
 		page -= 1
 		refresh()
 	end })
-	local nextBtn = UI.Button(panel, PW - 34, PH - 30, 22, 20, { Color = "white", Text = ">", OnClick = function()
+	local nextBtn = UI.Button(panel, PW - 34, PH - 30, 22, 20, { Color = "plain", Text = ">", OnClick = function()
 		page += 1
 		refresh()
 	end })
@@ -90,9 +92,8 @@ function exports.load(scene: Scene)
 		local y = (i - 1) * ROW_H
 		local slot = UI.Part(list, "slot", 12, y, 18, 18)
 		inventory.DrawItem(slot, def, 3, 3, 12)
-		UI.Label(list, nameText, 36, y + 3, { Color = C.ink })
-		UI.Icon(list, "coin", 150, y + 3)
-		UI.Label(list, tostring(price), 164, y + 3, { Color = C.ink })
+		UI.Label(list, nameText, 36, y + 3, { Color = C.ink, MaxWidth = NAME_W, MaxLines = 1 }) -- 엽전 아이콘 앞까지
+		UI.Icon(list, "coin", COIN_X, y + 3)
 		local bx = PW - 12
 		for k = #buttons, 1, -1 do
 			local b = buttons[k]
@@ -101,6 +102,7 @@ function exports.load(scene: Scene)
 			UI.Button(list, bx, y, w, 18, { Color = b.color, Text = b.text, OnClick = b.onClick })
 			bx -= 3
 		end
+		UI.Label(list, tostring(price), COIN_X + 14, y + 3, { Color = C.ink, MaxWidth = math.max(12, bx - (COIN_X + 14)), MaxLines = 1 }) -- 값은 버튼 앞까지
 	end
 
 	refresh = function()
@@ -120,8 +122,8 @@ function exports.load(scene: Scene)
 				if def and def.Price then
 					table.insert(entries, function(i)
 						row(i, def, def.Name, def.Price, {
-							{ text = "1개", color = "pink", onClick = function() Net.FireServer("ShopBuy", exports.shopId, itemId, 1) end },
-							{ text = "10개", color = "white", onClick = function() Net.FireServer("ShopBuy", exports.shopId, itemId, 10) end },
+							{ text = "1개", color = "primary", onClick = function() Net.FireServer("ShopBuy", exports.shopId, itemId, 1) end },
+							{ text = "10개", color = "plain", onClick = function() Net.FireServer("ShopBuy", exports.shopId, itemId, 10) end },
 						})
 					end)
 				end
@@ -139,8 +141,8 @@ function exports.load(scene: Scene)
 				if def and def.SellPrice and not def.NoDrop and SELL_TABS[e.Tab] then
 					table.insert(entries, function(i)
 						row(i, def, ("%s x%d"):format(def.Name, e.Count), def.SellPrice, {
-							{ text = "1개", color = "pink", onClick = function() Net.FireServer("ShopSell", e.Tab, e.Slot, 1) end },
-							{ text = "전부", color = "white", onClick = function() Net.FireServer("ShopSell", e.Tab, e.Slot, e.Count) end },
+							{ text = "1개", color = "primary", onClick = function() Net.FireServer("ShopSell", e.Tab, e.Slot, 1) end },
+							{ text = "전부", color = "plain", onClick = function() Net.FireServer("ShopSell", e.Tab, e.Slot, e.Count) end },
 						})
 					end)
 				end

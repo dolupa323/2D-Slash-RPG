@@ -65,7 +65,7 @@ function exports.load(scene: Scene)
 
 	local panel = UI.Panel(holder, 0, 0, PANEL_W, PANEL_H)
 	UI.TitleTag(panel, "설정", PANEL_W / 2, -13)
-	UI.Button(panel, PANEL_W - 26, 6, 20, 20, { Color = "white", Icon = "close", OnClick = function()
+	UI.Button(panel, PANEL_W - 26, 6, 20, 20, { Color = "plain", Icon = "close", OnClick = function()
 		popupManager.Close("Settings")
 	end })
 
@@ -88,7 +88,7 @@ function exports.load(scene: Scene)
 		local y = rowY + 15
 		local bar = UI.Bar(panel, TRACK_X, y, TRACK_W, "mint")
 		bar.Instance.Active = true
-		local knob = UI.Part(panel, "button_white", TRACK_X, y - 2, 8, 13)
+		local knob = UI.Part(panel, "button_plain", TRACK_X, y - 2, 8, 13)
 		knob.ZIndex = bar.Instance.ZIndex + 3
 		local value = UI.Label(panel, "", TRACK_X + TRACK_W + 8, y - 1, { Color = C.ink })
 		local entry = { group = getGroup(info.Name), bar = bar, knob = knob, value = value, y = y }

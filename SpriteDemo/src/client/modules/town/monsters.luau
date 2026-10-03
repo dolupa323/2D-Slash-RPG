@@ -9,6 +9,7 @@
 --  맞으면(TownCapture) 같은 씬 모두에게 같은 연출: 발밑 룬 문양 원 → 딸랑 3번(흔들림) → 성공: 반짝 + 폴짝 + 사라짐 /
 --  실패: 원이 깨지고 도망 / 포획 불가(blocked — 다른 사람이 딜 1등): 방울이 튕겨 떨어짐. (공방 「방울·포획」 탭과 같은 순서)
 --  체력이 capture.HINT_HP 이하인 몬스터 머리 위에는 작은 방울 표시만(숫자·확률은 전투 화면에 안 보임).
+-- 투척 무기(「오문 닌자전」, ProjectileThrown): 누군가 단축칸의 수리검·쿠나이·폭탄을 던지면 그 아이콘이 직선으로 날아간다(폭탄은 도착해서 터짐).
 -- 이벤트의 첫 인자는 씬 키 — 씬을 옮기는 순간 늦게 도착한 다른 씬 이벤트는 버린다.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,7 +21,10 @@ local map = require(script.Parent.map)
 local damageNumbers = require(script.Parent.Parent.damageNumbers)
 local UI = require(script.Parent.Parent.ui.pixelUI)
 local weapon = require(script.Parent.weapon)
+local packFx = require(script.Parent.Parent.packFx)
 local capture = require(ReplicatedStorage.shared.config.capture)
+local features = require(ReplicatedStorage.shared.config.features)
+local items = require(ReplicatedStorage.shared.data.items)
 
 local world = map.world
 local S = map.S
@@ -30,9 +34,15 @@ local CELL = Vector2.new(SHEET.cellW, SHEET.cellH)
 local IDLE_FRAME_TIME = 0.3
 local WALK_FRAME_TIME = 0.15
 local FOLLOW = 12 -- 서버 위치를 따라가는 빠르기(클수록 바로 붙음)
+local UI_SCALE = 2 -- 머리 위 글씨·게이지 배율(그림 배율과 따로 — 팩 그림은 배율 4라 글씨까지 키우면 너무 크다)
+-- 「오문 닌자전」 시트(SHEET.block): 방향 번호 → 그 방향으로 1칸
+local DIR_VEC = { [0] = Vector2.new(0, 1), [1] = Vector2.new(0, -1), [2] = Vector2.new(-1, 0), [3] = Vector2.new(1, 0) }
 local MY_HIT = Color3.fromRGB(255, 230, 90)
 local OTHER_HIT = Color3.fromRGB(255, 255, 255)
 local MY_PET_HIT = Color3.fromRGB(140, 220, 255) -- 내 펫 스킬 피해(맞음 이펙트는 town/petFx)
+-- 인술 상태 이상(서버 TownMonsterStatus): 그 시간 동안 몸 색이 바뀐다(느려짐 = 옅은 하늘색, 멈춤 = 푸른색)
+local STATUS_TINT = { slow = Color3.fromRGB(170, 215, 255), stun = Color3.fromRGB(120, 165, 255) }
+local WHITE = Color3.new(1, 1, 1)
 
 local exports = {}
 local byId = {}
@@ -54,14 +64,14 @@ local function makeMonster(gameFrame: Instance, w)
 	tag.Name = "Tag"
 	tag.BackgroundTransparency = 1
 	tag.AnchorPoint = Vector2.new(0.5, 1)
-	tag.Position = UDim2.new(0.5, 0, 0, 4 * CS)
+	tag.Position = UDim2.new(0.5, 0, 0, if SHEET.block then -2 else 4 * CS)
 	tag.Size = UDim2.fromOffset(40, 22)
 	tag.Parent = label
 	local tagScale = Instance.new("UIScale")
-	tagScale.Scale = townAssets.CHAR_SCALE
+	tagScale.Scale = UI_SCALE
 	tagScale.Parent = tag
 	-- 씬 화면(ScreenGui)은 ZIndex 전역 정렬이라, 머리 위 글씨·게이지를 모든 월드 그림(나무·집 등) 위로 올린다
-	local level = UI.Label(tag, "", 0, 0, { Color = UI.colors.white, Shadow = UI.colors.ink, ZIndex = 9005 })
+	local level = UI.Label(tag, "", 0, 0, { Color = UI.colors.white, Shadow = UI.colors.ink, ZIndex = 9005, Clamp = false })
 	local bar = UI.Bar(tag, 8, 13, 24, "red")
 	bar.Instance.ZIndex = 9001
 	for _, g in bar.Instance:GetDescendants() do
@@ -71,8 +81,8 @@ local function makeMonster(gameFrame: Instance, w)
 	end
 	-- 잡기 좋은 체력(capture.HINT_HP 이하)일 때만 레벨 글씨 옆 작은 방울(숫자·확률 없음)
 	local hint = nil
-	if UI.Has("icon_bell_1") then
-		hint = UI.Part(tag, "icon_bell_1", 32, -1, 8, 8)
+	if features.CAPTURE and UI.Has("icon_bell_1") then
+		hint = UI.Part(tag, "icon_bell_1", 32, -1, 8, 8) -- lint: optional(포획이 꺼져 있고 UI.Has로 확인한 뒤에만 그린다)
 		hint.ZIndex = 9006
 		hint.Visible = false
 	end
@@ -87,11 +97,14 @@ local function apply(m, w)
 	m.x, m.y, m.tx, m.ty = w.x, w.y, w.x, w.y
 	m.hp, m.maxHp = w.hp, w.maxHp
 	m.moving, m.dead, m.capturing = false, false, false
+	m.dir = 0 -- 바라보는 방향(아래 0 · 위 1 · 왼 2 · 오 3) — 움직인 쪽으로 바뀐다
 	m.level:SetText("Lv." .. w.level)
 	m.level.Frame.Position = UDim2.fromOffset(20 - m.level.Width // 2, 0)
 	m.bar:SetRatio(m.hp / m.maxHp)
 	m.bar.Instance.Visible = m.hp < m.maxHp
 	m.label.ImageTransparency = 0
+	m.tintUntil = nil
+	m.label.ImageColor3 = WHITE
 	m.label.Visible = true
 	if m.hint then
 		m.hint.Visible = false
@@ -157,6 +170,42 @@ local function playThrow(gameFrame: Instance, x: number, y: number, dx: number, 
 		end
 		bell.Position = UDim2.fromOffset(px, py)
 		bell.Rotation = clock * 720
+	end
+	holder:Destroy()
+end
+
+-- 투척 무기 날아가기(「오문 닌자전」 — 서버 ProjectileThrown): 아이템 아이콘이 직선으로 날아간다. 좌표는 도트.
+--  수리검은 빙글빙글 돌고, 쿠나이는 날 끝이 날아가는 쪽을 향한다. radius > 0(폭탄)이면 포물선으로 날아가 도착 자리에서 터진다.
+local function playProjectile(gameFrame: Instance, itemId: string, x: number, y: number, dx: number, dy: number, dist: number, speed: number, radius: number)
+	local def = items[itemId]
+	local name = def and def.KitIcon and def.KitIcon ~= "" and "icon_" .. def.KitIcon
+	if not name or not UI.Has(name) then
+		return
+	end
+	local holder = fxHolder(gameFrame)
+	local size = 10 * S
+	local img = UI.Part(holder, name, 0, 0, size, size)
+	img.AnchorPoint = Vector2.new(0.5, 0.5)
+	img.ZIndex = 9302
+	local spin = itemId == "Shuriken"
+	local heading = math.deg(math.atan2(dy, dx))
+	local flight = dist / speed
+	local clock = 0
+	while clock < flight and holder.Parent do
+		clock += task.wait()
+		local k = math.min(clock / flight, 1)
+		local arc = if radius > 0 then math.sin(k * math.pi) * 10 else 0
+		img.Position = UDim2.fromOffset((x + dx * dist * k) * S, (y + dy * dist * k - arc) * S)
+		-- 쿠나이 그림은 날 끝이 오른쪽 위(↗)를 향한다 — 날아가는 쪽에 맞추려면 45도 더 돌린다
+		img.Rotation = if spin then clock * 1080 elseif radius > 0 then clock * 360 else heading + 45
+	end
+	img:Destroy()
+	if radius > 0 then
+		-- 터짐: 팩 폭발 이펙트(도착 자리)
+		local at = Vector2.new((x + dx * dist) * S, (y + dy * dist) * S)
+		packFx.Play(gameFrame, "explosion", function()
+			return at
+		end, { zIndex = 9302 })
 	end
 	holder:Destroy()
 end
@@ -274,11 +323,17 @@ local function playCapture(gameFrame: Instance, m, tier: number, result: string,
 	label.Visible = false
 end
 
-local function flash(label: ImageLabel)
+-- 지금 몸 색: 상태 이상 중이면 그 색, 아니면 원래 색
+local function baseColor(m): Color3
+	return if m.tintUntil and os.clock() < m.tintUntil then m.tint else WHITE
+end
+
+local function flash(m)
+	local label = m.label
 	label.ImageColor3 = Color3.fromRGB(255, 150, 150)
 	task.delay(0.12, function()
 		if label.Parent then
-			label.ImageColor3 = Color3.new(1, 1, 1)
+			label.ImageColor3 = baseColor(m)
 		end
 	end)
 end
@@ -318,6 +373,11 @@ function exports.load(scene: Scene)
 		for _, e in list do
 			local m = byId[e[1]]
 			if m and not m.dead then
+				-- 움직인 쪽을 바라본다(가로·세로 중 더 많이 움직인 쪽)
+				local dx, dy = e[2] - m.tx, e[3] - m.ty
+				if math.abs(dx) + math.abs(dy) > 0.05 then
+					m.dir = if math.abs(dx) >= math.abs(dy) then (if dx < 0 then 2 else 3) else (if dy < 0 then 1 else 0)
+				end
 				m.tx, m.ty, m.facingLeft, m.moving = e[2], e[3], e[4], e[5]
 			end
 		end
@@ -335,8 +395,9 @@ function exports.load(scene: Scene)
 		end
 		-- 맞은 몬스터 몸 위에 무기에 맞는 베기 VFX(town/weapon.luau). 펫 스킬("pet:<종>")은 town/petFx가 그 펫 이펙트를 그린다.
 		local byPet = typeof(source) == "string" and string.sub(source, 1, 4) == "pet:"
+		local byNinjutsu = typeof(source) == "string" and string.sub(source, 1, 4) == "nin:" -- 인술: town/ninjutsuFx가 그 인술 이펙트를 그린다
 		local p = m.label.Position
-		if not byPet then
+		if not byPet and not byNinjutsu then
 			weapon.HitSlash(Vector2.new(p.X.Offset, p.Y.Offset - CELL.Y * CS / 2), source)
 		end
 		m.hp = hp
@@ -346,9 +407,18 @@ function exports.load(scene: Scene)
 		end
 		m.bar.Instance.Visible = true
 		damageNumbers.Show(m.label, damage, if attacker ~= myId then OTHER_HIT elseif byPet then MY_PET_HIT else MY_HIT)
-		flash(m.label)
+		flash(m)
 	end))
 	-- 반격: 공격하는 순간 몸을 살짝 키웠다 돌아오며 앞으로 튀어 나간다(서버가 플레이어 피해를 따로 준다)
+	table.insert(conns, Net.OnClient("TownMonsterStatus", function(sceneKey, id, kind, seconds)
+		local m = mine(sceneKey) and byId[id]
+		local tint = STATUS_TINT[kind]
+		if not m or m.dead or not tint then
+			return
+		end
+		m.tint, m.tintUntil = tint, os.clock() + seconds
+		m.label.ImageColor3 = tint
+	end))
 	table.insert(conns, Net.OnClient("TownMonsterAttack", function(sceneKey, id)
 		local m = mine(sceneKey) and byId[id]
 		if not m or m.dead then
@@ -361,6 +431,12 @@ function exports.load(scene: Scene)
 			return
 		end
 		task.spawn(playThrow, gameFrame, x, y, dx, dy, dist, tier, hitId ~= 0)
+	end))
+	table.insert(conns, Net.OnClient("ProjectileThrown", function(sceneKey, _userId, itemId, x, y, dx, dy, dist, speed, radius)
+		if not mine(sceneKey) then
+			return
+		end
+		task.spawn(playProjectile, gameFrame, itemId, x, y, dx, dy, dist, speed, radius)
 	end))
 	table.insert(conns, Net.OnClient("TownCapture", function(sceneKey, id, tier, result, dings)
 		local m = mine(sceneKey) and byId[id]
@@ -417,20 +493,33 @@ function exports.load(scene: Scene)
 				continue
 			end
 			m.clock += dt
+			if m.tintUntil and os.clock() >= m.tintUntil then
+				m.tintUntil = nil -- 상태 이상이 끝남
+				m.label.ImageColor3 = WHITE
+			end
 			m.x += (m.tx - m.x) * k
 			m.y += (m.ty - m.y) * k
-			-- 시트 칸: 대기R 0~3, 걷기R 4~7, 대기L 8~11, 걷기L 12~15
-			local frame = if m.moving
-				then math.floor(m.clock / WALK_FRAME_TIME) % 4 + 4
-				else math.floor(m.clock / IDLE_FRAME_TIME) % 4
-			if m.facingLeft then
-				frame += 8
-			end
 			local label = m.label
-			label.ImageRectOffset = townWorld.MonsterFrameOffset(m.row, frame)
-			-- 공방 편집기와 같은 기준: 발(그림자 아래끝)이 pos보다 1도트 아래.
-			local lunge = if m.lungeUntil and os.clock() < m.lungeUntil then (if m.facingLeft then -3 else 3) else 0
-			label.Position = UDim2.fromOffset(math.round((m.x + lunge) * S), math.round((m.y + 1) * S))
+			local lunging = m.lungeUntil and os.clock() < m.lungeUntil
+			if SHEET.block then
+				-- 팩 시트: frame = 방향 * 4 + 걷기 장(서 있으면 첫 장). 공격하면 바라보는 쪽으로 3도트 튀어 나간다.
+				local step = if m.moving then math.floor(m.clock / WALK_FRAME_TIME) % 4 else 0
+				label.ImageRectOffset = townWorld.MonsterFrameOffset(m.row, m.dir * 4 + step)
+				local push = if lunging then DIR_VEC[m.dir] * 3 else Vector2.zero
+				label.Position = UDim2.fromOffset(math.round((m.x + push.X) * S), math.round((m.y + push.Y) * S))
+			else
+				-- 옛 시트 칸: 대기R 0~3, 걷기R 4~7, 대기L 8~11, 걷기L 12~15
+				local frame = if m.moving
+					then math.floor(m.clock / WALK_FRAME_TIME) % 4 + 4
+					else math.floor(m.clock / IDLE_FRAME_TIME) % 4
+				if m.facingLeft then
+					frame += 8
+				end
+				label.ImageRectOffset = townWorld.MonsterFrameOffset(m.row, frame)
+				-- 공방 편집기와 같은 기준: 발(그림자 아래끝)이 pos보다 1도트 아래.
+				local lunge = if lunging then (if m.facingLeft then -3 else 3) else 0
+				label.Position = UDim2.fromOffset(math.round((m.x + lunge) * S), math.round((m.y + 1) * S))
+			end
 			label.ZIndex = map.ZIndexFor(m.y)
 		end
 	end)

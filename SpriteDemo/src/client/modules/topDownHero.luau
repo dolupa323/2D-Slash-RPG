@@ -1,8 +1,7 @@
--- 탑다운 도트 아이(플레이어) — 2026-09-28 게임 전체 탑다운 전환.
--- 예전 횡스크롤 구현(heroController.luau)은 지우지 않고 남겨뒀다(현재 미사용).
+-- 탑다운 플레이어(닌자).
 --
--- 그림: 에셋 공방 캐릭터 탭의 새 캐릭터(hero.js, 기본 외형). townAssets.PLAYER 시트 — 줄 = 아래·위·왼·오,
--- 칸 = 걷기 4장 + 기본 공격 4장(몸이 들썩이는 동작), 칸 32x32, 발바닥 = 칸 위에서 feetY 도트.
+-- 그림: 「오문 닌자전」 — Ninja Adventure 팩 닌자(공방 tools/export_ninja.mjs). townAssets.PLAYER 시트 — 유파마다 4줄(아래·위·왼·오),
+-- 칸 = 걷기 4장 + 기본 공격 4장, 칸 크기·발바닥 위치는 world.playerSheet(cellW · cellH · feetY).
 -- 기본 공격: "Attack" 액션(PC F키 · HUD 공격 버튼 · 모바일도 같은 버튼) → 공격 애니메이션 → hitFrame번째 장에서
 -- 서버에 바라보는 방향(TownAttack)을 보낸다 → 서버가 내 위치 앞 사각형(combat.luau의 ATTACK_REACH·ATTACK_WIDTH) 안의
 -- 몬스터에게 데미지(같은 씬 모두에게 공유). 공격 중엔 멈춘다. 공격 동작 자체는 캐릭터 복제로 다른 사람에게도 보인다.
@@ -32,6 +31,8 @@ local travelState = require(script.Parent.travelState)
 local loadingScreen = require(script.Parent.loadingScreen)
 local combat = require(ReplicatedStorage.shared.config.combat)
 local damageNumbers = require(script.Parent.damageNumbers)
+local items = require(ReplicatedStorage.shared.data.items)
+local weapons = require(ReplicatedStorage.shared.config.weapons)
 
 local world = map.world
 local S = map.S
@@ -46,11 +47,19 @@ local SPEED = world.playerSpeed -- 도트/초
 local FEET = world.playerFeet -- 발 상자(도트). 머리는 건물 앞 공간에 겹쳐도 되고 발만 막는다.
 local TRAVEL_RETRY = 1.5 -- 승인이 안 오면 이 시간 뒤 다시 요청할 수 있다
 
+local UserInputService = game:GetService("UserInputService")
+local ninjutsuConfig = require(ReplicatedStorage.shared.config.ninjutsu)
+local DASH_DIRS = { up = Vector2.new(0, -1), down = Vector2.new(0, 1), left = Vector2.new(-1, 0), right = Vector2.new(1, 0) }
+
 local exports = {}
+
+-- 유파(직업) 번호(0부터, world.schools 순서) — 시트에서 유파마다 4줄(아래·위·왼·오). globals/ninjutsu.luau가 내 유파에 맞춰 바꾼다
+-- (그림 칸 위치가 캐릭터 복제로 그대로 가서 다른 사람에게도 내 유파 옷으로 보인다).
+exports.school = 0
 
 local function applyFrame(instance: ImageLabel, dir: string, col: number)
 	instance.ImageRectSize = CELL
-	instance.ImageRectOffset = Vector2.new((col - 1) * CELL.X, DIR_ROW[dir] * CELL.Y)
+	instance.ImageRectOffset = Vector2.new((col - 1) * CELL.X, (exports.school * 4 + DIR_ROW[dir]) * CELL.Y)
 end
 
 local function blocked(x: number, y: number): boolean
@@ -95,12 +104,15 @@ local function findSpawn(d): Vector2
 		for _, p in d.portals do
 			if p.to == fromKey then
 				-- 돌아가는 포탈 바로 아래 — 맵 밖이거나 막혀 있으면(실내 아랫벽 출입구) 바로 위, 그래도 안 되면 가까운 빈 곳
-				local cx = (p.x0 + p.x1) / 2
-				local below = Vector2.new(cx, p.y1 + 6)
-				if below.Y >= d.h * world.tile or blocked(below.X, below.Y) then
-					below = Vector2.new(cx, p.y0 - 3)
+				-- (맵 가장자리의 포탈은 방향이 제각각이라 — 위·아래·왼·오른쪽 가장자리 — 포탈에서 맵 안쪽으로 한 걸음 들어온 자리를 찾는다)
+				local cx, cy = (p.x0 + p.x1) / 2, (p.y0 + p.y1) / 2
+				local mapW, mapH = d.w * world.tile, d.h * world.tile
+				for _, q in { Vector2.new(cx, p.y1 + 6), Vector2.new(cx, p.y0 - 3), Vector2.new(p.x1 + 8, cy + 2), Vector2.new(p.x0 - 8, cy + 2) } do
+					if q.X > 0 and q.Y > 0 and q.X < mapW and q.Y < mapH and not blocked(q.X, q.Y) then
+						return q
+					end
 				end
-				return freeNear(below)
+				return freeNear(Vector2.new(cx, cy))
 			end
 		end
 	end
@@ -165,12 +177,23 @@ function exports.start(scene: Scene)
 	end
 
 	local held = { up = false, down = false, left = false, right = false }
-	local attack = { active = false, clock = 0, hitDone = false, readyAt = 0 }
+	local attack = { active = false, clock = 0, hitDone = false, readyAt = 0, speed = 1 }
+	-- 대쉬(shared/config/ninjutsu.luau DASH): windup 동안 멈췄다가 time 동안 바라보는 쪽으로 dist만큼. 판정 · 연출은 서버(UseDash)
+	local dash = { active = false, clock = 0, def = nil, dir = Vector2.zero, from = Vector2.zero, dist = 0 }
 	exports.inputBeginConnection = CrossPlatformService:On("InputBegin", function(input)
 		local action = input.Action and input.Action:lower()
+		if action == "dash" then
+			if exports.Dash then
+				exports.Dash()
+			end
+			return
+		end
 		if action == "attack" then
-			if not attack.active and os.clock() >= attack.readyAt then
+			if not attack.active and not dash.active and os.clock() >= attack.readyAt then
 				attack.active, attack.clock, attack.hitDone = true, 0, false
+				-- 무기 종류마다 공격 빠르기가 다르다(shared/config/weapons.luau speed — 서버 공격 간격도 같은 배율)
+				local equipment = require(script.Parent.globals.inventory).getEquipment()
+				attack.speed = weapons.ClassOf(items[equipment.Weapon or ""]).speed * require(script.Parent.globals.ninjutsu).AttackSpeedMult() -- 전하가 쌓이면 빨라진다
 			end
 			return
 		end
@@ -244,6 +267,34 @@ function exports.start(scene: Scene)
 
 	local facing = "down"
 	local walkClock = 0
+	-- 대쉬 시작: 쿨타임 · 기력이 되면 서버에 알리고 바로 움직인다(벽까지의 거리는 서버와 같은 셈 — 2도트씩)
+	function exports.Dash()
+		if dash.active or attack.active or os.clock() < (exports.dashReadyAt or 0) then
+			return
+		end
+		local nin = require(script.Parent.globals.ninjutsu)
+		local _, def = ninjutsuConfig.DashFor(nin.school, nin.job)
+		if nin.Energy() < def.cost then
+			return
+		end
+		local dir = DASH_DIRS[facing]
+		local dist = 0
+		for step = 2, def.distance, 2 do
+			local p = exports.pos + dir * step
+			if blocked(p.X, p.Y) then
+				break
+			end
+			dist = step
+		end
+		dash.active, dash.clock, dash.def, dash.dir, dash.from, dash.dist = true, 0, def, dir, exports.pos, dist
+		exports.dashReadyAt, exports.dashCooldown = os.clock() + def.cooldown, def.cooldown
+		Net.FireServer("UseDash", facing)
+	end
+	exports.dashKeyConnection = UserInputService.InputBegan:Connect(function(input, processed)
+		if not processed and input.KeyCode == Enum.KeyCode[ninjutsuConfig.DASH_KEY] then
+			exports.Dash()
+		end
+	end)
 	local travelRequestedAt = -math.huge
 	exports.connection = RunService.Heartbeat:Connect(function(dt)
 		local instance = hero.Instance
@@ -252,10 +303,20 @@ function exports.start(scene: Scene)
 		end
 
 		local move = Vector2.new((held.right and 1 or 0) - (held.left and 1 or 0), (held.down and 1 or 0) - (held.up and 1 or 0))
-		local moving = move.Magnitude > 0 and not attack.active -- 공격 중엔 멈춘다
-		if attack.active then
+		local moving = move.Magnitude > 0 and not attack.active and not dash.active -- 공격 · 대쉬 중엔 방향키가 듣지 않는다
+		if dash.active then
+			-- 준비 동작 동안은 제자리, 그 뒤 time초에 걸쳐 나아간다(걷는 그림을 빠르게 돌린다)
+			dash.clock += dt
+			local def = dash.def
+			local p = math.clamp((dash.clock - def.windup) / def.time, 0, 1)
+			exports.pos = dash.from + dash.dir * (dash.dist * p)
+			applyFrame(instance, facing, if p > 0 then math.floor(dash.clock / 0.05) % WALK_FRAMES + 1 else 1)
+			if dash.clock >= def.windup + def.time then
+				dash.active = false
+			end
+		elseif attack.active then
 			attack.clock += dt
-			local f = math.floor(attack.clock / combat.ATTACK_FRAME_TIME) + 1
+			local f = math.floor(attack.clock / (combat.ATTACK_FRAME_TIME * attack.speed)) + 1
 			if f >= SHEET.hitFrame and not attack.hitDone then
 				attack.hitDone = true
 				-- 판정은 서버(townMonsters)가 한다: 바라보는 방향만 보내면 서버가 아는 내 위치 앞 사각형으로 때린다(모두에게 공유)
@@ -263,7 +324,7 @@ function exports.start(scene: Scene)
 			end
 			if f > ATTACK_FRAMES then
 				attack.active = false
-				attack.readyAt = os.clock() + combat.ATTACK_COOLDOWN
+				attack.readyAt = os.clock() + combat.ATTACK_COOLDOWN * attack.speed
 				applyFrame(instance, facing, 1)
 			else
 				applyFrame(instance, facing, WALK_FRAMES + f)
@@ -300,7 +361,7 @@ function exports.start(scene: Scene)
 
 		instance.Position = UDim2.fromOffset(math.round(exports.pos.X * S), math.round(exports.pos.Y * S))
 		instance.ZIndex = map.ZIndexFor(exports.pos.Y)
-		-- 엔진 자동 애니메이션이 IsPlaying을 켜면 프레임(ImageRectOffset)이 복제에서 빠진다(예전 heroController 이력) — 매 프레임 끈다.
+		-- 엔진 자동 애니메이션이 IsPlaying을 켜면 프레임(ImageRectOffset)이 복제에서 빠진다(실측 이력) — 매 프레임 끈다.
 		hero.IsPlaying = false
 
 		-- 포탈: 밖에 있다가 들어오면 이동 요청
@@ -328,7 +389,7 @@ function exports.start(scene: Scene)
 end
 
 function exports.unload(scene: Scene)
-	for _, key in { "connection", "inputBeginConnection", "inputEndConnection", "replicationConnection", "travelConnection", "healthConnection" } do
+	for _, key in { "connection", "inputBeginConnection", "inputEndConnection", "replicationConnection", "travelConnection", "healthConnection", "dashKeyConnection" } do
 		if exports[key] then
 			exports[key]:Disconnect()
 			exports[key] = nil

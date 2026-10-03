@@ -1,12 +1,14 @@
 -- 인벤토리/장비 서비스: 아이템 추가(스택/빈 칸), 칸 옮기기(드래그 앤 드롭), 꺼내기(버리기), 장비 착용·해제,
 -- 장비에서 계산하는 공격력/방어력. 가방은 탭(장비·소비·기타·캐시·중요)마다 칸이 따로 있고,
--- { Tab, Slot, ItemId, Count } 촘촘한 배열로 저장한다(DataStore가 빈 칸이 있는 숫자 키 테이블을 못 저장함).
+-- { Tab, Slot, ItemId, Count, Plus? } 촘촘한 배열로 저장한다(Plus = 무기 강화 단계 — 착용하면 data.EquipmentPlus로 옮겨 간다)(DataStore가 빈 칸이 있는 숫자 키 테이블을 못 저장함).
 -- 아이템이 어느 탭에 들어가는지는 아이템 표(shared/data/items.luau)의 Tab이 정한다.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local balance = require(ReplicatedStorage.shared.config.balance)
 local Net = require(ReplicatedStorage.shared.net.net)
 local persistence = require(script.Parent.persistence)
 local items = require(ReplicatedStorage.shared.data.items)
+local weapons = require(ReplicatedStorage.shared.config.weapons)
+local ninjutsu = require(ReplicatedStorage.shared.config.ninjutsu)
 
 local SLOTS = balance.INVENTORY_SLOTS
 
@@ -135,6 +137,10 @@ function exports.Take(player: Player, tab: string, slot: number)
 	if not entry or not def or def.NoDrop then
 		return nil
 	end
+	if (entry.Plus or 0) > 0 then
+		Net.FireClient("Notify", player, "강화한 장비는 버릴 수 없어요") -- 땅에 떨어진 아이템은 강화 단계를 담지 못한다
+		return nil
+	end
 	table.remove(data.Inventory, table.find(data.Inventory, entry))
 	push(player, data)
 	return { ItemId = entry.ItemId, Count = entry.Count }
@@ -208,8 +214,15 @@ local function equippedStat(player: Player, statName: string): number
 end
 
 -- 전투에 쓰이는 최종 수치(서버가 착용 장비에서 계산 — 몬스터 모듈이 호출).
+--  공격력 = 레벨(balance.attackFor) + 착용 장비 Attack + 무기 강화 보너스(weapons.Bonus)
 function exports.GetAttackDamage(player: Player): number
-	return balance.BASE_ATTACK + equippedStat(player, "Attack")
+	local data = persistence.Get(player)
+	local weaponDef = data and items[data.Equipment.Weapon or ""]
+	local plus = data and data.EquipmentPlus and data.EquipmentPlus.Weapon
+	local total = balance.attackFor(data and data.Level or 1) + equippedStat(player, "Attack") + weapons.Bonus(weaponDef, plus)
+	-- 무기 단련(공용 패시브 c_mastery): 레벨마다 공격력 +
+	local mastery = ninjutsu.LevelOf(data and data.Ninjutsu, "c_mastery")
+	return if mastery > 0 then math.round(total * (1 + ninjutsu.SKILLS.c_mastery.perLevel * mastery)) else total
 end
 
 function exports.GetDefense(player: Player): number
@@ -218,7 +231,15 @@ end
 
 local function pushEquipment(player: Player, data)
 	push(player, data)
-	Net.FireClient("EquipmentUpdated", player, data.Equipment)
+	Net.FireClient("EquipmentUpdated", player, data.Equipment, data.EquipmentPlus or {})
+end
+
+-- 가방·장비를 다시 보낸다(강화처럼 서비스 밖에서 칸 내용을 고친 뒤)
+function exports.Refresh(player: Player)
+	local data = persistence.Get(player)
+	if data then
+		pushEquipment(player, data)
+	end
 end
 
 -- 장비 탭의 칸(slot)을 착용한다. 이미 끼고 있던 장비는 그 칸으로 돌아간다(교체).
@@ -232,11 +253,17 @@ function exports.Equip(player: Player, slot: number): boolean
 	if not def or not def.EquipSlot then
 		return false
 	end
-	local previous = data.Equipment[def.EquipSlot]
+	if def.Level and (data.Level or 1) < def.Level then
+		Net.FireClient("Notify", player, ("Lv.%d부터 쓸 수 있어요"):format(def.Level))
+		return false
+	end
+	data.EquipmentPlus = data.EquipmentPlus or {}
+	local previous, previousPlus = data.Equipment[def.EquipSlot], data.EquipmentPlus[def.EquipSlot]
 	table.remove(data.Inventory, table.find(data.Inventory, entry))
 	data.Equipment[def.EquipSlot] = entry.ItemId
+	data.EquipmentPlus[def.EquipSlot] = entry.Plus -- 강화 단계도 같이 옮긴다(없으면 nil)
 	if previous then
-		table.insert(data.Inventory, { Tab = "Equip", Slot = slot, ItemId = previous, Count = 1 })
+		table.insert(data.Inventory, { Tab = "Equip", Slot = slot, ItemId = previous, Count = 1, Plus = previousPlus })
 	end
 	pushEquipment(player, data)
 	return true
@@ -250,8 +277,12 @@ function exports.Unequip(player: Player, equipSlot: string): boolean
 	end
 	for slot = 1, SLOTS do
 		if not findEntry(data.Inventory, "Equip", slot) then
-			table.insert(data.Inventory, { Tab = "Equip", Slot = slot, ItemId = itemId, Count = 1 })
+			local plus = data.EquipmentPlus and data.EquipmentPlus[equipSlot]
+			table.insert(data.Inventory, { Tab = "Equip", Slot = slot, ItemId = itemId, Count = 1, Plus = plus })
 			data.Equipment[equipSlot] = nil
+			if data.EquipmentPlus then
+				data.EquipmentPlus[equipSlot] = nil
+			end
 			pushEquipment(player, data)
 			return true
 		end

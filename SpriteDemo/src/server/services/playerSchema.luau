@@ -10,7 +10,7 @@ local pets = require(ReplicatedStorage.shared.config.pets)
 
 local exports = {}
 
-exports.CURRENT_VERSION = 6
+exports.CURRENT_VERSION = 13
 
 local STARTER_GOLD = 300 -- 처음 시작할 때 주는 골드(v3부터 — 기존 플레이어도 v3로 올라갈 때 한 번 받는다)
 
@@ -25,23 +25,42 @@ local STARTER_ITEMS = {
 	{ Tab = "Etc", Slot = 1, ItemId = "SproutFragment", Count = 3 },
 	{ Tab = "Key", Slot = 1, ItemId = "RainbowEgg", Count = 1 },
 }
-local function starterItems()
-	local list = {}
-	for _, e in STARTER_ITEMS do
-		table.insert(list, table.clone(e))
-	end
-	local useSlot = 1
-	for _, e in list do
+-- 「오문 닌자전」 시작 물건(v7부터 — 기존 플레이어도 v7로 올라갈 때 한 번 받는다): 수리검 · 주먹밥
+local NINJA_STARTER = { { ItemId = "Shuriken", Count = 30 }, { ItemId = "Onigiri", Count = 5 } }
+local NINJA_QUICKSLOTS = { "Shuriken", "Onigiri", "" }
+
+-- 소비 탭 빈 칸에 차례로 넣는다(칸이 모자라면 들어가는 만큼만)
+local function addToUseTab(inventory, list)
+	local used = {}
+	for _, e in inventory do
 		if e.Tab == "Use" then
-			useSlot = math.max(useSlot, e.Slot + 1)
+			used[e.Slot] = true
 		end
 	end
-	for _, b in STARTER_BELLS do
-		table.insert(list, { Tab = "Use", Slot = useSlot, ItemId = b.ItemId, Count = b.Count })
-		useSlot += 1
+	local slot = 1
+	for _, b in list do
+		while used[slot] do
+			slot += 1
+		end
+		if slot > balance.INVENTORY_SLOTS then
+			break
+		end
+		table.insert(inventory, { Tab = "Use", Slot = slot, ItemId = b.ItemId, Count = b.Count })
+		used[slot] = true
 	end
-	return list
 end
+
+-- 「오문 닌자전」 새 플레이어의 가방(v10부터): 닌자도 + 수리검 + 주먹밥. 예전 시작 물건(STARTER_ITEMS · STARTER_BELLS)은
+-- 옛 버전 마이그레이션이 지나가는 길에만 쓰이고, v10이 전부 팩 아이템으로 바꾸거나 없앤다.
+local NEW_PLAYER_ITEMS = {
+	{ Tab = "Equip", Slot = 1, ItemId = "Ninjato", Count = 1 },
+	{ Tab = "Use", Slot = 1, ItemId = "Shuriken", Count = 30 },
+	{ Tab = "Use", Slot = 2, ItemId = "Onigiri", Count = 5 },
+}
+-- 옛 아이템 → 팩 아이템(v10). 여기 없고 아이템 표에도 없는 것(방울 · 몬스터 재료 · 새싹 조각 · 무지개 알)은 없앤다.
+local LEGACY_ITEMS = { WoodenSword = "Ninjato", LeafArmor = "GuardCharm", RedPotion = "Onigiri", OrangePotion = "Sushi", WhitePotion = "Yakitori" }
+-- 옛 아이템이 들어가던 탭(v2 마이그레이션이 아이템 표 대신 본다 — 표에서 옛 아이템을 없앴으므로)
+local LEGACY_TABS = { WoodenSword = "Equip", LeafArmor = "Equip", RedPotion = "Use", OrangePotion = "Use", WhitePotion = "Use" }
 
 local function newPets()
 	return { Box = {}, Party = {}, Slots = pets.SLOTS_START, Boxes = pets.BOXES_START }
@@ -57,9 +76,17 @@ function exports.default()
 		Gold = STARTER_GOLD,
 		-- { { Tab = string, Slot = number, ItemId = string, Count = number }, ... } — 탭(장비·소비·기타·캐시·중요)마다
 		-- 칸 번호가 따로 있다. 빈 칸이 있는 숫자 키 테이블은 DataStore가 안전하게 저장하지 못해서 칸 번호를 값 안에 넣은 촘촘한 배열로 둔다.
-		Inventory = starterItems(),
+		Inventory = (function()
+			local list = {}
+			for _, e in NEW_PLAYER_ITEMS do
+				table.insert(list, table.clone(e))
+			end
+			return list
+		end)(),
 		-- { Weapon = ItemId?, Armor = ItemId? } — 착용 중인 장비(비어 있으면 키 없음).
 		Equipment = {},
+		-- 착용 장비의 강화 단계 { Weapon = 0~10 }(가방에 있을 때는 그 칸의 Plus — shared/config/weapons.luau)
+		EquipmentPlus = {},
 		-- 도감: { [종류 id] = 1(봤음 — 쓰러뜨림) | 2(잡았음) } (shared/config/pets.luau DEX_SEEN / DEX_CAUGHT)
 		Dex = {},
 		-- 펫(잡은 몬스터): 형식은 shared/config/pets.luau 맨 위 설명
@@ -67,7 +94,17 @@ function exports.default()
 		-- 생활 숙련도 경험치: Mine = 맺음석 캐기, Craft = 방울 세공
 		Life = { Mine = 0, Craft = 0 },
 		-- 소비 단축칸 1·2·3(아이템 id, 빈 칸 = "") — 숫자키/터치로 바로 사용(방울 = 던지기)
-		QuickSlots = { "Bell1", "RedPotion", "" },
+		QuickSlots = table.clone(NINJA_QUICKSLOTS),
+		-- 유파(shared/config/ninjutsu.luau SCHOOLS의 id, "" = 아직 안 고름) · 인술 단계 { [인술 id] = 1~5 }(없으면 1단계)
+		School = "",
+		Ninjutsu = {},
+		-- 전직 단계: 0 = 견습(유파 없음) · 1~4 = n차 전직(Lv.10 · 30 · 60 · 100, 1차 때 유파를 고른다)
+		Job = 0,
+		-- 스킬(shared/config/ninjutsu.luau 스킬 나무): Ninjutsu = { [스킬 id] = 레벨 }, SP = 전직(1~4)별 안 쓴 스킬 포인트, SkillSlots = 단축칸의 스킬 id("" = 빈 칸)
+		SP = { 0, 0, 0, 0 },
+		SkillSlots = { "", "", "", "" },
+		-- 본 줄거리 퀘스트(shared/config/quests.luau): 지금 퀘스트 번호 · 받았는가 · 진행(처치 수 등)
+		Quest = { Index = 1, Accepted = false, Progress = 0 },
 	}
 end
 
@@ -90,8 +127,9 @@ local migrations = {
 		local moved = {}
 		for _, e in data.Inventory or {} do
 			local def = items[e.ItemId]
-			if def then
-				local tab = def.Tab or "Etc"
+			local legacyTab = LEGACY_TABS[e.ItemId]
+			if def or legacyTab then
+				local tab = legacyTab or def.Tab or "Etc"
 				nextSlot[tab] = (nextSlot[tab] or 0) + 1
 				table.insert(moved, { Tab = tab, Slot = nextSlot[tab], ItemId = e.ItemId, Count = e.Count })
 			end
@@ -144,6 +182,141 @@ local migrations = {
 	-- v5 → v6: 포획이 전투 중 방울 던지기로 바뀌며 소비 단축칸 1·2·3이 생긴다(처음엔 흐린 방울 · 빨간 물약).
 	[6] = function(data)
 		data.QuickSlots = data.QuickSlots or { "Bell1", "RedPotion", "" }
+	end,
+	-- v6 → v7(「오문 닌자전」 전환, NINJA_DESIGN.md): 투척 무기·음식을 한 번 지급하고, 단축칸의 방울(포획은 꺼 둠)을 수리검·주먹밥으로 바꾼다.
+	[7] = function(data)
+		data.Inventory = data.Inventory or {}
+		addToUseTab(data.Inventory, NINJA_STARTER)
+		local slots = data.QuickSlots or { "", "", "" }
+		local taken = {}
+		for i = 1, 3 do
+			local id = slots[i] or ""
+			if string.sub(id, 1, 4) == "Bell" then
+				id = ""
+			end
+			slots[i] = id
+			taken[id] = true
+		end
+		for _, id in NINJA_QUICKSLOTS do
+			if id ~= "" and not taken[id] then
+				for i = 1, 3 do
+					if slots[i] == "" then
+						slots[i] = id
+						taken[id] = true
+						break
+					end
+				end
+			end
+		end
+		data.QuickSlots = slots
+	end,
+	-- v7 → v8(N2 유파와 인술): 유파(아직 안 고름)와 인술 단계표가 생긴다 — 접속하면 유파 고르기 창이 뜬다.
+	[8] = function(data)
+		data.School = data.School or ""
+		data.Ninjutsu = data.Ninjutsu or {}
+	end,
+	-- v8 → v9(N3 장비와 강화): 착용 장비의 강화 단계표가 생긴다.
+	[9] = function(data)
+		data.EquipmentPlus = data.EquipmentPlus or {}
+	end,
+	-- v9 → v10(에셋 · UI 전면 교체): 아이템이 전부 팩 아이템이 됐다. 옛 아이템은 짝이 되는 팩 아이템으로 바꾸고
+	-- (나무 검 → 닌자도, 잎사귀 갑옷 → 수호 부적, 물약 → 음식), 짝이 없는 것은 없앤다. 같은 아이템은 한 칸에 합친다.
+	[10] = function(data)
+		local items = require(ReplicatedStorage.shared.data.items)
+		local kept, usedSlots = {}, {}
+		local function freeSlot(tab: string, prefer: number?): number?
+			usedSlots[tab] = usedSlots[tab] or {}
+			if prefer and prefer >= 1 and prefer <= balance.INVENTORY_SLOTS and not usedSlots[tab][prefer] then
+				return prefer
+			end
+			for slot = 1, balance.INVENTORY_SLOTS do
+				if not usedSlots[tab][slot] then
+					return slot
+				end
+			end
+			return nil
+		end
+		for _, e in data.Inventory or {} do
+			local id = LEGACY_ITEMS[e.ItemId] or e.ItemId
+			local def = items[id]
+			local remaining = if def then (e.Count or 1) else 0
+			if def and def.StackMax > 1 then
+				for _, k in kept do
+					if remaining > 0 and k.ItemId == id and k.Count < def.StackMax then
+						local add = math.min(def.StackMax - k.Count, remaining)
+						k.Count += add
+						remaining -= add
+					end
+				end
+			end
+			while def and remaining > 0 do
+				local slot = freeSlot(def.Tab, if e.Tab == def.Tab then e.Slot else nil)
+				if not slot then
+					break -- 그 탭이 가득 — 남는 것은 버려진다
+				end
+				local add = math.min(def.StackMax, remaining)
+				usedSlots[def.Tab][slot] = true
+				table.insert(kept, { Tab = def.Tab, Slot = slot, ItemId = id, Count = add, Plus = e.Plus })
+				remaining -= add
+			end
+		end
+		data.Inventory = kept
+		local equipment = {}
+		for slotName, itemId in data.Equipment or {} do
+			local id = LEGACY_ITEMS[itemId] or itemId
+			local def = items[id]
+			if def and def.EquipSlot == slotName then
+				equipment[slotName] = id
+			end
+		end
+		data.Equipment = equipment
+		local slots, seen = data.QuickSlots or { "", "", "" }, {}
+		for i = 1, 3 do
+			local id = LEGACY_ITEMS[slots[i] or ""] or slots[i] or ""
+			local def = items[id]
+			if not def or def.Tab ~= "Use" or seen[id] then
+				id = ""
+			end
+			seen[id] = true
+			slots[i] = id
+		end
+		data.QuickSlots = slots
+	end,
+	-- v10 → v11(전직): 전직 단계가 생긴다. 이미 유파가 있는 사람은 그 레벨까지의 전직을 한 것으로 친다(레벨이 10이 안 돼도 1차).
+	[11] = function(data)
+		if data.Job == nil then
+			local ninjutsu = require(ReplicatedStorage.shared.config.ninjutsu)
+			data.Job = if (data.School or "") ~= "" then math.max(1, ninjutsu.JobFor(data.Level or 1)) else 0
+		end
+	end,
+	-- v12 → v13(스킬 나무 · SP): 옛 "전직마다 인술 하나 + 두루마리 단계"를 스킬 레벨 · SP · 단축칸으로 바꾼다.
+	--  전직한 구간마다 그 레벨까지의 SP를 주고, 각 전직의 주력기 · 핵심 장치를 배운 것으로 친다(옛 두루마리 단계는 그 스킬의 레벨로).
+	[13] = function(data)
+		local ninjutsu = require(ReplicatedStorage.shared.config.ninjutsu)
+		local old = if typeof(data.Ninjutsu) == "table" then data.Ninjutsu else {}
+		data.Ninjutsu = {}
+		data.SP = { 0, 0, 0, 0 }
+		data.SkillSlots = { "", "", "", "" }
+		local slot = 1
+		if ninjutsu.TREE[data.School or ""] then
+			for job = 1, math.min(data.Job or 0, #ninjutsu.JOB_LEVELS) do
+				data.SP[job] = math.max(ninjutsu.SP_ON_JOB, ninjutsu.SpEarned(job, data.Level or 1))
+				for _, id in ninjutsu.AutoFor(data.School, job) do
+					local level = if typeof(old[id]) == "number" then old[id] else 1
+					data.Ninjutsu[id] = math.clamp(math.floor(level), 1, ninjutsu.MaxOf(id))
+					if ninjutsu.IsActive(id) and slot <= ninjutsu.SLOTS then
+						data.SkillSlots[slot] = id
+						slot += 1
+					end
+				end
+			end
+		end
+	end,
+	-- v11 → v12(퀘스트): 본 줄거리 퀘스트가 생긴다. 누구나 첫 퀘스트부터.
+	[12] = function(data)
+		if typeof(data.Quest) ~= "table" then
+			data.Quest = { Index = 1, Accepted = false, Progress = 0 }
+		end
 	end,
 }
 

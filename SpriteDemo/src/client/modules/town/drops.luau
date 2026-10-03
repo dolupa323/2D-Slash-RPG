@@ -16,7 +16,7 @@ local map = require(script.Parent.map)
 local UI = require(script.Parent.Parent.ui.pixelUI)
 
 local S = map.S
-local CS = townAssets.CHAR_SCALE
+local CS = 2 -- 아이콘·말풍선 배율(UI 크기 — 캐릭터 그림 배율과 따로, townAssets.CHAR_SCALE를 쓰지 않는다)
 local C = UI.colors
 local BLINK_BEFORE = 10
 

@@ -3,13 +3,13 @@
 return {
 	potion = {
 		npc = "potion",
-		title = "포션 상점",
-		goods = { "RedPotion", "OrangePotion", "WhitePotion" },
+		title = "밥집",
+		goods = { "Onigiri", "Sushi", "Yakitori" },
 	},
-	-- 잡화 상점: 낮은 등급 맺음 방울을 직접 판다(높은 등급은 맺음석 세공 — M6)
+	-- 잡화 상점: 투척 무기(수리검 · 쿠나이 · 폭탄) + 들판 무기(닌자도 · 사이 · 곤봉). 포획 방울은 팔지 않는다(포획 꺼 둠).
 	merchant = {
 		npc = "merchant",
 		title = "잡화 상점",
-		goods = { "Bell1", "Bell2" },
+		goods = { "Shuriken", "Kunai", "Bomb", "Ninjato", "Sai", "Club", "GuardCharm" },
 	},
 }

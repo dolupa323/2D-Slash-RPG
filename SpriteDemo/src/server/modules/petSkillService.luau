@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage.shared.net.net)
 local balance = require(ReplicatedStorage.shared.config.balance)
 local petSkills = require(ReplicatedStorage.shared.config.petSkills)
+local features = require(ReplicatedStorage.shared.config.features)
 local townWorld = require(ReplicatedStorage.shared.data.townWorld)
 local heroTracking = require(script.Parent.heroTracking)
 local townMonsters = require(script.Parent.townMonsters)
@@ -149,6 +150,9 @@ local function onAttack(player: Player, key: string, feet: Vector2, _facing: str
 end
 
 function exports.load()
+	if not features.PETS then
+		return -- 펫은 지금 꺼 둠(shared/config/features.luau)
+	end
 	townMonsters.OnPlayerAttack(onAttack)
 	Players.PlayerRemoving:Connect(function(player)
 		ready[player.UserId] = nil

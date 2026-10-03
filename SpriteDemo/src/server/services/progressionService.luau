@@ -2,6 +2,7 @@
 -- 규칙(shared/config/balance.luau)에 따라 그 데이터를 바꾸고 결과를 클라이언트에 통지한다.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local balance = require(ReplicatedStorage.shared.config.balance)
+local ninjutsu = require(ReplicatedStorage.shared.config.ninjutsu)
 local Net = require(ReplicatedStorage.shared.net.net)
 local persistence = require(script.Parent.persistence)
 local scenes = require(ReplicatedStorage.shared.config.scenes)
@@ -22,11 +23,17 @@ function exports.AddExperience(player: Player, amount: number)
 
 	data.Experience += amount
 	local leveledUp = false
+	local gained = 0
 	while data.Experience >= data.MaxExperience do
 		data.Experience -= data.MaxExperience
 		data.Level += 1
 		data.MaxExperience = balance.maxExperienceFor(data.Level)
 		leveledUp = true
+		gained += 1
+	end
+	-- 스킬 포인트: 전직한 뒤로는 레벨업마다 지금 전직에 SP_PER_LEVEL(shared/config/ninjutsu.luau 스킬 나무)
+	if ninjutsu.GrantLevelSp(data, gained) then
+		Net.FireClient("SchoolUpdated", player, data.School, data.Ninjutsu or {}, data.Job, data.SP, data.SkillSlots or {})
 	end
 
 	persistence.MarkDirty(player)

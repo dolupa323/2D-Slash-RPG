@@ -14,12 +14,13 @@ local UI = require(script.Parent.Parent.ui.pixelUI)
 local C = UI.colors
 local TOAST_TIME = 2.2
 local MAX_TOASTS = 3
+local TOAST_MAX_W = 360 -- 알림 한 개의 최대 폭(UI 도트)
 local SHEET = townWorld.data.monsterSheet
-local ELEMENT = {
-	fire = { name = "불", icon = "fire" },
-	water = { name = "물", icon = "water" },
-	grass = { name = "풀", icon = "leaf" },
-}
+-- 몬스터가 사는 지역(species.element = 지역 id) → 지역 이름 · 아이콘
+local ELEMENT = {}
+for _, r in townWorld.data.regions or {} do
+	ELEMENT[r.id] = { name = r.name, icon = "book" }
+end
 
 local exports = {}
 local toasts = {}
@@ -39,26 +40,30 @@ end
 
 local function relayout()
 	for i, t in toasts do
-		t.Position = UDim2.new(0.5, 0, 0, 4 + (i - 1) * 22 * UI.CurrentScale())
+		t.Position = UDim2.new(0.5, 0, 0, 4 + (i - 1) * 36 * UI.CurrentScale()) -- 두 줄짜리 알림도 겹치지 않는 간격
 	end
 end
 
 function exports.Toast(text: string, icon: string?)
-	local w = UI.Text.Measure(text, "body") + (if icon then 30 else 16)
+	-- 긴 알림은 두 줄까지 줄을 바꾸고, 그래도 넘으면 …로 줄인다(화면 폭 480칸 기준 — 양옆 여백을 남긴다)
+	text = UI.Text.Fit(text, TOAST_MAX_W - (if icon then 30 else 16), 2)
+	local textW, textH = UI.Text.Measure(text, "body")
+	local w = textW + (if icon then 30 else 16)
+	local h = textH + 6
 	local holder = Instance.new("Frame")
 	holder.Name = "Toast"
 	holder.BackgroundTransparency = 1
 	holder.AnchorPoint = Vector2.new(0.5, 0)
-	holder.Size = UDim2.fromOffset(w, 20)
+	holder.Size = UDim2.fromOffset(w, h)
 	holder.Parent = gui()
 	UI.Scale(holder)
-	local pill = UI.Pill(holder, 0, 0, w, 20, true)
+	local pill = UI.Pill(holder, 0, 0, w, h, true)
 	local x = 8
 	if icon then
 		UI.Icon(pill, icon, 5, 4)
 		x = 20
 	end
-	UI.Label(pill, text, x, 4, { Color = C.white })
+	UI.Label(pill, text, x, 3, { Color = C.white, Clamp = false })
 	table.insert(toasts, 1, holder)
 	while #toasts > MAX_TOASTS do
 		table.remove(toasts):Destroy()
@@ -84,7 +89,9 @@ function exports.MonsterImage(parent: Instance, row: number, x: number, y: numbe
 	img.ImageRectOffset = townWorld.MonsterFrameOffset(row, 0)
 	img.ResampleMode = Enum.ResamplerMode.Pixelated
 	img.Position = UDim2.fromOffset(x, y)
-	img.Size = UDim2.fromOffset(SHEET.cellW * scale, SHEET.cellH * scale)
+	-- 팩 시트는 칸이 16x16으로 작다 — 옛 32칸 그림과 같은 크기로 보이게 두 배
+	local k = if SHEET.block then scale * 2 else scale
+	img.Size = UDim2.fromOffset(SHEET.cellW * k, SHEET.cellH * k)
 	img.ZIndex = 5
 	img.Parent = parent
 	return img
@@ -112,9 +119,9 @@ function exports.NewFriend(row: number)
 	local panel = UI.Panel(holder, 0, 0, PW, PH)
 	UI.TitleTag(panel, "새 친구!", PW / 2, -13)
 	exports.MonsterImage(panel, row, PW / 2 - SHEET.cellW, 16, 2)
-	local name = UI.Label(panel, species.name, PW / 2, 78, { Font = "title", Color = C.pinkD, Align = "center" })
+	local name = UI.Label(panel, species.name, PW / 2, 78, { Font = "title", Color = C.accentD, Align = "center" })
 	name.Frame.Position = UDim2.fromOffset(PW / 2 - name.Width // 2, 78)
-	local el = ELEMENT[species.element] or { name = species.element, icon = "star" }
+	local el = ELEMENT[species.element] or { name = species.element, icon = "book" }
 	local typeText = el.name .. " 속성"
 	local tw = UI.Text.Measure(typeText, "body") + 15
 	UI.Icon(panel, el.icon, PW / 2 - tw // 2, 101)
@@ -125,12 +132,12 @@ function exports.NewFriend(row: number)
 		end
 		holder:Destroy()
 	end
-	UI.Button(panel, 12, PH - 34, 72, 24, { Color = "white", Text = "도감 보기", OnClick = function()
+	UI.Button(panel, 12, PH - 34, 72, 24, { Color = "plain", Text = "도감 보기", OnClick = function()
 		close()
 		local dex = require(script.Parent.dex)
 		dex.open()
 	end })
-	UI.Button(panel, PW - 84, PH - 34, 72, 24, { Color = "pink", Text = "좋아!", OnClick = close })
+	UI.Button(panel, PW - 84, PH - 34, 72, 24, { Color = "primary", Text = "좋아!", OnClick = close })
 end
 
 function exports.load(scene: Scene)
@@ -139,7 +146,7 @@ function exports.load(scene: Scene)
 	end
 	exports.listening = true
 	Net.OnClient("DexDiscovered", function(row)
-		exports.Toast("새 몬스터를 발견했어요!", "star")
+		exports.Toast("새 몬스터를 발견했어요!", "book")
 		exports.NewFriend(row)
 	end)
 	Net.OnClient("Notify", function(text)

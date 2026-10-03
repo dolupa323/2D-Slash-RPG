@@ -40,10 +40,9 @@ local function redraw()
 		if def then
 			inventory.DrawItem(cell.content, def, 7, 6, 12)
 			local n = countOf(id)
-			local count = UI.Label(cell.content, tostring(n), 0, 15, { Color = if n > 0 then C.ink else C.pinkD, ZIndex = 7 })
+			local count = UI.Label(cell.content, tostring(n), 0, 15, { Color = if n > 0 then C.white else C.accentL, Shadow = C.ink, ZIndex = 7 })
 			count.Frame.Position = UDim2.fromOffset(SLOT - 2 - count.Width, 15)
 		end
-		UI.Label(cell.content, tostring(i), 3, 1, { Color = C.ink, ZIndex = 7 })
 	end
 end
 
@@ -83,6 +82,7 @@ function exports.load(scene: Scene)
 			slot.Instance.Activated:Connect(function()
 				use(i)
 			end)
+			UI.Part(holder, "key_" .. i, (i - 1) * (SLOT + GAP) - 3, -3).ZIndex = 10 -- 팩 키보드 키 그림
 			cells[i] = { ui = slot, content = content }
 		end
 		g.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")

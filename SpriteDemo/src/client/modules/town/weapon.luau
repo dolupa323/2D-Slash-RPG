@@ -1,9 +1,7 @@
--- 장착한 무기 + 무기 공격 VFX.
---  등 뒤 무기: 무기 그림(items.luau WorldIcon, 없으면 KitIcon → 도트 UI 키트 icon_*, 예: 칼날이 위로 곧게 선 목검)을
---    캐릭터 배율로 플레이어 등 뒤에 띄운다(살짝 둥실). 바라보는 방향(캐릭터 필드 Facing)에 따라 등 쪽으로 자리를 옮기고,
---    위를 볼 때(등이 보일 때)만 캐릭터 앞에, 나머지는 캐릭터 뒤에 그린다. 무기는 공격해도 움직이지 않는다.
---  베기 VFX(exports.HitSlash): 몬스터가 맞으면(서버 TownMonsterHit — 같은 씬 모두) 그 몬스터 위에 사선 베기가
---    한쪽 끝에서 반대쪽 끝으로 빠르게 그어졌다가 가늘어지며 사라진다. 색은 때린 무기의 Vfx(없으면 기본 흰/연노랑).
+-- 장착한 무기 + 맞음 이펙트.
+--  등 뒤 무기: 무기 그림(팩 아이템 아이콘 — items KitIcon)을 캐릭터 배율로 플레이어 등 뒤에 띄운다(살짝 둥실).
+--    바라보는 방향(캐릭터 필드 Facing)에 따라 등 쪽으로 자리를 옮기고, 위를 볼 때(등이 보일 때)만 캐릭터 앞에, 나머지는 캐릭터 뒤에 그린다.
+--  맞음 이펙트(exports.HitSlash): 몬스터가 맞으면(서버 TownMonsterHit — 같은 씬 모두) 그 몬스터 위에 팩 FX/Attack 이펙트.
 -- 온라인 공유: 내 캐릭터 필드 WeaponId(장착 무기) · Facing을 캐릭터 복제가 다른 사람에게 실어 보낸다.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -13,9 +11,11 @@ local items = require(ReplicatedStorage.shared.data.items)
 local townAssets = require(ReplicatedStorage.shared.config.townAssets)
 local map = require(script.Parent.map)
 local UI = require(script.Parent.Parent.ui.pixelUI)
+local packFx = require(script.Parent.Parent.packFx)
+local weapons = require(ReplicatedStorage.shared.config.weapons)
 
 local S = map.S
-local CS = townAssets.CHAR_SCALE -- 캐릭터 1도트 = 화면 px(VFX 도트도 이 크기)
+local CS = 2 -- 무기 그림·베기 VFX 1도트 = 화면 2px로 고정(팩 캐릭터는 배율 4지만 무기·이펙트 그림은 옛 크기 그대로 — townAssets.CHAR_SCALE를 쓰지 않는다)
 local BOB = 1 -- 둥실 높이(바닥 도트)
 local BOB_SPEED = 2.2
 local FOLLOW = 10 -- 방향을 바꿀 때 등 뒤 자리로 옮겨 가는 빠르기
@@ -27,84 +27,30 @@ local BACK = {
 	left = Vector2.new(6, -9),
 }
 
--- 베기 VFX(캐릭터 도트 단위)
-local SLASH_LEN = 30
-local SLASH_WIDTH = 2.5 -- 가운데 최대 두께(한쪽)
-local SLASH_DRAW = 0.07 -- 그어지는 시간
-local SLASH_HOLD = 0.05
-local SLASH_FADE = 0.12 -- 가늘어지며 사라지는 시간
-local DEFAULT_VFX = { core = Color3.fromRGB(255, 244, 190), edge = Color3.fromRGB(255, 255, 255) }
-
 local exports = {}
 local views = {} -- 캐릭터 오브젝트 -> { img, kit, offset, phase }
 local slashFlip = false
 
 local function makeImage(gameFrame: Instance, kit: string): ImageLabel
-	local size = UI.Size("icon_" .. kit) * CS -- 그림 자기 크기 그대로(착용 나무 검 16x16, 아이콘 12x12)
+	-- 그림 자기 크기 그대로(착용 나무 검 16x16, 아이콘 12x12). 팩 무기(nj_*)는 팩 캐릭터와 같은 배율로 그린다.
+	local scale = if string.sub(kit, 1, 3) == "nj_" then townAssets.CHAR_SCALE else CS
+	local size = UI.Size("icon_" .. kit) * scale
 	local img = UI.Part(gameFrame, "icon_" .. kit, 0, 0, size.X, size.Y)
 	img.Name = "Weapon"
 	img.AnchorPoint = Vector2.new(0.5, 0.5)
 	return img
 end
 
--- 몬스터 위 베기: centerPx = 몬스터 몸 가운데(화면 px), weaponId = 때린 무기
-function exports.HitSlash(centerPx: Vector2, weaponId: string?)
-	local gameFrame = exports.gameFrame
-	if not gameFrame then
-		return
-	end
-	local def = items[weaponId or ""]
-	local vfx = def and def.Vfx or DEFAULT_VFX
-	slashFlip = not slashFlip -- 번갈아 / \ 방향
-	local dir = Vector2.new(if slashFlip then 1 else -1, 0.8).Unit
-	local side = Vector2.new(-dir.Y, dir.X)
-	local c = centerPx / CS + Vector2.new(math.random(-3, 3), math.random(-3, 3)) -- 캐릭터 도트 좌표
-	local holder = Instance.new("Frame")
-	holder.Name = "HitSlash"
-	holder.BackgroundTransparency = 1
-	holder.Size = UDim2.fromOffset(0, 0)
-	holder.ZIndex = 9300
-	holder.Parent = gameFrame
-	local dots, seen = {}, {}
-	local steps = 40
-	for i = 0, steps do
-		local t = i / steps
-		local w = SLASH_WIDTH * math.sin(math.pi * t)
-		local p = c + dir * ((t - 0.5) * SLASH_LEN)
-		for k = -math.ceil(w), math.ceil(w) do
-			if math.abs(k) <= w + 0.3 then
-				local q = p + side * k
-				local gx, gy = math.round(q.X), math.round(q.Y)
-				local key = gx .. "," .. gy
-				if not seen[key] then
-					seen[key] = true
-					local f = Instance.new("Frame")
-					f.BorderSizePixel = 0
-					f.BackgroundColor3 = if k == 0 then vfx.edge else vfx.core
-					f.Position = UDim2.fromOffset(gx * CS, gy * CS)
-					f.Size = UDim2.fromOffset(CS, CS)
-					f.ZIndex = 9300 + (if k == 0 then 1 else 0)
-					f.Visible = false
-					f.Parent = holder
-					table.insert(dots, { frame = f, t = t, k = math.abs(k) })
-				end
-			end
-		end
-	end
-	task.spawn(function()
-		local clock = 0
-		local total = SLASH_DRAW + SLASH_HOLD + SLASH_FADE
-		while clock < total and holder.Parent do
-			clock += task.wait()
-			local drawn = math.clamp(clock / SLASH_DRAW, 0, 1) -- 한쪽 끝에서 반대쪽 끝으로 그어짐
-			local fade = math.clamp((clock - SLASH_DRAW - SLASH_HOLD) / SLASH_FADE, 0, 1)
-			local keep = SLASH_WIDTH * (1 - fade) -- 가늘어짐(가운데 줄이 마지막까지)
-			for _, dot in dots do
-				dot.frame.Visible = dot.t <= drawn and dot.k <= keep + 0.01 and fade < 1
-			end
-		end
-		holder:Destroy()
-	end)
+-- 맞은 몬스터 위 이펙트: centerPx = 몬스터 몸 가운데(화면 px), source = 때린 무기(또는 투척 무기) 아이템 id.
+--  무기 종류마다 다른 팩 이펙트(weapons.luau hitFx — 도검 = 휘어 베기, 쌍수 = 두 번 긋기, 대형 = X자, 장병기 = 찌르기, 채찍 = 둥글게, 맨손 = 할퀴기).
+function exports.HitSlash(centerPx: Vector2, source: string?)
+	local def = items[source or ""]
+	local name = if def and def.Throw then weapons.THROW_HIT_FX else weapons.ClassOf(def).hitFx
+	slashFlip = not slashFlip -- 번갈아 좌우를 뒤집어 단조롭지 않게
+	local at = centerPx + Vector2.new(math.random(-3, 3), math.random(-3, 3))
+	packFx.Play(exports.gameFrame, name, function()
+		return at
+	end, { rotation = if slashFlip then 0 else 180, zIndex = 9300 })
 end
 
 local function update(v, character, dt: number, clock: number)

@@ -1,13 +1,16 @@
--- 도트 글씨 — 에셋 공방(js/font.js)에서 만든 글자판 이미지에서 한 글자씩 잘라 붙여 문자열을 그린다.
+-- 도트 글씨 — 에셋 공방(js/font.js — 레트로 비트맵 글꼴 「갈무리」, SIL OFL)에서 만든 글자판 이미지에서 한 글자씩 잘라 붙여 문자열을 그린다.
 -- 로블록스에는 글꼴 파일을 올릴 수 없어서 쓰는 방식(비트맵 글꼴). 한글 11,172자·영문·숫자·기호를 지원하고,
 -- 글자판에 없는 글자는 "?"로 그린다. 입력칸(TextBox)에는 못 쓴다.
 --
 -- 좌표 단위는 "UI 도트"(글자판 픽셀 그대로). 화면 크기는 부모에 걸린 정수 UIScale(pixelUI.Scale)이 키운다.
---   local label = pixelText.new(parent, { Text = "안녕", Font = "body", Color = Color3, Shadow = Color3?, Align = "left"|"center"|"right" })
+--   local label = pixelText.new(parent, { Text = "안녕", Font = "body", Color = Color3, Shadow = Color3?, Align = "left"|"center"|"right",
+--                                         MaxWidth = 폭?, MaxLines = 줄 수? })
 --   label.Frame.Position = UDim2.fromOffset(x, y) / label:SetText("...") / label:SetColor(c) / label.Width, label.Height
+-- 글씨가 칸을 넘지 않게: MaxWidth를 주면 그 폭에 맞춰 줄을 바꾸고(띄어쓰기에서 먼저, 낱말이 길면 글자에서), MaxLines를 주면
+--  그 줄 수를 넘는 부분은 "…"로 줄인다. 칸이 정해진 자리의 글씨는 반드시 MaxWidth(와 MaxLines)를 줄 것.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local fontData = require(ReplicatedStorage.shared.data["pixelFont.generated"])
-local uiAssets = require(ReplicatedStorage.shared.config["uiAssets.generated"])
+local townIds = require(ReplicatedStorage.shared.config["townAssets.generated"])
 
 local JAMO_START = 0x3131
 local JAMO_END = 0x3163
@@ -22,9 +25,9 @@ local function glyphInfo(font, code: number): (number, number)
 	if code >= 32 and code <= 126 then
 		return code - 32, font.asciiAdv[code - 31]
 	elseif code >= HANGUL_START and code <= HANGUL_END then
-		return base + (JAMO_END - JAMO_START + 1) + (code - HANGUL_START), font.cellW
+		return base + (JAMO_END - JAMO_START + 1) + (code - HANGUL_START), font.hangulAdv or font.cellW
 	elseif code >= JAMO_START and code <= JAMO_END then
-		return base + (code - JAMO_START), font.cellW
+		return base + (code - JAMO_START), font.hangulAdv or font.cellW
 	end
 	for i, ch in font.extra do
 		if utf8.codepoint(ch) == code then
@@ -53,8 +56,92 @@ function exports.Measure(text: string, fontKey: string?): (number, number)
 	return w, n * font.line
 end
 
+-- 폭에 맞춰 줄바꿈: 띄어쓰기에서 먼저 끊고, 한 낱말이 폭보다 길면 글자에서 끊는다(공방 js/font.js wrap과 같은 규칙).
+function exports.Wrap(text: string, maxWidth: number, fontKey: string?): string
+	local font = fontData[fontKey or "body"]
+	local out = {}
+	for para in (text .. "\n"):gmatch("(.-)\n") do
+		local line = ""
+		for word in (para .. " "):gmatch("(.-) ") do
+			local try = if line == "" then word else line .. " " .. word
+			if lineWidth(font, try) <= maxWidth then
+				line = try
+			else
+				if line ~= "" then
+					table.insert(out, line)
+				end
+				line = ""
+				for _, code in utf8.codes(word) do
+					local ch = utf8.char(code)
+					if line ~= "" and lineWidth(font, line .. ch) > maxWidth then
+						table.insert(out, line)
+						line = ""
+					end
+					line ..= ch
+				end
+			end
+		end
+		table.insert(out, line)
+	end
+	return table.concat(out, "\n")
+end
+
+-- 한 줄이 폭을 넘으면 끝을 "…"로 줄인다
+local function fitLine(font, line: string, maxWidth: number): string
+	if lineWidth(font, line) <= maxWidth then
+		return line
+	end
+	local kept = ""
+	for _, code in utf8.codes(line) do
+		local try = kept .. utf8.char(code)
+		if lineWidth(font, try .. "…") > maxWidth then
+			break
+		end
+		kept = try
+	end
+	return (kept:gsub("%s+$", "")) .. "…"
+end
+
+-- 칸에 맞추기: 폭(maxWidth)을 넘으면 줄을 바꾸고, 줄 수(maxLines)를 넘으면 마지막 줄 끝을 "…"로 줄인다.
+-- maxLines = 1이면 줄을 바꾸지 않고 한 줄로 줄인다.
+function exports.Fit(text: string, maxWidth: number, maxLines: number?, fontKey: string?): string
+	local font = fontData[fontKey or "body"]
+	if maxLines == 1 then
+		return fitLine(font, (text:gsub("\n", " ")), maxWidth)
+	end
+	local lines = {}
+	for line in (exports.Wrap(text, maxWidth, fontKey) .. "\n"):gmatch("(.-)\n") do
+		table.insert(lines, line)
+	end
+	if maxLines and #lines > maxLines then
+		local last = lines[maxLines] .. "…"
+		while #lines > maxLines do
+			table.remove(lines)
+		end
+		-- "…"를 붙여도 폭 안에 들어오게
+		local kept = ""
+		for _, code in utf8.codes(lines[maxLines]) do
+			local try = kept .. utf8.char(code)
+			if lineWidth(font, try .. "…") > maxWidth then
+				break
+			end
+			kept = try
+		end
+		lines[maxLines] = if lineWidth(font, last) <= maxWidth then last else kept .. "…"
+	end
+	return table.concat(lines, "\n")
+end
+
 local Label = {}
 Label.__index = Label
+
+-- 칸 제한(MaxWidth · MaxLines)이 있으면 그 안에 들어가게 고친 글
+function Label:_fitted(text: string): string
+	if self._maxWidth then
+		return exports.Fit(text, self._maxWidth, self._maxLines, self._fontKey)
+	end
+	return text
+end
 
 function Label:_render()
 	for _, child in self._glyphs do
@@ -62,8 +149,9 @@ function Label:_render()
 	end
 	table.clear(self._glyphs)
 	local font = self._font
-	local pages = uiAssets.FONT[self._fontKey]
-	local width, height = exports.Measure(self._text, self._fontKey)
+	local pages = (townIds.FONT and townIds.FONT[self._fontKey]) or {}
+	local shown = self:_fitted(self._text)
+	local width, height = exports.Measure(shown, self._fontKey)
 	self.Width, self.Height = width, height
 	self.Frame.Size = UDim2.fromOffset(width, height)
 
@@ -74,7 +162,7 @@ function Label:_render()
 	table.insert(layers, { color = self._color, dx = 0, dy = 0, z = 1 })
 
 	local y = 0
-	for line in (self._text .. "\n"):gmatch("(.-)\n") do
+	for line in (shown .. "\n"):gmatch("(.-)\n") do
 		local lw = lineWidth(font, line)
 		local x = if self._align == "center" then math.floor((width - lw) / 2) elseif self._align == "right" then width - lw else 0
 		for _, code in utf8.codes(line) do
@@ -112,6 +200,12 @@ function Label:SetText(text: string)
 		return
 	end
 	self._text = text
+	self:_render()
+end
+
+-- 칸 크기가 바뀌었을 때(같은 글씨를 다른 폭에 맞춰 다시 그린다)
+function Label:SetMaxWidth(maxWidth: number?, maxLines: number?)
+	self._maxWidth, self._maxLines = maxWidth, maxLines
 	self:_render()
 end
 
@@ -159,10 +253,12 @@ function exports.new(parent: Instance, props)
 		_font = fontData[fontKey],
 		_fontKey = fontKey,
 		_text = tostring(props.Text or ""),
-		_color = props.Color or Color3.fromRGB(59, 42, 79),
+		_color = props.Color or Color3.fromRGB(20, 27, 27), -- 팩 외곽선 색(uiKit colors.ink)
 		_shadow = props.Shadow,
 		_align = props.Align or "left",
 		_zIndex = props.ZIndex or 5,
+		_maxWidth = props.MaxWidth, -- 이 폭을 넘으면 줄바꿈
+		_maxLines = props.MaxLines, -- 이 줄 수를 넘으면 …로 줄임
 		_glyphs = {},
 	}, Label)
 	self:_render()

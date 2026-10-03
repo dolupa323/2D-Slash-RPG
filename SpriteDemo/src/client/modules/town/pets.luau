@@ -14,6 +14,7 @@ local townWorld = require(ReplicatedStorage.shared.data.townWorld)
 local map = require(script.Parent.map)
 local UI = require(script.Parent.Parent.ui.pixelUI)
 local petBox = require(script.Parent.Parent.globals.petBox)
+local features = require(ReplicatedStorage.shared.config.features)
 
 local world = map.world
 local S = map.S
@@ -138,6 +139,9 @@ function exports.PetPosition(userId: number, slot: number): Vector2?
 end
 
 function exports.load(scene: Scene)
+	if not features.PETS then
+		return
+	end
 	local d = map.Use(scene)
 	if not d then
 		return

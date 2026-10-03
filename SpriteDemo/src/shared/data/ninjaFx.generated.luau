@@ -1,0 +1,35 @@
+-- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/export_ninja.mjs, 목록 js/ninja/pack.js FX_SHEETS).
+-- 팩 인술 이펙트 시트(assets/ninja/fx.png, 에셋 id = townAssets.generated의 FX) 안 위치: 이름 → 첫 장 자리(x, y) · 한 장 크기(w, h) · 장수(가로로 이어짐).
+return {
+	frameTime = 0.07, -- 한 장에 걸리는 시간(초)
+	rects = {
+		explosion = { x = 0, y = 0, w = 40, h = 40, frames = 9 },
+		flam = { x = 0, y = 40, w = 25, h = 30, frames = 8 },
+		ice = { x = 0, y = 70, w = 32, h = 32, frames = 10 },
+		iceB = { x = 0, y = 102, w = 32, h = 32, frames = 9 },
+		plant = { x = 0, y = 134, w = 30, h = 28, frames = 8 },
+		plantB = { x = 0, y = 162, w = 30, h = 26, frames = 7 },
+		rockSpike = { x = 0, y = 188, w = 54, h = 48, frames = 10 },
+		thunder = { x = 0, y = 236, w = 20, h = 28, frames = 8 },
+		fireball = { x = 0, y = 264, w = 16, h = 16, frames = 4 },
+		iceSpike = { x = 0, y = 280, w = 18, h = 10, frames = 8 },
+		rockShot = { x = 0, y = 290, w = 16, h = 16, frames = 4 },
+		shield = { x = 0, y = 306, w = 24, h = 26, frames = 6 },
+		boost = { x = 0, y = 332, w = 53, h = 35, frames = 8 },
+		spark = { x = 0, y = 367, w = 27, h = 35, frames = 10 },
+		hit_cut = { x = 0, y = 402, w = 32, h = 32, frames = 4 },
+		hit_cut2 = { x = 0, y = 434, w = 32, h = 32, frames = 5 },
+		hit_cutx = { x = 0, y = 466, w = 32, h = 32, frames = 4 },
+		hit_claw = { x = 0, y = 498, w = 32, h = 32, frames = 4 },
+		hit_slash = { x = 0, y = 530, w = 32, h = 32, frames = 4 },
+		hit_circle = { x = 0, y = 562, w = 32, h = 32, frames = 4 },
+		smoke = { x = 0, y = 594, w = 32, h = 32, frames = 6 },
+		dustRing = { x = 0, y = 626, w = 30, h = 14, frames = 8 },
+		rockBits = { x = 0, y = 640, w = 16, h = 16, frames = 5 },
+		iceFlake = { x = 0, y = 656, w = 32, h = 32, frames = 9 },
+		plantSpike = { x = 0, y = 688, w = 16, h = 20, frames = 6 },
+		iceFloor = { x = 0, y = 708, w = 16, h = 12, frames = 6, hold = 3 },
+		boltLine = { x = 0, y = 720, w = 16, h = 12, frames = 5 },
+		vine = { x = 0, y = 732, w = 16, h = 12, frames = 6, hold = 3 },
+	},
+}

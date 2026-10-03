@@ -17,6 +17,7 @@ local balance = require(ReplicatedStorage.shared.config.balance)
 local Net = require(ReplicatedStorage.shared.net.net)
 local UI = require(script.Parent.Parent.ui.pixelUI)
 local capture = require(ReplicatedStorage.shared.config.capture)
+local weapons = require(ReplicatedStorage.shared.config.weapons)
 
 local C = UI.colors
 local COLUMNS = balance.INVENTORY_COLUMNS
@@ -29,7 +30,8 @@ local STEP = 24
 local PANEL_W, PANEL_H = 300, 226 -- (방울 확률 설명·단축칸 버튼 자리 때문에 190 → 226)
 local GRID_Y = 32
 local INFO_X = 14 + COLUMNS * STEP + 8 -- 설명 영역 왼쪽
-local INFO_W = PANEL_W - INFO_X - 10
+local INFO_W = PANEL_W - INFO_X - 12
+local DESC_LINES = 5 -- 설명 줄 수(이름 아래 ~ 단축칸 줄 위)
 local DRAG_START = 6 -- 이만큼(px) 끌면 드래그 시작
 
 local exports = {}
@@ -37,26 +39,12 @@ local exports = {}
 -- 마지막으로 받은 인벤토리(UI 수명과 무관하게 세션 내내 유지).
 local cachedInventory = nil
 local cachedEquipment = {}
+local cachedEquipmentPlus = {} -- 착용 장비의 강화 단계 { Weapon = n }
 local cachedGold = 0
 local goldListeners = {}
 local equipmentListeners = {}
 
 -- 글자 폭에 맞춰 줄바꿈(도트 글씨는 자동 줄바꿈이 없다).
-local function wrap(text: string, maxWidth: number): string
-	local lines, line = {}, ""
-	for _, code in utf8.codes(text) do
-		local ch = utf8.char(code)
-		if UI.Text.Measure(line .. ch, "body") > maxWidth then
-			table.insert(lines, line)
-			line = if ch == " " then "" else ch
-		else
-			line ..= ch
-		end
-	end
-	table.insert(lines, line)
-	return table.concat(lines, "\n")
-end
-
 local function entryAt(tab: string, index: number)
 	for _, e in cachedInventory or {} do
 		if e.Tab == tab and e.Slot == index then
@@ -85,6 +73,11 @@ local function drawItem(parent: Instance, def, x: number, y: number, size: numbe
 end
 exports.DrawItem = drawItem
 
+-- 칸 구석에 적는 강화 단계 글씨: "+3" … "+9", 10단계는 "10"(칸 폭 22에 "+10"은 넘친다). 개수(흰색)와 헷갈리지 않게 주황색으로 쓴다.
+function exports.PlusText(plus: number): string
+	return if plus >= 10 then tostring(plus) else "+" .. plus
+end
+
 function exports.load(scene: Scene)
 	if exports.screenGui then
 		return
@@ -108,7 +101,7 @@ function exports.load(scene: Scene)
 
 	local panel = UI.Panel(holder, 0, 0, PANEL_W, PANEL_H)
 	UI.TitleTag(panel, "가방", PANEL_W / 2, -13)
-	UI.Button(panel, PANEL_W - 26, 6, 20, 20, { Color = "white", Icon = "close", OnClick = function()
+	UI.Button(panel, PANEL_W - 26, 6, 20, 20, { Color = "plain", Icon = "close", OnClick = function()
 		popupManager.Close("Inventory")
 	end })
 
@@ -140,14 +133,15 @@ function exports.load(scene: Scene)
 	bigContent.BackgroundTransparency = 1
 	bigContent.Size = UDim2.fromScale(1, 1)
 	bigContent.Parent = bigSlot
-	local nameLabel = UI.Label(panel, "", INFO_X, GRID_Y + 44, { Font = "title", Color = C.pinkD })
-	local descLabel = UI.Label(panel, "", INFO_X, GRID_Y + 64, { Color = C.ink })
-	local actionButton = UI.Button(panel, INFO_X, PANEL_H - 36, 56, 24, { Color = "pink", Text = "장착" })
+	local nameLabel = UI.Label(panel, "", INFO_X, GRID_Y + 44, { Font = "title", Color = C.accentD, MaxWidth = INFO_W, MaxLines = 1 })
+	-- 설명: 폭 INFO_W 안에서 줄바꿈. 줄 수는 아래에 무엇이 있느냐에 따라(소비 아이템은 단축칸 줄이 있어 5줄, 그 밖은 6줄) — showInfo가 정한다
+	local descLabel = UI.Label(panel, "", INFO_X, GRID_Y + 64, { Color = C.ink, MaxWidth = INFO_W, MaxLines = DESC_LINES })
+	local actionButton = UI.Button(panel, INFO_X, PANEL_H - 36, 56, 24, { Color = "primary", Text = "장착" })
 	-- 소비 단축칸에 놓기 [1][2][3]
 	local quickLabel = UI.Label(panel, "단축칸", INFO_X, PANEL_H - 56, { Color = C.ink })
 	local quickButtons = {}
 	for i = 1, 3 do
-		quickButtons[i] = UI.Button(panel, INFO_X + 44 + (i - 1) * 24, PANEL_H - 60, 20, 20, { Color = "white", Text = tostring(i), OnClick = function()
+		quickButtons[i] = UI.Button(panel, INFO_X + 44 + (i - 1) * 24, PANEL_H - 60, 20, 20, { Color = "plain", Text = tostring(i), OnClick = function()
 			local entry = selected and entryAt(tab, selected)
 			local def = entry and items[entry.ItemId]
 			if def and def.Tab == "Use" then
@@ -155,7 +149,7 @@ function exports.load(scene: Scene)
 			end
 		end })
 	end
-	local dropButton = UI.Button(panel, INFO_X + 60, PANEL_H - 36, 60, 24, { Color = "white", Text = "버리기" })
+	local dropButton = UI.Button(panel, INFO_X + 60, PANEL_H - 36, 60, 24, { Color = "plain", Text = "버리기" })
 
 	-- 착용 중인 장비(무기·방어구) — 누르면 해제되어 장비 탭 빈 칸으로 돌아간다
 	local EQUIP_Y = GRID_Y + ROWS * STEP + 4
@@ -180,6 +174,11 @@ function exports.load(scene: Scene)
 			local def = cachedEquipment[slotName] and items[cachedEquipment[slotName]]
 			if def then
 				drawItem(content, def, 5, 5, 12)
+				local n = cachedEquipmentPlus[slotName] or 0
+				if n > 0 then
+					local plus = UI.Label(content, exports.PlusText(n), 0, 10, { Color = C.accentL, Shadow = C.ink, ZIndex = 7 })
+					plus.Frame.Position = UDim2.fromOffset(SLOT - 2 - plus.Width, 10)
+				end
 			end
 		end
 	end
@@ -199,7 +198,7 @@ function exports.load(scene: Scene)
 		bigContent:ClearAllChildren()
 		if not def then
 			nameLabel:SetText("")
-			descLabel:SetText(if selected then "빈 칸이에요." else "칸을 눌러 아이템을\n살펴보세요.\n끌어서 자리를\n바꿀 수 있어요.")
+			descLabel:SetText(if selected then "빈 칸이에요." else "칸을 눌러 아이템을 살펴보세요. 끌어서 자리를 바꿀 수 있어요.")
 			actionButton:SetEnabled(false)
 			dropButton:SetEnabled(false)
 			for _, b in quickButtons do
@@ -212,17 +211,22 @@ function exports.load(scene: Scene)
 		end
 		quickLabel.Frame.Visible = def.Tab == "Use"
 		drawItem(bigContent, def, 8, 8, 24)
-		nameLabel:SetText(def.Name)
+		nameLabel:SetText(def.Name .. (if (entry.Plus or 0) > 0 then " +" .. entry.Plus else ""))
 		local desc = def.Description or ""
 		if def.Type == "Bell" and def.Tier then
 			-- 방울: 그 방울이 가진 기본 포획률만(종합 확률은 레벨·체력 보정이 더해져 서버가 계산 — 보여 주지 않음)
-			desc = wrap(desc, INFO_W) .. ("\n\n기본 포획률 %d%%"):format(math.floor(capture.BaseRate(def.Tier) * 100 + 0.5))
-		else
-			desc = wrap(desc, INFO_W)
+			desc ..= ("\n기본 포획률 %d%%"):format(math.floor(capture.BaseRate(def.Tier) * 100 + 0.5))
+		elseif def.Type == "Weapon" and def.Class then
+			-- 무기: 종류 · 쓸 수 있는 레벨 · 공격력(강화 보너스 포함) · 종류 특징
+			local class = weapons.ClassOf(def)
+			desc ..= ("\n%s · Lv.%d\n공격력 +%d\n%s"):format(class.name, def.Level or 1, def.Attack + weapons.Bonus(def, entry.Plus), class.desc)
+		elseif def.Type == "Charm" then
+			desc ..= ("\nLv.%d부터"):format(def.Level or 1)
 		end
+		descLabel:SetMaxWidth(INFO_W, if def.Tab == "Use" then DESC_LINES else DESC_LINES + 1) -- 단축칸 줄이 없으면 한 줄 더
 		descLabel:SetText(desc)
 		actionButton:SetText(if def.EquipSlot then "장착" else "사용")
-		actionButton:SetEnabled(def.EquipSlot ~= nil or def.Heal ~= nil) -- 장비는 장착, 물약(Heal)은 사용
+		actionButton:SetEnabled(def.EquipSlot ~= nil or def.Heal ~= nil or def.Type == "Scroll") -- 장비는 장착, 물약(Heal) · 인술 두루마리는 사용
 		dropButton:SetEnabled(not def.NoDrop)
 	end
 
@@ -238,8 +242,12 @@ function exports.load(scene: Scene)
 			if def then
 				drawItem(slot.content, def, 5, 5, 12)
 				if entry.Count > 1 then
-					local count = UI.Label(slot.content, tostring(entry.Count), 0, 11, { Color = C.ink, ZIndex = 7 })
-					count.Frame.Position = UDim2.fromOffset(SLOT - 1 - count.Width, 11)
+					local count = UI.Label(slot.content, tostring(entry.Count), 0, 10, { Color = C.white, Shadow = C.ink, ZIndex = 7 })
+					count.Frame.Position = UDim2.fromOffset(SLOT - 2 - count.Width, 10)
+				end
+				if (entry.Plus or 0) > 0 then -- 강화 단계
+					local plus = UI.Label(slot.content, exports.PlusText(entry.Plus), 0, 10, { Color = C.accentL, Shadow = C.ink, ZIndex = 7 })
+					plus.Frame.Position = UDim2.fromOffset(SLOT - 2 - plus.Width, 10)
 				end
 			end
 		end
@@ -344,8 +352,8 @@ function exports.load(scene: Scene)
 		local def = entry and items[entry.ItemId]
 		if def and def.EquipSlot then
 			Net.FireServer("EquipAction", "Equip", selected)
-		elseif def and def.Heal then
-			Net.FireServer("UseItem", tab, selected) -- 물약: 서버가 체력 회복 + 1개 줄임
+		elseif def and (def.Heal or def.Type == "Scroll") then
+			Net.FireServer("UseItem", tab, selected) -- 물약: 서버가 체력 회복 + 1개 줄임 / 두루마리: 내 유파 인술 단계 +1
 		end
 	end)
 	dropButton.Instance.Activated:Connect(function()
@@ -372,15 +380,15 @@ function exports.load(scene: Scene)
 			Net.OnClient("GoldUpdated", function(gold)
 				exports.applyGold(gold)
 			end)
-			Net.OnClient("EquipmentUpdated", function(equipment)
-				exports.applyEquipment(equipment)
+			Net.OnClient("EquipmentUpdated", function(equipment, plus)
+				exports.applyEquipment(equipment, plus)
 			end)
 			local ok, data = pcall(function()
 				return Net.Invoke("GetPlayerData")
 			end)
 			if ok and typeof(data) == "table" then
 				exports.applyInventory(data.Inventory)
-				exports.applyEquipment(data.Equipment)
+				exports.applyEquipment(data.Equipment, data.EquipmentPlus)
 				exports.applyGold(data.Gold)
 			end
 		end)
@@ -442,8 +450,14 @@ function exports.onEquipmentChanged(callback)
 	table.insert(equipmentListeners, callback)
 end
 
-function exports.applyEquipment(equipment)
+-- 착용 장비의 강화 단계 { Weapon = n } — 강화 창(upgrade.luau)이 읽는다
+function exports.getEquipmentPlus()
+	return cachedEquipmentPlus
+end
+
+function exports.applyEquipment(equipment, plus)
 	cachedEquipment = equipment or {}
+	cachedEquipmentPlus = plus or {}
 	if exports.drawEquipment then
 		exports.drawEquipment()
 	end

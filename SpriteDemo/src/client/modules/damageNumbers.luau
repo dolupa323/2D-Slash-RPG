@@ -1,5 +1,5 @@
--- 데미지 숫자 팝업 공용 유틸 — heroController.luau(플레이어가 맞았을 때)와
--- globals/monsterHealthBar.luau(몬스터가 맞았을 때)가 둘 다 쓴다. modules/globals나
+-- 데미지 숫자 팝업 공용 유틸 — topDownHero.luau(플레이어가 맞았을 때)와
+-- town/monsters.luau(몬스터가 맞았을 때)가 둘 다 쓴다. modules/globals나
 -- modules/<씬 이름> 밖(modules/ 루트)에 있어서 sceneLoader가 자동으로 load/start/unload를
 -- 부르지 않는다 — travelState.luau와 같은 패턴.
 --
@@ -9,7 +9,7 @@
 -- (2026-09-29) 글씨를 우리 도트 글꼴(ui/pixelText, 제목 16px)로 바꿨다 — 진보라 그림자, 캐릭터 배율(PIXEL_SCALE)로 크게.
 local pixelText = require(script.Parent.ui.pixelText)
 local PIXEL_SCALE = 2
-local SHADOW = Color3.fromRGB(59, 42, 79)
+local SHADOW = Color3.fromRGB(20, 27, 27) -- 팩 외곽선 색
 
 -- (Phase 1 전투 타격감, ROADMAP.md — Cheruton DamageVal.gd 패턴 참고) Cheruton은
 -- 알파 페이드를 전혀 안 쓰고 "스케일"만으로 등장/소멸을 표현한다: 0.2초 동안 확

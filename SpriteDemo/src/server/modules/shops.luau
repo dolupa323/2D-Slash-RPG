@@ -14,6 +14,7 @@ local persistence = require(script.Parent.Parent.services.persistence)
 local inventoryService = require(script.Parent.Parent.services.inventoryService)
 local currencyService = require(script.Parent.Parent.services.currencyService)
 local progressionService = require(script.Parent.Parent.services.progressionService)
+local ninjutsuService = require(script.Parent.ninjutsuService)
 
 local NPC_PAD = 24 -- 대화 거리보다 이만큼(도트) 여유(복제 지연 보정)
 local MAX_BUY = 99
@@ -93,6 +94,13 @@ function exports.load()
 		local data = persistence.Get(player)
 		local entry = data and inventoryService.FindEntry(data.Inventory, tab, slot)
 		local def = entry and items[entry.ItemId]
+		if def and def.Type == "Scroll" then
+			-- 인술 두루마리: 자기 유파 것이고 올릴 인술이 있을 때만 1개 줄인다
+			if ninjutsuService.UseScroll(player, def) then
+				inventoryService.Remove(player, tab, slot, 1)
+			end
+			return
+		end
 		if not def or not def.Heal then
 			return
 		end

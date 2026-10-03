@@ -11,6 +11,8 @@
 --  반격: 맞은 몬스터는 때린 사람을 쫓아가 공격한다(combat.MONSTER_*). 집에서 너무 멀어지거나, 한동안 안 맞거나,
 --   그 사람이 씬을 떠나면 포기하고 돌아간다. 피해는 progressionService.DamagePlayer(사망 페널티·리스폰 포함).
 --  combat.MONSTER_RESPAWN초 뒤 같은 구역에 새 레벨로 다시 나타남.
+--  인술(N2, server/modules/ninjutsuService.luau): Living · Damage로 같은 규칙의 피해를 주고, 상태 이상은 Slow(느려짐) · Stun(멈춤) ·
+--   Push(밀림), 받는 피해 줄이기는 SetGuard. 기본 공격이 맞으면 OnPlayerAttack 훅으로 기력이 찬다.
 --  펫 스킬(M4, server/modules/petSkills.luau): OnPlayerAttack 훅으로 공격 직후를 받고, Damage로 같은 규칙(기여도·반격·처치)의 피해를 준다.
 -- 같은 씬 플레이어에게만 보낸다(첫 인자 = 씬 키): 위치 10Hz(TownMonsterMoves), 피격/죽음/등장은 즉시.
 -- 플레이어가 없는 씬은 움직이지 않는다(서버 부담).
@@ -24,6 +26,9 @@ local monsterLevels = require(ReplicatedStorage.shared.config.monsterLevels)
 local pets = require(ReplicatedStorage.shared.config.pets)
 local rewards = require(ReplicatedStorage.shared.config.rewards)
 local capture = require(ReplicatedStorage.shared.config.capture)
+local features = require(ReplicatedStorage.shared.config.features)
+local drops = require(ReplicatedStorage.shared.config.drops)
+local weapons = require(ReplicatedStorage.shared.config.weapons)
 local items = require(ReplicatedStorage.shared.data.items)
 local townWorld = require(ReplicatedStorage.shared.data.townWorld)
 local heroTracking = require(script.Parent.heroTracking)
@@ -74,6 +79,23 @@ local function rollLevel(m)
 	m.damageBy = {} -- [userId] = { dmg = 넣은 피해, first = 처음 때린 시각 }
 	m.aggro = nil -- 쫓는 플레이어 userId
 	m.shiny = rng:NextNumber() < pets.SHINY_CHANCE -- 이로치(색만 다름) — 잡으면 펫에 저장
+	m.stunUntil, m.slowUntil, m.slowMult = nil, nil, nil -- 인술 상태 이상(멈춤 · 느려짐)
+end
+
+-- 몬스터가 플레이어를 때릴 때 피해를 고치는 함수들: fn(player, 씬 키, 몬스터, 피해) → 피해(얼음 갑옷 · 견고 — ninjutsuService)
+local hurtHooks = {}
+-- 기본 공격 간격 배율을 주는 함수들: fn(player) → 배율(전하 — ninjutsuService)
+local speedHooks = {}
+-- 받는 피해 줄이기(인술 "바위 갑옷" 등): [userId] = { mult, untilT }
+local guards = {}
+local function guardMult(userId: number, now: number): number
+	local g = guards[userId]
+	return if g and now < g.untilT then g.mult else 1
+end
+
+-- 지금 이 몬스터의 이동 속도 배율(느려짐)
+local function speedMult(m, now: number): number
+	return if m.slowUntil and now < m.slowUntil then m.slowMult else 1
 end
 
 local function wire(m)
@@ -141,7 +163,7 @@ local function chase(key: string, st, m, dt: number): boolean
 	local dx, dy = feet.X - m.x, feet.Y - m.y
 	local dist = math.sqrt(dx * dx + dy * dy)
 	if dist > combat.MONSTER_ATTACK_RANGE * 0.7 then
-		local s = math.min(dist - combat.MONSTER_ATTACK_RANGE * 0.6, SPEED * combat.MONSTER_CHASE_SPEED * dt)
+		local s = math.min(dist - combat.MONSTER_ATTACK_RANGE * 0.6, SPEED * combat.MONSTER_CHASE_SPEED * speedMult(m, now) * dt)
 		local nx, ny = m.x + dx / dist * s, m.y + dy / dist * s
 		if not blocked(st.d, nx, ny) then
 			m.x, m.y = nx, ny
@@ -153,6 +175,11 @@ local function chase(key: string, st, m, dt: number): boolean
 		m.nextAttack = now + combat.MONSTER_ATTACK_COOLDOWN
 		toScene(key, "TownMonsterAttack", m.id)
 		local damage = math.max(monsterLevels.AttackDamage(m.level) - inventoryService.GetDefense(player), 1)
+		damage *= guardMult(m.aggro, now)
+		for _, fn in hurtHooks do
+			damage = fn(player, key, m, damage)
+		end
+		damage = math.max(1, math.round(damage))
 		progressionService.DamagePlayer(player, damage)
 	end
 	return true
@@ -160,12 +187,20 @@ end
 
 local function step(key: string, st, dt: number)
 	local d = st.d
+	local now = os.clock()
 	for _, m in st.monsters do
 		if m.dead or m.capturing then
 			continue
 		end
 		local wasMoving = m.moving
 		m.moving = false
+		if m.stunUntil and now < m.stunUntil then
+			-- 멈춤(얼음 · 덩굴): 움직이지도 때리지도 못한다
+			if wasMoving then
+				m.dirty = true
+			end
+			continue
+		end
 		if m.aggro and chase(key, st, m, dt) then
 			if m.moving or wasMoving then
 				m.dirty = true
@@ -179,7 +214,7 @@ local function step(key: string, st, dt: number)
 				m.target = nil
 				m.wait = rng:NextNumber(WAIT[1], WAIT[2])
 			else
-				local s = math.min(dist, SPEED * dt)
+				local s = math.min(dist, SPEED * speedMult(m, now) * dt)
 				local nx, ny = m.x + dx / dist * s, m.y + dy / dist * s
 				if blocked(d, nx, ny) then
 					m.target = nil
@@ -220,9 +255,15 @@ end
 
 -- 처치 보상(기여도 10% 이상인 사람 모두, GAME_DESIGN §3): 기본(경험치 + 도감 봤음) + 전리품(골드 + 그 몬스터 재료).
 -- 그냥 사냥해서 쓰러뜨리는 것이 곧 "재료 받기"다. 포획은 전투 중 방울 던지기(아래 ThrowBell)로 따로 한다.
+local killHooks = {}
 local function rewardBase(player: Player, m)
 	progressionService.AddExperience(player, monsterLevels.Experience(m.level))
 	local species = world.species[m.row]
+	if species then
+		for _, fn in killHooks do
+			fn(player, species.id)
+		end
+	end
 	local data = persistence.Get(player)
 	if data and species then
 		data.Dex = data.Dex or {}
@@ -237,9 +278,9 @@ end
 local function rewardLoot(player: Player, m)
 	currencyService.AddGold(player, rewards.Gold(m.level, rng))
 	local species = world.species[m.row]
-	local material = species and species.material -- 그 몬스터 전용 재료(Mat_<종 id>)
-	if material then
-		inventoryService.AddItem(player, material, rewards.MaterialCount(m.level))
+	-- 그 몬스터가 사는 지역의 드롭 표(shared/config/drops.luau)
+	for _, d in drops.Roll(species and species.element, rng) do
+		inventoryService.AddItem(player, d.item, d.count)
 	end
 end
 
@@ -266,7 +307,7 @@ local function settle(m)
 			rewardBase(player, m)
 			rewardLoot(player, m)
 		else
-			Net.FireClient("Notify", player, ("기여도 %d%% — 10%% 이상 때려야 보상을 받아요"):format(math.floor(share * 100)))
+			Net.FireClient("Notify", player, ("기여도 %d%% · 10%% 이상 때려야 보상을 받아요"):format(math.floor(share * 100)))
 		end
 	end
 end
@@ -354,8 +395,8 @@ end
 -- THROW_RANGE까지 날아가 처음 맞은 몬스터에게 포획 시도. 같은 씬 모두에게 날아가는 연출(BellThrown).
 function exports.ThrowBell(player: Player, itemId: string, facing: string): boolean
 	local def = items[itemId]
-	if not def or def.Type ~= "Bell" then
-		return false
+	if not features.CAPTURE or not def or def.Type ~= "Bell" then
+		return false -- 포획은 지금 꺼 둠(shared/config/features.luau)
 	end
 	local now = os.clock()
 	if lastThrowAt[player.UserId] and now - lastThrowAt[player.UserId] < capture.THROW_COOLDOWN then
@@ -422,6 +463,19 @@ local function dealDamage(key: string, st, m, player: Player, amount: number, no
 	end
 end
 
+-- 처치 보상을 받은 사람마다 부를 함수 등록: fn(player, 몬스터 종 id) — 퀘스트 처치 수(questService)
+function exports.OnKill(fn)
+	table.insert(killHooks, fn)
+end
+
+function exports.OnPlayerHurt(fn)
+	table.insert(hurtHooks, fn)
+end
+
+function exports.OnAttackSpeed(fn)
+	table.insert(speedHooks, fn)
+end
+
 local attackHooks = {}
 
 -- 공격 직후 부를 함수 등록: fn(player, 씬 키, 발 위치(도트 Vector2), 바라보는 방향, 이번에 맞은 몬스터 id 목록)
@@ -457,9 +511,123 @@ function exports.Damage(key: string, monsterId: number, player: Player, amount: 
 	return true
 end
 
--- 바라보는 방향 앞 사각형(발 기준) — 클라이언트 topDownHero의 공격 범위와 같은 수치
-local function attackBox(x: number, y: number, facing: string)
-	local reach, half = combat.ATTACK_REACH, combat.ATTACK_WIDTH / 2
+-- ---- 인술 상태 이상(server/modules/ninjutsuService.luau가 부른다) — 같은 씬 모두에게 TownMonsterStatus(연출용) ----
+local function statusTarget(key: string, monsterId: number)
+	local st = scenes[key]
+	local m = st and st.monsters[monsterId]
+	return if m and not m.dead and not m.capturing then m else nil
+end
+
+-- 느려짐: seconds초 동안 이동 속도 × mult(이미 더 느린 상태면 시간만 늘린다)
+function exports.Slow(key: string, monsterId: number, mult: number, seconds: number): boolean
+	local m = statusTarget(key, monsterId)
+	if not m then
+		return false
+	end
+	local now = os.clock()
+	m.slowMult = if m.slowUntil and now < m.slowUntil then math.min(m.slowMult, mult) else mult
+	m.slowUntil = math.max(m.slowUntil or 0, now + seconds)
+	toScene(key, "TownMonsterStatus", monsterId, "slow", seconds)
+	return true
+end
+
+-- 멈춤: seconds초 동안 움직이지도 때리지도 못한다
+function exports.Stun(key: string, monsterId: number, seconds: number): boolean
+	local m = statusTarget(key, monsterId)
+	if not m then
+		return false
+	end
+	m.stunUntil = math.max(m.stunUntil or 0, os.clock() + seconds)
+	m.target = nil
+	m.dirty = true
+	toScene(key, "TownMonsterStatus", monsterId, "stun", seconds)
+	return true
+end
+
+-- 밀쳐 내기: (dx, dy)도트만큼 — 막힌 곳 앞에서 멈춘다
+function exports.Push(key: string, monsterId: number, dx: number, dy: number): boolean
+	local m = statusTarget(key, monsterId)
+	if not m then
+		return false
+	end
+	local d = scenes[key].d
+	local steps = math.max(1, math.ceil(math.max(math.abs(dx), math.abs(dy)) / 2))
+	for _ = 1, steps do
+		local nx, ny = m.x + dx / steps, m.y + dy / steps
+		if blocked(d, nx, ny) then
+			break
+		end
+		m.x, m.y = nx, ny
+	end
+	m.target = nil
+	m.dirty = true
+	return true
+end
+
+-- 받는 피해 줄이기: seconds초 동안 몬스터에게 받는 피해 × mult
+function exports.SetGuard(player: Player, mult: number, seconds: number)
+	guards[player.UserId] = { mult = mult, untilT = os.clock() + seconds }
+end
+
+-- 투척 무기(단축칸 사용 — server/modules/quickSlots.luau가 부른다). 1개를 먼저 쓰고, 바라보는 방향으로 직선으로 날아가
+-- 처음 닿은 몬스터에게 공격력 × power 피해. radius가 있으면(폭탄) 닿은 자리 — 안 닿으면 끝까지 간 자리 — 둘레 모두에게.
+function exports.ThrowWeapon(player: Player, itemId: string, facing: string): boolean
+	local def = items[itemId]
+	local t = def and def.Throw
+	if not t then
+		return false
+	end
+	local now = os.clock()
+	if lastThrowAt[player.UserId] and now - lastThrowAt[player.UserId] < combat.THROW_COOLDOWN then
+		return false
+	end
+	local key = townWorld.KeyOf(heroTracking.GetPlayerScene(player.UserId))
+	local st = key and scenes[key]
+	local position = heroTracking.GetPosition(player.UserId)
+	local dir = DIRS[facing]
+	if not st or not position or not dir then
+		return false
+	end
+	if not inventoryService.TakeItem(player, itemId, 1) then
+		return false
+	end
+	lastThrowAt[player.UserId] = now
+	local origin = position / world.scale - Vector2.new(0, 7) -- 손 높이
+	local hit, hitT = nil, t.range
+	for _, m in st.monsters do
+		if m.dead or m.capturing then
+			continue
+		end
+		local rel = Vector2.new(m.x, m.y - 6) - origin -- 몬스터 몸 가운데쯤
+		local along = rel:Dot(dir)
+		local side = math.abs(rel.X * dir.Y - rel.Y * dir.X)
+		if along >= 0 and along <= hitT and side <= t.width + 3 then
+			hit, hitT = m, along
+		end
+	end
+	toScene(key, "ProjectileThrown", player.UserId, itemId, origin.X, origin.Y, dir.X, dir.Y, hitT, t.speed, t.radius or 0)
+	local damage = math.max(1, math.round(inventoryService.GetAttackDamage(player) * t.power))
+	task.delay(hitT / t.speed, function()
+		if scenes[key] ~= st or not player.Parent then
+			return
+		end
+		if t.radius then
+			local at = origin + dir * hitT + Vector2.new(0, 6) -- 발 높이로 내려서 잰다
+			for _, m in st.monsters do
+				if not m.dead and not m.capturing and (Vector2.new(m.x, m.y) - at).Magnitude <= t.radius then
+					dealDamage(key, st, m, player, damage, os.clock(), itemId)
+				end
+			end
+		elseif hit and not hit.dead and not hit.capturing then
+			dealDamage(key, st, hit, player, damage, os.clock(), itemId)
+		end
+	end)
+	return true
+end
+
+-- 바라보는 방향 앞 사각형(발 기준) — 닿는 거리·폭은 무기 종류마다(shared/config/weapons.luau)
+local function attackBox(x: number, y: number, facing: string, reach: number, width: number)
+	local half = width / 2
 	if facing == "left" then
 		return x - reach, y - half, x, y + half
 	elseif facing == "right" then
@@ -493,7 +661,14 @@ function exports.load()
 	Net.OnServer("TownAttack", function(player: Player, facing: string)
 		local now = os.clock()
 		local last = lastAttackAt[player.UserId]
-		if last and now - last < balance.TOWN_ATTACK_COOLDOWN then
+		local data = persistence.Get(player)
+		local weaponId = data and data.Equipment and data.Equipment.Weapon or "" -- 맞은 몬스터 위 베기 VFX를 무기에 맞게
+		local class = weapons.ClassOf(items[weaponId]) -- 무기 종류마다 빠르기 · 범위 · 세기가 다르다
+		local speed = class.speed
+		for _, fn in speedHooks do
+			speed *= fn(player)
+		end
+		if last and now - last < balance.TOWN_ATTACK_COOLDOWN * speed then
 			return
 		end
 		local key = townWorld.KeyOf(heroTracking.GetPlayerScene(player.UserId))
@@ -504,10 +679,8 @@ function exports.load()
 		end
 		lastAttackAt[player.UserId] = now
 		local feet = position / world.scale
-		local x0, y0, x1, y1 = attackBox(feet.X, feet.Y, facing)
-		local damage = inventoryService.GetAttackDamage(player)
-		local data = persistence.Get(player)
-		local weaponId = data and data.Equipment and data.Equipment.Weapon or "" -- 맞은 몬스터 위 베기 VFX를 무기에 맞게
+		local x0, y0, x1, y1 = attackBox(feet.X, feet.Y, facing, class.reach, class.width)
+		local damage = math.max(1, math.round(inventoryService.GetAttackDamage(player) * class.power))
 		local hitIds = {}
 		for _, m in st.monsters do
 			if not m.dead and not m.capturing and m.x >= x0 and m.x <= x1 and m.y >= y0 and m.y <= y1 then
@@ -542,6 +715,7 @@ function exports.load()
 	Players.PlayerRemoving:Connect(function(player)
 		lastAttackAt[player.UserId] = nil
 		lastThrowAt[player.UserId] = nil
+		guards[player.UserId] = nil
 		forget(player.UserId, heroTracking.GetPlayerScene(player.UserId))
 	end)
 

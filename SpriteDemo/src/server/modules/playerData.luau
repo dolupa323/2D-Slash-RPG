@@ -1,6 +1,6 @@
 -- 플레이어 데이터 오케스트레이션(서버 모듈 진입점). 실제 일은 server/services의 역할별 서비스가 한다:
 --   persistence(저장/로드/세션 락/오토세이브) · playerSchema(저장 형태 + 버전 마이그레이션)
---   progressionService(경험치/레벨/체력/사망) · inventoryService(인벤토리/장비) · currencyService(골드) · lootService(드롭)
+--   progressionService(경험치/레벨/체력/사망) · inventoryService(인벤토리/장비) · currencyService(골드)
 -- 이 모듈은 접속/퇴장 생명주기와 클라이언트 요청(Net) 연결만 담당한다. 다른 서버 모듈(몬스터 등)은 필요한 서비스를 직접 require해서 쓴다.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

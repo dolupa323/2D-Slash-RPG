@@ -1,54 +1,32 @@
--- 레벨업 연출: 캐릭터 발밑에서 퍼지는 위로 떠오르는 반짝이 + "LEVEL UP!" 글자.
+-- 레벨업 연출: 캐릭터 몸 위 팩 반짝이 이펙트 + "LEVEL UP!" 글자.
 -- damageNumbers.luau처럼 대상 캐릭터의 Instance에 직접 자식으로 매달아서, 좌표 계산 없이
 -- 캐릭터를 따라다니게 한다. modules/ 루트라 sceneLoader가 자동으로 load/unload를 부르지
 -- 않는다 — playerStats.luau가 레벨업 신호를 받을 때 직접 Play()를 부른다.
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local uiTheme = require(ReplicatedStorage.shared.util.uiTheme)
+local packFx = require(script.Parent.packFx)
 local pixelText = require(script.Parent.ui.pixelText)
 
-local GOLD = Color3.fromRGB(255, 214, 90)
-local GOLD_LIGHT = Color3.fromRGB(255, 244, 190)
+local GOLD = Color3.fromRGB(255, 173, 85) -- 팩 밝은 주황(uiKit colors.accentL)
 
-local SPARKLE_COUNT = 14
-local SPARKLE_DURATION = 1.1
 local TEXT_DURATION = 1.4
 local TEXT_RISE = 70
 
 local exports = {}
 
+-- 팩 반짝이 이펙트(FX/Magic/Spark · Boost)를 캐릭터 몸 위에. anchor(캐릭터 그림) 안 좌표라 캐릭터를 따라다닌다.
 local function spawnSparkle(anchor: GuiObject)
-	local size = math.random(5, 10)
-	local sparkle = Instance.new("Frame")
-	sparkle.Name = "LevelUpSparkle"
-	sparkle.AnchorPoint = Vector2.new(0.5, 0.5)
-	sparkle.Position = UDim2.new(0.5, math.random(-70, 70), 0.9, math.random(-10, 10))
-	sparkle.Size = UDim2.fromOffset(size, size)
-	sparkle.BackgroundColor3 = if math.random() < 0.5 then GOLD else GOLD_LIGHT
-	sparkle.BorderSizePixel = 0
-	sparkle.Rotation = math.random(0, 45)
-	sparkle.ZIndex = 9400
-	sparkle.Parent = anchor
-	uiTheme.AddCorner(sparkle, 2)
-
-	local rise = math.random(90, 170)
-	local drift = math.random(-25, 25)
-	local info = TweenInfo.new(SPARKLE_DURATION * (0.7 + math.random() * 0.5), Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	TweenService:Create(sparkle, info, {
-		Position = sparkle.Position + UDim2.fromOffset(drift, -rise),
-		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(2, 2),
-	}):Play()
-	task.delay(info.Time + 0.05, function()
-		sparkle:Destroy()
-	end)
+	for i, name in { "spark", "boost" } do
+		packFx.Play(anchor, name, function()
+			return Vector2.new(anchor.AbsoluteSize.X / 2, anchor.AbsoluteSize.Y * 0.35)
+		end, { delay = (i - 1) * 0.15, zIndex = 9400 })
+	end
 end
 
 -- (2026-09-29) "LEVEL UP!" 글씨를 우리 도트 글꼴(제목 16px, 금색 + 갈색 그림자)로. 캐릭터 배율(2)보다 조금 크게.
 local PIXEL_SCALE = 2
 local function spawnText(anchor: GuiObject)
 	local glyphs = pixelText.new(anchor, {
-		Name = "LevelUpText", Text = "LEVEL UP!", Font = "title", Color = GOLD, Shadow = Color3.fromRGB(120, 60, 0),
+		Name = "LevelUpText", Text = "LEVEL UP!", Font = "title", Color = GOLD, Shadow = Color3.fromRGB(150, 83, 64),
 		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -20), ZIndex = 9600, -- 씬 화면은 ZIndex 전역 정렬 — 모든 월드 그림 위로
 	})
 	local label = glyphs.Frame
@@ -81,9 +59,7 @@ function exports.Play(anchor: GuiObject)
 		return
 	end
 
-	for _ = 1, SPARKLE_COUNT do
-		task.delay(math.random() * 0.35, spawnSparkle, anchor)
-	end
+	spawnSparkle(anchor)
 	spawnText(anchor)
 end
 

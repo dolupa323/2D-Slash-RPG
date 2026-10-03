@@ -1,10 +1,9 @@
--- 플레이어 상태 HUD — 에셋 공방 UI 탭 "HUD" 예시 화면 그대로(2026-09-29 도트 UI로 교체).
---  왼쪽 위: 패널 안에 레벨(분홍 알약) + 이름 + 체력(하트·빨강 게이지) + 경험치(별·노랑 게이지·%)
---  오른쪽 위: 코인(골드)
---  오른쪽 아래: 대화(흰색, E키와 같은 "Interact") · 공격(분홍, F키와 같은 "Attack") 버튼 — PC·모바일 공용
---             + 설정 · 도감 · 가방 버튼(모두 흰색)
--- 좌표는 UI 도트 단위, 화면 배율은 pixelUI.Scale(정수배). 예전 동양풍 틀 HUD는 git 기록에 있다.
--- 게이지는 값이 바뀔 때 부드럽게 따라간다.
+-- 플레이어 상태 HUD — 「오문 닌자전」 팩 UI(공방 「닌자 맵」 탭 「UI」 예시 화면 그대로).
+--  왼쪽 위: 패널 안에 레벨(주황 알약) + 이름 + 체력(하트·빨강 게이지) + 경험치(EXP·노랑 게이지·%)
+--  오른쪽 위: 엽전
+--  오른쪽 아래: 대화(E키와 같은 "Interact") · 공격(F키와 같은 "Attack") 버튼 — 팩 스킬 아이콘, PC·모바일 공용
+--             + 설정 · 도감 · 가방 버튼
+-- 좌표는 UI 도트 단위, 화면 배율은 pixelUI.Scale(정수배). 게이지는 값이 바뀔 때 부드럽게 따라간다.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15,7 +14,6 @@ local UI = require(script.Parent.Parent.ui.pixelUI)
 local inventory = require(script.Parent.inventory)
 local settings = require(script.Parent.settings)
 local dex = require(script.Parent.dex)
-local petBox = require(script.Parent.petBox)
 
 local C = UI.colors
 local MARGIN = 6 -- 화면 가장자리 여백(도트)
@@ -58,27 +56,28 @@ function exports.load(scene: Scene)
 	screenGui.ResetOnSpawn = false
 	-- IgnoreGuiInset 끔(기본) — 로블록스 기본 메뉴 버튼 영역과 안 겹치게.
 
-	-- 왼쪽 위: 레벨·이름·체력·경험치
-	local status = corner(screenGui, "Status", Vector2.new(0, 0), 156, 58)
-	UI.Panel(status, 0, 0, 156, 58)
-	UI.Pill(status, 7, 6, 36, 15)
-	local lvLabel = UI.Label(status, "Lv.1", 11, 7, { Color = C.white })
-	UI.Label(status, Players.LocalPlayer.DisplayName, 49, 7, { Color = C.ink })
-	UI.Icon(status, "heart", 6, 23)
-	local hpBar = UI.Bar(status, 21, 25, 96, "red")
-	local hpLabel = UI.Label(status, "", 122, 23, { Color = C.ink })
-	UI.Icon(status, "star", 6, 37)
-	local expBar = UI.Bar(status, 21, 39, 96, "yellow")
-	local expLabel = UI.Label(status, "", 122, 37, { Color = C.ink })
+	-- 왼쪽 위: 레벨·이름·체력·경험치(패널 테두리가 두꺼워 안쪽 여백 10)
+	local status = corner(screenGui, "Status", Vector2.new(0, 0), 158, 54)
+	UI.Panel(status, 0, 0, 158, 54)
+	local pillW = UI.Text.Measure("Lv.100") + 8 -- 가장 긴 레벨 글씨가 들어가는 폭
+	UI.Pill(status, 10, 8, pillW, 14)
+	local lvLabel = UI.Label(status, "Lv.1", 14, 8, { Color = C.white, Shadow = C.accentD, MaxWidth = pillW - 6, MaxLines = 1 })
+	UI.Label(status, Players.LocalPlayer.DisplayName, 10 + pillW + 5, 8, { Color = C.ink, MaxWidth = 158 - 10 - pillW - 5 - 10, MaxLines = 1 })
+	UI.Icon(status, "heart", 11, 23)
+	local hpBar = UI.Bar(status, 36, 25, 74, "red")
+	local hpLabel = UI.Label(status, "", 114, 23, { Color = C.ink, MaxWidth = 34, MaxLines = 1 })
+	UI.Label(status, "EXP", 10, 36, { Color = C.accentD, MaxWidth = 24, MaxLines = 1 })
+	local expBar = UI.Bar(status, 36, 37, 74, "yellow")
+	local expLabel = UI.Label(status, "", 114, 36, { Color = C.ink, MaxWidth = 34, MaxLines = 1 })
 
-	-- 오른쪽 위: 코인
-	local coins = corner(screenGui, "Coins", Vector2.new(1, 0), 76, 24)
-	UI.Panel(coins, 0, 0, 76, 24)
-	UI.Icon(coins, "coin", 6, 5)
-	local goldLabel = UI.Label(coins, "0", 70, 5, { Color = C.ink, Align = "right" })
+	-- 오른쪽 위: 엽전
+	local coins = corner(screenGui, "Coins", Vector2.new(1, 0), 108, 28)
+	UI.Panel(coins, 0, 0, 108, 28)
+	UI.Icon(coins, "coin", 12, 8)
+	local goldLabel = UI.Label(coins, "0", 94, 8, { Color = C.ink, Align = "right" })
 	local function setGold(gold: number)
 		goldLabel:SetText(formatNumber(gold or 0))
-		goldLabel.Frame.Position = UDim2.fromOffset(70 - goldLabel.Width, 5)
+		goldLabel.Frame.Position = UDim2.fromOffset(94 - goldLabel.Width, 8)
 	end
 	setGold(inventory.getGold())
 	if not exports.goldHooked then
@@ -91,11 +90,12 @@ function exports.load(scene: Scene)
 	end
 	exports.setGold = setGold
 
-	-- 오른쪽 아래: 대화 · 공격 버튼(위) + 설정 · 도감 · 몬스터 상자(발바닥) · 가방(아래)
-	local menu = corner(screenGui, "Menu", Vector2.new(1, 1), 132, 66)
+	-- 오른쪽 아래: 대화 · 공격 버튼(위, 팩 스킬 아이콘 + 키 그림) + 설정 · 도감 · 가방(아래)
+	local menu = corner(screenGui, "Menu", Vector2.new(1, 1), 138, 72)
 	-- 누르는 동안 키를 누른 것과 같은 입력을 보낸다(PC 키와 같은 액션)
-	local function actionButton(x: number, color: string, text: string, action: string)
-		local button = UI.Button(menu, x, 0, 44, 32, { Color = color, Text = text })
+	local function actionButton(x: number, color: string, image: string, key: string, action: string)
+		local button = UI.Button(menu, x, 4, 36, 34, { Color = color, Image = image })
+		UI.Part(menu, key, x + 40 - UI.Size(key).X, 0).ZIndex = 6 -- 그 행동의 키보드 키(오른쪽 위 모서리에 걸친다)
 		local function fire(kind: string)
 			CrossPlatformService:Fire(kind, { Action = action, Position = Vector2.zero, KeyCode = { Name = action } })
 		end
@@ -105,26 +105,30 @@ function exports.load(scene: Scene)
 		button.Instance.MouseButton1Up:Connect(function()
 			fire("InputEnd")
 		end)
+		return button
 	end
-	actionButton(40, "white", "대화", "Interact")
-	actionButton(88, "pink", "공격", "Attack")
-	UI.Button(menu, 0, 36, 30, 30, { Color = "white", Icon = "gear", OnClick = function()
+	local dashButton = actionButton(22, "plain", "act_dash", "key_shift", "Dash") -- 대쉬(견습 구르기 / 유파의 대쉬)
+	local dashLabel = UI.Label(dashButton.Instance, "", 0, 9, { Color = C.white, Shadow = C.ink, ZIndex = 9, Align = "center", Clamp = false })
+	actionButton(62, "plain", "act_talk", "key_e", "Interact")
+	actionButton(102, "primary", "act_attack", "key_f", "Attack")
+	UI.Button(menu, 6, 42, 30, 30, { Color = "plain", Image = "act_skill", OnClick = function()
+		require(script.Parent.ninjutsu).ToggleSkillWindow() -- 스킬 창(K 키)
+	end })
+	UI.Part(menu, "key_k", 6 + 21, 38).ZIndex = 6
+	UI.Button(menu, 40, 42, 30, 30, { Color = "plain", Icon = "gear", OnClick = function()
 		settings.toggle()
 	end })
-	UI.Button(menu, 34, 36, 30, 30, { Color = "white", Icon = "book", OnClick = function()
+	UI.Button(menu, 74, 42, 30, 30, { Color = "plain", Icon = "book", OnClick = function()
 		dex.toggle()
 	end })
-	UI.Button(menu, 68, 36, 30, 30, { Color = "white", Icon = if UI.Has("icon_paw") then "paw" else "star", OnClick = function()
-		petBox.toggle()
-	end })
-	UI.Button(menu, 102, 36, 30, 30, { Color = "white", Icon = "bag", OnClick = function()
+	UI.Button(menu, 108, 42, 30, 30, { Color = "plain", Icon = "bag", OnClick = function()
 		inventory.toggle()
 	end })
 
 	screenGui.Parent = playerGui
 	exports.screenGui = screenGui
 
-	local shown = { hp = nil, exp = nil }
+	local shown = { hp = nil, exp = nil, dash = "" }
 	local function approach(current: number?, target: number, delta: number): number
 		if current == nil then
 			return target
@@ -139,6 +143,14 @@ function exports.load(scene: Scene)
 			return
 		end
 		lvLabel:SetText("Lv." .. tostring(character.Level or 1))
+		-- 대쉬 쿨타임: 버튼 위에 남은 초
+		local left = (require(script.Parent.Parent.topDownHero).dashReadyAt or 0) - os.clock()
+		local text = if left > 0 then tostring(math.ceil(left)) else ""
+		if shown.dash ~= text then
+			shown.dash = text
+			dashLabel:SetText(text)
+			dashLabel.Frame.Position = UDim2.fromOffset((36 - dashLabel.Width) // 2, 9)
+		end
 
 		local health = character.Health or 0
 		local maxHealth = math.max(character.MaxHealth or 1, 1)

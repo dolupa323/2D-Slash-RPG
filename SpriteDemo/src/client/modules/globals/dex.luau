@@ -24,6 +24,18 @@ local TABS = {
 	{ key = "water", label = "물", icon = "water" },
 }
 local ELEMENT_NAME = { fire = "불", water = "물", grass = "풀" }
+local ELEMENT_WORD = "속성"
+-- 「오문 닌자전」: 몬스터의 element = 사는 지역 id(world.regions) → 지역 탭. 탭이 8개라 짧은 이름으로.
+local SHORT = { field = "들판", bamboo = "대숲", swamp = "늪", desert = "사막", snow = "설산", ruins = "폐허", tower = "탑", nest = "둥지" }
+if townWorld.data.regions then
+	TABS = { { key = nil, label = "전체" } }
+	ELEMENT_NAME = {}
+	ELEMENT_WORD = "지역"
+	for _, r in townWorld.data.regions do
+		table.insert(TABS, { key = r.id, label = SHORT[r.id] or r.name })
+		ELEMENT_NAME[r.id] = r.name
+	end
+end
 
 local exports = {}
 local discovered = {} -- 종류 id -> true
@@ -56,7 +68,7 @@ function exports.load(scene: Scene)
 	UI.TitleTag(panel, "몬스터 도감", PW / 2, -13)
 	UI.Pill(panel, PW - 88, 8, 52, 15, true)
 	local countLabel = UI.Label(panel, "", PW - 62, 9, { Color = C.white })
-	UI.Button(panel, PW - 30, 6, 20, 20, { Color = "white", Icon = "close", OnClick = function()
+	UI.Button(panel, PW - 30, 6, 20, 20, { Color = "plain", Icon = "close", OnClick = function()
 		popupManager.Close("Dex")
 	end })
 	-- 아래 설명 줄
@@ -81,12 +93,13 @@ function exports.load(scene: Scene)
 		refresh()
 	end)
 
-	-- 속성 탭
+	-- 속성(지역) 탭 — 탭이 많으면 여백을 줄인다
 	local tx = 10
+	local pad = if #TABS > 5 then 8 else 14
 	for _, t in TABS do
-		local w = UI.Text.Measure(t.label, "body") + (if t.icon then 26 else 14)
+		local w = UI.Text.Measure(t.label, "body") + (if t.icon then 26 else pad)
 		local part = UI.Part(panel, "tab_off", tx, 8, w, 18, "ImageButton")
-		local lx = 7
+		local lx = if #TABS > 5 then 4 else 7
 		if t.icon then
 			UI.Icon(part, t.icon, lx - 1, 3)
 			lx += 13
@@ -118,7 +131,7 @@ function exports.load(scene: Scene)
 			local s = species[cell.row]
 			local lo, hi = monsterLevels.LevelRange(cell.row)
 			if discovered[s.id] then
-				infoLabel:SetText(("%s · %s 속성 · Lv.%d~%d"):format(s.name, ELEMENT_NAME[s.element] or s.element, lo, hi))
+				infoLabel:SetText(("%s · %s %s · Lv.%d~%d"):format(s.name, ELEMENT_NAME[s.element] or s.element, ELEMENT_WORD, lo, hi))
 			else
 				infoLabel:SetText(("??? · Lv.%d~%d 지역에서 만날 수 있어요"):format(lo, hi))
 			end
@@ -151,7 +164,7 @@ function exports.load(scene: Scene)
 				cell.img.Image = townAssets.MONSTER_SHEETS[townWorld.MonsterSheet(row)]
 				cell.img.ImageRectOffset = townWorld.MonsterFrameOffset(row, 0)
 				-- 아직 못 만난 몬스터는 회색 그림자
-				cell.img.ImageColor3 = if seen then Color3.new(1, 1, 1) else Color3.fromRGB(90, 78, 110)
+				cell.img.ImageColor3 = if seen then Color3.new(1, 1, 1) else Color3.fromRGB(60, 66, 56)
 				cell.img.ImageTransparency = if seen then 0 else 0.55
 				cell.num:SetText(string.format("%02d", row))
 				cell.num:SetColor(if seen then C.ink else C.grayD or C.ink)

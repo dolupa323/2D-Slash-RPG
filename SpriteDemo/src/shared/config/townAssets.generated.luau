@@ -1,27 +1,27 @@
--- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/write_asset_ids.mjs).
--- 원본 이미지: SpriteDemo/assets/bunvillage/
+-- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/write_ninja_ids.mjs).
+-- 원본 이미지: SpriteDemo/assets/ninja/ (「오문 닌자전」 — Ninja Adventure 팩, CC0)
 return {
-	OBJECTS = "rbxassetid://105058303922871",
-	MONSTERS = "rbxassetid://105196537557568",
-	MONSTER_SHEETS = { "rbxassetid://105196537557568", "rbxassetid://72945187424707" }, -- 몬스터 시트 1, 2, …(한 장에 perSheet종)
-	PLAYER = "rbxassetid://91734152152012",
-	NPCS = "rbxassetid://88083387532713",
+	OBJECTS = "rbxassetid://116867253795408",
+	MONSTERS = "rbxassetid://134523042922733",
+	MONSTER_SHEETS = { "rbxassetid://134523042922733" }, -- 몬스터 66종이 한 장에 들어 있다
+	PLAYER = "rbxassetid://78471859808863",
+	NPCS = "rbxassetid://111577531997651",
+	ITEMS = "rbxassetid://81901429550263", -- 아이템 아이콘 시트(shared/data/itemIcons.generated.luau)
+	FX = "rbxassetid://125574344038345", -- 인술 · 맞음 이펙트 시트(shared/data/ninjaFx.generated.luau)
+	UI = "rbxassetid://95121906472533", -- UI 키트 아틀라스(shared/data/uiKit.generated.luau, tools/export_ninja_ui.mjs)
+	-- 도트 글꼴 글자판(shared/data/pixelFont.generated.luau, tools/export_ninja_font.mjs)
+	FONT = {
+		body = { "rbxassetid://86254954369011", "rbxassetid://74815922164131" },
+		title = { "rbxassetid://134390545966158", "rbxassetid://131806650250169", "rbxassetid://124307610648212", "rbxassetid://103155499437491" },
+	},
 	GROUNDS = {
-		smulckkhb0 = "rbxassetid://103103041612434", -- 마을
-		smulcl3173 = "rbxassetid://93248696474073", -- 사냥터1
-		smumb8gxr0 = "rbxassetid://88880863334807", -- 병원 실내
-		smumb9clq4 = "rbxassetid://111363597721429", -- 잡화 상점 실내
-		smumb9rcs8 = "rbxassetid://130640056203218", -- 대장간 실내
-		smumba2nmc = "rbxassetid://107099561903933", -- 창고 실내
-		smumbacjgg = "rbxassetid://132211851206421", -- 수리소 실내
-		smumbqc1e0 = "rbxassetid://126389699222952", -- 크림 벽 2층 집 1층
-		smumbqc1e2 = "rbxassetid://136397606256505", -- 크림 벽 2층 집 2층
-		smumbrdzc7 = "rbxassetid://115237785545018", -- 포션 상점 실내
-		smumbs2aqb = "rbxassetid://126389699222952", -- 하늘 벽 3층 집 1층
-		smumbs2aqd = "rbxassetid://122332185948239", -- 하늘 벽 3층 집 2층
-		smumbs2aqe = "rbxassetid://97796628103801", -- 하늘 벽 3층 집 3층
-		smumbsel1l = "rbxassetid://120624585210028", -- 분홍 벽 집 실내
-		smumdr1cut = "rbxassetid://104706355458684", -- 사냥터2
-		smumdr6ngu = "rbxassetid://80556278541114", -- 새 씬 16
+		village = "rbxassetid://118988897104438", -- 닌자 마을
+		field1 = "rbxassetid://137687022207213", -- 새싹 들판 1
+		field2 = "rbxassetid://115125289318889", -- 새싹 들판 2
+		field3 = "rbxassetid://121926389256231", -- 새싹 들판 3
+		hill1 = "rbxassetid://112754327978342", -- 나비 언덕 1
+		hill2 = "rbxassetid://74468023793636", -- 나비 언덕 2
+		hill3 = "rbxassetid://136155507364311", -- 나비 언덕 3
+		pond = "rbxassetid://125057394654328", -- 큰 웅덩이
 	},
 }

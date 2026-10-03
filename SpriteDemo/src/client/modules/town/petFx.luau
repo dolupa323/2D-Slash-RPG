@@ -20,6 +20,7 @@ local fxAssets = require(ReplicatedStorage.shared.config["fxAssets.generated"])
 local map = require(script.Parent.map)
 local monsters = require(script.Parent.monsters)
 local pets = require(script.Parent.pets)
+local features = require(ReplicatedStorage.shared.config.features)
 
 local G = petSkills.generated
 local S = map.S
@@ -189,6 +190,9 @@ local function cast(userId: number, slot: number, speciesId: string, pattern: st
 end
 
 function exports.load(scene: Scene)
+	if not features.PETS then
+		return
+	end
 	local d = map.Use(scene)
 	if not d then
 		return

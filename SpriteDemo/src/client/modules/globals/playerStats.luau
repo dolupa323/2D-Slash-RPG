@@ -6,7 +6,7 @@
 -- (실측 버그 이력) 게임 시작 직후엔 레벨이 1로 보이다가 포탈을 타면 저장된 레벨로 바뀌었다.
 -- globals 모듈이 씬 모듈(hero 생성)보다 먼저 load되는데, 그 시점에 이미
 -- CrossPlatformService.Character에 엔진 기본 캐릭터가 들어있어서 "캐릭터가 생겼다"고
--- 착각하고 그 임시 캐릭터에 값을 채웠고, 곧이어 heroController가 진짜 hero를 만들어
+-- 착각하고 그 임시 캐릭터에 값을 채웠고, 곧이어 topDownHero가 진짜 hero를 만들어
 -- 교체하면서 값이 날아갔다. 그래서 값을 한 번만 채우지 않고, 서버 값을 캐시해둔 뒤
 -- 매 프레임 "현재 Character가 마지막으로 채운 것과 다르면" 다시 채운다.
 local RunService = game:GetService("RunService")

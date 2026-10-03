@@ -79,7 +79,10 @@ function exports.load(scene: Scene)
 	-- 맵 바깥(카메라가 가장자리에 가면 보이는 곳)은 잔디색으로, 실내 씬은 벽 윗면 색으로 채운다.
 	local outside = Instance.new("Frame")
 	outside.Name = "Outside"
-	outside.BackgroundColor3 = if d.indoor then Color3.fromRGB(122, 101, 136) else Color3.fromRGB(191, 230, 164)
+	outside.BackgroundColor3 = if d.outside
+		then Color3.fromRGB(d.outside[1], d.outside[2], d.outside[3]) -- 씬 데이터가 정한 바깥 색(풀 바탕 평균색)
+		elseif d.indoor then Color3.fromRGB(122, 101, 136)
+		else Color3.fromRGB(191, 230, 164)
 	outside.BorderSizePixel = 0
 	outside.Position = UDim2.fromOffset(-2000, -2000)
 	outside.Size = UDim2.fromOffset(d.ground.w * S + 4000, d.ground.h * S + 4000)

@@ -90,7 +90,7 @@ function exports.load(scene: Scene)
 
 	local held = {} -- InputObject -> action
 	for action, pos in LAYOUT do
-		local button = UI.Button(pad, MARGIN + pos.X, MARGIN + pos.Y, BTN, BTN, { Color = "white" })
+		local button = UI.Button(pad, MARGIN + pos.X, MARGIN + pos.Y, BTN, BTN, { Color = "plain" })
 		arrow(button.Instance, action)
 		button.Instance.InputBegan:Connect(function(input)
 			if isPointer(input) and not held[input] then

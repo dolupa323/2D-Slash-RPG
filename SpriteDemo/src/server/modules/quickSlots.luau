@@ -1,6 +1,7 @@
 -- 소비 단축칸 1·2·3(서버) — GAME_DESIGN §3. 가방에서 소비 아이템(방울·물약)을 칸에 놓고, 숫자키/터치로 바로 쓴다.
 --  SetQuickSlot(칸, 아이템 id | ""): 소비("Use" 탭) 아이템만. 같은 아이템이 다른 칸에 있으면 그 칸은 비운다.
---  UseQuickSlot(칸, 바라보는 방향): 방울 → townMonsters.ThrowBell(그 방향 직선으로 던져 포획 시도) / 물약 → 체력 회복.
+--  UseQuickSlot(칸, 바라보는 방향): 투척 무기 → townMonsters.ThrowWeapon(그 방향 직선으로 던져 피해) /
+--   방울 → townMonsters.ThrowBell(포획 — 지금은 꺼 둠) / 음식·물약 → 체력 회복.
 --  저장: data.QuickSlots = { id1, id2, id3 } (playerSchema v6). 바뀌면 QuickSlotsUpdated로 알린다.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage.shared.net.net)
@@ -54,7 +55,9 @@ function exports.load()
 			Net.FireClient("Notify", player, ("%s이(가) 없어요"):format(def.Name))
 			return
 		end
-		if def.Type == "Bell" then
+		if def.Type == "Throw" then
+			townMonsters.ThrowWeapon(player, itemId, facing) -- 「오문 닌자전」 투척 무기(수리검 · 쿠나이 · 폭탄)
+		elseif def.Type == "Bell" then
 			townMonsters.ThrowBell(player, itemId, facing)
 		elseif def.Heal then
 			if progressionService.Heal(player, def.Heal) <= 0 then

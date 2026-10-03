@@ -15,5 +15,7 @@ return {
 	MONSTER_SHEETS = ids.MONSTER_SHEETS or { ids.MONSTERS }, -- 몬스터 시트 전부(1024px 한계로 여러 장) — townWorld.MonsterSheet(row)로 고른다
 	PLAYER = ids.PLAYER, -- 플레이어(줄: 아래·위·왼·오, 칸: 걷기4 + 공격4)
 	NPCS = ids.NPCS, -- NPC 시트(역할마다 한 줄, 대기 2장)
+	UI = ids.UI or "", -- UI 키트 아틀라스(shared/data/uiKit.generated.luau)
+	FX = ids.FX or "", -- 인술 이펙트 시트(shared/data/ninjaFx.generated.luau) — 업로드 전이면 빈 글자(이펙트를 안 그림)
 	GROUNDS = ids.GROUNDS, -- 씬 키 → 바닥 이미지
 }

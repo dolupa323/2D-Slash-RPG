@@ -54,13 +54,6 @@ local packets = {
 		Args = { t.string },
 		RateLimit = { PerSecond = 2, Burst = 3 },
 	},
-	-- 공격은 "바라보는 방향"(의도)만 보낸다. 공격 위치는 서버가 알고 있는 캐릭터 위치를 쓰고, 공격 간격도 서버가 검증한다.
-	ReportHeroAttack = {
-		Kind = "Event",
-		Direction = "ClientToServer",
-		Args = { t.oneOf("left", "right") },
-		RateLimit = { PerSecond = 30, Burst = 12 },
-	},
 	EquipAction = {
 		Kind = "Event",
 		Direction = "ClientToServer",
@@ -101,6 +94,62 @@ local packets = {
 		Kind = "Event",
 		Direction = "ClientToServer",
 		Args = { t.oneOf("up", "down", "left", "right") },
+		RateLimit = { PerSecond = 6, Burst = 6 },
+	},
+	-- 무기 강화(대장간 NPC 곁에서): 칸 0 = 착용한 무기, 1 이상 = 가방 장비 탭의 그 칸. 재료 · 엽전 · 확률은 서버가 처리한다.
+	UpgradeWeapon = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.number },
+		RateLimit = { PerSecond = 3, Burst = 4 },
+	},
+	-- 유파 고르기 = 1차 전직(Lv.10, 스승 곁) / 이미 유파가 있으면 유파 바꾸기(엽전). 조건은 서버가 확인한다.
+	ChooseSchool = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.oneOf("fire", "ice", "plant", "rock", "thunder") },
+		RateLimit = { PerSecond = 1, Burst = 3 },
+	},
+	-- 2 · 3 · 4차 전직(스승 곁, 전직 레벨이 됐을 때)
+	JobAdvance = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = {},
+		RateLimit = { PerSecond = 1, Burst = 2 },
+	},
+	-- 스킬 배우기 · 올리기(스킬 id — 그 전직의 SP 1) / 단축칸에 넣기(칸, 스킬 id · "" = 비움). 조건은 서버가 확인한다(ninjutsuService).
+	LearnSkill = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.string },
+		RateLimit = { PerSecond = 8, Burst = 12 },
+	},
+	SetSkillSlot = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.number, t.string },
+		RateLimit = { PerSecond = 4, Burst = 8 },
+	},
+	-- 대쉬(이동기 — 견습 구르기 / 유파의 대쉬, shared/config/ninjutsu.luau DASH): 바라보는 방향. 쿨타임 · 기력은 서버가 확인하고
+	--  같은 씬에 연출을 알린다(순수 이동기 — 피해 · 상태 이상 없음). 움직임 자체는 클라이언트가 한다(위치 복제). 연출은 NinjutsuCast("dash_<id>")로 같은 씬에 알린다.
+	UseDash = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.oneOf("up", "down", "left", "right") },
+		RateLimit = { PerSecond = 3, Burst = 4 },
+	},
+	-- 본 줄거리 퀘스트: NPC(키)에게 말을 걸어 받거나 끝낸다 — 곁에 있는지 · 레벨 · 목표는 서버가 확인한다(questService).
+	QuestTalk = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.string },
+		RateLimit = { PerSecond = 2, Burst = 4 },
+	},
+	-- 인술 쓰기(칸 1~4 = n차 전직 인술, 바라보는 방향) — 전직 단계 · 쿨타임 · 기력은 서버가 확인한다.
+	UseNinjutsu = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		Args = { t.number, t.oneOf("up", "down", "left", "right") },
 		RateLimit = { PerSecond = 6, Burst = 6 },
 	},
 	-- 가방: 같은 탭 안에서 칸 옮기기(드래그 앤 드롭) — 탭, 보낸 칸, 받는 칸. 받는 칸에 아이템이 있으면 서로 바꾸고, 같은 아이템이면 합친다.
@@ -164,11 +213,12 @@ local packets = {
 	RemoveReplicated = { Kind = "Event", Direction = "ServerToClient", Doc = "userId, objectId" },
 	TravelApproved = { Kind = "Event", Direction = "ServerToClient", Doc = "destinationSceneName" },
 	PlayerHealthChanged = { Kind = "Event", Direction = "ServerToClient", Doc = "health, maxHealth, damage, died" },
-	MonsterDespawned = { Kind = "Event", Direction = "ServerToClient", Doc = "monsterId" },
 	InventoryUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "{ {Slot, ItemId, Count} }" },
 	StatsUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "level, experience, maxExperience, leveledUp" },
 	ItemAcquired = { Kind = "Event", Direction = "ServerToClient", Doc = "itemId, count" },
-	EquipmentUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "{ Weapon=ItemId?, Armor=ItemId? }" },
+	EquipmentUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "{ Weapon=ItemId?, Armor=ItemId? }, { Weapon=강화 단계? }" },
+	-- 강화 결과(성공 여부, 아이템 id, 지금 단계) — 가방·장비 내용은 InventoryUpdated · EquipmentUpdated로 따로 온다
+	UpgradeResult = { Kind = "Event", Direction = "ServerToClient", Doc = "success, itemId, plus" },
 	GoldUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "gold" },
 	-- 탑다운 씬 공유 상태(같은 씬 플레이어에게만 보낸다 — 첫 인자는 항상 씬 키: 씬을 옮기는 순간 늦게 온 것은 버린다)
 	TownMonsterMoves = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, { {id, x, y, facingLeft, moving} } (10Hz)" },
@@ -183,6 +233,20 @@ local packets = {
 	-- 포획(M2): 방울 던지기(같은 씬 모두에게 날아가는 연출) / 맞은 몬스터의 포획 결과(연출 — 결과는 capture.RevealTime(딸랑 횟수) 뒤 적용)
 	BellThrown = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, userId, x, y, dirX, dirY, distance, tier, hitMonsterId(0 = 빗나감)" },
 	TownCapture = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, id, tier, result(\"success\"|\"fail\"|\"blocked\"), dings(딸랑 횟수 0~3)" },
+	-- 투척 무기를 던짐(같은 씬 모두에게 날아가는 연출 — 피해는 TownMonsterHit). radius > 0이면 도착 자리에서 터진다(폭탄)
+	ProjectileThrown = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, userId, itemId, x, y, dirX, dirY, distance, speed, radius" },
+	-- 유파와 인술(「오문 닌자전」 N2 — shared/config/ninjutsu.luau)
+	SchoolUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "school, { [스킬 id] = 레벨 }, 전직 단계(0~4), { 전직별 안 쓴 SP }, { 단축칸 스킬 id }" },
+	-- 내게 쌓이는 핵심 장치(생기 · 견고 · 전하): 스킬 id, 지금 값, 최대, 이 초 뒤 사라짐(없으면 안 사라짐)
+	CoreUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "skillId, value, max, seconds?" },
+	EnergyUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "energy, max, regenPerSecond — 값이 바뀔 때만(그 사이는 클라가 이어서 센다)" },
+	-- 인술을 씀(같은 씬 모두에게 연출용 — 피해는 TownMonsterHit "nin:<인술 id>"). x, y = 쓴 사람 발(도트).
+	--  distance = 종류마다: projectile 날아간 거리 · line 길이 · circle 반경 · guard 지속 초. targets = chain이 맞힌 몬스터 id 순서
+	NinjutsuCast = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, userId, skillId, x, y, dirX, dirY, distance, { targetMonsterId }" },
+	-- 본 줄거리 퀘스트 상태(shared/config/quests.luau): 지금 퀘스트 번호 · 받았는가 · 진행(처치 수 등) · 방금 끝낸 퀘스트 id(없으면 nil)
+	QuestUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "index, accepted, progress, completedId?" },
+	-- 몬스터 상태 이상(연출용): kind = "slow" | "stun"
+	TownMonsterStatus = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, id, kind, seconds" },
 	-- 펫 스킬 발동(M4, 같은 씬 모두에게 연출용 — 피해는 TownMonsterHit "pet:<종 id>", 회복은 PlayerHealthChanged). x, y = 대상 몬스터(없으면 주인 발) 위치(도트)
 	PetSkill = { Kind = "Event", Direction = "ServerToClient", Doc = "sceneKey, ownerUserId, partySlot, speciesId, pattern, targetMonsterId(0 = 없음), x, y" },
 	-- 펫 상자·파티가 바뀜(잡음·편성·놓아주기)

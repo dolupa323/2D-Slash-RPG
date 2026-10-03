@@ -1,0 +1,42 @@
+[
+  {
+    "key": "village",
+    "file": "ground_village.png",
+    "name": "닌자 마을"
+  },
+  {
+    "key": "field1",
+    "file": "ground_field1.png",
+    "name": "새싹 들판 1"
+  },
+  {
+    "key": "field2",
+    "file": "ground_field2.png",
+    "name": "새싹 들판 2"
+  },
+  {
+    "key": "field3",
+    "file": "ground_field3.png",
+    "name": "새싹 들판 3"
+  },
+  {
+    "key": "hill1",
+    "file": "ground_hill1.png",
+    "name": "나비 언덕 1"
+  },
+  {
+    "key": "hill2",
+    "file": "ground_hill2.png",
+    "name": "나비 언덕 2"
+  },
+  {
+    "key": "hill3",
+    "file": "ground_hill3.png",
+    "name": "나비 언덕 3"
+  },
+  {
+    "key": "pond",
+    "file": "ground_pond.png",
+    "name": "큰 웅덩이"
+  }
+]

@@ -2,7 +2,7 @@
 -- 레벨 적용 등)이 전부 준비된 뒤에 페이드로 걷어내는 블랙아웃. 이게 없으면 준비가
 -- 덜 된 상태로 게임이 바로 시작돼서 "될 때도 있고 안 될 때도 있는" 타이밍 버그가 났다.
 -- modules/ 루트에 있어서 sceneLoader가 자동으로 load/unload를 부르지 않는다(travelState와
--- 같은 패턴) — sceneLoader.luau와 portalController.luau가 직접 require해서 쓴다.
+-- 같은 패턴) — sceneLoader.luau와 topDownHero.luau가 직접 require해서 쓴다.
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
