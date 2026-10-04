@@ -85,7 +85,17 @@ local function dashFx(id: string, x: number, y: number, dx: number, dy: number, 
 	end
 end
 
-local function cast(userId: number, skillId: string, x: number, y: number, dx: number, dy: number, distance: number)
+local zoneTokens = {} -- [설치 번호] = 그 이펙트의 token(일찍 사라지면 끈다)
+
+local function cast(userId: number, skillId: string, x: number, y: number, dx: number, dy: number, distance: number, targets)
+	if skillId == "zone_end" then -- 설치한 것이 사라짐(distance = 설치 번호)
+		local token = zoneTokens[distance]
+		if token then
+			token.dead = true
+			zoneTokens[distance] = nil
+		end
+		return
+	end
 	if string.sub(skillId, 1, 5) == "dash_" then
 		dashFx(string.sub(skillId, 6), x, y, dx, dy, distance)
 		return
@@ -115,13 +125,43 @@ local function cast(userId: number, skillId: string, x: number, y: number, dx: n
 			return (hand + dir * skill.length * math.min(1, t / delay)) * S
 		end, { loop = true, duration = delay + 0.05, rotation = math.deg(math.atan2(dy, dx)) })
 		local count = fx.rowCount or 1
-		for i = 1, if fx.row then count else 0 do
-			local at = (feet + dir * skill.length * (i / count) * 0.9 + Vector2.new(0, 3)) * S
-			play(fx.row, function()
-				return at
-			end, { delay = (i - 1) * 0.07, bottom = true })
+		-- row: 앞으로 한 줄(rowGap = 한 칸씩 늦게 솟는 간격, rowRepeat = 여러 번 치는 인술이 칠 때마다 다시)
+		for r = 0, (fx.rowRepeat or 1) - 1 do
+			for i = 1, if fx.row then count else 0 do
+				local at = (feet + dir * skill.length * (i / count) * 0.9 + Vector2.new(0, 3)) * S
+				play(fx.row, function()
+					return at
+				end, { delay = (skill.delay or 0) * (if fx.rowGap then 1 else 0) + (i - 1) * (fx.rowGap or 0.07) + r * (skill.interval or 0), bottom = true })
+			end
 		end
-	elseif kind == "circle" then
+		if fx.front then -- 앞쪽 한가운데에 한 번(휘두르는 궤적) — 바라보는 쪽으로 돌린다
+			local at = (body + dir * skill.length * 0.5) * S
+			play(fx.front, function()
+				return at
+			end, { rotation = math.deg(math.atan2(dy, dx)), delay = math.max(0, (skill.delay or 0) - 0.1) })
+		end
+	elseif kind == "zone" then
+		-- 설치: 그 자리에 지속 시간(distance) 동안. 머무는 장이 있는 그림(꽃)은 피었다 머물고, 아니면 되풀이한다.
+		local n = targets and targets[1]
+		local token = {}
+		if n then
+			zoneTokens[n] = token
+		end
+		local at = feet * S
+		local held = packFx.Hold(fx.zone)
+		play(fx.zone, function()
+			return at
+		end, {
+			loop = not held, duration = distance, hold = if held then distance else nil, token = token,
+			bottom = not fx.flat, zIndex = if fx.flat then map.ZIndexFor(0) else map.ZIndexFor(feet.Y),
+		})
+	elseif kind == "buff" or kind == "counter" or kind == "detonate" then
+		-- 내 몸을 따라다니는 그림(버프 = 잠깐, 되받아치기 = 자세 동안)
+		play(fx.self, function()
+			local now = ownerFeet(userId) or feet * S
+			return now - Vector2.new(0, 8 * S)
+		end, { loop = true, duration = if kind == "detonate" then 0.3 else distance })
+	elseif kind == "circle" or kind == "shatter" or kind == "discharge" or kind == "decoy" then
 		local count = fx.ringCount or 4
 		for h = 0, (skill.hits or 1) - 1 do
 			local t0 = (skill.delay or 0) + h * (skill.interval or 0)
@@ -132,7 +172,7 @@ local function cast(userId: number, skillId: string, x: number, y: number, dx: n
 			end
 			for i = 0, if fx.ring then count - 1 else -1 do
 				local a = i / count * math.pi * 2 + h * 0.9
-				local at = (body + Vector2.new(math.cos(a), math.sin(a)) * skill.radius * 0.66) * S
+				local at = (body + Vector2.new(math.cos(a), math.sin(a)) * (if kind == "circle" or kind == "shatter" then skill.radius else distance) * 0.66) * S
 				play(fx.ring, function()
 					return at
 				end, { delay = math.max(0, t0 - 0.12) + i * 0.02 })
@@ -156,9 +196,9 @@ function exports.load(scene: Scene)
 	gameFrame = scene.Instance.GameFrame
 	local key = map.key
 	exports.conns = {
-		Net.OnClient("NinjutsuCast", function(sceneKey, userId, skillId, x, y, dx, dy, distance)
+		Net.OnClient("NinjutsuCast", function(sceneKey, userId, skillId, x, y, dx, dy, distance, targets)
 			if sceneKey == key and gameFrame then
-				cast(userId, skillId, x, y, dx, dy, distance)
+				cast(userId, skillId, x, y, dx, dy, distance, targets)
 			end
 		end),
 		-- 인술로 맞은 몬스터 몸 위에 그 인술의 맞음 이펙트
@@ -167,12 +207,14 @@ function exports.load(scene: Scene)
 				return
 			end
 			local skillId = string.sub(source, 5)
-			local burst = string.sub(skillId, -6) == ":burst" -- 씨앗이 터질 때("<id>:burst")
-			if burst then
-				skillId = string.sub(skillId, 1, -7)
+			-- 덧붙은 맞음: "<id>:burst"(씨앗이 터짐) · "<id>:mark"(표식에 떨어지는 번개) · "<id>:shard"(얼음 조각)
+			local base, suffix = string.match(skillId, "^(.-):(%a+)$")
+			local burst = suffix == "burst"
+			if base then
+				skillId = base
 			end
 			local skill = config.SKILLS[skillId]
-			local name = if skillId == "burn" then config.BURN_FX else skill and skill.fx and (if burst then skill.fx.burstHit else skill.fx.hit)
+			local name = if skillId == "burn" then config.BURN_FX else skill and skill.fx and (if burst then skill.fx.burstHit elseif suffix == "mark" then skill.fx.markHit else skill.fx.hit)
 			local feet = monsters.Feet(id)
 			if not name or not feet then
 				return

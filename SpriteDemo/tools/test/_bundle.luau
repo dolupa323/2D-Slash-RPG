@@ -628,8 +628,8 @@ exports.BURN_FX = "flam" -- 불붙어 타는 동안 맞은 몬스터 위(피격 
 exports.SCHOOLS = { "fire", "ice", "plant", "rock", "thunder" }
 
 exports.SCHOOL_INFO = {
-	fire = { name = "불", title = "화문", color = { 228, 109, 58 }, desc = "한 방이 센 유파. 불씨가 남아 계속 태운다.", skills = { "fire_ball", "fire_burst", "fire_rain", "fire_dragon" } },
-	ice = { name = "얼음", title = "빙문", color = { 99, 171, 214 }, desc = "적을 느리게 하고 얼려 세운다.", skills = { "ice_spike", "ice_freeze", "ice_lance", "ice_storm" } },
+	fire = { name = "불", title = "화문", color = { 228, 109, 58 }, desc = "한 방이 센 유파. 불씨가 남아 계속 태운다.", skills = { "fire_ball", "f_breath", "fire_rain", "fire_dragon" } },
+	ice = { name = "얼음", title = "빙문", color = { 99, 171, 214 }, desc = "적을 느리게 하고 얼려 세운다.", skills = { "ice_spike", "i_shatter", "ice_lance", "ice_storm" } },
 	plant = { name = "풀", title = "초문", color = { 122, 168, 62 }, desc = "덩굴로 묶고 잎으로 상처를 낫게 한다.", skills = { "plant_bind", "plant_heal", "plant_thorn", "plant_bloom" } },
 	rock = { name = "바위", title = "암문", color = { 168, 122, 84 }, desc = "적을 밀쳐 내고 바위로 몸을 지킨다.", skills = { "rock_spike", "rock_guard", "rock_quake", "rock_meteor" } },
 	thunder = { name = "번개", title = "뇌문", color = { 240, 200, 72 }, desc = "빠르고, 번개가 옆 적에게 튄다.", skills = { "thunder_bolt", "thunder_storm", "thunder_chain", "thunder_judge" } },
@@ -644,13 +644,6 @@ exports.SKILLS = {
 		fx = { shot = "fireball", burst = "explosion", hit = "flam" },
 		desc = "불덩이를 던진다. 닿은 자리에서 터지며 불씨를 붙인다.",
 	},
-	fire_burst = {
-		name = "불꽃 폭발", school = "fire", kind = "circle", cost = 45, cooldown = 9,
-		radius = 36, power = 2.6, delay = 0.25,
-		ember = 1,
-		fx = { ring = "flam", ringCount = 6, burst = "explosion", hit = "flam" },
-		desc = "내 둘레를 불태운다.",
-	},
 	-- ===== 얼음 =====
 	ice_spike = {
 		name = "얼음 가시", school = "ice", kind = "line", cost = 28, cooldown = 4,
@@ -659,16 +652,11 @@ exports.SKILLS = {
 		fx = { shot = "iceSpike", hit = "iceB" },
 		desc = "앞으로 얼음 가시를 쏜다. 꿰뚫고, 맞은 적에게 서리가 쌓인다.",
 	},
-	ice_freeze = {
-		name = "빙결", school = "ice", kind = "circle", cost = 45, cooldown = 10,
-		radius = 40, power = 1.4, delay = 0.25, stun = 2.5,
-		fx = { ring = "ice", ringCount = 6, hit = "iceB" },
-		desc = "내 둘레의 적을 얼려 세운다.",
-	},
 	-- ===== 풀 =====
 	plant_bind = {
 		name = "덩굴 묶기", school = "plant", kind = "circle", cost = 28, cooldown = 5,
 		radius = 34, power = 1.5, delay = 0.2, stun = 2,
+		root = 5,
 		fx = { ring = "plantB", ringCount = 5, hit = "plant" },
 		desc = "덩굴이 내 둘레의 적을 묶는다.",
 	},
@@ -773,7 +761,7 @@ exports.SKILLS = {
 }
 
 -- ===== 스킬 나무(메이플식 1~4차 — 공방 설계 dino-workshop/js/ninja/design/skills.js를 옮기는 중) =====
---  지금: 1차 전직 스킬은 새 설계대로(주력기 · 핵심 장치 · 패시브/보조 + 공용 2개). 2~4차는 옛 인술이 자리를 지킨다(옮기는 대로 바뀐다).
+--  지금: 1차 · 2차 전직 스킬은 새 설계대로. 3~4차는 옛 인술이 자리를 지킨다(옮기는 대로 바뀐다 — 빙문 4차는 비어 있음).
 --  스킬 포인트(SP): 레벨업마다 SP_PER_LEVEL, 전직할 때 SP_ON_JOB — 그 전직 구간에서 얻은 SP는 그 전직 스킬에만 쓴다.
 --  스킬마다 마스터 레벨(max). 쓰는 인술은 레벨이 오를수록 피해 · 회복량이 는다(마스터에서 +GROW). 0레벨 = 아직 안 배움.
 --  전직하면 그 전직의 주력기와 핵심 장치는 1레벨로 바로 배운다(auto). 배운 쓰는 인술은 단축칸 SLOTS개에 골라 넣는다.
@@ -786,7 +774,7 @@ exports.SLOTS = 4
 -- 1차 새 스킬 — 쓰는 인술
 exports.SKILLS.p_seed = {
 	name = "가시 씨앗", school = "plant", kind = "seed", cost = 24, cooldown = 3,
-	range = 104, speed = 180, width = 7, power = 0.6, fuse = 2, radius = 24, burstPower = 2.0,
+	range = 104, speed = 180, width = 7, power = 0.6, fuse = 2, radius = 24, burstPower = 2.0, root = 6,
 	fx = { shot = "plantSpike", hit = "plantB", burstHit = "plant" },
 	desc = "씨앗을 쏜다. 맞은 적에게 박혀 있다가 2초 뒤 가시로 터진다.",
 }
@@ -844,19 +832,172 @@ exports.SKILLS.c_energy = {
 	desc = "최대 기력과 기력 회복이 는다.",
 }
 
+-- ===== 2차 스킬(공방 설계 그대로 — 유파마다 주력기 · 터뜨리기/제어 · 설치 · 버프 · 패시브) =====
+--  새 종류: zone(설치 — offset 앞에 seconds초, interval마다 radius 안에 효과. heal = 안의 아군 회복, once = 처음 닿을 때 한 번, limit = 둘 수 있는 수)
+--   · buff(나와 radius 안 아군에게 seconds초: attack 공격력 + · haste 걸음/공격 속도 + · regen 2초마다 회복)
+--   · detonate(내 불씨가 걸린 적이 불씨 수만큼 터짐, spread 안의 적에게 불씨) · shatter(얼어붙은 적 = 깨짐 mult배 + 조각 shard, 아니면 서리)
+--   · discharge(전하를 다 써서 반경 radius + radiusPer×전하, 피해 power + powerPer×전하) · decoy(나를 쫓던 적이 seconds초 놓침 → 서리)
+--   · counter(window초 안에 맞으면 피해 없이 radius에 충격파 + 견고 가득)
+--  line의 덧붙임: hits · interval(여러 번) · follow(그때그때 내 자리에서) · segments · segDelay · falloff(나눠서 차례로 터짐) · pull(끌어당김)
+--  projectile의 덧붙임: shots · shotGap(연달아) · single(한 마리만) · mark(표식 — 표식 있는 적을 다시 맞히면 번개 power) · firmBonus(견고 하나마다 피해 +, 다 씀)
+-- 불
+exports.SKILLS.f_breath = {
+	name = "화염 방사", school = "fire", kind = "line", cost = 34, cooldown = 5,
+	length = 56, width = 14, power = 0.9, delay = 0.15, hits = 4, interval = 0.4, follow = true, ember = 1,
+	fx = { row = "flam", rowCount = 4, rowRepeat = 4, hit = "flam" },
+	desc = "앞으로 불길을 1.6초 동안 뿜는다. 네 번 태우고 불씨가 쌓인다.",
+}
+exports.SKILLS.f_ignite = {
+	name = "점화", school = "fire", kind = "detonate", cost = 30, cooldown = 8,
+	radius = 130, power = 1.0, spread = 30, spreadEmber = 1,
+	fx = { self = "spark", hit = "explosion" },
+	desc = "불씨가 걸린 적이 모두 터진다. 불씨 수만큼 세고, 옆의 적에게 불씨가 옮겨붙는다.",
+}
+exports.SKILLS.f_pillar = {
+	name = "불기둥", school = "fire", kind = "zone", cost = 36, cooldown = 10,
+	offset = 28, radius = 20, seconds = 6, interval = 0.5, power = 0.35, ember = 1, limit = 2,
+	fx = { zone = "firePillar", hit = "flam" },
+	desc = "앞에 불기둥이 6초 동안 선다. 가까운 적을 계속 태우고 불씨를 붙인다. 2개까지.",
+}
+exports.SKILLS.f_heat = {
+	name = "열기", school = "fire", kind = "buff", cost = 30, cooldown = 60,
+	radius = 70, seconds = 120, buff = { attack = 0.08, attackPerLevel = 0.012 },
+	fx = { self = "aura" },
+	desc = "120초 동안 나와 가까운 파티원의 공격력이 오른다.",
+}
+exports.SKILLS.f_drain = {
+	name = "타오르는 마음", school = "fire", kind = "passive",
+	base = 0.01, perLevel = 0.004, cap = 5,
+	desc = "내 불씨가 걸린 적 하나마다 인술 피해가 는다(5마리까지).",
+}
+-- 얼음
+exports.SKILLS.i_shatter = {
+	name = "깨뜨리기", school = "ice", kind = "shatter", cost = 40, cooldown = 9,
+	radius = 44, power = 1.2, delay = 0.2, frost = 2, shatter = { mult = 3, shard = 0.8, shardRadius = 34 },
+	fx = { ring = "iceFlake", ringCount = 6, hit = "iceB" },
+	desc = "둘레에 냉기를 터뜨린다. 얼어붙은 적은 깨져 큰 피해를 받고 조각이 옆으로 튄다. 아니면 서리 2.",
+}
+exports.SKILLS.i_wall = {
+	name = "얼음 벽", school = "ice", kind = "zone", cost = 30, cooldown = 12,
+	offset = 24, radius = 16, seconds = 5, interval = 0.5, stun = 0.6, limit = 1,
+	fx = { zone = "ice" },
+	desc = "앞에 얼음 벽이 5초 동안 선다. 닿은 적은 멈춰 선다.",
+}
+exports.SKILLS.i_decoy = {
+	name = "얼음 분신", school = "ice", kind = "decoy", cost = 26, cooldown = 14,
+	radius = 50, seconds = 2, frost = 2,
+	fx = { burst = "smoke", ring = "iceFlake", ringCount = 3 },
+	desc = "얼음 분신을 남긴다. 나를 쫓던 적이 2초 동안 나를 놓치고, 분신이 깨지며 서리 2.",
+}
+exports.SKILLS.i_cold = {
+	name = "차가운 피", school = "ice", kind = "passive",
+	perLevel = 0.03,
+	desc = "서리가 걸렸거나 얼어붙은 적에게 인술 피해가 는다.",
+}
+-- 풀
+exports.SKILLS.p_whip = {
+	name = "덩굴 채찍", school = "plant", kind = "line", cost = 26, cooldown = 3.5,
+	length = 48, width = 24, power = 1.9, delay = 0.15, pull = 20,
+	fx = { front = "arc", hit = "plantB" },
+	desc = "긴 덩굴을 크게 휘두른다. 맞은 적을 내 쪽으로 끌어당긴다.",
+}
+exports.SKILLS.p_flower = {
+	name = "치유꽃", school = "plant", kind = "zone", cost = 40, cooldown = 15,
+	offset = 0, radius = 34, seconds = 20, interval = 1, heal = 0.02, limit = 2,
+	fx = { zone = "flower" },
+	desc = "꽃을 심는다. 20초 동안 가까운 아군이 조금씩 회복한다. 2송이까지.",
+}
+exports.SKILLS.p_root = {
+	name = "뿌리 내림", school = "plant", kind = "passive",
+	vigorPerLevel = 0.1, reducePerLevel = 0.02,
+	desc = "뿌리 표식이 있는 적을 치면 생기가 더 쌓이고, 그 적에게 받는 피해가 준다.",
+}
+exports.SKILLS.p_breath = {
+	name = "숲의 숨결", school = "plant", kind = "buff", cost = 30, cooldown = 60,
+	radius = 70, seconds = 120, buff = { regen = 0.01 },
+	fx = { self = "boost" },
+	desc = "120초 동안 나와 가까운 파티원이 조금씩 회복한다.",
+}
+-- 바위
+exports.SKILLS.r_crack = {
+	name = "지면 강타", school = "rock", kind = "line", cost = 30, cooldown = 4.5,
+	length = 72, width = 12, power = 1.5, delay = 0.15, segments = 3, segDelay = 0.22, falloff = 0.85,
+	fx = { row = "rockSpike", rowCount = 3, rowGap = 0.22 },
+	desc = "땅을 내리치면 균열이 앞으로 세 번 이어서 터진다. 멀수록 약하다.",
+}
+exports.SKILLS.r_counter = {
+	name = "되받아치기", school = "rock", kind = "counter", cost = 20, cooldown = 8,
+	window = 0.6, radius = 36, power = 2.2,
+	fx = { self = "shield", loop = true, hit = "hit_circle" },
+	desc = "잠깐 막는 자세. 그 사이에 맞으면 피해 없이 충격파로 되받아치고 견고가 가득 찬다.",
+}
+exports.SKILLS.r_throw = {
+	name = "바위 던지기", school = "rock", kind = "projectile", cost = 34, cooldown = 7,
+	range = 110, speed = 170, width = 9, radius = 26, power = 2.0, stun = 1, firmBonus = 0.15,
+	fx = { shot = "rockShot", burst = "rockBurst" },
+	desc = "바위를 던진다. 떨어진 자리의 적이 멈춘다. 견고를 다 써서 더 세게 던진다.",
+}
+exports.SKILLS.r_stomp = {
+	name = "발 구르기", school = "rock", kind = "circle", cost = 28, cooldown = 9,
+	radius = 38, power = 1.2, delay = 0.15, stun = 1, firmGain = 1,
+	fx = { burst = "dustRing", ring = "rockBits", ringCount = 6 },
+	desc = "발을 굴러 둘레의 적을 띄워 멈추게 한다. 견고 1을 얻는다.",
+}
+exports.SKILLS.r_heavy = {
+	name = "무거운 몸", school = "rock", kind = "passive",
+	perLevel = 0.01,
+	desc = "받는 피해가 줄어든다.",
+}
+-- 번개
+exports.SKILLS.t_star = {
+	name = "뇌전 수리검", school = "thunder", kind = "projectile", cost = 26, cooldown = 3,
+	range = 110, speed = 260, width = 7, radius = 0, power = 0.8, shots = 3, shotGap = 0.12, single = true,
+	mark = { seconds = 5, power = 1.0 },
+	fx = { shot = "shurikenMagic", hit = "spark", markHit = "thunder" },
+	desc = "번개 두른 수리검 셋을 연달아 던진다. 표식이 붙은 적을 다시 맞히면 번개가 떨어진다.",
+}
+exports.SKILLS.t_discharge = {
+	name = "방전", school = "thunder", kind = "discharge", cost = 20, cooldown = 8,
+	radius = 26, radiusPer = 3, power = 0.6, powerPer = 0.22, delay = 0.1,
+	fx = { burst = "circleSpark", hit = "thunder" },
+	desc = "전하를 모두 써서 둘레에 번개를 쏟는다. 전하가 많을수록 넓고 세다.",
+}
+exports.SKILLS.t_trap = {
+	name = "번개 덫", school = "thunder", kind = "zone", cost = 24, cooldown = 6,
+	offset = 20, radius = 20, seconds = 20, interval = 0.25, power = 0.8, stun = 1.5, once = true, limit = 3,
+	fx = { zone = "circleSpark2", flat = true, hit = "thunder" },
+	desc = "덫을 놓는다. 밟은 적과 그 둘레가 감전되어 멈춘다. 3개까지.",
+}
+exports.SKILLS.t_haste = {
+	name = "질풍", school = "thunder", kind = "buff", cost = 30, cooldown = 60,
+	radius = 70, seconds = 180, buff = { haste = 0.10, hastePerLevel = 0.008 },
+	fx = { self = "boost" },
+	desc = "180초 동안 나와 가까운 파티원의 걸음과 공격이 빨라진다.",
+}
+exports.SKILLS.t_shock = {
+	name = "감전", school = "thunder", kind = "passive",
+	seconds = 5, base = 0.02, perLevel = 0.01,
+	desc = "내 번개에 맞은 적은 5초 동안 내 인술에 더 아프다.",
+}
+
 -- 유파 → 전직(1~4) → 스킬 id. 각 전직의 첫 번째 = 주력기.
 exports.TREE = {
-	fire = { { "fire_ball", "f_ember", "f_blade" }, { "fire_burst" }, { "fire_rain" }, { "fire_dragon" } },
-	ice = { { "ice_spike", "i_frost", "i_armor" }, { "ice_freeze" }, { "ice_lance" }, { "ice_storm" } },
-	plant = { { "p_seed", "p_vigor", "plant_heal" }, { "plant_bind" }, { "plant_thorn" }, { "plant_bloom" } },
-	rock = { { "rock_spike", "r_firm", "rock_guard" }, {}, { "rock_quake" }, { "rock_meteor" } },
-	thunder = { { "thunder_bolt", "t_charge", "t_static" }, { "thunder_storm" }, { "thunder_chain" }, { "thunder_judge" } },
+	fire = { { "fire_ball", "f_ember", "f_blade" }, { "f_breath", "f_ignite", "f_pillar", "f_heat", "f_drain" }, { "fire_rain" }, { "fire_dragon" } },
+	ice = { { "ice_spike", "i_frost", "i_armor" }, { "ice_lance", "i_shatter", "i_wall", "i_decoy", "i_cold" }, { "ice_storm" }, {} },
+	plant = { { "p_seed", "p_vigor", "plant_heal" }, { "p_whip", "plant_bind", "p_flower", "p_root", "p_breath" }, { "plant_thorn" }, { "plant_bloom" } },
+	rock = { { "rock_spike", "r_firm", "rock_guard" }, { "r_crack", "r_counter", "r_throw", "r_stomp", "r_heavy" }, { "rock_quake" }, { "rock_meteor" } },
+	thunder = { { "thunder_bolt", "t_charge", "t_static" }, { "t_star", "t_discharge", "t_trap", "t_haste", "t_shock" }, { "thunder_chain", "thunder_storm" }, { "thunder_judge" } },
 }
 exports.COMMON = { { "c_mastery", "c_energy" }, {}, {}, {} }
 -- 마스터 레벨(없으면 전직별 기본: 1차 20 · 2차 15 · 3차 20 · 4차 30)
 local MAX = {
 	f_ember = 10, f_blade = 10, i_frost = 10, i_armor = 10, p_vigor = 10, plant_heal = 10, r_firm = 10, rock_guard = 10,
 	t_charge = 10, t_static = 10, c_mastery = 10, c_energy = 5,
+	f_breath = 20, f_ignite = 15, f_pillar = 10, f_heat = 10, f_drain = 10,
+	ice_lance = 20, i_shatter = 15, i_wall = 10, i_decoy = 10, i_cold = 10,
+	p_whip = 20, plant_bind = 15, p_flower = 10, p_root = 10, p_breath = 10,
+	r_crack = 20, r_counter = 15, r_throw = 10, r_stomp = 10, r_heavy = 10,
+	t_star = 20, t_discharge = 15, t_trap = 10, t_haste = 10, t_shock = 10,
 }
 local JOB_MAX = { 20, 15, 20, 30 }
 local jobOf = {}
@@ -1251,8 +1392,8 @@ return {
 	PLAYER = "rbxassetid://78471859808863",
 	NPCS = "rbxassetid://111577531997651",
 	ITEMS = "rbxassetid://81901429550263", -- 아이템 아이콘 시트(shared/data/itemIcons.generated.luau)
-	FX = "rbxassetid://125574344038345", -- 인술 · 맞음 이펙트 시트(shared/data/ninjaFx.generated.luau)
-	UI = "rbxassetid://95121906472533", -- UI 키트 아틀라스(shared/data/uiKit.generated.luau, tools/export_ninja_ui.mjs)
+	FX = "rbxassetid://98901275850125", -- 인술 · 맞음 이펙트 시트(shared/data/ninjaFx.generated.luau)
+	UI = "rbxassetid://100142829399672", -- UI 키트 아틀라스(shared/data/uiKit.generated.luau, tools/export_ninja_ui.mjs)
 	-- 도트 글꼴 글자판(shared/data/pixelFont.generated.luau, tools/export_ninja_font.mjs)
 	FONT = {
 		body = { "rbxassetid://86254954369011", "rbxassetid://74815922164131" },
@@ -1482,9 +1623,17 @@ return {
 		rockBits = { x = 0, y = 640, w = 16, h = 16, frames = 5 },
 		iceFlake = { x = 0, y = 656, w = 32, h = 32, frames = 9 },
 		plantSpike = { x = 0, y = 688, w = 16, h = 20, frames = 6 },
-		iceFloor = { x = 0, y = 708, w = 16, h = 12, frames = 6, hold = 3 },
-		boltLine = { x = 0, y = 720, w = 16, h = 12, frames = 5 },
-		vine = { x = 0, y = 732, w = 16, h = 12, frames = 6, hold = 3 },
+		arc = { x = 0, y = 708, w = 38, h = 34, frames = 6 },
+		aura = { x = 0, y = 742, w = 25, h = 24, frames = 5 },
+		shurikenMagic = { x = 0, y = 766, w = 16, h = 16, frames = 2 },
+		circleSpark = { x = 0, y = 782, w = 32, h = 32, frames = 6 },
+		circleSpark2 = { x = 0, y = 814, w = 32, h = 32, frames = 5 },
+		rockBurst = { x = 0, y = 846, w = 30, h = 30, frames = 14 },
+		firePillar = { x = 0, y = 876, w = 30, h = 41, frames = 9 },
+		flower = { x = 0, y = 917, w = 16, h = 16, frames = 6, hold = 3 },
+		iceFloor = { x = 0, y = 933, w = 16, h = 12, frames = 6, hold = 3 },
+		boltLine = { x = 0, y = 945, w = 16, h = 12, frames = 5 },
+		vine = { x = 0, y = 957, w = 16, h = 12, frames = 6, hold = 3 },
 	},
 }
 
@@ -4562,111 +4711,153 @@ MODULES['ReplicatedStorage/shared/data/uiKit.generated'] = function(script, game
 return {
 	colors = { ink = { 20, 27, 27 }, white = { 255, 255, 255 }, paper = { 242, 234, 241 }, accent = { 240, 103, 51 }, accentD = { 150, 83, 64 }, accentL = { 255, 173, 85 }, good = { 173, 188, 58 }, goodD = { 106, 121, 51 }, red = { 224, 57, 76 }, sky = { 95, 205, 228 }, yellow = { 255, 173, 85 }, gray = { 141, 151, 127 }, grayD = { 86, 99, 77 }, barBg = { 70, 64, 46 } },
 	rects = {
-		panel = { x = 0, y = 232, w = 22, h = 22, slice = { 10, 10, 10, 10 } },
-		tag = { x = 329, y = 232, w = 12, h = 12, slice = { 3, 3, 3, 4 } },
-		tab_on = { x = 342, y = 232, w = 16, h = 12, slice = { 5, 5, 6, 1 } },
-		tab_off = { x = 359, y = 232, w = 16, h = 12, slice = { 5, 5, 6, 1 } },
-		button_primary = { x = 424, y = 232, w = 16, h = 8, slice = { 3, 2, 3, 3 } },
-		button_primary_pressed = { x = 441, y = 232, w = 16, h = 8, slice = { 3, 2, 3, 3 } },
-		button_plain = { x = 458, y = 232, w = 16, h = 8, slice = { 3, 2, 3, 3 } },
-		button_plain_pressed = { x = 475, y = 232, w = 16, h = 8, slice = { 3, 2, 3, 3 } },
-		button_disabled = { x = 492, y = 232, w = 16, h = 8, slice = { 3, 2, 3, 3 } },
-		pill = { x = 0, y = 255, w = 16, h = 8, slice = { 3, 2, 3, 3 } },
-		pill_dark = { x = 23, y = 232, w = 16, h = 16, slice = { 4, 4, 4, 4 } },
-		slot = { x = 40, y = 232, w = 16, h = 16, slice = { 3, 3, 3, 3 } },
-		slot_selected = { x = 57, y = 232, w = 16, h = 16, slice = { 3, 3, 3, 3 } },
-		bar_frame = { x = 74, y = 232, w = 16, h = 16, slice = { 4, 4, 4, 4 } },
-		bar_fill_red = { x = 17, y = 255, w = 2, h = 7 },
-		bar_fill_yellow = { x = 20, y = 255, w = 2, h = 7 },
-		bar_fill_sky = { x = 23, y = 255, w = 2, h = 7 },
-		bar_fill_mint = { x = 26, y = 255, w = 2, h = 7 },
-		bubble = { x = 91, y = 232, w = 20, h = 16 },
+		panel = { x = 50, y = 282, w = 22, h = 22, slice = { 10, 10, 10, 10 } },
+		tag = { x = 379, y = 282, w = 12, h = 12, slice = { 3, 3, 3, 4 } },
+		tab_on = { x = 392, y = 282, w = 16, h = 12, slice = { 5, 5, 6, 1 } },
+		tab_off = { x = 409, y = 282, w = 16, h = 12, slice = { 5, 5, 6, 1 } },
+		button_primary = { x = 474, y = 282, w = 16, h = 8, slice = { 3, 2, 3, 3 } },
+		button_primary_pressed = { x = 491, y = 282, w = 16, h = 8, slice = { 3, 2, 3, 3 } },
+		button_plain = { x = 0, y = 307, w = 16, h = 8, slice = { 3, 2, 3, 3 } },
+		button_plain_pressed = { x = 17, y = 307, w = 16, h = 8, slice = { 3, 2, 3, 3 } },
+		button_disabled = { x = 34, y = 307, w = 16, h = 8, slice = { 3, 2, 3, 3 } },
+		pill = { x = 51, y = 307, w = 16, h = 8, slice = { 3, 2, 3, 3 } },
+		pill_dark = { x = 73, y = 282, w = 16, h = 16, slice = { 4, 4, 4, 4 } },
+		slot = { x = 90, y = 282, w = 16, h = 16, slice = { 3, 3, 3, 3 } },
+		slot_selected = { x = 107, y = 282, w = 16, h = 16, slice = { 3, 3, 3, 3 } },
+		bar_frame = { x = 124, y = 282, w = 16, h = 16, slice = { 4, 4, 4, 4 } },
+		bar_fill_red = { x = 68, y = 307, w = 2, h = 7 },
+		bar_fill_yellow = { x = 71, y = 307, w = 2, h = 7 },
+		bar_fill_sky = { x = 74, y = 307, w = 2, h = 7 },
+		bar_fill_mint = { x = 77, y = 307, w = 2, h = 7 },
+		bubble = { x = 141, y = 282, w = 20, h = 16 },
 		dialog = { x = 0, y = 0, w = 300, h = 58 },
 		dialog_face = { x = 0, y = 59, w = 300, h = 58 },
-		icon_heart = { x = 376, y = 232, w = 14, h = 12 },
-		icon_coin = { x = 391, y = 232, w = 10, h = 10 },
-		icon_bag = { x = 112, y = 232, w = 16, h = 16 },
-		icon_book = { x = 129, y = 232, w = 16, h = 16 },
-		icon_gear = { x = 146, y = 232, w = 11, h = 13 },
-		icon_energy = { x = 402, y = 232, w = 11, h = 10 },
-		icon_close = { x = 414, y = 232, w = 9, h = 9 },
+		icon_heart = { x = 426, y = 282, w = 14, h = 12 },
+		icon_coin = { x = 441, y = 282, w = 10, h = 10 },
+		icon_bag = { x = 162, y = 282, w = 16, h = 16 },
+		icon_book = { x = 179, y = 282, w = 16, h = 16 },
+		icon_gear = { x = 196, y = 282, w = 11, h = 13 },
+		icon_energy = { x = 452, y = 282, w = 11, h = 10 },
+		icon_close = { x = 464, y = 282, w = 9, h = 9 },
 		act_attack = { x = 351, y = 118, w = 24, h = 24 },
 		act_talk = { x = 376, y = 118, w = 24, h = 24 },
 		act_dash = { x = 401, y = 118, w = 24, h = 24 },
 		act_skill = { x = 426, y = 118, w = 24, h = 24 },
-		key_q = { x = 158, y = 232, w = 13, h = 13 },
-		key_r = { x = 172, y = 232, w = 13, h = 13 },
-		key_t = { x = 186, y = 232, w = 13, h = 13 },
-		key_g = { x = 200, y = 232, w = 13, h = 13 },
-		key_1 = { x = 214, y = 232, w = 13, h = 13 },
-		key_2 = { x = 228, y = 232, w = 13, h = 13 },
-		key_3 = { x = 242, y = 232, w = 13, h = 13 },
-		key_e = { x = 256, y = 232, w = 13, h = 13 },
-		key_f = { x = 270, y = 232, w = 13, h = 13 },
-		key_shift = { x = 284, y = 232, w = 30, h = 13 },
-		key_k = { x = 315, y = 232, w = 13, h = 13 },
+		key_q = { x = 208, y = 282, w = 13, h = 13 },
+		key_r = { x = 222, y = 282, w = 13, h = 13 },
+		key_t = { x = 236, y = 282, w = 13, h = 13 },
+		key_g = { x = 250, y = 282, w = 13, h = 13 },
+		key_1 = { x = 264, y = 282, w = 13, h = 13 },
+		key_2 = { x = 278, y = 282, w = 13, h = 13 },
+		key_3 = { x = 292, y = 282, w = 13, h = 13 },
+		key_e = { x = 306, y = 282, w = 13, h = 13 },
+		key_f = { x = 320, y = 282, w = 13, h = 13 },
+		key_shift = { x = 334, y = 282, w = 30, h = 13 },
+		key_k = { x = 365, y = 282, w = 13, h = 13 },
 		skill_fire_ball = { x = 451, y = 118, w = 24, h = 24 },
 		skill_fire_ball_off = { x = 476, y = 118, w = 24, h = 24 },
-		skill_fire_burst = { x = 0, y = 157, w = 24, h = 24 },
-		skill_fire_burst_off = { x = 25, y = 157, w = 24, h = 24 },
-		skill_ice_spike = { x = 50, y = 157, w = 24, h = 24 },
-		skill_ice_spike_off = { x = 75, y = 157, w = 24, h = 24 },
-		skill_ice_freeze = { x = 100, y = 157, w = 24, h = 24 },
-		skill_ice_freeze_off = { x = 125, y = 157, w = 24, h = 24 },
-		skill_plant_bind = { x = 150, y = 157, w = 24, h = 24 },
-		skill_plant_bind_off = { x = 175, y = 157, w = 24, h = 24 },
-		skill_plant_heal = { x = 200, y = 157, w = 24, h = 24 },
-		skill_plant_heal_off = { x = 225, y = 157, w = 24, h = 24 },
-		skill_rock_spike = { x = 250, y = 157, w = 24, h = 24 },
-		skill_rock_spike_off = { x = 275, y = 157, w = 24, h = 24 },
-		skill_rock_guard = { x = 300, y = 157, w = 24, h = 24 },
-		skill_rock_guard_off = { x = 325, y = 157, w = 24, h = 24 },
-		skill_thunder_bolt = { x = 350, y = 157, w = 24, h = 24 },
-		skill_thunder_bolt_off = { x = 375, y = 157, w = 24, h = 24 },
-		skill_thunder_storm = { x = 400, y = 157, w = 24, h = 24 },
-		skill_thunder_storm_off = { x = 425, y = 157, w = 24, h = 24 },
-		skill_f_ember = { x = 450, y = 157, w = 24, h = 24 },
-		skill_f_ember_off = { x = 475, y = 157, w = 24, h = 24 },
-		skill_f_blade = { x = 0, y = 182, w = 24, h = 24 },
-		skill_f_blade_off = { x = 25, y = 182, w = 24, h = 24 },
-		skill_i_frost = { x = 50, y = 182, w = 24, h = 24 },
-		skill_i_frost_off = { x = 75, y = 182, w = 24, h = 24 },
-		skill_i_armor = { x = 100, y = 182, w = 24, h = 24 },
-		skill_i_armor_off = { x = 125, y = 182, w = 24, h = 24 },
-		skill_p_seed = { x = 150, y = 182, w = 24, h = 24 },
-		skill_p_seed_off = { x = 175, y = 182, w = 24, h = 24 },
-		skill_p_vigor = { x = 200, y = 182, w = 24, h = 24 },
-		skill_p_vigor_off = { x = 225, y = 182, w = 24, h = 24 },
-		skill_r_firm = { x = 250, y = 182, w = 24, h = 24 },
-		skill_r_firm_off = { x = 275, y = 182, w = 24, h = 24 },
-		skill_t_charge = { x = 300, y = 182, w = 24, h = 24 },
-		skill_t_charge_off = { x = 325, y = 182, w = 24, h = 24 },
-		skill_t_static = { x = 350, y = 182, w = 24, h = 24 },
-		skill_t_static_off = { x = 375, y = 182, w = 24, h = 24 },
-		skill_c_mastery = { x = 400, y = 182, w = 24, h = 24 },
-		skill_c_mastery_off = { x = 425, y = 182, w = 24, h = 24 },
-		skill_c_energy = { x = 450, y = 182, w = 24, h = 24 },
-		skill_c_energy_off = { x = 475, y = 182, w = 24, h = 24 },
-		skill_fire_rain = { x = 0, y = 207, w = 24, h = 24 },
-		skill_fire_rain_off = { x = 25, y = 207, w = 24, h = 24 },
-		skill_fire_dragon = { x = 50, y = 207, w = 24, h = 24 },
-		skill_fire_dragon_off = { x = 75, y = 207, w = 24, h = 24 },
-		skill_ice_lance = { x = 100, y = 207, w = 24, h = 24 },
-		skill_ice_lance_off = { x = 125, y = 207, w = 24, h = 24 },
-		skill_ice_storm = { x = 150, y = 207, w = 24, h = 24 },
-		skill_ice_storm_off = { x = 175, y = 207, w = 24, h = 24 },
-		skill_plant_thorn = { x = 200, y = 207, w = 24, h = 24 },
-		skill_plant_thorn_off = { x = 225, y = 207, w = 24, h = 24 },
-		skill_plant_bloom = { x = 250, y = 207, w = 24, h = 24 },
-		skill_plant_bloom_off = { x = 275, y = 207, w = 24, h = 24 },
-		skill_rock_quake = { x = 300, y = 207, w = 24, h = 24 },
-		skill_rock_quake_off = { x = 325, y = 207, w = 24, h = 24 },
-		skill_rock_meteor = { x = 350, y = 207, w = 24, h = 24 },
-		skill_rock_meteor_off = { x = 375, y = 207, w = 24, h = 24 },
-		skill_thunder_chain = { x = 400, y = 207, w = 24, h = 24 },
-		skill_thunder_chain_off = { x = 425, y = 207, w = 24, h = 24 },
-		skill_thunder_judge = { x = 450, y = 207, w = 24, h = 24 },
-		skill_thunder_judge_off = { x = 475, y = 207, w = 24, h = 24 },
+		skill_ice_spike = { x = 0, y = 157, w = 24, h = 24 },
+		skill_ice_spike_off = { x = 25, y = 157, w = 24, h = 24 },
+		skill_plant_bind = { x = 50, y = 157, w = 24, h = 24 },
+		skill_plant_bind_off = { x = 75, y = 157, w = 24, h = 24 },
+		skill_plant_heal = { x = 100, y = 157, w = 24, h = 24 },
+		skill_plant_heal_off = { x = 125, y = 157, w = 24, h = 24 },
+		skill_rock_spike = { x = 150, y = 157, w = 24, h = 24 },
+		skill_rock_spike_off = { x = 175, y = 157, w = 24, h = 24 },
+		skill_rock_guard = { x = 200, y = 157, w = 24, h = 24 },
+		skill_rock_guard_off = { x = 225, y = 157, w = 24, h = 24 },
+		skill_thunder_bolt = { x = 250, y = 157, w = 24, h = 24 },
+		skill_thunder_bolt_off = { x = 275, y = 157, w = 24, h = 24 },
+		skill_thunder_storm = { x = 300, y = 157, w = 24, h = 24 },
+		skill_thunder_storm_off = { x = 325, y = 157, w = 24, h = 24 },
+		skill_f_ember = { x = 350, y = 157, w = 24, h = 24 },
+		skill_f_ember_off = { x = 375, y = 157, w = 24, h = 24 },
+		skill_f_blade = { x = 400, y = 157, w = 24, h = 24 },
+		skill_f_blade_off = { x = 425, y = 157, w = 24, h = 24 },
+		skill_i_frost = { x = 450, y = 157, w = 24, h = 24 },
+		skill_i_frost_off = { x = 475, y = 157, w = 24, h = 24 },
+		skill_i_armor = { x = 0, y = 182, w = 24, h = 24 },
+		skill_i_armor_off = { x = 25, y = 182, w = 24, h = 24 },
+		skill_p_seed = { x = 50, y = 182, w = 24, h = 24 },
+		skill_p_seed_off = { x = 75, y = 182, w = 24, h = 24 },
+		skill_p_vigor = { x = 100, y = 182, w = 24, h = 24 },
+		skill_p_vigor_off = { x = 125, y = 182, w = 24, h = 24 },
+		skill_r_firm = { x = 150, y = 182, w = 24, h = 24 },
+		skill_r_firm_off = { x = 175, y = 182, w = 24, h = 24 },
+		skill_t_charge = { x = 200, y = 182, w = 24, h = 24 },
+		skill_t_charge_off = { x = 225, y = 182, w = 24, h = 24 },
+		skill_t_static = { x = 250, y = 182, w = 24, h = 24 },
+		skill_t_static_off = { x = 275, y = 182, w = 24, h = 24 },
+		skill_c_mastery = { x = 300, y = 182, w = 24, h = 24 },
+		skill_c_mastery_off = { x = 325, y = 182, w = 24, h = 24 },
+		skill_c_energy = { x = 350, y = 182, w = 24, h = 24 },
+		skill_c_energy_off = { x = 375, y = 182, w = 24, h = 24 },
+		skill_f_breath = { x = 400, y = 182, w = 24, h = 24 },
+		skill_f_breath_off = { x = 425, y = 182, w = 24, h = 24 },
+		skill_f_ignite = { x = 450, y = 182, w = 24, h = 24 },
+		skill_f_ignite_off = { x = 475, y = 182, w = 24, h = 24 },
+		skill_f_pillar = { x = 0, y = 207, w = 24, h = 24 },
+		skill_f_pillar_off = { x = 25, y = 207, w = 24, h = 24 },
+		skill_f_heat = { x = 50, y = 207, w = 24, h = 24 },
+		skill_f_heat_off = { x = 75, y = 207, w = 24, h = 24 },
+		skill_f_drain = { x = 100, y = 207, w = 24, h = 24 },
+		skill_f_drain_off = { x = 125, y = 207, w = 24, h = 24 },
+		skill_i_shatter = { x = 150, y = 207, w = 24, h = 24 },
+		skill_i_shatter_off = { x = 175, y = 207, w = 24, h = 24 },
+		skill_i_wall = { x = 200, y = 207, w = 24, h = 24 },
+		skill_i_wall_off = { x = 225, y = 207, w = 24, h = 24 },
+		skill_i_decoy = { x = 250, y = 207, w = 24, h = 24 },
+		skill_i_decoy_off = { x = 275, y = 207, w = 24, h = 24 },
+		skill_i_cold = { x = 300, y = 207, w = 24, h = 24 },
+		skill_i_cold_off = { x = 325, y = 207, w = 24, h = 24 },
+		skill_p_whip = { x = 350, y = 207, w = 24, h = 24 },
+		skill_p_whip_off = { x = 375, y = 207, w = 24, h = 24 },
+		skill_p_flower = { x = 400, y = 207, w = 24, h = 24 },
+		skill_p_flower_off = { x = 425, y = 207, w = 24, h = 24 },
+		skill_p_root = { x = 450, y = 207, w = 24, h = 24 },
+		skill_p_root_off = { x = 475, y = 207, w = 24, h = 24 },
+		skill_p_breath = { x = 0, y = 232, w = 24, h = 24 },
+		skill_p_breath_off = { x = 25, y = 232, w = 24, h = 24 },
+		skill_r_crack = { x = 50, y = 232, w = 24, h = 24 },
+		skill_r_crack_off = { x = 75, y = 232, w = 24, h = 24 },
+		skill_r_counter = { x = 100, y = 232, w = 24, h = 24 },
+		skill_r_counter_off = { x = 125, y = 232, w = 24, h = 24 },
+		skill_r_throw = { x = 150, y = 232, w = 24, h = 24 },
+		skill_r_throw_off = { x = 175, y = 232, w = 24, h = 24 },
+		skill_r_stomp = { x = 200, y = 232, w = 24, h = 24 },
+		skill_r_stomp_off = { x = 225, y = 232, w = 24, h = 24 },
+		skill_r_heavy = { x = 250, y = 232, w = 24, h = 24 },
+		skill_r_heavy_off = { x = 275, y = 232, w = 24, h = 24 },
+		skill_t_star = { x = 300, y = 232, w = 24, h = 24 },
+		skill_t_star_off = { x = 325, y = 232, w = 24, h = 24 },
+		skill_t_discharge = { x = 350, y = 232, w = 24, h = 24 },
+		skill_t_discharge_off = { x = 375, y = 232, w = 24, h = 24 },
+		skill_t_trap = { x = 400, y = 232, w = 24, h = 24 },
+		skill_t_trap_off = { x = 425, y = 232, w = 24, h = 24 },
+		skill_t_haste = { x = 450, y = 232, w = 24, h = 24 },
+		skill_t_haste_off = { x = 475, y = 232, w = 24, h = 24 },
+		skill_t_shock = { x = 0, y = 257, w = 24, h = 24 },
+		skill_t_shock_off = { x = 25, y = 257, w = 24, h = 24 },
+		skill_fire_rain = { x = 50, y = 257, w = 24, h = 24 },
+		skill_fire_rain_off = { x = 75, y = 257, w = 24, h = 24 },
+		skill_fire_dragon = { x = 100, y = 257, w = 24, h = 24 },
+		skill_fire_dragon_off = { x = 125, y = 257, w = 24, h = 24 },
+		skill_ice_lance = { x = 150, y = 257, w = 24, h = 24 },
+		skill_ice_lance_off = { x = 175, y = 257, w = 24, h = 24 },
+		skill_ice_storm = { x = 200, y = 257, w = 24, h = 24 },
+		skill_ice_storm_off = { x = 225, y = 257, w = 24, h = 24 },
+		skill_plant_thorn = { x = 250, y = 257, w = 24, h = 24 },
+		skill_plant_thorn_off = { x = 275, y = 257, w = 24, h = 24 },
+		skill_plant_bloom = { x = 300, y = 257, w = 24, h = 24 },
+		skill_plant_bloom_off = { x = 325, y = 257, w = 24, h = 24 },
+		skill_rock_quake = { x = 350, y = 257, w = 24, h = 24 },
+		skill_rock_quake_off = { x = 375, y = 257, w = 24, h = 24 },
+		skill_rock_meteor = { x = 400, y = 257, w = 24, h = 24 },
+		skill_rock_meteor_off = { x = 425, y = 257, w = 24, h = 24 },
+		skill_thunder_chain = { x = 450, y = 257, w = 24, h = 24 },
+		skill_thunder_chain_off = { x = 475, y = 257, w = 24, h = 24 },
+		skill_thunder_judge = { x = 0, y = 282, w = 24, h = 24 },
+		skill_thunder_judge_off = { x = 25, y = 282, w = 24, h = 24 },
 		face_elder = { x = 301, y = 59, w = 38, h = 38 },
 		face_blacksmith = { x = 340, y = 59, w = 38, h = 38 },
 		face_merchant = { x = 379, y = 59, w = 38, h = 38 },
@@ -5086,6 +5277,8 @@ local packets = {
 	SchoolUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "school, { [스킬 id] = 레벨 }, 전직 단계(0~4), { 전직별 안 쓴 SP }, { 단축칸 스킬 id }" },
 	-- 내게 쌓이는 핵심 장치(생기 · 견고 · 전하): 스킬 id, 지금 값, 최대, 이 초 뒤 사라짐(없으면 안 사라짐)
 	CoreUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "skillId, value, max, seconds?" },
+	-- 버프를 받음(열기 · 질풍 · 숲의 숨결): kind = "attack" | "haste" | "regen", 값(비율), 지속 초 — haste는 클라가 걸음 · 공격 동작에 반영한다
+	BuffUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "kind, value, seconds" },
 	EnergyUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "energy, max, regenPerSecond — 값이 바뀔 때만(그 사이는 클라가 이어서 센다)" },
 	-- 인술을 씀(같은 씬 모두에게 연출용 — 피해는 TownMonsterHit "nin:<인술 id>"). x, y = 쓴 사람 발(도트).
 	--  distance = 종류마다: projectile 날아간 거리 · line 길이 · circle 반경 · guard 지속 초. targets = chain이 맞힌 몬스터 id 순서
@@ -5291,6 +5484,8 @@ MODULES['ServerScriptService/server/modules/ninjutsuService'] = function(script,
 --   견고(r_firm)   — 몬스터에게 맞을 때마다 내게 쌓임. 하나마다 받는 피해가 줄어든다.
 --   전하(t_charge) — 공격이 맞을 때마다 내게 쌓임. 하나마다 기본 공격이 빨라진다.
 --   내게 쌓이는 것은 CoreUpdated(스킬 id, 값, 최대, 남은 초)로 화면에 알린다.
+--  2차 스킬의 종류(shared/config/ninjutsu.luau 머리말): zone(설치) · buff(파티 버프) · detonate(점화) · shatter(깨뜨리기) · discharge(방전)
+--   · decoy(얼음 분신) · counter(되받아치기) + line/projectile의 덧붙임(hits · follow · segments · pull · shots · single · mark · firmBonus).
 --  기력: 서버가 갖는다(저장하지 않음 — 접속하면 가득). 값이 바뀔 때만 EnergyUpdated(지금 값, 최대, 초당 회복) — 그 사이는 클라가 이어서 센다.
 --   기본 공격이 맞으면(townMonsters.OnPlayerAttack) 맞은 몬스터 수 × ENERGY_PER_HIT.
 --  두루마리(UseScroll — server/modules/shops.luau UseItem이 부른다): 자기 유파 두루마리 1개 → 지금 전직의 SP +1.
@@ -5320,6 +5515,10 @@ local ready = {} -- [userId] = { [인술 id | "dash"] = 다시 쓸 수 있는 �
 local cores = {} -- [userId] = { id, value, untilT? } — 생기 · 견고 · 전하(유파에 따라 하나)
 local counters = {} -- [userId] = 기본 공격이 맞은 횟수(달궈진 칼날 · 정전기)
 local guardUntil = {} -- [userId] = 방어 인술이 끝나는 시각(견고가 더 쌓인다)
+local counterUntil = {} -- [userId] = { untilT, skill, level, key } — 되받아치기 자세가 끝나는 시각
+local haste = {} -- [userId] = { value, untilT } — 질풍(공격 속도 버프)
+local zones = {} -- 설치한 자리 목록(불기둥 · 얼음 벽 · 치유꽃 · 번개 덫): { n, owner, id, key, x, y, untilT, dead }
+local zoneSerial = 0
 
 local function levelOf(data, id: string): number
 	return if data then ninjutsu.LevelOf(data.Ninjutsu, id) else 0
@@ -5518,6 +5717,7 @@ local function addFrost(key: string, m, player: Player, n: number)
 	f.untilT = now + def.seconds
 	if f.stacks >= def.stacks then
 		f.stacks = 0
+		m.frozenUntil = now + def.freeze + def.perLevel * level -- 얼어붙음(깨뜨리기가 본다)
 		townMonsters.Stun(key, m.id, def.freeze + def.perLevel * level)
 	else
 		townMonsters.Slow(key, m.id, 1 - def.slowPer * f.stacks, def.seconds)
@@ -5557,18 +5757,69 @@ local function gainCharge(player: Player)
 	end
 end
 
--- 인술 한 번 맞음. source = "nin:<id>"(씨앗이 터질 때는 "<id>:burst"), power를 주면 skill.power 대신 쓴다.
+-- 그 몬스터가 지금 얼어붙어 있는가(서리 5로 멈춘 동안)
+local function frozen(m, now: number): boolean
+	return m.frozenUntil ~= nil and now < m.frozenUntil
+end
+
+-- 2차 패시브가 주는 피해 배율: 타오르는 마음(불씨가 걸린 적 수) · 차가운 피(서리/얼어붙은 적) · 감전(내 번개에 맞은 적)
+local function passiveMult(key: string, m, player: Player, data): number
+	local uid = player.UserId
+	local now = os.clock()
+	local mult = 1
+	local school = data.School
+	if school == "fire" then
+		local level = levelOf(data, "f_drain")
+		if level >= 1 then
+			local n = 0
+			for _, other in townMonsters.Living(key) do
+				local e = other.ember and other.ember[uid]
+				if e and now < e.untilT and e.stacks > 0 then
+					n += 1
+				end
+			end
+			mult *= 1 + (SK.f_drain.base + SK.f_drain.perLevel * level) * math.min(SK.f_drain.cap, n)
+		end
+	elseif school == "ice" then
+		local level = levelOf(data, "i_cold")
+		if level >= 1 and (frozen(m, now) or (m.frost and now < m.frost.untilT and m.frost.stacks > 0)) then
+			mult *= 1 + SK.i_cold.perLevel * level
+		end
+	elseif school == "thunder" then
+		local level = levelOf(data, "t_shock")
+		if level >= 1 and m.shock and now < (m.shock[uid] or 0) then
+			mult *= 1 + SK.t_shock.base + SK.t_shock.perLevel * level
+		end
+	end
+	return mult
+end
+
+-- 인술 한 번 맞음. source = "nin:<id>"(씨앗이 터질 때 "<id>:burst" 등), power를 주면 skill.power 대신 쓴다.
 local function hit(key: string, m, player: Player, source: string, skill, attack: number, scale: number, mult: number, away: Vector2?, power: number?): boolean
-	local amount = math.max(1, math.round(attack * (power or skill.power) * scale * mult))
+	local data = persistence.Get(player)
+	local amount = math.max(1, math.round(attack * (power or skill.power) * scale * mult * passiveMult(key, m, player, data)))
 	if not townMonsters.Damage(key, m.id, player, amount, "nin:" .. source) then
 		return false
 	end
 	applyEffects(key, m, player, skill, attack, scale, away)
 	gainCharge(player) -- 전하: 인술이 맞을 때마다(번개 유파만 쌓인다)
-	if skill.school == "plant" then -- 생기: 풀 인술이 맞을 때마다
-		local coreId, value, level = coreOf(player, persistence.Get(player))
+	local now = os.clock()
+	if skill.school == "thunder" and levelOf(data, "t_shock") >= 1 then -- 감전: 다음 번개부터 더 아프다
+		m.shock = m.shock or {}
+		m.shock[player.UserId] = now + SK.t_shock.seconds
+	end
+	if skill.root then -- 뿌리 표식(가시 씨앗 · 덩굴 묶기)
+		m.rootUntil = now + skill.root
+	end
+	if skill.school == "plant" then -- 생기: 풀 인술이 맞을 때마다(뿌리 내림 — 뿌리 표식이 있는 적이면 더)
+		local coreId, value, level = coreOf(player, data)
 		if coreId == "p_vigor" then
-			setCore(player, coreId, value + SK.p_vigor.perHit + SK.p_vigor.perLevel * level)
+			local gain = SK.p_vigor.perHit + SK.p_vigor.perLevel * level
+			local root = levelOf(data, "p_root")
+			if root >= 1 and m.rootUntil and now < m.rootUntil then
+				gain *= 1 + SK.p_root.vigorPerLevel * root
+			end
+			setCore(player, coreId, value + gain)
 		end
 	end
 	return true
@@ -5590,6 +5841,113 @@ function exports.DashDistance(key: string, feet: Vector2, dir: Vector2, distance
 	return reached
 end
 
+-- 같은 씬에서 그 자리 둘레 radius 안에 있는 플레이어들(파티 버프 · 치유꽃)
+local function playersNear(key: string, at: Vector2, radius: number): { Player }
+	local out = {}
+	for _, other in heroTracking.PlayersInScene(townWorld.SceneName(key)) do
+		local feet = feetOf(other)
+		if feet and (feet - at).Magnitude <= radius then
+			table.insert(out, other)
+		end
+	end
+	return out
+end
+
+-- 설치(zone): 그 자리에 seconds초 동안 남아 interval초마다 둘레 radius에 효과. once면 처음 적이 닿을 때 한 번 터지고 사라진다(덫).
+--  같은 사람이 같은 스킬을 limit개 넘게 놓으면 가장 오래된 것이 사라진다. 연출: NinjutsuCast(id … targets = { 번호 }) / 끝날 때 "zone_end"(distance = 번호).
+local function endZone(z)
+	if not z.dead then
+		z.dead = true
+		table.remove(zones, table.find(zones, z))
+		toScene(z.key, z.owner.UserId, "zone_end", z.x, z.y, 0, 0, z.n, {})
+	end
+end
+
+local function placeZone(player: Player, key: string, id: string, skill, level: number, at: Vector2)
+	local mine = {}
+	for _, z in zones do
+		if z.owner == player and z.id == id then
+			table.insert(mine, z)
+		end
+	end
+	while #mine >= (skill.limit or 1) do
+		endZone(table.remove(mine, 1))
+	end
+	zoneSerial += 1
+	local z = { n = zoneSerial, owner = player, id = id, key = key, x = at.X, y = at.Y, untilT = os.clock() + skill.seconds, dead = false }
+	table.insert(zones, z)
+	local scale = ninjutsu.Scale(id, level)
+	local function tick()
+		if z.dead then
+			return
+		end
+		if os.clock() >= z.untilT or not player.Parent or townWorld.KeyOf(heroTracking.GetPlayerScene(player.UserId)) ~= key then
+			endZone(z)
+			return
+		end
+		local attack = inventoryService.GetAttackDamage(player)
+		local touched = false
+		for _, m in townMonsters.Living(key) do
+			if (Vector2.new(m.x, m.y) - at).Magnitude <= skill.radius then
+				touched = true
+				if skill.power then
+					hit(key, m, player, id, skill, attack, scale, 1, nil)
+				else
+					applyEffects(key, m, player, skill, attack, scale, nil)
+				end
+			end
+		end
+		if skill.heal then
+			for _, other in playersNear(key, at, skill.radius) do
+				local d = persistence.Get(other)
+				if d then
+					progressionService.Heal(other, math.max(1, math.round(balance.maxHealthFor(d.Level) * skill.heal * scale)))
+				end
+			end
+		end
+		if skill.once and touched then
+			endZone(z)
+			return
+		end
+		task.delay(skill.interval, tick)
+	end
+	task.delay(skill.interval, tick)
+	return z
+end
+
+-- 버프: 나와 둘레 radius 안의 같은 씬 플레이어에게. attack = 공격력 + · haste = 걸음/공격 속도 + · regen = 2초마다 최대 체력의 그 비율 회복
+local function applyBuff(player: Player, key: string, id: string, skill, level: number, feet: Vector2)
+	local b = skill.buff
+	for _, other in playersNear(key, feet, skill.radius) do
+		if b.attack then
+			local value = b.attack + (b.attackPerLevel or 0) * level
+			inventoryService.SetAttackBuff(other, 1 + value, skill.seconds)
+			Net.FireClient("BuffUpdated", other, "attack", value, skill.seconds)
+			Net.FireClient("Notify", other, ("%s: 공격력 +%d%% (%d초)"):format(skill.name, math.round(value * 100), skill.seconds))
+		end
+		if b.haste then
+			local value = b.haste + (b.hastePerLevel or 0) * level
+			haste[other.UserId] = { value = value, untilT = os.clock() + skill.seconds }
+			Net.FireClient("BuffUpdated", other, "haste", value, skill.seconds)
+			Net.FireClient("Notify", other, ("%s: 걸음 · 공격 속도 +%d%% (%d초)"):format(skill.name, math.round(value * 100), skill.seconds))
+		end
+		if b.regen then
+			local untilT = os.clock() + skill.seconds
+			local function tick()
+				local d = persistence.Get(other)
+				if not d or not other.Parent or os.clock() > untilT then
+					return
+				end
+				progressionService.Heal(other, math.max(1, math.round(balance.maxHealthFor(d.Level) * b.regen * ninjutsu.Scale(id, level))))
+				task.delay(2, tick)
+			end
+			task.delay(2, tick)
+			Net.FireClient("BuffUpdated", other, "regen", b.regen, skill.seconds)
+			Net.FireClient("Notify", other, ("%s: 조금씩 회복 (%d초)"):format(skill.name, skill.seconds))
+		end
+	end
+end
+
 -- 인술 실행. 못 쓰면(대상 없음 등) false + 이유 — 기력·쿨타임을 쓰지 않는다.
 local function cast(player: Player, key: string, id: string, skill, level: number, feet: Vector2, dir: Vector2): (boolean, string?)
 	local uid = player.UserId
@@ -5598,51 +5956,93 @@ local function cast(player: Player, key: string, id: string, skill, level: numbe
 	local kind = skill.kind
 	if kind == "projectile" or kind == "seed" then
 		local origin = feet - Vector2.new(0, ninjutsu.HAND_Y)
-		local hitT, first = skill.range, nil
-		for _, m in townMonsters.Living(key) do
-			local rel = Vector2.new(m.x, m.y - ninjutsu.BODY_Y) - origin
-			local along = rel:Dot(dir)
-			local side = math.abs(rel.X * dir.Y - rel.Y * dir.X)
-			if along >= 0 and along <= hitT and side <= skill.width + 3 then
-				hitT, first = along, m
+		-- 견고를 실어 던지는 인술(바위 던지기): 견고 하나마다 피해 +, 쓰면 견고를 다 쓴다
+		local firmMult = 1
+		if skill.firmBonus then
+			local coreId, value = coreOf(player, persistence.Get(player))
+			if coreId == "r_firm" and value > 0 then
+				firmMult = 1 + skill.firmBonus * value
+				setCore(player, coreId, 0)
 			end
 		end
-		toScene(key, uid, id, feet.X, feet.Y, dir.X, dir.Y, hitT, {})
-		task.delay(hitT / skill.speed, function()
-			if kind == "seed" then
-				-- 처음 닿은 몬스터에 박히고, fuse초 뒤 그 몬스터가 있는 자리 둘레에 터진다
-				if first and hit(key, first, player, id, skill, attack, scale, 1, nil) then
-					task.delay(skill.fuse, function()
-						local at = Vector2.new(first.x, first.y)
-						for _, m in townMonsters.Living(key) do
-							if (Vector2.new(m.x, m.y) - at).Magnitude <= skill.radius then
-								hit(key, m, player, id .. ":burst", skill, attack, scale, 1, nil, skill.burstPower)
+		do
+			local function fire()
+				local hitT, first = skill.range, nil
+				for _, m in townMonsters.Living(key) do
+					local rel = Vector2.new(m.x, m.y - ninjutsu.BODY_Y) - origin
+					local along = rel:Dot(dir)
+					local side = math.abs(rel.X * dir.Y - rel.Y * dir.X)
+					if along >= 0 and along <= hitT and side <= skill.width + 3 then
+						hitT, first = along, m
+					end
+				end
+				toScene(key, uid, id, feet.X, feet.Y, dir.X, dir.Y, hitT, {})
+				task.delay(hitT / skill.speed, function()
+					if kind == "seed" then
+						-- 처음 닿은 몬스터에 박히고, fuse초 뒤 그 몬스터가 있는 자리 둘레에 터진다
+						if first and hit(key, first, player, id, skill, attack, scale, 1, nil) then
+							task.delay(skill.fuse, function()
+								local at = Vector2.new(first.x, first.y)
+								for _, m in townMonsters.Living(key) do
+									if (Vector2.new(m.x, m.y) - at).Magnitude <= skill.radius then
+										hit(key, m, player, id .. ":burst", skill, attack, scale, 1, nil, skill.burstPower)
+									end
+								end
+							end)
+						end
+						return
+					end
+					if skill.single then
+						-- 한 마리만 맞는 투척(뇌전 수리검): 표식이 이미 있으면 번개가 한 번 더 떨어진다
+						if first then
+							local mark = skill.mark
+							local marked = mark and first.mark and os.clock() < (first.mark[uid] or 0)
+							if hit(key, first, player, id, skill, attack, scale, 1, nil) and mark then
+								if marked then
+									hit(key, first, player, id .. ":mark", skill, attack, scale, 1, nil, mark.power)
+								end
+								first.mark = first.mark or {}
+								first.mark[uid] = os.clock() + mark.seconds
 							end
 						end
-					end)
-				end
-				return
+						return
+					end
+					local at = origin + dir * hitT + Vector2.new(0, ninjutsu.BODY_Y) -- 발 높이로 내려서 잰다
+					for _, m in townMonsters.Living(key) do
+						if (Vector2.new(m.x, m.y) - at).Magnitude <= skill.radius then
+							hit(key, m, player, id, skill, attack, scale, firmMult, dir)
+						end
+					end
+				end)
 			end
-			local at = origin + dir * hitT + Vector2.new(0, ninjutsu.BODY_Y) -- 발 높이로 내려서 잰다
-			for _, m in townMonsters.Living(key) do
-				if (Vector2.new(m.x, m.y) - at).Magnitude <= skill.radius then
-					hit(key, m, player, id, skill, attack, scale, 1, dir)
-				end
+			fire() -- 첫 발은 바로, 나머지는 shotGap초씩 늦게(연달아 던지는 인술)
+			for shot = 2, skill.shots or 1 do
+				task.delay((shot - 1) * (skill.shotGap or 0), fire)
 			end
-		end)
+		end
 	elseif kind == "line" then
-		local origin = feet - Vector2.new(0, ninjutsu.HAND_Y)
+		-- hits · interval: 여러 번(follow면 그때그때 내 자리에서). segments: 줄을 나눠 앞에서부터 segDelay초씩 늦게 터진다(falloff배씩 약해짐).
 		toScene(key, uid, id, feet.X, feet.Y, dir.X, dir.Y, skill.length, {})
-		task.delay(skill.delay or 0, function()
-			for _, m in townMonsters.Living(key) do
-				local rel = Vector2.new(m.x, m.y - ninjutsu.BODY_Y) - origin
-				local along = rel:Dot(dir)
-				local side = math.abs(rel.X * dir.Y - rel.Y * dir.X)
-				if along >= 0 and along <= skill.length and side <= skill.width then
-					hit(key, m, player, id, skill, attack, scale, 1, dir)
-				end
+		local segments = skill.segments or 1
+		for h = 1, skill.hits or 1 do
+			for seg = 1, segments do
+				task.delay((skill.delay or 0) + (h - 1) * (skill.interval or 0) + (seg - 1) * (skill.segDelay or 0), function()
+					local from = if skill.follow then feetOf(player) or feet else feet
+					local origin = from - Vector2.new(0, ninjutsu.HAND_Y)
+					local lo, hi = skill.length * (seg - 1) / segments, skill.length * seg / segments
+					for _, m in townMonsters.Living(key) do
+						local rel = Vector2.new(m.x, m.y - ninjutsu.BODY_Y) - origin
+						local along = rel:Dot(dir)
+						local side = math.abs(rel.X * dir.Y - rel.Y * dir.X)
+						if along >= (if seg == 1 then 0 else lo) and along <= hi and side <= skill.width then
+							if hit(key, m, player, id, skill, attack, scale, (skill.falloff or 1) ^ (seg - 1), dir) and skill.pull then
+								townMonsters.Push(key, m.id, -dir.X * skill.pull, -dir.Y * skill.pull) -- 끌어당김
+							end
+						end
+					end
+				end)
 			end
-		end)
+		end
 	elseif kind == "circle" then
 		toScene(key, uid, id, feet.X, feet.Y, dir.X, dir.Y, skill.radius, {})
 		for i = 1, skill.hits or 1 do
@@ -5655,6 +6055,112 @@ local function cast(player: Player, key: string, id: string, skill, level: numbe
 				end
 			end)
 		end
+		if skill.firmGain then -- 발 구르기: 견고 +
+			local coreId, value = coreOf(player, persistence.Get(player))
+			if coreId == "r_firm" then
+				setCore(player, coreId, value + skill.firmGain)
+			end
+		end
+	elseif kind == "shatter" then
+		-- 깨뜨리기: 둘레의 얼어붙은 적은 "깨짐"(큰 피해 + 조각이 옆의 적에게), 얼지 않은 적은 서리
+		toScene(key, uid, id, feet.X, feet.Y, dir.X, dir.Y, skill.radius, {})
+		task.delay(skill.delay or 0, function()
+			local now = os.clock()
+			local living = townMonsters.Living(key)
+			for _, m in living do
+				if (Vector2.new(m.x, m.y) - feet).Magnitude <= skill.radius then
+					if frozen(m, now) then
+						m.frozenUntil = nil
+						local plain = table.clone(skill)
+						plain.frost = nil
+						if hit(key, m, player, id, plain, attack, scale, skill.shatter.mult, nil) then
+							for _, other in living do
+								if other ~= m and (Vector2.new(other.x, other.y) - Vector2.new(m.x, m.y)).Magnitude <= skill.shatter.shardRadius then
+									hit(key, other, player, id .. ":shard", plain, attack, scale, 1, nil, skill.shatter.shard)
+								end
+							end
+						end
+					else
+						hit(key, m, player, id, skill, attack, scale, 1, nil)
+					end
+				end
+			end
+		end)
+	elseif kind == "detonate" then
+		-- 점화: 둘레에서 내 불씨가 걸린 적이 모두 터진다(불씨 수만큼 세게). 터질 때 옆의 적에게 불씨가 옮겨붙는다.
+		local now = os.clock()
+		local targets = {}
+		local living = townMonsters.Living(key)
+		for _, m in living do
+			local e = m.ember and m.ember[uid]
+			if e and now < e.untilT and e.stacks > 0 and (Vector2.new(m.x, m.y) - feet).Magnitude <= skill.radius then
+				table.insert(targets, { m = m, stacks = e.stacks })
+			end
+		end
+		if #targets == 0 then
+			return false, "불씨가 걸린 적이 없어요"
+		end
+		local ids = {}
+		for _, t in targets do
+			table.insert(ids, t.m.id)
+		end
+		toScene(key, uid, id, feet.X, feet.Y, dir.X, dir.Y, skill.radius, ids)
+		local plain = table.clone(skill)
+		plain.ember = nil
+		for _, t in targets do
+			t.m.ember[uid].untilT = 0 -- 불씨를 다 쓴다
+			if hit(key, t.m, player, id, plain, attack, scale, t.stacks, nil) then
+				for _, other in living do
+					if other ~= t.m and (Vector2.new(other.x, other.y) - Vector2.new(t.m.x, t.m.y)).Magnitude <= skill.spread then
+						addEmber(key, other, player, skill.spreadEmber)
+					end
+				end
+			end
+		end
+	elseif kind == "discharge" then
+		-- 방전: 전하를 모두 써서 둘레에 번개(전하가 많을수록 넓고 세다)
+		local coreId, value = coreOf(player, persistence.Get(player))
+		if coreId ~= "t_charge" or value < 1 then
+			return false, "전하가 없어요"
+		end
+		local radius = skill.radius + skill.radiusPer * value
+		toScene(key, uid, id, feet.X, feet.Y, dir.X, dir.Y, radius, {})
+		setCore(player, coreId, 0)
+		task.delay(skill.delay or 0, function()
+			for _, m in townMonsters.Living(key) do
+				if (Vector2.new(m.x, m.y) - feet).Magnitude <= radius then
+					hit(key, m, player, id, skill, attack, scale, 1, nil, skill.power + skill.powerPer * value)
+				end
+			end
+			setCore(player, "t_charge", 0) -- 방전으로 맞힌 것은 전하로 치지 않는다
+		end)
+	elseif kind == "zone" then
+		local at = feet + dir * (skill.offset or 0)
+		local z = placeZone(player, key, id, skill, level, at)
+		toScene(key, uid, id, at.X, at.Y, dir.X, dir.Y, skill.seconds, { z.n })
+	elseif kind == "buff" then
+		toScene(key, uid, id, feet.X, feet.Y, dir.X, dir.Y, 1.2, {})
+		applyBuff(player, key, id, skill, level, feet)
+	elseif kind == "decoy" then
+		-- 얼음 분신: 나를 쫓던 둘레의 적이 seconds초 동안 나를 놓치고, 분신이 깨지며 둘레에 서리
+		toScene(key, uid, id, feet.X, feet.Y, dir.X, dir.Y, skill.seconds, {})
+		for _, m in townMonsters.Living(key) do
+			if (Vector2.new(m.x, m.y) - feet).Magnitude <= skill.radius and m.aggro == uid then
+				m.aggro, m.target = nil, nil
+				townMonsters.Stun(key, m.id, skill.seconds)
+			end
+		end
+		task.delay(skill.seconds, function()
+			for _, m in townMonsters.Living(key) do
+				if (Vector2.new(m.x, m.y) - feet).Magnitude <= skill.radius then
+					addFrost(key, m, player, skill.frost)
+				end
+			end
+		end)
+	elseif kind == "counter" then
+		-- 되받아치기: window초 동안 막는 자세 — 그 사이에 맞으면(OnPlayerHurt) 피해 없이 충격파로 되받아친다
+		toScene(key, uid, id, feet.X, feet.Y, dir.X, dir.Y, skill.window, {})
+		counterUntil[uid] = { untilT = os.clock() + skill.window, skill = skill, level = level, key = key, id = id }
 	elseif kind == "chain" then
 		local living = townMonsters.Living(key)
 		local chain, used = {}, {}
@@ -5978,6 +6484,33 @@ function exports.load()
 	-- 몬스터에게 맞을 때: 얼음 갑옷(피해 감소 + 때린 적에게 서리) · 견고(피해 감소 + 쌓임)
 	townMonsters.OnPlayerHurt(function(player: Player, key: string, m, damage: number): number
 		local data = persistence.Get(player)
+		-- 되받아치기: 자세 중에 맞으면 피해 없이 둘레에 충격파 + 견고 가득
+		local c = counterUntil[player.UserId]
+		if c and os.clock() < c.untilT then
+			counterUntil[player.UserId] = nil
+			local feet = feetOf(player)
+			local attack = inventoryService.GetAttackDamage(player)
+			if feet then
+				for _, other in townMonsters.Living(c.key) do
+					if (Vector2.new(other.x, other.y) - feet).Magnitude <= c.skill.radius then
+						hit(c.key, other, player, c.id, c.skill, attack, ninjutsu.Scale(c.id, c.level), 1, nil)
+					end
+				end
+			end
+			local coreId = coreOf(player, data)
+			if coreId == "r_firm" then
+				setCore(player, coreId, SK.r_firm.stacks)
+			end
+			return 0
+		end
+		local root = levelOf(data, "p_root")
+		if root >= 1 and data.School == "plant" and m.rootUntil and os.clock() < m.rootUntil then
+			damage *= 1 - SK.p_root.reducePerLevel * root -- 뿌리 표식이 있는 적은 덜 아프게 때린다
+		end
+		local heavy = levelOf(data, "r_heavy")
+		if heavy >= 1 and data.School == "rock" then
+			damage *= 1 - SK.r_heavy.perLevel * heavy
+		end
 		local armor = levelOf(data, "i_armor")
 		if armor >= 1 and data.School == "ice" then
 			damage *= 1 - SK.i_armor.perLevel * armor
@@ -5995,11 +6528,16 @@ function exports.load()
 
 	-- 전하: 하나마다 기본 공격이 빨라진다(공격 간격 × 이 배율)
 	townMonsters.OnAttackSpeed(function(player: Player): number
+		local mult = 1
 		local coreId, value, level = coreOf(player, persistence.Get(player))
 		if coreId == "t_charge" then
-			return 1 / (1 + (SK.t_charge.speedPer + SK.t_charge.perLevel * level) * value)
+			mult /= 1 + (SK.t_charge.speedPer + SK.t_charge.perLevel * level) * value
 		end
-		return 1
+		local h = haste[player.UserId]
+		if h and os.clock() < h.untilT then
+			mult /= 1 + h.value -- 질풍
+		end
+		return mult
 	end)
 
 	Players.PlayerRemoving:Connect(function(player)
@@ -6008,6 +6546,13 @@ function exports.load()
 		cores[player.UserId] = nil
 		counters[player.UserId] = nil
 		guardUntil[player.UserId] = nil
+		counterUntil[player.UserId] = nil
+		haste[player.UserId] = nil
+		for i = #zones, 1, -1 do
+			if zones[i].owner == player then
+				endZone(zones[i])
+			end
+		end
 	end)
 end
 
@@ -6929,8 +7474,9 @@ local function chase(key: string, st, m, dt: number): boolean
 		for _, fn in hurtHooks do
 			damage = fn(player, key, m, damage)
 		end
-		damage = math.max(1, math.round(damage))
-		progressionService.DamagePlayer(player, damage)
+		if damage > 0 then -- 0 이하 = 완전히 막음(되받아치기)
+			progressionService.DamagePlayer(player, math.max(1, math.round(damage)))
+		end
 	end
 	return true
 end
@@ -8082,6 +8628,7 @@ end
 
 -- 전투에 쓰이는 최종 수치(서버가 착용 장비에서 계산 — 몬스터 모듈이 호출).
 --  공격력 = 레벨(balance.attackFor) + 착용 장비 Attack + 무기 강화 보너스(weapons.Bonus)
+local attackBuffs = {} -- [userId] = { mult, untilT }
 function exports.GetAttackDamage(player: Player): number
 	local data = persistence.Get(player)
 	local weaponDef = data and items[data.Equipment.Weapon or ""]
@@ -8089,7 +8636,19 @@ function exports.GetAttackDamage(player: Player): number
 	local total = balance.attackFor(data and data.Level or 1) + equippedStat(player, "Attack") + weapons.Bonus(weaponDef, plus)
 	-- 무기 단련(공용 패시브 c_mastery): 레벨마다 공격력 +
 	local mastery = ninjutsu.LevelOf(data and data.Ninjutsu, "c_mastery")
-	return if mastery > 0 then math.round(total * (1 + ninjutsu.SKILLS.c_mastery.perLevel * mastery)) else total
+	if mastery > 0 then
+		total *= 1 + ninjutsu.SKILLS.c_mastery.perLevel * mastery
+	end
+	local buff = attackBuffs[player.UserId] -- 파티 버프(열기 등)
+	if buff and os.clock() < buff.untilT then
+		total *= buff.mult
+	end
+	return math.round(total)
+end
+
+-- 공격력 버프: seconds초 동안 공격력 × mult(ninjutsuService의 버프 인술)
+function exports.SetAttackBuff(player: Player, mult: number, seconds: number)
+	attackBuffs[player.UserId] = { mult = mult, untilT = os.clock() + seconds }
 end
 
 function exports.GetDefense(player: Player): number
@@ -9855,6 +10414,13 @@ local NEED = {
 	guard = { "mult", "seconds" },
 }
 NEED.seed = { "range", "speed", "width", "radius", "power", "fuse", "burstPower" }
+NEED.zone = { "radius", "seconds", "interval" }
+NEED.buff = { "radius", "seconds" }
+NEED.detonate = { "radius", "power", "spread" }
+NEED.shatter = { "radius", "power" }
+NEED.discharge = { "radius", "radiusPer", "power", "powerPer" }
+NEED.decoy = { "radius", "seconds", "frost" }
+NEED.counter = { "window", "radius", "power" }
 for id, s in SK do
 	expect(typeof(s.name) == "string" and typeof(s.desc) == "string", "이름 · 설명 " .. id)
 	if s.kind == "passive" then
@@ -9964,7 +10530,7 @@ ninjutsuService.load()
 shops.load()
 
 -- 스킬 나무(저장 v13) 호환: 아래 종류별 시험은 "칸 n = 그 유파의 옛 n차 인술(SCHOOL_INFO.skills)"로 쓴다 —
---  인술을 쓰기 직전에 그 네 인술을 1레벨로 배운 것으로 하고 단축칸을 그렇게 맞춘다(전직 단계는 시험이 정한 그대로 본다).
+--  인술을 쓰기 직전에 그 네 인술을 1레벨로 배운 것으로 하고 단축칸을 그렇게 맞춘다(전직 단계도 4로 보고 쓴다 — 전직별 잠금은 09 · 10이 본다).
 --  스킬 나무 · SP · 단축칸 · 핵심 장치 자체의 시험은 09_skills.luau.
 do
 	local use = handlers.UseNinjutsu
@@ -9978,7 +10544,10 @@ do
 				if (d.Ninjutsu[id] or 0) < 1 then d.Ninjutsu[id] = 1 end
 			end
 		end
-		return use(player, slot, facing)
+		local job = d and d.Job
+		if d then d.Job = 4 end
+		use(player, slot, facing)
+		if d then d.Job = job end
 	end
 end
 
@@ -10133,28 +10702,12 @@ e1 = ninjutsuService.GetEnergy(p1)
 handlers.TownAttack(p1, "left")
 expect(near(ninjutsuService.GetEnergy(p1), e1, 0.05), "헛손질은 기력이 안 참")
 
--- ---- 5) 2번 칸: 2차 전직 뒤에 → 불꽃 폭발(둘레) ----
-list = reset()
-a, b, far = list[1], list[2], list[3]
-place(a, 320, 200)
-place(b, 300, 230)
-place(far, 340, 200)
-standAt(p1, 300, 200)
-refill()
-clear()
-handlers.UseNinjutsu(p1, 2, "down")
-eq(#sent("NinjutsuCast", p1), 0, "2차 인술은 2차 전직 뒤에")
+-- ---- 5) 칸 번호 ----
 data[p1].Job = 4 -- 아래 시험은 인술 칸이 모두 열린 상태로
-handlers.UseNinjutsu(p1, 2, "down")
-eq(#sent("NinjutsuCast", p1), 1, "전직하면 2번 칸을 씀")
-eq(lost(a), 0, "불꽃 폭발: 시전 시간 전")
-advance(SK.fire_burst.delay + 0.02)
-eq(lost(a), dmg(SK.fire_burst.power), "불꽃 폭발: 반경 안(20)")
-eq(lost(b), dmg(SK.fire_burst.power), "불꽃 폭발: 반경 안(30)")
-eq(lost(far), 0, "불꽃 폭발: 반경 밖(40)")
+clear()
 handlers.UseNinjutsu(p1, 5, "down")
 handlers.UseNinjutsu(p1, 1.5, "down")
-eq(#sent("NinjutsuCast", p1), 1, "없는 칸 번호는 무시")
+eq(#sent("NinjutsuCast", p1), 0, "없는 칸 번호는 무시")
 
 -- ---- 6) 얼음: 가시(직선 · 꿰뚫음 · 느려짐) / 빙결(멈춤) ----
 data[p1].School = "ice"
@@ -10197,16 +10750,15 @@ for _ = 1, 10 do
 end
 moved = math.sqrt((b.x - startX) ^ 2 + (b.y - startY) ^ 2)
 expect(near(moved, world.monsterSpeed * combat.MONSTER_CHASE_SPEED, 0.8), ("느려짐이 풀리면 원래 속도(%.2f)"):format(moved))
--- 빙결: 둘레 몬스터가 멈춘다(움직이지도 때리지도 못함)
+-- 멈춤: 멈춘 몬스터는 움직이지도 때리지도 못한다
 list = reset()
 a = list[1]
 place(a, 262, 200)
 standAt(p1, 250, 200)
 refill()
 table.clear(hurts)
-handlers.UseNinjutsu(p1, 2, "right")
-advance(SK.ice_freeze.delay + 0.02)
-eq(lost(a), dmg(SK.ice_freeze.power), "빙결 피해")
+townMonsters.Damage("field1", a.id, p1, 1, "test") -- 맞았으니 쫓아와 때리려 한다
+townMonsters.Stun("field1", a.id, 2.5)
 for _ = 1, 20 do
 	advance(0.1)
 	heartbeat(0.1)
@@ -10372,8 +10924,6 @@ for _, school in ninjutsu.SCHOOLS do
 	standAt(p1, 250, 200)
 	refill()
 	clear()
-	handlers.UseNinjutsu(p1, 3, "right")
-	eq(#sent("NinjutsuCast", p1), 0, school .. ": 2차 닌자는 3차 인술을 못 씀")
 	data[p1].Job = 4
 	for slot = 3, 4 do
 		local id = ninjutsu.SkillFor(school, slot)
@@ -11597,7 +12147,7 @@ for _, school in ninjutsu.SCHOOLS do
 				expect(job == 1 and s.kind == "passive", "핵심 장치는 1차 패시브 " .. id)
 			end
 			if s.fx then
-				for _, k in { "shot", "burst", "hit", "burstHit", "self", "ring", "row" } do
+				for _, k in { "shot", "burst", "hit", "burstHit", "markHit", "self", "ring", "row", "front", "zone" } do
 					expect(s.fx[k] == nil or fxSheet.rects[s.fx[k]] ~= nil, ("%s 이펙트 %s"):format(id, tostring(s.fx[k])))
 				end
 			end
@@ -11654,7 +12204,7 @@ do
 	two.School, two.Job, two.Level, two.Ninjutsu = "ice", 2, 35, {}
 	schema.migrate(two)
 	expect(two.SP[1] == ninjutsu.SpEarned(1, 35) and two.SP[2] == ninjutsu.SpEarned(2, 35) and two.SP[3] == 0, "v13: 전직한 구간마다 SP")
-	expect(two.SkillSlots[1] == "ice_spike" and two.SkillSlots[2] == "ice_freeze", "v13: 전직마다 주력기가 단축칸에")
+	expect(two.SkillSlots[1] == "ice_spike" and two.SkillSlots[2] == "ice_lance", "v13: 전직마다 주력기가 단축칸에")
 	local none = schema.default()
 	none.SchemaVersion, none.SP, none.SkillSlots = 12, nil, nil
 	schema.migrate(none)
@@ -11797,8 +12347,8 @@ local su = sent("SchoolUpdated")
 expect(#su == 1 and su[1].args[4][1] == d.SP[1] and su[1].args[5][1] == "fire_ball", "SchoolUpdated(유파, 레벨표, 전직, SP, 단축칸)")
 handlers.LearnSkill(p1, "ice_spike")
 expect(d.Ninjutsu.ice_spike == nil, "다른 유파 스킬은 못 배움")
-handlers.LearnSkill(p1, "fire_burst")
-expect(d.Ninjutsu.fire_burst == nil, "아직 안 한 전직의 스킬은 못 배움")
+handlers.LearnSkill(p1, "f_breath")
+expect(d.Ninjutsu.f_breath == nil, "아직 안 한 전직의 스킬은 못 배움")
 handlers.LearnSkill(p1, "nothing")
 handlers.LearnSkill(p1, "fire_ball")
 handlers.LearnSkill(p1, "fire_ball")
@@ -11814,7 +12364,7 @@ eq(d.SP[1], 50 - (ninjutsu.MaxOf("f_ember") - 1), "마스터 뒤에는 SP가 안
 handlers.SetSkillSlot(p1, 3, "fire_ball")
 eq(slots(), ",,fire_ball,", "칸 옮기기(같은 인술은 한 칸에만)")
 handlers.SetSkillSlot(p1, 2, "f_ember")
-handlers.SetSkillSlot(p1, 2, "fire_burst")
+handlers.SetSkillSlot(p1, 2, "f_breath")
 handlers.SetSkillSlot(p1, 9, "fire_ball")
 eq(slots(), ",,fire_ball,", "패시브 · 안 배운 인술 · 없는 칸은 무시")
 handlers.SetSkillSlot(p1, 3, "")
@@ -11827,8 +12377,8 @@ handlers.SetSkillSlot(p1, 1, "fire_ball")
 d.Level = 30
 atElder()
 handlers.JobAdvance(p1)
-expect(d.Job == 2 and d.SP[2] == ninjutsu.SP_ON_JOB and d.Ninjutsu.fire_burst == 1, "2차 전직: SP + 2차 주력기")
-eq(slots(), "fire_ball,fire_burst,,", "2차 주력기가 빈 칸에")
+expect(d.Job == 2 and d.SP[2] == ninjutsu.SP_ON_JOB and d.Ninjutsu.f_breath == 1, "2차 전직: SP + 2차 주력기")
+eq(slots(), "fire_ball,f_breath,,", "2차 주력기가 빈 칸에")
 
 -- ---- 5) 불: 불씨(쌓임 · 주기 피해 · 최대) + 스킬 레벨 보정 + 달궈진 칼날 ----
 d = newNinja("fire")
@@ -12066,6 +12616,350 @@ end
 for _, sk in { SK.p_vigor, SK.r_firm, SK.t_charge } do
 	expect(fits(("%s %d/%d"):format(sk.name, sk.stacks, sk.stacks), 26 * 4 + 4 * 3, 1), "핵심 장치 표시 " .. sk.name)
 end
+
+-- =====================================================================================================
+-- 2차 스킬(유파마다 5개): 새 종류(설치 · 버프 · 점화 · 깨뜨리기 · 방전 · 분신 · 되받아치기)와 덧붙임(여러 번 · 나눠 터짐 · 끌어당김 · 연달아 · 표식)
+-- =====================================================================================================
+local function zoneEnds()
+	local n = 0
+	for _, e in sent("NinjutsuCast") do
+		if e.args[3] == "zone_end" then n += 1 end
+	end
+	return n
+end
+-- 2차 전직까지 한 새 캐릭터: 2차 스킬을 모두 1레벨로 배우고(SP 넉넉히) want를 2 · 3 · 4번 칸에 넣는다
+local function ninja2(school, want)
+	local nd = newNinja(school)
+	nd.Level = 30
+	nd.Health = balance.maxHealthFor(30)
+	atElder()
+	handlers.JobAdvance(p1)
+	nd.SP[2] = 50
+	for _, id in ninjutsu.TREE[school][2] do
+		if (nd.Ninjutsu[id] or 0) < 1 then handlers.LearnSkill(p1, id) end
+	end
+	for i, id in want or {} do
+		handlers.SetSkillSlot(p1, i + 1, id)
+	end
+	atField()
+	for _, m in townMonsters.Living("field1") do
+		m.mark, m.shock, m.rootUntil, m.frozenUntil, m.nextAttack = nil, nil, nil, nil, nil
+	end
+	advance(120)
+	clear()
+	table.clear(hurts)
+	return nd
+end
+for _, school in ninjutsu.SCHOOLS do
+	local two = ninjutsu.TREE[school][2]
+	eq(#two, 5, "2차 고유 스킬 5개 " .. school)
+	local kinds, passives = {}, 0
+	for _, id in two do
+		if ninjutsu.IsActive(id) then kinds[SK[id].kind] = true else passives += 1 end
+	end
+	local n = 0
+	for _ in kinds do n += 1 end
+	expect(n >= 3 and passives >= 1, ("2차는 쓰는 법이 3가지 넘게 + 패시브 %s(%d가지)"):format(school, n))
+end
+expect(packets.BuffUpdated ~= nil, "패킷 등록 BuffUpdated")
+local b, c, l0
+
+-- ---- 13) 불 2차: 화염 방사 · 점화 · 불기둥 · 열기 · 타오르는 마음 ----
+d = ninja2("fire", { "f_breath", "f_ignite", "f_pillar" })
+eq(slots(), "fire_ball,f_breath,f_ignite,f_pillar", "화문 2차 단축칸")
+d.Ninjutsu.f_ember, d.Ninjutsu.f_drain = nil, nil -- 불씨 없이 맞는 횟수만 본다
+list = monsters()
+a = list[1]
+put(a, X0 + 30, Y0)
+handlers.UseNinjutsu(p1, 2, "right")
+advance(SK.f_breath.delay + SK.f_breath.interval * 3 + 0.05)
+eq(hitsFrom("nin:f_breath"), SK.f_breath.hits, "화염 방사: 네 번 태움")
+eq(lost(a), SK.f_breath.hits * dmg(SK.f_breath.power), "화염 방사 피해")
+-- 점화: 불씨가 걸린 적이 불씨 수만큼 터지고, 옆의 적에게 불씨가 옮겨붙는다
+d.Ninjutsu.f_ember = 1
+list = monsters()
+a, b = list[1], list[2]
+put(a, X0 + 50, Y0)
+put(b, X0 + 50, Y0 + 40)
+clear()
+handlers.UseNinjutsu(p1, 3, "right")
+expect(#sent("NinjutsuCast") == 0 and noticed("불씨"), "점화: 불씨가 걸린 적이 없으면 못 씀")
+handlers.UseNinjutsu(p1, 1, "right")
+advance(0.6)
+eq(a.ember[1].stacks, 1, "화염구로 불씨 1")
+put(b, X0 + 50, Y0 + 20) -- 터질 때 옆에 있는 적
+local beforeA = lost(a)
+clear()
+handlers.UseNinjutsu(p1, 3, "right")
+eq(lost(a) - beforeA, dmg(SK.f_ignite.power * 1), "점화: 불씨 1개만큼 터짐")
+expect(a.ember[1].untilT == 0 and b.ember ~= nil and b.ember[1].stacks == 1, "점화: 불씨를 다 쓰고 옆의 적에게 옮겨붙음")
+-- 불기둥: 설치 — 6초 동안 0.5초마다
+d.Ninjutsu.f_ember = nil
+list = monsters()
+a = list[1]
+put(a, X0 + SK.f_pillar.offset + 4, Y0)
+advance(30)
+clear()
+handlers.UseNinjutsu(p1, 4, "right")
+local zc = sent("NinjutsuCast")
+expect(#zc == 1 and zc[1].args[3] == "f_pillar" and zc[1].args[4] == X0 + SK.f_pillar.offset and zc[1].args[8] == SK.f_pillar.seconds and #zc[1].args[9] == 1, "불기둥: NinjutsuCast(자리, 지속 시간, { 번호 })")
+advance(SK.f_pillar.seconds + 1)
+eq(hitsFrom("nin:f_pillar"), SK.f_pillar.seconds / SK.f_pillar.interval - 1, "불기둥: 서 있는 동안 0.5초마다 태움")
+eq(zoneEnds(), 1, "불기둥: 시간이 다 되면 사라짐(zone_end)")
+-- 열기: 공격력 버프(120초)
+handlers.SetSkillSlot(p1, 4, "f_heat")
+advance(60)
+clear()
+local a0 = atk()
+handlers.UseNinjutsu(p1, 4, "right")
+local H = SK.f_heat
+eq(atk(), math.round(a0 * (1 + H.buff.attack + H.buff.attackPerLevel * 1)), "열기: 공격력 +")
+local bu = sent("BuffUpdated")
+expect(#bu == 1 and bu[1].args[1] == "attack" and bu[1].args[3] == H.seconds and noticed("열기"), "BuffUpdated(attack, 값, 초)")
+advance(H.seconds + 1)
+eq(atk(), a0, "열기가 끝나면 원래 공격력")
+-- 타오르는 마음: 내 불씨가 걸린 적 수만큼 인술 피해 +
+d.Ninjutsu.f_ember, d.Ninjutsu.f_drain = 1, 1
+list = monsters()
+a, b = list[1], list[2]
+put(a, X0 + 50, Y0)
+put(b, X0 + 50, Y0 + 12)
+handlers.UseNinjutsu(p1, 1, "right") -- 둘 다 맞고 불씨가 붙는다
+advance(0.6)
+expect(a.ember[1].stacks == 1 and b.ember[1].stacks == 1, "두 마리에 불씨")
+advance(SK.fire_ball.cooldown)
+clear()
+handlers.UseNinjutsu(p1, 1, "right")
+advance(0.6)
+local direct = 0
+for _, e in sent("TownMonsterHit") do
+	if e.args[2] == a.id and e.args[6] == "nin:fire_ball" then direct = e.args[4] end
+end
+eq(direct, math.max(1, math.round(atk() * SK.fire_ball.power * (1 + (SK.f_drain.base + SK.f_drain.perLevel * 1) * 2))), "타오르는 마음: 불씨 걸린 적 2마리만큼 피해 +")
+
+-- ---- 14) 얼음 2차: 빙창 · 깨뜨리기 · 얼음 벽 · 얼음 분신 · 차가운 피 ----
+d = ninja2("ice", { "i_shatter", "i_wall", "i_decoy" })
+expect(d.Ninjutsu.ice_lance == 1, "빙창은 2차 주력기")
+d.Ninjutsu.i_cold = nil
+list = monsters()
+a, b, c = list[1], list[2], list[3]
+put(a, X0 + 30, Y0)
+put(b, X0 + 60, Y0) -- 내 둘레 밖, a의 조각이 닿는 자리
+put(c, X0 - 20, Y0)
+a.frozenUntil = math.huge -- 얼어붙은 적
+handlers.UseNinjutsu(p1, 2, "right")
+advance(SK.i_shatter.delay + 0.05)
+eq(lost(a), dmg(SK.i_shatter.power * SK.i_shatter.shatter.mult), "깨뜨리기: 얼어붙은 적은 깨짐(큰 피해)")
+eq(lost(b), dmg(SK.i_shatter.shatter.shard), "깨뜨리기: 조각이 옆의 적에게")
+expect(lost(c) == dmg(SK.i_shatter.power) and c.frost.stacks == SK.i_shatter.frost, "깨뜨리기: 얼지 않은 적은 피해 + 서리 2")
+expect(a.frozenUntil == nil and hitsFrom("nin:i_shatter:shard") == 1, "깨진 적은 더는 얼어 있지 않음 · 조각 출처")
+-- 얼음 벽: 닿은 적이 멈춰 선다
+list = monsters()
+a = list[1]
+put(a, X0 + SK.i_wall.offset + 2, Y0)
+clear()
+handlers.UseNinjutsu(p1, 3, "right")
+advance(SK.i_wall.seconds + 1)
+expect(status("stun") >= 5 and lost(a) == 0 and zoneEnds() == 1, "얼음 벽: 서 있는 동안 닿은 적을 멈춰 세움(피해 없음)")
+-- 얼음 분신: 나를 쫓던 적이 나를 놓치고, 분신이 깨지며 서리
+list = monsters()
+a = list[1]
+put(a, X0 + 20, Y0)
+a.aggro = 1
+handlers.UseNinjutsu(p1, 4, "right")
+expect(a.aggro == nil, "얼음 분신: 나를 쫓던 적이 나를 놓침")
+advance(SK.i_decoy.seconds + 0.1)
+eq(a.frost.stacks, SK.i_decoy.frost, "얼음 분신: 깨지며 서리 2")
+-- 차가운 피: 서리가 걸린 적에게 인술 피해 +
+d.Ninjutsu.i_cold = 1
+advance(20)
+list = monsters()
+a = list[1]
+put(a, X0 + 30, Y0)
+handlers.UseNinjutsu(p1, 1, "right") -- 얼음 가시(맞는 순간에는 아직 서리가 없다)
+advance(SK.ice_spike.delay + 0.05)
+eq(lost(a), dmg(SK.ice_spike.power), "서리가 없는 적: 보정 없음")
+advance(SK.ice_spike.cooldown)
+l0 = lost(a)
+put(a, X0 + 30, Y0)
+handlers.UseNinjutsu(p1, 1, "right")
+advance(SK.ice_spike.delay + 0.05)
+eq(lost(a) - l0, math.max(1, math.round(atk() * SK.ice_spike.power * (1 + SK.i_cold.perLevel * 1))), "차가운 피: 서리가 걸린 적에게 피해 +")
+
+-- ---- 15) 풀 2차: 덩굴 채찍 · 덩굴 묶기 · 치유꽃 · 뿌리 내림 · 숲의 숨결 ----
+d = ninja2("plant", { "p_whip", "p_flower", "p_breath" })
+d.Ninjutsu.p_root = nil
+list = monsters()
+a = list[1]
+put(a, X0 + 40, Y0)
+handlers.UseNinjutsu(p1, 2, "right")
+advance(SK.p_whip.delay + 0.3)
+eq(lost(a), dmg(SK.p_whip.power), "덩굴 채찍 피해")
+expect(a.x < X0 + 40 - SK.p_whip.pull * 0.5, ("덩굴 채찍: 내 쪽으로 끌려옴(%.1f)"):format(a.x))
+-- 치유꽃: 심은 자리 둘레의 아군이 1초마다 회복
+monsters()
+d.Health = 10
+handlers.UseNinjutsu(p1, 3, "right")
+advance(5.5)
+eq(d.Health, 10 + 5 * math.max(1, math.round(balance.maxHealthFor(30) * SK.p_flower.heal)), "치유꽃: 1초마다 회복")
+standAt(X0 + 200, Y0)
+local hp = d.Health
+advance(5)
+eq(d.Health, hp, "치유꽃: 멀어지면 회복하지 않음")
+standAt(X0, Y0)
+-- 숲의 숨결: 2초마다 회복(120초)
+advance(30)
+d.Health = 10
+handlers.UseNinjutsu(p1, 4, "right")
+advance(6.5)
+eq(d.Health, 10 + 3 * math.max(1, math.round(balance.maxHealthFor(30) * SK.p_breath.buff.regen)), "숲의 숨결: 2초마다 회복")
+-- 뿌리 내림: 뿌리 표식이 있는 적을 치면 생기가 더 쌓임
+d.Ninjutsu.p_root = 1
+list = monsters()
+a = list[1]
+put(a, X0 + 50, Y0)
+advance(200)
+ninjutsuService.AddCore(p1, -1000)
+handlers.UseNinjutsu(p1, 1, "right")
+advance(0.5)
+local V2 = (SK.p_vigor.perHit + SK.p_vigor.perLevel * 1) * (1 + SK.p_root.vigorPerLevel * 1)
+expect(a.rootUntil ~= nil and math.abs(ninjutsuService.GetCore(p1) - V2) < 1e-6, "뿌리 내림: 씨앗이 박히면 뿌리 표식 · 생기 +10%")
+
+-- ---- 16) 바위 2차: 지면 강타 · 되받아치기 · 바위 던지기 · 발 구르기 · 무거운 몸 ----
+d = ninja2("rock", { "r_crack", "r_counter", "r_throw" })
+d.Ninjutsu.r_heavy = nil
+list = monsters()
+a, b, c = list[1], list[2], list[3]
+put(a, X0 + 12, Y0)
+put(b, X0 + 36, Y0)
+put(c, X0 + 60, Y0)
+local K = SK.r_crack
+handlers.UseNinjutsu(p1, 2, "right")
+advance(K.delay + 0.02)
+expect(lost(a) == dmg(K.power) and lost(b) == 0 and lost(c) == 0, "지면 강타: 첫 균열")
+advance(K.segDelay)
+expect(lost(b) == math.max(1, math.round(atk() * K.power * K.falloff)) and lost(c) == 0, "지면 강타: 둘째 균열(한 박자 늦게, 약하게)")
+advance(K.segDelay)
+eq(lost(c), math.max(1, math.round(atk() * K.power * K.falloff ^ 2)), "지면 강타: 셋째 균열")
+eq(lost(a), dmg(K.power), "지면 강타: 한 번씩만 맞음")
+-- 되받아치기: 자세 중에 맞으면 피해 없이 충격파 + 견고 가득
+list = monsters()
+a = list[1]
+a.level = 50
+put(a, X0 + 8, Y0)
+a.aggro, a.nextAttack = 1, 0
+table.clear(hurts)
+handlers.UseNinjutsu(p1, 3, "right")
+heartbeat(0.1)
+expect(#hurts == 0 and lost(a) == dmg(SK.r_counter.power), ("되받아치기: 피해 없이 되받아침(맞은 횟수 %d, 몬스터 피해 %d)"):format(#hurts, lost(a)))
+eq(ninjutsuService.GetCore(p1), SK.r_firm.stacks, "되받아치기: 견고 가득")
+-- 바위 던지기: 견고를 실어 던진다
+list = monsters()
+a = list[1]
+put(a, X0 + 50, Y0)
+advance(SK.r_firm.seconds + 1)
+ninjutsuService.AddCore(p1, 2)
+clear()
+handlers.UseNinjutsu(p1, 4, "right")
+eq(ninjutsuService.GetCore(p1), 0, "바위 던지기: 견고를 다 씀")
+advance(1)
+eq(lost(a), math.max(1, math.round(atk() * SK.r_throw.power * (1 + SK.r_throw.firmBonus * 2))), "바위 던지기: 견고 2만큼 피해 +")
+eq(status("stun"), 1, "바위 던지기: 멈춤")
+-- 발 구르기: 둘레 멈춤 + 견고 1
+handlers.SetSkillSlot(p1, 4, "r_stomp")
+list = monsters()
+a = list[1]
+put(a, X0 + 20, Y0)
+clear()
+handlers.UseNinjutsu(p1, 4, "right")
+eq(ninjutsuService.GetCore(p1), SK.r_stomp.firmGain, "발 구르기: 견고 1")
+advance(SK.r_stomp.delay + 0.05)
+expect(lost(a) == dmg(SK.r_stomp.power) and status("stun") == 1, "발 구르기: 피해 + 멈춤")
+-- 무거운 몸: 받는 피해 감소
+d.Ninjutsu.r_heavy = 1
+advance(SK.r_firm.seconds + 5)
+list = monsters()
+a = list[1]
+a.level = 50
+put(a, X0 + 8, Y0)
+table.clear(hurts)
+getHit(a, 1)
+eq(hurts[1], math.max(1, math.round((monsterLevels.AttackDamage(50) - inventory.GetDefense(p1)) * (1 - SK.r_heavy.perLevel * 1))), "무거운 몸: 받는 피해 -")
+
+-- ---- 17) 번개 2차: 뇌전 수리검 · 방전 · 번개 덫 · 질풍 · 감전 ----
+d = ninja2("thunder", { "t_star", "t_discharge", "t_trap" })
+d.Ninjutsu.t_shock = nil
+list = monsters()
+a = list[1]
+put(a, X0 + 50, Y0)
+handlers.UseNinjutsu(p1, 2, "right")
+eq(#sent("NinjutsuCast"), 1, "뇌전 수리검: 첫 발은 바로")
+advance(1)
+eq(#sent("NinjutsuCast"), SK.t_star.shots, "뇌전 수리검: 세 발을 연달아")
+eq(hitsFrom("nin:t_star"), SK.t_star.shots, "뇌전 수리검: 세 번 맞음")
+eq(hitsFrom("nin:t_star:mark"), SK.t_star.shots - 1, "표식: 표식이 붙은 뒤의 수리검마다 번개가 떨어짐")
+eq(lost(a), SK.t_star.shots * dmg(SK.t_star.power) + (SK.t_star.shots - 1) * dmg(SK.t_star.mark.power), "뇌전 수리검 + 표식 번개 피해")
+-- 방전: 전하를 다 써서 둘레에
+advance(SK.t_charge.seconds + 1)
+list = monsters()
+a = list[1]
+put(a, X0 + 50, Y0)
+clear()
+handlers.UseNinjutsu(p1, 3, "right")
+expect(#sent("NinjutsuCast") == 0 and noticed("전하"), "방전: 전하가 없으면 못 씀")
+ninjutsuService.AddCore(p1, 100)
+local stacks = SK.t_charge.stacks
+handlers.UseNinjutsu(p1, 3, "right")
+local dc = sent("NinjutsuCast")
+eq(dc[#dc].args[8], SK.t_discharge.radius + SK.t_discharge.radiusPer * stacks, "방전: 전하가 많을수록 넓음")
+advance(SK.t_discharge.delay + 0.05)
+eq(lost(a), math.max(1, math.round(atk() * (SK.t_discharge.power + SK.t_discharge.powerPer * stacks))), "방전: 전하가 많을수록 셈")
+eq(ninjutsuService.GetCore(p1), 0, "방전: 전하를 다 씀")
+-- 번개 덫: 밟으면 한 번 터지고 사라진다
+list = monsters()
+a = list[1]
+clear()
+handlers.UseNinjutsu(p1, 4, "right")
+advance(3)
+eq(hitsFrom("nin:t_trap"), 0, "번개 덫: 아무도 안 밟으면 그대로")
+put(a, X0 + SK.t_trap.offset + 2, Y0)
+advance(0.6)
+expect(hitsFrom("nin:t_trap") == 1 and status("stun") == 1 and zoneEnds() == 1, "번개 덫: 밟으면 감전(피해 + 멈춤)되고 사라짐")
+advance(3)
+eq(hitsFrom("nin:t_trap"), 1, "번개 덫: 한 번만")
+-- 질풍: 공격이 빨라진다
+handlers.SetSkillSlot(p1, 4, "t_haste")
+advance(60)
+list = monsters()
+a = list[1]
+put(a, X0 + 10, Y0)
+handlers.TownAttack(p1, "right")
+advance(SWORD_GAP * 0.93)
+before = lost(a)
+handlers.TownAttack(p1, "right")
+eq(lost(a), before, "질풍 없이는 이 간격으로 못 침")
+advance(10)
+clear()
+handlers.UseNinjutsu(p1, 4, "right")
+expect(sent("BuffUpdated")[1].args[1] == "haste" and noticed("질풍"), "BuffUpdated(haste)")
+handlers.TownAttack(p1, "right")
+advance(SWORD_GAP * 0.93)
+before = lost(a)
+handlers.TownAttack(p1, "right")
+expect(lost(a) > before, "질풍: 같은 간격으로도 공격이 나감")
+-- 감전: 내 번개에 맞은 적은 내 인술에 더 아프다
+d.Ninjutsu.t_shock = 1
+advance(30)
+list = monsters()
+a = list[1]
+put(a, X0 + 40, Y0)
+handlers.UseNinjutsu(p1, 1, "right")
+eq(lost(a), dmg(SK.thunder_bolt.power), "감전 전: 보정 없음")
+l0 = lost(a)
+advance(SK.thunder_bolt.cooldown + 0.01)
+put(a, X0 + 40, Y0)
+handlers.UseNinjutsu(p1, 1, "right")
+eq(lost(a) - l0, math.max(1, math.round(atk() * SK.thunder_bolt.power * (1 + SK.t_shock.base + SK.t_shock.perLevel * 1))), "감전: 감전된 동안 다시 맞으면 피해 +")
 
 end)
 finish()

@@ -340,7 +340,7 @@ function exports.start(scene: Scene)
 				hero.Facing = facing -- 등 뒤 무기 자리(town/weapon.luau)용 — 캐릭터 복제로 다른 사람에게도 간다
 			end
 
-			local step = move.Unit * SPEED * math.min(dt, 0.1)
+			local step = move.Unit * SPEED * (1 + require(script.Parent.globals.ninjutsu).Haste()) * math.min(dt, 0.1) -- 질풍 버프면 더 빨리 걷는다
 			local pos = exports.pos
 			local nx = pos.X + step.X
 			if not blocked(nx, pos.Y) then

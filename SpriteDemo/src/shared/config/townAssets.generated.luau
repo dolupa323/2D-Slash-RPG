@@ -7,8 +7,8 @@ return {
 	PLAYER = "rbxassetid://78471859808863",
 	NPCS = "rbxassetid://111577531997651",
 	ITEMS = "rbxassetid://81901429550263", -- 아이템 아이콘 시트(shared/data/itemIcons.generated.luau)
-	FX = "rbxassetid://125574344038345", -- 인술 · 맞음 이펙트 시트(shared/data/ninjaFx.generated.luau)
-	UI = "rbxassetid://95121906472533", -- UI 키트 아틀라스(shared/data/uiKit.generated.luau, tools/export_ninja_ui.mjs)
+	FX = "rbxassetid://98901275850125", -- 인술 · 맞음 이펙트 시트(shared/data/ninjaFx.generated.luau)
+	UI = "rbxassetid://100142829399672", -- UI 키트 아틀라스(shared/data/uiKit.generated.luau, tools/export_ninja_ui.mjs)
 	-- 도트 글꼴 글자판(shared/data/pixelFont.generated.luau, tools/export_ninja_font.mjs)
 	FONT = {
 		body = { "rbxassetid://86254954369011", "rbxassetid://74815922164131" },

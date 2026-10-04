@@ -64,8 +64,8 @@ exports.BURN_FX = "flam" -- 불붙어 타는 동안 맞은 몬스터 위(피격 
 exports.SCHOOLS = { "fire", "ice", "plant", "rock", "thunder" }
 
 exports.SCHOOL_INFO = {
-	fire = { name = "불", title = "화문", color = { 228, 109, 58 }, desc = "한 방이 센 유파. 불씨가 남아 계속 태운다.", skills = { "fire_ball", "fire_burst", "fire_rain", "fire_dragon" } },
-	ice = { name = "얼음", title = "빙문", color = { 99, 171, 214 }, desc = "적을 느리게 하고 얼려 세운다.", skills = { "ice_spike", "ice_freeze", "ice_lance", "ice_storm" } },
+	fire = { name = "불", title = "화문", color = { 228, 109, 58 }, desc = "한 방이 센 유파. 불씨가 남아 계속 태운다.", skills = { "fire_ball", "f_breath", "fire_rain", "fire_dragon" } },
+	ice = { name = "얼음", title = "빙문", color = { 99, 171, 214 }, desc = "적을 느리게 하고 얼려 세운다.", skills = { "ice_spike", "i_shatter", "ice_lance", "ice_storm" } },
 	plant = { name = "풀", title = "초문", color = { 122, 168, 62 }, desc = "덩굴로 묶고 잎으로 상처를 낫게 한다.", skills = { "plant_bind", "plant_heal", "plant_thorn", "plant_bloom" } },
 	rock = { name = "바위", title = "암문", color = { 168, 122, 84 }, desc = "적을 밀쳐 내고 바위로 몸을 지킨다.", skills = { "rock_spike", "rock_guard", "rock_quake", "rock_meteor" } },
 	thunder = { name = "번개", title = "뇌문", color = { 240, 200, 72 }, desc = "빠르고, 번개가 옆 적에게 튄다.", skills = { "thunder_bolt", "thunder_storm", "thunder_chain", "thunder_judge" } },
@@ -80,13 +80,6 @@ exports.SKILLS = {
 		fx = { shot = "fireball", burst = "explosion", hit = "flam" },
 		desc = "불덩이를 던진다. 닿은 자리에서 터지며 불씨를 붙인다.",
 	},
-	fire_burst = {
-		name = "불꽃 폭발", school = "fire", kind = "circle", cost = 45, cooldown = 9,
-		radius = 36, power = 2.6, delay = 0.25,
-		ember = 1,
-		fx = { ring = "flam", ringCount = 6, burst = "explosion", hit = "flam" },
-		desc = "내 둘레를 불태운다.",
-	},
 	-- ===== 얼음 =====
 	ice_spike = {
 		name = "얼음 가시", school = "ice", kind = "line", cost = 28, cooldown = 4,
@@ -95,16 +88,11 @@ exports.SKILLS = {
 		fx = { shot = "iceSpike", hit = "iceB" },
 		desc = "앞으로 얼음 가시를 쏜다. 꿰뚫고, 맞은 적에게 서리가 쌓인다.",
 	},
-	ice_freeze = {
-		name = "빙결", school = "ice", kind = "circle", cost = 45, cooldown = 10,
-		radius = 40, power = 1.4, delay = 0.25, stun = 2.5,
-		fx = { ring = "ice", ringCount = 6, hit = "iceB" },
-		desc = "내 둘레의 적을 얼려 세운다.",
-	},
 	-- ===== 풀 =====
 	plant_bind = {
 		name = "덩굴 묶기", school = "plant", kind = "circle", cost = 28, cooldown = 5,
 		radius = 34, power = 1.5, delay = 0.2, stun = 2,
+		root = 5,
 		fx = { ring = "plantB", ringCount = 5, hit = "plant" },
 		desc = "덩굴이 내 둘레의 적을 묶는다.",
 	},
@@ -209,7 +197,7 @@ exports.SKILLS = {
 }
 
 -- ===== 스킬 나무(메이플식 1~4차 — 공방 설계 dino-workshop/js/ninja/design/skills.js를 옮기는 중) =====
---  지금: 1차 전직 스킬은 새 설계대로(주력기 · 핵심 장치 · 패시브/보조 + 공용 2개). 2~4차는 옛 인술이 자리를 지킨다(옮기는 대로 바뀐다).
+--  지금: 1차 · 2차 전직 스킬은 새 설계대로. 3~4차는 옛 인술이 자리를 지킨다(옮기는 대로 바뀐다 — 빙문 4차는 비어 있음).
 --  스킬 포인트(SP): 레벨업마다 SP_PER_LEVEL, 전직할 때 SP_ON_JOB — 그 전직 구간에서 얻은 SP는 그 전직 스킬에만 쓴다.
 --  스킬마다 마스터 레벨(max). 쓰는 인술은 레벨이 오를수록 피해 · 회복량이 는다(마스터에서 +GROW). 0레벨 = 아직 안 배움.
 --  전직하면 그 전직의 주력기와 핵심 장치는 1레벨로 바로 배운다(auto). 배운 쓰는 인술은 단축칸 SLOTS개에 골라 넣는다.
@@ -222,7 +210,7 @@ exports.SLOTS = 4
 -- 1차 새 스킬 — 쓰는 인술
 exports.SKILLS.p_seed = {
 	name = "가시 씨앗", school = "plant", kind = "seed", cost = 24, cooldown = 3,
-	range = 104, speed = 180, width = 7, power = 0.6, fuse = 2, radius = 24, burstPower = 2.0,
+	range = 104, speed = 180, width = 7, power = 0.6, fuse = 2, radius = 24, burstPower = 2.0, root = 6,
 	fx = { shot = "plantSpike", hit = "plantB", burstHit = "plant" },
 	desc = "씨앗을 쏜다. 맞은 적에게 박혀 있다가 2초 뒤 가시로 터진다.",
 }
@@ -280,19 +268,172 @@ exports.SKILLS.c_energy = {
 	desc = "최대 기력과 기력 회복이 는다.",
 }
 
+-- ===== 2차 스킬(공방 설계 그대로 — 유파마다 주력기 · 터뜨리기/제어 · 설치 · 버프 · 패시브) =====
+--  새 종류: zone(설치 — offset 앞에 seconds초, interval마다 radius 안에 효과. heal = 안의 아군 회복, once = 처음 닿을 때 한 번, limit = 둘 수 있는 수)
+--   · buff(나와 radius 안 아군에게 seconds초: attack 공격력 + · haste 걸음/공격 속도 + · regen 2초마다 회복)
+--   · detonate(내 불씨가 걸린 적이 불씨 수만큼 터짐, spread 안의 적에게 불씨) · shatter(얼어붙은 적 = 깨짐 mult배 + 조각 shard, 아니면 서리)
+--   · discharge(전하를 다 써서 반경 radius + radiusPer×전하, 피해 power + powerPer×전하) · decoy(나를 쫓던 적이 seconds초 놓침 → 서리)
+--   · counter(window초 안에 맞으면 피해 없이 radius에 충격파 + 견고 가득)
+--  line의 덧붙임: hits · interval(여러 번) · follow(그때그때 내 자리에서) · segments · segDelay · falloff(나눠서 차례로 터짐) · pull(끌어당김)
+--  projectile의 덧붙임: shots · shotGap(연달아) · single(한 마리만) · mark(표식 — 표식 있는 적을 다시 맞히면 번개 power) · firmBonus(견고 하나마다 피해 +, 다 씀)
+-- 불
+exports.SKILLS.f_breath = {
+	name = "화염 방사", school = "fire", kind = "line", cost = 34, cooldown = 5,
+	length = 56, width = 14, power = 0.9, delay = 0.15, hits = 4, interval = 0.4, follow = true, ember = 1,
+	fx = { row = "flam", rowCount = 4, rowRepeat = 4, hit = "flam" },
+	desc = "앞으로 불길을 1.6초 동안 뿜는다. 네 번 태우고 불씨가 쌓인다.",
+}
+exports.SKILLS.f_ignite = {
+	name = "점화", school = "fire", kind = "detonate", cost = 30, cooldown = 8,
+	radius = 130, power = 1.0, spread = 30, spreadEmber = 1,
+	fx = { self = "spark", hit = "explosion" },
+	desc = "불씨가 걸린 적이 모두 터진다. 불씨 수만큼 세고, 옆의 적에게 불씨가 옮겨붙는다.",
+}
+exports.SKILLS.f_pillar = {
+	name = "불기둥", school = "fire", kind = "zone", cost = 36, cooldown = 10,
+	offset = 28, radius = 20, seconds = 6, interval = 0.5, power = 0.35, ember = 1, limit = 2,
+	fx = { zone = "firePillar", hit = "flam" },
+	desc = "앞에 불기둥이 6초 동안 선다. 가까운 적을 계속 태우고 불씨를 붙인다. 2개까지.",
+}
+exports.SKILLS.f_heat = {
+	name = "열기", school = "fire", kind = "buff", cost = 30, cooldown = 60,
+	radius = 70, seconds = 120, buff = { attack = 0.08, attackPerLevel = 0.012 },
+	fx = { self = "aura" },
+	desc = "120초 동안 나와 가까운 파티원의 공격력이 오른다.",
+}
+exports.SKILLS.f_drain = {
+	name = "타오르는 마음", school = "fire", kind = "passive",
+	base = 0.01, perLevel = 0.004, cap = 5,
+	desc = "내 불씨가 걸린 적 하나마다 인술 피해가 는다(5마리까지).",
+}
+-- 얼음
+exports.SKILLS.i_shatter = {
+	name = "깨뜨리기", school = "ice", kind = "shatter", cost = 40, cooldown = 9,
+	radius = 44, power = 1.2, delay = 0.2, frost = 2, shatter = { mult = 3, shard = 0.8, shardRadius = 34 },
+	fx = { ring = "iceFlake", ringCount = 6, hit = "iceB" },
+	desc = "둘레에 냉기를 터뜨린다. 얼어붙은 적은 깨져 큰 피해를 받고 조각이 옆으로 튄다. 아니면 서리 2.",
+}
+exports.SKILLS.i_wall = {
+	name = "얼음 벽", school = "ice", kind = "zone", cost = 30, cooldown = 12,
+	offset = 24, radius = 16, seconds = 5, interval = 0.5, stun = 0.6, limit = 1,
+	fx = { zone = "ice" },
+	desc = "앞에 얼음 벽이 5초 동안 선다. 닿은 적은 멈춰 선다.",
+}
+exports.SKILLS.i_decoy = {
+	name = "얼음 분신", school = "ice", kind = "decoy", cost = 26, cooldown = 14,
+	radius = 50, seconds = 2, frost = 2,
+	fx = { burst = "smoke", ring = "iceFlake", ringCount = 3 },
+	desc = "얼음 분신을 남긴다. 나를 쫓던 적이 2초 동안 나를 놓치고, 분신이 깨지며 서리 2.",
+}
+exports.SKILLS.i_cold = {
+	name = "차가운 피", school = "ice", kind = "passive",
+	perLevel = 0.03,
+	desc = "서리가 걸렸거나 얼어붙은 적에게 인술 피해가 는다.",
+}
+-- 풀
+exports.SKILLS.p_whip = {
+	name = "덩굴 채찍", school = "plant", kind = "line", cost = 26, cooldown = 3.5,
+	length = 48, width = 24, power = 1.9, delay = 0.15, pull = 20,
+	fx = { front = "arc", hit = "plantB" },
+	desc = "긴 덩굴을 크게 휘두른다. 맞은 적을 내 쪽으로 끌어당긴다.",
+}
+exports.SKILLS.p_flower = {
+	name = "치유꽃", school = "plant", kind = "zone", cost = 40, cooldown = 15,
+	offset = 0, radius = 34, seconds = 20, interval = 1, heal = 0.02, limit = 2,
+	fx = { zone = "flower" },
+	desc = "꽃을 심는다. 20초 동안 가까운 아군이 조금씩 회복한다. 2송이까지.",
+}
+exports.SKILLS.p_root = {
+	name = "뿌리 내림", school = "plant", kind = "passive",
+	vigorPerLevel = 0.1, reducePerLevel = 0.02,
+	desc = "뿌리 표식이 있는 적을 치면 생기가 더 쌓이고, 그 적에게 받는 피해가 준다.",
+}
+exports.SKILLS.p_breath = {
+	name = "숲의 숨결", school = "plant", kind = "buff", cost = 30, cooldown = 60,
+	radius = 70, seconds = 120, buff = { regen = 0.01 },
+	fx = { self = "boost" },
+	desc = "120초 동안 나와 가까운 파티원이 조금씩 회복한다.",
+}
+-- 바위
+exports.SKILLS.r_crack = {
+	name = "지면 강타", school = "rock", kind = "line", cost = 30, cooldown = 4.5,
+	length = 72, width = 12, power = 1.5, delay = 0.15, segments = 3, segDelay = 0.22, falloff = 0.85,
+	fx = { row = "rockSpike", rowCount = 3, rowGap = 0.22 },
+	desc = "땅을 내리치면 균열이 앞으로 세 번 이어서 터진다. 멀수록 약하다.",
+}
+exports.SKILLS.r_counter = {
+	name = "되받아치기", school = "rock", kind = "counter", cost = 20, cooldown = 8,
+	window = 0.6, radius = 36, power = 2.2,
+	fx = { self = "shield", loop = true, hit = "hit_circle" },
+	desc = "잠깐 막는 자세. 그 사이에 맞으면 피해 없이 충격파로 되받아치고 견고가 가득 찬다.",
+}
+exports.SKILLS.r_throw = {
+	name = "바위 던지기", school = "rock", kind = "projectile", cost = 34, cooldown = 7,
+	range = 110, speed = 170, width = 9, radius = 26, power = 2.0, stun = 1, firmBonus = 0.15,
+	fx = { shot = "rockShot", burst = "rockBurst" },
+	desc = "바위를 던진다. 떨어진 자리의 적이 멈춘다. 견고를 다 써서 더 세게 던진다.",
+}
+exports.SKILLS.r_stomp = {
+	name = "발 구르기", school = "rock", kind = "circle", cost = 28, cooldown = 9,
+	radius = 38, power = 1.2, delay = 0.15, stun = 1, firmGain = 1,
+	fx = { burst = "dustRing", ring = "rockBits", ringCount = 6 },
+	desc = "발을 굴러 둘레의 적을 띄워 멈추게 한다. 견고 1을 얻는다.",
+}
+exports.SKILLS.r_heavy = {
+	name = "무거운 몸", school = "rock", kind = "passive",
+	perLevel = 0.01,
+	desc = "받는 피해가 줄어든다.",
+}
+-- 번개
+exports.SKILLS.t_star = {
+	name = "뇌전 수리검", school = "thunder", kind = "projectile", cost = 26, cooldown = 3,
+	range = 110, speed = 260, width = 7, radius = 0, power = 0.8, shots = 3, shotGap = 0.12, single = true,
+	mark = { seconds = 5, power = 1.0 },
+	fx = { shot = "shurikenMagic", hit = "spark", markHit = "thunder" },
+	desc = "번개 두른 수리검 셋을 연달아 던진다. 표식이 붙은 적을 다시 맞히면 번개가 떨어진다.",
+}
+exports.SKILLS.t_discharge = {
+	name = "방전", school = "thunder", kind = "discharge", cost = 20, cooldown = 8,
+	radius = 26, radiusPer = 3, power = 0.6, powerPer = 0.22, delay = 0.1,
+	fx = { burst = "circleSpark", hit = "thunder" },
+	desc = "전하를 모두 써서 둘레에 번개를 쏟는다. 전하가 많을수록 넓고 세다.",
+}
+exports.SKILLS.t_trap = {
+	name = "번개 덫", school = "thunder", kind = "zone", cost = 24, cooldown = 6,
+	offset = 20, radius = 20, seconds = 20, interval = 0.25, power = 0.8, stun = 1.5, once = true, limit = 3,
+	fx = { zone = "circleSpark2", flat = true, hit = "thunder" },
+	desc = "덫을 놓는다. 밟은 적과 그 둘레가 감전되어 멈춘다. 3개까지.",
+}
+exports.SKILLS.t_haste = {
+	name = "질풍", school = "thunder", kind = "buff", cost = 30, cooldown = 60,
+	radius = 70, seconds = 180, buff = { haste = 0.10, hastePerLevel = 0.008 },
+	fx = { self = "boost" },
+	desc = "180초 동안 나와 가까운 파티원의 걸음과 공격이 빨라진다.",
+}
+exports.SKILLS.t_shock = {
+	name = "감전", school = "thunder", kind = "passive",
+	seconds = 5, base = 0.02, perLevel = 0.01,
+	desc = "내 번개에 맞은 적은 5초 동안 내 인술에 더 아프다.",
+}
+
 -- 유파 → 전직(1~4) → 스킬 id. 각 전직의 첫 번째 = 주력기.
 exports.TREE = {
-	fire = { { "fire_ball", "f_ember", "f_blade" }, { "fire_burst" }, { "fire_rain" }, { "fire_dragon" } },
-	ice = { { "ice_spike", "i_frost", "i_armor" }, { "ice_freeze" }, { "ice_lance" }, { "ice_storm" } },
-	plant = { { "p_seed", "p_vigor", "plant_heal" }, { "plant_bind" }, { "plant_thorn" }, { "plant_bloom" } },
-	rock = { { "rock_spike", "r_firm", "rock_guard" }, {}, { "rock_quake" }, { "rock_meteor" } },
-	thunder = { { "thunder_bolt", "t_charge", "t_static" }, { "thunder_storm" }, { "thunder_chain" }, { "thunder_judge" } },
+	fire = { { "fire_ball", "f_ember", "f_blade" }, { "f_breath", "f_ignite", "f_pillar", "f_heat", "f_drain" }, { "fire_rain" }, { "fire_dragon" } },
+	ice = { { "ice_spike", "i_frost", "i_armor" }, { "ice_lance", "i_shatter", "i_wall", "i_decoy", "i_cold" }, { "ice_storm" }, {} },
+	plant = { { "p_seed", "p_vigor", "plant_heal" }, { "p_whip", "plant_bind", "p_flower", "p_root", "p_breath" }, { "plant_thorn" }, { "plant_bloom" } },
+	rock = { { "rock_spike", "r_firm", "rock_guard" }, { "r_crack", "r_counter", "r_throw", "r_stomp", "r_heavy" }, { "rock_quake" }, { "rock_meteor" } },
+	thunder = { { "thunder_bolt", "t_charge", "t_static" }, { "t_star", "t_discharge", "t_trap", "t_haste", "t_shock" }, { "thunder_chain", "thunder_storm" }, { "thunder_judge" } },
 }
 exports.COMMON = { { "c_mastery", "c_energy" }, {}, {}, {} }
 -- 마스터 레벨(없으면 전직별 기본: 1차 20 · 2차 15 · 3차 20 · 4차 30)
 local MAX = {
 	f_ember = 10, f_blade = 10, i_frost = 10, i_armor = 10, p_vigor = 10, plant_heal = 10, r_firm = 10, rock_guard = 10,
 	t_charge = 10, t_static = 10, c_mastery = 10, c_energy = 5,
+	f_breath = 20, f_ignite = 15, f_pillar = 10, f_heat = 10, f_drain = 10,
+	ice_lance = 20, i_shatter = 15, i_wall = 10, i_decoy = 10, i_cold = 10,
+	p_whip = 20, plant_bind = 15, p_flower = 10, p_root = 10, p_breath = 10,
+	r_crack = 20, r_counter = 15, r_throw = 10, r_stomp = 10, r_heavy = 10,
+	t_star = 20, t_discharge = 15, t_trap = 10, t_haste = 10, t_shock = 10,
 }
 local JOB_MAX = { 20, 15, 20, 30 }
 local jobOf = {}

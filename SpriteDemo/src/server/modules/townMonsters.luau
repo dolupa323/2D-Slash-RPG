@@ -179,8 +179,9 @@ local function chase(key: string, st, m, dt: number): boolean
 		for _, fn in hurtHooks do
 			damage = fn(player, key, m, damage)
 		end
-		damage = math.max(1, math.round(damage))
-		progressionService.DamagePlayer(player, damage)
+		if damage > 0 then -- 0 이하 = 완전히 막음(되받아치기)
+			progressionService.DamagePlayer(player, math.max(1, math.round(damage)))
+		end
 	end
 	return true
 end

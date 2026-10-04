@@ -239,6 +239,8 @@ local packets = {
 	SchoolUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "school, { [스킬 id] = 레벨 }, 전직 단계(0~4), { 전직별 안 쓴 SP }, { 단축칸 스킬 id }" },
 	-- 내게 쌓이는 핵심 장치(생기 · 견고 · 전하): 스킬 id, 지금 값, 최대, 이 초 뒤 사라짐(없으면 안 사라짐)
 	CoreUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "skillId, value, max, seconds?" },
+	-- 버프를 받음(열기 · 질풍 · 숲의 숨결): kind = "attack" | "haste" | "regen", 값(비율), 지속 초 — haste는 클라가 걸음 · 공격 동작에 반영한다
+	BuffUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "kind, value, seconds" },
 	EnergyUpdated = { Kind = "Event", Direction = "ServerToClient", Doc = "energy, max, regenPerSecond — 값이 바뀔 때만(그 사이는 클라가 이어서 센다)" },
 	-- 인술을 씀(같은 씬 모두에게 연출용 — 피해는 TownMonsterHit "nin:<인술 id>"). x, y = 쓴 사람 발(도트).
 	--  distance = 종류마다: projectile 날아간 거리 · line 길이 · circle 반경 · guard 지속 초. targets = chain이 맞힌 몬스터 id 순서

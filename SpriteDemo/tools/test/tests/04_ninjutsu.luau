@@ -45,6 +45,13 @@ local NEED = {
 	guard = { "mult", "seconds" },
 }
 NEED.seed = { "range", "speed", "width", "radius", "power", "fuse", "burstPower" }
+NEED.zone = { "radius", "seconds", "interval" }
+NEED.buff = { "radius", "seconds" }
+NEED.detonate = { "radius", "power", "spread" }
+NEED.shatter = { "radius", "power" }
+NEED.discharge = { "radius", "radiusPer", "power", "powerPer" }
+NEED.decoy = { "radius", "seconds", "frost" }
+NEED.counter = { "window", "radius", "power" }
 for id, s in SK do
 	expect(typeof(s.name) == "string" and typeof(s.desc) == "string", "이름 · 설명 " .. id)
 	if s.kind == "passive" then
@@ -154,7 +161,7 @@ ninjutsuService.load()
 shops.load()
 
 -- 스킬 나무(저장 v13) 호환: 아래 종류별 시험은 "칸 n = 그 유파의 옛 n차 인술(SCHOOL_INFO.skills)"로 쓴다 —
---  인술을 쓰기 직전에 그 네 인술을 1레벨로 배운 것으로 하고 단축칸을 그렇게 맞춘다(전직 단계는 시험이 정한 그대로 본다).
+--  인술을 쓰기 직전에 그 네 인술을 1레벨로 배운 것으로 하고 단축칸을 그렇게 맞춘다(전직 단계도 4로 보고 쓴다 — 전직별 잠금은 09 · 10이 본다).
 --  스킬 나무 · SP · 단축칸 · 핵심 장치 자체의 시험은 09_skills.luau.
 do
 	local use = handlers.UseNinjutsu
@@ -168,7 +175,10 @@ do
 				if (d.Ninjutsu[id] or 0) < 1 then d.Ninjutsu[id] = 1 end
 			end
 		end
-		return use(player, slot, facing)
+		local job = d and d.Job
+		if d then d.Job = 4 end
+		use(player, slot, facing)
+		if d then d.Job = job end
 	end
 end
 
@@ -323,28 +333,12 @@ e1 = ninjutsuService.GetEnergy(p1)
 handlers.TownAttack(p1, "left")
 expect(near(ninjutsuService.GetEnergy(p1), e1, 0.05), "헛손질은 기력이 안 참")
 
--- ---- 5) 2번 칸: 2차 전직 뒤에 → 불꽃 폭발(둘레) ----
-list = reset()
-a, b, far = list[1], list[2], list[3]
-place(a, 320, 200)
-place(b, 300, 230)
-place(far, 340, 200)
-standAt(p1, 300, 200)
-refill()
-clear()
-handlers.UseNinjutsu(p1, 2, "down")
-eq(#sent("NinjutsuCast", p1), 0, "2차 인술은 2차 전직 뒤에")
+-- ---- 5) 칸 번호 ----
 data[p1].Job = 4 -- 아래 시험은 인술 칸이 모두 열린 상태로
-handlers.UseNinjutsu(p1, 2, "down")
-eq(#sent("NinjutsuCast", p1), 1, "전직하면 2번 칸을 씀")
-eq(lost(a), 0, "불꽃 폭발: 시전 시간 전")
-advance(SK.fire_burst.delay + 0.02)
-eq(lost(a), dmg(SK.fire_burst.power), "불꽃 폭발: 반경 안(20)")
-eq(lost(b), dmg(SK.fire_burst.power), "불꽃 폭발: 반경 안(30)")
-eq(lost(far), 0, "불꽃 폭발: 반경 밖(40)")
+clear()
 handlers.UseNinjutsu(p1, 5, "down")
 handlers.UseNinjutsu(p1, 1.5, "down")
-eq(#sent("NinjutsuCast", p1), 1, "없는 칸 번호는 무시")
+eq(#sent("NinjutsuCast", p1), 0, "없는 칸 번호는 무시")
 
 -- ---- 6) 얼음: 가시(직선 · 꿰뚫음 · 느려짐) / 빙결(멈춤) ----
 data[p1].School = "ice"
@@ -387,16 +381,15 @@ for _ = 1, 10 do
 end
 moved = math.sqrt((b.x - startX) ^ 2 + (b.y - startY) ^ 2)
 expect(near(moved, world.monsterSpeed * combat.MONSTER_CHASE_SPEED, 0.8), ("느려짐이 풀리면 원래 속도(%.2f)"):format(moved))
--- 빙결: 둘레 몬스터가 멈춘다(움직이지도 때리지도 못함)
+-- 멈춤: 멈춘 몬스터는 움직이지도 때리지도 못한다
 list = reset()
 a = list[1]
 place(a, 262, 200)
 standAt(p1, 250, 200)
 refill()
 table.clear(hurts)
-handlers.UseNinjutsu(p1, 2, "right")
-advance(SK.ice_freeze.delay + 0.02)
-eq(lost(a), dmg(SK.ice_freeze.power), "빙결 피해")
+townMonsters.Damage("field1", a.id, p1, 1, "test") -- 맞았으니 쫓아와 때리려 한다
+townMonsters.Stun("field1", a.id, 2.5)
 for _ = 1, 20 do
 	advance(0.1)
 	heartbeat(0.1)
@@ -562,8 +555,6 @@ for _, school in ninjutsu.SCHOOLS do
 	standAt(p1, 250, 200)
 	refill()
 	clear()
-	handlers.UseNinjutsu(p1, 3, "right")
-	eq(#sent("NinjutsuCast", p1), 0, school .. ": 2차 닌자는 3차 인술을 못 씀")
 	data[p1].Job = 4
 	for slot = 3, 4 do
 		local id = ninjutsu.SkillFor(school, slot)

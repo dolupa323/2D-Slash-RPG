@@ -247,12 +247,19 @@ end
 
 -- 전하(번개 유파의 핵심 장치): 기본 공격 간격 · 동작 시간에 곱하는 배율(서버 ninjutsuService와 같은 셈)
 function exports.AttackSpeedMult(): number
+	local mult = 1 / (1 + exports.Haste())
 	local core = exports.core
 	if core.id == "t_charge" and (not core.untilT or os.clock() < core.untilT) then
 		local def = config.SKILLS.t_charge
-		return 1 / (1 + (def.speedPer + def.perLevel * config.LevelOf(exports.levels, "t_charge")) * core.value)
+		mult /= 1 + (def.speedPer + def.perLevel * config.LevelOf(exports.levels, "t_charge")) * core.value
 	end
-	return 1
+	return mult
+end
+
+-- 질풍(걸음 · 공격 속도 버프): 지금 값(없으면 0) — 서버 BuffUpdated("haste", 값, 초)
+exports.haste = { value = 0, untilT = 0 }
+function exports.Haste(): number
+	return if os.clock() < exports.haste.untilT then exports.haste.value else 0
 end
 
 -- 내게 쌓이는 핵심 장치의 지금 값(시간이 지나 사라졌으면 0)
@@ -426,6 +433,11 @@ function exports.load(scene: Scene)
 		-- 내게 쌓이는 핵심 장치(생기 · 견고 · 전하): 기력 게이지 위에 "전하 7/10"처럼 적는다
 		Net.OnClient("CoreUpdated", function(id, value, max, seconds)
 			exports.core = { id = id, value = value, max = max, untilT = if seconds and value > 0 then os.clock() + seconds else nil }
+		end)
+		Net.OnClient("BuffUpdated", function(kind, value, seconds)
+			if kind == "haste" then
+				exports.haste = { value = value, untilT = os.clock() + seconds }
+			end
 		end)
 		Net.OnClient("EnergyUpdated", function(value, max, regen)
 			energy.value, energy.max, energy.regen, energy.at = value, max, regen, os.clock()

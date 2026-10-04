@@ -14,6 +14,12 @@ local DEFAULT_Z = 8900 -- 월드 그림 위, 머리 위 글씨(9001~)·데미지
 local exports = {}
 local active = {} -- [label] = parent
 
+-- 머무는 장이 있는 이펙트인가(깔렸다 → 머묾 → 사라짐)
+function exports.Hold(name: string?): boolean
+	local r = name and sheet.rects[name]
+	return r ~= nil and r.hold ~= nil
+end
+
 function exports.Has(name: string?): boolean
 	return name ~= nil and sheet.rects[name] ~= nil
 end
@@ -21,6 +27,7 @@ end
 -- 이펙트 하나 재생. where(t) → 가운데 자리(parent 안 px, Vector2) 또는 nil(그만).
 --  opt: delay(초 뒤 시작) · loop · duration(loop일 때 길이) · rotation(도) · bottom(자리 = 그림 아래 가운데) · scale(1도트 = px) · zIndex
 --       · hold(초 — 시트에 머무는 장(hold)이 있는 이펙트가 그 장에서 머무는 시간: 깔렸다 → 머묾 → 사라짐)
+--       · token(표 — token.dead = true로 만들면 그 자리에서 끝난다: 설치한 것이 일찍 사라질 때)
 function exports.Play(parent: Instance?, name: string?, where, opt)
 	local r = name and sheet.rects[name]
 	if not r or not parent or (townAssets.FX or "") == "" then
@@ -43,7 +50,7 @@ function exports.Play(parent: Instance?, name: string?, where, opt)
 		label.Parent = parent
 		active[label] = parent
 		local t = -(opt.delay or 0)
-		while label.Parent do
+		while label.Parent and not (opt.token and opt.token.dead) do
 			t += task.wait()
 			if t < 0 then
 				continue

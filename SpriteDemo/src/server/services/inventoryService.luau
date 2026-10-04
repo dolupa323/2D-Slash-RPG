@@ -215,6 +215,7 @@ end
 
 -- 전투에 쓰이는 최종 수치(서버가 착용 장비에서 계산 — 몬스터 모듈이 호출).
 --  공격력 = 레벨(balance.attackFor) + 착용 장비 Attack + 무기 강화 보너스(weapons.Bonus)
+local attackBuffs = {} -- [userId] = { mult, untilT }
 function exports.GetAttackDamage(player: Player): number
 	local data = persistence.Get(player)
 	local weaponDef = data and items[data.Equipment.Weapon or ""]
@@ -222,7 +223,19 @@ function exports.GetAttackDamage(player: Player): number
 	local total = balance.attackFor(data and data.Level or 1) + equippedStat(player, "Attack") + weapons.Bonus(weaponDef, plus)
 	-- 무기 단련(공용 패시브 c_mastery): 레벨마다 공격력 +
 	local mastery = ninjutsu.LevelOf(data and data.Ninjutsu, "c_mastery")
-	return if mastery > 0 then math.round(total * (1 + ninjutsu.SKILLS.c_mastery.perLevel * mastery)) else total
+	if mastery > 0 then
+		total *= 1 + ninjutsu.SKILLS.c_mastery.perLevel * mastery
+	end
+	local buff = attackBuffs[player.UserId] -- 파티 버프(열기 등)
+	if buff and os.clock() < buff.untilT then
+		total *= buff.mult
+	end
+	return math.round(total)
+end
+
+-- 공격력 버프: seconds초 동안 공격력 × mult(ninjutsuService의 버프 인술)
+function exports.SetAttackBuff(player: Player, mult: number, seconds: number)
+	attackBuffs[player.UserId] = { mult = mult, untilT = os.clock() + seconds }
 end
 
 function exports.GetDefense(player: Player): number
