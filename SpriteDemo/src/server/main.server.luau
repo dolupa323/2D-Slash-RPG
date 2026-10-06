@@ -8,6 +8,17 @@ local setup = require(replicatedStorage.shared.util.setup)
 local Players = game:GetService("Players")
 Players.CharacterAutoLoads = false
 
+-- 「달의 계승자」(횡스크롤 MMORPG)를 켰으면 그쪽 서버만 시작한다(닌자 게임의 모듈은 읽지도 않는다).
+local features = require(replicatedStorage.shared.config.features)
+if features.GAME == "lune" then
+	local luneBoot = require(script.Parent.lune.boot)
+	luneBoot.start()
+	game:BindToClose(function()
+		luneBoot.stop()
+	end)
+	return
+end
+
 local modulesFolder = script.Parent:FindFirstChild("modules")
 local modules = modulesFolder and setup.getModulesByPath(modulesFolder) or {}
 

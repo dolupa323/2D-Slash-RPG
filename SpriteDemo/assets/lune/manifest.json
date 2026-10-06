@@ -1,0 +1,39 @@
+{
+ "files": [
+  "chars_1.png",
+  "sky.png",
+  "far.png",
+  "near_hunt.png",
+  "ground_hunt_1.png",
+  "ground_hunt_2.png",
+  "props_hunt.png",
+  "near_town.png",
+  "ground_town_1.png",
+  "ground_town_2.png",
+  "props_town.png",
+  "villagers.png",
+  "ground_r1a1_1.png",
+  "ui_kit.png",
+  "font_small_1.png",
+  "font_small_2.png"
+ ],
+ "need": [],
+ "hashes": {
+  "chars_1.png": "cf6f6fceb855ea998532879c076ee0f9",
+  "sky.png": "f1233efc3940a4d589e0228040f7e3b9",
+  "far.png": "ac7617c702b29f03c3218f81f38b19ab",
+  "near_hunt.png": "a8868c61c60153487309d0511e0d3193",
+  "ground_hunt_1.png": "ad099e52bbe83e97821b26abe9c881a9",
+  "ground_hunt_2.png": "b71d29baa38b5b8ebcaf7af44accaa11",
+  "props_hunt.png": "ec9e2e7211487389bad66bd1383673f5",
+  "near_town.png": "c80594a44e2dc6bcbd67fdd707deff4e",
+  "ground_town_1.png": "1a4ea60198c1d4a4e110787bb853494f",
+  "ground_town_2.png": "194550519172b6f52d4ec0a61d0607b5",
+  "props_town.png": "3fb784970aeb5d562d672ab05516e8df",
+  "villagers.png": "bf8cc748cde63c1150802075899d382e",
+  "ground_r1a1_1.png": "001af68a716f90686c722ab585d6a1bb",
+  "ui_kit.png": "814afa23d0874b5f2c78ee4436eb0833",
+  "font_small_1.png": "ac4dece3c0c59b86da3700b3bd09d6c8",
+  "font_small_2.png": "a39c57d23acf7233f3419f3f15021ff7"
+ }
+}

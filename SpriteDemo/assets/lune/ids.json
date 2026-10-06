@@ -1,0 +1,66 @@
+{
+ "chars_1.png": {
+  "hash": "cf6f6fceb855ea998532879c076ee0f9",
+  "id": "rbxassetid://84097963008814"
+ },
+ "far.png": {
+  "hash": "ac7617c702b29f03c3218f81f38b19ab",
+  "id": "rbxassetid://70389067240845"
+ },
+ "villagers.png": {
+  "hash": "bf8cc748cde63c1150802075899d382e",
+  "id": "rbxassetid://123347061749595"
+ },
+ "ground_town_2.png": {
+  "hash": "194550519172b6f52d4ec0a61d0607b5",
+  "id": "rbxassetid://139519795725344"
+ },
+ "sky.png": {
+  "hash": "f1233efc3940a4d589e0228040f7e3b9",
+  "id": "rbxassetid://132220205436830"
+ },
+ "ground_hunt_2.png": {
+  "hash": "b71d29baa38b5b8ebcaf7af44accaa11",
+  "id": "rbxassetid://132987892634939"
+ },
+ "props_town.png": {
+  "hash": "3fb784970aeb5d562d672ab05516e8df",
+  "id": "rbxassetid://81861917495566"
+ },
+ "near_hunt.png": {
+  "hash": "a8868c61c60153487309d0511e0d3193",
+  "id": "rbxassetid://72094974796206"
+ },
+ "near_town.png": {
+  "hash": "c80594a44e2dc6bcbd67fdd707deff4e",
+  "id": "rbxassetid://139877960469674"
+ },
+ "props_hunt.png": {
+  "hash": "ec9e2e7211487389bad66bd1383673f5",
+  "id": "rbxassetid://126214212380510"
+ },
+ "ground_hunt_1.png": {
+  "hash": "ad099e52bbe83e97821b26abe9c881a9",
+  "id": "rbxassetid://103190714501161"
+ },
+ "ground_town_1.png": {
+  "hash": "1a4ea60198c1d4a4e110787bb853494f",
+  "id": "rbxassetid://135577427334062"
+ },
+ "ground_r1a1_1.png": {
+  "hash": "001af68a716f90686c722ab585d6a1bb",
+  "id": "rbxassetid://116973790416240"
+ },
+ "font_small_1.png": {
+  "hash": "ac4dece3c0c59b86da3700b3bd09d6c8",
+  "id": "rbxassetid://105450659975716"
+ },
+ "ui_kit.png": {
+  "hash": "814afa23d0874b5f2c78ee4436eb0833",
+  "id": "rbxassetid://132298016070080"
+ },
+ "font_small_2.png": {
+  "hash": "a39c57d23acf7233f3419f3f15021ff7",
+  "id": "rbxassetid://107436252829336"
+ }
+}

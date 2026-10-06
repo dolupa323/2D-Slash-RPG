@@ -23,7 +23,7 @@ def compile_all():
     for f in glob.glob(os.path.join(SRC, '**', '*.luau'), recursive=True):
         n += 1
         r = subprocess.run([COMPILE, '--null', f], capture_output=True, text=True, encoding='utf-8', errors='replace')
-        if 'Compiled' not in (r.stdout + r.stderr):
+        if 'Compiled' not in (r.stdout + r.stderr) or 'Error' in (r.stdout + r.stderr) or r.returncode != 0:  # 문법 오류가 있어도 'Compiled 0 KLOC'이 찍힌다
             bad += 1; print('  컴파일 실패', os.path.relpath(f, SRC), (r.stdout + r.stderr).strip())
     print(f'[컴파일] {n}개 파일, 실패 {bad}개')
     return bad
@@ -79,10 +79,30 @@ def lint_ui_names():
     print(f'[UI 부품 이름] 키트 부품 {len(names)}개, 없는 이름 {bad}개')
     return bad
 
+def lint_globals():
+    """새 게임(lune) 코드에서 정의되지 않은 이름을 쓰는 곳을 찾는다(luau-analyze의 "Unknown global").
+    아래쪽에서 정의한 지역 변수를 위쪽 함수가 쓰면 Luau는 그것을 전역(nil)으로 본다 — 컴파일은 되고 실행 중에야 터지므로 여기서 잡는다."""
+    import re
+    known = {'script', 'game', 'workspace', 'Enum', 'Instance', 'task', 'UDim2', 'UDim', 'Color3', 'Vector2', 'Vector3', 'Random', 'warn', 'tick',
+             'CFrame', 'TweenInfo', 'Rect', 'NumberSequence', 'ColorSequence', 'NumberRange', 'Font', 'shared', 'time', 'wait', 'spawn', 'delay'}
+    analyze = os.path.join(ROOT, 'tools', 'luau', 'luau-analyze.exe')
+    files = [f for d in ('shared', 'server', 'client') for f in glob.glob(os.path.join(SRC, d, 'lune', '**', '*.luau'), recursive=True) if not f.endswith('.generated.luau')]
+    if not os.path.exists(analyze) or not files:
+        print('[전역 이름] luau-analyze가 없어 건너뜀'); return 0
+    r = subprocess.run([analyze] + files, capture_output=True, text=True, encoding='utf-8', errors='replace')
+    bad = 0
+    for line in (r.stdout + r.stderr).split(NL):
+        m = re.search(r"^(.*?\(\d+,\d+\)).*Unknown global '([^']+)'", line)
+        if m and m.group(2) not in known:
+            bad += 1; print(f'  정의되지 않은 이름 {m.group(2)} — {os.path.relpath(m.group(1).split("(")[0], SRC)}({m.group(1).split("(")[1]}')
+    print(f'[전역 이름] 파일 {len(files)}개, 정의되지 않은 이름 {bad}개')
+    return bad
+
 if __name__ == '__main__':
     sys.stdout.reconfigure(encoding='utf-8')
     bad = compile_all()
     bad += lint_ui_names()
+    bad += lint_globals()
     mods, tests = bundle()
     print(f'[묶음] 모듈 {mods}개 · 테스트 파일 {tests}개')
     r = subprocess.run([LUAU, OUT], capture_output=True, text=True, encoding='utf-8', errors='replace')

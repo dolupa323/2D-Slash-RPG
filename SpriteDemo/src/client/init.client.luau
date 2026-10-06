@@ -9,4 +9,10 @@ pcall(function()
 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 end)
 
-require(script.sceneLoader)
+-- 어느 게임을 켤지는 shared/config/features.luau의 GAME이 정한다.
+local features = require(game:GetService("ReplicatedStorage"):WaitForChild("shared"):WaitForChild("config"):WaitForChild("features"))
+if features.GAME == "lune" then
+	require(script:WaitForChild("lune"):WaitForChild("boot")).start()
+else
+	require(script.sceneLoader)
+end

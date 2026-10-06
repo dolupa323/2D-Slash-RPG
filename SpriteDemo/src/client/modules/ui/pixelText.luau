@@ -19,6 +19,17 @@ local HANGUL_END = 0xD7A3
 
 local exports = {}
 
+-- 글꼴: 기본 둘(body · title — pixelFont.generated.luau)에 더해, 게임이 제 글꼴을 등록할 수 있다(Register).
+--  「달의 계승자」는 화면 글씨로 작은 글씨(small = 갈무리9)를 등록한다 — client/lune/ui/kit.luau.
+local fonts = setmetatable({}, { __index = fontData })
+local pagesOf = {} -- [글꼴 이름] = { 글자판 그림 id … }
+
+-- meta = 글자판 규칙(pixelFont.generated.luau의 한 글꼴과 같은 꼴), pages = 글자판 그림의 id들
+function exports.Register(key: string, meta, pages: { string })
+	fonts[key] = meta
+	pagesOf[key] = pages
+end
+
 -- 글자 → 글자판 번호(0부터)와 폭
 local function glyphInfo(font, code: number): (number, number)
 	local base = 95 + #font.extra
@@ -47,7 +58,7 @@ local function lineWidth(font, line: string): number
 end
 
 function exports.Measure(text: string, fontKey: string?): (number, number)
-	local font = fontData[fontKey or "body"]
+	local font = fonts[fontKey or "body"]
 	local w, n = 0, 0
 	for line in (text .. "\n"):gmatch("(.-)\n") do
 		w = math.max(w, lineWidth(font, line))
@@ -58,7 +69,7 @@ end
 
 -- 폭에 맞춰 줄바꿈: 띄어쓰기에서 먼저 끊고, 한 낱말이 폭보다 길면 글자에서 끊는다(공방 js/font.js wrap과 같은 규칙).
 function exports.Wrap(text: string, maxWidth: number, fontKey: string?): string
-	local font = fontData[fontKey or "body"]
+	local font = fonts[fontKey or "body"]
 	local out = {}
 	for para in (text .. "\n"):gmatch("(.-)\n") do
 		local line = ""
@@ -105,7 +116,7 @@ end
 -- 칸에 맞추기: 폭(maxWidth)을 넘으면 줄을 바꾸고, 줄 수(maxLines)를 넘으면 마지막 줄 끝을 "…"로 줄인다.
 -- maxLines = 1이면 줄을 바꾸지 않고 한 줄로 줄인다.
 function exports.Fit(text: string, maxWidth: number, maxLines: number?, fontKey: string?): string
-	local font = fontData[fontKey or "body"]
+	local font = fonts[fontKey or "body"]
 	if maxLines == 1 then
 		return fitLine(font, (text:gsub("\n", " ")), maxWidth)
 	end
@@ -149,7 +160,7 @@ function Label:_render()
 	end
 	table.clear(self._glyphs)
 	local font = self._font
-	local pages = (townIds.FONT and townIds.FONT[self._fontKey]) or {}
+	local pages = pagesOf[self._fontKey] or (townIds.FONT and townIds.FONT[self._fontKey]) or {}
 	local shown = self:_fitted(self._text)
 	local width, height = exports.Measure(shown, self._fontKey)
 	self.Width, self.Height = width, height
@@ -250,7 +261,7 @@ function exports.new(parent: Instance, props)
 	frame.Parent = parent
 	local self = setmetatable({
 		Frame = frame,
-		_font = fontData[fontKey],
+		_font = fonts[fontKey],
 		_fontKey = fontKey,
 		_text = tostring(props.Text or ""),
 		_color = props.Color or Color3.fromRGB(20, 27, 27), -- 팩 외곽선 색(uiKit colors.ink)
