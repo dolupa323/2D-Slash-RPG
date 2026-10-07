@@ -41,7 +41,9 @@ function P.respawn(scene, body)
 	body.x, body.y, body.vx, body.vy, body.ground = scene.spawn.x, scene.spawn.y, 0, 0, false
 end
 
--- 한 걸음(dt초). 낭떠러지나 가시에 닿아 시작 자리로 돌아갔으면 "respawn"을 돌려준다.
+-- 한 걸음(dt초). 맵 아래로 떨어져 시작 자리로 돌아갔으면 "respawn"을 돌려준다.
+--  가시("^")는 닿아도 아무 일도 일어나지 않는다 — 사용자 2026-10-07: "가시맞고 돌아가는거 없애세요 가시맞고 돌아간다음에 몬스터랑 전투도안되고 고장나네요"
+--   (고장난 까닭: 화면에서만 시작 자리로 옮겨지고 서버는 그 순간이동을 믿지 않아, 그 뒤로 서버가 아는 자리와 어긋났다. 맵 아래로 떨어진 때를 위해 서버는 시작 자리로 온 보고는 받는다 — world.luau의 onMove)
 function P.step(scene, body, input, dt: number): string?
 	local mx = input.mx or 0
 	body.vx = if input.vx ~= nil then input.vx else mx * G.RUN * (input.speed or 1)
@@ -84,7 +86,7 @@ function P.step(scene, body, input, dt: number): string?
 		body.y, body.ground = ny, false
 	end
 
-	if body.y > scene.h * T + G.FALL_OUT or P.cell(scene, math.floor(body.x / T), math.floor((body.y - 1) / T)) == "^" then
+	if body.y > scene.h * T + G.FALL_OUT then
 		P.respawn(scene, body)
 		return "respawn"
 	end

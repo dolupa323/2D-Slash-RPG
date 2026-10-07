@@ -1,7 +1,7 @@
 -- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/export_lune_game.mjs).
--- 싸움의 기본 수치(dino-workshop/js/lune/design/combat.js). 기술의 hits: at = 구간이 시작한 뒤 맞는 때(초) · box = { 앞쪽 시작, 앞쪽 끝, 위, 아래 } · mul = 전투력에 곱하는 값.
+-- 싸움의 기본 수치(dino-workshop/js/lune/design/combat.js). fx = 직업 색(tones — n 직업 색 · l 밝은 색 · w 흰색 · d 어두운 색, { r, g, b })과 대쉬 효과의 값(dash — dino-workshop/js/lune/fx.js의 DASHFX: 잔상 · 속도선). 기술의 hits: at = 구간이 시작한 뒤 맞는 때(초) · box = { 앞쪽 시작, 앞쪽 끝, 위, 아래 } · mul = 전투력에 곱하는 값.
 return {
-	rules = { spread = 10, mobShare = 0.7, maxTargets = 8, invuln = 0.6, stagger = 0.25, respawn = 8, reviveWait = 3, startPotions = 10, dropOwn = 30, dropLife = 120, pickup = 20, moneySpread = 20 },
+	rules = { dmgScale = 10, targetBonus = 50, spread = 10, mobShare = 0.7, maxTargets = 8, invuln = 0.6, stagger = 0.25, respawn = 8, reviveWait = 3, startPotions = 10, dropOwn = 30, dropLife = 120, pickup = 20, moneySpread = 20 },
 	mobs = {
 		trainee = {
 			name = "수습 검병",
@@ -82,48 +82,23 @@ return {
 					box = { -12, 48, 44, 4 },
 					mul = 1.4346,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 2,
 					at = 0.2167,
-					box = { 36, 54, 30, 6 },
+					box = { -12, 48, 44, 4 },
 					mul = 0.6148,
 					pull = 0,
-				},
-				{
-					seg = 2,
-					at = 0.2167,
-					box = { -14, 4, 30, 6 },
-					mul = 0.6148,
-					pull = 0,
+					except = false,
 				},
 				{
 					seg = 2,
 					at = 0.2667,
-					box = { 51, 69, 30, 6 },
+					box = { -44, 84, 30, 6 },
 					mul = 0.6148,
 					pull = 0,
-				},
-				{
-					seg = 2,
-					at = 0.2667,
-					box = { -29, -11, 30, 6 },
-					mul = 0.6148,
-					pull = 0,
-				},
-				{
-					seg = 2,
-					at = 0.3167,
-					box = { 66, 84, 30, 6 },
-					mul = 0.6148,
-					pull = 0,
-				},
-				{
-					seg = 2,
-					at = 0.3167,
-					box = { -44, -26, 30, 6 },
-					mul = 0.6148,
-					pull = 0,
+					except = { -12, 48, 44, 4 },
 				},
 			},
 			shots = {  },
@@ -151,6 +126,7 @@ return {
 					box = { -4, 44, 26, 4 },
 					mul = 1.0247,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 2,
@@ -158,6 +134,7 @@ return {
 					box = { -4, 46, 26, 4 },
 					mul = 1.0247,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 3,
@@ -165,6 +142,7 @@ return {
 					box = { -8, 50, 46, 4 },
 					mul = 2.0494,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -207,6 +185,7 @@ return {
 					box = { 0, 88, 44, 6 },
 					mul = 1.309,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -232,6 +211,7 @@ return {
 					box = { -4, 44, 24, 4 },
 					mul = 0.8242,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 1,
@@ -239,6 +219,7 @@ return {
 					box = { -28, 28, 26, 4 },
 					mul = 0.4121,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 1,
@@ -246,6 +227,7 @@ return {
 					box = { -4, 48, 24, 4 },
 					mul = 1.2364,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -288,6 +270,7 @@ return {
 					box = { -6, 44, 30, 4 },
 					mul = 0.663,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 1,
@@ -295,6 +278,7 @@ return {
 					box = { -6, 48, 30, 4 },
 					mul = 0.884,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -320,6 +304,7 @@ return {
 					box = { 8, 64, 26, 4 },
 					mul = 0.9107,
 					pull = 40,
+					except = false,
 				},
 				{
 					seg = 1,
@@ -327,6 +312,7 @@ return {
 					box = { -4, 44, 26, 4 },
 					mul = 1.2143,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -369,6 +355,7 @@ return {
 					box = { -46, 46, 22, 4 },
 					mul = 2.0627,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -394,6 +381,7 @@ return {
 					box = { 4, 80, 16, 4 },
 					mul = 2.975,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -436,6 +424,7 @@ return {
 					box = { 12, 194, 22, 6 },
 					mul = 0.7933,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 1,
@@ -443,6 +432,7 @@ return {
 					box = { 12, 194, 22, 6 },
 					mul = 0.7933,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 1,
@@ -450,6 +440,7 @@ return {
 					box = { 12, 194, 22, 6 },
 					mul = 0.7933,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {
@@ -477,6 +468,7 @@ return {
 					box = { 0, 38, 24, 4 },
 					mul = 0.9852,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 1,
@@ -484,6 +476,7 @@ return {
 					box = { 0, 42, 26, 4 },
 					mul = 1.642,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -504,6 +497,26 @@ return {
 			},
 			hits = {  },
 			shots = {  },
+		},
+	},
+	fx = {
+		tones = {
+			mint = {
+				n = { 62, 255, 215 },
+				l = { 172, 255, 215 },
+				w = { 255, 255, 255 },
+				d = { 31, 168, 156 },
+			},
+			pink = {
+				n = { 255, 62, 159 },
+				l = { 255, 126, 162 },
+				w = { 255, 255, 255 },
+				d = { 177, 31, 165 },
+			},
+		},
+		dash = {
+			ghost = { every = 0.035, life = 0.24, alpha = 0.55 },
+			streak = { up = 4, base = 3, perSpeed = 100, len = 10, lenPerSpeed = 25, w = 60, h = 26, life = 0.22, slide = 26, delay = 0.08 },
 		},
 	},
 }

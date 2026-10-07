@@ -2,17 +2,25 @@
 --  가방이나 장비 창에서 「올리기」로 장비를 올리면: 지금 별과 다음 별 · 성공 / 실패 / 파괴 % · 실패하면 그대로인지 떨어지는지 · 드는 달가루와 정수.
 --  둘째로 올린 장비는 「재료」다: 같은 부위면 별 옮기기(재료의 별을 하나 낮춰 옮기고 재료는 사라진다), 올린 것이 부서졌고 같은 장비면 되살리기.
 --  확률과 값은 shared/lune/sim/items.luau의 enhanceInfo(공방의 강화 표). 결과는 서버가 정한다(Item → ItemDone).
+--  화면 오른쪽의 옆 판(ui/windows.luau).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local Items = require(lune.sim.items)
 local Format = require(lune.ui.format)
-local Kit = require(script.Parent.kit)
+local Ui = require(script.Parent.ui)
 local ItemCell = require(script.Parent.itemCell)
 
-local C = Kit.COLOR
+local C = Ui.COLOR
+local W = 300
+local LINE = 16
 
-local ForgeWindow = { height = 152 }
+local ForgeWindow = {}
 ForgeWindow.RESULT = { ok = { "붙었다!", C.green }, fail = { "실패 — 별은 그대로다", C.dim }, drop = { "실패 — 한 단계 떨어졌다", C.red }, boom = { "부서졌다 — 흔적이 남았다", C.red } }
+
+function ForgeWindow.size(): (number, number)
+	local S = ItemCell.size()
+	return W, S + 12 + 5 * LINE + 8 + Ui.M.button + 8 + 16 + 14 + S + 4
+end
 
 local function pct(v: number): string
 	return if v == math.floor(v) then ("%d%%"):format(v) else ("%.1f%%"):format(v)
@@ -39,6 +47,7 @@ end
 
 function ForgeWindow.build(body: Frame, ctx, w: number, _h: number)
 	local ui = ctx.ui
+	local S = ItemCell.size()
 	local guard = false
 	local view = {}
 	local function find(id: number?)
@@ -59,40 +68,47 @@ function ForgeWindow.build(body: Frame, ctx, w: number, _h: number)
 		return nil
 	end
 
-	local cell = ItemCell.new(body, 2, 0, function()
+	local cell = ItemCell.new(body, 0, 0, function()
 		ui.forgeTarget, ui.forgeMat, ui.forgeResult = nil, nil, nil
 		view.refresh()
-	end)
-	local name = Kit.text(body, "", 26, 0, w - 30, { lines = 2 })
+	end, S)
+	local name = Ui.text(body, "", S + 10, math.floor((S - 30) / 2), w - S - 10, { font = "body", lines = 2, line = 16 })
 	local lines = {}
+	local y = S + 12
 	for i = 1, 5 do
-		lines[i] = Kit.text(body, "", 4, 24 + (i - 1) * 11, w - 8, { color = if i == 1 then C.yellow else C.white })
+		lines[i] = Ui.text(body, "", 0, y + (i - 1) * LINE, w, { color = if i == 1 then C.gold else C.text })
 	end
-	local go = Kit.button(body, "강화", 2, 81, 82, 14, function()
+	y += 5 * LINE + 8
+	-- 단추 한 줄: 강화 · 파괴 막기 · 상점
+	local go = Ui.button(body, "강화", 0, y, 84, function()
 		if ui.forgeTarget then
 			ctx.send("Item", "enhance", ui.forgeTarget, guard)
 		end
-	end, { kind = "orange" })
-	local shield = Kit.button(body, "", 88, 81, 84, 14, function()
+	end, { main = true })
+	local shield = Ui.button(body, "", 92, y, 130, function()
 		guard = not guard
 		view.refresh()
 	end)
-	local result = Kit.text(body, "", 4, 98, w - 8)
-	Kit.box(body, 2, 110, w - 4, 1, C.edgeDim)
-	local matCell = ItemCell.new(body, 2, 112, function()
+	Ui.button(body, "상점", 230, y, w - 230, function()
+		ctx.openService("smithShop")
+	end)
+	y += Ui.M.button + 8
+	local result = Ui.text(body, "", 0, y, w)
+	y += 16
+	Ui.line(body, 0, y + 4, w)
+	y += 14
+	-- 재료: 별을 옮겨 올 장비 · 되살릴 때 쓰는 같은 장비
+	local matCell = ItemCell.new(body, 0, y, function()
 		ui.forgeMat = nil
 		view.refresh()
-	end)
-	local matName = Kit.text(body, "", 26, 110, w - 30, { color = C.dim })
-	local move = Kit.button(body, "", 26, 120, 70, 13, function()
+	end, S)
+	local matName = Ui.text(body, "", S + 10, y + math.floor((S - 26) / 2), w - S - 10 - 108, { color = C.dim, lines = 2, line = 14 })
+	local move = Ui.button(body, "", w - 100, y + math.floor((S - Ui.M.button) / 2), 100, function()
 		local it, mat = find(ui.forgeTarget), find(ui.forgeMat)
 		if it and mat then
 			ctx.send("Item", if it.broken then "restore" else "transfer", if it.broken then it.id else mat.id, if it.broken then mat.id else it.id)
 			ui.forgeMat = nil
 		end
-	end)
-	Kit.button(body, "상점", w - 46, 120, 44, 13, function()
-		ctx.openService("smithShop")
 	end)
 
 	function view.refresh()
@@ -131,7 +147,7 @@ function ForgeWindow.build(body: Frame, ctx, w: number, _h: number)
 		go:setEnabled(info.can and bag.dust >= info.dust and bag.essence >= info.essence)
 		shield.frame.Visible = info.can and info.guard == true
 		shield:setText(if guard then "파괴 막기 켬" else "파괴 막기 끔")
-		shield:setKind(if guard then "orange" else "blue")
+		shield:setMain(guard)
 		local last = ui.forgeResult
 		local show = last and ForgeWindow.RESULT[last]
 		result:set(if show then show[1] else "")

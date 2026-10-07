@@ -1,16 +1,20 @@
 -- 졸개 그리기. 서버가 초당 열 번 보내는 모습(자리 · 보는 쪽 · 상태 · 상태가 된 뒤 흐른 시간 · 체력)을 받아, 그 사이를 이어 그린다.
 --  졸개가 무엇을 하는지는 서버가 정한다 — 여기서는 보이는 것만 맞춘다.
---  다친 졸개에게만 머리 위에 체력 띠, 발밑에 이름표(「Lv.1 수습 검병」)가 뜬다 — 다 띄우면 좁은 화면이 이름표로 덮인다.
+--  다친 졸개에게만 머리 위에 체력 띠, 발밑에 이름표(「Lv.1 수습 검병」)가 뜬다 — 다 띄우면 화면이 이름표로 덮인다.
+--  체력 띠와 이름표는 글씨의 층(화면 틀의 고운 격자 — overlay.luau)에 그리고, 자리만 졸개를 따라간다.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local COMBAT = require(lune.data["combat.generated"])
 local Sprite = require(script.Parent.sprite)
-local Kit = require(script.Parent.ui.kit)
+local Ui = require(script.Parent.ui.ui)
+local Overlay = require(script.Parent.overlay)
+local Layout = require(lune.ui.layout)
 
-local C = Kit.COLOR
+local C = Ui.COLOR
 local LERP = 0.1 -- 모습이 오는 간격(초) — 이 시간에 걸쳐 앞 자리에서 새 자리로 옮긴다
-local BAR_W, BAR_H, BAR_UP = 26, 5, 26 -- 체력 띠의 크기와 발밑에서의 높이
-local TAG_DOWN = 3 -- 이름표: 발밑에서 이만큼 아래
+local BAR_W, BAR_H = Layout.MOBBAR.w, Layout.MOBBAR.h -- 체력 띠의 크기(화면 틀의 점)
+local BAR_UP = Layout.MOBBAR.up -- 체력 띠: 발밑에서 이만큼 위(게임의 도트)
+local TAG_DOWN = Layout.TAG.down -- 이름표: 발밑에서 이만큼 아래(화면 틀의 점)
 
 local MobsView = {}
 MobsView.__index = MobsView
@@ -19,18 +23,18 @@ function MobsView.tagText(lv: number, name: string): string
 	return ("Lv.%d %s"):format(lv, name)
 end
 
--- layer = 졸개 그림의 층 · room = 서버가 준 방의 모습 · tagLayer = 이름표와 체력 띠의 층(모든 것 위)
-function MobsView.new(layer: Frame, room, tagLayer: Frame?)
+-- layer = 졸개 그림의 층(게임 세계) · room = 서버가 준 방의 모습 · tagLayer = 이름표와 체력 띠의 층(화면 틀 — overlay)
+function MobsView.new(layer: Frame, room, tagLayer: Frame)
 	local self = setmetatable({}, MobsView)
 	self.layer = layer
 	self.mobs = {}
-	local top = tagLayer or layer
+	local top = tagLayer
 	for _, info in room.mobs do
-		local bar = Kit.bar(top, 0, 0, BAR_W, BAR_H, "hp")
+		local bar = Ui.bar(top, 0, 0, BAR_W, BAR_H, C.hp)
 		bar.frame.Name = "HpBar"
 		bar.frame.ZIndex = 5
 		bar.frame.Visible = false
-		local tag = Kit.tag(top, MobsView.tagText(info.lv or 1, info.name or COMBAT.mobs[info.kind].name), C.text, 130)
+		local tag = Ui.tag(top, MobsView.tagText(info.lv or 1, info.name or COMBAT.mobs[info.kind].name), C.text, 260)
 		tag.Frame.Visible = false
 		self.mobs[info.id] = {
 			info = info,
@@ -133,7 +137,7 @@ function MobsView:update(now: number)
 		m.bar.frame.Visible = m.hurt
 		m.tag.Frame.Visible = m.hurt -- 자리는 boot가 정한다(이름표끼리 겹치지 않게 쌓는다 — tags())
 		if m.hurt then
-			m.bar.frame.Position = UDim2.fromOffset(math.floor(m.x + 0.5) - BAR_W / 2, m.info.y - BAR_UP)
+			m.bar.frame.Position = UDim2.fromOffset(Overlay.x(m.x) - BAR_W / 2, Overlay.y(m.info.y - BAR_UP))
 			if m.shownHp ~= m.hp then
 				m.shownHp = m.hp
 				m.bar:set(m.hp / m.info.maxHp)
@@ -142,12 +146,12 @@ function MobsView:update(now: number)
 	end
 end
 
--- 떠 있는 이름표들: { x(왼쪽), y(위), w, frame } — 번호 차례(늘 같은 차례로 쌓이게)
+-- 떠 있는 이름표들: { x(왼쪽), y(위), w, frame } — 화면 틀의 점. 번호 차례(늘 같은 차례로 쌓이게)
 function MobsView:tags()
 	local out = {}
 	for id, m in self.mobs do
 		if m.hurt then
-			table.insert(out, { id = id, x = math.floor(m.x - m.tag.Width / 2 + 0.5), y = m.info.y + TAG_DOWN, w = m.tag.Width, frame = m.tag.Frame })
+			table.insert(out, { id = id, x = Overlay.x(m.x) - math.floor(m.tag.Width / 2), y = Overlay.y(m.info.y) + TAG_DOWN, w = m.tag.Width, frame = m.tag.Frame })
 		end
 	end
 	table.sort(out, function(a, b)

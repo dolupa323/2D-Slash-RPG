@@ -15,6 +15,7 @@ local SEE_Y = 28 -- 이만큼 높이가 다르면 알아채지 못한다(다른 
 local BODY_W, BODY_H = 6, 14 -- 졸개의 몸(반폭, 높이)
 local HERO_W, HERO_H = 5, 17
 local SPAWN_TIME, DEAD_TIME = 0.8, 0.9
+local BIG_HIT = 1.4 -- 센 타격: 세기 배수가 이만큼 넘는 타(대지 강타의 내려찍기 1.43 · 삼단 베기의 셋째 타 2.05 같은 것). 그 숫자는 직업의 밝은 색으로 뜬다(공방 시험 탭의 "12 넘는 피해"에 해당)
 
 local Room = {}
 Room.__index = Room
@@ -31,7 +32,8 @@ function Room.new(key: string, scene, rng)
 	self.nextId = 1
 	for _, def in scene.mobs do
 		local kind = COMBAT.mobs[def.kind]
-		local maxHp = math.max(1, math.floor(N.mobHp(def.lv) * kind.hp + 0.5))
+		-- 피해 숫자의 배율(dmgScale)과 쓰임의 보정(targetBonus — 맞는 갈래의 기술은 피해가 그만큼 더 뜬다)만큼 체력도 크다: 맞는 기술로 잡는 타수는 그대로다
+		local maxHp = math.max(1, math.floor(N.mobHp(def.lv) * kind.hp * RULES.dmgScale * (1 + RULES.targetBonus / 100) + 0.5))
 		local mob = {
 			id = #self.mobs + 1,
 			kind = def.kind,
@@ -272,23 +274,35 @@ end
 
 -- 기술의 한 타. hero가 (x, y)에서 dir 쪽을 보고 쓴 기술의 hit(판정 하나)를 푼다. scale = 스킬 레벨에 따른 세기(없으면 1).
 --  mates = 경험치를 함께 나눌 사람들(hero도 든다 — 같은 맵의 파티원. 없으면 혼자). 떨어진 것은 그 사람들도 바로 주울 수 있다.
---  돌려주는 것: { hits = { { mob, dmg, hp, dead } … }, kills = { { mob, xp, ups, gains = { { hero, xp, ups, level } … }, drop, loot } … } }
-function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: number?, mates)
+--  돌려주는 것: { hits = { { mob, dmg, hp, dead, big } … }, kills = { { mob, xp, ups, gains = { { hero, xp, ups, level } … }, drop, loot } … } }
+--  kind = 그 기술의 갈래: 사냥기("mob")는 일반 몬스터에게, 보스기("boss")는 보스에게 피해가 targetBonus% 더 뜬다 — 맞지 않는 상대에게는 그 보정이 없다(체력은 보정만큼 크다)
+--   (사용자 2026-10-07: "보스기는 보스 공격시 추가데미지, 사냥기는 일반 몹 공격시 추가 데미지 … 지금 그냥 보스기로 사냥하는게 더빠른현상이 생깁니다")
+function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: number?, mates, kind: string?)
 	local box = hit.box
 	local xa, xb = x + dir * box[1], x + dir * box[2]
 	local x0, x1 = math.min(xa, xb), math.max(xa, xb)
-	local power = Hero.power(hero)
+	local power = Hero.powerRaw(hero) -- 반올림하지 않은 전투력으로 셈한다(능력치 1점도 피해에 들어간다)
 	local out = { hits = {}, kills = {} }
 	for _, mob in self:mobsInBox(x0, x1, y - box[3], y + box[4], x) do
 		local roll = 1 + self.rng:NextNumber(-RULES.spread, RULES.spread) / 100
-		local dmg = math.max(1, math.floor(power * hit.mul * (scale or 1) * roll + 0.5))
+		-- 가운데 타에 이미 맞은 적은 빼는 타(hit.except = 그 범위): 한 적이 같은 것을 두 번 맞지 않는다
+		if hit.except then
+			local e = hit.except
+			local ea, eb = x + dir * e[1], x + dir * e[2]
+			if mob.x + BODY_W >= math.min(ea, eb) and mob.x - BODY_W <= math.max(ea, eb) and mob.y >= y - e[3] and mob.y - BODY_H <= y + e[4] then
+				continue
+			end
+		end
+		-- 쓰임의 보정: 사냥기는 일반 몬스터에게, 보스기는 보스에게 피해가 targetBonus% 더 뜬다(다른 갈래의 기술은 누구에게나 뜬다). 맞지 않는 상대에게는 보정이 없다
+		local fit = if (kind == "mob" and mob.def.boss) or (kind == "boss" and not mob.def.boss) then 1 else 1 + RULES.targetBonus / 100
+		local dmg = math.max(1, math.floor(power * hit.mul * (scale or 1) * roll * RULES.dmgScale * fit + 0.5)) -- dmgScale = 피해 숫자의 배율(올린 만큼 숫자로 보이게 — 공방 combat.js)
 		local dead = self:damageMob(mob, dmg, x, hero.id)
 		if not dead and (hit.pull or 0) > 0 then
 			-- 끌어온다: 쓴 사람 쪽으로(제 범위 안에서만)
 			local toward = if mob.x > x then -1 else 1
 			mob.x = math.clamp(mob.x + toward * math.min(hit.pull, math.max(0, math.abs(mob.x - x) - 10)), mob.a, mob.b)
 		end
-		table.insert(out.hits, { mob = mob.id, dmg = dmg, hp = mob.hp, dead = dead })
+		table.insert(out.hits, { mob = mob.id, dmg = dmg, hp = mob.hp, dead = dead, big = if hit.mul >= BIG_HIT then true else nil })
 		if dead then
 			local list = mates or { hero }
 			local share = Party.share(#list)
@@ -315,7 +329,7 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 					d.friends = friends
 				end
 			end
-			table.insert(out.kills, { mob = mob.id, kind = mob.kind, xp = myXp, ups = myUps, gains = gains, drop = drop, loot = loot })
+			table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = myXp, ups = myUps, gains = gains, drop = drop, loot = loot })
 		end
 	end
 	return out
@@ -362,7 +376,7 @@ end
 
 -- 방 사람들에게 알릴 때의 꼴(떨어진 것 하나)
 function Room.dropView(d)
-	return { id = d.id, kind = d.kind, amount = d.amount, x = d.x, y = d.y, item = if d.item then { slot = d.item.slot, stage = d.item.stage, q = d.item.q, star = d.item.star, who = d.item.who } else nil }
+	return { id = d.id, kind = d.kind, amount = d.amount, x = d.x, y = d.y, name = d.name, icon = d.icon, item = if d.item then { slot = d.item.slot, stage = d.item.stage, q = d.item.q, star = d.item.star, who = d.item.who } else nil }
 end
 
 -- 줍는다. 주웠으면 그 물건을, 아니면 nil과 까닭을 돌려준다.
@@ -378,6 +392,10 @@ function Room:pickup(hero, dropId: number)
 		return nil, "멀다"
 	end
 	if d.owner ~= hero.id and not (d.friends and d.friends[hero.id]) and self.time - d.born < RULES.dropOwn then
+		return nil, "남의 것"
+	end
+	-- 퀘스트의 물건은 그 퀘스트를 하는 사람의 것이다(시간이 지나도 남이 줍지 못한다). 숫자를 올리는 것은 부른 쪽(Quests.onLoot)
+	if d.kind == "quest" and d.owner ~= hero.id then
 		return nil, "남의 것"
 	end
 	if d.kind == "gear" then
@@ -403,13 +421,16 @@ function Room:snapshot()
 	return list
 end
 
--- 방에 들어온 사람에게 한 번 주는 것(졸개의 종류 · 레벨 · 체력, 떨어져 있는 것)
-function Room:describe()
+-- 방에 들어온 사람에게 한 번 주는 것(졸개의 종류 · 레벨 · 체력, 떨어져 있는 것). heroId = 그 사람 — 남의 퀘스트 물건은 보여 주지 않는다
+function Room:describe(heroId: any?)
 	local mobs, drops = {}, {}
 	for i, mob in self.mobs do
 		mobs[i] = { id = mob.id, kind = mob.kind, lv = mob.lv, y = mob.y, maxHp = mob.maxHp, name = mob.def.name }
 	end
 	for _, d in self.drops do
+		if d.kind == "quest" and d.owner ~= heroId then
+			continue
+		end
 		table.insert(drops, Room.dropView(d))
 	end
 	return { key = self.key, mobs = mobs, drops = drops, snap = self:snapshot() }

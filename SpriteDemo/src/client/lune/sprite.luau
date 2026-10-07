@@ -9,12 +9,14 @@ local Stage = require(script.Parent.stage)
 local Sprite = {}
 Sprite.__index = Sprite
 
-function Sprite.new(parent: Instance, who: string, z: number?)
+-- mask = true면 같은 자리의 흰 실루엣 판(CHARS.masks)으로 그린다 — label.ImageColor3로 색을 입혀 한 색 실루엣을 만든다(대쉬의 잔상)
+function Sprite.new(parent: Instance, who: string, z: number?, mask: boolean?)
 	local char = CHARS.chars[who]
 	assert(char, "없는 캐릭터 " .. tostring(who))
 	local self = setmetatable({}, Sprite)
 	self.who = who
 	self.char = char
+	self.pages = if mask then CHARS.masks else CHARS.pages
 	self.label = Stage.image(parent, who, "", 1, 1)
 	self.label.ZIndex = z or 1
 	self.label.Visible = false
@@ -41,7 +43,7 @@ function Sprite:set(clip: string, frame: number, x: number, y: number, dir: numb
 	end
 	if self.page ~= f[1] then
 		self.page = f[1]
-		label.Image = ASSETS[CHARS.pages[f[1]]] or ""
+		label.Image = ASSETS[self.pages[f[1]]] or ""
 	end
 	local w, h, dx, dy = f[4], f[5], f[6], f[7]
 	local px, py = math.floor(x + 0.5), math.floor(y + 0.5)

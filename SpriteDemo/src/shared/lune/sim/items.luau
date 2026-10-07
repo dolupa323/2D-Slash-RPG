@@ -116,7 +116,12 @@ function Items.gearScore(list): number
 end
 
 function Items.power(level: number, eff: number, list): number
-	return round(POWER.base * (POWER.levelShare * eff * POWER.grow ^ level + POWER.itemShare * Items.gearScore(list)))
+	return round(Items.powerRaw(level, eff, list))
+end
+-- 반올림하기 전의 전투력 — 피해를 셈할 때 쓴다. 화면의 전투력(정수)으로 셈하면 능력치 1점(낮은 레벨에서 +0.3쯤)이 반올림에 묻혀 피해가 그대로일 때가 있다
+--  (사용자 2026-10-07: "스킬을찍거나, 스텟이 증가했을때 데미지가 증가하고있는지 확인하세요")
+function Items.powerRaw(level: number, eff: number, list): number
+	return POWER.base * (POWER.levelShare * eff * POWER.grow ^ level + POWER.itemShare * Items.gearScore(list))
 end
 
 -- 방어구가 줄여 주는 피해 %: 부위마다 4분의 1씩(빈 부위 · 부서진 것은 0)

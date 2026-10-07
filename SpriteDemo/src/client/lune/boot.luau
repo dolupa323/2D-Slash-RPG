@@ -15,12 +15,13 @@ local Tags = require(lune.ui.tags)
 local SCENES = require(lune.data["scenes.generated"])
 local ASSETS = require(lune.data["assets.generated"])
 local COMBAT = require(lune.data["combat.generated"])
+local CLASSES = require(lune.data["classes.generated"])
 local Stage = require(script.Parent.stage)
 local SceneView = require(script.Parent.sceneView)
 local Sprite = require(script.Parent.sprite)
 local Input = require(script.Parent.input)
 local MobsView = require(script.Parent.mobsView)
-local MiniMap = require(script.Parent.minimap)
+local Overlay = require(script.Parent.overlay)
 local Effects = require(script.Parent.effects)
 local Hud = require(script.Parent.hud)
 local Chooser = require(script.Parent.chooser)
@@ -29,7 +30,7 @@ local StatWindow = require(script.Parent.ui.statWindow)
 local SkillWindow = require(script.Parent.ui.skillWindow)
 local KeysWindow = require(script.Parent.ui.keysWindow)
 local Talk = require(script.Parent.ui.talk)
-local Kit = require(script.Parent.ui.kit)
+local Ui = require(script.Parent.ui.ui)
 local Touch = require(script.Parent.touch)
 local Items = require(lune.sim.items)
 local BagWindow = require(script.Parent.ui.bagWindow)
@@ -49,6 +50,10 @@ local STEP = 1 / 60
 local MAX_STEPS = 5 -- 한 화면에 따라잡는 걸음 수(멈칫했다가 순간이동하지 않게)
 local REPORT = 0.1 -- 내 자리를 서버에 알리는 간격(초)
 local RULES = COMBAT.rules
+local UI_HUD = require(lune.data["ui.generated"]).hud
+local QUICK = require(lune.data["ui.generated"]).quick -- 퀵슬롯(칸 수 · 칸마다의 기본 키 · 글)
+local Quick = require(lune.ui.quick)
+local QuickEdit = require(script.Parent.ui.quickEdit)
 
 local Boot = {}
 local mySkills = {} -- 내 직업의 기술(사냥기 · 보스기 · 이동기 차례로) { id, name, type, order, cd }
@@ -57,6 +62,7 @@ local state = {
 	who = "axion",
 	sceneKey = SCENES.start,
 	view = nil :: any,
+	over = nil :: any, -- 이 장면의 이름표 · 체력 띠 · 알림 글이 놓이는 층(화면 틀 — overlay)
 	mobs = nil :: any,
 	fx = nil :: any,
 	body = nil :: any,
@@ -126,14 +132,18 @@ local function enterScene(key: string, x: number, y: number, room)
 		state.others:destroy()
 	end
 	if state.view then
-		state.view:destroy() -- 이름표(내 것 포함)는 장면의 층과 함께 사라진다
+		state.view:destroy()
+	end
+	if state.over then
+		state.over:Destroy() -- 이름표(내 것 포함) · 체력 띠 · 알림 글은 이 층과 함께 사라진다
 	end
 	state.sceneKey = key
-	state.view = SceneView.new(Stage.view, key, scene)
+	state.over = Overlay.layer("Scene", 10)
+	state.view = SceneView.new(Stage.view, key, scene, state.over)
 	state.body = P.newBody(scene)
 	state.body.x, state.body.y = x, y
 	state.sprite = Sprite.new(state.view.heroLayer, state.who)
-	state.mobs = MobsView.new(state.view.mobLayer, room, state.view.topLayer)
+	state.mobs = MobsView.new(state.view.mobLayer, room, state.over)
 	table.clear(state.npcNames)
 	for _, sc in SCENES.scenes do
 		for _, n in sc.npcs or {} do
@@ -143,20 +153,19 @@ local function enterScene(key: string, x: number, y: number, room)
 	if state.drawQuests then
 		state.drawQuests()
 	end
-	state.others = Others.new(state.view.heroLayer, state.view.topLayer, state.myId)
+	state.others = Others.new(state.view.heroLayer, state.over, state.myId)
 	state.others:setWho(room.who or {})
-	state.tag = Kit.tag(state.view.topLayer, Others.tagText(if state.me then state.me.level else 1, state.myName), Kit.COLOR.white, 150)
+	state.tag = Ui.tag(state.over, Others.tagText(if state.me then state.me.level else 1, state.myName), Ui.COLOR.text, 220, true)
 	state.tagLevel = if state.me then state.me.level else 1
 	PartyHud.set(state.party, state.myId, key)
-	state.fx = Effects.new(state.view.topLayer)
+	state.fx = Effects.new(state.view.topLayer, state.over, state.view.heroLayer)
+	state.others.fx = state.fx -- 다른 사람의 대쉬도 같은 효과를 낸다
 	for _, d in room.drops do
 		state.fx:addDrop(d)
 	end
 	state.clip, state.clipT, state.skill = "idle", 0, nil
 	state.sentX = -1
 	Talk.close()
-	Talk.sheet = if scene.npcSheet then { image = ASSETS[scene.npcSheet] or "", w = scene.npcCell[1], h = scene.npcCell[2] } else nil
-	MiniMap.setScene(scene)
 end
 
 -- ---------- 기술 ----------
@@ -173,6 +182,8 @@ local function startSeg(id: string, seg: number)
 	if def.type == "move" then
 		sk.vx = state.dir * def.speed
 		sk.move = def.dist / def.speed
+		-- 대쉬의 효과(시험 탭과 같다): 시작할 때 속도선, 가는 동안 잔상(stepSkill)
+		state.fx:streaks(state.body.x, state.body.y, def.speed, state.dir, CLASSES.classes[state.who].tone)
 	end
 	state.skill = sk
 end
@@ -205,6 +216,11 @@ local function stepSkill()
 	end
 	sk.t += STEP
 	local segDef = sk.def.segs[sk.seg]
+	-- 대쉬로 가는 동안: 그 순간의 몸을 직업 색 실루엣으로 남긴다(잔상)
+	if sk.vx ~= nil and sk.t < sk.move then
+		local frame = segDef.from + math.min(segDef.to - segDef.from, math.floor(sk.t * segDef.fps)) + 1
+		state.fx:trail(sk, STEP, state.who, segDef.clip, frame, state.body.x, state.body.y, state.dir, CLASSES.classes[state.who].tone)
+	end
 	-- 기술에 딸린 날아가는 그림(화염 광선 등)
 	for i, shot in sk.def.shots do
 		if shot.seg == sk.seg and not sk.shown[i] and sk.t >= shot.at then
@@ -295,6 +311,19 @@ local function step()
 			trySkill(id)
 		end
 	end
+	-- 퀵슬롯: 그 칸의 키를 누르면 칸에 놓인 것(물약 · 스킬)을 쓴다. 스마트폰의 칸 단추("tslot:")도 같은 길 — 놓인 것만 따로다(state.touchSlots)
+	for i = 1, Quick.N do
+		for _, from in { { "slot:", state.slots }, { "tslot:", state.touchSlots } } do
+			if Input.take(from[1] .. i) then
+				local what = from[2][i]
+				if what == Quick.POTION then
+					Net.FireServer("Potion")
+				elseif what then
+					trySkill(what)
+				end
+			end
+		end
+	end
 	if Input.take("potion") then
 		Net.FireServer("Potion")
 	end
@@ -382,24 +411,41 @@ local function draw(dt: number)
 		alpha = 0.55
 	end
 	state.sprite.label.ImageTransparency = alpha
-	state.view:update(body.x, body.y, state.now)
+	state.view:update(body.x, body.y, state.now, body.ground)
+	-- 스마트폰의 상호작용 단추가 지금 할 일: 떨어진 물건 → 문 → 주민의 차례로 가까운 것
+	if Touch.on then
+		Touch.setAct(if state.dead then nil elseif state.fx and state.fx:dropNear(body.x, body.y, RULES.pickup) then "pickup" elseif state.view:portalNear(body.x, body.y) then "portal" elseif state.view:npcNear(body.x, body.y) then "npc" else nil)
+	end
 	state.mobs:update(state.now)
 	state.others:update(state.now, state.partySet)
-	-- 이름표(발밑): 내 것이 먼저 자리를 잡고, 다른 사람들 · 다친 졸개의 것은 주민의 이름표와 서로를 피해 아래로 쌓인다
-	local tags = state.others:tags()
-	table.insert(tags, 1, { x = math.floor(body.x - state.tag.Width / 2 + 0.5), y = math.floor(body.y + 0.5) + Others.TAG_DOWN, w = state.tag.Width, frame = state.tag.Frame })
-	for _, t in state.mobs:tags() do
+	-- 이름표(발밑): 모두 제 주인의 발밑 그 자리에 둔다 — 옮기지 않는다(사용자 2026-10-07: 내 이름이 주민 이름 아래로 밀려 내려가던 것).
+	--  겹치면 앞선 것만 보인다: 내 것 → 다른 사람들 → 주민 · 문 → 다친 졸개
+	local tags = { { x = Overlay.x(body.x) - math.floor(state.tag.Width / 2), y = Overlay.y(body.y) + Others.TAG_DOWN, w = state.tag.Width, frame = state.tag.Frame, move = true } }
+	for _, t in state.others:tags() do
+		t.move = true
 		table.insert(tags, t)
 	end
-	for i, y in Tags.stack(state.view:rects(), tags, Kit.TAG_H + 1, 1) do
-		tags[i].frame.Position = UDim2.fromOffset(tags[i].x, y)
+	for _, t in state.view:tagList() do
+		table.insert(tags, t)
+	end
+	for _, t in state.mobs:tags() do
+		t.move = true
+		table.insert(tags, t)
+	end
+	for i, on in Tags.visible(tags, Ui.TAG_H) do
+		local t = tags[i]
+		t.frame.Visible = on
+		if t.move then
+			t.frame.Position = UDim2.fromOffset(t.x, t.y)
+		end
 	end
 	-- 스킬 칸: 다시 쓰기까지 남은 시간
 	for _, sk in mySkills do
 		Hud.setCooldown(sk.id, (state.cds[sk.id] or 0) - state.clock, sk.cd)
+		Touch.setCooldown(sk.id, (state.cds[sk.id] or 0) - state.clock, sk.cd)
 	end
 	state.fx:update(state.now, dt)
-	MiniMap.update(body.x, body.y, state.mobs.mobs, state.now)
+	Talk.place() -- 말풍선은 그 주민을 따라간다
 end
 
 -- ---------- 서버가 알려 주는 것 ----------
@@ -425,17 +471,27 @@ local function listen()
 			state.mobs:apply(list, state.now)
 		end
 	end)
-	Net.OnClient("Hits", function(_by, list)
+	-- 때린 사람의 직업 색(민트 · 분홍) — 센 타격의 숫자에 쓴다
+	local function toneOf(id: any): string
+		local class = state.who
+		if id ~= myId and state.others and state.others.list[id] then
+			class = state.others.list[id].class
+		end
+		local def = class and CLASSES.classes[class]
+		return if def then def.tone else "mint"
+	end
+	Net.OnClient("Hits", function(by, list)
 		for _, h in list do
 			local m = state.mobs and state.mobs:get(h.mob)
 			if m then
 				m.hp = h.hp
-				state.fx:number(h.dmg, m.x, m.info.y - 30, Effects.DEAL)
+				-- 시험 탭과 같은 자리 · 같은 색: 발밑에서 16도트 위(우두머리는 30)에서 뜬다. 센 타격은 때린 사람 직업의 밝은 색
+				state.fx:number(h.dmg, m.x, m.info.y - (if m.def.boss then 30 else 16), if h.big then Effects.BIG[toneOf(by)] else Effects.DEAL, h.big)
 			end
 		end
 	end)
 	Net.OnClient("Hurt", function(e)
-		state.fx:number(e.dmg, state.body.x, state.body.y - 34, Effects.HURT)
+		state.fx:number(e.dmg, state.body.x, state.body.y - 22, Effects.HURT) -- 머리 바로 위에서 뜬다(졸개의 숫자가 발밑에서 16 위인 것과 같은 느낌)
 		state.blink = RULES.invuln
 		if not state.skill then
 			state.hurtT = 0.25 -- 기술을 쓰는 중이 아니면 맞는 동작을 잠깐 보인다
@@ -463,6 +519,8 @@ local function listen()
 		if d and taker == myId then
 			if d.kind == "gear" then
 				state.fx:float(ItemCell.label(d.item), d.x, d.y - 18, ItemCell.color(d.item), 1.6)
+			elseif d.kind == "quest" then
+				state.fx:float("+1 " .. tostring(d.name), d.x, d.y - 18, Effects.GOLD, 1.2)
 			elseif d.kind == "dust" then
 				state.fx:float("+" .. Format.short(amount) .. " 달가루", d.x, d.y - 18, Effects.MINT)
 			else
@@ -566,23 +624,23 @@ local function debugMarks()
 	end
 end
 
-local KEYS = { Shift = Enum.KeyCode.LeftShift }
-
 function Boot.start()
 	Stage.init()
+	Overlay.init()
 	Input.init()
 	Hud.init()
-	MiniMap.init(Hud.root)
 	preload()
 	listen()
 
 	local first = Net.Invoke("Ready")
 	if first and first.choose then
-		-- 처음 온 사람: 직업을 고른다. 서버가 캐릭터를 만들어 주면 이어 간다
+		-- 처음 온 사람: 직업을 고른다. 서버가 캐릭터를 만들어 주면 이어 간다(고르는 동안 늘 보이는 화면은 숨긴다)
+		Hud.root.Visible = false
 		repeat
 			first = Net.Invoke("Choose", Chooser.run())
 		until first and first.self
 		Chooser.close()
+		Hud.root.Visible = true
 	end
 	assert(first and first.self, "서버에서 캐릭터를 받지 못했다")
 	state.me = first.self
@@ -598,13 +656,18 @@ function Boot.start()
 	table.clear(mySkills)
 	for id, def in COMBAT.skills do
 		if def.who == state.who then
-			Input.bind("skill:" .. id, KEYS[def.key] or Enum.KeyCode[def.key])
 			table.insert(mySkills, { id = id, name = def.name, type = def.type, order = order[def.type] or 9, cd = def.cd })
 		end
 	end
 	table.sort(mySkills, function(a, b)
 		return a.order < b.order
 	end)
+	-- 퀵슬롯: 키는 스킬이 아니라 칸에 붙는다(칸마다 하나 — 공방의 QUICK.keys). 칸에 놓인 것은 서버가 저장해 둔 것(없으면 처음 차림)
+	for i, name in QUICK.keys do
+		Input.bind("slot:" .. i, (Enum.KeyCode :: any)[name])
+	end
+	state.slots = first.self.slots or Quick.start(CLASSES.classes[state.who].skills)
+	state.touchSlots = first.self.tslots or Quick.start(CLASSES.classes[state.who].skills) -- 스마트폰의 단추 배치(PC의 퀵슬롯과 따로 저장한다)
 
 	-- 창: 능력치 · 스킬 · 키 설정. 여는 키는 공방에서 정한 것(P · K — 키 설정은 메뉴에서)
 	local function keyName(action: string): string
@@ -632,19 +695,19 @@ function Boot.start()
 			end
 		end
 		table.insert(items, { id = "keys", name = "키 설정" })
-		local w, rowH = 74, 15
-		local h = #items * rowH + 7
-		local at = Hud.menuRoot.Position
-		local panel = Kit.plate(Stage.view, "frame", at.X.Offset, at.Y.Offset - h - 1, w, h)
-		panel.Name = "More"
-		panel.ZIndex = 160
+		local w, rowH = 132, 28
+		local h = #items * rowH + 14
+		local r = UI_HUD.menu
+		local holder = Stage.place(Stage.ui, "More", r.at, r.x + r.w - w, r.y - h - 6, w, h)
+		holder.ZIndex = 160
+		local panel = Ui.panel(holder, 0, 0, w, h)
 		for i, item in items do
-			Kit.button(panel, item.name, 4, 4 + (i - 1) * rowH, w - 8, 14, function()
+			Ui.button(panel, item.name, 8, 8 + (i - 1) * rowH, w - 16, function()
 				closeMore()
 				Windows.toggle(item.id)
-			end).frame.Name = "More_" .. item.id
+			end, { h = 24 }).frame.Name = "More_" .. item.id
 		end
-		morePanel = panel
+		morePanel = holder
 	end
 	local function onMenu(id: string)
 		if id == "more" then
@@ -657,10 +720,11 @@ function Boot.start()
 	-- 키가 적힌 자리(스킬 칸 · 메뉴 단추 · 물약 칸)를 지금의 키로 다시 적는다
 	local function drawKeyHints()
 		local list = {}
-		for _, sk in mySkills do
-			table.insert(list, { id = sk.id, key = keyName("skill:" .. sk.id), name = sk.name })
+		for i = 1, Quick.N do
+			list[i] = { what = state.slots[i] or false, key = keyName("slot:" .. i) }
 		end
-		Hud.setSkills(list)
+		Hud.setSlots(list)
+		Touch.setSlots(state.touchSlots) -- 스마트폰의 칸 단추(놓인 것은 PC와 따로다)
 		local menu = {}
 		for _, w in Windows.list() do
 			if MAIN[w.id] then
@@ -670,7 +734,6 @@ function Boot.start()
 		table.insert(menu, { id = "more", name = "메뉴", key = "" })
 		closeMore()
 		Hud.setMenu(menu, onMenu)
-		Hud.setPotionKey(keyName("potion"))
 		if state.me then
 			Hud.setSelf(state.me)
 		end
@@ -740,8 +803,16 @@ function Boot.start()
 			if not Windows.isOpen("forge") then
 				state.ui.forgeTarget, state.ui.forgeMat, state.ui.forgeResult = nil, nil, nil
 			end
+			local openSet = {}
+			for _, w in Windows.all() do
+				openSet[w.id] = Windows.isOpen(w.id)
+			end
+			Hud.setOpen(openSet)
+			QuickEdit.setOpen(Windows.isOpen("skill") or Windows.isOpen("bag")) -- 스킬 · 소비 아이템을 골라 놓는 것은 그 창이 열려 있을 때(칸끼리 끄는 것은 늘 된다)
 			Windows.refresh(state.me)
 		end,
+		-- 퀵슬롯에 스킬을 놓는 일(스킬 창이 스킬을 고르거나 끌 때 부른다 — ui/quickEdit.luau)
+		quick = QuickEdit,
 		send = function(name: string, ...)
 			Net.FireServer(name, ...)
 		end,
@@ -754,13 +825,13 @@ function Boot.start()
 				{ action = "down", name = "아래 발판" },
 				{ action = "jump", name = "뛰기" },
 				{ action = "pickup", name = "줍기" },
-				{ action = "potion", name = "물약" },
 			}
-			for _, sk in mySkills do
-				table.insert(out, { action = "skill:" .. sk.id, name = sk.name })
-			end
 			for _, w in Windows.list() do
 				table.insert(out, { action = "win:" .. w.id, name = w.name })
+			end
+			-- 스킬의 키는 여기서 바꾸지 않는다 — 스킬은 스킬 창에서 퀵슬롯에 놓고, 여기서는 칸의 키만 바꾼다
+			for i = 1, Quick.N do
+				table.insert(out, { action = "slot:" .. i, name = Format.fill(QUICK.words.slot, { n = i }) })
 			end
 			return out
 		end,
@@ -772,6 +843,49 @@ function Boot.start()
 			Input.reset()
 		end,
 	})
+	-- 지금 쓰는 배치: 스마트폰 단추가 켜져 있으면 단추 배치(touchSlots), 아니면 PC의 퀵슬롯(slots). 스킬 창 · 가방에서 놓는 것도 지금 쓰는 쪽에 놓인다
+	local quickHooks = {
+		slots = function()
+			return if Touch.on then state.touchSlots else state.slots
+		end,
+		-- 칸들을 바꿨다: 화면은 바로 고치고 서버에 알린다. 서버가 가진 칸들이 돌아오면 그것으로 맞춘다(받아들이지 않았으면 되돌아간다)
+		apply = function(next)
+			local touch = Touch.on
+			local function put(value)
+				if touch then
+					state.touchSlots = value
+				else
+					state.slots = value
+				end
+			end
+			put(next)
+			state.slotSeq = (state.slotSeq or 0) + 1
+			local seq = state.slotSeq
+			drawKeyHints()
+			task.spawn(function()
+				local ok, result = pcall(Net.Invoke, if touch then "TouchSlots" else "Slots", next)
+				if ok and typeof(result) == "table" and seq == state.slotSeq then
+					put(result)
+					drawKeyHints()
+					Windows.refresh(state.me)
+				end
+			end)
+		end,
+		-- 그 스킬을 퀵슬롯에 놓을 수 있는가: ok · passive(늘 켜져 있는 것) · unlearned(아직 안 배웠다) · later(게임에 아직 없다). kind = 스킬의 갈래
+		state = function(id: string, kind: string?): string
+			local def = COMBAT.skills[id]
+			if def and def.who == state.who then
+				return if state.me and (state.me.skills[id] or 0) > 0 then "ok" else "unlearned"
+			end
+			return if kind == "passive" or kind == "core" then "passive" else "later"
+		end,
+		changed = function()
+			if state.me then
+				Windows.refresh(state.me)
+			end
+		end,
+	}
+	QuickEdit.init(quickHooks)
 	Windows.register("stat", StatWindow)
 	Windows.register("skill", SkillWindow)
 	Windows.register("keys", KeysWindow)
@@ -796,7 +910,12 @@ function Boot.start()
 	end)
 	Chat.init(Hud.root)
 	QuestHud.init(Hud.root)
-	Talk.onToggle = QuestHud.hide
+	-- 말풍선이 떠 있는 주민의 머리 위 표시는 그동안 숨는다
+	Talk.onToggle = function(npc)
+		if state.view then
+			state.view:setTalking(if npc then npc.id else nil)
+		end
+	end
 	-- 퀘스트가 바뀌면: 주민 머리 위의 표시 · 알리미 · 열려 있는 창
 	state.drawQuests = function()
 		local level = if state.me then state.me.level else 1
@@ -813,17 +932,21 @@ function Boot.start()
 	-- 스마트폰 단추(터치 화면이면 저절로 켜진다)
 	local touchMenu: Frame? = nil
 	Touch.init({
-		skillOf = function(kind: string)
+		-- 칸 단추에 놓을 수 있는 것: 물약과 배운(쓸 수 있는) 스킬 — 놓을 것의 목록에 뜬다
+		choices = function()
+			local list = { { what = Quick.POTION, name = "물약" } }
 			for _, sk in mySkills do
-				if sk.type == kind then
-					return "skill:" .. sk.id
+				if quickHooks.state(sk.id) == "ok" then
+					table.insert(list, { what = sk.id, name = sk.name })
 				end
 			end
-			return nil
+			return list
 		end,
-		labelOf = function(name: string)
-			local labels = { ["사냥기"] = "사냥", ["보스기"] = "보스", ["뛰기"] = "뛰기", ["대쉬"] = "대쉬", ["물약"] = "물약", ["줍기 · 말 걸기"] = "줍기", ["메뉴"] = "…" }
-			return labels[name]
+		apply = quickHooks.apply,
+		-- 누르고 있으면 이어서 쓰는 스킬: 공격 스킬(사냥기 · 보스기)
+		repeats = function(id: string): boolean
+			local def = COMBAT.skills[id]
+			return def ~= nil and (def.type == "mob" or def.type == "boss")
 		end,
 		-- 상황 단추: 떨어진 것이 가까우면 줍고, 아니면 ↑(문 · 주민)
 		onAct = function(down: boolean)
@@ -838,6 +961,8 @@ function Boot.start()
 		end,
 		onToggle = function(on: boolean)
 			Hud.setTouch(on)
+			QuestHud.setTouch(on)
+			Chat.setTouch(on)
 		end,
 		onChat = Chat.open,
 		-- 메뉴: 창 이름이 적힌 큰 단추들
@@ -848,19 +973,24 @@ function Boot.start()
 				return
 			end
 			local items = Windows.list() -- 키 설정은 넣지 않는다(손가락 단추에는 바꿀 키가 없다)
-			if #items == 0 then
-				return -- 아직 열린 창이 없다(Lv.1)
-			end
-			local panel = Kit.plate(Stage.view, "frame", 104, 30, 176, #items * 24 + 8)
-			panel.ZIndex = 160
-			for i, w in items do
-				Kit.button(panel, w.name, 5, 5 + (i - 1) * 24, 166, 20, function()
-					Windows.toggle(w.id)
-					panel:Destroy()
+			table.insert(items, { id = "@arrange", name = "단추 배치" }) -- 스킬 · 물약을 단추에 놓는다
+				local w, rowH = 240, 40
+			local h = #items * rowH + 12
+			local holder = Stage.place(Stage.ui, "TouchMenu", "tc", 480 - w / 2, 60, w, h)
+			holder.ZIndex = 160
+			local panel = Ui.panel(holder, 0, 0, w, h)
+			for i, win in items do
+				Ui.button(panel, win.name, 8, 8 + (i - 1) * rowH, w - 16, function()
+					holder:Destroy()
 					touchMenu = nil
-				end)
+					if win.id == "@arrange" then
+						Touch.arrange(true)
+					else
+						Windows.toggle(win.id)
+					end
+				end, { h = 36, font = "body", main = win.id == "@arrange" })
 			end
-			touchMenu = panel
+			touchMenu = holder
 		end,
 	})
 
@@ -895,7 +1025,7 @@ function Boot.start()
 			debugMarks()
 		end
 	end)
-	print(("[lune] 시작 — 장면 %s · 캐릭터 %s · 배율 x%d"):format(state.sceneKey, state.who, Stage.scale))
+	print(("[lune] 시작 — 장면 %s · 캐릭터 %s · 배율 x%s"):format(state.sceneKey, state.who, tostring(math.floor(Stage.scale * 100 + 0.5) / 100)))
 end
 
 return Boot

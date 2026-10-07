@@ -44,6 +44,10 @@ local packets = {
 	Quest = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 4, Burst = 6 } },
 	-- 바꾼 키를 저장한다 { [하는 일] = 키 이름 } — 꼴은 서버가 다시 본다
 	Keys = { Kind = "Event", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 2, Burst = 4 } },
+	-- 퀵슬롯을 바꿨다: 칸들 전체 { "potion" · 스킬의 이름표 · false … } — 꼴과 놓아도 되는 스킬인지는 서버가 다시 본다. 돌려주는 값 = 서버가 가진 칸들(받아들였으면 보낸 것, 아니면 예전 것)
+	Slots = { Kind = "Function", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 8 } },
+	-- 스마트폰의 단추 배치를 바꿨다: 같은 꼴(칸들 전체) — PC의 퀵슬롯과 따로 저장한다. 돌려주는 값 = 서버가 가진 배치
+	TouchSlots = { Kind = "Function", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 8 } },
 	-- 내 자리(도트)와 보는 쪽. 움직임은 클라이언트가 셈하고 서버는 말이 되는지만 본다.
 	Move = { Kind = "Event", Direction = "ClientToServer", Args = { t.number, t.number, t.dir }, RateLimit = { PerSecond = 20, Burst = 30 } },
 	-- 문으로 다른 장면에 간다. 돌려주는 값 { scene, x, y, room } 또는 nil(문 앞이 아님)

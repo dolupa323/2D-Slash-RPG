@@ -391,7 +391,7 @@ eq(#miss.hits, 0, "등 뒤의 졸개는 삼단 베기에 맞지 않는다")
 -- 앞으로 쓰면 맞는다. 피해 = 전투력 × 배수 ± 흩어짐
 local res = roomS:skillHit(hero, combo.hits[1], hero.x, hero.y, 1)
 expect(#res.hits >= 1, "앞의 졸개가 맞는다")
-local want = Hero.power(hero) * combo.hits[1].mul
+local want = Hero.powerRaw(hero) * combo.hits[1].mul * RULES.dmgScale * (1 + RULES.targetBonus / 100) -- 피해 = 전투력(반올림 전) x 그 타의 배수 x 피해 숫자의 배율 x 쓰임의 보정(갈래를 주지 않으면 누구에게나)
 for _, hit in res.hits do
 	expect(hit.dmg >= math.floor(want * 0.9) and hit.dmg <= math.ceil(want * 1.1), ("피해 %d(기대 %.1f ±10%%)"):format(hit.dmg, want))
 end

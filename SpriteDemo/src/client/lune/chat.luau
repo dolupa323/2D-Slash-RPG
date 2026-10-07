@@ -1,9 +1,8 @@
--- 채팅 — 화면 왼쪽 아래의 채팅 칸(공방 「기본 · UI」 탭의 확정 배치 6번, data/ui.generated.luau의 hud.chat).
+-- 채팅 — 화면 왼쪽 아래, 체력 덩어리 바로 위(공방 「기본 · UI」 탭의 화면 배치, data/ui.generated.luau의 hud.chat).
 --  글은 Roblox의 채팅(TextChatService)을 거쳐 오간다: 글 거르기 · 신고가 그쪽에 들어 있다. 여기서는 보이는 것과 쓰는 칸만 우리 것으로 바꾼다
 --  (Roblox 기본 채팅 창과 입력줄은 끈다 — 기본 것은 Enter로 열리지 않고 도트 화면과 어울리지 않는다).
---  평소: 새 글이 오면 세 줄이 흐린 바탕 위에 잠깐(12초) 보였다가 사라진다. Enter: 쓰는 칸이 열리고 지난 글이 보인다. 한 번 더 Enter로 보내고 닫는다.
---  평소의 글은 공방에서 잡은 칸(폭 116)보다 넓게, 상태바 바로 위에 그린다 — 116에는 이름을 빼면 한글 여덟 자쯤밖에 안 들어간다.
---  폭 168: 화면 가운데에 서 있는 내 캐릭터를 가리지 않는 데까지. 바탕은 비치는 어두운 판, 글씨는 작은 글씨.
+--  평소: 새 글이 오면 마지막 세 줄이 판 없이(어두운 테두리를 두른 작은 글씨로) 잠깐(12초) 보였다가 사라진다.
+--  Enter: 어두운 판이 뜨고 지난 글 여섯 줄과 쓰는 칸이 보인다. 한 번 더 Enter로 보내고 닫는다.
 --  채널: 둘레(같은 맵의 사람) · 파티. 쓰는 칸 왼쪽의 단추로 바꾼다. 누구에게 가는지는 서버가 정한다(server/lune/modules/chat.luau).
 --  쓰는 칸은 Roblox의 글자 입력 칸(TextBox)이라 그 글꼴은 Roblox 것이다(도트 글꼴은 입력 칸에 쓸 수 없다). 받은 글은 도트 글꼴로 그린다 —
 --  한글 · 영문 · 숫자가 아닌 글자(한자 · 이모지 등)는 "?"로 보인다.
@@ -14,16 +13,18 @@ local lune = ReplicatedStorage.shared.lune
 local UI = require(lune.data["ui.generated"])
 local Format = require(lune.ui.format)
 local Tags = require(lune.ui.tags)
-local Kit = require(script.Parent.ui.kit)
+local Layout = require(lune.ui.layout)
+local Stage = require(script.Parent.stage)
+local Ui = require(script.Parent.ui.ui)
 local pixelText = require(script.Parent.Parent.modules.ui.pixelText)
 
-local C = Kit.COLOR
+local C = Ui.COLOR
 local KEEP = 40 -- 지난 글을 몇 개까지 갖고 있나
-local LINE = Kit.LINE
-local OPEN = { x = 2, w = 230, lines = 6 } -- 쓰는 중의 넓은 칸(높이는 줄 수에서)
-local QUIET = { w = 168, lines = 3, life = 12 } -- 평소: 폭 · 세 줄 · 새 글이 온 뒤 보이는 시간(초)
-local BOTTOM = UI.hud.vitals.y - 1 -- 채팅 칸의 아래 끝: 상태바 바로 위
-local CHANNEL = { { id = "near", name = "둘레", channel = "RBXGeneral", color = C.white }, { id = "party", name = "파티", channel = "파티", color = C.mint } }
+local LINE = Layout.CHAT.line
+local FIELD = Layout.CHAT.field -- 쓰는 칸 · 채널 단추의 높이
+local OPEN = Layout.CHAT.open -- 쓰는 중의 넓은 판(높이는 줄 수에서)
+local QUIET = { w = UI.hud.chat.w, lines = math.floor(UI.hud.chat.h / LINE), life = Layout.CHAT.life } -- 평소: 폭 · 세 줄 · 새 글이 온 뒤 보이는 시간(초)
+local CHANNEL = { { id = "near", name = "둘레", channel = "RBXGeneral", color = C.text }, { id = "party", name = "파티", channel = "파티", color = C.pink } }
 
 local Chat = {}
 Chat.OPEN = OPEN
@@ -69,15 +70,15 @@ local function draw()
 	quiet.Visible = not Chat.typing and #Chat.log > 0 and os.clock() - Chat.lastAt < QUIET.life
 	panel.Visible = Chat.typing
 	if Chat.typing then
-		fill(panelLines, OPEN.w - 10, 3)
+		fill(panelLines, OPEN.w - OPEN.pad * 2, 3)
 	else
-		fill(quietLines, QUIET.w - 8, 2) -- 평소: 한 글에 두 줄까지
+		fill(quietLines, QUIET.w, 2) -- 평소: 한 글에 두 줄까지
 	end
 end
 
 -- 글 한 줄을 지난 글에 더한다
 function Chat.add(channelId: string, name: string?, text: string)
-	local color = C.white
+	local color = C.text
 	for _, ch in CHANNEL do
 		if ch.id == channelId then
 			color = ch.color
@@ -152,6 +153,24 @@ local function send(text: string)
 	end)
 end
 
+-- 스마트폰 단추가 켜지면 채팅 줄을 왼쪽 위로 옮긴다(왼쪽 아래에는 이동 패드가 온다 — data/ui.generated.luau의 hudTouch).
+--  쓰는 판도 위에 뜬다: 화면 아래 절반은 글자판이 덮는다.
+function Chat.setTouch(on: boolean)
+	if not quiet or not panel then
+		return
+	end
+	local r = UI.hud.chat
+	local t = UI.hudTouch.chat
+	local o = Layout.chatOpen()
+	if on and t then
+		quiet.Position = Stage.atPosition(t.at, t.x, t.y)
+		panel.Position = Stage.atPosition(t.at, t.x, t.y)
+	else
+		quiet.Position = Stage.atPosition(r.at, r.x, r.y)
+		panel.Position = Stage.atPosition(o.at, o.x, o.y)
+	end
+end
+
 function Chat.init(parent: Frame)
 	-- Roblox 기본 채팅 창과 입력줄은 끈다(채널과 글 거르기는 그대로 쓴다)
 	pcall(function()
@@ -166,47 +185,43 @@ function Chat.init(parent: Frame)
 	end)
 
 	local r = UI.hud.chat
-	root = Kit.group(parent, 0, 0, 1, 1)
-	root.Name = "Chat"
-	root.ZIndex = 20
+	root = Stage.group(parent, "Chat", 20)
 
-	-- 평소: 새 글 세 줄(비치는 바탕)
-	local qh = QUIET.lines * LINE + 3
-	quiet = Kit.group(root, r.x, BOTTOM - qh, QUIET.w, qh)
-	quiet.Name = "Quiet"
-	Kit.part(quiet, "veil", 0, 0, QUIET.w, qh).ImageTransparency = 0.15 -- 뒤의 이름표가 글에 섞여 보이지 않을 만큼 짙게
+	-- 평소: 새 글 세 줄(판 없이 — 테두리를 두른 글)
+	quiet = Stage.placeRect(root, "Quiet", r)
 	for i = 1, QUIET.lines do
-		quietLines[i] = Kit.text(quiet, "", 4, 2 + (i - 1) * LINE, QUIET.w - 8)
+		quietLines[i] = Ui.text(quiet, "", 0, (i - 1) * LINE, QUIET.w, { outline = true })
 	end
 
-	-- 쓰는 중: 지난 글 여섯 줄 + 채널 단추 + 쓰는 칸. 아래 끝을 평소 칸의 아래 끝에 맞춘다
-	local h = OPEN.lines * LINE + 6 + 16
-	panel = Kit.group(root, OPEN.x, BOTTOM - h, OPEN.w, h)
-	panel.Name = "Open"
-	Kit.part(panel, "panel", 0, 0, OPEN.w, h)
+	-- 쓰는 중: 어두운 판에 지난 글 여섯 줄 + 채널 단추 + 쓰는 칸. 아래 끝을 평소 칸의 아래 끝에 맞춘다
+	local o = Layout.chatOpen()
+	local h = o.h
+	local holder = Stage.placeRect(root, "Open", o)
+	panel = holder
+	Ui.panel(holder, 0, 0, OPEN.w, h)
 	for i = 1, OPEN.lines do
-		panelLines[i] = Kit.text(panel, "", 5, 4 + (i - 1) * LINE, OPEN.w - 10)
+		panelLines[i] = Ui.text(holder, "", OPEN.pad, OPEN.pad + (i - 1) * LINE, OPEN.w - OPEN.pad * 2)
 	end
-	local inputY = OPEN.lines * LINE + 5
-	Kit.box(panel, 3, inputY - 2, OPEN.w - 6, 1, C.edgeDim)
-	channelButton = Kit.button(panel, CHANNEL[1].name, 4, inputY, 30, 13, function()
+	local inputY = OPEN.pad + OPEN.lines * LINE + 4
+	channelButton = Ui.button(holder, CHANNEL[1].name, OPEN.pad, inputY, OPEN.channelW, function()
 		setChannel(Chat.channel % #CHANNEL + 1)
 		if box then
 			box:CaptureFocus()
 		end
-	end)
-	local field = Kit.group(panel, 36, inputY, OPEN.w - 40, 13)
-	Kit.part(field, "field", 0, 0, OPEN.w - 40, 13)
+	end, { h = FIELD })
+	local fieldW = OPEN.w - OPEN.pad * 2 - OPEN.channelW - 6
+	local field = Ui.group(holder, OPEN.pad + OPEN.channelW + 6, inputY, fieldW, FIELD, "Field")
+	Ui.part(field, "uField", 0, 0, fieldW, FIELD)
 	box = Instance.new("TextBox")
 	box.Name = "Input"
 	box.BackgroundTransparency = 1
-	box.Position = UDim2.fromOffset(3, 0)
-	box.Size = UDim2.new(1, -6, 1, 0)
+	box.Position = UDim2.fromOffset(6, 0)
+	box.Size = UDim2.new(1, -12, 1, 0)
 	box.Font = Enum.Font.SourceSans
-	box.TextSize = 10
-	box.TextColor3 = C.white
+	box.TextSize = 12
+	box.TextColor3 = C.text
 	box.PlaceholderText = "Enter로 보낸다"
-	box.PlaceholderColor3 = C.gray
+	box.PlaceholderColor3 = C.off
 	box.TextXAlignment = Enum.TextXAlignment.Left
 	box.ClearTextOnFocus = false
 	box.Text = ""

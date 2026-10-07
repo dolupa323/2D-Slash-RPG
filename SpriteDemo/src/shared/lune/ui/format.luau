@@ -47,10 +47,29 @@ function F.key(name: string): string
 	return KEYNAME[name] or name
 end
 
--- 주민과의 대화 상자의 자리(게임 화면 384x216의 도트). 늘 보이는 화면의 칸들(미니맵 · 파티원 · 보스 체력 · 버프)과
---  겹치지 않고, 서 있는 주민과 주인공을 가리지 않는 위쪽. 퀘스트 알리미의 자리에는 걸친다 — 말하는 동안 알리미는 숨는다.
---  왼쪽에 얼굴 칸이 있고 말은 textX부터 폭 textW에 lines줄까지(본문 글씨).
-F.TALK = { x = 114, y = 30, w = 266, h = 70, textX = 50, textW = 208, lines = 2 }
+-- 주민의 말풍선(화면 틀의 고운 격자의 점): 말은 본문 글씨로 폭 textW에 lines줄까지. 말풍선은 그 주민 머리 위에 뜬다(얼굴 칸 · 이름표를 따로 두지 않는다 — 산나비처럼).
+--  padX · padY = 글 둘레의 여백 · tail = 꼬리의 높이 · up = 머리 위로 띄우는 높이(게임의 도트). 값은 공방 js/lune/design/ui.js의 BUBBLE(시험 탭과 같은 값)
+F.BUBBLE = require(script.Parent.Parent.data["ui.generated"]).bubble
+
+-- 칸 위의 키 딱지에 적는 키 이름(작은 글씨): 다섯 글자까지 — 긴 이름은 줄임말로
+local CAP = { PageUp = "PgUp", PageDown = "PgDn", CapsLock = "Caps", Insert = "Ins", Delete = "Del", Escape = "Esc", NEnter = "NEnt" }
+function F.keyShort(name: string): string
+	local text = F.key(name)
+	local pad = string.match(text, "^Keypad(.+)$")
+	if pad then
+		text = "N" .. F.key(pad)
+	end
+	text = CAP[text] or text
+	local out, n = "", 0
+	for _, code in utf8.codes(text) do
+		n += 1
+		if n > 5 then
+			break
+		end
+		out ..= utf8.char(code)
+	end
+	return out
+end
 
 -- 이름표에 적는 이름. 도트 글꼴에 있는 글자(한글 · 영문 · 숫자 · 몇 가지 기호)로만 된 이름은 그대로, 다른 글자가 섞였으면 대신할 이름(로블록스 아이디)을 쓴다.
 --  길면 max글자에서 자른다.
@@ -135,6 +154,58 @@ function F.split(total: number, gap: number, needs: { number }, min: number): { 
 		widths[i] += each
 	end
 	return widths
+end
+
+-- ---------- 능력치의 설명 · 스킬 창의 글 ----------  글은 공방 js/lune/design/ui.js의 STATTIP · SKILLWORDS(data/ui.generated.luau의 statTip · skillWords)
+-- 글 속의 {이름}을 o의 값으로 채운다
+function F.fill(text: string, o): string
+	return (text:gsub("{(%w+)}", function(k)
+		local v = o[k]
+		return if v == nil then "" else tostring(v)
+	end))
+end
+
+-- 오르는 값을 적는 법: 100부터는 정수 · 10부터는 소수 한 자리 · 그 아래는 소수 두 자리
+function F.gain(v: number): string
+	if v >= 100 then
+		return tostring(math.floor(v + 0.5))
+	elseif v >= 10 then
+		return ("%.1f"):format(v)
+	end
+	return ("%.2f"):format(v)
+end
+
+-- 능력치 하나의 설명(능력치 창에서 마우스를 올렸을 때): { kind(main 주 · sub 부 · none 이 직업은 안 쓴다 · hp 체력), title(능력치 이름), tag, lines }
+--  사용자 2026-10-07: "능력치에 각각 스텟별로 마우스 올리면 호버로 스텟 효과를 보여줘야합니다. 뭔지알고 스텟을찍으라는건지"
+--  그 직업에게 무엇을 해 주는지와, 지금 레벨에서 1점에 얼마가 오르는지를 실제 숫자로 적는다(공방 js/lune/ui/paint.js의 statTip과 같은 글 — 테스트 14가 맞춰 본다)
+function F.statTip(class: string, id: string, level: number)
+	local N = require(script.Parent.Parent.config.numbers)
+	local CLASSES = require(script.Parent.Parent.data["classes.generated"])
+	local TIP = require(script.Parent.Parent.data["ui.generated"]).statTip
+	local STATS = N.data.STATS
+	local pair = STATS.classes[class]
+	local kind = if id == "hp" then "hp" elseif id == pair[1] then "main" elseif id == pair[2] then "sub" else "none"
+	local gain = N.statGain(class, level)
+	local users = {}
+	for _, c in TIP.order do
+		local q = STATS.classes[c]
+		if q[1] == id or q[2] == id then
+			table.insert(users, ("%s(%s)"):format(CLASSES.classes[c].name, if q[1] == id then TIP.marks.main else TIP.marks.sub))
+		end
+	end
+	local o = {
+		class = CLASSES.classes[class].name,
+		main = STATS.names[pair[1]],
+		ratio = STATS.mainW / STATS.subW,
+		power = F.gain(if kind == "main" then gain.main else gain.sub),
+		hp = F.gain(gain.hp),
+		users = table.concat(users, " · "),
+	}
+	local lines = {}
+	for i, text in TIP[kind].lines do
+		lines[i] = F.fill(text, o)
+	end
+	return { kind = kind, title = STATS.names[id], tag = TIP[kind].tag, lines = lines }
 end
 
 return F

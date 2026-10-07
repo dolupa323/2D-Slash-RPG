@@ -4982,6 +4982,12 @@ end
 function N.hpOf(class: string, L: number, toHp: number?): number
 	return round(N.baseHp(L) * BODY.classHp[class] * (1 + (toHp or 0) * STATS.hpPerPoint / 100))
 end
+-- 능력치 1점의 효과 — 능력치 창에서 능력치에 마우스를 올리면 보여 주는 값(공방 numbers.js의 statGain과 같은 식).
+--  main · sub = 주 · 부 능력치 1점이 전투력에 더하는 값(전투력 식의 "레벨 몫"이 능력치 효율에 곧게 비례하므로 장비와 상관없이 같다) · hp = 체력 1점이 최대 체력에 더하는 값
+function N.statGain(class: string, L: number)
+	local k = POWER.base * POWER.levelShare * POWER.grow ^ L / N.statAttack(STATS.base + N.apAt(L), STATS.base)
+	return { main = STATS.mainW * k, sub = STATS.subW * k, hp = N.baseHp(L) * BODY.classHp[class] * STATS.hpPerPoint / 100 }
+end
 function N.armorCut(armorLv: number, mobLv: number): number -- 방어구가 줄여 주는 피해 %
 	return math.max(BODY.armor.min, math.min(BODY.armor.max, BODY.armor.same + BODY.armor.per10 * (armorLv - mobLv) / 10))
 end
@@ -5018,15 +5024,16 @@ end
 MODULES['ReplicatedStorage/shared/lune/data/assets.generated'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/export_lune_game.mjs).
 -- 그림 파일 이름 → 로블록스 에셋 id. 비어 있으면 아직 올리지 않았거나 그림이 바뀐 것이다(tools/write_lune_ids.mjs).
-return { ["chars_1.png"] = "rbxassetid://84097963008814", ["sky.png"] = "rbxassetid://132220205436830", ["far.png"] = "rbxassetid://70389067240845", ["near_hunt.png"] = "rbxassetid://72094974796206", ["ground_hunt_1.png"] = "rbxassetid://103190714501161", ["ground_hunt_2.png"] = "rbxassetid://132987892634939", ["props_hunt.png"] = "rbxassetid://126214212380510", ["near_town.png"] = "rbxassetid://139877960469674", ["ground_town_1.png"] = "rbxassetid://135577427334062", ["ground_town_2.png"] = "rbxassetid://139519795725344", ["props_town.png"] = "rbxassetid://81861917495566", ["villagers.png"] = "rbxassetid://123347061749595", ["ground_r1a1_1.png"] = "rbxassetid://116973790416240", ["ui_kit.png"] = "rbxassetid://132298016070080", ["font_small_1.png"] = "rbxassetid://105450659975716", ["font_small_2.png"] = "rbxassetid://107436252829336" }
+return { ["chars_1.png"] = "rbxassetid://84097963008814", ["chars_mask_1.png"] = "rbxassetid://108469890157271", ["sky.png"] = "rbxassetid://132220205436830", ["far.png"] = "rbxassetid://70389067240845", ["near_hunt.png"] = "rbxassetid://72094974796206", ["ground_hunt_1.png"] = "rbxassetid://103190714501161", ["ground_hunt_2.png"] = "rbxassetid://132987892634939", ["props_hunt.png"] = "rbxassetid://126214212380510", ["near_town.png"] = "rbxassetid://135098639271756", ["ground_town_1.png"] = "rbxassetid://84950426329628", ["props_town.png"] = "rbxassetid://132425995252662", ["villagers.png"] = "rbxassetid://123347061749595", ["back_in_storage.png"] = "rbxassetid://136086571022108", ["back_in_store.png"] = "rbxassetid://104786944273081", ["back_in_elder.png"] = "rbxassetid://108350436672963", ["back_in_forge.png"] = "rbxassetid://74669737693063", ["back_in_shrine.png"] = "rbxassetid://113277212188271", ["ground_r1a1_1.png"] = "rbxassetid://116973790416240", ["ui_kit.png"] = "rbxassetid://97618504097758", ["font_small_1.png"] = "rbxassetid://105450659975716", ["font_small_2.png"] = "rbxassetid://107436252829336", ["font_small_o_1.png"] = "rbxassetid://97414893618224", ["font_small_o_2.png"] = "rbxassetid://103679168006398", ["font_body_o_1.png"] = "rbxassetid://111645782980424", ["font_body_o_2.png"] = "rbxassetid://83949705319808", ["font_body_o_3.png"] = "rbxassetid://122937040402111" }
 
 end
 MODULES['ReplicatedStorage/shared/lune/data/chars.generated'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/export_lune_game.mjs).
--- 캐릭터와 졸개의 동작. 장 하나 = { 판 번호, x, y, w, h, dx, dy } — 판(pages)에서 x · y · w · h를 잘라, 칸(fw x fh)의 (dx, dy)에 놓는다.
+-- 캐릭터와 졸개의 동작. 장 하나 = { 판 번호, x, y, w, h, dx, dy } — 판(pages)에서 x · y · w · h를 잘라, 칸(fw x fh)의 (dx, dy)에 놓는다. masks = 같은 자리의 흰 실루엣 판(색을 입혀 잔상을 그린다).
 -- 칸의 (ox, oy)가 발 가운데다. 그림은 오른쪽을 본다 — 왼쪽을 볼 때는 뒤집는다. 빈 장은 false.
 return {
 	pages = { "chars_1.png" },
+	masks = { "chars_mask_1.png" },
 	chars = {
 		axion = {
 			name = "리틀 액시온",
@@ -6384,7 +6391,7 @@ return {
 end
 MODULES['ReplicatedStorage/shared/lune/data/classes.generated'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/export_lune_game.mjs).
--- 직업 다섯(= 다섯 영웅의 계승자). 이름 · 무기 · 달의 얼굴 · 싸우는 법과 1차 스킬 목록 — dino-workshop/js/lune/design/jobs.js · story.js에서.
+-- 직업 다섯(= 다섯 영웅의 계승자). 이름 · 무기 · 달의 얼굴 · 싸우는 법과 1차 스킬 목록(skills) · 차수마다의 스킬(tiers — 스킬 창의 탭) · types = 스킬 갈래의 이름 — dino-workshop/js/lune/design/jobs.js · story.js에서.
 -- skillRule = 스킬 레벨의 효과(레벨 1에서 floor, 마스터에서 1배) · 처음부터 주는 기술의 갈래. scaleCheck = 공방의 식으로 셈한 값(게임의 식과 맞춰 본다).
 return {
 	order = { "riven", "mooni", "axion", "reaper", "salamander" },
@@ -6404,6 +6411,65 @@ return {
 				{ id = "ax_grit", name = "묵직한 몸", ["type"] = "passive", max = 10, text = "최대 체력 +. 도끼를 휘두르는 동안 밀리지 않을 확률 +." },
 				{ id = "ax_echo", name = "메아리 도끼", ["type"] = "toggle", max = 10, text = "켜 두면 도끼질 세 번째 타마다 달빛 도끼가 위에서 한 번 더 내려친다." },
 			},
+			tiers = {
+				{
+					job = 1,
+					lv = 1,
+					skills = {
+						{ id = "ax_slam", name = "대지 강타", ["type"] = "mob", max = 20, text = "도끼로 땅을 내려찍는다. 찍은 자리에서 양옆으로 수정 가시가 번지며 띄운다. 모을 수 있다." },
+						{ id = "ax_combo", name = "삼단 베기", ["type"] = "boss", max = 20, text = "F를 이어 누르면 3단으로 벤다. 셋째 타는 올려 쳐서 띄운다." },
+						{ id = "ax_dash", name = "돌진", ["type"] = "move", max = 5, text = "무겁게 밀고 나가는 긴 대쉬 — 느리지만 멀리 간다. 이동만 한다." },
+						{ id = "ax_charge", name = "힘 모으기", ["type"] = "core", max = 10, text = "강타 기술(대지 강타, 삼단 베기 셋째 타)의 키를 누르고 있으면 힘이 모인다 — 2단계까지. 모으는 동안 밀리지 않는다." },
+						{ id = "ax_grit", name = "묵직한 몸", ["type"] = "passive", max = 10, text = "최대 체력 +. 도끼를 휘두르는 동안 밀리지 않을 확률 +." },
+						{ id = "ax_echo", name = "메아리 도끼", ["type"] = "toggle", max = 10, text = "켜 두면 도끼질 세 번째 타마다 달빛 도끼가 위에서 한 번 더 내려친다." },
+					},
+				},
+				{
+					job = 2,
+					lv = 30,
+					skills = {
+						{ id = "ax_crescent", name = "초승달 가르기", ["type"] = "mob", max = 20, text = "초승달 칼날을 날린다 — 꿰뚫고 지나간다. 끝까지 모으면 셋으로 갈라져 위 · 앞 · 아래로 나간다.", replaces = "ax_slam" },
+						{ id = "ax_rend", name = "쪼개기", ["type"] = "boss", max = 20, text = "한 적을 위에서 아래로 두 번 쪼갠다. 맞은 적은 5초 동안 \"갈라짐\" — 받는 피해 +.", replaces = "ax_combo" },
+						{ id = "ax_echo2", name = "겹 메아리", ["type"] = "passive", max = 10, text = "메아리 도끼가 둘씩 떨어진다." },
+						{ id = "ax_breath", name = "전투 호흡", ["type"] = "buff", max = 10, text = "60초 동안 공격 속도가 한 단계 빨라진다. 끝나기 전에 다시 건다." },
+						{ id = "ax_mastery", name = "도끼 숙련", ["type"] = "passive", max = 10, text = "숙련도 50%, 공격력 +. 뜬 적 · 넘어진 적에게 피해 +." },
+						{ id = "ax_shock", name = "충격파", ["type"] = "passive", max = 10, text = "끝까지 모아 친 강타는 땅을 따라 충격파가 한 번 더 나간다." },
+						{ id = "ax_stance", name = "굳센 자세", ["type"] = "passive", max = 10, text = "받는 피해 -. 힘을 모으거나 강타 기술을 쓰는 동안에는 더 줄어들고 밀리지 않는다." },
+					},
+				},
+				{
+					job = 3,
+					lv = 60,
+					skills = {
+						{ id = "ax_whirl", name = "몰아치기", ["type"] = "mob", max = 20, text = "누르고 있는 동안 도끼를 좌우로 계속 휘두르며 걷는다. 떼는 순간 내려찍어 마무리한다(휘두른 시간만큼 세다).", replaces = "ax_crescent" },
+						{ id = "ax_leap", name = "도약 강타", ["type"] = "boss", max = 20, text = "뛰어올라 한 점으로 떨어지며 찍는다. 공중에서도 쓸 수 있고, 높이 떨어질수록 세다.", replaces = "ax_rend" },
+						{ id = "ax_pulse", name = "달빛 파동", ["type"] = "attack", max = 15, text = "도끼로 땅을 내려쳐 달빛 파동을 사방으로 퍼뜨린다. 화면에 보이는 대부분 — 위층 · 아래층의 적까지 한 번에 닿고, 피해는 약하다(사냥용). 다시 쓰기 8초." },
+						{ id = "ax_roar", name = "달의 함성", ["type"] = "party", max = 10, text = "60초 동안 나와 가까운 파티원의 공격력 +. 끝나기 전에 다시 건다." },
+						{ id = "ax_brace", name = "버티기", ["type"] = "guard", max = 5, text = "3초 동안 어떤 공격에도 피해를 받지 않고 밀리지 않는다. 다시 쓰기 120초." },
+						{ id = "ax_charge2", name = "깊은 호흡", ["type"] = "passive", max = 10, text = "힘 모으기가 3단계까지. 모으면서 걸을 수 있고, 모으는 동안 받은 피해의 일부가 힘으로 바뀐다." },
+						{ id = "ax_echo3", name = "울리는 메아리", ["type"] = "passive", max = 10, text = "달빛 도끼가 떨어진 자리에 작은 충격파가 번진다." },
+						{ id = "ax_weight", name = "무게 싣기", ["type"] = "passive", max = 10, text = "힘을 모은 단계마다 적의 방어를 더 무시한다. 체력이 많이 남은 적에게 피해 +." },
+					},
+				},
+				{
+					job = 4,
+					lv = 100,
+					skills = {
+						{ id = "ax_moonfall", name = "달 가르기", ["type"] = "mob", max = 30, text = "거대한 초승달 도끼질 한 번 — 앞 넓은 범위를 통째로 벤다.", replaces = "ax_whirl" },
+						{ id = "ax_execute", name = "처단", ["type"] = "boss", max = 30, text = "누를 때마다 무겁게 내려찍는다. 칠 때마다 적 둘레를 도는 빛 조각이 하나씩 늘고, 다섯이 차면 모여서 터진다.", replaces = "ax_leap" },
+						{ id = "ax_echo4", name = "달 그림자 도끼", ["type"] = "passive", max = 10, text = "메아리 도끼가 두 번째 타마다 떨어지고, 더 크고 세다." },
+						{ id = "ax_fullmoon", name = "만월", ["type"] = "burst", max = 20, text = "30초 동안 모든 강타가 모으지 않아도 최대 단계로 나가고 최종 피해 +. 다시 쓰기 120초." },
+						{ id = "ax_titan", name = "거신", ["type"] = "burst", max = 15, text = "20초 동안 몸이 두 배로 커진다 — 모든 도끼질의 범위 +, 밀리지 않는다. 다시 쓰기 120초." },
+						{ id = "ax_pillars", name = "달빛 기둥", ["type"] = "nuke", max = 20, text = "내려찍으면 앞으로 빛기둥 여섯이 차례로 솟는다. 다시 쓰기 60초." },
+						{ id = "ax_quake", name = "지진", ["type"] = "attack", max = 15, text = "땅을 울려 앞 넓은 범위의 보통 적을 1.5초 넘어뜨린다(우두머리는 넘어지지 않는다). 다시 쓰기 15초." },
+						{ id = "ax_expert", name = "도끼 달인", ["type"] = "passive", max = 10, text = "숙련도 70%, 공격력 +, 치명타 피해 +." },
+						{ id = "ax_crush", name = "분쇄", ["type"] = "passive", max = 10, text = "최종 피해 +, 방어 무시 +. 초승달 가르기 · 몰아치기의 피해가 크게 오른다(옛 사냥기를 계속 쓴다)." },
+						{ id = "ax_charge3", name = "넘치는 힘", ["type"] = "passive", max = 10, text = "끝까지 모은 강타를 맞히면 3초 동안 다음 강타가 2단계에서 시작한다." },
+						{ id = "c_hero", name = "달의 용사", ["type"] = "party", max = 10, text = "60초 동안 파티 모두의 기본 능력치 +15%. 끝나기 전에 다시 건다." },
+						{ id = "c_will", name = "용사의 의지", ["type"] = "guard", max = 5, text = "걸려 있는 상태 이상을 모두 풀고 3초 동안 걸리지 않는다. 다시 쓰기 300초." },
+					},
+				},
+			},
 		},
 		riven = {
 			name = "리틀 리븐",
@@ -6419,6 +6485,65 @@ return {
 				{ id = "rv_mark", name = "표식", ["type"] = "core", max = 10, text = "베기에 맞은 적에게 표식 1(8초). 표식이 있는 적에게 치명타 확률 +." },
 				{ id = "rv_nimble", name = "날랜 몸", ["type"] = "passive", max = 10, text = "걸음 · 뛰는 높이 +, 회피 +." },
 				{ id = "rv_star", name = "그림자 표창", ["type"] = "toggle", max = 10, text = "켜 두면 베기가 맞을 때 40% 확률로 그림자 표창이 가까운 적에게 날아가 표식을 남긴다." },
+			},
+			tiers = {
+				{
+					job = 1,
+					lv = 1,
+					skills = {
+						{ id = "rv_fan", name = "칼날 부채", ["type"] = "mob", max = 20, text = "앞으로 칼바람 세 갈래를 부채꼴로 날린다." },
+						{ id = "rv_double", name = "이중 베기", ["type"] = "boss", max = 20, text = "제자리에서 두 번 베며 표식을 남긴다." },
+						{ id = "rv_dash", name = "순보", ["type"] = "move", max = 5, text = "가장 빠르고 짧은 대쉬 — 눈 깜짝할 새 한 걸음, 연달아 쓰기 좋다. 이동만 한다." },
+						{ id = "rv_mark", name = "표식", ["type"] = "core", max = 10, text = "베기에 맞은 적에게 표식 1(8초). 표식이 있는 적에게 치명타 확률 +." },
+						{ id = "rv_nimble", name = "날랜 몸", ["type"] = "passive", max = 10, text = "걸음 · 뛰는 높이 +, 회피 +." },
+						{ id = "rv_star", name = "그림자 표창", ["type"] = "toggle", max = 10, text = "켜 두면 베기가 맞을 때 40% 확률로 그림자 표창이 가까운 적에게 날아가 표식을 남긴다." },
+					},
+				},
+				{
+					job = 2,
+					lv = 30,
+					skills = {
+						{ id = "rv_gale", name = "질풍 일섬", ["type"] = "mob", max = 20, text = "앞으로 꿰뚫고 지나가며 길 위의 적을 모두 벤다. 두 번까지 이어 쓸 수 있고 공중에서도 된다.", replaces = "rv_fan" },
+						{ id = "rv_cross", name = "교차 베기", ["type"] = "boss", max = 20, text = "제자리에서 적 하나를 X자로 긋는다. 등 뒤에서 치면 피해 +.", replaces = "rv_double" },
+						{ id = "rv_step", name = "연막 순보", ["type"] = "attack", max = 10, text = "연기 속으로 사라졌다가 가까운 적 뒤에 나타나 벤다. 화면의 표식을 모두 터뜨린다. 다시 쓰기 3초." },
+						{ id = "rv_star2", name = "쌍표창", ["type"] = "passive", max = 10, text = "그림자 표창이 둘씩 날아간다." },
+						{ id = "rv_quick", name = "가벼운 손", ["type"] = "buff", max = 10, text = "60초 동안 공격 속도가 한 단계 빨라진다. 끝나기 전에 다시 건다." },
+						{ id = "rv_mastery", name = "쌍날 숙련", ["type"] = "passive", max = 10, text = "숙련도 50%, 공격력 +, 치명타 확률 +." },
+						{ id = "rv_back", name = "급소", ["type"] = "passive", max = 10, text = "표식이 있는 적을 등 뒤에서 치면 표식이 하나 더 남고 치명타 피해 +." },
+					},
+				},
+				{
+					job = 3,
+					lv = 60,
+					skills = {
+						{ id = "rv_chain", name = "연쇄 순보", ["type"] = "mob", max = 20, text = "가까운 적들 사이를 차례로 순간이동하며 한 번씩 벤다(다섯까지). 표식이 있는 적부터 고른다.", replaces = "rv_gale" },
+						{ id = "rv_flurry", name = "난도질", ["type"] = "boss", max = 20, text = "누르고 있는 동안 제자리에서 아주 빠르게 벤다(1초에 8번). 네 번마다 표식 1.", replaces = "rv_cross" },
+						{ id = "rv_clone", name = "그림자 분신", ["type"] = "buff", max = 15, text = "60초 동안 분신이 뒤따르며 내 베기를 반 박자 늦게 따라 한다(피해 40%). 분신의 베기도 표식을 남긴다." },
+						{ id = "rv_smoke", name = "연막탄", ["type"] = "install", max = 10, text = "8초 동안 연막을 깐다. 연막 안의 나는 적 눈에 띄지 않고 치명타 피해 +. 다시 쓰기 30초." },
+						{ id = "rv_slip", name = "그림자 숨기", ["type"] = "guard", max = 5, text = "3초 동안 그림자가 되어 모든 공격이 나를 지나간다. 다시 쓰기 120초." },
+						{ id = "rv_mark2", name = "깊은 표식", ["type"] = "passive", max = 10, text = "표식이 3까지 겹친다. 터질 때 표식 수만큼 세다." },
+						{ id = "rv_venom", name = "스미는 독", ["type"] = "passive", max = 10, text = "표식이 있는 적은 초마다 독 피해를 받는다. 표식 수만큼 세다." },
+						{ id = "rv_star3", name = "되돌아오는 표창", ["type"] = "passive", max = 10, text = "표창이 적을 맞힌 뒤 가까운 다른 적에게 한 번 튕긴다." },
+					},
+				},
+				{
+					job = 4,
+					lv = 100,
+					skills = {
+						{ id = "rv_phantom", name = "무영참", ["type"] = "mob", max = 30, text = "누르는 순간 앞 넓은 범위에 보이지 않는 칼질 여섯 번이 한꺼번에 그어진다. 쓰고 바로 움직일 수 있다.", replaces = "rv_chain" },
+						{ id = "rv_kill", name = "암살", ["type"] = "boss", max = 30, text = "누르면 여섯 번 찌르고, 한 번 더 누르면 마무리 일격. 표식이 가득한 적에게는 마무리가 훨씬 세다.", replaces = "rv_flurry" },
+						{ id = "rv_star4", name = "피의 표창", ["type"] = "passive", max = 10, text = "표창이 날아갈 확률 70%. 표식이 가득한 적에게 닿으면 터지며 피해 +." },
+						{ id = "rv_eclipse", name = "월식", ["type"] = "burst", max = 20, text = "20초 동안 화면이 어두워지고 모든 베기가 표식 2, 최종 피해 +. 다시 쓰기 120초." },
+						{ id = "rv_shadow", name = "그림자 난무", ["type"] = "nuke", max = 20, text = "모습을 감추고 화면을 다섯 번 긋고 X자로 마무리한다. 표식을 모두 터뜨린다. 다시 쓰기 60초." },
+						{ id = "rv_execute", name = "종결", ["type"] = "attack", max = 15, text = "표식이 가득한 적 하나에게 순간이동해 표식을 모두 태우는 큰 한 방. 다시 쓰기 20초 — 그 적이 쓰러지면 바로 다시 쓴다." },
+						{ id = "rv_clone2", name = "쌍영", ["type"] = "passive", max = 10, text = "분신이 둘. 연막 순보 · 종결 때 분신도 같이 순간이동해 벤다." },
+						{ id = "rv_expert", name = "쌍날 달인", ["type"] = "passive", max = 10, text = "숙련도 70%, 공격력 +, 치명타 피해 +." },
+						{ id = "rv_intent", name = "살의", ["type"] = "passive", max = 10, text = "최종 피해 +, 방어 무시 +. 질풍 일섬 · 연쇄 순보의 피해가 크게 오른다(옛 사냥기를 계속 쓴다)." },
+						{ id = "rv_feint", name = "흘리기", ["type"] = "passive", max = 10, text = "회피 +. 공격을 피하면 다음 베기가 반드시 치명타이고 표식을 하나 더 남긴다." },
+						{ id = "c_hero", name = "달의 용사", ["type"] = "party", max = 10, text = "60초 동안 파티 모두의 기본 능력치 +15%. 끝나기 전에 다시 건다." },
+						{ id = "c_will", name = "용사의 의지", ["type"] = "guard", max = 5, text = "걸려 있는 상태 이상을 모두 풀고 3초 동안 걸리지 않는다. 다시 쓰기 300초." },
+					},
+				},
 			},
 		},
 		reaper = {
@@ -6436,6 +6561,65 @@ return {
 				{ id = "rp_drain", name = "생기 흡수", ["type"] = "passive", max = 10, text = "낫 기술이 맞을 때마다 체력을 조금 되찾는다." },
 				{ id = "rp_wisp", name = "도깨비불", ["type"] = "toggle", max = 10, text = "켜 두면 낫질이 맞을 때 영혼 구슬이 도깨비불이 되어 가까운 적에게 날아가 친다(2초에 한 번)." },
 			},
+			tiers = {
+				{
+					job = 1,
+					lv = 1,
+					skills = {
+						{ id = "rp_double", name = "이중 낫질", ["type"] = "mob", max = 20, text = "낫을 두 번 크게 휘두른다. 둘째 타가 멀리 민다." },
+						{ id = "rp_hook", name = "낫 걸기", ["type"] = "boss", max = 20, text = "낫 끝으로 적 하나를 찍어 당기며 두 번 벤다." },
+						{ id = "rp_dash", name = "그림자 걸음", ["type"] = "move", max = 5, text = "그림자 속을 미끄러지는 가장 긴 대쉬 — 빠르기는 중간. 이동만 한다." },
+						{ id = "rp_soul", name = "영혼", ["type"] = "core", max = 10, text = "적을 쓰러뜨리면 영혼 1(다섯까지). 영혼 하나마다 공격력 +. 30초 지나면 하나씩 흩어진다." },
+						{ id = "rp_drain", name = "생기 흡수", ["type"] = "passive", max = 10, text = "낫 기술이 맞을 때마다 체력을 조금 되찾는다." },
+						{ id = "rp_wisp", name = "도깨비불", ["type"] = "toggle", max = 10, text = "켜 두면 낫질이 맞을 때 영혼 구슬이 도깨비불이 되어 가까운 적에게 날아가 친다(2초에 한 번)." },
+					},
+				},
+				{
+					job = 2,
+					lv = 30,
+					skills = {
+						{ id = "rp_throw", name = "회전 낫", ["type"] = "mob", max = 20, text = "낫을 던진다 — 돌며 날아갔다가 되돌아오면서 가는 길 · 오는 길 두 번 벤다.", replaces = "rp_double" },
+						{ id = "rp_ambush", name = "급습", ["type"] = "boss", max = 20, text = "땅으로 꺼졌다가 가까운 적 머리 위에서 내리찍는다.", replaces = "rp_hook" },
+						{ id = "rp_reap", name = "영혼 수확", ["type"] = "attack", max = 10, text = "앞쪽의 적을 끌어당긴 뒤 크게 벤다. 맞힌 적이 있으면 영혼 1. 다시 쓰기 4초." },
+						{ id = "rp_wisp2", name = "떼도깨비불", ["type"] = "passive", max = 10, text = "영혼이 많을수록 도깨비불이 여러 발 날아간다(넷까지)." },
+						{ id = "rp_chill", name = "서늘한 손", ["type"] = "buff", max = 10, text = "60초 동안 공격 속도가 한 단계 빨라진다. 끝나기 전에 다시 건다." },
+						{ id = "rp_mastery", name = "낫 숙련", ["type"] = "passive", max = 10, text = "숙련도 50%, 공격력 +, 낫 기술의 범위 +." },
+						{ id = "rp_pact", name = "피의 계약", ["type"] = "passive", max = 10, text = "체력이 줄어 있을수록 공격력이 오른다." },
+					},
+				},
+				{
+					job = 3,
+					lv = 60,
+					skills = {
+						{ id = "rp_drag", name = "망령 돌진", ["type"] = "mob", max = 20, text = "낫을 끌며 내달린다 — 지나는 길의 적을 모두 걸어서 끌고 가 끝에서 올려 벤다.", replaces = "rp_throw" },
+						{ id = "rp_judge", name = "단죄", ["type"] = "boss", max = 20, text = "적 하나의 머리 위로 사신의 낫이 연달아 세 번 떨어진다. 화면 안이면 어디든 닿는다.", replaces = "rp_ambush" },
+						{ id = "rp_ghost", name = "망령 소환", ["type"] = "summon", max = 15, text = "영혼 3을 태워 망령 하나를 60초 부린다. 가까운 적을 낫으로 벤다." },
+						{ id = "rp_ward", name = "죽음의 가호", ["type"] = "party", max = 10, text = "60초 동안 파티원 모두가 쓰러질 피해를 한 번 버틴다. 끝나기 전에 다시 건다." },
+						{ id = "rp_fade", name = "저승 걸음", ["type"] = "guard", max = 5, text = "3초 동안 유령이 되어 모든 피해를 받지 않는다. 다시 쓰기 120초." },
+						{ id = "rp_soul2", name = "영혼 주머니", ["type"] = "passive", max = 10, text = "영혼을 여덟까지 모은다. 다섯 이상이면 낫 기술의 범위 +." },
+						{ id = "rp_drain2", name = "깊은 흡수", ["type"] = "passive", max = 10, text = "되찾는 체력 +. 영혼이 가득하면 두 배." },
+						{ id = "rp_wisp3", name = "붙는 불", ["type"] = "passive", max = 10, text = "도깨비불이 맞은 적에게 3초 동안 붙어 계속 태운다." },
+					},
+				},
+				{
+					job = 4,
+					lv = 100,
+					skills = {
+						{ id = "rp_harvest", name = "대수확", ["type"] = "mob", max = 30, text = "화면 절반을 가로지르는 큰 낫질 한 번. 맞은 적마다 영혼 1(셋까지).", replaces = "rp_drag" },
+						{ id = "rp_behead", name = "참수", ["type"] = "boss", max = 30, text = "낫을 수직으로 세 번 내리긋는다. 영혼이 있으면 타마다 하나씩 태워 그림자 낫이 한 번 더 따라 벤다.", replaces = "rp_judge" },
+						{ id = "rp_wisp4", name = "원혼", ["type"] = "passive", max = 10, text = "도깨비불이 1초에 한 번 날아가고 피해 +." },
+						{ id = "rp_form", name = "사신화", ["type"] = "burst", max = 15, text = "30초 동안 사신의 그림자를 두른다 — 모든 낫질에 그림자 낫이 따라 베고 영혼이 줄지 않는다. 다시 쓰기 120초." },
+						{ id = "rp_advent", name = "사신 강림", ["type"] = "nuke", max = 20, text = "사신의 그림자가 일어나 화면을 쓸어 벤다. 가진 영혼을 모두 태우고 그만큼 세다. 다시 쓰기 60초." },
+						{ id = "rp_chains", name = "저승 사슬", ["type"] = "bind", max = 15, text = "저승의 기운이 사슬처럼 휘감아 앞의 적을 10초 동안 꼼짝 못 하게 묶는다(우두머리도 묶인다). 다시 쓰기 120초." },
+						{ id = "rp_gate", name = "저승문", ["type"] = "install", max = 15, text = "10초 동안 저승문을 연다. 둘레의 적을 계속 끌어당기고, 문 곁에서 쓰러진 적은 영혼 2. 다시 쓰기 60초." },
+						{ id = "rp_expert", name = "낫 달인", ["type"] = "passive", max = 10, text = "숙련도 70%, 공격력 +, 치명타 피해 +." },
+						{ id = "rp_ghost2", name = "망령 군단", ["type"] = "passive", max = 10, text = "망령을 셋까지 부린다. 망령이 쓰러뜨려도 영혼을 얻는다." },
+						{ id = "rp_touch", name = "죽음의 손길", ["type"] = "passive", max = 10, text = "최종 피해 +, 방어 무시 +, 체력이 30% 아래인 적에게 피해 +. 회전 낫 · 망령 돌진의 피해가 크게 오른다." },
+						{ id = "c_hero", name = "달의 용사", ["type"] = "party", max = 10, text = "60초 동안 파티 모두의 기본 능력치 +15%. 끝나기 전에 다시 건다." },
+						{ id = "c_will", name = "용사의 의지", ["type"] = "guard", max = 5, text = "걸려 있는 상태 이상을 모두 풀고 3초 동안 걸리지 않는다. 다시 쓰기 300초." },
+					},
+				},
+			},
 		},
 		mooni = {
 			name = "리틀 무니",
@@ -6452,6 +6636,65 @@ return {
 				{ id = "mn_oath", name = "지키는 마음", ["type"] = "passive", max = 10, text = "받는 피해 -. 수정 곁에서는 더 줄어든다." },
 				{ id = "mn_shard", name = "수정 조각", ["type"] = "toggle", max = 10, text = "켜 두면 대검이 맞을 때 수정마다 조각이 하나씩 날아가 친다(1.5초에 한 번). 수정이 없으면 대검에서 한 조각." },
 			},
+			tiers = {
+				{
+					job = 1,
+					lv = 1,
+					skills = {
+						{ id = "mn_spin", name = "회전 베기", ["type"] = "mob", max = 20, text = "대검을 한 번 크게 돌려 양옆을 벤다. 천천히 걸으면서 쓸 수 있고 공중에서도 된다." },
+						{ id = "mn_thrust", name = "달빛 찌르기", ["type"] = "boss", max = 20, text = "대검으로 한 번 깊게 찌른다. 기본기 가운데 가장 멀리 닿는다." },
+						{ id = "mn_dash", name = "달빛 걸음", ["type"] = "move", max = 5, text = "갑옷과 대검이 무거워 가장 느리고 짧은 대쉬 — 한 걸음 미끄러진다. 이동만 한다." },
+						{ id = "mn_reson", name = "수정 공명", ["type"] = "core", max = 10, text = "대검 기술이 맞으면 일정 확률로 그 자리에 달 수정이 맺힌다(20초, 둘까지). 수정 가까이에서 쓴 대검 기술은 수정에서도 같이 나간다." },
+						{ id = "mn_oath", name = "지키는 마음", ["type"] = "passive", max = 10, text = "받는 피해 -. 수정 곁에서는 더 줄어든다." },
+						{ id = "mn_shard", name = "수정 조각", ["type"] = "toggle", max = 10, text = "켜 두면 대검이 맞을 때 수정마다 조각이 하나씩 날아가 친다(1.5초에 한 번). 수정이 없으면 대검에서 한 조각." },
+					},
+				},
+				{
+					job = 2,
+					lv = 30,
+					skills = {
+						{ id = "mn_wave", name = "달빛 파도", ["type"] = "mob", max = 20, text = "대검을 크게 휘둘러 달빛 파도가 땅을 타고 나간다. 수정을 지나면 파도가 한 번 더 인다.", replaces = "mn_spin" },
+						{ id = "mn_smash", name = "내려찍기", ["type"] = "boss", max = 20, text = "뛰어올라 대검으로 내려찍는다. 찍은 자리에서 앞으로 수정 가시가 솟는다.", replaces = "mn_thrust" },
+						{ id = "mn_plant", name = "수정 심기", ["type"] = "install", max = 10, text = "대검을 박아 발밑에 달 수정을 바로 심는다(20초). 다시 쓰기 6초." },
+						{ id = "mn_shard2", name = "쌍조각", ["type"] = "passive", max = 10, text = "수정마다 조각이 둘씩 날아간다." },
+						{ id = "mn_tide", name = "달의 숨결", ["type"] = "buff", max = 10, text = "60초 동안 공격 속도가 한 단계 빨라진다. 끝나기 전에 다시 건다." },
+						{ id = "mn_heal", name = "달빛 치유", ["type"] = "heal", max = 10, text = "나와 가까운 파티원의 체력을 되돌린다. 수정이 있으면 수정 둘레에서도 치유가 인다. 다시 쓰기 8초." },
+						{ id = "mn_mastery", name = "대검 숙련", ["type"] = "passive", max = 10, text = "숙련도 50%, 공격력 +. 대검 끝(먼 거리)에 맞으면 피해 +." },
+					},
+				},
+				{
+					job = 3,
+					lv = 60,
+					skills = {
+						{ id = "mn_burst", name = "공명 폭발", ["type"] = "mob", max = 20, text = "맺혀 있는 수정이 모두 터지며 넓게 친다. 수정은 사라지지 않고 금이 간 채 남는다(금 간 수정은 한 번 더 터지면 사라진다).", replaces = "mn_wave" },
+						{ id = "mn_ray", name = "월광선", ["type"] = "boss", max = 20, text = "대검을 한 번 내지르면 굵은 달빛 줄기가 뻗는다. 수정에 닿으면 꺾여 다음 수정으로 이어지고, 줄기를 지나는 적을 세 번 태운다.", replaces = "mn_smash" },
+						{ id = "mn_guard", name = "수정 수호령", ["type"] = "summon", max = 15, text = "수정 하나를 수호령으로 깨운다(하나만 둘 수 있다 — 다시 쓰면 새로 깨운다). 60초 동안 따라다니며 3초마다 가장 다친 아군을 치유하거나 적에게 빛을 쏜다." },
+						{ id = "mn_bless", name = "달의 축복", ["type"] = "party", max = 10, text = "60초 동안 파티 모두의 방어 · 상태 이상 저항 +. 끝나기 전에 다시 건다." },
+						{ id = "mn_wall", name = "수정 방벽", ["type"] = "guard", max = 5, text = "8초 동안 원 안의 파티원이 받는 피해 일부를 내가 대신 받고, 그만큼 나에게 보호막이 생긴다. 다시 쓰기 120초." },
+						{ id = "mn_grove", name = "수정 군락", ["type"] = "passive", max = 10, text = "수정이 넷까지 맺힌다. 지속 시간 +." },
+						{ id = "mn_shard3", name = "꿰뚫는 조각", ["type"] = "passive", max = 10, text = "조각이 적을 꿰뚫고 지나가며 길 위의 적을 모두 친다." },
+						{ id = "mn_edge", name = "달빛 칼날", ["type"] = "passive", max = 10, text = "대검 기술 다섯 번째 타마다 달빛이 한 번 더 넓게 번진다." },
+					},
+				},
+				{
+					job = 4,
+					lv = 100,
+					skills = {
+						{ id = "mn_arc", name = "만월 베기", ["type"] = "mob", max = 30, text = "화면 끝까지 닿는 굵은 달빛 줄기 한 방. 지나간 자리의 수정이 모두 공명해 작은 수정 산이 솟는다.", replaces = "mn_burst" },
+						{ id = "mn_divide", name = "월광 대참", ["type"] = "boss", max = 30, text = "대검을 머리 위로 들어 한 번 크게 내려벤다. 이어 누르면 크게 휩쓰는 둘째 타. 느리지만 한 대가 가장 무겁고, 수정 가까이에서는 수정에서도 검기가 나간다.", replaces = "mn_ray" },
+						{ id = "mn_shard4", name = "수정 검", ["type"] = "passive", max = 10, text = "조각이 검 모양으로 커지고 1초에 한 번 날아가며 피해 +." },
+						{ id = "mn_sanct", name = "달의 성역", ["type"] = "burst", max = 20, text = "20초 동안 큰 달빛 원을 편다 — 안의 파티원 최종 피해 +, 계속 회복, 받는 피해 -. 다시 쓰기 120초." },
+						{ id = "mn_range", name = "수정 산맥", ["type"] = "nuke", max = 20, text = "빛기둥과 함께 양옆으로 수정 산맥이 솟는다. 다시 쓰기 60초." },
+						{ id = "mn_prison", name = "수정 감옥", ["type"] = "bind", max = 15, text = "앞의 적을 수정 속에 가둬 10초 동안 꼼짝 못 하게 한다(우두머리도 묶인다). 다시 쓰기 120초." },
+						{ id = "mn_revive", name = "소생", ["type"] = "heal", max = 5, text = "쓰러진 파티원을 되살린다. 다시 쓰기 300초." },
+						{ id = "mn_expert", name = "대검 달인", ["type"] = "passive", max = 10, text = "숙련도 70%, 공격력 +, 치명타 피해 +." },
+						{ id = "mn_guard2", name = "수호령 각성", ["type"] = "passive", max = 10, text = "수호령이 둘. 수호령도 수정처럼 공명의 기준점이 된다." },
+						{ id = "mn_astral", name = "별빛 가호", ["type"] = "passive", max = 10, text = "최종 피해 +, 방어 무시 +. 달빛 파도 · 공명 폭발의 피해가 크게 오르고, 아군을 치유할 때마다 내 공격력이 잠깐 오른다." },
+						{ id = "c_hero", name = "달의 용사", ["type"] = "party", max = 10, text = "60초 동안 파티 모두의 기본 능력치 +15%. 끝나기 전에 다시 건다." },
+						{ id = "c_will", name = "용사의 의지", ["type"] = "guard", max = 5, text = "걸려 있는 상태 이상을 모두 풀고 3초 동안 걸리지 않는다. 다시 쓰기 300초." },
+					},
+				},
+			},
 		},
 		salamander = {
 			name = "살라맨더",
@@ -6467,6 +6710,65 @@ return {
 				{ id = "sl_heat", name = "열기", ["type"] = "core", max = 10, text = "주먹이 맞으면 열기 +, 3초 동안 못 맞히면 식는다. 50 이상이면 달아오름 — 주먹 기술에 불꽃이 한 번 더 터진다." },
 				{ id = "sl_blood", name = "뜨거운 피", ["type"] = "passive", max = 10, text = "체력이 조금씩 찬다. 달아오름 동안 걸음 +." },
 				{ id = "sl_ember", name = "불티", ["type"] = "toggle", max = 10, text = "켜 두면 주먹이 맞을 때마다 불티가 튀어 가까운 적에게 날아간다." },
+			},
+			tiers = {
+				{
+					job = 1,
+					lv = 1,
+					skills = {
+						{ id = "sl_beam", name = "화염 광선", ["type"] = "mob", max = 20, text = "주먹 높이로 긴 광선을 쏴 한 줄의 적을 모두 꿰뚫는다." },
+						{ id = "sl_punch", name = "불주먹 연타", ["type"] = "boss", max = 20, text = "주먹 두 방. 둘째가 멀리 민다. 맞힐 때마다 열기 +." },
+						{ id = "sl_roll", name = "불꽃 구르기", ["type"] = "move", max = 5, text = "폭발하듯 튀어 나가는 빠른 대쉬 — 거리는 중간. 이동만 한다." },
+						{ id = "sl_heat", name = "열기", ["type"] = "core", max = 10, text = "주먹이 맞으면 열기 +, 3초 동안 못 맞히면 식는다. 50 이상이면 달아오름 — 주먹 기술에 불꽃이 한 번 더 터진다." },
+						{ id = "sl_blood", name = "뜨거운 피", ["type"] = "passive", max = 10, text = "체력이 조금씩 찬다. 달아오름 동안 걸음 +." },
+						{ id = "sl_ember", name = "불티", ["type"] = "toggle", max = 10, text = "켜 두면 주먹이 맞을 때마다 불티가 튀어 가까운 적에게 날아간다." },
+					},
+				},
+				{
+					job = 2,
+					lv = 30,
+					skills = {
+						{ id = "sl_slam", name = "화염 강타", ["type"] = "mob", max = 20, text = "머리 위에 불덩이를 모아 내리쳐 양옆을 터뜨린다. 달아오름이면 불기둥이 더 솟는다.", replaces = "sl_beam" },
+						{ id = "sl_rush", name = "불꽃 돌진", ["type"] = "boss", max = 20, text = "적 하나에게 짧게 돌진하며 친다. 이어 누르면 세 번까지 방향을 바꿔 가며 달려든다.", replaces = "sl_punch" },
+						{ id = "sl_ember2", name = "겹불티", ["type"] = "passive", max = 10, text = "달아오름 동안에는 불티가 둘씩 튄다." },
+						{ id = "sl_tempo", name = "박자", ["type"] = "buff", max = 10, text = "60초 동안 공격 속도가 한 단계 빨라진다. 끝나기 전에 다시 건다." },
+						{ id = "sl_vent", name = "열 방출", ["type"] = "attack", max = 10, text = "쌓인 열기를 한꺼번에 뿜어 둘레를 태운다. 열기만큼 세고, 열기는 0이 된다. 다시 쓰기 10초." },
+						{ id = "sl_mastery", name = "주먹 숙련", ["type"] = "passive", max = 10, text = "숙련도 50%, 공격력 +. 쉬지 않고 맞힐수록 피해가 오른다(세 번까지 겹친다)." },
+						{ id = "sl_tough", name = "달궈진 몸", ["type"] = "passive", max = 10, text = "달아오름 동안 받는 피해가 준다." },
+					},
+				},
+				{
+					job = 3,
+					lv = 60,
+					skills = {
+						{ id = "sl_meteor", name = "불덩이 던지기", ["type"] = "mob", max = 20, text = "머리 위에서 키운 불덩이를 던진다 — 포물선으로 날아가 떨어진 자리가 6초 동안 불바다가 된다.", replaces = "sl_slam" },
+						{ id = "sl_barrage", name = "난타", ["type"] = "boss", max = 20, text = "누르고 있는 동안 주먹을 아주 빠르게 내지른다(열기가 빨리 오른다). 떼는 순간 큰 한 방 — 그때의 열기만큼 세다.", replaces = "sl_rush" },
+						{ id = "sl_furnace", name = "화로", ["type"] = "install", max = 10, text = "그 자리에 10초 동안 화로를 놓는다. 곁에 있으면 열기가 식지 않고 조금씩 오르며, 다가온 적은 탄다. 다시 쓰기 30초." },
+						{ id = "sl_warm", name = "불씨 나눔", ["type"] = "party", max = 10, text = "60초 동안 나와 가까운 파티원의 공격 속도 +. 끝나기 전에 다시 건다." },
+						{ id = "sl_cross", name = "맞불", ["type"] = "guard", max = 5, text = "3초 동안 피해를 받지 않고, 그동안 맞을 때마다 불주먹으로 되받아친다. 다시 쓰기 120초." },
+						{ id = "sl_heat2", name = "끓는 피", ["type"] = "passive", max = 10, text = "열기가 더 빨리 오르고 천천히 식는다. 달아오름 기준이 40으로 낮아진다." },
+						{ id = "sl_press", name = "몰아붙이기", ["type"] = "passive", max = 10, text = "같은 적을 계속 때리면 그 적의 방어를 점점 더 무시한다(다섯 번까지 겹친다)." },
+						{ id = "sl_ember3", name = "옮겨붙는 불티", ["type"] = "passive", max = 10, text = "불티가 맞힌 적에서 옆의 적으로 한 번 옮겨붙는다." },
+					},
+				},
+				{
+					job = 4,
+					lv = 100,
+					skills = {
+						{ id = "sl_tide", name = "화염 해일", ["type"] = "mob", max = 30, text = "땅을 쳐서 불의 해일을 양쪽으로 굴려 보낸다.", replaces = "sl_meteor" },
+						{ id = "sl_king", name = "염왕권", ["type"] = "boss", max = 30, text = "누를 때마다 좌우 주먹이 번갈아 나가고 주먹 모양 불길이 앞으로 날아간다. 셋째 타에 터진다.", replaces = "sl_barrage" },
+						{ id = "sl_ember4", name = "불새", ["type"] = "passive", max = 10, text = "불티가 세모 날개의 불새가 되어 날아가고 피해 +." },
+						{ id = "sl_overheat", name = "폭주", ["type"] = "burst", max = 20, text = "20초 동안 열기가 100으로 고정되고 모든 주먹 기술이 강화판으로 나가며 최종 피해 +. 다시 쓰기 120초." },
+						{ id = "sl_sun", name = "작은 태양", ["type"] = "burst", max = 15, text = "머리 위에 불덩이를 20초 띄워 둔다 — 가까운 적에게 불씨를 쏘고, 화염 강타를 쓰면 태양이 떨어져 크게 터진다. 다시 쓰기 120초." },
+						{ id = "sl_dragon", name = "화염 질주", ["type"] = "nuke", max = 20, text = "불길을 남기며 길게 돌진하고 주먹 폭발로 마무리한다. 남은 불길이 계속 태운다. 다시 쓰기 60초." },
+						{ id = "sl_expert", name = "주먹 달인", ["type"] = "passive", max = 10, text = "숙련도 70%, 공격력 +, 치명타 피해 +." },
+						{ id = "sl_embers", name = "꺼지지 않는 불", ["type"] = "passive", max = 10, text = "폭주가 끝나도 열기가 50에서 시작한다. 폭주 중 적을 쓰러뜨리면 폭주 시간이 늘어난다." },
+						{ id = "sl_rekindle", name = "재점화", ["type"] = "passive", max = 10, text = "쓰러질 피해를 받으면 열기를 모두 태워 체력 30%로 버틴다(300초에 한 번)." },
+						{ id = "sl_reign", name = "염왕의 기세", ["type"] = "passive", max = 10, text = "최종 피해 +, 방어 무시 +. 화염 강타 · 불덩이 던지기의 피해가 크게 오른다(옛 사냥기를 계속 쓴다)." },
+						{ id = "c_hero", name = "달의 용사", ["type"] = "party", max = 10, text = "60초 동안 파티 모두의 기본 능력치 +15%. 끝나기 전에 다시 건다." },
+						{ id = "c_will", name = "용사의 의지", ["type"] = "guard", max = 5, text = "걸려 있는 상태 이상을 모두 풀고 3초 동안 걸리지 않는다. 다시 쓰기 300초." },
+					},
+				},
 			},
 		},
 	},
@@ -6488,14 +6790,15 @@ return {
 		{ job = 3, lv = 60, ["until"] = 99 },
 		{ job = 4, lv = 100, ["until"] = 150 },
 	},
+	types = { mob = "사냥기", boss = "보스기", attack = "공격", toggle = "온오프 사출기", buff = "갱신 버프", party = "파티 버프", burst = "극딜 버프", nuke = "큰 기술", bind = "바인드", move = "이동기", guard = "생존기", install = "설치", summon = "소환", heal = "회복", core = "핵심 장치", passive = "패시브" },
 }
 
 end
 MODULES['ReplicatedStorage/shared/lune/data/combat.generated'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/export_lune_game.mjs).
--- 싸움의 기본 수치(dino-workshop/js/lune/design/combat.js). 기술의 hits: at = 구간이 시작한 뒤 맞는 때(초) · box = { 앞쪽 시작, 앞쪽 끝, 위, 아래 } · mul = 전투력에 곱하는 값.
+-- 싸움의 기본 수치(dino-workshop/js/lune/design/combat.js). fx = 직업 색(tones — n 직업 색 · l 밝은 색 · w 흰색 · d 어두운 색, { r, g, b })과 대쉬 효과의 값(dash — dino-workshop/js/lune/fx.js의 DASHFX: 잔상 · 속도선). 기술의 hits: at = 구간이 시작한 뒤 맞는 때(초) · box = { 앞쪽 시작, 앞쪽 끝, 위, 아래 } · mul = 전투력에 곱하는 값.
 return {
-	rules = { spread = 10, mobShare = 0.7, maxTargets = 8, invuln = 0.6, stagger = 0.25, respawn = 8, reviveWait = 3, startPotions = 10, dropOwn = 30, dropLife = 120, pickup = 20, moneySpread = 20 },
+	rules = { dmgScale = 10, targetBonus = 50, spread = 10, mobShare = 0.7, maxTargets = 8, invuln = 0.6, stagger = 0.25, respawn = 8, reviveWait = 3, startPotions = 10, dropOwn = 30, dropLife = 120, pickup = 20, moneySpread = 20 },
 	mobs = {
 		trainee = {
 			name = "수습 검병",
@@ -6576,48 +6879,23 @@ return {
 					box = { -12, 48, 44, 4 },
 					mul = 1.4346,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 2,
 					at = 0.2167,
-					box = { 36, 54, 30, 6 },
+					box = { -12, 48, 44, 4 },
 					mul = 0.6148,
 					pull = 0,
-				},
-				{
-					seg = 2,
-					at = 0.2167,
-					box = { -14, 4, 30, 6 },
-					mul = 0.6148,
-					pull = 0,
+					except = false,
 				},
 				{
 					seg = 2,
 					at = 0.2667,
-					box = { 51, 69, 30, 6 },
+					box = { -44, 84, 30, 6 },
 					mul = 0.6148,
 					pull = 0,
-				},
-				{
-					seg = 2,
-					at = 0.2667,
-					box = { -29, -11, 30, 6 },
-					mul = 0.6148,
-					pull = 0,
-				},
-				{
-					seg = 2,
-					at = 0.3167,
-					box = { 66, 84, 30, 6 },
-					mul = 0.6148,
-					pull = 0,
-				},
-				{
-					seg = 2,
-					at = 0.3167,
-					box = { -44, -26, 30, 6 },
-					mul = 0.6148,
-					pull = 0,
+					except = { -12, 48, 44, 4 },
 				},
 			},
 			shots = {  },
@@ -6645,6 +6923,7 @@ return {
 					box = { -4, 44, 26, 4 },
 					mul = 1.0247,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 2,
@@ -6652,6 +6931,7 @@ return {
 					box = { -4, 46, 26, 4 },
 					mul = 1.0247,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 3,
@@ -6659,6 +6939,7 @@ return {
 					box = { -8, 50, 46, 4 },
 					mul = 2.0494,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -6701,6 +6982,7 @@ return {
 					box = { 0, 88, 44, 6 },
 					mul = 1.309,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -6726,6 +7008,7 @@ return {
 					box = { -4, 44, 24, 4 },
 					mul = 0.8242,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 1,
@@ -6733,6 +7016,7 @@ return {
 					box = { -28, 28, 26, 4 },
 					mul = 0.4121,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 1,
@@ -6740,6 +7024,7 @@ return {
 					box = { -4, 48, 24, 4 },
 					mul = 1.2364,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -6782,6 +7067,7 @@ return {
 					box = { -6, 44, 30, 4 },
 					mul = 0.663,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 1,
@@ -6789,6 +7075,7 @@ return {
 					box = { -6, 48, 30, 4 },
 					mul = 0.884,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -6814,6 +7101,7 @@ return {
 					box = { 8, 64, 26, 4 },
 					mul = 0.9107,
 					pull = 40,
+					except = false,
 				},
 				{
 					seg = 1,
@@ -6821,6 +7109,7 @@ return {
 					box = { -4, 44, 26, 4 },
 					mul = 1.2143,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -6863,6 +7152,7 @@ return {
 					box = { -46, 46, 22, 4 },
 					mul = 2.0627,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -6888,6 +7178,7 @@ return {
 					box = { 4, 80, 16, 4 },
 					mul = 2.975,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -6930,6 +7221,7 @@ return {
 					box = { 12, 194, 22, 6 },
 					mul = 0.7933,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 1,
@@ -6937,6 +7229,7 @@ return {
 					box = { 12, 194, 22, 6 },
 					mul = 0.7933,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 1,
@@ -6944,6 +7237,7 @@ return {
 					box = { 12, 194, 22, 6 },
 					mul = 0.7933,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {
@@ -6971,6 +7265,7 @@ return {
 					box = { 0, 38, 24, 4 },
 					mul = 0.9852,
 					pull = 0,
+					except = false,
 				},
 				{
 					seg = 1,
@@ -6978,6 +7273,7 @@ return {
 					box = { 0, 42, 26, 4 },
 					mul = 1.642,
 					pull = 0,
+					except = false,
 				},
 			},
 			shots = {  },
@@ -6998,6 +7294,26 @@ return {
 			},
 			hits = {  },
 			shots = {  },
+		},
+	},
+	fx = {
+		tones = {
+			mint = {
+				n = { 62, 255, 215 },
+				l = { 172, 255, 215 },
+				w = { 255, 255, 255 },
+				d = { 31, 168, 156 },
+			},
+			pink = {
+				n = { 255, 62, 159 },
+				l = { 255, 126, 162 },
+				w = { 255, 255, 255 },
+				d = { 177, 31, 165 },
+			},
+		},
+		dash = {
+			ghost = { every = 0.035, life = 0.24, alpha = 0.55 },
+			streak = { up = 4, base = 3, perSpeed = 100, len = 10, lenPerSpeed = 25, w = 60, h = 26, life = 0.22, slide = 26, delay = 0.08 },
 		},
 	},
 }
@@ -7097,7 +7413,7 @@ return {
 		highDiv = 40,
 	},
 	BAG = {
-		tabs = { "장비", "쓰는 것", "재료" },
+		tabs = { "장비", "소비", "기타" },
 		base = 24,
 		step = 4,
 		times = 6,
@@ -7758,114 +8074,92 @@ return {
 end
 MODULES['ReplicatedStorage/shared/lune/data/kit.generated'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/export_lune_game.mjs).
--- 화면 부품 — 공방 tools/build_lune_ui.mjs가 지은 것(메이플풍 틀 · 칸 · 단추 · 아이콘 · 아주 작은 글씨 · 큰 숫자).
--- image = 부품 한 장의 파일 이름(assets.generated.luau에서 id를 찾는다) · parts = 부품의 자리(m = 아홉 조각으로 늘일 때 가장자리의 두께)
--- icon = 아이콘 한 변 · cell = 칸 한 변 · pitch = 칸에서 칸까지 · ground = 화면에서 땅의 윗면(발밑)의 y · colors = 색(r, g, b) · font.small = 작은 글씨(갈무리9)의 글자판 규칙
+-- 화면 부품 — 공방 tools/build_lune_ui.mjs가 지은 것.
+-- image = 부품 한 장의 파일 이름(assets.generated.luau에서 id를 찾는다) · parts = 부품의 자리(m = 아홉 조각으로 늘일 때 가장자리의 두께 · mb = 아래 가장자리가 더 두꺼울 때)
+-- 게임 세계의 것(굵은 도트): icon = 장비 그림의 한 변 · ground = 화면에서 땅의 윗면(발밑)의 y · colors = 피해 숫자 등의 색(r, g, b) · 부품 icons · dmg · dropCoin · dropDust · tier*
+-- 화면의 것(고운 격자 960x540급): ui = 색과 치수 · 부품 이름이 u로 시작하는 것과 pics(24x24 그림)
+-- font.small = 작은 글씨(갈무리9)의 글자판 규칙 · font.small_o · body_o = 테두리를 두른 글자판(pad = 칸이 글자보다 사방으로 큰 만큼)
 return {
 	image = "ui_kit.png",
 	icon = 18,
-	cell = 20,
-	pitch = 19,
 	ground = 150,
 	colors = {
-		line = { 11, 19, 34 },
-		navy = { 15, 27, 46 },
-		frame = { 24, 37, 68 },
-		frameHi = { 42, 59, 99 },
-		frameLo = { 16, 26, 48 },
-		trough = { 34, 48, 77 },
-		troughLo = { 20, 31, 54 },
-		edge = { 138, 182, 228 },
-		edgeDim = { 70, 96, 140 },
-		paper = { 237, 244, 250 },
-		paperLo = { 195, 208, 222 },
-		slot = { 208, 221, 233 },
-		slotLine = { 163, 180, 200 },
-		slotHi = { 246, 250, 253 },
-		orange = { 255, 194, 54 },
-		orangeHi = { 255, 224, 138 },
-		orangeLo = { 217, 142, 28 },
-		blue = { 75, 118, 187 },
-		blueHi = { 123, 160, 221 },
-		blueLo = { 52, 85, 142 },
-		grey = { 111, 125, 146 },
-		greyHi = { 140, 153, 173 },
-		greyLo = { 86, 98, 119 },
-		tabOff = { 67, 95, 144 },
-		tabOffHi = { 90, 121, 174 },
-		hp = { 248, 36, 106 },
-		hpHi = { 255, 123, 166 },
-		hpLo = { 179, 19, 79 },
-		mp = { 0, 128, 254 },
-		mpHi = { 98, 182, 255 },
-		mpLo = { 0, 88, 184 },
-		exp = { 200, 252, 74 },
-		expHi = { 234, 255, 166 },
-		expLo = { 143, 196, 30 },
-		white = { 255, 255, 255 },
-		text = { 238, 244, 250 },
-		dim = { 157, 176, 200 },
-		ink = { 22, 35, 58 },
-		inkDim = { 93, 111, 136 },
-		yellow = { 255, 226, 74 },
-		npc = { 255, 255, 54 },
-		pink = { 255, 143, 192 },
-		green = { 125, 255, 160 },
-		mint = { 62, 255, 215 },
-		red = { 255, 90, 110 },
-		dmg = { 255, 178, 26 },
-		dmgHi = { 255, 240, 138 },
-		dmgLine = { 58, 20, 8 },
-		tier0 = { 160, 128, 104 },
-		tier1 = { 138, 143, 150 },
-		tier3 = { 47, 217, 182 },
-		tier4 = { 255, 178, 26 },
+		line = { 18, 23, 28 },
+		white = { 242, 239, 220 },
+		dmg = { 255, 255, 255 },
+		dmgBig = { 172, 255, 215 },
+		dmgBigPink = { 255, 126, 162 },
+		dmgFade = { 169, 188, 203 },
+		tier0 = { 138, 111, 90 },
+		tier1 = { 123, 121, 121 },
+		tier3 = { 111, 168, 160 },
+		tier4 = { 201, 179, 95 },
+	},
+	ui = {
+		colors = {
+			ink = { 11, 15, 22 },
+			panel = { 18, 24, 33 },
+			panel2 = { 27, 35, 48 },
+			panelHot = { 36, 48, 66 },
+			line = { 47, 58, 74 },
+			lineHot = { 70, 86, 108 },
+			text = { 233, 237, 242 },
+			dim = { 142, 152, 166 },
+			off = { 86, 96, 112 },
+			accent = { 95, 227, 207 },
+			accentHot = { 147, 240, 226 },
+			accentDark = { 31, 107, 98 },
+			hp = { 224, 72, 79 },
+			hpDark = { 90, 31, 38 },
+			red = { 224, 72, 79 },
+			gold = { 232, 200, 96 },
+			green = { 143, 214, 138 },
+			pink = { 239, 127, 176 },
+			bubble = { 250, 250, 250 },
+			bubbleInk = { 26, 31, 41 },
+			bubbleShade = { 154, 163, 173 },
+			mark = { 47, 111, 224 },
+			tier0 = { 176, 140, 114 },
+			tier1 = { 154, 160, 168 },
+			tier2 = { 233, 237, 242 },
+			tier3 = { 111, 183, 240 },
+			tier4 = { 240, 207, 74 },
+		},
+		metric = {
+			grid = { 960, 540 },
+			gridMin = { 768, 432 },
+			margin = 16,
+			small = 10,
+			smallLine = 14,
+			body = 12,
+			bodyLine = 18,
+			key = 14,
+			button = 26,
+			slot = 28,
+			slotGap = 10,
+			menu = 30,
+			menuPitch = 38,
+			cell = 50,
+			pad = 18,
+			pic = 24,
+			panelAlpha = 238,
+		},
 	},
 	parts = {
-		panel = { x = 1, y = 1, w = 12, h = 12, m = 5 },
-		frame = { x = 14, y = 1, w = 12, h = 12, m = 5 },
-		paper = { x = 27, y = 1, w = 10, h = 10, m = 4 },
-		slot = { x = 38, y = 1, w = 8, h = 8, m = 3 },
-		socket = { x = 47, y = 1, w = 8, h = 8, m = 3 },
-		veil = { x = 56, y = 1, w = 8, h = 8, m = 3 },
-		field = { x = 65, y = 1, w = 8, h = 8, m = 3 },
-		gauge = { x = 74, y = 1, w = 8, h = 8, m = 3 },
-		tabOn = { x = 83, y = 1, w = 10, h = 10, m = 4 },
-		tabOff = { x = 94, y = 1, w = 10, h = 10, m = 4 },
-		btnOrange = { x = 105, y = 1, w = 10, h = 10, m = 4 },
-		btnOrangeHot = { x = 116, y = 1, w = 10, h = 10, m = 4 },
-		btnBlue = { x = 127, y = 1, w = 10, h = 10, m = 4 },
-		btnBlueHot = { x = 138, y = 1, w = 10, h = 10, m = 4 },
-		btnOff = { x = 149, y = 1, w = 10, h = 10, m = 4 },
-		slotCell = { x = 160, y = 1, w = 20, h = 20 },
-		socketCell = { x = 181, y = 1, w = 20, h = 20 },
-		select = { x = 202, y = 1, w = 20, h = 20 },
-		close = { x = 223, y = 1, w = 11, h = 11 },
-		closeHot = { x = 235, y = 1, w = 11, h = 11 },
-		tier0 = { x = 247, y = 1, w = 6, h = 6 },
-		tier1 = { x = 1, y = 22, w = 6, h = 6 },
-		tier3 = { x = 8, y = 22, w = 6, h = 6 },
-		tier4 = { x = 15, y = 22, w = 6, h = 6 },
-		gem = { x = 22, y = 22, w = 7, h = 7 },
-		dropCoin = { x = 30, y = 22, w = 8, h = 8 },
-		dropDust = { x = 39, y = 22, w = 8, h = 8 },
-		microLine = { x = 1, y = 31, w = 285, h = 7, order = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ+-/%.,:!?<>^~[];'\\=`*", cw = 5, ch = 7 },
-		micro = { x = 1, y = 39, w = 171, h = 5, order = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ+-/%.,:!?<>^~[];'\\=`*", cw = 3, ch = 5 },
-		big = {
-			x = 1,
-			y = 45,
-			w = 120,
-			h = 16,
-			order = "0123456789",
-			cw = 12,
-			ch = 16,
-			adv = { 10, 6, 10, 10, 10, 10, 10, 10, 10, 10 },
-		},
+		tier0 = { x = 1, y = 1, w = 6, h = 6 },
+		tier1 = { x = 8, y = 1, w = 6, h = 6 },
+		tier3 = { x = 15, y = 1, w = 6, h = 6 },
+		tier4 = { x = 22, y = 1, w = 6, h = 6 },
+		dropCoin = { x = 29, y = 1, w = 12, h = 12 },
+		dropDust = { x = 42, y = 1, w = 12, h = 12 },
+		markNew = { x = 55, y = 1, w = 3, h = 7 },
+		markDone = { x = 59, y = 1, w = 5, h = 7 },
+		dmg = { x = 65, y = 1, w = 50, h = 14, order = "0123456789", cw = 5, ch = 7, adv = 4 },
 		icons = {
 			x = 1,
-			y = 62,
+			y = 16,
 			w = 180,
-			h = 144,
+			h = 162,
 			icons = {
 				w_axe = { 0, 0 },
 				w_dagger = { 18, 0 },
@@ -7947,15 +8241,282 @@ return {
 				buff_cool = { 126, 126 },
 				buff_heal = { 144, 126 },
 				buff_exp = { 162, 126 },
+				etc_cloth = { 0, 144 },
+				etc_plate = { 18, 144 },
+				etc_paper = { 36, 144 },
 			},
 			size = 18,
+		},
+		uPanel = { x = 182, y = 16, w = 12, h = 12, m = 5 },
+		uSlot = { x = 195, y = 16, w = 8, h = 8, m = 3 },
+		uSlotOn = { x = 204, y = 16, w = 8, h = 8, m = 3 },
+		uKey = { x = 213, y = 16, w = 8, h = 8, m = 3 },
+		uField = { x = 222, y = 16, w = 8, h = 8, m = 3 },
+		uBtn = { x = 231, y = 16, w = 8, h = 8, m = 3 },
+		uBtnHot = { x = 240, y = 16, w = 8, h = 8, m = 3 },
+		uTip = { x = 1, y = 179, w = 8, h = 8, m = 3 },
+		uBtnMain = { x = 10, y = 179, w = 8, h = 8, m = 3 },
+		uBtnMainHot = { x = 19, y = 179, w = 8, h = 8, m = 3 },
+		uBtnOff = { x = 28, y = 179, w = 8, h = 8, m = 3 },
+		uBubble = { x = 37, y = 179, w = 12, h = 14, m = 5, mb = 7 },
+		uTail = { x = 50, y = 179, w = 9, h = 9 },
+		uClose = { x = 60, y = 179, w = 11, h = 11 },
+		uCloseHot = { x = 72, y = 179, w = 11, h = 11 },
+		pics = {
+			x = 1,
+			y = 194,
+			w = 240,
+			h = 576,
+			icons = {
+				w_axe = { 0, 0 },
+				w_dagger = { 24, 0 },
+				w_scythe = { 48, 0 },
+				w_sword = { 72, 0 },
+				w_fist = { 96, 0 },
+				coin = { 120, 0 },
+				dust = { 144, 0 },
+				orb = { 168, 0 },
+				a_hat1 = { 192, 0 },
+				a_suit1 = { 216, 0 },
+				a_glove1 = { 0, 24 },
+				a_shoes1 = { 24, 24 },
+				a_hat2 = { 48, 24 },
+				a_suit2 = { 72, 24 },
+				a_glove2 = { 96, 24 },
+				a_shoes2 = { 120, 24 },
+				a_hat3 = { 144, 24 },
+				a_suit3 = { 168, 24 },
+				a_glove3 = { 192, 24 },
+				a_shoes3 = { 216, 24 },
+				a_hat4 = { 0, 48 },
+				a_suit4 = { 24, 48 },
+				a_glove4 = { 48, 48 },
+				a_shoes4 = { 72, 48 },
+				acc_neck = { 96, 48 },
+				acc_ring = { 120, 48 },
+				acc_ear = { 144, 48 },
+				acc_belt = { 168, 48 },
+				acc_shoulder = { 192, 48 },
+				acc_eye = { 216, 48 },
+				acc_face = { 0, 72 },
+				acc_medal = { 24, 72 },
+				potion_s = { 48, 72 },
+				potion_m = { 72, 72 },
+				potion_l = { 96, 72 },
+				potion_star = { 120, 72 },
+				scroll = { 144, 72 },
+				charm = { 168, 72 },
+				fragment = { 192, 72 },
+				paper = { 216, 72 },
+				menu_bag = { 0, 96 },
+				menu_equip = { 24, 96 },
+				menu_stat = { 48, 96 },
+				menu_skill = { 72, 96 },
+				menu_quest = { 96, 96 },
+				menu_party = { 120, 96 },
+				menu_gear = { 144, 96 },
+				menu_chat = { 168, 96 },
+				bulb = { 192, 96 },
+				book_done = { 216, 96 },
+				star = { 0, 120 },
+				star_off = { 24, 120 },
+				lock = { 48, 120 },
+				crown = { 72, 120 },
+				plus = { 96, 120 },
+				close = { 120, 120 },
+				skill_ax_slam = { 144, 120 },
+				skill_ax_combo = { 168, 120 },
+				skill_ax_dash = { 192, 120 },
+				skill_rv_fan = { 216, 120 },
+				skill_rv_double = { 0, 144 },
+				skill_rv_dash = { 24, 144 },
+				skill_rp_double = { 48, 144 },
+				skill_rp_hook = { 72, 144 },
+				skill_rp_dash = { 96, 144 },
+				skill_mn_spin = { 120, 144 },
+				skill_mn_thrust = { 144, 144 },
+				skill_mn_dash = { 168, 144 },
+				skill_sl_beam = { 192, 144 },
+				skill_sl_punch = { 216, 144 },
+				skill_sl_roll = { 0, 168 },
+				slot_potion = { 24, 168 },
+				buff_atk = { 48, 168 },
+				buff_def = { 72, 168 },
+				buff_speed = { 96, 168 },
+				buff_moon = { 120, 168 },
+				buff_death = { 144, 168 },
+				buff_cool = { 168, 168 },
+				buff_heal = { 192, 168 },
+				buff_exp = { 216, 168 },
+				skill_ax_charge = { 0, 192 },
+				skill_ax_grit = { 24, 192 },
+				skill_ax_echo = { 48, 192 },
+				skill_ax_crescent = { 72, 192 },
+				skill_ax_rend = { 96, 192 },
+				skill_ax_echo2 = { 120, 192 },
+				skill_ax_breath = { 144, 192 },
+				skill_ax_mastery = { 168, 192 },
+				skill_ax_shock = { 192, 192 },
+				skill_ax_stance = { 216, 192 },
+				skill_ax_whirl = { 0, 216 },
+				skill_ax_leap = { 24, 216 },
+				skill_ax_pulse = { 48, 216 },
+				skill_ax_roar = { 72, 216 },
+				skill_ax_brace = { 96, 216 },
+				skill_ax_charge2 = { 120, 216 },
+				skill_ax_echo3 = { 144, 216 },
+				skill_ax_weight = { 168, 216 },
+				skill_ax_moonfall = { 192, 216 },
+				skill_ax_execute = { 216, 216 },
+				skill_ax_echo4 = { 0, 240 },
+				skill_ax_fullmoon = { 24, 240 },
+				skill_ax_titan = { 48, 240 },
+				skill_ax_pillars = { 72, 240 },
+				skill_ax_quake = { 96, 240 },
+				skill_ax_expert = { 120, 240 },
+				skill_ax_crush = { 144, 240 },
+				skill_ax_charge3 = { 168, 240 },
+				skill_rv_mark = { 192, 240 },
+				skill_rv_nimble = { 216, 240 },
+				skill_rv_star = { 0, 264 },
+				skill_rv_gale = { 24, 264 },
+				skill_rv_cross = { 48, 264 },
+				skill_rv_step = { 72, 264 },
+				skill_rv_star2 = { 96, 264 },
+				skill_rv_quick = { 120, 264 },
+				skill_rv_mastery = { 144, 264 },
+				skill_rv_back = { 168, 264 },
+				skill_rv_chain = { 192, 264 },
+				skill_rv_flurry = { 216, 264 },
+				skill_rv_clone = { 0, 288 },
+				skill_rv_smoke = { 24, 288 },
+				skill_rv_slip = { 48, 288 },
+				skill_rv_mark2 = { 72, 288 },
+				skill_rv_venom = { 96, 288 },
+				skill_rv_star3 = { 120, 288 },
+				skill_rv_phantom = { 144, 288 },
+				skill_rv_kill = { 168, 288 },
+				skill_rv_star4 = { 192, 288 },
+				skill_rv_eclipse = { 216, 288 },
+				skill_rv_shadow = { 0, 312 },
+				skill_rv_execute = { 24, 312 },
+				skill_rv_clone2 = { 48, 312 },
+				skill_rv_expert = { 72, 312 },
+				skill_rv_intent = { 96, 312 },
+				skill_rv_feint = { 120, 312 },
+				skill_rp_soul = { 144, 312 },
+				skill_rp_drain = { 168, 312 },
+				skill_rp_wisp = { 192, 312 },
+				skill_rp_throw = { 216, 312 },
+				skill_rp_ambush = { 0, 336 },
+				skill_rp_reap = { 24, 336 },
+				skill_rp_wisp2 = { 48, 336 },
+				skill_rp_chill = { 72, 336 },
+				skill_rp_mastery = { 96, 336 },
+				skill_rp_pact = { 120, 336 },
+				skill_rp_drag = { 144, 336 },
+				skill_rp_judge = { 168, 336 },
+				skill_rp_ghost = { 192, 336 },
+				skill_rp_ward = { 216, 336 },
+				skill_rp_fade = { 0, 360 },
+				skill_rp_soul2 = { 24, 360 },
+				skill_rp_drain2 = { 48, 360 },
+				skill_rp_wisp3 = { 72, 360 },
+				skill_rp_harvest = { 96, 360 },
+				skill_rp_behead = { 120, 360 },
+				skill_rp_wisp4 = { 144, 360 },
+				skill_rp_form = { 168, 360 },
+				skill_rp_advent = { 192, 360 },
+				skill_rp_chains = { 216, 360 },
+				skill_rp_gate = { 0, 384 },
+				skill_rp_expert = { 24, 384 },
+				skill_rp_ghost2 = { 48, 384 },
+				skill_rp_touch = { 72, 384 },
+				skill_mn_reson = { 96, 384 },
+				skill_mn_oath = { 120, 384 },
+				skill_mn_shard = { 144, 384 },
+				skill_mn_wave = { 168, 384 },
+				skill_mn_smash = { 192, 384 },
+				skill_mn_plant = { 216, 384 },
+				skill_mn_shard2 = { 0, 408 },
+				skill_mn_tide = { 24, 408 },
+				skill_mn_heal = { 48, 408 },
+				skill_mn_mastery = { 72, 408 },
+				skill_mn_burst = { 96, 408 },
+				skill_mn_ray = { 120, 408 },
+				skill_mn_guard = { 144, 408 },
+				skill_mn_bless = { 168, 408 },
+				skill_mn_wall = { 192, 408 },
+				skill_mn_grove = { 216, 408 },
+				skill_mn_shard3 = { 0, 432 },
+				skill_mn_edge = { 24, 432 },
+				skill_mn_arc = { 48, 432 },
+				skill_mn_divide = { 72, 432 },
+				skill_mn_shard4 = { 96, 432 },
+				skill_mn_sanct = { 120, 432 },
+				skill_mn_range = { 144, 432 },
+				skill_mn_prison = { 168, 432 },
+				skill_mn_revive = { 192, 432 },
+				skill_mn_expert = { 216, 432 },
+				skill_mn_guard2 = { 0, 456 },
+				skill_mn_astral = { 24, 456 },
+				skill_sl_heat = { 48, 456 },
+				skill_sl_blood = { 72, 456 },
+				skill_sl_ember = { 96, 456 },
+				skill_sl_slam = { 120, 456 },
+				skill_sl_rush = { 144, 456 },
+				skill_sl_ember2 = { 168, 456 },
+				skill_sl_tempo = { 192, 456 },
+				skill_sl_vent = { 216, 456 },
+				skill_sl_mastery = { 0, 480 },
+				skill_sl_tough = { 24, 480 },
+				skill_sl_meteor = { 48, 480 },
+				skill_sl_barrage = { 72, 480 },
+				skill_sl_furnace = { 96, 480 },
+				skill_sl_warm = { 120, 480 },
+				skill_sl_cross = { 144, 480 },
+				skill_sl_heat2 = { 168, 480 },
+				skill_sl_press = { 192, 480 },
+				skill_sl_ember3 = { 216, 480 },
+				skill_sl_tide = { 0, 504 },
+				skill_sl_king = { 24, 504 },
+				skill_sl_ember4 = { 48, 504 },
+				skill_sl_overheat = { 72, 504 },
+				skill_sl_sun = { 96, 504 },
+				skill_sl_dragon = { 120, 504 },
+				skill_sl_expert = { 144, 504 },
+				skill_sl_embers = { 168, 504 },
+				skill_sl_rekindle = { 192, 504 },
+				skill_sl_reign = { 216, 504 },
+				skill_c_hero = { 0, 528 },
+				skill_c_will = { 24, 528 },
+				st_stun = { 48, 528 },
+				st_bind = { 72, 528 },
+				st_slow = { 96, 528 },
+				st_burn = { 120, 528 },
+				st_poison = { 144, 528 },
+				st_shield = { 168, 528 },
+				st_invincible = { 192, 528 },
+				st_revive = { 216, 528 },
+				menu_map = { 0, 552 },
+				menu_boss = { 24, 552 },
+				menu_note = { 48, 552 },
+				menu_guild = { 72, 552 },
+				menu_auction = { 96, 552 },
+				menu_forge = { 120, 552 },
+				menu_shop = { 144, 552 },
+				menu_store = { 168, 552 },
+				menu_mail = { 192, 552 },
+				menu_trade = { 216, 552 },
+			},
+			size = 24,
 		},
 	},
 	font = {
 		small = {
 			cellW = 10,
 			cellH = 10,
-			line = 11,
+			line = 12,
 			hangulAdv = 10,
 			cols = 102,
 			perPage = 10404,
@@ -7964,6 +8525,34 @@ return {
 			extra = { "♥", "★", "×", "·", "…", "♪", "—", "→", "←", "↑", "↓", "▲", "▼", "●", "○", "「", "」" },
 			extraAdv = { 10, 10, 6, 4, 10, 10, 7, 10, 10, 10, 10, 10, 10, 10, 10, 5, 5 },
 			files = { "font_small_1.png", "font_small_2.png" },
+		},
+		small_o = {
+			cellW = 12,
+			cellH = 12,
+			line = 12,
+			pad = 1,
+			hangulAdv = 10,
+			cols = 85,
+			perPage = 7225,
+			pages = 2,
+			asciiAdv = { 4, 4, 4, 8, 6, 8, 7, 2, 4, 4, 6, 6, 4, 5, 4, 4, 6, 4, 6, 6, 7, 6, 6, 6, 6, 6, 4, 4, 4, 5, 4, 5, 8, 6, 6, 6, 6, 5, 5, 6, 6, 2, 5, 6, 5, 6, 6, 6, 6, 6, 6, 5, 6, 6, 6, 6, 6, 6, 5, 4, 4, 4, 4, 6, 3, 6, 6, 6, 6, 6, 5, 6, 6, 2, 4, 5, 3, 8, 6, 6, 6, 6, 5, 5, 5, 6, 6, 6, 6, 6, 6, 5, 4, 5, 8 },
+			extra = { "♥", "★", "×", "·", "…", "♪", "—", "→", "←", "↑", "↓", "▲", "▼", "●", "○", "「", "」" },
+			extraAdv = { 10, 10, 6, 4, 10, 10, 7, 10, 10, 10, 10, 10, 10, 10, 10, 5, 5 },
+			files = { "font_small_o_1.png", "font_small_o_2.png" },
+		},
+		body_o = {
+			cellW = 14,
+			cellH = 15,
+			line = 14,
+			pad = 1,
+			hangulAdv = 12,
+			cols = 73,
+			perPage = 4964,
+			pages = 3,
+			asciiAdv = { 5, 4, 4, 8, 8, 10, 8, 4, 4, 4, 6, 8, 4, 6, 4, 6, 8, 6, 8, 8, 8, 8, 8, 8, 8, 8, 4, 4, 5, 6, 5, 6, 10, 8, 8, 9, 8, 7, 7, 9, 8, 4, 7, 8, 7, 10, 8, 9, 8, 9, 8, 8, 8, 9, 8, 10, 8, 8, 7, 4, 6, 4, 6, 8, 4, 7, 8, 7, 8, 8, 6, 8, 7, 4, 6, 7, 4, 10, 7, 8, 8, 8, 6, 7, 6, 8, 8, 10, 8, 8, 7, 5, 4, 5, 8 },
+			extra = { "♥", "★", "×", "·", "…", "♪", "—", "→", "←", "↑", "↓", "▲", "▼", "●", "○", "「", "」" },
+			extraAdv = { 12, 12, 8, 4, 12, 12, 10, 12, 12, 12, 12, 12, 12, 12, 12, 5, 5 },
+			files = { "font_body_o_1.png", "font_body_o_2.png", "font_body_o_3.png" },
 		},
 	},
 }
@@ -8114,7 +8703,7 @@ return {
 			auto = false,
 			playable = true,
 			steps = {
-				{ ["type"] = "kill", mob = "trainee", name = "수습 검병", n = 5, pct = 100 },
+				{ ["type"] = "kill", mob = "trainee", name = "수습 검병", n = 5, pct = 100, icon = false },
 			},
 			offer = { "마을 밖에 낯선 병사들이 어슬렁거려요.", "같이 나가서 다섯만 쫓아 주실래요?" },
 			wait = { "문 밖 마을 어귀에 있어요. 조심하세요!" },
@@ -8134,7 +8723,7 @@ return {
 			auto = false,
 			playable = true,
 			steps = {
-				{ ["type"] = "gather", mob = "warrior", name = "갑옷 조각", n = 8, pct = 50 },
+				{ ["type"] = "gather", mob = "warrior", name = "갑옷 조각", n = 8, pct = 50, icon = "etc_plate" },
 			},
 			offer = { "빛 없는 갑옷이라… 직접 봐야 믿겠네.", "조각을 여덟 개만 모아다 주게." },
 			wait = { "어귀 너머 사냥터의 검병에게서 나온다네." },
@@ -8262,7 +8851,7 @@ return {
 			auto = false,
 			playable = true,
 			steps = {
-				{ ["type"] = "gather", mob = "trainee", name = "기름 천", n = 5, pct = 60 },
+				{ ["type"] = "gather", mob = "trainee", name = "기름 천", n = 5, pct = 60, icon = "etc_cloth" },
 			},
 			offer = { "등불 심지가 다 탔어요.", "병사들의 기름 천 다섯 장만 구해 주세요." },
 			wait = { "기름 천은 수습 검병이 갖고 있어요." },
@@ -8282,7 +8871,7 @@ return {
 			auto = false,
 			playable = true,
 			steps = {
-				{ ["type"] = "gather", mob = "warrior", name = "젖지 않은 종이", n = 8, pct = 50 },
+				{ ["type"] = "gather", mob = "warrior", name = "젖지 않은 종이", n = 8, pct = 50, icon = "etc_paper" },
 			},
 			offer = { "게시판 달력이 낡아서 새로 베끼려네.", "젖지 않은 종이 여덟 장이 필요해." },
 			wait = { "검병들이 종이를 품고 다닌다더군." },
@@ -8450,6 +9039,8 @@ return {
 			name = "달그림자 사냥터",
 			w = 96,
 			h = 14,
+			tall = false,
+			indoor = false,
 			sky = "#5a6a82",
 			deep = "#232931",
 			rows = { "................................................................................................", "................................................................................................", "................................................................................................", ".............==.................................................................................", "................................................................................................", "................................................................................................", ".................................==.................................................==..........", "..........====..............................==..........##......................................", "..........................==............................##..==..................==..............", "..............................########..==......==....####..............==......................", "..............................########................####.....########.........................", "##################======###############............####################....#####################", "##################......###############..^^^^^^^^..####################....#####################", "##################......###############################################....#####################" },
@@ -8526,8 +9117,6 @@ return {
 				{ id = "capital", x = 1450, y = 177 },
 				{ id = "mint", x = 1482, y = 177 },
 				{ id = "lantern", x = 1514, y = 177 },
-			},
-			front = {
 				{ id = "grass", x = 18, y = 177 },
 				{ id = "bush", x = 99, y = 177 },
 				{ id = "shroom", x = 74, y = 177 },
@@ -8545,6 +9134,7 @@ return {
 				{ id = "shroom", x = 1446, y = 177 },
 				{ id = "bush", x = 1488, y = 177 },
 			},
+			front = {  },
 			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 30, y = 176, to = "r1a1", label = "마을 어귀로", h = 60 },
@@ -8659,19 +9249,20 @@ return {
 		},
 		town = {
 			name = "초승달 마을",
-			w = 76,
-			h = 14,
+			w = 64,
+			h = 18,
+			tall = true,
+			indoor = false,
 			sky = "#5a6a82",
-			deep = "#1b2028",
-			rows = { "............................................................................", "............................................................................", "............................................................................", "............................................................................", "............................................................................", "............................................................................", "............................................................................", "............................................................................", "............................................................................", "............................................................................", "............................................................................", "############################################################################", "############################################################################", "############################################################################" },
+			deep = "#232931",
+			rows = { "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "....................................................===.........", ".............===============....................................", ".===.......................................=========............", "................................................................", ".....==========..===..=============..................==========.", "................................................................", "................................................................", "################################################################", "################################################################", "################################################################" },
 			layers = {
-				{ img = "sky.png", w = 384, h = 216, f = 0.03, y = 0 },
-				{ img = "far.png", w = 384, h = 142, f = 0.14, y = 74 },
-				{ img = "near_town.png", w = 384, h = 124, f = 0.34, y = 92 },
+				{ img = "sky.png", w = 384, h = 216, f = 0.03, y = 1 },
+				{ img = "far.png", w = 384, h = 142, f = 0.14, y = 78 },
+				{ img = "near_town.png", w = 384, h = 216, f = 0.34, y = 103 },
 			},
 			ground = {
-				{ img = "ground_town_1.png", x = 0, w = 608, h = 224 },
-				{ img = "ground_town_2.png", x = 608, w = 608, h = 224 },
+				{ img = "ground_town_1.png", x = 0, w = 1024, h = 288 },
 			},
 			props = "props_town.png",
 			rects = {
@@ -8696,36 +9287,39 @@ return {
 				stonelamp = { x = 54, y = 179, w = 21, h = 34 },
 				sacks = { x = 76, y = 179, w = 46, h = 23 },
 				anvil = { x = 123, y = 179, w = 31, h = 27 },
+				tree = { x = 0, y = 217, w = 1024, h = 288 },
 			},
 			back = {
-				{ id = "gate", x = 44, y = 177 },
-				{ id = "elder", x = 186, y = 177 },
-				{ id = "store", x = 434, y = 177 },
-				{ id = "forge", x = 624, y = 177 },
-				{ id = "shrine", x = 800, y = 177 },
-				{ id = "storage", x = 956, y = 177 },
-				{ id = "house", x = 1150, y = 177 },
-				{ id = "signpost", x = 104, y = 177 },
-				{ id = "board", x = 286, y = 177 },
-				{ id = "lamp", x = 324, y = 177 },
-				{ id = "well", x = 356, y = 177 },
-				{ id = "stall", x = 532, y = 177 },
-				{ id = "anvil", x = 714, y = 177 },
-				{ id = "lamp", x = 740, y = 177 },
-				{ id = "stonelamp", x = 886, y = 177 },
-				{ id = "cart", x = 1062, y = 177 },
-				{ id = "fence", x = 1100, y = 177 },
+				{ id = "tree", x = 512, y = 288 },
+				{ id = "gate", x = 44, y = 241 },
+				{ id = "storage", x = 630, y = 241 },
+				{ id = "store", x = 508, y = 193 },
+				{ id = "elder", x = 140, y = 193 },
+				{ id = "forge", x = 952, y = 193 },
+				{ id = "house", x = 770, y = 161 },
+				{ id = "shrine", x = 328, y = 145 },
+				{ id = "signpost", x = 256, y = 241 },
+				{ id = "barrels", x = 706, y = 241 },
+				{ id = "well", x = 748, y = 241 },
+				{ id = "cart", x = 806, y = 241 },
+				{ id = "bench", x = 900, y = 241 },
+				{ id = "pot", x = 40, y = 161 },
+				{ id = "stonelamp", x = 232, y = 145 },
+				{ id = "stonelamp", x = 424, y = 145 },
+				{ id = "crates", x = 392, y = 193 },
+				{ id = "board", x = 712, y = 161 },
+				{ id = "pot", x = 856, y = 129 },
+				{ id = "anvil", x = 872, y = 193 },
 			},
-			front = {
-				{ id = "pot", x = 126, y = 177 },
-				{ id = "barrels", x = 574, y = 177 },
-				{ id = "crates", x = 906, y = 177 },
-				{ id = "sacks", x = 988, y = 177 },
-				{ id = "pot", x = 1196, y = 177 },
-			},
-			spawn = { x = 48, y = 176 },
+			front = {  },
+			spawn = { x = 48, y = 240 },
 			portals = {
-				{ x = 44, y = 176, to = "r1a1", label = "마을 어귀로", h = 60 },
+				{ id = "gate", x = 44, y = 240, to = "r1a1", label = "마을 어귀로", h = 60 },
+				{ id = "door_storage", x = 621, y = 240, to = "in_storage", at = "exit", label = "창고", h = 33 },
+				{ id = "door_store", x = 503, y = 192, to = "in_store", at = "exit", label = "잡화점", h = 26 },
+				{ id = "door_elder", x = 145, y = 192, to = "in_elder", at = "exit", label = "촌장의 집", h = 29 },
+				{ id = "door_forge", x = 937, y = 192, to = "in_forge", at = "exit", label = "대장간", h = 30 },
+				{ id = "door_shrine", x = 328, y = 144, to = "in_shrine", at = "exit", label = "달의 사당", h = 30 },
 			},
 			mobs = {  },
 			npcSheet = "villagers.png",
@@ -8736,66 +9330,201 @@ return {
 					cell = 0,
 					name = "샛별",
 					role = "길잡이",
-					x = 82,
-					y = 176,
+					x = 84,
+					y = 240,
 					dir = -1,
 					h = 23,
 					lines = { "이 문을 지나면 사냥터예요.", "문 앞에서 ↑ 키를 누르면 지나가요." },
 				},
-				{
-					id = "elder",
-					cell = 1,
-					name = "보름 영감",
-					role = "촌장",
-					x = 248,
-					y = 176,
-					dir = 1,
-					h = 22,
-					lines = { "어서 오게. 달이 밝은 밤이구먼.", "마을 밖은 졸개들이 들끓는다네." },
-				},
-				{
-					id = "merchant",
-					cell = 2,
-					name = "반달",
-					role = "잡화 상인",
-					x = 492,
-					y = 176,
-					dir = 1,
-					h = 24,
-					lines = { "물약 필요해요? 싸게 드릴게요!", "오늘은 달빛 물약이 잘 나가요." },
-				},
-				{
-					id = "smith",
-					cell = 3,
-					name = "무쇠뿔",
-					role = "대장장이",
-					x = 690,
-					y = 176,
-					dir = 1,
-					h = 21,
-					lines = { "무기는 내가 벼려 주지.", "뿔 하나는 망치질하다 부러졌어." },
-				},
-				{
-					id = "master",
-					cell = 4,
-					name = "그믐 사제",
-					role = "전직관",
-					x = 856,
-					y = 176,
-					dir = 1,
-					h = 22,
-					lines = { "때가 차면 다음 길을 열어 주마.", "달은 준비된 자를 알아본다." },
-				},
+			},
+		},
+		in_storage = {
+			name = "창고",
+			w = 24,
+			h = 16,
+			tall = false,
+			indoor = true,
+			sky = "#12161c",
+			deep = "#12161c",
+			rows = { "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "########################", "########################", "########################", "########################", "########################" },
+			layers = {
+				{ img = "back_in_storage.png", w = 384, h = 216, f = 0, y = 0 },
+			},
+			ground = {  },
+			props = false,
+			rects = {  },
+			back = {  },
+			front = {  },
+			spawn = { x = 22, y = 176 },
+			portals = {
+				{ id = "exit", x = 22, y = 176, to = "town", at = "door_storage", label = "밖으로", h = 59 },
+			},
+			mobs = {  },
+			npcSheet = "villagers.png",
+			npcCell = { 32, 26 },
+			npcs = {
 				{
 					id = "keeper",
 					cell = 5,
 					name = "초롱",
 					role = "창고지기",
-					x = 1022,
+					x = 272,
 					y = 176,
-					dir = 1,
+					dir = -1,
 					h = 22,
 					lines = { "짐은 여기 맡겨 두세요.", "열쇠는 절대 안 잃어버려요." },
+				},
+			},
+		},
+		in_store = {
+			name = "잡화점",
+			w = 24,
+			h = 16,
+			tall = false,
+			indoor = true,
+			sky = "#12161c",
+			deep = "#12161c",
+			rows = { "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "########################", "########################", "########################", "########################", "########################" },
+			layers = {
+				{ img = "back_in_store.png", w = 384, h = 216, f = 0, y = 0 },
+			},
+			ground = {  },
+			props = false,
+			rects = {  },
+			back = {  },
+			front = {  },
+			spawn = { x = 24, y = 176 },
+			portals = {
+				{ id = "exit", x = 24, y = 176, to = "town", at = "door_store", label = "밖으로", h = 53 },
+			},
+			mobs = {  },
+			npcSheet = "villagers.png",
+			npcCell = { 32, 26 },
+			npcs = {
+				{
+					id = "merchant",
+					cell = 2,
+					name = "반달",
+					role = "잡화 상인",
+					x = 196,
+					y = 176,
+					dir = -1,
+					h = 24,
+					lines = { "물약 필요해요? 싸게 드릴게요!", "오늘은 달빛 물약이 잘 나가요." },
+				},
+			},
+		},
+		in_elder = {
+			name = "촌장의 집",
+			w = 24,
+			h = 16,
+			tall = false,
+			indoor = true,
+			sky = "#12161c",
+			deep = "#12161c",
+			rows = { "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "########################", "########################", "########################", "########################", "########################" },
+			layers = {
+				{ img = "back_in_elder.png", w = 384, h = 216, f = 0, y = 0 },
+			},
+			ground = {  },
+			props = false,
+			rects = {  },
+			back = {  },
+			front = {  },
+			spawn = { x = 29, y = 176 },
+			portals = {
+				{ id = "exit", x = 29, y = 176, to = "town", at = "door_elder", label = "밖으로", h = 61 },
+			},
+			mobs = {  },
+			npcSheet = "villagers.png",
+			npcCell = { 32, 26 },
+			npcs = {
+				{
+					id = "elder",
+					cell = 1,
+					name = "보름 영감",
+					role = "촌장",
+					x = 190,
+					y = 176,
+					dir = -1,
+					h = 22,
+					lines = { "어서 오게. 달이 밝은 밤이구먼.", "마을 밖은 졸개들이 들끓는다네." },
+				},
+			},
+		},
+		in_forge = {
+			name = "대장간",
+			w = 24,
+			h = 16,
+			tall = false,
+			indoor = true,
+			sky = "#12161c",
+			deep = "#12161c",
+			rows = { "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "########################", "########################", "########################", "########################", "########################" },
+			layers = {
+				{ img = "back_in_forge.png", w = 384, h = 216, f = 0, y = 0 },
+			},
+			ground = {  },
+			props = false,
+			rects = {  },
+			back = {  },
+			front = {  },
+			spawn = { x = 21, y = 176 },
+			portals = {
+				{ id = "exit", x = 21, y = 176, to = "town", at = "door_forge", label = "밖으로", h = 61 },
+			},
+			mobs = {  },
+			npcSheet = "villagers.png",
+			npcCell = { 32, 26 },
+			npcs = {
+				{
+					id = "smith",
+					cell = 3,
+					name = "무쇠뿔",
+					role = "대장장이",
+					x = 192,
+					y = 176,
+					dir = -1,
+					h = 21,
+					lines = { "무기는 내가 벼려 주지.", "뿔 하나는 망치질하다 부러졌어." },
+				},
+			},
+		},
+		in_shrine = {
+			name = "달의 사당",
+			w = 24,
+			h = 16,
+			tall = false,
+			indoor = true,
+			sky = "#12161c",
+			deep = "#12161c",
+			rows = { "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "........................", "########################", "########################", "########################", "########################", "########################" },
+			layers = {
+				{ img = "back_in_shrine.png", w = 384, h = 216, f = 0, y = 0 },
+			},
+			ground = {  },
+			props = false,
+			rects = {  },
+			back = {  },
+			front = {  },
+			spawn = { x = 18, y = 176 },
+			portals = {
+				{ id = "exit", x = 18, y = 176, to = "town", at = "door_shrine", label = "밖으로", h = 41 },
+			},
+			mobs = {  },
+			npcSheet = "villagers.png",
+			npcCell = { 32, 26 },
+			npcs = {
+				{
+					id = "master",
+					cell = 4,
+					name = "그믐 사제",
+					role = "전직관",
+					x = 238,
+					y = 176,
+					dir = -1,
+					h = 22,
+					lines = { "때가 차면 다음 길을 열어 주마.", "달은 준비된 자를 알아본다." },
 				},
 			},
 		},
@@ -8803,6 +9532,8 @@ return {
 			name = "마을 어귀",
 			w = 64,
 			h = 14,
+			tall = false,
+			indoor = false,
 			sky = "#5a6a82",
 			deep = "#232931",
 			rows = { "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "......................................==........................", "................................................................", "...................................==.................==........", "..........................................########..............", "......................########............########..............", "################################################################", "################################################################", "################################################################" },
@@ -8855,8 +9586,6 @@ return {
 				{ id = "pillar", x = 728, y = 145 },
 				{ id = "lantern", x = 824, y = 177 },
 				{ id = "tree", x = 920, y = 177 },
-			},
-			front = {
 				{ id = "grass", x = 38, y = 177 },
 				{ id = "bush", x = 122, y = 177 },
 				{ id = "grass", x = 234, y = 177 },
@@ -8867,6 +9596,7 @@ return {
 				{ id = "shroom", x = 896, y = 177 },
 				{ id = "grass", x = 986, y = 177 },
 			},
+			front = {  },
 			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 32, y = 176, to = "town", label = "마을로", h = 60 },
@@ -8924,19 +9654,37 @@ end
 MODULES['ReplicatedStorage/shared/lune/data/ui.generated'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/export_lune_game.mjs).
 -- 화면의 자리 — 공방 「기본 · UI」 탭(js/lune/design/basics.js)에서 정한 것. hud = 늘 보이는 화면(확정 배치) · windows = 창과 여는 키 · touch = 스마트폰 단추.
--- 좌표는 게임 화면(384x216)의 도트.
+-- grid = 화면 틀의 격자(1080p에서 960x540 — 게임 화면 384x216의 world배를 ui로 나눈 것. 창 크기에 따라 min부터 max까지 달라진다).
+-- hud의 x · y · w · h는 그 격자 960x540에서의 자리, at = 붙는 구석(t 위 · b 아래 / l 왼쪽 · c 가운데 · r 오른쪽). touch는 아직 게임 화면(384x216)의 도트.
+-- hudTouch = 스마트폰(손가락 단추가 켜졌을 때)에서 자리를 옮기는 칸 — 체력 · 퀘스트 알리미 · 채팅(PC의 자리면 손가락 단추와 겹친다).
+-- layout = 늘 보이는 화면과 창의 치수 · bubble = 주민의 말풍선 · questMark = 주민 머리 위의 퀘스트 표시(부품 이름 — new "!" 받을 수 있다 · done "?" 돌려줄 수 있다) · words = 낱말(장착 …).
+--  모두 공방 js/lune/design/ui.js에서 온다 — 공방의 횡스크롤 시험 탭에서 먼저 보고 정한 값이다(사용자 2026-10-07). shared/lune/ui/layout.luau · format.luau가 읽는다.
+-- statTip = 능력치의 설명(능력치 창에서 마우스를 올리면 뜬다 — {…}는 format.luau의 statTip이 채운다) · statTip.order = 「쓰는 직업」을 적는 직업의 차례 · statTipCheck = 공방의 셈으로 채운 본보기 { 직업, 능력치, 레벨, 꼬리표, 줄… }(게임의 셈과 맞춰 본다)
+-- skillWords = 스킬 창의 글(차수 탭 · 안내) · quick = 퀵슬롯(칸 수 · 칸마다의 기본 키 keys(Enum.KeyCode의 이름) · 딱지에 적는 글 labels · 새 캐릭터의 칸 start · 글 words · check = 공방의 셈으로 놓아 본 본보기)
 return {
+	grid = {
+		w = 960,
+		h = 540,
+		min = { w = 768, h = 432 },
+		max = { w = 1152, h = 648 },
+		margin = 16,
+		world = 5,
+		ui = 2,
+	},
 	hud = {
-		minimap = { x = 2, y = 2, w = 92, h = 48, name = "미니맵" },
-		party = { x = 2, y = 54, w = 62, h = 44, name = "파티원" },
-		boss = { x = 116, y = 4, w = 152, h = 14, name = "보스 체력" },
-		buffs = { x = 268, y = 2, w = 114, h = 26, name = "버프" },
-		quest = { x = 258, y = 30, w = 124, h = 47, name = "퀘스트 알리미" },
-		chat = { x = 2, y = 151, w = 116, h = 35, name = "채팅" },
-		menu = { x = 2, y = 188, w = 115, h = 20, name = "메뉴 단추" },
-		vitals = { x = 119, y = 180, w = 146, h = 28, name = "체력과 직업 게이지" },
-		skills = { x = 267, y = 169, w = 115, h = 39, name = "스킬 칸" },
-		xp = { x = 0, y = 209, w = 384, h = 7, name = "경험치 바" },
+		party = { at = "tl", x = 16, y = 14, w = 130, h = 78, name = "파티원" },
+		boss = { at = "tc", x = 330, y = 14, w = 300, h = 30, name = "보스 체력" },
+		buffs = { at = "tr", x = 770, y = 14, w = 174, h = 40, name = "버프" },
+		quest = { at = "tr", x = 724, y = 60, w = 220, h = 98, name = "퀘스트 알리미" },
+		chat = { at = "bl", x = 16, y = 426, w = 250, h = 42, name = "채팅" },
+		vitals = { at = "bl", x = 16, y = 480, w = 248, h = 44, name = "체력과 직업 게이지" },
+		skills = { at = "bc", x = 371, y = 430, w = 218, h = 94, name = "스킬 칸" },
+		menu = { at = "br", x = 724, y = 480, w = 220, h = 44, name = "메뉴 단추" },
+	},
+	hudTouch = {
+		vitals = { at = "bc", x = 356, y = 480, w = 248, h = 44, name = "체력과 직업 게이지" },
+		quest = { at = "tr", x = 724, y = 72, w = 220, h = 98, name = "퀘스트 알리미" },
+		chat = { at = "tl", x = 160, y = 30, w = 250, h = 42, name = "채팅" },
 	},
 	windows = {
 		{ id = "bag", name = "가방", key = "I", from = 2 },
@@ -8955,28 +9703,218 @@ return {
 		{ id = "shop", name = "상점 · 창고", key = false, from = 1 },
 	},
 	touch = {
-		{ no = 1, name = "이동 패드", kind = "pad", x = 10, y = 138, w = 64, h = 64 },
-		{ no = 2, name = "사냥기", kind = "big", x = 330, y = 160, w = 44, h = 44 },
-		{ no = 3, name = "보스기", kind = "big", x = 286, y = 172, w = 34, h = 34 },
-		{ no = 4, name = "뛰기", kind = "big", x = 340, y = 116, w = 34, h = 34 },
-		{ no = 5, name = "대쉬", kind = "big", x = 298, y = 132, w = 30, h = 30 },
-		{ no = 6, name = "스킬 1", kind = "skill", x = 262, y = 148, w = 24, h = 24 },
-		{ no = 7, name = "스킬 2", kind = "skill", x = 262, y = 118, w = 24, h = 24 },
-		{ no = 8, name = "스킬 3", kind = "skill", x = 290, y = 100, w = 24, h = 24 },
-		{ no = 9, name = "스킬 4", kind = "skill", x = 318, y = 86, w = 24, h = 24 },
-		{ no = 10, name = "스킬 5", kind = "skill", x = 346, y = 86, w = 24, h = 24 },
-		{ no = 11, name = "스킬 6", kind = "skill", x = 234, y = 154, w = 24, h = 24 },
-		{ no = 12, name = "쪽 넘기기", kind = "etc", x = 262, y = 180, w = 20, h = 24 },
-		{ no = 13, name = "줍기 · 말 걸기", kind = "etc", x = 84, y = 148, w = 24, h = 24 },
-		{ no = 14, name = "물약", kind = "etc", x = 84, y = 178, w = 24, h = 24 },
-		{ no = 15, name = "메뉴", kind = "etc", x = 360, y = 4, w = 20, h = 20 },
-		{ no = 16, name = "채팅", kind = "etc", x = 4, y = 40, w = 20, h = 20 },
-		{ no = 17, name = "미니맵", kind = "hud", x = 4, y = 4, w = 56, h = 30 },
-		{ no = 18, name = "보스 체력", kind = "hud", x = 112, y = 4, w = 160, h = 12 },
-		{ no = 19, name = "버프", kind = "hud", x = 276, y = 4, w = 80, h = 14 },
-		{ no = 20, name = "퀘스트 알리미", kind = "hud", x = 292, y = 22, w = 64, h = 14 },
-		{ no = 21, name = "체력과 직업 게이지", kind = "hud", x = 132, y = 190, w = 120, h = 18 },
-		{ no = 22, name = "경험치 바", kind = "hud", x = 0, y = 211, w = 384, h = 5 },
+		{ no = 1, name = "이동 패드", kind = "pad", slot = false, act = false, x = 10, y = 138, w = 64, h = 64 },
+		{ no = 2, name = "칸 2(처음에는 사냥기)", kind = "big", slot = 2, act = false, x = 330, y = 160, w = 44, h = 44 },
+		{ no = 3, name = "칸 3(처음에는 보스기)", kind = "big", slot = 3, act = false, x = 286, y = 172, w = 34, h = 34 },
+		{ no = 4, name = "뛰기", kind = "big", slot = false, act = "jump", x = 340, y = 116, w = 34, h = 34 },
+		{ no = 5, name = "칸 4(처음에는 대쉬)", kind = "big", slot = 4, act = false, x = 296, y = 130, w = 32, h = 32 },
+		{ no = 6, name = "칸 5", kind = "skill", slot = 5, act = false, x = 262, y = 148, w = 24, h = 24 },
+		{ no = 7, name = "칸 6", kind = "skill", slot = 6, act = false, x = 262, y = 118, w = 24, h = 24 },
+		{ no = 8, name = "칸 7", kind = "skill", slot = 7, act = false, x = 290, y = 100, w = 24, h = 24 },
+		{ no = 9, name = "칸 8", kind = "skill", slot = 8, act = false, x = 318, y = 86, w = 24, h = 24 },
+		{ no = 10, name = "칸 9", kind = "skill", slot = 9, act = false, x = 346, y = 86, w = 24, h = 24 },
+		{ no = 11, name = "칸 10", kind = "skill", slot = 10, act = false, x = 234, y = 154, w = 24, h = 24 },
+		{ no = 12, name = "칸 11", kind = "skill", slot = 11, act = false, x = 258, y = 180, w = 24, h = 24 },
+		{ no = 13, name = "칸 12", kind = "skill", slot = 12, act = false, x = 206, y = 158, w = 24, h = 24 },
+		{ no = 14, name = "상호작용(줍기 · 문 · 말 걸기)", kind = "etc", slot = false, act = "interact", x = 82, y = 140, w = 30, h = 30 },
+		{ no = 15, name = "칸 1(처음에는 물약)", kind = "etc", slot = 1, act = false, x = 84, y = 178, w = 24, h = 24 },
+		{ no = 16, name = "메뉴", kind = "etc", slot = false, act = "menu", x = 338, y = 4, w = 42, h = 20 },
+		{ no = 17, name = "채팅", kind = "etc", slot = false, act = "chat", x = 4, y = 40, w = 28, h = 20 },
+		{ no = 18, name = "보스 체력", kind = "hud", slot = false, act = false, x = 112, y = 4, w = 160, h = 12 },
+		{ no = 19, name = "버프", kind = "hud", slot = false, act = false, x = 250, y = 20, w = 80, h = 10 },
+		{ no = 20, name = "퀘스트 알리미", kind = "hud", slot = false, act = false, x = 290, y = 30, w = 88, h = 38 },
+		{ no = 21, name = "체력과 직업 게이지", kind = "hud", slot = false, act = false, x = 142, y = 192, w = 100, h = 18 },
+		{ no = 22, name = "경험치 바", kind = "hud", slot = false, act = false, x = 142, y = 211, w = 80, h = 3 },
+	},
+	layout = {
+		vitals = { barW = 200, hpH = 20, xpH = 5, nameY = 0, nameGap = 6, hpY = 15, hpPad = 6, xpY = 39, xpGap = 6, xpText = "100.00%" },
+		skills = { cols = 6, rows = 2, slot = 28, gap = 10, keyUp = 17, rowGap = 4, keyMax = 5 },
+		menu = {
+			max = 6,
+			slot = 30,
+			pitch = 38,
+			labelW = 38,
+			labelY = 33,
+			labels = { stat = "능력치", more = "메뉴" },
+		},
+		party = {
+			row = 26,
+			max = 3,
+			barY = 14,
+			barW = 110,
+			barH = 5,
+			askText = "파티에 초대했다",
+			ask = { at = "tc", x = 360, y = 64, w = 240, h = 92, pad = 14 },
+		},
+		quest = { title = 18, line = 14, gap = 6 },
+		chat = {
+			line = 14,
+			field = 22,
+			life = 12,
+			open = { w = 340, lines = 6, pad = 10, dx = -6, dy = 6, channelW = 48 },
+		},
+		tag = {
+			h = 13,
+			down = 4,
+			maxW = 220,
+			plate = { padX = 4, padY = 2 },
+		},
+		mobBar = { w = 52, h = 6, up = 25 },
+		win = { pad = 18, head = 44, foot = 14, edge = 16, top = 16, bodyW = 300 },
+		bag = { cols = 6, rows = 4, gridY = 22, infoH = 132, gap = 8, countW = 70, scrollW = 36 },
+		equip = { textW = 70, accCols = 4, gap = 8 },
+		shop = { w = 300, nameW = 150, priceW = 56, buyW = 82, rows = 8 },
+		stat = {
+			w = 264,
+			top = 24,
+			row = 30,
+			tagX = 84,
+			valueRight = 40,
+			plusW = 30,
+			tip = { w = 236, pad = 10, gap = 8, title = 20, line = 14, lines = 3 },
+		},
+		skill = { tabW = 30, tabGap = 4, infoY = 24, autoW = 110, top = 54, cols = 2, rows = 6, row = 36, slot = 30, colW = 162, colGap = 12, plusW = 26, gap = 24, detailW = 240, textLine = 16, textLines = 9 },
+	},
+	bubble = { textW = 260, lines = 3, padX = 12, padY = 8, tail = 8, up = 2 },
+	questMark = { new = "markNew", done = "markDone", up = 2 },
+	words = { equip = "장착", equipIf = "장착하면" },
+	statTip = {
+		main = {
+			tag = "주 능력치",
+			lines = { "{class}의 공격을 가장 크게 올린다.", "1점 찍으면 전투력 +{power}" },
+		},
+		sub = {
+			tag = "부 능력치",
+			lines = { "공격을 조금 올린다 — {main}의 {ratio}분의 1.", "1점 찍으면 전투력 +{power}" },
+		},
+		none = {
+			tag = "안 쓰는 능력치",
+			lines = { "{class}에게는 아무 효과가 없다.", "쓰는 직업: {users}" },
+		},
+		hp = {
+			tag = "",
+			lines = { "최대 체력을 올린다. 공격은 오르지 않는다.", "1점 찍으면 최대 체력 +{hp}" },
+		},
+		marks = { main = "주", sub = "부" },
+		order = { "axion", "riven", "reaper", "mooni", "salamander" },
+	},
+	skillWords = {
+		tabs = { "I", "II", "III", "IV" },
+		open = "Lv.{lv}부터 쓰는 {job}차 스킬 {n}개",
+		locked = "Lv.{lv}에 {job}차 전직을 하면 배운다",
+		points = "스킬 포인트 {n}",
+		auto = "추천대로 찍기",
+		replaces = "앞 차수의 「{name}」 자리에 들어간다",
+		bonus = { mob = "일반 몬스터에게 피해 +{pct}%", boss = "보스에게 피해 +{pct}%" },
+	},
+	quick = {
+		n = 12,
+		cols = 6,
+		keys = { "LeftControl", "Q", "A", "LeftShift", "W", "S", "E", "D", "R", "F", "One", "Two" },
+		start = { "potion", "mob", "boss", "move" },
+		blink = 1.6,
+		drag = 5,
+		emptyAlpha = 0.5,
+		words = { pick = "놓을 칸을 고르세요", hint = "스킬을 누르거나 끌어서 퀵슬롯에 놓는다", armed = "반짝이는 칸을 누르면 그 칸에 놓인다", at = "퀵슬롯 {key}", none = "퀵슬롯에 없음", passive = "늘 켜져 있다(퀵슬롯에 놓지 않는다)", unlearned = "배우면 퀵슬롯에 놓을 수 있다", later = "아직 쓸 수 없는 스킬이다", slot = "퀵슬롯 {n}" },
+		labels = { "Ctrl", "Q", "A", "Shift", "W", "S", "E", "D", "R", "F", "1", "2" },
+		check = {
+			{
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				"place",
+				"x",
+				5,
+				{ "potion", "m", "b", "d", "x", false, false, false, false, false, false, false },
+			},
+			{
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				"place",
+				"m",
+				6,
+				{ "potion", false, "b", "d", false, "m", false, false, false, false, false, false },
+			},
+			{
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				"place",
+				"b",
+				2,
+				{ "potion", "b", "m", "d", false, false, false, false, false, false, false, false },
+			},
+			{
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				"place",
+				"x",
+				1,
+				{ "x", "m", "b", "d", false, false, false, false, false, false, false, false },
+			},
+			{
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				"place",
+				"x",
+				2,
+				{ "potion", "x", "b", "d", false, false, false, false, false, false, false, false },
+			},
+			{
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				"place",
+				"potion",
+				3,
+				{ "b", "m", "potion", "d", false, false, false, false, false, false, false, false },
+			},
+			{
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				"place",
+				"m",
+				2,
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+			},
+			{
+				{ "potion", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k" },
+				"place",
+				"x",
+				1,
+				{ "x", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k" },
+			},
+			{
+				{ "potion", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k" },
+				"place",
+				"x",
+				4,
+				{ "potion", "a", "b", "x", "d", "e", "f", "g", "h", "i", "j", "k" },
+			},
+			{
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				"clear",
+				"",
+				2,
+				{ "potion", false, "b", "d", false, false, false, false, false, false, false, false },
+			},
+			{
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				"clear",
+				"",
+				1,
+				{ false, "m", "b", "d", false, false, false, false, false, false, false, false },
+			},
+			{
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				"clear",
+				"",
+				9,
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+			},
+		},
+	},
+	statTipCheck = {
+		{ "axion", "str", 1, "main", "힘", "주 능력치", "리틀 액시온의 공격을 가장 크게 올린다.", "1점 찍으면 전투력 +0.64" },
+		{ "axion", "dex", 12, "sub", "민첩", "부 능력치", "공격을 조금 올린다 — 힘의 4분의 1.", "1점 찍으면 전투력 +0.03" },
+		{ "axion", "int", 12, "none", "지능", "안 쓰는 능력치", "리틀 액시온에게는 아무 효과가 없다.", "쓰는 직업: 리틀 리퍼(주) · 리틀 무니(부)" },
+		{ "axion", "hp", 12, "hp", "체력", "", "최대 체력을 올린다. 공격은 오르지 않는다.", "1점 찍으면 최대 체력 +0.20" },
+		{ "riven", "luk", 30, "main", "운", "주 능력치", "리틀 리븐의 공격을 가장 크게 올린다.", "1점 찍으면 전투력 +0.15" },
+		{ "reaper", "luk", 61, "sub", "운", "부 능력치", "공격을 조금 올린다 — 지능의 4분의 1.", "1점 찍으면 전투력 +0.15" },
+		{ "mooni", "str", 100, "main", "힘", "주 능력치", "리틀 무니의 공격을 가장 크게 올린다.", "1점 찍으면 전투력 +5.21" },
+		{ "mooni", "hp", 100, "hp", "체력", "", "최대 체력을 올린다. 공격은 오르지 않는다.", "1점 찍으면 최대 체력 +20.3" },
+		{ "salamander", "dex", 150, "main", "민첩", "주 능력치", "살라맨더의 공격을 가장 크게 올린다.", "1점 찍으면 전투력 +102" },
+		{ "salamander", "luk", 150, "none", "운", "안 쓰는 능력치", "살라맨더에게는 아무 효과가 없다.", "쓰는 직업: 리틀 리븐(주) · 리틀 리퍼(부)" },
 	},
 }
 
@@ -9188,6 +10126,10 @@ local packets = {
 	Quest = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 4, Burst = 6 } },
 	-- 바꾼 키를 저장한다 { [하는 일] = 키 이름 } — 꼴은 서버가 다시 본다
 	Keys = { Kind = "Event", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 2, Burst = 4 } },
+	-- 퀵슬롯을 바꿨다: 칸들 전체 { "potion" · 스킬의 이름표 · false … } — 꼴과 놓아도 되는 스킬인지는 서버가 다시 본다. 돌려주는 값 = 서버가 가진 칸들(받아들였으면 보낸 것, 아니면 예전 것)
+	Slots = { Kind = "Function", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 8 } },
+	-- 스마트폰의 단추 배치를 바꿨다: 같은 꼴(칸들 전체) — PC의 퀵슬롯과 따로 저장한다. 돌려주는 값 = 서버가 가진 배치
+	TouchSlots = { Kind = "Function", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 8 } },
 	-- 내 자리(도트)와 보는 쪽. 움직임은 클라이언트가 셈하고 서버는 말이 되는지만 본다.
 	Move = { Kind = "Event", Direction = "ClientToServer", Args = { t.number, t.number, t.dir }, RateLimit = { PerSecond = 20, Burst = 30 } },
 	-- 문으로 다른 장면에 간다. 돌려주는 값 { scene, x, y, room } 또는 nil(문 앞이 아님)
@@ -9318,7 +10260,7 @@ function Bag.canWear(h, it): (boolean?, string?)
 	elseif it.slot == "weapon" and it.who ~= h.class then
 		return nil, "다른 직업의 무기다"
 	elseif h.level < Items.needLevel(it) then
-		return nil, ("Lv.%d부터 낀다"):format(Items.needLevel(it))
+		return nil, ("Lv.%d부터 장착할 수 있다"):format(Items.needLevel(it))
 	end
 	return true
 end
@@ -9346,7 +10288,7 @@ end
 function Bag.unequip(h, slot: any): (boolean?, string?)
 	local it = if typeof(slot) == "string" then h.equip[slot] else nil
 	if not it then
-		return nil, "끼고 있지 않다"
+		return nil, "장착하고 있지 않다"
 	elseif Bag.free(h) <= 0 then
 		return nil, "가방이 가득 찼다"
 	end
@@ -9606,6 +10548,7 @@ local CLASSES = require(script.Parent.Parent.data["classes.generated"])
 local Items = require(script.Parent.items)
 local Bag = require(script.Parent.bag)
 local Quests = require(script.Parent.quests)
+local Quick = require(script.Parent.Parent.ui.quick)
 local RULES = COMBAT.rules
 local STATS = N.data.STATS
 local STAT_IDS = { "str", "dex", "int", "luk", "hp" }
@@ -9661,6 +10604,10 @@ end
 function Hero.power(h): number
 	return Items.power(h.level, Hero.eff(h), Bag.worn(h))
 end
+-- 반올림하기 전의 전투력(피해의 셈에 쓴다 — 능력치 1점도 피해에 그대로 들어가게)
+function Hero.powerRaw(h): number
+	return Items.powerRaw(h.level, Hero.eff(h), Bag.worn(h))
+end
 
 -- 끼고 있는 방어구가 줄여 주는 피해 %(그 레벨의 몬스터에게 맞을 때)
 function Hero.cut(h, mobLv: number): number
@@ -9687,6 +10634,10 @@ function Hero.new(id: any, class: string)
 		skills = grants(class), -- [스킬 id] = 레벨
 		auto = false, -- true면 레벨업 때 능력치 · 스킬을 저절로 찍는다. 기본은 직접 찍는다(사용자 결정) — 창의 「자동으로 찍기」 · 「추천대로 찍기」는 한 번씩 누르는 단추다
 		keys = {}, -- 바꾼 키 { [하는 일] = 키 이름 } — 기본과 다른 것만(클라이언트가 보낸 것을 꼴만 보고 담아 둔다)
+		slots = Quick.start(CLASSES.classes[class].skills), -- 퀵슬롯: 칸마다 "potion" · 스킬의 이름표 · false(빈 칸) — shared/lune/ui/quick.luau
+		-- 스마트폰의 단추 배치: 같은 열두 칸이지만 PC의 것과 따로 둔다 — PC에서는 손에 익은 키(E · D …)에, 폰에서는 큰 단추에 놓고 싶은 것이 서로 다르다(2026-10-08).
+		--  한쪽에서 바꿔도 다른 쪽은 그대로다. 처음 차림은 같다(물약 · 사냥기 · 보스기 · 이동기)
+		tslots = Quick.start(CLASSES.classes[class].skills),
 		money = 0,
 		potions = RULES.startPotions,
 		hp = 0,
@@ -9913,6 +10864,28 @@ local function cleanKeys(map: any)
 	return out
 end
 
+-- 퀵슬롯에 놓아도 되는 스킬인가: 이 직업이 키로 쓰는 기술(싸움 수치가 있는 것)이고 배운 것
+function Hero.canSlot(h, id: string): boolean
+	local def = COMBAT.skills[id]
+	return def ~= nil and def.who == h.class and (h.skills[id] or 0) > 0
+end
+
+-- 퀵슬롯을 바꾼다(클라이언트가 보낸 칸들 — 꼴과 놓아도 되는 것인지를 본다). touch = 스마트폰의 단추 배치(tslots)를 바꾼다
+function Hero.setSlots(h, list: any, touch: boolean?): boolean
+	local slots = Quick.clean(list, function(id)
+		return Hero.canSlot(h, id)
+	end)
+	if not slots then
+		return false
+	end
+	if touch then
+		h.tslots = slots
+	else
+		h.slots = slots
+	end
+	return true
+end
+
 function Hero.setKeys(h, map: any): boolean
 	local keys = cleanKeys(map)
 	if not keys then
@@ -9936,6 +10909,8 @@ function Hero.pack(h)
 		skills = table.clone(h.skills),
 		auto = h.auto,
 		keys = table.clone(h.keys),
+		slots = table.clone(h.slots),
+		tslots = table.clone(h.tslots),
 		money = h.money,
 		potions = h.potions,
 		weak = math.floor(h.weak),
@@ -10008,6 +10983,14 @@ function Hero.unpack(id: any, data: any)
 		h.skills = base
 		h.sp = spEarned(h.level)
 	end
+	-- 퀵슬롯: 저장된 것이 말이 되면 그대로, 아니면(퀵슬롯이 생기기 전에 저장된 캐릭터 포함) 처음 차림(Hero.new가 놓아 둔 것)
+	if data.slots ~= nil then
+		Hero.setSlots(h, data.slots)
+	end
+	-- 스마트폰의 단추 배치: 저장된 것이 말이 되면 그대로, 없으면(이것이 생기기 전에 저장된 캐릭터) 처음 차림
+	if data.tslots ~= nil then
+		Hero.setSlots(h, data.tslots, true)
+	end
 
 	h.maxHp = N.hpOf(h.class, h.level, h.stats.hp)
 	h.hp = h.maxHp
@@ -10031,6 +11014,8 @@ function Hero.view(h)
 		skills = h.skills,
 		power = Hero.power(h),
 		keys = h.keys,
+		slots = h.slots,
+		tslots = h.tslots,
 		alive = h.alive,
 		weak = math.ceil(h.weak),
 	}
@@ -10158,7 +11143,12 @@ function Items.gearScore(list): number
 end
 
 function Items.power(level: number, eff: number, list): number
-	return round(POWER.base * (POWER.levelShare * eff * POWER.grow ^ level + POWER.itemShare * Items.gearScore(list)))
+	return round(Items.powerRaw(level, eff, list))
+end
+-- 반올림하기 전의 전투력 — 피해를 셈할 때 쓴다. 화면의 전투력(정수)으로 셈하면 능력치 1점(낮은 레벨에서 +0.3쯤)이 반올림에 묻혀 피해가 그대로일 때가 있다
+--  (사용자 2026-10-07: "스킬을찍거나, 스텟이 증가했을때 데미지가 증가하고있는지 확인하세요")
+function Items.powerRaw(level: number, eff: number, list): number
+	return POWER.base * (POWER.levelShare * eff * POWER.grow ^ level + POWER.itemShare * Items.gearScore(list))
 end
 
 -- 방어구가 줄여 주는 피해 %: 부위마다 4분의 1씩(빈 부위 · 부서진 것은 0)
@@ -10561,7 +11551,9 @@ function P.respawn(scene, body)
 	body.x, body.y, body.vx, body.vy, body.ground = scene.spawn.x, scene.spawn.y, 0, 0, false
 end
 
--- 한 걸음(dt초). 낭떠러지나 가시에 닿아 시작 자리로 돌아갔으면 "respawn"을 돌려준다.
+-- 한 걸음(dt초). 맵 아래로 떨어져 시작 자리로 돌아갔으면 "respawn"을 돌려준다.
+--  가시("^")는 닿아도 아무 일도 일어나지 않는다 — 사용자 2026-10-07: "가시맞고 돌아가는거 없애세요 가시맞고 돌아간다음에 몬스터랑 전투도안되고 고장나네요"
+--   (고장난 까닭: 화면에서만 시작 자리로 옮겨지고 서버는 그 순간이동을 믿지 않아, 그 뒤로 서버가 아는 자리와 어긋났다. 맵 아래로 떨어진 때를 위해 서버는 시작 자리로 온 보고는 받는다 — world.luau의 onMove)
 function P.step(scene, body, input, dt: number): string?
 	local mx = input.mx or 0
 	body.vx = if input.vx ~= nil then input.vx else mx * G.RUN * (input.speed or 1)
@@ -10604,7 +11596,7 @@ function P.step(scene, body, input, dt: number): string?
 		body.y, body.ground = ny, false
 	end
 
-	if body.y > scene.h * T + G.FALL_OUT or P.cell(scene, math.floor(body.x / T), math.floor((body.y - 1) / T)) == "^" then
+	if body.y > scene.h * T + G.FALL_OUT then
 		P.respawn(scene, body)
 		return "respawn"
 	end
@@ -10646,6 +11638,60 @@ end
 -- 할 일 하나를 화면에 적는 꼴: 「수습 검병 3/5」
 function Q.stepText(step, have: number): string
 	return ("%s %d/%d"):format(step.name, math.min(have, step.n), step.n)
+end
+
+-- 받침이 있으면 a, 없으면 b(을 · 를 / 이 · 가)를 고른다 — 한글로 끝나지 않으면 a
+local function josa(word: string, a: string, b: string): string
+	local last = nil
+	for _, code in utf8.codes(word) do
+		last = code
+	end
+	if last and last >= 0xAC00 and last <= 0xD7A3 and (last - 0xAC00) % 28 == 0 then
+		return b
+	end
+	return a
+end
+Q.josa = josa
+
+-- 그 일을 어디서 무엇을 잡아 하는가: 「달그림자 사냥터의 검병을 잡으면 떨어진다」 · 「마을 어귀에 있다」
+--  사용자 2026-10-07: "뭘잡아야 갑옷조각이 나오는지를 자연스럽게 적어둬야 퀘스트를 진행할거아닙니까 이렇게 적으면 누가 어떻게 알아요"
+function Q.stepHint(def, step): string
+	local SCENES = require(script.Parent.Parent.data["scenes.generated"])
+	local COMBAT = require(script.Parent.Parent.data["combat.generated"])
+	local scene = def.scene and SCENES.scenes[def.scene]
+	local place = if scene then scene.name else "이 근처"
+	local mob = COMBAT.mobs[step.mob]
+	local name = if mob then mob.name else step.name
+	if step.type == "gather" then
+		return ("%s의 %s%s 잡으면 떨어진다"):format(place, name, josa(name, "을", "를"))
+	end
+	return ("%s에 있다"):format(place)
+end
+
+-- 아직 다 하지 못한 일들의 길잡이(퀘스트 창에 적는다)
+function Q.hints(book, id: string): { string }
+	local def, st = byId[id], book[id]
+	local out = {}
+	if def and st then
+		for i, step in def.steps do
+			if (st.c[i] or 0) < step.n then
+				table.insert(out, Q.stepHint(def, step))
+			end
+		end
+	end
+	return out
+end
+
+-- 알리미에 적는 한 줄: 모으는 일은 떨어뜨리는 졸개의 이름을 앞에 — 「검병 · 갑옷 조각 0/8」
+function Q.trackText(step, have: number): string
+	if step.type == "gather" then
+		local COMBAT = require(script.Parent.Parent.data["combat.generated"])
+		local mob = COMBAT.mobs[step.mob]
+		if mob then
+			return ("%s · %s"):format(mob.name, Q.stepText(step, have))
+		end
+	end
+	return Q.stepText(step, have)
 end
 
 -- 받아 둔 퀘스트의 할 일이 다 됐는가
@@ -10714,24 +11760,70 @@ function Q.start(book, level: number)
 	end
 end
 
--- 졸개를 잡았다. 바뀐 퀘스트들의 id를 돌려준다(없으면 빈 표). 모으는 물건은 잡을 때마다 확률로 하나
-function Q.onKill(book, mobKind: string, scene: string, rng): { string }
+-- 졸개를 잡았다. 바뀐 퀘스트들의 id를 돌려준다(없으면 빈 표). 잡는 일만 센다 — 모으는 물건은 땅에 떨어지고(Q.drops) 주워야 오른다(Q.onLoot)
+function Q.onKill(book, mobKind: string, scene: string): { string }
 	local changed = {}
 	for id, st in book do
 		local def = byId[id]
 		if def and not st.done and def.scene == scene then
 			for i, step in def.steps do
 				local have = st.c[i] or 0
-				if step.mob == mobKind and have < step.n then
-					if step.type == "kill" or rng:NextNumber(0, 100) < step.pct then
-						st.c[i] = have + 1
-						table.insert(changed, id)
-					end
+				if step.type == "kill" and step.mob == mobKind and have < step.n then
+					st.c[i] = have + 1
+					table.insert(changed, id)
 				end
 			end
 		end
 	end
 	return changed
+end
+
+-- 졸개를 잡았을 때 떨어지는 퀘스트의 물건들: 아직 모으는 중인 물건마다 그 확률(pct)로 하나. { { quest, step, name, icon } … }
+--  사용자 2026-10-07: "퀘스트 아이템이나 , 기타아이템들은 왜 드롭도되지않고 그림도없고 그냥 텍스트로만 오르나요?" — 잡으면 숫자만 오르던 것을, 그림이 있는 물건이 땅에 떨어지고 주워야 오르게 고쳤다
+function Q.drops(book, mobKind: string, scene: string, rng)
+	local out = {}
+	for id, st in book do
+		local def = byId[id]
+		if def and not st.done and def.scene == scene then
+			for i, step in def.steps do
+				if step.type == "gather" and step.mob == mobKind and (st.c[i] or 0) < step.n and rng:NextNumber(0, 100) < step.pct then
+					table.insert(out, { quest = id, step = i, name = step.name, icon = step.icon })
+				end
+			end
+		end
+	end
+	return out
+end
+
+-- 퀘스트의 물건을 주웠다. 그 퀘스트의 숫자가 올랐으면 true(이미 다 모았거나 그만둔 퀘스트면 false — 물건은 그냥 사라진다)
+function Q.onLoot(book, id: any, step: number): boolean
+	local def, st = byId[id], book[id]
+	local s = def and def.steps[step]
+	if not st or st.done or not s or s.type ~= "gather" then
+		return false
+	end
+	local have = st.c[step] or 0
+	if have >= s.n then
+		return false
+	end
+	st.c[step] = have + 1
+	return true
+end
+
+-- 지금 모으고 있는 물건들(가방의 재료 탭에 보인다): { { name, icon, have, n } … } — 받은 퀘스트의 것만, 끝낸 퀘스트의 것은 빠진다
+function Q.items(book)
+	local out = {}
+	for _, def in D.list do
+		local st = book[def.id]
+		if st and not st.done then
+			for i, step in def.steps do
+				if step.type == "gather" then
+					table.insert(out, { name = step.name, icon = step.icon, have = st.c[i] or 0, n = step.n })
+				end
+			end
+		end
+	end
+	return out
 end
 
 -- 돌려준다. 끝낸 것으로 적고 보상을 돌려준다(보상을 실제로 주는 것은 부른 쪽 — sim/hero.luau의 questDone)
@@ -10809,7 +11901,7 @@ function Q.todo(book, id: string, names): { string }
 	end
 	for i, step in def.steps do
 		if (st.c[i] or 0) < step.n then
-			table.insert(out, Q.stepText(step, st.c[i] or 0))
+			table.insert(out, Q.trackText(step, st.c[i] or 0))
 		end
 	end
 	if #out == 0 then
@@ -10894,6 +11986,7 @@ local SEE_Y = 28 -- 이만큼 높이가 다르면 알아채지 못한다(다른 
 local BODY_W, BODY_H = 6, 14 -- 졸개의 몸(반폭, 높이)
 local HERO_W, HERO_H = 5, 17
 local SPAWN_TIME, DEAD_TIME = 0.8, 0.9
+local BIG_HIT = 1.4 -- 센 타격: 세기 배수가 이만큼 넘는 타(대지 강타의 내려찍기 1.43 · 삼단 베기의 셋째 타 2.05 같은 것). 그 숫자는 직업의 밝은 색으로 뜬다(공방 시험 탭의 "12 넘는 피해"에 해당)
 
 local Room = {}
 Room.__index = Room
@@ -10910,7 +12003,8 @@ function Room.new(key: string, scene, rng)
 	self.nextId = 1
 	for _, def in scene.mobs do
 		local kind = COMBAT.mobs[def.kind]
-		local maxHp = math.max(1, math.floor(N.mobHp(def.lv) * kind.hp + 0.5))
+		-- 피해 숫자의 배율(dmgScale)과 쓰임의 보정(targetBonus — 맞는 갈래의 기술은 피해가 그만큼 더 뜬다)만큼 체력도 크다: 맞는 기술로 잡는 타수는 그대로다
+		local maxHp = math.max(1, math.floor(N.mobHp(def.lv) * kind.hp * RULES.dmgScale * (1 + RULES.targetBonus / 100) + 0.5))
 		local mob = {
 			id = #self.mobs + 1,
 			kind = def.kind,
@@ -11151,23 +12245,35 @@ end
 
 -- 기술의 한 타. hero가 (x, y)에서 dir 쪽을 보고 쓴 기술의 hit(판정 하나)를 푼다. scale = 스킬 레벨에 따른 세기(없으면 1).
 --  mates = 경험치를 함께 나눌 사람들(hero도 든다 — 같은 맵의 파티원. 없으면 혼자). 떨어진 것은 그 사람들도 바로 주울 수 있다.
---  돌려주는 것: { hits = { { mob, dmg, hp, dead } … }, kills = { { mob, xp, ups, gains = { { hero, xp, ups, level } … }, drop, loot } … } }
-function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: number?, mates)
+--  돌려주는 것: { hits = { { mob, dmg, hp, dead, big } … }, kills = { { mob, xp, ups, gains = { { hero, xp, ups, level } … }, drop, loot } … } }
+--  kind = 그 기술의 갈래: 사냥기("mob")는 일반 몬스터에게, 보스기("boss")는 보스에게 피해가 targetBonus% 더 뜬다 — 맞지 않는 상대에게는 그 보정이 없다(체력은 보정만큼 크다)
+--   (사용자 2026-10-07: "보스기는 보스 공격시 추가데미지, 사냥기는 일반 몹 공격시 추가 데미지 … 지금 그냥 보스기로 사냥하는게 더빠른현상이 생깁니다")
+function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: number?, mates, kind: string?)
 	local box = hit.box
 	local xa, xb = x + dir * box[1], x + dir * box[2]
 	local x0, x1 = math.min(xa, xb), math.max(xa, xb)
-	local power = Hero.power(hero)
+	local power = Hero.powerRaw(hero) -- 반올림하지 않은 전투력으로 셈한다(능력치 1점도 피해에 들어간다)
 	local out = { hits = {}, kills = {} }
 	for _, mob in self:mobsInBox(x0, x1, y - box[3], y + box[4], x) do
 		local roll = 1 + self.rng:NextNumber(-RULES.spread, RULES.spread) / 100
-		local dmg = math.max(1, math.floor(power * hit.mul * (scale or 1) * roll + 0.5))
+		-- 가운데 타에 이미 맞은 적은 빼는 타(hit.except = 그 범위): 한 적이 같은 것을 두 번 맞지 않는다
+		if hit.except then
+			local e = hit.except
+			local ea, eb = x + dir * e[1], x + dir * e[2]
+			if mob.x + BODY_W >= math.min(ea, eb) and mob.x - BODY_W <= math.max(ea, eb) and mob.y >= y - e[3] and mob.y - BODY_H <= y + e[4] then
+				continue
+			end
+		end
+		-- 쓰임의 보정: 사냥기는 일반 몬스터에게, 보스기는 보스에게 피해가 targetBonus% 더 뜬다(다른 갈래의 기술은 누구에게나 뜬다). 맞지 않는 상대에게는 보정이 없다
+		local fit = if (kind == "mob" and mob.def.boss) or (kind == "boss" and not mob.def.boss) then 1 else 1 + RULES.targetBonus / 100
+		local dmg = math.max(1, math.floor(power * hit.mul * (scale or 1) * roll * RULES.dmgScale * fit + 0.5)) -- dmgScale = 피해 숫자의 배율(올린 만큼 숫자로 보이게 — 공방 combat.js)
 		local dead = self:damageMob(mob, dmg, x, hero.id)
 		if not dead and (hit.pull or 0) > 0 then
 			-- 끌어온다: 쓴 사람 쪽으로(제 범위 안에서만)
 			local toward = if mob.x > x then -1 else 1
 			mob.x = math.clamp(mob.x + toward * math.min(hit.pull, math.max(0, math.abs(mob.x - x) - 10)), mob.a, mob.b)
 		end
-		table.insert(out.hits, { mob = mob.id, dmg = dmg, hp = mob.hp, dead = dead })
+		table.insert(out.hits, { mob = mob.id, dmg = dmg, hp = mob.hp, dead = dead, big = if hit.mul >= BIG_HIT then true else nil })
 		if dead then
 			local list = mates or { hero }
 			local share = Party.share(#list)
@@ -11194,7 +12300,7 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 					d.friends = friends
 				end
 			end
-			table.insert(out.kills, { mob = mob.id, kind = mob.kind, xp = myXp, ups = myUps, gains = gains, drop = drop, loot = loot })
+			table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = myXp, ups = myUps, gains = gains, drop = drop, loot = loot })
 		end
 	end
 	return out
@@ -11241,7 +12347,7 @@ end
 
 -- 방 사람들에게 알릴 때의 꼴(떨어진 것 하나)
 function Room.dropView(d)
-	return { id = d.id, kind = d.kind, amount = d.amount, x = d.x, y = d.y, item = if d.item then { slot = d.item.slot, stage = d.item.stage, q = d.item.q, star = d.item.star, who = d.item.who } else nil }
+	return { id = d.id, kind = d.kind, amount = d.amount, x = d.x, y = d.y, name = d.name, icon = d.icon, item = if d.item then { slot = d.item.slot, stage = d.item.stage, q = d.item.q, star = d.item.star, who = d.item.who } else nil }
 end
 
 -- 줍는다. 주웠으면 그 물건을, 아니면 nil과 까닭을 돌려준다.
@@ -11257,6 +12363,10 @@ function Room:pickup(hero, dropId: number)
 		return nil, "멀다"
 	end
 	if d.owner ~= hero.id and not (d.friends and d.friends[hero.id]) and self.time - d.born < RULES.dropOwn then
+		return nil, "남의 것"
+	end
+	-- 퀘스트의 물건은 그 퀘스트를 하는 사람의 것이다(시간이 지나도 남이 줍지 못한다). 숫자를 올리는 것은 부른 쪽(Quests.onLoot)
+	if d.kind == "quest" and d.owner ~= hero.id then
 		return nil, "남의 것"
 	end
 	if d.kind == "gear" then
@@ -11282,13 +12392,16 @@ function Room:snapshot()
 	return list
 end
 
--- 방에 들어온 사람에게 한 번 주는 것(졸개의 종류 · 레벨 · 체력, 떨어져 있는 것)
-function Room:describe()
+-- 방에 들어온 사람에게 한 번 주는 것(졸개의 종류 · 레벨 · 체력, 떨어져 있는 것). heroId = 그 사람 — 남의 퀘스트 물건은 보여 주지 않는다
+function Room:describe(heroId: any?)
 	local mobs, drops = {}, {}
 	for i, mob in self.mobs do
 		mobs[i] = { id = mob.id, kind = mob.kind, lv = mob.lv, y = mob.y, maxHp = mob.maxHp, name = mob.def.name }
 	end
 	for _, d in self.drops do
+		if d.kind == "quest" and d.owner ~= heroId then
+			continue
+		end
 		table.insert(drops, Room.dropView(d))
 	end
 	return { key = self.key, mobs = mobs, drops = drops, snap = self:snapshot() }
@@ -11347,10 +12460,29 @@ function F.key(name: string): string
 	return KEYNAME[name] or name
 end
 
--- 주민과의 대화 상자의 자리(게임 화면 384x216의 도트). 늘 보이는 화면의 칸들(미니맵 · 파티원 · 보스 체력 · 버프)과
---  겹치지 않고, 서 있는 주민과 주인공을 가리지 않는 위쪽. 퀘스트 알리미의 자리에는 걸친다 — 말하는 동안 알리미는 숨는다.
---  왼쪽에 얼굴 칸이 있고 말은 textX부터 폭 textW에 lines줄까지(본문 글씨).
-F.TALK = { x = 114, y = 30, w = 266, h = 70, textX = 50, textW = 208, lines = 2 }
+-- 주민의 말풍선(화면 틀의 고운 격자의 점): 말은 본문 글씨로 폭 textW에 lines줄까지. 말풍선은 그 주민 머리 위에 뜬다(얼굴 칸 · 이름표를 따로 두지 않는다 — 산나비처럼).
+--  padX · padY = 글 둘레의 여백 · tail = 꼬리의 높이 · up = 머리 위로 띄우는 높이(게임의 도트). 값은 공방 js/lune/design/ui.js의 BUBBLE(시험 탭과 같은 값)
+F.BUBBLE = require(script.Parent.Parent.data["ui.generated"]).bubble
+
+-- 칸 위의 키 딱지에 적는 키 이름(작은 글씨): 다섯 글자까지 — 긴 이름은 줄임말로
+local CAP = { PageUp = "PgUp", PageDown = "PgDn", CapsLock = "Caps", Insert = "Ins", Delete = "Del", Escape = "Esc", NEnter = "NEnt" }
+function F.keyShort(name: string): string
+	local text = F.key(name)
+	local pad = string.match(text, "^Keypad(.+)$")
+	if pad then
+		text = "N" .. F.key(pad)
+	end
+	text = CAP[text] or text
+	local out, n = "", 0
+	for _, code in utf8.codes(text) do
+		n += 1
+		if n > 5 then
+			break
+		end
+		out ..= utf8.char(code)
+	end
+	return out
+end
 
 -- 이름표에 적는 이름. 도트 글꼴에 있는 글자(한글 · 영문 · 숫자 · 몇 가지 기호)로만 된 이름은 그대로, 다른 글자가 섞였으면 대신할 이름(로블록스 아이디)을 쓴다.
 --  길면 max글자에서 자른다.
@@ -11437,117 +12569,332 @@ function F.split(total: number, gap: number, needs: { number }, min: number): { 
 	return widths
 end
 
+-- ---------- 능력치의 설명 · 스킬 창의 글 ----------  글은 공방 js/lune/design/ui.js의 STATTIP · SKILLWORDS(data/ui.generated.luau의 statTip · skillWords)
+-- 글 속의 {이름}을 o의 값으로 채운다
+function F.fill(text: string, o): string
+	return (text:gsub("{(%w+)}", function(k)
+		local v = o[k]
+		return if v == nil then "" else tostring(v)
+	end))
+end
+
+-- 오르는 값을 적는 법: 100부터는 정수 · 10부터는 소수 한 자리 · 그 아래는 소수 두 자리
+function F.gain(v: number): string
+	if v >= 100 then
+		return tostring(math.floor(v + 0.5))
+	elseif v >= 10 then
+		return ("%.1f"):format(v)
+	end
+	return ("%.2f"):format(v)
+end
+
+-- 능력치 하나의 설명(능력치 창에서 마우스를 올렸을 때): { kind(main 주 · sub 부 · none 이 직업은 안 쓴다 · hp 체력), title(능력치 이름), tag, lines }
+--  사용자 2026-10-07: "능력치에 각각 스텟별로 마우스 올리면 호버로 스텟 효과를 보여줘야합니다. 뭔지알고 스텟을찍으라는건지"
+--  그 직업에게 무엇을 해 주는지와, 지금 레벨에서 1점에 얼마가 오르는지를 실제 숫자로 적는다(공방 js/lune/ui/paint.js의 statTip과 같은 글 — 테스트 14가 맞춰 본다)
+function F.statTip(class: string, id: string, level: number)
+	local N = require(script.Parent.Parent.config.numbers)
+	local CLASSES = require(script.Parent.Parent.data["classes.generated"])
+	local TIP = require(script.Parent.Parent.data["ui.generated"]).statTip
+	local STATS = N.data.STATS
+	local pair = STATS.classes[class]
+	local kind = if id == "hp" then "hp" elseif id == pair[1] then "main" elseif id == pair[2] then "sub" else "none"
+	local gain = N.statGain(class, level)
+	local users = {}
+	for _, c in TIP.order do
+		local q = STATS.classes[c]
+		if q[1] == id or q[2] == id then
+			table.insert(users, ("%s(%s)"):format(CLASSES.classes[c].name, if q[1] == id then TIP.marks.main else TIP.marks.sub))
+		end
+	end
+	local o = {
+		class = CLASSES.classes[class].name,
+		main = STATS.names[pair[1]],
+		ratio = STATS.mainW / STATS.subW,
+		power = F.gain(if kind == "main" then gain.main else gain.sub),
+		hp = F.gain(gain.hp),
+		users = table.concat(users, " · "),
+	}
+	local lines = {}
+	for i, text in TIP[kind].lines do
+		lines[i] = F.fill(text, o)
+	end
+	return { kind = kind, title = STATS.names[id], tag = TIP[kind].tag, lines = lines }
+end
+
 return F
 
 end
-MODULES['ReplicatedStorage/shared/lune/ui/minimap'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
--- 미니맵의 자리 셈(그리지는 않는다 — 그리기는 client/lune/minimap.luau). 장면의 칸 격자를 작은 상자에 줄여 넣는다.
---  가로 · 세로를 같은 비율로 줄이고(맵의 생김새가 그대로 보이게) 상자 가운데에 놓는다. 좌표는 모두 상자 안의 도트.
-local M = {}
+MODULES['ReplicatedStorage/shared/lune/ui/layout'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
+-- 늘 보이는 화면과 창의 치수 — 화면 틀의 고운 격자(1080p에서 960x540)에서의 값. 그리지는 않는다: 화면(client/lune/hud.luau · chat.luau · partyHud.luau · questHud.luau · ui/*Window.luau)과
+--  자동 검사(tools/test/tests/14_lune_hud.luau · 15_lune_items.luau)가 같은 값을 쓰게 한데 모아 둔 것이다.
+--  숫자는 여기서 적지 않는다 — 모두 공방에서 온다(사용자 2026-10-07: "공방에서 횡스크롤 시험 탭에서 먼저 구현해보고 느낌보고 게임에 반영하는 순서로 하겠습니다"):
+--   칸의 자리(붙는 구석과 x · y · w · h) = 공방 「기본 · UI」 탭(data/ui.generated.luau의 hud) · 치수 = 공방 js/lune/design/ui.js의 UILAYOUT(ui.generated.luau의 layout —
+--   공방의 횡스크롤 시험 탭이 같은 값으로 그린다) · 부품의 치수 = 공방의 부품 도구(data/kit.generated.luau의 ui.metric).
+local UI = require(script.Parent.Parent.data["ui.generated"])
+local KIT = require(script.Parent.Parent.data["kit.generated"])
+local M = KIT.ui.metric
+local D = UI.layout
 
--- 장면을 w x h 상자에 넣는 꼴.
---  돌려주는 것: { s = 한 칸이 몇 도트인가, w, h = 줄인 맵의 크기, ox, oy = 상자 안에서의 왼쪽 위,
---                ground = 땅 덩어리 { x, y, w, h }…, steps = 발판 { x, y, w, h }… }
-function M.layout(scene, w: number, h: number)
-	local s = math.min(w / scene.w, h / scene.h)
-	local mw = math.max(1, math.min(w, math.floor(scene.w * s + 0.5)))
-	local mh = math.max(1, math.min(h, math.floor(scene.h * s + 0.5)))
-	local out = { s = s, w = mw, h = mh, ox = math.floor((w - mw) / 2), oy = math.floor((h - mh) / 2), ground = {}, steps = {} }
+local L = {}
+L.GRID = UI.grid
+L.M = M
 
-	-- 땅: 도트 한 줄(세로)마다 가장 위의 막힌 칸부터 바닥까지. 높이가 같은 줄은 하나로 잇는다
-	local run = nil
-	for c = 0, mw - 1 do
-		local tx = math.min(scene.w - 1, math.floor((c + 0.5) / s))
-		local top = nil
-		for ty = 0, scene.h - 1 do
-			if string.sub(scene.rows[ty + 1], tx + 1, tx + 1) == "#" then
-				top = math.min(mh - 1, math.floor(ty * s))
-				break
-			end
+-- 화면의 격자가 gw x gh일 때 그 칸의 자리(구석에서의 거리를 지킨다). r = { at, x, y, w, h }
+function L.rect(r, gw: number?, gh: number?)
+	local w, h = gw or UI.grid.w, gh or UI.grid.h
+	local fy = if r.at:sub(1, 1) == "b" then 1 else 0
+	local side = r.at:sub(2, 2)
+	local fx = if side == "r" then 1 elseif side == "c" then 0.5 else 0
+	return { x = r.x + math.floor((w - UI.grid.w) * fx + 0.5), y = r.y + math.floor((h - UI.grid.h) * fy + 0.5), w = r.w, h = r.h }
+end
+
+-- 게임 세계의 배율 s에서 화면 틀의 배율과 격자(client/lune/stage.luau와 같은 셈)
+function L.gridFor(s: number): (number, number, number)
+	local us = math.max(1, math.floor(0.4 * s + 0.5))
+	return 384 * s / us, 216 * s / us, us
+end
+
+-- ---------- 늘 보이는 화면 ----------
+L.VITALS = D.vitals -- 왼쪽 아래 덩어리: 윗줄에 레벨 · 이름 / 체력 바(숫자는 바 안) / 가는 경험치 줄과 그 옆의 %
+L.SKILLS = D.skills -- 스킬 칸: 두 줄 x 여섯. 칸 위에 키 딱지(높이 keyUp)
+L.MENU = D.menu -- 창을 여는 단추: 여섯까지, 오른쪽 끝에 붙여. 그림 아래에 이름(labels = 칸에 맞춘 짧은 이름)
+L.PARTY = D.party -- 파티원 칸: 한 사람 = 이름 한 줄 + 가는 체력 줄. ask = 초대 알림(위쪽 가운데)
+L.QUEST = D.quest -- 퀘스트 알리미: 이름 한 줄(본문 글씨) · 할 일 한 줄(작은 글씨) · 퀘스트 사이
+L.CHAT = D.chat -- 채팅: 평소에는 채팅 칸에 마지막 몇 줄, 쓸 때는 넓은 판(open)
+L.TAG = D.tag -- 이름표: 한 줄의 높이(쌓을 때) · 발밑에서 아래로 띄우는 만큼 · 가장 넓을 때
+L.MOBBAR = D.mobBar -- 졸개의 체력 띠: 크기(화면 틀의 점) · 발밑에서 위로(게임의 도트)
+
+-- 쓰는 칸이 n개일 때 i째 칸의 자리(스킬 칸 틀 안): 여섯까지는 아랫줄에 가운데로 모으고, 일곱째부터는 윗줄에 같은 식으로
+function L.slotPlace(i: number, n: number): (number, number)
+	local s, K = UI.hud.skills, L.SKILLS
+	local pitch = K.slot + K.gap
+	local row = if i <= K.cols then 1 else 2
+	local inRow = if row == 1 then math.min(n, K.cols) else n - K.cols
+	local k = if row == 1 then i else i - K.cols
+	local left = math.floor((s.w - (inRow * pitch - K.gap)) / 2)
+	return left + (k - 1) * pitch, s.h - K.slot - (row - 1) * (K.slot + K.keyUp + K.rowGap)
+end
+
+-- 메뉴 단추 아래에 적는 이름(칸에 맞춘 짧은 이름이 있으면 그것)
+function L.menuLabel(id: string, name: string): string
+	return L.MENU.labels[id] or name
+end
+
+-- n개 가운데 i째 단추의 x(메뉴 칸 틀 안)
+function L.menuX(i: number, n: number): number
+	return UI.hud.menu.w - (n - i + 1) * L.MENU.pitch + (L.MENU.pitch - L.MENU.slot)
+end
+
+-- 쓰는 중의 채팅 판의 자리(아래 끝은 채팅 칸의 아래 끝에서 dy 아래)
+function L.chatOpen()
+	local c, o = UI.hud.chat, L.CHAT.open
+	local h = o.pad + o.lines * L.CHAT.line + 4 + L.CHAT.field + o.pad
+	return { at = c.at, x = c.x + o.dx, y = c.y + c.h - h + o.dy, w = o.w, h = h }
+end
+
+-- ---------- 창(화면 오른쪽 · 왼쪽의 옆 판) ----------
+L.WIN = D.win -- 판에서 속까지: 옆으로 pad, 위로 head(제목 줄), 아래로 foot. edge · top = 화면 끝에서 띄우는 폭
+L.BAG = D.bag -- 가방: 칸 여섯 x 넷. 탭 줄(gridY) 아래에 칸, 그 아래 infoH에 이름 · 설명 · 단추 셋(같은 폭 — 사이 gap) · 돈
+L.EQUIP = D.equip -- 장비 창: 왼쪽 = 칸 하나 + 글(textW), 오른쪽 = 장신구 네 칸
+L.SHOP = D.shop -- 상점: 물건 이름(본문 글씨) · 값 · 사는 단추(들)
+L.STAT = D.stat -- 능력치 창: 속의 폭 · 줄(top부터 row씩) · 주/부의 자리 · 값의 오른쪽 끝 · + 단추의 폭 · tip = 능력치에 마우스를 올렸을 때 창 옆에 뜨는 설명 판
+L.SKILL = D.skill -- 스킬 창: 차수 탭 · 안내 줄 · 스킬들(cols줄 x rows) · 오른쪽의 설명
+
+-- 능력치 창의 속(폭 · 높이). n = 능력치의 수
+function L.statBody(n: number): (number, number)
+	return L.STAT.w, L.STAT.top + n * L.STAT.row + 8 + M.button + 14 + 20
+end
+
+-- 스킬 창의 속(폭 · 높이)과 스킬 목록의 폭
+function L.skillBody(): (number, number, number)
+	local K = L.SKILL
+	local listW = K.cols * K.colW + (K.cols - 1) * K.colGap
+	return listW + K.gap + K.detailW, K.top + K.rows * K.row, listW
+end
+
+-- 장비 칸의 한 변: 장비 그림(게임의 굵은 도트 18개)에 사방으로 여백을 둔 크기. ratio = 게임 도트 하나가 화면 틀의 몇 점인가(1080p에서 2.5 → 50)
+function L.cellFor(ratio: number): number
+	return math.floor(KIT.icon * ratio + 0.5) + 5
+end
+
+-- 가방의 속(폭 · 높이)과 단추 셋의 폭
+function L.bagBody(ratio: number): (number, number)
+	local s = L.cellFor(ratio)
+	return L.BAG.cols * s, L.BAG.gridY + L.BAG.rows * s + L.BAG.infoH
+end
+
+function L.bagButtonW(bodyW: number): number
+	return math.floor((bodyW - L.BAG.gap * 2) / 3)
+end
+
+-- 장비 창의 속(폭 · 높이)과 오른쪽 덩이의 왼쪽 끝
+function L.equipBody(ratio: number): (number, number, number)
+	local s = L.cellFor(ratio)
+	local rx = s + L.EQUIP.gap + L.EQUIP.textW + L.EQUIP.gap
+	return rx + L.EQUIP.accCols * s, math.max(5 * (s + 2) - 2, 2 * s + 150), rx
+end
+
+return L
+
+end
+MODULES['ReplicatedStorage/shared/lune/ui/quick'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
+-- 퀵슬롯의 셈 — 화면 가운데 아래의 스킬 칸(여섯 x 두 줄). 그리지는 않는다: 화면(client/lune/hud.luau · boot.luau)과 서버(sim/hero.luau), 테스트가 같이 쓴다.
+--  사용자 2026-10-07: "스킬키를 단축키에 등록하기 쉬워야합니다. … 드래그앤 드랍으로 배치도 되어야하고, 스킬탭에서 스킬아이콘을 꾹누르거나 클릭하면 퀵슬롯쪽이 반짝거리고 거기서 퀵슬롯을 누르면 배치된다던가"
+--  키는 스킬이 아니라 칸에 붙는다(칸마다 키 하나). 칸에는 물약("potion")이나 스킬의 이름표가 놓인다. 빈 칸은 false.
+--  값과 놓는 법은 공방 js/lune/design/ui.js의 QUICK · quickPlace · quickClear · quickStart(횡스크롤 시험 탭이 같은 셈으로 논다) — data/ui.generated.luau의 quick.
+local UI = require(script.Parent.Parent.data["ui.generated"])
+
+local Q = {}
+Q.DATA = UI.quick
+Q.N = UI.quick.n -- 칸의 수
+Q.COLS = UI.quick.cols -- 한 줄
+Q.POTION = "potion"
+
+-- 칸에 놓인 것의 그림 이름(화면의 그림 24x24 — 공방의 아이콘 이름)
+function Q.pic(what: string): string
+	if what == Q.POTION then
+		return "slot_potion"
+	end
+	return "skill_" .. what
+end
+
+local function copy(slots)
+	local out = table.create(Q.N, false)
+	for i = 1, Q.N do
+		out[i] = slots[i] or false
+	end
+	return out
+end
+
+local function find(slots, what): number?
+	for i = 1, Q.N do
+		if slots[i] == what then
+			return i
 		end
-		if run and run.top == top then
-			run.w += 1
+	end
+	return nil
+end
+Q.find = find
+
+-- 칸에 놓는다: what(스킬의 이름표 · "potion")을 j째 칸에. 이미 다른 칸에 있던 것이면 두 칸이 자리를 바꾼다.
+--  창(스킬 창 · 가방)에서 온 것이면 그 칸에 있던 것은 빠진다. 새 칸들을 돌려준다(못 놓으면 nil)
+function Q.place(slots, what: string, j: number)
+	if typeof(what) ~= "string" or what == "" or j < 1 or j > Q.N or j % 1 ~= 0 then
+		return nil
+	end
+	local out = copy(slots)
+	local i = find(out, what)
+	if i == j then
+		return out
+	end
+	local old = out[j]
+	out[j] = what
+	if i then
+		out[i] = old
+	end
+	return out
+end
+
+-- 칸에서 뺀다(물약도 빠진다 — 가방의 소비 탭에서 다시 끌어다 놓는다)
+function Q.clear(slots, i: number)
+	if i < 1 or i > Q.N then
+		return nil
+	end
+	local out = copy(slots)
+	out[i] = false
+	return out
+end
+
+-- 새 캐릭터의 칸: start의 차례대로(물약 · 사냥기 · 보스기 · 이동기 — 스킬은 그 갈래의 첫 스킬). skills = { { id, type } … }
+function Q.start(skills)
+	local out = table.create(Q.N, false)
+	for k, kind in UI.quick.start do
+		if kind == Q.POTION then
+			out[k] = Q.POTION
 		else
-			run = { top = top, x = c, w = 1 }
-			if top then
-				table.insert(out.ground, run)
-			end
-		end
-	end
-	for _, g in out.ground do
-		g.y, g.h, g.top = g.top, mh - g.top, nil
-	end
-
-	-- 발판: 가로로 이어진 "="를 한 도트 높이의 줄로
-	for ty = 0, scene.h - 1 do
-		local row = scene.rows[ty + 1]
-		local from = nil
-		for tx = 0, scene.w do
-			local on = tx < scene.w and string.sub(row, tx + 1, tx + 1) == "="
-			if on and not from then
-				from = tx
-			elseif not on and from then
-				local x0 = math.min(mw - 1, math.floor(from * s))
-				local x1 = math.max(x0 + 1, math.min(mw, math.floor(tx * s + 0.5)))
-				table.insert(out.steps, { x = x0, y = math.min(mh - 1, math.floor(ty * s)), w = x1 - x0, h = 1 })
-				from = nil
+			for _, s in skills do
+				if s.type == kind then
+					out[k] = s.id
+					break
+				end
 			end
 		end
 	end
 	return out
 end
 
--- 미니맵 상자의 폭: 맵 이름이 기본 폭에 다 들어가지 않으면 이름만큼 늘어난다(공방의 화면 규칙 — 글이 길면 상자가 늘어난다).
---  그래도 max(보스 체력 칸의 왼쪽)를 넘지는 않는다 — 그보다 긴 이름은 줄여 적는다.
-function M.boxWidth(nameWidth: number, base: number, max: number, pad: number): number
-	return math.clamp(nameWidth + pad * 2, base, max)
+-- 밖에서 온 칸들(클라이언트가 보낸 것 · 저장된 것)을 살핀다: 꼭 N칸, 칸마다 false · "potion" · 놓아도 되는 스킬(ok(id)가 참), 겹치는 것 없이(물약도 한 칸까지 — 없어도 된다).
+--  말이 되면 깨끗한 칸들을, 아니면 nil을 돌려준다
+function Q.clean(list: any, ok: (string) -> boolean)
+	if typeof(list) ~= "table" then
+		return nil
+	end
+	local out = table.create(Q.N, false)
+	local seen = {}
+	local potions = 0
+	for k in list do
+		if typeof(k) ~= "number" or k < 1 or k > Q.N or k % 1 ~= 0 then
+			return nil
+		end
+	end
+	for i = 1, Q.N do
+		local v = list[i]
+		if v == nil or v == false then
+			out[i] = false
+		elseif typeof(v) == "string" and #v <= 40 and not seen[v] and (v == Q.POTION or ok(v)) then
+			seen[v] = true
+			out[i] = v
+			if v == Q.POTION then
+				potions += 1
+			end
+		else
+			return nil
+		end
+	end
+	if potions > 1 then
+		return nil
+	end
+	return out
 end
 
--- 미니맵 판 안의 자리: 옆 테두리 · 맵 이름 줄(그 아래부터 줄인 맵) · 아래 테두리, 맵 이름의 왼쪽(보석 그림 다음)과 오른쪽 여백
-M.SIDE, M.TOP, M.BOTTOM, M.NAME_X, M.NAME_R = 3, 14, 3, 13, 4
-
--- 맵 이름이 들어가는 판의 폭(기본 폭부터 max까지)
-function M.boxFor(nameWidth: number, base: number, max: number): number
-	return math.clamp(nameWidth + M.NAME_X + M.NAME_R, base, max)
+-- 윗줄(둘째 줄)에 놓인 것이 있는가 — 있으면 윗줄도 늘 보인다
+function Q.usesTop(slots): boolean
+	for i = Q.COLS + 1, Q.N do
+		if slots[i] then
+			return true
+		end
+	end
+	return false
 end
 
--- 장면 안의 한 점(도트 — 발밑)이 미니맵의 어느 도트인가(줄인 맵 안으로 가둔다)
-function M.point(layout, tile: number, x: number, y: number): (number, number)
-	local px = math.clamp(math.floor(x / tile * layout.s), 0, layout.w - 1)
-	local py = math.clamp(math.floor(y / tile * layout.s), 0, layout.h - 1)
-	return px, py
-end
-
-return M
+return Q
 
 end
 MODULES['ReplicatedStorage/shared/lune/ui/tags'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
--- 이름표와 채팅 줄의 자리 셈(그리지는 않는다). 테스트 14가 본다.
+-- 이름표와 채팅 줄의 셈(그리지는 않는다). 테스트 14가 본다.
 local T = {}
 
--- 이름표가 겹치지 않게 쌓는다. fixed = 움직이지 않는 것들(주민 · 문의 이름표), moving = 사람들의 이름표(앞의 것이 먼저 자리를 잡는다).
---  하나 = { x(왼쪽), y(위), w(폭) }. h = 한 줄의 높이. dir = 쌓는 쪽(-1 위로 · 1 아래로 — 발밑의 이름표는 아래로 쌓는다. 안 주면 위로).
---  돌려주는 것: moving의 차례대로 정해진 y들.
-function T.stack(fixed, moving, h: number, dir: number?): { number }
-	local placed = table.clone(fixed)
+-- 이름표가 겹칠 때: 아무것도 옮기지 않는다 — 이름은 늘 제 주인의 발밑 그 자리에 있다.
+--  사용자 2026-10-07: "닉네임이 npc랑 지나갈때 npc이름 아래로 낑겨버리는데 … 이건 말도 안되는 상황입니다" → 겹치면 밀어서 쌓던 것(stack)을 없앴다.
+--  list = 앞선 차례대로(내 것 → 다른 사람 → 주민 · 문 → 졸개) { x(왼쪽), y(위), w(폭) }. h = 한 줄의 높이 · gap = 옆으로 이만큼보다 가까우면 겹친 것으로 본다.
+--  앞선 것이 보이고, 그것과 겹치는 뒤의 것은 겹치는 동안 숨는다(글씨끼리 포개져 못 읽게 되지 않게). 돌려주는 것 = 보이는가의 차례표.
+--  공방의 횡스크롤 시험 탭(js/lune/ui/paint.js의 tagsVisible)과 같은 셈이다.
+function T.visible(list, h: number, gap: number?): { boolean }
+	local near = gap or 4
+	local shown = {}
 	local out = {}
-	for i, m in moving do
-		local y = m.y
-		for _ = 1, 6 do
-			local hit = false
-			for _, p in placed do
-				if m.x < p.x + p.w + 2 and p.x < m.x + m.w + 2 and math.abs(p.y - y) < h then
-					hit = true
-					break
-				end
-			end
-			if not hit then
+	for i, t in list do
+		local hit = false
+		for _, q in shown do
+			if t.x < q.x + q.w + near and q.x < t.x + t.w + near and math.abs(q.y - t.y) < h then
+				hit = true
 				break
 			end
-			y += h * (dir or -1)
 		end
-		out[i] = y
-		table.insert(placed, { x = m.x, y = y, w = m.w })
+		if not hit then
+			table.insert(shown, t)
+		end
+		out[i] = not hit
 	end
 	return out
 end
@@ -12422,7 +13769,7 @@ end
 
 -- ---------- 패킷 ----------
 local function describe(s)
-	local room = roomOf(s.scene):describe()
+	local room = roomOf(s.scene):describe(s.hero.id)
 	room.who = roster(s.scene)
 	return { self = Hero.view(s.hero), bag = Bag.view(s.hero), quests = Quests.view(s.hero.quests), scene = s.scene, x = s.hero.x, y = s.hero.y, room = room, id = s.hero.id, name = s.name }
 end
@@ -12473,7 +13820,9 @@ local function onMove(player, x: number, y: number, dir: number)
 	if x < 0 or x > scene.w * G.TILE or y < -200 or y > scene.h * G.TILE + G.FALL_OUT then
 		return
 	end
-	if not s.jumped and (math.abs(x - hero.x) > MOVE_SLACK or math.abs(y - hero.y) > MOVE_SLACK * 2) then
+	-- 그 맵의 시작 자리로 온 것은 받는다(맵 아래로 떨어지면 화면이 시작 자리로 돌려놓는다 — 이것까지 막으면 그 뒤로 자리가 영영 어긋난다)
+	local atSpawn = math.abs(x - scene.spawn.x) <= MOVE_SLACK and math.abs(y - scene.spawn.y) <= MOVE_SLACK * 2
+	if not s.jumped and not atSpawn and (math.abs(x - hero.x) > MOVE_SLACK or math.abs(y - hero.y) > MOVE_SLACK * 2) then
 		return -- 순간이동은 믿지 않는다(서버가 아는 자리를 그대로 둔다)
 	end
 	s.jumped = false
@@ -12497,7 +13846,7 @@ local function onTravel(player, to: string)
 			end
 			local from = s.scene
 			place(s, to, x, y)
-			local room = roomOf(to):describe()
+			local room = roomOf(to):describe(s.hero.id)
 			room.who = roster(to)
 			sendWho(from)
 			sendWho(to)
@@ -12595,7 +13944,7 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 						for _, mid in Party.mates(book, cur.hero.id, here) do
 							table.insert(mates, heroOf[mid])
 						end
-						local result = roomOf(key):skillHit(cur.hero, hit, cur.hero.x, cur.hero.y, dir, Hero.scale(cur.hero, id), if #mates > 1 then mates else nil)
+						local result = roomOf(key):skillHit(cur.hero, hit, cur.hero.x, cur.hero.y, dir, Hero.scale(cur.hero, id), if #mates > 1 then mates else nil, COMBAT.skills[id].type)
 						if #result.hits > 0 then
 							toRoom(key, "Hits", player.UserId, result.hits)
 						end
@@ -12604,10 +13953,15 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 							for _, gain in kill.gains do
 								local gs = byUser[gain.hero]
 								if gs then
-									-- 퀘스트: 함께 잡은 사람 모두에게 잡은 것으로 쳐 준다(모으는 물건은 사람마다 따로 굴린다)
-									if #Quests.onKill(gs.hero.quests, kill.kind, key, questRng) > 0 then
+									-- 퀘스트: 함께 잡은 사람 모두에게 잡은 것으로 쳐 준다
+									if #Quests.onKill(gs.hero.quests, kill.kind, key) > 0 then
 										gs.dirty = true
 										fire("Quests", gs.player, Quests.view(gs.hero.quests))
+									end
+									-- 모으는 물건은 사람마다 따로 굴려 그 사람의 것으로 땅에 떨어진다(그 사람에게만 보인다) — 주워야 숫자가 오른다
+									for n, q in Quests.drops(gs.hero.quests, kill.kind, key, questRng) do
+										local d = roomOf(key):addDrop({ kind = "quest", amount = 1, quest = q.quest, step = q.step, name = q.name, icon = q.icon }, kill.x - n * 9, kill.y, gs.hero.id)
+										fire("DropAdd", gs.player, Room.dropView(d))
 									end
 									fire("Gain", gs.player, { xp = gain.xp, ups = gain.ups, level = gain.level })
 									if gs ~= cur then
@@ -12645,7 +13999,13 @@ local function onPickup(player, dropId: number)
 	local drop, why = roomOf(s.scene):pickup(s.hero, dropId)
 	if drop then
 		toRoom(s.scene, "DropGone", drop.id, player.UserId, drop.amount)
-		if drop.kind == "money" then
+		if drop.kind == "quest" then
+			-- 퀘스트의 물건: 주운 만큼 그 퀘스트의 숫자가 오른다
+			if Quests.onLoot(s.hero.quests, drop.quest, drop.step) then
+				s.dirty = true
+				fire("Quests", player, Quests.view(s.hero.quests))
+			end
+		elseif drop.kind == "money" then
 			sendSelf(s)
 		else
 			sendBag(s)
@@ -12745,6 +14105,30 @@ local function onKeys(player, map)
 	if s and s.hero and Hero.setKeys(s.hero, map) then
 		s.dirty = true
 	end
+end
+
+-- 퀵슬롯을 바꿨다(칸들 전체를 보낸다 — 꼴과 놓아도 되는 스킬인지는 Hero.setSlots가 본다). 서버가 가진 칸들을 돌려준다 — 말이 안 되는 것을 보냈으면 예전 것이 돌아가 화면이 되돌아간다
+local function onSlots(player, list)
+	local s = sessions[player]
+	if not s or not s.hero then
+		return nil
+	end
+	if Hero.setSlots(s.hero, list) then
+		s.dirty = true
+	end
+	return s.hero.slots
+end
+
+-- 스마트폰의 단추 배치를 바꿨다(PC의 퀵슬롯과 따로 — 같은 식으로 본다)
+local function onTouchSlots(player, list)
+	local s = sessions[player]
+	if not s or not s.hero then
+		return nil
+	end
+	if Hero.setSlots(s.hero, list, true) then
+		s.dirty = true
+	end
+	return s.hero.tslots
 end
 
 local function onStatAuto(player)
@@ -12974,6 +14358,21 @@ local function onDebug(player, what: string, n: number)
 		local dust = room:addDrop({ kind = "dust", amount = 7 }, hero.x + 40, hero.y, hero.id)
 		toRoom(s.scene, "DropAdd", Room.dropView(gear))
 		toRoom(s.scene, "DropAdd", Room.dropView(dust))
+		local coin = room:addDrop({ kind = "money", amount = 12 }, hero.x + 58, hero.y, hero.id) -- 달돈의 그림도 본다
+		toRoom(s.scene, "DropAdd", Room.dropView(coin))
+	elseif what == "qdrop" then
+		-- 확인용: 발 앞에 퀘스트의 물건들을 하나씩 떨어뜨린다(그림과 줍기를 본다 — 받지 않은 퀘스트의 것은 주워도 숫자가 오르지 않는다)
+		local room = roomOf(s.scene)
+		local i = 0
+		for _, def in Quests.list do
+			for k, step in def.steps do
+				if step.type == "gather" then
+					i += 1
+					local d = room:addDrop({ kind = "quest", amount = 1, quest = def.id, step = k, name = step.name, icon = step.icon }, hero.x + 10 + i * 16, hero.y, hero.id)
+					fire("DropAdd", player, Room.dropView(d))
+				end
+			end
+		end
 	elseif what == "gear" then
 		-- 확인용: 그 단계의 장비 다섯 부위를 가방에 넣는다(성능은 차례로)
 		for i, slot in Items.data.GEAR do
@@ -13008,7 +14407,7 @@ function World.tick(dt: number)
 			local scene = SCENES.scenes[SCENES.start]
 			local from = s.scene
 			place(s, SCENES.start, scene.spawn.x, scene.spawn.y)
-			local room = roomOf(s.scene):describe()
+			local room = roomOf(s.scene):describe(s.hero.id)
 			room.who = roster(s.scene)
 			fire("Revive", s.player, { scene = s.scene, x = s.hero.x, y = s.hero.y, room = room })
 			sendSelf(s)
@@ -13079,6 +14478,8 @@ function World.start()
 	Net.OnServer("Party", onParty)
 	Net.OnServer("Quest", onQuest)
 	onSkill2 = onSkill
+	Net.OnServer("Slots", onSlots)
+	Net.OnServer("TouchSlots", onTouchSlots)
 	Net.OnServer("StatAdd", onStatAdd)
 	Net.OnServer("StatAuto", onStatAuto)
 	Net.OnServer("SkillUp", onSkillUp)
@@ -17162,10 +18563,12 @@ MODULES['Client/ui/pixelText'] = function(script, game, require, task, os, typeo
 -- 도트 글씨 — 에셋 공방(js/font.js — 레트로 비트맵 글꼴 「갈무리」, SIL OFL)에서 만든 글자판 이미지에서 한 글자씩 잘라 붙여 문자열을 그린다.
 -- 로블록스에는 글꼴 파일을 올릴 수 없어서 쓰는 방식(비트맵 글꼴). 한글 11,172자·영문·숫자·기호를 지원하고,
 -- 글자판에 없는 글자는 "?"로 그린다. 입력칸(TextBox)에는 못 쓴다.
+-- 테두리를 두른 글자판(글꼴 규칙에 pad가 있는 것 — 「달의 계승자」의 small_o · body_o)은 글자 둘레에 어두운 테두리가 이미 그려져 있다:
+--  판 없이 게임 화면 위에 바로 적는 글에 쓴다. 색을 입혀도 테두리는 어두운 채로 남는다.
 --
 -- 좌표 단위는 "UI 도트"(글자판 픽셀 그대로). 화면 크기는 부모에 걸린 정수 UIScale(pixelUI.Scale)이 키운다.
 --   local label = pixelText.new(parent, { Text = "안녕", Font = "body", Color = Color3, Shadow = Color3?, Align = "left"|"center"|"right",
---                                         MaxWidth = 폭?, MaxLines = 줄 수? })
+--                                         MaxWidth = 폭?, MaxLines = 줄 수?, Line = 줄 간격? })
 --   label.Frame.Position = UDim2.fromOffset(x, y) / label:SetText("...") / label:SetColor(c) / label.Width, label.Height
 -- 글씨가 칸을 넘지 않게: MaxWidth를 주면 그 폭에 맞춰 줄을 바꾸고(띄어쓰기에서 먼저, 낱말이 길면 글자에서), MaxLines를 주면
 --  그 줄 수를 넘는 부분은 "…"로 줄인다. 칸이 정해진 자리의 글씨는 반드시 MaxWidth(와 MaxLines)를 줄 것.
@@ -17324,9 +18727,14 @@ function Label:_render()
 	local pages = pagesOf[self._fontKey] or (townIds.FONT and townIds.FONT[self._fontKey]) or {}
 	local shown = self:_fitted(self._text)
 	local width, height = exports.Measure(shown, self._fontKey)
+	local lineH = self._line or font.line -- 줄 간격(Line을 주면 그 값 — 말풍선처럼 줄 사이를 넓게 쓸 때)
+	if self._line then
+		height = height / font.line * lineH
+	end
 	self.Width, self.Height = width, height
 	self.Frame.Size = UDim2.fromOffset(width, height)
 
+	local pad = font.pad or 0 -- 테두리를 두른 글자판은 칸이 글자보다 사방으로 이만큼 크다(글자의 자리는 그대로)
 	local layers = {}
 	if self._shadow then
 		table.insert(layers, { color = self._shadow, dx = 1, dy = 1, z = 0 })
@@ -17351,7 +18759,7 @@ function Label:_render()
 					img.ImageRectOffset = Vector2.new((k % font.cols) * font.cellW, (k // font.cols) * font.cellH)
 					img.ImageRectSize = Vector2.new(font.cellW, font.cellH)
 					img.Size = UDim2.fromOffset(font.cellW, font.cellH)
-					img.Position = UDim2.fromOffset(x + layer.dx, y + layer.dy)
+					img.Position = UDim2.fromOffset(x + layer.dx - pad, y + layer.dy - pad)
 					img.ResampleMode = Enum.ResamplerMode.Pixelated
 					img.ImageColor3 = layer.color
 					img.ImageTransparency = if layer.z == 0 and self._shadowHidden then 1 else 0
@@ -17362,7 +18770,7 @@ function Label:_render()
 			end
 			x += adv
 		end
-		y += font.line
+		y += lineH
 	end
 end
 
@@ -17431,6 +18839,7 @@ function exports.new(parent: Instance, props)
 		_zIndex = props.ZIndex or 5,
 		_maxWidth = props.MaxWidth, -- 이 폭을 넘으면 줄바꿈
 		_maxLines = props.MaxLines, -- 이 줄 수를 넘으면 …로 줄임
+		_line = props.Line, -- 줄 간격(안 주면 글꼴의 것)
 		_glyphs = {},
 	}, Label)
 	self:_render()
@@ -20781,11 +22190,20 @@ for key, sc in S.scenes do
 		expect(A[g.img] ~= nil, key .. " 바닥 그림이 에셋 목록에 있음 " .. g.img)
 		x += g.w
 	end
-	eq(x, sc.w * T, key .. " 바닥 그림 폭 = 맵 폭")
+	if sc.indoor then
+		-- 건물의 실내: 방 그림 한 장(층)이 바닥까지 다 그린다 — 바닥 그림 · 소품 그림이 없고, 한 화면이다
+		eq(x, 0, key .. " 실내에는 바닥 그림이 없다")
+		expect(#sc.layers == 1 and sc.layers[1].f == 0 and sc.layers[1].w == S.view[1] and sc.layers[1].h == S.view[2], key .. " 실내는 화면만 한 방 그림 한 장")
+		eq(sc.w * T, S.view[1], key .. " 실내는 한 화면 폭")
+		expect(not sc.tall, key .. " 실내는 카메라가 세로로 움직이지 않는다")
+	else
+		eq(x, sc.w * T, key .. " 바닥 그림 폭 = 맵 폭")
+	end
 	for _, l in sc.layers do
 		expect(A[l.img] ~= nil and l.w > 0 and l.f >= 0 and l.f < 1, key .. " 배경 층 " .. l.img)
 	end
-	expect(A[sc.props] ~= nil, key .. " 놓인 것 그림")
+	expect(if sc.indoor then sc.props == false and #sc.back == 0 else A[sc.props] ~= nil, key .. " 놓인 것 그림")
+	eq(#sc.front, 0, key .. " 캐릭터 앞에 놓인 것은 없다(캐릭터를 가린다)")
 	for _, list in { sc.back, sc.front } do
 		for _, p in list do
 			expect(sc.rects[p.id] ~= nil, key .. " 놓인 것의 그림 자리 " .. p.id)
@@ -20816,6 +22234,42 @@ for key, sc in S.scenes do
 	end
 end
 expect(sceneCount >= 2, "장면이 둘 이상")
+
+-- 마을: 층이 있는 맵(엘리니아 방식) — 건물의 문은 그 건물의 실내로 가고, 실내의 문은 그 건물의 문으로 돌아온다. 일을 봐 주는 주민은 실내에 있다
+do
+	local town0 = S.scenes[S.start]
+	expect(town0.tall == true, "마을은 카메라가 세로로도 따라가는 맵")
+	local doors, inside = 0, {}
+	for _, p in town0.portals do
+		local dest = S.scenes[p.to]
+		if dest.indoor then
+			doors += 1
+			eq(#dest.portals, 1, p.to .. " 나가는 문은 하나")
+			eq(dest.portals[1].to, S.start, p.to .. " 나가는 문은 마을로")
+			expect(dest.npcs ~= nil and #dest.npcs >= 1, p.to .. " 안에 주민이 있다")
+			for _, n in dest.npcs do
+				inside[n.id] = p.to
+			end
+			eq(dest.spawn.x, dest.portals[1].x, p.to .. " 시작 자리는 문 앞")
+		end
+	end
+	expect(doors >= 5, "들어갈 수 있는 건물이 다섯 " .. doors)
+	for _, id in { "merchant", "smith", "keeper", "elder", "master" } do
+		expect(inside[id] ~= nil, "건물 안에 있는 주민 " .. id)
+	end
+	for _, n in town0.npcs or {} do
+		expect(inside[n.id] == nil, "밖에 선 주민은 안에도 있지 않다 " .. n.id)
+	end
+	-- 건물의 문은 높이가 서로 다르다(평평한 한 줄이 아니다)
+	local heights, kinds = {}, 0
+	for _, p in town0.portals do
+		if not heights[p.y] then
+			heights[p.y] = true
+			kinds += 1
+		end
+	end
+	expect(kinds >= 3, "문이 놓인 높이가 셋 이상 " .. kinds)
+end
 
 -- 캐릭터: 다섯 직업과 졸개 넷, 움직이는 데 쓰는 동작, 장마다 판 안에 들어 있음
 for _, page in C.pages do
@@ -20873,6 +22327,26 @@ expect(math.abs((b.x - x0) - G.RUN) < 0.01, "1초에 " .. G.RUN .. "도트: " ..
 eq(P.clipOf(b, 1), "run", "달리는 동작")
 
 -- 뛰기: 가장 높이 올라간 높이 ≈ JUMP² / (2 · GRAVITY), 같은 자리에 내려선다
+--  (마을의 흙섬은 길에서 한 번 뛰면 올라서는 높이다 — 머리 위에 섬이 없는 자리로 옮겨서 잰다)
+do
+	local open = nil
+	for tx = 2, town.w - 3 do
+		local clear = true
+		for ty = 0, math.floor(town.spawn.y / T) - 1 do
+			for dx = -1, 1 do
+				if P.cell(town, tx + dx, ty) ~= "." then
+					clear = false
+				end
+			end
+		end
+		if clear and not open then
+			open = tx
+		end
+	end
+	expect(open ~= nil, "마을에 머리 위가 트인 길이 있다")
+	b.x = open * T + T / 2
+	run(town, b, { mx = 0 }, 0.2)
+end
 local top, y0 = b.y, b.y
 local input = { mx = 0, jump = true }
 local sawJump, sawFall = false, false
@@ -20902,6 +22376,29 @@ run(town, b, { mx = -1 }, 30)
 expect(b.x >= G.BOX_W / 2 and b.x < T, "왼쪽 끝에서 멈춘다 " .. b.x)
 run(town, b, { mx = 1 }, 30)
 expect(b.x < town.w * T - G.BOX_W / 2 + 1 and b.x > town.w * T - T, "오른쪽 끝에서 멈춘다 " .. b.x)
+
+-- 마을의 흙섬: 길에서 뛰어 가장 낮은 흙섬(= 칸)에 올라선다 — 한 번의 점프로 닿는 높이여야 한다
+do
+	local lowest: any = nil
+	for ty = 0, town.h - 1 do
+		for tx = 0, town.w - 1 do
+			if P.cell(town, tx, ty) == "=" and (lowest == nil or ty > lowest.ty) then
+				lowest = { tx = tx, ty = ty }
+			end
+		end
+	end
+	expect(lowest ~= nil, "마을에 흙섬이 있다")
+	local rise = town.spawn.y - lowest.ty * T
+	expect(rise > 0 and rise <= 48, "가장 낮은 흙섬은 길에서 한 번에 뛰어오를 높이 " .. rise)
+	local b2 = P.newBody(town)
+	b2.x, b2.y = lowest.tx * T + T / 2 + 4, town.spawn.y
+	run(town, b2, { mx = 0 }, 0.2)
+	local hop = { mx = 0, jump = true }
+	run(town, b2, hop, 1.2)
+	expect(b2.ground and b2.y == lowest.ty * T, ("길에서 뛰어 흙섬에 선다(높이 %d, 선 곳 %d)"):format(lowest.ty * T, b2.y))
+	run(town, b2, { mx = 0, down = true }, 0.6)
+	expect(b2.ground and b2.y == town.spawn.y, "↓로 길에 내려온다 " .. b2.y)
+end
 
 -- 사냥터: 얇은 발판(=)에 아래에서 올라타고, ↓로 내려온다
 local hunt = S.scenes.hunt
@@ -20947,19 +22444,31 @@ if wall then
 	expect(wb.x < wall.tx * T - G.BOX_W / 2 + 1, "턱 앞에서 멈춘다 " .. wb.x)
 end
 
--- 가시와 낭떠러지: 시작 자리로 돌아간다
-local fake = { w = 6, h = 4, spawn = { x = 24, y = 48 }, rows = { "......", "......", "......", "###^.#" } }
+-- 가시: 닿아도 아무 일도 일어나지 않는다(사용자 2026-10-07 — 시작 자리로 돌려보내던 것을 없앴다). 발밑의 가시 칸을 그냥 지나간다
+local spikes = { w = 6, h = 4, spawn = { x = 8, y = 48 }, rows = { "......", "......", "..^^..", "######" } }
+local sb = P.newBody(spikes)
+run(spikes, sb, { mx = 0 }, 0.5)
+expect(sb.ground and sb.y == 48, "가시가 있는 시험 맵에 선다")
+local sev = nil
+for _ = 1, 40 do
+	sev = sev or P.step(spikes, sb, { mx = 1 }, DT)
+end
+eq(sev, nil, "가시에 닿아도 돌아가지 않는다")
+expect(sb.x > 48 and sb.y == 48 and sb.ground, "가시 칸을 지나 그대로 걷는다")
+-- 구덩이: 맵의 맨 아래는 막혀 있어서 구덩이에 빠져도 그 바닥에 선다(시작 자리로 돌아가지 않는다)
+local fake = { w = 6, h = 4, spawn = { x = 24, y = 48 }, rows = { "......", "......", "......", "###..#" } }
 local fb = P.newBody(fake)
 run(fake, fb, { mx = 0 }, 0.5)
 expect(fb.ground and fb.y == 48, "작은 시험 맵에 선다")
 local ev = nil
-for _ = 1, 120 do
-	ev = P.step(fake, fb, { mx = 1 }, DT)
-	if ev then
-		break
-	end
+for _ = 1, 240 do
+	ev = ev or P.step(fake, fb, { mx = 1 }, DT)
 end
-eq(ev, "respawn", "가시에 닿으면 시작 자리로")
+eq(ev, nil, "구덩이에 빠져도 돌아가지 않는다")
+expect(fb.ground and fb.y == fake.h * G.TILE, "구덩이의 바닥(맵의 맨 아래)에 선다")
+-- 맵 아래로 벗어난 자리에 있으면(있을 수 없는 일 — 안전장치) 시작 자리로 돌아간다
+fb.x, fb.y, fb.ground = 24, fake.h * G.TILE + G.FALL_OUT + 20, false
+eq(P.step(fake, fb, { mx = 0 }, DT), "respawn", "맵 아래로 벗어나면 시작 자리로")
 eq(fb.x, fake.spawn.x, "시작 자리로 돌아왔다")
 eq(fb.vy, 0, "돌아오면 멈춰 있다")
 
@@ -21418,7 +22927,7 @@ eq(#miss.hits, 0, "등 뒤의 졸개는 삼단 베기에 맞지 않는다")
 -- 앞으로 쓰면 맞는다. 피해 = 전투력 × 배수 ± 흩어짐
 local res = roomS:skillHit(hero, combo.hits[1], hero.x, hero.y, 1)
 expect(#res.hits >= 1, "앞의 졸개가 맞는다")
-local want = Hero.power(hero) * combo.hits[1].mul
+local want = Hero.powerRaw(hero) * combo.hits[1].mul * RULES.dmgScale * (1 + RULES.targetBonus / 100) -- 피해 = 전투력(반올림 전) x 그 타의 배수 x 피해 숫자의 배율 x 쓰임의 보정(갈래를 주지 않으면 누구에게나)
 for _, hit in res.hits do
 	expect(hit.dmg >= math.floor(want * 0.9) and hit.dmg <= math.ceil(want * 1.1), ("피해 %d(기대 %.1f ±10%%)"):format(hit.dmg, want))
 end
@@ -21681,6 +23190,19 @@ handlers.Move(p1, s1.hero.x + 500, s1.hero.y, 1)
 eq(s1.hero.x, SCENES.scenes.town.spawn.x + 10, "순간이동은 믿지 않는다")
 handlers.Move(p1, -50, 0, 1)
 eq(s1.hero.x, SCENES.scenes.town.spawn.x + 10, "맵 밖은 받지 않는다")
+-- 그 맵의 시작 자리로 온 것은 멀어도 받는다(맵 아래로 떨어지면 화면이 시작 자리로 돌려놓는다 — 이것을 막으면 그 뒤로 서버가 아는 자리와 영영 어긋난다.
+--  사용자 2026-10-07: "가시맞고 돌아간다음에 몬스터랑 전투도안되고 고장나네요" — 가시의 되돌리기는 없앴고, 같은 고장이 다시 나지 않게 이 길을 열어 두었다)
+do
+	local spawn = SCENES.scenes.town.spawn
+	handlers.Move(p1, spawn.x + 300, spawn.y, 1)
+	eq(s1.hero.x, spawn.x + 10, "먼 곳으로의 순간이동은 여전히 믿지 않는다")
+	local far = World.session(p1)
+	far.hero.x = spawn.x + 300 -- 서버가 아는 자리가 먼 곳일 때
+	handlers.Move(p1, spawn.x, spawn.y, 1)
+	eq(s1.hero.x, spawn.x, "시작 자리로 돌아온 것은 받는다")
+	handlers.Move(p1, spawn.x + 10, spawn.y, 1)
+	eq(s1.hero.x, spawn.x + 10, "그 뒤의 자리 보고도 받는다(어긋나지 않는다)")
+end
 -- 문에서 먼 곳에서는 못 간다
 handlers.Move(p1, s1.hero.x + 80, s1.hero.y, 1)
 handlers.Move(p1, s1.hero.x + 80, s1.hero.y, 1)
@@ -21702,6 +23224,34 @@ eq(s1.scene, "hunt", "사냥터에 왔다")
 eq(#trip.room.mobs, #SCENES.scenes.hunt.mobs, "사냥터의 졸개 목록을 받는다")
 local back = SCENES.scenes.hunt.portals[1]
 eq(trip.x, back.x, "마을로 가는 문 앞에 선다")
+
+-- ---- 2-1) 건물의 문: 마을의 문 앞에서 그 건물의 실내로, 실내의 문 앞에서 들어갔던 그 문 앞으로 ----
+do
+	expect(goTo(p1, SCENES.start) ~= nil, "마을로 돌아온다")
+	local town = SCENES.scenes[SCENES.start]
+	local doors = 0
+	for _, door in town.portals do
+		local inside = SCENES.scenes[door.to]
+		if inside.indoor then
+			doors += 1
+			eq(handlers.Travel(p1, door.to), nil, "문 앞이 아니면 못 들어간다 " .. door.to)
+			s1.jumped = true
+			handlers.Move(p1, door.x, door.y, 1)
+			local into = handlers.Travel(p1, door.to)
+			expect(into ~= nil and into.scene == door.to, "문 앞에서 들어간다 " .. door.to)
+			local exit = inside.portals[1]
+			expect(into.x == exit.x and into.y == exit.y, "들어가면 나가는 문 앞에 선다 " .. door.to)
+			eq(#into.room.mobs, 0, "실내에는 졸개가 없다 " .. door.to)
+			eq(s1.scene, door.to, "서버가 아는 장면이 바뀐다 " .. door.to)
+			local out = handlers.Travel(p1, SCENES.start)
+			expect(out ~= nil and out.scene == SCENES.start, "나가는 문으로 마을에 나온다 " .. door.to)
+			expect(out.x == door.x and out.y == door.y, ("들어갔던 그 문 앞으로 나온다 %s (%d, %d)"):format(door.to, out.x, out.y))
+		end
+	end
+	expect(doors >= 5, "들어갈 수 있는 건물이 다섯")
+	expect(goTo(p1, "hunt") ~= nil, "다시 사냥터로")
+	eq(s1.scene, "hunt", "사냥터에 왔다(다음 검사를 위해)")
+end
 
 -- ---- 3) 졸개의 모습이 온다 ----
 table.clear(sent)
@@ -21937,15 +23487,22 @@ do
 		local list = got(name, p3)
 		return list[#list] and list[#list].args[1]
 	end
+	-- 주민은 제 건물 안(실내 장면)에 있다 — 어느 장면의 누구인지 찾고, 그 앞에 서려면 문으로 들어간다
 	local function npc(id)
-		for _, n in SCENES.scenes[SCENES.start].npcs do
-			if n.id == id then
-				return n
+		for key, sc in SCENES.scenes do
+			for _, n in sc.npcs or {} do
+				if n.id == id then
+					return n, key
+				end
 			end
 		end
+		error("없는 주민 " .. id)
 	end
 	local function stand(id)
-		local n = npc(id)
+		local n, key = npc(id)
+		goTo(p3, key)
+		eq(s3.scene, key, "주민이 있는 곳으로 간다 " .. id)
+		s3.jumped = true
 		h3.x, h3.y = n.x + 10, n.y
 	end
 	local it = Items.make("hat", 1, 5)
@@ -21964,7 +23521,18 @@ do
 	eq(Bag.find(h3, junkId), nil, "분해한 것은 없다")
 	-- 상점: 파는 사람 앞에서만
 	h3.money = 100000
-	h3.x = npc("merchant").x + 400
+	do
+		local m, mkey = npc("merchant")
+		expect(SCENES.scenes[mkey].indoor == true, "상인은 건물 안에 있다")
+		table.clear(sent)
+		handlers.Item(p3, "buy", "potion", 3)
+		expect(last("ItemDone").ok == false and last("ItemDone").why == "파는 사람 앞이 아니다", "건물 밖(마을)에서는 못 산다")
+		goTo(p3, mkey)
+		eq(s3.scene, mkey, "잡화점 문으로 들어간다")
+		eq(h3.x, SCENES.scenes[mkey].portals[1].x, "들어가면 나가는 문 앞에 선다")
+		s3.jumped = true
+		h3.x, h3.y = m.x + 150, m.y -- 같은 방 안이지만 멀다
+	end
 	table.clear(sent)
 	handlers.Item(p3, "buy", "potion", 3)
 	expect(last("ItemDone").ok == false and last("ItemDone").why == "파는 사람 앞이 아니다", "멀리서는 못 산다")
@@ -22182,12 +23750,20 @@ do
 		local list = got(name, pq)
 		return list[#list] and list[#list].args
 	end
+	-- 주민 앞에 선다: 건물 안의 주민이면 그 문으로 들어간다
 	local function at(id)
-		for _, n in SCENES.scenes[SCENES.start].npcs do
-			if n.id == id then
-				hq.x, hq.y = n.x + 8, n.y
+		for key, sc in SCENES.scenes do
+			for _, n in sc.npcs or {} do
+				if n.id == id then
+					goTo(pq, key)
+					eq(sq.scene, key, "주민이 있는 곳으로 간다 " .. id)
+					sq.jumped = true
+					hq.x, hq.y = n.x + 8, n.y
+					return
+				end
 			end
 		end
+		error("없는 주민 " .. id)
 	end
 	-- 사제 앞이 아니면 돌려주지 못한다
 	at("guide")
@@ -22262,28 +23838,80 @@ end
 
 end)
 runTest('14_lune_hud', function()
--- 「달의 계승자」 — 화면 글씨가 제 칸에 들어가는가(글씨는 칸을 넘지 않는다) · 숫자를 짧게 적는 꼴
+-- 「달의 계승자」 — 화면 글씨가 제 칸에 들어가는가(글씨는 칸을 넘지 않는다) · 숫자를 짧게 적는 꼴 · 늘 보이는 화면의 자리
+--  화면의 글씨와 틀은 게임의 도트보다 고운 격자(1080p에서 960x540)에 있다 — 격자는 창 크기에 따라 768x432부터 1152x648까지 달라지므로 세 크기에서 다 본다.
 local pixelText = req("Client/ui/pixelText")
 local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
 local F = req("ReplicatedStorage/shared/lune/ui/format")
+local L = req("ReplicatedStorage/shared/lune/ui/layout")
 local N = req("ReplicatedStorage/shared/lune/config/numbers")
-local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
+local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
 
 local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
-pixelText.Register("small", KIT.font.small, {}) -- 화면의 글은 작은 글씨(갈무리9) — 게임에서는 client/lune/ui/kit.luau가 등록한다
+-- 화면의 글씨: 작은 글씨(갈무리9)와 본문 글씨(갈무리11 — 글씨 모듈이 갖고 있다). 게임에서는 client/lune/ui/ui.luau가 등록한다
+pixelText.Register("small", KIT.font.small, {})
+pixelText.Register("small_o", KIT.font.small_o, {})
+pixelText.Register("body_o", KIT.font.body_o, {})
 
 local function measure(text)
 	return (pixelText.Measure(text, "small"))
 end
-local CELL, PITCH = KIT.cell, KIT.pitch
-
--- 화면 칸은 게임 화면(384x216) 안에 있다
-for key, r in UI.hud do
-	expect(r.x >= 0 and r.y >= 0 and r.x + r.w <= 384 and r.y + r.h <= 216, "화면 칸이 화면 안 " .. key)
+local function measureBody(text)
+	return (pixelText.Measure(text, "body"))
 end
-for _, key in { "minimap", "party", "boss", "buffs", "quest", "chat", "menu", "vitals", "skills", "xp" } do
+local M = KIT.ui.metric
+local G = UI.grid
+local GRIDS = { { name = "1080p", w = G.w, h = G.h }, { name = "가장 작은 격자", w = G.min.w, h = G.min.h }, { name = "가장 큰 격자", w = G.max.w, h = G.max.h } }
+local function apart(a, b)
+	return a.x >= b.x + b.w or a.x + a.w <= b.x or a.y >= b.y + b.h or a.y + a.h <= b.y
+end
+
+-- ---------- 글자판 ----------
+eq(KIT.font.small_o.pad, 1, "테두리를 두른 작은 글씨는 칸이 사방으로 한 점 크다")
+eq(KIT.font.small_o.cellW, KIT.font.small.cellW + 2, "테두리를 두른 글자판의 칸 폭")
+eq(KIT.font.small_o.line, KIT.font.small.line, "줄 간격은 같다")
+eq(measure("가나다 abc 123"), (pixelText.Measure("가나다 abc 123", "small_o")), "테두리를 둘러도 글의 폭은 같다")
+eq(measureBody("가나다 abc 123"), (pixelText.Measure("가나다 abc 123", "body_o")), "본문 글씨도 같다")
+expect(M.small == 10 and M.body == 12, "글씨는 둘뿐: 작은 글씨 10 · 본문 12")
+expect(M.button >= M.body + 12 and M.key >= M.small + 4, "글이 들어가는 칸에는 위아래 여백이 있다")
+
+-- ---------- 화면의 격자 ----------
+eq(G.w * G.ui, 384 * G.world, "1080p의 격자 폭 = 게임 화면의 정수배")
+eq(G.h * G.ui, 216 * G.world, "1080p의 격자 높이")
+for s = 2, 10 do
+	local w, h, us = L.gridFor(s)
+	expect(w == math.floor(w) and h == math.floor(h), ("게임 %d배일 때 화면 틀의 격자가 정수 — %sx%s"):format(s, tostring(w), tostring(h)))
+	expect(w >= G.min.w and h >= G.min.h and w <= G.max.w and h <= G.max.h, ("게임 %d배일 때 격자 %dx%d가 가장 작은 것과 큰 것 사이"):format(s, w, h))
+	expect(w % 2 == 0 and h % 2 == 0, "격자의 가운데가 반 점에 걸리지 않는다")
+	expect(384 * s == w * us, "화면 틀이 게임 화면을 꼭 덮는다")
+end
+eq(select(1, L.gridFor(5)), G.w, "게임 5배(1080p)의 격자 폭")
+eq(select(2, L.gridFor(5)), G.h, "게임 5배(1080p)의 격자 높이")
+
+-- ---------- 늘 보이는 화면의 칸: 세 격자에서 화면 안에 있고, 서로 겹치지 않고, 싸움터 가운데를 가리지 않는다 ----------
+for _, key in { "party", "boss", "buffs", "quest", "chat", "menu", "vitals", "skills" } do
 	expect(UI.hud[key] ~= nil, "지금 쓰는 화면 칸 " .. key)
 end
+expect(UI.hud.minimap == nil, "미니맵은 없다(사용자 결정 2026-10-07)")
+for _, g in GRIDS do
+	local mid = { x = g.w / 3, y = g.h * 0.3, w = g.w / 3, h = g.h * 0.4 }
+	local keys = {}
+	for key in UI.hud do
+		table.insert(keys, key)
+	end
+	table.sort(keys)
+	for i, key in keys do
+		local r = L.rect(UI.hud[key], g.w, g.h)
+		expect(r.x >= 0 and r.y >= 0 and r.x + r.w <= g.w and r.y + r.h <= g.h, ("화면 칸이 화면 안 %s(%s)"):format(key, g.name))
+		expect(apart(r, mid), ("화면 칸이 싸움터 가운데를 가리지 않는다 %s(%s)"):format(key, g.name))
+		for j = i + 1, #keys do
+			expect(apart(r, L.rect(UI.hud[keys[j]], g.w, g.h)), ("화면 칸이 겹치지 않는다 %s · %s(%s)"):format(key, keys[j], g.name))
+		end
+	end
+end
+eq(L.rect(UI.hud.menu, G.w, G.h).x, UI.hud.menu.x, "기준 격자에서는 적힌 자리 그대로")
+eq(L.rect(UI.hud.menu, G.min.w, G.min.h).x + UI.hud.menu.w, G.min.w - (G.w - UI.hud.menu.x - UI.hud.menu.w), "오른쪽에 붙는 칸은 오른쪽 끝에서의 거리가 같다")
+eq(L.rect(UI.hud.vitals, G.min.w, G.min.h).y + UI.hud.vitals.h, G.min.h - (G.h - UI.hud.vitals.y - UI.hud.vitals.h), "아래에 붙는 칸은 아래 끝에서의 거리가 같다")
 
 -- 숫자를 짧게
 eq(F.short(0), "0", "0")
@@ -22295,22 +23923,19 @@ eq(F.short(1234567), "123만", "100만부터는 소수점 없이")
 eq(F.short(123456789), "1.2억", "1.2억")
 eq(F.short(5748000000), "57.5억", "57.5억")
 
--- 상태바(client/lune/hud.luau의 layout과 같은 셈): 윗줄에 레벨과 이름, 아랫줄에 체력 바 — 어느 레벨 · 어느 직업에서도 글이 칸을 넘지 않는다
-local v = UI.hud.vitals
-local LEVEL_W = measure("Lv." .. N.MAX_LEVEL)
-local nameX = 5 + LEVEL_W + 4
-local nameW = v.w - 5 - nameX
-local hpLabelW = measure("HP") + 6
-local hpWidth = v.w - 8 - 2 * hpLabelW
-expect(v.h >= 3 + 9 + 1 + 11 + 3, "상태바에 글 한 줄과 체력 바가 들어간다")
-expect(nameW >= 80, ("상태바의 이름 칸이 여든 도트는 된다 — %d"):format(nameW))
-expect(hpWidth >= 60, ("체력 숫자의 칸 %d"):format(hpWidth))
+-- ---------- 왼쪽 아래 덩어리: 레벨 · 이름 / 체력 바(숫자는 바 안) / 경험치 줄과 % ----------
+local v, V = UI.hud.vitals, L.VITALS
+expect(V.barW + V.xpGap + measure(V.xpText) <= v.w, ("경험치 줄 옆의 %% 글이 칸 안 — 폭 %d"):format(measure(V.xpText)))
+expect(V.xpY + V.xpH <= v.h and V.hpY + V.hpH <= V.xpY, "체력 바 · 경험치 줄이 차례로 칸 안")
+expect(V.hpY >= M.small + 3, "이름 줄과 체력 바 사이에 여백")
+expect(V.hpH >= M.small + 8, "체력 바 안의 숫자 위아래로 여백이 있다(바 20 · 글 10)")
+local hpWidth = V.barW - V.hpPad * 2
 for _, class in { "axion", "riven", "reaper", "mooni", "salamander" } do
-	for _, L in { 1, 9, 10, 30, 60, 99, 100, 149, 150 } do
-		local max = N.hpOf(class, L, 500)
+	for _, lv in { 1, 9, 10, 30, 60, 99, 100, 149, 150 } do
+		local max = N.hpOf(class, lv, 500)
 		for _, cur in { max, math.floor(max / 3), 1, 0 } do
 			local text = F.hp(cur, max, hpWidth, measure)
-			expect(measure(text) <= hpWidth, ("체력 글 %s(%s Lv.%d)이 칸 %d에 들어감 — 폭 %d"):format(text, class, L, hpWidth, measure(text)))
+			expect(measure(text) <= hpWidth, ("체력 글 %s(%s Lv.%d)이 바 안 %d에 들어감 — 폭 %d"):format(text, class, lv, hpWidth, measure(text)))
 			expect(#text > 0, "체력 글이 비지 않음")
 		end
 	end
@@ -22318,36 +23943,64 @@ end
 eq(F.hp(86, 104, hpWidth, measure), "86/104", "들어가면 그대로 적는다")
 do
 	local longName = F.safeName("가나다라마바사아자차카타파하", "x")
-	expect(measure(pixelText.Fit(longName, nameW, 1, "small")) <= nameW, "가장 긴 이름도 상태바의 이름 칸에 줄여서 들어간다")
+	local nameW = v.w - measure("Lv." .. N.MAX_LEVEL) - V.nameGap
+	expect(nameW >= 150, ("이름 칸의 폭 %d"):format(nameW))
+	expect(measure(pixelText.Fit(longName, nameW, 1, "small")) <= nameW, "가장 긴 이름도 레벨 글 뒤에 줄여서 들어간다")
 end
 
--- 스킬 칸(두 줄 x 여섯)과 메뉴 단추(여섯)가 제 칸에 들어간다
-local s = UI.hud.skills
-expect(5 * PITCH + CELL <= s.w and PITCH + CELL <= s.h, "스킬 칸 두 줄 x 여섯이 칸 안")
-local m = UI.hud.menu
-expect(5 * PITCH + CELL <= m.w and CELL <= m.h, "메뉴 단추 여섯이 칸 안")
--- 아주 작은 글씨(3x5)로 적는 것: 키 이름(네 글자까지) · 물약 수 · 남은 초 · 경험치 %
-local function microWidth(text)
-	return #text * 4 - 1
-end
-eq(F.MICRO_CHARS, KIT.parts.microLine.order, "아주 작은 글씨의 글자 차례가 부품 그림과 같다")
-for _, name in { "Q", "A", "LeftShift", "Space", "LeftControl", "Return", "Backspace", "F12", "KeypadEnter", "PageDown", "Left", "Right", "Up", "Down", "Semicolon", "Zero", "Tab", "BackSlash" } do
-	local text = F.keyMicro(name)
-	expect(#text >= 1 and #text <= 4, ("스킬 칸의 키 이름 %s → %s"):format(name, text))
-	expect(microWidth(text) <= CELL - 4, "키 이름이 칸 안 " .. name)
-	for i = 1, #text do
-		expect(string.find(F.MICRO_CHARS, text:sub(i, i), 1, true) ~= nil, ("키 이름 %s의 글자 %s가 아주 작은 글씨에 있다"):format(name, text:sub(i, i)))
+-- ---------- 스킬 칸(두 줄 x 여섯)과 메뉴 단추(여섯) ----------
+local s, K = UI.hud.skills, L.SKILLS
+local pitch = K.slot + K.gap
+expect(K.cols * pitch - K.gap <= s.w, "스킬 칸 여섯이 칸의 폭 안")
+expect(K.rows * (K.slot + K.keyUp) + (K.rows - 1) * K.rowGap <= s.h, "스킬 칸 두 줄이(줄마다 위에 키 딱지) 칸의 높이 안")
+expect(K.slot >= M.pic + 4, "칸이 그림(24)보다 사방으로 두 점은 크다")
+for n = 1, K.cols * K.rows do
+	local seen = {}
+	for i = 1, n do
+		local x, y = L.slotPlace(i, n)
+		expect(x >= 0 and x + K.slot <= s.w and y - K.keyUp >= 0 and y + K.slot <= s.h, ("쓰는 칸 %d개일 때 %d째 칸(과 그 위의 키 딱지)이 칸 안"):format(n, i))
+		expect(not seen[x .. ":" .. y], "칸이 겹치지 않는다")
+		seen[x .. ":" .. y] = true
 	end
+	-- 아랫줄은 가운데에 모인다
+	local first = L.slotPlace(1, n)
+	local lastX = L.slotPlace(math.min(n, K.cols), n)
+	expect(math.abs(first - (s.w - lastX - K.slot)) <= 1, ("쓰는 칸 %d개일 때 아랫줄이 가운데"):format(n))
 end
-eq(F.keyMicro("LeftShift"), "SHFT", "Shift")
-eq(F.keyMicro("Shift"), "SHFT", "이미 바꾼 이름도 받는다")
-eq(F.keyMicro("LeftControl"), "CTRL", "Ctrl")
-eq(F.keyMicro("Left"), "<", "화살표는 그 글씨의 화살표 자리로")
-eq(F.keyMicro("Q"), "Q", "글자 키는 그대로")
-eq(F.keyMicro(""), "", "키가 없으면 빈 글")
-expect(microWidth("999") <= CELL - 4, "물약 수가 칸에 들어감")
-expect(microWidth("EXP 100.00%") <= UI.hud.xp.w - 4, "경험치 글이 바 안")
-expect(UI.hud.xp.h >= 7, "경험치 바에 아주 작은 글씨(다섯 줄)와 테두리가 들어간다")
+for _, name in { "Q", "A", "LeftShift", "Space", "LeftControl", "Return", "Backspace", "F12", "KeypadEnter", "KeypadFive", "PageDown", "Left", "Right", "Up", "Down", "Semicolon", "Zero", "Tab", "BackSlash", "CapsLock", "Insert" } do
+	local text = F.keyShort(name)
+	expect(utf8.len(text) >= 1 and utf8.len(text) <= K.keyMax, ("칸 위의 키 이름 %s → %s"):format(name, text))
+	expect(measure(text) + 8 <= pitch - 1, ("키 딱지 「%s」(폭 %d)가 옆 칸의 것과 닿지 않는다"):format(text, measure(text) + 8))
+end
+eq(F.keyShort("LeftShift"), "Shift", "Shift")
+eq(F.keyShort("Shift"), "Shift", "이미 바꾼 이름도 받는다")
+eq(F.keyShort("LeftControl"), "Ctrl", "Ctrl")
+eq(F.keyShort("Left"), "←", "화살표")
+eq(F.keyShort("Q"), "Q", "글자 키는 그대로")
+eq(F.keyShort("PageDown"), "PgDn", "긴 이름은 줄임말")
+expect(measure("999") <= K.slot - 2, "물약 수가 칸에 들어감")
+expect(measure("120") <= K.slot, "다시 쓰기까지 남은 초가 칸에 들어감")
+
+local m, MN = UI.hud.menu, L.MENU
+expect(MN.max * MN.pitch - (MN.pitch - MN.slot) <= m.w, "메뉴 단추 여섯이 칸의 폭 안")
+expect(MN.labelY + M.small + 1 <= m.h, "메뉴 단추의 그림과 그 아래의 이름이 칸의 높이 안")
+expect(MN.labelW <= MN.pitch, "이름의 폭이 옆 단추의 이름과 겹치지 않는다")
+eq(L.menuX(MN.max, MN.max) + MN.slot, m.w, "마지막 단추가 칸의 오른쪽 끝에 붙는다")
+expect(L.menuX(1, MN.max) - (MN.labelW - MN.slot) / 2 >= 0 - 4, "첫 단추의 이름이 칸에서 크게 벗어나지 않는다")
+do
+	local shown = 0
+	for _, w in UI.windows do
+		local label = L.menuLabel(w.id, w.name)
+		-- 메뉴 단추로 놓이는 창(앞의 다섯)의 이름은 한 줄에 들어가야 한다
+		if w.id == "bag" or w.id == "equip" or w.id == "stat" or w.id == "skill" or w.id == "quest" then
+			expect(measure(label) <= MN.labelW, ("메뉴 단추의 이름 「%s」(폭 %d)이 %d에 들어감"):format(label, measure(label), MN.labelW))
+			shown += 1
+		end
+	end
+	eq(shown, 5, "메뉴 단추로 놓이는 창 다섯")
+	expect(measure(L.menuLabel("more", "메뉴")) <= MN.labelW, "「메뉴」 단추의 이름")
+end
+
 eq(F.fitKey("Q", 26, measure), "Q", "들어가면 그대로")
 eq(F.fitKey("Space", 200, measure), "Space", "넓으면 그대로")
 expect(F.fitKey("Space", 20, measure) ~= "Space", "좁으면 줄임말")
@@ -22355,147 +24008,79 @@ eq(F.split(30, 1, { 20, 20 }, 10), nil, "다 못 들어가면 nil")
 eq(F.key("LeftShift"), "Shift", "키 이름")
 eq(F.key("Q"), "Q", "글자 키는 그대로")
 
--- ---------- 미니맵: 어느 장면이든 상자 안에 들어가고, 맵 이름이 칸을 넘지 않는다 ----------
-local MM = req("ReplicatedStorage/shared/lune/ui/minimap")
-local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
-local mm = UI.hud.minimap
-local mapH = mm.h - MM.TOP - MM.BOTTOM -- client/lune/minimap.luau와 같은 값
-local maxW = UI.hud.boss.x - mm.x - 4 -- 상자가 늘어날 수 있는 끝(보스 체력 칸의 왼쪽)
-expect(mapH >= 8, "미니맵의 맵 자리가 여덟 도트는 된다")
-eq(MM.boxFor(20, mm.w, maxW), mm.w, "이름이 짧으면 기본 폭")
-eq(MM.boxFor(80, mm.w, maxW), 80 + MM.NAME_X + MM.NAME_R, "이름이 길면 이름만큼 늘어난다")
-eq(MM.boxFor(500, mm.w, maxW), maxW, "그래도 보스 체력 칸은 넘지 않는다")
-local mapW = mm.w - MM.SIDE * 2
-for key, scene in SCENES.scenes do
-	expect(measure(scene.name) <= maxW - MM.NAME_X - MM.NAME_R, ("맵 이름 「%s」이 늘어난 미니맵 칸에 들어감 — 폭 %d"):format(scene.name, measure(scene.name)))
-	local boxW = MM.boxFor(measure(scene.name), mm.w, maxW)
-	expect(mm.x + boxW <= UI.hud.boss.x - 4, "늘어난 미니맵이 보스 체력 칸과 겹치지 않는다 " .. key)
-	mapW = boxW - MM.SIDE * 2
-	local L = MM.layout(scene, mapW, mapH)
-	expect(L.w <= mapW and L.h <= mapH and L.w >= 1 and L.h >= 1, "줄인 맵이 상자 안 " .. key)
-	expect(L.ox >= 0 and L.oy >= 0 and L.ox + L.w <= mapW and L.oy + L.h <= mapH, "줄인 맵의 자리가 상자 안 " .. key)
-	expect(math.abs(L.w / scene.w - L.h / scene.h) < 0.2, "가로 · 세로를 같은 비율로 줄임 " .. key)
-	expect(#L.ground > 0, "땅이 그려진다 " .. key)
-	local cover = 0
-	for _, g in L.ground do
-		expect(g.x >= 0 and g.y >= 0 and g.w >= 1 and g.h >= 1 and g.x + g.w <= L.w and g.y + g.h <= L.h, "땅 덩어리가 줄인 맵 안 " .. key)
-		cover += g.w
-	end
-	expect(cover <= L.w, "땅 덩어리가 겹치지 않는다 " .. key)
-	for _, st in L.steps do
-		expect(st.x >= 0 and st.y >= 0 and st.w >= 1 and st.x + st.w <= L.w and st.y < L.h, "발판이 줄인 맵 안 " .. key)
-	end
-	-- 장면의 네 귀퉁이와 문 · 주민이 모두 줄인 맵 안에 찍힌다
-	local pts = { { 0, 0 }, { scene.w * 16, scene.h * 16 }, { -50, 9999 } }
-	for _, p in scene.portals or {} do
-		table.insert(pts, { p.x, p.y })
-	end
-	for _, n in scene.npcs or {} do
-		table.insert(pts, { n.x, n.y })
-	end
-	for _, p in pts do
-		local x, y = MM.point(L, 16, p[1], p[2])
-		expect(x >= 0 and x < L.w and y >= 0 and y < L.h, ("점 (%d, %d)이 줄인 맵 안 %s"):format(p[1], p[2], key))
-	end
-end
--- 왼쪽 끝과 오른쪽 끝은 다른 자리에 찍힌다(맵을 걸으면 점이 움직인다)
-do
-	local scene = SCENES.scenes.hunt
-	local L = MM.layout(scene, MM.boxFor(measure(scene.name), mm.w, maxW) - MM.SIDE * 2, mapH)
-	local x0 = MM.point(L, 16, 16, 176)
-	local x1 = MM.point(L, 16, scene.w * 16 - 16, 176)
-	expect(x1 - x0 >= L.w - 4, "사냥터의 양 끝이 미니맵의 양 끝")
-	-- 땅 위에 서 있는 점은 땅 덩어리의 윗줄 바로 위 또는 그 줄
-	local _, y = MM.point(L, 16, 16, 176)
-	expect(y <= L.ground[1].y + 1, "서 있는 자리가 땅 위")
-end
-
--- ---------- 대화 상자: 화면 칸과 겹치지 않고, 주민의 말이 상자 안에 다 들어간다 ----------
-local talk = F.TALK
-expect(talk.x >= 0 and talk.y >= 0 and talk.x + talk.w <= 384 and talk.y + talk.h <= 216, "대화 상자가 화면 안")
-expect(talk.y + talk.h <= 110, "대화 상자가 서 있는 캐릭터(이름표 포함)를 가리지 않는다")
-expect(talk.textX >= 8 + 36 + 4 and talk.textX + 1 + talk.textW <= talk.w - 6, "얼굴 칸 옆의 말이 상자 안")
-expect(22 + talk.lines * 14 <= talk.h - 18, "말 두 줄이 밝은 판 안")
-for key, r in UI.hud do
-	local w = r.w
-	if key == "minimap" then
-		w = maxW -- 맵 이름이 길어 가장 넓게 늘어났을 때
-	end
-	local apart = talk.x >= r.x + w or talk.x + talk.w <= r.x or talk.y >= r.y + r.h or talk.y + talk.h <= r.y
-	-- 퀘스트 알리미는 말하는 동안 숨는다(같은 자리에 걸친다)
-	expect(apart or key == "quest", "대화 상자가 화면 칸과 겹치지 않는다 " .. key)
-end
+-- ---------- 말풍선: 주민의 말이 말풍선의 줄 수에 다 들어가고, 가장 큰 말풍선도 가장 작은 화면에 들어간다 ----------
+local B = F.BUBBLE
+expect(B.textW + B.padX * 2 + 16 <= G.min.w, "말풍선이 가장 작은 격자의 폭 안")
 local said = 0
 for key, scene in SCENES.scenes do
 	for _, n in scene.npcs or {} do
-		expect(measure(("%s %s"):format(n.role, n.name)) + 10 <= (talk.w - talk.textX - 8) / 2, ("주민 이름표 「%s %s」이 대화 상자의 절반 안(나머지에 퀘스트 이름이 온다)"):format(n.role, n.name))
-		expect(measure(("%s %s"):format(n.role, n.name)) <= 120, ("발밑의 주민 이름표 「%s %s」"):format(n.role, n.name))
+		expect(measure(("%s %s"):format(n.role, n.name)) <= 260, ("발밑의 주민 이름표 「%s %s」"):format(n.role, n.name))
 		expect(#n.lines > 0, "주민에게 할 말이 있다 " .. n.name)
+		expect((n.h or 0) > 0, "주민의 키가 있다(말풍선이 머리 위에 뜬다) " .. n.name)
 		for i, line in n.lines do
-			local wrapped = pixelText.Wrap(line, talk.textW, "body")
+			local wrapped = pixelText.Wrap(line, B.textW, "body")
 			local count = #string.split(wrapped, "\n")
-			expect(count <= talk.lines, ("%s의 말 %d이 %d줄에 들어감(지금 %d줄) — %s"):format(n.name, i, talk.lines, count, line))
+			expect(count <= B.lines, ("%s의 말 %d이 %d줄에 들어감(지금 %d줄) — %s"):format(n.name, i, B.lines, count, line))
 			said += 1
 		end
+		-- 말풍선이 머리 위에 떠도 화면 위로 나가지 않는다(가장 작은 격자 · 세 줄일 때): 머리의 높이(화면 틀의 점) - 말풍선의 높이 >= 0
+		local ratio = G.min.w / 384
+		local headY = (KIT.ground - n.h - B.up) * ratio
+		local bubbleH = (B.lines - 1) * M.bodyLine + 14 + B.padY * 2 + B.tail + 16 -- 위에 퀘스트 이름 한 줄
+		expect(headY - bubbleH >= 0, ("%s의 말풍선이 화면 안(머리 %d · 말풍선 %d)"):format(n.name, headY, bubbleH))
 	end
 end
 expect(said > 0, "주민의 말을 하나 이상 검사했다")
+for _, hint in { "다음", "닫기", "받는다", "끝낸다" } do
+	expect(measure(hint) <= 120, "말풍선 아래의 글 " .. hint)
+end
 
--- ---------- 여럿이: 이름표 · 파티원 칸 · 파티 창 · 초대 알림의 글 ----------
+-- ---------- 여럿이: 이름표 · 파티원 칸 · 초대 알림의 글 ----------
 do
 	local longName = F.safeName("가나다라마바사아자차카타파하", "x") -- 열두 자(가장 긴 이름)
-	-- 발밑의 이름표: 이름만 — 가장 긴 이름도 150에 들어간다
-	expect(measure(longName) <= 150, ("가장 긴 이름표의 폭 %d"):format(measure(longName)))
-	-- 파티 창: 이름 칸 118(client/lune/ui/partyWindow.luau의 NAME_W)에 "Lv.150 이름"이 줄여서라도 한 줄에 들어간다(Kit.text가 …로 줄인다)
-	local fitted = pixelText.Fit(("Lv.%d %s"):format(150, longName), 118, 1, "small")
-	expect(measure(fitted) <= 118, "파티 창의 이름 줄")
-	-- 초대 알림(client/lune/partyHud.luau의 ASK): 이름 한 줄과 「파티에 초대했다」 한 줄이 상자에 들어간다
-	local askW = 142 - 12
-	expect(measure(pixelText.Fit(longName, askW, 1, "small")) <= askW, "초대 알림의 이름")
-	expect(measure("파티에 초대했다") <= askW, "초대 알림의 글")
-	-- 파티원 칸의 이름(기본 폭 62 - 6부터 100 - 6까지 늘어난다)
-	expect(measure(pixelText.Fit(longName, 100 - 6, 1, "small")) <= 100 - 6, "파티원 칸의 이름")
-	-- 파티원 칸: 세 사람이 늘어나도 채팅 칸 위에서 끝난다
+	expect(measure(longName) <= L.TAG.maxW, ("가장 긴 이름표의 폭 %d"):format(measure(longName)))
+	local P = L.PARTY
 	local pr = UI.hud.party
-	expect(pr.y + 3 * 15 + 1 <= UI.hud.chat.y, "파티원 칸이 셋까지 늘어나도 채팅 칸과 겹치지 않는다")
-	-- 초대 알림의 자리: 화면 칸과 겹치지 않는다(미니맵이 가장 넓게 늘어났을 때도)
-	local a = { x = 114, y = 30, w = 142, h = 52 } -- client/lune/partyHud.luau의 ASK
-	for key, r in UI.hud do
-		local w, h = r.w, r.h
-		if key == "minimap" then
-			w = UI.hud.boss.x - r.x - 4
-		elseif key == "party" then
-			h = 3 * 15 + 1
+	expect(measure(pixelText.Fit(longName, pr.w, 1, "small")) <= pr.w, "파티원 칸의 이름")
+	expect(P.max * P.row <= pr.h, "파티원 셋이 제 칸 안")
+	expect(P.barY + P.barH <= P.row and P.barY >= M.small + 2 and P.barW <= pr.w, "파티원의 이름과 체력 줄이 한 사람의 칸 안")
+	-- 초대 알림: 이름 한 줄과 「파티에 초대했다」 한 줄 · 단추 둘이 상자에 들어가고, 화면 칸과 겹치지 않는다
+	local a = P.ask
+	expect(measureBody(pixelText.Fit(longName, a.w - a.pad * 2, 1, "body")) <= a.w - a.pad * 2, "초대 알림의 이름")
+	expect(measure(P.askText) <= a.w - a.pad * 2, "초대 알림의 글")
+	expect(52 + M.button + a.pad - 2 <= a.h, "초대 알림의 단추가 상자 안")
+	for _, g in GRIDS do
+		local ar = L.rect(a, g.w, g.h)
+		expect(ar.x >= 0 and ar.y >= 0 and ar.x + ar.w <= g.w and ar.y + ar.h <= g.h, "초대 알림이 화면 안 " .. g.name)
+		for key, r in UI.hud do
+			expect(apart(ar, L.rect(r, g.w, g.h)), ("초대 알림이 화면 칸과 겹치지 않는다 %s(%s)"):format(key, g.name))
 		end
-		local apart = a.x >= r.x + w or a.x + a.w <= r.x or a.y >= r.y + h or a.y + a.h <= r.y
-		expect(apart, "초대 알림이 화면 칸과 겹치지 않는다 " .. key)
 	end
 end
 
 -- ---------- 이름표 쌓기 · 채팅 줄 ----------
 do
 	local Tags = req("ReplicatedStorage/shared/lune/ui/tags")
-	-- 겹치지 않으면 그대로
-	local ys = Tags.stack({}, { { x = 0, y = 100, w = 40 }, { x = 60, y = 100, w = 40 } }, 12)
-	eq(ys[1], 100, "겹치지 않는 이름표는 제자리")
-	eq(ys[2], 100, "겹치지 않는 이름표는 제자리(둘째)")
-	-- 겹치면 뒤의 것이 위로
-	ys = Tags.stack({}, { { x = 0, y = 100, w = 40 }, { x = 20, y = 100, w = 40 }, { x = 30, y = 100, w = 40 } }, 12)
-	eq(ys[1], 100, "앞의 것은 제자리")
-	eq(ys[2], 88, "겹치는 것은 한 줄 위로")
-	eq(ys[3], 76, "셋이 겹치면 두 줄 위로")
-	-- 움직이지 않는 것(주민의 이름표)을 피한다
-	ys = Tags.stack({ { x = 10, y = 100, w = 50 } }, { { x = 0, y = 104, w = 40 } }, 12)
-	eq(ys[1], 80, "주민의 이름표와 겹치면 위로 올라간다")
-	ys = Tags.stack({ { x = 10, y = 60, w = 50 } }, { { x = 0, y = 104, w = 40 } }, 12)
-	eq(ys[1], 104, "높이가 다르면 겹치지 않는다")
-	-- 발밑의 이름표는 아래로 쌓는다
-	ys = Tags.stack({}, { { x = 0, y = 100, w = 40 }, { x = 20, y = 100, w = 40 }, { x = 30, y = 100, w = 40 } }, 12, 1)
-	eq(ys[1], 100, "앞의 것은 제자리(아래로)")
-	eq(ys[2], 112, "겹치는 것은 한 줄 아래로")
-	eq(ys[3], 124, "셋이 겹치면 두 줄 아래로")
-	ys = Tags.stack({ { x = 10, y = 153, w = 50 } }, { { x = 0, y = 153, w = 40 } }, 12, 1)
-	eq(ys[1], 165, "주민의 이름표와 겹치면 그 아래로 내려간다")
+	-- 이름표는 옮기지 않는다(사용자 2026-10-07: 내 이름이 주민 이름 아래로 밀려 내려가던 것) — 겹치면 앞선 것만 보인다
+	local vis = Tags.visible({ { x = 0, y = 100, w = 40 }, { x = 60, y = 100, w = 40 } }, 13)
+	expect(vis[1] and vis[2], "겹치지 않는 이름표는 둘 다 보인다")
+	vis = Tags.visible({ { x = 0, y = 100, w = 40 }, { x = 20, y = 100, w = 40 }, { x = 70, y = 100, w = 40 } }, 13)
+	expect(vis[1] and not vis[2] and vis[3], "겹치면 앞선 것(내 것)이 보이고 뒤의 것은 숨는다 — 숨은 것과만 겹치는 셋째는 보인다")
+	vis = Tags.visible({ { x = 0, y = 100, w = 40 }, { x = 42, y = 100, w = 40 } }, 13)
+	expect(vis[1] and not vis[2], "거의 붙어 있어도(사이 2) 겹친 것으로 본다 — 한 줄로 이어 읽히지 않게")
+	vis = Tags.visible({ { x = 0, y = 100, w = 40 }, { x = 46, y = 100, w = 40 } }, 13)
+	expect(vis[1] and vis[2], "사이가 넉넉하면(6) 둘 다 보인다")
+	vis = Tags.visible({ { x = 0, y = 100, w = 40 }, { x = 10, y = 120, w = 40 } }, 13)
+	expect(vis[1] and vis[2], "높이가 다르면 겹치지 않는다(문 위의 글과 발밑의 이름)")
+	eq(#Tags.visible({}, 13), 0, "이름표가 없으면 빈 표")
+	expect(L.TAG.h >= M.small + 2, "이름표를 쌓는 높이가 글자보다 크다")
+	-- 발밑의 이름표(한 줄)가 화면 아래의 칸에 닿지 않는다(가장 작은 격자)
+	do
+		local ratio = G.min.w / 384
+		local feet = KIT.ground * ratio
+		local bottom = feet + L.TAG.down + L.TAG.h
+		expect(bottom <= L.rect(UI.hud.skills, G.min.w, G.min.h).y + K.keyUp, ("발밑의 이름표(아래 끝 %d)가 스킬 칸의 아랫줄 위"):format(bottom))
+	end
 	-- 채팅 줄
 	eq(Tags.chatLine("near", "달토끼", "안녕"), "달토끼: 안녕", "둘레의 글")
 	eq(Tags.chatLine("party", "달토끼", "가자"), "[파티] 달토끼: 가자", "파티의 글")
@@ -22506,26 +24091,28 @@ do
 	eq(Tags.chatClean(""), nil, "빈 글")
 	eq(Tags.chatClean(42), nil, "글이 아닌 것")
 	eq(#Tags.chatClean(string.rep("a", 200)), 80, "여든 자까지만")
-	-- 쓰는 중의 채팅 칸(client/lune/chat.luau의 OPEN): 화면 안에 있고 상태바 위에서 끝난다. 긴 글도 세 줄 안에 들어간다
-	local c = UI.hud.chat
-	local LINE = KIT.font.small.line
-	local bottom = UI.hud.vitals.y - 1
-	local open = { x = 2, w = 230, lines = 6 }
-	local h = open.lines * LINE + 6 + 16
-	expect(open.x + open.w <= 384 and bottom - h >= 0, "쓰는 중의 채팅 칸이 화면 안")
+	-- 평소의 채팅 글: 채팅 칸에 세 줄
+	local c, CH = UI.hud.chat, L.CHAT
+	expect(math.floor(c.h / CH.line) >= 3, "채팅 칸에 세 줄이 들어간다")
+	expect(c.y + c.h <= UI.hud.vitals.y, "채팅 글이 체력 덩어리 위에서 끝난다")
+	-- 쓰는 중의 채팅 판: 세 격자에서 화면 안에 있고 체력 덩어리 위에서 끝난다. 긴 글도 세 줄 안에 들어간다
+	local o = L.chatOpen()
+	for _, g in GRIDS do
+		local r = L.rect(o, g.w, g.h)
+		expect(r.x >= 0 and r.y >= 0 and r.x + r.w <= g.w, "쓰는 중의 채팅 판이 화면 안 " .. g.name)
+		expect(r.y + r.h <= L.rect(UI.hud.vitals, g.w, g.h).y, "쓰는 중의 채팅 판이 체력 덩어리 위에서 끝난다 " .. g.name)
+		expect(apart(r, L.rect(UI.hud.party, g.w, g.h)), "쓰는 중의 채팅 판이 파티원 칸과 겹치지 않는다 " .. g.name)
+	end
+	expect(apart(o, UI.hud.skills), "쓰는 중의 채팅 판이 스킬 칸과 겹치지 않는다(1080p)")
+	local textW = CH.open.w - CH.open.pad * 2
 	local long = Tags.chatLine("party", "가나다라마바사아자차카타", string.rep("가", 80))
-	local fitted = pixelText.Fit(long, open.w - 10, 3, "small")
+	local fitted = pixelText.Fit(long, textW, 3, "small")
 	local lines = string.split(fitted, "\n")
 	expect(#lines <= 3, "긴 글도 세 줄까지")
 	for _, line in lines do
-		expect(measure(line) <= open.w - 10, "채팅 줄이 칸 안")
+		expect(measure(line) <= textW, "채팅 줄이 판 안")
 	end
-	-- 평소의 채팅 칸(QUIET): 세 줄 · 상태바 바로 위 — 상태바와 메뉴 단추를 가리지 않는다
-	local quietBottom = bottom
-	local quietTop = bottom - (3 * LINE + 3)
-	expect(quietBottom <= UI.hud.vitals.y and quietBottom <= UI.hud.menu.y, "평소의 채팅 글이 상태바 · 메뉴 단추 위에서 끝난다")
-	expect(quietTop >= UI.hud.party.y + 3 * 15 + 1, "평소의 채팅 글이 파티원 칸 아래에서 시작한다")
-	expect(c.x + 168 <= 384 / 2 - 16, "평소의 채팅 글(폭 168)이 화면 가운데의 내 캐릭터를 가리지 않는다")
+	expect(CH.field >= M.small + 8, "쓰는 칸의 높이에 글과 여백이 들어간다")
 end
 
 end)
@@ -22603,22 +24190,39 @@ for _, s in D.STOCK do
 	expect(D.NPCDO[s.npc] ~= nil, "상점 물건을 파는 주민 " .. s.id)
 	expect(s.id == "potion" or (typeof(s.price) == "number" and s.price > 0), "값이 있다 " .. s.id)
 end
--- 이름이 가방 창의 이름 줄(한 줄 · 폭 166 — 작은 글씨)에 별까지 붙여 들어간다 — 가장 긴 이름까지
+-- 가장 긴 장비 이름: 가방의 이름 줄(본문 글씨 한 줄 — 가장 좁은 가방의 속)에 별까지 붙여 들어가고, 장비 창의 이름 칸(두 줄)에도 들어간다
 local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
 pixelText.Register("small", KIT.font.small, {})
-local longest = 0
-for _, stage in D.STAGES do
-	for qi in D.QUALITY do
-		for who in D.KINDS do
-			longest = math.max(longest, (pixelText.Measure(Items.name(Items.make("weapon", stage, qi, who)), "small")))
-		end
-		for _, slot in D.ARMOR do
-			longest = math.max(longest, (pixelText.Measure(Items.name(Items.make(slot, stage, qi)), "small")))
+do
+	local LAY = req("ReplicatedStorage/shared/lune/ui/layout")
+	local longest, longName = 0, ""
+	local function see(it)
+		local name = Items.name(it)
+		local w = (pixelText.Measure(name, "body"))
+		if w > longest then
+			longest, longName = w, name
 		end
 	end
+	for _, stage in D.STAGES do
+		for qi in D.QUALITY do
+			for who in D.KINDS do
+				see(Items.make("weapon", stage, qi, who))
+			end
+			for _, slot in D.ARMOR do
+				see(Items.make(slot, stage, qi))
+			end
+		end
+	end
+	for s = 2, 10 do
+		local _, _, us = LAY.gridFor(s)
+		local ratio = s / us
+		local bagW = select(1, LAY.bagBody(ratio))
+		expect(longest + (pixelText.Measure(" +22", "body")) <= bagW, ("게임 %d배: 가장 긴 장비 이름 「%s +22」(폭 %d)이 가방의 이름 줄(%d)에 들어감"):format(s, longName, longest + (pixelText.Measure(" +22", "body")), bagW))
+		local ew, _, rx = LAY.equipBody(ratio)
+		local wrapped = pixelText.Wrap(longName .. " +22", ew - rx, "body")
+		expect(#string.split(wrapped, "\n") <= 2, ("게임 %d배: 가장 긴 장비 이름이 장비 창의 이름 칸(폭 %d · 두 줄)에 들어감"):format(s, ew - rx))
+	end
 end
-expect(longest + (pixelText.Measure(" +22", "small")) <= 166, ("가장 긴 장비 이름이 별까지 한 줄(166)에 들어감 — 폭 %d"):format(longest))
-expect(longest <= 84 * 3, "장비 창의 이름 칸(84 x 세 줄)에도 들어간다")
 
 -- ---- 3) 새 캐릭터의 차림 ----
 local h = Hero.new(1, "reaper")
@@ -23039,535 +24643,101 @@ do
 	expect(dustN > 0, "달가루가 떨어진다")
 end
 
--- ---- 14) 창에 적는 글이 칸에 들어간다 ----
+-- ---- 14) 창에 적는 글이 칸에 들어간다 · 창이 화면에 들어간다 ----
+--  창은 화면 틀의 고운 격자에 뜨는 옆 판이다(client/lune/ui/windows.luau). 치수는 shared/lune/ui/layout.luau — 화면과 같은 값을 쓴다.
+--  장비 칸의 크기는 화면 틀의 배율을 따르므로(게임 2배 ~ 10배) 배율마다 본다.
 do
-	local function width(text)
-		return (pixelText.Measure(text, "small"))
-	end
-	-- 상점: 물건 이름 100 · 값 30 · "Lv.10부터" 64(client/lune/ui/shopWindow.luau의 NAME_W · PRICE_W · LOCK_W) — 셋과 단추가 창 안(174)에 들어간다
-	local NAME_W, PRICE_W, LOCK_W = 100, 30, 64
-	expect(4 + NAME_W + PRICE_W + 3 + 15 + 1 + 17 <= 174, "상점 한 줄이 창 안")
-	expect(4 + NAME_W + LOCK_W <= 174, "잠긴 줄이 창 안")
-	for _, st in D.STOCK do
-		local label = st.name
-		if st.id == "w10" then
-			for who in D.KINDS do
-				expect(width(Items.name(Items.make("weapon", st.item.stage, D.NORMAL, who))) <= NAME_W, "상점의 무기 이름 " .. who)
-			end
-		elseif st.id == "potion" then
-			for _, pt in N.data.BODY.potion do
-				expect(width(pt.name) <= NAME_W, "물약 이름 " .. pt.name)
-				expect(width(tostring(pt.price)) <= PRICE_W, "물약 값 " .. pt.name)
-			end
-		else
-			expect(width(label) <= NAME_W, ("상점의 물건 이름 %s — 폭 %d"):format(label, width(label)))
-			expect(width(tostring(st.price)) <= PRICE_W, "상점의 값 " .. label)
-		end
-		expect(width(("Lv.%d부터"):format(st.from)) <= LOCK_W, "열리는 레벨 글 " .. st.id)
-	end
-	-- 장비 창: 부위 이름과 「Lv.140 +17」이 58에 들어간다(client/lune/ui/equipWindow.luau의 TEXT_W) — 왼쪽 단(칸 20 + 글)이 오른쪽 덩이(88부터, 네 칸) 앞에서 끝나고, 오른쪽 덩이가 창 안(174)
-	local TEXT_W, CELL = 58, KIT.cell
-	expect(2 + CELL + 4 + TEXT_W <= 88 and 88 + 4 * (CELL + 1) - 1 <= 174, "장비 창의 두 덩이가 겹치지 않고 창 안")
-	expect(2 + 5 * (CELL + 1) <= 152 - 18, "장비 창의 왼쪽 다섯 칸이 창의 높이 안")
-	for _, slot in D.SLOTS do
-		expect(width(slot.name) <= TEXT_W, "장비 창의 부위 이름 " .. slot.name)
-		expect(width(slot.name .. " — 비었다") <= 84 * 3, "빈 부위를 골랐을 때의 글 " .. slot.name)
-	end
-	expect(width("Lv.140 +17") <= TEXT_W, "장비 창의 단계와 별(사냥 장비)")
-	-- 가방 창: 탭 셋이 나란히(이름 + 10씩, 사이 1) 가방 수 글(174 - 64부터) 왼쪽에 들어간다 · 칸 여덟이 창 안
-	local tabs = 2
-	for _, name in D.BAG.tabs do
-		tabs += width(name) + 10 + 1
-	end
-	expect(tabs <= 174 - 64, ("가방 탭 셋의 폭 %d"):format(tabs))
-	expect(2 + 8 * CELL + 6 <= 174, "가방의 여덟 칸이 창 안")
-	expect(width("48/48") <= 30, "가방 수 글")
-	-- 가방을 늘리는 단추(폭 58)의 글: 「+4칸 16만」
+	local L = req("ReplicatedStorage/shared/lune/ui/layout")
+	local UIGEN = req("ReplicatedStorage/shared/lune/data/ui.generated")
 	local F = req("ReplicatedStorage/shared/lune/ui/format")
-	for n = 0, D.BAG.times - 1 do
-		local text = ("+4칸 %s"):format(F.short(D.BAG.costs[n + 1]))
-		expect(width(text) <= 58 - 4, ("가방 늘리기 단추의 글 %s — 폭 %d"):format(text, width(text)))
-	end
-end
-for _, s in D.STOCK do
-	expect(D.NPCDO[s.npc] ~= nil, "상점 물건을 파는 주민 " .. s.id)
-	expect(s.id == "potion" or (typeof(s.price) == "number" and s.price > 0), "값이 있다 " .. s.id)
-end
--- 이름이 가방 창의 이름 줄(한 줄 · 폭 166 — 작은 글씨)에 별까지 붙여 들어간다 — 가장 긴 이름까지
-local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
-pixelText.Register("small", KIT.font.small, {})
-local longest = 0
-for _, stage in D.STAGES do
-	for qi in D.QUALITY do
-		for who in D.KINDS do
-			longest = math.max(longest, (pixelText.Measure(Items.name(Items.make("weapon", stage, qi, who)), "small")))
-		end
-		for _, slot in D.ARMOR do
-			longest = math.max(longest, (pixelText.Measure(Items.name(Items.make(slot, stage, qi)), "small")))
-		end
-	end
-end
-expect(longest + (pixelText.Measure(" +22", "small")) <= 166, ("가장 긴 장비 이름이 별까지 한 줄(166)에 들어감 — 폭 %d"):format(longest))
-expect(longest <= 84 * 3, "장비 창의 이름 칸(84 x 세 줄)에도 들어간다")
-
--- ---- 3) 새 캐릭터의 차림 ----
-local h = Hero.new(1, "reaper")
-eq(#Bag.worn(h), 5, "무기와 방어구 네 부위를 입고 있다")
-eq(h.equip.weapon.who, "reaper", "내 직업의 무기")
-eq(#h.gear, 0, "가방은 비어 있다")
-eq(Bag.size(h), D.BAG.base, "가방 24칸")
-near(Hero.cut(h, 1), N.armorCut(1, 1), "Lv.1 방어구 네 부위 = 같은 레벨의 방어")
-expect(Hero.cut(h, 20) < Hero.cut(h, 1), "레벨이 높은 몬스터에게는 덜 막는다")
-
--- ---- 4) 끼기 · 벗기 ----
-local better = Items.make("weapon", 1, 5, "reaper")
-expect(Bag.add(h, better), "가방에 넣는다")
-local before = Hero.power(h)
-local oldId = h.equip.weapon.id
-expect(Bag.equip(h, better.id), "낀다")
-eq(h.equip.weapon, better, "무기가 바뀌었다")
-eq(h.gear[1].id, oldId, "끼고 있던 것은 그 칸으로 들어간다")
-expect(Hero.power(h) >= before, "빼어난 무기는 전투력이 같거나 높다")
-local other = Items.make("weapon", 1, 3, "axion")
-Bag.add(h, other)
-local ok, why = Bag.equip(h, other.id)
-expect(not ok and why == "다른 직업의 무기다", "남의 무기는 못 낀다")
-local high = Items.make("hat", 10, 3)
-Bag.add(h, high)
-ok, why = Bag.equip(h, high.id)
-expect(not ok and string.find(why, "Lv.10") ~= nil, "레벨이 모자라면 못 낀다")
-h.level = 10
-expect(Bag.equip(h, high.id), "레벨이 되면 낀다")
-expect(Hero.cut(h, 10) > 0, "방어구가 피해를 줄인다")
-eq(Bag.equip(h, 9999), nil, "없는 번호")
-eq(Bag.equip(h, "x"), nil, "번호가 아닌 것")
-expect(Bag.unequip(h, "hat"), "벗는다")
-eq(h.equip.hat, nil, "모자 자리가 비었다")
-eq(Bag.unequip(h, "hat"), nil, "안 낀 것은 못 벗는다")
-local naked = Hero.new(2, "axion")
-for _, slot in D.GEAR do
-	Bag.unequip(naked, slot)
-end
-eq(Hero.cut(naked, 1), 0, "다 벗으면 방어가 0")
-expect(Hero.power(naked) < Hero.power(Hero.new(3, "axion")), "다 벗으면 전투력이 낮다")
--- 가방이 가득 차면
-local full = Hero.new(4, "mooni")
-for i = 1, Bag.size(full) do
-	expect(Bag.add(full, Items.make("glove", 1, 3)), "가방에 넣는다 " .. i)
-end
-ok, why = Bag.add(full, Items.make("glove", 1, 3))
-expect(not ok and why == "가방이 가득 찼다", "가득 차면 못 넣는다")
-ok, why = Bag.unequip(full, "weapon")
-expect(not ok, "가득 차면 못 벗는다")
--- 가방 늘리기
-eq(Bag.growCost(full), D.BAG.costs[1], "처음 늘리는 값")
-ok, why = Bag.grow(full)
-expect(not ok and why == "달돈이 모자란다", "돈이 없으면 못 늘린다")
-full.money = 1e9
-for i = 1, D.BAG.times do
-	expect(Bag.grow(full), "늘린다 " .. i)
-end
-eq(Bag.size(full), D.BAG.base + D.BAG.step * D.BAG.times, "48칸까지")
-eq(Bag.grow(full), nil, "더는 못 늘린다")
-
--- ---- 5) 분해 ----
-local d = Hero.new(5, "axion")
-local junk = Items.make("shoes", 20, 1)
-junk.star = 3
-Bag.add(d, junk)
-local dust = Bag.dismantle(d, junk.id)
-eq(dust, Items.dismantle(junk), "분해한 달가루")
-eq(d.dust, dust, "달가루가 는다")
-eq(#d.gear, 0, "분해한 것은 사라진다")
-eq(Bag.dismantle(d, d.equip.weapon.id), nil, "끼고 있는 것은 분해하지 못한다")
-
--- ---- 6) 상점 ----
-local b = Hero.new(6, "salamander")
-ok, why = Bag.buy(b, "potion", 5)
-expect(not ok and why == "달돈이 모자란다", "돈이 없으면 못 산다")
-b.money = 100000
-local p0, m0 = b.potions, b.money
-expect(Bag.buy(b, "potion", 5), "물약 다섯 병")
-eq(b.potions, p0 + 5, "물약이 는다")
-eq(b.money, m0 - 5 * N.potionAt(1).price, "값을 치른다")
-eq(Bag.buy(b, "potion", 0), nil, "0개는 못 산다")
-eq(Bag.buy(b, "potion", 1.5), nil, "소수는 못 산다")
-eq(Bag.buy(b, "potion", 100000), nil, "한 번에 너무 많이는 못 산다")
-eq(Bag.buy(b, "nothing", 1), nil, "없는 물건")
-expect(Bag.buy(b, "a1_hat", 1), "Lv.1 모자")
-eq(b.gear[1].q, D.NORMAL, "상점의 것은 늘 보통")
-ok, why = Bag.buy(b, "w10", 1)
-expect(not ok and string.find(why, "Lv.10") ~= nil, "Lv.10 무기는 Lv.10부터")
-b.level = 10
-expect(Bag.buy(b, "w10", 1), "Lv.10 무기")
-eq(b.gear[2].who, "salamander", "내 직업의 무기를 판다")
-eq(b.gear[2].stage, 10, "Lv.10")
-expect(Bag.buy(b, "dust", 50), "달가루 쉰 개")
-eq(b.dust, 50, "달가루가 는다")
-
--- ---- 7) 강화 ----
-local rng = Random.new(7)
-local f = Hero.new(7, "axion")
-f.level = 20
-local w = Items.make("weapon", 20, 3, "axion")
-Bag.add(f, w)
-ok, why = Bag.enhance(f, w.id, rng)
-expect(not ok and why == "달가루가 모자란다", "달가루가 없으면 못 한다")
-f.dust = 1e9
-local tries, oks = 0, 0
-while w.star < Items.starCap(20) and tries < 500 do
-	local star0, dust0 = w.star, f.dust
-	local info = Items.enhanceInfo(w)
-	local result = Bag.enhance(f, w.id, rng)
-	tries += 1
-	eq(f.dust, dust0 - info.dust, "달가루를 치른다")
-	if result == "ok" then
-		oks += 1
-		eq(w.star, star0 + 1, "붙으면 별 하나")
-	else
-		eq(result, "fail", "10성까지는 실패해도 그대로다")
-		eq(w.star, star0, "별이 그대로")
-	end
-end
-eq(w.star, 5, "Lv.20 장비는 5성까지")
-ok, why = Bag.enhance(f, w.id, rng)
-expect(not ok and why == "더 붙일 수 없다", "상한을 넘지 못한다")
-near(Items.score(w), 4 * 1.07 ^ 20 * 1.04 ^ 5, "별 하나에 4%씩")
--- 확률: 첫 별 95% · 열한째 별 50%
-local function rate(star, n)
-	local hit = 0
-	for _ = 1, n do
-		local it = Items.make("weapon", 160, 3, "axion")
-		it.star = star
-		if Items.enhance(it, rng) == "ok" then
-			hit += 1
-		end
-	end
-	return hit / n * 100
-end
-local r0, r10 = rate(0, 4000), rate(10, 4000)
-expect(math.abs(r0 - 95) < 2, ("첫 별은 95%% — %.1f"):format(r0))
-expect(math.abs(r10 - 50) < 3, ("열한째 별은 50%% — %.1f"):format(r10))
--- 정수: 11~15성에만 든다
-for star = 0, E.max - 1 do
-	local it = Items.make("weapon", 180, 3, "axion")
-	it.star = star
-	local info = Items.enhanceInfo(it)
-	eq(info.essence > 0, star >= 10 and star <= 14, "정수가 드는 별 " .. (star + 1))
-	eq(info.drops, star + 1 >= 16 and star ~= 15 and star ~= 20, "실패하면 떨어지는 별 " .. (star + 1))
-	eq(info.boom > 0, star + 1 >= 16, "부서질 수 있는 별 " .. (star + 1))
-	eq(info.guard, star + 1 == 16 or star + 1 == 17, "파괴 막기를 쓸 수 있는 별 " .. (star + 1))
-end
--- 16성부터: 떨어짐 · 부서짐 · 버팀 단계 · 두 번 떨어지면 반드시 성공 · 파괴 막기
-local seen = { ok = 0, fail = 0, drop = 0, boom = 0 }
-local sureOk, lowest = true, 99
-for _ = 1, 3000 do
-	local it = Items.make("weapon", 180, 3, "axion")
-	it.star = 17
-	for _ = 1, 40 do
-		if it.broken then
-			break
-		end
-		if it.star >= E.max then
-			break
-		end
-		local star0, sure = it.star, (it.fails or 0) >= E.chance
-		local result = Items.enhance(it, rng)
-		seen[result] += 1
-		if sure and result ~= "ok" then
-			sureOk = false
-		end
-		if result == "drop" then
-			eq(it.star, star0 - 1, "한 단계 떨어진다")
-		elseif result == "boom" then
-			eq(it.star, math.min(E.boomTo, star0), "부서지면 12성 흔적")
-			eq(Items.score(it), 0, "부서진 것은 힘이 없다")
-		end
-		lowest = math.min(lowest, it.star)
-	end
-end
-expect(seen.drop > 0 and seen.boom > 0 and seen.ok > 0, ("떨어지고 부서지고 붙는다(%d · %d · %d)"):format(seen.drop, seen.boom, seen.ok))
-expect(sureOk, "두 번 잇달아 떨어지면 다음은 반드시 붙는다")
-expect(lowest >= 12, "15성 아래로는 부서질 때만 내려간다(가장 낮은 별 " .. lowest .. ")")
-local floorHeld = true
-for _ = 1, 2000 do
-	local it = Items.make("weapon", 180, 3, "axion")
-	it.star = 15
-	local result = Items.enhance(it, rng)
-	if result == "drop" then
-		floorHeld = false
-	end
-end
-expect(floorHeld, "15성은 버팀 단계 — 16성 시도에 실패해도 떨어지지 않는다")
-local guarded = 0
-for _ = 1, 3000 do
-	local it = Items.make("weapon", 180, 3, "axion")
-	it.star = 16
-	if Items.enhance(it, rng, true) == "boom" then
-		guarded += 1
-	end
-end
-eq(guarded, 0, "파괴 막기를 켜면 17성 시도에서 부서지지 않는다")
-do
-	local it = Items.make("weapon", 180, 3, "axion")
-	it.star = 16
-	eq(Items.enhanceInfo(it, true).dust, Items.enhanceInfo(it).dust * E.guard.cost, "파괴 막기는 달가루 세 배")
-	it.star = 18
-	eq(Items.enhanceInfo(it, true).boom > 0, true, "19성 시도는 막을 수 없다")
-end
--- 끼고 있다가 부서지면 가방으로 간다 · 같은 장비로 되살린다
-local g = Hero.new(8, "axion")
-g.level = 150
-g.dust, g.essence = 1e12, 1e6
-local sword = Items.make("weapon", 180, 3, "axion")
-sword.star = 18
-sword.need = 150 -- 보스의 장비는 단계가 레벨보다 높다(낄 수 있는 레벨을 따로 가진다 — 보스 장비가 생기는 단계에서 저장에도 넣는다)
-Bag.add(g, sword)
-expect(Bag.equip(g, sword.id), "18성 무기를 낀다")
-local broke = false
-for _ = 1, 4000 do
-	local result = Bag.enhance(g, sword.id, rng)
-	if result == "boom" then
-		broke = true
-		break
-	elseif result == nil then
-		sword.star = 18
-	end
-end
-expect(broke, "언젠가 부서진다")
-eq(g.equip.weapon, nil, "부서진 것은 끼고 있을 수 없다")
-eq(Bag.find(g, sword.id) ~= nil, true, "흔적이 가방에 남는다")
-eq(sword.star, 12, "12성 흔적")
-eq(Bag.equip(g, sword.id), nil, "부서진 것은 못 낀다")
-eq(Bag.enhance(g, sword.id, rng), nil, "부서진 것은 강화하지 못한다")
-local wrong = Items.make("weapon", 170, 3, "axion")
-Bag.add(g, wrong)
-ok, why = Bag.restore(g, sword.id, wrong.id)
-expect(not ok and why == "같은 장비가 아니다", "다른 장비로는 못 되살린다")
-local spare = Items.make("weapon", 180, 1, "axion")
-Bag.add(g, spare)
-expect(Bag.restore(g, sword.id, spare.id), "같은 장비로 되살린다")
-eq(sword.broken, false, "되살아났다")
-eq(sword.star, 12, "12성으로")
-eq(Bag.find(g, spare.id), nil, "쓴 장비는 사라진다")
-
--- ---- 8) 별 옮기기 ----
-local t = Hero.new(9, "riven")
-t.level = 30
-t.equip.weapon.star = 5
-local old = t.equip.weapon
-local new = Items.make("weapon", 20, 4, "riven")
-Bag.add(t, new)
-expect(Bag.transfer(t, old.id, new.id), "별을 옮긴다")
-eq(new.star, 4, "하나 낮아져 4성")
-eq(Bag.find(t, old.id), nil, "옛 장비는 사라진다")
-eq(t.equip.weapon, new, "끼고 있던 것을 옮겼으면 새것을 낀다")
-local hat = Items.make("hat", 20, 3)
-Bag.add(t, hat)
-ok, why = Bag.transfer(t, new.id, hat.id)
-expect(not ok and why == "같은 부위끼리만 옮긴다", "다른 부위로는 못 옮긴다")
-local plain = Items.make("weapon", 30, 3, "riven")
-Bag.add(t, plain)
-local zero = Items.make("weapon", 30, 3, "riven")
-Bag.add(t, zero)
-ok, why = Bag.transfer(t, zero.id, plain.id)
-expect(not ok and why == "옮길 별이 없다", "별이 없는 것은 옮길 것이 없다")
-
--- ---- 9) 창고 ----
-local k = Hero.new(10, "axion")
-local thing = Items.make("suit", 1, 2)
-Bag.add(k, thing)
-expect(Bag.storeIn(k, thing.id), "창고에 넣는다")
-eq(#k.gear, 0, "가방에서 빠진다")
-eq(#k.store, 1, "창고에 들어간다")
-eq(Bag.equip(k, thing.id), nil, "창고의 것은 바로 못 낀다")
-eq(Bag.dismantle(k, thing.id), nil, "창고의 것은 분해하지 못한다")
-expect(Bag.storeOut(k, thing.id), "창고에서 뺀다")
-eq(#k.gear, 1, "가방으로 돌아온다")
-eq(Bag.storeIn(k, k.equip.weapon.id), nil, "끼고 있는 것은 못 넣는다")
-for i = 1, Bag.storeSize(k) do
-	local it = Items.make("hat", 1, 3)
-	Bag.add(k, it)
-	expect(Bag.storeIn(k, it.id), "창고에 넣는다 " .. i)
-end
-ok, why = Bag.storeIn(k, thing.id)
-expect(not ok and why == "창고가 가득 찼다", "창고가 가득 차면 못 넣는다")
-
--- ---- 10) 떨어지는 것 ----
-local roll = Random.new(11)
-local n, mine, others, armor = 200000, 0, 0, 0
-local byQ = table.create(#D.QUALITY, 0)
-for _ = 1, n do
-	local it = Items.rollDrop(roll, 25, "mooni")
-	if it then
-		eq(it.stage, 20, "Lv.25 몬스터는 Lv.20 장비")
-		byQ[it.q] += 1
-		if it.slot ~= "weapon" then
-			armor += 1
-		elseif it.who == "mooni" then
-			mine += 1
-		else
-			others += 1
-		end
-	end
-end
-local function pctOf(x)
-	return x / n * 100
-end
-expect(math.abs(pctOf(mine) - D.DROP.weapon) < 0.06, ("내 무기 0.2%% — %.3f"):format(pctOf(mine)))
-expect(math.abs(pctOf(others) - D.DROP.other) < 0.06, ("남의 무기 0.2%% — %.3f"):format(pctOf(others)))
-expect(math.abs(pctOf(armor) - D.DROP.armor) < 0.08, ("방어구 0.4%% — %.3f"):format(pctOf(armor)))
-local total = mine + others + armor
-for i, q in D.QUALITY do
-	expect(math.abs(byQ[i] / total * 100 - q.pct) < 5, ("성능 %s %d%% — %.1f"):format(q.name, q.pct, byQ[i] / total * 100))
-end
-expect(byQ[1] > 0 and byQ[5] > 0, "보통 아래도, 위도 나온다")
--- 벌칙 동안에는 덜 나온다
-local weakN = 0
-for _ = 1, n do
-	if Items.rollDrop(roll, 25, "mooni", 0.2) then
-		weakN += 1
-	end
-end
-expect(weakN < total * 0.35, ("벌칙 동안 장비가 덜 나온다(%d → %d)"):format(total, weakN))
-
--- ---- 11) 저장 ----
-local s = Hero.new(12, "mooni")
-s.level = 20
-local keep = Items.make("glove", 20, 5)
-keep.star = 4
-Bag.add(s, keep)
-Bag.add(s, Items.make("weapon", 20, 1, "axion"))
-local stored = Items.make("hat", 10, 2)
-Bag.add(s, stored)
-Bag.storeIn(s, stored.id)
-s.dust, s.essence = 321, 7
-s.money = 1e7
-Bag.grow(s)
-Bag.equip(s, keep.id)
-local back = Hero.unpack(12, Hero.pack(s))
-expect(back ~= nil, "저장한 것을 되살린다")
-eq(Hero.power(back), Hero.power(s), "전투력이 같다")
-eq(back.equip.glove.star, 4, "낀 장비의 별")
-eq(back.equip.glove.q, 5, "낀 장비의 성능")
-eq(#back.gear, #s.gear, "가방의 장비 수")
-eq(#back.store, 1, "창고")
-eq(back.dust, 321, "달가루")
-eq(back.essence, 7, "정수")
-eq(Bag.size(back), Bag.size(s), "늘린 가방")
--- 장비가 생기기 전에 저장된 캐릭터는 처음 차림을 받는다
-local oldSave = Hero.pack(Hero.new(13, "riven"))
-oldSave.bag = nil
-local revived = Hero.unpack(13, oldSave)
-eq(#Bag.worn(revived), 5, "옛 저장에는 처음 차림을 준다")
--- 깨진 자료: 이상한 장비는 버린다
-local bad = Hero.pack(s)
-bad.bag.gear[1] = { "weapon", 20, 9, 0, "axion", 0, 0 } -- 없는 성능 단
-table.insert(bad.bag.gear, { "wing", 20, 3, 0, "", 0, 0 }) -- 없는 부위
-table.insert(bad.bag.gear, { "hat", 20, 3, 22, "", 0, 0 }) -- 상한을 넘는 별
-table.insert(bad.bag.equip, { "weapon", 20, 3, 0, "axion", 0, 0 }) -- 남의 무기를 끼고 있다
-bad.bag.dust = -5
-local fixed = Hero.unpack(12, bad)
-expect(fixed ~= nil, "깨진 자료도 캐릭터는 살린다")
-eq(fixed.dust, 0, "이상한 달가루는 0으로")
-for _, it in fixed.gear do
-	expect(Items.valid(it), "남은 장비는 꼴이 맞다")
-end
-expect(fixed.equip.weapon == nil or fixed.equip.weapon.who == "mooni", "남의 무기는 끼고 있지 않다")
-
--- ---- 12) 화면에 보내는 것 ----
-local v = Bag.view(s)
-eq(v.size, Bag.size(s), "가방 칸 수")
-eq(v.dust, 321, "달가루")
-expect(v.equip.glove ~= nil and v.equip.glove.id == keep.id, "낀 장비")
-eq(#v.gear, #s.gear, "가방의 장비")
-
--- ---- 13) 떨어진 장비와 달가루를 줍는다 ----
-do
-	local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
-	local Room = req("ReplicatedStorage/shared/lune/sim/room")
-	local room = Room.new("hunt", SCENES.scenes.hunt, Random.new(3))
-	local me = Hero.new(21, "axion")
-	me.x, me.y = 200, 176
-	local gear = room:addDrop({ kind = "gear", item = Items.make("hat", 1, 4), amount = 1 }, 205, 176, me.id)
-	local dustDrop = room:addDrop({ kind = "dust", amount = 7 }, 210, 176, me.id)
-	local shown = Room.dropView(gear)
-	expect(shown.item ~= nil and shown.item.slot == "hat" and shown.item.q == 4, "떨어진 장비가 무엇인지 알린다")
-	eq(#room:describe().drops, 2, "방에 들어온 사람도 떨어진 것을 본다")
-	expect(room:pickup(me, gear.id) ~= nil, "장비를 줍는다")
-	eq(#me.gear, 1, "가방에 들어온다")
-	eq(me.gear[1].q, 4, "성능이 그대로")
-	expect(room:pickup(me, dustDrop.id) ~= nil, "달가루를 줍는다")
-	eq(me.dust, 7, "달가루가 는다")
-	-- 가방이 가득 차면 줍지 못하고, 물건은 그대로 남는다
-	for _ = 1, Bag.free(me) do
-		Bag.add(me, Items.make("glove", 1, 3))
-	end
-	local more = room:addDrop({ kind = "gear", item = Items.make("suit", 1, 3), amount = 1 }, 205, 176, me.id)
-	local got, why = room:pickup(me, more.id)
-	expect(got == nil and why == "가방이 가득 찼다", "가방이 가득 차면 못 줍는다")
-	expect(room.drops[more.id] ~= nil, "못 주운 것은 그대로 남는다")
-	-- 졸개를 잡으면 장비와 달가루가 정한 확률로 나온다(Lv.25 졸개 십만 마리)
-	local hunter = Hero.new(22, "reaper")
-	local gearN, dustN, dustSum, kills = 0, 0, 0, 100000
-	local mob = { lv = 25, x = 100, y = 176, def = { hp = 1 } }
-	for _ = 1, kills do
-		for _, d in room:lootFor(hunter, mob) do
-			if d.kind == "gear" then
-				gearN += 1
-			else
-				dustN += 1
-				dustSum += d.amount
-			end
-			room.drops[d.id] = nil
-		end
-	end
-	local want = D.DROP.weapon + D.DROP.other + D.DROP.armor
-	expect(math.abs(gearN / kills * 100 - want) < 0.15, ("졸개 백 마리에 장비 %.1f개 — %.2f"):format(want, gearN / kills * 100))
-	local avg = D.DUST.kill * (25 / 10) ^ 3
-	expect(math.abs(dustSum / kills - avg) < avg * 0.06, ("달가루 한 마리 평균 %.3f — %.3f"):format(avg, dustSum / kills))
-	expect(dustN > 0, "달가루가 떨어진다")
-end
-
--- ---- 14) 창에 적는 글이 칸에 들어간다 ----
-do
 	local function width(text)
 		return (pixelText.Measure(text, "small"))
 	end
-	-- 상점: 물건 이름 100 · 값 30 · "Lv.10부터" 64(client/lune/ui/shopWindow.luau의 NAME_W · PRICE_W · LOCK_W) — 셋과 단추가 창 안(174)에 들어간다
-	local NAME_W, PRICE_W, LOCK_W = 100, 30, 64
-	expect(4 + NAME_W + PRICE_W + 3 + 15 + 1 + 17 <= 174, "상점 한 줄이 창 안")
-	expect(4 + NAME_W + LOCK_W <= 174, "잠긴 줄이 창 안")
+	local function widthBody(text)
+		return (pixelText.Measure(text, "body"))
+	end
+	local WIN, BAG, EQ, SHOP = L.WIN, L.BAG, L.EQUIP, L.SHOP
+	local function outer(bw, bh)
+		return bw + WIN.pad * 2, bh + WIN.head + WIN.foot
+	end
+	for s = 2, 10 do
+		local gw, gh, us = L.gridFor(s)
+		local ratio = s / us
+		local cell = L.cellFor(ratio)
+		expect(cell >= KIT.icon * ratio + 4, ("게임 %d배: 칸(%d)이 장비 그림(%s)보다 사방으로 두 점은 크다"):format(s, cell, tostring(KIT.icon * ratio)))
+		-- 가방 · 장비 창이 화면의 높이 안에 들어가고, 둘이 양쪽 끝에 같이 떠도 가운데가 남는다
+		local bw, bh = L.bagBody(ratio)
+		local ow, oh = outer(bw, bh)
+		expect(WIN.top + oh <= gh, ("게임 %d배: 가방 창(%dx%d)이 화면(%dx%d) 안"):format(s, ow, oh, gw, gh))
+		local ew, eh, rx = L.equipBody(ratio)
+		local eow, eoh = outer(ew, eh)
+		expect(WIN.top + eoh + 46 <= gh, ("게임 %d배: 장비 창(%dx%d)이 화면 안(왼쪽 위의 기본 단추 아래로 내려도)"):format(s, eow, eoh))
+		expect(ow + eow + WIN.edge * 2 <= gw - 40, ("게임 %d배: 가방과 장비 창이 양쪽에 떠도 가운데가 남는다(%d + %d / %d)"):format(s, ow, eow, gw))
+		expect(rx >= cell + EQ.gap + EQ.textW and ew - rx == EQ.accCols * cell, "장비 창의 두 덩이가 겹치지 않는다")
+		expect(ew - rx >= 150, ("게임 %d배: 장비 창의 이름 · 단추 칸의 폭 %d"):format(s, ew - rx))
+		-- 가방: 탭 셋과 가방 수 글(과 줄 넘기는 단추)이 한 줄에 · 단추 셋의 글이 단추 안에
+		local tabs = 0
+		for _, name in D.BAG.tabs do
+			tabs += width(name) + 16
+		end
+		expect(tabs <= bw - BAG.countW - BAG.scrollW - 4, ("게임 %d배: 가방 탭 셋(%d)이 가방 수 글의 왼쪽에 들어간다(속 %d)"):format(s, tabs, bw))
+		local button = L.bagButtonW(bw)
+		expect(widthBody(UIGEN.words.equip) <= button - 6 and widthBody("분해") <= button - 6 and widthBody("맡기기") <= button - 6 and widthBody("올리기") <= button - 6, ("게임 %d배: 가방 단추(%d)의 글"):format(s, button))
+		for n = 0, D.BAG.times - 1 do
+			local text = ("+4칸 %s"):format(F.short(D.BAG.costs[n + 1]))
+			expect(width(text) <= button - 6, ("게임 %d배: 가방 늘리기 단추(%d)의 글 %s — 폭 %d"):format(s, button, text, width(text)))
+		end
+		-- 창고: 가방과 같은 여섯 칸
+		local rows = math.ceil(D.BAG.storeBase / BAG.cols)
+		local _, soh = outer(BAG.cols * cell, rows * cell + 96)
+		expect(WIN.top + soh + 46 <= gh, ("게임 %d배: 창고 창이 화면 안"):format(s))
+	end
+	expect(width("48 / 48") <= BAG.countW, "가방 수 글")
+	expect(BAG.infoH >= 12 + 54 + 26 + 8 + 5 + 18, "가방의 칸 아래에 이름 · 설명 두 줄 · 단추 · 돈이 들어간다")
+	-- 상점: 물건 이름(본문 글씨) · 값 · 사는 단추가 한 줄에 들어간다
+	expect(SHOP.nameW + 4 <= SHOP.w - SHOP.buyW - 8 - SHOP.priceW, "상점의 이름과 값이 겹치지 않는다")
 	for _, st in D.STOCK do
 		local label = st.name
 		if st.id == "w10" then
 			for who in D.KINDS do
-				expect(width(Items.name(Items.make("weapon", st.item.stage, D.NORMAL, who))) <= NAME_W, "상점의 무기 이름 " .. who)
+				local name = Items.name(Items.make("weapon", st.item.stage, D.NORMAL, who))
+				expect(widthBody(name) <= SHOP.nameW, ("상점의 무기 이름 %s — 폭 %d"):format(name, widthBody(name)))
 			end
 		elseif st.id == "potion" then
 			for _, pt in N.data.BODY.potion do
-				expect(width(pt.name) <= NAME_W, "물약 이름 " .. pt.name)
-				expect(width(tostring(pt.price)) <= PRICE_W, "물약 값 " .. pt.name)
+				expect(widthBody(pt.name) <= SHOP.nameW, "물약 이름 " .. pt.name)
+				expect(width(tostring(pt.price)) <= SHOP.priceW, "물약 값 " .. pt.name)
 			end
 		else
-			expect(width(label) <= NAME_W, ("상점의 물건 이름 %s — 폭 %d"):format(label, width(label)))
-			expect(width(tostring(st.price)) <= PRICE_W, "상점의 값 " .. label)
+			expect(widthBody(label) <= SHOP.nameW, ("상점의 물건 이름 %s — 폭 %d"):format(label, widthBody(label)))
+			expect(width(tostring(st.price)) <= SHOP.priceW, "상점의 값 " .. label)
 		end
-		expect(width(("Lv.%d부터"):format(st.from)) <= LOCK_W, "열리는 레벨 글 " .. st.id)
+		expect(width(("Lv.%d부터"):format(st.from)) <= SHOP.w - SHOP.nameW, "열리는 레벨 글 " .. st.id)
 	end
-	-- 장비 창: 부위 이름과 「Lv.140 +17」이 68에 들어간다(client/lune/ui/equipWindow.luau의 TEXT_W) — 두 단이 창 안(174)
-	local TEXT_W = 68
-	expect(89 + 17 + TEXT_W <= 174 and 2 + 17 + TEXT_W <= 89, "장비 창의 두 단이 겹치지 않고 창 안")
+	do
+		local count = {}
+		for _, st in D.STOCK do
+			count[st.npc] = (count[st.npc] or 0) + 1
+		end
+		for npc, n in count do
+			expect(n <= SHOP.rows, ("상점 %s의 물건 %d가지가 창의 줄 수(%d) 안"):format(npc, n, SHOP.rows))
+		end
+	end
+	expect(widthBody("사기") <= SHOP.buyW - 6 and widthBody("10") <= (SHOP.buyW - 6) / 2 - 6, "사는 단추의 글")
+	-- 장비 창: 부위 이름과 「Lv.140 +17」이 글 칸에 들어간다
 	for _, slot in D.SLOTS do
-		expect(width(slot.name) <= TEXT_W, "장비 창의 부위 이름 " .. slot.name)
+		expect(width(slot.name) <= EQ.textW, "장비 창의 부위 이름 " .. slot.name)
+		expect(widthBody(slot.name .. " — 비었다") <= 150 * 2, "빈 부위를 골랐을 때의 글(두 줄까지) " .. slot.name)
 	end
-	expect(width("Lv.140 +17") <= TEXT_W, "장비 창의 단계와 별(사냥 장비)")
-	-- 가방 탭 이름: 셋이 나란히(이름 + 10씩, 사이 2) 가방 수 글(40) 왼쪽에 들어간다
-	local tabs = 4
-	for _, name in D.BAG.tabs do
-		tabs += width(name) + 10 + 2
+	expect(width("Lv.140 +17") <= EQ.textW, "장비 창의 단계와 별(사냥 장비)")
+	-- 장비의 이름(본문 글씨)이 가방의 속(가장 좁을 때)에 한 줄로 들어간다 — 넘으면 …로 줄지만, 흔한 이름은 다 보여야 한다
+	do
+		local narrow = select(1, L.bagBody(2))
+		local sample = Items.make("weapon", 20, 5, "axion")
+		sample.star = 17
+		local name = ("%s +%d"):format(Items.name(sample), sample.star)
+		expect(widthBody(name) <= narrow, ("가방에서 고른 장비의 이름 「%s」(폭 %d)이 가장 좁은 가방(%d)에 들어간다"):format(name, widthBody(name), narrow))
 	end
-	expect(tabs <= 174 - 44, ("가방 탭 셋의 폭 %d"):format(tabs))
 end
 
 end)
@@ -23755,7 +24925,9 @@ local F = req("ReplicatedStorage/shared/lune/ui/format")
 local pixelText = req("Client/ui/pixelText")
 
 local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
-pixelText.Register("small", KIT.font.small, {}) -- 알리미의 글은 작은 글씨(client/lune/questHud.luau — 폭 116)
+pixelText.Register("small", KIT.font.small, {}) -- 알리미의 할 일은 작은 글씨, 퀘스트 이름과 말풍선의 말은 본문 글씨(client/lune/questHud.luau · ui/talk.luau)
+local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
+local QUEST_W = UI.hud.quest.w -- 알리미의 글이 쓸 수 있는 폭
 
 local function measure(text)
 	return (pixelText.Measure(text, "small"))
@@ -23793,16 +24965,16 @@ for _, def in D.list do
 				found = found or m.kind == step.mob
 			end
 			expect(found, ("그 맵에 그 졸개가 있다 %s(%s)"):format(def.id, step.mob))
-			expect(measure(Q.stepText(step, step.n)) <= 116, ("할 일의 글이 알리미에 들어감 %s — 폭 %d"):format(def.id, measure(Q.stepText(step, step.n))))
+			expect(measure(Q.stepText(step, step.n)) <= QUEST_W, ("할 일의 글이 알리미에 들어감 %s — 폭 %d"):format(def.id, measure(Q.stepText(step, step.n))))
 		end
-		-- 대사: 한 마디가 대화 상자 두 줄에 들어간다
+		-- 대사: 한 마디가 말풍선의 줄 수(세 줄)에 들어간다
 		for _, group in { def.offer, def.wait, def.done } do
 			for _, line in group do
-				local lines = #string.split(pixelText.Wrap(line, F.TALK.textW, "body"), "\n")
-				expect(lines <= F.TALK.lines, ("%s의 말이 %d줄에 들어감(지금 %d줄) — %s"):format(def.id, F.TALK.lines, lines, line))
+				local lines = #string.split(pixelText.Wrap(line, F.BUBBLE.textW, "body"), "\n")
+				expect(lines <= F.BUBBLE.lines, ("%s의 말이 %d줄에 들어감(지금 %d줄) — %s"):format(def.id, F.BUBBLE.lines, lines, line))
 			end
 		end
-		expect(measure(def.name) <= 116, ("퀘스트 이름이 알리미에 들어감 %s — 폭 %d"):format(def.name, measure(def.name)))
+		expect((pixelText.Measure(def.name, "body")) <= QUEST_W, ("퀘스트 이름(본문 글씨)이 알리미에 들어감 %s — 폭 %d"):format(def.name, (pixelText.Measure(def.name, "body"))))
 	end
 end
 expect(playable >= 5, "지금 할 수 있는 퀘스트가 다섯은 된다")
@@ -23847,8 +25019,17 @@ eq(#Q.atNpc(book, 1, "guide").wait, 1, "하는 중인 것을 안다")
 local rng = Random.new(5)
 -- 퀘스트마다의 맵과 졸개(자료가 바뀌어도 테스트가 따라가게 자료에서 읽는다)
 local M2, M3, S1 = Q.def("r1m2"), Q.def("r1m3"), Q.def("r1s1")
+-- 졸개 한 마리를 잡고, 떨어진 퀘스트의 물건을 모두 줍는다. 바뀐 퀘스트들의 id를 돌려준다.
+--  잡는 일은 잡는 순간 오르고(Q.onKill), 모으는 물건은 땅에 떨어진 것(Q.drops)을 주워야 오른다(Q.onLoot) — 사용자 2026-10-07
 local function kill(b, def, r)
-	return Q.onKill(b, def.steps[1].mob, def.scene, r or rng)
+	local mob, scene = def.steps[1].mob, def.scene
+	local changed = Q.onKill(b, mob, scene)
+	for _, d in Q.drops(b, mob, scene, r or rng) do
+		if Q.onLoot(b, d.quest, d.step) then
+			table.insert(changed, d.quest)
+		end
+	end
+	return changed
 end
 eq(#Q.onKill(book, "archer", M2.scene, rng), 0, "다른 졸개는 세지 않는다")
 eq(#Q.onKill(book, M2.steps[1].mob, "town", rng), 0, "다른 맵에서는 세지 않는다")
@@ -23958,6 +25139,630 @@ eq(Q.state(fixed.quests, 5, "r1m1"), "done", "끝낸 표시는 살린다")
 local v = Q.view({ r1m2 = { done = false, c = {} }, r1m1 = { done = true, c = {} } })
 eq(v.r1m2.c[1], 0, "안 센 것은 0으로 채운다")
 eq(#v.r1m1.c, 0, "할 일이 없는 퀘스트")
+
+-- ---- 9) 모으는 물건은 땅에 떨어지고, 주워야 오른다 ----
+--  사용자 2026-10-07: "퀘스트 아이템이나 , 기타아이템들은 왜 드롭도되지않고 그림도없고 그냥 텍스트로만 오르나요?"
+do
+	local KIT9 = req("ReplicatedStorage/shared/lune/data/kit.generated")
+	local gathers = 0
+	for _, def in D.list do
+		for _, step in def.steps do
+			if step.type == "gather" then
+				gathers += 1
+				expect(typeof(step.icon) == "string" and KIT9.parts.icons.icons[step.icon] ~= nil, ("모으는 물건마다 제 그림이 있다: %s(%s)"):format(step.name, tostring(step.icon)))
+			else
+				eq(step.icon, false, "잡는 일에는 물건의 그림이 없다 " .. def.id)
+			end
+		end
+	end
+	expect(gathers >= 3, "모으는 퀘스트가 있다")
+	local def = Q.def("r1m3")
+	local step = def.steps[1]
+	local book = { r1m3 = { done = false, c = {} } }
+	-- 잡기만 해서는 오르지 않는다
+	for _ = 1, 200 do
+		eq(#Q.onKill(book, step.mob, def.scene), 0, "모으는 퀘스트는 잡는 것만으로 오르지 않는다")
+	end
+	eq(book.r1m3.c[1] or 0, 0, "줍기 전에는 0개")
+	-- 떨어진 것: 그 퀘스트 · 그 일 · 물건의 이름과 그림
+	local r9 = Random.new(11)
+	local seen = nil
+	for _ = 1, 100 do
+		for _, d in Q.drops(book, step.mob, def.scene, r9) do
+			seen = d
+		end
+	end
+	expect(seen ~= nil and seen.quest == "r1m3" and seen.step == 1 and seen.name == step.name and seen.icon == step.icon, "떨어진 물건이 그 퀘스트의 것이다")
+	eq(#Q.drops(book, "archer", def.scene, r9), 0, "다른 졸개에게서는 떨어지지 않는다")
+	eq(#Q.drops(book, step.mob, "town", r9), 0, "다른 맵에서는 떨어지지 않는다")
+	eq(#Q.drops({}, step.mob, def.scene, r9), 0, "받지 않은 퀘스트의 물건은 떨어지지 않는다")
+	-- 주우면 하나씩 오르고, 다 모으면 더 오르지 않는다(더 떨어지지도 않는다)
+	for i = 1, step.n do
+		expect(Q.onLoot(book, "r1m3", 1), "주우면 오른다 " .. i)
+		eq(book.r1m3.c[1], i, "하나씩 오른다")
+	end
+	expect(not Q.onLoot(book, "r1m3", 1), "다 모은 뒤에 주운 것은 세지 않는다")
+	eq(book.r1m3.c[1], step.n, "모을 수를 넘지 않는다")
+	for _ = 1, 50 do
+		eq(#Q.drops(book, step.mob, def.scene, r9), 0, "다 모은 뒤에는 떨어지지 않는다")
+	end
+	expect(not Q.onLoot(book, "r1m2", 1), "받지 않은 퀘스트 · 잡는 일은 주워도 오르지 않는다")
+	expect(not Q.onLoot(book, "no_such", 1) and not Q.onLoot(book, "r1m3", 9), "없는 퀘스트 · 없는 일")
+	-- 가방의 재료 탭에 보이는 것: 모으는 중인 물건(가진 수 / 모을 수) — 끝낸 퀘스트의 것은 빠진다
+	local items = Q.items({ r1m3 = { done = false, c = { 3 } }, r1m2 = { done = false, c = { 1 } } })
+	eq(#items, 1, "모으는 물건만 나온다")
+	expect(items[1].name == step.name and items[1].icon == step.icon and items[1].have == 3 and items[1].n == step.n, "이름 · 그림 · 가진 수 · 모을 수")
+	eq(#Q.items({ r1m3 = { done = true, c = { step.n } } }), 0, "끝낸 퀘스트의 물건은 빠진다")
+	for _, it in Q.items({ r1m3 = { done = false, c = {} }, r1s1 = { done = false, c = {} } }) do
+		expect(measure(it.name) <= 2 * 50 - 10, "물건 이름이 가방의 칸 옆 자리에 들어간다(1080p): " .. it.name)
+	end
+end
+
+end)
+runTest('18_lune_stat_skill', function()
+-- 「달의 계승자」 — 능력치의 설명(마우스를 올리면 뜨는 것) · 스킬 창의 차수 탭 · 스킬마다의 그림 · 대쉬 효과의 값.
+--  사용자 2026-10-07: "능력치에 각각 스텟별로 마우스 올리면 호버로 스텟 효과를 보여줘야합니다" · "1,2,3,4 차 스킬 탭이있어야지" · "패시브든 뭐든 다 아이콘이 있는거에요" · "대쉬 이펙트가 바뀐거같은데"
+local N = req("ReplicatedStorage/shared/lune/config/numbers")
+local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
+local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
+local CLASSES = req("ReplicatedStorage/shared/lune/data/classes.generated")
+local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
+local CHARS = req("ReplicatedStorage/shared/lune/data/chars.generated")
+local ASSETS = req("ReplicatedStorage/shared/lune/data/assets.generated")
+local F = req("ReplicatedStorage/shared/lune/ui/format")
+local L = req("ReplicatedStorage/shared/lune/ui/layout")
+local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+local pixelText = req("Client/ui/pixelText")
+pixelText.Register("small", KIT.font.small, {})
+
+local STATS = N.data.STATS
+local M = KIT.ui.metric
+local G = UI.grid
+local function small(text)
+	return (pixelText.Measure(text, "small"))
+end
+local function bodyW(text)
+	return (pixelText.Measure(text, "body"))
+end
+
+-- ---- 1) 능력치의 설명: 공방의 글과 같다 ----
+do
+	eq(F.fill("Lv.{lv}에 {job}차", { lv = 30, job = 2 }), "Lv.30에 2차", "글 채우기")
+	eq(F.fill("{none}!", {}), "!", "없는 이름은 빈 글")
+	eq(F.gain(0.1126), "0.11", "작은 값은 소수 두 자리")
+	eq(F.gain(12.34), "12.3", "10부터는 소수 한 자리")
+	eq(F.gain(345.6), "346", "100부터는 정수")
+	expect(#UI.statTipCheck >= 8, "공방의 본보기가 있다")
+	for _, row in UI.statTipCheck do
+		local class, id, lv, kind, title, tag = row[1], row[2], row[3], row[4], row[5], row[6]
+		local t = F.statTip(class, id, lv)
+		local what = ("%s %s Lv.%d"):format(class, id, lv)
+		eq(t.kind, kind, "갈래 " .. what)
+		eq(t.title, title, "이름 " .. what)
+		eq(t.tag, tag, "꼬리표 " .. what)
+		eq(#t.lines, #row - 6, "줄 수 " .. what)
+		for i, line in t.lines do
+			eq(line, row[6 + i], ("%d째 줄 %s"):format(i, what))
+		end
+	end
+end
+
+-- ---- 2) 설명의 숫자가 실제 셈과 맞는다 ----
+do
+	for _, class in CLASSES.order do
+		local pair = STATS.classes[class]
+		for _, lv in { 1, 12, 30, 61, 100, 150 } do
+			local gain = N.statGain(class, lv)
+			-- 주 · 부 능력치: 그 레벨의 점수를 다 주 능력치에 넣은 것에서 50점을 덜어 냈다가 다시 넣으면 전투력이 50 x 설명의 값만큼 오른다(반올림 1 안에서)
+			local h = Hero.new(1, class)
+			h.level = lv
+			local all = N.apAt(lv)
+			if all >= 50 then
+				h.stats[pair[1]] = all - 50
+				local before = Hero.power(h)
+				h.stats[pair[1]] = all
+				expect(math.abs((Hero.power(h) - before) - 50 * gain.main) <= 1.01, ("%s Lv.%d: 주 능력치 50점 = 전투력 +%.2f"):format(class, lv, 50 * gain.main))
+				h.stats[pair[1]] = all - 50
+				h.stats[pair[2]] = 50
+				expect(math.abs((Hero.power(h) - before) - 50 * gain.sub) <= 1.01, ("%s Lv.%d: 부 능력치 50점 = 전투력 +%.2f"):format(class, lv, 50 * gain.sub))
+				-- 안 쓰는 능력치는 전투력을 바꾸지 않는다
+				h.stats[pair[2]] = 0
+				for _, id in STATS.order do
+					if id ~= "hp" and id ~= pair[1] and id ~= pair[2] then
+						h.stats[id] = 50
+						eq(Hero.power(h), before, ("%s Lv.%d: 안 쓰는 능력치 %s는 전투력을 바꾸지 않는다"):format(class, lv, id))
+						h.stats[id] = 0
+					end
+				end
+			end
+			-- 체력: 100점 = 최대 체력 + 100 x 설명의 값(반올림 1 안에서)
+			expect(math.abs((N.hpOf(class, lv, 100) - N.hpOf(class, lv, 0)) - 100 * gain.hp) <= 1.01, ("%s Lv.%d: 체력 100점 = 최대 체력 +%.1f"):format(class, lv, 100 * gain.hp))
+			expect(gain.main > gain.sub and gain.sub > 0 and gain.hp > 0, ("%s Lv.%d: 주 > 부 > 0"):format(class, lv))
+		end
+	end
+end
+
+-- ---- 3) 능력치 창과 설명 판의 자리 · 글이 칸 안에 ----
+do
+	local S, T = L.STAT, L.STAT.tip
+	local bw, bh = L.statBody(#STATS.order)
+	local winW, winH = bw + L.WIN.pad * 2, bh + L.WIN.head + L.WIN.foot
+	local inner = T.w - T.pad * 2
+	for _, g in { { "1080p", G.w, G.h }, { "가장 작은 격자", G.min.w, G.min.h } } do
+		expect(L.WIN.top + winH <= g[3], "능력치 창이 화면 안(높이) " .. g[1])
+		-- 설명 판은 창의 왼쪽에 붙는다: 화면 왼쪽 끝을 넘지 않는다
+		expect(g[2] - L.WIN.edge - winW - T.gap - T.w >= 4, "설명 판이 화면 안(왼쪽) " .. g[1])
+	end
+	for _, id in STATS.order do
+		expect(bodyW(STATS.names[id]) <= S.tagX - 4, "능력치 이름이 꼬리표 앞에서 끝난다 " .. id)
+	end
+	expect(S.plusW + 10 <= S.valueRight, "값과 + 단추 사이가 떨어져 있다")
+	local tallest = 0
+	for _, class in CLASSES.order do
+		for _, id in STATS.order do
+			for _, lv in { 1, 150 } do
+				local t = F.statTip(class, id, lv)
+				expect(bodyW(t.title) + 8 + small(t.tag) <= inner, ("제목과 꼬리표가 설명 판 안 %s %s"):format(class, id))
+				local rows = 0
+				for _, line in t.lines do
+					local fitted = pixelText.Fit(line, inner, T.lines, "small")
+					expect(not fitted:find("…", 1, true), ("설명이 잘리지 않는다 %s %s: %s"):format(class, id, line))
+					for _, part in string.split(fitted, "\n") do
+						rows += 1
+						expect(small(part) <= inner, ("설명 줄이 판 안 %s %s"):format(class, id))
+					end
+				end
+				tallest = math.max(tallest, T.pad * 2 + T.title + rows * T.line)
+			end
+		end
+	end
+	expect(L.WIN.top + L.WIN.head + S.top + (#STATS.order - 1) * S.row + tallest <= G.min.h, "맨 아랫줄의 설명 판도 가장 작은 화면 안")
+end
+
+-- ---- 4) 스킬 창: 차수 탭 넷 · 스킬마다 그림 · 글이 칸 안에 ----
+do
+	local K = L.SKILL
+	local bw, bh, listW = L.skillBody()
+	local winW, winH = bw + L.WIN.pad * 2, bh + L.WIN.head + L.WIN.foot
+	expect(winW + L.WIN.edge * 2 <= G.min.w, "스킬 창이 가장 작은 화면 안(폭)")
+	expect(L.WIN.top + winH <= G.min.h, "스킬 창이 가장 작은 화면 안(높이)")
+	local nameW = K.colW - K.slot - 8 - K.plusW - 4
+	local pics = KIT.parts.pics.icons
+	local W = UI.skillWords
+	-- 차수 탭: 로마 숫자(I · II · III · IV — "차"라는 말 없이. 사용자 2026-10-07)를 같은 폭의 칸에
+	local tabsW = 0
+	eq(#W.tabs, #CLASSES.jobs, "차수 탭의 글이 차수마다 하나")
+	for _, j in CLASSES.jobs do
+		local text = W.tabs[j.job]
+		expect(text:match("^[IVX]+$") ~= nil, "차수 탭은 로마 숫자 " .. text)
+		expect(bodyW(text) <= K.tabW - 4, "탭의 글이 탭의 칸 안 " .. text)
+		tabsW += K.tabW + K.tabGap
+	end
+	expect(K.tabW >= 24, "탭이 누르기 쉬운 폭")
+	expect(tabsW + small(F.fill(W.points, { n = 999 })) <= listW, "차수 탭과 스킬 포인트가 한 줄에")
+	expect(small(W.auto) + 6 <= K.autoW, "「추천대로 찍기」가 단추 안")
+	local total = 0
+	for _, class in CLASSES.order do
+		local c = CLASSES.classes[class]
+		eq(#c.tiers, 4, "차수 넷 " .. class)
+		local names = {}
+		for i, t in c.tiers do
+			eq(t.job, i, "차수의 차례 " .. class)
+			eq(t.lv, CLASSES.jobs[i].lv, "차수가 열리는 레벨 " .. class)
+			expect(#t.skills >= 6 and #t.skills <= K.cols * K.rows, ("%s %d차: 스킬 %d개가 칸(%d) 안"):format(class, i, #t.skills, K.cols * K.rows))
+			for _, text in { F.fill(W.open, { job = t.job, lv = t.lv, n = #t.skills }), F.fill(W.locked, { job = t.job, lv = t.lv }) } do
+				expect(small(text) <= listW - K.autoW - 8, "안내 줄이 단추 앞에서 끝난다: " .. text)
+			end
+			for _, sk in t.skills do
+				total += 1
+				names[sk.id] = sk.name
+				expect(pics["skill_" .. sk.id] ~= nil, ("스킬마다 제 그림이 있다: %s %s(%s)"):format(class, sk.name, sk.id))
+				expect(CLASSES.types[sk.type] ~= nil, "갈래의 이름이 있다: " .. sk.type)
+				expect(bodyW(sk.name) <= nameW, ("스킬 이름이 칸 안: %s(%d > %d)"):format(sk.name, bodyW(sk.name), nameW))
+				expect(small(("%s · Lv.%d / %d"):format(CLASSES.types[sk.type], sk.max, sk.max)) <= K.detailW - K.slot - 10, "갈래와 레벨이 설명 칸 안: " .. sk.name)
+				local fitted = pixelText.Fit(sk.text, K.detailW, K.textLines, "small")
+				expect(not fitted:find("…", 1, true), "스킬 설명이 잘리지 않는다: " .. sk.name)
+				local rows = #string.split(fitted, "\n")
+				expect(K.slot + 14 + rows * K.textLine + 6 + M.small <= bh, "설명과 그 아래 한 줄이 창 안: " .. sk.name)
+				if sk.replaces then
+					expect(names[sk.replaces] ~= nil, "잇는 기술이 앞 차수에 있다: " .. sk.name)
+					expect(small(F.fill(W.replaces, { name = names[sk.replaces] })) <= K.detailW, "잇는 기술의 글이 설명 칸 안: " .. sk.name)
+				end
+			end
+		end
+		-- 1차 탭의 스킬 = 게임이 지금 쓰는 스킬 목록
+		eq(#c.tiers[1].skills, #c.skills, "1차 탭 = 1차 스킬 " .. class)
+		for i, sk in c.skills do
+			eq(c.tiers[1].skills[i].id, sk.id, "1차 스킬의 차례 " .. class)
+		end
+	end
+	expect(total >= 150, ("스킬 %d개에 모두 그림이 있다"):format(total))
+	for _, name in { "menu_bag", "menu_equip", "menu_stat", "menu_skill", "menu_quest", "menu_gear", "slot_potion" } do
+		expect(pics[name] ~= nil, "늘 보이는 화면의 그림 " .. name)
+	end
+	expect(KIT.parts.uTip ~= nil, "설명 판의 부품")
+end
+
+-- ---- 5) 대쉬의 효과: 값과 그림이 있다 ----
+do
+	local D = COMBAT.fx.dash
+	expect(D.ghost.every > 0 and D.ghost.life > D.ghost.every and D.ghost.alpha > 0 and D.ghost.alpha <= 1, "잔상의 값")
+	expect(D.streak.life > 0 and D.streak.w > 0 and D.streak.h > 0 and D.streak.perSpeed > 0 and D.streak.lenPerSpeed > 0, "속도선의 값")
+	eq(#CHARS.masks, #CHARS.pages, "실루엣 판이 캐릭터 판마다 하나")
+	for _, name in CHARS.masks do
+		expect((ASSETS[name] or "") ~= "", "실루엣 판을 올렸다 " .. name)
+	end
+	local moves = 0
+	for id, def in COMBAT.skills do
+		if def.type == "move" then
+			moves += 1
+			local tone = CLASSES.classes[def.who].tone
+			expect(COMBAT.fx.tones[tone] ~= nil and #COMBAT.fx.tones[tone].n == 3 and #COMBAT.fx.tones[tone].l == 3, "직업 색이 있다 " .. id)
+			-- 가는 동안 잔상이 적어도 둘은 남는다 · 속도선은 셋 이상
+			expect(def.dist / def.speed / D.ghost.every >= 2, ("대쉬 %s: 잔상이 둘 이상(%.1f)"):format(id, def.dist / def.speed / D.ghost.every))
+			expect(math.floor(D.streak.base + def.speed / D.streak.perSpeed + 0.5) >= 3, "속도선이 셋 이상 " .. id)
+		end
+	end
+	eq(moves, #CLASSES.order, "직업마다 대쉬 하나")
+end
+
+-- ---- 6) 퀵슬롯: 칸에 놓는 셈 · 서버가 받는 꼴 · 저장 ----
+--  사용자 2026-10-07: "스킬키를 단축키에 등록하기 쉬워야합니다 … 드래그앤 드랍으로 배치도 되어야하고 … 퀵슬롯을 누르면 배치된다던가"
+do
+	local Quick = req("ReplicatedStorage/shared/lune/ui/quick")
+	local QD = UI.quick
+	eq(Quick.N, L.SKILLS.cols * L.SKILLS.rows, "퀵슬롯의 수 = 스킬 칸의 수")
+	eq(#QD.keys, Quick.N, "칸마다 기본 키 하나")
+	eq(#QD.labels, Quick.N, "칸마다 딱지의 글 하나")
+	local seenKey = {}
+	for i, name in QD.keys do
+		expect(not seenKey[name], "칸의 기본 키가 겹치지 않는다 " .. name)
+		seenKey[name] = true
+		expect(small(F.keyShort(name)) + 8 <= L.SKILLS.slot + L.SKILLS.gap - 2, "키 딱지가 옆 칸의 딱지와 붙지 않는다 " .. name)
+		eq(F.keyShort(name), QD.labels[i], "딱지에 적히는 글이 공방의 것과 같다 " .. name)
+	end
+	-- 창을 여는 키 · 줍기와 겹치지 않는다
+	for _, w in UI.windows do
+		expect(not w.key or not seenKey[w.key], "퀵슬롯의 키가 창의 키와 겹치지 않는다 " .. tostring(w.key))
+	end
+	expect(not seenKey.Z and not seenKey.Space and not seenKey.Up, "퀵슬롯의 키가 기본 동작의 키와 겹치지 않는다")
+	-- 열두 칸의 자리가 스킬 칸 틀 안이고 서로 겹치지 않는다
+	local sw, sh = UI.hud.skills.w, UI.hud.skills.h
+	local spots = {}
+	for i = 1, Quick.N do
+		local x, y = L.slotPlace(i, Quick.N)
+		expect(x >= 0 and x + L.SKILLS.slot <= sw and y - L.SKILLS.keyUp >= 0 and y + L.SKILLS.slot <= sh, "칸과 키 딱지가 스킬 칸 틀 안 " .. i)
+		for _, o in spots do
+			expect(math.abs(o.x - x) >= L.SKILLS.slot or math.abs(o.y - y) >= L.SKILLS.slot + L.SKILLS.keyUp, "칸끼리 겹치지 않는다 " .. i)
+		end
+		table.insert(spots, { x = x, y = y })
+	end
+	expect(small(QD.words.pick) <= sw, "안내 글이 스킬 칸 틀 안")
+	for _, key in { "hint", "armed", "none", "passive", "unlearned", "later" } do
+		expect(small(QD.words[key]) <= L.SKILL.detailW, "퀵슬롯의 글이 설명 칸 안: " .. QD.words[key])
+	end
+	expect(small(F.fill(QD.words.at, { key = "Shift" })) <= L.SKILL.detailW, "「퀵슬롯 Shift」가 설명 칸 안")
+
+	-- 공방의 셈과 같다(공방이 놓아 본 본보기)
+	local function same(a, b): boolean
+		if a == false or b == nil or a == nil then
+			return (a == false or a == nil) and (b == nil or b == false)
+		end
+		for i = 1, Quick.N do
+			if (a[i] or false) ~= (b[i] or false) then
+				return false
+			end
+		end
+		return true
+	end
+	expect(#QD.check >= 10, "공방의 본보기가 있다")
+	for n, row in QD.check do
+		local from, op, what, j, want = row[1], row[2], row[3], row[4], row[5]
+		local got = if op == "place" then Quick.place(from, what, j) else Quick.clear(from, j)
+		expect(same(want, got), ("공방의 본보기 %d(%s %s → %d)와 같다"):format(n, op, what, j))
+	end
+
+	-- 새 캐릭터: 물약 · 사냥기 · 보스기 · 이동기가 첫 네 칸에
+	for _, class in CLASSES.order do
+		local h = Hero.new(1, class)
+		eq(#h.slots, Quick.N, "칸의 수 " .. class)
+		eq(h.slots[1], "potion", "첫 칸은 물약 " .. class)
+		for k = 2, 4 do
+			local def = COMBAT.skills[h.slots[k]]
+			expect(def ~= nil and def.who == class and def.type == QD.start[k], ("%d째 칸은 %s %s"):format(k, QD.start[k], class))
+		end
+		for k = 5, Quick.N do
+			eq(h.slots[k], false, "나머지는 빈 칸 " .. class)
+		end
+		-- 자리를 바꾸는 것은 받는다
+		local moved = Quick.place(h.slots, h.slots[2], 7)
+		expect(Hero.setSlots(h, moved) and h.slots[7] == moved[7] and h.slots[2] == false, "칸을 옮긴 것을 받는다 " .. class)
+		-- 저장했다가 되살리면 그대로다
+		local back = Hero.unpack(1, Hero.pack(h))
+		expect(back ~= nil and same(back.slots, h.slots), "저장한 칸들이 되살아난다 " .. class)
+		-- 말이 안 되는 것은 받지 않는다(예전 칸들이 그대로다)
+		local keep = table.clone(h.slots)
+		-- 물약도 칸에서 뺄 수 있다(가방의 소비 탭에서 다시 끌어다 놓는다 — 사용자 2026-10-07). 두 칸에 놓을 수는 없다
+		local noPotion = Quick.clear(h.slots, 1)
+		expect(noPotion ~= nil and Hero.setSlots(h, noPotion) and h.slots[1] == false, "물약을 뺀 칸들도 받는다")
+		local again = Quick.place(h.slots, "potion", 9)
+		expect(again ~= nil and Hero.setSlots(h, again) and h.slots[9] == "potion", "가방에서 끌어다 다른 칸에 다시 놓는다")
+		expect(Hero.setSlots(h, keep), "처음 배치로 되돌린다")
+		local bad = table.clone(keep)
+		bad[12] = "potion"
+		expect(not Hero.setSlots(h, bad), "물약을 두 칸에 놓은 것은 받지 않는다")
+		bad = table.clone(keep)
+		bad[3] = "no_such_skill"
+		expect(not Hero.setSlots(h, bad), "없는 스킬은 받지 않는다")
+		bad = table.clone(keep)
+		bad[5] = keep[4]
+		expect(not Hero.setSlots(h, bad), "같은 스킬을 두 칸에 놓은 것은 받지 않는다")
+		bad = table.clone(keep)
+		bad[Quick.N + 1] = "potion"
+		expect(not Hero.setSlots(h, bad), "칸이 더 많은 것은 받지 않는다")
+		expect(not Hero.setSlots(h, "potion") and not Hero.setSlots(h, nil), "꼴이 다른 것은 받지 않는다")
+		for other, def in COMBAT.skills do
+			if def.who ~= class then
+				bad = table.clone(keep)
+				bad[6] = other
+				expect(not Hero.setSlots(h, bad), "다른 직업의 스킬은 받지 않는다")
+				break
+			end
+		end
+		expect(same(h.slots, keep), "받지 않은 뒤에도 칸들이 그대로다 " .. class)
+		-- 스마트폰의 단추 배치(tslots): PC의 퀵슬롯과 따로 저장한다 — 처음 차림은 같고, 한쪽을 바꿔도 다른 쪽은 그대로다
+		expect(same(h.tslots, Quick.start(CLASSES.classes[class].skills)), "스마트폰 배치의 처음 차림 " .. class)
+		local tmoved = Quick.place(h.tslots, h.tslots[2], 9)
+		expect(Hero.setSlots(h, tmoved, true) and h.tslots[9] == tmoved[9] and h.tslots[2] == false, "스마트폰 배치를 바꾼 것을 받는다 " .. class)
+		expect(same(h.slots, keep), "스마트폰 배치를 바꿔도 PC의 퀵슬롯은 그대로다 " .. class)
+		expect(not Hero.setSlots(h, { "potion", "no_such_skill" }, true) and same(h.tslots, tmoved), "스마트폰 배치도 없는 스킬은 받지 않는다 " .. class)
+		local tback = Hero.unpack(1, Hero.pack(h))
+		expect(tback ~= nil and same(tback.tslots, h.tslots) and same(tback.slots, h.slots), "두 배치가 따로 저장되고 되살아난다 " .. class)
+		eq(Hero.view(h).tslots, h.tslots, "스마트폰 배치가 내 상태에 실려 간다 " .. class)
+	end
+	-- 퀵슬롯이 생기기 전에 저장된 캐릭터는 처음 차림을 받는다
+	local old = Hero.pack(Hero.new(1, "axion"))
+	old.slots = nil
+	local revived = Hero.unpack(1, old)
+	expect(revived ~= nil and revived.slots[1] == "potion" and COMBAT.skills[revived.slots[2]] ~= nil, "칸이 없던 저장도 처음 차림으로 되살아난다")
+	old.slots = { "potion", "no_such_skill" }
+	revived = Hero.unpack(1, old)
+	expect(revived ~= nil and revived.slots[1] == "potion" and COMBAT.skills[revived.slots[2]] ~= nil, "깨진 칸들도 처음 차림으로 되살아난다")
+end
+
+-- ---- 7) 스킬을 올리거나 능력치를 찍으면 실제 한 타의 피해가 오른다 ----
+--  사용자 2026-10-07: "스킬을찍거나, 스텟이 증가했을때 데미지가 증가하고있는지 확인하세요"
+--  진짜 싸움의 셈(Room:skillHit)으로 여러 번 때려 평균을 본다. 피해 = 전투력(반올림 전) x 그 타의 배수 x 스킬 레벨의 세기(Lv.1에서 0.4, 마스터에서 1) x 흔들림(±10%)
+do
+	local SCENES7 = req("ReplicatedStorage/shared/lune/data/scenes.generated")
+	local Room = req("ReplicatedStorage/shared/lune/sim/room")
+	local function average(h, id: string, n: number): number
+		local room = Room.new("hunt", SCENES7.scenes.hunt, Random.new(3))
+		local mob = nil
+		for _, m in room.mobs do
+			mob = m
+			break
+		end
+		local def = COMBAT.skills[id]
+		local sum, count = 0, 0
+		for _ = 1, n do
+			mob.hp, mob.maxHp, mob.state = 1e9, 1e9, "idle"
+			for _, hit in room:skillHit(h, def.hits[1], mob.x - 10, mob.y, 1, Hero.scale(h, id)).hits do
+				sum += hit.dmg
+				count += 1
+			end
+		end
+		expect(count == n, "때릴 때마다 맞는다 " .. id)
+		return sum / math.max(1, count)
+	end
+	for _, class in CLASSES.order do
+		local pair = STATS.classes[class]
+		-- 그 직업의 사냥기
+		local mobSkill = nil
+		for id, def in COMBAT.skills do
+			if def.who == class and def.type == "mob" then
+				mobSkill = id
+			end
+		end
+		expect(mobSkill ~= nil, "사냥기가 있다 " .. class)
+		local max = Hero.skillDef(class, mobSkill).max
+		for _, lv in { 2, 12, 30 } do
+			local h = Hero.new(1, class)
+			h.level = lv
+			-- 스킬 레벨: 한 레벨마다 평균 피해가 오른다. 마스터는 Lv.1의 2.5배(0.4 → 1)
+			local prev, first = 0, 0
+			for sl = 1, max do
+				h.skills[mobSkill] = sl
+				local a = average(h, mobSkill, 400)
+				expect(a > prev, ("%s Lv.%d: %s Lv.%d의 평균 피해 %.2f가 Lv.%d의 %.2f보다 크다"):format(class, lv, mobSkill, sl, a, sl - 1, prev))
+				prev = a
+				if sl == 1 then
+					first = a
+				end
+			end
+			expect(prev / first > 2.2 and prev / first < 2.8, ("%s Lv.%d: 마스터의 피해가 Lv.1의 2.5배쯤(%.2f배)"):format(class, lv, prev / first))
+			-- 능력치: 주 능력치를 1점씩 찍을 때마다 평균 피해가 오른다(반올림에 묻히지 않는다). 부 능력치도 오르고, 안 쓰는 능력치는 그대로다
+			h.skills[mobSkill] = max
+			local base = average(h, mobSkill, 1500)
+			local last = base
+			for pts = 1, 5 do
+				h.stats[pair[1]] = pts
+				local a = average(h, mobSkill, 1500)
+				expect(a > last, ("%s Lv.%d: 주 능력치 %d점째에도 평균 피해가 오른다(%.2f → %.2f)"):format(class, lv, pts, last, a))
+				last = a
+			end
+			h.stats[pair[1]] = 0
+			h.stats[pair[2]] = 5
+			expect(average(h, mobSkill, 1500) > base, ("%s Lv.%d: 부 능력치 5점에도 평균 피해가 오른다"):format(class, lv))
+			h.stats[pair[2]] = 0
+			for _, id in STATS.order do
+				if id ~= "hp" and id ~= pair[1] and id ~= pair[2] then
+					h.stats[id] = 50
+					eq(average(h, mobSkill, 300), average(Hero.new(1, class) and (function()
+						local z = Hero.new(1, class)
+						z.level = lv
+						z.skills[mobSkill] = max
+						return z
+					end)(), mobSkill, 300), ("%s Lv.%d: 안 쓰는 능력치 %s는 피해를 바꾸지 않는다"):format(class, lv, id))
+					h.stats[id] = 0
+				end
+			end
+		end
+	end
+end
+
+-- ---- 8) 사냥기는 일반 몬스터에게, 보스기는 보스에게 제 힘을 낸다 ----
+--  사용자 2026-10-07: "보스기는 보스 공격시 추가데미지, 사냥기는 일반 몹 공격시 추가 데미지 이런식이라도 있어야지 지금 그냥 보스기로 사냥하는게 더빠른현상이 생깁니다"
+do
+	local SCENES8 = req("ReplicatedStorage/shared/lune/data/scenes.generated")
+	local Room = req("ReplicatedStorage/shared/lune/sim/room")
+	local RULES = COMBAT.rules
+	expect(RULES.targetBonus > 0, "쓰임의 보정이 있다")
+	local off = 1 / (1 + RULES.targetBonus / 100)
+	-- 한 타: 같은 타를 일반 몬스터 · 보스(시험용으로 그 졸개를 보스로 친다)에게 갈래를 바꿔 가며 때려 평균을 본다
+	local function average(h, hit, kind: string?, boss: boolean): number
+		local room = Room.new("hunt", SCENES8.scenes.hunt, Random.new(9))
+		local mob = nil
+		for _, m in room.mobs do
+			mob = m
+			break
+		end
+		mob.def = setmetatable({ boss = boss }, { __index = mob.def })
+		local sum, n = 0, 600
+		for _ = 1, n do
+			mob.hp, mob.maxHp, mob.state = 1e9, 1e9, "idle"
+			sum += room:skillHit(h, hit, mob.x - 10, mob.y, 1, 1, nil, kind).hits[1].dmg
+		end
+		return sum / n
+	end
+	local h = Hero.new(1, "axion")
+	h.level = 30
+	h.stats.str = N.apAt(30)
+	local hit = { box = { -40, 40, 60, 10 }, mul = 1 }
+	local plain = average(h, hit, nil, false)
+	local function near(a: number, b: number): boolean
+		return math.abs(a / b - 1) < 0.02
+	end
+	expect(near(average(h, hit, "mob", false), plain), "사냥기는 일반 몬스터에게 제 피해")
+	expect(near(average(h, hit, "mob", true), plain * off), "사냥기는 보스에게 덜 든다")
+	expect(near(average(h, hit, "boss", true), plain), "보스기는 보스에게 제 피해")
+	expect(near(average(h, hit, "boss", false), plain * off), "보스기는 일반 몬스터에게 덜 든다")
+	expect(near(average(h, hit, "move", false), plain) and near(average(h, hit, "move", true), plain), "다른 갈래는 그대로")
+	-- 일반 몬스터 한 마리를 칠 때: 사냥기가 보스기보다 느리지 않다(같은 시간의 피해 — 사냥기 mobShare vs 보스기 1 / (1 + 보정))
+	expect(RULES.mobShare >= off, ("일반 몬스터는 사냥기로 잡는 것이 느리지 않다(%.2f ≥ %.2f)"):format(RULES.mobShare, off))
+	-- 스킬 창에 적는 글
+	local K8 = L.SKILL
+	for _, key in { "mob", "boss" } do
+		expect(small(F.fill(UI.skillWords.bonus[key], { pct = RULES.targetBonus })) <= K8.detailW, "쓰임의 글이 설명 칸 안 " .. key)
+	end
+	-- 설명 · 그 아래 한 줄 · 퀵슬롯의 두 줄이 서로 겹치지 않는다(가장 긴 설명으로)
+	local _, bh = L.skillBody()
+	for _, class in CLASSES.order do
+		for _, t in CLASSES.classes[class].tiers do
+			for _, sk in t.skills do
+				local rows = #string.split(pixelText.Fit(sk.text, K8.detailW, K8.textLines, "small"), "\n")
+				local top = K8.slot + 14 + (if UI.skillWords.bonus[sk.type] then K8.textLine else 0)
+				expect(top + rows * K8.textLine + 6 + M.small <= bh - M.small - 16 - 4, "설명이 퀵슬롯의 줄과 겹치지 않는다: " .. sk.name)
+			end
+		end
+	end
+end
+
+-- ---- 9) 퀘스트: 무엇을 어디서 잡아야 하는지 적는다 ----
+--  사용자 2026-10-07: "뭘잡아야 갑옷조각이 나오는지를 자연스럽게 적어둬야 퀘스트를 진행할거아닙니까"
+do
+	local Q9 = req("ReplicatedStorage/shared/lune/sim/quests")
+	local SCENES9 = req("ReplicatedStorage/shared/lune/data/scenes.generated")
+	eq(Q9.josa("검병", "을", "를"), "을", "받침이 있으면 을")
+	eq(Q9.josa("박쥐", "을", "를"), "를", "받침이 없으면 를")
+	eq(Q9.josa("Boss", "을", "를"), "을", "한글이 아니면 을")
+	local seen = 0
+	for _, def in Q9.list do
+		for _, step in def.steps do
+			local hint = Q9.stepHint(def, step)
+			local mob = COMBAT.mobs[step.mob]
+			expect(mob ~= nil, "할 일의 졸개가 있다 " .. def.id)
+			if def.scene then
+				expect(hint:find(SCENES9.scenes[def.scene].name, 1, true) ~= nil, "어디인지 적는다: " .. hint)
+			end
+			if step.type == "gather" then
+				seen += 1
+				expect(hint:find(mob.name, 1, true) ~= nil and hint:find("잡으면", 1, true) ~= nil, "무엇을 잡아야 하는지 적는다: " .. hint)
+				expect(Q9.trackText(step, 0):find(mob.name, 1, true) ~= nil, "알리미에도 졸개의 이름이 있다: " .. Q9.trackText(step, 0))
+				expect(small(Q9.trackText(step, step.n)) <= UI.hud.quest.w, "알리미의 줄이 칸 안: " .. Q9.trackText(step, step.n))
+			end
+			expect(small(hint) <= 300, "길잡이가 퀘스트 창의 폭 안: " .. hint)
+		end
+	end
+	expect(seen >= 3, "모으는 일마다 길잡이가 있다")
+	local def = Q9.def("r1m3")
+	eq(#Q9.hints({ r1m3 = { done = false, c = {} } }, "r1m3"), #def.steps, "하지 못한 일마다 한 줄")
+	eq(#Q9.hints({ r1m3 = { done = false, c = { def.steps[1].n } } }, "r1m3"), 0, "다 한 일의 길잡이는 빠진다")
+end
+
+-- ---- 10) 딜레이 · 타수 · 퍼뎀: 붙어 있는 적 한 마리가 설계한 피해를 다 받는가, 사냥기와 보스기의 빠르기 ----
+--  사용자 2026-10-07: "공속 딜레이랑 타수랑 퍼뎀 정확히 계산해야지 … 대지강타로 몬스터 잡는거보다 삼단베기로 잡는게 훨씬빠른데?"
+--  (대지 강타의 가시가 바로 앞의 적을 못 맞혀 설계의 70%만 들어가던 것을 이 검사가 잡는다)
+do
+	local SCENES10 = req("ReplicatedStorage/shared/lune/data/scenes.generated")
+	local Room = req("ReplicatedStorage/shared/lune/sim/room")
+	local RULES = COMBAT.rules
+	local DPS = N.data.POWER.dps
+	local bonus = 1 + RULES.targetBonus / 100
+	-- 진짜 싸움의 셈으로 기술 한 번(모든 타)을 d만큼 앞에 선 일반 몬스터 한 마리에게 쓴다 → 전투력 1에 대한 피해의 합(흔들림 · 배율을 걷어 낸 값)
+	local function cast(h, id: string, d: number): (number, number)
+		local def = COMBAT.skills[id]
+		local sum, landed, n = 0, 0, 200
+		for trial = 1, n do
+			local room = Room.new("hunt", SCENES10.scenes.hunt, Random.new(trial))
+			local mob = nil
+			for _, m in room.mobs do
+				mob = m
+				break
+			end
+			for _, other in room.mobs do
+				if other ~= mob then
+					other.state = "gone" -- 한 마리만 남긴다
+				end
+			end
+			mob.hp, mob.maxHp = 1e9, 1e9
+			local hits = 0
+			for _, hit in def.hits do
+				mob.state = "idle"
+				for _, r in room:skillHit(h, hit, mob.x - d, mob.y, 1, 1, nil, def.type).hits do
+					sum += r.dmg
+					hits += 1
+				end
+			end
+			landed = hits
+		end
+		return sum / n / (Hero.powerRaw(h) * RULES.dmgScale), landed
+	end
+	for _, class in CLASSES.order do
+		local h = Hero.new(1, class)
+		h.level = 30
+		h.stats[STATS.classes[class][1]] = N.apAt(30)
+		local mobId, bossId = nil, nil
+		for id, def in COMBAT.skills do
+			if def.who == class and def.type == "mob" then
+				mobId = id
+			elseif def.who == class and def.type == "boss" then
+				bossId = id
+			end
+		end
+		local mobDef, bossDef = COMBAT.skills[mobId], COMBAT.skills[bossId]
+		-- 붙어 있는 적(20도트 앞)은 설계한 한 번의 피해를 다 받는다: 사냥기 = 초당 피해 x 딜레이 x mobShare(x 보정), 보스기 = 초당 피해 x 딜레이(일반 몬스터에게는 보정 없음)
+		local mobGot, mobHits = cast(h, mobId, 20)
+		local bossGot, bossHits = cast(h, bossId, 20)
+		local mobWant, bossWant = DPS * mobDef.time * RULES.mobShare * bonus, DPS * bossDef.time
+		expect(math.abs(mobGot / mobWant - 1) < 0.02, ("%s 사냥기 %s: 붙은 적 한 마리에게 설계한 피해가 다 들어간다(딜레이 %.2f초 · %d타 · 합 %.0f%% — 기대 %.0f%%)"):format(class, mobId, mobDef.time, mobHits, mobGot * 100, mobWant * 100))
+		expect(math.abs(bossGot / bossWant - 1) < 0.02, ("%s 보스기 %s: 붙은 적 한 마리에게 설계한 피해가 다 들어간다(딜레이 %.2f초 · %d타 · 합 %.0f%% — 기대 %.0f%%)"):format(class, bossId, bossDef.time, bossHits, bossGot * 100, bossWant * 100))
+		-- 같은 시간에 주는 피해: 일반 몬스터 한 마리는 사냥기가 보스기보다 느리지 않다
+		local mobRate, bossRate = mobGot / mobDef.time, bossGot / bossDef.time
+		expect(mobRate >= bossRate, ("%s: 일반 몬스터 한 마리 — 사냥기 초당 %.0f%% ≥ 보스기 초당 %.0f%%"):format(class, mobRate * 100, bossRate * 100))
+	end
+end
+
 
 end)
 finish()

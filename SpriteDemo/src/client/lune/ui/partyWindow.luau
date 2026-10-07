@@ -1,15 +1,22 @@
 -- 파티 창(O · Lv.10부터) — 위에 파티원(넷까지: 이름 · 레벨 · 파티장 표시)과 「나가기」, 아래에 같은 맵에 있는 사람들과 「초대」.
---  초대 · 나가기는 서버에 부탁한다(Party). 파티 찾기(멀리 있는 사람과 맺기)는 아직 없다.
+--  초대 · 나가기는 서버에 부탁한다(Party). 파티 찾기(멀리 있는 사람과 맺기)는 아직 없다. 화면 오른쪽의 옆 판(ui/windows.luau).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local Party = require(lune.sim.party)
-local Kit = require(script.Parent.kit)
+local Ui = require(script.Parent.ui)
 
-local C = Kit.COLOR
+local C = Ui.COLOR
+local W = 300
+local LINE = 18 -- 파티원 한 줄
+local ROW = Ui.M.button + 4 -- 같은 맵의 사람 한 줄(초대 단추)
 
-local PartyWindow = { height = 152 }
-PartyWindow.NAME_W = 118 -- 「Lv.150 이름(열두 자)」가 들어가는 폭 — 넘으면 줄여 적는다
-PartyWindow.NEAR = 3 -- 같은 맵의 사람을 몇 줄까지 보이나
+local PartyWindow = {}
+PartyWindow.NAME_W = W - 80 -- 「Lv.150 이름(열두 자)」가 들어가는 폭 — 넘으면 줄여 적는다
+PartyWindow.NEAR = 4 -- 같은 맵의 사람을 몇 줄까지 보이나
+
+function PartyWindow.size(): (number, number)
+	return W, 20 + Party.MAX * LINE + 8 + Ui.M.button + 12 + 22 + PartyWindow.NEAR * ROW
+end
 
 function PartyWindow.line(level: number, name: string): string
 	return ("Lv.%d %s"):format(level, name)
@@ -17,23 +24,26 @@ end
 
 function PartyWindow.build(body: Frame, ctx, w: number, _h: number)
 	local view = {}
-	Kit.text(body, "파티원", 4, 1, 80, { color = C.yellow })
-	local count = Kit.text(body, "", w - 44, 1, 40, { align = "right", color = C.dim })
+	Ui.text(body, "파티원", 0, 0, 120, { color = C.gold })
+	local count = Ui.text(body, "", w - 60, 0, 60, { align = "right", color = C.dim })
 	local members = {}
 	for i = 1, Party.MAX do
-		local y = 14 + (i - 1) * 12
-		members[i] = { name = Kit.text(body, "", 4, y, PartyWindow.NAME_W), mark = Kit.text(body, "", w - 50, y, 46, { align = "right", color = C.mint }) }
+		local y = 20 + (i - 1) * LINE
+		members[i] = { name = Ui.text(body, "", 0, y, PartyWindow.NAME_W, { font = "body" }), mark = Ui.text(body, "", w - 70, y + 1, 70, { align = "right", color = C.accent }) }
 	end
-	local leave = Kit.button(body, "파티 나가기", 2, 63, w - 4, 14, function()
+	local y = 20 + Party.MAX * LINE + 8
+	local leave = Ui.button(body, "파티 나가기", 0, y, w, function()
 		ctx.send("Party", "leave")
 	end)
-	Kit.box(body, 2, 80, w - 4, 1, C.edgeDim)
-	Kit.text(body, "같은 맵의 사람", 4, 84, 120, { color = C.yellow })
+	y += Ui.M.button + 10
+	Ui.line(body, 0, y, w)
+	Ui.text(body, "같은 맵의 사람", 0, y + 8, 160, { color = C.gold })
+	y += 26
 	local near = {}
 	for i = 1, PartyWindow.NEAR do
-		local y = 98 + (i - 1) * 13
-		local row = { name = Kit.text(body, "", 4, y, PartyWindow.NAME_W), id = nil :: any }
-		row.button = Kit.button(body, "초대", w - 38, y - 2, 34, 13, function()
+		local ry = y + (i - 1) * ROW
+		local row = { name = Ui.text(body, "", 0, ry + 7, PartyWindow.NAME_W, { font = "body" }), id = nil :: any }
+		row.button = Ui.button(body, "초대", w - 64, ry, 64, function()
 			if row.id then
 				ctx.send("Party", "invite", row.id)
 			end
@@ -53,7 +63,7 @@ function PartyWindow.build(body: Frame, ctx, w: number, _h: number)
 			if m then
 				inParty[m.id] = true
 				row.name:set(PartyWindow.line(m.level, m.name))
-				row.name:color(if m.id == myId then C.white else C.mint)
+				row.name:color(if m.id == myId then C.text else C.accent)
 				row.mark:set(if m.id == party.leader then "파티장" else "")
 			else
 				row.name:set(if i == 1 and #list == 0 then "파티가 없다" else "")
@@ -61,7 +71,7 @@ function PartyWindow.build(body: Frame, ctx, w: number, _h: number)
 				row.mark:set("")
 			end
 		end
-		count:set(("%d/%d"):format(#list, Party.MAX))
+		count:set(("%d / %d"):format(#list, Party.MAX))
 		leave:setEnabled(#list > 0)
 		-- 초대할 수 있는 사람: 내가 파티장이거나 파티가 없을 때, 자리가 남았을 때
 		local canInvite = (#list == 0 or party.leader == myId) and #list < Party.MAX
@@ -75,7 +85,7 @@ function PartyWindow.build(body: Frame, ctx, w: number, _h: number)
 			local o = others[i]
 			row.id = if o then o.id else nil
 			row.name:set(if o then PartyWindow.line(o.level, o.name) elseif i == 1 then "아무도 없다" else "")
-			row.name:color(if o then C.white else C.dim)
+			row.name:color(if o then C.text else C.dim)
 			row.button.frame.Visible = o ~= nil
 			row.button:setEnabled(canInvite)
 		end

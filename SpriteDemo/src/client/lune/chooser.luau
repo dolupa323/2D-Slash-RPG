@@ -1,6 +1,7 @@
 -- 직업 고르기 — 처음 온 사람에게 한 번 나온다. 달 아래 다섯 영웅이 나란히 서 있고, 하나를 고르면 그 영웅의 달 · 무기 · 싸우는 법이 뜬다.
 --  ← → 로 고르고 Space(또는 Enter)로 정한다. 눌러서(터치) 고를 수도 있다 — 고른 영웅을 한 번 더 누르면 정해진다.
 --  자료는 shared/lune/data/classes.generated.luau(공방의 전직 설계와 줄거리에서 내보낸 것). 글씨는 제 칸을 넘지 않게 폭을 준다.
+--  하늘 · 영웅들은 게임 세계의 층에, 글(제목 · 이름 · 설명 판)은 화면 틀의 층(고운 격자)에 그린다 — 늘 보이는 화면과 같은 방식.
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13,25 +14,17 @@ local SCENES = require(lune.data["scenes.generated"])
 local ASSETS = require(lune.data["assets.generated"])
 local Stage = require(script.Parent.stage)
 local Sprite = require(script.Parent.sprite)
-local pixelText = require(script.Parent.Parent.modules.ui.pixelText)
+local Ui = require(script.Parent.ui.ui)
 
+local C = Ui.COLOR
 local INK = Color3.fromRGB(18, 22, 28)
-local WHITE = Color3.fromRGB(238, 246, 246)
-local Kit = require(script.Parent.ui.kit)
-local GRAY = Color3.fromRGB(138, 143, 150)
-local MINT = Color3.fromRGB(62, 255, 215)
-local PINK = Color3.fromRGB(255, 62, 159)
+local WHITE, GRAY, MINT, PINK = C.text, C.dim, C.accent, C.pink
 
-local GROUND_Y = 124 -- 영웅들이 서는 높이
-local GAP = 70 -- 영웅 사이의 간격(이름이 겹치지 않을 만큼)
-local PANEL = { x = 24, y = 142, w = 336, h = 52 }
+local GROUND_Y = 124 -- 영웅들이 서는 높이(게임의 도트)
+local GAP = 70 -- 영웅 사이의 간격(게임의 도트 — 이름이 겹치지 않을 만큼)
+local PANEL = { w = 520, h = 86, up = 44 } -- 설명 판(화면 틀의 점): 아래 가운데에, 화면 아래에서 up만큼 위
 
 local Chooser = {}
-
--- 글을 (cx, y)에 가운데 맞춰 놓는다
-local function center(label, cx: number, y: number)
-	label.Frame.Position = UDim2.fromOffset(math.floor(cx - label.Width / 2 + 0.5), y)
-end
 
 -- 직업을 고를 때까지 기다렸다가 고른 직업의 이름을 돌려준다
 function Chooser.run(): string
@@ -55,9 +48,10 @@ function Chooser.run(): string
 	floor.ZIndex = 3
 	floor.Parent = root
 
-	local title = pixelText.new(root, { Text = "달이 고른 자 — 누구의 뒤를 이을 것인가", Font = "body", Color = WHITE, Shadow = INK, Align = "center", MaxWidth = G.VIEW_W - 16, MaxLines = 1 })
-	center(title, G.VIEW_W / 2, 8)
-	title.Frame.ZIndex = 6
+	-- 글의 층(화면 틀): 제목 · 영웅의 이름 · 설명 판 · 누르는 자리
+	local over = Stage.group(Stage.ui, "Chooser", 200)
+	local titleBox = Stage.place(over, "Title", "tc", Stage.REF_W / 2 - 300, 22, 600, 16)
+	Ui.text(titleBox, "달이 고른 자 — 누구의 뒤를 이을 것인가", 0, 0, 600, { font = "body", align = "center", outline = true })
 
 	local order = CLASSES.order
 	local n = #order
@@ -67,40 +61,39 @@ function Chooser.run(): string
 		local c = CLASSES.classes[id]
 		local x = x0 + (i - 1) * GAP
 		local sprite = Sprite.new(root, id, 5)
-		local name = pixelText.new(root, { Text = c.name, Font = "body", Color = WHITE, Shadow = INK, Align = "center", MaxWidth = GAP, MaxLines = 1 })
-		center(name, x, GROUND_Y + 3)
-		name.Frame.ZIndex = 6
+		local name = Ui.tag(over, c.name, WHITE, 200)
 		-- 눌러서 고르는 자리(보이지 않는 단추)
 		local button = Instance.new("TextButton")
 		button.Name = "Pick_" .. id
 		button.Text = ""
 		button.BackgroundTransparency = 1
-		button.Position = UDim2.fromOffset(math.floor(x - GAP / 2), GROUND_Y - 44)
-		button.Size = UDim2.fromOffset(GAP, 62)
 		button.ZIndex = 8
-		button.Parent = root
+		button.Parent = over
 		slots[i] = { id = id, class = c, x = x, sprite = sprite, name = name, button = button }
 	end
+	-- 이름과 누르는 자리는 영웅의 자리(게임의 도트)를 따라 놓는다 — 화면 틀의 배율이 바뀌면 다시 놓는다
+	local function place()
+		local r = Stage.ratio
+		for _, s in slots do
+			local cx, gy = math.floor(s.x * r + 0.5), math.floor(GROUND_Y * r + 0.5)
+			s.name.Frame.Position = UDim2.fromOffset(cx - math.floor(s.name.Width / 2), gy + 6)
+			s.button.Position = UDim2.fromOffset(cx - math.floor(GAP * r / 2), gy - math.floor(44 * r))
+			s.button.Size = UDim2.fromOffset(math.floor(GAP * r), math.floor(44 * r) + 24)
+		end
+	end
+	place()
+	Stage.onResize(function()
+		if over.Parent then
+			place()
+		end
+	end)
 
-	-- 고른 영웅의 설명
-	local panel = Instance.new("Frame")
-	panel.Position = UDim2.fromOffset(PANEL.x, PANEL.y)
-	panel.Size = UDim2.fromOffset(PANEL.w, PANEL.h)
-	panel.BackgroundTransparency = 1
-	panel.BorderSizePixel = 0
-	panel.ZIndex = 5
-	panel.Parent = root
-	local plate = Kit.part(root, "frame", PANEL.x - 3, PANEL.y - 2, PANEL.w + 6, PANEL.h + 4)
-	plate.ZIndex = 4
-	local head = pixelText.new(panel, { Text = "", Font = "body", Color = MINT, Shadow = INK, MaxWidth = PANEL.w - 12, MaxLines = 1 })
-	head.Frame.Position = UDim2.fromOffset(6, 3)
-	head.Frame.ZIndex = 6
-	local role = pixelText.new(panel, { Text = "", Font = "body", Color = WHITE, MaxWidth = PANEL.w - 12, MaxLines = 3 })
-	role.Frame.Position = UDim2.fromOffset(6, 17)
-	role.Frame.ZIndex = 6
-	local hint = pixelText.new(root, { Text = "← → 고르기 · Space 정하기", Font = "body", Color = GRAY, Align = "center", MaxWidth = G.VIEW_W - 16, MaxLines = 1 })
-	center(hint, G.VIEW_W / 2, PANEL.y + PANEL.h + 5)
-	hint.Frame.ZIndex = 6
+	-- 고른 영웅의 설명: 아래 가운데의 판
+	local holder = Stage.place(over, "Panel", "bc", Stage.REF_W / 2 - PANEL.w / 2, Stage.REF_H - PANEL.up - PANEL.h, PANEL.w, PANEL.h + 24)
+	local panel = Ui.panel(holder, 0, 0, PANEL.w, PANEL.h)
+	local head = Ui.text(panel, "", 18, 14, PANEL.w - 36, { font = "body", color = MINT })
+	local role = Ui.text(panel, "", 18, 36, PANEL.w - 36, { lines = 3, line = 15 })
+	Ui.text(holder, "← → 고르기 · Space 정하기", 0, PANEL.h + 8, PANEL.w, { align = "center", color = GRAY, outline = true })
 
 	local picked = math.ceil(n / 2)
 	local chosen: string? = nil
@@ -110,9 +103,9 @@ function Chooser.run(): string
 	local function show()
 		local slot = slots[picked]
 		local c = slot.class
-		head:SetColor(if c.tone == "pink" then PINK else MINT)
-		head:SetText(("%s의 계승자 · %s · %s"):format(c.hero, c.face, c.weapon))
-		role:SetText(c.role)
+		head:color(if c.tone == "pink" then PINK else MINT)
+		head:set(("%s의 계승자 · %s · %s"):format(c.hero, c.face, c.weapon))
+		role:set(c.role)
 		for i, s in slots do
 			s.name:SetColor(if i == picked then WHITE else GRAY)
 		end
@@ -189,6 +182,7 @@ function Chooser.run(): string
 		c:Disconnect()
 	end
 	Chooser.root = root -- 서버의 답을 받을 때까지 화면을 그대로 둔다 — 부른 쪽이 close()로 닫는다
+	Chooser.over = over
 	return chosen :: string
 end
 
@@ -196,6 +190,10 @@ function Chooser.close()
 	if Chooser.root then
 		Chooser.root:Destroy()
 		Chooser.root = nil
+	end
+	if Chooser.over then
+		Chooser.over:Destroy()
+		Chooser.over = nil
 	end
 end
 

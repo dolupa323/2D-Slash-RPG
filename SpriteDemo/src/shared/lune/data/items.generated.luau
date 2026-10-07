@@ -91,7 +91,7 @@ return {
 		highDiv = 40,
 	},
 	BAG = {
-		tabs = { "장비", "쓰는 것", "재료" },
+		tabs = { "장비", "소비", "기타" },
 		base = 24,
 		step = 4,
 		times = 6,

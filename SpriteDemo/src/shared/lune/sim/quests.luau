@@ -23,6 +23,60 @@ function Q.stepText(step, have: number): string
 	return ("%s %d/%d"):format(step.name, math.min(have, step.n), step.n)
 end
 
+-- 받침이 있으면 a, 없으면 b(을 · 를 / 이 · 가)를 고른다 — 한글로 끝나지 않으면 a
+local function josa(word: string, a: string, b: string): string
+	local last = nil
+	for _, code in utf8.codes(word) do
+		last = code
+	end
+	if last and last >= 0xAC00 and last <= 0xD7A3 and (last - 0xAC00) % 28 == 0 then
+		return b
+	end
+	return a
+end
+Q.josa = josa
+
+-- 그 일을 어디서 무엇을 잡아 하는가: 「달그림자 사냥터의 검병을 잡으면 떨어진다」 · 「마을 어귀에 있다」
+--  사용자 2026-10-07: "뭘잡아야 갑옷조각이 나오는지를 자연스럽게 적어둬야 퀘스트를 진행할거아닙니까 이렇게 적으면 누가 어떻게 알아요"
+function Q.stepHint(def, step): string
+	local SCENES = require(script.Parent.Parent.data["scenes.generated"])
+	local COMBAT = require(script.Parent.Parent.data["combat.generated"])
+	local scene = def.scene and SCENES.scenes[def.scene]
+	local place = if scene then scene.name else "이 근처"
+	local mob = COMBAT.mobs[step.mob]
+	local name = if mob then mob.name else step.name
+	if step.type == "gather" then
+		return ("%s의 %s%s 잡으면 떨어진다"):format(place, name, josa(name, "을", "를"))
+	end
+	return ("%s에 있다"):format(place)
+end
+
+-- 아직 다 하지 못한 일들의 길잡이(퀘스트 창에 적는다)
+function Q.hints(book, id: string): { string }
+	local def, st = byId[id], book[id]
+	local out = {}
+	if def and st then
+		for i, step in def.steps do
+			if (st.c[i] or 0) < step.n then
+				table.insert(out, Q.stepHint(def, step))
+			end
+		end
+	end
+	return out
+end
+
+-- 알리미에 적는 한 줄: 모으는 일은 떨어뜨리는 졸개의 이름을 앞에 — 「검병 · 갑옷 조각 0/8」
+function Q.trackText(step, have: number): string
+	if step.type == "gather" then
+		local COMBAT = require(script.Parent.Parent.data["combat.generated"])
+		local mob = COMBAT.mobs[step.mob]
+		if mob then
+			return ("%s · %s"):format(mob.name, Q.stepText(step, have))
+		end
+	end
+	return Q.stepText(step, have)
+end
+
 -- 받아 둔 퀘스트의 할 일이 다 됐는가
 function Q.isReady(book, id: string): boolean
 	local def, st = byId[id], book[id]
@@ -89,24 +143,70 @@ function Q.start(book, level: number)
 	end
 end
 
--- 졸개를 잡았다. 바뀐 퀘스트들의 id를 돌려준다(없으면 빈 표). 모으는 물건은 잡을 때마다 확률로 하나
-function Q.onKill(book, mobKind: string, scene: string, rng): { string }
+-- 졸개를 잡았다. 바뀐 퀘스트들의 id를 돌려준다(없으면 빈 표). 잡는 일만 센다 — 모으는 물건은 땅에 떨어지고(Q.drops) 주워야 오른다(Q.onLoot)
+function Q.onKill(book, mobKind: string, scene: string): { string }
 	local changed = {}
 	for id, st in book do
 		local def = byId[id]
 		if def and not st.done and def.scene == scene then
 			for i, step in def.steps do
 				local have = st.c[i] or 0
-				if step.mob == mobKind and have < step.n then
-					if step.type == "kill" or rng:NextNumber(0, 100) < step.pct then
-						st.c[i] = have + 1
-						table.insert(changed, id)
-					end
+				if step.type == "kill" and step.mob == mobKind and have < step.n then
+					st.c[i] = have + 1
+					table.insert(changed, id)
 				end
 			end
 		end
 	end
 	return changed
+end
+
+-- 졸개를 잡았을 때 떨어지는 퀘스트의 물건들: 아직 모으는 중인 물건마다 그 확률(pct)로 하나. { { quest, step, name, icon } … }
+--  사용자 2026-10-07: "퀘스트 아이템이나 , 기타아이템들은 왜 드롭도되지않고 그림도없고 그냥 텍스트로만 오르나요?" — 잡으면 숫자만 오르던 것을, 그림이 있는 물건이 땅에 떨어지고 주워야 오르게 고쳤다
+function Q.drops(book, mobKind: string, scene: string, rng)
+	local out = {}
+	for id, st in book do
+		local def = byId[id]
+		if def and not st.done and def.scene == scene then
+			for i, step in def.steps do
+				if step.type == "gather" and step.mob == mobKind and (st.c[i] or 0) < step.n and rng:NextNumber(0, 100) < step.pct then
+					table.insert(out, { quest = id, step = i, name = step.name, icon = step.icon })
+				end
+			end
+		end
+	end
+	return out
+end
+
+-- 퀘스트의 물건을 주웠다. 그 퀘스트의 숫자가 올랐으면 true(이미 다 모았거나 그만둔 퀘스트면 false — 물건은 그냥 사라진다)
+function Q.onLoot(book, id: any, step: number): boolean
+	local def, st = byId[id], book[id]
+	local s = def and def.steps[step]
+	if not st or st.done or not s or s.type ~= "gather" then
+		return false
+	end
+	local have = st.c[step] or 0
+	if have >= s.n then
+		return false
+	end
+	st.c[step] = have + 1
+	return true
+end
+
+-- 지금 모으고 있는 물건들(가방의 재료 탭에 보인다): { { name, icon, have, n } … } — 받은 퀘스트의 것만, 끝낸 퀘스트의 것은 빠진다
+function Q.items(book)
+	local out = {}
+	for _, def in D.list do
+		local st = book[def.id]
+		if st and not st.done then
+			for i, step in def.steps do
+				if step.type == "gather" then
+					table.insert(out, { name = step.name, icon = step.icon, have = st.c[i] or 0, n = step.n })
+				end
+			end
+		end
+	end
+	return out
 end
 
 -- 돌려준다. 끝낸 것으로 적고 보상을 돌려준다(보상을 실제로 주는 것은 부른 쪽 — sim/hero.luau의 questDone)
@@ -184,7 +284,7 @@ function Q.todo(book, id: string, names): { string }
 	end
 	for i, step in def.steps do
 		if (st.c[i] or 0) < step.n then
-			table.insert(out, Q.stepText(step, st.c[i] or 0))
+			table.insert(out, Q.trackText(step, st.c[i] or 0))
 		end
 	end
 	if #out == 0 then

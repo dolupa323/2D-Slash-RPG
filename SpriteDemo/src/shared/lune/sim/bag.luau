@@ -89,7 +89,7 @@ function Bag.canWear(h, it): (boolean?, string?)
 	elseif it.slot == "weapon" and it.who ~= h.class then
 		return nil, "다른 직업의 무기다"
 	elseif h.level < Items.needLevel(it) then
-		return nil, ("Lv.%d부터 낀다"):format(Items.needLevel(it))
+		return nil, ("Lv.%d부터 장착할 수 있다"):format(Items.needLevel(it))
 	end
 	return true
 end
@@ -117,7 +117,7 @@ end
 function Bag.unequip(h, slot: any): (boolean?, string?)
 	local it = if typeof(slot) == "string" then h.equip[slot] else nil
 	if not it then
-		return nil, "끼고 있지 않다"
+		return nil, "장착하고 있지 않다"
 	elseif Bag.free(h) <= 0 then
 		return nil, "가방이 가득 찼다"
 	end

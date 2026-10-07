@@ -1,15 +1,17 @@
 -- 같은 맵에 있는 다른 사람들 — 서버가 알려 준 이름표(Who)와 자리(Heroes · 초당 10번)를 받아 그린다. 자리 사이는 이어서 그린다.
 --  동작은 움직임에서 짐작한다: 옆으로 움직이면 달리기, 위아래로 움직이면 뛰기, 아니면 서 있기. 기술은 서버가 알려 준 것(Act)을 그 구간 동안 튼다.
---  발밑에 이름표(메이플처럼 이름만) — 파티원은 민트색이다.
+--  발밑에 이름표(메이플처럼 이름만) — 파티원은 민트색이다. 이름표는 글씨의 층(화면 틀 — overlay.luau)에 그린다.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local COMBAT = require(ReplicatedStorage.shared.lune.data["combat.generated"])
+local CLASSES = require(ReplicatedStorage.shared.lune.data["classes.generated"])
 local Sprite = require(script.Parent.sprite)
-local Kit = require(script.Parent.ui.kit)
+local Ui = require(script.Parent.ui.ui)
+local Overlay = require(script.Parent.overlay)
 
-local WHITE = Kit.COLOR.white
-local MINT = Kit.COLOR.mint
+local WHITE = Ui.COLOR.text
+local MINT = Ui.COLOR.accent
 local LERP = 0.12 -- 자리 보고 사이를 이만큼에 걸쳐 잇는다(초)
-local TAG_DOWN = 3 -- 이름표: 발밑에서 이만큼 아래
+local TAG_DOWN = 4 -- 이름표: 발밑에서 이만큼 아래(화면 틀의 점)
 
 local Others = {}
 Others.__index = Others
@@ -24,6 +26,8 @@ function Others.new(heroLayer: Frame, tagLayer: Frame, myId: any)
 	local self = setmetatable({}, Others)
 	self.heroLayer, self.tagLayer, self.myId = heroLayer, tagLayer, myId
 	self.list = {} -- [번호] = 한 사람
+	self.fx = nil :: any -- 효과(effects.luau) — boot가 넣어 준다. 대쉬의 잔상 · 속도선을 여기에 그린다
+	self.last = 0 -- 지난번 update의 때(잔상의 간격을 잰다)
 	return self
 end
 
@@ -48,7 +52,7 @@ function Others:setWho(roster)
 					id = w.id,
 					class = w.class,
 					sprite = Sprite.new(self.heroLayer, w.class, 4),
-					tag = Kit.tag(self.tagLayer, "", WHITE, 150),
+					tag = Ui.tag(self.tagLayer, "", WHITE, 220, true), -- 플레이어의 이름표: 민트 테두리를 두른 판
 					x = 0,
 					y = 0,
 					fromX = 0,
@@ -121,10 +125,16 @@ function Others:act(id: any, skillId: string, seg: number, x: number, y: number,
 	if not o.placed then
 		o.x, o.y, o.toX, o.toY, o.fromX, o.fromY, o.placed = x, y, x, y, x, y, true
 	end
+	-- 대쉬를 시작했다: 속도선(잔상은 update가 가는 동안 남긴다)
+	if def.type == "move" and seg == 1 and self.fx then
+		self.fx:streaks(x, y, def.speed, dir, CLASSES.classes[o.class].tone)
+	end
 end
 
 -- party = 내 파티원 { [번호] = true }
 function Others:update(now: number, party)
+	local dt = math.clamp(now - self.last, 0, 0.1)
+	self.last = now
 	for id, o in self.list do
 		if not o.placed then
 			continue
@@ -151,6 +161,10 @@ function Others:update(now: number, party)
 			end
 			if act then
 				clip, frame = segDef.clip, segDef.from + math.min(segDef.to - segDef.from, math.floor(t * segDef.fps)) + 1
+				-- 대쉬로 가는 동안: 잔상
+				if act.def.type == "move" and t < act.def.dist / act.def.speed and self.fx and o.alive then
+					self.fx:trail(o, dt, o.class, clip, frame, o.x, o.y, o.dir, CLASSES.classes[o.class].tone)
+				end
 			end
 		end
 		if not o.alive then
@@ -173,12 +187,12 @@ function Others:update(now: number, party)
 	end
 end
 
--- 이름표들: { x(왼쪽), y(위), w, frame } — 번호 차례(늘 같은 차례로 쌓이게)
+-- 이름표들: { x(왼쪽), y(위), w, frame } — 화면 틀의 점. 번호 차례(늘 같은 차례로 쌓이게)
 function Others:tags()
 	local out = {}
 	for id, o in self.list do
 		if o.placed then
-			table.insert(out, { id = id, x = math.floor(o.x - o.tag.Width / 2 + 0.5), y = math.floor(o.y + 0.5) + TAG_DOWN, w = o.tag.Width, frame = o.tag.Frame })
+			table.insert(out, { id = id, x = Overlay.x(o.x) - math.floor(o.tag.Width / 2), y = Overlay.y(o.y) + TAG_DOWN, w = o.tag.Width, frame = o.tag.Frame })
 		end
 	end
 	table.sort(out, function(a, b)

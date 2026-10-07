@@ -1,10 +1,12 @@
 -- 도트 글씨 — 에셋 공방(js/font.js — 레트로 비트맵 글꼴 「갈무리」, SIL OFL)에서 만든 글자판 이미지에서 한 글자씩 잘라 붙여 문자열을 그린다.
 -- 로블록스에는 글꼴 파일을 올릴 수 없어서 쓰는 방식(비트맵 글꼴). 한글 11,172자·영문·숫자·기호를 지원하고,
 -- 글자판에 없는 글자는 "?"로 그린다. 입력칸(TextBox)에는 못 쓴다.
+-- 테두리를 두른 글자판(글꼴 규칙에 pad가 있는 것 — 「달의 계승자」의 small_o · body_o)은 글자 둘레에 어두운 테두리가 이미 그려져 있다:
+--  판 없이 게임 화면 위에 바로 적는 글에 쓴다. 색을 입혀도 테두리는 어두운 채로 남는다.
 --
 -- 좌표 단위는 "UI 도트"(글자판 픽셀 그대로). 화면 크기는 부모에 걸린 정수 UIScale(pixelUI.Scale)이 키운다.
 --   local label = pixelText.new(parent, { Text = "안녕", Font = "body", Color = Color3, Shadow = Color3?, Align = "left"|"center"|"right",
---                                         MaxWidth = 폭?, MaxLines = 줄 수? })
+--                                         MaxWidth = 폭?, MaxLines = 줄 수?, Line = 줄 간격? })
 --   label.Frame.Position = UDim2.fromOffset(x, y) / label:SetText("...") / label:SetColor(c) / label.Width, label.Height
 -- 글씨가 칸을 넘지 않게: MaxWidth를 주면 그 폭에 맞춰 줄을 바꾸고(띄어쓰기에서 먼저, 낱말이 길면 글자에서), MaxLines를 주면
 --  그 줄 수를 넘는 부분은 "…"로 줄인다. 칸이 정해진 자리의 글씨는 반드시 MaxWidth(와 MaxLines)를 줄 것.
@@ -163,9 +165,14 @@ function Label:_render()
 	local pages = pagesOf[self._fontKey] or (townIds.FONT and townIds.FONT[self._fontKey]) or {}
 	local shown = self:_fitted(self._text)
 	local width, height = exports.Measure(shown, self._fontKey)
+	local lineH = self._line or font.line -- 줄 간격(Line을 주면 그 값 — 말풍선처럼 줄 사이를 넓게 쓸 때)
+	if self._line then
+		height = height / font.line * lineH
+	end
 	self.Width, self.Height = width, height
 	self.Frame.Size = UDim2.fromOffset(width, height)
 
+	local pad = font.pad or 0 -- 테두리를 두른 글자판은 칸이 글자보다 사방으로 이만큼 크다(글자의 자리는 그대로)
 	local layers = {}
 	if self._shadow then
 		table.insert(layers, { color = self._shadow, dx = 1, dy = 1, z = 0 })
@@ -190,7 +197,7 @@ function Label:_render()
 					img.ImageRectOffset = Vector2.new((k % font.cols) * font.cellW, (k // font.cols) * font.cellH)
 					img.ImageRectSize = Vector2.new(font.cellW, font.cellH)
 					img.Size = UDim2.fromOffset(font.cellW, font.cellH)
-					img.Position = UDim2.fromOffset(x + layer.dx, y + layer.dy)
+					img.Position = UDim2.fromOffset(x + layer.dx - pad, y + layer.dy - pad)
 					img.ResampleMode = Enum.ResamplerMode.Pixelated
 					img.ImageColor3 = layer.color
 					img.ImageTransparency = if layer.z == 0 and self._shadowHidden then 1 else 0
@@ -201,7 +208,7 @@ function Label:_render()
 			end
 			x += adv
 		end
-		y += font.line
+		y += lineH
 	end
 end
 
@@ -270,6 +277,7 @@ function exports.new(parent: Instance, props)
 		_zIndex = props.ZIndex or 5,
 		_maxWidth = props.MaxWidth, -- 이 폭을 넘으면 줄바꿈
 		_maxLines = props.MaxLines, -- 이 줄 수를 넘으면 …로 줄임
+		_line = props.Line, -- 줄 간격(안 주면 글꼴의 것)
 		_glyphs = {},
 	}, Label)
 	self:_render()

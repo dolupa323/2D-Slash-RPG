@@ -1,8 +1,9 @@
 -- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/export_lune_game.mjs).
--- 캐릭터와 졸개의 동작. 장 하나 = { 판 번호, x, y, w, h, dx, dy } — 판(pages)에서 x · y · w · h를 잘라, 칸(fw x fh)의 (dx, dy)에 놓는다.
+-- 캐릭터와 졸개의 동작. 장 하나 = { 판 번호, x, y, w, h, dx, dy } — 판(pages)에서 x · y · w · h를 잘라, 칸(fw x fh)의 (dx, dy)에 놓는다. masks = 같은 자리의 흰 실루엣 판(색을 입혀 잔상을 그린다).
 -- 칸의 (ox, oy)가 발 가운데다. 그림은 오른쪽을 본다 — 왼쪽을 볼 때는 뒤집는다. 빈 장은 false.
 return {
 	pages = { "chars_1.png" },
+	masks = { "chars_mask_1.png" },
 	chars = {
 		axion = {
 			name = "리틀 액시온",

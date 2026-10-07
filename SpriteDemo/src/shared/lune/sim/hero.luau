@@ -6,6 +6,7 @@ local CLASSES = require(script.Parent.Parent.data["classes.generated"])
 local Items = require(script.Parent.items)
 local Bag = require(script.Parent.bag)
 local Quests = require(script.Parent.quests)
+local Quick = require(script.Parent.Parent.ui.quick)
 local RULES = COMBAT.rules
 local STATS = N.data.STATS
 local STAT_IDS = { "str", "dex", "int", "luk", "hp" }
@@ -61,6 +62,10 @@ end
 function Hero.power(h): number
 	return Items.power(h.level, Hero.eff(h), Bag.worn(h))
 end
+-- 반올림하기 전의 전투력(피해의 셈에 쓴다 — 능력치 1점도 피해에 그대로 들어가게)
+function Hero.powerRaw(h): number
+	return Items.powerRaw(h.level, Hero.eff(h), Bag.worn(h))
+end
 
 -- 끼고 있는 방어구가 줄여 주는 피해 %(그 레벨의 몬스터에게 맞을 때)
 function Hero.cut(h, mobLv: number): number
@@ -87,6 +92,10 @@ function Hero.new(id: any, class: string)
 		skills = grants(class), -- [스킬 id] = 레벨
 		auto = false, -- true면 레벨업 때 능력치 · 스킬을 저절로 찍는다. 기본은 직접 찍는다(사용자 결정) — 창의 「자동으로 찍기」 · 「추천대로 찍기」는 한 번씩 누르는 단추다
 		keys = {}, -- 바꾼 키 { [하는 일] = 키 이름 } — 기본과 다른 것만(클라이언트가 보낸 것을 꼴만 보고 담아 둔다)
+		slots = Quick.start(CLASSES.classes[class].skills), -- 퀵슬롯: 칸마다 "potion" · 스킬의 이름표 · false(빈 칸) — shared/lune/ui/quick.luau
+		-- 스마트폰의 단추 배치: 같은 열두 칸이지만 PC의 것과 따로 둔다 — PC에서는 손에 익은 키(E · D …)에, 폰에서는 큰 단추에 놓고 싶은 것이 서로 다르다(2026-10-08).
+		--  한쪽에서 바꿔도 다른 쪽은 그대로다. 처음 차림은 같다(물약 · 사냥기 · 보스기 · 이동기)
+		tslots = Quick.start(CLASSES.classes[class].skills),
 		money = 0,
 		potions = RULES.startPotions,
 		hp = 0,
@@ -313,6 +322,28 @@ local function cleanKeys(map: any)
 	return out
 end
 
+-- 퀵슬롯에 놓아도 되는 스킬인가: 이 직업이 키로 쓰는 기술(싸움 수치가 있는 것)이고 배운 것
+function Hero.canSlot(h, id: string): boolean
+	local def = COMBAT.skills[id]
+	return def ~= nil and def.who == h.class and (h.skills[id] or 0) > 0
+end
+
+-- 퀵슬롯을 바꾼다(클라이언트가 보낸 칸들 — 꼴과 놓아도 되는 것인지를 본다). touch = 스마트폰의 단추 배치(tslots)를 바꾼다
+function Hero.setSlots(h, list: any, touch: boolean?): boolean
+	local slots = Quick.clean(list, function(id)
+		return Hero.canSlot(h, id)
+	end)
+	if not slots then
+		return false
+	end
+	if touch then
+		h.tslots = slots
+	else
+		h.slots = slots
+	end
+	return true
+end
+
 function Hero.setKeys(h, map: any): boolean
 	local keys = cleanKeys(map)
 	if not keys then
@@ -336,6 +367,8 @@ function Hero.pack(h)
 		skills = table.clone(h.skills),
 		auto = h.auto,
 		keys = table.clone(h.keys),
+		slots = table.clone(h.slots),
+		tslots = table.clone(h.tslots),
 		money = h.money,
 		potions = h.potions,
 		weak = math.floor(h.weak),
@@ -408,6 +441,14 @@ function Hero.unpack(id: any, data: any)
 		h.skills = base
 		h.sp = spEarned(h.level)
 	end
+	-- 퀵슬롯: 저장된 것이 말이 되면 그대로, 아니면(퀵슬롯이 생기기 전에 저장된 캐릭터 포함) 처음 차림(Hero.new가 놓아 둔 것)
+	if data.slots ~= nil then
+		Hero.setSlots(h, data.slots)
+	end
+	-- 스마트폰의 단추 배치: 저장된 것이 말이 되면 그대로, 없으면(이것이 생기기 전에 저장된 캐릭터) 처음 차림
+	if data.tslots ~= nil then
+		Hero.setSlots(h, data.tslots, true)
+	end
 
 	h.maxHp = N.hpOf(h.class, h.level, h.stats.hp)
 	h.hp = h.maxHp
@@ -431,6 +472,8 @@ function Hero.view(h)
 		skills = h.skills,
 		power = Hero.power(h),
 		keys = h.keys,
+		slots = h.slots,
+		tslots = h.tslots,
 		alive = h.alive,
 		weak = math.ceil(h.weak),
 	}

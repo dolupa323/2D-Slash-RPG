@@ -189,7 +189,7 @@ end
 
 -- ---------- 패킷 ----------
 local function describe(s)
-	local room = roomOf(s.scene):describe()
+	local room = roomOf(s.scene):describe(s.hero.id)
 	room.who = roster(s.scene)
 	return { self = Hero.view(s.hero), bag = Bag.view(s.hero), quests = Quests.view(s.hero.quests), scene = s.scene, x = s.hero.x, y = s.hero.y, room = room, id = s.hero.id, name = s.name }
 end
@@ -240,7 +240,9 @@ local function onMove(player, x: number, y: number, dir: number)
 	if x < 0 or x > scene.w * G.TILE or y < -200 or y > scene.h * G.TILE + G.FALL_OUT then
 		return
 	end
-	if not s.jumped and (math.abs(x - hero.x) > MOVE_SLACK or math.abs(y - hero.y) > MOVE_SLACK * 2) then
+	-- 그 맵의 시작 자리로 온 것은 받는다(맵 아래로 떨어지면 화면이 시작 자리로 돌려놓는다 — 이것까지 막으면 그 뒤로 자리가 영영 어긋난다)
+	local atSpawn = math.abs(x - scene.spawn.x) <= MOVE_SLACK and math.abs(y - scene.spawn.y) <= MOVE_SLACK * 2
+	if not s.jumped and not atSpawn and (math.abs(x - hero.x) > MOVE_SLACK or math.abs(y - hero.y) > MOVE_SLACK * 2) then
 		return -- 순간이동은 믿지 않는다(서버가 아는 자리를 그대로 둔다)
 	end
 	s.jumped = false
@@ -264,7 +266,7 @@ local function onTravel(player, to: string)
 			end
 			local from = s.scene
 			place(s, to, x, y)
-			local room = roomOf(to):describe()
+			local room = roomOf(to):describe(s.hero.id)
 			room.who = roster(to)
 			sendWho(from)
 			sendWho(to)
@@ -362,7 +364,7 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 						for _, mid in Party.mates(book, cur.hero.id, here) do
 							table.insert(mates, heroOf[mid])
 						end
-						local result = roomOf(key):skillHit(cur.hero, hit, cur.hero.x, cur.hero.y, dir, Hero.scale(cur.hero, id), if #mates > 1 then mates else nil)
+						local result = roomOf(key):skillHit(cur.hero, hit, cur.hero.x, cur.hero.y, dir, Hero.scale(cur.hero, id), if #mates > 1 then mates else nil, COMBAT.skills[id].type)
 						if #result.hits > 0 then
 							toRoom(key, "Hits", player.UserId, result.hits)
 						end
@@ -371,10 +373,15 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 							for _, gain in kill.gains do
 								local gs = byUser[gain.hero]
 								if gs then
-									-- 퀘스트: 함께 잡은 사람 모두에게 잡은 것으로 쳐 준다(모으는 물건은 사람마다 따로 굴린다)
-									if #Quests.onKill(gs.hero.quests, kill.kind, key, questRng) > 0 then
+									-- 퀘스트: 함께 잡은 사람 모두에게 잡은 것으로 쳐 준다
+									if #Quests.onKill(gs.hero.quests, kill.kind, key) > 0 then
 										gs.dirty = true
 										fire("Quests", gs.player, Quests.view(gs.hero.quests))
+									end
+									-- 모으는 물건은 사람마다 따로 굴려 그 사람의 것으로 땅에 떨어진다(그 사람에게만 보인다) — 주워야 숫자가 오른다
+									for n, q in Quests.drops(gs.hero.quests, kill.kind, key, questRng) do
+										local d = roomOf(key):addDrop({ kind = "quest", amount = 1, quest = q.quest, step = q.step, name = q.name, icon = q.icon }, kill.x - n * 9, kill.y, gs.hero.id)
+										fire("DropAdd", gs.player, Room.dropView(d))
 									end
 									fire("Gain", gs.player, { xp = gain.xp, ups = gain.ups, level = gain.level })
 									if gs ~= cur then
@@ -412,7 +419,13 @@ local function onPickup(player, dropId: number)
 	local drop, why = roomOf(s.scene):pickup(s.hero, dropId)
 	if drop then
 		toRoom(s.scene, "DropGone", drop.id, player.UserId, drop.amount)
-		if drop.kind == "money" then
+		if drop.kind == "quest" then
+			-- 퀘스트의 물건: 주운 만큼 그 퀘스트의 숫자가 오른다
+			if Quests.onLoot(s.hero.quests, drop.quest, drop.step) then
+				s.dirty = true
+				fire("Quests", player, Quests.view(s.hero.quests))
+			end
+		elseif drop.kind == "money" then
 			sendSelf(s)
 		else
 			sendBag(s)
@@ -512,6 +525,30 @@ local function onKeys(player, map)
 	if s and s.hero and Hero.setKeys(s.hero, map) then
 		s.dirty = true
 	end
+end
+
+-- 퀵슬롯을 바꿨다(칸들 전체를 보낸다 — 꼴과 놓아도 되는 스킬인지는 Hero.setSlots가 본다). 서버가 가진 칸들을 돌려준다 — 말이 안 되는 것을 보냈으면 예전 것이 돌아가 화면이 되돌아간다
+local function onSlots(player, list)
+	local s = sessions[player]
+	if not s or not s.hero then
+		return nil
+	end
+	if Hero.setSlots(s.hero, list) then
+		s.dirty = true
+	end
+	return s.hero.slots
+end
+
+-- 스마트폰의 단추 배치를 바꿨다(PC의 퀵슬롯과 따로 — 같은 식으로 본다)
+local function onTouchSlots(player, list)
+	local s = sessions[player]
+	if not s or not s.hero then
+		return nil
+	end
+	if Hero.setSlots(s.hero, list, true) then
+		s.dirty = true
+	end
+	return s.hero.tslots
 end
 
 local function onStatAuto(player)
@@ -741,6 +778,21 @@ local function onDebug(player, what: string, n: number)
 		local dust = room:addDrop({ kind = "dust", amount = 7 }, hero.x + 40, hero.y, hero.id)
 		toRoom(s.scene, "DropAdd", Room.dropView(gear))
 		toRoom(s.scene, "DropAdd", Room.dropView(dust))
+		local coin = room:addDrop({ kind = "money", amount = 12 }, hero.x + 58, hero.y, hero.id) -- 달돈의 그림도 본다
+		toRoom(s.scene, "DropAdd", Room.dropView(coin))
+	elseif what == "qdrop" then
+		-- 확인용: 발 앞에 퀘스트의 물건들을 하나씩 떨어뜨린다(그림과 줍기를 본다 — 받지 않은 퀘스트의 것은 주워도 숫자가 오르지 않는다)
+		local room = roomOf(s.scene)
+		local i = 0
+		for _, def in Quests.list do
+			for k, step in def.steps do
+				if step.type == "gather" then
+					i += 1
+					local d = room:addDrop({ kind = "quest", amount = 1, quest = def.id, step = k, name = step.name, icon = step.icon }, hero.x + 10 + i * 16, hero.y, hero.id)
+					fire("DropAdd", player, Room.dropView(d))
+				end
+			end
+		end
 	elseif what == "gear" then
 		-- 확인용: 그 단계의 장비 다섯 부위를 가방에 넣는다(성능은 차례로)
 		for i, slot in Items.data.GEAR do
@@ -775,7 +827,7 @@ function World.tick(dt: number)
 			local scene = SCENES.scenes[SCENES.start]
 			local from = s.scene
 			place(s, SCENES.start, scene.spawn.x, scene.spawn.y)
-			local room = roomOf(s.scene):describe()
+			local room = roomOf(s.scene):describe(s.hero.id)
 			room.who = roster(s.scene)
 			fire("Revive", s.player, { scene = s.scene, x = s.hero.x, y = s.hero.y, room = room })
 			sendSelf(s)
@@ -846,6 +898,8 @@ function World.start()
 	Net.OnServer("Party", onParty)
 	Net.OnServer("Quest", onQuest)
 	onSkill2 = onSkill
+	Net.OnServer("Slots", onSlots)
+	Net.OnServer("TouchSlots", onTouchSlots)
 	Net.OnServer("StatAdd", onStatAdd)
 	Net.OnServer("StatAuto", onStatAuto)
 	Net.OnServer("SkillUp", onSkillUp)

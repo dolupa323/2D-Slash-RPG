@@ -34,7 +34,7 @@ return {
 			auto = false,
 			playable = true,
 			steps = {
-				{ ["type"] = "kill", mob = "trainee", name = "수습 검병", n = 5, pct = 100 },
+				{ ["type"] = "kill", mob = "trainee", name = "수습 검병", n = 5, pct = 100, icon = false },
 			},
 			offer = { "마을 밖에 낯선 병사들이 어슬렁거려요.", "같이 나가서 다섯만 쫓아 주실래요?" },
 			wait = { "문 밖 마을 어귀에 있어요. 조심하세요!" },
@@ -54,7 +54,7 @@ return {
 			auto = false,
 			playable = true,
 			steps = {
-				{ ["type"] = "gather", mob = "warrior", name = "갑옷 조각", n = 8, pct = 50 },
+				{ ["type"] = "gather", mob = "warrior", name = "갑옷 조각", n = 8, pct = 50, icon = "etc_plate" },
 			},
 			offer = { "빛 없는 갑옷이라… 직접 봐야 믿겠네.", "조각을 여덟 개만 모아다 주게." },
 			wait = { "어귀 너머 사냥터의 검병에게서 나온다네." },
@@ -182,7 +182,7 @@ return {
 			auto = false,
 			playable = true,
 			steps = {
-				{ ["type"] = "gather", mob = "trainee", name = "기름 천", n = 5, pct = 60 },
+				{ ["type"] = "gather", mob = "trainee", name = "기름 천", n = 5, pct = 60, icon = "etc_cloth" },
 			},
 			offer = { "등불 심지가 다 탔어요.", "병사들의 기름 천 다섯 장만 구해 주세요." },
 			wait = { "기름 천은 수습 검병이 갖고 있어요." },
@@ -202,7 +202,7 @@ return {
 			auto = false,
 			playable = true,
 			steps = {
-				{ ["type"] = "gather", mob = "warrior", name = "젖지 않은 종이", n = 8, pct = 50 },
+				{ ["type"] = "gather", mob = "warrior", name = "젖지 않은 종이", n = 8, pct = 50, icon = "etc_paper" },
 			},
 			offer = { "게시판 달력이 낡아서 새로 베끼려네.", "젖지 않은 종이 여덟 장이 필요해." },
 			wait = { "검병들이 종이를 품고 다닌다더군." },

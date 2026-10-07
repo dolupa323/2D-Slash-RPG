@@ -139,6 +139,19 @@ handlers.Move(p1, s1.hero.x + 500, s1.hero.y, 1)
 eq(s1.hero.x, SCENES.scenes.town.spawn.x + 10, "순간이동은 믿지 않는다")
 handlers.Move(p1, -50, 0, 1)
 eq(s1.hero.x, SCENES.scenes.town.spawn.x + 10, "맵 밖은 받지 않는다")
+-- 그 맵의 시작 자리로 온 것은 멀어도 받는다(맵 아래로 떨어지면 화면이 시작 자리로 돌려놓는다 — 이것을 막으면 그 뒤로 서버가 아는 자리와 영영 어긋난다.
+--  사용자 2026-10-07: "가시맞고 돌아간다음에 몬스터랑 전투도안되고 고장나네요" — 가시의 되돌리기는 없앴고, 같은 고장이 다시 나지 않게 이 길을 열어 두었다)
+do
+	local spawn = SCENES.scenes.town.spawn
+	handlers.Move(p1, spawn.x + 300, spawn.y, 1)
+	eq(s1.hero.x, spawn.x + 10, "먼 곳으로의 순간이동은 여전히 믿지 않는다")
+	local far = World.session(p1)
+	far.hero.x = spawn.x + 300 -- 서버가 아는 자리가 먼 곳일 때
+	handlers.Move(p1, spawn.x, spawn.y, 1)
+	eq(s1.hero.x, spawn.x, "시작 자리로 돌아온 것은 받는다")
+	handlers.Move(p1, spawn.x + 10, spawn.y, 1)
+	eq(s1.hero.x, spawn.x + 10, "그 뒤의 자리 보고도 받는다(어긋나지 않는다)")
+end
 -- 문에서 먼 곳에서는 못 간다
 handlers.Move(p1, s1.hero.x + 80, s1.hero.y, 1)
 handlers.Move(p1, s1.hero.x + 80, s1.hero.y, 1)
@@ -160,6 +173,34 @@ eq(s1.scene, "hunt", "사냥터에 왔다")
 eq(#trip.room.mobs, #SCENES.scenes.hunt.mobs, "사냥터의 졸개 목록을 받는다")
 local back = SCENES.scenes.hunt.portals[1]
 eq(trip.x, back.x, "마을로 가는 문 앞에 선다")
+
+-- ---- 2-1) 건물의 문: 마을의 문 앞에서 그 건물의 실내로, 실내의 문 앞에서 들어갔던 그 문 앞으로 ----
+do
+	expect(goTo(p1, SCENES.start) ~= nil, "마을로 돌아온다")
+	local town = SCENES.scenes[SCENES.start]
+	local doors = 0
+	for _, door in town.portals do
+		local inside = SCENES.scenes[door.to]
+		if inside.indoor then
+			doors += 1
+			eq(handlers.Travel(p1, door.to), nil, "문 앞이 아니면 못 들어간다 " .. door.to)
+			s1.jumped = true
+			handlers.Move(p1, door.x, door.y, 1)
+			local into = handlers.Travel(p1, door.to)
+			expect(into ~= nil and into.scene == door.to, "문 앞에서 들어간다 " .. door.to)
+			local exit = inside.portals[1]
+			expect(into.x == exit.x and into.y == exit.y, "들어가면 나가는 문 앞에 선다 " .. door.to)
+			eq(#into.room.mobs, 0, "실내에는 졸개가 없다 " .. door.to)
+			eq(s1.scene, door.to, "서버가 아는 장면이 바뀐다 " .. door.to)
+			local out = handlers.Travel(p1, SCENES.start)
+			expect(out ~= nil and out.scene == SCENES.start, "나가는 문으로 마을에 나온다 " .. door.to)
+			expect(out.x == door.x and out.y == door.y, ("들어갔던 그 문 앞으로 나온다 %s (%d, %d)"):format(door.to, out.x, out.y))
+		end
+	end
+	expect(doors >= 5, "들어갈 수 있는 건물이 다섯")
+	expect(goTo(p1, "hunt") ~= nil, "다시 사냥터로")
+	eq(s1.scene, "hunt", "사냥터에 왔다(다음 검사를 위해)")
+end
 
 -- ---- 3) 졸개의 모습이 온다 ----
 table.clear(sent)
@@ -395,15 +436,22 @@ do
 		local list = got(name, p3)
 		return list[#list] and list[#list].args[1]
 	end
+	-- 주민은 제 건물 안(실내 장면)에 있다 — 어느 장면의 누구인지 찾고, 그 앞에 서려면 문으로 들어간다
 	local function npc(id)
-		for _, n in SCENES.scenes[SCENES.start].npcs do
-			if n.id == id then
-				return n
+		for key, sc in SCENES.scenes do
+			for _, n in sc.npcs or {} do
+				if n.id == id then
+					return n, key
+				end
 			end
 		end
+		error("없는 주민 " .. id)
 	end
 	local function stand(id)
-		local n = npc(id)
+		local n, key = npc(id)
+		goTo(p3, key)
+		eq(s3.scene, key, "주민이 있는 곳으로 간다 " .. id)
+		s3.jumped = true
 		h3.x, h3.y = n.x + 10, n.y
 	end
 	local it = Items.make("hat", 1, 5)
@@ -422,7 +470,18 @@ do
 	eq(Bag.find(h3, junkId), nil, "분해한 것은 없다")
 	-- 상점: 파는 사람 앞에서만
 	h3.money = 100000
-	h3.x = npc("merchant").x + 400
+	do
+		local m, mkey = npc("merchant")
+		expect(SCENES.scenes[mkey].indoor == true, "상인은 건물 안에 있다")
+		table.clear(sent)
+		handlers.Item(p3, "buy", "potion", 3)
+		expect(last("ItemDone").ok == false and last("ItemDone").why == "파는 사람 앞이 아니다", "건물 밖(마을)에서는 못 산다")
+		goTo(p3, mkey)
+		eq(s3.scene, mkey, "잡화점 문으로 들어간다")
+		eq(h3.x, SCENES.scenes[mkey].portals[1].x, "들어가면 나가는 문 앞에 선다")
+		s3.jumped = true
+		h3.x, h3.y = m.x + 150, m.y -- 같은 방 안이지만 멀다
+	end
 	table.clear(sent)
 	handlers.Item(p3, "buy", "potion", 3)
 	expect(last("ItemDone").ok == false and last("ItemDone").why == "파는 사람 앞이 아니다", "멀리서는 못 산다")
@@ -640,12 +699,20 @@ do
 		local list = got(name, pq)
 		return list[#list] and list[#list].args
 	end
+	-- 주민 앞에 선다: 건물 안의 주민이면 그 문으로 들어간다
 	local function at(id)
-		for _, n in SCENES.scenes[SCENES.start].npcs do
-			if n.id == id then
-				hq.x, hq.y = n.x + 8, n.y
+		for key, sc in SCENES.scenes do
+			for _, n in sc.npcs or {} do
+				if n.id == id then
+					goTo(pq, key)
+					eq(sq.scene, key, "주민이 있는 곳으로 간다 " .. id)
+					sq.jumped = true
+					hq.x, hq.y = n.x + 8, n.y
+					return
+				end
 			end
 		end
+		error("없는 주민 " .. id)
 	end
 	-- 사제 앞이 아니면 돌려주지 못한다
 	at("guide")

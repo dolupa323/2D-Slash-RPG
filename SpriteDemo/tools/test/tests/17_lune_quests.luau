@@ -9,7 +9,9 @@ local F = req("ReplicatedStorage/shared/lune/ui/format")
 local pixelText = req("Client/ui/pixelText")
 
 local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
-pixelText.Register("small", KIT.font.small, {}) -- 알리미의 글은 작은 글씨(client/lune/questHud.luau — 폭 116)
+pixelText.Register("small", KIT.font.small, {}) -- 알리미의 할 일은 작은 글씨, 퀘스트 이름과 말풍선의 말은 본문 글씨(client/lune/questHud.luau · ui/talk.luau)
+local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
+local QUEST_W = UI.hud.quest.w -- 알리미의 글이 쓸 수 있는 폭
 
 local function measure(text)
 	return (pixelText.Measure(text, "small"))
@@ -47,16 +49,16 @@ for _, def in D.list do
 				found = found or m.kind == step.mob
 			end
 			expect(found, ("그 맵에 그 졸개가 있다 %s(%s)"):format(def.id, step.mob))
-			expect(measure(Q.stepText(step, step.n)) <= 116, ("할 일의 글이 알리미에 들어감 %s — 폭 %d"):format(def.id, measure(Q.stepText(step, step.n))))
+			expect(measure(Q.stepText(step, step.n)) <= QUEST_W, ("할 일의 글이 알리미에 들어감 %s — 폭 %d"):format(def.id, measure(Q.stepText(step, step.n))))
 		end
-		-- 대사: 한 마디가 대화 상자 두 줄에 들어간다
+		-- 대사: 한 마디가 말풍선의 줄 수(세 줄)에 들어간다
 		for _, group in { def.offer, def.wait, def.done } do
 			for _, line in group do
-				local lines = #string.split(pixelText.Wrap(line, F.TALK.textW, "body"), "\n")
-				expect(lines <= F.TALK.lines, ("%s의 말이 %d줄에 들어감(지금 %d줄) — %s"):format(def.id, F.TALK.lines, lines, line))
+				local lines = #string.split(pixelText.Wrap(line, F.BUBBLE.textW, "body"), "\n")
+				expect(lines <= F.BUBBLE.lines, ("%s의 말이 %d줄에 들어감(지금 %d줄) — %s"):format(def.id, F.BUBBLE.lines, lines, line))
 			end
 		end
-		expect(measure(def.name) <= 116, ("퀘스트 이름이 알리미에 들어감 %s — 폭 %d"):format(def.name, measure(def.name)))
+		expect((pixelText.Measure(def.name, "body")) <= QUEST_W, ("퀘스트 이름(본문 글씨)이 알리미에 들어감 %s — 폭 %d"):format(def.name, (pixelText.Measure(def.name, "body"))))
 	end
 end
 expect(playable >= 5, "지금 할 수 있는 퀘스트가 다섯은 된다")
@@ -101,8 +103,17 @@ eq(#Q.atNpc(book, 1, "guide").wait, 1, "하는 중인 것을 안다")
 local rng = Random.new(5)
 -- 퀘스트마다의 맵과 졸개(자료가 바뀌어도 테스트가 따라가게 자료에서 읽는다)
 local M2, M3, S1 = Q.def("r1m2"), Q.def("r1m3"), Q.def("r1s1")
+-- 졸개 한 마리를 잡고, 떨어진 퀘스트의 물건을 모두 줍는다. 바뀐 퀘스트들의 id를 돌려준다.
+--  잡는 일은 잡는 순간 오르고(Q.onKill), 모으는 물건은 땅에 떨어진 것(Q.drops)을 주워야 오른다(Q.onLoot) — 사용자 2026-10-07
 local function kill(b, def, r)
-	return Q.onKill(b, def.steps[1].mob, def.scene, r or rng)
+	local mob, scene = def.steps[1].mob, def.scene
+	local changed = Q.onKill(b, mob, scene)
+	for _, d in Q.drops(b, mob, scene, r or rng) do
+		if Q.onLoot(b, d.quest, d.step) then
+			table.insert(changed, d.quest)
+		end
+	end
+	return changed
 end
 eq(#Q.onKill(book, "archer", M2.scene, rng), 0, "다른 졸개는 세지 않는다")
 eq(#Q.onKill(book, M2.steps[1].mob, "town", rng), 0, "다른 맵에서는 세지 않는다")
@@ -212,3 +223,61 @@ eq(Q.state(fixed.quests, 5, "r1m1"), "done", "끝낸 표시는 살린다")
 local v = Q.view({ r1m2 = { done = false, c = {} }, r1m1 = { done = true, c = {} } })
 eq(v.r1m2.c[1], 0, "안 센 것은 0으로 채운다")
 eq(#v.r1m1.c, 0, "할 일이 없는 퀘스트")
+
+-- ---- 9) 모으는 물건은 땅에 떨어지고, 주워야 오른다 ----
+--  사용자 2026-10-07: "퀘스트 아이템이나 , 기타아이템들은 왜 드롭도되지않고 그림도없고 그냥 텍스트로만 오르나요?"
+do
+	local KIT9 = req("ReplicatedStorage/shared/lune/data/kit.generated")
+	local gathers = 0
+	for _, def in D.list do
+		for _, step in def.steps do
+			if step.type == "gather" then
+				gathers += 1
+				expect(typeof(step.icon) == "string" and KIT9.parts.icons.icons[step.icon] ~= nil, ("모으는 물건마다 제 그림이 있다: %s(%s)"):format(step.name, tostring(step.icon)))
+			else
+				eq(step.icon, false, "잡는 일에는 물건의 그림이 없다 " .. def.id)
+			end
+		end
+	end
+	expect(gathers >= 3, "모으는 퀘스트가 있다")
+	local def = Q.def("r1m3")
+	local step = def.steps[1]
+	local book = { r1m3 = { done = false, c = {} } }
+	-- 잡기만 해서는 오르지 않는다
+	for _ = 1, 200 do
+		eq(#Q.onKill(book, step.mob, def.scene), 0, "모으는 퀘스트는 잡는 것만으로 오르지 않는다")
+	end
+	eq(book.r1m3.c[1] or 0, 0, "줍기 전에는 0개")
+	-- 떨어진 것: 그 퀘스트 · 그 일 · 물건의 이름과 그림
+	local r9 = Random.new(11)
+	local seen = nil
+	for _ = 1, 100 do
+		for _, d in Q.drops(book, step.mob, def.scene, r9) do
+			seen = d
+		end
+	end
+	expect(seen ~= nil and seen.quest == "r1m3" and seen.step == 1 and seen.name == step.name and seen.icon == step.icon, "떨어진 물건이 그 퀘스트의 것이다")
+	eq(#Q.drops(book, "archer", def.scene, r9), 0, "다른 졸개에게서는 떨어지지 않는다")
+	eq(#Q.drops(book, step.mob, "town", r9), 0, "다른 맵에서는 떨어지지 않는다")
+	eq(#Q.drops({}, step.mob, def.scene, r9), 0, "받지 않은 퀘스트의 물건은 떨어지지 않는다")
+	-- 주우면 하나씩 오르고, 다 모으면 더 오르지 않는다(더 떨어지지도 않는다)
+	for i = 1, step.n do
+		expect(Q.onLoot(book, "r1m3", 1), "주우면 오른다 " .. i)
+		eq(book.r1m3.c[1], i, "하나씩 오른다")
+	end
+	expect(not Q.onLoot(book, "r1m3", 1), "다 모은 뒤에 주운 것은 세지 않는다")
+	eq(book.r1m3.c[1], step.n, "모을 수를 넘지 않는다")
+	for _ = 1, 50 do
+		eq(#Q.drops(book, step.mob, def.scene, r9), 0, "다 모은 뒤에는 떨어지지 않는다")
+	end
+	expect(not Q.onLoot(book, "r1m2", 1), "받지 않은 퀘스트 · 잡는 일은 주워도 오르지 않는다")
+	expect(not Q.onLoot(book, "no_such", 1) and not Q.onLoot(book, "r1m3", 9), "없는 퀘스트 · 없는 일")
+	-- 가방의 재료 탭에 보이는 것: 모으는 중인 물건(가진 수 / 모을 수) — 끝낸 퀘스트의 것은 빠진다
+	local items = Q.items({ r1m3 = { done = false, c = { 3 } }, r1m2 = { done = false, c = { 1 } } })
+	eq(#items, 1, "모으는 물건만 나온다")
+	expect(items[1].name == step.name and items[1].icon == step.icon and items[1].have == 3 and items[1].n == step.n, "이름 · 그림 · 가진 수 · 모을 수")
+	eq(#Q.items({ r1m3 = { done = true, c = { step.n } } }), 0, "끝낸 퀘스트의 물건은 빠진다")
+	for _, it in Q.items({ r1m3 = { done = false, c = {} }, r1s1 = { done = false, c = {} } }) do
+		expect(measure(it.name) <= 2 * 50 - 10, "물건 이름이 가방의 칸 옆 자리에 들어간다(1080p): " .. it.name)
+	end
+end
