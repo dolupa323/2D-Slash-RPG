@@ -15,8 +15,19 @@ local function round(v: number): number
 end
 
 -- ---- 레벨과 경험치 ----
+-- Lv.30까지는 쉽게(공방 numbers.js의 CURVE.soft — 사용자 2026-10-11): 한 레벨에 드는 시간의 배수 · 일반 몬스터의 한 방의 배수. Lv.29까지 낮고, 그 뒤로 조금씩 올라 back에서 1
+local function rampBack(L: number, s): number
+	return if L <= s.upto then s.mul elseif L >= s.back then 1 else s.mul + (1 - s.mul) * (L - s.upto) / (s.back - s.upto)
+end
+function N.softTimeAt(L: number): number
+	local s = C.soft.time
+	return if L <= s.from then 1 elseif L < s.low then 1 - (1 - s.mul) * (L - s.from) / (s.low - s.from) else rampBack(L, s)
+end
+function N.softHitAt(L: number): number
+	return rampBack(L, C.soft.hit)
+end
 function N.minutesAt(L: number): number -- 그 레벨에서 다음 레벨까지 드는 분
-	return C.T0 + C.C * L ^ C.K
+	return (C.T0 + C.C * L ^ C.K) * N.softTimeAt(L)
 end
 function N.rateAt(L: number): number -- 같은 레벨 몬스터를 1분에 몇 마리 잡나
 	return C.rate0 + (C.rate1 - C.rate0) * L / MAX
@@ -27,8 +38,13 @@ end
 function N.mobXp(L: number): number
 	return round(C.xp0 * C.xpR ^ L)
 end
+-- 초반 몬스터의 체력 배수: Lv.1에 ease.from에서 Lv.ease.upto에 1까지 고르게(그 뒤는 1)
+function N.easeAt(L: number): number
+	local e = C.ease
+	return if L >= e.upto then 1 else e.from + (1 - e.from) * (L - 1) / (e.upto - 1)
+end
 function N.mobHp(L: number): number
-	return round(C.hp0 * C.hpR ^ L)
+	return round(C.hp0 * C.hpR ^ L * N.easeAt(L))
 end
 function N.xpNeed(L: number): number -- 다음 레벨까지 필요한 경험치
 	return N.killsAt(L) * N.mobXp(L)
@@ -90,11 +106,11 @@ function N.armorCut(armorLv: number, mobLv: number): number -- 방어구가 줄�
 end
 -- 한 방의 크기. kind = mob 일반 몬스터 · field 필드 보스 · lieutenant 부관 · boss · big · wipe
 function N.hitOf(kind: string, mobLv: number, armorLv: number?): number
-	return round(N.baseHp(mobLv) * BODY.hit[kind] / 100 * (1 - N.armorCut(armorLv or mobLv, mobLv) / 100))
+	return round(N.baseHp(mobLv) * BODY.hit[kind] / 100 * (if kind == "mob" then N.softHitAt(mobLv) else 1) * (1 - N.armorCut(armorLv or mobLv, mobLv) / 100))
 end
 -- 방어로 줄이기 전의 한 방(방어구는 sim/items.luau의 cut이 부위마다 셈한다)
 function N.rawHit(kind: string, mobLv: number): number
-	return N.baseHp(mobLv) * BODY.hit[kind] / 100
+	return N.baseHp(mobLv) * BODY.hit[kind] / 100 * (if kind == "mob" then N.softHitAt(mobLv) else 1)
 end
 function N.deathMinutes(L: number): number -- 쓰러진 뒤 벌칙이 이어지는 분
 	return round(BODY.death.min + (BODY.death.max - BODY.death.min) * L / MAX)

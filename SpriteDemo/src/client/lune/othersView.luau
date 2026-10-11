@@ -4,7 +4,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local COMBAT = require(ReplicatedStorage.shared.lune.data["combat.generated"])
 local CLASSES = require(ReplicatedStorage.shared.lune.data["classes.generated"])
+local Kitset = require(ReplicatedStorage.shared.lune.kitset)
+local CHARS = require(ReplicatedStorage.shared.lune.data["chars.generated"])
 local Sprite = require(script.Parent.sprite)
+local Grave = require(script.Parent.grave)
 local Ui = require(script.Parent.ui.ui)
 local Overlay = require(script.Parent.overlay)
 
@@ -27,6 +30,7 @@ function Others.new(heroLayer: Frame, tagLayer: Frame, myId: any)
 	self.heroLayer, self.tagLayer, self.myId = heroLayer, tagLayer, myId
 	self.list = {} -- [번호] = 한 사람
 	self.fx = nil :: any -- 효과(effects.luau) — boot가 넣어 준다. 대쉬의 잔상 · 속도선을 여기에 그린다
+	self.graveLayer = nil :: any -- 비석을 놓는 층 — boot가 넣어 준다(장면의 Graves 층)
 	self.last = 0 -- 지난번 update의 때(잔상의 간격을 잰다)
 	return self
 end
@@ -34,6 +38,9 @@ end
 local function drop(o)
 	o.sprite:destroy()
 	o.tag:Destroy()
+	if o.grave then
+		o.grave:Destroy()
+	end
 end
 
 -- 방 사람들의 이름표: 새로 온 사람은 만들고, 나간 사람은 지운다
@@ -113,10 +120,34 @@ function Others:apply(list, now: number)
 	end
 end
 
+-- 2~4차의 쓰는 스킬(직업 묶음의 그 스킬)의 동작: 구간마다 서버가 알려 준다(next) — 되풀이 구간(누르고 있는 것 · 모으는 것 · 조건을 기다리는 것)은 끝 장을 넘으면 loopFrom으로 돌아간다
+local KITDEF = {}
+local function kitDef(skillId: string)
+	local def = KITDEF[skillId]
+	if def == nil then
+		local skill, kit = Kitset.skill(skillId)
+		def = false
+		if skill and kit and skill.segs and COMBAT.cast[skillId] then
+			local segs = {}
+			for i, s in skill.segs do
+				local clip = CHARS.chars[kit.who].clips[s.clip]
+				local from, to = s.from or 0, s.to or (if clip then #clip.frames - 1 else 0)
+				local fps = s.fps or 14
+				local loops = s.loop or s.hold or s.charge or s.till
+				local time = if s.loop then s.dur elseif s.hold then s.max or 3 elseif s.charge then (to - from + 1) / fps + 1 elseif s.till then s.max or 1.5 else (to - from + 1) / fps
+				segs[i] = { clip = s.clip, from = from, to = to, fps = fps, time = time, next = true, loops = loops == true, loopFrom = s.loopFrom or from }
+			end
+			def = { type = "cast", segs = segs }
+		end
+		KITDEF[skillId] = def
+	end
+	return def or nil
+end
+
 -- 그 사람이 기술의 한 구간을 쓴다
 function Others:act(id: any, skillId: string, seg: number, x: number, y: number, dir: number, now: number)
 	local o = self.list[id]
-	local def = COMBAT.skills[skillId]
+	local def = COMBAT.skills[skillId] or kitDef(skillId)
 	if not o or not def or not def.segs[seg] then
 		return
 	end
@@ -160,7 +191,11 @@ function Others:update(now: number, party)
 				end
 			end
 			if act then
-				clip, frame = segDef.clip, segDef.from + math.min(segDef.to - segDef.from, math.floor(t * segDef.fps)) + 1
+				local f = segDef.from + math.floor(t * segDef.fps)
+				if f > segDef.to then
+					f = if segDef.loops then segDef.loopFrom + ((f - segDef.to - 1) % (segDef.to - segDef.loopFrom + 1)) else segDef.to
+				end
+				clip, frame = segDef.clip, f + 1
 				-- 대쉬로 가는 동안: 잔상
 				if act.def.type == "move" and t < act.def.dist / act.def.speed and self.fx and o.alive then
 					self.fx:trail(o, dt, o.class, clip, frame, o.x, o.y, o.dir, CLASSES.classes[o.class].tone)
@@ -178,6 +213,17 @@ function Others:update(now: number, party)
 			end
 		end
 		o.sprite:set(clip, frame, o.x, o.y, o.dir)
+		o.clip, o.frame = clip, frame -- 지금의 동작과 장(boot가 버프의 모습을 그 위에 입힌다 — cast.luau의 look)
+		-- 쓰러진 사람: 쓰러지는 동작이 끝나면 몸 대신 비석이 선다(마을로 돌아가거나 소생을 받을 때까지)
+		local downFor = if o.alive then -1 else now - (o.deadAt or now) - #char.clips.death.frames / char.clips.death.fps
+		o.fallen = downFor >= 0
+		if o.fallen and self.graveLayer then
+			o.grave = o.grave or Grave.new(self.graveLayer)
+			Grave.put(o.grave, o.x, o.y, downFor)
+			o.sprite.label.Visible = false
+		elseif o.grave then
+			o.grave.Visible = false
+		end
 		o.tag.Frame.Visible = true -- 자리는 boot가 정한다(이름표끼리 겹치지 않게 쌓는다 — tags())
 		local color = if party and party[id] then MINT else WHITE
 		if o.tagColor ~= color then

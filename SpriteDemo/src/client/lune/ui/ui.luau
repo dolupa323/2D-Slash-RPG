@@ -224,6 +224,7 @@ end
 Ui.TAG_H = M.small + 3 -- 이름표 한 줄이 차지하는 높이(쌓을 때 쓴다)
 --  plate = true: 플레이어(나 · 다른 사람)의 이름표 — 어두운 판에 민트의 가는 테두리를 두른다(data/ui.generated.luau의 layout.tag.plate).
 --   사용자 2026-10-08: "닉네임 표시되는게 그냥 닉네임하얀글씨로 표시되는게 아니라 얇은 우리게임 민트색 테두리같은게 있으면 좋을거같네요". 주민(노랑 글) · 졸개의 이름표는 판이 없다.
+--   같은 날 글자 둘레에 민트를 두르는 방식("이름 글씨만 있는데 글자 그자체 테두리에 민트 테두리")으로 바꿔 봤다가 되돌렸다 — "생각보다 별로네요 이전방식으로 롤백".
 function Ui.tag(parent: Instance, text: string, color: Color3?, maxWidth: number?, plate: boolean?)
 	local label = pixelText.new(parent, { Text = text, Font = "small_o", Color = color or C.text, MaxWidth = maxWidth or 220, MaxLines = 1 })
 	label.Frame.Name = "Tag"

@@ -16,7 +16,10 @@ local C = Ui.COLOR
 local S = Layout.SKILL
 local WORDS = UI.skillWords
 local QWORDS = UI.quick.words
-local BONUS = require(lune.data["combat.generated"]).rules.targetBonus -- 사냥기 · 보스기가 맞는 상대에게 더 주는 피해(%)
+local COMBAT = require(lune.data["combat.generated"])
+local BONUS = COMBAT.rules.targetBonus -- 사냥기 · 보스기가 맞는 상대에게 더 주는 피해(%)
+local EFFECTS = COMBAT.kitEffects -- 온오프 사출기 · 핵심 장치 · 패시브의 레벨마다의 효과 글([스킬][레벨])
+local READY = COMBAT.ready -- 게임에 들어와 있는 스킬. 여기에 없는 스킬은 + 단추가 꺼져 있고 「아직 준비 중」이라고 적힌다(서버도 찍어 주지 않는다 — sim/hero.luau의 skillUp)
 local TYPES = CLASSES.types
 
 local SkillWindow = { wide = true }
@@ -71,6 +74,41 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 	local auto = Ui.button(body, WORDS.auto, listW - S.autoW, S.infoY, S.autoW, function()
 		ctx.send("SkillAuto")
 	end, { main = true, h = 22, font = "small" })
+	-- 전직하며 받은 공짜 초기화(설계: "전직하면 SP 초기화 한 번이 공짜"): 남아 있을 때만 탭의 오른쪽에 단추가 보인다. 잘못 누르지 않게 두 번 눌러야 한다(「정말 초기화?」 — 3초 안에)
+	local RESET_X, RESET_W = (S.tabW + S.tabGap) * 4 + 8, 96
+	local resetHolder = Ui.group(body, RESET_X, -2, RESET_W, 20, "Reset")
+	local resetBtn: Instance? = nil
+	local resetArmed, resetShown = 0, nil :: string?
+	local function drawReset(me)
+		local left = (me and me.resets) or 0
+		local armed = os.clock() - resetArmed < 3
+		local label = if left < 1 then "" elseif armed then "정말 초기화?" else "초기화(무료 1회)"
+		if label == resetShown then
+			return
+		end
+		resetShown = label
+		if resetBtn then
+			resetBtn:Destroy()
+			resetBtn = nil
+		end
+		if label ~= "" then
+			local button = Ui.button(resetHolder, label, 0, 0, RESET_W, function()
+				if os.clock() - resetArmed < 3 then
+					resetArmed = 0
+					ctx.send("SkillReset")
+				else
+					resetArmed = os.clock()
+					task.delay(3.1, function()
+						drawReset(ctx.me())
+					end)
+				end
+				drawReset(ctx.me())
+			end, { h = 18, font = "small" })
+			button.frame.Name = "Do_reset"
+			resetBtn = button.frame
+		end
+	end
+	view.drawReset = drawReset
 
 	-- 스킬 칸들(cols x rows)을 미리 만들어 두고, 탭에 따라 채운다
 	local cells = {}
@@ -118,6 +156,14 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 	local detailBonus = Ui.text(body, "", dx, S.slot + 14, S.detailW, { color = C.accent }) -- 사냥기 · 보스기의 쓰임(일반 몬스터 · 보스에게 피해 +%)
 	local detailText = Ui.text(body, "", dx, S.slot + 14, S.detailW, { lines = S.textLines, line = S.textLine })
 	local detailNote = Ui.text(body, "", dx, S.slot + 14, S.detailW, { color = C.dim })
+	-- 온오프 사출기 · 핵심 장치 · 패시브: 설명 아래에 그 레벨의 효과를 숫자로(지금의 것 · + 를 누르면 되는 것)
+	local effects = {}
+	for i = 1, 2 do
+		effects[i] = {
+			label = Ui.text(body, "", dx, 0, S.detailW, { color = C.dim }),
+			text = Ui.text(body, "", dx, 0, S.detailW, { lines = 3, line = S.textLine, color = if i == 1 then C.text else C.dim }),
+		}
+	end
 	-- 맨 아래 두 줄: 퀵슬롯의 어느 칸에 있는가 · 놓는 법
 	local quickAt = Ui.text(body, "", dx, h - Ui.M.small - 16, S.detailW, { color = C.dim })
 	local quickHint = Ui.text(body, "", dx, h - Ui.M.small, S.detailW, { color = C.dim })
@@ -152,10 +198,12 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 			t.label:color(if i == tab then C.accent elseif t.job > job then C.off else C.dim)
 			t.under.Visible = i == tab
 		end
-		points:set(Format.fill(WORDS.points, { n = me.sp }))
+		-- 스킬 포인트는 차수마다 따로다(받은 SP는 그때의 차수 스킬에만 쓴다) — 보고 있는 탭의 것을 적는다
+		local pool = if me.sps then me.sps[tier.job] or 0 else me.sp
+		points:set(Format.fill(WORDS.points, { n = pool }))
 		info:set(Format.fill(if locked then WORDS.locked else WORDS.open, { job = tier.job, lv = tier.lv, n = #tier.skills }))
 		info:color(if locked then C.red else C.dim)
-		auto:setEnabled(not locked and me.sp > 0)
+		auto:setEnabled(not locked and pool > 0)
 		for i, c in cells do
 			local sk = tier.skills[i]
 			c.holder.Visible = sk ~= nil
@@ -164,10 +212,10 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 				c.cell:setOn(i == selected)
 				Ui.setPic(c.pic, "skill_" .. sk.id)
 				c.name:set(sk.name)
-				c.name:color(if i == selected then C.accent elseif lv > 0 then C.text else C.dim)
+				c.name:color(if i == selected then C.accent elseif not READY[sk.id] then C.off elseif lv > 0 then C.text else C.dim)
 				c.level:set(("%d / %d"):format(lv, sk.max))
 				c.level:color(if lv >= sk.max then C.accent else C.dim)
-				c.plus:setEnabled(not locked and me.sp > 0 and lv < sk.max)
+				c.plus:setEnabled(not locked and pool > 0 and lv < sk.max and READY[sk.id] == true and (not sk.needs or not READY[sk.needs] or (me.skills[sk.needs] or 0) > 0))
 			end
 		end
 		local sk = tier.skills[selected]
@@ -182,9 +230,30 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 			detailText:set(sk.text)
 			detailText:move(dx, top)
 			local _, th = detailText:size()
-			local note = if sk.replaces and names[sk.replaces] then Format.fill(WORDS.replaces, { name = names[sk.replaces] }) else ""
+			-- 알림 한 줄: 게임에 아직 없는 스킬이면 그것부터(빨강), 먼저 배워야 하는 스킬을 아직 안 배웠으면 그것(빨강), 아니면 앞 차수의 어느 기술 자리에 들어가는지
+			local soon = not READY[sk.id]
+			local needs = not soon and sk.needs and READY[sk.needs] and (me.skills[sk.needs] or 0) < 1 and names[sk.needs]
+			local note = if soon then WORDS.soon elseif needs then Format.fill(WORDS.needs, { name = needs }) elseif sk.replaces and names[sk.replaces] then Format.fill(WORDS.replaces, { name = names[sk.replaces] }) else ""
+			detailNote:color(if soon or needs then C.red else C.dim)
 			detailNote:set(note)
-			detailNote:move(dx, top + math.max(1, math.floor(th / S.textLine + 0.5)) * S.textLine + 6)
+			local below = top + math.max(1, math.floor(th / S.textLine + 0.5)) * S.textLine
+			detailNote:move(dx, below + 6)
+			-- 그 레벨의 효과: 지금(배웠을 때) · 다음(마스터가 아닐 때)
+			local list = EFFECTS[sk.id]
+			local y = below + S.effGap + (if note ~= "" then S.textLine + 6 else 0)
+			for i, e in effects do
+				local at = lv + i - 1
+				local text = if list then list[at] else nil
+				e.label:set(if text then Format.fill(if i == 1 then WORDS.now else WORDS.next, { lv = at }) else "")
+				e.label:color(if i == 1 then C.accent else C.dim)
+				e.text:set(text or "")
+				if text then
+					e.label:move(dx, y)
+					e.text:move(dx, y + S.textLine)
+					local _, eh = e.text:size()
+					y += S.textLine + math.max(1, math.floor(eh / S.textLine + 0.5)) * S.textLine
+				end
+			end
 			-- 퀵슬롯: 놓인 칸의 키 · 놓는 법(놓으려고 고른 중이면 민트)
 			local q = ctx.quick.info(sk.id, sk.type)
 			local armed = ctx.quick.picked() == sk.id
@@ -197,6 +266,7 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 
 	function view.refresh(me)
 		last = me
+		drawReset(me)
 		if not tiers then
 			-- 처음: 내 직업의 차수들로 탭을 만든다. 지금 배울 수 있는 가장 높은 차수의 탭부터 보여 준다
 			tiers = CLASSES.classes[me.class].tiers

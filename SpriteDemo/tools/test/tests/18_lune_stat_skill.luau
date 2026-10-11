@@ -5,6 +5,7 @@ local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
 local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
 local CLASSES = req("ReplicatedStorage/shared/lune/data/classes.generated")
 local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
+COMBAT.rules.critChance = 0 -- 치명타는 따로 본다(22_lune_passives.luau의 치명타 검사) — 이 파일은 치명타 없이 피해를 그대로 잰다
 local CHARS = req("ReplicatedStorage/shared/lune/data/chars.generated")
 local ASSETS = req("ReplicatedStorage/shared/lune/data/assets.generated")
 local F = req("ReplicatedStorage/shared/lune/ui/format")
@@ -264,7 +265,8 @@ do
 	for _, class in CLASSES.order do
 		local h = Hero.new(1, class)
 		eq(#h.slots, Quick.N, "칸의 수 " .. class)
-		eq(h.slots[1], "potion", "첫 칸은 물약 " .. class)
+		eq(h.slots[1], Quick.START_POTION, "첫 칸은 물약(작은 달빛 물약) " .. class)
+		expect(Quick.item(h.slots[1]) ~= nil and Quick.item(h.slots[1]).tab == "use" and Quick.item(h.slots[2]) == nil, "칸에 놓인 것이 소비 아이템인지 스킬인지 안다")
 		for k = 2, 4 do
 			local def = COMBAT.skills[h.slots[k]]
 			expect(def ~= nil and def.who == class and def.type == QD.start[k], ("%d째 칸은 %s %s"):format(k, QD.start[k], class))
@@ -283,12 +285,21 @@ do
 		-- 물약도 칸에서 뺄 수 있다(가방의 소비 탭에서 다시 끌어다 놓는다 — 사용자 2026-10-07). 두 칸에 놓을 수는 없다
 		local noPotion = Quick.clear(h.slots, 1)
 		expect(noPotion ~= nil and Hero.setSlots(h, noPotion) and h.slots[1] == false, "물약을 뺀 칸들도 받는다")
-		local again = Quick.place(h.slots, "potion", 9)
-		expect(again ~= nil and Hero.setSlots(h, again) and h.slots[9] == "potion", "가방에서 끌어다 다른 칸에 다시 놓는다")
+		local again = Quick.place(h.slots, "potion1", 9)
+		expect(again ~= nil and Hero.setSlots(h, again) and h.slots[9] == "potion1", "가방에서 끌어다 다른 칸에 다시 놓는다")
+		-- 소비 아이템은 저마다 따로 놓는다(사용자 2026-10-08): 다른 물약은 다른 칸에 — 가진 것이 없어도 놓아 둘 수 있다
+		local two = Quick.place(h.slots, "potion3", 10)
+		expect(two ~= nil and Hero.setSlots(h, two) and h.slots[9] == "potion1" and h.slots[10] == "potion3", "다른 물약은 다른 칸에 놓인다")
 		expect(Hero.setSlots(h, keep), "처음 배치로 되돌린다")
 		local bad = table.clone(keep)
+		bad[12] = keep[1]
+		expect(not Hero.setSlots(h, bad), "같은 물약을 두 칸에 놓은 것은 받지 않는다")
+		bad = table.clone(keep)
+		bad[12] = "etc_plate"
+		expect(not Hero.setSlots(h, bad), "기타 아이템은 칸에 놓지 못한다")
+		bad = table.clone(keep)
 		bad[12] = "potion"
-		expect(not Hero.setSlots(h, bad), "물약을 두 칸에 놓은 것은 받지 않는다")
+		expect(not Hero.setSlots(h, bad), "예전의 이름표(potion)는 받지 않는다")
 		bad = table.clone(keep)
 		bad[3] = "no_such_skill"
 		expect(not Hero.setSlots(h, bad), "없는 스킬은 받지 않는다")
@@ -296,9 +307,9 @@ do
 		bad[5] = keep[4]
 		expect(not Hero.setSlots(h, bad), "같은 스킬을 두 칸에 놓은 것은 받지 않는다")
 		bad = table.clone(keep)
-		bad[Quick.N + 1] = "potion"
+		bad[Quick.N + 1] = "potion1"
 		expect(not Hero.setSlots(h, bad), "칸이 더 많은 것은 받지 않는다")
-		expect(not Hero.setSlots(h, "potion") and not Hero.setSlots(h, nil), "꼴이 다른 것은 받지 않는다")
+		expect(not Hero.setSlots(h, "potion1") and not Hero.setSlots(h, nil), "꼴이 다른 것은 받지 않는다")
 		for other, def in COMBAT.skills do
 			if def.who ~= class then
 				bad = table.clone(keep)
@@ -313,7 +324,7 @@ do
 		local tmoved = Quick.place(h.tslots, h.tslots[2], 9)
 		expect(Hero.setSlots(h, tmoved, true) and h.tslots[9] == tmoved[9] and h.tslots[2] == false, "스마트폰 배치를 바꾼 것을 받는다 " .. class)
 		expect(same(h.slots, keep), "스마트폰 배치를 바꿔도 PC의 퀵슬롯은 그대로다 " .. class)
-		expect(not Hero.setSlots(h, { "potion", "no_such_skill" }, true) and same(h.tslots, tmoved), "스마트폰 배치도 없는 스킬은 받지 않는다 " .. class)
+		expect(not Hero.setSlots(h, { "potion1", "no_such_skill" }, true) and same(h.tslots, tmoved), "스마트폰 배치도 없는 스킬은 받지 않는다 " .. class)
 		local tback = Hero.unpack(1, Hero.pack(h))
 		expect(tback ~= nil and same(tback.tslots, h.tslots) and same(tback.slots, h.slots), "두 배치가 따로 저장되고 되살아난다 " .. class)
 		eq(Hero.view(h).tslots, h.tslots, "스마트폰 배치가 내 상태에 실려 간다 " .. class)
@@ -322,10 +333,24 @@ do
 	local old = Hero.pack(Hero.new(1, "axion"))
 	old.slots = nil
 	local revived = Hero.unpack(1, old)
-	expect(revived ~= nil and revived.slots[1] == "potion" and COMBAT.skills[revived.slots[2]] ~= nil, "칸이 없던 저장도 처음 차림으로 되살아난다")
-	old.slots = { "potion", "no_such_skill" }
+	expect(revived ~= nil and revived.slots[1] == "potion1" and COMBAT.skills[revived.slots[2]] ~= nil, "칸이 없던 저장도 처음 차림으로 되살아난다")
+	old.slots = { "potion1", "no_such_skill" }
 	revived = Hero.unpack(1, old)
-	expect(revived ~= nil and revived.slots[1] == "potion" and COMBAT.skills[revived.slots[2]] ~= nil, "깨진 칸들도 처음 차림으로 되살아난다")
+	expect(revived ~= nil and revived.slots[1] == "potion1" and COMBAT.skills[revived.slots[2]] ~= nil, "깨진 칸들도 처음 차림으로 되살아난다")
+	-- 예전 저장의 물약 칸("potion" — 물약이 한 가지였을 때): 놓아 둔 자리 그대로, 그때 마시던 물약(내 레벨의 것)의 칸이 된다. PC · 스마트폰 배치 모두
+	do
+		local was = Hero.new(1, "axion")
+		local saved = Hero.pack(was)
+		local sk = was.slots[2]
+		saved.slots = { false, sk, false, false, false, false, false, "potion" }
+		saved.tslots = { "potion", sk }
+		local now = Hero.unpack(1, saved)
+		expect(now ~= nil and now.slots[8] == "potion1" and now.slots[2] == sk and now.slots[1] == false, "예전 물약 칸이 그 자리에 남는다(PC)")
+		expect(now.tslots[1] == "potion1" and now.tslots[2] == sk, "예전 물약 칸이 그 자리에 남는다(스마트폰)")
+		saved.level = 45
+		now = Hero.unpack(1, saved)
+		expect(now ~= nil and now.slots[8] == "potion2", "Lv.45였다면 그때 마시던 것은 달빛 물약이다")
+	end
 end
 
 -- ---- 7) 스킬을 올리거나 능력치를 찍으면 실제 한 타의 피해가 오른다 ----
@@ -378,7 +403,8 @@ do
 					first = a
 				end
 			end
-			expect(prev / first > 2.2 and prev / first < 2.8, ("%s Lv.%d: 마스터의 피해가 Lv.1의 2.5배쯤(%.2f배)"):format(class, lv, prev / first))
+			local want = 1 / CLASSES.skillRule.floor -- 1레벨의 세기가 floor(70%)이니 마스터는 그 역수(1.43배)
+			expect(prev / first > want * 0.9 and prev / first < want * 1.1, ("%s Lv.%d: 마스터의 피해가 Lv.1의 %.2f배쯤(%.2f배)"):format(class, lv, want, prev / first))
 			-- 능력치: 주 능력치를 1점씩 찍을 때마다 평균 피해가 오른다(반올림에 묻히지 않는다). 부 능력치도 오르고, 안 쓰는 능력치는 그대로다
 			h.skills[mobSkill] = max
 			local base = average(h, mobSkill, 1500)
@@ -479,7 +505,11 @@ do
 		for _, step in def.steps do
 			local hint = Q9.stepHint(def, step)
 			local mob = COMBAT.mobs[step.mob]
-			expect(mob ~= nil, "할 일의 졸개가 있다 " .. def.id)
+			expect(mob ~= nil or step.type == "use", "할 일의 졸개가 있다 " .. def.id) -- ↑를 누르는 일에는 졸개가 없다
+			if step.type == "use" then
+				expect(hint:find(step.place, 1, true) ~= nil and hint:find("↑", 1, true) ~= nil, "어느 자리에서 ↑를 누르는지 적는다: " .. hint)
+				expect(small(Q9.trackText(step, step.n)) <= UI.hud.quest.w, "알리미의 줄이 칸 안: " .. Q9.trackText(step, step.n))
+			end
 			if def.scene then
 				expect(hint:find(SCENES9.scenes[def.scene].name, 1, true) ~= nil, "어디인지 적는다: " .. hint)
 			end
@@ -561,3 +591,304 @@ do
 	end
 end
 
+-- ---- 차수: 레벨로 열린다 · 스킬 포인트는 차수마다 따로 · 먼저 배워야 하는 스킬 ----
+do
+	local Hero2 = req("ReplicatedStorage/shared/lune/sim/hero")
+	local N2 = req("ReplicatedStorage/shared/lune/config/numbers")
+	local CL = req("ReplicatedStorage/shared/lune/data/classes.generated")
+	eq(Hero2.jobAt(1), 1, "Lv.1은 1차")
+	eq(Hero2.jobAt(29), 1, "Lv.29까지 1차")
+	eq(Hero2.jobAt(30), 2, "Lv.30에 2차")
+	eq(Hero2.jobAt(60), 3, "Lv.60에 3차")
+	eq(Hero2.jobAt(100), 4, "Lv.100에 4차")
+	eq(Hero2.skillJob("axion", "ax_echo2"), 2, "겹 메아리는 2차")
+	eq(Hero2.skillJob("axion", "c_hero"), 4, "공용 스킬은 4차")
+	-- 차수마다의 포인트: 다 더하면 그 레벨까지 받은 것과 같다
+	for _, lv in { 1, 2, 29, 30, 31, 60, 100, 140, 150 } do
+		local sum = 0
+		for job = 1, 4 do
+			sum += Hero2.spEarnedIn(lv, job)
+		end
+		eq(sum, Hero2.spEarned(lv), "차수마다 받은 포인트의 합 = 받은 포인트 Lv." .. lv)
+	end
+	-- 1차 캐릭터는 2차 스킬을 못 올린다
+	local h = Hero2.new(71, "axion")
+	h.level = 29
+	h.sp = Hero2.spEarned(29)
+	eq(Hero2.skillUp(h, "ax_crescent"), false, "열리지 않은 차수의 스킬은 못 올린다")
+	eq(h.skills.ax_crescent, nil, "2차의 사냥기도 아직 없다")
+	-- Lv.30이 되어도 전직하기 전에는 2차가 열리지 않는다(2026-10-10 — 전직 퀘스트를 돌려줘야 오른다). 대신 전직 퀘스트를 저절로 받는다
+	Hero2.gainXp(h, N2.xpNeed(29) - h.xp)
+	eq(h.level, 30, "Lv.30")
+	eq(h.job, 1, "Lv.30이 됐어도 아직 1차다")
+	eq(h.skills.ax_crescent, nil, "전직하기 전에는 2차의 사냥기가 없다")
+	eq(Hero2.skillUp(h, "ax_crescent"), false, "전직하기 전에는 2차의 스킬을 못 올린다")
+	eq(h.quests.job2, nil, "Lv.30이 되어도 전직 퀘스트를 저절로 받지 않는다(사제에게 가서 받는다)")
+	eq(Hero2.advance(h, 3), false, "차수를 건너뛰어 전직하지 못한다")
+	-- 전직하면: 2차의 사냥기 · 보스기가 레벨 1로 생기고(게임에 들어와 있는 것만 — 아직 없는 것은 주지 않는다), Lv.30부터 받은 포인트는 2차의 것이다
+	local slotWas = table.find(h.slots, "ax_slam")
+	expect(Hero2.advance(h, 2), "Lv.30에 2차로 전직한다")
+	eq(h.job, 2, "2차")
+	eq(Hero2.advance(h, 2), false, "같은 차수로 두 번 전직하지 못한다")
+	expect(slotWas ~= nil and h.slots[slotWas] == "ax_crescent", "1차의 사냥기가 놓여 있던 칸에 2차의 사냥기가 들어온다")
+	eq(table.find(h.slots, "ax_slam"), nil, "1차의 사냥기는 칸에서 빠진다(스킬 창에서 다시 놓을 수 있다)")
+	for _, sk in CL.classes.axion.tiers[2].skills do
+		if table.find(CL.skillRule.start, sk.type) then
+			eq(h.skills[sk.id], if Hero2.ready(sk.id) then 1 else nil, "2차의 사냥기 · 보스기: 게임에 있는 것만 레벨 1로 생긴다 " .. sk.id)
+		end
+	end
+	eq(Hero2.spLeft(h, 2), N2.spAt(30), "Lv.30에 받은 포인트는 2차의 것")
+	eq(Hero2.spLeft(h, 1), Hero2.spEarnedIn(29, 1, h.class), "1차에서 남긴 포인트는 그대로 1차의 것")
+	-- 먼저 배워야 하는 스킬: 겹 메아리 ← 메아리 도끼
+	eq(Hero2.skillUp(h, "ax_echo2"), false, "메아리 도끼를 배우기 전에는 겹 메아리를 못 올린다")
+	expect(Hero2.skillUp(h, "ax_echo"), "메아리 도끼(1차의 포인트로)")
+	eq(Hero2.spLeft(h, 1), Hero2.spEarnedIn(29, 1, h.class) - 1, "1차의 포인트가 줄었다")
+	expect(Hero2.skillUp(h, "ax_echo2"), "이제 겹 메아리를 올린다(2차의 포인트로)")
+	eq(Hero2.spLeft(h, 2), N2.spAt(30) - 1, "2차의 포인트가 줄었다")
+	-- 2차의 포인트가 떨어지면 1차의 포인트가 남아 있어도 2차 스킬은 못 올린다
+	for _ = 1, 10 do
+		Hero2.skillUp(h, "ax_echo2")
+	end
+	eq(Hero2.spLeft(h, 2), 0, "2차의 포인트를 다 썼다")
+	expect(Hero2.spLeft(h, 1) > 0, "1차의 포인트는 남아 있다")
+	eq(Hero2.skillUp(h, "ax_breath"), false, "2차의 포인트가 없으면 2차 스킬은 못 올린다")
+	-- 화면에 보내는 것 · 저장하고 되살리기
+	local view = Hero2.view(h)
+	eq(view.job, 2, "지금의 차수")
+	eq(view.sps[1], Hero2.spLeft(h, 1), "차수마다 남은 포인트(1차)")
+	eq(view.sps[2], 0, "차수마다 남은 포인트(2차)")
+	local back = Hero2.unpack(71, Hero2.pack(h))
+	eq(back.skills.ax_echo2, h.skills.ax_echo2, "다시 들어와도 2차 스킬이 그대로")
+	eq(Hero2.spLeft(back, 1), Hero2.spLeft(h, 1), "남은 포인트도 그대로")
+	-- 말이 안 되는 저장(1차 레벨인데 2차 스킬 · 그 차수에 받은 것보다 많이 쓴 것)은 처음 차림으로
+	local bad = Hero2.pack(h)
+	bad.level = 20
+	local fixed = Hero2.unpack(71, bad)
+	eq(fixed.skills.ax_echo2, nil, "레벨이 안 되는데 2차 스킬이 있으면 처음 차림으로")
+	-- 「추천대로 찍기」: 차수마다 제 포인트를 쓴다. Lv.140이면 4차까지 거의 다 찍힌다
+	local top = Hero2.new(72, "riven")
+	while top.level < 140 do
+		Hero2.gainXp(top, N2.xpNeed(top.level) - top.xp)
+	end
+	Hero2.advanceAll(top) -- 전직을 다 한 것으로(전직 퀘스트는 13_lune_world가 본다)
+	eq(top.job, 4, "Lv.140이면 4차까지")
+	Hero2.autoSkill(top)
+	for job = 1, 4 do
+		local pool, cost = Hero2.spEarnedIn(140, job, "riven"), 0
+		for _, sk in CL.classes.riven.tiers[job].skills do
+			if Hero2.ready(sk.id) then -- 게임에 아직 없는 스킬에는 찍히지 않는다
+				cost += sk.max - (if table.find(CL.skillRule.start, sk.type) then 1 else 0)
+			else
+				eq(top.skills[sk.id], nil, "게임에 아직 없는 스킬은 추천대로 찍기로도 찍히지 않는다 " .. sk.id)
+			end
+		end
+		eq(Hero2.spLeft(top, job), math.max(0, pool - cost), ("%d차: 남은 포인트(받은 %d · 게임에 있는 것을 다 찍는 데 %d)"):format(job, pool, cost))
+	end
+end
+
+-- ---- 게임에 아직 없는 스킬에는 포인트가 찍히지 않는다(사용자 2026-10-08: 찍히는데 효과가 없던 일) ----
+do
+	local Hero2 = req("ReplicatedStorage/shared/lune/sim/hero")
+	local N2 = req("ReplicatedStorage/shared/lune/config/numbers")
+	local CL = req("ReplicatedStorage/shared/lune/data/classes.generated")
+	local CB = req("ReplicatedStorage/shared/lune/data/combat.generated")
+	-- 게임에 있는 것: 기술 · 1차의 사출기 · 장치 · 패시브 · 수치가 있는 버프 · 사출기 강화 · 설치 · 소환
+	for id in CB.skills do
+		expect(Hero2.ready(id), "기술은 게임에 있다 " .. id)
+	end
+	for id in CB.kitSkill do
+		expect(Hero2.ready(id), "1차의 사출기 · 장치 · 패시브는 게임에 있다 " .. id)
+	end
+	for id in CB.placed do
+		expect(Hero2.ready(id), "설치 · 소환은 게임에 있다 " .. id)
+	end
+	for id, b in CB.buffs do
+		eq(Hero2.ready(id), next(b.fx) ~= nil or CB.placed[id] ~= nil, "버프는 수치가 있을 때만 게임에 있다 " .. id)
+	end
+	for _, ups in CB.kitUp do
+		for _, def in ups do
+			expect(Hero2.ready(def.id), "사출기 강화는 게임에 있다 " .. def.id)
+		end
+	end
+	eq(Hero2.ready("nope"), false, "없는 스킬")
+	-- 1차는 모두 게임에 있다(새 캐릭터가 찍지 못하는 스킬이 없다)
+	for class, c in CL.classes do
+		for _, sk in c.tiers[1].skills do
+			expect(Hero2.ready(sk.id), ("1차 스킬은 모두 게임에 있다 %s %s"):format(class, sk.id))
+		end
+	end
+	-- 아직 없는 스킬: 차수가 열리고 포인트가 있어도 찍히지 않는다 · 포인트도 줄지 않는다
+	for class, c in CL.classes do
+		local h = Hero2.new(81, class)
+		while h.level < 120 do
+			Hero2.gainXp(h, N2.xpNeed(h.level) - h.xp)
+		end
+		Hero2.advanceAll(h)
+		local seen = 0
+		for _, t in c.tiers do
+			for _, sk in t.skills do
+				if not Hero2.ready(sk.id) then
+					seen += 1
+					local before = Hero2.spLeft(h, t.job)
+					eq(Hero2.skillUp(h, sk.id), false, ("아직 없는 스킬은 찍히지 않는다 %s %s"):format(class, sk.id))
+					eq(h.skills[sk.id], nil, "레벨도 생기지 않는다 " .. sk.id)
+					eq(Hero2.spLeft(h, t.job), before, "포인트가 줄지 않는다 " .. sk.id)
+				end
+			end
+		end
+		expect(seen > 0, "아직 옮기지 않은 스킬이 있다(다 옮기면 이 검사를 고친다) " .. class)
+		-- 게임에 있는 스킬은 모두 찍을 수 있다(먼저 배워야 하는 스킬이 아직 없는 것이면 그 조건은 보지 않는다)
+		Hero2.autoSkill(h)
+		for _, t in c.tiers do
+			for _, sk in t.skills do
+				if Hero2.ready(sk.id) and Hero2.spLeft(h, t.job) > 0 then
+					eq(h.skills[sk.id], sk.max, ("포인트가 남았으면 게임에 있는 스킬은 마스터까지 찍힌다 %s %s"):format(class, sk.id))
+				end
+			end
+		end
+	end
+	-- 만월(4차)은 깊은 호흡(먼저 배워야 하는 스킬 — 아직 게임에 없다)을 배우지 않아도 찍힌다
+	do
+		local h = Hero2.new(82, "axion")
+		while h.level < 100 do
+			Hero2.gainXp(h, N2.xpNeed(h.level) - h.xp)
+		end
+		Hero2.advanceAll(h)
+		local def = Hero2.skillDef("axion", "ax_fullmoon")
+		if def.needs and not Hero2.ready(def.needs) then
+			expect(Hero2.skillUp(h, "ax_fullmoon"), "먼저 배워야 하는 스킬이 게임에 아직 없으면 그 조건은 보지 않는다")
+		end
+		-- 게임에 있는 것이 먼저 배워야 하는 스킬이면 그대로 본다: 겹 메아리 ← 메아리 도끼
+		eq(Hero2.skillUp(h, "ax_echo2"), false, "메아리 도끼를 배우기 전에는 겹 메아리를 못 올린다")
+	end
+	-- 아직 없는 스킬에 찍혀 있던 저장(막기 전의 것): 그 포인트를 돌려받는다 · 다른 스킬은 그대로
+	do
+		local h = Hero2.new(83, "axion")
+		while h.level < 110 do
+			Hero2.gainXp(h, N2.xpNeed(h.level) - h.xp)
+		end
+		Hero2.advanceAll(h)
+		expect(Hero2.skillUp(h, "ax_breath"), "전투 호흡을 찍는다")
+		local left = Hero2.spLeft(h, 4)
+		local data = Hero2.pack(h)
+		local gone = nil
+		for _, sk in CL.classes.axion.tiers[4].skills do
+			if not Hero2.ready(sk.id) then
+				gone = sk.id
+				break
+			end
+		end
+		expect(gone ~= nil, "4차에 아직 없는 스킬이 있다(용사의 의지 — 다 옮기면 이 검사를 고친다)")
+		if gone then
+			data.skills[gone] = 3
+			local back = Hero2.unpack(83, data)
+			eq(back.skills[gone], nil, "아직 없는 스킬은 되살리지 않는다 " .. gone)
+			eq(back.skills.ax_breath, 1, "다른 스킬은 그대로")
+			eq(Hero2.spLeft(back, 4), left, "그 포인트는 돌려받는다")
+		end
+	end
+end
+
+-- ---- 스킬 포인트는 그 차수에 드는 만큼만 받는다(2026-10-11 — 사용자: "스킬 전부 마스터했는데 왜 1차에 남는 스킬포인트가 12 가있는건지?") ----
+do
+	local Hero2 = req("ReplicatedStorage/shared/lune/sim/hero")
+	local N2 = req("ReplicatedStorage/shared/lune/config/numbers")
+	local CL = req("ReplicatedStorage/shared/lune/data/classes.generated")
+	for class, c in CL.classes do
+		for _, t in c.tiers do
+			local j = CL.jobs[t.job]
+			local need = 0
+			for _, sk in t.skills do
+				need += sk.max - (if Hero2.ready(sk.id) and table.find(CL.skillRule.start, sk.type) then 1 else 0)
+			end
+			eq(Hero2.spNeed(class, t.job), need, ("%s %d차: 다 마스터하는 데 드는 포인트"):format(class, t.job))
+			local raw = Hero2.spEarnedIn(j["until"], t.job)
+			expect(raw >= need, ("%s %d차: 레벨업마다 받는 양(%d)이 드는 양(%d)보다 모자라지 않는다"):format(class, t.job, raw, need))
+			eq(Hero2.spEarnedIn(j["until"], t.job, class), need, ("%s %d차: 그 차수 동안 받는 포인트 = 드는 포인트(남지 않는다)"):format(class, t.job))
+			-- 레벨마다: 드는 만큼을 다 받을 때까지는 레벨업마다의 양 그대로, 그 뒤로는 0. 한 번도 줄어들지 않는다
+			local sum = 0
+			for L = math.max(2, j.lv), j["until"] do
+				local gain = Hero2.spGain(class, L)
+				expect(gain >= 0 and gain <= N2.spAt(L), ("%s Lv.%d: 받는 포인트 %d"):format(class, L, gain))
+				expect(gain == N2.spAt(L) or sum + gain == need, ("%s Lv.%d: 덜 받는 것은 다 받은 때뿐"):format(class, L))
+				sum += gain
+			end
+			eq(sum, need, ("%s %d차: 레벨마다 받은 것의 합"):format(class, t.job))
+		end
+	end
+	-- 1차: 72점 — 레벨업마다 3점씩 Lv.25에 다 받고, Lv.26~29에는 받지 않는다. Lv.30부터는 2차의 것
+	eq(Hero2.spGain("axion", 25), 3, "Lv.25까지 3점씩")
+	eq(Hero2.spGain("axion", 26), 0, "Lv.26에는 받지 않는다(1차의 것을 다 받았다)")
+	eq(Hero2.spGain("axion", 29), 0, "Lv.29에도")
+	eq(Hero2.spGain("axion", 30), 3, "Lv.30부터는 2차의 포인트")
+	-- 처음부터 키운 캐릭터: 레벨이 오를 때마다 추천대로 찍으면 Lv.25에 1차를 모두 마스터하고 남는 포인트가 없다
+	for class in CL.classes do
+		local h = Hero2.new(900, class)
+		h.auto = false
+		while h.level < 29 do
+			Hero2.gainXp(h, N2.xpNeed(h.level) - h.xp)
+			Hero2.autoSkill(h)
+			if h.level == 24 then
+				expect(Hero2.spLeft(h, 1) == 0 and Hero2.spEarnedIn(24, 1, class) < Hero2.spNeed(class, 1), class .. ": Lv.24에는 아직 다 찍지 못했다")
+			end
+		end
+		eq(Hero2.spLeft(h, 1), 0, class .. ": 1차를 다 찍으면 남는 포인트가 없다")
+		eq(h.sp, 0, class .. ": 가진 포인트도 0")
+		for _, sk in CL.classes[class].tiers[1].skills do
+			if Hero2.ready(sk.id) then
+				eq(h.skills[sk.id], sk.max, ("%s: 1차 스킬 %s 마스터"):format(class, sk.id))
+			end
+		end
+		-- 저장했다가 다시 들어와도 같다
+		local back = Hero2.unpack(900, Hero2.pack(h))
+		eq(Hero2.spLeft(back, 1), 0, class .. ": 다시 들어와도 남는 포인트가 없다")
+		eq(back.sp, 0, class .. ": 다시 들어와도 0")
+	end
+end
+
+-- ---- 전직하면 스킬 포인트 초기화 한 번이 공짜(2026-10-11 — 설계 basics.js의 SPRULE) ----
+do
+	local Hero2 = req("ReplicatedStorage/shared/lune/sim/hero")
+	local N2 = req("ReplicatedStorage/shared/lune/config/numbers")
+	local CL = req("ReplicatedStorage/shared/lune/data/classes.generated")
+	local h = Hero2.new(950, "axion")
+	h.auto = false
+	eq(h.resets, 0, "new character: no free reset")
+	eq(Hero2.freeReset(h), false, "nothing to use at job 1")
+	while h.level < 30 do
+		Hero2.gainXp(h, N2.xpNeed(h.level) - h.xp)
+		Hero2.autoSkill(h)
+	end
+	eq(Hero2.spLeft(h, 1), 0, "tier 1 mastered before the job change")
+	expect(Hero2.advance(h, 2), "advance to job 2")
+	eq(h.resets, 1, "job change grants one free reset")
+	eq(Hero2.view(h).resets, 1, "the client sees it")
+	Hero2.autoSkill(h)
+	local slamMax = h.skills.ax_slam
+	expect(slamMax ~= nil and slamMax > 1, "skills were raised")
+	expect(Hero2.freeReset(h), "use the free reset")
+	eq(h.resets, 0, "used up")
+	eq(Hero2.spLeft(h, 1), Hero2.spNeed("axion", 1), "tier 1 points all back")
+	eq(Hero2.spLeft(h, 2), Hero2.spEarnedIn(h.level, 2, "axion"), "tier 2 points all back")
+	eq(h.sp, Hero2.spEarned(h.level, "axion"), "total points all back")
+	for _, t in CL.classes.axion.tiers do
+		if t.job <= 2 then
+			for _, sk in t.skills do
+				local start = Hero2.ready(sk.id) and table.find(CL.skillRule.start, sk.type) ~= nil
+				eq(h.skills[sk.id], if start then 1 else nil, "after reset only the granted level 1 remains " .. sk.id)
+			end
+		end
+	end
+	eq(Hero2.freeReset(h), false, "cannot reset twice")
+	-- save / load
+	h.resets = 1
+	eq(Hero2.unpack(950, Hero2.pack(h)).resets, 1, "saved")
+	local old = Hero2.pack(h)
+	old.resets = nil
+	eq(Hero2.unpack(950, old).resets, 1, "a character that changed job before this existed gets one")
+	old.resets = 7
+	eq(Hero2.unpack(950, old).resets, 0, "bad value is dropped")
+	local fresh = Hero2.pack(Hero2.new(951, "riven"))
+	fresh.resets = nil
+	eq(Hero2.unpack(951, fresh).resets, 0, "a job-1 character gets none")
+end

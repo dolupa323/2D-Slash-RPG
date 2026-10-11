@@ -6,6 +6,9 @@ local CLASSES = require(script.Parent.Parent.data["classes.generated"])
 local Items = require(script.Parent.items)
 local Bag = require(script.Parent.bag)
 local Quests = require(script.Parent.quests)
+local Kit = require(script.Parent.kit) -- 1차의 온오프 사출기 · 핵심 장치 · 패시브
+local Buffs = require(script.Parent.buffs) -- 2~4차의 버프
+local Passives = require(script.Parent.passives) -- 2~4차의 패시브
 local Quick = require(script.Parent.Parent.ui.quick)
 local RULES = COMBAT.rules
 local STATS = N.data.STATS
@@ -16,40 +19,137 @@ local Hero = {}
 Hero.STAT_IDS = STAT_IDS
 
 -- 직업의 스킬 정의(이름 · 갈래 · 마스터 레벨). 지금은 1차만 있다.
-local function skillDef(class: string, id: string)
-	local c = CLASSES.classes[class]
-	if not c then
-		return nil
-	end
-	for _, s in c.skills do
-		if s.id == id then
-			return s
+-- 직업의 모든 차수의 스킬(1~4차 + 공용): [직업][스킬] = { def, job }
+local ALL = {}
+for class, c in CLASSES.classes do
+	local map = {}
+	for _, t in c.tiers do
+		for _, s in t.skills do
+			map[s.id] = { def = s, job = t.job }
 		end
 	end
-	return nil
+	ALL[class] = map
+end
+
+local function skillDef(class: string, id: string)
+	local e = ALL[class] and ALL[class][id]
+	return if e then e.def else nil
 end
 Hero.skillDef = skillDef
 
--- 처음부터 주는 기술(사냥기 · 보스기 · 이동기)을 레벨 1로
-local function grants(class: string)
+-- 그 스킬의 차수(없는 스킬이면 nil)
+function Hero.skillJob(class: string, id: string): number?
+	local e = ALL[class] and ALL[class][id]
+	return if e then e.job else nil
+end
+
+-- 그 스킬이 게임에 들어와 있는가(효과가 있는가 — COMBAT.ready: 기술 · 1차의 사출기 · 장치 · 패시브 · 수치가 있는 버프 · 사출기 강화 · 설치 · 소환).
+--  아직 없는 스킬에는 포인트가 찍히지 않고, 처음부터 주는 기술로도 주지 않는다 — 찍히는데 효과가 없는 일이 없게(사용자 2026-10-08: 1차의 사출기 · 장치가 그랬다)
+local READY = COMBAT.ready
+function Hero.ready(id: any): boolean
+	return READY[id] == true
+end
+
+-- 그 레벨에 닿을 수 있는 차수(레벨만 본 것). 실제 차수는 캐릭터가 갖고 있다(h.job) — 전직 퀘스트를 돌려줘야 오른다(2026-10-10).
+--  전직 퀘스트가 아직 없는 차수(지금은 3 · 4차 — 그 지역을 다듬을 때 만든다)는 레벨만 되면 저절로 오른다
+function Hero.jobAt(level: number): number
+	local job = 1
+	for _, j in CLASSES.jobs do
+		if j.lv <= level then
+			job = math.max(job, j.job)
+		end
+	end
+	return job
+end
+
+-- 처음부터 주는 기술(사냥기 · 보스기 · 이동기)을 레벨 1로 — 그 차수까지의 것 모두(게임에 들어와 있는 것만)
+local function grants(class: string, job: number?)
 	local out = {}
-	for _, s in CLASSES.classes[class].skills do
-		if table.find(CLASSES.skillRule.start, s.type) then
-			out[s.id] = 1
+	job = job or 1
+	for _, t in CLASSES.classes[class].tiers do
+		if t.job <= job then
+			for _, s in t.skills do
+				if READY[s.id] and table.find(CLASSES.skillRule.start, s.type) then
+					out[s.id] = 1
+				end
+			end
 		end
 	end
 	return out
 end
 
--- 그 레벨까지 받은 스킬 포인트
-local function spEarned(level: number): number
+-- 그 직업이 그 차수의 스킬을 모두 마스터하는 데 드는 스킬 포인트(처음부터 주는 레벨 1은 뺀다. 아직 게임에 없는 스킬의 것도 센다 — 그 스킬이 열리면 거기에 쓴다)
+--  그 차수 동안 받는 포인트는 이것을 넘지 않는다: 스킬을 다 찍으면 남는 포인트가 없다.
+--  사용자 2026-10-11: "스킬 전부 마스터했는데 왜 1차에 남는 스킬포인트가 12 가있는건지?" — 레벨업마다 3점씩 1차 동안 84점을 받는데 다 찍는 데는 72점이 들었다(2차 +2 · 3차 +22~27 · 4차 +4~14점씩 남았다)
+local needOf: { [string]: number } = {}
+local function spNeed(class: string, job: number): number
+	local key = class .. ":" .. job
+	local n = needOf[key]
+	if n == nil then
+		n = 0
+		for _, t in CLASSES.classes[class].tiers do
+			if t.job == job then
+				for _, s in t.skills do
+					n += s.max - (if READY[s.id] and table.find(CLASSES.skillRule.start, s.type) then 1 else 0)
+				end
+			end
+		end
+		needOf[key] = n
+	end
+	return n
+end
+Hero.spNeed = spNeed
+
+-- 그 차수 동안 받은 스킬 포인트. 받은 SP는 그때의 차수 스킬에만 쓴다(설계 basics.js의 SPRULE) — 2차로 전직하면 그 뒤로 받는 SP는 2차 스킬에 쓰고, 1차에서 남긴 SP는 1차 스킬에 계속 쓴다.
+--  class를 주면 그 직업이 그 차수에 드는 만큼까지만 센다(다 받았으면 그 차수의 남은 레벨에서는 더 받지 않는다). 안 주면 레벨업마다 받는 양을 그대로 더한다
+local function spEarnedIn(level: number, job: number, class: string?): number
+	local j = CLASSES.jobs[job]
 	local n = 0
-	for L = 2, level do
-		n += N.spAt(L)
+	if j then
+		for L = math.max(2, j.lv), math.min(level, j["until"]) do
+			n += N.spAt(L)
+		end
+	end
+	return if class then math.min(n, spNeed(class, job)) else n
+end
+Hero.spEarnedIn = spEarnedIn
+
+-- 그 레벨까지 받은 스킬 포인트(class를 주면 차수마다 그 직업이 드는 만큼까지)
+local function spEarned(level: number, class: string?): number
+	local n = 0
+	if class then
+		for _, j in CLASSES.jobs do
+			n += spEarnedIn(level, j.job, class)
+		end
+	else
+		for L = 2, level do
+			n += N.spAt(L)
+		end
 	end
 	return n
 end
 Hero.spEarned = spEarned
+
+-- 그 레벨이 될 때 그 직업이 받는 스킬 포인트: 보통은 N.spAt(L) — 그 차수에 드는 만큼을 다 받았으면 0(마지막에는 모자란 만큼만)
+function Hero.spGain(class: string, level: number): number
+	return spEarned(level, class) - spEarned(level - 1, class)
+end
+
+-- 그 차수의 스킬에 쓴 포인트 · 남은 포인트
+local function spSpentIn(class: string, mine: number, skills, job: number): number
+	local base = grants(class, mine) -- mine = 그 캐릭터의 차수
+	local n = 0
+	for id, lv in skills do
+		local e = ALL[class][id]
+		if e and e.job == job then
+			n += lv - (base[id] or 0)
+		end
+	end
+	return n
+end
+function Hero.spLeft(h, job: number): number
+	return spEarnedIn(h.level, job, h.class) - spSpentIn(h.class, h.job, h.skills, job)
+end
 
 -- 능력치 효율: 다 주 능력치에 찍었을 때 1
 function Hero.eff(h): number
@@ -63,8 +163,9 @@ function Hero.power(h): number
 	return Items.power(h.level, Hero.eff(h), Bag.worn(h))
 end
 -- 반올림하기 전의 전투력(피해의 셈에 쓴다 — 능력치 1점도 피해에 그대로 들어가게)
+--  관리자의 시험용 피해 배율(h.dmgBoost — 저장하지 않는다)은 여기에만 곱한다: 보이는 전투력과 순위(Hero.power)는 그대로다
 function Hero.powerRaw(h): number
-	return Items.powerRaw(h.level, Hero.eff(h), Bag.worn(h))
+	return Items.powerRaw(h.level, Hero.eff(h), Bag.worn(h)) * (h.dmgBoost or 1)
 end
 
 -- 끼고 있는 방어구가 줄여 주는 피해 %(그 레벨의 몬스터에게 맞을 때)
@@ -73,8 +174,14 @@ function Hero.cut(h, mobLv: number): number
 end
 
 -- 체력 상한을 다시 셈한다(레벨 · 체력에 찍은 점수)
+-- 최대 체력: 직업 · 레벨 · 찍은 체력에 패시브(액시온의 묵직한 몸)를 곱한다
+local function maxHpOf(h): number
+	return math.floor(N.hpOf(h.class, h.level, h.stats.hp) * Kit.maxHp(h) + 0.5)
+end
+Hero.maxHpOf = maxHpOf
+
 function Hero.recalc(h)
-	h.maxHp = N.hpOf(h.class, h.level, h.stats.hp)
+	h.maxHp = maxHpOf(h)
 	h.hp = math.min(h.hp, h.maxHp)
 end
 
@@ -85,6 +192,7 @@ function Hero.new(id: any, class: string)
 		id = id,
 		class = class,
 		level = 1,
+		job = 1, -- 차수(1~4). 전직 퀘스트를 돌려주면 오른다(Hero.advance)
 		xp = 0,
 		ap = 0, -- 아직 찍지 않은 능력치 점수
 		stats = { str = 0, dex = 0, int = 0, luk = 0, hp = 0 }, -- 찍은 점수(처음 값 4는 빼고)
@@ -92,12 +200,14 @@ function Hero.new(id: any, class: string)
 		skills = grants(class), -- [스킬 id] = 레벨
 		auto = false, -- true면 레벨업 때 능력치 · 스킬을 저절로 찍는다. 기본은 직접 찍는다(사용자 결정) — 창의 「자동으로 찍기」 · 「추천대로 찍기」는 한 번씩 누르는 단추다
 		keys = {}, -- 바꾼 키 { [하는 일] = 키 이름 } — 기본과 다른 것만(클라이언트가 보낸 것을 꼴만 보고 담아 둔다)
-		slots = Quick.start(CLASSES.classes[class].skills), -- 퀵슬롯: 칸마다 "potion" · 스킬의 이름표 · false(빈 칸) — shared/lune/ui/quick.luau
+		slots = Quick.start(CLASSES.classes[class].skills), -- 퀵슬롯: 칸마다 스킬 · 소비 아이템의 이름표 · false(빈 칸) — shared/lune/ui/quick.luau
 		-- 스마트폰의 단추 배치: 같은 열두 칸이지만 PC의 것과 따로 둔다 — PC에서는 손에 익은 키(E · D …)에, 폰에서는 큰 단추에 놓고 싶은 것이 서로 다르다(2026-10-08).
 		--  한쪽에서 바꿔도 다른 쪽은 그대로다. 처음 차림은 같다(물약 · 사냥기 · 보스기 · 이동기)
 		tslots = Quick.start(CLASSES.classes[class].skills),
 		money = 0,
-		potions = RULES.startPotions,
+		forged = false, -- 강화를 해 본 적이 있는가(첫 강화는 달가루 없이 반드시 붙는다 — sim/bag.luau의 Bag.enhance)
+		resets = 0, -- 공짜로 스킬을 되돌릴 수 있는 횟수(전직할 때마다 한 번 — 쌓이지 않는다. Hero.freeReset)
+		home = nil :: string?, -- 마지막으로 들른 마을 · 작은 마을(쓰러졌을 때 돌아가는 곳 — 없으면 시작 마을. 어느 장면이 마을인가는 scenes.generated의 homes · 서버가 본다)
 		hp = 0,
 		maxHp = 0,
 		alive = true,
@@ -109,10 +219,14 @@ function Hero.new(id: any, class: string)
 		potionWait = 0,
 		revive = 0, -- 쓰러진 뒤 일어나기까지 남은 시간(초)
 	}
+	Kit.init(h) -- 사출기 · 장치의 그때그때의 상태(h.kit)
+	Buffs.init(h) -- 걸린 버프 · 다시 쓰기(h.buffs · h.cds — 저장하지 않는다)
+	Passives.init(h) -- 패시브의 그때그때의 상태(h.pass — 저장하지 않는다)
 	Bag.init(h) -- 처음 받는 차림(무기와 방어구 네 부위)을 입고 있다
+	Bag.give(h, Items.potionFor(1).id, RULES.startPotions) -- 처음 받는 물약(가방의 소비 탭 첫 칸)
 	h.quests = {} -- 퀘스트의 상태(sim/quests.luau의 book)
-	Quests.start(h.quests, h.level) -- 첫 메인 퀘스트는 저절로 받는다
-	h.maxHp = N.hpOf(class, 1)
+	Quests.start(h.quests, h.level) -- (저절로 받는 퀘스트는 이제 없다 — 첫 퀘스트도 사제에게 말을 걸어 받는다)
+	h.maxHp = maxHpOf(h)
 	h.hp = h.maxHp
 	return h
 end
@@ -161,38 +275,205 @@ function Hero.scale(h, id: string): number
 end
 
 -- 스킬 포인트 1점으로 스킬을 한 레벨 올린다. 올렸으면 true.
+--  게임에 들어와 있는 스킬만 · 열린 차수의 스킬만 · 그 차수의 포인트로 · 먼저 배워야 하는 스킬(needs — 사출기 강화 → 사출기)을 1이라도 찍었을 때
+--  (먼저 배워야 하는 스킬이 게임에 아직 없으면 그 조건은 보지 않는다 — 만월은 깊은 호흡이 들어오기 전에도 배운다)
 function Hero.skillUp(h, id: string): boolean
-	local def = skillDef(h.class, id)
-	if not def or h.sp < 1 or Hero.skillLevel(h, id) >= def.max then
+	local e = ALL[h.class][id]
+	if not e or not READY[id] then
+		return false
+	end
+	local def = e.def
+	if e.job > h.job or Hero.spLeft(h, e.job) < 1 or Hero.skillLevel(h, id) >= def.max then
+		return false
+	end
+	if def.needs and READY[def.needs] and Hero.skillLevel(h, def.needs) < 1 then
 		return false
 	end
 	h.skills[id] = Hero.skillLevel(h, id) + 1
 	h.sp -= 1
+	if Kit.skill(id) then
+		Hero.recalc(h) -- 패시브가 최대 체력을 바꾼다(묵직한 몸)
+	end
 	return true
 end
 
 -- 남은 스킬 포인트를 추천 순서로 모두 쓴다(「추천대로 찍기」): 사냥기 → 보스기 → 핵심 장치 → 버프 → 나머지
+--  차수마다 그 차수의 포인트를 쓴다. 먼저 배워야 하는 스킬 때문에 건너뛴 것은 한 바퀴 더 돌아 찍는다
 local PRIORITY = { mob = 1, boss = 2, core = 3, buff = 4 }
 function Hero.autoSkill(h): number
-	local list = table.clone(CLASSES.classes[h.class].skills)
-	local index = {}
-	for i, s in list do
-		index[s.id] = i
-	end
-	table.sort(list, function(a, b)
-		local pa, pb = PRIORITY[a.type] or 9, PRIORITY[b.type] or 9
-		if pa ~= pb then
-			return pa < pb
-		end
-		return index[a.id] < index[b.id]
-	end)
 	local spent = 0
-	for _, s in list do
-		while h.sp > 0 and Hero.skillUp(h, s.id) do
-			spent += 1
+	for _, t in CLASSES.classes[h.class].tiers do
+		if t.job > h.job then
+			continue
+		end
+		local list = table.clone(t.skills)
+		local index = {}
+		for i, s in list do
+			index[s.id] = i
+		end
+		table.sort(list, function(a, b)
+			local pa, pb = PRIORITY[a.type] or 9, PRIORITY[b.type] or 9
+			if pa ~= pb then
+				return pa < pb
+			end
+			return index[a.id] < index[b.id]
+		end)
+		for _ = 1, 2 do
+			for _, s in list do
+				while Hero.skillUp(h, s.id) do
+					spent += 1
+				end
+			end
 		end
 	end
 	return spent
+end
+
+-- 새 차수가 열렸으면 그 차수의 처음부터 주는 기술(사냥기 · 보스기)을 레벨 1로 준다
+function Hero.grantJob(h)
+	for id in grants(h.class, h.job) do
+		if (h.skills[id] or 0) < 1 then
+			h.skills[id] = 1
+		end
+	end
+end
+
+-- 전직 퀘스트가 없는 차수는 레벨만 되면 오른다(앞 차수를 건너뛰지는 않는다). 올랐으면 true
+local function autoJobs(h): boolean
+	local rose = false
+	while true do
+		local nextJob = CLASSES.jobs[h.job + 1]
+		if not nextJob or h.level < nextJob.lv or Quests.jobQuest(nextJob.job) then
+			break
+		end
+		h.job = nextJob.job
+		rose = true
+	end
+	return rose
+end
+
+-- 새 차수의 사냥기 · 보스기를 앞 차수의 것이 놓여 있던 칸에 넣는다(설계 basics.js의 JOBFLOW: "사냥기와 보스기가 윗차수의 것으로 바뀌어 스킬 칸에 들어온다")
+local function slotJob(h, job: number)
+	for _, t in CLASSES.classes[h.class].tiers do
+		if t.job == job then
+			for _, s in t.skills do
+				if s.replaces and (h.skills[s.id] or 0) > 0 then
+					for _, slots in { h.slots, h.tslots } do
+						local i = Quick.find(slots, s.replaces)
+						if i and not Quick.find(slots, s.id) then
+							slots[i] = s.id
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
+-- 그 레벨이 닿을 수 있는 차수까지 전직한 것으로 친다 — 전직 퀘스트도 끝낸 것으로 적는다(확인용 캐릭터 LuneGuest = "직업:레벨" · 자동 검사가 쓴다. 진짜 캐릭터는 퀘스트로만 오른다)
+function Hero.advanceAll(h)
+	while h.job < Hero.jobAt(h.level) and Hero.advance(h, h.job + 1) do
+	end
+	Quests.jobsDone(h.quests, h.job)
+end
+
+-- 전직한다: 바로 다음 차수로, 그 차수의 레벨이 됐을 때만. 했으면 true
+function Hero.advance(h, job: any): boolean
+	local j = if typeof(job) == "number" then CLASSES.jobs[job] else nil
+	if not j or job ~= h.job + 1 or h.level < j.lv then
+		return false
+	end
+	local from = h.job
+	h.job = job
+	h.resets = 1 -- 전직하면 스킬 포인트 초기화 한 번이 공짜(설계 basics.js의 SPRULE: "전직할 때마다 한 번은 공짜로 되돌릴 수 있다" — 안 쓰고 다음 전직을 해도 한 번이다)
+	autoJobs(h)
+	Hero.grantJob(h)
+	for at = from + 1, h.job do
+		slotJob(h, at)
+	end
+	if h.auto then
+		Hero.autoSkill(h)
+	end
+	return true
+end
+
+-- ---------- 관리자(어드민)의 시험용 — 서버의 관리자 명령(server/lune/modules/world.luau의 onAdmin)만 부른다 ----------
+-- 레벨을 그 값으로 맞춘다(올리기도 내리기도): 능력치 · 스킬을 처음으로 되돌리고 그 레벨까지의 점수를 새로 준다(찍지 않은 채로). 가방 · 장비 · 달돈 · 퀘스트 · 키는 그대로.
+--  차수: job을 주면 그 차수로(그 레벨이 닿을 수 있는 데까지), 안 주면 지금의 차수를 지킨다(레벨이 모자라면 낮아진다)
+function Hero.setLevel(h, level: number, job: number?)
+	level = math.clamp(math.floor(level), 1, N.MAX_LEVEL)
+	local want = math.clamp(math.floor(job or h.job), 1, Hero.jobAt(level))
+	h.level, h.xp = level, 0
+	h.stats = { str = 0, dex = 0, int = 0, luk = 0, hp = 0 }
+	h.ap = N.apAt(level)
+	h.job = 1
+	h.skills = grants(h.class)
+	h.sp = spEarned(level, h.class)
+	while h.job < want and Hero.advance(h, h.job + 1) do
+	end
+	Quests.jobsDone(h.quests, h.job)
+	-- 지금의 차수보다 위의 전직 퀘스트는 받기 전으로 되돌린다(차수를 내렸을 때 — 그 레벨이 되면 다시 「달이 부른다」로 받는다)
+	for j = h.job + 1, #CLASSES.jobs do
+		local def = Quests.jobQuest(j)
+		if def then
+			h.quests[def.id] = nil
+		end
+	end
+	Quests.start(h.quests, h.level)
+	-- 칸에 놓인 것 가운데 이제 배우지 않은 스킬은 뺀다
+	for _, slots in { h.slots, h.tslots } do
+		for i, id in slots do
+			if typeof(id) == "string" and not Quick.item(id) and (h.skills[id] or 0) < 1 then
+				slots[i] = false
+			end
+		end
+	end
+	h.maxHp = maxHpOf(h)
+	h.hp = h.maxHp
+end
+
+-- 열린 차수의 스킬(게임에 들어와 있는 것)을 모두 마스터한다 · 스킬을 처음(차수가 주는 레벨 1)으로 되돌린다 · 찍은 능력치를 모두 되돌려 받는다
+function Hero.maxSkills(h)
+	for _, tier in CLASSES.classes[h.class].tiers do
+		if tier.job <= h.job then
+			for _, sk in tier.skills do
+				if Hero.ready(sk.id) then
+					h.skills[sk.id] = sk.max
+				end
+			end
+		end
+	end
+	h.maxHp = maxHpOf(h)
+end
+-- 전직하며 받은 공짜 초기화를 쓴다: 찍은 스킬을 모두 되돌려(처음부터 주는 레벨 1만 남는다) 포인트를 다시 쓴다. 됐으면 true
+function Hero.freeReset(h): boolean
+	if (h.resets or 0) < 1 then
+		return false
+	end
+	h.resets -= 1
+	Hero.resetSkills(h)
+	return true
+end
+
+function Hero.resetSkills(h)
+	h.skills = grants(h.class, h.job)
+	h.sp = spEarned(h.level, h.class) -- 찍은 것이 없다: 받은 포인트가 그대로 남는다
+	for _, slots in { h.slots, h.tslots } do
+		for i, id in slots do
+			if typeof(id) == "string" and not Quick.item(id) and (h.skills[id] or 0) < 1 then
+				slots[i] = false
+			end
+		end
+	end
+	h.maxHp = maxHpOf(h)
+	h.hp = math.min(h.hp, h.maxHp)
+end
+function Hero.resetStats(h)
+	for stat, n in h.stats do
+		h.ap += n
+		h.stats[stat] = 0
+	end
+	Hero.recalc(h)
 end
 
 -- ---------- 경험치 ----------
@@ -202,23 +483,30 @@ function Hero.gainXp(h, amount: number): number
 	if h.level >= N.MAX_LEVEL then
 		return 0
 	end
-	h.xp += amount
+	h.xp += amount * (h.xpBoost or 1) -- 관리자의 시험용 경험치 배율(저장하지 않는다 — 서버의 관리자 명령만 정한다)
 	while h.level < N.MAX_LEVEL and h.xp >= N.xpNeed(h.level) do
 		h.xp -= N.xpNeed(h.level)
 		h.level += 1
 		h.ap += STATS.perLevel
-		h.sp += N.spAt(h.level)
+		h.sp += Hero.spGain(h.class, h.level) -- 그 차수의 스킬을 다 찍을 만큼 받았으면 더 받지 않는다
 		ups += 1
 	end
 	if h.level >= N.MAX_LEVEL then
 		h.xp = 0
 	end
 	if ups > 0 then
+		local from = h.job
+		autoJobs(h)
+		Hero.grantJob(h)
+		for at = from + 1, h.job do
+			slotJob(h, at)
+		end
+		Quests.start(h.quests, h.level) -- (저절로 받는 퀘스트는 이제 없다 — 전직 퀘스트는 레벨이 되면 사제에게 가서 받는다. 화면이 "달이 부른다"로 알린다)
 		if h.auto then
 			Hero.autoStat(h)
 			Hero.autoSkill(h)
 		end
-		h.maxHp = N.hpOf(h.class, h.level, h.stats.hp)
+		h.maxHp = maxHpOf(h)
 		h.hp = h.maxHp -- 레벨이 오르면 체력이 다 찬다
 	end
 	return ups
@@ -236,7 +524,7 @@ end
 -- ---------- 맞기 · 물약 · 쓰러짐 ----------
 -- 맞는다. 실제로 들어간 피해를 돌려준다(무적 중이거나 쓰러져 있으면 0).
 function Hero.hurt(h, amount: number): number
-	if not h.alive or h.invuln > 0 then
+	if not h.alive or h.invuln > 0 or h.god then -- god = 관리자의 시험용 무적(저장하지 않는다)
 		return 0
 	end
 	local dmg = math.max(1, math.floor(amount + 0.5))
@@ -244,7 +532,8 @@ function Hero.hurt(h, amount: number): number
 	h.invuln = RULES.invuln
 	if h.hp <= 0 then
 		h.alive = false
-		h.revive = RULES.reviveWait
+		h.revive = RULES.reviveWait -- 이 시간이 지나야 마을로 돌아갈 수 있다(쓰러지는 동작 · 비석이 서는 동안)
+		h.weakWas = h.weak -- 소생으로 그 자리에서 일어나면 이번 벌칙은 없던 일이 된다
 		-- 벌칙은 숫자 뼈대대로 정해 둔 레벨부터(그 전에는 벌칙이 없다)
 		if h.level >= N.data.BODY.death.free then
 			h.weak = N.deathMinutes(h.level) * 60
@@ -253,16 +542,42 @@ function Hero.hurt(h, amount: number): number
 	return dmg
 end
 
--- 물약을 마신다. 회복한 양을 돌려준다(못 마셨으면 nil).
-function Hero.drink(h): number?
-	if not h.alive or h.potions <= 0 or h.potionWait > 0 or h.hp >= h.maxHp then
-		return nil
+-- 가방에 든 물약의 수(모든 단의 합)
+function Hero.potions(h): number
+	local n = 0
+	for _, g in Items.data.GOODS do
+		if g.kind == "potion" then
+			n += Bag.count(h, g.id)
+		end
 	end
-	local potion = N.potionAt(h.level)
-	local heal = math.floor(h.maxHp * potion.heal / 100 + 0.5)
+	return n
+end
+
+-- 지금 마실 수 있는 가장 좋은 물약(가방에 있고 내 레벨에 쓸 수 있는 것 — 없으면 nil)
+function Hero.bestPotion(h)
+	local best = nil
+	for _, g in Items.data.GOODS do
+		if g.kind == "potion" and g.lv <= h.level and Bag.count(h, g.id) > 0 and (not best or g.heal > best.heal) then
+			best = g
+		end
+	end
+	return best
+end
+
+-- 소비 아이템을 쓴다(지금은 물약뿐): id = 그 아이템의 이름표(안 주면 지금 마실 수 있는 가장 좋은 물약). 회복한 양을 돌려준다(못 썼으면 nil과 까닭).
+function Hero.drink(h, id: any): (number?, string?)
+	local def = if id == nil then Hero.bestPotion(h) else Items.goods(id)
+	if not def or def.kind ~= "potion" or Bag.count(h, def.id) <= 0 then
+		return nil, "가진 물약이 없다"
+	elseif h.level < def.lv then
+		return nil, ("Lv.%d부터 쓸 수 있다"):format(def.lv)
+	elseif not h.alive or h.potionWait > 0 or h.hp >= h.maxHp then
+		return nil -- 쓰러졌다 · 아직 다시 쓸 수 없다 · 체력이 가득하다(까닭을 띄우지 않는다 — 키를 누르고 있을 때마다 뜨면 시끄럽다)
+	end
+	local heal = math.floor(h.maxHp * def.heal / 100 + 0.5)
 	local before = h.hp
 	h.hp = math.min(h.maxHp, h.hp + heal)
-	h.potions -= 1
+	Bag.take(h, def.id, 1)
 	h.potionWait = N.data.BODY.cooldown.field
 	return h.hp - before
 end
@@ -272,31 +587,101 @@ function Hero.tick(h, dt: number): boolean
 	h.invuln = math.max(0, h.invuln - dt)
 	h.weak = math.max(0, h.weak - dt)
 	h.potionWait = math.max(0, h.potionWait - dt)
+	-- 쓰러져 있는 동안: 저절로 일어나지 않는다 — 그 자리에 비석이 서고, 마을로 돌아갈지는 그 사람이 정한다(사용자 2026-10-08:
+	--  "죽으면 비석 세우고, 모달띄워서 마을로 갈거냐고 물어보는 딜레이를 넣읍시다"). 그 사이에 파티원이 소생으로 일으켜 줄 수 있다
 	if not h.alive then
-		h.revive -= dt
-		return h.revive <= 0
+		h.revive = math.max(0, h.revive - dt)
 	end
 	return false
 end
 
+-- 쓰러진 사람이 마을로 돌아갈 수 있는가(쓰러지고 조금 지난 뒤부터)
+function Hero.canReturn(h): boolean
+	return not h.alive and h.revive <= 0
+end
+
+-- 맵에 들어섰다: 잠깐(RULES.arrive초) 피해를 받지 않는다 — 들어서자마자 맞지 않게(문 곁에도 몬스터가 있다. 공방 combat.js의 arrive)
+function Hero.arrive(h)
+	h.invuln = math.max(h.invuln, RULES.arrive)
+end
+
+-- 마을에서 일어난다(체력이 가득)
 function Hero.revive(h)
 	h.alive = true
 	h.hp = h.maxHp
 	h.invuln = 2
 	h.revive = 0
+	h.weakWas = nil
+end
+
+-- 소생을 받아 그 자리에서 일어난다: 최대 체력의 share만큼으로. 쓰러지며 받은 벌칙(약해짐)은 없던 일이 된다
+function Hero.raise(h, share: number)
+	h.alive = true
+	h.hp = math.clamp(math.floor(h.maxHp * share + 0.5), 1, h.maxHp)
+	h.invuln = 2
+	h.revive = 0
+	if h.weakWas ~= nil then
+		h.weak = h.weakWas
+	end
+	h.weakWas = nil
 end
 
 -- ---------- 퀘스트 ----------
+-- 모으는 일의 숫자를 가방에 맞춘다(가방에 든 수가 곧 숫자다). 바뀌었으면 true
+function Hero.syncQuests(h): boolean
+	return Quests.sync(h.quests, function(item)
+		return Bag.count(h, item)
+	end)
+end
+
 -- 퀘스트를 돌려주고 보상을 받는다. 돌려주는 것: 보상, 오른 레벨 수(안 됐으면 nil과 까닭)
+--  모은 물건은 가방에서 빠진다. 보상의 물약(내 레벨에 쓸 수 있는 가장 좋은 물약)이 들어갈 칸이 없으면 돌려주지 못한다
 function Hero.questDone(h, id: any)
+	local def = Quests.def(id)
+	local potion = Items.potionFor(h.level)
+	if def and def.reward.potions > 0 and Quests.isReady(h.quests, id) and Bag.room(h, potion.id) < def.reward.potions then
+		return nil, "가방의 소비 칸이 모자란다"
+	end
+	-- 보상의 장비(전직할 때 받는 무기)가 들어갈 칸이 없으면 돌려주지 못한다
+	if def and def.reward.gear and Quests.isReady(h.quests, id) and Bag.free(h) <= 0 then
+		return nil, Bag.FULL
+	end
 	local reward, why = Quests.complete(h.quests, id)
 	if not reward then
 		return nil, why
 	end
+	for _, t in Quests.takes(id) do
+		Bag.take(h, t.item, math.min(t.n, Bag.count(h, t.item)))
+	end
 	h.money += reward.money
-	h.potions = math.min(h.potions + reward.potions, Bag.potionMax(h))
+	if reward.potions > 0 then
+		Bag.give(h, potion.id, reward.potions)
+	end
+	if reward.gear then
+		Bag.add(h, Items.make(reward.gear.slot, reward.gear.stage, Items.NORMAL, h.class)) -- 보상의 장비는 내 직업의 것 · 성능은 보통
+	end
+	Hero.syncQuests(h) -- 같은 물건을 모으는 다른 퀘스트의 숫자
+	if reward.job then
+		Hero.advance(h, reward.job) -- 전직 퀘스트: 다음 차수가 열린다
+	end
 	local ups = Hero.gainXp(h, reward.xp)
 	return reward, ups
+end
+
+-- 퀘스트를 그만둔다. 모으던 물건도 사라진다(다른 퀘스트가 같은 것을 모으고 있으면 남는다) — 다시 받으면 처음부터다
+function Hero.questDrop(h, id: any): (boolean?, string?)
+	local ok, why = Quests.drop(h.quests, id)
+	if not ok then
+		return nil, why
+	end
+	for _, t in Quests.takes(id) do
+		local have = Bag.count(h, t.item)
+		if have > 0 and not Quests.wants(h.quests, t.item) then
+			Bag.take(h, t.item, have)
+		end
+	end
+	Hero.syncQuests(h)
+	return true
 end
 
 -- ---------- 키 설정 ----------
@@ -324,6 +709,24 @@ end
 
 -- 퀵슬롯에 놓아도 되는 스킬인가: 이 직업이 키로 쓰는 기술(싸움 수치가 있는 것)이고 배운 것
 function Hero.canSlot(h, id: string): boolean
+	local goods = Items.goods(id)
+	if goods then
+		return goods.tab == "use" -- 소비 아이템은 가진 것이 없어도 놓아 둘 수 있다(다 써도 칸에 남는다 — 숫자가 0)
+	end
+	if Kit.isToggle(h, id) then
+		return true -- 배운 온오프 사출기(칸의 키로 켜고 끈다)
+	end
+	if Buffs.learned(h, id) then
+		return true -- 배운 버프(칸의 키로 건다)
+	end
+	local placed = COMBAT.placed[id]
+	if placed and placed.who == h.class and (h.skills[id] or 0) > 0 then
+		return true -- 배운 설치 · 소환
+	end
+	local cast = COMBAT.cast[id]
+	if cast and cast.who == h.class and (h.skills[id] or 0) > 0 then
+		return true -- 배운 2~4차의 쓰는 스킬
+	end
 	local def = COMBAT.skills[id]
 	return def ~= nil and def.who == h.class and (h.skills[id] or 0) > 0
 end
@@ -360,6 +763,7 @@ function Hero.pack(h)
 		v = SAVE_VERSION,
 		class = h.class,
 		level = h.level,
+		job = h.job,
 		xp = h.xp,
 		ap = h.ap,
 		stats = table.clone(h.stats),
@@ -369,8 +773,11 @@ function Hero.pack(h)
 		keys = table.clone(h.keys),
 		slots = table.clone(h.slots),
 		tslots = table.clone(h.tslots),
+		kitOn = h.kit.on, -- 온오프 사출기를 켜 두었는가(다시 들어와도 그대로다)
 		money = h.money,
-		potions = h.potions,
+		forged = h.forged == true,
+		home = h.home or false,
+		resets = h.resets or 0,
 		weak = math.floor(h.weak),
 		bag = Bag.pack(h),
 		quests = Quests.pack(h.quests),
@@ -389,15 +796,44 @@ function Hero.unpack(id: any, data: any)
 	end
 	local h = Hero.new(id, data.class)
 	h.level = data.level
+	-- 차수: 저장된 것(그 레벨에 닿을 수 있는 데까지). 전직 퀘스트가 생기기 전에 저장된 캐릭터(2026-10-10 이전)는 레벨만 되면 전직했으므로 그 레벨의 차수 그대로다
+	h.job = if whole(data.job, 1, #CLASSES.jobs) then math.min(data.job, Hero.jobAt(h.level)) else Hero.jobAt(h.level)
 	h.xp = if typeof(data.xp) == "number" and data.xp >= 0 and data.xp < N.xpNeed(h.level) then math.floor(data.xp) else 0
 	h.money = if whole(data.money, 0, 9e15) then data.money else 0
-	h.potions = if whole(data.potions, 0, 9999) then data.potions else RULES.startPotions
 	h.weak = if whole(data.weak, 0, 3600) then data.weak else 0
+	-- 공짜 초기화: 이것이 생기기 전에 전직한 캐릭터(2026-10-11 이전 — 저장에 없다)는 한 번 받는다
+	h.resets = if whole(data.resets, 0, 1) then data.resets elseif data.resets == nil and h.job >= 2 then 1 else 0
+	h.home = if typeof(data.home) == "string" then data.home else nil -- 없는 장면 · 마을이 아닌 장면이면 서버가 시작 마을로 돌려보낸다(world.luau의 onReturn). 옛 저장의 towns(걷어낸 빠른 이동)는 읽지 않는다
+	h.forged = data.forged == true -- 이것이 생기기 전에 저장된 캐릭터(2026-10-11 이전)는 한 번 더 받는다(첫 강화가 공짜로 반드시 붙는다)
 	h.auto = data.auto == true
 	h.keys = cleanKeys(data.keys) or {}
-	Bag.unpack(h, data.bag) -- 장비가 생기기 전에 저장된 캐릭터는 처음 차림을 받는다
+	local oldBag = Bag.unpack(h, data.bag) -- 장비가 생기기 전에 저장된 캐릭터는 처음 차림을 받는다
 	h.quests = Quests.unpack(data.quests)
+	Quests.jobsDone(h.quests, h.job) -- 이미 닿은 차수의 전직 퀘스트는 끝낸 것으로(다시 받지 않게)
+	autoJobs(h)
 	Quests.start(h.quests, h.level) -- 퀘스트가 생기기 전에 저장된 캐릭터도 첫 메인을 받는다
+	-- 소비 · 기타 칸이 생기기 전에 저장된 캐릭터(2026-10-08 이전): 숫자로만 갖고 있던 것을 가방의 아이템으로 옮긴다 — 잃는 것이 없게.
+	--  물약 = 그때 마시던 물약(내 레벨의 것)으로 그 수만큼 · 퀘스트의 물건 = 하는 중인 퀘스트가 세어 둔 수만큼
+	local myPotion = Items.potionFor(h.level).id
+	if oldBag then
+		Bag.take(h, Items.potionFor(1).id, Bag.count(h, Items.potionFor(1).id)) -- Hero.new가 넣어 둔 처음 물약 대신 저장된 수를 넣는다
+		local n = if whole(data.potions, 0, 9999) then data.potions else RULES.startPotions
+		if n > 0 then
+			Bag.give(h, myPotion, math.min(n, Bag.room(h, myPotion)))
+		end
+		for id, st in h.quests do
+			local def = Quests.def(id)
+			if def and not st.done then
+				for i, step in def.steps do
+					local have = st.c[i] or 0
+					if step.type == "gather" and step.item and have > 0 then
+						Bag.give(h, step.item, math.min(have, Bag.room(h, step.item)))
+					end
+				end
+			end
+		end
+	end
+	Hero.syncQuests(h) -- 가방에 든 수가 곧 퀘스트의 숫자다
 
 	-- 능력치: 찍은 것 + 남은 것 = 그 레벨까지 받은 것
 	local earned = N.apAt(h.level)
@@ -420,37 +856,51 @@ function Hero.unpack(id: any, data: any)
 	end
 
 	-- 스킬: 처음부터 주는 것은 늘 1 이상, 쓴 포인트는 받은 것을 넘지 않는다
-	local base = grants(h.class)
+	local base = grants(h.class, h.job)
 	local spent, good = 0, typeof(data.skills) == "table"
 	local skills = table.clone(base)
 	if good then
 		for sid, lv in data.skills do
 			local def = skillDef(h.class, sid)
 			if def and whole(lv, 0, def.max) then
-				skills[sid] = math.max(lv, base[sid] or 0)
-				spent += skills[sid] - (base[sid] or 0)
+				-- 게임에 아직 없는 스킬에 찍혀 있던 것(그 스킬을 막기 전의 저장)은 포인트로 돌려준다
+				if READY[sid] then
+					skills[sid] = math.max(lv, base[sid] or 0)
+					spent += skills[sid] - (base[sid] or 0)
+				end
 			else
 				good = false
 			end
 		end
 	end
-	if good and spent <= spEarned(h.level) then
+	-- 차수마다: 열리지 않은 차수의 스킬은 없고, 그 차수에 쓴 포인트는 그 차수 동안 받은 것을 넘지 않는다
+	if good then
+		for _, j in CLASSES.jobs do
+			local used = spSpentIn(h.class, h.job, skills, j.job)
+			if used > spEarnedIn(h.level, j.job, h.class) or (j.job > h.job and used > 0) then
+				good = false
+			end
+		end
+	end
+	if good and spent <= spEarned(h.level, h.class) then
 		h.skills = skills
-		h.sp = spEarned(h.level) - spent
+		h.sp = spEarned(h.level, h.class) - spent
 	else
 		h.skills = base
-		h.sp = spEarned(h.level)
+		h.sp = spEarned(h.level, h.class)
 	end
 	-- 퀵슬롯: 저장된 것이 말이 되면 그대로, 아니면(퀵슬롯이 생기기 전에 저장된 캐릭터 포함) 처음 차림(Hero.new가 놓아 둔 것)
+	--  예전 저장의 물약 칸("potion" — 물약이 한 가지였을 때)은 그때 마시던 물약의 칸으로 바꾼다(놓아 둔 자리가 그대로 남는다)
 	if data.slots ~= nil then
-		Hero.setSlots(h, data.slots)
+		Hero.setSlots(h, Quick.renew(data.slots, myPotion))
 	end
 	-- 스마트폰의 단추 배치: 저장된 것이 말이 되면 그대로, 없으면(이것이 생기기 전에 저장된 캐릭터) 처음 차림
 	if data.tslots ~= nil then
-		Hero.setSlots(h, data.tslots, true)
+		Hero.setSlots(h, Quick.renew(data.tslots, myPotion), true)
 	end
 
-	h.maxHp = N.hpOf(h.class, h.level, h.stats.hp)
+	h.kit.on = data.kitOn == true and Kit.level(h, "toggle") > 0
+	h.maxHp = maxHpOf(h)
 	h.hp = h.maxHp
 	return h
 end
@@ -465,15 +915,22 @@ function Hero.view(h)
 		hp = h.hp,
 		maxHp = h.maxHp,
 		money = h.money,
-		potions = h.potions,
+		potions = Hero.potions(h), -- 가방에 든 물약의 수(모든 단의 합 — 확인용. 화면의 숫자는 가방에서 아이템마다 센다)
 		ap = h.ap,
 		stats = h.stats,
 		sp = h.sp,
+		job = h.job, -- 지금의 차수(스킬 창의 탭이 열린다)
+		resets = h.resets or 0, -- 공짜로 스킬을 되돌릴 수 있는 횟수(스킬 창의 「초기화」 단추)
+		forged = h.forged == true, -- 강화를 해 본 적이 있는가(아니면 강화 창이 「첫 강화」를 알린다)
+		sps = { math.max(0, Hero.spLeft(h, 1)), math.max(0, Hero.spLeft(h, 2)), math.max(0, Hero.spLeft(h, 3)), math.max(0, Hero.spLeft(h, 4)) }, -- 차수마다 남은 스킬 포인트
 		skills = h.skills,
 		power = Hero.power(h),
 		keys = h.keys,
 		slots = h.slots,
 		tslots = h.tslots,
+		kit = Kit.view(h), -- 사출기를 켰는가 · 영혼 · 열기(화면의 버프 자리 · 칸의 켜진 표시)
+		run = (Kit.move(h)), -- 걸음의 배수(날랜 몸 · 뜨거운 피) — 화면이 그 빠르기로 걷는다
+		jump = select(2, Kit.move(h)), -- 뛰는 힘의 배수
 		alive = h.alive,
 		weak = math.ceil(h.weak),
 	}

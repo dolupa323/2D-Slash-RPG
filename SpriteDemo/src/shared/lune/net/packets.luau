@@ -26,18 +26,24 @@ end
 
 local packets = {
 	-- ===== 클라이언트 → 서버 =====
-	-- 들어와서 처음 한 번: 내 상태와 지금 방을 받는다. 돌려주는 값 { self, scene, x, y, room } — 캐릭터가 아직 없으면 { choose = true }
+	-- 들어와서 처음 한 번: 캐릭터 고르기 화면에 놓을 것 { select = { chars = { { id, name, class, level } … }, max, last } }.
+	--  이미 캐릭터로 들어가 있으면(다시 물었을 때) 내 상태와 지금 방 { self, scene, x, y, room … }
 	Ready = { Kind = "Function", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 3 } },
-	-- 직업을 고른다(캐릭터가 없을 때만). 돌려주는 값은 Ready와 같다
-	Choose = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 1, Burst = 2 } },
+	-- 캐릭터 고르기 화면의 일(하는 일, 대상 둘): check(이름) · create(이름, 직업) · name(번호, 이름) · delete(번호, 이름) · enter(번호) · leave()
+	--  돌려주는 값: { ok, why, select … } — enter는 Ready의 뒤쪽과 같은 것(내 상태와 방). server/lune/modules/world.luau의 onChars
+	Chars = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 2, Burst = 5 } },
+	-- 명예의 전당: 순위판 셋의 위 열 줄 { level = { { name, class, value } … }, power = …, robux = … }
+	Rank = { Kind = "Function", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 3 } },
 	-- 능력치에 점수를 찍는다(능력치 이름, 점수) · 남은 점수를 모두 주 능력치에
 	StatAdd = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number }, RateLimit = { PerSecond = 10, Burst = 20 } },
 	StatAuto = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 2, Burst = 3 } },
 	-- 스킬을 한 레벨 올린다(스킬 id) · 남은 포인트를 추천대로
 	SkillUp = { Kind = "Event", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 10, Burst = 20 } },
 	SkillAuto = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 2, Burst = 3 } },
+	-- 전직하며 받은 공짜 초기화를 쓴다(스킬 창의 「초기화」 — 찍은 스킬을 모두 되돌린다)
+	SkillReset = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 2 } },
 	-- 물건을 다룬다: 하는 일(equip · unequip · dismantle · buy · enhance · transfer · restore · grow · storeIn · storeOut)과 그 대상 둘(번호 · 부위 · 수 등)
-	Item = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 8, Burst = 12 } },
+	Item = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any, t.any }, RateLimit = { PerSecond = 8, Burst = 12 } },
 	-- 파티: 하는 일(invite · accept · decline · leave)과 대상(초대할 사람의 번호)
 	Party = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 4, Burst = 6 } },
 	-- 퀘스트: 하는 일(accept · complete · drop)과 퀘스트 id — 받기와 돌려주기는 그 주민 앞에서만
@@ -58,28 +64,39 @@ local packets = {
 	Pickup = { Kind = "Event", Direction = "ClientToServer", Args = { t.number }, RateLimit = { PerSecond = 10, Burst = 15 } },
 	-- 확인용(Studio에서만 듣는다): "xp" 경험치를 준다 · "money" 달돈을 준다 · "hp" 체력을 정한다 · "reset" 캐릭터를 지운다(직업 고르기부터 다시)
 	Debug = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number }, RateLimit = { PerSecond = 5, Burst = 5 } },
+	-- 관리자의 시험용 명령(하는 일, 값 셋). 서버가 보낸 사람의 계정 번호로 관리자인지 올 때마다 다시 가린다 — 관리자가 아니면 아무 일도 하지 않고 nil(server/lune/modules/admin.luau)
+	Admin = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any }, RateLimit = { PerSecond = 6, Burst = 10 } },
 	-- 물약을 마신다
-	Potion = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 3, Burst = 3 } },
+	Potion = { Kind = "Event", Direction = "ClientToServer", Args = { t.any }, RateLimit = { PerSecond = 3, Burst = 3 } }, -- 소비 아이템을 쓴다: 그 아이템의 이름표(안 주면 지금 마실 수 있는 가장 좋은 물약)
 
 	-- ===== 서버 → 클라이언트 =====
 	Self = { Kind = "Event", Direction = "ServerToClient", Doc = "내 상태(sim/hero.luau의 view)" },
 	Snap = { Kind = "Event", Direction = "ServerToClient", Doc = "장면 이름, 졸개 목록 { id, x, dir, 상태, 상태가 된 뒤 흐른 시간, 체력 }" },
-	Hits = { Kind = "Event", Direction = "ServerToClient", Doc = "누가(userId), 맞은 졸개 목록 { mob, dmg, hp, dead }" },
+	Hits = { Kind = "Event", Direction = "ServerToClient", Doc = "누가(userId), 맞은 졸개 목록 { mob, dmg, hp, dead, big, crit, proc(사출기 · 장치의 타), sx, sy(그것이 날아오는 자리), mark(표식의 남은 초) }" },
 	Hurt = { Kind = "Event", Direction = "ServerToClient", Doc = "내가 맞았다 { dmg, hp, from, dead }" },
 	Gain = { Kind = "Event", Direction = "ServerToClient", Doc = "경험치를 얻었다 { xp, ups, level }" },
 	DropAdd = { Kind = "Event", Direction = "ServerToClient", Doc = "떨어진 것 { id, kind(money · gear · dust), amount, x, y, item }" },
 	Heroes = { Kind = "Event", Direction = "ServerToClient", Doc = "장면 이름, 그 방 사람들의 자리 { id, x, y, dir, 살아 있는가 } — 초당 10번" },
 	Who = { Kind = "Event", Direction = "ServerToClient", Doc = "장면 이름, 그 방 사람들의 이름표 { id, name, class, level } — 들고 날 때 · 레벨이 오를 때" },
-	Act = { Kind = "Event", Direction = "ServerToClient", Doc = "다른 사람이 기술을 쓴다: 누구, 기술, 구간, x, y, 보는 쪽" },
+	Buffs = { Kind = "Event", Direction = "ServerToClient", Doc = "방의 누군가에게 걸린 버프가 바뀌었다: 누구, { { id, t, dur, x, y } … }(건 차례) — 그 사람의 몸에 버프의 모습이 보인다" },
+	Act = { Kind = "Event", Direction = "ServerToClient", Doc = "다른 사람이 기술을 쓴다: 누구, 기술, 구간, x, y, 보는 쪽, 모은 단계(힘 모으기 — 없으면 0)" },
 	PartyInfo = { Kind = "Event", Direction = "ServerToClient", Doc = "내 파티 { leader, members = { { id, name, class, level, hp, maxHp, scene } … } } — 파티가 없으면 members가 비어 있다" },
 	PartyAsk = { Kind = "Event", Direction = "ServerToClient", Doc = "파티 초대 { from, name } — 초대가 사라졌으면 from = false" },
 	Quests = { Kind = "Event", Direction = "ServerToClient", Doc = "내 퀘스트의 상태 { [id] = { done, c = { 할 일마다의 수 } } } — 바뀔 때마다. 둘째 값 = 방금 끝낸 퀘스트의 id(없으면 nil)" },
 	Bag = { Kind = "Event", Direction = "ServerToClient", Doc = "가방 · 장비 · 창고 · 달가루(sim/bag.luau의 view) — 바뀔 때마다" },
 	ItemDone = { Kind = "Event", Direction = "ServerToClient", Doc = "물건을 다룬 결과 { action, ok, why, result }" },
 	DropGone = { Kind = "Event", Direction = "ServerToClient", Doc = "물건 번호, 주운 사람(userId — 사라진 것이면 nil), 양" },
-	Shot = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 { id, x, y, dir, speed, range }" },
+	Shot = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 { id, x, y, dir, speed, range, kind(쏜 졸개의 종류 — 제 그림이 있는 것은 그 그림으로 날아간다) }" },
+	MobCast = { Kind = "Event", Direction = "ServerToClient", Doc = "몬스터의 마법이 뜸 { id, kind(쓴 몬스터의 종류), x, y, dir(쓴 몬스터가 보던 쪽 — 앞으로 뻗는 마법은 그쪽으로 그린다) } — 그 종류의 마법 그림(cast)이 그 자리에서 한 번 돈다. 맞는 것은 서버가 예고 뒤에 따로 알린다(Hurt)" },
 	ShotEnd = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 번호" },
 	Burst = { Kind = "Event", Direction = "ServerToClient", Doc = "폭탄병이 터짐 { mob, x, y }" },
+	Crystal = { Kind = "Event", Direction = "ServerToClient", Doc = "무니의 달 수정 { add = { { id, owner, x, y, life } … }, gone = { id … } }" },
+	Dodge = { Kind = "Event", Direction = "ServerToClient", Doc = "내가 피했다(리븐의 날랜 몸)" },
+	Return = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 3 }, Doc = "쓰러진 뒤 마을로 돌아간다(「마을로 돌아갈까요?」 상자의 단추) — 쓰러지고 조금 지난 뒤부터 받는다" },
+	Raise = { Kind = "Event", Direction = "ServerToClient", Doc = "소생을 받아 그 자리에서 일어났다 { hp }" },
+	Warp = { Kind = "Event", Direction = "ServerToClient", Doc = "서버가 내 자리를 바로잡는다: x, y — 너무 멀리 간 자리 보고를 받지 않았을 때(그대로 두면 서버가 아는 자리와 영영 어긋난다)" },
+	Healed = { Kind = "Event", Direction = "ServerToClient", Doc = "체력을 되찾았다: 양(누군가의 회복 스킬 — 무니의 달빛 치유)" },
+	Cool = { Kind = "Event", Direction = "ServerToClient", Doc = "스킬의 다시 쓰기가 바뀌었다: 스킬, 남은 초(0 = 바로 다시 쓴다 — 리븐의 종결이 적을 쓰러뜨렸다)" },
 	Revive = { Kind = "Event", Direction = "ServerToClient", Doc = "쓰러졌다가 마을에서 일어남 { scene, x, y, room }" },
 }
 

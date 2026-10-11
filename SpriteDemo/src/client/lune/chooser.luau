@@ -1,3 +1,4 @@
+-- ※ 2026-10-10부터 쓰지 않는다 — 처음 화면은 title.luau다. 이 파일은 화면을 RunService.RenderStepped 이벤트에서 고쳐서, 캐릭터의 그림과 틀의 크기가 한 장 어긋나 그려지는 잘못이 있다(title.luau의 「돌리기」에 적은 것). 다시 쓰려면 BindToRenderStep으로 바꿀 것.
 -- 직업 고르기 — 처음 온 사람에게 한 번 나온다. 달 아래 다섯 영웅이 나란히 서 있고, 하나를 고르면 그 영웅의 달 · 무기 · 싸우는 법이 뜬다.
 --  ← → 로 고르고 Space(또는 Enter)로 정한다. 눌러서(터치) 고를 수도 있다 — 고른 영웅을 한 번 더 누르면 정해진다.
 --  자료는 shared/lune/data/classes.generated.luau(공방의 전직 설계와 줄거리에서 내보낸 것). 글씨는 제 칸을 넘지 않게 폭을 준다.
@@ -104,7 +105,7 @@ function Chooser.run(): string
 		local slot = slots[picked]
 		local c = slot.class
 		head:color(if c.tone == "pink" then PINK else MINT)
-		head:set(("%s의 계승자 · %s · %s"):format(c.hero, c.face, c.weapon))
+		head:set(c.weapon) -- 무기만 적는다 — 처음에는 아무 이야기도 들려주지 않는다(사용자 2026-10-08: "처음에는 아무 스토리도 모르다가 그냥 캐릭터 키우다가")
 		role:set(c.role)
 		for i, s in slots do
 			s.name:SetColor(if i == picked then WHITE else GRAY)

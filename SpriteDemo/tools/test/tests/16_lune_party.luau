@@ -1,6 +1,7 @@
 -- 「달의 계승자」 — 파티(shared/lune/sim/party.luau): 초대 · 받기 · 거절 · 나가기 · 파티장 넘기기 · 경험치 나누기 · 떨어진 것 같이 줍기 · 이름표에 적는 이름
 local N = req("ReplicatedStorage/shared/lune/config/numbers")
 local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
+COMBAT.rules.critChance = 0 -- 치명타는 따로 본다(22_lune_passives.luau의 치명타 검사) — 이 파일은 치명타 없이 피해를 그대로 잰다
 local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
 local Party = req("ReplicatedStorage/shared/lune/sim/party")
 local Hero = req("ReplicatedStorage/shared/lune/sim/hero")

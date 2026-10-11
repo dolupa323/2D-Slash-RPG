@@ -39,7 +39,7 @@ function ForgeWindow.lines(it, info, bag): { string }
 	return {
 		("별 %d → %d"):format(it.star, it.star + 1),
 		odds,
-		if info.sure then "두 번 떨어졌다 — 이번은 반드시 붙는다" elseif info.drops then "실패하면 한 단계 떨어진다" else "실패해도 별은 그대로다",
+		if info.first then "첫 강화 — 달가루 없이 반드시 붙는다" elseif info.sure then "두 번 떨어졌다 — 이번은 반드시 붙는다" elseif info.drops then "실패하면 한 단계 떨어진다" else "실패해도 별은 그대로다",
 		("달가루 %s (가진 것 %s)"):format(Format.short(info.dust), Format.short(bag.dust)),
 		if info.essence > 0 then ("정수 %d (가진 것 %s)"):format(info.essence, Format.short(bag.essence)) else "",
 	}
@@ -56,7 +56,7 @@ function ForgeWindow.build(body: Frame, ctx, w: number, _h: number)
 			return nil
 		end
 		for _, it in bag.gear do
-			if it.id == id then
+			if it and it.id == id then
 				return it
 			end
 		end
@@ -140,7 +140,8 @@ function ForgeWindow.build(body: Frame, ctx, w: number, _h: number)
 		end
 		name:set(ItemCell.label(it))
 		name:color(ItemCell.color(it))
-		local info = Items.enhanceInfo(it, guard)
+		local me = ctx.me()
+		local info = Items.enhanceInfo(it, guard, me ~= nil and me.forged ~= true and it.star == 0) -- 첫 강화(별이 없는 장비의 첫 별)는 공짜로 반드시 붙는다
 		for i, text in ForgeWindow.lines(it, info, bag) do
 			lines[i]:set(text)
 		end

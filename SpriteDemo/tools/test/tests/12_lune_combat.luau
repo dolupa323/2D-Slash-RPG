@@ -1,6 +1,7 @@
 -- 「달의 계승자」 — 싸움의 셈: 캐릭터(체력 · 경험치 · 레벨업 · 물약 · 쓰러짐)와 방(졸개의 움직임 · 공격 · 기술 판정 · 보상 · 줍기)
 local N = req("ReplicatedStorage/shared/lune/config/numbers")
 local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
+COMBAT.rules.critChance = 0 -- 치명타는 따로 본다(22_lune_passives.luau의 치명타 검사) — 이 파일은 치명타 없이 피해를 그대로 잰다
 local CHARS = req("ReplicatedStorage/shared/lune/data/chars.generated")
 local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
 local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
@@ -39,6 +40,12 @@ for id, sk in COMBAT.skills do
 	end
 	if sk.type == "move" then
 		expect(#sk.hits == 0 and sk.speed > 0 and sk.dist > 0, id .. " 이동기는 피해가 없다")
+	elseif sk.type == "install" then
+		-- 쓰는 동작이 있는 설치(연막탄 · 수정 심기 · 저승문): 동작만 있고 판정은 없다 — 그 장에서 놓이고, 놓인 것이 친다(COMBAT.placed)
+		local placed = COMBAT.placed[id]
+		expect(#sk.hits == 0 and placed ~= nil and placed.cast == "seg", id .. " 설치는 판정이 없고 놓이는 것의 수치가 있다")
+		expect(placed ~= nil and placed.at >= 0 and placed.at <= sk.segs[1].time, id .. " 놓이는 때가 동작 안이다")
+		eq(sk.cd, placed and placed.cd, id .. " 다시 쓰기")
 	else
 		expect(#sk.hits >= 1, id .. " 공격기는 판정이 있다")
 	end
@@ -51,10 +58,16 @@ for _, h in combo.hits do
 end
 expect(math.abs(sum - N.data.POWER.dps * combo.time) < 0.01, ("삼단 베기의 배수 합 %.3f = 초당 피해 × 시간 %.3f"):format(sum, N.data.POWER.dps * combo.time))
 for kind, m in COMBAT.mobs do
+	if m.story then
+		-- 스토리 보스(33_lune_boss.luau): 지금은 대기 그림뿐이다(동작 그림은 사용자가 만든다) — 졸개의 공격(atk)은 쓰지 않는다
+		expect(CHARS.chars[m.sprite].clips.idle ~= nil, "보스의 대기 그림 " .. kind)
+		continue
+	end
 	local clip = CHARS.chars[COMBAT.mobs[kind].sprite].clips.atk
 	expect(clip ~= nil, "졸개 공격 동작 " .. kind)
 	expect(m.atk.windup < m.atk.time and m.atk.time > 0, "졸개가 치는 때 " .. kind)
-	for _, c in { "idle", "run", "hit", "spawn", "death" } do
+	-- 새 몬스터(bare)는 맞음 · 나타남 · 쓰러짐 그림이 없다 — 화면이 번쩍 · 서서히 보임 · 서서히 사라짐으로 그린다(23_lune_monsters.luau)
+	for _, c in if m.bare then { "idle", "run" } else { "idle", "run", "hit", "spawn", "death" } do
 		expect(CHARS.chars[COMBAT.mobs[kind].sprite].clips[c] ~= nil, ("졸개 동작 %s.%s"):format(kind, c))
 	end
 end
@@ -89,10 +102,10 @@ eq(Hero.hurt(h, 10), 0, "무적 중에는 안 맞는다")
 Hero.tick(h, RULES.invuln + 0.01)
 eq(Hero.hurt(h, 10), 10, "무적이 끝나면 다시 맞는다")
 -- 물약
-local pots = h.potions
+local pots = Hero.potions(h)
 local healed = Hero.drink(h)
 expect(healed ~= nil and healed > 0, "물약으로 회복")
-eq(h.potions, pots - 1, "물약이 하나 준다")
+eq(Hero.potions(h), pots - 1, "물약이 하나 준다(가방의 소비 탭에서 빠진다)")
 eq(Hero.drink(h), nil, "바로 또 마시지는 못한다")
 Hero.tick(h, 2)
 h.hp = h.maxHp
@@ -102,9 +115,15 @@ Hero.hurt(h, 999999)
 expect(not h.alive and h.hp == 0, "쓰러진다")
 eq(h.weak, 0, "Lv.10 전에는 벌칙 없음")
 eq(Hero.hurt(h, 10), 0, "쓰러져 있으면 더 맞지 않는다")
-expect(not Hero.tick(h, RULES.reviveWait - 0.1), "아직 일어날 때가 아니다")
-expect(Hero.tick(h, 0.2), "일어날 때가 됐다")
+-- 저절로 일어나지 않는다: 조금 지나면 마을로 돌아갈 수 있게 될 뿐이다(돌아갈지는 그 사람이 정한다 — 사용자 2026-10-08)
+eq(Hero.tick(h, RULES.reviveWait - 0.1), false, "쓰러져 있다")
+eq(Hero.canReturn(h), false, "쓰러진 직후에는 아직 마을로 돌아가지 못한다")
+eq(Hero.tick(h, 0.2), false, "저절로 일어나지 않는다")
+expect(Hero.canReturn(h), "조금 지나면 마을로 돌아갈 수 있다")
+Hero.tick(h, 60)
+expect(not h.alive, "오래 지나도 쓰러져 있다")
 Hero.revive(h)
+eq(Hero.canReturn(h), false, "일어난 사람은 돌아갈 것이 없다")
 expect(h.alive and h.hp == h.maxHp, "일어나면 체력이 다 찬다")
 -- Lv.10부터는 벌칙: 경험치가 20%만
 local vet = Hero.new(2, "riven")
@@ -128,7 +147,7 @@ eq(top.stats.str, N.apAt(N.MAX_LEVEL), "무니의 주 능력치는 힘")
 eq(#CLASSES.order, 5, "직업 다섯")
 for _, class in CLASSES.order do
 	local c = CLASSES.classes[class]
-	expect(c ~= nil and c.name ~= "" and c.weapon ~= "" and c.face ~= "", "직업의 이름 · 무기 · 달의 얼굴 " .. class)
+	expect(c ~= nil and c.name ~= "" and c.weapon ~= "" and c.old ~= "", "직업의 이름 · 무기 · 닮은 옛 용사 " .. class)
 	local fresh = Hero.new(1, class)
 	local started = 0
 	for _, sk in c.skills do
@@ -195,12 +214,15 @@ expect(Hero.skillLevel(all, "rv_fan") >= Hero.skillLevel(all, "rv_double"), "사
 -- 마스터를 넘지 않는다
 local rich = Hero.new(7, "axion")
 rich.auto = false
-rich.sp = 500
+rich.level = 29 -- 1차의 끝: 그 차수 동안 받는 포인트는 1차 스킬을 다 찍는 데 드는 만큼이다(72 — 마스터의 합 75에서 처음부터 주는 셋의 1레벨을 뺀 것). 레벨업마다 3점씩이면 84지만 72에서 멈춘다
+rich.sp = Hero.spEarned(29, "axion")
+eq(rich.sp, 72, "1차 동안 받는 포인트 = 1차 스킬을 다 찍는 데 드는 만큼")
 Hero.autoSkill(rich)
+eq(Hero.spLeft(rich, 1), 0, "1차 스킬을 다 찍으면 남는 포인트가 없다(사용자 2026-10-11: 12점이 남았다)")
 for _, sk in CLASSES.classes.axion.skills do
 	eq(Hero.skillLevel(rich, sk.id), sk.max, "마스터까지만 " .. sk.id)
 end
-expect(rich.sp > 0, "남는 포인트는 그대로")
+eq(rich.sp, 0, "all tier-1 skills mastered: no skill points left over")
 -- 저절로 찍기를 켜 두면: 레벨업하면 주 능력치와 추천 스킬에 들어간다(기본은 꺼져 있다 — 직접 찍는다)
 eq(Hero.new(8, "salamander").auto, false, "기본은 직접 찍기")
 local auto = Hero.new(8, "salamander")
@@ -242,7 +264,8 @@ eq(Hero.skillLevel(cheat, "ax_slam"), 1, "넘치게 찍힌 스킬은 처음으�
 eq(cheat.sp, Hero.spEarned(5), "받은 스킬 포인트를 다 돌려준다")
 -- 빠진 칸이 있어도 기본값으로 채운다
 local thin = Hero.unpack(1, { class = "mooni", level = 2 })
-expect(thin ~= nil and thin.money == 0 and thin.potions == RULES.startPotions and thin.ap == N.apAt(2), "빠진 칸은 기본값")
+expect(thin ~= nil and thin.money == 0 and Hero.potions(thin) == RULES.startPotions and thin.ap == N.apAt(2), "빠진 칸은 기본값")
+eq(Hero.potions(cheat), 4, "예전 저장의 물약 수는 가방의 물약이 된다")
 eq(Hero.skillLevel(thin, "mn_spin"), 1, "처음부터 주는 기술은 늘 있다")
 
 -- ---- 3) 방: 졸개의 움직임 ----
@@ -308,12 +331,20 @@ local function fresh(class, lv)
 	end
 	return hero
 end
-local warrior = pick("warrior")
-expect(warrior ~= nil, "검병이 있다")
+expect(pick("warrior") ~= nil, "검병이 있다")
+-- 검병 한 마리만 있는 방에서 잰다 — 사냥터에는 한 자리에 네 종류가 몰려 있어, 옆의 창병 · 폭탄병이 먼저 치면 "검병의 한 방"이 아닌 피해가 섞인다
+--  (2026-10-09: 문 곁의 창병 하나를 빼자 졸개들의 어슬렁거리는 차례가 바뀌어 이 검사가 창병의 피해를 쟀다)
+local roomW, warrior = soloRoom("warrior", 7)
 local me = fresh("axion", 3)
 me.x, me.y = math.clamp(warrior.x + 30, warrior.a, warrior.b), warrior.y
 local hp0 = me.hp
-local ev = run({ [me.id] = me }, 4)
+local ev = {}
+for _ = 1, math.floor(4 / DT + 0.5) do
+	Hero.tick(me, DT)
+	for _, e in roomW:step({ [me.id] = me }, DT) do
+		table.insert(ev, e)
+	end
+end
 local hurt = 0
 for _, e in ev do
 	if e.type == "hurt" and e.hero == me.id then
@@ -358,13 +389,14 @@ if archer then
 	eq(archer.x, ax, "궁병은 다가오지 않는다")
 end
 
--- 폭탄병: 달려와 터지고 사라진다(경험치를 주지 않는다)
+-- 폭탄병: 달려와 터뜨린다 — 터뜨려도 사라지지 않고, 기다렸다가 또 터뜨린다(사용자 2026-10-11: "폭탄병 지혼자 터져서 없어지는거 없어야합니다. 공격하고 사냥당하는 일반 몬스터여야하는거에요")
 local room4, bomber = soloRoom("bomber", 13)
 expect(bomber ~= nil, "폭탄병이 있다")
 if bomber then
 	local victim = fresh("mooni", 4)
 	victim.x, victim.y = math.clamp(bomber.x + 24, bomber.a, bomber.b), bomber.y
 	local burst, hurtN = false, 0
+	local hp0 = bomber.hp
 	for _ = 1, 100 do
 		Hero.tick(victim, DT)
 		for _, e in room4:step({ [victim.id] = victim }, DT) do
@@ -375,9 +407,24 @@ if bomber then
 			end
 		end
 	end
-	expect(burst and hurtN == 1, "폭탄병이 터져 한 번 맞는다")
-	expect(bomber.state == "gone" or bomber.state == "dead" or bomber.state == "spawn", "터진 폭탄병은 사라진다 " .. bomber.state)
-	eq(victim.xp, 0, "터진 폭탄병은 경험치를 주지 않는다")
+	expect(not burst and hurtN >= 1, ("폭탄병이 터뜨려 맞는다(%d번) — 「사라졌다」는 일은 없다"):format(hurtN))
+	expect(bomber.hp == hp0 and bomber.state ~= "gone" and bomber.state ~= "dead" and bomber.state ~= "spawn", "터뜨린 폭탄병은 사라지지 않는다 " .. bomber.state)
+	expect(bomber.def.atk.cd >= 1, "다시 터뜨리기까지 기다린다")
+	-- 오래 두면 되풀이해 터뜨린다(한 번 치고 끝나지 않는다)
+	for _ = 1, 300 do
+		Hero.tick(victim, DT)
+		victim.hp = victim.maxHp
+		for _, e in room4:step({ [victim.id] = victim }, DT) do
+			if e.type == "hurt" then
+				hurtN += 1
+			end
+		end
+	end
+	expect(hurtN >= 3, ("되풀이해 터뜨린다(%d번)"):format(hurtN))
+	-- 맞으면 다른 몬스터처럼 멈칫하고, 잡히면 경험치를 준다
+	-- (경험치는 잡은 기술의 길로 준다 — 4)의 검사가 본다)
+	room4:damageMob(bomber, 99999, victim.x, victim.id)
+	expect(bomber.state == "dead", "폭탄병도 잡힌다")
 end
 
 -- ---- 4) 기술 판정과 보상 ----
@@ -457,7 +504,9 @@ eq(#wide.hits, RULES.maxTargets, "한 타에 맞는 수")
 local d = drops[#drops]
 local live = nil
 for _, x in room5.drops do
-	live = x
+	if x.kind == "money" then -- 달돈 말고 재료 · 물약도 떨어진다(2026-10-11) — 달돈을 골라 줍는 것을 본다
+		live = x
+	end
 end
 expect(live ~= nil, "방에 떨어진 것이 남아 있다")
 if live then
@@ -509,4 +558,172 @@ local _ = d
 local desc = room:describe()
 eq(#desc.mobs, #room.mobs, "졸개 목록")
 eq(#desc.snap, #room.mobs, "요약 목록")
-expect(desc.mobs[1].maxHp > 0 and desc.mobs[1].name ~= nil and #desc.snap[1] == 6, "졸개 한 줄의 짜임")
+expect(desc.mobs[1].maxHp > 0 and desc.mobs[1].name ~= nil and #desc.snap[1] == 9 and desc.snap[1][9] == 0, "졸개 한 줄의 짜임(일곱째 · 여덟째 = 묶인 · 넘어진 시간 · 아홉째 = 스토리 보스의 패턴 차례)")
+
+-- ---- 가시: 닿으면 약한 피해(최대 체력의 5%) — 사용자 2026-10-08: "맵에 가시 있잖아요 그거 닿으면 데미지 입게 약한데미지 입게하세요" ----
+do
+	local Physics = req("ReplicatedStorage/shared/lune/sim/physics")
+	local Buffs = req("ReplicatedStorage/shared/lune/sim/buffs")
+	local SC = req("ReplicatedStorage/shared/lune/data/scenes.generated")
+	local scene = SC.scenes.hunt
+	-- 사냥터의 가시 구덩이: 가시 칸을 찾는다
+	local tx, ty = nil, nil
+	for y, row in scene.rows do
+		local x = string.find(row, "^", 1, true)
+		if x then
+			tx, ty = x - 1, y - 1
+			break
+		end
+	end
+	expect(tx ~= nil, "사냥터에 가시 칸이 있다")
+	local sx, sy = tx * 16 + 8, (ty + 1) * 16 -- 그 칸에 서 있는 자리(발밑)
+	expect(Physics.onSpike(scene, sx, sy), "가시 칸에 서 있으면 닿는다")
+	eq(Physics.onSpike(scene, sx, sy - 16), false, "가시 위로 뛰어 있는 동안에는 닿지 않는다")
+	eq(Physics.onSpike(scene, scene.spawn.x, scene.spawn.y), false, "가시가 없는 자리")
+	eq(Physics.onSpike(scene, tx * 16 - 7, sy), false, "가시 칸의 옆 칸")
+	eq(RULES.spike, 5, "가시의 피해 = 최대 체력의 5%")
+	local room = Room.new("hunt", scene, Random.new(71))
+	for i, mob in room.mobs do
+		mob.state, mob.t, mob.x = "idle", 0, 5000 + i * 30 -- 졸개는 멀리 치워 둔다
+		mob.a, mob.b = 5000, 6000
+	end
+	local h = Hero.new(1, "axion")
+	h.x, h.y, h.invuln = sx, sy, 0
+	local function hurts(events)
+		local n, dmg = 0, 0
+		for _, e in events do
+			if e.type == "hurt" and e.hero == h.id then
+				n += 1
+				dmg += e.dmg
+			end
+		end
+		return n, dmg
+	end
+	local want = math.max(1, math.floor(h.maxHp * RULES.spike / 100 + 0.5))
+	local n, dmg = hurts(room:step({ [h.id] = h }, 0.05))
+	eq(n, 1, "가시에 닿으면 맞는다")
+	eq(dmg, want, "최대 체력의 5%")
+	eq(h.hp, h.maxHp - want, "체력이 그만큼 준다")
+	expect(h.invuln > 0, "맞은 뒤 잠깐은 다시 맞지 않는다")
+	n = hurts(room:step({ [h.id] = h }, 0.05))
+	eq(n, 0, "바로 또 맞지는 않는다")
+	-- 닿아 있는 동안: 그 간격(invuln)으로 한 번씩
+	local count = 0
+	for _ = 1, 60 do
+		Hero.tick(h, 0.05)
+		count += hurts(room:step({ [h.id] = h }, 0.05))
+	end
+	expect(count >= 4 and count <= 5, "3초 동안 0.6초마다 한 번씩 " .. count)
+	-- 가시에서 나오면 맞지 않는다 · 시작 자리로 돌려보내지지 않는다
+	h.x, h.y, h.invuln = scene.spawn.x, scene.spawn.y, 0
+	n = hurts(room:step({ [h.id] = h }, 0.05))
+	eq(n, 0, "가시 밖에서는 맞지 않는다")
+	-- 피해를 받지 않는 버프(버티기) 동안에는 들지 않는다
+	local g = Hero.new(2, "axion")
+	g.level = 120
+	g.skills.ax_brace = 5
+	Hero.recalc(g)
+	g.hp = g.maxHp
+	g.x, g.y, g.invuln = sx, sy, 0
+	Buffs.cast(g, "ax_brace", 0)
+	local gn = 0
+	for _, e in room:step({ [g.id] = g }, 0.05) do
+		if e.type == "hurt" then
+			gn += 1
+		end
+	end
+	eq(gn, 0, "버티기 동안에는 가시도 아프지 않다")
+	-- 체력이 바닥이면 가시에도 쓰러진다
+	h.x, h.y, h.invuln, h.hp = sx, sy, 0, 1
+	local events = room:step({ [h.id] = h }, 0.05)
+	expect(not h.alive, "체력이 바닥이면 가시에 쓰러진다")
+	local dead = false
+	for _, e in events do
+		dead = dead or (e.type == "hurt" and e.dead == true)
+	end
+	expect(dead, "쓰러졌다고 알린다")
+end
+
+-- ---- 문 곁의 빈 터: 어느 맵이든 문 위에 몬스터가 겹쳐 서지 않는다 ----
+--  2026-10-10에 규칙이 바뀌었다(맵을 화면 두 장으로 줄이면서): 보는 거리를 다 비우지 않고 40점까지만 친다(어느 몬스터든 문에서 56점 = 3.5칸). 들어서자마자 맞지 않게 하는 일은 Hero.arrive가 맡는다(아래).
+--  몬스터가 돌아다니는 구간의 가까운 끝은 모든 문에서 (그 몬스터가 보는 거리 + 한 칸)보다 멀다(공방의 maps.js gateNeed — 2026-10-09 고갯길 초입에서 들어서자마자 화살을 맞아 넣은 규칙)
+do
+	local n = 0
+	for key, sc in SCENES.scenes do
+		for _, m in sc.mobs do
+			local see = COMBAT.mobs[m.kind].see
+			for _, p in sc.portals do
+				if math.abs(p.y - m.y) > 32 then
+					continue -- 층이 다르면 서로 알아채지 못한다(망루의 안)
+				end
+				local gap = if p.x < m.range[1] then m.range[1] - p.x elseif p.x > m.range[2] then p.x - m.range[2] else 0
+				n += 1
+				expect(gap >= math.min(see, 40) + 16 - 0.01, ("%s: %s(%.0f~%.0f)이 문(%s · %d)에서 %.0f점 — 56점(보는 거리 %d)보다 가깝다"):format(key, m.kind, m.range[1], m.range[2], p.to, p.x, gap, see))
+			end
+		end
+	end
+	expect(n > 100, "문과 몬스터의 사이를 잰 것이 있다")
+end
+
+-- ---- 쉬는 곳(쉼터 · 작은 마을 · 마을): 가만히 서 있으면 체력이 찬다 ----
+do
+	local R = RULES.rest
+	local sc = SCENES.scenes.r1af
+	expect(sc.rest == true and #sc.mobs == 0, "세 갈래 길은 쉬는 곳이고 몬스터가 없다")
+	expect(SCENES.scenes.r1bv.rest == true and #SCENES.scenes.r1bv.mobs == 0, "고갯마루 주막도 쉬는 곳이다")
+	expect(SCENES.scenes.town.rest == true and SCENES.scenes.in_store.rest == true, "마을과 건물의 실내도 쉬는 곳이다")
+	expect(SCENES.scenes.hunt.rest == false and SCENES.scenes.r1b1.rest == false and SCENES.scenes.r1b3.rest == false, "사냥터와 길 맵은 쉬는 곳이 아니다")
+	local room = Room.new("r1af", sc, Random.new(3))
+	local h = Hero.new(1, "axion")
+	h.x, h.y = sc.spawn.x, sc.spawn.y
+	h.hp = 1
+	local heroes = { [h.id] = h }
+	local function rest(r, sec)
+		local healed, times = 0, 0
+		for _ = 1, math.floor(sec / DT + 0.5) do
+			for _, e in r:step(heroes, DT) do
+				if e.type == "healed" then
+					healed += e.amount
+					times += 1
+				end
+			end
+		end
+		return healed, times
+	end
+	local one = math.floor(h.maxHp * R.heal / 100 + 0.5)
+	eq(rest(room, R.wait + R.every - 0.3), 0, "가만히 선 지 얼마 안 됐으면 차지 않는다")
+	local got, times = rest(room, 0.6)
+	eq(times, 1, "기다린 뒤에 한 번 찬다")
+	eq(got, one, "한 번에 최대 체력의 10%")
+	eq(h.hp, 1 + one, "체력이 그만큼 올랐다")
+	got, times = rest(room, R.every * 3)
+	eq(times, 3, "그 뒤로 1초에 한 번씩")
+	eq(h.hp, 1 + one * 4, "네 번 찼다")
+	-- 움직이면 처음부터 다시 센다
+	h.x += 12
+	eq(rest(room, R.wait + R.every - 0.3), 0, "움직이면 처음부터 다시 센다")
+	-- 맞으면(체력이 줄면) 처음부터 다시 센다
+	rest(room, 0.6)
+	h.hp -= 1
+	eq(rest(room, R.wait + R.every - 0.3), 0, "체력이 줄면 처음부터 다시 센다")
+	-- 가득 차면 멈춘다
+	rest(room, 30)
+	eq(h.hp, h.maxHp, "가득 찬다")
+	eq(rest(room, 5), 0, "가득 차면 더 차지 않는다")
+	-- 쓰러진 사람은 차지 않는다
+	h.hp, h.alive = 0, false
+	eq(rest(room, 6), 0, "쓰러진 사람은 차지 않는다")
+	h.alive = true
+	-- 사냥터에서는 차지 않는다
+	local field = Room.new("r1b1", SCENES.scenes.r1b1, Random.new(4))
+	h.x, h.y, h.hp, h.rest = SCENES.scenes.r1b1.portals[1].x, SCENES.scenes.r1b1.portals[1].y, 1, nil
+	-- 들어선 뒤 RULES.arrive초는 피해를 받지 않는다(문 곁에도 몬스터가 있다)
+	h.invuln = 0
+	Hero.arrive(h)
+	eq(h.invuln, COMBAT.rules.arrive, "들어서면 잠깐 피해를 받지 않는다")
+	rest(field, COMBAT.rules.arrive - 0.2)
+	eq(h.hp, 1, "들어선 직후에는 문 앞에 서 있어도 맞지 않는다")
+	h.invuln = 99 -- 아래는 쉬는 곳의 규칙만 본다(맞아서 체력이 바뀌지 않게)
+	eq(rest(field, 8), 0, "사냥터에서는 가만히 있어도 차지 않는다")
+	h.invuln = 0
+end

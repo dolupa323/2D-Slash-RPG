@@ -1,9 +1,12 @@
 -- 횡스크롤 움직임 — 달리기 · 뛰기 · 떨어지기 · 발판. 화면과 상관없는 셈만 한다(클라이언트가 제 캐릭터를 움직이고, 서버가 같은 식으로 따져 본다).
 --  공방 「횡스크롤 시험」 탭(dino-workshop/js/lune/luneTab.js)의 step()을 그대로 옮겼다.
---  장면의 칸(rows): "#" 막힌 칸 · "=" 아래에서 올라탈 수 있는 얇은 발판(↓를 누르면 내려간다) · "^" 가시 · "." 빈 칸.
---  body = { x, y, vx, vy, ground } — (x, y)는 발밑 가운데.  input = { mx = -1 | 0 | 1, jump = 이번 걸음에 뛰기를 눌렀나, down = ↓를 누르고 있나, speed = 빠르기 배수(없으면 1),
+--  장면의 칸(rows): "#" 막힌 칸 · "=" 아래에서 올라탈 수 있는 얇은 발판(↓를 누른 채 뛰기를 누르면 내려간다 — 하단 점프) · "^" 가시 · "." 빈 칸.
+--  body = { x, y, vx, vy, ground, air = 땅을 떠난 뒤 공중에서 뛴 수(2단 점프 — 땅에 닿으면 0) } — (x, y)는 발밑 가운데.  input = { mx = -1 | 0 | 1, jump = 이번 걸음에 뛰기를 눌렀나, down = ↓를 누르고 있나, speed = 빠르기 배수(없으면 1),
 --          vx = 가로 빠르기를 직접 준다(대쉬 · 기술 중의 이동), float = 떨어지지 않는다(대쉬) }
 local G = require(script.Parent.Parent.config.game)
+local COMBAT = require(script.Parent.Parent.data["combat.generated"])
+-- 바닷속(scene.sea): 걷기는 조금 느리고, 뛰면 느리게 높이 떴다가 천천히 가라앉는다(공방 combat.js의 sea — 시험 탭과 같은 숫자)
+local SEA = COMBAT.rules.sea
 
 local T = G.TILE
 local HALF = G.BOX_W / 2
@@ -33,23 +36,72 @@ function P.solidBox(scene, x: number, y: number): boolean
 	return false
 end
 
+-- 가시(^)에 닿아 있는가: 발이 놓인 칸이 가시일 때(몸 폭에서 양옆 두 점씩 뺀 안쪽 — 스치기만 한 것은 치지 않는다). 가시 위로 뛰어넘는 동안에는 닿지 않는다.
+--  닿으면 약한 피해를 입는다(서버 — sim/room.luau의 step. 사용자 2026-10-08: "맵에 가시 있잖아요 그거 닿으면 데미지 입게 약한데미지 입게하세요")
+function P.onSpike(scene, x: number, y: number): boolean
+	local ty = math.floor((y - 1) / T)
+	for tx = math.floor((x - HALF + 2) / T), math.floor((x + HALF - 3) / T) do
+		if P.cell(scene, tx, ty) == "^" then
+			return true
+		end
+	end
+	return false
+end
+
+-- 발밑이 얇은 발판(=)뿐인가 — 하단 점프를 할 수 있는 자리. 몸 폭 안의 발밑 칸에 막힌 칸(#)이 하나라도 있으면 아니다(그 칸이 받친다)
+function P.onPlatform(scene, body): boolean
+	local ty = math.floor(body.y / T)
+	if body.y ~= ty * T then
+		return false
+	end
+	local found = false
+	for tx = math.floor((body.x - HALF) / T), math.floor((body.x + HALF - 1) / T) do
+		local k = P.cell(scene, tx, ty)
+		if k == "#" then
+			return false
+		elseif k == "=" then
+			found = true
+		end
+	end
+	return found
+end
+
 function P.newBody(scene)
 	return { x = scene.spawn.x, y = scene.spawn.y, vx = 0, vy = 0, ground = false }
 end
 
 function P.respawn(scene, body)
 	body.x, body.y, body.vx, body.vy, body.ground = scene.spawn.x, scene.spawn.y, 0, 0, false
+	body.air = 0
 end
 
 -- 한 걸음(dt초). 맵 아래로 떨어져 시작 자리로 돌아갔으면 "respawn"을 돌려준다.
---  가시("^")는 닿아도 아무 일도 일어나지 않는다 — 사용자 2026-10-07: "가시맞고 돌아가는거 없애세요 가시맞고 돌아간다음에 몬스터랑 전투도안되고 고장나네요"
+--  가시("^")는 닿아도 시작 자리로 돌려보내지 않는다 — 사용자 2026-10-07: "가시맞고 돌아가는거 없애세요 가시맞고 돌아간다음에 몬스터랑 전투도안되고 고장나네요"
+--   (2026-10-08부터는 닿으면 약한 피해를 입는다 — 위의 onSpike. 움직임은 그대로다)
 --   (고장난 까닭: 화면에서만 시작 자리로 옮겨지고 서버는 그 순간이동을 믿지 않아, 그 뒤로 서버가 아는 자리와 어긋났다. 맵 아래로 떨어진 때를 위해 서버는 시작 자리로 온 보고는 받는다 — world.luau의 onMove)
 function P.step(scene, body, input, dt: number): string?
 	local mx = input.mx or 0
-	body.vx = if input.vx ~= nil then input.vx else mx * G.RUN * (input.speed or 1)
-	if input.jump and body.ground and not input.float then
-		body.vy = -G.JUMP
-		body.ground = false
+	local sea = if scene.sea then SEA else nil
+	-- body.run · body.jump = 걸음 · 뛰는 힘의 배수(패시브 — 리븐의 날랜 몸 · 살라맨더의 뜨거운 피. 없으면 1)
+	body.vx = if input.vx ~= nil then input.vx else mx * G.RUN * (input.speed or 1) * (body.run or 1) * (if sea then sea.run else 1)
+	if input.jump and not body.ground and not input.float and (body.air or 0) < G.AIR_JUMPS then
+		-- 2단 점프: 공중에서 뛰기를 한 번 더 누르면 그 자리에서 다시 뛰어오른다(전 직업 — 사용자 2026-10-11). 발판에서 걸어 떨어진 뒤에도 한 번 된다.
+		--  땅에 닿으면 다시 센다. 바닷속에서도 같다(뛰는 힘만 바닷속의 것)
+		body.air = (body.air or 0) + 1
+		body.vy = -G.JUMP * G.JUMP2 * (body.jump or 1) * (if sea then sea.jump else 1)
+	elseif input.jump and body.ground and not input.float then
+		body.air = 0
+		if input.down and P.onPlatform(scene, body) then
+			-- 하단 점프: 발판 위에서 ↓ 를 누른 채 뛰기를 누르면 그 발판을 지나 내려간다(↓ 만으로는 내려가지 않는다).
+			--  사용자 2026-10-08: "하단점프가 지금 그냥 아래키만 누르면 지금 하단점프인데 아래방향+점프키 여야 하단점프되어야합니다."
+			--  발을 발판의 윗면 바로 아래로 옮긴다 — 그 발판은 더 받치지 않고, 그 아래의 발판 · 땅에는 평소처럼 선다
+			body.y += 1
+			body.vy = 0
+			body.ground = false
+		else
+			body.vy = -G.JUMP * (body.jump or 1) * (if sea then sea.jump else 1)
+			body.ground = false
+		end
 	end
 
 	local nx = body.x + body.vx * dt
@@ -57,7 +109,7 @@ function P.step(scene, body, input, dt: number): string?
 		body.x = nx
 	end
 
-	body.vy = if input.float then 0 else math.min(body.vy + G.GRAVITY * dt, G.MAX_FALL) -- 대쉬 중에는 높이를 지킨다
+	body.vy = if input.float then 0 else math.min(body.vy + G.GRAVITY * (if sea then sea.grav else 1) * dt, if sea then sea.fall else G.MAX_FALL) -- 대쉬 중에는 높이를 지킨다
 	local ny = body.y + body.vy * dt
 	if input.float then
 		-- 떨어지지 않는다
@@ -68,7 +120,7 @@ function P.step(scene, body, input, dt: number): string?
 		while ty <= math.floor(ny / T) and land == nil do
 			for tx = math.floor((body.x - HALF) / T), math.floor((body.x + HALF - 1) / T) do
 				local k = P.cell(scene, tx, ty)
-				if k == "#" or (k == "=" and body.y <= ty * T and not input.down) then
+				if k == "#" or (k == "=" and body.y <= ty * T) then
 					land = ty * T
 					break
 				end
@@ -77,6 +129,7 @@ function P.step(scene, body, input, dt: number): string?
 		end
 		if land ~= nil and ny >= land then
 			body.y, body.vy, body.ground = land, 0, true
+			body.air = 0 -- 땅에 닿았다: 2단 점프를 다시 쓴다
 		else
 			body.y, body.ground = ny, false
 		end

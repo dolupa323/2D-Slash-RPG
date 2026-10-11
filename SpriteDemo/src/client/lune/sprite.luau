@@ -32,7 +32,8 @@ function Sprite.frameAt(char, clip: string, t: number, once: boolean?): number
 	return (if once then math.min(n - 1, i) else i % n) + 1
 end
 
-function Sprite:set(clip: string, frame: number, x: number, y: number, dir: number)
+-- scale = 몸의 크기(거신의 두 배 — 발밑 가운데를 그대로 두고 커진다. 없으면 1)
+function Sprite:set(clip: string, frame: number, x: number, y: number, dir: number, scale: number?)
 	local char = self.char
 	local c = char.clips[clip]
 	local f = c and c.frames[frame]
@@ -48,19 +49,23 @@ function Sprite:set(clip: string, frame: number, x: number, y: number, dir: numb
 	local w, h, dx, dy = f[4], f[5], f[6], f[7]
 	local px, py = math.floor(x + 0.5), math.floor(y + 0.5)
 	-- 기준점: 캐릭터 동작은 발밑 가운데(ox, oy). 칸 크기가 따로인 동작(날아가는 그림)은 왼쪽 가운데다
+	-- 제 기준점이 적힌 동작(몬스터의 마법 그림 = 발밑 가운데 · 날아가는 그림 = 한가운데)은 그것을 쓴다
 	local ox, oy = char.ox, char.oy
-	if c.fw then
+	if c.ox then
+		ox, oy = c.ox, c.oy
+	elseif c.fw then
 		ox, oy = 0, c.fh / 2
 	end
-	label.Size = UDim2.fromOffset(w, h)
+	local s = scale or 1
+	label.Size = UDim2.fromOffset(math.floor(w * s + 0.5), math.floor(h * s + 0.5))
 	if dir >= 0 then
 		label.ImageRectOffset = Vector2.new(f[2], f[3])
 		label.ImageRectSize = Vector2.new(w, h)
-		label.Position = UDim2.fromOffset(px - ox + dx, py - oy + dy)
+		label.Position = UDim2.fromOffset(px - math.floor((ox - dx) * s + 0.5), py - math.floor((oy - dy) * s + 0.5))
 	else
 		label.ImageRectOffset = Vector2.new(f[2] + w, f[3])
 		label.ImageRectSize = Vector2.new(-w, h)
-		label.Position = UDim2.fromOffset(px + ox - dx - w, py - oy + dy)
+		label.Position = UDim2.fromOffset(px + math.floor((ox - dx - w) * s + 0.5), py - math.floor((oy - dy) * s + 0.5))
 	end
 	label.Visible = true
 end

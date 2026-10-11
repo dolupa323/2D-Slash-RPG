@@ -118,12 +118,13 @@ local function actionOf(key: Enum.KeyCode): string?
 end
 
 Input.onEnter = nil :: (() -> ())? -- Enter를 눌렀을 때(채팅 열기)
+Input.paused = false -- 캐릭터 고르기 화면에 가 있는 동안에는 게임의 키를 받지 않는다(boot.luau의 toSelect)
 
 function Input.init()
 	UserInputService.InputBegan:Connect(function(input)
 		-- 로블록스 기본 조작이 방향키를 먼저 가져가므로 "처리됨" 표시는 보지 않는다. 글자를 치는 중(채팅 등)에만 받지 않는다.
-		if input.UserInputType ~= Enum.UserInputType.Keyboard or UserInputService:GetFocusedTextBox() then
-			return
+		if input.UserInputType ~= Enum.UserInputType.Keyboard or UserInputService:GetFocusedTextBox() or Input.paused then
+			return -- paused = 캐릭터 고르기 화면에 가 있다(게임의 키를 받지 않는다)
 		end
 		-- Enter는 채팅을 연다(키 설정으로 바꾸는 키가 아니다)
 		if (input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter) and not captureFn then

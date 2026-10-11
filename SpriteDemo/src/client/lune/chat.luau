@@ -11,7 +11,6 @@ local TextChatService = game:GetService("TextChatService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local UI = require(lune.data["ui.generated"])
-local Format = require(lune.ui.format)
 local Tags = require(lune.ui.tags)
 local Layout = require(lune.ui.layout)
 local Stage = require(script.Parent.stage)
@@ -238,7 +237,7 @@ function Chat.init(parent: Frame)
 		Chat.close()
 	end)
 
-	-- 받은 글: 이름은 이름표에 적는 꼴로(글꼴에 없는 글자가 섞인 이름은 아이디로)
+	-- 받은 글: 이름은 그 사람이 하고 있는 캐릭터의 이름(서버가 사람에게 적어 둔 LuneName — 캐릭터를 만들 때 지은 이름이다. Roblox의 이름은 쓰지 않는다)
 	TextChatService.MessageReceived:Connect(function(message)
 		if message.Status ~= Enum.TextChatMessageStatus.Success then
 			return -- 내가 보낸 글도 서버가 받아 준 뒤에 한 번만 넣는다
@@ -254,7 +253,8 @@ function Chat.init(parent: Frame)
 		local name = nil
 		if source then
 			local player = Players:GetPlayerByUserId(source.UserId)
-			name = if player then Format.safeName(player.DisplayName, player.Name) else source.Name
+			local charName = if player then player:GetAttribute("LuneName") else nil
+			name = if typeof(charName) == "string" and charName ~= "" then charName else "?"
 		elseif channel and channel.Name ~= "RBXGeneral" and channel.Name ~= "파티" then
 			return -- 시스템 채널의 글은 넣지 않는다
 		end

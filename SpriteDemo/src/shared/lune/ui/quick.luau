@@ -1,21 +1,49 @@
 -- 퀵슬롯의 셈 — 화면 가운데 아래의 스킬 칸(여섯 x 두 줄). 그리지는 않는다: 화면(client/lune/hud.luau · boot.luau)과 서버(sim/hero.luau), 테스트가 같이 쓴다.
 --  사용자 2026-10-07: "스킬키를 단축키에 등록하기 쉬워야합니다. … 드래그앤 드랍으로 배치도 되어야하고, 스킬탭에서 스킬아이콘을 꾹누르거나 클릭하면 퀵슬롯쪽이 반짝거리고 거기서 퀵슬롯을 누르면 배치된다던가"
---  키는 스킬이 아니라 칸에 붙는다(칸마다 키 하나). 칸에는 물약("potion")이나 스킬의 이름표가 놓인다. 빈 칸은 false.
+--  키는 스킬이 아니라 칸에 붙는다(칸마다 키 하나). 칸에는 스킬의 이름표나 소비 아이템의 이름표("potion1" … — data/items.generated.luau의 GOODS)가 놓인다. 빈 칸은 false.
+--   소비 아이템은 저마다 따로 놓는다(사용자 2026-10-08 — 가방의 진짜 아이템이다): 작은 달빛 물약과 큰 달빛 물약은 다른 칸. 칸의 숫자 = 가방에 든 그 아이템의 수.
 --  값과 놓는 법은 공방 js/lune/design/ui.js의 QUICK · quickPlace · quickClear · quickStart(횡스크롤 시험 탭이 같은 셈으로 논다) — data/ui.generated.luau의 quick.
 local UI = require(script.Parent.Parent.data["ui.generated"])
+local ITEMS = require(script.Parent.Parent.data["items.generated"])
+
+local GOODS = {}
+for _, g in ITEMS.GOODS do
+	GOODS[g.id] = g
+end
 
 local Q = {}
 Q.DATA = UI.quick
 Q.N = UI.quick.n -- 칸의 수
 Q.COLS = UI.quick.cols -- 한 줄
-Q.POTION = "potion"
+Q.START_POTION = UI.quick.potion -- 새 캐릭터의 첫 칸에 놓이는 물약(작은 달빛 물약)
+Q.OLD_POTION = "potion" -- 예전 저장의 물약 칸(물약이 한 가지였을 때의 이름표) — Q.renew가 지금의 이름표로 바꾼다
+
+-- 칸에 놓인 것이 소비 아이템이면 그 자료(스킬이면 nil)
+function Q.item(what: any)
+	return if typeof(what) == "string" then GOODS[what] else nil
+end
 
 -- 칸에 놓인 것의 그림 이름(화면의 그림 24x24 — 공방의 아이콘 이름)
 function Q.pic(what: string): string
-	if what == Q.POTION then
-		return "slot_potion"
+	local g = GOODS[what]
+	if g then
+		return g.icon
 	end
 	return "skill_" .. what
+end
+
+-- 예전 저장의 칸들을 지금 꼴로: "potion" → potionId(그때 마시던 물약). 꼴이 다른 것은 그대로 돌려준다(Q.clean이 걸러 낸다)
+function Q.renew(list: any, potionId: string): any
+	if typeof(list) ~= "table" then
+		return list
+	end
+	local out = table.clone(list)
+	for k, v in out do
+		if v == Q.OLD_POTION then
+			out[k] = potionId
+		end
+	end
+	return out
 end
 
 local function copy(slots)
@@ -36,7 +64,7 @@ local function find(slots, what): number?
 end
 Q.find = find
 
--- 칸에 놓는다: what(스킬의 이름표 · "potion")을 j째 칸에. 이미 다른 칸에 있던 것이면 두 칸이 자리를 바꾼다.
+-- 칸에 놓는다: what(스킬 · 소비 아이템의 이름표)을 j째 칸에. 이미 다른 칸에 있던 것이면 두 칸이 자리를 바꾼다.
 --  창(스킬 창 · 가방)에서 온 것이면 그 칸에 있던 것은 빠진다. 새 칸들을 돌려준다(못 놓으면 nil)
 function Q.place(slots, what: string, j: number)
 	if typeof(what) ~= "string" or what == "" or j < 1 or j > Q.N or j % 1 ~= 0 then
@@ -55,7 +83,7 @@ function Q.place(slots, what: string, j: number)
 	return out
 end
 
--- 칸에서 뺀다(물약도 빠진다 — 가방의 소비 탭에서 다시 끌어다 놓는다)
+-- 칸에서 뺀다(소비 아이템도 빠진다 — 가방의 소비 탭에서 다시 끌어다 놓는다)
 function Q.clear(slots, i: number)
 	if i < 1 or i > Q.N then
 		return nil
@@ -69,8 +97,8 @@ end
 function Q.start(skills)
 	local out = table.create(Q.N, false)
 	for k, kind in UI.quick.start do
-		if kind == Q.POTION then
-			out[k] = Q.POTION
+		if kind == "potion" then
+			out[k] = Q.START_POTION
 		else
 			for _, s in skills do
 				if s.type == kind then
@@ -83,7 +111,7 @@ function Q.start(skills)
 	return out
 end
 
--- 밖에서 온 칸들(클라이언트가 보낸 것 · 저장된 것)을 살핀다: 꼭 N칸, 칸마다 false · "potion" · 놓아도 되는 스킬(ok(id)가 참), 겹치는 것 없이(물약도 한 칸까지 — 없어도 된다).
+-- 밖에서 온 칸들(클라이언트가 보낸 것 · 저장된 것)을 살핀다: 꼭 N칸, 칸마다 false · 놓아도 되는 것(ok(id)가 참 — 배운 스킬 · 소비 아이템), 겹치는 것 없이.
 --  말이 되면 깨끗한 칸들을, 아니면 nil을 돌려준다
 function Q.clean(list: any, ok: (string) -> boolean)
 	if typeof(list) ~= "table" then
@@ -91,7 +119,6 @@ function Q.clean(list: any, ok: (string) -> boolean)
 	end
 	local out = table.create(Q.N, false)
 	local seen = {}
-	local potions = 0
 	for k in list do
 		if typeof(k) ~= "number" or k < 1 or k > Q.N or k % 1 ~= 0 then
 			return nil
@@ -101,18 +128,12 @@ function Q.clean(list: any, ok: (string) -> boolean)
 		local v = list[i]
 		if v == nil or v == false then
 			out[i] = false
-		elseif typeof(v) == "string" and #v <= 40 and not seen[v] and (v == Q.POTION or ok(v)) then
+		elseif typeof(v) == "string" and #v <= 40 and not seen[v] and ok(v) then
 			seen[v] = true
 			out[i] = v
-			if v == Q.POTION then
-				potions += 1
-			end
 		else
 			return nil
 		end
-	end
-	if potions > 1 then
-		return nil
 	end
 	return out
 end

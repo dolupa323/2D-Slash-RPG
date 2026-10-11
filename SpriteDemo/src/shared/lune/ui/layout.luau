@@ -32,10 +32,12 @@ L.VITALS = D.vitals -- 왼쪽 아래 덩어리: 윗줄에 레벨 · 이름 / 체
 L.SKILLS = D.skills -- 스킬 칸: 두 줄 x 여섯. 칸 위에 키 딱지(높이 keyUp)
 L.MENU = D.menu -- 창을 여는 단추: 여섯까지, 오른쪽 끝에 붙여. 그림 아래에 이름(labels = 칸에 맞춘 짧은 이름)
 L.PARTY = D.party -- 파티원 칸: 한 사람 = 이름 한 줄 + 가는 체력 줄. ask = 초대 알림(위쪽 가운데)
+L.DEATH = D.death -- 쓰러졌을 때 묻는 상자(위쪽 가운데): 제목 · 묻는 글 · 안내 · 단추 하나
 L.QUEST = D.quest -- 퀘스트 알리미: 이름 한 줄(본문 글씨) · 할 일 한 줄(작은 글씨) · 퀘스트 사이
 L.CHAT = D.chat -- 채팅: 평소에는 채팅 칸에 마지막 몇 줄, 쓸 때는 넓은 판(open)
 L.TAG = D.tag -- 이름표: 한 줄의 높이(쌓을 때) · 발밑에서 아래로 띄우는 만큼 · 가장 넓을 때
 L.MOBBAR = D.mobBar -- 졸개의 체력 띠: 크기(화면 틀의 점) · 발밑에서 위로(게임의 도트)
+L.BOSS = D.boss -- 스토리 보스의 체력: 화면 위 가운데 — 이름(y) 아래(barY)에 넓은 바(안에 숫자 · pad = 좌우 여백), 그 아래(patY)에 패턴의 이름
 
 -- 쓰는 칸이 n개일 때 i째 칸의 자리(스킬 칸 틀 안): 여섯까지는 아랫줄에 가운데로 모으고, 일곱째부터는 윗줄에 같은 식으로
 function L.slotPlace(i: number, n: number): (number, number)
@@ -67,7 +69,9 @@ end
 
 -- ---------- 창(화면 오른쪽 · 왼쪽의 옆 판) ----------
 L.WIN = D.win -- 판에서 속까지: 옆으로 pad, 위로 head(제목 줄), 아래로 foot. edge · top = 화면 끝에서 띄우는 폭
-L.BAG = D.bag -- 가방: 칸 여섯 x 넷. 탭 줄(gridY) 아래에 칸, 그 아래 infoH에 이름 · 설명 · 단추 셋(같은 폭 — 사이 gap) · 돈
+L.BAG = D.bag -- 가방: 칸 여섯 x 넷(세 탭 모두 칸). 탭 줄(gridY) 아래에 칸, 그 아래 footH에 단추 줄(정렬 · 칸 늘리기)과 지갑(달돈 · 달가루 · 정수)
+L.DETAIL = D.detail -- 아이템 상세(창 옆의 작은 판): 그림 칸과 이름 · 갈래 · 줄(이름과 값) · 알림 글 · 단추
+L.STORE = D.store -- 창고: 가방과 같은 짜임 — 탭 줄(gridY) 아래에 칸, 그 아래 footH에 「정렬」(sortW)과 안내 글
 L.EQUIP = D.equip -- 장비 창: 왼쪽 = 칸 하나 + 글(textW), 오른쪽 = 장신구 네 칸
 L.SHOP = D.shop -- 상점: 물건 이름(본문 글씨) · 값 · 사는 단추(들)
 L.STAT = D.stat -- 능력치 창: 속의 폭 · 줄(top부터 row씩) · 주/부의 자리 · 값의 오른쪽 끝 · + 단추의 폭 · tip = 능력치에 마우스를 올렸을 때 창 옆에 뜨는 설명 판
@@ -90,14 +94,52 @@ function L.cellFor(ratio: number): number
 	return math.floor(KIT.icon * ratio + 0.5) + 5
 end
 
--- 가방의 속(폭 · 높이)과 단추 셋의 폭
+-- 가방의 속(폭 · 높이)
 function L.bagBody(ratio: number): (number, number)
 	local s = L.cellFor(ratio)
-	return L.BAG.cols * s, L.BAG.gridY + L.BAG.rows * s + L.BAG.infoH
+	return L.BAG.cols * s, L.BAG.gridY + L.BAG.rows * s + L.BAG.footH
 end
 
-function L.bagButtonW(bodyW: number): number
-	return math.floor((bodyW - L.BAG.gap * 2) / 3)
+-- 창고의 속(폭 · 높이). slots = 창고의 탭 하나의 칸 수
+function L.storeBody(ratio: number, slots: number): (number, number)
+	local s = L.cellFor(ratio)
+	return L.BAG.cols * s, L.STORE.gridY + math.ceil(slots / L.BAG.cols) * s + L.STORE.footH
+end
+
+-- 지갑의 한 칸(달돈 · 달가루 · 정수 — 셋이 같은 폭)
+function L.purseW(bodyW: number): number
+	return math.floor(bodyW / 3)
+end
+
+-- 상세 판: 속의 폭 · 이름이 쓰는 폭(그림 칸의 오른쪽 — 닫기 자리는 뺀다) · 값이 쓰는 폭 · 단추 n개가 한 줄에 놓일 때의 폭
+function L.detailInner(): number
+	return L.DETAIL.w - L.DETAIL.pad * 2
+end
+
+function L.detailNameW(ratio: number): number
+	return L.detailInner() - L.cellFor(ratio) - 8 - L.DETAIL.closeW
+end
+
+function L.detailValueW(): number
+	return L.detailInner() - L.DETAIL.labelW
+end
+
+function L.detailButtonW(n: number): number
+	return math.floor((L.detailInner() - L.DETAIL.btnGap * (n - 1)) / n)
+end
+
+-- 상세 판의 높이: nameLines = 이름의 줄 수 · rows = 줄 수 · noteLines = 알림 글의 줄 수(모두 더한 것) · btnRows = 단추 줄 수
+function L.detailHeight(ratio: number, nameLines: number, rows: number, noteLines: number, btnRows: number): number
+	local K = L.DETAIL
+	local head = math.max(L.cellFor(ratio), nameLines * K.nameLine + K.subGap + M.small)
+	local h = K.pad + head + K.rowTop + rows * K.rowH
+	if noteLines > 0 then
+		h += K.noteTop + noteLines * K.noteLine
+	end
+	if btnRows > 0 then
+		h += K.btnTop + btnRows * M.button + (btnRows - 1) * K.btnGap
+	end
+	return h + K.pad
 end
 
 -- 장비 창의 속(폭 · 높이)과 오른쪽 덩이의 왼쪽 끝

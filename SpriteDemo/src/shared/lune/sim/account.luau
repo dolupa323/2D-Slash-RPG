@@ -1,0 +1,413 @@
+-- 계정 — 한 사람(Roblox 계정)이 가진 캐릭터들과 그 캐릭터들이 같이 쓰는 창고.
+--  사용자 2026-10-10: "처음 접속할때 캐릭터를 선택하고 그 캐릭터를 계속 키우는형식 … 캐릭터 만들기도 있고, 캐릭터 삭제도 있고, 내가 만든 캐릭터 중 하나를 선택해서 접속하는 방식",
+--   "창고는 내 계정내의 캐릭터들이 공유하는 창고입니다", "캐릭터 이름은 처음에 생성할때 캐릭터 이름을 짓습니다. 중복확인을하고, 현재처럼 그냥 로블록스의 아이디를 가져와서 사용하지않습니다".
+--  여기는 셈만 한다(저장소 · 글 거르기 · 이름 장부는 서버의 것 — server/lune/modules/world.luau · store.luau).
+--  계정의 표: { next = 다음 캐릭터 번호, last = 마지막으로 들어간 캐릭터의 번호(없으면 false), chars = { { id, name, class, made, hero = 저장된 캐릭터(sim/hero.luau의 pack — 창고는 빼고) } … }, store = 같이 쓰는 창고(sim/bag.luau의 packStore) }
+--  캐릭터의 이름이 ""인 것 = 이름을 짓기 전에 만들어진 캐릭터(계정이 생기기 전의 저장을 옮긴 것) — 들어가기 전에 이름을 지어야 한다.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local lune = ReplicatedStorage.shared.lune
+local CLASSES = require(lune.data["classes.generated"])
+local NAMES = require(lune.data["names.generated"]) -- 이름의 규칙(공방의 js/lune/design/names.js)
+
+local Account = {}
+Account.VERSION = 1
+Account.MAX = 6 -- 한 계정의 캐릭터 수(내 제안 — 직업 다섯에 하나 더)
+-- 이름의 길이: 한글은 한 글자가 2칸, 영문 · 숫자는 1칸 — 모두 4~12칸(한글 2~6자 · 영문 4~12자. 메이플스토리의 셈과 같다)
+Account.NAME_MIN, Account.NAME_MAX = NAMES.min, NAMES.max
+Account.TEXT = NAMES.text
+local MAX_BYTES = 48 -- 이보다 긴 글은 따져 보지도 않는다(한글 여섯 자 = 18바이트)
+
+local function whole(v: any, lo: number, hi: number): boolean
+	return typeof(v) == "number" and v == math.floor(v) and v >= lo and v <= hi
+end
+
+function Account.new()
+	return { next = 1, last = false, chars = {}, store = false, broken = {}, spent = 0 } -- spent = 이 계정이 게임에 쓴 로벅스(명예의 전당의 후원 판)
+end
+
+-- 이름을 견줄 때의 꼴(영문은 소문자로 — Moon과 moon은 같은 이름이다)
+function Account.nameKey(name: string): string
+	return string.lower(name)
+end
+
+-- ---------- 지을 수 없는 말 ----------
+--  사용자 2026-10-10(「성관계장인」이 통과되는 사진): "조금만 우회해도 문제되는 닉네임이 통과됩니다."
+--  공방의 tools/build_lune_names.mjs의 banned()와 같은 셈이다(같은 이름들로 양쪽을 맞춰 본다 — NAMES.check). 고칠 때는 둘을 같이 고친다.
+--   한글: 이름에서 한글만 뽑아 견준다(시1발 · 시a발 → 시발). 모음을 늘인 것은 줄인다(씨이발 → 씨발). loose의 말은 소리의 뼈대로 견준다(쎅쓰 → 섹스).
+--   영문: 이름에서 영문만 뽑아 견준다(fu달ck → fuck). 숫자로 바꿔 적은 것(sh1t) · 같은 글자를 늘인 것(fuuck)도 같은 말이다.
+--         whole의 말(ass · tit · cum …)은 영문 덩어리 전체가 그 말일 때만 막는다(class · title을 막지 않는다).
+--   allow의 말(성기사 · 시발점 · essex …)은 먼저 가려 놓는다.
+local SEN = "\1" -- 가려 놓은 말의 자리(어느 금칙어와도 이어지지 않는다)
+local CHO = { [1] = 0, [4] = 3, [8] = 7, [10] = 9, [13] = 12 } -- 된소리 → 예사소리
+local JUNG = { [1] = 5, [3] = 5, [7] = 5, [10] = 11, [15] = 11, [19] = 20, [16] = 20 } -- ㅐ ㅒ ㅖ → ㅔ · ㅙ ㅞ → ㅚ · ㅢ ㅟ → ㅣ
+local JONG = {} -- 받침은 소리가 같은 것끼리
+for to, list in { [1] = { 1, 2, 3, 24, 9 }, [4] = { 4, 5, 6 }, [7] = { 7, 19, 20, 22, 23, 25 }, [8] = { 8, 11, 12, 13, 15 }, [16] = { 10, 16 }, [17] = { 17, 18, 26, 14 } } do
+	for _, jong in list do
+		JONG[jong] = to
+	end
+end
+
+local function isHangul(code: number): boolean
+	return code >= 0xAC00 and code <= 0xD7A3
+end
+
+-- 한글 한 글자를 초성 · 중성 · 종성의 번호로
+local function parts(code: number): (number, number, number)
+	local i = code - 0xAC00
+	return i // 588, (i % 588) // 28, i % 28
+end
+
+-- 모음을 늘인 것을 줄인다: 받침 없는 글자 뒤에 같은 모음의 「ㅇ + 모음」이 오면 뺀다. codes = 한글(과 가려 놓은 자리 1)의 코드들
+local function shorten(codes: { number }): { number }
+	local out = {}
+	local prevV, prevT = nil, nil
+	for _, code in codes do
+		if code == 1 then
+			table.insert(out, code)
+			prevV, prevT = nil, nil
+		else
+			local c, j, t = parts(code)
+			local v = JUNG[j] or j
+			if not (prevV and c == 11 and t == 0 and prevT == 0 and prevV == v) then
+				table.insert(out, code)
+				prevV, prevT = v, t
+			end
+		end
+	end
+	return out
+end
+
+-- 소리의 뼈대: 글자마다 (초성 · 중성 · 종성)을 비슷한 것끼리 묶어 세 바이트로
+local function skeleton(codes: { number }): string
+	local out = table.create(#codes)
+	for i, code in codes do
+		if code == 1 then
+			out[i] = SEN .. SEN .. SEN
+		else
+			local c, j, t = parts(code)
+			out[i] = string.char(65 + (CHO[c] or c), 65 + (JUNG[j] or j), 65 + (JONG[t] or t))
+		end
+	end
+	return table.concat(out)
+end
+
+local function hasAligned(s: string, word: string): boolean
+	local from = 1
+	while true do
+		local at = string.find(s, word, from, true)
+		if not at then
+			return false
+		elseif (at - 1) % 3 == 0 then
+			return true
+		end
+		from = at + 1
+	end
+end
+
+-- 글자의 덩이(같은 글자가 이어진 것): { 글자들, 길이들 }
+local function runsOf(s: string)
+	local chars, counts = {}, {}
+	for i = 1, #s do
+		local ch = string.sub(s, i, i)
+		if chars[#chars] == ch then
+			counts[#counts] += 1
+		else
+			table.insert(chars, ch)
+			table.insert(counts, 1)
+		end
+	end
+	return { chars = chars, counts = counts }
+end
+
+-- 이름의 덩이 속에 금칙어의 덩이가 있는가(이름의 덩이가 같거나 길면 같은 말이다 — fuuck = fuck, 하지만 niger ≠ nigger)
+local function runsHave(name, word): boolean
+	local n, m = #name.chars, #word.chars
+	for i = 1, n - m + 1 do
+		local ok = true
+		for k = 1, m do
+			if name.chars[i + k - 1] ~= word.chars[k] or name.counts[i + k - 1] < word.counts[k] then
+				ok = false
+				break
+			end
+		end
+		if ok then
+			return true
+		end
+	end
+	return false
+end
+
+local function codesOf(s: string): { number }
+	local out = {}
+	for _, code in utf8.codes(s) do
+		table.insert(out, code)
+	end
+	return out
+end
+
+-- 미리 지어 두는 것
+local WHOLE, RESWHOLE = {}, {}
+for _, w in NAMES.whole do
+	WHOLE[w] = true
+end
+for _, w in NAMES.reservedWhole do
+	RESWHOLE[w] = true
+end
+local EN_RUNS = table.create(#NAMES.en)
+for i, w in NAMES.en do
+	EN_RUNS[i] = runsOf(w)
+end
+local LOOSE = table.create(#NAMES.loose)
+for i, w in NAMES.loose do
+	LOOSE[i] = skeleton(codesOf(w))
+end
+
+local function leetOf(s: string): string
+	return (string.gsub(s, "%d", function(d)
+		return NAMES.leet["d" .. d] or d
+	end))
+end
+
+-- 글에서 word를 모두 가려 놓는다
+local function mask(s: string, word: string): string
+	local out, from = {}, 1
+	while true do
+		local a, b = string.find(s, word, from, true)
+		if not a then
+			break
+		end
+		table.insert(out, string.sub(s, from, a - 1))
+		table.insert(out, SEN)
+		from = (b :: number) + 1
+	end
+	if from == 1 then
+		return s
+	end
+	table.insert(out, string.sub(s, from))
+	return table.concat(out)
+end
+
+-- 지을 수 없는 말이 들었는가(바른 UTF-8의 글이어야 한다 — Account.nameOk가 먼저 본다)
+function Account.nameBanned(name: string): boolean
+	local key0 = Account.nameKey(name)
+	-- 운영하는 사람 · 게임인 척: 영문 덩어리 전체(GM달빛 · gm) · 들어 있는 말(숫자를 끼우거나 숫자로 바꿔 적은 것 포함)
+	for seg in string.gmatch(key0, "%a+") do
+		if RESWHOLE[seg] then
+			return true
+		end
+	end
+	local bare0, leet0 = string.gsub(key0, "%d", ""), leetOf(key0)
+	for _, w in NAMES.reserved do
+		if string.find(key0, w, 1, true) or string.find(bare0, w, 1, true) or string.find(leet0, w, 1, true) then
+			return true
+		end
+	end
+	local key = key0
+	for _, a in NAMES.allow do
+		key = mask(key, a)
+	end
+	-- 한글만 · 영문만 뽑는다
+	local hangCodes, lat = {}, {}
+	for _, code in utf8.codes(key) do
+		if code == 1 then
+			table.insert(hangCodes, code)
+			table.insert(lat, SEN)
+		elseif isHangul(code) then
+			table.insert(hangCodes, code)
+		elseif code >= 97 and code <= 122 then
+			table.insert(lat, string.char(code))
+		end
+	end
+	local shortCodes = shorten(hangCodes)
+	local hang, hang2 = utf8.char(table.unpack(hangCodes)), utf8.char(table.unpack(shortCodes))
+	if hang ~= "" then
+		for _, w in NAMES.ko do
+			if string.find(hang, w, 1, true) or string.find(hang2, w, 1, true) then
+				return true
+			end
+		end
+	end
+	for _, w in NAMES.mixed do
+		if string.find(key, w, 1, true) then
+			return true
+		end
+	end
+	-- 영문: 글자만(숫자는 뺀다) · 숫자를 글자로 바꾼 것 — 글자의 덩이로 견준다
+	local latin = table.concat(lat)
+	local leetLatin = string.gsub(leetOf(key), "[^%l%c]", "") -- 소문자와 가려 놓은 자리만 남긴다(한글의 바이트 · 남은 숫자는 뺀다)
+	if latin ~= "" or leetLatin ~= "" then
+		local a, b = runsOf(latin), runsOf(leetLatin)
+		for _, w in EN_RUNS do
+			if runsHave(a, w) or runsHave(b, w) then
+				return true
+			end
+		end
+	end
+	-- 영문 덩어리 전체가 그 말인가(a55 → ass)
+	for seg in string.gmatch(key, "[%l%d]+") do
+		if WHOLE[(string.gsub(seg, "%d", ""))] or WHOLE[(string.gsub(leetOf(seg), "%d", ""))] then
+			return true
+		end
+	end
+	-- 소리가 같은 말
+	if #shortCodes > 0 then
+		local sk = skeleton(shortCodes)
+		for _, w in LOOSE do
+			if hasAligned(sk, w) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- 이름의 꼴을 본다. 돌려주는 것: 되는가, 안 되는 까닭(화면에 그대로 적는 글)
+--  차례: 글인가 → 너무 긴 글이 아닌가 → 쓸 수 있는 글자뿐인가(완성된 한글 · 영문 · 숫자) → 숫자만은 아닌가 → 길이 → 지을 수 없는 말
+function Account.nameOk(name: any): (boolean, string?)
+	local TEXT = NAMES.text
+	if typeof(name) ~= "string" or name == "" then
+		return false, TEXT.empty
+	end
+	if #name > MAX_BYTES then
+		return false, TEXT.long
+	end
+	if not utf8.len(name) then
+		return false, TEXT.chars
+	end
+	local width, letters = 0, 0
+	for _, code in utf8.codes(name) do
+		if code >= 0xAC00 and code <= 0xD7A3 then
+			width += 2
+			letters += 1
+		elseif (code >= 65 and code <= 90) or (code >= 97 and code <= 122) then
+			width += 1
+			letters += 1
+		elseif code >= 48 and code <= 57 then
+			width += 1
+		else
+			return false, TEXT.chars
+		end
+	end
+	if width < Account.NAME_MIN then
+		return false, TEXT.short
+	elseif width > Account.NAME_MAX then
+		return false, TEXT.long
+	elseif letters == 0 and not NAMES.digitsOnly then
+		return false, TEXT.digits
+	end
+	if Account.nameBanned(name) then
+		return false, TEXT.banned
+	end
+	return true, nil
+end
+
+function Account.find(acct, id: any)
+	for i, c in acct.chars do
+		if c.id == id then
+			return c, i
+		end
+	end
+	return nil, nil
+end
+
+-- 내 캐릭터 가운데 그 이름이 있는가(skip = 견주지 않을 캐릭터의 번호)
+function Account.hasName(acct, name: string, skip: any?): boolean
+	local key = Account.nameKey(name)
+	for _, c in acct.chars do
+		if c.id ~= skip and c.name ~= "" and Account.nameKey(c.name) == key then
+			return true
+		end
+	end
+	return false
+end
+
+function Account.full(acct): boolean
+	return #acct.chars >= Account.MAX
+end
+
+-- 캐릭터를 하나 넣는다(hero = 저장할 꼴의 캐릭터). 꽉 찼으면 nil
+function Account.add(acct, name: string, class: string, hero, now: number?)
+	if Account.full(acct) or not CLASSES.classes[class] then
+		return nil
+	end
+	local c = { id = acct.next, name = name, class = class, made = now or 0, hero = hero }
+	acct.next += 1
+	table.insert(acct.chars, c)
+	return c
+end
+
+-- 캐릭터를 지운다. 지운 캐릭터를 돌려준다
+function Account.remove(acct, id: any)
+	local c, i = Account.find(acct, id)
+	if not c then
+		return nil
+	end
+	table.remove(acct.chars, i)
+	if acct.last == id then
+		acct.last = false
+	end
+	return c
+end
+
+-- 계정이 생기기 전의 저장(캐릭터 하나 — 이름이 없다)을 계정으로 옮긴다: 그 캐릭터가 첫 캐릭터가 되고, 그 캐릭터의 창고가 계정의 창고가 된다
+function Account.adopt(old: any, now: number?)
+	local acct = Account.new()
+	if typeof(old) == "table" and CLASSES.classes[old.class] then
+		if typeof(old.bag) == "table" then
+			acct.store = old.bag.store or false
+			old.bag.store = nil
+		end
+		Account.add(acct, "", old.class, old, now)
+	end
+	return acct
+end
+
+-- ---------- 저장 ----------
+function Account.pack(acct)
+	local chars = {}
+	for _, c in acct.chars do
+		table.insert(chars, { id = c.id, name = c.name, class = c.class, made = c.made, hero = c.hero })
+	end
+	-- 읽지 못한 캐릭터(꼴이 맞지 않던 것)도 그대로 다시 적는다 — 읽는 쪽의 실수로 캐릭터가 사라지지 않게
+	for _, raw in acct.broken do
+		table.insert(chars, raw)
+	end
+	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, spent = acct.spent }
+end
+
+function Account.unpack(data: any)
+	if typeof(data) ~= "table" or typeof(data.chars) ~= "table" then
+		return nil
+	end
+	local acct = Account.new()
+	local top = 0
+	for _, raw in data.chars do
+		local fine = typeof(raw) == "table" and whole(raw.id, 1, 9e9) and typeof(raw.name) == "string" and CLASSES.classes[raw.class] ~= nil and typeof(raw.hero) == "table" and not Account.find(acct, raw.id)
+		if fine and #acct.chars < Account.MAX then
+			table.insert(acct.chars, { id = raw.id, name = raw.name, class = raw.class, made = if typeof(raw.made) == "number" then raw.made else 0, hero = raw.hero })
+		else
+			table.insert(acct.broken, raw)
+		end
+		if typeof(raw) == "table" and whole(raw.id, 1, 9e9) then
+			top = math.max(top, raw.id)
+		end
+	end
+	acct.next = math.max(if whole(data.next, 1, 9e9) then data.next else 1, top + 1)
+	acct.last = if Account.find(acct, data.last) then data.last else false
+	acct.store = if typeof(data.store) == "table" then data.store else false
+	acct.spent = if whole(data.spent, 0, 9e12) then data.spent else 0
+	return acct
+end
+
+-- ---------- 화면에 보내는 것 ----------
+-- 캐릭터 고르기 화면의 표: 캐릭터마다 번호 · 이름 · 직업 · 레벨, 그리고 만들 수 있는 수 · 마지막으로 들어간 캐릭터
+function Account.view(acct)
+	local chars = {}
+	for _, c in acct.chars do
+		local level = if typeof(c.hero.level) == "number" then c.hero.level else 1
+		table.insert(chars, { id = c.id, name = c.name, class = c.class, level = level })
+	end
+	return { chars = chars, max = Account.MAX, last = acct.last }
+end
+
+return Account

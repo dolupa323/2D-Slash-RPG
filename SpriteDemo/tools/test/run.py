@@ -15,7 +15,7 @@ OUT = os.path.join(HERE, '_bundle.luau')
 NL = chr(10)
 
 # client/modules/ui(도트 글씨 — 폭 재기 · 줄바꿈)는 화면 없이도 돌릴 수 있어 같이 묶는다
-MOUNTS = [('shared', 'ReplicatedStorage/shared'), ('server', 'ServerScriptService/server'), ('client/modules/ui', 'Client/ui')]
+MOUNTS = [('shared', 'ReplicatedStorage/shared'), ('server', 'ServerScriptService/server'), ('client/modules/ui', 'Client/ui'), ('client/lune', 'Client/lune')]
 PARAMS = 'script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick'
 
 def compile_all():
@@ -30,6 +30,16 @@ def compile_all():
 
 def bundle():
     parts = [open(os.path.join(HERE, 'mock.luau'), encoding='utf-8').read()]
+    # LUNE_PLAY=axion,salamander: tests/29_lune_playthrough.luau that plays to the 2nd job with those classes (unset = its short check only)
+    play = os.environ.get('LUNE_PLAY', '')  # a trailing 0 ("axion0") = never visits the smith
+    parts.append('PLAY_FULL = ' + ('"' + ''.join(c for c in play if c.isalnum() or c == ',') + '"' if play else 'nil'))
+    # LUNE_PLAY_XP=2: a what-if for that playthrough - experience from Lv.10 on is multiplied (same as dividing the experience a level needs)
+    try:
+        parts.append('PLAY_XP = %g' % float(os.environ.get('LUNE_PLAY_XP', '1')))
+    except ValueError:
+        parts.append('PLAY_XP = 1')
+    # LUNE_PLAY_NODODGE=1: the virtual player does NOT dodge story-boss attacks (it stands and hits) - measures whether the bosses can be beaten without dodging
+    parts.append('PLAY_NODODGE = %s' % ('true' if os.environ.get('LUNE_PLAY_NODODGE') else 'false'))
     count = 0
     for folder, mount in MOUNTS:
         base = os.path.join(SRC, folder)
@@ -79,12 +89,31 @@ def lint_ui_names():
     print(f'[UI 부품 이름] 키트 부품 {len(names)}개, 없는 이름 {bad}개')
     return bad
 
+def lint_render_step():
+    """「달의 계승자」의 화면 코드(src/client/lune)는 화면을 RunService.RenderStepped 이벤트(PreRender 포함)에서 고치면 안 된다 — RunService:BindToRenderStep으로 고친다.
+    그 이벤트는 Roblox가 그 장의 틀 크기를 셈한 뒤에 불려서, 그림의 자리(ImageRect)는 이번 장에 · 틀의 크기(Size)는 다음 장에 적용된다.
+    그러면 동작의 장이 바뀔 때마다 한 장씩 그림이 앞 장의 크기로 늘어나 그려진다(2026-10-10 캐릭터 만들기 화면 — 사용자의 영상 bug.mp4).
+    chooser.luau는 쓰지 않는 예전 화면이라 뺀다(머리말에 적어 두었다)."""
+    import re
+    bad = 0; n = 0
+    base = os.path.join(SRC, 'client', 'lune')
+    for f in glob.glob(os.path.join(base, '**', '*.luau'), recursive=True):
+        if os.path.basename(f) == 'chooser.luau':
+            continue
+        n += 1
+        for k, line in enumerate(open(f, encoding='utf-8').read().split(NL), 1):
+            code = line.split('--')[0]
+            if re.search(r'\.(RenderStepped|PreRender)\s*:\s*(Connect|Once|Wait)', code):
+                bad += 1; print(f'  RenderStepped 이벤트에서 화면을 고친다 ({os.path.relpath(f, SRC)}:{k}) — BindToRenderStep을 쓸 것')
+    print(f'[화면을 고치는 때] 파일 {n}개, RenderStepped 이벤트를 쓰는 곳 {bad}개')
+    return bad
+
 def lint_globals():
     """새 게임(lune) 코드에서 정의되지 않은 이름을 쓰는 곳을 찾는다(luau-analyze의 "Unknown global").
     아래쪽에서 정의한 지역 변수를 위쪽 함수가 쓰면 Luau는 그것을 전역(nil)으로 본다 — 컴파일은 되고 실행 중에야 터지므로 여기서 잡는다."""
     import re
     known = {'script', 'game', 'workspace', 'Enum', 'Instance', 'task', 'UDim2', 'UDim', 'Color3', 'Vector2', 'Vector3', 'Random', 'warn', 'tick',
-             'CFrame', 'TweenInfo', 'Rect', 'NumberSequence', 'ColorSequence', 'NumberRange', 'Font', 'shared', 'time', 'wait', 'spawn', 'delay'}
+             'CFrame', 'TweenInfo', 'Rect', 'NumberSequence', 'ColorSequence', 'NumberRange', 'Font', 'shared', 'time', 'wait', 'spawn', 'delay', 'Content'}
     analyze = os.path.join(ROOT, 'tools', 'luau', 'luau-analyze.exe')
     files = [f for d in ('shared', 'server', 'client') for f in glob.glob(os.path.join(SRC, d, 'lune', '**', '*.luau'), recursive=True) if not f.endswith('.generated.luau')]
     if not os.path.exists(analyze) or not files:
@@ -103,6 +132,7 @@ if __name__ == '__main__':
     bad = compile_all()
     bad += lint_ui_names()
     bad += lint_globals()
+    bad += lint_render_step()
     mods, tests = bundle()
     print(f'[묶음] 모듈 {mods}개 · 테스트 파일 {tests}개')
     r = subprocess.run([LUAU, OUT], capture_output=True, text=True, encoding='utf-8', errors='replace')

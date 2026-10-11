@@ -48,8 +48,11 @@ eq(N.potionAt(150).lv, 100, "Lv.150의 물약")
 expect(N.potionAt(60).price > N.potionAt(30).price, "윗단 물약이 더 비싸다")
 
 -- 크기 감각: 같은 레벨 몬스터 체력 = 전투력의 6배쯤, 한 방 = 내 체력의 몇 %
+--  Lv.1~14는 초반이라 몬스터의 체력을 덜어 준다(N.easeAt — Lv.1에 절반) — 덜어 주기 전의 값으로 견준다
+expect(N.easeAt(1) == N.data.CURVE.ease.from and N.easeAt(N.data.CURVE.ease.upto) == 1 and N.easeAt(150) == 1, "초반 몬스터의 체력 배수: Lv.1에 가장 낮고 그 뒤로 1")
+expect(N.easeAt(5) > N.easeAt(1) and N.easeAt(5) < 1, "그 사이는 고르게 오른다")
 for _, L in { 5, 30, 100, 150 } do
-	local ratio = N.mobHp(L) / N.refPower(L)
+	local ratio = N.mobHp(L) / N.easeAt(L) / N.refPower(L)
 	expect(ratio > 5.5 and ratio < 6.5, ("Lv.%d 몬스터 체력 ÷ 전투력 = %.2f"):format(L, ratio))
 	local hit = N.hitOf("mob", L) / N.hpOf("riven", L)
 	expect(hit > 0.03 and hit < 0.08, ("Lv.%d 한 방이 가장 여린 직업 체력의 %.1f%%"):format(L, hit * 100))

@@ -1,4 +1,5 @@
--- 장비 한 칸 — 가방 · 장비 창 · 창고 · 강화 창이 같이 쓴다.
+-- 아이템 한 칸 — 가방 · 장비 창 · 창고 · 강화 창 · 상세 판이 같이 쓴다. 칸에 놓이는 것 = 장비({ slot, stage, q, star … }) 또는 소비 · 기타 아이템의 묶음({ item = 이름표, n = 수 }).
+--  묶음은 그 아이템의 그림과 오른쪽 아래의 수(사용자 2026-10-08: 소비 · 기타 아이템도 장비처럼 칸에 놓인다).
 --  어두운 칸에 그 장비의 그림(땅에 떨어진 것과 같은 그림 — 게임의 굵은 도트 그대로). 오른쪽 아래의 +숫자 = 별, 부서진 것은 어둡게 하고 빨간 ×.
 --  고른 칸은 민트 테두리. 등급(성능 단)은 칸에 표시하지 않는다 — 이름의 글자색으로만 보인다(던그리드처럼. 낡은 갈색 · 허름한 회색 · 보통 흰색 · 좋은 하늘색 · 빼어난 노랑).
 --  그림은 공방의 아이콘(tools/build_lune_icons.mjs): 무기는 직업마다 하나, 방어구는 부위 x 재질(가죽 · 수정 · 무쇠 · 달빛), 장신구는 부위마다 하나.
@@ -19,7 +20,7 @@ function ItemCell.size(): number
 end
 -- 성능 단의 글자색: 낡은 · 허름한 · 보통 · 좋은 · 빼어난
 ItemCell.QUALITY = { C.tier0, C.tier1, C.tier2, C.tier3, C.tier4 }
-local WEAPON = { axion = "w_axe", riven = "w_dagger", reaper = "w_scythe", mooni = "w_sword", salamander = "w_fist" }
+local WEAPON = { axion = "w_axe", riven = "w_spear", reaper = "w_scythe", mooni = "w_sword", salamander = "w_fist" }
 
 function ItemCell.color(it): Color3
 	if it.broken then
@@ -38,8 +39,17 @@ function ItemCell.material(stage: number): number
 	return #D.MATERIAL
 end
 
--- 그 장비의 아이콘 이름
+-- 소비 · 기타 아이템의 묶음인가
+function ItemCell.isStack(it: any): boolean
+	return it ~= nil and it.item ~= nil
+end
+
+-- 그 아이템의 아이콘 이름
 function ItemCell.icon(it): string
+	if it.item then
+		local g = Items.goods(it.item)
+		return if g then g.icon else ""
+	end
 	if it.slot == "weapon" then
 		return WEAPON[it.who] or "w_sword"
 	end
@@ -76,6 +86,23 @@ function ItemCell.qualityText(it): string
 	return ("%s %s%d%%"):format(q.name, if q.bonus > 0 then "+" else "", q.bonus)
 end
 
+-- 화면의 그 자리(at)에 있는 칸의 차례(없으면 nil) — 끌던 것을 놓을 칸을 찾을 때 쓴다. cells = ItemCell.new로 만든 칸들
+function ItemCell.at(cells, at: Vector2): number?
+	for i, cell in cells do
+		local p, s = cell.frame.AbsolutePosition, cell.frame.AbsoluteSize
+		if at.X >= p.X and at.X < p.X + s.X and at.Y >= p.Y and at.Y < p.Y + s.Y then
+			return i
+		end
+	end
+	return nil
+end
+
+-- 화면의 그 자리(at)가 그 틀(frame) 안인가
+function ItemCell.over(frame: GuiObject, at: Vector2): boolean
+	local p, s = frame.AbsolutePosition, frame.AbsoluteSize
+	return at.X >= p.X and at.X < p.X + s.X and at.Y >= p.Y and at.Y < p.Y + s.Y
+end
+
 -- 칸 하나(한 변 s — 안 주면 ItemCell.size()). onClick(item) — 빈 칸을 눌러도 불린다(item = nil)
 function ItemCell.new(parent: Instance, x: number, y: number, onClick: (any) -> (), s: number?)
 	local S = s or ItemCell.size()
@@ -90,19 +117,24 @@ function ItemCell.new(parent: Instance, x: number, y: number, onClick: (any) -> 
 	veil.ZIndex = 5
 	veil.Visible = false
 	local cell = { frame = outer, item = nil :: any, size = S }
-	Ui.hit(outer).Activated:Connect(function()
+	cell.hit = Ui.hit(outer) -- 누르는 자리(가방은 여기서 끌기도 받는다)
+	cell.hit.Activated:Connect(function()
 		onClick(cell.item)
 	end)
-	-- it = 장비(없으면 빈 칸). opts = { locked 아직 열리지 않은 칸, selected 고른 칸 }
+	-- it = 장비 · 묶음(없으면 빈 칸). opts = { locked 아직 열리지 않은 칸, selected 고른 칸, hot 끌던 것을 놓을 칸 }
 	function cell.set(_, it: any, opts)
 		opts = opts or {}
 		cell.item = it
 		Ui.setWorldIcon(icon, if it then ItemCell.icon(it) else nil)
-		star:set(if it and it.star > 0 then "+" .. it.star else "")
+		if it and it.item then
+			star:set(tostring(it.n)) -- 묶음: 수
+		else
+			star:set(if it and it.star > 0 then "+" .. it.star else "")
+		end
 		local broken = it ~= nil and it.broken == true
 		icon.ImageColor3 = if broken then Color3.fromRGB(90, 90, 100) else Color3.new(1, 1, 1)
 		cross:set(if broken then "×" else "")
-		slot:setOn(opts.selected == true)
+		slot:setOn(opts.selected == true or opts.hot == true)
 		veil.Visible = opts.locked == true
 	end
 	cell:set(nil)

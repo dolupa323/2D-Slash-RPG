@@ -22,7 +22,7 @@ local KEY_UP = K.keyUp -- 칸 위의 키 딱지가 차지하는 높이
 local COLS, ROWS = K.cols, K.rows -- 스킬 칸: 두 줄 x 여섯
 local PIC = M.pic
 -- 메뉴 단추의 그림(창의 이름표 → 그림)
-local MENU_PIC = { bag = "menu_bag", equip = "menu_equip", stat = "menu_stat", skill = "menu_skill", quest = "menu_quest", party = "menu_party", more = "menu_gear" }
+local MENU_PIC = { bag = "menu_bag", equip = "menu_equip", stat = "menu_stat", skill = "menu_skill", quest = "menu_quest", map = "menu_map", party = "menu_party", more = "menu_gear" }
 
 local Hud = {}
 Hud.COLS, Hud.ROWS = COLS, ROWS
@@ -96,12 +96,14 @@ function Hud.init()
 		table.insert(Hud.slots, slot)
 	end
 	Hud.byId = {} -- [기술 id] = 칸
-	Hud.potionSlot = nil -- 물약이 놓인 칸
 	-- 놓을 스킬을 골랐을 때 칸들 위에 뜨는 안내
 	Hud.pickHint = Ui.text(Hud.skillRoot, Quick.DATA.words.pick, 0, -16, s.w, { align = "center", color = C.accent, outline = true })
 	Hud.pickHint:show(false)
 
 	Hud.menuRoot = Stage.placeRect(root, "Menu", UI.hud.menu)
+	-- 버프 자리(오른쪽 위): 켜 둔 사출기 · 직업의 장치(영혼 · 열기 · 수정)가 그림으로, 그 아래에 수(공방 「기본 · UI」 탭의 3번 칸)
+	Hud.buffRoot = Stage.placeRect(root, "Buffs", UI.hud.buffs)
+	Hud.buffs = {}
 	return Hud
 end
 
@@ -116,15 +118,17 @@ Hud.slotPlace = Layout.slotPlace
 Hud.touchSlotAt = nil :: ((Vector2) -> number?)? -- 스마트폰의 칸 단추: 그 자리의 칸 · 고르는 중 · 끌어 올린 칸(touch.luau가 채운다)
 Hud.touchPick = nil :: ((boolean) -> ())?
 Hud.touchHot = nil :: ((number?) -> ())?
+Hud.countOf = nil :: ((string) -> number)? -- 가방에 든 그 소비 아이템의 수(boot.luau가 넣는다 — 칸의 숫자)
 Hud.onSlotClick = nil :: ((number) -> ())? -- 칸을 눌렀다
 Hud.onSlotPress = nil :: ((number, InputObject) -> ())? -- 칸을 누르기 시작했다(끌기)
 Hud.edit, Hud.pick, Hud.pulse, Hud.hot, Hud.top = false, false, false, nil :: number?, false
+Hud.active = {} :: { [string]: boolean } -- 켜 둔 것(온오프 사출기): 그 칸에 민트 테두리가 켜진다
 
 -- 칸들의 모습을 다시 그린다: 보이는 줄 · 빈 칸의 흐림 · 반짝임(놓을 스킬을 골랐을 때) · 마우스가 올라간 칸
 function Hud.paintSlots()
 	for i, slot in Hud.slots do
 		slot.frame.Visible = true
-		local on = (Hud.pick and Hud.pulse) or Hud.hot == i
+		local on = (Hud.pick and Hud.pulse) or Hud.hot == i or (slot.what ~= false and Hud.active[slot.what] == true)
 		slot.cell:setOn(on)
 		slot.back.ImageTransparency = if slot.what or on then 0 else 1 - Quick.DATA.emptyAlpha
 		slot.key:color(if slot.what then C.text else C.dim)
@@ -132,28 +136,35 @@ function Hud.paintSlots()
 	Hud.pickHint:show(Hud.pick)
 end
 
--- 칸마다 놓인 것을 그린다. list[i] = { what = "potion" · 스킬의 이름표 · false, key = 그 칸의 키 이름 }
+-- 가방이 바뀌었다: 소비 아이템이 놓인 칸의 숫자를 다시 적는다(다 쓰면 0 — 칸에는 남는다)
+function Hud.setCounts()
+	for _, slot in Hud.slots do
+		if slot.item then
+			slot.count:set(tostring(if Hud.countOf then Hud.countOf(slot.item) else 0))
+		end
+	end
+end
+
+-- 칸마다 놓인 것을 그린다. list[i] = { what = 스킬 · 소비 아이템의 이름표 · false, key = 그 칸의 키 이름 }
 function Hud.setSlots(list)
 	table.clear(Hud.byId)
-	Hud.potionSlot = nil
 	Hud.top = false
 	for i, slot in Hud.slots do
 		local it = list[i]
 		local what = if it then it.what or false else false
 		slot.what = what
-		slot.id = if what and what ~= Quick.POTION then what else nil
+		local goods = if what then Quick.item(what) else nil
+		slot.id = if what and not goods then what else nil -- 스킬(다시 쓰기까지의 시간이 덮인다)
+		slot.item = if goods then what else nil -- 소비 아이템(가방에 든 수가 적힌다)
 		slot.keyName = if it then Format.keyShort(it.key) else ""
 		Ui.setPic(slot.pic, if what then Quick.pic(what) else nil)
 		slot.key:set(slot.keyName)
 		slot.veil.Visible = false
 		slot.wait:set("")
 		slot.shown = nil
-		slot.count:set(if what == Quick.POTION and Hud.potions then tostring(Hud.potions) else "")
+		slot.count:set(if slot.item then tostring(if Hud.countOf then Hud.countOf(slot.item) else 0) else "")
 		if slot.id then
 			Hud.byId[slot.id] = slot
-		end
-		if what == Quick.POTION then
-			Hud.potionSlot = slot
 		end
 		if i > COLS and what then
 			Hud.top = true
@@ -295,13 +306,55 @@ function Hud.setOpen(set)
 	end
 end
 
+-- 켜 둔 것(온오프 사출기)의 이름표들: 그 칸에 테두리가 켜진다
+function Hud.setActive(ids: { [string]: boolean })
+	Hud.active = ids
+	Hud.paintSlots()
+end
+
+-- 버프 자리를 그린다. list = { { pic = 그림(화면의 24도트 그림 이름), text = 그림 아래의 글(수 · 없으면 ""), hot = 밝게(달아오름) } … } — 오른쪽 끝부터 왼쪽으로 놓는다
+local BUFF_PITCH = PIC + 6
+function Hud.setBuffs(list)
+	local key = {}
+	for i, b in list do
+		key[i] = b.pic .. ":" .. b.text .. ":" .. tostring(b.hot == true)
+	end
+	local sig = table.concat(key, "|")
+	if Hud.buffSig == sig then
+		return
+	end
+	Hud.buffSig = sig
+	for _, item in Hud.buffs do
+		item.frame:Destroy()
+	end
+	table.clear(Hud.buffs)
+	local w = UI.hud.buffs.w
+	for i, b in list do
+		local frame = Ui.group(Hud.buffRoot, w - i * BUFF_PITCH + 6, 0, PIC, PIC + 14, "Buff" .. i)
+		Ui.pic(frame, b.pic, 0, 0)
+		if b.hot then
+			local edge = Instance.new("UIStroke")
+			edge.Color = C.accent
+			edge.Thickness = 1
+			edge.Parent = frame:FindFirstChild("Pic") or frame
+		end
+		if b.text ~= "" then
+			Ui.text(frame, b.text, -8, PIC + 2, PIC + 16, { align = "center", outline = true, color = if b.hot then C.gold else C.text })
+		end
+		Hud.buffs[i] = { frame = frame }
+	end
+end
+
 -- 스마트폰 단추가 켜지면 키가 적힌 칸(스킬 칸 · 메뉴 단추)은 숨긴다 — 그 자리에 손가락 단추가 온다
 --  체력 덩어리는 아래 가운데로 옮긴다(왼쪽 아래에는 이동 패드가 온다 — data/ui.generated.luau의 hudTouch)
 function Hud.setTouch(on: boolean)
 	Hud.touch = on
 	local v = if on and UI.hudTouch.vitals then UI.hudTouch.vitals else UI.hud.vitals
 	Hud.vitalsBox.Position = Stage.atPosition(v.at, v.x, v.y)
-	Hud.skillRoot.Visible = not on
+	-- 버프 자리: 스마트폰에서는 오른쪽 위의 「메뉴」 단추만큼 왼쪽으로
+	local bf = if on and UI.hudTouch.buffs then UI.hudTouch.buffs else UI.hud.buffs
+	Hud.buffRoot.Position = Stage.atPosition(bf.at, bf.x, bf.y)
+	Hud.skillRoot.Visible = not on and not Hud.locked
 	for _, item in Hud.menu or {} do
 		item.frame.Visible = not on
 	end
@@ -349,6 +402,15 @@ function Hud.xpLabel(xp: number, need: number): string
 end
 
 -- 내 상태(서버가 보낸 것)를 그린다
+-- 스킬 칸을 잠근다: 새 캐릭터는 사제에게 첫 기술을 배운 뒤에 칸이 생긴다(공방 basics.js의 UNLOCK — "스킬 칸: 사당을 나서면")
+Hud.locked = false
+function Hud.setLocked(on: boolean)
+	if Hud.locked ~= on then
+		Hud.locked = on
+		Hud.skillRoot.Visible = not Hud.touch and not on
+	end
+end
+
 function Hud.setSelf(me)
 	local level = "Lv." .. me.level
 	Hud.level:set(level)
@@ -358,10 +420,6 @@ function Hud.setSelf(me)
 	Hud.hp:set(me.hp / math.max(1, me.maxHp))
 	Hud.xp:set(me.xp / math.max(1, me.need))
 	Hud.xpText:set(Hud.xpLabel(me.xp, me.need))
-	Hud.potions = me.potions
-	if Hud.potionSlot then
-		Hud.potionSlot.count:set(tostring(me.potions))
-	end
 	Hud.markMenu("stat", me.ap > 0)
 	Hud.markMenu("skill", me.sp > 0)
 end

@@ -8,7 +8,7 @@
 --    칸에 놓인 것의 그림 · 남은 수(물약) · 다시 쓰기까지 남은 시간이 단추에 뜬다. 공격 스킬은 누르고 있으면 이어서 쓴다.
 --    놓는 법: ① 빈 단추를 누르거나 메뉴의 「단추 배치」 → 놓을 것의 목록(배운 스킬 · 물약)이 뜨고, 고르면 고른 단추에 놓인다. 배치 중에는 단추를 끌어 서로 자리를 바꾼다.
 --            ② 스킬 창 · 가방에서 스킬 · 물약을 누르고(또는 끌어) 단추를 누른다 — PC와 같은 법(ui/quickEdit.luau가 한다. 단추의 자리는 Hud.touchSlotAt으로 알려 준다).
---  조이스틱: 바깥 원 + 가운데 손잡이. 좌우 = 걷기, 아래 = 발판에서 내려오기. 위로 미는 것은 아무 일도 없다(문 · 주민 · 줍기는 상호작용 단추).
+--  조이스틱: 바깥 원 + 가운데 손잡이. 좌우 = 걷기, 아래로 민 채 「점프」 = 발판에서 내려오기(하단 점프 — PC의 ↓ + 뛰기와 같다). 위로 미는 것은 아무 일도 없다(문 · 주민 · 줍기는 상호작용 단추).
 --  단추의 자리는 게임 화면(384x216)의 도트로 적혀 있다. 그리는 곳은 화면 틀의 층(고운 격자)이라, 그 자리에 Stage.ratio를 곱해 놓는다.
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -24,7 +24,7 @@ local C = Ui.COLOR
 local PIC = 24 -- 그림 한 장(화면 틀의 점)
 local HOLD_FIRST, HOLD_NEXT = 0.3, 0.12 -- 공격 스킬을 누르고 있을 때: 처음 다시 누르기까지 · 그 뒤의 간격(초)
 local DRAG = Quick.DATA.drag -- 이만큼 움직이면 끌기로 본다(화면 틀의 점)
-local ACT_WORDS = { pickup = "줍기", portal = "들어가기", npc = "말 걸기" }
+local ACT_WORDS = { pickup = "줍기", portal = "들어가기", npc = "말 걸기", spot = "살펴보기" } -- spot = 맵에 놓인 것 앞(퀘스트의 자리)
 
 local Touch = {}
 Touch.on = false
@@ -75,14 +75,15 @@ end
 local function paintButton(b)
 	local t = b.t
 	local slotOn = t.slot and state.slots[t.slot]
+	local active = slotOn and Hud.active[slotOn] == true -- 켜 둔 사출기: 테두리가 켜지고 판에 민트가 옅게 깔린다(큰 단추는 테두리가 늘 민트라 판으로 가린다)
 	local main = t.kind == "big" or t.kind == "pad"
 	local edge = if main then C.accent else C.lineHot
 	local alpha = if main then 0 else 0.15
 	if t.slot then
 		if Touch.arranging then
 			edge, alpha = (if selected == t.slot then C.text else C.accent), 0
-		elseif state.pick or state.hot == t.slot then
-			edge, alpha = C.accent, 0
+		elseif state.pick or state.hot == t.slot or active then
+			edge, alpha = C.accent, 0 -- 고르는 중 · 놓을 칸 · 켜 둔 사출기
 		elseif not slotOn then
 			alpha = 0.55 -- 빈 칸은 흐리게
 		end
@@ -91,8 +92,8 @@ local function paintButton(b)
 	end
 	b.stroke.Color = edge
 	b.stroke.Transparency = alpha
-	b.frame.BackgroundColor3 = if b.down then C.accent else C.ink
-	b.frame.BackgroundTransparency = if b.down then 0.55 elseif t.slot and not slotOn and not Touch.arranging then 0.7 else 0.4
+	b.frame.BackgroundColor3 = if b.down or active then C.accent else C.ink
+	b.frame.BackgroundTransparency = if b.down then 0.55 elseif active then 0.72 elseif t.slot and not slotOn and not Touch.arranging then 0.7 else 0.4
 end
 
 local function paintAll()
@@ -106,13 +107,13 @@ local function paintSlot(b)
 	local what = state.slots[b.t.slot]
 	Ui.setPic(b.pic, if what then Quick.pic(what) else nil)
 	b.plus:show(not what)
-	if what == Quick.POTION then
-		b.count:set(tostring(state.potions))
+	if what and Quick.item(what) then
+		b.count:set(tostring(if Hud.countOf then Hud.countOf(what) else 0)) -- 소비 아이템: 가방에 든 수
 		b.count:show(true)
 	else
 		b.count:show(false)
 	end
-	local cd = if what and what ~= Quick.POTION then state.cds[what] else nil
+	local cd = if what and not Quick.item(what) then state.cds[what] else nil
 	local remain = if cd then cd.remain else 0
 	b.veil.Visible = remain > 0
 	if remain > 0 then
@@ -466,7 +467,7 @@ local function makePad(t)
 		knob.Position = UDim2.new(0.5, v.X / s, 0.5, v.Y / s)
 		set("left", v.X < -radius * 0.2)
 		set("right", v.X > radius * 0.2)
-		set("down", v.Y > radius * 0.42) -- 아래로 밀면 발판에서 내려온다
+		set("down", v.Y > radius * 0.42) -- 아래로 민 채 「점프」를 누르면 발판에서 내려온다(하단 점프 — sim/physics.luau)
 		-- 위로 미는 것은 아무 일도 없다(문 · 주민은 상호작용 단추 — 사용자 2026-10-08)
 	end
 	pad.stop = function()
@@ -543,12 +544,18 @@ function Touch.setCooldown(id: string, remain: number, total: number)
 	end
 end
 
--- 남은 물약의 수
-function Touch.setPotions(n: number)
-	state.potions = n
-	local i = Quick.find(state.slots, Quick.POTION)
-	if i and slotButtons[i] then
-		paintSlot(slotButtons[i])
+-- 단추들의 모습을 다시 그린다(켜 둔 사출기가 바뀌었을 때 — Hud.active)
+function Touch.refresh()
+	paintAll()
+end
+
+-- 가방이 바뀌었다: 소비 아이템이 놓인 단추의 숫자를 다시 적는다
+function Touch.setCounts()
+	for i, b in slotButtons do
+		local what = state.slots[i]
+		if what and Quick.item(what) then
+			paintSlot(b)
+		end
 	end
 end
 
@@ -654,7 +661,7 @@ function Touch.init(options)
 			if h.t >= h.next then
 				h.next = h.t + HOLD_NEXT
 				local what = state.slots[i]
-				if what and what ~= Quick.POTION and opts.repeats(what) then
+				if what and not Quick.item(what) and opts.repeats(what) then
 					Input.release("tslot:" .. i)
 					Input.press("tslot:" .. i)
 				end

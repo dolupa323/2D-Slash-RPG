@@ -21,14 +21,17 @@ local QuickEdit = {}
 local hooks = nil -- { slots() → 지금 칸들, apply(새 칸들), state(id) → "ok" · "passive" · "unlearned", changed() }
 local open = false -- 놓을 것을 고르는 창(스킬 창 · 가방)이 열려 있다
 local picked: string? = nil -- 놓으려고 고른 스킬
-local pending = nil -- 누르고 있는 것 { what, from(칸 · 스킬 창에서 온 것이면 nil), start, input, moved, ghost }
+local pending = nil -- 누르고 있는 것 { what, from(칸 · 스킬 창에서 온 것이면 nil), start, input, moved, ghost, extra }
+-- 가방의 칸에서 끄는 것(ui/bagWindow.luau)도 여기서 맡는다 — 끌기는 한 번에 하나뿐이다. extra = { icon(게임 세계의 그림 이름), size(끌려오는 그림의 한 변),
+--   onMove(at) 움직일 때마다, onDrop(at) → 여기서 받았으면 true(그러면 퀵슬롯에는 놓지 않는다), onEnd() 끝났다(놓았든 그만뒀든) }.
+--   what이 nil이면(장비 · 기타 아이템) 퀵슬롯에는 놓이지 않고 extra의 일만 한다
 
 local function isPress(input: InputObject): boolean
 	return input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
 end
 
 local function paint()
-	Hud.setPick(picked ~= nil or (pending ~= nil and pending.moved))
+	Hud.setPick(picked ~= nil or (pending ~= nil and pending.moved and pending.what ~= nil))
 	if hooks.changed then
 		hooks.changed()
 	end
@@ -39,9 +42,14 @@ function QuickEdit.picked(): string?
 	return picked
 end
 
+-- 지금 무엇을 끌고 있는가(누른 채 움직이기 시작했다) — 끌기를 끝낼 때 함께 오는 "눌렀다"를 창이 가려낼 때 쓴다
+function QuickEdit.dragging(): boolean
+	return pending ~= nil and pending.moved
+end
+
 -- 스킬을 고른다: 칸들이 반짝인다. 같은 것을 한 번 더 고르면 그만둔다. nil = 그만둔다
 function QuickEdit.pick(id: string?)
-	if id ~= nil and (not open or (id ~= Quick.POTION and hooks.state(id) ~= "ok") or picked == id) then
+	if id ~= nil and (not open or (not Quick.item(id) and hooks.state(id) ~= "ok") or picked == id) then
 		id = nil
 	end
 	if picked ~= id then
@@ -58,6 +66,12 @@ end
 
 -- 끌던 것(p)을 놓았다: 칸 위면 그 칸에(칸에서 온 것이면 자리를 바꾼다), 칸 밖이면 칸에서 온 것은 빠진다
 local function drop(p, at: Vector2)
+	if p.extra and p.extra.onDrop and p.extra.onDrop(at) then
+		return -- 가방의 칸에 놓았다
+	end
+	if not p.what then
+		return
+	end
 	local j = Hud.slotAt(at)
 	local slots = hooks.slots()
 	local next = nil
@@ -89,15 +103,21 @@ local function finish(at: Vector2?)
 		Hud.setHot(nil)
 		paint()
 	end
+	if p.extra and p.extra.onEnd then
+		p.extra.onEnd()
+	end
 end
 
--- 누르기 시작했다(끌기가 될 수도 있다). what = 스킬의 이름표 · "potion", from = 칸(스킬 창에서 온 것이면 nil)
-function QuickEdit.press(what: string, from: number?, input: InputObject)
-	if not isPress(input) or (from == nil and what ~= Quick.POTION and hooks.state(what) ~= "ok") then
+-- 누르기 시작했다(끌기가 될 수도 있다). what = 스킬 · 소비 아이템의 이름표(가방의 장비 · 기타 아이템이면 nil), from = 칸(창에서 온 것이면 nil), extra = 가방의 칸에서 끌 때(위의 설명)
+function QuickEdit.press(what: string?, from: number?, input: InputObject, extra: any)
+	if not isPress(input) or (what == nil and extra == nil) then
+		return
+	end
+	if what ~= nil and from == nil and not Quick.item(what) and hooks.state(what) ~= "ok" then
 		return
 	end
 	finish(nil)
-	pending = { what = what, from = from, start = Vector2.new(input.Position.X, input.Position.Y), input = input, moved = false, ghost = nil }
+	pending = { what = what, from = from, start = Vector2.new(input.Position.X, input.Position.Y), input = input, moved = false, ghost = nil, extra = extra }
 end
 
 -- 스킬 창이 열렸다 · 닫혔다: 닫히면 고르던 것 · 끌던 것을 그만둔다
@@ -147,18 +167,26 @@ function QuickEdit.init(h)
 			-- 끌기 시작: 그림이 마우스를 따라오고 칸들이 반짝인다
 			p.moved = true
 			picked = nil
-			local ghost = Ui.group(Stage.ui, 0, 0, SLOT, SLOT, "DragGhost")
+			local size = if p.extra and p.extra.size then p.extra.size else SLOT
+			local ghost = Ui.group(Stage.ui, 0, 0, size, size, "DragGhost")
 			ghost.ZIndex = 400
-			Ui.slot(ghost, 0, 0, SLOT):setOn(true)
-			local pad = math.floor((SLOT - Ui.M.pic) / 2)
-			Ui.pic(ghost, Quick.pic(p.what), pad, pad).ZIndex = 2
-			p.ghost = ghost
+			Ui.slot(ghost, 0, 0, size):setOn(true)
+			if p.extra and p.extra.icon then
+				Ui.worldIcon(ghost, p.extra.icon, 0, 0, size).ZIndex = 2 -- 가방의 것: 칸에 놓인 그 그림(게임의 굵은 도트)
+			else
+				local pad = math.floor((size - Ui.M.pic) / 2)
+				Ui.pic(ghost, Quick.pic(p.what), pad, pad).ZIndex = 2
+			end
+			p.ghost, p.size = ghost, size
 			paint()
 		end
 		if p.moved then
 			local origin = Stage.ui.AbsolutePosition
-			p.ghost.Position = UDim2.fromOffset(math.floor((at.X - origin.X) / Stage.uiScale - SLOT / 2 + 0.5), math.floor((at.Y - origin.Y) / Stage.uiScale - SLOT / 2 + 0.5))
-			Hud.setHot(Hud.slotAt(at))
+			p.ghost.Position = UDim2.fromOffset(math.floor((at.X - origin.X) / Stage.uiScale - p.size / 2 + 0.5), math.floor((at.Y - origin.Y) / Stage.uiScale - p.size / 2 + 0.5))
+			Hud.setHot(if p.what then Hud.slotAt(at) else nil)
+			if p.extra and p.extra.onMove then
+				p.extra.onMove(at)
+			end
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input)

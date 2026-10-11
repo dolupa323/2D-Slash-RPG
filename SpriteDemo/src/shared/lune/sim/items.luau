@@ -26,6 +26,12 @@ local STOCK = {}
 for _, s in D.STOCK do
 	STOCK[s.id] = s
 end
+-- 소비 · 기타 아이템(가방의 칸에 묶음으로 놓인다 — 공방 js/lune/design/items.js의 GOODS). order = 목록의 차례(정렬할 때 쓴다)
+local GOODS = {}
+for i, g in D.GOODS do
+	GOODS[g.id] = g
+	g.order = i
+end
 
 local function round(v: number): number
 	return math.floor(v + 0.5)
@@ -41,6 +47,34 @@ end
 
 function Items.stock(id: string)
 	return STOCK[id]
+end
+
+-- 소비 · 기타 아이템의 자료(없는 이름표면 nil): { id, tab("use" · "etc"), kind("potion" · "quest"), name, icon, stack, text, lv · heal(물약), from · quest · need(퀘스트의 물건) }
+function Items.goods(id: any)
+	return if typeof(id) == "string" then GOODS[id] else nil
+end
+
+-- 상점에 팔 때의 값(헐값 — 공방 js/lune/design/items.js의 SELL · gearSell과 같은 셈). 장비: 그 단계 몬스터 한 마리의 달돈 x (무기 · 그 밖의 몫 — D.SELL) x 20% — 성능과 별은 값에 들어가지 않는다
+function Items.sellPrice(it): number
+	local mult = if it.slot == "weapon" then D.SELL.weapon else D.SELL.other
+	return math.max(1, math.floor(D.SELL.rate * mult * N.killMoney(it.stage) + 1e-9))
+end
+
+-- 소비 · 기타 아이템 하나를 상점에 팔 때의 값(0 = 팔 수 없다 — 퀘스트의 물건)
+function Items.goodsSell(id: any): number
+	local g = if typeof(id) == "string" then GOODS[id] else nil
+	return if g then g.sell else 0
+end
+
+-- 그 레벨에서 쓸 수 있는 가장 좋은 물약(새 캐릭터의 물약 · 퀘스트 보상의 물약)
+function Items.potionFor(level: number)
+	local best = nil
+	for _, g in D.GOODS do
+		if g.kind == "potion" and g.lv <= level and (not best or g.lv > best.lv) then
+			best = g
+		end
+	end
+	return best
 end
 
 -- ---------- 만들기 · 꼴 ----------
@@ -196,6 +230,74 @@ function Items.rollDrop(rng, mobLv: number, who: string, mul: number?)
 	return nil
 end
 
+-- ---------- 재료 · 제작 · 낮은 확률의 귀한 드롭 ----------
+--  사용자 2026-10-11: "그냥 일반몬스터들이 확률에 따라서 레벨 10 몬스터 잡다가 적은확률로 10렙제 아이템, 방어구를 드롭하는겁니다. 안뜨면 재료를 모아서 대장장이에서 만들수도 있구요.
+--    … 그냥 몬스터에 간단하게 일반아이템 드롭되고, 낮은확률로 이것저것 리워드 드롭되게해서 반복사냥 mmorpg 개념으로 가야하는겁니다."
+--  값은 공방 js/lune/design/items.js의 MATS · MATDROP · RECIPES · CRAFTQ · RARE(모두 제안)
+local RECIPE = {}
+for i, r in D.RECIPES do
+	RECIPE[r.id] = r
+	r.order = i
+end
+
+-- 그 레벨의 몬스터가 떨어뜨리는 재료들(가방의 기타 탭에 놓이는 아이템의 이름표 — 광석 · 가죽)
+function Items.matsAt(mobLv: number): { string }
+	local out = {}
+	for _, m in D.MATS do
+		if mobLv >= m.lv[1] and mobLv <= m.lv[2] then
+			table.insert(out, m.id)
+		end
+	end
+	return out
+end
+
+-- 몬스터 한 마리가 떨어뜨리는 재료(이름표들 — 없으면 빈 표). 재료마다 따로 굴린다(둘 다 나올 수도 있다)
+function Items.rollMats(rng, mobLv: number, mul: number?): { string }
+	local out = {}
+	for _, id in Items.matsAt(mobLv) do
+		if rng:NextNumber(0, 100) < D.MATDROP.pct * (mul or 1) then
+			table.insert(out, id)
+		end
+	end
+	return out
+end
+
+-- 낮은 확률의 귀한 것(소비 아이템의 이름표들): 그 몬스터의 레벨에 쓰는 물약 · 귀환 주문서
+function Items.rollRare(rng, mobLv: number, mul: number?): { string }
+	local out = {}
+	for _, r in D.RARE do
+		if rng:NextNumber(0, 100) < r.pct * (mul or 1) then
+			if r.id == "potion" then
+				table.insert(out, Items.potionFor(mobLv).id)
+			elseif r.goods then
+				table.insert(out, r.goods)
+			end
+		end
+	end
+	return out
+end
+
+-- 제작법(없는 이름표면 nil): { id, slot, stage, from(만들 수 있는 레벨), needs = { { item, n } … }, money }
+function Items.recipe(id: any)
+	return if typeof(id) == "string" then RECIPE[id] else nil
+end
+
+-- 만든 장비의 성능 단: 보통 이상만(D.CRAFTQ의 비율 — 떨어질 때의 보통 · 좋은 · 빼어난의 비율 그대로)
+function Items.rollCraftQuality(rng): number
+	local total = 0
+	for _, x in D.CRAFTQ do
+		total += x.pct
+	end
+	local roll = rng:NextNumber(0, total)
+	for _, x in D.CRAFTQ do
+		if roll < x.pct then
+			return x.q
+		end
+		roll -= x.pct
+	end
+	return D.NORMAL
+end
+
 -- 달가루가 떨어지는 꼴: 확률(%)과 한 번에 떨어지는 양(소수일 수 있다). 평균 = 0.01 × (레벨/10)³
 function Items.dustDrop(mobLv: number): (number, number)
 	local avg = D.DUST.kill * (mobLv / 10) ^ 3
@@ -235,9 +337,9 @@ function Items.starDust(stage: number, star: number): number
 	return sum
 end
 
--- 다음 시도의 내용. guard = 파괴 막기를 켰는가.
---  { can(시도할 수 있는가), why, ok · fail · boom(%), dust, essence, drops(실패하면 떨어지는가), sure(반드시 성공인가), guard(파괴 막기를 쓸 수 있는 별인가) }
-function Items.enhanceInfo(it, guard: boolean?)
+-- 다음 시도의 내용. guard = 파괴 막기를 켰는가 · first = 그 캐릭터의 첫 강화인가(달가루 없이 반드시 붙는다 — 공방 basics.js의 FORGE.first).
+--  { can(시도할 수 있는가), why, ok · fail · boom(%), dust, essence, drops(실패하면 떨어지는가), sure(반드시 성공인가), guard(파괴 막기를 쓸 수 있는 별인가), first(첫 강화인가) }
+function Items.enhanceInfo(it, guard: boolean?, first: boolean?)
 	local s = it.star
 	if it.broken then
 		return { can = false, why = "부서짐" }
@@ -263,6 +365,12 @@ function Items.enhanceInfo(it, guard: boolean?)
 		info.fail += info.boom
 		info.boom = 0
 	end
+	-- 첫 강화: 공짜로, 반드시 붙는다(파괴 막기도 필요 없다)
+	if first then
+		info.first = true
+		info.sure = true
+		info.dust, info.essence = 0, 0
+	end
 	if info.sure then
 		info.ok, info.fail, info.boom = 100, 0, 0
 	end
@@ -270,8 +378,8 @@ function Items.enhanceInfo(it, guard: boolean?)
 end
 
 -- 강화를 한 번 시도한다(값은 부른 쪽이 치른다). 결과: "ok" 붙음 · "fail" 그대로 · "drop" 한 단계 떨어짐 · "boom" 부서짐
-function Items.enhance(it, rng, guard: boolean?): string
-	local info = Items.enhanceInfo(it, guard)
+function Items.enhance(it, rng, guard: boolean?, first: boolean?): string
+	local info = Items.enhanceInfo(it, guard, first)
 	assert(info.can, "강화할 수 없는 장비")
 	local roll = rng:NextNumber(0, 100)
 	if roll < info.ok then
@@ -303,7 +411,8 @@ end
 
 -- ---------- 분해 · 별 옮기기 ----------
 function Items.dismantle(it): number
-	return round(D.DUST.dismantle * (it.stage / 10) ^ 3 + D.DUST.back / 100 * Items.starDust(it.stage, it.star))
+	-- Lv.10부터는 적어도 1(분해했는데 0이 나오지 않게 — 공방의 dismantleDust와 같은 셈)
+	return math.max(if it.stage >= 10 then 1 else 0, round(D.DUST.dismantle * (it.stage / 10) ^ 3 + D.DUST.back / 100 * Items.starDust(it.stage, it.star)))
 end
 
 -- 옛 장비의 별을 새 장비로 옮겼을 때 새 장비의 별(옛 별에서 하나를 뺀 만큼, 새 장비의 상한까지 — 이미 더 높으면 그대로)
@@ -312,11 +421,8 @@ function Items.transfer(from, to): number
 end
 
 -- ---------- 상점 ----------
--- 그 물건의 값(물약은 내 레벨에 맞는 물약의 값)
-function Items.stockPrice(stock, level: number): number
-	if stock.id == "potion" then
-		return N.potionAt(level).price
-	end
+-- 그 물건의 값(물약도 단마다 따로 판다 — 값이 레벨을 따라 달라지지 않는다)
+function Items.stockPrice(stock, _level: number?): number
 	return stock.price
 end
 

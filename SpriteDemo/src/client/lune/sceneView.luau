@@ -11,7 +11,9 @@ local G = require(lune.config.game)
 local ASSETS = require(lune.data["assets.generated"])
 local UI = require(lune.data["ui.generated"])
 local SCENES = require(lune.data["scenes.generated"])
+local PORTAL = require(lune.data["portal.generated"])
 local Stage = require(script.Parent.stage)
+local Canvas = require(script.Parent.canvas)
 local Kit = require(script.Parent.ui.kit)
 local Ui = require(script.Parent.ui.ui)
 local Overlay = require(script.Parent.overlay)
@@ -66,10 +68,15 @@ function SceneView.new(view: Frame, key: string, scene, tagLayer: Frame)
 	self.world = world
 	local back = Stage.group(world, "Back", 10)
 	local ground = Stage.group(world, "Ground", 20)
+	self.portalLayer = Stage.group(world, "Portals", 22) -- 포탈의 그림(땅 위 · 주민과 캐릭터 뒤)
 	self.npcLayer = Stage.group(world, "Npcs", 30)
+	self.graveLayer = Stage.group(world, "Graves", 35) -- 쓰러진 사람의 비석(졸개 · 캐릭터보다 뒤 — 놓인 것이 캐릭터를 가리지 않는다)
 	self.mobLayer = Stage.group(world, "Mobs", 40)
 	self.heroLayer = Stage.group(world, "Heroes", 50)
 	self.fxLayer = Stage.group(world, "Fx", 55)
+	-- 이펙트의 점 그림판(client/lune/canvas.luau): 뒤의 것은 땅과 주민 사이 · 앞의 것은 캐릭터 위 — 시험 탭이 그리는 차례와 같다
+	self.fxBack, self.fxFront = Canvas.attach(world, 25, 56)
+	self.shakeX, self.shakeY = 0, 0 -- 화면 흔들림(cast.luau가 장마다 넣는다)
 	local front = Stage.group(world, "Front", 60)
 	self.topLayer = Stage.group(world, "Top", 70) -- 이름표 · 피해 숫자처럼 모든 것 위에 뜨는 것
 
@@ -103,16 +110,18 @@ function SceneView.new(view: Frame, key: string, scene, tagLayer: Frame)
 		for i, n in scene.npcs do
 			local label = Stage.image(self.npcLayer, n.id, ASSETS[scene.npcSheet] or "", nw, nh)
 			label.Position = UDim2.fromOffset(round(n.x - nw / 2), n.y - nh)
+			label.Visible = not n.stone -- 비석(명예의 전당): 방 그림에 그려져 있다 — 이름표와 말만 있다
 			self.npcs[i] = { def = n, label = label, nw = nw, nh = nh, shown = "" }
 		end
 	end
 
 	-- 이름표: 주민의 발밑에 구실과 이름(노랑), 문 위에 어디로 가는지(민트). 자리는 update가 화면마다 잡는다
-	self.tags = {} -- { label, wx, wy(게임 세계의 자리), dy(거기서 화면 틀의 점으로 얼마나 아래) }
+	self.tags = {} -- { label, wx, wy(게임 세계의 자리), dy(거기서 화면 틀의 점으로 얼마나 아래), portal(문의 이름표면 그 문) }
+	self.tagOut = {} -- tagList가 돌려주는 표(장마다 다시 채운다)
 	self.tagRects = {} -- 주민 · 문의 이름표들의 자리 { x, y, w }(화면 틀의 점)
-	local function tag(text: string, wx: number, wy: number, dy: number, color: Color3)
+	local function tag(text: string, wx: number, wy: number, dy: number, color: Color3, portal: any?)
 		local label = Ui.tag(tagLayer, text, color, 260)
-		table.insert(self.tags, { label = label, wx = wx, wy = wy, dy = dy })
+		table.insert(self.tags, { label = label, wx = wx, wy = wy, dy = dy, portal = portal })
 		return label
 	end
 	for _, npc in self.npcs do
@@ -125,9 +134,16 @@ function SceneView.new(view: Frame, key: string, scene, tagLayer: Frame)
 		npc.mark.ZIndex = 6
 	end
 	-- 문 위의 퀘스트 표시: 그 문 안(건물의 실내)에 있는 주민에게 받을 · 돌려줄 퀘스트가 있으면 문 위에 ! · ? 를 띄운다 — 주민이 건물 안에 있어 밖에서는 머리 위의 표시가 보이지 않는다
+	--  포탈: 모든 문 · 건물 입구에 같은 그림(빛의 타원 안에서 소용돌이가 돈다)이 놓인다 — 글씨가 아니라 이 그림이 포탈임을 알려 준다(사용자 2026-10-10).
+	--   어디로 가는지의 글(↑ 마을 어귀로)은 그 앞에 섰을 때만 보인다(tagList)
 	self.doorMarks = {}
-	for _, p in scene.portals do
-		tag("↑ " .. p.label, p.x, p.y - (p.h or 60), -(Ui.TAG_H + 2), C.accent)
+	self.portals = {}
+	for i, p in scene.portals do
+		local glow = Stage.image(self.portalLayer, "Portal_" .. tostring(p.id or p.to), ASSETS[PORTAL.img] or "", PORTAL.w, PORTAL.h) -- 이름표(id)가 없는 문도 있다(새로 지은 맵의 문 — 가는 곳으로 부른다)
+		glow.ImageRectSize = Vector2.new(PORTAL.w, PORTAL.h)
+		glow.Position = UDim2.fromOffset(round(p.x - PORTAL.w / 2), p.y - PORTAL.h)
+		self.portals[i] = { label = glow, phase = i * 0.37, frame = -1 }
+		tag("↑ " .. p.label, p.x, p.y - math.max(p.h or 60, PORTAL.h), -(Ui.TAG_H + 2), C.accent, p)
 		local dest = SCENES.scenes[p.to]
 		if dest and dest.indoor and dest.npcs then
 			local ids = {}
@@ -175,7 +191,16 @@ function SceneView:update(heroX: number, heroY: number, clock: number, grounded:
 		cy = round(self.camYf)
 	end
 	self.camX, self.camY = cx, cy
-	self.world.Position = UDim2.fromOffset(-cx, -cy)
+	self.heroX, self.heroY = heroX, heroY
+	-- 포탈의 그림을 돌린다
+	for _, pt in self.portals do
+		local frame = math.floor((clock + pt.phase) * PORTAL.fps) % PORTAL.frames
+		if frame ~= pt.frame then
+			pt.frame = frame
+			pt.label.ImageRectOffset = Vector2.new(frame * PORTAL.w, 0)
+		end
+	end
+	self.world.Position = UDim2.fromOffset(-cx + self.shakeX, -cy + self.shakeY)
 	Overlay.setCamera(cx, cy)
 	for i, t in self.tags do
 		local left, top = Overlay.x(t.wx) - math.floor(t.label.Width / 2), Overlay.y(t.wy) + t.dy
@@ -190,9 +215,11 @@ function SceneView:update(heroX: number, heroY: number, clock: number, grounded:
 
 	for _, layer in self.layers do
 		local l = layer.def
-		local ox = -(round(cx * l.f) % l.w)
+		-- f 2 = 맵과 똑같이 움직이는 벽(망루 · 종탑의 안 — 세로로 쌓인 벽 / 회랑 — 가로로 이어 붙는 벽): 카메라와 1:1로 민다
+		local lock = l.f >= 2
+		local ox = if lock then -(cx % l.w) else -(round(cx * l.f) % l.w)
 		-- 층이 있는 맵 · 실내는 공방 시험 탭의 식 그대로(멀수록 세로로도 덜 따라온다 — 실내의 방 그림은 f = 0이라 화면에 붙어 있다)
-		local oy = if self.scene.tall or self.scene.indoor then round(l.y - cy * l.f * 0.5) else l.y - cy
+		local oy = if lock then l.y - cy elseif self.scene.tall or self.scene.indoor then round(l.y - cy * l.f * 0.5) else l.y - cy
 		for c, label in layer.labels do
 			label.Position = UDim2.fromOffset(ox + (c - 1) * l.w, oy)
 		end
@@ -235,11 +262,22 @@ function SceneView:update(heroX: number, heroY: number, clock: number, grounded:
 end
 
 -- 주민 · 문의 이름표들: { x(왼쪽), y(위), w, frame }(화면 틀의 점) — 자리는 update가 이미 잡았다. 겹칠 때 보일지는 boot가 정한다
+--  문의 이름표(어디로 가는지)는 캐릭터가 그 문 앞에 섰을 때만 넣는다 — 멀리 있는 문의 글은 숨긴다
 function SceneView:tagList()
+	local out = self.tagOut
+	table.clear(out)
+	local hx, hy = self.heroX or 0, self.heroY or 0
 	for i, r in self.tagRects do
-		r.frame = self.tags[i].label.Frame
+		local t = self.tags[i]
+		r.frame = t.label.Frame
+		local p = t.portal
+		if p and (math.abs(p.x - hx) > PORTAL.near.x or math.abs(p.y - hy) > PORTAL.near.y) then
+			r.frame.Visible = false
+		else
+			table.insert(out, r)
+		end
 	end
-	return self.tagRects
+	return out
 end
 
 -- 주민 머리 위의 퀘스트 표시를 고친다. markOf(주민 id) → "!" · "?" · nil
@@ -297,6 +335,7 @@ function SceneView:portalNear(x: number, y: number)
 end
 
 function SceneView:destroy()
+	Canvas.detach() -- 그림판은 다음 장면이 다시 쓴다(맵 틀과 같이 없애지 않는다)
 	self.root:Destroy()
 	for _, t in self.tags do
 		t.label:Destroy()

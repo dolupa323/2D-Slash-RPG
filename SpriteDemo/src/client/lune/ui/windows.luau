@@ -87,6 +87,11 @@ function Windows.locked(id: string): boolean
 	return def == nil or def.from > level
 end
 
+-- 다른 캐릭터로 들어왔다: 그 캐릭터의 레벨에서 다시 센다(열려 있던 창은 부른 쪽이 먼저 닫는다 — 낮은 레벨의 캐릭터에게는 아직 열리지 않은 창이 있다)
+function Windows.resetLevel(now: number)
+	level = now
+end
+
 -- 내 레벨을 알린다. 이번에 새로 열린 창의 이름표(id)들을 돌려준다
 function Windows.setLevel(now: number): { string }
 	local fresh = {}
@@ -115,6 +120,11 @@ end
 
 function Windows.anyOpen(): boolean
 	return #open > 0
+end
+
+-- 그쪽("right" · "left") 끝에 창이 떠 있는가(오른쪽 창은 오른쪽 위의 퀘스트 알리미를 덮는다)
+function Windows.sideOpen(side: string): boolean
+	return at(side) ~= nil
 end
 
 function Windows.close(id: string)
@@ -147,9 +157,10 @@ function Windows.closeTop(): boolean
 end
 
 -- arg = 창에 딸려 주는 값(같은 창이 다른 값으로 열려 있으면 닫고 다시 연다)
-function Windows.open(id: string, arg: any)
+--  force = 아직 열리지 않은 창이어도 띄운다(창고를 열 때의 가방 — 새 캐릭터도 계정의 창고에서 바로 꺼낼 수 있어야 한다)
+function Windows.open(id: string, arg: any, force: boolean?)
 	local def = defs[id]
-	if not def or def.from > level then
+	if not def or (def.from > level and not force) then
 		return
 	end
 	if Windows.isOpen(id) then
@@ -252,6 +263,20 @@ function Windows.refresh(me)
 			o.view.refresh(me)
 		end
 	end
+end
+
+-- 그 창 옆(화면 가운데 쪽)에 폭 w의 판을 놓을 자리 — 아이템 상세 판(ui/itemDetail.luau)이 쓴다. 창이 열려 있지 않으면 nil.
+--  오른쪽 창이면 그 왼쪽에, 왼쪽 창이면 그 오른쪽에(창과 gap만큼 띄운다). 윗줄은 창과 같다
+function Windows.beside(id: string, w: number, gap: number): UDim2?
+	for _, o in open do
+		if o.id == id then
+			if o.side == "left" then
+				return Stage.atPosition("tl", EDGE + o.w + gap, TOP)
+			end
+			return Stage.atPosition("tr", Stage.REF_W - EDGE - o.w - gap - w, TOP)
+		end
+	end
+	return nil
 end
 
 -- 열린 창에 딸린 값(상점 창이 누구의 것인지 등)
