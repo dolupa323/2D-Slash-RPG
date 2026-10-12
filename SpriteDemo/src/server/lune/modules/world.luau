@@ -39,6 +39,7 @@ local MOVE_SLACK = 90 -- 한 번의 보고에서 이보다 멀리 가 있으면 
 local LOAD_GUARD, LOAD_STALE = 12, 2
 local WARP_SLACK, WARP_TIME = 280, 1.5 -- 2~4차의 스킬을 쓴 직후(초)에는 이만큼(도트) 멀리 간 자리도 받는다 — 순간이동하는 스킬(연막 순보 · 급습 · 연쇄 순보 …)과 길게 내달리는 스킬
 local SAVE_EVERY = 60 -- 바뀐 캐릭터를 이 간격(초)으로 저장한다
+local STOP_WAIT = 20 -- 서버가 닫힐 때 쓰고 있는 저장을 기다리는 시간의 위(초 — 로블록스가 닫히는 서버에 주는 30초 안)
 -- 같은 계정이 다른 서버에서 하는 중일 때(modules/store.luau의 잠금): 이만큼 다시 물어 보고(서버를 옮겨 올 때 앞 서버가 저장을 끝내고 잠금을 푼다) 끝내 안 풀리면 내보낸다
 local LOCK_TRIES, LOCK_WAIT = 6, 1.5
 local LOCK_KICK = "이 계정은 다른 서버에서 하는 중입니다. 잠시 뒤에 다시 들어와 주세요."
@@ -330,17 +331,34 @@ local function pushRank(s)
 end
 
 -- 계정을 저장한다. 확인용 임시 계정은 계정의 표에만 적고(캐릭터를 바꿔 들어가도 창고 · 레벨이 이어지게) 저장소에는 쓰지 않는다
+--  차례: 계정을 먼저 쓰고 순위판은 그 뒤에 쓴다(2026-10-12 — 그 앞에는 순위판(쓸 때마다 기다린다)을 먼저 써서, 서버가 닫히는 중이면 정작 계정이 마지막에 밀려 쓰이지 못할 수 있었다)
+--  saving = 지금 저장소에 쓰고 있는 것의 수: 서버가 닫힐 때 World.stop이 이것이 0이 될 때까지 기다린다(나가는 사람의 저장이 끝나기 전에 서버가 닫히지 않게)
+local saving = 0
 local function saveAccount(s)
 	if not s.acct or not s.loaded then
 		return
 	end
 	commit(s)
-	pushRank(s)
 	if s.guest then
+		pushRank(s)
 		return
 	end
-	s.dirty = false
-	Store.saveAccount(s.player.UserId, Account.pack(s.acct))
+	s.dirty, s.soon = false, nil
+	saving += 1
+	local ok, err = pcall(Store.saveAccount, s.player.UserId, Account.pack(s.acct))
+	if not ok then
+		warn("[lune] 저장하다 오류: " .. tostring(err))
+	end
+	pcall(pushRank, s)
+	saving -= 1
+end
+
+-- 곧 저장한다(키 설정 · 퀵슬롯처럼 바꾸자마자 나가기 쉬운 것): SAVE_SOON초 뒤에 — 그 사이 또 바꾸면 그때부터 다시 센다(연달아 바꾸는 동안에는 한 번만 쓴다)
+--  사용자 2026-10-12: "지금 키세팅을하고 다시접속하면 키세팅이 초기화됩니다." — 바꾼 것은 60초마다 도는 저장을 기다렸고, 그 전에 나가면 나갈 때의 저장 하나에만 걸려 있었다
+local SAVE_SOON = 4
+local function saveSoon(s)
+	s.dirty = true
+	s.soon = os.clock() + SAVE_SOON
 end
 
 -- 이름표(다른 사람의 화면 — 채팅의 이름)에 쓰이게 사람에게 적어 둔다
@@ -1379,7 +1397,7 @@ end
 local function onKeys(player, map)
 	local s = sessions[player]
 	if s and s.hero and Hero.setKeys(s.hero, map) then
-		s.dirty = true
+		saveSoon(s)
 	end
 end
 
@@ -1390,7 +1408,7 @@ local function onSlots(player, list)
 		return nil
 	end
 	if Hero.setSlots(s.hero, list) then
-		s.dirty = true
+		saveSoon(s)
 	end
 	return s.hero.slots
 end
@@ -1402,7 +1420,7 @@ local function onTouchSlots(player, list)
 		return nil
 	end
 	if Hero.setSlots(s.hero, list, true) then
-		s.dirty = true
+		saveSoon(s)
 	end
 	return s.hero.tslots
 end
@@ -2164,11 +2182,31 @@ function World.start()
 			saveT = 0
 			task.spawn(World.saveAll, true)
 		end
+		World.saveDue()
 	end)
+end
+
+-- 곧 저장하기로 한 것(saveSoon — 키 설정 · 퀵슬롯)의 때가 됐으면 저장한다
+function World.saveDue()
+	local now = os.clock()
+	for _, s in sessions do
+		if s.soon and now >= s.soon then
+			s.soon = nil
+			if s.hero and s.loaded and not s.guest and s.dirty then
+				task.spawn(saveAccount, s)
+			end
+		end
+	end
 end
 
 function World.stop()
 	World.saveAll(false)
+	-- 나가는 사람의 저장(World.removePlayer — 그 사람은 이미 sessions에서 빠져 위의 saveAll이 보지 못한다)이 아직 쓰이는 중이면 끝날 때까지 기다린다(길어도 STOP_WAIT초).
+	--  혼자 하다가 나가면 서버가 곧바로 닫힌다 — 기다리지 않으면 마지막에 바꾼 것(키 설정처럼 방금 바꾼 것)이 저장되지 못한 채 서버가 닫힐 수 있다
+	local waited = 0
+	while saving > 0 and waited < STOP_WAIT do
+		waited += task.wait(0.1) or 0.1
+	end
 	-- 서버가 닫힌다: 저장한 뒤에 잡고 있던 계정을 모두 푼다
 	for _, s in sessions do
 		if s.held and Store.unlock then

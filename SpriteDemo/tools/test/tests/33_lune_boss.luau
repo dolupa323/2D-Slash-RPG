@@ -26,23 +26,57 @@ for _, b in scene.bosses do
 	expect(q ~= nil and q.kind == "main" and q.scene == KEY and #q.steps == 1 and q.steps[1].type == "kill" and q.steps[1].mob == b.kind and q.steps[1].n == 1, "그 보스를 한 번 잡는 메인 퀘스트 " .. b.kind)
 	expect(b.range[1] >= 32 + def.body[1] / 2 and b.range[2] <= scene.w * 16 - 32 - def.body[1] / 2 and b.x >= b.range[1] and b.x <= b.range[2], "움직이는 범위가 방 안(양 끝의 벽 안쪽)")
 	eq(b.y, FLOOR, "바닥에 선다")
+	local ids = {}
 	for _, p in def.story.patterns do
-		expect(p.tell >= 1.2 and p.tell <= 1.8, ("%s %s: 예고가 기술을 쓰던 중에도 보고 피할 만큼 길다(%.1f초)"):format(b.kind, p.id, p.tell))
-		expect(p.act + p.rest >= 1.4, ("%s %s: 친 뒤 다음 패턴까지 한두 번 칠 틈이 있다(굳어 있는 %.2f + %.2f초)"):format(b.kind, p.id, p.act, p.rest))
+		ids[p.id] = p
+	end
+	for _, p in def.story.patterns do
 		expect(typeof(p.name) == "string" and #p.name > 0, ("%s %s: 화면에 띄울 패턴의 이름"):format(b.kind, p.id))
-		expect((p.zone ~= nil or p.wave ~= nil or p.summon ~= nil or p.dash ~= nil) and p.mul >= 0, ("%s %s: 하는 일이 있다"):format(b.kind, p.id))
+		if p.chain then
+			-- 연속기: 적힌 패턴들을 쉬지 않고 잇는다 — 그 자체는 예고도 판정도 없다
+			expect(#p.chain >= 2 and p.quick >= 0.6 and p.quick <= 1, ("%s %s: 연속기는 둘 넘게 잇고, 둘째부터의 예고는 0.6배보다 짧아지지 않는다"):format(b.kind, p.id))
+			for _, id in p.chain do
+				expect(ids[id] ~= nil and ids[id].chain == nil, ("%s %s: 잇는 패턴 %s가 있다"):format(b.kind, p.id, id))
+				expect(ids[id].tell * p.quick >= 0.8, ("%s %s: 이어지는 %s의 예고도 0.8초는 된다"):format(b.kind, p.id, id))
+			end
+			continue
+		end
+		-- 예고: 맞기까지 1.2초는 된다(도약은 뛰어올라 내려앉는 시간까지) — 기술을 쓰던 중에도 보고 피할 만큼
+		local warn = p.tell + (if p.leap then p.leap.time else 0)
+		expect(warn >= 1.2 and p.tell <= 1.8, ("%s %s: 예고가 기술을 쓰던 중에도 보고 피할 만큼 길다(%.1f초)"):format(b.kind, p.id, warn))
+		expect(p.act + p.rest >= 1.4, ("%s %s: 친 뒤 다음 패턴까지 한두 번 칠 틈이 있다(굳어 있는 %.2f + %.2f초)"):format(b.kind, p.id, p.act, p.rest))
+		expect((p.zone ~= nil or p.wave ~= nil or p.summon ~= nil or p.dash ~= nil or p.spots ~= nil) and p.mul >= 0, ("%s %s: 하는 일이 있다"):format(b.kind, p.id))
 		if p.zone then
 			expect(p.zone.to > p.zone.from and p.zone.up > 0, ("%s %s: 맞는 자리"):format(b.kind, p.id))
 		end
 		if p.summon then
 			expect(COMBAT.mobs[p.summon.kind] ~= nil and p.summon.n <= p.summon.max, "부르는 졸개")
 		end
+		if p.leap then
+			expect(p.zone ~= nil and p.far ~= nil and p.leap.time >= 0.4, ("%s %s: 도약은 멀리 있을 때 쓰고, 내려앉아 찍는 자리가 있다"):format(b.kind, p.id))
+		end
+		if p.spots then
+			expect(p.spots.r >= 8 and p.spots.up > 12, ("%s %s: 표시된 자리의 크기"):format(b.kind, p.id))
+		end
 	end
+	-- 패턴의 수 · 체력 구간: 처음부터 서넛, 체력 구간(포효) 뒤에 둘 넘게 더 열린다 · 멀리 있을 때 쓰는 것이 처음부터 있다(멀리 도망가도 쉴 수 없다)
+	local early, late, far = 0, 0, 0
+	for _, p in def.story.patterns do
+		if p.from then
+			late += 1
+		else
+			early += 1
+			far += if p.far then 1 else 0
+		end
+	end
+	expect(early >= 3 and late >= 2 and far >= 1, ("%s: 패턴 처음 %d개 + 체력 구간 뒤 %d개 · 멀리 있을 때 쓰는 것 %d개"):format(b.kind, early, late, far))
+	local ph = def.story.phase
+	expect(ph ~= nil and ph.at > 0.3 and ph.at < 0.8 and ph.time >= 0.8 and ph.rage <= 1 and #ph.name > 0, b.kind .. ": 체력 구간의 포효")
 end
 -- 세기(사용자 2026-10-11: 처음 값은 "깰수가 없는 수준"): 한 방이 맨몸 체력의 3~10% — 열 번을 맞아도 선다 · 그래도 일반 몬스터보다는 아프다
 for _, b in scene.bosses do
 	for _, p in COMBAT.mobs[b.kind].story.patterns do
-		if p.mul > 0 then
+		if p.mul and p.mul > 0 then
 			local share = N.rawHit("mob", b.lv) * p.mul / N.baseHp(b.lv)
 			expect(share >= 0.03 and share <= 0.1 and p.mul > 1, ("%s %s: 한 방 = 맨몸 체력의 %.0f%%"):format(b.kind, p.id, share * 100))
 		end
@@ -124,13 +158,34 @@ run(room, heroes, 30, function()
 	saw[lt.state] = true
 	return lt.state == "tell"
 end)
-eq(lt.state, "tell", "가까워지면 패턴을 예고한다")
+eq(lt.state, "tell", "쉬는 틈이 지나면 패턴을 예고한다")
 local P = lt.def.story.patterns
 local p = P[lt.pat]
-expect(p ~= nil and (p.id == "smash" or p.id == "sweep"), "체력이 많을 때는 내려찍기나 휩쓸기 — " .. tostring(p and p.id))
+expect(p ~= nil and p.from == nil and p.chain == nil, "체력이 많을 때는 처음부터 쓰는 패턴 — " .. tostring(p and p.id))
 eq(room:snapshot()[lt.id][9], lt.pat, "화면에 패턴의 차례를 보낸다")
 eq(room:snapshot()[lt.id][4], "tell", "화면에 예고를 보낸다")
+eq(#room:snapshot()[lt.id], 12, "화면에 겨눈 자리 · 연속기 · 빠른 패턴인지도 보낸다")
+
+-- 패턴을 시킨다: id의 패턴을 예고부터(보는 쪽 dir · target = 겨눈 사람 — 없으면 보는 쪽 앞을 겨눈다). 연속기는 그 첫 패턴부터 시작한다
+local function force(mob, id: string, dir: number, target)
+	for i, q in mob.def.story.patterns do
+		if q.id == id then
+			mob.dir, mob.rest = dir, 0
+			mob.target = if target then target.id else mob.target
+			room:bossSpotsOff(mob)
+			room.blasts = nil
+			local first = room:bossStart(mob, i, target)
+			if not target then
+				mob.dir = dir
+			end
+			return q, first
+		end
+	end
+	error("없는 패턴 " .. id)
+end
 -- 예고 동안에는 맞지 않는다 · 그 자리에 서 있으면 예고가 끝날 때 맞는다
+lt.x = 400
+p = force(lt, "smash", -1)
 h.x = lt.x + lt.dir * (p.zone.from + p.zone.to) / 2
 h.invuln = 0
 local hp0 = h.hp
@@ -142,18 +197,10 @@ eq(hurts(ev, 1), 1, "예고가 끝나면 그 자리의 사람이 맞는다")
 expect(h.hp < hp0 and h.hp > hp0 * 0.85, ("한 방에 체력의 15%% 넘게 깎이지 않는다 %d → %d"):format(hp0, h.hp))
 expect(lt.state == "act" or lt.state == "idle", "친다")
 run(room, heroes, p.act + 0.1)
-expect(lt.state == "idle" and lt.pat == 0 and lt.rest > 0.3, "친 뒤에는 굳어 있다(때릴 틈)")
+-- 굳어 있는 시간(act)이 끝나면 다음 패턴까지 쉰다(rest) — 그동안은 돌아서거나 다가올 뿐 치지 않는다(맞는 자리의 가운데가 서는 거리 keep보다 멀면 그새 다가온다)
+expect((lt.state == "idle" or lt.state == "run") and lt.pat == 0 and lt.rest > 0.3, "친 뒤에는 다음 패턴까지 틈이 있다(때릴 틈) — " .. lt.state)
 
 -- 패턴마다: 피하는 법대로 하면 맞지 않는다
-local function force(mob, id: string, dir: number)
-	for i, q in mob.def.story.patterns do
-		if q.id == id then
-			mob.state, mob.t, mob.pat, mob.dir, mob.rest = "tell", 0, i, dir, 0
-			return q
-		end
-	end
-	error("없는 패턴 " .. id)
-end
 do
 	-- 내려찍기: 뒤로 물러나면 · 등 뒤로 돌아가면 안 맞는다 / 발판 위(48점)에 서 있어도 맞는다(안전한 자리가 없게)
 	lt.x = 400
@@ -173,34 +220,158 @@ do
 	q = force(lt, "sweep", 1)
 	h.x, h.y, h.invuln = lt.x + 50, FLOOR, 0
 	eq(hurts(run(room, heroes, q.tell + 0.1), 1), 1, "휩쓸기: 서 있으면 맞는다")
-	-- 땅 울림: 체력이 절반 아래일 때만 고른다
-	lt.state, lt.pat, lt.rest, lt.used = "idle", 0, 0, {}
+	-- 고르기: 가까이 있으면 내려찍기와 휩쓸기를 번갈아(방금 쓴 것은 다시 뽑지 않는다) · 체력 구간 뒤의 것(땅 울림 · 연속 찍기 · 봉화 불기둥)은 아직 쓰지 않는다
+	lt.state, lt.pat, lt.rest, lt.used, lt.lastPat, lt.raged = "idle", 0, 0, {}, 0, false
 	h.x, h.y = lt.x + 30, FLOOR
 	lt.hp = lt.maxHp
-	local seen = {}
-	for _ = 1, 6 do
-		run(room, heroes, 20, function()
-			return lt.state == "tell"
-		end)
-		seen[lt.def.story.patterns[lt.pat].id] = true
-		h.invuln = 99
-		run(room, heroes, 4, function()
-			return lt.state == "idle" and lt.rest <= 0.05
-		end)
+	local function picks(n: number, far: boolean?)
+		local seen, order = {}, {}
+		for _ = 1, n do
+			if far then
+				h.x = if lt.x > 384 then lt.x - 200 else lt.x + 200 -- 멀리 선다(보스가 다가오면 다시 물러난다)
+			end
+			run(room, heroes, 20, function()
+				if far and math.abs(h.x - lt.x) < 130 and lt.state ~= "tell" and lt.state ~= "act" then
+					h.x = if lt.x > 384 then lt.x - 200 else lt.x + 200
+				end
+				return lt.state == "tell"
+			end)
+			local id = if (lt.chainPat or 0) > 0 then lt.def.story.patterns[lt.chainPat].id else lt.def.story.patterns[lt.pat].id
+			seen[id] = true
+			table.insert(order, id)
+			h.invuln = 99
+			run(room, heroes, 12, function()
+				return lt.state == "idle" and lt.rest <= 0.05
+			end)
+		end
+		return seen, order
 	end
-	expect(seen.smash and seen.sweep and not seen.quake, "체력이 절반 위: 내려찍기와 휩쓸기를 번갈아 쓴다(땅 울림은 아직)")
+	local seen, order = picks(6)
+	expect(seen.smash and seen.sweep and not (seen.quake or seen.combo or seen.beacon or seen.embers or seen.leap), "체력이 많고 가까이: 내려찍기와 휩쓸기만")
+	for k = 2, #order do
+		expect(order[k] ~= order[k - 1], "같은 것을 연달아 쓰지 않는다 — " .. table.concat(order, " "))
+	end
+	expect(not lt.raged, "체력이 많을 때는 포효하지 않는다")
+	-- 멀리 있으면: 불씨 뿌리기 · 도약 찍기(멀리 도망가도 쉴 수 없다)
+	lt.state, lt.pat, lt.rest, lt.used, lt.lastPat = "idle", 0, 0, {}, 0
+	seen = picks(4, true)
+	expect(seen.embers and seen.leap and not (seen.smash or seen.sweep), "멀리 있으면 불씨 뿌리기와 도약 찍기를 쓴다")
+	-- 체력 구간: 체력이 60% 아래로 내려가면 한 번 포효한다(그동안은 치지 않는다) → 그 뒤로 땅 울림 · 연속 찍기 · 봉화 불기둥이 열린다
+	lt.state, lt.pat, lt.rest, lt.used, lt.lastPat = "idle", 0, 0, {}, 0
 	lt.hp = math.floor(lt.maxHp * 0.4)
-	seen = {}
-	for _ = 1, 6 do
-		run(room, heroes, 20, function()
-			return lt.state == "tell"
-		end)
-		seen[lt.def.story.patterns[lt.pat].id] = true
-		run(room, heroes, 4, function()
-			return lt.state == "idle" and lt.rest <= 0.05
-		end)
+	h.x, h.y, h.invuln = lt.x + 30, FLOOR, 0
+	ev = run(room, heroes, 0.2)
+	local ph = lt.def.story.phase
+	expect(lt.state == "roar" and lt.raged == true, "체력 구간: 포효한다 — " .. lt.state)
+	eq(room:snapshot()[lt.id][4], "roar", "화면에 포효를 보낸다")
+	ev = run(room, heroes, ph.time - 0.3)
+	expect(lt.state == "roar" and hurts(ev, 1) == 0, "포효하는 동안은 치지 않는다(때릴 틈)")
+	run(room, heroes, 0.4)
+	expect(lt.state ~= "roar", "포효가 끝난다")
+	seen = picks(14)
+	expect(seen.quake and seen.combo and seen.beacon, "체력 구간 뒤: 땅 울림 · 연속 찍기 · 봉화 불기둥을 쓴다")
+	expect(lt.raged and lt.state ~= "roar", "포효는 한 번뿐이다")
+	lt.state, lt.pat, lt.rest, lt.chain, lt.chainPat, lt.quick = "idle", 0, 0, nil, 0, 1
+	lt.bind = 0.3
+	run(room, heroes, 0.4)
+	-- 불씨 뿌리기: 겨눈 사람의 발밑과 그 좌우에 자리 넷 — 예고가 끝나면 솟는다. 발밑에 그대로 서 있으면 맞고, 자리 사이로 옮기면 안 맞는다
+	lt.x, h.x, h.y, h.invuln = 600, 300, FLOOR, 0
+	local q = force(lt, "embers", -1, h)
+	eq(#room.blasts, q.spots.n, "불씨가 떨어질 자리 넷")
+	eq(room.blasts[1].x, 300, "첫 자리는 겨눈 사람의 발밑")
+	eq(room:snapshot()[lt.id][10], 300, "화면에 겨눈 자리를 보낸다")
+	ev = run(room, heroes, q.tell - DT)
+	eq(hurts(ev, 1), 0, "불씨: 예고 동안에는 안 맞는다")
+	ev = run(room, heroes, 0.5)
+	eq(hurts(ev, 1), 1, "불씨: 발밑에 그대로 서 있으면 맞는다")
+	eq(#room.blasts, 0, "솟고 나면 자리가 사라진다")
+	lt.state, lt.pat, lt.rest = "idle", 0, 9
+	lt.x, h.x, h.invuln = 600, 300, 0
+	q = force(lt, "embers", -1, h)
+	h.x = 300 + q.spots.spread / 2 -- 두 자리의 한가운데
+	expect(q.spots.spread / 2 > q.spots.r + 5, "자리 사이에 설 틈이 있다")
+	ev = run(room, heroes, q.tell + 0.6)
+	eq(hurts(ev, 1), 0, "불씨: 자리 사이로 옮기면 안 맞는다")
+	-- 예고하던 중에 묶이면 표시된 자리도 사라진다
+	lt.state, lt.pat, lt.rest = "idle", 0, 9
+	lt.x, h.x, h.invuln = 600, 300, 0
+	q = force(lt, "embers", -1, h)
+	lt.bind = 2
+	ev = run(room, heroes, q.tell + 0.6)
+	expect(hurts(ev, 1) == 0 and (room.blasts == nil or #room.blasts == 0), "묶이면 불씨의 자리도 사라진다")
+	lt.bind = 0
+	-- 도약 찍기: 뛰어올라 겨눈 자리에 내려앉으며 찍는다. 붉은 자리는 뛰기 0.25초 전까지 따라온다 → 그 뒤에 밖으로 나가면 안 맞는다
+	lt.state, lt.pat, lt.rest = "idle", 0, 9
+	lt.x, h.x, h.y, h.invuln = 600, 300, FLOOR, 0
+	q = force(lt, "leap", -1, h)
+	run(room, heroes, 0.4)
+	h.x = 260 -- 예고하는 동안 움직이면 겨눈 자리가 따라온다
+	run(room, heroes, 0.2)
+	eq(lt.aim, 260, "도약: 겨눈 자리가 사람을 따라온다")
+	ev = run(room, heroes, 2, function()
+		return lt.state == "act"
+	end)
+	expect(lt.state == "act" and lt.x == 600 and hurts(ev, 1) == 0, "도약: 예고가 끝나면 뛰어오른다(아직 안 맞는다)")
+	run(room, heroes, q.leap.time / 2)
+	expect(lt.alt > q.leap.peak * 0.8 and lt.x < 600 and lt.x > 260, ("도약: 공중을 날아간다(높이 %.0f · x %.0f)"):format(lt.alt, lt.x))
+	ev = run(room, heroes, q.leap.time / 2 + DT * 2)
+	eq(hurts(ev, 1), 1, "도약: 그 자리에 그대로 서 있으면 내려앉을 때 맞는다")
+	expect(lt.alt == 0 and math.abs(lt.x - (260 + q.leap.aim)) < 1, ("도약: 겨눈 자리 앞에 내려앉는다(x %.0f)"):format(lt.x))
+	lt.state, lt.pat, lt.rest = "idle", 0, 9
+	lt.x, h.x, h.invuln = 600, 300, 0
+	q = force(lt, "leap", -1, h)
+	run(room, heroes, q.tell - 0.2) -- 겨눈 자리가 멈춘 뒤(뛰기 0.25초 전)
+	h.x = 300 + q.zone.to + 80 -- 붉은 자리 밖으로(보스 쪽으로 지나쳐 나간다)
+	ev = run(room, heroes, 0.2 + q.leap.time + 0.2)
+	eq(hurts(ev, 1), 0, "도약: 붉은 자리 밖으로 나가면 안 맞는다")
+	-- 봉화 불기둥: 방 전체에 한 칸 걸러 한 칸 — 먼저 터지는 칸에 서 있으면 맞고, 나중 칸에 서 있다가 첫 불기둥이 꺼진 뒤 옮기면 안 맞는다
+	lt.state, lt.pat, lt.rest = "idle", 0, 9
+	lt.x, h.invuln = 400, 0
+	q = force(lt, "beacon", -1, h)
+	local first, second = nil, nil
+	for _, bl in room.blasts do
+		if math.abs(bl.t - q.tell) < 0.01 then
+			first = first or bl.x
+		else
+			second = second or bl.x
+		end
 	end
-	expect(seen.quake == true, "체력이 절반 아래: 땅 울림을 쓴다")
+	expect(first ~= nil and second ~= nil and math.abs(second - first) == q.spots.gap, "불기둥의 자리: 먼저 터지는 칸과 나중 칸이 번갈아 있다")
+	expect(#room.blasts >= 8, ("방 전체에 깔린다(%d곳)"):format(#room.blasts))
+	h.x = first
+	ev = run(room, heroes, q.tell + 0.1)
+	eq(hurts(ev, 1), 1, "불기둥: 먼저 터지는 칸에 서 있으면 맞는다")
+	lt.state, lt.pat, lt.rest = "idle", 0, 9
+	h.invuln = 0
+	q = force(lt, "beacon", -1, h)
+	h.x = second
+	ev = run(room, heroes, q.tell + 0.2)
+	eq(hurts(ev, 1), 0, "불기둥: 나중 칸에 서 있으면 첫 번에는 안 맞는다")
+	h.x = first -- 방금 터진 칸으로 옮긴다
+	ev = run(room, heroes, q.spots.lag + 0.2)
+	eq(hurts(ev, 1), 0, "불기둥: 첫 불기둥이 꺼진 칸으로 옮기면 둘째 번도 안 맞는다")
+	eq(#room.blasts, 0, "다 터지면 자리가 사라진다")
+	-- 연속 찍기: 내려찍기 → 내려찍기 → 땅 울림을 쉬지 않고 잇는다. 첫 번째는 제 예고대로, 둘째부터 quick배. 다 끝나면 길게 쉰다
+	lt.state, lt.pat, lt.rest = "idle", 0, 9
+	lt.x, h.x, h.y, h.invuln = 400, 300, FLOOR, 99
+	local combo, sub = force(lt, "combo", -1, h)
+	local smash = sub
+	expect(smash.id == "smash" and lt.chainPat > 0 and lt.quick == 1, "연속기: 첫 패턴(내려찍기)부터 — 제 예고대로")
+	eq(room:snapshot()[lt.id][11], lt.chainPat, "화면에 연속기의 차례를 보낸다")
+	eq(room:snapshot()[lt.id][12], 0, "첫 번째는 빠르지 않다")
+	run(room, heroes, smash.tell + smash.act + DT * 2)
+	expect(lt.state == "tell" and lt.def.story.patterns[lt.pat].id == "smash" and lt.quick == combo.quick, "연속기: 쉬지 않고 둘째(내려찍기 — 빠르게)를 예고한다")
+	eq(room:snapshot()[lt.id][12], 1, "화면에 빠른 패턴임을 보낸다")
+	run(room, heroes, smash.tell * combo.quick - lt.t - DT)
+	expect(lt.state == "tell" and math.abs(lt.x - (400 - combo.chainStep)) < 0.5, ("연속기: 예고하면서 한 걸음(%d점) 다가선다(400 → %.0f)"):format(combo.chainStep, lt.x))
+	run(room, heroes, DT * 2 + math.max(0.25, smash.act * combo.quick))
+	expect(lt.state == "tell" and lt.def.story.patterns[lt.pat].id == "quake", "연속기: 셋째(땅 울림)")
+	run(room, heroes, 3, function()
+		return lt.state == "idle"
+	end)
+	expect(lt.state == "idle" and lt.chainPat == 0 and lt.rest > 1.2, ("연속기가 끝나면 길게 쉰다(%.2f초)"):format(lt.rest))
+	room.waves = nil
+	lt.raged = false
 	-- 물결: 내려찍은 자리에서 양쪽으로 — 멀리 서 있으면 물결이 와서 맞고, 뛰어 있으면 넘는다
 	room.waves = nil
 	lt.x = 400
@@ -209,7 +380,7 @@ do
 	ev = run(room, heroes, q.tell + 0.05)
 	eq(hurts(ev, 1), 0, "땅 울림: 내려찍는 자리 밖은 그 순간에는 안 맞는다")
 	expect(room.waves ~= nil and #room.waves == 2, "물결 둘이 생긴다")
-	local travel = (160 - 0) / q.wave.speed
+	local travel = (q.wave.at + 120) / q.wave.speed -- 물결이 생기는 자리(보는 쪽으로 wave.at)에서 등 뒤 120점의 사람까지
 	ev = run(room, heroes, travel + 0.3)
 	eq(hurts(ev, 1), 1, "물결이 와서 맞는다(한 번)")
 	q = force(lt, "quake", 1)
@@ -258,7 +429,16 @@ do
 		expect(Quests.isReady(who.quests, "r1m7"), "「망루의 부관」의 할 일이 끝났다")
 		expect(not Quests.wantsKill(who.quests, "towerlieutenant", KEY), "더 잡을 것이 없다")
 	end
-	run(room, heroes, 1.5)
+	-- 쓰러지는 동작 그림이 있는 보스는 그 그림이 다 보일 때까지(story.fall초 — 동작 + 누워 있는 시간 + 사라지는 시간) 쓰러진 채 남는다. 없는 보스는 0.9초
+	local fall = lt.def.story.fall
+	if fall then
+		expect(fall > 1 and fall < 4, ("쓰러져 사라지기까지 %.2f초 — 1~4초"):format(fall))
+		run(room, heroes, fall - 0.2)
+		eq(lt.state, "dead", "쓰러지는 동작이 다 보일 때까지는 쓰러진 채 있다")
+		run(room, heroes, 0.4)
+	else
+		run(room, heroes, 1.5)
+	end
 	expect(lt.state == "gone" and lt.away, "쓰러진 뒤 사라진다")
 	run(room, heroes, 30)
 	expect(lt.state == "gone" and lt.away, "다시 나오지 않는다(다시 싸울 수 없다)")
@@ -340,8 +520,67 @@ do
 		return cap.state == "idle"
 	end)
 	eq(hurts(ev, 1), 0, "발판 위(48점)에 있으면 달려오는 것을 넘긴다")
-	-- 체력이 절반 위에서는 내달리기를 고르지 않는다
-	cap.hp, cap.used, cap.rest = cap.maxHp, {}, 0
+	-- 검기: 보는 쪽으로만 초승달이 날아간다 — 서 있으면 맞고, 뛰어 있으면 넘고, 등 뒤는 안 맞는다
+	room.waves = nil
+	cap.x = 600
+	q = force(cap, "bladewave", -1)
+	h.x, h.y, h.invuln = 300, FLOOR, 0
+	ev = run(room, heroes, q.tell + DT)
+	expect(room.waves ~= nil and #room.waves == 1 and room.waves[1].dir == -1, "검기 하나가 보는 쪽으로 떠난다")
+	eq(hurts(ev, 1), 0, "검기: 떠나는 순간에는 멀리 있는 사람이 안 맞는다")
+	ev = run(room, heroes, (600 - q.wave.at - 300) / q.wave.speed + 0.3)
+	eq(hurts(ev, 1), 1, "검기가 와서 맞는다(한 번)")
+	cap.state, cap.pat, cap.rest = "idle", 0, 9
+	room.waves = nil
+	q = force(cap, "bladewave", -1)
+	h.x, h.y, h.invuln = 300, FLOOR - 30, 0
+	ev = run(room, heroes, q.tell + (600 - q.wave.at - 300) / q.wave.speed + 0.4)
+	eq(hurts(ev, 1), 0, "검기: 뛰어 있으면 넘는다")
+	cap.state, cap.pat, cap.rest = "idle", 0, 9
+	room.waves = nil
+	q = force(cap, "bladewave", -1)
+	h.x, h.y, h.invuln = 700, FLOOR, 0
+	ev = run(room, heroes, q.tell + 2)
+	eq(hurts(ev, 1), 0, "검기: 등 뒤에서는 안 맞는다")
+	-- 연속 검기: 셋이 gap초 간격으로 — 서 있으면 맞는다(맞은 뒤의 짧은 무적 때문에 셋을 다 맞지는 않는다)
+	cap.state, cap.pat, cap.rest = "idle", 0, 9
+	room.waves = nil
+	q = force(cap, "storm", -1)
+	run(room, heroes, q.tell + DT)
+	eq(#room.waves, q.wave.n, "연속 검기: 물결 셋")
+	local waits = {}
+	for _, w in room.waves do
+		table.insert(waits, w.wait or 0)
+	end
+	table.sort(waits)
+	expect(waits[1] <= 0 and math.abs(waits[2] - q.wave.gap) < DT * 3 and math.abs(waits[3] - q.wave.gap * 2) < DT * 3, "하나씩 gap초 간격으로 떠난다")
+	cap.bind = 9
+	run(room, heroes, 6)
+	cap.bind = 0
+	eq(#room.waves, 0, "검기는 끝까지 가면 사라진다")
+	-- 몰아치기: 내리베기 → 내리베기 → 내달리기를 쉬지 않고 잇는다(벽까지 달린 뒤 길게 쉰다)
+	cap.state, cap.pat, cap.rest = "idle", 0, 9
+	cap.x, h.x, h.y, h.invuln = 500, 400, FLOOR, 99
+	local triple, sub = force(cap, "triple", -1, h)
+	expect(sub.id == "slash" and cap.chainPat > 0, "몰아치기: 내리베기부터")
+	local chainIds = { sub.id }
+	local lastPat = cap.pat
+	run(room, heroes, 12, function()
+		if cap.pat ~= 0 and (cap.pat ~= lastPat or (cap.state == "tell" and cap.t <= DT * 1.5 and #chainIds < 2)) then
+			if cap.state == "tell" and cap.t <= DT * 1.5 then
+				table.insert(chainIds, cap.def.story.patterns[cap.pat].id)
+			end
+			lastPat = cap.pat
+		end
+		return cap.state == "idle"
+	end)
+	expect(cap.state == "idle" and cap.chainPat == 0 and cap.rest > 1.2, "몰아치기가 끝나면 길게 쉰다")
+	expect(chainIds[#chainIds] == "charge" and (cap.x == cap.a or cap.x == cap.b), ("몰아치기의 끝은 내달리기 — 벽까지(%s)"):format(table.concat(chainIds, " ")))
+	-- 체력이 많고 가까이 있으면: 내리베기와 호령
+	cap.hp, cap.used, cap.rest, cap.lastPat, cap.raged, cap.chain, cap.chainPat, cap.quick = cap.maxHp, {}, 0, 0, false, nil, 0, 1
+	for _, a in cap.adds do
+		a.state, a.away = "gone", true
+	end
 	local saw = {}
 	h.x, h.y, h.invuln = cap.x + 40, FLOOR, 99
 	for _ = 1, 5 do
@@ -353,7 +592,7 @@ do
 			return cap.state == "idle" and cap.rest <= 0.05
 		end)
 	end
-	expect(saw.slash and saw.call and not saw.charge, "체력이 절반 위: 내리베기와 호령")
+	expect(saw.slash and saw.call and not (saw.charge or saw.bladewave or saw.storm or saw.triple), "체력이 많고 가까이: 내리베기와 호령(멀리 있을 때 쓰는 검기 · 내달리기는 쓰지 않는다)")
 end
 
 -- 방을 비우면(쓰러져 마을로 돌아갔다) 보스가 사라지고, 다시 들어오면 체력이 가득한 채 새로 선다
@@ -395,7 +634,7 @@ do
 	eq(#out.kills[1].gains, 2, "둘 다 잡은 것으로 친다")
 	Quests.onKill(b.quests, "towerlieutenant", KEY)
 	eq(#Quests.onKill(a.quests, "towerlieutenant", KEY), 0, "그 퀘스트가 없는 사람은 오르는 것이 없다")
-	run(r2, both, 1.5)
+	run(r2, both, (l2.def.story.fall or 0.9) + 0.6) -- 쓰러지는 동작이 다 보인 뒤에 사라진다(story.fall초 — 없으면 0.9초)
 	expect(l2.away and not c2.away, "부관이 사라진 뒤에 대장이 선다")
 end
 

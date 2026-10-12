@@ -1,17 +1,19 @@
 --!native
 --!optimize 2
 -- 스토리 보스의 예고와 이펙트 — 공방 시험 탭의 dino-workshop/js/lune/bossfx.js를 줄마다 옮긴 것(고칠 때는 시험 탭에서 먼저 고치고 여기를 맞춘다).
---  사용자 2026-10-11: "패턴, 스킬 이펙트는 따로 만드셔야해요" — 몸의 동작 그림은 사용자가, 맞을 자리의 예고와 치는 순간의 이펙트는 여기서 코드로 그린다(fx.luau와 같은 말투: 한 점 단위 · 네온 한 벌).
---  사용자 같은 날(해 보고): "뭐 보스 패턴도 없고 이펙트도없고 …" → 처음 것은 얇은 선과 작은 고리뿐이라 싸우는 동안 눈에 들어오지 않았다. 크게 다시 만들었다:
---    예고 = 맞을 자리를 짙게 칠하고(차오른다) 머리 위에 느낌표 · 치는 순간 = 맞는 자리 전체를 채우는 번쩍임 + 솟는 가시 일곱 + 파편 + 화면 흔들림 · 내달리기 = 잔상과 속도선, 벽에 닿으면 터진다.
---  색은 적의 분홍(Fx.TONE.pink — 정예 병사의 불티와 같은 색). 싸움의 자료는 data/combat.generated.luau의 mobs[보스].story(공방 design/bosses.js의 STORYBOSS).
+--  사용자 2026-10-11: "패턴, 스킬 이펙트는 따로 만드셔야해요" — 몸의 동작 그림은 사용자가, 맞을 자리의 예고와 치는 순간의 이펙트는 여기서 그린다.
+--  사용자 2026-10-12 밤: "패턴 이팩트들 스킬이펙트 재사용하지말고 새로 만드세요 퀄리티 높게"
+--    → 치는 순간 · 물결 · 불기둥 · 포효의 이펙트는 이제 패턴마다의 제 그림(스프라이트)이다 — 그 보스의 동작 묶음에 fx_로 시작하는 동작으로 실려 있다(공방 design/bosses.js의 BOSS_FXART · BOSS_FX).
+--      여기서는 그 그림을 제자리 · 제때에 틀 뿐이다: fx.sprite(누구의, 동작, x, y, 보는 쪽, { delay 늦게 · back 몸의 뒤 · loop 돌려 트는 시간 · vx 가는 빠르기 · lo · hi 그 밖에서는 안 그림 · fade 끝에서 사라지는 몫 })
+--      (그 앞에는 캐릭터 기술의 이펙트 부품 — fx.luau의 고리 · 가시 · 파편 · 초승달 · 빛기둥 — 을 조립해 그렸다. 캐릭터의 기술과 같은 그림이라 보스의 것으로 보이지 않았다)
+--    맞을 자리의 예고(붉은 자리 · 띠 · 느낌표 · 둥근 표시)는 그대로 코드로 그린다 — 판정의 자리를 한 점까지 정확히 보여 줘야 하는 표시다. 색은 적의 분홍(Fx.TONE.pink).
+--  싸움의 자료는 data/combat.generated.luau의 mobs[보스].story(공방 design/bosses.js의 STORYBOSS) — 패턴에 붙어 오는 이펙트: p.fx(치는 순간) · p.spots.fx · p.wave.fx · p.leap.fx · p.summon.fx · p.dash.trail · p.dash.crash · 보스의 phase.fx
 --  그리는 일은 화면에서만 일어난다(서버는 부르지 않는다).
 local Fx = require(script.Parent.fx)
 
-local floor, max, min, abs = math.floor, math.max, math.min, math.abs
+local floor, max, min = math.floor, math.max, math.min
 local R = Fx.R
 local T = Fx.TONE.pink
-local HEAD = 88 -- 호령의 고리가 퍼지는 높이(발밑에서 머리까지 — 보스의 그림이 바뀌면 같이 고친다)
 
 local BossFx = {}
 
@@ -100,110 +102,117 @@ function BossFx.callMark(ctx, x: number, y: number, k: number)
 	BossFx.alert(ctx, x, y - h - 4, k)
 end
 
--- 물결의 마루(땅 울림): 바닥을 따라 가는 뾰족한 물결 + 뒤에 남는 금과 튀는 점. k = 0 → 1(끝에서 사라진다)
-function BossFx.crest(ctx, x: number, y: number, dir: number, k: number)
+-- ---- 새 패턴의 예고(2026-10-12 밤 — 공방 design/bosses.js의 STORYBOSS_NEXT) ----
+-- 표시된 자리(불씨 뿌리기 · 봉화 불기둥): 바닥의 굵은 줄(가로 2r) + 그 위로 차오르는 옅은 기둥(k = 0 → 1 — 다 차면 솟는다) · 끝이 가까우면 깜박인다.
+--  fromX · fromY = 불씨가 날아오는 곳(보스의 화로 — 있으면 포물선을 그리며 날아와 k = 1에 그 자리에 닿는다)
+function BossFx.spot(ctx, x: number, y: number, r: number, up: number, k: number, fromX: number?, fromY: number?)
 	x, y = R(x), R(y)
-	ctx:alpha(if k > 0.85 then max(0, (1 - k) / 0.15) else 1)
-	ctx:style(T.d)
-	ctx:rect(x - 9, y - 4, 18, 4)
+	k = math.clamp(k, 0, 1)
+	local blink = k > 0.7 and floor(k * 40) % 2 == 0
+	local h = R(up * k)
 	ctx:style(T.n)
-	ctx:rect(x - 7, y - 8, 14, 6)
-	ctx:rect(x - 5, y - 12, 10, 4)
-	ctx:style(T.l)
-	ctx:rect(x - 3 + dir * 2, y - 15, 6, 9)
-	ctx:style(T.w)
-	ctx:rect(x - 1 + dir * 3, y - 17, 3, 6)
-	ctx:style(T.n)
-	for i = 1, 5 do
-		ctx:rect(x - dir * (9 + i * 5), y - 1 - (i % 2) * 2, 3, 2)
-	end
+	ctx:alpha(0.18)
+	ctx:rect(x - r, y - up, r * 2, up)
+	ctx:alpha(0.42)
+	ctx:rect(x - r, y - h, r * 2, h)
 	ctx:alpha(1)
-end
-
-local CALL_RINGS = { { 56, 0 }, { 40, 0.12 }, { 26, 0.24 } }
-
--- 치는 순간의 이펙트(한 번): p = 패턴 · (x, y) = 보스의 발밑 가운데 · dir = 보는 쪽 · shake(세기, 초) = 화면 흔들기(보스의 큰 한 방에만 — 없어도 된다)
-function BossFx.strike(fx, p, x: number, y: number, dir: number, shake: ((number, number) -> ())?)
-	if p.id == "smash" or p.id == "quake" then -- 내려찍기 · 땅 울림: 맞는 자리 전체가 번쩍이고 땅이 갈라진다 — 겹 고리 + 솟는 돌 가시 일곱 + 튀는 파편 + 피어오르는 먼지
-		local a, b = p.zone.from, p.zone.to
-		local w, ix = b - a, x + dir * (a + b) / 2
-		fx.beam(ix, y, w * 0.9, p.zone.up, T, { life = 0.22 })
-		fx.ring(ix, y, 8, w * 0.7, T, { life = 0.5 })
-		fx.ring(ix, y, 4, w * 0.45, T, { life = 0.4, delay = 0.08 })
-		for i = 0, 6 do
-			local dx = (i - 3) * (w / 7)
-			fx.spike(ix + dx, y, 10, 34 - abs(i - 3) * 7, T, { life = 0.6, delay = abs(i - 3) * 0.035, lean = dx * 0.15 })
+	ctx:style(if blink then T.w else T.n)
+	ctx:rect(x - r, y - 2, r * 2, 3)
+	ctx:rect(x - r, y - 6, 2, 4)
+	ctx:rect(x + r - 2, y - 6, 2, 4)
+	ctx:style(T.w)
+	ctx:rect(x - r, y - h, r * 2, 1)
+	if fromX and fromY and k < 1 then
+		local function at(q: number): (number, number)
+			return fromX + (x - fromX) * q, fromY + (y - 6 - fromY) * q - math.sin(math.pi * q) * 46
 		end
-		fx.shards(ix, y - 2, 22, T, { speed = 130, up = 110, kind = "mix", life = 0.7 })
-		fx.rise(ix, y, 10, T, { w = w, speed = 40, life = 0.8 })
-		if shake then
-			shake(3, 0.22)
-		end
-	elseif p.id == "sweep" then -- 휩쓸기: 땅을 스치는 굵은 띠 — 바닥 바로 위의 긴 줄 둘 + 줄지어 터지는 먼지 + 피어오르는 점
-		local a, b = p.zone.from, p.zone.to
-		local w, mid = b - a, (a + b) / 2
-		fx.cut(x + dir * mid, y - 6, w, 0, T, { life = 0.34, th = 7 })
-		fx.cut(x + dir * mid, y - 12, w * 0.7, 0, T, { life = 0.28, th = 3, delay = 0.04 })
-		for i = 0, 7 do
-			fx.pop(x + dir * (a + 8 + i * (w - 16) / 7), y - 5, T, { r = 4, life = 0.2 + i * 0.03 })
-		end
-		fx.rise(x + dir * mid, y, 12, T, { w = w, speed = 30, life = 0.7 })
-		fx.shards(x + dir * mid, y - 2, 14, T, { speed = 110, up = 40, kind = "dot", dir = dir, spread = 0.7, life = 0.5 })
-		if shake then
-			shake(2, 0.15)
-		end
-	elseif p.id == "slash" then -- 내리베기: 맞는 자리의 끝까지 닿는 큰 초승달 둘 + 땅에 긋는 한 줄 + 파편
-		local b = p.zone.to
-		local r = b * 0.72
-		fx.slash(x + dir * (b - r), y - r * 0.5, dir, r, -80, 75, T, { thick = r * 0.34, life = 0.4 })
-		fx.slash(x + dir * (b - r), y - r * 0.5, dir, r * 0.72, -60, 60, T, { thick = r * 0.16, life = 0.3 })
-		fx.cut(x + dir * b * 0.7, y - 3, b * 0.6, 0, T, { life = 0.3, th = 4 })
-		fx.shards(x + dir * b * 0.8, y - 6, 16, T, { speed = 120, up = 70, kind = "mix", dir = dir, spread = 0.9, life = 0.6 })
-		if shake then
-			shake(3, 0.2)
-		end
-	elseif p.id == "call" then -- 호령: 머리 위에서 퍼지는 세 겹 고리 + 몸에서 오르는 점 + 졸개가 나오는 자리의 빛기둥과 고리
-		for _, q in CALL_RINGS do
-			fx.ring(x, y - HEAD, 6, q[1], T, { life = 0.55, squash = 1, back = false, delay = q[2] })
-		end
-		fx.rise(x, y - 20, 14, T, { w = 40, speed = 50, life = 0.9 })
-		for _, ax in p.summon.at do
-			fx.beam(ax, y, 18, 80, T, { life = 0.6 })
-			fx.ring(ax, y, 4, 22, T, { life = 0.5 })
-			fx.shards(ax, y - 4, 8, T, { speed = 70, up = 60, kind = "mix" })
-		end
-	elseif p.id == "charge" then -- 내달리기: 박차는 자리의 고리 + 속도선 + 뒤로 튀는 흙
-		fx.ring(x, y, 6, 34, T, { life = 0.35 })
-		fx.streaks(x, y, 14, dir, T, { len = 30 })
-		fx.shards(x - dir * 10, y - 2, 10, T, { speed = 90, up = 40, kind = "dot", dir = -dir, spread = 0.6 })
+		local ex, ey = at(k)
+		local tx, ty = at(max(0, k - 0.05))
+		local ux, uy = at(max(0, k - 0.1))
+		ctx:style(T.d)
+		ctx:rect(R(ux), R(uy), 2, 2)
+		ctx:style(T.l)
+		ctx:rect(R(tx) - 1, R(ty) - 1, 3, 3)
+		ctx:style(T.n)
+		ctx:rect(R(ex) - 2, R(ey) - 2, 5, 5)
+		ctx:style(T.w)
+		ctx:rect(R(ex) - 1, R(ey) - 1, 3, 3)
 	end
 end
 
--- 내달리기가 끝났다(벽에 닿았다): 그 자리에서 터진다
-function BossFx.crash(fx, x: number, y: number, dir: number, shake: ((number, number) -> ())?)
-	fx.ring(x + dir * 14, y, 6, 40, T, { life = 0.4 })
-	fx.shards(x + dir * 18, y - 20, 18, T, { speed = 120, up = 80, kind = "mix", dir = -dir, spread = 1, life = 0.6 })
-	fx.rise(x, y, 8, T, { w = 30, speed = 40, life = 0.7 })
+-- ---- 패턴의 이펙트 그림을 튼다(who = 그 보스 — 그림은 그 보스의 동작 묶음에 있다) ----
+-- 불기둥이 솟는다(표시된 자리 하나 — 한 번). def = 그 패턴의 spots
+function BossFx.blast(fx, who: string, x: number, y: number, def, shake: ((number, number) -> ())?)
+	if def.fx then
+		fx.sprite(who, def.fx, x, y, 1)
+	end
+	if shake then
+		shake(2, 0.12)
+	end
+end
+
+-- 뛰어오르는 자리(도약 찍기): 박차는 먼지
+function BossFx.jump(fx, who: string, p, x: number, y: number)
+	if p.leap and p.leap.fx then
+		fx.sprite(who, p.leap.fx, x, y, 1)
+	end
+end
+
+-- 체력 구간의 포효(「봉화를 올린다」 · 「늑대의 포효」): 몸의 뒤에서 솟는 그림 + 긴 흔들림. S = 그 보스의 싸움 자료
+function BossFx.roar(fx, who: string, S, x: number, y: number, shake: ((number, number) -> ())?)
+	if S.phase and S.phase.fx then
+		fx.sprite(who, S.phase.fx, x, y, 1, { back = true })
+	end
+	if shake then
+		shake(4, 0.4)
+	end
+end
+
+-- 치는 순간의 화면 흔들림(세기, 초) — 보스의 큰 한 방에만
+local SHAKE = { smash = { 3, 0.22 }, quake = { 3, 0.22 }, leap = { 3, 0.22 }, sweep = { 2, 0.15 }, slash = { 3, 0.2 }, bladewave = { 2, 0.12 }, storm = { 2, 0.12 }, beacon = { 3, 0.25 } }
+
+-- 치는 순간의 이펙트(한 번): p = 패턴 · (x, y) = 보스의 발밑 가운데 · dir = 보는 쪽 · shake(세기, 초) = 화면 흔들기(없어도 된다)
+--  p.fx = { { clip, dx 보는 쪽으로, dy 위로, delay, back } … } · 호령은 졸개가 나오는 자리마다 p.summon.fx도
+function BossFx.strike(fx, who: string, p, x: number, y: number, dir: number, shake: ((number, number) -> ())?)
+	for _, e in p.fx or {} do
+		fx.sprite(who, e.clip, x + dir * (e.dx or 0), y - (e.dy or 0), dir, { delay = e.delay or 0, back = e.back == true })
+	end
+	if p.summon and p.summon.fx then
+		for _, ax in p.summon.at do
+			fx.sprite(who, p.summon.fx, ax, y, 1)
+		end
+	end
+	local s = SHAKE[p.id]
+	if s and shake then
+		shake(s[1], s[2])
+	end
+end
+
+-- 내달리기가 끝났다(벽에 닿았다): 그 자리에서 터진다. p = 그 내달리기 패턴
+function BossFx.crash(fx, who: string, p, x: number, y: number, dir: number, shake: ((number, number) -> ())?)
+	local e = p and p.dash and p.dash.crash
+	if e then
+		fx.sprite(who, e.clip, x + dir * (e.dx or 0), y, dir)
+	end
 	if shake then
 		shake(3, 0.2)
 	end
 end
 
--- 물결 하나: 생긴 자리 x0에서 dir 쪽으로 range를 speed로 간다(판정은 서버 — 여기는 그림만). age = 이미 흐른 시간(화면이 조금 늦게 알았을 때)
---  lo · hi = 방의 양 끝(벽 안쪽) — 그 밖으로는 그리지 않는다(서버의 판정도 벽에서 멈춘다)
-function BossFx.wave(fx, x0: number, y: number, dir: number, def, age: number?, lo: number?, hi: number?)
-	fx.add(def.range / def.speed, function(ctx, k)
-		local x = x0 + dir * def.range * k
-		if x >= (lo or -math.huge) and x <= (hi or math.huge) then
-			BossFx.crest(ctx, x, y, dir, k)
-		end
-	end, { delay = -(age or 0) })
+-- 물결 하나: 생긴 자리 x0에서 dir 쪽으로 range를 speed로 간다(판정은 서버 — 여기는 그림만). 그 그림(def.fx)을 가는 동안 돌려 튼다
+--  lo · hi = 방의 양 끝(벽 안쪽) — 그 밖으로는 그리지 않는다(서버의 판정도 벽에서 멈춘다) · age = 이미 흐른 시간(화면이 조금 늦게 알았을 때 — 음수면 그만큼 늦게 떠난다: 연속 검기)
+function BossFx.wave(fx, who: string, x0: number, y: number, dir: number, def, age: number?, lo: number?, hi: number?)
+	if def.fx then
+		fx.sprite(who, def.fx, x0, y, dir, { loop = def.range / def.speed, vx = dir * def.speed, lo = lo, hi = hi, fade = 0.15, delay = -(age or 0) })
+	end
 end
 
--- 내달리는 동안(부르는 쪽이 0.05초쯤마다 부른다): 속도선과 발밑의 먼지
-function BossFx.dashTrail(fx, x: number, y: number, dir: number)
-	fx.streaks(x - dir * 8, y, 4, dir, T, { len = 26 })
-	fx.pop(x - dir * 16, y - 3, T, { r = 3, life = 0.2 })
+-- 내달리는 동안(부르는 쪽이 p.dash.trail.every초마다 부른다): 발밑의 먼지
+function BossFx.dashTrail(fx, who: string, p, x: number, y: number, dir: number)
+	local e = p and p.dash and p.dash.trail
+	if e then
+		fx.sprite(who, e.clip, x + dir * (e.dx or 0), y, dir)
+	end
 end
 
 -- 동작 그림이 없을 때: 대기 그림을 움직여 대신한다 — 앞으로(보는 쪽) · 위로 몇 점. 그림이 오면 쓰지 않는다
@@ -243,6 +252,10 @@ function BossFx.body(state: string, p, t: number, now: number, clips, anim, tail
 		local c = clips[clip]
 		return clip, floor(now * (c.fps or fps) * k) % #c.frames + 1, false
 	end
+	if state == "roar" and clips.roar then
+		-- 체력 구간의 포효: 그 동작을 한 번 튼다(끝 장에서 멈춘다)
+		return "roar", min(#clips.roar.frames, floor(t * (clips.roar.fps or fps)) + 1), false
+	end
 	local a = if p and not p.dash and clips[p.clip] and anim then anim[p.clip] else nil
 	if state == "tell" and a then
 		-- 치기 바로 앞의 장(hit-1 — 휘두르는 도중)은 예고의 마지막 한 장 시간에만. 그 앞까지는 제 빠르기로 틀고 다 치켜든 자세(hit-2)에서 멈춰 기다린다
@@ -268,11 +281,37 @@ function BossFx.body(state: string, p, t: number, now: number, clips, anim, tail
 	return clip, frame, state == "tell" or state == "act" or state == "dash"
 end
 
--- 예고를 그린다(상태가 tell인 동안 장마다): (x, y) = 보스의 발밑 가운데(바닥) · dir = 보는 쪽 · p = 패턴 · k = 0 → 1 · a · b = 움직이는 범위(내달리기의 끝) · top = 몸의 높이(머리 위에 느낌표를 띄운다)
-function BossFx.tell(ctx, x: number, y: number, dir: number, p, k: number, a: number, b: number, top: number?)
-	if p.zone then
+-- 쓰러진 보스의 몸 — 쓰러지는 동작 그림(death)이 있을 때. 없으면 nil(부르는 쪽이 전처럼 선 채로 사라지게 한다). 시험 탭 bossfx.js의 fall과 같은 셈.
+--   t = 쓰러진 뒤 흐른 시간 · 돌려주는 것: 동작 · 장(1부터) · 또렷한 정도(1 → 0)
+--   그 동작을 제 빠르기로 한 번 틀고 마지막 장(쓰러져 누운 장)에서 멈춘다 → anim.fall.hold초 뒤부터 fade초에 걸쳐 사라진다(공방 design/bosses.js의 BOSS_FALL)
+function BossFx.fall(t: number, clips, anim): (string?, number, number)
+	local c = clips.death
+	local F = anim and anim.fall
+	if not c or not F then
+		return nil, 1, 1
+	end
+	local fps = c.fps or anim.fps or 12
+	local over = t - #c.frames / fps - F.hold
+	return "death", min(#c.frames, floor(t * fps) + 1), if over <= 0 then 1 else max(0, 1 - over / F.fade)
+end
+
+-- 예고를 그린다(상태가 tell인 동안 장마다): (x, y) = 보스의 발밑 가운데(바닥) · dir = 보는 쪽 · p = 패턴 · k = 0 → 1 · a · b = 움직이는 범위(내달리기의 끝) · top = 몸의 높이(머리 위에 느낌표를 띄운다 — nil이면 느낌표 없이)
+--  aim = 겨눈 자리(도약 찍기 — 내려앉아 찍을 자리를 그린다. 뛰기 직전까지 겨눈 사람을 따라온다)
+function BossFx.tell(ctx, x: number, y: number, dir: number, p, k: number, a: number, b: number, top: number?, aim: number?)
+	if p.leap then
+		local d = if (aim or x) > x then 1 elseif (aim or x) < x then -1 else dir
+		local land = math.clamp((aim or x) - d * p.leap.aim, a, b)
+		local x0, x1 = land + d * p.zone.from, land + d * p.zone.to
+		BossFx.zone(ctx, min(x0, x1), max(x0, x1), y, p.zone.up, d, k)
+	elseif p.zone then
 		local x0, x1 = x + dir * p.zone.from, x + dir * p.zone.to
 		BossFx.zone(ctx, min(x0, x1), max(x0, x1), y, p.zone.up, dir, k)
+	end
+	if p.wave and p.wave.dir == "front" and not p.zone then
+		-- 검기: 날아갈 길
+		local x0 = x + dir * p.wave.at
+		local x1 = math.clamp(x0 + dir * p.wave.range, a - 20, b + 20)
+		BossFx.lane(ctx, min(x0, x1), max(x0, x1), y, dir, k)
 	end
 	if p.dash then
 		local fin = if dir > 0 then b else a
@@ -283,7 +322,9 @@ function BossFx.tell(ctx, x: number, y: number, dir: number, p, k: number, a: nu
 			BossFx.callMark(ctx, ax, y, k)
 		end
 	end
-	BossFx.alert(ctx, x, y - (top or 80) - 6, k)
+	if top then
+		BossFx.alert(ctx, x, y - top - 6, k)
+	end
 end
 
 return BossFx

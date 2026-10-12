@@ -12880,7 +12880,7 @@ return {
 					lv = 25,
 					x = 400,
 					y = 176,
-					range = { 60, 708 },
+					range = { 70, 698 },
 				},
 				{
 					kind = "scoutcaptain",

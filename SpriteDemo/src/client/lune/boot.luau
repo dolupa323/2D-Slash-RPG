@@ -15,6 +15,7 @@ local Tags = require(lune.ui.tags)
 local SCENES = require(lune.data["scenes.generated"])
 local ASSETS = require(lune.data["assets.generated"])
 local COMBAT = require(lune.data["combat.generated"])
+local CHARS = require(lune.data["chars.generated"]) -- 캐릭터와 졸개의 동작(관리 창의 「보스 크기」가 고운 그림이 있는지 본다)
 local CLASSES = require(lune.data["classes.generated"])
 local Stage = require(script.Parent.stage)
 local SceneView = require(script.Parent.sceneView)
@@ -277,7 +278,16 @@ local function enterScene(key: string, x: number, y: number, room)
 	end
 	-- 기술의 이펙트: 나와 방의 사람들이 쓰는 기술을 시험 탭과 같은 그림으로 돌린다
 	state.cast = Cast.new(state.view, scene, state.fx, state.mobs)
-	state.boss = BossView.new(state.mobs, state.cast, state.fx, scene) -- 스토리 보스가 서는 방이면 그 예고와 이펙트 · 잔상 · 화면 흔들림(없는 방에서는 아무것도 하지 않는다)
+	state.push = nil
+	state.boss = BossView.new(state.mobs, state.cast, state.fx, scene, {
+		-- 보스가 포효한다: 가까이(150점 안) 땅을 딛고 있으면 0.25초 동안 dist만큼 밀려난다(피해는 없다 — 시험 탭과 같다)
+		push = function(x: number, dist: number)
+			local b = state.body
+			if b and b.ground and math.abs(b.x - x) < 150 then
+				state.push = { v = (if b.x >= x then 1 else -1) * dist / 0.25, t = 0.25 }
+			end
+		end,
+	}) -- 스토리 보스가 서는 방이면 그 예고와 이펙트 · 잔상 · 화면 흔들림(없는 방에서는 아무것도 하지 않는다)
 	state.actor = state.cast:actor(state.myId or 0, state.who, true)
 	state.actor.x, state.actor.y = x, y
 	-- 직업 묶음의 스킬이 내 몸을 옮긴다(밀고 나가기 · 뛰기 · 돌아보기 · 순간이동). 자리는 여기(화면)가 정하고 서버에 알린다
@@ -870,6 +880,16 @@ local function step()
 			state.dir = mx
 		end
 		input = { mx = mx, jump = Input.take("jump"), down = Input.held("down") }
+	end
+	if state.push then
+		-- 보스의 포효에 밀려나는 중(기술을 쓰는 중이 아니면)
+		if not state.skill then
+			input = { mx = 0, vx = state.push.v, down = false }
+		end
+		state.push.t -= STEP
+		if state.push.t <= 0 then
+			state.push = nil
+		end
 	end
 	local airWas = body.air or 0
 	P.step(scene, body, input, STEP)
@@ -1669,6 +1689,32 @@ function Boot.start()
 		admin = function(what: string, a: any, b: any, c: any)
 			local ok, got = pcall(Net.Invoke, "Admin", what, a, b, c)
 			return if ok then got else nil
+		end,
+		-- 관리 창의 「보스 크기」: 보스의 그림만 그 크기(제가 드린 서 있는 그림의 몇 %)로 바꿔 그려 본다 — 싸움의 자리는 설계값(combat의 story.show) 그대로다. 값 없이 부르면 지금 크기(%)만 돌려준다
+		bossShow = function(percent: number?): number?
+			local base = 1
+			for _, def in COMBAT.mobs do
+				if def.story and def.story.show then
+					base = def.story.show
+					break
+				end
+			end
+			-- 고운 그림(동작에 k가 적힌 것)이 하나도 없으면 바꿔 볼 것이 없다 → nil(관리 창이 그 줄을 그리지 않는다). 2026-10-12부터 보스의 동작은 도트 그림이라 지금은 없다
+			local fine = false
+			for _, char in CHARS.chars do
+				for _, clip in char.clips do
+					if clip.k then
+						fine = true
+					end
+				end
+			end
+			if not fine then
+				return nil
+			end
+			if percent then
+				Sprite.preview = percent / 100 / base
+			end
+			return math.floor(Sprite.preview * base * 100 + 0.5)
 		end,
 		npcNames = function()
 			return state.npcNames

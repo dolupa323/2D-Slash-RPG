@@ -8,6 +8,8 @@ local Stage = require(script.Parent.stage)
 
 local Sprite = {}
 Sprite.__index = Sprite
+-- 고운 그림의 미리보기 배율(관리 창 「전투 → 보스 크기」): 동작에 k가 적힌 그림(스토리 보스)을 이 배만큼 더 크게 · 작게 그려 본다. 그림만 바뀐다(맞는 자리 · 몸의 판정은 설계값 그대로)
+Sprite.preview = 1
 
 -- mask = true면 같은 자리의 흰 실루엣 판(CHARS.masks)으로 그린다 — label.ImageColor3로 색을 입혀 한 색 실루엣을 만든다(대쉬의 잔상)
 function Sprite.new(parent: Instance, who: string, z: number?, mask: boolean?)
@@ -56,16 +58,26 @@ function Sprite:set(clip: string, frame: number, x: number, y: number, dir: numb
 	elseif c.fw then
 		ox, oy = 0, c.fh / 2
 	end
-	local s = scale or 1
-	label.Size = UDim2.fromOffset(math.floor(w * s + 0.5), math.floor(h * s + 0.5))
+	-- 고운 그림(c.k — 스토리 보스: 사용자가 만든 동작 그림을 받은 화소 그대로 싣고 작게 그린다. k = 그림 한 화소가 세계의 몇 점인가):
+	--  부드럽게 줄여 그리고(도트 그림은 점이 또렷하게 — Pixelated) 자리와 크기를 점의 소수 자리까지 둔다. 사용자 2026-10-11: "게임에서 표현되어지는 크기를 줄이라는거에요 스프라이트를 건드리라는게아니라"
+	local fine = c.k ~= nil
+	local s = (scale or 1) * (if fine then c.k * Sprite.preview else 1)
+	if self.fine ~= fine then
+		self.fine = fine
+		label.ResampleMode = if fine then Enum.ResamplerMode.Default else Enum.ResamplerMode.Pixelated
+	end
+	local function R(v: number): number
+		return if fine then v else math.floor(v + 0.5)
+	end
+	label.Size = UDim2.fromOffset(R(w * s), R(h * s))
 	if dir >= 0 then
 		label.ImageRectOffset = Vector2.new(f[2], f[3])
 		label.ImageRectSize = Vector2.new(w, h)
-		label.Position = UDim2.fromOffset(px - math.floor((ox - dx) * s + 0.5), py - math.floor((oy - dy) * s + 0.5))
+		label.Position = UDim2.fromOffset(px - R((ox - dx) * s), py - R((oy - dy) * s))
 	else
 		label.ImageRectOffset = Vector2.new(f[2] + w, f[3])
 		label.ImageRectSize = Vector2.new(-w, h)
-		label.Position = UDim2.fromOffset(px + math.floor((ox - dx - w) * s + 0.5), py - math.floor((oy - dy) * s + 0.5))
+		label.Position = UDim2.fromOffset(px + R((ox - dx - w) * s), py - R((oy - dy) * s))
 	end
 	label.Visible = true
 end

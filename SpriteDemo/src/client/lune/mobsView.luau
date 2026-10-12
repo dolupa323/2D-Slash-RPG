@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local COMBAT = require(lune.data["combat.generated"])
 local BossFx = require(lune.bossfx) -- 스토리 보스: 동작 그림이 없을 때 대기 그림을 움직여 대신한다(pose)
+local BossPat = require(lune.sim.bosspat) -- 스토리 보스: 연속기의 시간 · 도약의 높이(서버와 같은 셈)
 local Sprite = require(script.Parent.sprite)
 local Stage = require(script.Parent.stage) -- 불티(한 점짜리 틀)
 local Ui = require(script.Parent.ui.ui)
@@ -177,6 +178,7 @@ function MobsView:apply(list, now: number)
 			m.toX, m.dir, m.at = row[2], row[3], now
 			m.state, m.t, m.hp = row[4], row[5], row[6]
 			m.pat = row[9] or 0
+			m.aim, m.chain, m.quick = row[10] or 0, row[11] or 0, row[12] == 1 -- 스토리 보스: 겨눈 자리(도약 · 불씨) · 연속기의 차례(0이면 아니다) · 지금 패턴이 연속기의 빠른 것인가
 			-- 묶인 · 넘어진 시간(서버의 것). 화면이 방금 어림으로 묶은 직후(cast.luau의 g.bind)에는 그보다 먼저 떠난 0을 받지 않는다
 			if (row[7] or 0) > 0 or os.clock() - (m.bindAt or -9) > 0.6 then
 				m.bind = row[7] or 0
@@ -188,6 +190,29 @@ end
 
 function MobsView:get(id: number)
 	return self.mobs[id]
+end
+
+-- 스토리 보스가 지금 하는 패턴: 연속기(chain)의 둘째부터는 예고 · 굳는 시간이 그 quick배로 줄어든 것을 돌려준다(화면의 그림 · 동작의 박자가 서버의 시간과 맞게). 없으면 nil
+local QUICK = {} :: { [any]: { [number]: any } }
+function MobsView.patOf(m)
+	local S = m.def.story
+	local p = S.patterns[m.pat or 0]
+	local c = S.patterns[m.chain or 0]
+	if not p or not m.quick or not c or not c.quick or c.quick == 1 then
+		return p
+	end
+	local cache = QUICK[p]
+	if not cache then
+		cache = {}
+		QUICK[p] = cache
+	end
+	local q = cache[c.quick]
+	if not q then
+		q = table.clone(p)
+		q.tell, q.act = BossPat.tell(p, c.quick), BossPat.act(p, c.quick)
+		cache[c.quick] = q
+	end
+	return q
 end
 
 -- 그 졸개의 머리 위 높이(발밑에서 위로, 게임의 도트): 병사 16 · 새 몬스터 = 뜬 높이 + 몸의 높이 + 2. 피해 숫자가 뜨는 자리
@@ -228,6 +253,13 @@ function MobsView:update(now: number)
 		m.alt = altOf(m, t, now)
 		if m.state == "gone" then
 			show = false
+		elseif m.state == "dead" and m.def.story and char.clips.death and m.def.story.anim.fall then
+			-- 스토리 보스가 쓰러진다(쓰러지는 동작 그림이 있는 보스): 그 동작을 한 번 틀고 누운 채 잠깐 있다가 사라진다(BossFx.fall) — 그동안 서버는 보스를 치우지 않는다(story.fall초)
+			local c, f, a = BossFx.fall(t, char.clips, m.def.story.anim)
+			clip, frame = c :: string, f
+			fade = 1 - a
+			show = a > 0
+			m.tail = nil
 		elseif bare and m.state == "dead" then
 			frame = Sprite.frameAt(char, "idle", now + m.info.id * 0.3, false)
 			fade = math.clamp(t / FADE, 0, 1)
@@ -238,7 +270,8 @@ function MobsView:update(now: number)
 		elseif m.def.story then
 			-- 스토리 보스: 받은 동작 그림(idle · run · attack — 사용자가 만든다)을 패턴의 시간에 맞춰 튼다(BossFx.body). 그림이 없는 동작(sweep · shout)은 대기 그림을 움직여 대신한다
 			local S = m.def.story
-			local p = S.patterns[m.pat]
+			local p = MobsView.patOf(m) -- 지금 하는 패턴(연속기 안에서는 예고 · 굳는 시간이 줄어든 것)
+			m.jump = if p and m.state == "act" then BossPat.leapAlt(p, t) else 0 -- 도약: 뛰어오른 높이(서버와 같은 식)
 			-- 친 뒤에 남은 장: 굳어 있는 동안(act)의 동작을 적어 두었다가, 그 뒤 서 있는 동안 이어서 끝까지 튼다(걷거나 다음 패턴을 예고하면 그만둔다)
 			if m.state == "act" and p and not p.dash then
 				m.tail = { clip = p.clip, act = p.act, t = t }
@@ -284,7 +317,7 @@ function MobsView:update(now: number)
 			px += math.floor((m.pushDir or 0) * (if m.def.boss or m.info.boss then HIT.pushBoss else HIT.push) * k * k + 0.5)
 		end
 		px += m.dir * poseX
-		local py = m.info.y - m.alt - poseY
+		local py = m.info.y - m.alt - poseY - math.floor((m.jump or 0) + 0.5)
 		m.px = px
 		if m.under then
 			-- 터진 장부터(atk.frame 다음)는 서 있는 몸을 밑에 그린다

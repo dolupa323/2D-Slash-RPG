@@ -105,6 +105,9 @@ for _, kind in kinds do
 		expect(m.hurt == false, kind .. ": 다쳐도 머리 위의 체력 띠 · 이름표는 띄우지 않는다")
 		eq(m.px, 300, kind .. ": 서 있을 때는 제자리")
 		for i, p in def.story.patterns do
+			if p.chain then
+				continue -- 연속기: 그 자체는 예고도 판정도 없다(적힌 패턴들을 차례로 쓴다 — 화면에는 그 패턴의 차례가 온다)
+			end
 			m = boss("tell", p.tell * 0.9, i)
 			expect(m.pat == i and m.warn[1].label.Visible == true, ("%s %s: 예고하는 동안 윤곽이 보인다"):format(kind, p.id))
 			expect(m.sprite.label.Visible == true and m.tNow >= p.tell * 0.9, ("%s %s: 몸이 보이고, 예고가 얼마나 찼는지 안다"):format(kind, p.id))
@@ -119,6 +122,9 @@ for _, kind in kinds do
 		expect(anim ~= nil and anim.fps > 0, kind .. ": 동작을 패턴의 시간에 맞추는 자료가 있다")
 		local played = 0
 		for i, p in def.story.patterns do
+			if p.chain then
+				continue
+			end
 			local a = if not p.dash and clips[p.clip] then anim[p.clip] else nil
 			local c, f, stand = BossFx.body("tell", p, p.tell, 0, clips, anim, nil)
 			if a then
@@ -133,12 +139,16 @@ for _, kind in kinds do
 				eq(f, a.hit + 1, ("%s %s: 치는 순간 = 무기가 닿는 장"):format(kind, p.id))
 				c, f = BossFx.body("act", p, p.act, 0, clips, anim, nil)
 				expect(f > a.hit + 1 and f <= a.to + 1, ("%s %s: 굳어 있는 동안 그 뒤의 장이 흐른다"):format(kind, p.id))
+				-- 굳은 것이 풀린 뒤: 동작이 아직 남았으면(굳어 있는 시간보다 긴 동작) 서 있는 동안 이어서 틀고, 다 틀었으면 대기로 돌아온다
+				local left = a.hit + math.floor(p.act * anim.fps) <= a.to
 				local c2, f2 = BossFx.body("idle", nil, 0, 0, clips, anim, { clip = p.clip, t = p.act })
-				expect(c2 == p.clip and f2 == f, ("%s %s: 굳은 것이 풀린 뒤에도 서 있으면 남은 장을 이어서 튼다"):format(kind, p.id))
+				expect(if left then c2 == p.clip and f2 == f else c2 == "idle", ("%s %s: 굳은 것이 풀린 뒤 — 남은 장이 있으면 이어서, 없으면 대기"):format(kind, p.id))
+				c2 = BossFx.body("idle", nil, 0, 0, clips, anim, { clip = p.clip, t = 0.05 })
+				eq(c2, p.clip, ("%s %s: 친 직후에 서 있으면 그 동작을 이어서 튼다"):format(kind, p.id))
 				c2 = BossFx.body("idle", nil, 0, 0, clips, anim, { clip = p.clip, t = 99 })
 				eq(c2, "idle", ("%s %s: 다 틀면 대기 그림으로 돌아온다"):format(kind, p.id))
 				c2 = BossFx.body("run", nil, 0, 0, clips, anim, { clip = p.clip, t = p.act })
-				eq(c2, "run", ("%s %s: 걷기 시작하면 걷는 그림으로 넘어간다"):format(kind, p.id))
+				eq(c2, if clips.run then "run" else "idle", ("%s %s: 걷기 시작하면 그 동작을 그만둔다(걷는 그림이 있으면 그것으로)"):format(kind, p.id))
 				m = boss("tell", p.tell, i)
 				eq(m.px, 300, ("%s %s: 그림이 있으면 몸을 옮기지 않는다"):format(kind, p.id))
 				m = boss("act", 0, i)
@@ -155,13 +165,55 @@ for _, kind in kinds do
 				expect(c == "run" and stand == false, ("%s %s: 내달릴 때는 걷는 그림을 돌린다"):format(kind, p.id))
 			end
 		end
-		expect(played >= 1, kind .. ": 받은 공격 그림을 쓰는 패턴이 있다")
-		expect(clips.idle ~= nil and #clips.idle.frames >= 2 and clips.run ~= nil, kind .. ": 대기 · 걷는 그림이 있다")
+		expect(played >= 1 or anim.attack == nil, kind .. ": 공격 그림이 있으면 그것을 쓰는 패턴이 있다")
+		-- 쓰러지는 동작 그림이 있는 보스(2026-10-12): 쓰러지면 그 동작을 한 번 틀고(마지막 장 = 쓰러져 누운 장) 누워 있다가 서서히 사라진다. 없는 보스는 선 채로 서서히 사라진다
+		if clips.death and anim.fall then
+			local n, fps = #clips.death.frames, clips.death.fps
+			local c, f, a = BossFx.fall(0, clips, anim)
+			expect(c == "death" and f == 1 and a == 1, kind .. ": 쓰러지는 순간 = 그 동작의 첫 장")
+			c, f, a = BossFx.fall(n / fps + anim.fall.hold * 0.5, clips, anim)
+			expect(f == n and a == 1, kind .. ": 다 틀면 쓰러져 누운 장에서 또렷이 멈춰 있다")
+			c, f, a = BossFx.fall(n / fps + anim.fall.hold + anim.fall.fade * 0.5, clips, anim)
+			expect(f == n and a > 0.4 and a < 0.6, kind .. ": 그 뒤 서서히 사라진다")
+			expect(math.abs(def.story.fall - (n / fps + anim.fall.hold + anim.fall.fade)) < 0.011, kind .. ": 서버가 치우기까지의 시간 = 동작 + 누워 있는 시간 + 사라지는 시간")
+			m = boss("dead", 0, 0)
+			expect(m.sprite.label.Visible == true and m.sprite.label.ImageTransparency == 0, kind .. ": 쓰러지는 동안 몸이 또렷이 보인다")
+			m = boss("dead", def.story.fall - anim.fall.fade * 0.5, 0)
+			expect(m.sprite.label.Visible == true and m.sprite.label.ImageTransparency > 0.3, kind .. ": 누운 뒤 서서히 사라진다")
+			m = boss("dead", def.story.fall + 0.1, 0)
+			expect(m.sprite.label.Visible == false, kind .. ": 다 사라지면 보이지 않는다")
+		else
+			expect(BossFx.fall(0, clips, anim) == nil, kind .. ": 쓰러지는 동작 그림이 없으면 선 채로 사라진다(전처럼)")
+			expect(def.story.fall == nil, kind .. ": 그런 보스는 서버도 전처럼 0.9초 뒤에 치운다")
+		end
+		-- 게임에서 그리는 크기(2026-10-11 — 사용자: "게임에서 표현되어지는 크기를 줄이라는거에요 스프라이트를 건드리라는게아니라"): 받은 그림은 화소 그대로 싣고(동작의 k) 작게 · 부드럽게 줄여 그린다
+		do
+			local c = clips.idle
+			expect(def.story.show ~= nil and def.story.show <= 1, kind .. ": 그리는 크기가 적혀 있다")
+			m = boss("idle", 0, 0)
+			local lab = m.sprite.label
+			if not c.k then
+				-- 2026-10-12부터: 보스의 동작은 Codex로 만든 도트 그림 — 한 점 = 세계의 한 점으로 또렷하게 그린다(k 없음)
+				expect(lab.ResampleMode ~= Enum.ResamplerMode.Default and lab.Size.X.Offset == math.abs(lab.ImageRectSize.X), kind .. ": 도트 그림은 점 그대로 또렷하게 그린다")
+				c = { k = 1 }
+			else
+			local fw, fh = math.abs(lab.ImageRectSize.X), lab.ImageRectSize.Y -- 지금 그려진 장의 화소(판에서 자른 크기)
+			expect(math.abs(lab.Size.X.Offset - fw * c.k) < 0.01 and math.abs(lab.Size.Y.Offset - fh * c.k) < 0.01, ("%s: 그리는 크기 = 그림의 화소 x %.3f(%.1f x %.1f)"):format(kind, c.k, lab.Size.X.Offset, lab.Size.Y.Offset))
+			expect(lab.ResampleMode == Enum.ResamplerMode.Default, kind .. ": 고운 그림은 부드럽게 줄여 그린다")
+			local was = Sprite.preview
+			Sprite.preview = 0.5
+			m = boss("idle", 0, 0)
+			expect(math.abs(m.sprite.label.Size.X.Offset - math.abs(m.sprite.label.ImageRectSize.X) * c.k * 0.5) < 0.01, kind .. ": 관리 창의 미리보기 배율만큼 더 줄여 그린다")
+			Sprite.preview = was
+			end
+			expect(CHARS.chars[def.sprite].fh <= def.body[2] * 2, kind .. ": 몸의 판정이 그림의 크기와 맞는다")
+		end
+		expect(clips.idle ~= nil and #clips.idle.frames >= 2, kind .. ": 대기 그림이 있다")
 		m = boss("run", 0, 0)
 		expect(m.sprite.label.Visible == true and m.px == 300, kind .. ": 걷는 모습이 그려진다")
 		m = boss("spawn", 0, 0)
 		expect(m.sprite.label.ImageTransparency > 0.9, kind .. ": 나타날 때 처음에는 안 보인다")
-		m = boss("dead", 0.8, 0)
+		m = boss("dead", (def.story.fall or 0.8) + 0.05, 0) -- 쓰러지는 동작 그림이 있는 보스는 그 그림이 다 보인 뒤에(story.fall초), 없는 보스는 0.45초에 걸쳐 사라진다
 		expect(m.sprite.label.Visible == false, kind .. ": 쓰러지면 사라진다")
 		m = boss("gone", 0, 0)
 		expect(m.sprite.label.Visible == false and m.warn[1].label.Visible == false, kind .. ": 없을 때는 아무것도 안 보인다")
@@ -379,7 +431,14 @@ do
 	})
 	local castFake = { fx = fx, shakeA = 0, shakeT = 0 }
 	local ghosts = 0
-	local bv = BossView.new(v2, castFake, { ghost = function() ghosts += 1 end }, scene)
+	-- 장면의 효과(가짜): 잔상을 세고, 패턴의 이펙트 그림(스프라이트)을 트는 것을 받아 적는다 — calls에 이름 "sprite" · { 누구의, 동작, x, y, 보는 쪽, opts }
+	local effectsFake = {
+		ghost = function() ghosts += 1 end,
+		play = function(_, who, clip, x, y, dir, opts)
+			table.insert(calls, { name = "sprite", args = { who, clip, x, y, dir, opts or {} } })
+		end,
+	}
+	local bv = BossView.new(v2, castFake, effectsFake, scene)
 	eq(#bv.list, 2, "그 방의 보스 둘을 본다")
 	expect(bv.lo == 32 and bv.hi == scene.w * 16 - 32, ("방의 양 끝(벽 안쪽) %s ~ %s"):format(tostring(bv.lo), tostring(bv.hi)))
 	local t = 50
@@ -404,6 +463,20 @@ do
 		end
 		return list
 	end
+	-- 그 동작(이펙트 그림)을 튼 것들
+	local function sprs(clip)
+		local list = {}
+		for _, c in calls do
+			if c.name == "sprite" and c.args[2] == clip then
+				table.insert(list, c)
+			end
+		end
+		return list
+	end
+	local function spr(clip)
+		return #sprs(clip)
+	end
+	local OLD = { "beam", "ring", "spike", "shards", "rise", "cut", "slash", "pop", "streaks" } -- 캐릭터 기술의 이펙트 부품 — 보스의 패턴은 이제 쓰지 않는다
 	local function patOf(kind, id)
 		for i, p in COMBAT.mobs[kind].story.patterns do
 			if p.id == id then
@@ -430,72 +503,244 @@ do
 	adds()[1].args[2](ctx, 0.5)
 	expect(drawn > 5, "예고하는 동안 맞을 자리를 그린다")
 	snap(1, "act", 0.05, qi)
-	expect(count("beam") == 1 and count("ring") == 2 and count("spike") == 7 and count("shards") == 1 and count("rise") == 1 and castFake.shakeT > 0 and castFake.shakeA >= 2, "치는 순간: 고리 · 솟는 가시 다섯 · 파편")
-	eq(count("add"), 3, "땅 울림: 물결 둘을 건다")
+	-- 치는 순간: 그 패턴의 이펙트 그림(공방 design/bosses.js의 BOSS_FX)을 튼다 — 사용자 2026-10-12 밤: "패턴 이팩트들 스킬이펙트 재사용하지말고 새로 만드세요"
+	expect(#q.fx >= 1 and q.wave.fx ~= nil, "땅 울림의 자료에 이펙트 그림이 적혀 있다")
+	local hit = sprs(q.fx[1].clip)
+	expect(#hit == 1 and castFake.shakeT > 0 and castFake.shakeA >= 2, "치는 순간: 내려찍는 이펙트 그림 하나 + 화면 흔들림")
+	eq(hit[1].args[1], "towerlieutenant", "그림은 그 보스의 동작 묶음에서")
+	expect(CHARS.chars.towerlieutenant.clips[q.fx[1].clip] ~= nil, "그 그림이 캐릭터 판에 실려 있다")
+	eq(hit[1].args[3], 400 + hit[1].args[5] * q.fx[1].dx, "돌망치가 떨어지는 자리(보는 쪽으로 dx)에")
+	local wv = sprs(q.wave.fx)
+	eq(#wv, 2, "땅 울림: 물결 둘(양쪽)을 튼다")
+	expect(wv[1].args[5] == -wv[2].args[5], "물결은 서로 반대쪽으로")
+	for _, w in wv do
+		local o = w.args[6]
+		expect(o.loop == q.wave.range / q.wave.speed and o.vx == w.args[5] * q.wave.speed, "물결: 가는 동안 돌려 틀고(거리 / 빠르기) 그 빠르기로 간다")
+		expect(o.lo == bv.lo and o.hi == bv.hi, "물결: 방의 벽 밖으로는 그리지 않는다")
+	end
+	for _, name in OLD do
+		eq(count(name), 0, "기술의 이펙트 부품(" .. name .. ")은 쓰지 않는다")
+	end
+	eq(count("add"), 1, "판에 거는 것은 예고뿐이다")
 	drawn = 0
 	adds()[1].args[2](ctx, 0.9)
 	eq(drawn, 0, "치고 난 뒤에는 예고를 그리지 않는다")
-	-- 물결: 방 안에서는 그리고, 벽 밖으로는 그리지 않는다(왼쪽으로 가는 것은 400 - 40 = 360에서 250을 간다 → 110까지. 오른쪽은 610까지 — 둘 다 방 안)
-	for i = 2, 3 do
-		drawn = 0
-		adds()[i].args[2](ctx, 0.5)
-		expect(drawn > 0, "물결을 그린다")
-	end
 	snap(1, "idle", 0, 0)
 	local n0 = #adds()
 	snap(1, "tell", 0.1, qi)
 	snap(1, "idle", 0, 0) -- 묶여서 끊겼다
-	eq(count("ring"), 2, "예고가 끊기면(묶임) 치는 이펙트가 없다")
+	eq(spr(q.fx[1].clip), 1, "예고가 끊기면(묶임) 치는 이펙트가 없다")
 	drawn = 0
 	adds()[n0 + 1].args[2](ctx, 0.3)
 	eq(drawn, 0, "끊긴 예고는 그리지 않는다")
-	-- 벽 가까이에서 친 물결은 벽 밖을 그리지 않는다
-	v2:apply({ { 1, 60, -1, "idle", 0, 900, 0, 0, 0 } }, t)
-	v2:update(t)
-	bv:update(0.016)
-	n0 = #calls
-	v2:apply({ { 1, 60, -1, "tell", 0.1, 900, 0, 0, qi } }, t)
-	v2:update(t)
-	bv:update(0.016)
-	v2:apply({ { 1, 60, -1, "act", 0.02, 900, 0, 0, qi } }, t)
-	v2:update(t)
-	bv:update(0.016)
-	local left
-	for i = n0 + 1, #calls do
-		if calls[i].name == "add" and calls[i].args[1] == q.wave.range / q.wave.speed and left == nil then
-			left = calls[i]
+	-- 이펙트 그림을 트는 것(effects.luau의 play — 진짜): 한 번 틀고 사라진다 · 가는 것은 방의 벽 밖에서 보이지 않는다 · 늦게 뜨는 것은 그때까지 안 보인다
+	do
+		local ef = Effects.new({}, {}, {})
+		local clip = CHARS.chars.towerlieutenant.clips[q.fx[1].clip]
+		ef:play("towerlieutenant", q.fx[1].clip, 300, 200, -1)
+		eq(#ef.sprites, 1, "이펙트 그림이 뜬다")
+		local sp = ef.sprites[1]
+		expect(math.abs(sp.life - #clip.frames / clip.fps) < 1e-6, "그 동작의 길이만큼(장 수 / 빠르기)")
+		ef:update(0, 0.01)
+		expect(sp.sprite.label.Visible == true, "첫 장이 보인다")
+		local tt = 0
+		while #ef.sprites > 0 and tt < 5 do
+			tt += 0.05
+			ef:update(tt, 0.05)
 		end
+		expect(#ef.sprites == 0 and tt < #clip.frames / clip.fps + 0.11, "다 틀면 사라진다")
+		-- 물결: 벽(lo = 32) 곁 60 - 40 = 20에서 왼쪽으로 떠나면 처음부터 벽 밖이다 → 보이지 않는다. 오른쪽으로 가는 것은 보인다
+		ef:play("towerlieutenant", q.wave.fx, 20, 200, -1, { loop = q.wave.range / q.wave.speed, vx = -q.wave.speed, lo = 32, hi = 700, fade = 0.15 })
+		ef:play("towerlieutenant", q.wave.fx, 100, 200, 1, { loop = q.wave.range / q.wave.speed, vx = q.wave.speed, lo = 32, hi = 700, fade = 0.15 })
+		ef:update(0, 0.1)
+		expect(ef.sprites[1].sprite.label.Visible == false, "벽 밖으로 나간 물결은 보이지 않는다")
+		expect(ef.sprites[2].sprite.label.Visible == true, "방 안의 물결은 보인다")
+		local x0 = ef.sprites[2].sprite.label.Position.X.Offset
+		ef:update(0, 0.5)
+		expect(ef.sprites[2].sprite.label.Position.X.Offset - x0 >= q.wave.speed * 0.5 - 2, "물결이 제 빠르기로 간다")
+		for _ = 1, 60 do
+			ef:update(0, 0.05)
+		end
+		eq(#ef.sprites, 0, "끝까지 가면 사라진다")
+		-- 늦게 뜨는 것(연속 검기의 둘째 · 셋째)
+		ef:play("towerlieutenant", q.wave.fx, 100, 200, 1, { loop = 1, vx = 10, delay = 0.4 })
+		ef:update(0, 0.2)
+		expect(ef.sprites[1].sprite.label.Visible == false, "제 때가 되기 전에는 보이지 않는다")
+		ef:update(0, 0.3)
+		expect(ef.sprites[1].sprite.label.Visible == true, "제 때가 되면 뜬다")
+		-- 없는 그림은 아무 일도 없다
+		ef:play("towerlieutenant", "fx_none", 0, 0, 1)
+		eq(#ef.sprites, 1, "없는 그림을 틀라고 하면 아무것도 뜨지 않는다")
+		ef:destroy()
 	end
-	expect(left ~= nil, "벽 곁에서도 물결을 건다")
-	drawn = 0
-	left.args[2](ctx, 0.9) -- 왼쪽으로 간 물결: 60 - 40 - 225 = 벽 밖
-	eq(drawn, 0, "벽 밖으로 나간 물결은 그리지 않는다")
-	-- 정찰대장: 호령(빛기둥 둘) · 내달리기(달리는 동안 속도선)
+	-- 정찰대장: 호령(뿔나팔의 소리 + 졸개가 나오는 두 자리의 빛기둥) · 내달리기(박차는 먼지 · 달리는 동안의 먼지 · 벽에 부딪침)
 	snap(1, "gone", 0, 0)
-	local ci = patOf("scoutcaptain", "call")
+	local ci, cp = patOf("scoutcaptain", "call")
 	snap(2, "tell", 0.1, ci)
-	n0 = count("beam")
 	snap(2, "act", 0.05, ci)
-	eq(count("beam") - n0, 2, "호령: 졸개가 나오는 두 자리에 빛기둥")
+	eq(spr(cp.summon.fx), #cp.summon.at, "호령: 졸개가 나오는 두 자리에 빛기둥")
+	eq(spr(cp.fx[1].clip), 1, "호령: 뿔나팔의 소리")
+	expect(sprs(cp.summon.fx)[1].args[3] == cp.summon.at[1] and sprs(cp.summon.fx)[2].args[3] == cp.summon.at[2], "빛기둥은 졸개가 나오는 자리에")
 	snap(2, "idle", 0, 0)
-	local di = patOf("scoutcaptain", "charge")
+	local di, dp = patOf("scoutcaptain", "charge")
 	snap(2, "tell", 0.1, di)
-	n0 = count("streaks")
+	n0 = spr(dp.dash.trail.clip)
 	snap(2, "dash", 0.02, di)
-	expect(count("streaks") - n0 >= 2, "내달리기: 박차는 순간과 달리는 동안의 속도선")
-	local n1 = count("streaks")
-	for _ = 1, 10 do
+	expect(spr(dp.dash.trail.clip) - n0 >= 2, "내달리기: 박차는 순간과 달리기 시작할 때의 먼지")
+	local n1 = spr(dp.dash.trail.clip)
+	for _ = 1, 20 do
 		bv:update(0.02)
 	end
-	expect(count("streaks") - n1 >= 3, "달리는 동안 속도선이 이어진다")
+	local more = spr(dp.dash.trail.clip) - n1
+	expect(more >= 2 and more <= 3, ("달리는 동안 먼지가 %.2f초마다 이어진다(0.4초에 %d번)"):format(dp.dash.trail.every, more))
 	expect(ghosts >= 2, "내달리는 동안 잔상이 남는다 " .. ghosts)
-	local r0 = count("ring")
 	castFake.shakeT = 0
 	snap(2, "idle", 0, 0)
-	expect(count("ring") == r0 + 1 and castFake.shakeT > 0, "내달리기가 끝나면(벽) 터지고 화면이 흔들린다")
+	expect(spr(dp.dash.crash.clip) == 1 and castFake.shakeT > 0, "내달리기가 끝나면(벽) 부딪치는 그림이 뜨고 화면이 흔들린다")
 	eq(BossView.hpLabel(1234.2, 53640, 288, function(t) return #t * 6 end), "1235/53640", "체력의 숫자: 지금/최대")
 	eq(BossView.hpLabel(-5, 53640, 288, function(t) return #t * 6 end), "0/53640", "체력이 다하면 0")
 	expect(BossView.hpLabel(53640, 53640, 30, function(t) return #t * 6 end) ~= "53640/53640", "칸이 좁으면 짧게 적는다")
+	-- ---- 새 패턴(2026-10-12 밤 — 공방 STORYBOSS_NEXT): 표시된 자리 · 도약 · 포효 · 검기 · 연속기 ----
+	local BossPat = req("ReplicatedStorage/shared/lune/sim/bosspat")
+	local BossFx = req("ReplicatedStorage/shared/lune/bossfx")
+	local pushed = nil
+	bv:destroy()
+	bv = BossView.new(v2, castFake, effectsFake, scene, { push = function(x, dist) pushed = { x, dist } end })
+	local function snap2(id, x, state, st, pat, aim, chain, quick)
+		v2:apply({ { id, x, -1, state, st, 900, 0, 0, pat, aim or 0, chain or 0, quick or 0 } }, t)
+		v2:update(t)
+		bv:update(0.016)
+	end
+	snap2(2, 400, "gone", 0, 0)
+	snap2(1, 600, "idle", 0, 0)
+	-- 불씨 뿌리기: 예고가 시작되면 맞을 자리(느낌표) + 표시된 자리 넷을 건다. 자리는 서버와 같은 식 — 겨눈 사람의 발밑과 그 좌우
+	local ei, e = patOf("towerlieutenant", "embers")
+	n0 = count("add")
+	snap2(1, 600, "tell", 0.05, ei, 300)
+	eq(count("add") - n0, 1 + e.spots.n, "불씨: 예고 + 표시된 자리 넷")
+	eq(#bv.spots, e.spots.n, "표시된 자리를 적어 둔다")
+	local want = BossPat.spots(e, 300, bv.roomLo, bv.roomHi)
+	for i, sp in bv.spots do
+		eq(sp.x, want[i][1], "불씨의 자리(서버와 같은 식)")
+	end
+	eq(bv.spots[1].x, 300, "첫 자리 = 겨눈 사람의 발밑")
+	drawn = 0
+	adds()[#adds()].args[2](ctx, 0.5)
+	expect(drawn > 5, "표시된 자리를 그린다")
+	local blast0 = spr(e.spots.fx)
+	snap2(1, 600, "act", 0.05, ei, 300)
+	eq(spr(e.spots.fx), blast0, "예고가 끝난 순간에는 아직 솟지 않는다(자리마다 제 때에)")
+	eq(spr(e.fx[1].clip), 1, "불씨를 뿌리는 순간: 등의 화로가 타오른다")
+	for _, sp in bv.spots do
+		sp.at -= 5 -- 시간이 흘렀다
+	end
+	bv:update(0.016)
+	eq(spr(e.spots.fx) - blast0, e.spots.n, "때가 되면 자리마다 불씨가 터진다")
+	local at300 = false
+	for _, c in sprs(e.spots.fx) do
+		at300 = at300 or c.args[3] == 300
+	end
+	expect(at300, "불씨는 표시된 그 자리에서 터진다")
+	eq(#bv.spots, 0, "솟고 나면 자리가 사라진다")
+	-- 예고하던 중에 끊기면(묶임) 자리도 사라지고 솟지 않는다
+	snap2(1, 600, "idle", 0, 0)
+	snap2(1, 600, "tell", 0.05, ei, 300)
+	local live = bv.spots[1]
+	snap2(1, 600, "idle", 0, 0)
+	blast0 = spr(e.spots.fx)
+	expect(#bv.spots == 0 and live.live == false, "예고가 끊기면 표시된 자리도 사라진다")
+	bv:update(0.016)
+	eq(spr(e.spots.fx), blast0, "끊긴 자리는 솟지 않는다")
+	-- 봉화 불기둥: 방 전체에 깔린다(두 번에 나눠 솟는다)
+	local bi, bp = patOf("towerlieutenant", "beacon")
+	snap2(1, 400, "tell", 0.05, bi, 300)
+	expect(#bv.spots >= 8, ("불기둥의 자리가 방 전체에 깔린다(%d곳)"):format(#bv.spots))
+	local early, lateN = 0, 0
+	for _, sp in bv.spots do
+		if sp.T > bp.tell + 0.01 then
+			lateN += 1
+		else
+			early += 1
+		end
+	end
+	expect(early >= 4 and lateN >= 4 and math.abs(early - lateN) <= 1, "먼저 솟는 칸과 나중 칸이 번갈아 있다")
+	snap2(1, 400, "act", 0.05, bi, 300)
+	snap2(1, 400, "idle", 0, 0)
+	expect(#bv.spots >= 8, "예고가 끝난 뒤에는 보스가 다른 것을 해도 자리가 남는다(제 때에 솟는다)")
+	snap2(1, 400, "dead", 0, 0)
+	eq(#bv.spots, 0, "보스가 쓰러지면 표시된 자리도 사라진다")
+	-- 도약 찍기: 뛰어오를 때는 박차는 고리만, 내려앉을 때 치는 이펙트 · 몸은 공중에 뜬다(서버와 같은 식)
+	snap2(1, 600, "idle", 0, 0)
+	local li, lp = patOf("towerlieutenant", "leap")
+	snap2(1, 600, "tell", 0.05, li, 300)
+	drawn = 0
+	adds()[#adds()].args[2](ctx, 0.5)
+	expect(drawn > 5, "도약: 내려앉을 자리를 그린다")
+	local beam0, ring0 = spr(lp.fx[1].clip), spr(lp.leap.fx)
+	snap2(1, 600, "act", 0.05, li, 300)
+	expect(spr(lp.fx[1].clip) == beam0 and spr(lp.leap.fx) == ring0 + 1, "도약: 뛰어오르는 순간에는 박차는 먼지만(아직 치지 않는다)")
+	snap2(1, 480, "act", lp.leap.time / 2, li, 300)
+	local mm = v2:get(1)
+	expect(mm.jump > lp.leap.peak * 0.9, ("도약: 몸이 공중에 떠 있다(%.0f점)"):format(mm.jump))
+	drawn = 0
+	adds()[#adds()].args[2](ctx, 0.5)
+	expect(drawn > 5, "도약: 날아가는 동안에도 내려앉을 자리가 보인다")
+	snap2(1, 366, "act", lp.leap.time + 0.02, li, 300)
+	expect(spr(lp.fx[1].clip) == beam0 + 1 and v2:get(1).jump == 0, "도약: 내려앉으면 치는 이펙트 · 몸은 바닥에")
+	snap2(1, 366, "act", lp.leap.time + 0.1, li, 300)
+	eq(spr(lp.fx[1].clip), beam0 + 1, "한 번만 친다")
+	-- 포효(체력 구간): 큰 고리 · 긴 흔들림 · 가까운 사람을 밀어낸다(boot가 받는다) · 바 아래에 그 이름
+	snap2(1, 366, "idle", 0, 0)
+	local ph = COMBAT.mobs.towerlieutenant.story.phase
+	ring0 = spr(ph.fx)
+	castFake.shakeT = 0
+	snap2(1, 366, "roar", 0.02, 0)
+	expect(spr(ph.fx) - ring0 == 1 and castFake.shakeT >= 0.3, "포효: 그 그림 하나와 긴 흔들림")
+	expect(sprs(ph.fx)[1].args[6].back == true and sprs(ph.fx)[1].args[3] == 366, "포효의 그림은 몸의 뒤에 · 보스의 자리에")
+	expect(pushed ~= nil and pushed[1] == 366 and pushed[2] == ph.push, "포효: 밀어내라고 알린다(보스의 자리 · 거리)")
+	local c1, f1 = BossFx.body("roar", nil, 0, 0, CHARS.chars.towerlieutenant.clips, COMBAT.mobs.towerlieutenant.story.anim, nil)
+	expect(c1 == "roar" and f1 == 1, "포효하는 동안 그 동작을 튼다")
+	snap2(1, 366, "roar", 0.5, 0)
+	eq(spr(ph.fx) - ring0 == 1 and pushed[1], 366, "포효의 이펙트는 한 번")
+	-- 연속기: 둘째부터는 예고가 quick배로 짧다(화면의 그림 · 동작의 박자가 서버의 시간과 맞게)
+	local combI, comb = patOf("towerlieutenant", "combo")
+	local si, sm = patOf("towerlieutenant", "smash")
+	snap2(1, 366, "idle", 0, 0)
+	snap2(1, 366, "tell", 0.05, si, 300, combI, 0)
+	eq(MobsView.patOf(v2:get(1)).tell, sm.tell, "연속기의 첫 번째는 제 예고대로")
+	snap2(1, 366, "act", 0.05, si, 300, combI, 0)
+	snap2(1, 366, "tell", 0.05, si, 300, combI, 1)
+	expect(math.abs(MobsView.patOf(v2:get(1)).tell - sm.tell * comb.quick) < 1e-6, "연속기의 둘째부터는 예고가 quick배")
+	expect(MobsView.patOf(v2:get(1)) ~= sm and sm.tell == COMBAT.mobs.towerlieutenant.story.patterns[si].tell, "설계의 패턴은 건드리지 않는다(줄인 것은 따로 만든 것)")
+	-- 정찰대장의 검기: 보는 쪽으로 물결 하나 · 연속 검기는 셋(뒤의 둘은 늦게 떠난다)
+	snap2(1, 366, "gone", 0, 0)
+	local wi, wp = patOf("scoutcaptain", "bladewave")
+	snap2(2, 600, "idle", 0, 0)
+	snap2(2, 600, "tell", 0.05, wi, 300)
+	drawn = 0
+	adds()[#adds()].args[2](ctx, 0.5)
+	expect(drawn > 5, "검기: 날아갈 길을 그린다")
+	n0 = spr(wp.wave.fx)
+	local a0 = count("add")
+	snap2(2, 600, "act", 0.02, wi, 300)
+	eq(spr(wp.wave.fx) - n0, 1, "검기: 제 그림 하나가 날아간다")
+	eq(count("add"), a0, "검기를 판에 그리지 않는다(그림을 튼다)")
+	local bw = sprs(wp.wave.fx)[spr(wp.wave.fx)]
+	expect(bw.args[5] == -1 and bw.args[6].vx == -wp.wave.speed and bw.args[3] == 600 - wp.wave.at, "검기는 보는 쪽으로(왼쪽) 제 빠르기로 · 칼끝에서 떠난다")
+	eq(spr(wp.fx[1].clip), 1, "검기를 날리는 순간: 칼을 내리긋는 그림")
+	snap2(2, 600, "idle", 0, 0)
+	local sti, stp = patOf("scoutcaptain", "storm")
+	snap2(2, 600, "tell", 0.05, sti, 300)
+	n0 = spr(stp.wave.fx)
+	snap2(2, 600, "act", 0.02, sti, 300)
+	eq(spr(stp.wave.fx) - n0, stp.wave.n, "연속 검기: 검기 셋")
+	local delays = {}
+	local all = sprs(stp.wave.fx)
+	for i = #all - stp.wave.n + 1, #all do
+		table.insert(delays, all[i].args[6].delay)
+	end
+	table.sort(delays)
+	expect(delays[1] <= 0 and math.abs(delays[2] - delays[1] - stp.wave.gap) < 1e-6 and math.abs(delays[3] - delays[1] - stp.wave.gap * 2) < 1e-6, "뒤의 둘은 gap초씩 늦게 떠난다")
 	bv:destroy()
 	eq(#bv.list, 0, "장면이 바뀌면 치운다")
 end

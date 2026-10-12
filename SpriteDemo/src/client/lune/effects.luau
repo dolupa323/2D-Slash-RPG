@@ -91,6 +91,35 @@ function Effects:addSprite(who: string, clip: string, x: number, y: number, dir:
 	table.insert(self.sprites, { sprite = sprite, clip = clip, x = x, y = y, dir = dir, t = 0, life = life, fps = fps })
 end
 
+-- 캐릭터 판의 동작 하나를 그 동작의 빠르기로 튼다(보스 패턴의 이펙트 그림 — shared/lune/bossfx.luau). 공방 시험 탭의 fx.sprite와 같은 셈
+--  opts: delay 늦게(음수면 그만큼 이미 흐른 데서) · back 몸들의 뒤(캐릭터들의 층 맨 아래) · loop 돌려 트는 시간(초 — 없으면 한 번 튼다) · vx 가는 빠르기(점/초)
+--        lo · hi 그 밖에서는 보이지 않는다(방의 벽) · fade 끝에서 사라지는 몫(0~1)
+function Effects:play(who: string, clip: string, x: number, y: number, dir: number, opts)
+	opts = opts or {}
+	local sprite = Sprite.new(if opts.back then self.heroLayer else self.layer, who, if opts.back then 0 else 6)
+	local c = sprite.char.clips[clip]
+	if not c then
+		sprite:destroy() -- 그 그림이 없다(아직 싣지 않은 이펙트)
+		return
+	end
+	sprite.label.Name = "BossFx"
+	table.insert(self.sprites, {
+		sprite = sprite,
+		clip = clip,
+		x = x,
+		y = y,
+		dir = dir,
+		t = -(opts.delay or 0),
+		life = opts.loop or (#c.frames / c.fps),
+		fps = c.fps,
+		loop = opts.loop ~= nil,
+		vx = opts.vx or 0,
+		lo = opts.lo,
+		hi = opts.hi,
+		fade = opts.fade or 0,
+	})
+end
+
 -- 잔상: 그 캐릭터의 그 장을 한 색 실루엣으로 남긴다. 처음의 불투명도에서 곧게 옅어져 사라진다(시험 탭의 ghost)
 function Effects:ghost(who: string, clip: string, frame: number, x: number, y: number, dir: number, color: Color3)
 	local sprite = Sprite.new(self.heroLayer, who, 0, true)
@@ -282,9 +311,21 @@ function Effects:update(now: number, dt: number)
 		if sp.t >= sp.life then
 			sp.sprite:destroy()
 			table.remove(self.sprites, i)
+		elseif sp.t < 0 then
+			sp.sprite.label.Visible = false -- 아직 제 때가 아니다(늦게 뜨는 것)
 		else
 			local n = #sp.sprite.char.clips[sp.clip].frames
-			sp.sprite:set(sp.clip, math.min(n, math.floor(sp.t * sp.fps) + 1), sp.x, sp.y, sp.dir)
+			local f = math.floor(sp.t * sp.fps)
+			local x = sp.x + (sp.vx or 0) * sp.t
+			if (sp.lo and x < sp.lo) or (sp.hi and x > sp.hi) then
+				sp.sprite.label.Visible = false -- 방의 벽 밖
+			else
+				sp.sprite:set(sp.clip, if sp.loop then f % n + 1 else math.min(n, f + 1), x, sp.y, sp.dir)
+				if sp.fade and sp.fade > 0 then
+					local k = sp.t / sp.life
+					sp.sprite.label.ImageTransparency = if k > 1 - sp.fade then 1 - math.max(0, (1 - k) / sp.fade) else 0
+				end
+			end
 		end
 	end
 	for i = #self.ghosts, 1, -1 do

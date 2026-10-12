@@ -312,9 +312,17 @@ do
 		expect(Items.goods(g.id) ~= nil and g.n >= 1 and g.n <= 999, "받을 수 있는 아이템 " .. g.id)
 	end
 
+	local shown, showCalls = 75, 0 -- 「보스 크기」 미리보기(화면 쪽만 — 서버에 묻지 않는다)
 	local function run(player, expectAnswer: boolean)
 		local calls, answered = 0, 0
 		local ctx = {
+			bossShow = function(v: number?)
+				if v then
+					shown = v
+					showCalls += 1
+				end
+				return shown
+			end,
 			me = function()
 				local sess = World.session(player)
 				return { level = sess.hero.level, job = sess.hero.job, admin = if expectAnswer then { xp = 1, dmg = 1, god = false } else nil }
@@ -359,6 +367,7 @@ do
 	end
 	-- 관리자: 누른 만큼 서버가 대답한다
 	local calls, answered = run(pAdmin, true)
+	expect(showCalls == #AdminWindow.BOSS_SHOW and shown == AdminWindow.BOSS_SHOW[#AdminWindow.BOSS_SHOW], ("「보스 크기」의 단추마다 그림의 크기를 바꾼다(%d번 · 마지막 %d%%)"):format(showCalls, shown))
 	expect(calls >= 40 and answered == calls, ("관리자가 누른 단추는 모두 서버가 대답한다(%d번 가운데 %d번)"):format(calls, answered))
 	-- 관리자가 아닌 사람이 이 창을 억지로 띄워 모든 단추를 눌러도: 서버는 하나도 듣지 않고, 그 사람은 그대로다
 	local was = snap(hu, sUser)

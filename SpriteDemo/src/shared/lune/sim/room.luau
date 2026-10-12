@@ -14,6 +14,7 @@ local Buffs = require(script.Parent.buffs)
 local Caster = require(script.Parent.caster) -- 2~4차의 쓰는 스킬(직업 묶음의 그 스킬을 방이 돌린다)
 local Passives = require(script.Parent.passives) -- 2~4차의 패시브
 local Quests = require(script.Parent.quests) -- 스토리 보스: 그 퀘스트를 하는 사람이 있을 때만 선다
+local BossPat = require(script.Parent.bosspat) -- 스토리 보스: 표시된 자리 · 도약 · 물결의 자리와 시간(화면과 같은 셈)
 local RULES = COMBAT.rules
 local CASTRULE = COMBAT.castRule
 local KIT = COMBAT.kit
@@ -371,6 +372,14 @@ end
 --  사용자 2026-10-11: "리워드 없는 스토리보스로 … 그냥 이야기에서 지나치는 스토리보스로" · "패턴, 스킬 이펙트는 따로 만드셔야해요"
 --  상태: gone(없다) → spawn(나타남) → idle · run(쉬며 다가옴) → tell(예고 — 맞을 자리가 바닥에 그려진다) → act(친다) / dash(내달린다) → idle(굳어 있다 = rest) … → dead → gone
 --  pat = 지금 하는 패턴의 차례(없으면 0 — 화면에 같이 보낸다: snapshot의 아홉째). 맞아도 멈칫하지 않고 밀리지 않는다. 묶이거나(바인드) 넘어지면 하던 것을 그만둔다.
+--  2026-10-12 밤(사용자: "패턴이 너무적습니다. 뻔하고 … 패턴좀 멋있게 만드세요" → 시험 탭에서 먼저 만든 뒤 "추가 패턴 적용하고 …"): 패턴을 다시 짰다 — 시험 탭 luneTab.js의 stepStory를 옮긴 것.
+--   · 고르기: 겨눈 사람과의 거리(reach 안 · far 밖)와 체력(from) · 쉬는 시간(every)으로 쓸 수 있는 것을 추리고, 그 가운데 몫(w)대로 뽑는다. 방금 쓴 것은 다른 것이 있으면 뽑지 않는다.
+--   · 연속기(chain): 적힌 패턴들을 쉬지 않고 잇는다(첫 번째는 제 예고대로 · 둘째부터 예고 · 굳는 시간이 quick배 · 칠 때마다 chainStep만큼 다가선다). only = 연속기 안에서만 쓰는 패턴.
+--   · 표시된 자리(spots): 예고가 시작될 때 바닥의 자리들이 정해지고(self.blasts), 예고가 끝나면(자리마다 더 기다린 뒤) 터진다 — 그 위에 선 사람이 맞는다.
+--   · 도약(leap): 예고가 끝나면 뛰어올라 time초 뒤 겨눈 자리(mob.aim — 뛰기 0.25초 전까지 겨눈 사람을 따라간다)에 내려앉으며 친다.
+--   · 물결(wave): dir = "front"면 보는 쪽으로만 · n개를 gap초 간격으로(검기 · 연속 검기).
+--   · 체력 구간(story.phase): 체력이 at 아래로 내려가면 한 번 포효한다(roar — time초 동안 치지 않는다). 그 뒤로 쉬는 시간이 rage배 · 걸음이 1.15배.
+--  화면에 더 보내는 것(snapshot의 열째 ~ 열두째): 겨눈 자리(aim) · 연속기의 차례(chainPat — 0이면 연속기가 아니다) · 지금 패턴이 빠른가(quick).
 
 -- 보스를 치운다(그 퀘스트를 하는 사람이 없어졌다 · 쓰러진 뒤). 부른 졸개와 물결도 같이 사라진다
 function Room:bossAway(mob)
@@ -384,6 +393,19 @@ function Room:bossAway(mob)
 		for i = #self.waves, 1, -1 do
 			if self.waves[i].mob == mob then
 				table.remove(self.waves, i)
+			end
+		end
+	end
+	self:bossSpotsOff(mob)
+	mob.chain, mob.chainPat, mob.quick, mob.aim, mob.alt = nil, 0, 1, 0, 0
+end
+
+-- 그 보스가 표시해 둔 자리들을 거둔다(묶여서 예고가 끊겼다 · 쓰러졌다 · 사라졌다)
+function Room:bossSpotsOff(mob)
+	if self.blasts then
+		for i = #self.blasts, 1, -1 do
+			if self.blasts[i].mob == mob then
+				table.remove(self.blasts, i)
 			end
 		end
 	end
@@ -417,6 +439,7 @@ function Room:stepPresence(heroes)
 				mob.away = false
 				mob.state, mob.t, mob.x, mob.hp, mob.dir, mob.target = "spawn", 0, mob.homeX, mob.maxHp, -1, nil
 				mob.pat, mob.rest, mob.used = 0, 0, {}
+				mob.raged, mob.lastPat, mob.chain, mob.chainPat, mob.quick, mob.aim, mob.alt = false, 0, nil, 0, 1, 0, 0
 			end
 		elseif not mob.away and mob.state ~= "dead" then
 			self:bossAway(mob)
@@ -429,7 +452,7 @@ local function inZone(mob, h, lo: number, hi: number, up: number): boolean
 	return h.alive and h.x >= lo - HERO_W and h.x <= hi + HERO_W and mob.y - h.y < up and h.y <= mob.y + 4
 end
 
--- 예고가 끝났다: 친다
+-- 예고가 끝났다(도약은 내려앉았다): 친다
 function Room:bossStrike(mob, p, heroes, events)
 	if p.zone then
 		local x0, x1 = mob.x + mob.dir * p.zone.from, mob.x + mob.dir * p.zone.to
@@ -441,10 +464,10 @@ function Room:bossStrike(mob, p, heroes, events)
 		end
 	end
 	if p.wave then
-		-- 물결 둘이 내려찍은 자리에서 양쪽으로 바닥을 따라 간다(Room:step이 옮기고 맞힌다 — 한 사람은 한 물결에 한 번)
+		-- 물결이 바닥을 따라 간다(Room:step이 옮기고 맞힌다 — 한 사람은 한 물결에 한 번): 내려찍은 자리에서 양쪽으로(땅 울림) · 보는 쪽으로만(검기) · 여럿이 잇달아(연속 검기 — wait초 뒤에 떠난다)
 		self.waves = self.waves or {}
-		for _, dir in { -1, 1 } do
-			table.insert(self.waves, { mob = mob, x = mob.x + mob.dir * p.wave.at, y = mob.y, dir = dir, left = p.wave.range, def = p.wave, mul = p.mul, hit = {} })
+		for _, w in BossPat.waves(p, mob.dir) do
+			table.insert(self.waves, { mob = mob, x = mob.x + mob.dir * p.wave.at, y = mob.y, dir = w[1], wait = w[2], left = p.wave.range, def = p.wave, mul = p.mul, hit = {} })
 		end
 	end
 	if p.summon then
@@ -463,26 +486,121 @@ function Room:bossStrike(mob, p, heroes, events)
 	end
 end
 
--- 다음에 쓸 패턴: 쓸 수 있는 것 가운데 가장 오래 안 쓴 것(같으면 앞의 것). 없으면 nil(더 다가간다)
-function Room:bossPick(mob, dist: number)
-	local best, bestI, bestAt = nil, 0, math.huge
-	for i, p in mob.def.story.patterns do
-		local last = mob.used[p.id] or -math.huge
-		local ok = (not p.from or mob.hp <= mob.maxHp * p.from) and (not p.every or self.time - last >= p.every) and (not p.reach or dist <= p.reach)
-		if ok and p.summon then
-			ok = false
-			for _, add in mob.adds do
-				if add.away then
-					ok = true -- 부를 자리가 남아 있다
-					break
-				end
+-- 그 패턴을 지금 쓸 수 있는가(겨눈 사람과의 거리 dist)
+function Room:bossCan(mob, p, dist: number): boolean
+	local ok = not p.only and (not p.from or mob.hp <= mob.maxHp * p.from) and (not p.every or self.time - (mob.used[p.id] or -math.huge) >= p.every)
+		and (not p.reach or dist <= p.reach) and (not p.far or dist >= p.far)
+	if ok and p.summon then
+		ok = false
+		for _, add in mob.adds do
+			if add.away then
+				ok = true -- 부를 자리가 남아 있다
+				break
 			end
 		end
-		if ok and last < bestAt then
-			best, bestI, bestAt = p, i, last
+	end
+	return ok
+end
+
+-- 다음에 쓸 패턴: 쓸 수 있는 것 가운데 몫(w — 없으면 1)대로 하나. 방금 쓴 것은 다른 것이 있으면 뽑지 않는다. 없으면 nil(더 다가간다)
+function Room:bossPick(mob, dist: number)
+	local P = mob.def.story.patterns
+	local pool, fresh = {}, {}
+	for i, p in P do
+		if self:bossCan(mob, p, dist) then
+			table.insert(pool, i)
+			if i ~= mob.lastPat then
+				table.insert(fresh, i)
+			end
 		end
 	end
-	return best, bestI
+	if #fresh > 0 then
+		pool = fresh
+	end
+	if #pool == 0 then
+		return nil, 0
+	end
+	local total = 0
+	for _, i in pool do
+		total += P[i].w or 1
+	end
+	local r = self.rng:NextNumber(0, total)
+	local pick = pool[#pool]
+	for _, i in pool do
+		r -= P[i].w or 1
+		if r <= 0 then
+			pick = i
+			break
+		end
+	end
+	return P[pick], pick
+end
+
+local function patIndex(S, id: string): number
+	for i, p in S.patterns do
+		if p.id == id then
+			return i
+		end
+	end
+	error("스토리 보스: 없는 패턴 " .. id)
+end
+
+-- 그 패턴을 예고부터 시작한다. quick = 연속기 안에서 예고 · 굳는 시간을 줄이는 비율(없으면 1) · target = 겨눈 사람(없어도 된다 — 그러면 보는 쪽 앞을 겨눈다)
+function Room:bossBegin(mob, i: number, quick: number?, target)
+	local S = mob.def.story
+	local p = S.patterns[i]
+	mob.state, mob.t, mob.pat, mob.quick = "tell", 0, i, quick or 1
+	mob.landed, mob.alt = false, 0
+	mob.slide = if quick then mob.chainStep or 0 else 0
+	if target then
+		local dx = target.x - mob.x
+		if dx ~= 0 then
+			mob.dir = sign(dx)
+		end
+	end
+	mob.aim = if target then target.x else mob.x + mob.dir * ((p.leap and p.leap.aim or 0) + 30)
+	if p.spots then
+		-- 표시되는 자리들이 지금 정해진다 — 예고가 끝나면(자리마다 더 기다린 뒤) 터진다
+		self.blasts = self.blasts or {}
+		local lo, hi = BossPat.bounds(self.scene)
+		local tell = BossPat.tell(p, mob.quick)
+		for _, sp in BossPat.spots(p, mob.aim, lo, hi) do
+			table.insert(self.blasts, { mob = mob, x = sp[1], y = mob.y, t = tell + sp[2], def = p.spots, mul = p.mul })
+		end
+	end
+	return p
+end
+
+-- 쉬는 틈의 배율: 포효한 뒤에는 짧아진다
+local function rageOf(mob, S): number
+	return if mob.raged and S.phase then S.phase.rage or 1 else 1
+end
+
+-- 고른 패턴(i째)을 쓴다: 연속기면 그 첫 패턴부터(첫 번째는 제 예고대로 — 둘째부터 quick배: bossDone), 아니면 그 패턴을. 쓴 때와 차례를 적는다(every · 방금 쓴 것 피하기)
+function Room:bossStart(mob, i: number, target)
+	local S = mob.def.story
+	local pick = S.patterns[i]
+	mob.used[pick.id] = self.time
+	mob.lastPat = i
+	if pick.chain then
+		mob.chain = table.clone(pick.chain)
+		mob.chainQuick, mob.chainStep, mob.chainPat = pick.quick, pick.chainStep or 0, i
+		mob.chainRest = 1.8 * rageOf(mob, S) -- 다 끝나면 길게 쉰다(때릴 틈)
+		return self:bossBegin(mob, patIndex(S, table.remove(mob.chain, 1)), nil, target)
+	end
+	mob.chain, mob.chainRest, mob.chainPat = nil, nil, 0
+	return self:bossBegin(mob, i, nil, target)
+end
+-- 그 패턴이 끝났다: 연속기면 쉬지 않고 다음 것으로, 아니면 쉰다
+function Room:bossDone(mob, p, heroes)
+	local S = mob.def.story
+	if mob.chain and #mob.chain > 0 then
+		local id = table.remove(mob.chain, 1)
+		self:bossBegin(mob, patIndex(S, id), mob.chainQuick, if mob.target then heroes[mob.target] else nil)
+		return
+	end
+	mob.state, mob.t, mob.pat, mob.rest = "idle", 0, 0, mob.chainRest or p.rest * rageOf(mob, S)
+	mob.chain, mob.chainRest, mob.chainPat, mob.quick, mob.alt = nil, nil, 0, 1, 0
 end
 
 function Room:stepBoss(mob, heroes, dt: number, events)
@@ -491,7 +609,8 @@ function Room:stepBoss(mob, heroes, dt: number, events)
 	if mob.state == "gone" then
 		return
 	elseif mob.state == "dead" then
-		if mob.t >= DEAD_TIME then
+		-- 쓰러지는 동작 그림이 있는 보스(S.fall초 — 그 동작 + 누워 있는 시간 + 사라지는 시간)는 그 그림이 다 보일 때까지 치우지 않는다
+		if mob.t >= (S.fall or DEAD_TIME) then
 			self:bossAway(mob)
 		end
 		return
@@ -501,19 +620,52 @@ function Room:stepBoss(mob, heroes, dt: number, events)
 		end
 		return
 	end
-	-- 묶였거나 넘어져 있다: 하던 것을 그만두고 선다(풀리면 잠깐 뒤에 다시 고른다)
+	-- 묶였거나 넘어져 있다: 하던 것을 그만두고 선다(풀리면 잠깐 뒤에 다시 고른다). 예고하던 중이면 표시해 둔 자리도 거둔다. 뛰어오른 중이면 그 자리에 내려선다
 	if (mob.bind or 0) > 0 or (mob.stun or 0) > 0 then
 		if mob.state ~= "idle" then
+			if mob.state == "tell" then
+				self:bossSpotsOff(mob)
+			end
 			mob.state, mob.t, mob.pat = "idle", 0, 0
+			mob.chain, mob.chainRest, mob.chainPat, mob.quick, mob.alt = nil, nil, 0, 1, 0
 		end
 		mob.rest = math.max(mob.rest, 0.4)
 		return
 	end
+	if mob.state == "roar" then
+		-- 체력 구간의 포효: 그동안은 치지 않는다(때릴 틈)
+		if mob.t >= S.phase.time then
+			mob.state, mob.t, mob.rest = "idle", 0, 0.5
+		end
+		return
+	end
 	local p = S.patterns[mob.pat]
+	local quick = mob.quick or 1
 	if mob.state == "tell" then
-		if mob.t >= p.tell then
+		local tell = BossPat.tell(p, quick)
+		local target = if mob.target then heroes[mob.target] else nil
+		if (mob.slide or 0) > 0 then
+			-- 연속기: 예고하면서 한 걸음 다가선다(서는 거리 keep 안으로는 들어가지 않는다)
+			if target and target.alive then
+				local dx = target.x - mob.x
+				local mv = math.min(mob.slide, 130 * dt, math.max(0, math.abs(dx) - S.keep))
+				mob.x = math.clamp(mob.x + sign(dx) * mv, mob.a, mob.b)
+			end
+			mob.slide -= 130 * dt
+		end
+		if p.leap and mob.t < tell - 0.25 and target and target.alive then
+			mob.aim = target.x -- 도약: 뛰기 0.25초 전까지 겨눈 사람을 따라간다
+		end
+		if mob.t >= tell then
 			mob.t = 0
-			self:bossStrike(mob, p, heroes, events)
+			if p.leap then
+				-- 뛰어오른다 — 내려앉을 때 친다
+				mob.leapFrom = mob.x
+				mob.leapTo, mob.dir = BossPat.leapTo(p, mob.x, mob.dir, mob.aim, mob.a, mob.b)
+				mob.landed = false
+			else
+				self:bossStrike(mob, p, heroes, events)
+			end
 			if p.dash then
 				mob.state, mob.dashHit = "dash", {}
 			else
@@ -522,16 +674,26 @@ function Room:stepBoss(mob, heroes, dt: number, events)
 		end
 		return
 	elseif mob.state == "act" then
+		if p.leap and not mob.landed then
+			local k = math.min(1, mob.t / p.leap.time)
+			mob.x = mob.leapFrom + (mob.leapTo - mob.leapFrom) * k
+			mob.alt = BossPat.leapAlt(p, mob.t)
+			if k >= 1 then
+				mob.landed, mob.alt = true, 0
+				self:bossStrike(mob, p, heroes, events)
+			end
+		end
 		-- 치면서 한 걸음 내디딘다: 처음 STEP_TIME초 안에 다 간다(act = 친 뒤에 굳어 있는 시간 — 받은 공격 그림의 길이에 맞춰 길다. 그동안 걷지도 돌아서지도 않는다)
-		local stepT = math.min(p.act, STEP_TIME)
+		local act = BossPat.act(p, quick)
+		local stepT = math.min(act, STEP_TIME)
 		if p.step and stepT > 0 then
 			local part = math.min(mob.t, stepT) - math.min(mob.t - dt, stepT)
 			if part > 0 then
 				mob.x = math.clamp(mob.x + mob.dir * p.step * part / stepT, mob.a, mob.b)
 			end
 		end
-		if mob.t >= p.act then
-			mob.state, mob.t, mob.pat, mob.rest = "idle", 0, 0, p.rest
+		if mob.t >= act then
+			self:bossDone(mob, p, heroes)
 		end
 		return
 	elseif mob.state == "dash" then
@@ -545,7 +707,8 @@ function Room:stepBoss(mob, heroes, dt: number, events)
 			end
 		end
 		if mob.x <= mob.a or mob.x >= mob.b then
-			mob.state, mob.t, mob.pat, mob.rest, mob.dashHit = "idle", 0, 0, p.rest, nil
+			mob.dashHit = nil
+			self:bossDone(mob, p, heroes)
 		end
 		return
 	end
@@ -569,16 +732,22 @@ function Room:stepBoss(mob, heroes, dt: number, events)
 	if dx ~= 0 then
 		mob.dir = sign(dx)
 	end
+	-- 체력 구간: 한 번 포효한다 — 그 뒤로 새 패턴이 열리고(from) 쉬는 틈이 짧아진다
+	if S.phase and not mob.raged and mob.hp <= mob.maxHp * S.phase.at then
+		mob.raged = true
+		mob.state, mob.t, mob.pat = "roar", 0, 0
+		mob.chain, mob.chainPat = nil, 0
+		return
+	end
 	if mob.rest <= 0 then
 		local pick, i = self:bossPick(mob, math.abs(dx))
 		if pick then
-			mob.state, mob.t, mob.pat = "tell", 0, i
-			mob.used[pick.id] = self.time
+			self:bossStart(mob, i, target)
 			return
 		end
 	end
 	if math.abs(dx) > S.keep then
-		mob.x = math.clamp(mob.x + mob.dir * mob.def.speed * dt, mob.a, mob.b)
+		mob.x = math.clamp(mob.x + mob.dir * mob.def.speed * (if mob.raged then 1.15 else 1) * dt, mob.a, mob.b)
 		mob.state = "run"
 	else
 		mob.state = "idle"
@@ -671,6 +840,10 @@ function Room:step(heroes, dt: number)
 	if self.waves then
 		for i = #self.waves, 1, -1 do
 			local w = self.waves[i]
+			if (w.wait or 0) > 0 then
+				w.wait -= dt -- 연속 검기: 차례를 기다린다
+				continue
+			end
 			local move = w.def.speed * dt
 			w.x += w.dir * move
 			w.left -= move
@@ -682,6 +855,25 @@ function Room:step(heroes, dt: number)
 			end
 			if w.left <= 0 or Physics.cell(self.scene, math.floor(w.x / 16), math.floor((w.y - 1) / 16)) == "#" then
 				table.remove(self.waves, i)
+			end
+		end
+	end
+	-- 스토리 보스가 표시한 자리(불씨 뿌리기 · 봉화 불기둥): 때가 되면 터진다 — 그 위에 선 사람이 맞는다(발이 up보다 높이 떠 있으면 안 맞는다). 보스가 쓰러지면 사라진다
+	if self.blasts then
+		for i = #self.blasts, 1, -1 do
+			local b = self.blasts[i]
+			if b.mob.state == "dead" or b.mob.state == "gone" then
+				table.remove(self.blasts, i)
+				continue
+			end
+			b.t -= dt
+			if b.t <= 0 then
+				for _, h in heroes do
+					if h.alive and math.abs(h.x - b.x) <= b.def.r + HERO_W and b.y - h.y < b.def.up and h.y <= b.y + 4 then
+						self:hurtHero(events, h, b.mob, b.mul)
+					end
+				end
+				table.remove(self.blasts, i)
 			end
 		end
 	end
@@ -1533,7 +1725,8 @@ function Room:snapshot()
 	for i, mob in self.mobs do
 		-- 일곱째 · 여덟째 = 묶인 시간 · 넘어진 시간(초 — 없으면 0): 화면이 휘감는 기운 · 수정 감옥을 그린다
 		-- 아홉째 = 스토리 보스가 지금 하는 패턴의 차례(없으면 0): 화면이 예고와 이펙트를 그린다
-		list[i] = { mob.id, math.floor(mob.x * 10 + 0.5) / 10, mob.dir, mob.state, math.floor(mob.t * 100 + 0.5) / 100, mob.hp, math.floor((mob.bind or 0) * 10 + 0.5) / 10, math.floor((mob.stun or 0) * 10 + 0.5) / 10, mob.pat or 0 }
+		-- 열째 = 겨눈 자리(도약이 내려앉을 데 · 불씨가 떨어질 데 — 없으면 0) · 열한째 = 연속기의 차례(0이면 연속기가 아니다) · 열두째 = 지금 패턴이 그 연속기의 quick배로 빠른가(1 — 연속기의 둘째부터)
+		list[i] = { mob.id, math.floor(mob.x * 10 + 0.5) / 10, mob.dir, mob.state, math.floor(mob.t * 100 + 0.5) / 100, mob.hp, math.floor((mob.bind or 0) * 10 + 0.5) / 10, math.floor((mob.stun or 0) * 10 + 0.5) / 10, mob.pat or 0, math.floor((mob.aim or 0) + 0.5), mob.chainPat or 0, if (mob.quick or 1) ~= 1 then 1 else 0 }
 	end
 	return list
 end

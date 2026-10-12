@@ -20,6 +20,7 @@ AdminWindow.W, AdminWindow.H = 356, 300
 AdminWindow.TABS = { { id = "grow", name = "성장" }, { id = "item", name = "아이템" }, { id = "move", name = "이동" }, { id = "fight", name = "전투" } }
 AdminWindow.XP = { 1, 2, 5, 10, 50, 100 } -- 경험치 배율(서버가 같은 표로 다시 본다)
 AdminWindow.DMG = { 1, 5, 20, 100 } -- 피해 배율
+AdminWindow.BOSS_SHOW = { 100, 75, 60, 50, 40 } -- 보스의 그림 크기 미리보기(서 있는 그림의 몇 %)
 AdminWindow.LEVELS = { 10, 20, 30, 60, 100, 150 } -- 바로 가는 레벨
 AdminWindow.STAGES = { 1, 10, 20, 30, 60, 100 } -- 한 벌을 받는 장비의 단계
 AdminWindow.PER_PAGE = 15 -- 이동 탭의 한 쪽(세 줄 x 다섯)
@@ -268,8 +269,23 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 				table.insert(ds, { text = "x" .. v, id = "dmg" .. v, main = on.dmg == v, on = function() ask("dmg", v) end })
 			end
 			y = row(p, y, "피해 배율", ds)
+			-- 보스의 그림 크기 미리보기(화면 쪽만 — 서버에 묻지 않는다): 받은 동작 그림을 작게 그릴수록 또렷하다. 고른 크기를 알려 주면 설계값(공방 bosses.js의 BOSS_SHOW)으로 굳힌다
+			local now = ctx.bossShow and ctx.bossShow() -- 고운 그림이 없으면 nil(이 줄을 그리지 않는다)
+			if now then
+				local bs = {}
+				for _, v in AdminWindow.BOSS_SHOW do
+					table.insert(bs, { text = v .. "%", id = "boss" .. v, w = 44, main = now == v, on = function()
+						ctx.bossShow(v)
+						view.draw()
+					end })
+				end
+				y = row(p, y, "보스 크기", bs)
+			end
 			Ui.text(p, "배율과 무적은 저장되지 않는다(다시 들어오면 꺼져 있다).", 0, y + 4, w, { color = C.off })
 			Ui.text(p, "피해 배율은 보이는 전투력과 순위를 바꾸지 않는다.", 0, y + 18, w, { color = C.off })
+			if now then
+				Ui.text(p, "보스 크기는 그림만 바꿔 본다(맞는 자리는 그대로).", 0, y + 32, w, { color = C.off })
+			end
 		end
 	end
 

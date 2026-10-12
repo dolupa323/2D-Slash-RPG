@@ -558,7 +558,7 @@ local _ = d
 local desc = room:describe()
 eq(#desc.mobs, #room.mobs, "졸개 목록")
 eq(#desc.snap, #room.mobs, "요약 목록")
-expect(desc.mobs[1].maxHp > 0 and desc.mobs[1].name ~= nil and #desc.snap[1] == 9 and desc.snap[1][9] == 0, "졸개 한 줄의 짜임(일곱째 · 여덟째 = 묶인 · 넘어진 시간 · 아홉째 = 스토리 보스의 패턴 차례)")
+expect(desc.mobs[1].maxHp > 0 and desc.mobs[1].name ~= nil and #desc.snap[1] == 12 and desc.snap[1][9] == 0 and desc.snap[1][10] == 0 and desc.snap[1][11] == 0 and desc.snap[1][12] == 0, "졸개 한 줄의 짜임(일곱째 · 여덟째 = 묶인 · 넘어진 시간 · 아홉째 = 스토리 보스의 패턴 차례 · 열째 ~ 열두째 = 겨눈 자리 · 연속기 · 빠른 패턴)")
 
 -- ---- 가시: 닿으면 약한 피해(최대 체력의 5%) — 사용자 2026-10-08: "맵에 가시 있잖아요 그거 닿으면 데미지 입게 약한데미지 입게하세요" ----
 do
