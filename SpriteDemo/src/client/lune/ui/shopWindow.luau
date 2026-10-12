@@ -5,6 +5,9 @@
 --   · 창고는 가방과 같은 짜임이다: 탭 셋(장비 · 소비 · 기타) · 탭마다 칸 여섯 x 넷. 가방의 것을 끌어다 창고의 칸에 놓으면 맡겨지고(놓은 칸에 — 묶음은 전부),
 --     창고의 것을 끌어다 가방에 놓으면 찾아진다. 창고 안에서도 끌어서 옮기고 「정렬」한다. 칸을 누르면 상세 판(「찾기」 — 묶음은 몇 개를 찾을지 고른다), 두 번 누르면 전부 찾는다.
 --   · 상점: 가방의 것을 끌어다 상점 창에 놓으면 팔지 묻는다(가방의 상세 판에 — ui/bagWindow.luau). 상세 판의 「팔기」도 같은 일이다.
+--  사용자 2026-10-13: "대장간 장비제작이나, 상점에서 소비템 구매하는거나  메이플스토리처럼 아이템 아이콘이 보여야합니다"
+--   · 상점의 줄마다 그 물건의 그림(가방의 그 그림 — 칸 안에) · 값 앞에 달돈 그림. 제작의 줄마다 만들 장비의 그림과 재료의 그림(그 앞에는 글뿐이었다).
+--     자리는 공방 시험 탭의 js/lune/ui/paint.js(paintShop · paintCraft)와 같다 — 치수는 공방 설계 자료(UILAYOUT.shop · craft).
 --  화면 오른쪽 · 왼쪽의 옆 판(ui/windows.luau).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
@@ -26,9 +29,12 @@ local D = Items.data
 local COLS = Layout.BAG.cols -- 창고의 칸: 가방과 같은 여섯 칸
 local ROW = Ui.M.button + 4 -- 상점의 한 줄
 local SHOP = Layout.SHOP
+local CRAFT = Layout.CRAFT
 local STORE = Layout.STORE
 local W = SHOP.w
 local MAX_ROWS = SHOP.rows -- 상점에 놓이는 물건의 줄 수(창의 높이)
+local IC = SHOP.iconS -- 줄의 아이콘 칸(그 안에 18x18 그림)
+local TX = IC + 6 -- 아이콘 칸의 오른쪽 — 이름이 시작하는 자리
 local KEYS = D.BAG.keys -- 탭의 이름표("gear" · "use" · "etc")
 local DOUBLE = 0.4 -- 이 안에 같은 칸을 다시 누르면 두 번 누른 것(초)
 
@@ -57,6 +63,17 @@ local function stockOf(npc: string)
 	return list
 end
 ShopWindow.stockOf = stockOf
+
+-- 상점의 그 물건의 그림 이름(가방에 들어왔을 때의 그 그림): 물약 · 주문서 = 그 아이템의 것 · 장비 = 부위와 재질(무기는 내 직업의 것) · 달가루
+function ShopWindow.stockIcon(stock, class: string): string
+	if stock.goods then
+		local g = Items.goods(stock.goods)
+		return if g then g.icon else ""
+	elseif stock.item then
+		return ItemCell.icon(Items.make(stock.item.slot, stock.item.stage, D.NORMAL, class))
+	end
+	return "dust"
+end
 
 -- 창고: 탭 셋 · 칸 · 끌어서 맡기기와 찾기
 local function buildStore(body: Frame, ctx, w: number)
@@ -357,18 +374,20 @@ end
 
 -- 제작(대장장이 — 사용자 2026-10-11: "안뜨면 재료를 모아서 대장장이에서 만들수도 있구요"): 단계의 탭(Lv.1 · Lv.10 · Lv.20) 아래에 장비마다 한 줄.
 --  윗줄 = 장비의 이름 · 삯(달돈) · 「제작」, 아랫줄 = 드는 재료 「강철 광석 12/20 · 질긴 가죽 3/5」(가진 수/드는 수 — 다 모였으면 풀빛). 만든 것의 성능은 보통 이상이다.
-ShopWindow.CRAFT_ROW = 40
-ShopWindow.CRAFT_MAKE_W, ShopWindow.CRAFT_FEE_W = 58, 50
-ShopWindow.CRAFT_NOTE = "만든 장비의 성능은 보통 이상"
--- 한 줄의 재료 글(가진 수/드는 수)과 다 모였는가
-function ShopWindow.craftNeeds(recipe, bag): (string, boolean)
+ShopWindow.CRAFT_ROW = CRAFT.row
+ShopWindow.CRAFT_MAKE_W, ShopWindow.CRAFT_FEE_W = CRAFT.makeW, CRAFT.feeW
+ShopWindow.CRAFT_NOTE = CRAFT.note
+ShopWindow.CRAFT_MATS = 2 -- 한 줄에 그리는 재료의 수(레시피의 재료는 둘이다 — 광석 · 가죽)
+-- 한 줄의 재료들 { { icon 그림 이름, text 「청동 광석 3/5」(가진 수/드는 수), ok 그 재료가 모였는가 } … } 와 다 모였는가
+function ShopWindow.craftParts(recipe, bag)
 	local parts, enough = {}, true
 	for _, need in recipe.needs do
 		local have = Bag.countIn(bag, need.item)
-		table.insert(parts, ("%s %d/%d"):format(Items.goods(need.item).name, math.min(have, 9999), need.n))
+		local g = Items.goods(need.item)
+		table.insert(parts, { icon = g.icon, text = ("%s %d/%d"):format(g.name, math.min(have, 9999), need.n), ok = have >= need.n })
 		enough = enough and have >= need.n
 	end
-	return table.concat(parts, " · "), enough
+	return parts, enough
 end
 
 local function buildCraft(body: Frame, ctx, w: number, h: number)
@@ -411,16 +430,27 @@ local function buildCraft(body: Frame, ctx, w: number, h: number)
 	local rows = {}
 	local bw, fw = ShopWindow.CRAFT_MAKE_W, ShopWindow.CRAFT_FEE_W
 	for i = 1, perStage do
-		local y = 24 + (i - 1) * ShopWindow.CRAFT_ROW
+		local y = CRAFT.tabH + (i - 1) * CRAFT.row
 		local row = {}
-		row.name = Ui.text(body, "", 0, y + 1, w - bw - 8 - fw, { font = "body" })
-		row.fee = Ui.text(body, "", w - bw - 8 - fw, y + 2, fw, { align = "right", color = C.gold })
-		row.needs = Ui.text(body, "", 0, y + Ui.M.body + 6, w - bw - 8, { color = C.dim })
-		row.make = Ui.button(body, "제작", w - bw, y + 2, bw, function()
+		-- 윗줄: [만들 장비의 그림] 이름 · [달돈] 삯 · 「제작」
+		row.cell = Ui.slot(body, 0, y, IC)
+		row.cell.frame.Name = "Icon"
+		row.icon = Ui.smallIcon(row.cell.frame, "coin", 3, 3)
+		row.name = Ui.text(body, "", TX, y + 5, w - TX - bw - 8 - fw - 22, { font = "body" })
+		row.coin = Ui.smallIcon(body, "coin", w - bw - 8 - fw - 19, y + 3)
+		row.fee = Ui.text(body, "", w - bw - 8 - fw, y + 7, fw, { align = "right", color = C.gold })
+		row.make = Ui.button(body, "제작", w - bw, y + 1, bw, function()
 			if row.recipe then
 				ctx.send("Item", "craft", row.recipe.id)
 			end
-		end)
+		end, { h = CRAFT.makeH })
+		-- 아랫줄: 재료마다 [그림] 이름 가진 수/드는 수(모였으면 풀빛). 아직 못 만드는 장비는 그 자리에 「Lv.10부터 만든다」
+		row.mats = {}
+		for k = 1, ShopWindow.CRAFT_MATS do
+			local mx = TX + (k - 1) * CRAFT.matW
+			row.mats[k] = { icon = Ui.smallIcon(body, "coin", mx, y + 25), text = Ui.text(body, "", mx + 21, y + 29, CRAFT.matW - 25, { color = C.dim }) }
+		end
+		row.lock = Ui.text(body, "", TX, y + 29, w - TX, { color = C.dim })
 		rows[i] = row
 	end
 	local fy = h - 28
@@ -435,7 +465,7 @@ local function buildCraft(body: Frame, ctx, w: number, h: number)
 	end)
 	Ui.line(body, 0, fy - 6, w)
 	local money = BagWindow.purse(body, "coin", -3, fy, 90)
-	Ui.text(body, "재료는 몬스터가 떨어뜨린다", 96, fy + 4, w - 96, { align = "right", color = C.dim })
+	Ui.text(body, CRAFT.hint, 96, fy + 4, w - 96, { align = "right", color = C.dim })
 
 	function view.refresh()
 		local bag, me = ctx.bag(), ctx.me()
@@ -453,12 +483,20 @@ local function buildCraft(body: Frame, ctx, w: number, h: number)
 				if row then
 					row.recipe = r
 					local open = me.level >= r.from
-					row.name:set(Items.name(Items.make(r.slot, r.stage, D.NORMAL, me.class)))
+					local item = Items.make(r.slot, r.stage, D.NORMAL, me.class)
+					Ui.setWorldIcon(row.icon, ItemCell.icon(item))
+					row.name:set(Items.name(item))
 					row.name:color(if open then C.text else C.dim)
-					local text, enough = ShopWindow.craftNeeds(r, bag)
-					row.needs:set(if open then text else ("Lv.%d부터 만든다"):format(r.from))
-					row.needs:color(if open and enough then C.green else C.dim)
+					local parts, enough = ShopWindow.craftParts(r, bag)
+					for j, m in row.mats do
+						local q = if open then parts[j] else nil
+						Ui.setWorldIcon(m.icon, if q then q.icon else nil)
+						m.text:set(if q then q.text else "")
+						m.text:color(if q and q.ok then C.green else C.dim)
+					end
+					row.lock:set(if open then "" else ("Lv.%d부터 만든다"):format(r.from))
 					row.fee:set(if open then Format.short(r.money) else "")
+					row.coin.Visible = open
 					row.make.frame.Visible = open
 					row.make:setEnabled(enough and me.money >= r.money)
 				end
@@ -489,13 +527,18 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 	local ui = ctx.ui
 	local panel = body.Parent :: GuiObject
 
-	-- 상점: 물건마다 한 줄(이름 · 값 · 사기). 물약(단마다 따로 판다 — 가방의 소비 탭에 들어온다)과 달가루는 열 개씩도 산다
+	-- 상점: 물건마다 한 줄([그림] 이름 · [달돈] 값 · 사기). 물약(단마다 따로 판다 — 가방의 소비 탭에 들어온다)과 달가루는 열 개씩도 산다
 	local rows = {}
 	local bx = w - ShopWindow.BUY_W
 	for i, stock in stockOf(arg) do
 		local y = (i - 1) * ROW
 		local many = stock.max > 1
-		local name = Ui.text(body, "", 0, y + 7, ShopWindow.NAME_W, { font = "body" })
+		-- [그 물건의 그림(칸 안에)] 이름 · [달돈] 값 · 사는 단추 — 살 수 없는 것도 그림은 보인다
+		local cell = Ui.slot(body, 0, y + 1, IC)
+		cell.frame.Name = "Icon"
+		local icon = Ui.smallIcon(cell.frame, "coin", 3, 3)
+		local name = Ui.text(body, "", TX, y + 7, ShopWindow.NAME_W, { font = "body" })
+		local coin = Ui.smallIcon(body, "coin", bx - 8 - ShopWindow.PRICE_W - 19, y + 4)
 		local price = Ui.text(body, "", bx - 8 - ShopWindow.PRICE_W, y + 8, ShopWindow.PRICE_W, { align = "right", color = C.gold })
 		local half = math.floor((ShopWindow.BUY_W - 6) / 2)
 		local one = Ui.button(body, if many then "1" else "사기", bx, y, if many then half else ShopWindow.BUY_W, function()
@@ -507,8 +550,8 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 			end)
 			else nil
 		-- 아직 살 수 없는 것은 값과 단추 자리에 "Lv.10부터"
-		local lock = Ui.text(body, "", ShopWindow.NAME_W, y + 8, w - ShopWindow.NAME_W, { align = "right", color = C.dim })
-		rows[i] = { stock = stock, name = name, price = price, one = one, ten = ten, lock = lock }
+		local lock = Ui.text(body, "", TX + ShopWindow.NAME_W, y + 8, w - TX - ShopWindow.NAME_W, { align = "right", color = C.dim })
+		rows[i] = { stock = stock, icon = icon, coin = coin, name = name, price = price, one = one, ten = ten, lock = lock }
 	end
 	local fy = h - 28
 	-- 대장장이의 상점: 아래에 단추 둘 — 「제작하러 가기」(재료로 장비를 만든다) · 「강화하러 가기」(Lv.8부터)
@@ -545,6 +588,8 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 				label = Items.name(Items.make("weapon", stock.item.stage, D.NORMAL, me.class))
 			end
 			local open = me.level >= stock.from
+			Ui.setWorldIcon(row.icon, ShopWindow.stockIcon(stock, me.class))
+			row.coin.Visible = open
 			row.name:set(label)
 			row.name:color(if open then C.text else C.dim)
 			row.price:set(if open then Format.short(cost) else "")

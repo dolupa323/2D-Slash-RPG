@@ -201,6 +201,11 @@ function Q.onKill(book, mobKind: string, scene: string): { string }
 end
 
 -- 그 장면의 그 몬스터를 아직 잡아야 하는가(하는 중인 퀘스트의 못 다 한 잡기). 스토리 보스는 이것이 참인 사람이 방에 있을 때만 서 있다(sim/room.luau)
+-- 그 퀘스트에 닿았는가: 받았거나(하는 중) 끝냈다 — 그 퀘스트를 받아야 열리는 문(장면의 portals의 need — 사당 지하)이 쓴다
+function Q.reached(book, id: any): boolean
+	return book ~= nil and typeof(id) == "string" and book[id] ~= nil
+end
+
 function Q.wantsKill(book, mobKind: string, scene: string): boolean
 	if not book then
 		return false

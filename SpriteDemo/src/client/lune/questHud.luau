@@ -72,13 +72,13 @@ function QuestHud.setBuffs(on: boolean)
 	end
 end
 
--- book = 내 퀘스트의 상태 · names = 주민 id → 이름 · level = 내 레벨(길잡이를 셈한다 — 안 주면 길잡이를 적지 않는다)
-function QuestHud.set(book, names, level: number?)
+-- book = 내 퀘스트의 상태 · names = 주민 id → 이름 · level = 내 레벨(길잡이를 셈한다 — 안 주면 길잡이를 적지 않는다) · daily = 받아 둔 일일 의뢰들(sim/daily.luau의 tracked)
+function QuestHud.set(book, names, level: number?, daily: any?)
 	local box = QuestHud.box
 	for _, child in box:GetChildren() do
 		child:Destroy()
 	end
-	local rows, height, shown, guided = Panel.layout(book or {}, names, level, if QuestHud.touch then Panel.H_TOUCH else Panel.H)
+	local rows, height, shown, guided = Panel.layout(book or {}, names, level, if QuestHud.touch then Panel.H_TOUCH else Panel.H, daily)
 	QuestHud.shown = shown
 	QuestHud.guided = guided
 	box.Visible = shown + guided > 0 and not QuestHud.covered

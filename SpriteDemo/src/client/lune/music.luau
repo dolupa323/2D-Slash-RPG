@@ -3,19 +3,30 @@
 --  어느 곡을 어디에 트는지 · 곡마다의 크기는 shared/lune/data/music.generated.luau(공방의 js/lune/design/music.js — 배치는 모두 제안이다).
 --  배경 음악: 장면이 바뀌면 그 장면의 곡으로 천천히(fade초) 넘어간다. 같은 곡이면 끊지 않고 이어 튼다(마을 → 건물 안).
 --  징글: 배경 음악을 잠깐 줄이고(duck) 한 번 튼다.
+--  크기: 배경 음악과 효과음(타격 · 줍기 · 징글)을 따로 0~steps칸으로(한 칸 10%) — 메뉴 → 「소리 설정」(ui/soundWindow.luau). 계정에 저장된다.
+--   사용자 2026-10-13: "소리조절 있어야합니다." — 그 앞에는 「소리 끄기 / 켜기」뿐이었고 저장되지 않았다.
 --  올린 오디오의 번호(id)가 아직 없는 곡은 조용히 건너뛴다 — 오디오는 사용자가 로블록스에 올린다(공방의 tools/build_lune_music.mjs).
 local SoundService = game:GetService("SoundService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MUSIC = require(ReplicatedStorage.shared.lune.data["music.generated"])
+local SOUND = require(ReplicatedStorage.shared.lune.data["ui.generated"]).layout.sound -- 칸 수(steps) · 처음 크기(start)
 
 local Music = {}
-Music.on = true -- 소리를 켰는가(메뉴의 「소리」)
+Music.on = true -- 모두 켰는가(소리 설정의 「모두 끄기 / 켜기」)
+Music.MAX = SOUND.steps
+Music.level = { music = SOUND.start, sfx = SOUND.start } -- 크기(0~MAX칸): music = 배경 음악 · sfx = 효과음과 징글
 Music.now = nil :: string? -- 지금 트는 곡의 이름표
 
 local folder: Folder? = nil
 local playing = {} -- [이름표] = { sound, want(가려는 크기 0~1), at(지금 크기 0~1), base(그 곡의 크기) }
 local duckT = 0 -- 징글이 끝날 때까지 남은 시간(초)
+
+-- 그 갈래의 크기(0~1): 모두 껐으면 0
+local function gain(kind: string): number
+	return if Music.on then Music.level[kind] / Music.MAX else 0
+end
+Music.gain = gain
 
 local function ensure()
 	if folder then
@@ -29,7 +40,7 @@ local function ensure()
 	RunService.Heartbeat:Connect(function(dt)
 		duckT = math.max(0, duckT - dt)
 		local duck = if duckT > 0 then MUSIC.duck else 1
-		local master = if Music.on then 1 else 0
+		local master = gain("music")
 		for key, p in playing do
 			local step = dt / MUSIC.fade
 			if p.at < p.want then
@@ -79,13 +90,13 @@ end
 function Music.jingle(key: string)
 	ensure()
 	local def = MUSIC.jingles[key]
-	if not def or def.id == "" or not Music.on then
+	if not def or def.id == "" or gain("sfx") <= 0 then
 		return
 	end
 	local sound = Instance.new("Sound")
 	sound.Name = "Jingle_" .. key
 	sound.SoundId = def.id
-	sound.Volume = def.volume
+	sound.Volume = def.volume * gain("sfx")
 	sound.Parent = folder
 	sound.Ended:Connect(function()
 		sound:Destroy()
@@ -99,7 +110,7 @@ end
 local sfxAt: { [string]: number } = {}
 function Music.sfx(key: string): boolean
 	local def = MUSIC.sfx and MUSIC.sfx[key]
-	if not def or def.id == "" or not Music.on then
+	if not def or def.id == "" or gain("sfx") <= 0 then
 		return false
 	end
 	local now = os.clock()
@@ -111,7 +122,7 @@ function Music.sfx(key: string): boolean
 	local sound = Instance.new("Sound")
 	sound.Name = "Sfx_" .. key
 	sound.SoundId = def.id
-	sound.Volume = def.volume
+	sound.Volume = def.volume * gain("sfx")
 	sound.Parent = folder
 	sound.Ended:Connect(function()
 		sound:Destroy()
@@ -131,11 +142,33 @@ function Music.hit(big: boolean?)
 	end
 end
 
--- 소리를 켜고 끈다(메뉴). 돌려주는 것: 지금 켜져 있는가
+-- 모두 켜고 끈다(소리 설정). 돌려주는 것: 지금 켜져 있는가
 function Music.toggle(): boolean
 	ensure()
 	Music.on = not Music.on
 	return Music.on
+end
+
+-- 그 갈래("music" · "sfx")의 크기를 n칸으로. 돌려주는 것: 바뀌었는가(범위 밖 · 같은 값이면 false)
+function Music.setLevel(kind: string, n: number): boolean
+	if typeof(n) ~= "number" or Music.level[kind] == nil or n ~= math.floor(n) or n < 0 or n > Music.MAX or Music.level[kind] == n then
+		return false
+	end
+	Music.level[kind] = n
+	return true
+end
+
+-- 저장된 설정을 얹는다(서버가 준 계정의 것 — 꼴은 서버가 이미 봤다) · 저장할 꼴로 내놓는다
+function Music.import(sound: any)
+	if typeof(sound) ~= "table" then
+		return
+	end
+	Music.setLevel("music", sound.music)
+	Music.setLevel("sfx", sound.sfx)
+	Music.on = sound.on ~= false
+end
+function Music.export()
+	return { music = Music.level.music, sfx = Music.level.sfx, on = Music.on }
 end
 
 return Music

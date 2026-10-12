@@ -2198,3 +2198,248 @@ do
 	expect(hc.hp > 1, "물약을 마신다")
 	World.removePlayer(pc)
 end
+
+-- ---- 일일 의뢰(Daily): 게시판 앞에서 받고, 그 맵의 그 몬스터를 잡으면 세고, 게시판에 낸다 ----
+--  사용자 2026-10-13: "일일 퀘스트 필요합니다. 게시판이랑 상호작용해서 일퀘받는거 좋습니다. … 일일 의뢰는 10부터 열죠"
+do
+	local Daily = req("ReplicatedStorage/shared/lune/sim/daily")
+	local HeroD = req("ReplicatedStorage/shared/lune/sim/hero")
+	local DD = Daily.DATA
+	local pd = person({ UserId = 351, Name = "dailyman" })
+	handlers.Ready(pd)
+	expect(handlers.Choose(pd, "axion", "의뢰시험") ~= nil, "일일 의뢰를 해 볼 캐릭터")
+	local sd = World.session(pd)
+	local hd = sd.hero
+	local function last(name)
+		local list = got(name, pd)
+		return list[#list] and list[#list].args
+	end
+	local board = DD.boards.r1
+	local function atBoard(dx: number)
+		goTo(pd, board.scene)
+		eq(sd.scene, board.scene, "게시판이 있는 마을로")
+		for _, n in SCENES.scenes[board.scene].npcs do
+			if n.id == board.npc then
+				sd.jumped, sd.stale = true, nil
+				hd.x, hd.y = n.x + dx, n.y
+			end
+		end
+	end
+	-- Lv.9: 아직 없다
+	HeroD.setLevel(hd, DD.from - 1)
+	atBoard(6)
+	local r = handlers.Daily(pd, "view")
+	expect(r ~= nil and next(r.view.boards) == nil, "Lv.9에게는 의뢰가 없다")
+	r = handlers.Daily(pd, "accept", "r1", 1)
+	expect(r.ok == false and r.why == Daily.WORDS.early, "Lv.9는 게시판 앞에서도 받지 못한다")
+	-- Lv.12: 의뢰 둘
+	HeroD.setLevel(hd, 12)
+	HeroD.autoStat(hd)
+	HeroD.maxSkills(hd)
+	r = handlers.Daily(pd, "view")
+	expect(r.ok and #r.view.boards.r1.tasks == DD.perDay and sd.dirty == true, "Lv.12: 오늘의 의뢰 둘(새로 뽑은 것은 저장한다)")
+	local task = r.view.boards.r1.tasks[1]
+	-- 멀리서는 받지 못한다 · 말이 안 되는 것
+	atBoard(300)
+	r = handlers.Daily(pd, "accept", "r1", 1)
+	expect(r.ok == false and r.why == Daily.WORDS.far and hd.daily.r1.tasks[1].st == Daily.OPEN, "게시판에서 멀면 받지 못한다")
+	atBoard(6)
+	expect(handlers.Daily(pd, "accept", "r9", 1).ok == false and handlers.Daily(pd, "fly", "r1", 1).ok == false and handlers.Daily(pd, "accept", "r1", 9).ok == false, "없는 지역 · 모르는 일 · 없는 의뢰")
+	r = handlers.Daily(pd, "accept", "r1", 1)
+	expect(r.ok == true and r.view.boards.r1.tasks[1].st == Daily.ON, "게시판 앞에서 받는다")
+	-- 그 맵으로 가서 그 몬스터를 잡는다(끝의 셋만 진짜로 잡는다)
+	expect(goTo(pd, task.scene) ~= nil, "의뢰의 맵으로 — " .. task.place)
+	hd.invuln = 9999
+	hd.daily.r1.tasks[1].have = DD.kills - 3
+	local room = World.room(task.scene)
+	table.clear(sent)
+	local killed = 0
+	for _ = 1, 300 do
+		if hd.daily.r1.tasks[1].have >= DD.kills then
+			break
+		end
+		local target
+		for _, m in room.mobs do
+			if m.kind == task.mob and m.state ~= "dead" and m.state ~= "gone" and m.state ~= "spawn" then
+				target = m
+				break
+			end
+		end
+		if target then
+			target.hp = 1
+			sd.jumped, sd.stale = true, nil
+			handlers.Move(pd, math.clamp(target.x - 12, 8, 3000), target.y, 1)
+			castSlam(pd, hd.x, hd.y, 1)
+			run(1.2)
+			if target.state == "dead" or target.state == "gone" then
+				killed += 1
+			end
+		else
+			run(1)
+		end
+	end
+	eq(hd.daily.r1.tasks[1].have, DD.kills, ("그 맵의 %s를 잡아 30을 채웠다(진짜로 잡은 수 %d)"):format(task.name, killed))
+	local pushed = got("DailyView", pd)
+	expect(#pushed >= 3 and pushed[#pushed].args[1].boards.r1.tasks[1].have == DD.kills, "잡을 때마다 의뢰의 상태가 온다")
+	-- 내는 것은 게시판 앞에서만
+	local money0, level0 = hd.money, hd.level
+	r = handlers.Daily(pd, "turn", "r1", 1)
+	expect(r.ok == false and r.why == Daily.WORDS.far and hd.money == money0, "사냥터에서는 내지 못한다")
+	atBoard(-8)
+	table.clear(sent)
+	r = handlers.Daily(pd, "turn", "r1", 1)
+	expect(r.ok == true and r.reward ~= nil and r.reward.money == DD.pay.money[level0] and r.reward.xp == DD.pay.xp[level0] and r.reward.dust == 0 and r.reward.name == task.name, "게시판 앞에서 낸다: 내 레벨의 보상")
+	expect(hd.money == money0 + r.reward.money and r.view.boards.r1.tasks[1].st == Daily.DONE, "달돈이 늘고 「완료」가 된다")
+	expect(last("Gain") ~= nil and last("Gain")[1].xp == r.reward.xp, "경험치를 받았다고 알린다")
+	expect(handlers.Daily(pd, "turn", "r1", 1).ok == false, "두 번 내지 못한다")
+	-- 둘째: 받고 → (셈으로 채우고) → 내면 덤
+	expect(handlers.Daily(pd, "accept", "r1", 2).ok == true, "둘째 의뢰를 받는다")
+	hd.daily.r1.tasks[2].have = DD.kills
+	local dust0, lv = hd.dust, hd.level
+	r = handlers.Daily(pd, "turn", "r1", 2)
+	expect(r.ok == true and r.reward.all == true and r.reward.dust == DD.pay.dust[lv] and hd.dust == dust0 + r.reward.dust, "둘을 다 내면 덤으로 달가루")
+	-- 캐릭터 고르기로 나갔다 들어와도 남는다
+	local keep = Daily.pack(hd.daily)
+	handlers.Chars(pd, "leave")
+	local again = enterAgain(pd)
+	expect(again ~= nil, "다시 들어온다")
+	local hd2 = World.session(pd).hero
+	expect(hd2.daily.r1 ~= nil and hd2.daily.r1.day == keep.r1.day and hd2.daily.r1.bonus == true and hd2.daily.r1.tasks[1].st == Daily.DONE and hd2.daily.r1.tasks[2].st == Daily.DONE, "다시 들어와도 오늘의 의뢰는 낸 그대로다(다시 받지 못한다)")
+	-- 다음 날(저장된 것이 어제의 것): 새 의뢰 둘
+	hd2.daily.r1.day -= 1
+	r = handlers.Daily(pd, "view")
+	expect(r.view.boards.r1.tasks[1].st == Daily.OPEN and r.view.boards.r1.tasks[2].st == Daily.OPEN and r.view.boards.r1.bonus == false, "날이 바뀌면 새 의뢰 둘")
+	World.removePlayer(pd)
+end
+
+-- ---- 사당 지하(메인 「불타는 마을」): 퀘스트를 받아야 문이 열리고, 내려가면 병사가 밀려들고, 열둘을 잡으면 사라진다 ----
+--  사용자 2026-10-13: "사당지하 개발 해야합니다."
+do
+	local Quests = req("ReplicatedStorage/shared/lune/sim/quests")
+	local HeroC = req("ReplicatedStorage/shared/lune/sim/hero")
+	local def = Quests.def("r1m9")
+	expect(def ~= nil and def.name == "불타는 마을" and def.scene == "in_cellar", "1지역의 마지막 메인 「불타는 마을」은 사당 지하에서 한다")
+	local step = def.steps[1]
+	expect(#def.steps == 1 and step.type == "kill" and step.n >= 8, "할 일 = 지하로 밀려든 병사를 잡는다")
+	local cellar, shrine = SCENES.scenes.in_cellar, SCENES.scenes.in_shrine
+	expect(cellar ~= nil and cellar.story == true and cellar.rest == false and cellar.indoor == true, "사당 지하: 이야기의 방 · 쉬는 곳이 아니다")
+	local down = nil
+	for _, pt in shrine.portals do
+		if pt.to == "in_cellar" then
+			down = pt
+		end
+	end
+	expect(down ~= nil and down.need == "r1m9", "사당 안에 지하로 내려가는 문이 있다(「불타는 마을」을 받아야 열린다)")
+	expect(#cellar.mobs >= 3, "지하에 병사의 자리가 있다")
+	for _, m in cellar.mobs do
+		expect(m.kind == step.mob and m.lv == def.lv, "지하의 병사 = 퀘스트가 잡으라는 것 · 그 레벨")
+	end
+	local tablet = cellar.npcs and cellar.npcs[1]
+	expect(tablet ~= nil and tablet.stone == true and #tablet.lines >= 1, "지하에 읽을거리(비석)가 있다")
+
+	local pc = person({ UserId = 371, Name = "cellarman" })
+	handlers.Ready(pc)
+	expect(handlers.Choose(pc, "axion", "지하시험") ~= nil, "사당 지하를 해 볼 캐릭터")
+	local sc = World.session(pc)
+	local hc = sc.hero
+	HeroC.setLevel(hc, def.lv)
+	HeroC.autoStat(hc)
+	HeroC.maxSkills(hc)
+	hc.invuln = 9999
+	local function standAt(key, x, y)
+		expect(goTo(pc, key) ~= nil or sc.scene == key, "간다 " .. key)
+		sc.jumped, sc.stale = true, nil
+		hc.x, hc.y = x, y
+	end
+	-- 퀘스트를 받기 전: 사당 안의 문은 닫혀 있다
+	standAt("in_shrine", down.x, down.y)
+	expect(handlers.Travel(pc, "in_cellar") == nil and sc.scene == "in_shrine", "「불타는 마을」을 받기 전에는 지하로 내려가지 못한다")
+	-- 받은 것으로(앞의 메인은 끝낸 것으로): 문이 열린다
+	local cur = def
+	while cur and cur.after do
+		hc.quests[cur.after] = { done = true, c = {} }
+		cur = Quests.def(cur.after)
+	end
+	hc.quests.r1m9 = { done = false, c = {} }
+	local trip = handlers.Travel(pc, "in_cellar")
+	expect(trip ~= nil and trip.scene == "in_cellar" and sc.scene == "in_cellar", "받은 뒤에는 내려간다")
+	expect(math.abs(hc.x - cellar.portals[1].x) <= 1, "올라가는 문 앞에 선다")
+	local room = World.room("in_cellar")
+	local function standing(): number
+		local n = 0
+		for _, m in room.mobs do
+			if m.state ~= "gone" then
+				n += 1
+			end
+		end
+		return n
+	end
+	-- 병사가 하나씩 나타난다
+	run(0.2)
+	expect(standing() < #room.mobs, "한꺼번에 나타나지 않는다(하나씩)")
+	run(4)
+	eq(standing(), #room.mobs, "조금 뒤에는 병사가 모두 나와 있다")
+	-- 열둘을 잡는다
+	table.clear(sent)
+	local killed = 0
+	for _ = 1, 600 do
+		if Quests.isReady(hc.quests, "r1m9") then
+			break
+		end
+		local target
+		for _, m in room.mobs do
+			if m.state ~= "dead" and m.state ~= "gone" and m.state ~= "spawn" then
+				target = m
+				break
+			end
+		end
+		if target then
+			target.hp = 1
+			sc.jumped, sc.stale = true, nil
+			handlers.Move(pc, math.clamp(target.x - 12, 8, 376), target.y, 1)
+			castSlam(pc, hc.x, hc.y, 1)
+			run(1.2)
+			if target.state == "dead" or target.state == "gone" then
+				killed += 1
+			end
+		else
+			run(1)
+		end
+	end
+	expect(Quests.isReady(hc.quests, "r1m9"), ("병사 %d을 잡았다(잡은 수 %d)"):format(step.n, killed))
+	expect(killed >= step.n - 1, "쓰러뜨린 병사는 다시 밀려든다(자리 넷으로 열둘을 채운다)")
+	-- 다 잡으면 남은 병사가 사라진다 · 다시 나오지 않는다
+	run(0.2)
+	eq(standing(), 0, "다 잡으면 병사가 모두 사라진다")
+	run(30)
+	eq(standing(), 0, "다시 나오지 않는다")
+	-- 퀘스트가 없는 사람만 있으면 병사가 없다
+	local pv = person({ UserId = 372, Name = "visitor" })
+	handlers.Ready(pv)
+	expect(handlers.Choose(pv, "riven", "구경꾼") ~= nil, "퀘스트가 없는 사람")
+	expect(World.jump(pv, "in_cellar") == true, "(확인용으로 옮긴다)")
+	run(3)
+	eq(standing(), 0, "그 퀘스트를 하지 않는 사람에게는 병사가 나오지 않는다")
+	-- 촌장에게 돌려준다: 경험치와 달돈 · 끝
+	local elderAt = nil
+	for key, scn in SCENES.scenes do
+		for _, n in scn.npcs or {} do
+			if n.id == def.endNpc then
+				elderAt = { key = key, x = n.x, y = n.y }
+			end
+		end
+	end
+	expect(elderAt ~= nil, "돌려줄 사람(촌장)이 있다")
+	standAt(elderAt.key, elderAt.x + 8, elderAt.y)
+	local money0 = hc.money
+	handlers.Quest(pc, "complete", "r1m9")
+	eq(Quests.state(hc.quests, hc.level, "r1m9"), "done", "촌장에게 돌려준다 — 1지역의 메인을 끝까지 했다")
+	expect(hc.money > money0, "보상(달돈)을 받는다")
+	-- 끝낸 뒤에도 지하에 내려갈 수 있다(조용한 방 — 비석을 읽는다)
+	standAt("in_shrine", down.x, down.y)
+	expect(handlers.Travel(pc, "in_cellar") ~= nil, "끝낸 뒤에도 내려갈 수 있다")
+	run(3)
+	eq(standing(), 0, "끝낸 뒤의 지하에는 병사가 없다")
+	World.removePlayer(pc)
+	World.removePlayer(pv)
+end

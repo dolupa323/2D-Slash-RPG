@@ -50,6 +50,11 @@ local packets = {
 	Quest = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 4, Burst = 6 } },
 	-- 바꾼 키를 저장한다 { [하는 일] = 키 이름 } — 꼴은 서버가 다시 본다
 	Keys = { Kind = "Event", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 2, Burst = 4 } },
+	-- 일일 의뢰: 하는 일(view 보기 · accept 받기 · turn 내기)과 지역 · 몇째 의뢰. 받기와 내기는 그 게시판 앞에서만.
+	--  돌려주는 값 { ok, why, reward = { xp, money, dust, all, name }, view = sim/daily.luau의 view }
+	Daily = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } },
+	-- 소리 설정을 저장한다 { music = 0~10, sfx = 0~10, on = 켰는가 } — 꼴은 서버가 다시 본다(계정에 저장 — sim/account.luau의 setSound)
+	Sound = { Kind = "Event", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 12 } },
 	-- 퀵슬롯을 바꿨다: 칸들 전체 { "potion" · 스킬의 이름표 · false … } — 꼴과 놓아도 되는 스킬인지는 서버가 다시 본다. 돌려주는 값 = 서버가 가진 칸들(받아들였으면 보낸 것, 아니면 예전 것)
 	Slots = { Kind = "Function", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 8 } },
 	-- 스마트폰의 단추 배치를 바꿨다: 같은 꼴(칸들 전체) — PC의 퀵슬롯과 따로 저장한다. 돌려주는 값 = 서버가 가진 배치
@@ -83,6 +88,7 @@ local packets = {
 	PartyInfo = { Kind = "Event", Direction = "ServerToClient", Doc = "내 파티 { leader, members = { { id, name, class, level, hp, maxHp, scene } … } } — 파티가 없으면 members가 비어 있다" },
 	PartyAsk = { Kind = "Event", Direction = "ServerToClient", Doc = "파티 초대 { from, name } — 초대가 사라졌으면 from = false" },
 	Quests = { Kind = "Event", Direction = "ServerToClient", Doc = "내 퀘스트의 상태 { [id] = { done, c = { 할 일마다의 수 } } } — 바뀔 때마다. 둘째 값 = 방금 끝낸 퀘스트의 id(없으면 nil)" },
+	DailyView = { Kind = "Event", Direction = "ServerToClient", Doc = "일일 의뢰의 상태(sim/daily.luau의 view) — 잡은 수가 오를 때마다" },
 	Bag = { Kind = "Event", Direction = "ServerToClient", Doc = "가방 · 장비 · 창고 · 달가루(sim/bag.luau의 view) — 바뀔 때마다" },
 	ItemDone = { Kind = "Event", Direction = "ServerToClient", Doc = "물건을 다룬 결과 { action, ok, why, result }" },
 	DropGone = { Kind = "Event", Direction = "ServerToClient", Doc = "물건 번호, 주운 사람(userId — 사라진 것이면 nil), 양" },

@@ -6,6 +6,7 @@ local CLASSES = require(script.Parent.Parent.data["classes.generated"])
 local Items = require(script.Parent.items)
 local Bag = require(script.Parent.bag)
 local Quests = require(script.Parent.quests)
+local Daily = require(script.Parent.daily)
 local Kit = require(script.Parent.kit) -- 1차의 온오프 사출기 · 핵심 장치 · 패시브
 local Buffs = require(script.Parent.buffs) -- 2~4차의 버프
 local Passives = require(script.Parent.passives) -- 2~4차의 패시브
@@ -225,6 +226,7 @@ function Hero.new(id: any, class: string)
 	Bag.init(h) -- 처음 받는 차림(무기와 방어구 네 부위)을 입고 있다
 	Bag.give(h, Items.potionFor(1).id, RULES.startPotions) -- 처음 받는 물약(가방의 소비 탭 첫 칸)
 	h.quests = {} -- 퀘스트의 상태(sim/quests.luau의 book)
+	h.daily = {} -- 일일 의뢰의 상태(sim/daily.luau — 지역마다 그날의 의뢰들)
 	Quests.start(h.quests, h.level) -- (저절로 받는 퀘스트는 이제 없다 — 첫 퀘스트도 사제에게 말을 걸어 받는다)
 	h.maxHp = maxHpOf(h)
 	h.hp = h.maxHp
@@ -781,6 +783,7 @@ function Hero.pack(h)
 		weak = math.floor(h.weak),
 		bag = Bag.pack(h),
 		quests = Quests.pack(h.quests),
+		daily = Daily.pack(h.daily),
 	}
 end
 
@@ -809,6 +812,7 @@ function Hero.unpack(id: any, data: any)
 	h.keys = cleanKeys(data.keys) or {}
 	local oldBag = Bag.unpack(h, data.bag) -- 장비가 생기기 전에 저장된 캐릭터는 처음 차림을 받는다
 	h.quests = Quests.unpack(data.quests)
+	h.daily = Daily.unpack(data.daily) -- 일일 의뢰가 생기기 전의 저장 = 빈 것(게시판에 가면 오늘의 의뢰를 받는다)
 	Quests.jobsDone(h.quests, h.job) -- 이미 닿은 차수의 전직 퀘스트는 끝낸 것으로(다시 받지 않게)
 	autoJobs(h)
 	Quests.start(h.quests, h.level) -- 퀘스트가 생기기 전에 저장된 캐릭터도 첫 메인을 받는다

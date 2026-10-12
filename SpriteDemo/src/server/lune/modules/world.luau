@@ -23,6 +23,7 @@ local Bag = require(lune.sim.bag)
 local Items = require(lune.sim.items)
 local Party = require(lune.sim.party)
 local Quests = require(lune.sim.quests)
+local Daily = require(lune.sim.daily) -- 일일 의뢰(마을의 게시판)
 local Kit = require(lune.sim.kit)
 local Buffs = require(lune.sim.buffs)
 local Passives = require(lune.sim.passives) -- 2~4차의 패시브(충격파 · 넘치는 힘 · 꺼지지 않는 불은 여기서 때를 본다)
@@ -808,6 +809,9 @@ local function onTravel(player, to: string)
 	local scene = SCENES.scenes[s.scene]
 	for _, p in scene.portals do
 		if p.to == to and math.abs(p.x - s.hero.x) <= 28 and math.abs(p.y - s.hero.y) <= 28 then
+			if p.need and not Quests.reached(s.hero.quests, p.need) then
+				return nil -- 그 퀘스트를 받아야 열리는 문(달의 사당 안의 「사당 지하」 — 메인 「불타는 마을」): 화면에도 보이지 않는다
+			end
 			local dest = SCENES.scenes[to]
 			local x, y = dest.spawn.x, dest.spawn.y
 			for _, back in dest.portals do
@@ -867,6 +871,11 @@ local function applyResult(cur, key: string, result)
 				if #Quests.onKill(gs.hero.quests, kill.kind, key) > 0 then
 					gs.dirty = true
 					fire("Quests", gs.player, Quests.view(gs.hero.quests))
+				end
+				-- 일일 의뢰: 받아 둔 의뢰의 그 맵 · 그 몬스터면 센다(함께 잡은 사람 모두)
+				if Daily.onKill(gs.hero, kill.kind, key, os.time()) then
+					gs.dirty = true
+					fire("DailyView", gs.player, (Daily.view(gs.hero, os.time())))
 				end
 				-- 모으는 물건은 사람마다 따로 굴려 그 사람의 것으로 땅에 떨어진다(그 사람에게만 보인다) — 주워야 숫자가 오른다
 				for n, q in Quests.drops(gs.hero.quests, kill.kind, key, questRng) do
@@ -1401,6 +1410,14 @@ local function onKeys(player, map)
 	end
 end
 
+-- 소리 설정을 바꿨다(메뉴 → 「소리 설정」): 계정에 적고 곧 저장한다 — 캐릭터 고르기 화면에 있을 때도 받는다
+local function onSound(player, sound)
+	local s = sessions[player]
+	if s and s.acct and Account.setSound(s.acct, sound) then
+		saveSoon(s)
+	end
+end
+
 -- 퀵슬롯을 바꿨다(칸들 전체를 보낸다 — 꼴과 놓아도 되는 스킬인지는 Hero.setSlots가 본다). 서버가 가진 칸들을 돌려준다 — 말이 안 되는 것을 보냈으면 예전 것이 돌아가 화면이 되돌아간다
 local function onSlots(player, list)
 	local s = sessions[player]
@@ -1514,6 +1531,51 @@ local function onQuest(player, action: string, id: any)
 	else
 		fire("ItemDone", player, { action = "quest", ok = false, why = why })
 	end
+end
+
+-- 일일 의뢰: 보기(어디서든 — 알리미와 게시판 위의 표시가 쓴다) · 받기 · 내기(그 게시판 앞에 서 있어야 한다).
+--  사용자 2026-10-13: "게시판이랑 상호작용해서 일퀘받는거 좋습니다". 돌려주는 것 { ok, why, reward, view }
+local function onDaily(player, action: string, region: any, i: any)
+	local s = sessions[player]
+	if not s or not s.hero then
+		return nil
+	end
+	local h, now = s.hero, os.time()
+	local function reply(ok: boolean?, why: string?, reward: any)
+		local view, fresh = Daily.view(h, now)
+		if ok or fresh then
+			s.dirty = true -- 받았다 · 냈다 · 날이 바뀌어 새 의뢰를 뽑았다
+		end
+		return { ok = ok == true, why = why, reward = reward, view = view }
+	end
+	if action == "view" then
+		return reply(true, nil, nil)
+	end
+	local board = if typeof(region) == "string" then Daily.DATA.boards[region] else nil
+	if not board or (action ~= "accept" and action ~= "turn") then
+		return reply(nil, "모르는 일이다", nil)
+	elseif not h.alive or s.scene ~= board.scene or not nearNpcId(s, board.npc) then
+		return reply(nil, Daily.WORDS.far, nil)
+	elseif h.level < Daily.FROM then
+		return reply(nil, Daily.WORDS.early, nil)
+	end
+	if action == "accept" then
+		local ok, why = Daily.accept(h, region, i, now)
+		return reply(ok, why, nil)
+	end
+	local reward, why = Daily.turnIn(h, region, i, now)
+	if not reward then
+		return reply(nil, why, nil)
+	end
+	local ups = Hero.gainXp(h, reward.xp)
+	fire("Gain", player, { xp = reward.xp, ups = ups, level = h.level })
+	if ups > 0 then
+		fire("Quests", player, Quests.view(h.quests)) -- 레벨이 되어 받을 수 있게 된 퀘스트
+		sendWho(s.scene)
+	end
+	sendSelf(s) -- 달돈 · 레벨
+	sendBag(s) -- 달가루(덤)
+	return reply(true, nil, reward)
 end
 
 -- 파티: 초대 · 받기 · 거절 · 나가기. Lv.10부터(공방 「기본 · UI」 탭의 UNLOCK). 초대는 같은 맵에 있는 사람에게만.
@@ -2152,6 +2214,8 @@ function World.start()
 	Net.OnServer("Debug", onDebug)
 	Net.OnServer("Admin", onAdmin)
 	Net.OnServer("Keys", onKeys)
+	Net.OnServer("Sound", onSound)
+	Net.OnServer("Daily", onDaily)
 	Net.OnServer("Item", onItem)
 	Net.OnServer("Party", onParty)
 	Net.OnServer("Quest", onQuest)

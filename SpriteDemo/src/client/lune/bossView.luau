@@ -44,6 +44,7 @@ end
 
 -- mobs = 그 장면의 졸개 그림(mobsView) · cast = 기술의 이펙트를 돌리는 것(cast.fx = 이펙트 한 벌 · 화면 흔들기) · effects = 장면의 효과(잔상) · scene = 장면 자료(bosses의 range = 내달리기의 끝)
 --  hooks = { push(x, dist) } — 보스가 포효할 때 부른다(x = 보스의 자리 · dist = 밀어내는 거리): 내 캐릭터가 가까이 있으면 밀려난다(boot.luau)
+--          music(곡의 이름표 또는 nil) — 보스가 나타나 그 곡으로 바꿀 때 · 쓰러지거나 사라져 맵의 곡으로 돌아갈 때(nil)
 function BossView.new(mobs, cast, effects, scene, hooks)
 	local self = setmetatable({ cast = cast, effects = effects, list = {}, hooks = hooks or {}, spots = {} }, BossView)
 	-- 이펙트 한 벌: 예고(맞을 자리 · 느낌표)는 기술의 이펙트와 같은 판(cast.fx)에 그리고, 패턴의 이펙트 그림(스프라이트)은 장면의 효과(effects:play)가 튼다
@@ -212,6 +213,14 @@ function BossView:update(dt: number)
 			spot.live = false
 			table.remove(self.spots, i)
 			BossFx.blast(self.fx, spot.who, spot.x, m.info.y, spot.def, self.shake)
+		end
+	end
+	-- 보스의 곡: 보스가 나타나 있는 동안은 그 보스의 곡을(없으면 그 맵의 곡 그대로), 쓰러지거나 사라지면 맵의 곡으로 — 바뀔 때만 알린다(boot.luau가 튼다)
+	local track = if shown then shown.def.story.music else nil
+	if track ~= self.track then
+		self.track = track
+		if self.hooks.music then
+			self.hooks.music(track)
 		end
 	end
 	local box = BossView.box

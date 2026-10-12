@@ -142,7 +142,7 @@ function SceneView.new(view: Frame, key: string, scene, tagLayer: Frame)
 		local glow = Stage.image(self.portalLayer, "Portal_" .. tostring(p.id or p.to), ASSETS[PORTAL.img] or "", PORTAL.w, PORTAL.h) -- 이름표(id)가 없는 문도 있다(새로 지은 맵의 문 — 가는 곳으로 부른다)
 		glow.ImageRectSize = Vector2.new(PORTAL.w, PORTAL.h)
 		glow.Position = UDim2.fromOffset(round(p.x - PORTAL.w / 2), p.y - PORTAL.h)
-		self.portals[i] = { label = glow, phase = i * 0.37, frame = -1 }
+		self.portals[i] = { label = glow, phase = i * 0.37, frame = -1, def = p, open = true } -- open = 지나갈 수 있는가(그 퀘스트를 받아야 열리는 문 — setPortals)
 		tag("↑ " .. p.label, p.x, p.y - math.max(p.h or 60, PORTAL.h), -(Ui.TAG_H + 2), C.accent, p)
 		local dest = SCENES.scenes[p.to]
 		if dest and dest.indoor and dest.npcs then
@@ -271,13 +271,30 @@ function SceneView:tagList()
 		local t = self.tags[i]
 		r.frame = t.label.Frame
 		local p = t.portal
-		if p and (math.abs(p.x - hx) > PORTAL.near.x or math.abs(p.y - hy) > PORTAL.near.y) then
+		if p and (not self:portalOpen(p) or math.abs(p.x - hx) > PORTAL.near.x or math.abs(p.y - hy) > PORTAL.near.y) then
 			r.frame.Visible = false
 		else
 			table.insert(out, r)
 		end
 	end
 	return out
+end
+
+-- 그 퀘스트를 받아야 열리는 문(문의 need — 달의 사당 안의 「사당 지하」)을 열고 닫는다. openOf(문) → 지나갈 수 있는가.
+--  닫힌 문은 포탈의 그림도 「↑ 어디로」도 없고, 앞에서 ↑를 눌러도 지나가지 못한다(서버도 같은 것을 본다 — world.luau의 onTravel)
+function SceneView:setPortals(openOf: (any) -> boolean)
+	for _, pt in self.portals do
+		pt.open = openOf(pt.def) == true
+		pt.label.Visible = pt.open
+	end
+end
+function SceneView:portalOpen(p: any): boolean
+	for _, pt in self.portals do
+		if pt.def == p then
+			return pt.open
+		end
+	end
+	return true
 end
 
 -- 주민 머리 위의 퀘스트 표시를 고친다. markOf(주민 id) → "!" · "?" · nil
@@ -327,7 +344,7 @@ end
 function SceneView:portalNear(x: number, y: number)
 	for _, p in self.scene.portals do
 		-- 문 가운데에서 26도트 안(서버는 28까지 받는다). 맵 끝의 문은 벽에 붙어 서서도 들어갈 수 있어야 한다 — 16으로 두었더니 벽까지 달려간 뒤에는 들어가지 못했다
-		if math.abs(p.x - x) < 26 and math.abs(p.y - y) < 4 then
+		if math.abs(p.x - x) < 26 and math.abs(p.y - y) < 4 and self:portalOpen(p) then
 			return p
 		end
 	end

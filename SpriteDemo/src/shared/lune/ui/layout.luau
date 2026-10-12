@@ -73,7 +73,10 @@ L.BAG = D.bag -- 가방: 칸 여섯 x 넷(세 탭 모두 칸). 탭 줄(gridY) �
 L.DETAIL = D.detail -- 아이템 상세(창 옆의 작은 판): 그림 칸과 이름 · 갈래 · 줄(이름과 값) · 알림 글 · 단추
 L.STORE = D.store -- 창고: 가방과 같은 짜임 — 탭 줄(gridY) 아래에 칸, 그 아래 footH에 「정렬」(sortW)과 안내 글
 L.EQUIP = D.equip -- 장비 창: 왼쪽 = 칸 하나 + 글(textW), 오른쪽 = 장신구 네 칸
-L.SHOP = D.shop -- 상점: 물건 이름(본문 글씨) · 값 · 사는 단추(들)
+L.SHOP = D.shop -- 상점의 한 줄: [아이콘 칸 iconS] 이름(nameW) · [달돈 그림] 값(priceW) · 사는 단추(buyW)
+L.DAILY = D.daily -- 일일 의뢰: 머리글(top) 아래 의뢰마다 한 칸(row — 맵의 이름 · 의뢰의 이름 · 오른쪽 단추 btnW · 진행 띠 barH), 가르는 줄 아래 보상 두 줄(payRow — 이름표 labelW)
+L.SOUND = D.sound -- 소리 설정: 줄마다 이름(labelW) · 「−」(btn) · 칸 steps개(seg x barH · 사이 gap) · 「+」 · %(pctW). 아래 muteY에 「모두 끄기 / 켜기」(muteW)
+L.CRAFT = D.craft -- 제작(대장장이): 탭(tabH) 아래에 장비마다 한 줄(row) — 윗줄 = [아이콘 칸] 이름 · [달돈] 삯(feeW) · 「제작」(makeW x makeH), 아랫줄 = 재료 둘([그림] 이름 가진 수/드는 수 — 하나에 matW)
 L.STAT = D.stat -- 능력치 창: 속의 폭 · 줄(top부터 row씩) · 주/부의 자리 · 값의 오른쪽 끝 · + 단추의 폭 · tip = 능력치에 마우스를 올렸을 때 창 옆에 뜨는 설명 판
 L.SKILL = D.skill -- 스킬 창: 차수 탭 · 안내 줄 · 스킬들(cols줄 x rows) · 오른쪽의 설명
 

@@ -810,7 +810,10 @@ do
 		end
 	end
 	-- 상점: 물건 이름(본문 글씨) · 값 · 사는 단추가 한 줄에 들어간다
-	expect(SHOP.nameW + 4 <= SHOP.w - SHOP.buyW - 8 - SHOP.priceW, "상점의 이름과 값이 겹치지 않는다")
+	-- 줄: [아이콘 칸 iconS] 이름(nameW) · [달돈 그림 18] 값(priceW) · 사는 단추(buyW) — 사용자 2026-10-13: "상점에서 소비템 구매하는거나 메이플스토리처럼 아이템 아이콘이 보여야합니다"
+	local shopTx = SHOP.iconS + 6
+	expect(SHOP.iconS >= 18 + 4 and SHOP.iconS + 2 <= L.M.button + 4, "아이콘 칸이 그림(18)을 담고 한 줄(단추 높이 + 4)에 들어간다")
+	expect(shopTx + SHOP.nameW + 4 <= SHOP.w - SHOP.buyW - 8 - SHOP.priceW - 19, "상점의 이름과 달돈 그림 · 값이 겹치지 않는다")
 	for _, st in D.STOCK do
 		local label = st.name
 		if st.id == "w10" then
@@ -822,7 +825,42 @@ do
 			expect(widthBody(label) <= SHOP.nameW, ("상점의 물건 이름 %s — 폭 %d"):format(label, widthBody(label)))
 			expect(width(tostring(st.price)) <= SHOP.priceW, "상점의 값 " .. label)
 		end
-		expect(width(("Lv.%d부터"):format(st.from)) <= SHOP.w - SHOP.nameW, "열리는 레벨 글 " .. st.id)
+		expect(width(("Lv.%d부터"):format(st.from)) <= SHOP.w - shopTx - SHOP.nameW, "열리는 레벨 글 " .. st.id)
+		-- 줄의 그림: 물약 · 주문서는 그 아이템의 그림(장비 · 달가루의 그림 이름은 화면 쪽이 정한다 — client/lune/ui/shopWindow.luau의 stockIcon)
+		if st.goods then
+			local g = Items.goods(st.goods)
+			expect(g ~= nil and KIT.parts.icons.icons[g.icon] ~= nil, "상점의 물건 " .. st.id .. "의 그림")
+		end
+	end
+	expect(KIT.parts.icons.icons.dust ~= nil and KIT.parts.icons.icons.coin ~= nil, "달가루 · 달돈의 그림")
+	-- 제작(대장장이): 줄마다 만들 장비의 그림 · 이름 · 삯 · 「제작」, 아래에 재료 둘(그림 · 이름 · 가진 수/드는 수)
+	do
+		local CR = L.CRAFT
+		local body = SHOP.rows * (L.M.button + 4) + L.M.button + 12 + 32 -- 창의 속 높이(상점과 같다 — shopWindow.luau의 size)
+		local per = {}
+		for _, r in D.RECIPES do
+			per[r.stage] = (per[r.stage] or 0) + 1
+			expect(#r.needs <= 2, "레시피의 재료는 둘까지(한 줄에 둘을 그린다) " .. r.id)
+			for _, need in r.needs do
+				local g = Items.goods(need.item)
+				expect(g ~= nil and KIT.parts.icons.icons[g.icon] ~= nil, "재료의 그림 " .. need.item)
+				local text = ("%s %d/%d"):format(g.name, 9999, need.n)
+				expect(width(text) <= CR.matW - 25, ("재료의 글 %s — 폭 %d(칸 %d)"):format(text, width(text), CR.matW - 25))
+			end
+			expect(width(F.short(r.money)) <= CR.feeW, "제작의 삯 " .. r.id)
+			for who in D.KINDS do
+				local name = Items.name(Items.make(r.slot, r.stage, D.NORMAL, who))
+				expect(widthBody(name) <= SHOP.w - shopTx - CR.makeW - 8 - CR.feeW - 22, ("제작의 장비 이름 %s — 폭 %d"):format(name, widthBody(name)))
+			end
+			expect(width(("Lv.%d부터 만든다"):format(r.from)) <= SHOP.w - shopTx, "제작의 열리는 레벨 글")
+		end
+		for stage, n in per do
+			expect(CR.tabH + n * CR.row <= body - 84, ("제작 Lv.%d의 %d줄이 창에 들어간다(탭 %d + 줄 %d x %d ≤ %d)"):format(stage, n, CR.tabH, n, CR.row, body - 84))
+		end
+		expect(shopTx + 2 * CR.matW <= SHOP.w, "재료 두 칸이 창의 폭에 들어간다")
+		expect(18 + 25 <= CR.row, "한 줄에 윗줄(아이콘 칸)과 아랫줄(재료의 그림 18)이 들어간다")
+		expect(width("제작") <= CR.makeW - 6 and CR.makeH >= L.M.small + 6, "「제작」 단추의 글")
+		expect(width(CR.note) <= SHOP.w - 120 and width(CR.hint) <= SHOP.w - 96, "제작 창의 안내 글들")
 	end
 	do
 		local count = {}
@@ -1284,4 +1322,590 @@ do
 		expect((g.kind == "quest") == (g.sell == 0), "퀘스트의 물건만 팔 수 없다 " .. g.id)
 	end
 	eq(Items.goodsSell("no_such"), 0, "없는 아이템의 값은 0")
+end
+
+-- ---- 상점 · 제작 창을 화면 없이 지어 본다(client/lune/ui/shopWindow.luau) ----
+--  사용자 2026-10-13: "대장간 장비제작이나, 상점에서 소비템 구매하는거나  메이플스토리처럼 아이템 아이콘이 보여야합니다"
+--  → 줄마다 그 물건의 그림이 있다(그림 이름이 아이콘 판에 있다) · 값 앞에 달돈 그림 · 제작은 재료마다 그림. 글 · 그림 · 단추가 서로 겹치지 않고 창 안에 있다. 다섯 직업 x 레벨 1 · 10 · 30
+do
+	local L = req("ReplicatedStorage/shared/lune/ui/layout")
+	local ICONS = KIT.parts.icons.icons
+	pixelText.Register("body", KIT.font.body, {})
+	local made = {} -- 지금 창에 놓인 것들 { kind, x, y, w, h, … }
+	local tabClicks = {}
+	local function frame(name: string?)
+		return { Name = name or "Frame", Visible = true }
+	end
+	local any = setmetatable({}, { __index = function() return "c" end })
+	MOCK("Client/lune/stage", { ratio = 1 })
+	MOCK("Client/lune/ui/ui", {
+		COLOR = any,
+		M = L.M,
+		cellSize = function() return 50 end,
+		group = function(_, _, _, _, _, name) return frame(name) end,
+		line = function() return frame("Line") end,
+		tab = function(_, text, _, _, onClick)
+			tabClicks[text] = onClick
+			local t = { width = pixelText.Measure(text, "small") }
+			function t.setOn() end
+			return t
+		end,
+		text = function(parent, text, x, y, width, opts)
+			local font = if opts and opts.font then opts.font else "small"
+			local item = { kind = "text", parent = parent, value = text, x = x, y = y, w = width, font = font, align = if opts and opts.align then opts.align else "left" }
+			function item.set(_, v) item.value = v end
+			function item.color(_, c) item.tint = c end
+			function item.show() end
+			table.insert(made, item)
+			return item
+		end,
+		button = function(parent, text, x, y, w, onClick, opts)
+			local h = if opts and opts.h then opts.h else L.M.button
+			local item = { kind = "button", parent = parent, value = text, x = x, y = y, w = w, h = h, click = onClick, frame = frame("Button"), enabled = true }
+			function item.setEnabled(_, on) item.enabled = on end
+			table.insert(made, item)
+			return item
+		end,
+		slot = function(parent, x, y, s2)
+			local item = { kind = "slot", parent = parent, x = x, y = y, w = s2, h = s2, frame = frame("Slot") }
+			function item.setOn() end
+			table.insert(made, item)
+			return item
+		end,
+		smallIcon = function(parent, name, x, y)
+			local item = { kind = "icon", parent = parent, x = x, y = y, w = 18, h = 18, name = name, Visible = true }
+			table.insert(made, item)
+			return item
+		end,
+		setWorldIcon = function(label, name)
+			label.name = name
+			label.Visible = name ~= nil and ICONS[name] ~= nil
+		end,
+	})
+	MOCK("Client/lune/ui/bagWindow", { purse = function()
+		local item = {}
+		function item.set() end
+		return item
+	end })
+	MOCK("Client/lune/ui/itemDetail", {})
+	MOCK("Client/lune/ui/windows", {})
+	local ShopWindow = req("Client/lune/ui/shopWindow")
+	local ItemCell = req("Client/lune/ui/itemCell")
+	local w, hgt = ShopWindow.size("merchant")
+	expect(w + 36 <= 768 and hgt + 64 <= 432, "상점 · 제작 창이 스마트폰의 화면 틀(768x432)에 들어간다")
+
+	local function textW(t)
+		return pixelText.Measure(t.value, t.font)
+	end
+	-- 글이 실제로 차지하는 가로 구간(오른쪽 맞춤은 칸의 오른쪽 끝에서)
+	local function span(e)
+		if e.kind ~= "text" then
+			return e.x, e.x + e.w
+		end
+		local tw = textW(e)
+		if e.align == "right" then
+			return e.x + e.w - tw, e.x + e.w
+		end
+		return e.x, e.x + tw
+	end
+	local function shownOf(e)
+		if e.kind == "text" then
+			return e.value ~= ""
+		elseif e.kind == "button" then
+			return e.frame.Visible
+		elseif e.kind == "icon" then
+			return e.Visible
+		end
+		return true
+	end
+	-- 같은 높이에 놓인 것들이 가로로 겹치지 않는다 · 창의 폭 안이다 · 글이 제 칸을 넘지 않는다
+	local function tidy(list, label: string)
+		for _, e in list do
+			if shownOf(e) then
+				local a, b = span(e)
+				expect(a >= 0 and b <= w, ("%s — 창의 폭 안이다(%d ~ %d / %d) %s"):format(label, a, b, w, tostring(e.value or e.name)))
+				if e.kind == "text" then
+					expect(textW(e) <= e.w, ("%s — 글이 제 칸에 들어간다 「%s」(%d / %d)"):format(label, e.value, textW(e), e.w))
+				elseif e.kind == "button" then
+					expect(pixelText.Measure(e.value, if e.h >= L.M.button then "body" else "small") <= e.w - 6, ("%s — 단추의 글 「%s」"):format(label, e.value))
+				end
+			end
+		end
+		for i, e in list do
+			for j = i + 1, #list do
+				local f = list[j]
+				if shownOf(e) and shownOf(f) then
+					local a, b = span(e)
+					local c, d = span(f)
+					expect(b <= c or d <= a, ("%s — 겹친다: %s(%d~%d) · %s(%d~%d)"):format(label, tostring(e.value or e.name), a, b, tostring(f.value or f.name), c, d))
+				end
+			end
+		end
+	end
+
+	local CLASSES = { "axion", "riven", "reaper", "mooni", "salamander" }
+	local sent = {}
+	local function ctxOf(class: string, level: number, money: number, bag)
+		return {
+			ui = {},
+			me = function() return { class = class, level = level, money = money } end,
+			bag = function() return bag end,
+			send = function(...) table.insert(sent, { ... }) end,
+			openService = function() end,
+		}
+	end
+	local emptyBag = Bag.view(Hero.new(900, "axion")) -- 화면이 받는 가방(서버가 보내는 모양)
+
+	-- 상점(잡화 상인 · 대장장이): 줄마다 [그림] 이름 · [달돈] 값 · 단추
+	local iconsSeen = 0
+	for _, npc in { "merchant", "smith" } do
+		local stock = ShopWindow.stockOf(npc)
+		expect(#stock >= 1 and #stock <= L.SHOP.rows, "상점의 줄 수 " .. npc)
+		for _, class in CLASSES do
+			for _, level in { 1, 10, 30 } do
+				table.clear(made)
+				local body = frame("Body")
+				body.Parent = frame("Panel")
+				local view = ShopWindow.build(body, ctxOf(class, level, 999999, emptyBag), w, hgt, npc)
+				view.refresh()
+				-- 줄마다(같은 y의 띠에 놓인 것들)
+				for i, st in stock do
+					local y0 = (i - 1) * (L.M.button + 4)
+					local row, slotN, itemIcon, coin = {}, 0, nil, nil
+					for _, e in made do
+						if e.y >= y0 and e.y < y0 + L.M.button + 4 then
+							if e.kind == "slot" then
+								slotN += 1
+								table.insert(row, e)
+							elseif e.kind == "icon" and e.parent ~= body then
+								itemIcon = e -- 칸 안의 그림
+							elseif e.kind == "icon" then
+								coin = e
+								table.insert(row, e)
+							else
+								table.insert(row, e)
+							end
+						end
+					end
+					-- 칸 안의 그림은 칸의 자리(0,0)에서 3점 안쪽이라 y가 3이다 — 줄 1에서만 위의 띠에 잡힌다. 그래서 칸으로 찾는다
+					local open = level >= st.from
+					eq(slotN, 1, ("%s %s — 줄에 아이콘 칸 하나"):format(npc, st.id))
+					local name = ShopWindow.stockIcon(st, class)
+					expect(ICONS[name] ~= nil, ("%s %s(%s) — 그림 이름 「%s」가 아이콘 판에 있다"):format(npc, st.id, class, tostring(name)))
+					expect(coin ~= nil and coin.Visible == open, ("%s %s Lv.%d — 달돈 그림은 살 수 있을 때만"):format(npc, st.id, level))
+					tidy(row, ("%s %s(%s Lv.%d)"):format(npc, st.id, class, level))
+					iconsSeen += 1
+				end
+				-- 칸 안의 그림: 줄의 수만큼 있고 모두 보인다(살 수 없는 것도 그림은 보인다)
+				local inCell, shown = 0, 0
+				for _, e in made do
+					if e.kind == "icon" and e.parent ~= body then
+						inCell += 1
+						shown += if e.Visible and ICONS[e.name] ~= nil then 1 else 0
+						expect(e.x == 3 and e.y == 3 and e.x + e.w <= L.SHOP.iconS - 3, "그림이 칸의 가운데에 든다")
+					end
+				end
+				eq(inCell, #stock, npc .. " — 줄마다 그림 하나")
+				eq(shown, #stock, npc .. " — 모든 줄의 그림이 보인다")
+				view.destroy()
+			end
+		end
+	end
+	expect(iconsSeen > 0, "상점의 줄을 보았다")
+	-- 무기는 내 직업의 그림이다(대장장이의 Lv.10 무기)
+	for _, st in D.STOCK do
+		if st.item and st.item.slot == "weapon" then
+			local seen = {}
+			for _, class in CLASSES do
+				seen[ShopWindow.stockIcon(st, class)] = true
+			end
+			local n = 0
+			for _ in seen do
+				n += 1
+			end
+			eq(n, #CLASSES, "상점의 무기는 직업마다 제 그림 " .. st.id)
+		end
+	end
+
+	-- 제작: 탭마다, 줄마다 [그림] 이름 · [달돈] 삯 · 「제작」 / 재료마다 [그림] 이름 가진 수/드는 수
+	local CR = L.CRAFT
+	local stages = {}
+	for _, r in D.RECIPES do
+		if not table.find(stages, r.stage) then
+			table.insert(stages, r.stage)
+		end
+	end
+	table.sort(stages)
+	local richHero = Hero.new(901, "axion") -- 재료를 넉넉히 가진 사람
+	for _, r in D.RECIPES do
+		for _, need in r.needs do
+			if Bag.count(richHero, need.item) == 0 then
+				expect(Bag.give(richHero, need.item, 999) == true, "재료를 받는다 " .. need.item)
+			end
+		end
+	end
+	local rich = Bag.view(richHero)
+	local rowsSeen, greens = 0, 0
+	for _, class in CLASSES do
+		for _, level in { 1, 10, 30 } do
+			for _, bag in { emptyBag, rich } do
+				table.clear(made)
+				table.clear(tabClicks)
+				local body = frame("Body")
+				body.Parent = frame("Panel")
+				local view = ShopWindow.build(body, ctxOf(class, level, 999999, bag), w, hgt, "craft")
+				for _, stage in stages do
+					tabClicks["Lv." .. stage]()
+					view.refresh()
+					local list = {}
+					for _, r in D.RECIPES do
+						if r.stage == stage then
+							table.insert(list, r)
+						end
+					end
+					for i, r in list do
+						local y0 = CR.tabH + (i - 1) * CR.row
+						local top, low, cellIcon = {}, {}, nil
+						for _, e in made do
+							if e.kind == "icon" and e.parent ~= body then
+								continue
+							end
+							if e.y >= y0 and e.y < y0 + 24 then
+								table.insert(top, e)
+							elseif e.y >= y0 + 24 and e.y < y0 + CR.row then
+								table.insert(low, e)
+							end
+						end
+						local open = level >= r.from
+						local label = ("제작 %s(%s Lv.%d)"):format(r.id, class, level)
+						tidy(top, label .. " 윗줄")
+						tidy(low, label .. " 아랫줄")
+						local item = Items.make(r.slot, r.stage, D.NORMAL, class)
+						expect(ICONS[ItemCell.icon(item)] ~= nil, label .. " — 만들 장비의 그림이 아이콘 판에 있다")
+						local mats, lock = 0, nil
+						for _, e in low do
+							if e.kind == "icon" and e.Visible then
+								mats += 1
+								expect(ICONS[e.name] ~= nil, label .. " — 재료의 그림")
+							elseif e.kind == "text" and e.value:find("부터 만든다") then
+								lock = e
+							end
+						end
+						eq(mats, if open then #r.needs else 0, label .. " — 재료마다 그림 하나(아직 못 만드는 것은 없다)")
+						expect((lock ~= nil) == not open, label .. " — 못 만드는 것에만 「Lv.N부터 만든다」")
+						for _, e in top do
+							if e.kind == "button" then
+								expect(e.frame.Visible == open, label .. " — 「제작」 단추는 만들 수 있는 레벨에만")
+								if open then
+									eq(e.enabled, bag == rich, label .. " — 재료가 모여야 눌린다")
+									if bag == rich then
+										greens += 1
+									end
+								end
+							end
+						end
+						rowsSeen += 1
+					end
+					-- 줄의 그림(칸 안): 이 탭의 줄 수만큼 보인다
+					local shown = 0
+					for _, e in made do
+						if e.kind == "icon" and e.parent ~= body and e.Visible then
+							shown += 1
+						end
+					end
+					eq(shown, #list, ("제작 Lv.%d — 줄마다 만들 장비의 그림"):format(stage))
+					expect(CR.tabH + #list * CR.row <= hgt - 28 - L.M.button - 12 - 18, ("제작 Lv.%d — 줄들이 아래의 글 · 단추 위에서 끝난다"):format(stage))
+				end
+				view.destroy()
+			end
+		end
+	end
+	expect(rowsSeen > 0 and greens > 0, "제작의 줄과 눌리는 단추를 보았다")
+	-- 「제작」을 누르면 그 줄의 레시피가 서버로 간다
+	table.clear(made)
+	table.clear(sent)
+	local body = frame("Body")
+	body.Parent = frame("Panel")
+	local view = ShopWindow.build(body, ctxOf("riven", 30, 999999, rich), w, hgt, "craft")
+	view.refresh()
+	local pressed = 0
+	for _, e in made do
+		if e.kind == "button" and e.value == "제작" then
+			e.click()
+			pressed += 1
+		end
+	end
+	eq(#sent, pressed, "누른 만큼 서버로 간다")
+	for _, m in sent do
+		expect(m[1] == "Item" and m[2] == "craft" and typeof(m[3]) == "string", "「제작」이 보내는 것 = 그 레시피")
+	end
+end
+
+-- ---- 퀘스트 창의 보상 줄 · 강화 창의 드는 것 줄을 화면 없이 지어 본다(client/lune/ui/questWindow.luau · forgeWindow.luau) ----
+--  사용자 2026-10-13: "강화창이랑 퀘스트 보상에 아이템그림 들어가야합니다."
+--  → 보상의 아이템(달돈 · 물약 · 장비)은 그 그림과 함께 · 강화에 드는 달가루와 정수는 그 그림과 함께. 그림 이름이 아이콘 판에 있고, 줄이 창의 폭에 들고, 서로 겹치지 않는다
+do
+	local L = req("ReplicatedStorage/shared/lune/ui/layout")
+	local Quests = req("ReplicatedStorage/shared/lune/sim/quests")
+	local QD = req("ReplicatedStorage/shared/lune/data/quests.generated")
+	local ICONS = KIT.parts.icons.icons
+	local made = {}
+	local tabClicks = {}
+	local function frame(name: string?)
+		return { Name = name or "Frame", Visible = true }
+	end
+	local any = setmetatable({}, { __index = function() return "c" end })
+	MOCK("Client/lune/ui/ui", {
+		COLOR = any,
+		M = L.M,
+		cellSize = function() return 50 end,
+		measure = function(text: string, font: string?) return (pixelText.Measure(text, font or "small")) end,
+		group = function(_, _, _, _, _, name) return frame(name) end,
+		box = function() return frame("Box") end,
+		line = function() return frame("Line") end,
+		hit = function() return { Activated = { Connect = function() end } } end,
+		tab = function(_, text, _, _, onClick)
+			tabClicks[text] = onClick
+			local t = { width = pixelText.Measure(text, "small") }
+			function t.setOn() end
+			return t
+		end,
+		text = function(parent, text, x, y, width, opts)
+			local font = if opts and opts.font then opts.font else "small"
+			local fh = if font == "body" then L.M.body else L.M.small
+			local n = if opts and opts.lines then opts.lines else 1
+			local item = { kind = "text", parent = parent, value = text, x = x, y = y, w = width, font = font, many = n > 1,
+				h = if n > 1 then (n - 1) * (opts.line or fh) + fh else fh }
+			function item.set(_, v) item.value = v end
+			function item.color(_, c) item.tint = c end
+			function item.move(_, nx, ny) item.x, item.y = nx, ny end
+			function item.show() end
+			table.insert(made, item)
+			return item
+		end,
+		button = function(parent, text, x, y, w, onClick, opts)
+			local item = { kind = "button", parent = parent, value = text, x = x, y = y, w = w, h = if opts and opts.h then opts.h else L.M.button, click = onClick, frame = frame("Button"), enabled = true }
+			function item.setEnabled(_, on) item.enabled = on end
+			function item.setText(_, v) item.value = v end
+			function item.setMain() end
+			table.insert(made, item)
+			return item
+		end,
+		smallIcon = function(parent, name, x, y)
+			local item = { kind = "icon", parent = parent, w = 18, h = 18, name = name, Visible = true, Position = UDim2.fromOffset(x, y) }
+			table.insert(made, item)
+			return item
+		end,
+		setWorldIcon = function(label, name)
+			label.name = name
+			label.Visible = name ~= nil and ICONS[name] ~= nil
+		end,
+	})
+	local ItemCell = req("Client/lune/ui/itemCell")
+	local realNew = ItemCell.new
+	ItemCell.new = function(parent, x, y, _, s2) -- 아이템 칸은 자리만(그리는 것은 다른 검사가 본다)
+		local item = { kind = "cell", parent = parent, x = x, y = y, w = s2, h = s2 }
+		function item.set(_, it) item.it = it end
+		table.insert(made, item)
+		return item
+	end
+	local QuestWindow = req("Client/lune/ui/questWindow")
+	local ForgeWindow = req("Client/lune/ui/forgeWindow")
+	local CLASSES = { "axion", "riven", "reaper", "mooni", "salamander" }
+
+	-- 화면에 놓인 것의 네모(글은 실제로 그려지는 폭 — 여러 줄 글은 칸 전체)
+	local function rect(e)
+		if e.kind == "icon" then
+			return e.Position.X.Offset, e.Position.Y.Offset, e.Position.X.Offset + 18, e.Position.Y.Offset + 18
+		elseif e.kind == "text" then
+			return e.x, e.y, e.x + (if e.many then e.w else pixelText.Measure(e.value, e.font)), e.y + e.h
+		end
+		return e.x, e.y, e.x + e.w, e.y + e.h
+	end
+	local function shownOf(e)
+		if e.kind == "text" then
+			return e.value ~= ""
+		elseif e.kind == "button" then
+			return e.frame.Visible
+		elseif e.kind == "icon" then
+			return e.Visible
+		end
+		return true
+	end
+	-- 그 틀(body)에 바로 놓인 것들이 서로 겹치지 않고 창의 폭 안이다
+	local function tidy(body, w: number, label: string)
+		local list = {}
+		for _, e in made do
+			if e.parent == body and shownOf(e) then
+				table.insert(list, e)
+			end
+		end
+		for i, e in list do
+			local x0, y0, x1, y1 = rect(e)
+			expect(x0 >= 0 and x1 <= w, ("%s — 창의 폭 안이다(%d ~ %d / %d) %s"):format(label, x0, x1, w, tostring(e.value or e.name or e.kind)))
+			for j = i + 1, #list do
+				local f = list[j]
+				local a0, b0, a1, b1 = rect(f)
+				expect(x1 <= a0 or a1 <= x0 or y1 <= b0 or b1 <= y0, ("%s — 겹친다: %s(%d,%d~%d,%d) · %s(%d,%d~%d,%d)"):format(label, tostring(e.value or e.name or e.kind), x0, y0, x1, y1, tostring(f.value or f.name or f.kind), a0, b0, a1, b1))
+			end
+		end
+		return list
+	end
+
+	-- 1) 모든 퀘스트 x 다섯 직업 x 레벨: 보상의 조각 · 그림 · 폭
+	local iconParts, gearParts, potionParts, widest = 0, 0, 0, 0
+	for _, def in QD.list do
+		for _, class in CLASSES do
+			for _, level in { 1, 30, 60, 100, 150 } do
+				local parts = QuestWindow.rewardParts(def.reward, level, class)
+				local at, width = QuestWindow.rewardLayout(parts)
+				expect(#parts <= QuestWindow.REWARD_MAX, "보상의 조각이 다섯을 넘지 않는다 " .. def.id)
+				expect(width <= QuestWindow.W, ("보상 줄이 창의 폭에 든다 「%s」(%s Lv.%d) — %d / %d"):format(def.name, class, level, width, QuestWindow.W))
+				widest = math.max(widest, width)
+				local last = -1
+				for i, q in parts do
+					expect(q.text ~= "", "보상의 글 " .. def.id)
+					if q.icon then
+						expect(ICONS[q.icon] ~= nil, ("보상의 그림 「%s」가 아이콘 판에 있다 — %s"):format(tostring(q.icon), def.id))
+						expect(at[i].icon >= last and at[i].text == at[i].icon + QuestWindow.REWARD_ICON, "그림 뒤에 그 글이 온다 " .. def.id)
+						iconParts += 1
+					end
+					expect(at[i].text > last, "조각이 왼쪽부터 차례로 놓인다 " .. def.id)
+					last = at[i].text + pixelText.Measure(q.text, "small")
+				end
+				if def.reward.money > 0 then
+					local found = false
+					for _, q in parts do
+						found = found or q.icon == "coin"
+					end
+					expect(found, "달돈을 주는 퀘스트는 달돈 그림이 있다 " .. def.id)
+				end
+				if def.reward.potions > 0 then
+					potionParts += 1
+				end
+				if def.reward.gear then
+					gearParts += 1
+				end
+			end
+		end
+	end
+	expect(iconParts > 0 and gearParts > 0, ("그림이 붙는 보상을 보았다(그림 %d · 장비 %d · 물약 %d · 가장 넓은 줄 %d)"):format(iconParts, gearParts, potionParts, widest))
+	-- 장비 보상은 내 직업의 그림이다(전직 퀘스트의 무기)
+	for _, def in QD.list do
+		if def.reward.gear and def.reward.gear.slot == "weapon" then
+			local seen, n = {}, 0
+			for _, class in CLASSES do
+				local parts = QuestWindow.rewardParts(def.reward, def.lv, class)
+				local icon = parts[#parts].icon
+				if not seen[icon] then
+					seen[icon] = true
+					n += 1
+				end
+			end
+			eq(n, #CLASSES, "보상의 무기는 직업마다 제 그림 " .. def.id)
+		end
+	end
+
+	-- 2) 퀘스트 창을 지어 본다: 고른 퀘스트의 보상 줄이 그 조각대로 놓인다(탭 셋)
+	local qw, qh = QuestWindow.size()
+	expect(qw + 36 <= 768 and qh + 64 <= 432, "퀘스트 창이 스마트폰의 화면 틀(768x432)에 들어간다")
+	for _, class in CLASSES do
+		local book = Hero.new(920, class).quests
+		local first = QD.list[1]
+		expect(Quests.accept(book, first.lv, first.id) == true, "첫 퀘스트를 받는다")
+		for _, level in { 1, 30 } do
+			table.clear(made)
+			table.clear(tabClicks)
+			local body = frame("Body")
+			local view = QuestWindow.build(body, {
+				quests = function() return book end,
+				me = function() return { level = level, class = class } end,
+				npcNames = function() return {} end,
+				send = function() end,
+			}, qw, qh)
+			for ti, name in QuestWindow.TABS do
+				tabClicks[name]()
+				view.refresh()
+				local list = QuestWindow.listOf(ti, book, level)
+				local def = list[1] and Quests.def(list[1])
+				local parts = if def then QuestWindow.rewardParts(def.reward, level, class) else {}
+				local at = QuestWindow.rewardLayout(parts)
+				local icons, wantIcons = {}, 0
+				for _, e in made do
+					if e.kind == "icon" and e.parent == body and e.Visible then
+						table.insert(icons, e)
+					end
+				end
+				table.sort(icons, function(a, b) return a.Position.X.Offset < b.Position.X.Offset end)
+				local k = 0
+				for i, q in parts do
+					if q.icon then
+						wantIcons += 1
+						k += 1
+						expect(icons[k] ~= nil and icons[k].name == q.icon and icons[k].Position.X.Offset == at[i].icon, ("퀘스트 창(%s · %s) — 보상의 그림 %s가 제자리에 있다"):format(name, class, q.icon))
+					end
+				end
+				eq(#icons, wantIcons, ("퀘스트 창(%s · %s Lv.%d) — 보상의 그림 수"):format(name, class, level))
+				tidy(body, qw, ("퀘스트 창(%s · %s Lv.%d)"):format(name, class, level))
+			end
+		end
+	end
+
+	-- 3) 강화 창: 드는 것 두 줄(달가루 · 정수)의 그림과 글
+	local fw, fh = ForgeWindow.size()
+	expect(fw + 36 <= 768 and fh + 64 <= 432, "강화 창이 스마트폰의 화면 틀(768x432)에 들어간다")
+	for _, icon in ForgeWindow.COST_ICONS do
+		expect(ICONS[icon] ~= nil, "드는 것의 그림 " .. icon)
+	end
+	expect(ForgeWindow.COST >= 18 + 2, "드는 것의 줄이 그림(18)보다 높다")
+	local both, dustOnly, none = 0, 0, 0
+	local smith = Hero.new(921, "axion")
+	smith.dust, smith.essence = 99999999, 9999
+	for _, stage in { 1, 10, 20, 30, 60, 100, 150, 180 } do
+		local it = Items.make("weapon", stage, 3, "axion")
+		local at = Bag.add(smith, it)
+		expect(at ~= nil, "장비를 가방에 넣는다")
+		for star = 0, 25 do
+			it.star = star
+			local bag = Bag.view(smith)
+			for _, firstFree in { false, true } do
+				table.clear(made)
+				local body = frame("Body")
+				local uiState = { forgeTarget = it.id }
+				local view = ForgeWindow.build(body, {
+					ui = uiState,
+					bag = function() return bag end,
+					me = function() return { level = 200, class = "axion", forged = not firstFree } end,
+					send = function() end,
+					openService = function() end,
+				}, fw, fh)
+				view.refresh()
+				local icons = {}
+				for _, e in made do
+					if e.kind == "icon" then
+						table.insert(icons, e)
+					end
+				end
+				eq(#icons, 2, "강화 창의 그림은 둘(달가루 · 정수)")
+				local info = Items.enhanceInfo(it, false, firstFree and star == 0)
+				local texts = ForgeWindow.lines(it, info, bag)
+				for i, e in icons do
+					eq(e.name, ForgeWindow.COST_ICONS[i], "드는 것의 그림 차례")
+					eq(e.Visible, texts[3 + i] ~= "", ("강화 창 Lv.%d 별 %d — 드는 것이 있는 줄에만 그림(%s)"):format(stage, star, ForgeWindow.COST_ICONS[i]))
+					expect(pixelText.Measure(texts[3 + i], "small") <= fw - ForgeWindow.COST_TX, ("강화 창 — 드는 것의 글이 칸에 든다 「%s」"):format(texts[3 + i]))
+				end
+				if icons[1].Visible and icons[2].Visible then
+					both += 1
+				elseif icons[1].Visible then
+					dustOnly += 1
+				else
+					none += 1
+				end
+				tidy(body, fw, ("강화 창 Lv.%d 별 %d"):format(stage, star))
+			end
+		end
+		smith.gear[at] = false
+	end
+	expect(both > 0 and dustOnly > 0, ("달가루만 드는 강화 · 정수도 드는 강화를 둘 다 보았다(둘 다 %d · 달가루만 %d · 없음 %d)"):format(both, dustOnly, none))
+	ItemCell.new = realNew
 end

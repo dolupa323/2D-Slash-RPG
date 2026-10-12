@@ -18,7 +18,8 @@ Panel.COUNT_W = 34 -- 오른쪽의 「12/15」가 쓰는 폭
 Panel.BAR_H = 4 -- 진행 띠의 높이
 Panel.TITLE, Panel.LINE, Panel.GAP = TITLE, LINE, GAP
 Panel.STEP = LINE + Panel.BAR_H + 2 -- 할 일 한 줄(글 + 띠)
-Panel.TAGS = { main = "메인", side = "부탁", job = "전직" }
+Panel.TAGS = { main = "메인", side = "부탁", job = "전직", daily = "일일" }
+Panel.DAILY_BACK = "게시판에 낸다" -- 다 잡은 일일 의뢰의 줄
 
 -- 할 일 한 줄을 글과 숫자로 가른다: 「검병 · 갑옷 조각 3/8」 → 「검병 · 갑옷 조각」, 「3/8」
 function Panel.split(text: string): (string, string?)
@@ -32,7 +33,8 @@ end
 -- 알리미에 적을 것을 차례대로 셈한다(화면을 모르는 셈 — 자동 검사가 그대로 부른다). 돌려주는 것: 줄들, 판의 높이, 하는 중인 수, 길잡이 수
 --  줄: { kind = "quest"(갈래 · 이름) | "step"(글 · 숫자 · 한 수 · 할 수) | "ready"(돌려줄 사람) | "label"(「받을 수 있는 퀘스트」) | "guide"(이름) | "where"(받는 곳), y, … }
 --  maxH = 판이 쓸 수 있는 높이(안 주면 PC의 칸 — 스마트폰은 손가락 단추에 닿지 않게 더 낮다)
-function Panel.layout(book, names, level: number?, maxH: number?)
+--  daily = 받아 둔 일일 의뢰들 { { name(몬스터), place(맵), n, have } … }(sim/daily.luau의 tracked) — 하는 중인 퀘스트 다음, 길잡이 앞에 「일일」 표로 적는다
+function Panel.layout(book, names, level: number?, maxH: number?, daily: any?)
 	local rows = {}
 	local y = Panel.HEAD + 4
 	local shown, guided = 0, 0
@@ -68,6 +70,25 @@ function Panel.layout(book, names, level: number?, maxH: number?)
 					y += Panel.STEP
 				end
 			end
+		end
+		y += GAP
+	end
+	-- 일일 의뢰(받아 둔 것): 「일일」 표 + 맵의 이름 / 「포자 주머니 12/30」과 진행 띠 — 다 잡았으면 「? 게시판에 낸다」
+	for _, d in daily or {} do
+		local ready = d.have >= d.n
+		local need = TITLE + (if ready then LINE + 2 else Panel.STEP)
+		if y + need > limit then
+			break
+		end
+		shown += 1
+		table.insert(rows, { kind = "quest", y = y, tag = "daily", name = d.place })
+		y += TITLE
+		if ready then
+			table.insert(rows, { kind = "ready", y = y, text = Panel.DAILY_BACK })
+			y += LINE + 2
+		else
+			table.insert(rows, { kind = "step", y = y, text = d.name, count = ("%d/%d"):format(d.have, d.n), have = d.have, n = d.n })
+			y += Panel.STEP
 		end
 		y += GAP
 	end

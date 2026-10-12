@@ -83,6 +83,9 @@ function Room.new(key: string, scene, rng)
 			respawn = 0,
 			alt = if kind.fly then kind.fly.alt else nil, -- 나는 몬스터: 지금 땅에서 뜬 높이(덮칠 때 내려왔다 올라간다)
 		}
+		if scene.story then
+			mob.state, mob.away = "gone", true -- 이야기의 방(사당 지하): 그 퀘스트를 하는 사람이 올 때까지 없다(Room:stepStory)
+		end
 		table.insert(self.mobs, mob)
 	end
 	-- 스토리 보스(장면의 bosses — 공방 design/bosses.js의 STORYBOSS): 졸개의 목록 끝에 자리를 잡아 둔다(번호가 바뀌지 않게). 처음에는 없다(state "gone" · away) —
@@ -416,6 +419,39 @@ function Room:idle()
 	for _, mob in self.bosses or {} do
 		if not mob.away then
 			self:bossAway(mob)
+		end
+	end
+end
+
+-- 이야기의 방(scene.story — 사당 지하 · 메인 「불타는 마을」): 졸개는 그 졸개를 잡는 퀘스트를 하는 중인 사람이 방에 있을 때만 나온다.
+--  그런 사람이 오면 하나씩 차례로 나타나고(쓰러뜨리면 여느 졸개처럼 다시 나온다 — 밀려드는 병사), 다 잡았거나 그런 사람이 없으면 모두 사라진다.
+--  사용자 2026-10-13: "사당지하 개발 해야합니다." — 퀘스트를 끝낸 뒤의 지하는 병사가 없는 조용한 방이다(비석을 읽을 수 있다)
+Room.STORY_STAGGER = 0.5 -- 졸개가 하나씩 나타나는 간격(초)
+function Room:stepStory(heroes)
+	local want = false
+	for _, h in heroes do
+		for _, mob in self.mobs do
+			if not mob.def.story and not mob.add and Quests.wantsKill(h.quests, mob.kind, self.key) then
+				want = true
+				break
+			end
+		end
+		if want then
+			break
+		end
+	end
+	local n = 0
+	for _, mob in self.mobs do
+		if not mob.def.story and not mob.add then
+			n += 1
+			if want and mob.away then
+				mob.away = false
+				mob.state, mob.t, mob.respawn = "gone", 0, Room.STORY_STAGGER * n
+			elseif not want and not mob.away then
+				mob.away = true
+				mob.state, mob.t, mob.target = "gone", 0, nil
+				mob.bind, mob.bindImm, mob.stun, mob.rend, mob.cracks, mob.marks = 0, 0, 0, 0, 0, nil
+			end
 		end
 	end
 end
@@ -761,6 +797,9 @@ function Room:step(heroes, dt: number)
 	self.heroes = heroes -- 지금 방에 있는 사람들(스토리 보스를 쓰러뜨리면 모두에게 잡은 것으로 친다 — Room:strike)
 	if self.bosses then
 		self:stepPresence(heroes)
+	end
+	if self.scene and self.scene.story then
+		self:stepStory(heroes)
 	end
 	for _, mob in self.mobs do
 		-- 졸개에 걸린 것이 풀려 간다: bind 묶임 · bindImm 다시 묶이지 않는 시간 · stun 넘어짐 · rend 갈라짐(받는 피해 +)

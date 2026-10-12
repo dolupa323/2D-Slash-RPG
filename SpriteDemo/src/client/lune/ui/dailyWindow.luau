@@ -1,0 +1,102 @@
+-- 일일 의뢰 창 — 마을의 의뢰 게시판 앞에서 ↑를 누르면 뜬다.
+--  사용자 2026-10-13: "일일 퀘스트 필요합니다. 게시판이랑 상호작용해서 일퀘받는거 좋습니다. 근데 좀더 간결하게 해도 될거 같습니다.  5분쯤 걸리게 / 일일 의뢰는 10부터 열죠"
+--  머리글(「오늘의 의뢰」 · 「자정에 바뀐다」) 아래에 의뢰마다 한 칸: 맵의 이름(작게) · 「포자 주머니 30마리」 · 오른쪽에 「받는다」 → 「12/30」 → 「낸다」 → 「완료」 · 아래에 진행 띠.
+--  그 아래 보상 두 줄: 의뢰 하나(경험치 · [달돈 그림]) · 둘을 다 내면([달가루 그림]) — 내 레벨의 것.
+--  받기와 내기는 서버가 정한다(ctx.dailyDo → Daily). 셈은 shared/lune/sim/daily.luau, 모양은 공방 시험 탭의 js/lune/ui/paint.js(paintDaily)와 같다.
+--  화면 오른쪽의 옆 판(ui/windows.luau). 게시판에서 멀어지면 닫힌다(boot.luau).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local lune = ReplicatedStorage.shared.lune
+local Daily = require(lune.sim.daily)
+local Format = require(lune.ui.format)
+local Layout = require(lune.ui.layout)
+local Ui = require(script.Parent.ui)
+
+local C = Ui.COLOR
+local S = Layout.DAILY
+local W = Daily.WORDS
+
+local DailyWindow = {}
+DailyWindow.ROWS = Daily.DATA.perDay
+
+function DailyWindow.size(): (number, number)
+	return S.w, S.top + DailyWindow.ROWS * S.row + S.payY + 2 * S.payRow
+end
+
+-- 의뢰의 이름: 「포자 주머니 30마리」
+function DailyWindow.taskName(t): string
+	return Format.fill(W.kill, { name = t.name, n = t.n })
+end
+
+function DailyWindow.build(body: Frame, ctx, w: number, _h: number)
+	local view = {}
+	local region = Daily.REGION
+	Ui.text(body, W.head, 0, 2, w, { color = C.gold })
+	Ui.text(body, W.reset, 0, 2, w, { align = "right", color = C.dim })
+	local rows = {}
+	local textW = w - S.btnW - 8
+	for i = 1, DailyWindow.ROWS do
+		local y = S.top + (i - 1) * S.row
+		local by = y + 14
+		local row = {}
+		row.place = Ui.text(body, "", 0, y, textW, { color = C.dim })
+		row.name = Ui.text(body, "", 0, y + 15, textW, { font = "body" })
+		row.button = Ui.button(body, W.accept, w - S.btnW, by, S.btnW, function()
+			local board = ctx.daily() and ctx.daily().boards[region]
+			local t = board and board.tasks[i]
+			if t then
+				ctx.dailyDo(if t.st == Daily.OPEN then "accept" else "turn", region, i)
+			end
+		end, { main = true })
+		row.count = Ui.text(body, "", w - S.btnW, by + math.floor((Ui.M.button - Ui.M.small) / 2), S.btnW, { align = "right", color = C.accent })
+		row.bar = Ui.bar(body, 0, y + 34, textW, S.barH + 2, C.accent, C.panel2)
+		rows[i] = row
+	end
+	local y = S.top + DailyWindow.ROWS * S.row
+	Ui.line(body, 0, y, w)
+	y += S.payY
+	-- 보상: 의뢰 하나 = 경험치 · [달돈] / 둘을 다 내면 = [달가루]
+	Ui.text(body, W.each, 0, y + 4, S.labelW - 4, { color = C.dim })
+	local xp = Ui.text(body, "", S.labelW, y + 4, w - S.labelW, { color = C.gold })
+	local coin = Ui.smallIcon(body, "coin", S.labelW, y)
+	local money = Ui.text(body, "", S.labelW, y + 4, w - S.labelW, { color = C.gold })
+	Ui.text(body, W.all, 0, y + S.payRow + 4, S.labelW - 4, { color = C.dim })
+	Ui.smallIcon(body, "dust", S.labelW, y + S.payRow)
+	local dust = Ui.text(body, "", S.labelW + 21, y + S.payRow + 4, w - S.labelW - 21, { color = C.gold })
+
+	function view.refresh()
+		local got = ctx.daily()
+		local board = got and got.boards[region]
+		for i, row in rows do
+			local t = board and board.tasks[i]
+			local ready = t ~= nil and Daily.isReady(t)
+			local act = t ~= nil and (t.st == Daily.OPEN or ready)
+			row.place:set(if t then t.place else "")
+			row.name:set(if t then DailyWindow.taskName(t) else "")
+			row.name:color(if t and t.st == Daily.DONE then C.dim else C.text)
+			row.button.frame.Visible = act
+			if t and act then
+				row.button:setText(if t.st == Daily.OPEN then W.accept else W.turn)
+			end
+			row.count:set(if not t or act then "" elseif t.st == Daily.DONE then W.done else ("%d/%d"):format(math.min(t.have, t.n), t.n))
+			row.count:color(if t and t.st == Daily.DONE then C.green else C.accent)
+			row.bar.frame.Visible = t ~= nil
+			if t then
+				row.bar:set(if t.st == Daily.DONE then 1 elseif t.st == Daily.OPEN then 0 else t.have / t.n)
+				row.bar:setColor(if t.st == Daily.DONE then C.green else C.accent)
+			end
+		end
+		local pay = board and board.pay
+		local xpText = if pay then ("%s %s"):format(W.xp, Format.short(pay.xp)) else ""
+		xp:set(xpText)
+		local mx = S.labelW + Ui.measure(xpText) + 12
+		coin.Visible = pay ~= nil
+		coin.Position = UDim2.fromOffset(mx, y)
+		money:move(mx + 21, y + 4)
+		money:set(if pay then Format.short(pay.money) else "")
+		dust:set(if pay then Format.short(pay.dust) else "")
+	end
+	view.refresh()
+	return view
+end
+
+return DailyWindow

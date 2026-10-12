@@ -83,7 +83,18 @@ do
 		local dest = S.scenes[p.to]
 		if dest.indoor then
 			doors += 1
-			eq(#dest.portals, 1, p.to .. " 나가는 문은 하나")
+			-- 나가는 문은 하나(마을로). 그 밖의 문은 그 방에서 내려가는 지하뿐이다 — 퀘스트를 받아야 열리고(need), 지하의 문은 다시 그 방으로 올라온다(달의 사당 → 사당 지하. 2026-10-13)
+			local outs = 0
+			for _, q in dest.portals do
+				if q.to == S.start then
+					outs += 1
+				else
+					local under = S.scenes[q.to]
+					expect(typeof(q.need) == "string" and under ~= nil and under.indoor == true, p.to .. " 의 다른 문은 퀘스트로 열리는 지하다 — " .. tostring(q.to))
+					expect(under ~= nil and #under.portals == 1 and under.portals[1].to == p.to, tostring(q.to) .. " 에서 올라오는 문은 하나 — 그 방으로")
+				end
+			end
+			eq(outs, 1, p.to .. " 나가는 문은 하나")
 			eq(dest.portals[1].to, S.start, p.to .. " 나가는 문은 마을로")
 			expect(dest.npcs ~= nil and #dest.npcs >= 1, p.to .. " 안에 주민이 있다")
 			for _, n in dest.npcs do

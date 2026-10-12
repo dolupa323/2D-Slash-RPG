@@ -273,7 +273,7 @@ return {
 		},
 	},
 	OPEN = { bag = 2, store = 1, forge = 8 },
-	NPCDO = { merchant = "shop", smith = "smith", keeper = "store", hall_robux = "hall", hall_power = "hall", hall_level = "hall" },
+	NPCDO = { merchant = "shop", smith = "smith", keeper = "store", hall_robux = "hall", hall_power = "hall", hall_level = "hall", board = "daily" },
 	MATS = {
 		{
 			id = "mat_ore1",

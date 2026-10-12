@@ -4,12 +4,16 @@
 --   시작 가능 = 누구에게 · 어디서 받는지(「샛별 · 초승달 마을」) · 보상. 레벨이 모자란 다음 메인도 맨 끝에 흐리게 뜬다(「Lv.4가 되면 받는다」)
 --   완료 = 줄거리와 받은 보상
 --  받는 것과 돌려주는 것은 주민 앞에서 한다(머리 위의 ! · ?). 목록이 줄 수보다 길면 ▲ ▼로 넘긴다.
+--  보상은 한 줄에 조각들로: 「경험치 441」 · [달돈 그림] 73 · [물약 그림] x10 · [무기 그림] Lv.30 창 — 아이템은 그 그림과 함께
+--   (사용자 2026-10-13: "강화창이랑 퀘스트 보상에 아이템그림 들어가야합니다." — 그 앞에는 「경험치 441 · 달돈 73 · 물약 10」처럼 글뿐이었다)
 --  화면 오른쪽의 옆 판(ui/windows.luau).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local Quests = require(lune.sim.quests)
+local Items = require(lune.sim.items)
 local Format = require(lune.ui.format)
 local Ui = require(script.Parent.ui)
+local ItemCell = require(script.Parent.itemCell)
 
 local C = Ui.COLOR
 local ROWS = 5
@@ -28,25 +32,44 @@ function QuestWindow.size(): (number, number)
 	return W, TAB_H + ROWS * ROW + 12 + QuestWindow.TEXT_LINES * 16 + 8 + 16 + 16 + 20 + Ui.M.button + 4
 end
 
--- 보상을 한 줄로: 「경험치 441 · 달돈 73 · 물약 10」 · 전직 퀘스트는 「2차 전직 · Lv.30 무기」
-function QuestWindow.rewardText(reward): string
+-- 보상의 조각들(왼쪽부터 놓는다) { icon 그림 이름(없으면 글만), text }: 「2차 전직」 · 「경험치 441」 · [달돈] 73 · [물약] x10 · [무기] Lv.30 창
+--  물약은 내 레벨에 쓸 수 있는 가장 좋은 것, 장비는 내 직업의 것 · 성능은 보통(sim/hero.luau의 questDone이 주는 그대로)
+QuestWindow.REWARD_MAX = 5 -- 조각의 수(전직 · 경험치 · 달돈 · 물약 · 장비)
+QuestWindow.REWARD_GAP = 12 -- 조각 사이
+QuestWindow.REWARD_ICON = 21 -- 그림(18)과 그 뒤의 글 사이까지
+function QuestWindow.rewardParts(reward, level: number, class: string)
 	local parts = {}
 	if reward.job then
-		table.insert(parts, ("%d차 전직"):format(reward.job))
+		table.insert(parts, { text = ("%d차 전직"):format(reward.job) })
 	end
 	if reward.xp > 0 then
-		table.insert(parts, ("경험치 %s"):format(Format.short(reward.xp)))
+		table.insert(parts, { text = ("경험치 %s"):format(Format.short(reward.xp)) })
 	end
 	if reward.money > 0 then
-		table.insert(parts, ("달돈 %s"):format(Format.short(reward.money)))
+		table.insert(parts, { icon = "coin", text = Format.short(reward.money) })
 	end
 	if reward.potions > 0 then
-		table.insert(parts, ("물약 %d"):format(reward.potions))
+		table.insert(parts, { icon = Items.potionFor(level).icon, text = ("x%d"):format(reward.potions) })
 	end
 	if reward.gear then
-		table.insert(parts, ("Lv.%d %s"):format(reward.gear.stage, if reward.gear.slot == "weapon" then "무기" else "방어구"))
+		local it = Items.make(reward.gear.slot, reward.gear.stage, Items.data.NORMAL, class)
+		table.insert(parts, { icon = ItemCell.icon(it), text = Items.name(it) })
 	end
-	return table.concat(parts, " · ")
+	return parts
+end
+-- 조각들의 자리: { { icon = 그림의 x(그림이 없으면 nil), text = 글의 x } … } 와 전체 폭(창의 폭 안이어야 한다 — 자동 검사가 모든 퀘스트 x 직업으로 본다)
+function QuestWindow.rewardLayout(parts)
+	local at, x = {}, 0
+	for i, p in parts do
+		local iconX = nil
+		if p.icon then
+			iconX = x
+			x += QuestWindow.REWARD_ICON
+		end
+		at[i] = { icon = iconX, text = x }
+		x += Ui.measure(p.text) + (if i < #parts then QuestWindow.REWARD_GAP else 0)
+	end
+	return at, x
 end
 
 -- 그 탭의 목록(퀘스트의 이름표들). tab = 1 진행 중 · 2 시작 가능 · 3 완료
@@ -114,7 +137,27 @@ function QuestWindow.build(body: Frame, ctx, w: number, _h: number)
 	local todo = Ui.text(body, "", 0, y, w)
 	-- 할 일 아래에: 무엇을 어디서 잡아야 하는지(사용자 2026-10-07: "뭘잡아야 갑옷조각이 나오는지를 자연스럽게 적어둬야")
 	local where = Ui.text(body, "", 0, y + 16, w, { color = C.accent })
-	local reward = Ui.text(body, "", 0, y + 34, w, { color = C.gold })
+	-- 보상: 조각들을 왼쪽부터 — 아이템은 그 그림(18x18)과 글, 경험치 · 전직은 글만
+	local ry = y + 33
+	local rewards = {}
+	for i = 1, QuestWindow.REWARD_MAX do
+		rewards[i] = { icon = Ui.smallIcon(body, "coin", 0, ry), text = Ui.text(body, "", 0, ry + 4, w, { color = C.gold }) }
+	end
+	local function showReward(reward, level: number, class: string)
+		local parts = if reward then QuestWindow.rewardParts(reward, level, class) else {}
+		local at = QuestWindow.rewardLayout(parts)
+		for i, slot in rewards do
+			local p = parts[i]
+			Ui.setWorldIcon(slot.icon, if p then p.icon else nil)
+			slot.text:set(if p then p.text else "")
+			if p then
+				if at[i].icon then
+					slot.icon.Position = UDim2.fromOffset(at[i].icon, ry)
+				end
+				slot.text:move(at[i].text, ry + 4)
+			end
+		end
+	end
 	local drop = Ui.button(body, "그만두기", w - 100, y + 54, 100, function()
 		if tab == 1 and selected[1] then
 			ctx.send("Quest", "drop", selected[1])
@@ -125,6 +168,7 @@ function QuestWindow.build(body: Frame, ctx, w: number, _h: number)
 		local book = ctx.quests() or {}
 		local me = ctx.me()
 		local level = if me then me.level else 1
+		local class = if me then me.class else "axion"
 		local list = QuestWindow.listOf(tab, book, level)
 		for i, t in tabs do
 			t:setOn(i == tab)
@@ -164,7 +208,7 @@ function QuestWindow.build(body: Frame, ctx, w: number, _h: number)
 			todo:color(if Quests.isReady(book, id) then C.green else C.text)
 			where:set(table.concat(Quests.hints(book, id), " · "))
 			where:color(C.accent)
-			reward:set(QuestWindow.rewardText(def.reward))
+			showReward(def.reward, level, class)
 			drop.frame.Visible = def.kind == "side"
 		elseif def and tab == 2 then
 			local locked = Quests.state(book, level, id) == "locked"
@@ -173,13 +217,13 @@ function QuestWindow.build(body: Frame, ctx, w: number, _h: number)
 			todo:color(C.text)
 			where:set(if locked then ("Lv.%d가 되면 받는다"):format(def.lv) else "그 주민 앞에서 ↑ 를 눌러 받는다")
 			where:color(if locked then C.red else C.accent)
-			reward:set(QuestWindow.rewardText(def.reward))
+			showReward(def.reward, level, class)
 		elseif def then
 			text:set(def.text)
 			todo:set("끝낸 퀘스트")
 			todo:color(C.dim)
 			where:set("")
-			reward:set(QuestWindow.rewardText(def.reward))
+			showReward(def.reward, level, class)
 		else
 			text:set(if tab == 1
 				then "하는 중인 퀘스트가 없다. 머리 위에 ! 가 뜬 주민에게 말을 건다."
@@ -187,7 +231,7 @@ function QuestWindow.build(body: Frame, ctx, w: number, _h: number)
 				else "아직 끝낸 퀘스트가 없다.")
 			todo:set("")
 			where:set("")
-			reward:set("")
+			showReward(nil, level, class)
 		end
 	end
 	return view

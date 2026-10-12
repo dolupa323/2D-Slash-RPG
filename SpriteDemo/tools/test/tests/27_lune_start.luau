@@ -135,14 +135,14 @@ do
 	eq(Quests.jobQuest(3), nil, "3차 전직 퀘스트는 아직 없다(레벨만 되면 오른다)")
 	local main, why = Quests.nextMain(book, 30)
 	expect(main ~= nil and main.id == "r2m1" and why == "open", "Lv.30이면 2지역의 첫 메인을 받을 수 있다")
-	-- 부탁: 1지역 열 가운데 아홉(남은 하나 「묵은 도토리」는 굴의 주인을 불러내는 퀘스트 — 초반 구역에 보상 보스를 두지 않기로 해 쓰지 않는다)
+	-- 부탁: 1지역의 열을 모두 할 수 있다(2026-10-13 — 사용자: "부탁퀘스트 필요합니다." 남아 있던 하나 「묵은 도토리」는 굴의 주인을 불러내는 퀘스트였는데, 고갯마루 노인의 사냥 부탁(굴 두더지 스물)으로 고쳤다)
 	local sides = 0
 	for _, def in Quests.list do
 		if def.region == "r1" and def.kind == "side" and def.playable then
 			sides += 1
 		end
 	end
-	eq(sides, 9, "1지역의 부탁 아홉을 할 수 있다")
+	eq(sides, 10, "1지역의 부탁 열을 모두 할 수 있다")
 end
 
 -- ---- 4) 조작 안내의 글 ----

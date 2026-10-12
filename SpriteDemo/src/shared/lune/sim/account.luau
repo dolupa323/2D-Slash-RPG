@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local CLASSES = require(lune.data["classes.generated"])
 local NAMES = require(lune.data["names.generated"]) -- 이름의 규칙(공방의 js/lune/design/names.js)
+local SOUND = require(lune.data["ui.generated"]).layout.sound -- 소리 설정의 칸 수(steps) · 처음 크기(start)
 
 local Account = {}
 Account.VERSION = 1
@@ -21,8 +22,30 @@ local function whole(v: any, lo: number, hi: number): boolean
 	return typeof(v) == "number" and v == math.floor(v) and v >= lo and v <= hi
 end
 
+-- 소리 설정 { music = 배경 음악의 크기, sfx = 효과음의 크기(0~steps칸 — 한 칸 10%), on = 모두 켰는가 }. 계정의 것이다(캐릭터를 바꿔도 같다)
+--  사용자 2026-10-13: "소리조절 있어야합니다."
+function Account.soundDefault()
+	return { music = SOUND.start, sfx = SOUND.start, on = true }
+end
+-- 받은 것 · 저장된 것의 꼴을 본다: 맞으면 새 표, 아니면 nil
+function Account.cleanSound(v: any)
+	if typeof(v) ~= "table" or not whole(v.music, 0, SOUND.steps) or not whole(v.sfx, 0, SOUND.steps) or typeof(v.on) ~= "boolean" then
+		return nil
+	end
+	return { music = v.music, sfx = v.sfx, on = v.on }
+end
+function Account.setSound(acct, v: any): boolean
+	local sound = Account.cleanSound(v)
+	if not sound then
+		return false
+	end
+	acct.sound = sound
+	return true
+end
+
 function Account.new()
-	return { next = 1, last = false, chars = {}, store = false, broken = {}, spent = 0 } -- spent = 이 계정이 게임에 쓴 로벅스(명예의 전당의 후원 판)
+	-- spent = 이 계정이 게임에 쓴 로벅스(명예의 전당의 후원 판) · sound = 소리 설정
+	return { next = 1, last = false, chars = {}, store = false, broken = {}, spent = 0, sound = Account.soundDefault() }
 end
 
 -- 이름을 견줄 때의 꼴(영문은 소문자로 — Moon과 moon은 같은 이름이다)
@@ -372,7 +395,7 @@ function Account.pack(acct)
 	for _, raw in acct.broken do
 		table.insert(chars, raw)
 	end
-	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, spent = acct.spent }
+	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, spent = acct.spent, sound = acct.sound }
 end
 
 function Account.unpack(data: any)
@@ -396,6 +419,7 @@ function Account.unpack(data: any)
 	acct.last = if Account.find(acct, data.last) then data.last else false
 	acct.store = if typeof(data.store) == "table" then data.store else false
 	acct.spent = if whole(data.spent, 0, 9e12) then data.spent else 0
+	acct.sound = Account.cleanSound(data.sound) or Account.soundDefault() -- 소리 설정이 생기기 전의 저장 = 처음 크기
 	return acct
 end
 
@@ -407,7 +431,7 @@ function Account.view(acct)
 		local level = if typeof(c.hero.level) == "number" then c.hero.level else 1
 		table.insert(chars, { id = c.id, name = c.name, class = c.class, level = level })
 	end
-	return { chars = chars, max = Account.MAX, last = acct.last }
+	return { chars = chars, max = Account.MAX, last = acct.last, sound = acct.sound } -- sound = 소리 설정(처음 화면부터 그 크기로 튼다)
 end
 
 return Account

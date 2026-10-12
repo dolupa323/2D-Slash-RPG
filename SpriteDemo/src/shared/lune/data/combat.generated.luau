@@ -52,6 +52,7 @@ return {
 				},
 				fall = 2.28,
 				phase = { at = 0.6, name = "봉화를 올린다", time = 1.2, push = 56, rage = 0.8, clip = "roar", fx = "fx_roar" },
+				music = "lair",
 				patterns = {
 					{
 						id = "smash",
@@ -190,6 +191,7 @@ return {
 				},
 				fall = 2.28,
 				phase = { at = 0.5, name = "늑대의 포효", time = 1.2, push = 56, rage = 0.8, clip = "roar", fx = "fx_howl" },
+				music = "boss",
 				patterns = {
 					{
 						id = "slash",

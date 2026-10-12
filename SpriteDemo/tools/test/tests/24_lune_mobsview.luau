@@ -382,6 +382,30 @@ do
 	expect(fx.shots[1] == nil and fx.shots[2] == nil, "끝난 화살은 지운다")
 	fx:update(9, 0.05)
 	expect(fx.shots[3] == nil, "멀리 간 화살은 사라진다")
+	-- 날아가는 것이 떠 있는 채로 장면을 떠난다(문을 지난다): 그림으로 나는 것도 흰 줄도 오류 없이 치운다
+	--  사용자 2026-10-13: "장면을 그리지 못했다 r1c2: … effects:406: attempt to index nil with 'Destroy'" — 빈 투구의 덩어리가 날아가는 동안 문을 지나면 났다
+	do
+		local leave = Effects.new({}, {}, {})
+		leave:addShot({ id = 1, x = 10, y = 20, dir = 1, speed = 110, range = 150, kind = "helm" }, 0)
+		leave:addShot({ id = 2, x = 10, y = 20, dir = -1, speed = 170, range = 140, kind = "archer" }, 0)
+		leave:update(0.2, 0.05)
+		local ok, err = pcall(leave.destroy, leave)
+		expect(ok, "날아가는 것이 떠 있어도 이펙트를 치울 수 있다 — " .. tostring(err))
+		expect(next(leave.shots) == nil, "날아가던 것이 남지 않는다")
+		-- 날아가는 것을 쏘는 몬스터 모두(제 그림으로 나는 것): 떠 있는 채로 치워도 된다
+		local n = 0
+		for kind, def in COMBAT.mobs do
+			if def.atk and def.atk.shot then
+				local one = Effects.new({}, {}, {})
+				one:addShot({ id = 7, x = 30, y = 40, dir = 1, speed = 100, range = 120, kind = kind }, 0)
+				one:update(0.1, 0.05)
+				local fine, why = pcall(one.destroy, one)
+				expect(fine and next(one.shots) == nil, ("%s의 날아가는 것이 떠 있어도 치운다 — %s"):format(kind, tostring(why)))
+				n += 1
+			end
+		end
+		expect(n >= 2, "날아가는 것을 쏘는 몬스터들을 보았다 " .. n)
+	end
 
 	local cast = COMBAT.mobs.torch.atk.cast
 	fx:addMobCast("torch", 120, 200)
@@ -605,14 +629,19 @@ do
 	local BossFx = req("ReplicatedStorage/shared/lune/bossfx")
 	local pushed = nil
 	bv:destroy()
-	bv = BossView.new(v2, castFake, effectsFake, scene, { push = function(x, dist) pushed = { x, dist } end })
+	local tracks = {} -- 보스의 곡을 바꾸라는 알림(이름표 또는 false = 맵의 곡으로)
+	bv = BossView.new(v2, castFake, effectsFake, scene, { push = function(x, dist) pushed = { x, dist } end, music = function(track) table.insert(tracks, track or false) end })
 	local function snap2(id, x, state, st, pat, aim, chain, quick)
 		v2:apply({ { id, x, -1, state, st, 900, 0, 0, pat, aim or 0, chain or 0, quick or 0 } }, t)
 		v2:update(t)
 		bv:update(0.016)
 	end
 	snap2(2, 400, "gone", 0, 0)
+	eq(#tracks, 0, "보스가 없으면 곡을 바꾸지 않는다")
 	snap2(1, 600, "idle", 0, 0)
+	expect(#tracks == 1 and tracks[1] == COMBAT.mobs.towerlieutenant.story.music and tracks[1] ~= nil, "보스가 나타나면 그 보스의 곡으로 바꾸라고 알린다(한 번)")
+	snap2(1, 600, "idle", 0, 0)
+	eq(#tracks, 1, "같은 보스가 서 있는 동안에는 다시 알리지 않는다")
 	-- 불씨 뿌리기: 예고가 시작되면 맞을 자리(느낌표) + 표시된 자리 넷을 건다. 자리는 서버와 같은 식 — 겨눈 사람의 발밑과 그 좌우
 	local ei, e = patOf("towerlieutenant", "embers")
 	n0 = count("add")
@@ -669,6 +698,7 @@ do
 	expect(#bv.spots >= 8, "예고가 끝난 뒤에는 보스가 다른 것을 해도 자리가 남는다(제 때에 솟는다)")
 	snap2(1, 400, "dead", 0, 0)
 	eq(#bv.spots, 0, "보스가 쓰러지면 표시된 자리도 사라진다")
+	expect(tracks[#tracks] == false, "보스가 쓰러지면 맵의 곡으로 돌아가라고 알린다")
 	-- 도약 찍기: 뛰어오를 때는 박차는 고리만, 내려앉을 때 치는 이펙트 · 몸은 공중에 뜬다(서버와 같은 식)
 	snap2(1, 600, "idle", 0, 0)
 	local li, lp = patOf("towerlieutenant", "leap")

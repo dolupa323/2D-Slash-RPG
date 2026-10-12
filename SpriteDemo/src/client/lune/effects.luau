@@ -402,8 +402,14 @@ function Effects:destroy()
 	for _, f in self.floats do
 		f.frame:Destroy()
 	end
+	-- 날아가는 것: 흰 줄(frame)이거나 제 그림으로 나는 것(sprite — 빈 투구의 덩어리)이다. 둘 다 지운다
+	--  (2026-10-13 — 전에는 모두 frame이라고 보고 지워서, 그림으로 나는 것이 떠 있는 동안 문을 지나면 여기서 오류가 났고 새 장면이 그려지지 않았다)
 	for _, s in self.shots do
-		s.frame:Destroy()
+		if s.sprite then
+			s.sprite:destroy()
+		else
+			s.frame:Destroy()
+		end
 	end
 	for _, d in self.drops do
 		d.frame:Destroy()

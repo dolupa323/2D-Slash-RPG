@@ -415,6 +415,13 @@ do
 				handlers.Move(pAdmin, h.x + math.clamp(portal.x - h.x, -60, 60), h.y + math.clamp(portal.y - h.y, -120, 120), 1)
 			end
 			expect(math.abs(h.x - portal.x) <= 1 and math.abs(h.y - portal.y) <= 1, ("%s: 문 %s 앞까지 걸어간다(%d, %d)"):format(key, portal.to, h.x, h.y))
+			-- 퀘스트를 받아야 열리는 문(need — 달의 사당 안의 「사당 지하」): 받기 전에는 지나가지 못하고, 받은 뒤에는 지난다
+			if portal.need then
+				local kept = h.quests[portal.need]
+				h.quests[portal.need] = nil
+				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == key, ("%s: 퀘스트 %s를 받기 전에는 문 %s을 지나가지 못한다"):format(key, portal.need, portal.to))
+				h.quests[portal.need] = kept or { done = false, c = {} }
+			end
 			local trip = handlers.Travel(pAdmin, portal.to)
 			expect(trip ~= nil and trip.scene == portal.to and sAdmin.scene == portal.to, ("%s: 관리로 옮긴 뒤 문 %s을 지난다"):format(key, portal.to))
 			count += 1

@@ -33,6 +33,8 @@ local Windows = require(script.Parent.ui.windows)
 local StatWindow = require(script.Parent.ui.statWindow)
 local SkillWindow = require(script.Parent.ui.skillWindow)
 local KeysWindow = require(script.Parent.ui.keysWindow)
+local SoundWindow = require(script.Parent.ui.soundWindow) -- 소리 설정(메뉴 → 「소리 설정」)
+local DailyWindow = require(script.Parent.ui.dailyWindow) -- 일일 의뢰(마을의 의뢰 게시판 앞에서 ↑)
 local Talk = require(script.Parent.ui.talk)
 local Ui = require(script.Parent.ui.ui)
 local Kit = require(script.Parent.ui.kit) -- 부품 그림(퀘스트의 자리 위에 뜨는 「!」)
@@ -53,6 +55,7 @@ local PartyHud = require(script.Parent.partyHud)
 local PartyWindow = require(script.Parent.ui.partyWindow)
 local Chat = require(script.Parent.chat)
 local Quests = require(lune.sim.quests)
+local Daily = require(lune.sim.daily) -- 일일 의뢰(마을의 게시판)
 local QuestHud = require(script.Parent.questHud)
 local Guide = require(script.Parent.guide)
 local QuestWindow = require(script.Parent.ui.questWindow)
@@ -95,6 +98,8 @@ local state = {
 	quests = {} :: any, -- 서버가 알려 준 내 퀘스트의 상태(sim/quests.luau의 book)
 	npcNames = {} :: { [string]: string }, -- 주민 id → 이름(알리미의 「샛별에게 간다」)
 	drawQuests = nil :: any, -- 퀘스트가 바뀌었을 때 화면(표시 · 알리미 · 창)을 고치는 함수
+	daily = nil :: any, -- 일일 의뢰의 상태(서버가 준 것 — sim/daily.luau의 view)
+	fetchDaily = nil :: any, -- 일일 의뢰의 상태를 서버에 다시 묻는 함수(들어왔을 때 · 레벨이 올랐을 때)
 	jobSeen = {} :: { [string]: boolean }, -- 받았다고 알린 전직 퀘스트(「달이 부른다」는 받는 순간 한 번만 뜬다)
 	spots = {} :: { any }, -- 이 장면에서 ↑를 누를 수 있는 퀘스트의 자리들 { quest, x, y, place, act, mark(! 그림), tag(「↑ 물을 뜬다」) }
 	onJob = nil :: any, -- 전직했을 때(칸을 서버의 것으로 맞춘다)
@@ -219,27 +224,23 @@ end
 local function enterScene(key: string, x: number, y: number, room)
 	local scene = SCENES.scenes[key]
 	assert(scene, "없는 장면 " .. tostring(key))
-	if state.sprite then
-		state.sprite:destroy()
+	-- 이전 장면의 것을 치운다. 하나를 치우다 오류가 나도 나머지를 마저 치우고 새 장면을 그린다 — 치우기는 이 함수의 맨 앞이라, 여기서 멈추면 새 장면이 통째로 안 그려진다
+	--  (2026-10-13: 이펙트를 치우다 난 오류 하나로 문을 지난 뒤의 화면이 깨졌다 — 캐릭터와 몬스터가 없고 이전 맵이 남았다). 오류는 출력 창에 알린다
+	local function clear(what: string, thing: any, method: string)
+		if thing then
+			local ok, err = pcall(thing[method], thing)
+			if not ok then
+				warn(("[lune] 이전 장면의 %s을(를) 치우다 오류: %s"):format(what, tostring(err)))
+			end
+		end
 	end
-	if state.mobs then
-		state.mobs:destroy()
-	end
-	if state.boss then
-		state.boss:destroy()
-	end
-	if state.fx then
-		state.fx:destroy()
-	end
-	if state.others then
-		state.others:destroy()
-	end
-	if state.view then
-		state.view:destroy()
-	end
-	if state.over then
-		state.over:Destroy() -- 이름표(내 것 포함) · 체력 띠 · 알림 글은 이 층과 함께 사라진다
-	end
+	clear("내 캐릭터", state.sprite, "destroy")
+	clear("몬스터", state.mobs, "destroy")
+	clear("보스", state.boss, "destroy")
+	clear("이펙트", state.fx, "destroy")
+	clear("다른 사람들", state.others, "destroy")
+	clear("맵", state.view, "destroy")
+	clear("이름표의 층", state.over, "Destroy") -- 이름표(내 것 포함) · 체력 띠 · 알림 글은 이 층과 함께 사라진다
 	table.clear(state.spots) -- 퀘스트의 자리 표시도 위의 두 층과 함께 사라졌다(새 장면의 것은 아래 drawQuests가 만든다)
 	if MUSIC.hidden[key] and state.sceneKey ~= key then
 		Music.jingle("strange") -- 숨은 방에 들어섰다
@@ -285,6 +286,14 @@ local function enterScene(key: string, x: number, y: number, room)
 			local b = state.body
 			if b and b.ground and math.abs(b.x - x) < 150 then
 				state.push = { v = (if b.x >= x then 1 else -1) * dist / 0.25, t = 0.25 }
+			end
+		end,
+		-- 보스가 나타나 있는 동안은 보스의 곡, 쓰러지거나 사라지면 이 맵의 곡으로(같은 곡이면 이어 튼다)
+		music = function(track: string?)
+			if track then
+				Music.play(track)
+			else
+				Music.scene(key)
 			end
 		end,
 	}) -- 스토리 보스가 서는 방이면 그 예고와 이펙트 · 잔상 · 화면 흔들림(없는 방에서는 아무것도 하지 않는다)
@@ -788,6 +797,7 @@ local function step()
 		state.ui.npc = nil
 		Windows.close("shop")
 		Windows.close("forge")
+		Windows.close("daily")
 	end
 	-- 말하던 주민에게서 멀어지면 대화가 닫힌다
 	if Talk.npc and math.abs(Talk.npc.x - body.x) > 44 then
@@ -1285,6 +1295,14 @@ local function listen()
 		if e.ups > 0 then
 			state.fx:float("레벨 업! Lv." .. e.level, state.body.x, state.body.y - 48, Effects.GOLD, 1.8)
 			Music.jingle("victory")
+			if e.level >= Daily.FROM then
+				if e.level - e.ups < Daily.FROM then
+					Guide.banner(Daily.WORDS.open, Daily.WORDS.openHint, 6) -- Lv.10: 「일일 의뢰가 열렸다」
+				end
+				if state.fetchDaily then
+					state.fetchDaily()
+				end
+			end
 		end
 	end)
 	Net.OnClient("DropAdd", function(d)
@@ -1496,6 +1514,7 @@ function Boot.start()
 	preload({ "title_", "chars_", "ui_kit", "font_" }, nil)
 	local first = Net.Invoke("Ready")
 	if first and first.select then
+		Music.import(first.select.sound) -- 계정에 저장된 소리 설정(처음 화면부터 그 크기로)
 		Music.play(MUSIC.title)
 		-- 로딩 화면 → START → 캐릭터 고르기. 캐릭터로 들어가면 서버가 준 내 상태와 방을 받아 이어 간다(그동안 늘 보이는 화면은 숨긴다)
 		first = Title.run(first.select, {
@@ -1582,7 +1601,7 @@ function Boot.start()
 			table.insert(items, { id = "admin", name = "관리" })
 		end
 		table.insert(items, { id = "@chars", name = "캐릭터 선택" }) -- 저장하고 캐릭터 고르기 화면으로 돌아간다
-		table.insert(items, { id = "@sound", name = if Music.on then "소리 끄기" else "소리 켜기" })
+		table.insert(items, { id = "sound", name = "소리 설정" }) -- 배경 음악 · 효과음의 크기
 		local w, rowH = 132, 28
 		local h = #items * rowH + 14
 		local r = UI_HUD.menu
@@ -1594,8 +1613,6 @@ function Boot.start()
 				closeMore()
 				if item.id == "@chars" then
 					state.toSelect()
-				elseif item.id == "@sound" then
-					Music.toggle()
 				else
 					Windows.toggle(item.id)
 				end
@@ -1651,7 +1668,16 @@ function Boot.start()
 	state.openNpc = function(npc): boolean
 		local kind = Items.data.NPCDO[npc.id]
 		local level = state.me.level
-		if kind == "hall" then
+		if kind == "daily" then
+			-- 의뢰 게시판: 일일 의뢰 창(Lv.10부터 — 그 앞에는 「Lv.10부터 의뢰를 받을 수 있다」는 말만 뜬다)
+			if level < Daily.FROM then
+				return false
+			end
+			if state.fetchDaily then
+				state.fetchDaily() -- 날이 바뀌었으면 새 의뢰가 온다
+			end
+			Windows.open("daily", nil, true)
+		elseif kind == "hall" then
 			-- 명예의 전당의 비석: 그 비석의 순위판을 연다(hall_level → "level")
 			Windows.open("hall", string.match(npc.id, "^hall_(%a+)$") or "level", true)
 		elseif kind == "shop" then
@@ -1783,6 +1809,35 @@ function Boot.start()
 		resetKeys = function()
 			Input.reset()
 		end,
+		-- 일일 의뢰: 서버가 준 상태 · 받기와 내기(서버가 정한다 — 게시판 앞이어야 한다)
+		daily = function()
+			return state.daily
+		end,
+		dailyDo = function(action: string, region: string, i: number)
+			local ok, res = pcall(Net.Invoke, "Daily", action, region, i)
+			if not ok or not res then
+				return
+			end
+			state.daily = res.view
+			if res.reward then
+				Music.jingle("complete")
+				if state.fx then
+					state.fx:float(Format.fill(Daily.WORDS.got, { name = res.reward.name }), state.body.x, state.body.y - 84, Effects.GOLD, 2.2)
+					if res.reward.dust > 0 then
+						state.fx:float(Format.fill(Daily.WORDS.bonus, { n = res.reward.dust }), state.body.x, state.body.y - 98, Effects.MINT, 2.6)
+					end
+				end
+			elseif not res.ok and res.why and state.fx then
+				state.fx:float(res.why, state.body.x, state.body.y - 46, Effects.MINT, 1.6)
+			end
+			if state.drawQuests then
+				state.drawQuests()
+			end
+		end,
+		-- 소리 설정을 바꿨다: 계정에 저장한다
+		saveSound = function()
+			Net.FireServer("Sound", Music.export())
+		end,
 	})
 	-- 지금 쓰는 배치: 스마트폰 단추가 켜져 있으면 단추 배치(touchSlots), 아니면 PC의 퀵슬롯(slots). 스킬 창 · 가방에서 놓는 것도 지금 쓰는 쪽에 놓인다
 	local quickHooks = {
@@ -1848,6 +1903,8 @@ function Boot.start()
 	Windows.register("stat", StatWindow)
 	Windows.register("skill", SkillWindow)
 	Windows.register("keys", KeysWindow)
+	Windows.register("sound", SoundWindow)
+	Windows.register("daily", DailyWindow) -- 일일 의뢰(마을의 의뢰 게시판 앞에서 ↑)
 	Windows.register("bag", BagWindow)
 	Windows.register("equip", EquipWindow)
 	Windows.register("shop", ShopWindow)
@@ -1927,14 +1984,42 @@ function Boot.start()
 		end
 	end
 	-- 퀘스트가 바뀌면: 주민 머리 위의 표시 · 알리미 · 열려 있는 창
+	state.fetchDaily = function()
+		task.spawn(function()
+			local ok, res = pcall(Net.Invoke, "Daily", "view")
+			if ok and res and res.view then
+				state.daily = res.view
+				if state.drawQuests then
+					state.drawQuests()
+				end
+			end
+		end)
+	end
+	Net.OnClient("DailyView", function(view)
+		state.daily = view
+		if state.drawQuests then
+			state.drawQuests()
+		end
+	end)
+	state.fetchDaily() -- 들어온 캐릭터의 일일 의뢰(알리미 · 게시판 위의 표시)
 	state.drawQuests = function()
 		local level = if state.me then state.me.level else 1
 		if state.view then
 			state.view:setMarks(function(npcId: string)
+				-- 의뢰 게시판: 낼 의뢰가 있으면 「?」 · 안 받은 의뢰가 있으면 「!」
+				for region, board in Daily.DATA.boards do
+					if board.npc == npcId and board.scene == state.sceneKey then
+						return if level >= Daily.FROM and state.daily then Daily.mark(state.daily.boards[region]) else nil
+					end
+				end
 				return Quests.mark(state.quests, level, npcId, SCENES.scenes[state.sceneKey].region)
 			end)
+			-- 그 퀘스트를 받아야 열리는 문(달의 사당 안의 「사당 지하」 — 메인 「불타는 마을」): 받기 전에는 보이지 않는다
+			state.view:setPortals(function(p)
+				return p.need == nil or Quests.reached(state.quests, p.need)
+			end)
 		end
-		QuestHud.set(state.quests, state.npcNames, level)
+		QuestHud.set(state.quests, state.npcNames, level, Daily.tracked(state.daily))
 		drawSpots() -- 맵에 놓인 것 앞에서 ↑를 누르는 퀘스트의 자리
 		Windows.refresh(state.me)
 	end
@@ -2027,7 +2112,7 @@ function Boot.start()
 			end
 			table.insert(items, { id = "@arrange", name = "단추 배치" }) -- 스킬 · 물약을 단추에 놓는다
 			table.insert(items, { id = "@chars", name = "캐릭터 선택" }) -- 저장하고 캐릭터 고르기 화면으로 돌아간다
-			table.insert(items, { id = "@sound", name = if Music.on then "소리 끄기" else "소리 켜기" })
+			table.insert(items, { id = "sound", name = "소리 설정" }) -- 배경 음악 · 효과음의 크기
 				local w, rowH = 240, 40
 			local h = #items * rowH + 12
 			local holder = Stage.place(Stage.ui, "TouchMenu", "tc", 480 - w / 2, 60, w, h)
@@ -2041,8 +2126,6 @@ function Boot.start()
 						Touch.arrange(true)
 					elseif win.id == "@chars" then
 						state.toSelect()
-					elseif win.id == "@sound" then
-						Music.toggle()
 					else
 						Windows.toggle(win.id)
 					end
@@ -2109,6 +2192,8 @@ function Boot.start()
 			end,
 		})
 		adopt(got)
+		state.daily = nil
+		state.fetchDaily() -- 바꿔 들어온 캐릭터의 일일 의뢰
 		Windows.resetLevel(got.self.level)
 		Input.reset()
 		Input.import(got.self.keys)

@@ -2,6 +2,8 @@
 --  가방이나 장비 창에서 「올리기」로 장비를 올리면: 지금 별과 다음 별 · 성공 / 실패 / 파괴 % · 실패하면 그대로인지 떨어지는지 · 드는 달가루와 정수.
 --  둘째로 올린 장비는 「재료」다: 같은 부위면 별 옮기기(재료의 별을 하나 낮춰 옮기고 재료는 사라진다), 올린 것이 부서졌고 같은 장비면 되살리기.
 --  확률과 값은 shared/lune/sim/items.luau의 enhanceInfo(공방의 강화 표). 결과는 서버가 정한다(Item → ItemDone).
+--  드는 것 두 줄(달가루 · 정수)은 앞에 그 그림이 붙는다(가방의 지갑과 같은 그림 — 사용자 2026-10-13: "강화창이랑 퀘스트 보상에 아이템그림 들어가야합니다.").
+--   올린 장비와 재료는 처음부터 칸에 그림으로 보였다.
 --  화면 오른쪽의 옆 판(ui/windows.luau).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
@@ -13,13 +15,17 @@ local ItemCell = require(script.Parent.itemCell)
 local C = Ui.COLOR
 local W = 300
 local LINE = 16
+local COST = 20 -- 드는 것(달가루 · 정수)의 줄: 앞에 그림(18)이 붙어 글만 있는 줄보다 높다
+local COST_TX = 21 -- 그 줄의 글이 시작하는 자리(그림 18 + 3)
 
 local ForgeWindow = {}
+ForgeWindow.COST_ICONS = { "dust", "orb" } -- 드는 것 두 줄의 그림: 달가루 · 정수(ForgeWindow.lines의 넷째 · 다섯째 줄)
+ForgeWindow.COST, ForgeWindow.COST_TX = COST, COST_TX
 ForgeWindow.RESULT = { ok = { "붙었다!", C.green }, fail = { "실패 — 별은 그대로다", C.dim }, drop = { "실패 — 한 단계 떨어졌다", C.red }, boom = { "부서졌다 — 흔적이 남았다", C.red } }
 
 function ForgeWindow.size(): (number, number)
 	local S = ItemCell.size()
-	return W, S + 12 + 5 * LINE + 8 + Ui.M.button + 8 + 16 + 14 + S + 4
+	return W, S + 12 + 3 * LINE + 2 * COST + 8 + Ui.M.button + 8 + 16 + 14 + S + 4
 end
 
 local function pct(v: number): string
@@ -75,10 +81,18 @@ function ForgeWindow.build(body: Frame, ctx, w: number, _h: number)
 	local name = Ui.text(body, "", S + 10, math.floor((S - 30) / 2), w - S - 10, { font = "body", lines = 2, line = 16 })
 	local lines = {}
 	local y = S + 12
-	for i = 1, 5 do
+	for i = 1, 3 do
 		lines[i] = Ui.text(body, "", 0, y + (i - 1) * LINE, w, { color = if i == 1 then C.gold else C.text })
 	end
-	y += 5 * LINE + 8
+	y += 3 * LINE
+	-- 드는 것 두 줄: [달가루 그림] 달가루 120 (가진 것 505) · [정수 그림] 정수 2 (가진 것 0) — 들지 않는 줄은 그림도 숨긴다
+	local costIcons = {}
+	for i, icon in ForgeWindow.COST_ICONS do
+		local cy = y + (i - 1) * COST
+		costIcons[i] = Ui.smallIcon(body, icon, 0, cy)
+		lines[3 + i] = Ui.text(body, "", COST_TX, cy + 4, w - COST_TX)
+	end
+	y += 2 * COST + 8
 	-- 단추 한 줄: 강화 · 파괴 막기 · 상점
 	local go = Ui.button(body, "강화", 0, y, 84, function()
 		if ui.forgeTarget then
@@ -131,6 +145,9 @@ function ForgeWindow.build(body: Frame, ctx, w: number, _h: number)
 			for _, line in lines do
 				line:set("")
 			end
+			for _, icon in costIcons do
+				icon.Visible = false
+			end
 			go:setEnabled(false)
 			shield.frame.Visible = false
 			result:set("")
@@ -142,8 +159,12 @@ function ForgeWindow.build(body: Frame, ctx, w: number, _h: number)
 		name:color(ItemCell.color(it))
 		local me = ctx.me()
 		local info = Items.enhanceInfo(it, guard, me ~= nil and me.forged ~= true and it.star == 0) -- 첫 강화(별이 없는 장비의 첫 별)는 공짜로 반드시 붙는다
-		for i, text in ForgeWindow.lines(it, info, bag) do
+		local texts = ForgeWindow.lines(it, info, bag)
+		for i, text in texts do
 			lines[i]:set(text)
+		end
+		for i, icon in costIcons do
+			icon.Visible = texts[3 + i] ~= ""
 		end
 		go:setEnabled(info.can and bag.dust >= info.dust and bag.essence >= info.essence)
 		shield.frame.Visible = info.can and info.guard == true
