@@ -51,6 +51,10 @@ function QuestWindow.rewardParts(reward, level: number, class: string)
 	if reward.potions > 0 then
 		table.insert(parts, { icon = Items.potionFor(level).icon, text = ("x%d"):format(reward.potions) })
 	end
+	if (reward.scrolls or 0) > 0 then
+		local scroll = Items.goods("scroll_return")
+		table.insert(parts, { icon = if scroll then scroll.icon else "scroll", text = ("x%d"):format(reward.scrolls) })
+	end
 	if reward.gear then
 		local it = Items.make(reward.gear.slot, reward.gear.stage, Items.data.NORMAL, class)
 		table.insert(parts, { icon = ItemCell.icon(it), text = Items.name(it) })

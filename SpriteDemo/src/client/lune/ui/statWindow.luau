@@ -117,6 +117,7 @@ function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 	local auto = Ui.button(body, "자동으로 찍기", 0, y, w, function()
 		ctx.send("StatAuto")
 	end, { main = true })
+	StatWindow.autoFrame = auto.frame -- 튜토리얼(꿈)의 「능력치 찍기」 미션에서 반짝인다(2026-10-14)
 	y += Ui.M.button + 10
 	Ui.line(body, 0, y, w)
 	-- 전투력(왼쪽)과 체력(오른쪽)을 한 줄에

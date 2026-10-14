@@ -10,6 +10,7 @@ local BossPat = require(lune.sim.bosspat) -- 스토리 보스: 연속기의 시�
 local Sprite = require(script.Parent.sprite)
 local Stage = require(script.Parent.stage) -- 불티(한 점짜리 틀)
 local Ui = require(script.Parent.ui.ui)
+local HpBar = require(script.Parent.ui.hpBar) -- 체력 띠의 효과(닳은 자리가 밝게 남았다 줄어든다 · 번쩍임 — 플레이어의 체력 바와 같은 셈)
 local Overlay = require(script.Parent.overlay)
 local Layout = require(lune.ui.layout)
 
@@ -56,6 +57,8 @@ function MobsView.new(layer: Frame, room, tagLayer: Frame)
 			pat = 0, -- 스토리 보스가 지금 하는 패턴의 차례(서버가 보낸다 — 없으면 0)
 			alt = 0, -- 지금 땅에서 뜬 높이(나는 몬스터)
 			bar = bar,
+			barFx = HpBar.attach(bar, BAR_W, BAR_H), -- 사용자 2026-10-13: "몬스터 체력바도  유저 체력바처럼 고도화 되어야합니다."
+			fresh = false, -- 띠를 처음으로 돌려 두었는가(다시 나타날 때 한 번)
 			tag = tag,
 			x = 0,
 			fromX = 0,
@@ -239,6 +242,8 @@ local function altOf(m, t: number, now: number): number
 end
 
 function MobsView:update(now: number)
+	local dt = math.clamp(now - (self.now or now), 0, 0.1)
+	self.now = now
 	for _, m in self.mobs do
 		local k = math.clamp((now - m.at) / LERP, 0, 1)
 		m.x = m.fromX + (m.toX - m.fromX) * k
@@ -359,14 +364,32 @@ function MobsView:update(now: number)
 		-- 체력 띠와 이름표: 다친 졸개에게만
 		local alive = m.state ~= "gone" and m.state ~= "dead" and m.state ~= "spawn"
 		m.hurt = alive and m.hp < m.info.maxHp and not m.def.story -- 스토리 보스의 체력은 화면 위 가운데의 넓은 바에 뜬다(bossView.luau) — 머리 위의 띠 · 발밑의 이름표는 없다
-		m.bar.frame.Visible = m.hurt
-		m.tag.Frame.Visible = m.hurt -- 자리는 boot가 정한다(이름표끼리 겹치지 않게 쌓는다 — tags())
-		if m.hurt then
-			m.bar.frame.Position = UDim2.fromOffset(Overlay.x(m.x) - BAR_W / 2, Overlay.y(m.info.y - math.max(BAR_UP, MobsView.topOf(m) + 7))) -- 큰 몬스터 · 떠 있는 몬스터는 머리 위로 올린다
-			if m.shownHp ~= m.hp then
-				m.shownHp = m.hp
-				m.bar:set(m.hp / m.info.maxHp)
+		-- 띠의 효과: 맞으면 닳은 자리가 밝게 남았다가 따라 줄어들고 띠가 희게 번쩍인다(플레이어의 체력 바와 같다).
+		--  없는 동안 · 나타나는 동안에는 처음으로 돌려 둔다(가득 찬 채로 — 다시 나타났을 때 「차오르는」 효과가 뜨지 않게, 첫 타에도 닳은 자리가 보이게)
+		if m.state == "gone" or m.state == "spawn" then
+			if not m.fresh then
+				m.fresh = true
+				m.barFx:reset()
+				m.barFx:set(1, m.info.maxHp)
+				m.shownHp = m.info.maxHp
 			end
+		else
+			m.fresh = false
+			if m.shownHp ~= m.hp then
+				if m.shownHp == -1 then
+					m.barFx:reset() -- 처음 본 몬스터(이미 다쳐 있을 수 있다): 효과 없이 그대로
+				end
+				m.shownHp = m.hp
+				m.barFx:set(math.max(0, m.hp) / m.info.maxHp, math.max(0, m.hp))
+			end
+			m.barFx:step(dt)
+		end
+		-- 쓰러뜨린 마지막 타: 띠가 비워지는 것이 보이게, 효과가 끝날 때까지는 띠를 남겨 둔다(쓰러지는 동안)
+		local last = m.state == "dead" and not m.def.story and m.barFx:busy()
+		m.bar.frame.Visible = m.hurt or last
+		m.tag.Frame.Visible = m.hurt -- 자리는 boot가 정한다(이름표끼리 겹치지 않게 쌓는다 — tags())
+		if m.hurt or last then
+			m.bar.frame.Position = UDim2.fromOffset(Overlay.x(m.x) - BAR_W / 2, Overlay.y(m.info.y - math.max(BAR_UP, MobsView.topOf(m) + 7))) -- 큰 몬스터 · 떠 있는 몬스터는 머리 위로 올린다
 		end
 	end
 end

@@ -7,6 +7,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local CLASSES = require(lune.data["classes.generated"])
+local Market = require(lune.sim.market) -- 경매장에 맡긴 것의 꼴
 local NAMES = require(lune.data["names.generated"]) -- 이름의 규칙(공방의 js/lune/design/names.js)
 local SOUND = require(lune.data["ui.generated"]).layout.sound -- 소리 설정의 칸 수(steps) · 처음 크기(start)
 
@@ -45,7 +46,8 @@ end
 
 function Account.new()
 	-- spent = 이 계정이 게임에 쓴 로벅스(명예의 전당의 후원 판) · sound = 소리 설정
-	return { next = 1, last = false, chars = {}, store = false, broken = {}, spent = 0, sound = Account.soundDefault() }
+	-- market = 경매장에 맡긴 것(올린 물건 · 아직 찾지 않은 것 — sim/market.luau). 창고처럼 계정의 캐릭터들이 같이 본다
+	return { next = 1, last = false, chars = {}, store = false, broken = {}, spent = 0, sound = Account.soundDefault(), market = Market.newBook(), tutDone = false } -- tutDone = 이 계정의 캐릭터가 튜토리얼 「달빛 꿈」을 한 번 끝냈다(그 뒤의 새 캐릭터는 건너뛸 수 있다)
 end
 
 -- 이름을 견줄 때의 꼴(영문은 소문자로 — Moon과 moon은 같은 이름이다)
@@ -395,7 +397,7 @@ function Account.pack(acct)
 	for _, raw in acct.broken do
 		table.insert(chars, raw)
 	end
-	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, spent = acct.spent, sound = acct.sound }
+	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, spent = acct.spent, sound = acct.sound, market = Market.packBook(acct.market), tutDone = acct.tutDone == true }
 end
 
 function Account.unpack(data: any)
@@ -420,6 +422,14 @@ function Account.unpack(data: any)
 	acct.store = if typeof(data.store) == "table" then data.store else false
 	acct.spent = if whole(data.spent, 0, 9e12) then data.spent else 0
 	acct.sound = Account.cleanSound(data.sound) or Account.soundDefault() -- 소리 설정이 생기기 전의 저장 = 처음 크기
+	acct.market = Market.unpackBook(data.market) -- 경매장이 생기기 전의 저장 = 맡긴 것 없음
+	-- 튜토리얼을 한 번 끝냈는가: 저장된 표시, 또는 튜토리얼이 생기기 전(2026-10-14)의 캐릭터 · 꿈에서 깬 캐릭터가 있다
+	acct.tutDone = data.tutDone == true
+	for _, c in acct.chars do
+		if typeof(c.hero) == "table" and (typeof(c.hero.tut) ~= "table" or c.hero.tut.done == true) then
+			acct.tutDone = true
+		end
+	end
 	return acct
 end
 

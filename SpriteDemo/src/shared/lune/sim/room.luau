@@ -427,27 +427,28 @@ end
 --  그런 사람이 오면 하나씩 차례로 나타나고(쓰러뜨리면 여느 졸개처럼 다시 나온다 — 밀려드는 병사), 다 잡았거나 그런 사람이 없으면 모두 사라진다.
 --  사용자 2026-10-13: "사당지하 개발 해야합니다." — 퀘스트를 끝낸 뒤의 지하는 병사가 없는 조용한 방이다(비석을 읽을 수 있다)
 Room.STORY_STAGGER = 0.5 -- 졸개가 하나씩 나타나는 간격(초)
+-- 졸개는 종류마다 따로 본다: 정예 검병은 「불타는 마을」을 하는 사람이, 낡은 수련 인형은 2차 전직을 하는 사람이 있을 때만(2026-10-13)
 function Room:stepStory(heroes)
-	local want = false
-	for _, h in heroes do
-		for _, mob in self.mobs do
-			if not mob.def.story and not mob.add and Quests.wantsKill(h.quests, mob.kind, self.key) then
-				want = true
-				break
+	local want = {}
+	for _, mob in self.mobs do
+		if not mob.def.story and not mob.add and want[mob.kind] == nil then
+			want[mob.kind] = false
+			for _, h in heroes do
+				if Quests.wantsMob(h.quests, mob.kind, self.key) then
+					want[mob.kind] = true
+					break
+				end
 			end
 		end
-		if want then
-			break
-		end
 	end
-	local n = 0
+	local n = {}
 	for _, mob in self.mobs do
 		if not mob.def.story and not mob.add then
-			n += 1
-			if want and mob.away then
+			n[mob.kind] = (n[mob.kind] or 0) + 1
+			if want[mob.kind] and mob.away then
 				mob.away = false
-				mob.state, mob.t, mob.respawn = "gone", 0, Room.STORY_STAGGER * n
-			elseif not want and not mob.away then
+				mob.state, mob.t, mob.respawn = "gone", 0, Room.STORY_STAGGER * n[mob.kind]
+			elseif not want[mob.kind] and not mob.away then
 				mob.away = true
 				mob.state, mob.t, mob.target = "gone", 0, nil
 				mob.bind, mob.bindImm, mob.stun, mob.rend, mob.cracks, mob.marks = 0, 0, 0, 0, 0, nil

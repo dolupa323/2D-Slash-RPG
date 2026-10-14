@@ -1,4 +1,4 @@
--- 파티 창(O · Lv.10부터) — 위에 파티원(넷까지: 이름 · 레벨 · 파티장 표시)과 「나가기」, 아래에 같은 맵에 있는 사람들과 「초대」.
+-- 파티 창(O · 처음부터 — 2026-10-13에 Lv.10의 문턱을 없앴다) — 위에 파티원(넷까지: 이름 · 레벨 · 파티장 표시)과 「나가기」, 아래에 같은 맵에 있는 사람들과 「초대」.
 --  초대 · 나가기는 서버에 부탁한다(Party). 파티 찾기(멀리 있는 사람과 맺기)는 아직 없다. 화면 오른쪽의 옆 판(ui/windows.luau).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune

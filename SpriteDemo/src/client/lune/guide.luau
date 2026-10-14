@@ -19,6 +19,8 @@ local hintBox: Frame, bannerBox: Frame
 local hint, title, sub
 local hintNow = ""
 local bannerLeft = 0
+local queue = {} -- 기다리는 큰 알림들 { head, line, seconds }(앞의 것이 사라지면 차례로 뜬다)
+Guide.QUEUE_MAX = 4
 
 function Guide.init(root: Frame)
 	hintBox = Stage.place(root, "GuideHint", "tc", (Stage.REF_W - Guide.HINT_W) / 2, Guide.HINT_Y, Guide.HINT_W, 40)
@@ -41,11 +43,31 @@ function Guide.setHint(text: string?)
 end
 
 -- 큰 알림: 제목(노랑) + 한 줄. seconds 뒤에 사라진다
-function Guide.banner(head: string, line: string?, seconds: number?)
+--  앞의 알림이 아직 떠 있으면 그 뒤에 줄을 세운다(덮어쓰지 않는다 — 같은 순간에 둘이 오면 뒤의 것만 보였다). 같은 제목이 이미 떠 있거나 기다리는 중이면 다시 넣지 않는다
+local function show(head: string, line: string?, seconds: number?)
 	title:set(head)
 	sub:set(line or "")
 	bannerLeft = seconds or 4
 	bannerBox.Visible = true
+	Guide.now = head
+end
+function Guide.banner(head: string, line: string?, seconds: number?)
+	if bannerLeft > 0 then
+		if Guide.now == head then
+			show(head, line, seconds) -- 같은 알림이 다시 왔다: 글과 시간을 새로
+			return
+		end
+		for _, q in queue do
+			if q[1] == head then
+				return
+			end
+		end
+		if #queue < Guide.QUEUE_MAX then
+			table.insert(queue, { head, line, seconds })
+		end
+		return
+	end
+	show(head, line, seconds)
 end
 
 function Guide.step(dt: number)
@@ -53,11 +75,18 @@ function Guide.step(dt: number)
 		bannerLeft -= dt
 		if bannerLeft <= 0 then
 			bannerBox.Visible = false
+			Guide.now = nil
+			local nextOne = table.remove(queue, 1)
+			if nextOne then
+				show(nextOne[1], nextOne[2], nextOne[3])
+			end
 		end
 	end
 end
 
 function Guide.clear()
+	table.clear(queue)
+	Guide.now = nil
 	bannerLeft = 0
 	bannerBox.Visible = false
 	Guide.setHint(nil)

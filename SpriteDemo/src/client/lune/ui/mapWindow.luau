@@ -56,10 +56,8 @@ end
 
 -- 점줄: 표시에서 표시로 곧게, 다섯 점마다 한 점
 local function dots(parent: Instance, a, b, color: Color3, name: string)
-	local dx, dy = b[1] - a[1], b[2] - a[2]
-	local n = math.max(1, math.floor(math.sqrt(dx * dx + dy * dy) / 5))
-	for k = 1, n - 1 do
-		Ui.box(parent, math.floor(a[1] + dx * k / n) - 1, math.floor(a[2] + dy * k / n) - 1, 2, 2, color).Name = name
+	for _, d in WM.linkDots(a[1], a[2], b[1], b[2]) do
+		Ui.box(parent, d[1], d[2], 2, 2, color).Name = name
 	end
 end
 
@@ -165,7 +163,7 @@ function MapWindow.build(body: Frame, ctx, w: number, _h: number)
 		local mine = if sceneRegion == rid then sceneNode else nil
 		local marks = WM.marks(rid, ctx.quests() or {}, level)
 		local bestText, bestNode = WM.recommendShort(rid, level)
-		local card = WM.goalCard(ctx.quests() or {}, level, ctx.scene())
+		local card = WM.goalCard(ctx.quests() or {}, level, ctx.scene(), if ctx.navi then ctx.navi() else nil, if ctx.daily then ctx.daily() else nil)
 		local path, goal = if card then card.route else nil, if card then card.goal else nil
 		for _, t in tabs do
 			t:setOn(t.region == rid)
@@ -175,6 +173,14 @@ function MapWindow.build(body: Frame, ctx, w: number, _h: number)
 			local from, to = A.at[ex.node], A.out[ex.to]
 			if from and to then
 				dots(group, from, to, C.accent, "OutLink")
+			end
+		end
+		-- 이어진 곳끼리의 줄(문 하나로 오가는 두 곳 — 사용자 2026-10-13: "월드맵이랑 실제 포탈이랑 안맞잖아요 … 한참 헤멘다구요"): 흐린 점줄로 늘 보인다.
+		--  그림에 그려진 길만으로는 어느 곳이 어느 곳과 이어지는지 알 수 없었다(가지로 돌린 맵이 줄기의 길 위에 있는 것처럼 보였다)
+		for _, link in region.links do
+			local a, b = A.at[link[1]], A.at[link[2]]
+			if a and b then
+				dots(group, a, b, C.dim, "Link")
 			end
 		end
 		-- ⑤ 가는 길: 이 지역을 지나는 구간마다 금빛 점줄(다른 지역으로 넘어가는 구간은 그 지역의 표시까지)
@@ -232,7 +238,7 @@ function MapWindow.build(body: Frame, ctx, w: number, _h: number)
 			end
 			return a.at < b.at
 		end)
-		local places = WM.placeLabels(order)
+		local places = WM.placeLabels(order, WM.lines(rid)) -- 이어진 줄을 가리지 않는 자리에
 		for _, p in pins do
 			local x, y, r = p.x, p.y, p.r
 			if p.id == bestNode then
@@ -304,7 +310,7 @@ function MapWindow.build(body: Frame, ctx, w: number, _h: number)
 		for _, n in WM.region(rid).nodes do
 			table.insert(parts, marks[n.id] or "-")
 		end
-		local card = WM.goalCard(ctx.quests() or {}, level, ctx.scene())
+		local card = WM.goalCard(ctx.quests() or {}, level, ctx.scene(), if ctx.navi then ctx.navi() else nil, if ctx.daily then ctx.daily() else nil)
 		table.insert(parts, if card then card.title .. card.text else "")
 		local sig = table.concat(parts, "|")
 		if sig ~= last then

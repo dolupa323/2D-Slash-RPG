@@ -7,6 +7,7 @@ local Items = require(script.Parent.items)
 local Bag = require(script.Parent.bag)
 local Quests = require(script.Parent.quests)
 local Daily = require(script.Parent.daily)
+local Tutorial = require(script.Parent.tutorial)
 local Kit = require(script.Parent.kit) -- 1차의 온오프 사출기 · 핵심 장치 · 패시브
 local Buffs = require(script.Parent.buffs) -- 2~4차의 버프
 local Passives = require(script.Parent.passives) -- 2~4차의 패시브
@@ -204,7 +205,7 @@ function Hero.new(id: any, class: string)
 		slots = Quick.start(CLASSES.classes[class].skills), -- 퀵슬롯: 칸마다 스킬 · 소비 아이템의 이름표 · false(빈 칸) — shared/lune/ui/quick.luau
 		-- 스마트폰의 단추 배치: 같은 열두 칸이지만 PC의 것과 따로 둔다 — PC에서는 손에 익은 키(E · D …)에, 폰에서는 큰 단추에 놓고 싶은 것이 서로 다르다(2026-10-08).
 		--  한쪽에서 바꿔도 다른 쪽은 그대로다. 처음 차림은 같다(물약 · 사냥기 · 보스기 · 이동기)
-		tslots = Quick.start(CLASSES.classes[class].skills),
+		tslots = Quick.touchStart(CLASSES.classes[class].skills), -- 스마트폰의 단추 배치: 단추가 없는 칸 1의 물약은 칸 5로(ui/quick.luau의 touchFix)
 		money = 0,
 		forged = false, -- 강화를 해 본 적이 있는가(첫 강화는 달가루 없이 반드시 붙는다 — sim/bag.luau의 Bag.enhance)
 		resets = 0, -- 공짜로 스킬을 되돌릴 수 있는 횟수(전직할 때마다 한 번 — 쌓이지 않는다. Hero.freeReset)
@@ -227,6 +228,7 @@ function Hero.new(id: any, class: string)
 	Bag.give(h, Items.potionFor(1).id, RULES.startPotions) -- 처음 받는 물약(가방의 소비 탭 첫 칸)
 	h.quests = {} -- 퀘스트의 상태(sim/quests.luau의 book)
 	h.daily = {} -- 일일 의뢰의 상태(sim/daily.luau — 지역마다 그날의 의뢰들)
+	h.tut = Tutorial.new() -- 튜토리얼 「달빛 꿈」(sim/tutorial.luau): 새 캐릭터는 꿈에서 시작한다(2026-10-14). 되살린 · 자란 캐릭터는 마친 것으로 고쳐 둔다
 	Quests.start(h.quests, h.level) -- (저절로 받는 퀘스트는 이제 없다 — 첫 퀘스트도 사제에게 말을 걸어 받는다)
 	h.maxHp = maxHpOf(h)
 	h.hp = h.maxHp
@@ -638,10 +640,15 @@ end
 
 -- 퀘스트를 돌려주고 보상을 받는다. 돌려주는 것: 보상, 오른 레벨 수(안 됐으면 nil과 까닭)
 --  모은 물건은 가방에서 빠진다. 보상의 물약(내 레벨에 쓸 수 있는 가장 좋은 물약)이 들어갈 칸이 없으면 돌려주지 못한다
+Hero.SCROLL = "scroll_return" -- 귀환 주문서(퀘스트의 보상으로 주는 것)
 function Hero.questDone(h, id: any)
 	local def = Quests.def(id)
 	local potion = Items.potionFor(h.level)
 	if def and def.reward.potions > 0 and Quests.isReady(h.quests, id) and Bag.room(h, potion.id) < def.reward.potions then
+		return nil, "가방의 소비 칸이 모자란다"
+	end
+	-- 보상의 귀환 주문서(첫머리의 퀘스트 — 사용자 2026-10-13: "완전 초반부 퀘스트에서 마을귀환주문서를 뿌려야합니다")가 들어갈 칸이 없으면 돌려주지 못한다
+	if def and (def.reward.scrolls or 0) > 0 and Quests.isReady(h.quests, id) and Bag.room(h, Hero.SCROLL) < def.reward.scrolls then
 		return nil, "가방의 소비 칸이 모자란다"
 	end
 	-- 보상의 장비(전직할 때 받는 무기)가 들어갈 칸이 없으면 돌려주지 못한다
@@ -658,6 +665,9 @@ function Hero.questDone(h, id: any)
 	h.money += reward.money
 	if reward.potions > 0 then
 		Bag.give(h, potion.id, reward.potions)
+	end
+	if (reward.scrolls or 0) > 0 then
+		Bag.give(h, Hero.SCROLL, reward.scrolls)
 	end
 	if reward.gear then
 		Bag.add(h, Items.make(reward.gear.slot, reward.gear.stage, Items.NORMAL, h.class)) -- 보상의 장비는 내 직업의 것 · 성능은 보통
@@ -742,7 +752,7 @@ function Hero.setSlots(h, list: any, touch: boolean?): boolean
 		return false
 	end
 	if touch then
-		h.tslots = slots
+		h.tslots = Quick.touchFix(slots) -- 단추가 없는 칸(칸 1)에 놓인 것은 단추가 있는 빈 칸으로 — 전에 저장해 둔 배치도 들어올 때 이 길로 옮겨진다
 	else
 		h.slots = slots
 	end
@@ -784,6 +794,7 @@ function Hero.pack(h)
 		bag = Bag.pack(h),
 		quests = Quests.pack(h.quests),
 		daily = Daily.pack(h.daily),
+		tut = Tutorial.pack(h.tut),
 	}
 end
 
@@ -813,6 +824,7 @@ function Hero.unpack(id: any, data: any)
 	local oldBag = Bag.unpack(h, data.bag) -- 장비가 생기기 전에 저장된 캐릭터는 처음 차림을 받는다
 	h.quests = Quests.unpack(data.quests)
 	h.daily = Daily.unpack(data.daily) -- 일일 의뢰가 생기기 전의 저장 = 빈 것(게시판에 가면 오늘의 의뢰를 받는다)
+	h.tut = Tutorial.unpack(data.tut) -- 튜토리얼이 생기기 전의 캐릭터(2026-10-14 이전) = 마친 것
 	Quests.jobsDone(h.quests, h.job) -- 이미 닿은 차수의 전직 퀘스트는 끝낸 것으로(다시 받지 않게)
 	autoJobs(h)
 	Quests.start(h.quests, h.level) -- 퀘스트가 생기기 전에 저장된 캐릭터도 첫 메인을 받는다

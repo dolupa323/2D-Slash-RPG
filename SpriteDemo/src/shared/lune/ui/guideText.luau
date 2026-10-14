@@ -4,6 +4,7 @@
 --   첫 사냥 퀘스트 「마을 밖의 그림자」를 돌려주면 그 뒤로는 어떤 안내도 뜨지 않는다. 능력치 · 스킬을 찍으라는 안내는 처음 점수를 받은 Lv.2에서만 뜬다(그 뒤의 레벨업에서는 뜨지 않는다).
 --  그리는 것은 client/lune/guide.luau. 자동 검사(27_lune_start)가 모든 안내 글이 칸(W x LINES줄)에 들어가는지 본다.
 local Quests = require(script.Parent.Parent.sim.quests)
+local COMBAT = require(script.Parent.Parent.data["combat.generated"])
 
 local Guide = {}
 Guide.W, Guide.LINES = 420, 2 -- 안내 글의 칸(화면 틀의 고운 격자의 점 · 작은 글씨)
@@ -13,13 +14,30 @@ Guide.UNTIL = 5 -- 이 레벨이 지나면 조작 안내는 뜨지 않는다(퀘
 --  { level, quests(book), scene(장면 이름표), touch(스마트폰 단추인가), nearNpc(가까이 선 주민의 id), drop(주울 것이 발밑에 있는가), hpShare(체력 0~1), potions(가방의 물약 수),
 --    ap · sp(안 찍은 점수), key = function(하는 일) → 키 이름, slotOf = function(갈래 "mob" · "boss" · "move" · "potion") → 그것이 놓인 칸의 키 이름과 이름(없으면 nil) }
 --  돌려주는 것: 안내 글(없으면 nil). 화면을 모르는 셈이라 자동 검사가 그대로 부른다
+-- 튜토리얼이 따라가는 두 퀘스트: 첫 퀘스트(「첫 기술」)와 줄에서 그 바로 다음 것(첫 사냥) — 자료에서 읽는다(줄의 차례가 바뀌어도 따라간다)
+local FIRST = Quests.FIRST.quest
+local SECOND = nil
+for _, def in Quests.list do
+	if def.after == FIRST and def.playable then
+		SECOND = def
+	end
+end
+local PREY = "몬스터" -- 첫 사냥에서 잡는 몬스터의 이름
+do
+	local step = SECOND and SECOND.steps[1]
+	local mob = step and step.mob and COMBAT.mobs[step.mob]
+	if mob then
+		PREY = mob.name
+	end
+end
+
 function Guide.pick(s): string?
 	if s.level > Guide.UNTIL then
 		return nil
 	end
 	local book = s.quests or {}
 	local key = s.key
-	local first, second = book.r1m1, book.r1m2
+	local first, second = book[FIRST], if SECOND then book[SECOND.id] else nil
 	-- 튜토리얼(첫 기술 → 첫 사냥)이 끝났으면 더 가르치지 않는다
 	if second and second.done then
 		return nil
@@ -53,7 +71,7 @@ function Guide.pick(s): string?
 			return if s.touch then "「메뉴」 → 스킬: 스킬 포인트로 스킬을 올린다(「추천대로 찍기」)" else ("%s 키: 스킬 창 — 스킬 포인트로 스킬을 올린다(「추천대로 찍기」)"):format(key("win:skill"))
 		end
 	end
-	-- ⑤ 첫 사냥 「마을 밖의 그림자」: 받기 전에는 샛별에게, 받은 뒤에는 문 밖으로, 사냥터에서는 기술의 키
+	-- ⑤ 첫 사냥(줄에서 첫 퀘스트 바로 다음 것 — 지금은 「등불 심지」): 받기 전에는 샛별에게, 받은 뒤에는 문 밖으로, 사냥터에서는 기술의 키
 	if first and first.done and not (second and second.done) then
 		if not second then
 			if s.scene == "in_shrine" then
@@ -63,14 +81,14 @@ function Guide.pick(s): string?
 					then "「점프」로 뛴다 · 조이스틱 아래 + 「점프」로 내려간다 — 샛별은 맨 아래 길의 왼쪽"
 					else ("%s 키로 뛴다 · %s + %s 키로 내려간다 — 샛별은 맨 아래 길의 왼쪽"):format(key("jump"), key("down"), key("jump"))
 			end
-		elseif not Quests.isReady(book, "r1m2") then
-			if s.scene == "r1a1" then
+		elseif SECOND and not Quests.isReady(book, SECOND.id) then
+			if s.scene == SECOND.scene then
 				local mobKey, mobName = s.slotOf("mob")
 				local moveKey, moveName = s.slotOf("move")
 				if s.touch then
-					return "오른쪽 아래의 기술 단추로 수습 검병을 쓰러뜨린다"
+					return ("오른쪽 아래의 기술 단추로 %s을 쓰러뜨린다"):format(PREY)
 				elseif mobKey and moveKey then
-					return ("수습 검병을 쓰러뜨린다 — %s 키: %s · %s 키: %s"):format(mobKey, mobName, moveKey, moveName)
+					return ("%s을 쓰러뜨린다 — %s 키: %s · %s 키: %s"):format(PREY, mobKey, mobName, moveKey, moveName)
 				end
 			elseif s.scene == "town" then
 				return if s.touch then "마을 왼쪽 끝의 문 앞에서 「들어가기」 단추: 마을 어귀로 나간다" else ("마을 왼쪽 끝의 문 앞에서 %s 키: 마을 어귀로 나간다"):format(key("up"))

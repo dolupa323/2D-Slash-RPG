@@ -159,7 +159,8 @@ local function typeofMock(v)
 	return type(v)
 end
 
-local Color3 = { fromRGB = function(r, g, b) return { __type = "Color3", R = r / 255, G = g / 255, B = b / 255 } end, new = function(r, g, b) return { __type = "Color3", R = r, G = g, B = b } end }
+local Color3 = { fromRGB = function(r, g, b) return { __type = "Color3", R = r / 255, G = g / 255, B = b / 255 } end, new = function(r, g, b) return { __type = "Color3", R = r, G = g, B = b } end,
+	fromHex = function(hex) local h = hex:gsub("#", ""); assert(#h == 6 and h:match("^%x+$"), "색의 꼴이 틀렸다 " .. tostring(hex)); return { __type = "Color3", R = tonumber(h:sub(1, 2), 16) / 255, G = tonumber(h:sub(3, 4), 16) / 255, B = tonumber(h:sub(5, 6), 16) / 255, hex = "#" .. h:lower() } end }
 local UDim2 = { fromOffset = function(x, y) return { X = { Offset = x, Scale = 0 }, Y = { Offset = y, Scale = 0 } } end, new = function(xs, xo, ys, yo) return { X = { Offset = xo, Scale = xs }, Y = { Offset = yo, Scale = ys } } end }
 local Enum = setmetatable({}, { __index = function(_, k) return setmetatable({}, { __index = function(_, k2) return k .. "." .. k2 end }) end })
 local Instance = { new = function(class) return { ClassName = class } end }

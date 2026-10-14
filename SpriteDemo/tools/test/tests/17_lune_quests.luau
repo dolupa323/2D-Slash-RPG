@@ -62,18 +62,84 @@ for _, def in D.list do
 			end
 			expect(measure(Q.stepText(step, step.n)) <= QUEST_W, ("할 일의 글이 알리미에 들어감 %s — 폭 %d"):format(def.id, measure(Q.stepText(step, step.n))))
 		end
-		-- 대사: 한 마디가 말풍선의 줄 수(세 줄)에 들어간다
+		-- 대사: 한 마디가 대화창의 줄 수(세 줄)에 들어간다(2026-10-14부터 퀘스트의 말은 화면 아래의 대화창에 — 폭 F.DIALOG_TEXT_W)
 		for _, group in { def.offer, def.wait, def.done } do
 			for _, line in group do
-				local lines = #string.split(pixelText.Wrap(line, F.BUBBLE.textW, "body"), "\n")
-				expect(lines <= F.BUBBLE.lines, ("%s의 말이 %d줄에 들어감(지금 %d줄) — %s"):format(def.id, F.BUBBLE.lines, lines, line))
+				local lines = #string.split(pixelText.Wrap(line, F.DIALOG_TEXT_W, "body"), "\n")
+				expect(lines <= F.DIALOG.lines, ("%s의 말이 대화창 %d줄에 들어감(지금 %d줄) — %s"):format(def.id, F.DIALOG.lines, lines, line))
 			end
 		end
 		expect((pixelText.Measure(def.name, "body")) <= QUEST_W, ("퀘스트 이름(본문 글씨)이 알리미에 들어감 %s — 폭 %d"):format(def.name, (pixelText.Measure(def.name, "body"))))
 	end
 end
 expect(playable >= 5, "지금 할 수 있는 퀘스트가 다섯은 된다")
-eq(mains, 9, "1지역의 메인 아홉")
+eq(mains, 20, "1지역의 줄 스물(이야기의 메인 아홉 + 줄의 걸음이 된 것 열하나 — 게임에서는 모두 메인이다. 2026-10-14에 망루 3층의 「굴러다니는 투구」를 더했다)")
+-- 퀘스트의 줄(사용자 2026-10-13: "라인이 이어지듯이" · "한npc 에 같은시점에 몇개를 겹쳐서" 안 된다): 1지역의 퀘스트는 자료의 차례대로 한 줄 — 앞의 것을 끝내야 다음 것이 열린다
+do
+	local prev, lastLv, fit = false, 0, {}
+	for _, def in D.list do
+		if def.region == "r1" and def.kind ~= "job" then
+			expect(def.line == true and def.kind == "main", "줄에 든 퀘스트는 메인이다 " .. def.id)
+			eq(def.after, prev, "앞 퀘스트 = 줄의 바로 앞 " .. def.id)
+			expect(def.lv >= lastLv, "줄은 레벨이 낮아지지 않는다 " .. def.id)
+			prev, lastLv = def.id, def.lv
+			table.insert(fit, def)
+		end
+	end
+	-- 어느 때든 받을 수 있는 것은 하나뿐이다: 줄을 처음부터 끝까지 따라가 본다(레벨은 넉넉하게)
+	local b = {}
+	for i, def in fit do
+		local open = 0
+		for _, other in fit do
+			if Q.state(b, 60, other.id) == "open" then
+				open += 1
+			end
+		end
+		eq(open, 1, "받을 수 있는 것은 하나 — " .. def.name)
+		eq(Q.state(b, 60, def.id), "open", "그것이 줄의 다음 것이다 " .. def.id)
+		expect(Q.accept(b, 60, def.id), "받는다 " .. def.id)
+		for _, other in fit do
+			expect(Q.state(b, 60, other.id) ~= "open", "하는 중에는 줄의 다른 것을 받을 수 없다 " .. other.id)
+		end
+		for k, step in def.steps do
+			b[def.id].c[k] = step.n
+		end
+		expect(Q.complete(b, def.id) ~= nil, "돌려준다 " .. def.id)
+		-- Lv.10까지는 끊기지 않는다: 돌려받은 주민이 다음 것을 준다(첫 퀘스트만 빼고 — 사당 안에서 끝난다)
+		local nextDef = fit[i + 1]
+		if nextDef and i > 1 and nextDef.lv < 10 then
+			eq(nextDef.giver, def.endNpc, ("「%s」을 돌려받는 주민이 「%s」을 준다"):format(def.name, nextDef.name))
+		end
+	end
+	-- Lv.10까지는 줄만 따라가도 레벨이 된다(사용자: "레벨이 10 까지는 메인퀘스트만해도 자연스럽게 찍혀야합니다"): 퀘스트의 경험치 + 퀘스트가 시키는 사냥(가장 낮은 경험치로)
+	local have, lv = N.xpNeed(1), 2 -- 튜토리얼 「달빛 꿈」에서 Lv.2가 되어 사당에서 깬다(2026-10-14 — 공방 questplay.js의 LINE_START)
+	local function levelOf(xp: number): number
+		local L = 1
+		while xp >= N.xpNeed(L) do
+			xp -= N.xpNeed(L)
+			L += 1
+		end
+		return L
+	end
+	for _, def in fit do
+		lv = levelOf(have)
+		if def.lv <= 10 then
+			expect(lv >= def.lv, ("「%s」(Lv.%d)을 받을 때 Lv.%d — 사냥을 더 하지 않아도 된다"):format(def.name, def.lv, lv))
+		end
+		for _, step in def.steps do
+			if step.type ~= "use" then
+				have += step.n / (step.pct / 100) * N.mobXp(1)
+			end
+		end
+		have += def.reward.xp
+		if def.lv < 10 then
+			lv = levelOf(have)
+		end
+	end
+	expect(lv >= 10, "Lv.10이 되기 전의 줄을 다 따라가면 Lv.10이 된다 — " .. lv)
+	-- 첫머리의 퀘스트가 귀환 주문서를 준다(사용자: "완전 초반부 퀘스트에서 마을귀환주문서를 뿌려야합니다")
+	expect(Q.def("r1m1").reward.scrolls >= 1, "첫 퀘스트의 보상에 귀환 주문서가 있다")
+end
 -- 2지역(2026-10-10): 첫 메인은 앞 지역의 메인이 끝나지 않아도 레벨만 되면 받는다 · 그 뒤는 앞 메인을 끝내야 열린다
 do
 	local b = {}
@@ -102,6 +168,7 @@ do
 	end
 	eq(SCENES.scenes.town.region, "r1", "마을은 1지역")
 	eq(SCENES.scenes.port.region, "r3", "등불 포구는 3지역의 들머리")
+	b.r1m1 = { done = true, c = {} } -- (줄의 앞의 것 — 첫 기술 — 을 끝냈다)
 	expect(has(Q.atNpc(b, 60, "guide", "r1").offer, "r1s1"), "1지역의 샛별은 등불 심지를 준다")
 	expect(not has(Q.atNpc(b, 60, "guide", "r3").offer, "r1s1"), "3지역의 샛별은 1지역의 부탁을 주지 않는다")
 	expect(has(Q.atNpc(b, 60, "guide", "r3").offer, "r3m1"), "3지역의 샛별은 땅속으로를 준다")
@@ -118,7 +185,7 @@ local book = {}
 eq(Q.state(book, 1, "r1m1"), "open", "첫 메인은 받을 수 있다")
 eq(Q.state(book, 1, "r1m2"), "locked", "앞 메인을 끝내야 다음이 열린다")
 eq(Q.state(book, 1, "r1s1"), "locked", "레벨이 모자라면 못 받는다(등불 심지 Lv.2)")
-eq(Q.state(book, 2, "r1s1"), "open", "레벨이 되면 받을 수 있다")
+eq(Q.state(book, 2, "r1s1"), "locked", "레벨이 돼도 줄의 앞의 것(첫 기술)을 끝내야 열린다")
 eq(Q.state(book, 30, "r1m4"), "locked", "맵이 없는 퀘스트는 받을 수 없다")
 -- 저절로 받는 퀘스트는 없다(사용자 2026-10-11: "퀘스트를 부여해주는 npc 랑 말을하고 퀘스트를 수락해야 퀘스트가 수락되고") — 첫 메인도 사제에게 말을 걸어 받는다
 for _, def in Q.list do
@@ -133,7 +200,7 @@ eq(Q.state(book, 1, "r1m1"), "ready", "첫 메인은 할 일이 없어 받자마
 expect(Q.isNew(book, 1), "받은 뒤에도 끝내기 전에는 새 캐릭터다")
 local ok, why = Q.accept(book, 1, "r1m1")
 expect(not ok and why == "이미 받은 퀘스트다", "두 번 받지 못한다")
-ok, why = Q.accept(book, 1, "r1m2")
+ok, why = Q.accept(book, 9, "r1m2")
 expect(not ok and why == "아직 받을 수 없다", "앞 것을 끝내기 전에는 못 받는다")
 ok, why = Q.accept(book, 1, "r1s1")
 expect(not ok and string.find(why, "Lv.2") ~= nil, "레벨이 모자라면 까닭을 알린다")
@@ -147,17 +214,19 @@ expect(reward ~= nil and reward.xp > 0, "첫 메인을 돌려준다")
 eq(Q.state(book, 1, "r1m1"), "done", "끝냈다")
 eq(Q.complete(book, "r1m1"), nil, "두 번 돌려주지 못한다")
 eq(Q.mark(book, 1, "master"), nil, "돌려준 뒤에는 표시가 없다")
-eq(Q.mark(book, 1, "guide"), "!", "다음 메인을 주는 주민에게 !")
-local at = Q.atNpc(book, 1, "guide")
-eq(#at.offer, 1, "샛별이 줄 퀘스트 하나(Lv.1)")
-at = Q.atNpc(book, 2, "guide")
-eq(#at.offer, 2, "Lv.2면 등불 심지도")
+eq(Q.mark(book, 2, "guide"), "!", "줄의 다음 것(등불 심지)을 주는 주민에게 !")
+eq(Q.state(book, 2, "r1s1"), "open", "앞의 것을 끝내고 레벨이 되면 받을 수 있다")
+local at = Q.atNpc(book, 2, "guide")
+eq(#at.offer, 1, "샛별이 줄 퀘스트 하나")
+at = Q.atNpc(book, 60, "guide", "r1")
+eq(#at.offer, 1, "레벨이 높아도 한 번에 하나만 준다(퀘스트는 한 줄이다)")
+book.r1s1 = { done = true, c = {} } -- (등불 심지를 끝냈다 — 줄의 다음은 마을 밖의 그림자)
 
 -- ---- 3) 잡기 ----
-expect(Q.accept(book, 1, "r1m2"), "마을 밖의 그림자를 받는다")
+expect(Q.accept(book, 3, "r1m2"), "마을 밖의 그림자를 받는다")
 eq(Q.state(book, 1, "r1m2"), "active", "하는 중")
 eq(Q.mark(book, 1, "guide"), nil, "하는 중에는 표시가 없다")
-eq(#Q.atNpc(book, 1, "guide").wait, 1, "하는 중인 것을 안다")
+eq(#Q.atNpc(book, 1, "elder").wait, 1, "하는 중인 것을 안다(돌려받는 주민 — 촌장)")
 local rng = Random.new(5)
 -- 퀘스트마다의 맵과 졸개(자료가 바뀌어도 테스트가 따라가게 자료에서 읽는다)
 local M2, M3, S1 = Q.def("r1m2"), Q.def("r1m3"), Q.def("r1s1")
@@ -179,7 +248,24 @@ local function kill(b, def, r)
 	return changed
 end
 eq(#Q.onKill(book, "archer", M2.scene, rng), 0, "다른 졸개는 세지 않는다")
-eq(#Q.onKill(book, M2.steps[1].mob, "town", rng), 0, "다른 맵에서는 세지 않는다")
+-- 어느 맵에서 잡든 그 몬스터면 센다 · 떨어뜨린다(사용자 2026-10-13: "똑같은 몬스터인데 … 달그림자 사냥터  검병한테는 드랍이 안되고 사냥터 깊은곳 검병한테는 드랍이되고  이런식이면 안됩니다")
+do
+	-- 2026-10-14부터 한 몬스터는 한 맵에만 산다(한 맵에 한 종류) — 그래도 떨어뜨리는 규칙은 맵이 아니라 몬스터에 붙는다: 「빈 갑옷」의 검병을 다른 장면에서 잡아도 갑옷 조각이 나온다
+	local any = { r1m2 = { done = false, c = {} }, r1m3 = { done = false, c = {} } }
+	eq(#Q.onKill(any, M2.steps[1].mob, "town"), 1, "다른 맵에서 잡아도 센다")
+	local M3 = Q.def("r1m3")
+	local got = 0
+	for _ = 1, 20 do
+		got += #Q.drops(any, M3.steps[1].mob, "r1c1", Random.new(got + 3)) + #Q.drops(any, M3.steps[1].mob, M3.scene, Random.new(got + 9))
+	end
+	expect(M3.scene == "hunt" and M3.steps[1].type == "gather" and got == 40, "갑옷 조각은 달그림자 사냥터의 검병에게서도, 다른 맵의 검병에게서도 나온다 " .. got)
+	-- 이야기의 자리에서만 세는 일(only): 「불타는 마을」의 정예 검병은 사당 지하의 것만
+	local M9 = Q.def("r1m9")
+	local story = { r1m9 = { done = false, c = {} } }
+	expect(M9.steps[1].only == true, "불타는 마을은 그 자리의 것만 센다")
+	eq(#Q.onKill(story, M9.steps[1].mob, "r1c1"), 0, "망루에서 잡은 정예 검병은 세지 않는다")
+	eq(#Q.onKill(story, M9.steps[1].mob, M9.scene), 1, "사당 지하에서 잡으면 센다")
+end
 for i = 1, 4 do
 	eq(#kill(book, M2), 1, "수습 검병을 잡으면 센다 " .. i)
 end
@@ -189,14 +275,15 @@ eq(Q.complete(book, "r1m2"), nil, "다 하기 전에는 못 돌려준다")
 kill(book, M2)
 eq(Q.state(book, 1, "r1m2"), "ready", "다섯이면 다 됐다")
 eq(#kill(book, M2), 0, "다 찬 뒤에는 더 세지 않는다")
-eq(Q.todo(book, "r1m2", { guide = "샛별" })[1], "샛별에게 간다", "다 되면 돌아가라고 적는다")
-eq(Q.mark(book, 1, "guide"), "?", "돌려줄 주민에게 ?")
+eq(Q.todo(book, "r1m2", { guide = "샛별", elder = "보름 영감" })[1], "보름 영감에게 간다", "다 되면 돌려받을 주민에게 가라고 적는다(촌장 — 다음 퀘스트를 주는 사람)")
+eq(Q.mark(book, 1, "elder"), "?", "돌려줄 주민에게 ?")
 expect(Q.complete(book, "r1m2") ~= nil, "돌려준다")
 
 -- ---- 4) 모으기: 잡을 때마다 확률로 하나 ----
 local b2 = {}
 Q.accept(b2, 5, "r1m1")
 Q.complete(b2, "r1m1")
+b2.r1s1 = { done = true, c = {} }
 Q.accept(b2, 5, "r1m2")
 for _ = 1, 5 do
 	kill(b2, M2)
@@ -232,21 +319,33 @@ eq(both, 2, "한 마리로 두 퀘스트가 함께 나아간다")
 
 -- ---- 5) 그만두기 · 하는 중인 것의 차례 ----
 local b4 = {}
-Q.accept(b4, 5, "r1m1")
-Q.complete(b4, "r1m1")
-Q.accept(b4, 5, "r1s2")
-Q.accept(b4, 5, "r1s1")
-Q.accept(b4, 5, "r1m2")
+local side2 -- 2지역의 첫 부탁(줄을 아직 짜지 않은 지역 — 메인끼리, 부탁끼리 차례로 열린다)
+for _, def in D.list do
+	if def.kind == "side" and def.playable and def.region == "r2" and not side2 then
+		side2 = def
+	end
+end
+expect(side2 ~= nil and side2.after == false, "2지역의 첫 부탁")
+expect(Q.accept(b4, 60, side2.id) and Q.accept(b4, 60, "r2m1"), "부탁 하나와 메인 하나를 받는다")
 local active = Q.active(b4)
-eq(active[1], "r1m2", "메인이 맨 위")
-eq(active[2], "r1s1", "그다음은 자료의 차례")
-eq(#active, 3, "하는 중 셋")
-ok, why = Q.drop(b4, "r1m2")
+eq(active[1], "r2m1", "메인이 맨 위")
+eq(active[2], side2.id, "그다음이 부탁")
+eq(#active, 2, "하는 중 둘")
+ok, why = Q.drop(b4, "r2m1")
 expect(not ok and why == "메인 퀘스트는 그만둘 수 없다", "메인은 못 그만둔다")
-kill(b4, M2, Random.new(1))
-expect(Q.drop(b4, "r1s1"), "주민의 부탁은 그만둘 수 있다")
-eq(Q.state(b4, 5, "r1s1"), "open", "그만두면 다시 받을 수 있다")
-eq(Q.drop(b4, "r1s1"), nil, "받지 않은 것은 그만둘 수 없다")
+expect(Q.drop(b4, side2.id), "주민의 부탁은 그만둘 수 있다")
+eq(Q.state(b4, 60, side2.id), "open", "그만두면 다시 받을 수 있다")
+eq(Q.drop(b4, side2.id), nil, "받지 않은 것은 그만둘 수 없다")
+-- 부탁끼리도 차례로 열린다(한 주민이 여럿을 한꺼번에 주지 않는다)
+do
+	local opens = 0
+	for _, def in D.list do
+		if def.kind == "side" and def.region == "r2" and Q.state(b4, 60, def.id) == "open" then
+			opens += 1
+		end
+	end
+	eq(opens, 1, "2지역의 부탁도 한 번에 하나만 열린다")
+end
 
 -- ---- 6) 캐릭터: 보상 · 저장 ----
 local h = Hero.new(1, "axion")
@@ -260,10 +359,8 @@ eq(h.money, money0 + got.money, "달돈")
 expect(ups >= 1 and h.level >= 2, ("경험치 %d로 레벨이 오른다(Lv.1의 필요 %d)"):format(got.xp, xpNeed))
 local none, whyNot = Hero.questDone(h, "r1m1")
 expect(none == nil and whyNot == "이미 끝낸 퀘스트다", "두 번 받지 못한다")
-Q.accept(h.quests, h.level, "r1m2")
-kill(h.quests, M2)
-kill(h.quests, M2)
-Q.accept(h.quests, h.level, "r1s1")
+expect(Q.accept(h.quests, h.level, "r1s1"), "줄의 다음 것(등불 심지)을 받는다 — Lv." .. h.level)
+h.quests.r1m2 = { done = false, c = { 2 } } -- (저장을 보려고 하는 중인 잡기 퀘스트를 하나 넣어 둔다)
 local Bag17 = req("ReplicatedStorage/shared/lune/sim/bag")
 local pots = Hero.potions(h)
 local back = Hero.unpack(1, Hero.pack(h))
@@ -295,16 +392,26 @@ do
 end
 -- 그만두면 모으던 물건도 사라진다
 do
+	-- (그만둘 수 있는 것은 주민의 부탁뿐이다 — 1지역은 모두 줄에 든 메인이라, 물건을 모으는 다른 지역의 부탁으로 본다)
+	local gs
+	for _, def in D.list do
+		if def.kind == "side" and def.playable and def.steps[1] and def.steps[1].type == "gather" and not gs then
+			gs = def
+		end
+	end
+	expect(gs ~= nil, "물건을 모으는 부탁이 있다")
 	local hd = Hero.new(7, "mooni")
-	hd.level = 5
-	hd.quests.r1s1 = { done = false, c = {} }
-	local item = S1.steps[1].item
+	hd.level = 60
+	hd.quests[gs.id] = { done = false, c = {} }
+	local item = gs.steps[1].item
 	Bag17.give(hd, item, 4)
 	Hero.syncQuests(hd)
-	eq(hd.quests.r1s1.c[1], 4, "넷을 모았다")
-	expect(Hero.questDrop(hd, "r1s1"), "그만둔다")
+	eq(hd.quests[gs.id].c[1], 4, "넷을 모았다")
+	expect(Hero.questDrop(hd, gs.id), "그만둔다")
 	eq(Bag17.count(hd, item), 0, "그만두면 모으던 물건도 사라진다")
-	eq(Hero.questDrop(hd, "r1s1"), nil, "하는 중이 아니면 그만둘 수 없다")
+	eq(Hero.questDrop(hd, gs.id), nil, "하는 중이 아니면 그만둘 수 없다")
+	hd.quests.r1s1 = { done = false, c = {} }
+	eq(Hero.questDrop(hd, "r1s1"), nil, "줄에 든 퀘스트(등불 심지)는 메인이라 그만둘 수 없다")
 	eq(Hero.questDrop(hd, "r1m1"), nil, "메인은 그만둘 수 없다")
 end
 -- 퀘스트가 생기기 전의 저장 · 깨진 저장
@@ -357,7 +464,7 @@ do
 	end
 	expect(seen ~= nil and seen.quest == "r1m3" and seen.step == 1 and seen.name == step.name and seen.icon == step.icon, "떨어진 물건이 그 퀘스트의 것이다")
 	eq(#Q.drops(book, "archer", def.scene, r9), 0, "다른 졸개에게서는 떨어지지 않는다")
-	eq(#Q.drops(book, step.mob, "town", r9), 0, "다른 맵에서는 떨어지지 않는다")
+	eq(#Q.drops(book, step.mob, "town", r9), 1, "어느 맵에서 잡든 그 몬스터면 떨어뜨린다(맵으로 가리지 않는다 — 사용자 2026-10-13)")
 	eq(#Q.drops({}, step.mob, def.scene, r9), 0, "받지 않은 퀘스트의 물건은 떨어지지 않는다")
 	expect(seen.goods == step.item and typeof(step.item) == "string", "떨어진 물건은 가방에 들어갈 아이템의 이름표를 갖고 있다")
 	-- 가방에 든 수가 곧 숫자다(Q.sync): 하나씩 오르고, 모을 수를 넘지 않는다(다 모으면 더 떨어지지도 않는다)

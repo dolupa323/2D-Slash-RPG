@@ -25,6 +25,7 @@ local closers: Frame = nil
 local CLOSE_HIT = 40
 local ctx = nil
 local level = 1 -- 내 레벨(이 레벨에 열린 창만 쓴다)
+Windows.extra = {} :: { [string]: boolean } -- 레벨과 상관없이 쓸 수 있는 창(튜토리얼의 꿈: Lv.1에도 가방 — 「가방 열기」 미션 · 2026-10-14)
 
 -- 열린 창을 제 쪽 끝에 놓는다: 오른쪽 창은 화면 오른쪽 끝에, 왼쪽 창은 왼쪽 끝에(가운데의 캐릭터를 가리지 않는다)
 local function layout()
@@ -84,7 +85,7 @@ end
 -- 아직 열리지 않은 창인가
 function Windows.locked(id: string): boolean
 	local def = defs[id]
-	return def == nil or def.from > level
+	return def == nil or (def.from > level and not Windows.extra[id])
 end
 
 -- 다른 캐릭터로 들어왔다: 그 캐릭터의 레벨에서 다시 센다(열려 있던 창은 부른 쪽이 먼저 닫는다 — 낮은 레벨의 캐릭터에게는 아직 열리지 않은 창이 있다)
@@ -160,7 +161,7 @@ end
 --  force = 아직 열리지 않은 창이어도 띄운다(창고를 열 때의 가방 — 새 캐릭터도 계정의 창고에서 바로 꺼낼 수 있어야 한다)
 function Windows.open(id: string, arg: any, force: boolean?)
 	local def = defs[id]
-	if not def or (def.from > level and not force) then
+	if not def or (def.from > level and not force and not Windows.extra[id]) then
 		return
 	end
 	if Windows.isOpen(id) then
@@ -273,7 +274,10 @@ function Windows.beside(id: string, w: number, gap: number): UDim2?
 			if o.side == "left" then
 				return Stage.atPosition("tl", EDGE + o.w + gap, TOP)
 			end
-			return Stage.atPosition("tr", Stage.REF_W - EDGE - o.w - gap - w, TOP)
+			-- 넓은 창(경매장)은 좁은 화면 틀에서 왼쪽에 자리가 없다: 그때는 화면 왼쪽 끝에 붙인다(창의 왼쪽을 조금 덮는다)
+			local x = Stage.REF_W - EDGE - o.w - gap - w
+			local least = EDGE + (Stage.REF_W - Stage.uiW)
+			return Stage.atPosition("tr", math.max(x, least), TOP)
 		end
 	end
 	return nil
@@ -293,7 +297,7 @@ end
 local function listOf(all: boolean)
 	local out = {}
 	for _, w in UI.windows do
-		if defs[w.id] and w.key and (all or defs[w.id].from <= level) then
+		if defs[w.id] and w.key and (all or defs[w.id].from <= level or Windows.extra[w.id]) then
 			table.insert(out, { id = w.id, name = w.name, key = w.key })
 		end
 	end

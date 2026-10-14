@@ -583,6 +583,66 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 		return pick
 	end
 
+	-- 튜토리얼 「달빛 꿈」(2026-10-14): 새 캐릭터는 꿈에서 시작한다 — 미션을 차례로 한다. 화면만 아는 일(걷기 · 뛰기 · 내려가기 · 말 걸기 · 기술 · 창)은 그 자리에 가서 화면처럼 "끝냈다"고 알리고,
+	--  잡기 · 줍기 · 물약 · 빛나는 문은 실제로 한다(서버가 센다). 다 하면 사당에서 깨어난다
+	local function dream()
+		local Tut = req("ReplicatedStorage/shared/lune/sim/tutorial")
+		if s.scene ~= Tut.SCENE then
+			return
+		end
+		local sc = SCENES.scenes[Tut.SCENE]
+		local guard = 0
+		while not h.tut.done and guard < 80 and h.alive do
+			guard += 1
+			local def = Tut.current(h.tut)
+			local kind, step = Tut.kind(def), h.tut.step
+			if guard == 1 or step ~= (stat.dreamStep or 0) then
+				stat.dreamStep = step
+				note(("꿈 %d/%d %s(%s)"):format(step, Tut.TOTAL, def.title, kind))
+			end
+			if kind == "zone" then
+				for _, z in sc.tut do
+					if z.id == def.check.zone then
+						walkTo((z.a + z.b) / 2, z.y)
+					end
+				end
+				handlers.Tut(p, "done", step)
+			elseif kind == "talk" then
+				local n = npcAt(Tut.SCENE, def.check.talk)
+				if n then
+					walkTo(n.x + 8, n.y)
+				end
+				handlers.Tut(p, "done", step)
+			elseif Tut.CLIENT[kind] then
+				if kind == "walk" then
+					walkTo(h.x + def.check.walk + 8, h.y)
+				end
+				handlers.Tut(p, "done", step)
+			elseif kind == "kill" or kind == "pickup" then
+				hunt(Tut.SCENE, nil, 120, function()
+					return h.tut.step ~= step
+				end)
+			elseif kind == "potion" then
+				handlers.Potion(p)
+			elseif kind == "stat" then
+				handlers.StatAuto(p)
+			elseif kind == "sp" then
+				handlers.SkillAuto(p)
+			elseif kind == "exit" then
+				travel(Tut.DATA.exit)
+			end
+			if h.tut.step == step and not h.tut.done then
+				wait(0.2)
+			end
+		end
+		note(if h.tut.done then "꿈에서 깨어났다(튜토리얼 끝)" else "꿈에서 깨지 못했다(튜토리얼이 막혔다)")
+		stat.dreamDone = h.tut.done
+		if not h.tut.done then
+			local def = Tut.current(h.tut)
+			error(("꿈에서 깨지 못했다 — %d째 미션 「%s」(%s) · Lv.%d · 장면 %s · 체력 %d/%d"):format(h.tut.step, def and def.title or "?", def and Tut.kind(def) or "?", h.level, s.scene, h.hp, h.maxHp))
+		end
+	end
+	dream()
 	note("시작")
 	while now() < cap do
 		if (goal.job and h.job >= goal.job) or (not goal.job and h.level >= goal.level) then

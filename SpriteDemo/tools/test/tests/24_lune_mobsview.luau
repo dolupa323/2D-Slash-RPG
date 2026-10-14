@@ -20,7 +20,17 @@ MOCK("Client/lune/stage", { image = function(_, name) return label(name) end })
 MOCK("Client/lune/overlay", { x = function(v) return v end, y = function(v) return v end, len = function(v) return v end })
 MOCK("Client/lune/ui/ui", {
 	COLOR = any,
-	bar = function() return { frame = label("bar"), set = function() end } end,
+	bar = function()
+		local b = { frame = label("bar"), fill = label("fill"), ratio = nil }
+		function b.set(_, r) b.ratio = r end
+		return b
+	end,
+	box = function(parent, x, y, w, h, color)
+		local l = label("box")
+		l.Size = { X = { Offset = w }, Y = { Offset = h } }
+		l.BackgroundTransparency = 0
+		return l
+	end,
 	tag = function() local t = { Frame = label("tag"), Width = 40 } function t:Destroy() end return t end,
 })
 MOCK("Client/lune/ui/kit", { COLOR = any, box = function() return label("box") end })
@@ -773,4 +783,85 @@ do
 	expect(delays[1] <= 0 and math.abs(delays[2] - delays[1] - stp.wave.gap) < 1e-6 and math.abs(delays[3] - delays[1] - stp.wave.gap * 2) < 1e-6, "뒤의 둘은 gap초씩 늦게 떠난다")
 	bv:destroy()
 	eq(#bv.list, 0, "장면이 바뀌면 치운다")
+end
+
+-- ---- 체력 띠의 효과(client/lune/ui/hpBar.luau — 플레이어의 체력 바와 같은 셈) ----
+--  사용자 2026-10-13: "몬스터 체력바도  유저 체력바처럼 고도화 되어야합니다."
+do
+	local HpFx = req("ReplicatedStorage/shared/lune/ui/hpFx")
+	local F = HpFx.F
+	local kind = nil
+	for k, def in COMBAT.mobs do
+		if not def.story and not kind then
+			kind = k
+		end
+	end
+	local function newView(hp)
+		local rm = { mobs = { { id = 1, kind = kind, lv = 5, y = 200, maxHp = 100, name = "시험" } }, snap = {} }
+		local v = MobsView.new({}, rm, {})
+		return v, v:get(1)
+	end
+	local t = 100
+	local function feed(v, state, hp, dt)
+		v:apply({ { 1, 200, 1, state, 0, hp, 0, 0 } }, t)
+		v:update(t)
+		t += dt or 1 / 60
+	end
+	-- 없다가 나타난 몬스터: 띠는 가득 찬 채로 준비돼 있다(차오르는 효과 없이)
+	local v, m = newView()
+	feed(v, "gone", 100)
+	feed(v, "spawn", 100)
+	feed(v, "idle", 100)
+	local st = m.barFx.st
+	expect(st.fill == 1 and HpFx.idle(st) and m.bar.frame.Visible == false, "다치지 않은 몬스터: 띠가 없다 · 효과도 없다")
+	-- 첫 타: 빨간 띠는 바로 줄고, 닳은 자리(가득 찼던 데까지)가 밝게 남는다 · 희게 번쩍인다
+	feed(v, "hit", 60)
+	st = m.barFx.st
+	expect(m.bar.frame.Visible == true and st.fill == 0.6 and st.lag == 1 and st.kind == "hurt" and st.flash > 0, "첫 타에도 닳은 자리가 남는다")
+	eq(m.bar.ratio, 0.6, "빨간 띠는 바로 줄어든다")
+	expect(m.barFx.lag.Size.X.Offset > 0 and m.barFx.flash.BackgroundTransparency < 1, "닳은 자리의 띠와 번쩍임이 그려진다")
+	-- 잠깐 남아 있다가 따라 줄어든다
+	for _ = 1, math.ceil(F.hold * 60 * 0.5) do
+		feed(v, "idle", 60)
+	end
+	expect(m.barFx.st.lag == 1, "잠깐은 그대로 남아 있다")
+	for _ = 1, 120 do
+		feed(v, "idle", 60)
+	end
+	expect(HpFx.idle(m.barFx.st) and m.barFx.st.lag == 0.6 and m.barFx.lag.Size.X.Offset == 0 and m.barFx.flash.BackgroundTransparency == 1, "조금 뒤에는 효과가 끝난다(띠만 남는다)")
+	expect(m.bar.frame.Visible == true, "다친 몬스터의 띠는 그대로 보인다")
+	-- 마지막 타: 쓰러지는 동안에도 띠가 비워지는 것이 보인다 → 효과가 끝나면 사라진다
+	feed(v, "dead", 0)
+	expect(m.bar.frame.Visible == true and m.barFx.st.fill == 0 and m.barFx.st.lag == 0.6 and m.bar.ratio == 0, "쓰러뜨린 타: 띠가 비고 닳은 자리가 남아 보인다")
+	for _ = 1, 150 do
+		feed(v, "dead", 0)
+	end
+	expect(m.bar.frame.Visible == false, "효과가 끝나면 띠가 사라진다")
+	-- 다시 나타난다: 가득 찬 채로(차오르는 효과 없이) · 다시 맞으면 또 효과
+	feed(v, "gone", 0)
+	feed(v, "spawn", 100)
+	feed(v, "idle", 100)
+	expect(m.barFx.st.fill == 1 and HpFx.idle(m.barFx.st) and m.bar.frame.Visible == false, "다시 나타난 몬스터: 차오르는 효과가 없다")
+	feed(v, "hit", 80)
+	expect(m.barFx.st.fill == 0.8 and m.barFx.st.lag == 1, "다시 맞으면 또 닳은 자리가 남는다")
+	-- 잇달아 맞으면: 닳은 자리는 처음 높이에서 이어진다
+	feed(v, "hit", 50)
+	expect(m.barFx.st.fill == 0.5 and m.barFx.st.lag == 1, "잇달아 맞으면 닳은 자리가 이어진다")
+	-- 이미 다친 몬스터를 처음 봤을 때(다른 사람이 치던 것): 효과 없이 그대로
+	local v2, m2 = newView()
+	feed(v2, "idle", 40)
+	expect(m2.barFx.st.fill == 0.4 and HpFx.idle(m2.barFx.st) and m2.bar.frame.Visible == true, "이미 다친 몬스터: 효과 없이 그 체력으로")
+	-- 스토리 보스: 머리 위의 띠는 없다(화면 위의 넓은 바에 뜬다) — 쓰러질 때도
+	for k, def in COMBAT.mobs do
+		if def.story then
+			local rm = { mobs = { { id = 1, kind = k, lv = 5, y = 200, maxHp = 100, name = "보스" } }, snap = {} }
+			local vb = MobsView.new({}, rm, {})
+			vb:apply({ { 1, 200, 1, "idle", 0, 100, 0, 0 } }, t)
+			vb:update(t)
+			vb:apply({ { 1, 200, 1, "dead", 0, 0, 0, 0 } }, t + 0.02)
+			vb:update(t + 0.02)
+			expect(vb:get(1).bar.frame.Visible == false, "스토리 보스는 머리 위의 띠가 없다 " .. k)
+			break
+		end
+	end
 end

@@ -680,9 +680,7 @@ do
 	local s = World.session(p)
 	local wh = s.hero
 	Hero.setLevel(wh, 25)
-	for i = 1, 6 do
-		wh.quests["r1m" .. i] = { done = true, c = {} }
-	end
+	Quests.finishBefore(wh.quests, "r1m7") -- 줄에서 「망루의 부관」 앞의 것을 모두 끝냈다
 	local function tick(seconds: number)
 		for _ = 1, math.floor(seconds / DT + 0.5) do
 			World.tick(DT)
@@ -753,6 +751,7 @@ do
 	Quests.complete(wh.quests, "r1m7")
 	expect(Quests.accept(wh.quests, wh.level, "r1m8") == nil, "「정찰대장」은 Lv.28부터")
 	Hero.setLevel(wh, 28)
+	Quests.finishBefore(wh.quests, "r1m8") -- (줄에서 그 사이의 「마을 문 고치기」도 끝냈다)
 	expect(Quests.accept(wh.quests, wh.level, "r1m8"), "「정찰대장」을 받는다")
 	tick(1.2)
 	expect(not wcap.away and wlt.away, "대장이 선다(부관은 없다)")

@@ -183,14 +183,19 @@ function Q.jobsDone(book, job: number)
 end
 
 -- 졸개를 잡았다. 바뀐 퀘스트들의 id를 돌려준다(없으면 빈 표). 잡는 일만 센다 — 모으는 물건은 땅에 떨어지고(Q.drops) 주우면 가방에 들어가며, 가방에 든 수가 곧 숫자다(Q.sync)
+--  **어느 맵에서 잡든 그 몬스터면 센다**(사용자 2026-10-13: "똑같은 몬스터인데 … 달그림자 사냥터  검병한테는 드랍이 안되고 사냥터 깊은곳 검병한테는 드랍이되고  이런식이면 안됩니다.
+--   하드코딩 박는식으로 개발을하면안되요" — 전에는 그 퀘스트의 맵에서 잡은 것만 세고 떨어뜨렸다). 이야기의 자리에서만 세는 일(only — 사당 지하를 지키는 「불타는 마을」)만 그 맵을 본다.
+local function counts(def, step, scene: string): boolean
+	return not step.only or def.scene == scene
+end
 function Q.onKill(book, mobKind: string, scene: string): { string }
 	local changed = {}
 	for id, st in book do
 		local def = byId[id]
-		if def and not st.done and def.scene == scene then
+		if def and not st.done then
 			for i, step in def.steps do
 				local have = st.c[i] or 0
-				if step.type == "kill" and step.mob == mobKind and have < step.n then
+				if step.type == "kill" and step.mob == mobKind and have < step.n and counts(def, step, scene) then
 					st.c[i] = have + 1
 					table.insert(changed, id)
 				end
@@ -202,8 +207,93 @@ end
 
 -- 그 장면의 그 몬스터를 아직 잡아야 하는가(하는 중인 퀘스트의 못 다 한 잡기). 스토리 보스는 이것이 참인 사람이 방에 있을 때만 서 있다(sim/room.luau)
 -- 그 퀘스트에 닿았는가: 받았거나(하는 중) 끝냈다 — 그 퀘스트를 받아야 열리는 문(장면의 portals의 need — 사당 지하)이 쓴다
+--  id가 표면 그 가운데 하나라도(사당 지하 = 「불타는 마을」 또는 2차 전직)
 function Q.reached(book, id: any): boolean
-	return book ~= nil and typeof(id) == "string" and book[id] ~= nil
+	if book == nil then
+		return false
+	elseif typeof(id) == "table" then
+		for _, one in id do
+			if Q.reached(book, one) then
+				return true
+			end
+		end
+		return false
+	end
+	return typeof(id) == "string" and book[id] ~= nil
+end
+
+-- 그 퀘스트를 끝냈는가 — 끝내야 열리는 문(장면의 portals의 done — 초승달 마을의 작은 나루: 「불타는 마을」을 끝내야 은달 항구로 가는 배가 뜬다)
+function Q.finished(book, id: any): boolean
+	if book == nil then
+		return false
+	elseif typeof(id) == "table" then
+		for _, one in id do
+			if not Q.finished(book, one) then
+				return false
+			end
+		end
+		return true
+	end
+	return typeof(id) == "string" and book[id] ~= nil and book[id].done == true
+end
+
+-- 줄에서 그 퀘스트 앞의 것들을 모두 끝낸 것으로 적는다(자동 검사 · 시험용 — 그 퀘스트는 건드리지 않는다). 퀘스트는 한 줄이라 앞의 것을 끝내야 받는다
+function Q.finishBefore(book, id: any)
+	local def = byId[id]
+	while def and def.after do
+		local st = book[def.after]
+		if st then
+			st.done = true
+		else
+			book[def.after] = { done = true, c = {} }
+		end
+		def = byId[def.after]
+	end
+end
+
+-- 그 퀘스트를 끝내면 열리는 문들: { { scene(장면의 이름표), place(맵의 이름), label(문의 글) } … } — 끝낸 순간 화면이 「새 길이 열렸다」고 알린다(client/lune/boot.luau)
+function Q.opens(id: any)
+	local SCENES = require(script.Parent.Parent.data["scenes.generated"])
+	local out = {}
+	for key, sc in SCENES.scenes do
+		for _, p in sc.portals or {} do
+			local hit = p.done == id
+			if typeof(p.done) == "table" then
+				hit = table.find(p.done, id) ~= nil
+			end
+			if hit then
+				table.insert(out, { scene = key, place = sc.name, label = p.label })
+			end
+		end
+	end
+	table.sort(out, function(a, b)
+		return a.scene < b.scene
+	end)
+	return out
+end
+Q.OPENED = { head = "새 길이 열렸다", line = "%s의 「%s」" } -- 그때의 큰 알림(제목 · 줄 — 맵의 이름 · 문의 글)
+
+-- 그 문이 열렸는가: need = 그 퀘스트를 받은 뒤 · done = 그 퀘스트를 끝낸 뒤(서버 · 화면 · 길찾기 · 월드맵이 모두 이것으로 본다)
+function Q.portalOpen(book, portal): boolean
+	return (portal.need == nil or Q.reached(book, portal.need)) and (portal.done == nil or Q.finished(book, portal.done))
+end
+
+-- 그 장면의 그 졸개가 필요한가: 하는 중인 퀘스트에 그 졸개를 잡는 일 · 그 졸개에게서 모으는 일이 남아 있다 — 이야기의 방(사당 지하)의 졸개가 이것으로 나온다
+function Q.wantsMob(book, mobKind: string, scene: string): boolean
+	if not book then
+		return false
+	end
+	for id, st in book do
+		local def = byId[id]
+		if def and not st.done and def.scene == scene then
+			for i, step in def.steps do
+				if (step.type == "kill" or step.type == "gather") and step.mob == mobKind and (st.c[i] or 0) < step.n then
+					return true
+				end
+			end
+		end
+	end
+	return false
 end
 
 function Q.wantsKill(book, mobKind: string, scene: string): boolean
@@ -269,9 +359,9 @@ function Q.drops(book, mobKind: string, scene: string, rng)
 	local out = {}
 	for id, st in book do
 		local def = byId[id]
-		if def and not st.done and def.scene == scene then
+		if def and not st.done then
 			for i, step in def.steps do
-				if step.type == "gather" and step.mob == mobKind and (st.c[i] or 0) < step.n and rng:NextNumber(0, 100) < step.pct then
+				if step.type == "gather" and step.mob == mobKind and counts(def, step, scene) and (st.c[i] or 0) < step.n and rng:NextNumber(0, 100) < step.pct then
 					table.insert(out, { quest = id, step = i, name = step.name, icon = step.icon, goods = step.item })
 				end
 			end
@@ -495,6 +585,11 @@ function Q.npcScene(def, npcId: string): string?
 		if qa ~= qb then
 			return qa
 		end
+		-- 같은 거리면 마을(쓰러졌을 때 돌아오는 곳 — 초승달 마을 · 고갯마루 주막)이 먼저다: 샛별은 마을에도 세 갈래 길에도 서 있다(2026-10-13 — 길을 다시 이으며 둘이 같은 거리가 됐다)
+		local ha, hb = SCENES.homes[a] ~= nil, SCENES.homes[b] ~= nil
+		if ha ~= hb then
+			return ha
+		end
 		return a < b
 	end)
 	placeOf[cacheKey] = keys[1] or false
@@ -555,12 +650,12 @@ function Q.guide(book, level: number, names)
 	end
 	for _, def in Q.openJobs(book, level) do
 		local place = Q.giverPlace(def)
-		table.insert(out, { title = "! " .. def.name, line = if place then ("%s에게 받는다 · %s"):format(who(def), place) else ("%s에게 받는다"):format(who(def)), kind = "job" })
+		table.insert(out, { id = def.id, title = "! " .. def.name, line = if place then ("%s에게 받는다 · %s"):format(who(def), place) else ("%s에게 받는다"):format(who(def)), kind = "job" })
 	end
 	local main, why = Q.nextMain(book, level)
 	if main and why == "open" then
 		local place = Q.giverPlace(main)
-		table.insert(out, { title = "! " .. main.name, line = if place then ("%s에게 받는다 · %s"):format(who(main), place) else ("%s에게 받는다"):format(who(main)), kind = "open" })
+		table.insert(out, { id = main.id, title = "! " .. main.name, line = if place then ("%s에게 받는다 · %s"):format(who(main), place) else ("%s에게 받는다"):format(who(main)), kind = "open" })
 	elseif main then
 		table.insert(out, { title = main.name, line = ("Lv.%d부터 받는다"):format(main.lv), kind = "level" })
 	end
@@ -568,7 +663,7 @@ function Q.guide(book, level: number, names)
 	for i = 1, math.min(2, #sides) do
 		local def = sides[i]
 		local place = Q.giverPlace(def)
-		table.insert(out, { title = "! " .. def.name, line = if place then ("%s에게 받는다 · %s"):format(who(def), place) else ("%s에게 받는다"):format(who(def)), kind = "side" })
+		table.insert(out, { id = def.id, title = "! " .. def.name, line = if place then ("%s에게 받는다 · %s"):format(who(def), place) else ("%s에게 받는다"):format(who(def)), kind = "side" })
 	end
 	return out
 end

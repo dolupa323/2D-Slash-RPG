@@ -22,6 +22,7 @@ SERVICE("RunService", { Heartbeat = signal() })
 SERVICE("TextService", { FilterStringAsync = function(_, text) return { GetNonChatStringForBroadcastAsync = function() return text end } end })
 local disk, book = {}, {}
 local rankDisk, rankInfo = {}, {}
+local marketBoards = {} -- 경매장의 장부(가짜 저장소)
 MOCK("ServerScriptService/server/lune/modules/store", {
 	loadAccount = function(id) return disk[id] end,
 	saveAccount = function(id, data) disk[id] = data; return true end,
@@ -36,6 +37,15 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	rankInfoGet = function(key) return rankInfo[key] end,
 	rankInfoRemove = function(key) rankInfo[key] = nil end,
 	isOffline = function() return false end,
+	-- 경매장의 장부(관리 창의 「경매장 시험」이 쓴다 — 자세한 것은 41_lune_market.luau)
+	marketRead = function(key) return true, marketBoards[key] end,
+	marketUpdate = function(key, fn)
+		local new, x, y = fn(marketBoards[key])
+		if new ~= nil then
+			marketBoards[key] = new
+		end
+		return true, x, y, marketBoards[key]
+	end,
 })
 local World = req("ServerScriptService/server/lune/modules/world")
 local Admin = req("ServerScriptService/server/lune/modules/admin")
@@ -417,13 +427,39 @@ do
 			expect(math.abs(h.x - portal.x) <= 1 and math.abs(h.y - portal.y) <= 1, ("%s: 문 %s 앞까지 걸어간다(%d, %d)"):format(key, portal.to, h.x, h.y))
 			-- 퀘스트를 받아야 열리는 문(need — 달의 사당 안의 「사당 지하」): 받기 전에는 지나가지 못하고, 받은 뒤에는 지난다
 			if portal.need then
-				local kept = h.quests[portal.need]
-				h.quests[portal.need] = nil
-				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == key, ("%s: 퀘스트 %s를 받기 전에는 문 %s을 지나가지 못한다"):format(key, portal.need, portal.to))
-				h.quests[portal.need] = kept or { done = false, c = {} }
+				-- need = 퀘스트의 이름표 하나 또는 여럿(그 가운데 하나라도 받으면 열린다)
+				local needs = if typeof(portal.need) == "table" then portal.need else { portal.need }
+				local kept = {}
+				for _, id in needs do
+					kept[id] = h.quests[id]
+					h.quests[id] = nil
+				end
+				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == key, ("%s: 퀘스트 %s를 받기 전에는 문 %s을 지나가지 못한다"):format(key, table.concat(needs, " · "), portal.to))
+				for _, id in needs do
+					h.quests[id] = kept[id]
+				end
+				h.quests[needs[#needs]] = kept[needs[#needs]] or { done = false, c = {} } -- 마지막 것 하나만 받아도 열린다
+			end
+			if portal.done then
+				-- done = 그 퀘스트를 끝내야 열리는 문(초승달 마을의 작은 나루 — 「불타는 마을」): 받기만 해서는 안 열리고, 끝내면 열린다
+				h.quests[portal.done] = nil
+				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == key, ("%s: 퀘스트 %s가 없으면 문 %s을 지나가지 못한다"):format(key, portal.done, portal.to))
+				h.quests[portal.done] = { done = false, c = {} }
+				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == key, ("%s: 퀘스트 %s를 받기만 해서는 문 %s이 열리지 않는다"):format(key, portal.done, portal.to))
+				h.quests[portal.done] = { done = true, c = {} }
+			end
+			local Tut = req("ReplicatedStorage/shared/lune/sim/tutorial")
+			if key == Tut.SCENE then
+				-- 꿈(튜토리얼 — 2026-10-14)의 빛나는 문: 미션을 다 하기 전에는 열리지 않고, 마지막 미션(나가기)의 차례에 지나가면 꿈을 마친다
+				h.tut = Tut.new()
+				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == key, "꿈의 문은 첫 미션 때는 열리지 않는다")
+				h.tut.step = Tut.TOTAL
 			end
 			local trip = handlers.Travel(pAdmin, portal.to)
 			expect(trip ~= nil and trip.scene == portal.to and sAdmin.scene == portal.to, ("%s: 관리로 옮긴 뒤 문 %s을 지난다"):format(key, portal.to))
+			if key == Tut.SCENE then
+				expect(h.tut.done, "꿈의 문을 지나면 튜토리얼이 끝난다")
+			end
 			count += 1
 		end
 	end

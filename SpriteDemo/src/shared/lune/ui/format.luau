@@ -23,6 +23,13 @@ function F.short(n: number): string
 	return tostring(math.floor(n + 0.5))
 end
 
+-- 줄이지 않은 수에 세 자리마다 쉼표: 1234567 -> 1,234,567 (경매장의 값 - 줄여 적으면 값을 견줄 수 없다)
+function F.comma(n: number): string
+	local s = string.format("%d", math.floor(n + 0.5))
+	local out = string.reverse((string.gsub(string.reverse(s), "(%d%d%d)", "%1,")))
+	return (string.gsub(out, "^,", ""))
+end
+
 -- 체력 글: "지금/최대"가 들어가면 그대로, 안 들어가면 짧게, 그래도 안 들어가면 지금 것만
 function F.hp(cur: number, max: number, width: number, measure: (string) -> number): string
 	local full = ("%d/%d"):format(cur, max)
@@ -50,6 +57,64 @@ end
 -- 주민의 말풍선(화면 틀의 고운 격자의 점): 말은 본문 글씨로 폭 textW에 lines줄까지. 말풍선은 그 주민 머리 위에 뜬다(얼굴 칸 · 이름표를 따로 두지 않는다 — 산나비처럼).
 --  padX · padY = 글 둘레의 여백 · tail = 꼬리의 높이 · up = 머리 위로 띄우는 높이(게임의 도트). 값은 공방 js/lune/design/ui.js의 BUBBLE(시험 탭과 같은 값)
 F.BUBBLE = require(script.Parent.Parent.data["ui.generated"]).bubble
+
+-- 대화창(2026-10-14 — 사용자: 혼잣말만 말풍선, 말을 걸면 "일반 도트 게임처럼 … 대화창이떠서" · 둘째 판: 게임 UI의 색 · 한 글자씩 · 초상화 없음 · 좁게 · 모바일도):
+--  화면 아래 가운데의 어두운 판. 대사는 본문 글씨로 폭 (w - padX x 2)에 lines줄까지, cps자/초로 한 글자씩. 값은 공방 js/lune/design/ui.js의 DIALOG(시험 탭과 같은 값)
+local UIG = require(script.Parent.Parent.data["ui.generated"])
+F.DIALOG = UIG.dialog
+F.DIALOG_TEXT_W = UIG.dialog.w - UIG.dialog.padX * 2
+F.IDLE = UIG.idle -- 주민의 혼잣말(머리 위 말풍선): near 점 안 · gap초마다 · show초 동안
+F.TALK_KEYS = UIG.talkKeys -- 대사 속에서 칠할 낱말(몬스터 · 물건 · 곳 · 사람 — 긴 것부터)
+
+-- 대사 속 강조 낱말의 자리: 바이트 자리 → true(그 낱말의 모든 바이트). 긴 낱말부터 찾는다(「수습 검병」 안의 「검병」이 따로 칠해지지 않게 — 결과는 같다)
+function F.keyMarks(text: string, keys: { string }?): { [number]: boolean }
+	local marks = {}
+	for _, key in keys or F.TALK_KEYS do
+		local init = 1
+		while true do
+			local a, b = string.find(text, key, init, true)
+			if not a then
+				break
+			end
+			for i = a, b do
+				marks[i] = true
+			end
+			init = b + 1
+		end
+	end
+	return marks
+end
+
+-- 줄마다의 조각: lines = 이미 폭에 맞춰 바꾼 줄들(pixelText.Fit의 결과를 줄바꿈으로 나눈 것) · 원문 text에서 각 줄의 자리를 찾아 강조 여부가 같은 글자끼리 묶는다.
+--  shown = 앞에서부터 보일 글자 수(한 글자씩 — 줄을 넘어 센다). 돌려주는 것 = { { { t = 글, key = 강조인가 }, … }, … }(줄마다)
+function F.talkSegments(text: string, lines: { string }, shown: number?, keys: { string }?): { { { t: string, key: boolean } } }
+	local marks = F.keyMarks(text, keys)
+	local out, cursor, left = {}, 1, shown or math.huge
+	for _, ln in lines do
+		local segs = {}
+		local bare = string.gsub(ln, "…$", "")
+		local at = string.find(text, bare, cursor, true)
+		if at then
+			cursor = at + #bare
+		end
+		for pos, code in utf8.codes(ln) do
+			if left <= 0 then
+				break
+			end
+			left -= 1
+			local ch = utf8.char(code)
+			local key = at ~= nil and pos <= #bare and marks[at + pos - 1] == true
+			local last = segs[#segs]
+			if last and last.key == key then
+				last.t ..= ch
+			else
+				table.insert(segs, { t = ch, key = key })
+			end
+		end
+		table.insert(out, segs)
+	end
+	return out
+end
 
 -- 칸 위의 키 딱지에 적는 키 이름(작은 글씨): 다섯 글자까지 — 긴 이름은 줄임말로
 local CAP = { PageUp = "PgUp", PageDown = "PgDn", CapsLock = "Caps", Insert = "Ins", Delete = "Del", Escape = "Esc", NEnter = "NEnt" }

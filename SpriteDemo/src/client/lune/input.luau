@@ -117,21 +117,16 @@ local function actionOf(key: Enum.KeyCode): string?
 	return nil
 end
 
-Input.onEnter = nil :: (() -> ())? -- Enter를 눌렀을 때(채팅 열기)
+-- Roblox 채팅의 입력줄에 글을 치는 중인가(boot가 chat.luau의 Chat.focused를 넣는다). 그 입력줄은 Roblox의 화면이라 GetFocusedTextBox로는 보이지 않는다 —
+--  이것을 보지 않으면 채팅에 친 글자(Q · W · A …)가 스킬로 나간다(2026-10-13: 채팅을 Roblox의 기본 채팅으로 바꿨다. Enter로 열던 우리 채팅 판은 없다)
+Input.typing = nil :: (() -> boolean)?
 Input.paused = false -- 캐릭터 고르기 화면에 가 있는 동안에는 게임의 키를 받지 않는다(boot.luau의 toSelect)
 
 function Input.init()
 	UserInputService.InputBegan:Connect(function(input)
 		-- 로블록스 기본 조작이 방향키를 먼저 가져가므로 "처리됨" 표시는 보지 않는다. 글자를 치는 중(채팅 등)에만 받지 않는다.
-		if input.UserInputType ~= Enum.UserInputType.Keyboard or UserInputService:GetFocusedTextBox() or Input.paused then
+		if input.UserInputType ~= Enum.UserInputType.Keyboard or UserInputService:GetFocusedTextBox() or Input.paused or (Input.typing ~= nil and Input.typing()) then
 			return -- paused = 캐릭터 고르기 화면에 가 있다(게임의 키를 받지 않는다)
-		end
-		-- Enter는 채팅을 연다(키 설정으로 바꾸는 키가 아니다)
-		if (input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter) and not captureFn then
-			if Input.onEnter then
-				Input.onEnter()
-			end
-			return
 		end
 		if captureFn then
 			-- 키 설정 중: 이 키를 새 키로 넘긴다(Esc와 알 수 없는 키는 받지 않는다)

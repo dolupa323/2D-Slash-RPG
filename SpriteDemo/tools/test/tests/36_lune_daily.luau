@@ -53,7 +53,7 @@ end
 -- ---- 1) 자료: 정해진 것 · 게시판 · 풀 ----
 eq(DD.from, 10, "Lv.10부터 연다(사용자: \"일일 의뢰는 10부터 열죠\")")
 eq(DD.perDay, 2, "하루 둘")
-expect(DD.kills >= 20 and DD.kills <= 40 and DD.near >= DD.perDay, "의뢰 하나의 마릿수 · 뽑는 곳의 수")
+expect(DD.kills >= 5 and DD.kills <= 12 and DD.near >= DD.perDay, "의뢰 하나의 마릿수(사용자 2026-10-13: 30마리씩은 \"20분정도 걸립니다\" → 8) · 뽑는 곳의 수")
 expect(#DD.pay.xp == 150 and #DD.pay.money == 150 and #DD.pay.dust == 150, "보상은 레벨마다 하나")
 for lv = 2, 150 do
 	expect(DD.pay.xp[lv] >= DD.pay.xp[lv - 1] and DD.pay.money[lv] > DD.pay.money[lv - 1] and DD.pay.dust[lv] >= DD.pay.dust[lv - 1], "레벨이 오르면 보상이 줄지 않는다 Lv." .. lv)
@@ -242,9 +242,9 @@ do
 	eq(#rows0, 0, "의뢰를 안 주면 줄이 없다(전과 같다)")
 	eq(shown, 2, "알리미에 둘이 뜬다")
 	expect(height <= Panel.H, ("PC의 칸에 든다(%d / %d)"):format(height, Panel.H))
-	-- 스마트폰의 칸은 더 낮다: 그 높이를 주면 들어가는 데까지만 적는다(적어도 하나)
-	local _, heightT, shownT = Panel.layout({}, {}, nil, Panel.H_TOUCH, tracked)
-	expect(shownT >= 1 and heightT <= Panel.H_TOUCH, ("스마트폰의 칸에는 들어가는 만큼만(%d개 · %d / %d)"):format(shownT, heightT, Panel.H_TOUCH))
+	-- 스마트폰의 칸은 더 낮다: 판은 그 높이까지만이고, 넘치는 것은 판 안에서 스크롤한다(2026-10-13)
+	local _, heightT, shownT, _, infoT = Panel.layout({}, {}, nil, Panel.H_TOUCH, tracked)
+	expect(shownT == 2 and infoT.view <= Panel.H_TOUCH and infoT.scroll == (heightT > Panel.H_TOUCH), ("스마트폰의 칸: 둘 다 적고, 판은 칸까지만(넘치면 스크롤 — 적은 것 %d / 칸 %d)"):format(heightT, Panel.H_TOUCH))
 	local kinds = {}
 	for _, r in rows do
 		table.insert(kinds, r.kind)
@@ -426,12 +426,13 @@ do
 	eq(calls[#calls], "accept:1", "「받는다」 = 받기를 청한다")
 	expect(buttons[1].frame.Visible == false and counts()[1] == ("0/%d"):format(DD.kills), "받으면 단추 대신 「0/30」")
 	local task = hw.daily[R].tasks[1]
-	for _ = 1, 12 do
+	local some = math.floor(DD.kills / 2)
+	for _ = 1, some do
 		Daily.onKill(hw, task.mob, task.scene, NOW)
 	end
 	state = (Daily.view(hw, NOW))
 	view.refresh()
-	expect(counts()[1] == ("12/%d"):format(DD.kills) and math.abs(bars[1].ratio - 12 / DD.kills) < 1e-9, "잡은 만큼 숫자와 띠가 찬다")
+	expect(counts()[1] == ("%d/%d"):format(some, DD.kills) and math.abs(bars[1].ratio - some / DD.kills) < 1e-9, "잡은 만큼 숫자와 띠가 찬다")
 	tidy("하는 중")
 	for _ = 1, DD.kills do
 		Daily.onKill(hw, task.mob, task.scene, NOW)
@@ -450,4 +451,21 @@ do
 	state = nil
 	view.refresh()
 	expect(buttons[1].frame.Visible == false and buttons[2].frame.Visible == false, "받은 것이 없으면 단추가 없다")
+end
+
+-- ---- 마릿수의 설계가 바뀌었다(2026-10-13: 30 → 8 — 사용자: "더낮게 지금 이대로면 20분정도 걸립니다"): 받아 둔 오늘의 의뢰도 새 수로 맞춘다 ----
+do
+	local now = 1700000000
+	local day = Daily.dayOf(now)
+	local pick = Daily.pick("r1", 12, day)
+	local old = { level = 12, money = 0, dust = 0, daily = Daily.unpack({ r1 = { day = day, tasks = {
+		{ scene = pick[1].scene, mob = pick[1].mob, n = 30, have = 21, st = Daily.ON },
+		{ scene = pick[2].scene, mob = pick[2].mob, n = 30, have = 3, st = Daily.ON },
+	}, bonus = false } }) }
+	expect(old.daily.r1 ~= nil and old.daily.r1.tasks[1].n == 30, "저장돼 있던 옛 의뢰(30마리)")
+	local v = Daily.view(old, now)
+	local t1, t2 = v.boards.r1.tasks[1], v.boards.r1.tasks[2]
+	expect(t1.n == DD.kills and t1.have == DD.kills, "옛 의뢰: 새 마릿수로 줄고, 이미 넘게 잡았으면 다 잡은 것이 된다")
+	expect(t2.n == DD.kills and t2.have == 3, "덜 잡은 것은 잡은 수 그대로")
+	expect(Daily.turnIn(old, "r1", 1, now) ~= nil, "바로 낼 수 있다")
 end

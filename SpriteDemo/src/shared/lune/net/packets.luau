@@ -53,6 +53,10 @@ local packets = {
 	-- 일일 의뢰: 하는 일(view 보기 · accept 받기 · turn 내기)과 지역 · 몇째 의뢰. 받기와 내기는 그 게시판 앞에서만.
 	--  돌려주는 값 { ok, why, reward = { xp, money, dust, all, name }, view = sim/daily.luau의 view }
 	Daily = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } },
+	-- 경매장(메이플 옥션 방식 — 메뉴에서 어디서나): "mine" 내 것(판매 · 완료 탭) · "browse" 분류의 목록과 시세(장부의 이름, 새로 고침) · "list" 올리기(탭, 칸, 수, { 개당 값, 시간 }) ·
+	--  "buy" 사기(장부, 줄, 수, 본 값) · "settle" 내 것 하나(번호, "take" 수령 · "collect" 대금 수령 · "back" 취소 / 반환 · "relist" 재등록) · "all" 모두 받기
+	--  돌려주는 값 { ok, why, msg, rows(목록) · trades(시세) · board, mine(내 것), used · max(판매 수), now } — server/lune/modules/world.luau의 onMarket · 셈은 sim/market.luau
+	Market = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any, t.any }, RateLimit = { PerSecond = 3, Burst = 6 } },
 	-- 소리 설정을 저장한다 { music = 0~10, sfx = 0~10, on = 켰는가 } — 꼴은 서버가 다시 본다(계정에 저장 — sim/account.luau의 setSound)
 	Sound = { Kind = "Event", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 12 } },
 	-- 퀵슬롯을 바꿨다: 칸들 전체 { "potion" · 스킬의 이름표 · false … } — 꼴과 놓아도 되는 스킬인지는 서버가 다시 본다. 돌려주는 값 = 서버가 가진 칸들(받아들였으면 보낸 것, 아니면 예전 것)
@@ -63,6 +67,8 @@ local packets = {
 	Move = { Kind = "Event", Direction = "ClientToServer", Args = { t.number, t.number, t.dir }, RateLimit = { PerSecond = 20, Burst = 30 } },
 	-- 문으로 다른 장면에 간다. 돌려주는 값 { scene, x, y, room } 또는 nil(문 앞이 아님)
 	Travel = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 2, Burst = 3 } },
+	-- 튜토리얼 「달빛 꿈」(2026-10-14): "done" n = 화면만 아는 n째 미션을 끝냈다(돌려주는 값 = 내 튜토리얼 상태) · "skip" = 꿈을 건너뛴다(이 계정의 캐릭터가 한 번 끝낸 뒤에만 — 돌려주는 값은 Travel과 같다)
+	Tut = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 4, Burst = 6 } },
 	-- 기술을 쓴다: 기술 id, 몇째 구간, 쓴 자리(x, y), 보는 쪽
 	Skill = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number, t.number, t.number, t.dir }, RateLimit = { PerSecond = 8, Burst = 10 } },
 	-- 떨어진 것을 줍는다(물건 번호)

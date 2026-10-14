@@ -123,8 +123,10 @@ for ci, class in { "riven", "axion", "mooni" } do
 	local back = handlers.Slots(p, slots)
 	expect(same(back, slots), class .. ": 서버가 바꾼 칸들을 받아 둔다 " .. show(back or {}))
 	-- 스마트폰의 단추 배치도 따로 바꾼다
+	--  (폰에는 칸 1의 단추가 없다 — 2026-10-13. 칸 1에 놓아 보내면 서버가 단추가 있는 빈 칸으로 옮긴다: 40_lune_skill_touch.luau가 본다)
 	local tslots = table.clone(slots0)
-	tslots[3], tslots[1] = tslots[1], tslots[3]
+	tslots[9], tslots[1] = tslots[1], false
+	tslots[6], tslots[3] = tslots[3], false
 	local tback = handlers.TouchSlots(p, tslots)
 	expect(same(tback, tslots), class .. ": 스마트폰의 배치도 받아 둔다")
 

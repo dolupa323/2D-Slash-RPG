@@ -319,8 +319,9 @@ do
 			end
 		end
 		expect(same(h.slots, keep), "받지 않은 뒤에도 칸들이 그대로다 " .. class)
-		-- 스마트폰의 단추 배치(tslots): PC의 퀵슬롯과 따로 저장한다 — 처음 차림은 같고, 한쪽을 바꿔도 다른 쪽은 그대로다
-		expect(same(h.tslots, Quick.start(CLASSES.classes[class].skills)), "스마트폰 배치의 처음 차림 " .. class)
+		-- 스마트폰의 단추 배치(tslots): PC의 퀵슬롯과 따로 저장한다 — 한쪽을 바꿔도 다른 쪽은 그대로다.
+		--  처음 차림: 폰에는 칸 1의 단추가 없어(사용자 2026-10-13: "모바일에서 상호작용 버튼 아래에 있는 버튼 없애고") 물약이 칸 5에 놓인다 — 나머지는 PC와 같다
+		expect(same(h.tslots, Quick.touchStart(CLASSES.classes[class].skills)) and h.tslots[1] == false and h.tslots[5] == "potion1" and h.tslots[2] == Quick.start(CLASSES.classes[class].skills)[2], "스마트폰 배치의 처음 차림 " .. class)
 		local tmoved = Quick.place(h.tslots, h.tslots[2], 9)
 		expect(Hero.setSlots(h, tmoved, true) and h.tslots[9] == tmoved[9] and h.tslots[2] == false, "스마트폰 배치를 바꾼 것을 받는다 " .. class)
 		expect(same(h.slots, keep), "스마트폰 배치를 바꿔도 PC의 퀵슬롯은 그대로다 " .. class)
@@ -346,7 +347,7 @@ do
 		saved.tslots = { "potion", sk }
 		local now = Hero.unpack(1, saved)
 		expect(now ~= nil and now.slots[8] == "potion1" and now.slots[2] == sk and now.slots[1] == false, "예전 물약 칸이 그 자리에 남는다(PC)")
-		expect(now.tslots[1] == "potion1" and now.tslots[2] == sk, "예전 물약 칸이 그 자리에 남는다(스마트폰)")
+		expect(now.tslots[1] == false and now.tslots[3] == "potion1" and now.tslots[2] == sk, "예전 물약 칸은 지금의 이름표로 — 폰에는 칸 1의 단추가 없어 단추가 있는 첫 빈 칸(칸 3)으로 옮겨진다")
 		saved.level = 45
 		now = Hero.unpack(1, saved)
 		expect(now ~= nil and now.slots[8] == "potion2", "Lv.45였다면 그때 마시던 것은 달빛 물약이다")

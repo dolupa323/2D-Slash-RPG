@@ -1,266 +1,187 @@
--- 채팅 — 화면 왼쪽 아래, 체력 덩어리 바로 위(공방 「기본 · UI」 탭의 화면 배치, data/ui.generated.luau의 hud.chat).
---  글은 Roblox의 채팅(TextChatService)을 거쳐 오간다: 글 거르기 · 신고가 그쪽에 들어 있다. 여기서는 보이는 것과 쓰는 칸만 우리 것으로 바꾼다
---  (Roblox 기본 채팅 창과 입력줄은 끈다 — 기본 것은 Enter로 열리지 않고 도트 화면과 어울리지 않는다).
---  평소: 새 글이 오면 마지막 세 줄이 판 없이(어두운 테두리를 두른 작은 글씨로) 잠깐(12초) 보였다가 사라진다.
---  Enter: 어두운 판이 뜨고 지난 글 여섯 줄과 쓰는 칸이 보인다. 한 번 더 Enter로 보내고 닫는다.
---  채널: 둘레(같은 맵의 사람) · 파티. 쓰는 칸 왼쪽의 단추로 바꾼다. 누구에게 가는지는 서버가 정한다(server/lune/modules/chat.luau).
---  쓰는 칸은 Roblox의 글자 입력 칸(TextBox)이라 그 글꼴은 Roblox 것이다(도트 글꼴은 입력 칸에 쓸 수 없다). 받은 글은 도트 글꼴로 그린다 —
---  한글 · 영문 · 숫자가 아닌 글자(한자 · 이모지 등)는 "?"로 보인다.
+-- 채팅 — Roblox의 기본 채팅(TextChatService의 채팅 창 · 입력줄 · 채널 탭)을 그대로 쓴다. 우리가 그리는 채팅 화면은 없다.
+--  사용자 2026-10-13: "우리가 자체 채팅을 구현하는게 아니라 로블록스 채팅이 있어요 로블록스 공식문서좀 확인해보고 ,  그걸 어떻게 로블록스 채팅을 우리게임에 자연스럽게 사용하게 연결할수있는지
+--                     불가능하다면 그냥 채팅 없어도됩니다."
+--  전에는 글만 Roblox의 채팅으로 보내고(TextChannel:SendAsync) 창과 쓰는 칸은 우리 것이었다(기본 창 · 입력줄은 꺼 두었다). 이제 창 · 입력줄 · 폰의 채팅 단추까지 Roblox의 것이다:
+--    글 거르기 · 신고 · 한글 입력 · 폰의 글자판 · 채팅 제한(나이 확인 등)이 걸린 사람에게 뜨는 안내를 Roblox가 맡는다 — 우리가 따라 만들 것이 없다.
+--  공식 문서(create.roblox.com/docs/chat/in-experience-text-chat · chat-window · reference의 ChatWindowConfiguration · ChatInputBarConfiguration · ChannelTabsConfiguration)에서 확인한 것:
+--    · 기본 화면은 셋: 채팅 창(ChatWindowConfiguration) · 입력줄(ChatInputBarConfiguration) · 채널 탭(ChannelTabsConfiguration — 기본은 꺼져 있다). Enabled를 끄면 그 부분이 숨는다.
+--    · 창의 자리는 HorizontalAlignment(기본 Left) · VerticalAlignment(기본 Top), 크기는 WidthScale · HeightScale, 모습은 BackgroundColor3 · BackgroundTransparency · TextColor3 · TextSize · FontFace.
+--    · 입력줄은 그것을 누르거나 KeyboardKeyCode(기본 Slash — 「/」)로 연다. 폰에서는 화면 위의 Roblox 채팅 단추로 창을 여닫는다.
+--    · 채널 탭을 켜면 RBXGeneral이 「General」 탭이 되고, 따로 만든 TextChannel은 그 Name으로 탭이 생긴다 — 우리의 「파티」 채널.
+--    · 글의 앞머리(이름)는 TextChatService.OnIncomingMessage에서 TextChatMessageProperties.PrefixText로 바꾼다(글자색 꼬리표를 쓸 수 있다).
+--    · 알림 글은 TextChannel:DisplaySystemMessage(그 사람의 화면에만 뜬다).
+--    · 창 · 입력줄의 화면에서의 자리는 AbsolutePosition · AbsoluteSize로 읽는다(문서의 본보기 「Get Total Chat UI Bounds」) · 글을 치는 중인지는 ChatInputBarConfiguration.IsFocused.
+--  누구에게 가는지는 그대로 서버가 정한다(server/lune/modules/chat.luau): 둘레(RBXGeneral) = 같은 맵의 사람 · 「파티」 = 같은 파티.
+--  여기서 하는 일: ① 기본 창 · 입력줄 · 채널 탭을 켜고 게임의 색에 맞춘다(data/ui.generated.luau의 chatUi) ② 이름을 그 사람의 캐릭터 이름으로(Roblox의 이름을 쓰지 않는다 — 사용자 2026-10-10)
+--                 ③ 글을 치는 동안 게임의 키를 받지 않게 알려 준다(Chat.focused) ④ 창이 차지한 자리의 아래 끝을 알려 준다(Chat.bottom — PC에서 파티원 칸을 그 아래로 내린다)
+--  Roblox 캐릭터가 없는 게임이라(2D 화면) 머리 위 말풍선은 뜨지 않는다.
+--  확인하지 못한 것: 실제 화면에서의 모습(Play를 하지 않았다). 속성은 모두 문서에 있는 것이고, 하나가 안 먹어도 나머지와 게임은 그대로 돈다(pcall).
 local Players = game:GetService("Players")
 local TextChatService = game:GetService("TextChatService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local lune = ReplicatedStorage.shared.lune
-local UI = require(lune.data["ui.generated"])
-local Tags = require(lune.ui.tags)
-local Layout = require(lune.ui.layout)
+local UI = require(ReplicatedStorage.shared.lune.data["ui.generated"])
 local Stage = require(script.Parent.stage)
-local Ui = require(script.Parent.ui.ui)
-local pixelText = require(script.Parent.Parent.modules.ui.pixelText)
 
-local C = Ui.COLOR
-local KEEP = 40 -- 지난 글을 몇 개까지 갖고 있나
-local LINE = Layout.CHAT.line
-local FIELD = Layout.CHAT.field -- 쓰는 칸 · 채널 단추의 높이
-local OPEN = Layout.CHAT.open -- 쓰는 중의 넓은 판(높이는 줄 수에서)
-local QUIET = { w = UI.hud.chat.w, lines = math.floor(UI.hud.chat.h / LINE), life = Layout.CHAT.life } -- 평소: 폭 · 세 줄 · 새 글이 온 뒤 보이는 시간(초)
-local CHANNEL = { { id = "near", name = "둘레", channel = "RBXGeneral", color = C.text }, { id = "party", name = "파티", channel = "파티", color = C.pink } }
+local K = UI.chatUi -- 공방 js/lune/design/ui.js의 CHATUI
 
 local Chat = {}
-Chat.OPEN = OPEN
-Chat.QUIET = QUIET
-Chat.lastAt = -99 -- 마지막으로 새 글이 온 때
-Chat.log = {} -- { text(그릴 한 줄), color }
-Chat.channel = 1
-Chat.typing = false
-Chat.closedAt = 0
+Chat.bottom = 0 -- Roblox 채팅 화면(창 + 입력줄)의 아래 끝 — 화면 틀의 점(위에서부터). 아직 모르면 0
+Chat.onMoved = nil :: (() -> ())? -- 그 자리가 바뀌었을 때(boot가 파티원 칸을 다시 놓는다)
 
-local root: Frame
-local quiet: Frame -- 평소의 칸
-local quietLines = {}
-local panel: Frame -- 쓰는 중의 칸
-local panelLines = {}
-local box: TextBox
-local channelButton
+local window: Instance? = nil
+local bar: Instance? = nil
 
--- 줄들을 아래부터 채운다: 새 글이 맨 아래에 오고, 긴 글은 칸의 폭에서 줄을 바꾼다(한 글에 perMessage줄까지 — 넘으면 …)
-local function fill(rows, width: number, perMessage: number)
-	local row = #rows
-	for i = #Chat.log, 1, -1 do
-		if row < 1 then
-			break
-		end
-		local item = Chat.log[i]
-		local lines = string.split(pixelText.Fit(item.text, width, perMessage, "small"), "\n")
-		for k = #lines, 1, -1 do
-			if row < 1 then
-				break
-			end
-			rows[row]:set(lines[k])
-			rows[row]:color(item.color)
-			row -= 1
+local function config(class: string): Instance?
+	local found = TextChatService:FindFirstChildOfClass(class)
+	if found then
+		return found
+	end
+	-- 설정들은 TextChatService 바로 아래나 그 아래의 묶음에 있다
+	for _, d in TextChatService:GetDescendants() do
+		if d.ClassName == class then
+			return d
 		end
 	end
-	for i = row, 1, -1 do
-		rows[i]:set("")
-	end
+	return nil
 end
 
-local function draw()
-	quiet.Visible = not Chat.typing and #Chat.log > 0 and os.clock() - Chat.lastAt < QUIET.life
-	panel.Visible = Chat.typing
-	if Chat.typing then
-		fill(panelLines, OPEN.w - OPEN.pad * 2, 3)
-	else
-		fill(quietLines, QUIET.w, 2) -- 평소: 한 글에 두 줄까지
-	end
+local function color(hex: string): Color3
+	return Color3.fromHex(hex)
 end
 
--- 글 한 줄을 지난 글에 더한다
-function Chat.add(channelId: string, name: string?, text: string)
-	local color = C.text
-	for _, ch in CHANNEL do
-		if ch.id == channelId then
-			color = ch.color
-		end
+-- 속성 하나를 건다(그 속성이 없거나 막혀 있어도 나머지는 그대로 건다).
+--  값이 없으면(자료에 그 값이 없다) 걸지 않는다 — 2026-10-13: 자료에서 뺀 값(stroke)을 걸려던 줄이 남아, nil을 수 속성에 넣다가
+--  Studio의 Output에 "value of type nil cannot be converted to a number"가 떴다(pcall 안이라 게임은 그대로 돌았다). 걸어야 하는 값이 다 걸리는지는 테스트 40이 본다
+local function set(target: Instance?, key: string, value: any)
+	if value == nil then
+		warn("[lune] 채팅: 걸 값이 자료(ui.generated의 chatUi)에 없다 — " .. key)
+		return
 	end
-	table.insert(Chat.log, { text = Tags.chatLine(channelId, name, text), color = color })
-	while #Chat.log > KEEP do
-		table.remove(Chat.log, 1)
-	end
-	Chat.lastAt = os.clock()
-	if root then
-		draw()
-		-- 조금 뒤에 저절로 사라진다(그사이 새 글이 왔으면 그 글의 때에 맞춰 다시 본다)
-		task.delay(QUIET.life + 0.1, function()
-			if root then
-				draw()
-			end
+	if target then
+		pcall(function()
+			(target :: any)[key] = value
 		end)
 	end
 end
 
--- 알림 글(서버나 게임이 알리는 것)
+-- 글에 넣는 이름: 글자 꾸밈 꼬리표로 읽히지 않게
+local function plain(text: string): string
+	return (text:gsub("[&<>\"']", { ["&"] = "&amp;", ["<"] = "&lt;", [">"] = "&gt;", ['"'] = "&quot;", ["'"] = "&apos;" }))
+end
+Chat.plain = plain
+
+-- 그 글의 앞머리: 「[파티] 이름:」 — 이름은 그 사람이 하고 있는 캐릭터의 이름(서버가 사람에게 적어 둔 LuneName). 아직 캐릭터를 고르지 않은 사람이면 nil(Roblox의 기본 앞머리 그대로)
+function Chat.prefix(charName: any, party: boolean): string?
+	if typeof(charName) ~= "string" or charName == "" then
+		return nil
+	end
+	local head = if party then ("<font color='%s'>%s</font> "):format(K.party.color, plain(K.party.tag)) else ""
+	return ("%s<font color='%s'>%s:</font>"):format(head, if party then K.party.color else K.nameColor, plain(charName))
+end
+
+-- 입력줄에 글을 치는 중인가(그동안 게임의 키를 받지 않는다 — input.luau)
+function Chat.focused(): boolean
+	local ok, on = pcall(function()
+		return bar ~= nil and (bar :: any).IsFocused == true
+	end)
+	return ok and on == true
+end
+
+-- 알림 글(내 화면에만 뜬다)
 function Chat.note(text: string)
-	table.insert(Chat.log, { text = text, color = C.gold })
-	if root then
-		draw()
-	end
-end
-
-local function setChannel(index: number)
-	Chat.channel = index
-	channelButton:setText(CHANNEL[index].name)
-end
-
-function Chat.open()
-	-- 보내거나 닫은 바로 그 Enter가 다시 여는 일이 없게, 닫은 직후에는 열지 않는다
-	if Chat.typing or not box or os.clock() - Chat.closedAt < 0.25 then
-		return
-	end
-	Chat.typing = true
-	draw()
-	box.Text = ""
-	box:CaptureFocus()
-end
-
-function Chat.close()
-	Chat.typing = false
-	Chat.closedAt = os.clock()
-	if box then
-		box.Text = ""
-		box:ReleaseFocus()
-	end
-	draw()
-end
-
-local function send(text: string)
-	local clean = Tags.chatClean(text)
-	if not clean then
-		return
-	end
-	local def = CHANNEL[Chat.channel]
 	task.spawn(function()
-		local ok = pcall(function()
+		pcall(function()
 			local channels = TextChatService:WaitForChild("TextChannels", 5)
-			local channel = channels and channels:FindFirstChild(def.channel)
-			assert(channel, "채널 없음")
-			channel:SendAsync(clean)
+			local channel = channels and (channels:FindFirstChild("RBXSystem") or channels:FindFirstChild("RBXGeneral"))
+			if channel then
+				(channel :: any):DisplaySystemMessage(text)
+			end
 		end)
-		if not ok then
-			Chat.note("글을 보내지 못했다")
-		end
 	end)
 end
 
--- 스마트폰 단추가 켜지면 채팅 줄을 왼쪽 위로 옮긴다(왼쪽 아래에는 이동 패드가 온다 — data/ui.generated.luau의 hudTouch).
---  쓰는 판도 위에 뜬다: 화면 아래 절반은 글자판이 덮는다.
-function Chat.setTouch(on: boolean)
-	if not quiet or not panel then
-		return
-	end
-	local r = UI.hud.chat
-	local t = UI.hudTouch.chat
-	local o = Layout.chatOpen()
-	if on and t then
-		quiet.Position = Stage.atPosition(t.at, t.x, t.y)
-		panel.Position = Stage.atPosition(t.at, t.x, t.y)
-	else
-		quiet.Position = Stage.atPosition(r.at, r.x, r.y)
-		panel.Position = Stage.atPosition(o.at, o.x, o.y)
-	end
-end
-
-function Chat.init(parent: Frame)
-	-- Roblox 기본 채팅 창과 입력줄은 끈다(채널과 글 거르기는 그대로 쓴다)
-	pcall(function()
-		local window = TextChatService:FindFirstChildOfClass("ChatWindowConfiguration")
-		if window then
-			window.Enabled = false
-		end
-		local bar = TextChatService:FindFirstChildOfClass("ChatInputBarConfiguration")
-		if bar then
-			bar.Enabled = false
-		end
-	end)
-
-	local r = UI.hud.chat
-	root = Stage.group(parent, "Chat", 20)
-
-	-- 평소: 새 글 세 줄(판 없이 — 테두리를 두른 글)
-	quiet = Stage.placeRect(root, "Quiet", r)
-	for i = 1, QUIET.lines do
-		quietLines[i] = Ui.text(quiet, "", 0, (i - 1) * LINE, QUIET.w, { outline = true })
-	end
-
-	-- 쓰는 중: 어두운 판에 지난 글 여섯 줄 + 채널 단추 + 쓰는 칸. 아래 끝을 평소 칸의 아래 끝에 맞춘다
-	local o = Layout.chatOpen()
-	local h = o.h
-	local holder = Stage.placeRect(root, "Open", o)
-	panel = holder
-	Ui.panel(holder, 0, 0, OPEN.w, h)
-	for i = 1, OPEN.lines do
-		panelLines[i] = Ui.text(holder, "", OPEN.pad, OPEN.pad + (i - 1) * LINE, OPEN.w - OPEN.pad * 2)
-	end
-	local inputY = OPEN.pad + OPEN.lines * LINE + 4
-	channelButton = Ui.button(holder, CHANNEL[1].name, OPEN.pad, inputY, OPEN.channelW, function()
-		setChannel(Chat.channel % #CHANNEL + 1)
-		if box then
-			box:CaptureFocus()
-		end
-	end, { h = FIELD })
-	local fieldW = OPEN.w - OPEN.pad * 2 - OPEN.channelW - 6
-	local field = Ui.group(holder, OPEN.pad + OPEN.channelW + 6, inputY, fieldW, FIELD, "Field")
-	Ui.part(field, "uField", 0, 0, fieldW, FIELD)
-	box = Instance.new("TextBox")
-	box.Name = "Input"
-	box.BackgroundTransparency = 1
-	box.Position = UDim2.fromOffset(6, 0)
-	box.Size = UDim2.new(1, -12, 1, 0)
-	box.Font = Enum.Font.SourceSans
-	box.TextSize = 12
-	box.TextColor3 = C.text
-	box.PlaceholderText = "Enter로 보낸다"
-	box.PlaceholderColor3 = C.off
-	box.TextXAlignment = Enum.TextXAlignment.Left
-	box.ClearTextOnFocus = false
-	box.Text = ""
-	box.ZIndex = 6
-	box.Parent = field
-	box.FocusLost:Connect(function(enter: boolean)
-		if not Chat.typing then
-			return
-		end
-		local text = box.Text
-		if enter and Tags.chatClean(text) then
-			send(text)
-		end
-		Chat.close()
-	end)
-
-	-- 받은 글: 이름은 그 사람이 하고 있는 캐릭터의 이름(서버가 사람에게 적어 둔 LuneName — 캐릭터를 만들 때 지은 이름이다. Roblox의 이름은 쓰지 않는다)
-	TextChatService.MessageReceived:Connect(function(message)
-		if message.Status ~= Enum.TextChatMessageStatus.Success then
-			return -- 내가 보낸 글도 서버가 받아 준 뒤에 한 번만 넣는다
-		end
-		local channel = message.TextChannel
-		local id = "near"
-		for _, ch in CHANNEL do
-			if channel and channel.Name == ch.channel then
-				id = ch.id
+-- 채팅 화면이 차지한 자리의 아래 끝을 다시 잰다(창과 입력줄을 합친 네모 — 문서의 본보기와 같은 법). 화면 틀의 점으로
+local function measure()
+	local ok, y = pcall(function()
+		local low = 0
+		for _, c in { window, bar } do
+			if c and (c :: any).Enabled then
+				local pos, size = (c :: any).AbsolutePosition, (c :: any).AbsoluteSize
+				if size.Y > 0 then
+					low = math.max(low, pos.Y + size.Y)
+				end
 			end
 		end
-		local source = message.TextSource
-		local name = nil
-		if source then
-			local player = Players:GetPlayerByUserId(source.UserId)
-			local charName = if player then player:GetAttribute("LuneName") else nil
-			name = if typeof(charName) == "string" and charName ~= "" then charName else "?"
-		elseif channel and channel.Name ~= "RBXGeneral" and channel.Name ~= "파티" then
-			return -- 시스템 채널의 글은 넣지 않는다
+		if low <= 0 or not Stage.ui then
+			return 0
 		end
-		Chat.add(id, name, message.Text)
+		return math.max(0, math.ceil((low - Stage.ui.AbsolutePosition.Y) / Stage.uiScale))
 	end)
-	draw()
+	local now = if ok then y else 0
+	if now ~= Chat.bottom then
+		Chat.bottom = now
+		if Chat.onMoved then
+			Chat.onMoved()
+		end
+	end
+end
+Chat.measure = measure
+
+function Chat.init()
+	window = config("ChatWindowConfiguration")
+	bar = config("ChatInputBarConfiguration")
+	local tabs = config("ChannelTabsConfiguration")
+
+	-- ① 기본 화면을 켜고 게임의 색에 맞춘다
+	local W = K.window
+	set(window, "Enabled", true)
+	set(window, "BackgroundColor3", color(W.back))
+	set(window, "BackgroundTransparency", W.alpha)
+	set(window, "TextColor3", color(W.text))
+	set(window, "WidthScale", W.width)
+	set(window, "HeightScale", W.height)
+	set(bar, "Enabled", true)
+	set(bar, "BackgroundColor3", color(W.back))
+	set(bar, "BackgroundTransparency", W.alpha)
+	set(bar, "TextColor3", color(W.text))
+	set(bar, "PlaceholderColor3", color(W.dim))
+	-- 채널 탭: 「General」(둘레 — 같은 맵) · 「파티」
+	set(tabs, "Enabled", K.tabs)
+	set(tabs, "BackgroundColor3", color(W.back))
+	set(tabs, "BackgroundTransparency", W.alpha)
+	set(tabs, "TextColor3", color(W.dim))
+	set(tabs, "SelectedTabTextColor3", color(K.nameColor))
+
+	-- ② 이름은 캐릭터의 이름으로(이 함수는 기다리지 않는다 — 문서: 콜백은 멈추지 않아야 한다)
+	pcall(function()
+		TextChatService.OnIncomingMessage = function(message: TextChatMessage)
+			local props = Instance.new("TextChatMessageProperties")
+			local source = message.TextSource
+			if source then
+				local player = Players:GetPlayerByUserId(source.UserId)
+				local channel = message.TextChannel
+				local prefix = Chat.prefix(if player then player:GetAttribute("LuneName") else nil, channel ~= nil and channel.Name == K.party.channel)
+				if prefix then
+					props.PrefixText = prefix
+				end
+			end
+			return props
+		end
+	end)
+
+	-- ④ 창이 차지한 자리(바뀔 때마다 다시 잰다 — 창 크기 · 창을 여닫을 때)
+	for _, c in { window, bar } do
+		if c then
+			pcall(function()
+				c:GetPropertyChangedSignal("AbsoluteSize"):Connect(measure)
+				c:GetPropertyChangedSignal("AbsolutePosition"):Connect(measure)
+				c:GetPropertyChangedSignal("Enabled"):Connect(measure)
+			end)
+		end
+	end
+	Stage.onResize(measure)
+	task.delay(2, measure) -- 채팅 화면이 뜬 뒤(문서의 본보기도 잠깐 기다렸다가 잰다)
+	measure()
 end
 
 return Chat

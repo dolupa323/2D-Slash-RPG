@@ -67,7 +67,7 @@ eq(Music.gain("music"), S.start / S.steps, "처음 크기의 배경 음악")
 expect(Music.setLevel("music", 7) == true and Music.level.music == 7 and math.abs(Music.gain("music") - 0.7) < 1e-9, "배경 음악을 7칸으로 = 70%")
 eq(Music.gain("sfx"), S.start / S.steps, "효과음은 그대로다(따로 다룬다)")
 expect(Music.setLevel("sfx", 0) == true and Music.gain("sfx") == 0, "효과음을 0칸으로 = 나지 않는다")
-expect(Music.sfx("hit1") == false, "효과음이 0이면 타격 소리를 내지 않는다")
+expect(Music.sfx("coin") == false, "효과음이 0이면 효과음을 내지 않는다")
 for _, bad in { -1, S.steps + 1, 2.5, 0 / 0 } do
 	expect(Music.setLevel("music", bad) == false and Music.level.music == 7, "범위 밖의 크기는 받지 않는다")
 end
@@ -83,6 +83,35 @@ Music.import(nil)
 Music.import({ music = 4 })
 expect(same(Music.export(), { music = 4, sfx = 9, on = true }), "모자란 것은 있는 것만 얹는다(없는 on은 켬)")
 expect(Account.cleanSound(Music.export()) ~= nil, "화면이 보내는 꼴을 계정이 받는다")
+
+-- ---- 3b) 어느 소리를 내는가(2026-10-14) ----
+--  사용자: "플레이어랑 몬스터 때릴 때 나는 소리랑 맞을때 나는 소리 전부 빼겠습니다. 대쉬 소리 빼겠습니다." · "모든 브금 디폴트 소리 줄이세요"
+do
+	local MUSIC = req("ReplicatedStorage/shared/lune/data/music.generated")
+	-- 게임이 내는 효과음 · 트는 징글은 모두 자료에 있고 올린 번호가 있다(없으면 그 자리는 조용하다)
+	for _, k in { "coin", "pick", "gameover", "success", "secret2", "secret3", "secret4" } do
+		local d = MUSIC.sfx[k]
+		expect(d ~= nil and d.id ~= "" and d.volume > 0 and d.volume <= 1 and d.gap > 0, "효과음 " .. k)
+	end
+	-- 데미지 소리(사용자: "출력되는 데미지는 이소리를 아주 짧게 재생합니다. 한 틱당 한번재생"): 타마다 · 마리마다 한 번씩 — 같은 순간에 여럿이 떠도 하나도 거르지 않는다(틈 0)
+	local dmg = MUSIC.sfx.damage
+	expect(dmg ~= nil and dmg.id == "rbxassetid://102904154168830" and dmg.gap == 0 and dmg.volume == 0.5, "데미지 소리: 사용자의 Sound(번호 · 크기 0.5) · 틈 0")
+	-- 싸움의 소리(때릴 때 · 맞을 때 · 쓰러뜨림 · 대쉬)는 없다 — 자료에도, 화면 코드에도(Music.hit · Music.swing이 없다)
+	for _, k in { "slash", "whoosh", "whoosh2", "hit1", "hit2", "hit3", "hitBig", "kill", "hurt", "dash", "jump" } do
+		eq(MUSIC.sfx[k], nil, "효과음 " .. k .. "는 없다")
+	end
+	expect(Music.hit == nil and Music.swing == nil, "때리는 소리를 내는 함수가 없다")
+	for _, k in { "victory", "jobup" } do
+		expect(MUSIC.jingles[k] ~= nil and MUSIC.jingles[k].id ~= "", "징글 " .. k)
+	end
+	for _, k in { "complete", "death", "strange" } do
+		eq(MUSIC.jingles[k], nil, "징글 " .. k .. "는 없다(퀘스트 완료 · 사망 · 숨은 방은 효과음만)")
+	end
+	eq(MUSIC.tracks.boss, nil, "보스의 곡은 하나(lair) — 망루의 부관 · 정찰대장이 같은 방")
+	eq(MUSIC.scene.dream, "dream", "튜토리얼 꿈은 제 곡")
+	-- 배경 음악의 크기: 처음(0.5배 기준)의 4분의 1 — 처음에 가장 컸던 field_a(1.03)가 0.26(사용자: "줄이세요" → "여기서 다시 절반으로")
+	expect(MUSIC.tracks.field_a.volume <= 0.26, "배경 음악을 줄였다")
+end
 
 -- ---- 4) 소리 설정 창을 화면 없이 지어 본다 ----
 do

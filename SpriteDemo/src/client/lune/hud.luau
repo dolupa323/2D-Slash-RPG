@@ -17,16 +17,17 @@ local Ui = require(script.Parent.ui.ui)
 local C = Ui.COLOR
 local M = Ui.M
 local V, K, MN = Layout.VITALS, Layout.SKILLS, Layout.MENU
+local HpFx = require(lune.ui.hpFx) -- 체력이 닳고 찰 때의 효과(셈)
 local SLOT = K.slot -- 스킬 칸 한 변
 local KEY_UP = K.keyUp -- 칸 위의 키 딱지가 차지하는 높이
 local COLS, ROWS = K.cols, K.rows -- 스킬 칸: 두 줄 x 여섯
 local PIC = M.pic
 -- 메뉴 단추의 그림(창의 이름표 → 그림)
-local MENU_PIC = { bag = "menu_bag", equip = "menu_equip", stat = "menu_stat", skill = "menu_skill", quest = "menu_quest", map = "menu_map", party = "menu_party", more = "menu_gear" }
+local MENU_PIC = { bag = "menu_bag", equip = "menu_equip", stat = "menu_stat", skill = "menu_skill", quest = "menu_quest", map = "menu_map", auction = "menu_auction", party = "menu_party", more = "menu_gear" }
 
 local Hud = {}
 Hud.COLS, Hud.ROWS = COLS, ROWS
-Hud.MENU_MAX = MN.max -- 메뉴 단추는 여섯까지 놓인다(나머지는 「메뉴」 단추 안에)
+Hud.MENU_MAX = MN.max -- 메뉴 단추는 여덟까지 놓인다(나머지는 「메뉴」 단추 안에)
 
 -- 왼쪽 아래 덩어리 안의 자리(shared/lune/ui/layout.luau의 VITALS): 윗줄에 레벨 · 이름, 그 아래 체력 바(숫자는 바 안), 가는 경험치 줄과 %
 function Hud.layout()
@@ -46,6 +47,28 @@ function Hud.init()
 	Hud.level = Ui.text(box, "Lv.1", 0, L.nameY, 60, { color = C.gold, outline = true })
 	Hud.name = Ui.text(box, "", 40, L.nameY, v.w - 40, { outline = true })
 	Hud.hp = Ui.bar(box, 0, L.hpY, V.barW, V.hpH, C.hp, C.hpDark)
+	-- 체력이 닳고 찰 때의 효과(사용자 2026-10-13: "체력 다는거나  회복되는게 잘 보이지않습니다. 효과가 좀 들어가야해요"):
+	--  띠 안에 닳은 자리(밝은 색) · 찬 자리(풀빛)를 빨간 띠 아래에 깔고, 번쩍임을 맨 위에 덮는다. 띠 오른쪽 위에 「-23 · +60」이 떠오른다. 셈은 shared/lune/ui/hpFx.luau, 장마다 Hud.step이 그린다
+	do
+		local F = HpFx.F
+		local function hex(h: string): Color3
+			return Color3.fromRGB(tonumber(h:sub(2, 3), 16) :: number, tonumber(h:sub(4, 5), 16) :: number, tonumber(h:sub(6, 7), 16) :: number)
+		end
+		Hud.hpIn = { w = V.barW - 2, h = V.hpH - 2 }
+		Hud.hpLag = Ui.box(Hud.hp.frame, 1, 1, 0, Hud.hpIn.h, hex(F.lagColor))
+		Hud.hpLag.Name = "Lag"
+		Hud.hpGain = Ui.box(Hud.hp.frame, 1, 1, 0, Hud.hpIn.h, hex(F.gainColor))
+		Hud.hpGain.Name = "Gain"
+		Hud.hp.fill.ZIndex = 2 -- 빨간 띠는 그 둘 위에
+		Hud.hpLag.ZIndex, Hud.hpGain.ZIndex = 1, 1
+		Hud.hpFlash = Ui.box(Hud.hp.frame, 1, 1, Hud.hpIn.w, Hud.hpIn.h, Color3.new(1, 1, 1))
+		Hud.hpFlash.Name = "Flash"
+		Hud.hpFlash.ZIndex = 3
+		Hud.hpFlash.BackgroundTransparency = 1
+		Hud.hpFlashHeal = hex(F.gainColor)
+		Hud.hpDelta = Ui.text(box, "", 0, L.hpY - M.small - 1, V.barW, { align = "right", outline = true })
+		Hud.hpFx = HpFx.new()
+	end
 	Hud.hpText = Ui.text(box, "", V.hpPad, L.hpY + math.floor((V.hpH - M.small) / 2), L.hpTextW, { align = "center" })
 	Hud.hpText.label.Frame.ZIndex = 6
 	Hud.hpTextWidth = L.hpTextW
@@ -101,6 +124,8 @@ function Hud.init()
 	Hud.pickHint:show(false)
 
 	Hud.menuRoot = Stage.placeRect(root, "Menu", UI.hud.menu)
+	-- 화면 틀의 격자가 바뀌면 단추의 간격도 바뀐다(가장 작은 격자에서는 스킬 칸에 닿지 않게 촘촘하다)
+	Stage.onResize(Hud.placeMenu)
 	-- 버프 자리(오른쪽 위): 켜 둔 사출기 · 직업의 장치(영혼 · 열기 · 수정)가 그림으로, 그 아래에 수(공방 「기본 · UI」 탭의 3번 칸)
 	Hud.buffRoot = Stage.placeRect(root, "Buffs", UI.hud.buffs)
 	Hud.buffs = {}
@@ -260,7 +285,14 @@ function Hud.setCooldown(id: string, remain: number, total: number)
 end
 
 -- 메뉴 단추: 창마다 그림 단추 하나, 그 아래에 이름(그림만으로는 무엇을 여는지 모른다 — 사용자 2026-10-07 "무슨기능인지 인지가 하나도안됩니다").
---  누르면 그 창이 열린다. list = { { id, name, key } … } — 여섯까지, 오른쪽 끝에 붙여 놓는다
+-- 메뉴 단추들을 지금의 격자에 맞는 간격으로 놓는다
+function Hud.placeMenu()
+	for _, item in Hud.menu or {} do
+		item.frame.Position = UDim2.fromOffset(Layout.menuX(item.i, item.n, Stage.uiW), 0)
+	end
+end
+
+--  누르면 그 창이 열린다. list = { { id, name, key } … } — 여덟까지, 오른쪽 끝에 붙여 놓는다
 function Hud.setMenu(list, onClick: (string) -> ())
 	for _, old in Hud.menu or {} do
 		old.frame:Destroy()
@@ -273,7 +305,7 @@ function Hud.setMenu(list, onClick: (string) -> ())
 		if i > Hud.MENU_MAX then
 			break -- 칸을 넘는 것은 그리지 않는다
 		end
-		local frame = Ui.group(Hud.menuRoot, Layout.menuX(i, n), 0, s, r.h, "Menu_" .. item.id)
+		local frame = Ui.group(Hud.menuRoot, Layout.menuX(i, n, Stage.uiW), 0, s, r.h, "Menu_" .. item.id)
 		local cell = Ui.slot(frame, 0, 0, s)
 		Ui.pic(cell.frame, MENU_PIC[item.id] or "menu_gear", math.floor((s - PIC) / 2), math.floor((s - PIC) / 2))
 		-- 이름은 칸보다 넓을 수 있다(「퀘스트」) — 칸의 가운데에 맞춰 옆 칸과의 사이까지 쓴다
@@ -291,7 +323,7 @@ function Hud.setMenu(list, onClick: (string) -> ())
 			onClick(item.id)
 		end)
 		frame.Visible = not Hud.touch
-		Hud.menu[item.id] = { frame = frame, cell = cell, label = label, dot = dot, flash = flash, mark = false }
+		Hud.menu[item.id] = { frame = frame, cell = cell, label = label, dot = dot, flash = flash, mark = false, i = i, n = n }
 	end
 	Hud.setOpen(Hud.openSet or {})
 end
@@ -411,13 +443,56 @@ function Hud.setLocked(on: boolean)
 	end
 end
 
+-- 체력 바를 효과의 상태대로 그린다
+function Hud.drawHp()
+	local st, I = Hud.hpFx, Hud.hpIn
+	if st.fill == nil then
+		return
+	end
+	local function px(v: number): number
+		return math.floor(I.w * math.clamp(v, 0, 1) + 0.5)
+	end
+	Hud.hp:set(st.fill)
+	Hud.hpLag.Size = UDim2.fromOffset(if st.lag > st.fill then px(st.lag) else 0, I.h)
+	Hud.hpGain.Size = UDim2.fromOffset(if st.gain > st.fill then px(st.gain) else 0, I.h)
+	Hud.hpFlash.BackgroundColor3 = if st.kind == "heal" then Hud.hpFlashHeal else Color3.new(1, 1, 1)
+	Hud.hpFlash.BackgroundTransparency = 1 - HpFx.F.flashA * st.flash / HpFx.F.flash
+	local text, up = HpFx.deltaText(st)
+	Hud.hpDelta:set(text or "")
+	if text then
+		Hud.hpDelta:color(if st.delta > 0 then C.green else C.red)
+		Hud.hpDelta:move(0, Hud.layout().hpY - M.small - 1 - up)
+	end
+end
+
+-- 장마다(boot의 그리는 고리가 부른다): 체력 바의 효과를 흘려보낸다
+function Hud.step(dt: number)
+	local st = Hud.hpFx
+	if st and not HpFx.idle(st) then
+		HpFx.step(st, dt)
+		Hud.drawHp()
+	end
+end
+
+-- 다른 캐릭터로 들어왔다: 앞 캐릭터의 체력과 견주어 효과가 뜨지 않게 처음으로 돌린다
+function Hud.resetHp()
+	Hud.hpFx = HpFx.new()
+	if Hud.hpDelta then
+		Hud.hpDelta:set("")
+		Hud.hpFlash.BackgroundTransparency = 1
+		Hud.hpLag.Size = UDim2.fromOffset(0, Hud.hpIn.h)
+		Hud.hpGain.Size = UDim2.fromOffset(0, Hud.hpIn.h)
+	end
+end
+
 function Hud.setSelf(me)
 	local level = "Lv." .. me.level
 	Hud.level:set(level)
 	Hud.name:move(Ui.measure(level) + V.nameGap, V.nameY) -- 이름은 레벨 글 바로 뒤에
 	Hud.name.label:SetMaxWidth(UI.hud.vitals.w - Ui.measure(level) - V.nameGap, 1)
 	Hud.hpText:set(Format.hp(me.hp, me.maxHp, Hud.hpTextWidth, Ui.measure))
-	Hud.hp:set(me.hp / math.max(1, me.maxHp))
+	HpFx.set(Hud.hpFx, math.clamp(me.hp / math.max(1, me.maxHp), 0, 1), me.hp) -- 띠는 Hud.step이 효과와 함께 그린다
+	Hud.drawHp()
 	Hud.xp:set(me.xp / math.max(1, me.need))
 	Hud.xpText:set(Hud.xpLabel(me.xp, me.need))
 	Hud.markMenu("stat", me.ap > 0)

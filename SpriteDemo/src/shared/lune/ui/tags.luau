@@ -26,39 +26,4 @@ function T.visible(list, h: number, gap: number?): { boolean }
 	return out
 end
 
--- 채팅 한 줄: 「이름: 글」. 채널이 파티면 앞에 [파티]
-function T.chatLine(channel: string, name: string?, text: string): string
-	local head = if channel == "party" then "[파티] " else ""
-	if not name or name == "" then
-		return head .. text
-	end
-	return ("%s%s: %s"):format(head, name, text)
-end
-
--- 보내기 전에 다듬는다: 앞뒤 빈칸을 떼고, 줄바꿈을 빈칸으로, max글자까지만. 빈 글이면 nil
-function T.chatClean(text: any, max: number?): string?
-	if typeof(text) ~= "string" then
-		return nil
-	end
-	local s = string.gsub(text, "[\r\n\t]", " ")
-	s = string.match(s, "^%s*(.-)%s*$") or ""
-	if s == "" then
-		return nil
-	end
-	local out, n = "", 0
-	local ok = pcall(function()
-		for _, code in utf8.codes(s) do
-			n += 1
-			if n > (max or 80) then
-				break
-			end
-			out ..= utf8.char(code)
-		end
-	end)
-	if not ok or out == "" then
-		return nil
-	end
-	return out
-end
-
 return T

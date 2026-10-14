@@ -5,6 +5,7 @@ local D = require(script.Parent.Parent.data["worldmap.generated"])
 local SCENES = require(script.Parent.Parent.data["scenes.generated"])
 local COMBAT = require(script.Parent.Parent.data["combat.generated"])
 local Quests = require(script.Parent.Parent.sim.quests)
+local Navi = require(script.Parent.navi) -- 퀘스트 길찾기(켠 퀘스트가 있으면 「가는 길」이 그것을 따른다)
 
 local WM = {}
 WM.data = D
@@ -68,15 +69,20 @@ function WM.nodeOf(sceneKey: any): (string?, string?)
 			found = D.sceneNode[key]
 			break
 		end
-		local next = {}
+		-- 퀘스트를 받아야 열리는 문(need — 달의 사당 안의 「사당 지하」)은 늘 열린 문 다음에 따라간다: 사당 안은 지하가 아니라 마을의 마디다
+		local next, gated = {}, {}
 		for _, p in SCENES.scenes[key].portals or {} do
 			if SCENES.scenes[p.to] and not seen[p.to] then
 				seen[p.to] = true
-				table.insert(next, p.to)
+				table.insert(if p.need or p.done then gated else next, p.to)
 			end
 		end
 		table.sort(next) -- 차례가 늘 같게
+		table.sort(gated)
 		for _, k in next do
+			table.insert(queue, k)
+		end
+		for _, k in gated do
 			table.insert(queue, k)
 		end
 	end
@@ -192,7 +198,12 @@ function WM.recommend(rid: string, level: number): string?
 	local best, bestLo, lowest, lowestLo = nil, -1, nil, math.huge
 	for _, n in region.nodes do
 		local lo = WM.levels(n)
-		if lo then
+		-- 이야기의 방(사당 지하 — 그 퀘스트를 하는 동안에만 병사가 나온다)은 사냥터로 권하지 않는다
+		local story = false
+		for _, key in n.scenes do
+			story = story or SCENES.scenes[key].story == true
+		end
+		if lo and not story then
 			if lo <= level and lo > bestLo then
 				best, bestLo = n.id, lo
 			end
@@ -251,7 +262,7 @@ function WM.exitsOf(rid: string, nodeId: string)
 end
 
 -- 마디 아래에 적는 줄들(그림): 짧은 이름 · 몬스터의 레벨(있으면) · 이어지는 지역마다 「→ 은달 항구」. { { text, kind = "name" | "level" | "exit", exit? } … }
-WM.ROWS_MAX = 3 -- 그림의 아래 여백이 세 줄까지 받는다(자동 검사 28이 본다)
+WM.ROWS_MAX = 4 -- 마디 아래에 적는 줄의 끝(이름 + 이어지는 지역 셋 — 은달 항구의 부두: 수정 숲 · 물마루 바다 · 초승 고개. 2026-10-13에 셋 → 넷)
 function WM.rows(rid: string, node)
 	local rows = { { text = node.label, kind = "name" } }
 	local lv = WM.levelText(node)
@@ -437,25 +448,68 @@ end
 
 -- 이름표를 놓는다(화면을 모르는 셈 — 그림 위에서 서로, 그리고 표시와 겹치지 않게): 차례대로 아래 → 위 → 오른쪽 → 왼쪽을 대 보고 처음 맞는 자리에.
 --  items = { { id, x, y, r(표시의 반지름), w(글의 폭) } … }(앞선 것이 먼저 자리를 잡는다). 돌려주는 것: [id] = { x, y, w, h }(놓을 자리가 없으면 그 이름은 빠진다)
-function WM.placeLabels(items)
-	local P = WM.PLATE
-	local taken = {}
-	for _, it in items do
-		table.insert(taken, { it.x - it.r - 2, it.y - it.r - 2, it.x + it.r + 2, it.y + it.r + 2 }) -- 표시들
+--  lines = 가리지 말아야 할 점줄들({ { x1, y1, x2, y2 } … } — 포탈로 이어진 두 곳 사이): 그 점을 가장 적게 가리는 자리를 고른다(같으면 앞선 자리)
+-- 점줄의 점들: 표시에서 표시로 곧게, 다섯 점마다 한 점(지도 창이 이대로 그린다)
+function WM.linkDots(ax: number, ay: number, bx: number, by: number)
+	local dx, dy = bx - ax, by - ay
+	local n = math.max(1, math.floor(math.sqrt(dx * dx + dy * dy) / 5))
+	local out = {}
+	for k = 1, n - 1 do
+		table.insert(out, { math.floor(ax + dx * k / n) - 1, math.floor(ay + dy * k / n) - 1 })
 	end
-	local function free(x: number, y: number, w: number, h: number): boolean
-		if x < 1 or y < 1 or x + w > WM.ART_W - 1 or y + h > WM.ART_H - 1 then
-			return false
+	return out
+end
+
+-- 그 지역의 이어진 줄들(지도 창과 이름표 놓기가 함께 쓴다): 장소끼리 + 다른 지역으로 나가는 줄
+function WM.lines(rid: string)
+	local region = D.regions[rid]
+	local A = region and region.art
+	local out = {}
+	if not (region and A) then
+		return out
+	end
+	for _, link in region.links do
+		local a, b = A.at[link[1]], A.at[link[2]]
+		if a and b then
+			table.insert(out, { a[1], a[2], b[1], b[2], link[1], link[2] })
 		end
-		for _, t in taken do
-			if x < t[3] and x + w > t[1] and y < t[4] and y + h > t[2] then
-				return false
+	end
+	for _, ex in WM.exits(rid) do
+		local a, b = A.at[ex.node], A.out and A.out[ex.to]
+		if a and b then
+			table.insert(out, { a[1], a[2], b[1], b[2], ex.node, "out:" .. ex.to })
+		end
+	end
+	return out
+end
+
+WM.PLACE = { amb = 4, drop = 100, budget = 20000, depth = 2 } -- 남의 표시에 더 가까운 자리의 값 · 못 놓은 이름의 값 · 되돌아가며 대 보는 횟수의 끝
+function WM.placeLabels(items, lines)
+	local P, K = WM.PLATE, WM.PLACE
+	local dotsAll = {}
+	for _, l in lines or {} do
+		for _, d in WM.linkDots(l[1], l[2], l[3], l[4]) do
+			table.insert(dotsAll, d)
+		end
+	end
+	local function covered(x: number, y: number, w: number, h: number): number
+		local n = 0
+		for _, d in dotsAll do
+			if d[1] + 2 > x and d[1] < x + w and d[2] + 2 > y and d[2] < y + h then
+				n += 1
 			end
 		end
-		return true
+		return n
 	end
-	local out = {}
-	for _, it in items do
+	-- 네모에서 표시의 가장자리까지
+	local function gapTo(x: number, y: number, w: number, h: number, pin): number
+		local dx = math.max(x - pin.x, 0, pin.x - (x + w))
+		local dy = math.max(y - pin.y, 0, pin.y - (y + h))
+		return math.sqrt(dx * dx + dy * dy) - pin.r
+	end
+	-- ① 이름마다 놓을 수 있는 자리들과 그 값(다른 이름표와는 상관없는 것): 그림 안 · 표시를 가리지 않음 · 가린 점의 수 + 남의 표시에 더 가까우면 amb
+	local cands = {}
+	for n, it in items do
 		local w, h = it.w + P.padX * 2, P.h
 		local cx = it.x - math.floor(w / 2)
 		-- 대 보는 자리의 차례: 바로 아래 · 바로 위(가운데 → 오른쪽으로 · 왼쪽으로 반씩 민 것) → 오른쪽 · 왼쪽(가운데 → 아래로 · 위로 민 것) → 한 줄 더 떨어진 아래 · 위
@@ -472,14 +526,95 @@ function WM.placeLabels(items)
 			{ cx, below + h + 1 }, { cx, above - h - 1 },
 			{ cx + half, below + h + 1 }, { cx - half, below + h + 1 }, { cx + half, above - h - 1 }, { cx - half, above - h - 1 },
 		}
-		for _, t in tries do
+		local list = {}
+		for k, t in tries do
 			-- 옆으로 조금 밀어도 된다(그림의 가장자리에 붙은 마을)
-			local x = math.clamp(t[1], 1, WM.ART_W - 1 - w)
-			if free(x, t[2], w, h) then
-				out[it.id] = { x = x, y = t[2], w = w, h = h }
-				table.insert(taken, { x - 1, t[2] - 1, x + w + 1, t[2] + h + 1 })
+			local x, y = math.clamp(t[1], 1, WM.ART_W - 1 - w), t[2]
+			local ok = y >= 1 and y + h <= WM.ART_H - 1
+			if ok then
+				for _, pin in items do
+					if x < pin.x + pin.r + 2 and x + w > pin.x - pin.r - 2 and y < pin.y + pin.r + 2 and y + h > pin.y - pin.r - 2 then
+						ok = false
+						break
+					end
+				end
+			end
+			if ok then
+				local cost = covered(x, y, w, h)
+				local own = gapTo(x, y, w, h, it)
+				for _, other in items do
+					if other ~= it and gapTo(x, y, w, h, other) <= own then
+						cost += K.amb
+						break
+					end
+				end
+				table.insert(list, { x = x, y = y, w = w, h = h, cost = cost, k = k })
+			end
+		end
+		table.sort(list, function(a, b)
+			if a.cost ~= b.cost then
+				return a.cost < b.cost
+			end
+			return a.k < b.k
+		end)
+		cands[n] = list
+	end
+	-- ② 서로 겹치지 않는 짝 가운데 값의 합이 가장 작은 것: 앞선 이름부터 값이 작은 자리를 먼저 대 본다(첫 답 = 예전처럼 차례로 놓은 것 → 그보다 나쁜 답은 없다)
+	local chosen, best, bestCost, budget = {}, nil, math.huge, K.budget
+	local function clash(c, upto: number): boolean
+		for n = 1, upto do
+			local o = chosen[n]
+			if o and c.x < o.x + o.w + 1 and c.x + c.w > o.x - 1 and c.y < o.y + o.h + 1 and c.y + c.h > o.y - 1 then
+				return true
+			end
+		end
+		return false
+	end
+	-- left = 값이 가장 작은 자리(예전의 답)에서 벗어나도 되는 횟수: 0 → 1 → 2로 늘려 가며 찾는다(앞쪽 이름 하나만 옮기면 풀리는 일이 많다)
+	local function walk(n: number, cost: number, left: number)
+		if cost >= bestCost or budget <= 0 then
+			return
+		end
+		if n > #items then
+			best, bestCost = table.clone(chosen), cost
+			return
+		end
+		budget -= 1
+		local first = true
+		for _, c in cands[n] do
+			if cost + c.cost >= bestCost then
 				break
 			end
+			if not clash(c, n - 1) then
+				if not first and left <= 0 then
+					break
+				end
+				chosen[n] = c
+				walk(n + 1, cost + c.cost, if first then left else left - 1)
+				chosen[n] = nil
+				first = false
+				if bestCost == 0 then
+					return
+				end
+			end
+		end
+		if first then
+			chosen[n] = false -- 놓을 자리가 없으면 그 이름은 빠진다
+			walk(n + 1, cost + K.drop, left)
+			chosen[n] = nil
+		end
+	end
+	for left = 0, K.depth do
+		walk(1, 0, left)
+		if bestCost == 0 or budget <= 0 then
+			break
+		end
+	end
+	local out = {}
+	for n, it in items do
+		local c = best and best[n]
+		if c then
+			out[it.id] = { x = c.x, y = c.y, w = c.w, h = c.h }
 		end
 	end
 	return out
@@ -501,8 +636,19 @@ function WM.goalCardOf(goal, sceneKey: any)
 		goal = goal,
 	}
 end
-function WM.goalCard(book, level: number, sceneKey: any)
-	local goal = Quests.goal(book, level)
+--  navi = 길찾기를 켠 줄의 이름표(알리미의 화살표 단추) · daily = 일일 의뢰의 모습: 켠 것이 있으면 그 퀘스트의 지금 진행에 맞는 곳까지의 길을 적는다(머리 위의 화살표와 같은 곳)
+WM.DAILY_NAME = "일일 의뢰"
+function WM.naviGoal(navi: any, book, level: number, daily: any)
+	local target = Navi.target(navi, book, level, daily)
+	if not target then
+		return nil
+	end
+	local def = Quests.def(navi)
+	local kind = if target.kind ~= "npc" then "do" elseif def and not (book and book[navi]) then "take" else "back"
+	return { def = def or { name = WM.DAILY_NAME }, scene = target.scene, kind = kind }
+end
+function WM.goalCard(book, level: number, sceneKey: any, navi: any, daily: any)
+	local goal = (if navi then WM.naviGoal(navi, book, level, daily) else nil) or Quests.goal(book, level)
 	return if goal then WM.goalCardOf(goal, sceneKey) else nil
 end
 

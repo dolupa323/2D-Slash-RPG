@@ -27,6 +27,23 @@ function PartyHud.init(root: Frame, send)
 	PartyHud.root = root
 end
 
+-- Roblox의 채팅 창은 화면 왼쪽 위에 선다 — 파티원 칸의 자리다. PC에서는 파티원 칸을 그 창의 아래 끝(top — 화면 틀의 점. 모르거나 폰이면 0)에서 조금 띄워 그 아래에 놓는다.
+--  창이 너무 길어 파티원 칸이 체력 덩어리 쪽으로 밀리게 되면(화면 아래에 keep만큼은 남긴다) 제자리에 둔다. 치수는 공방 ui.js의 CHATUI(gap · keep)
+function PartyHud.setTop(top: number)
+	local box = PartyHud.box
+	if not box then
+		return
+	end
+	local r = UI.hud.party
+	local base = Stage.atPosition(r.at, r.x, r.y)
+	local y = base.Y.Offset
+	local want = top + UI.chatUi.gap
+	if top > 0 and want > y and want + r.h <= Stage.uiH - UI.chatUi.keep then
+		y = want
+	end
+	box.Position = UDim2.new(base.X.Scale, base.X.Offset, base.Y.Scale, y)
+end
+
 -- info = 서버가 보낸 파티의 모습 { leader, members = { { id, name, class, level, hp, maxHp, scene } … } } · myId = 나 · scene = 내가 있는 맵
 function PartyHud.set(info, myId: any, scene: string)
 	if not PartyHud.rows then

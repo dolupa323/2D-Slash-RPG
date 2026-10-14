@@ -139,18 +139,22 @@ do
 	marks = WM.marks("r1", book, 1)
 	eq(marks.town, "?", "첫 퀘스트는 받자마자 돌려줄 수 있다 — 사제가 있는 마을에 ?")
 	book.r1m1 = { done = true, c = {} }
-	marks = WM.marks("r1", book, 1)
-	eq(marks.town, "!", "첫 기술을 끝내면 샛별이 있는 마을에 !")
-	Quests.accept(book, 1, "r1m2")
-	marks = WM.marks("r1", book, 1)
-	eq(marks.town, nil, "하는 중에는 표시가 없다(Lv.1에 받을 부탁도 없다)")
-	book.r1m2.c[1] = 5
-	marks = WM.marks("r1", book, 1)
+	marks = WM.marks("r1", book, 2)
+	eq(marks.town, "!", "첫 기술을 끝내면 샛별이 있는 마을에 !(줄의 다음 것 — 등불 심지)")
+	expect(Quests.accept(book, 2, "r1s1"), "등불 심지를 받는다")
+	marks = WM.marks("r1", book, 2)
+	eq(marks.town, nil, "하는 중에는 표시가 없다(한 번에 하나만 받는다)")
+	book.r1s1.c[1] = 5
+	marks = WM.marks("r1", book, 2)
 	eq(marks.town, "?", "다 하면 돌려줄 마을에 ?")
 	-- Lv.20: 「옛 망루」는 수비대 야영지의 차돌이 준다
 	local b2 = {}
-	for i = 1, 5 do
-		b2["r1m" .. i] = { done = true, c = {} }
+	do -- 줄에서 「옛 망루」 앞의 것을 모두 끝냈다
+		local def = Quests.def("r1m6")
+		while def.after do
+			b2[def.after] = { done = true, c = {} }
+			def = Quests.def(def.after)
+		end
 	end
 	marks = WM.marks("r1", b2, 20)
 	eq(marks.r1cc, "!", "차돌이 있는 수비대 야영지에 !")
@@ -167,20 +171,20 @@ do
 	eq(#Quests.listDone(book), 0, "끝낸 것도 없다")
 	book.r1m1 = { done = true, c = {} }
 	local open = Quests.listOpen(book, 2)
-	eq(open[1], "r1m2", "시작 가능의 맨 위는 다음 메인")
-	expect(table.find(open, "r1s1") ~= nil, "Lv.2의 부탁 「등불 심지」도 시작 가능에 있다")
+	eq(open[1], "r1s1", "시작 가능에는 줄의 다음 것(등불 심지)")
+	eq(#open, 1, "하나뿐이다(퀘스트는 한 줄이다)")
 	eq(Quests.listDone(book)[1], "r1m1", "완료에 첫 기술")
 	-- 메인을 다 하고 다음 메인이 레벨 때문에 잠겨 있으면 맨 끝에 뜬다(잠긴 채로)
-	book.r1m2 = { done = true, c = { 5 } }
+	book.r1s1 = { done = true, c = { 5 } }
 	open = Quests.listOpen(book, 2)
-	eq(open[#open], "r1m3", "레벨이 모자란 다음 메인이 맨 끝에")
-	eq(Quests.state(book, 2, "r1m3"), "locked", "그 줄은 잠겨 있다")
+	eq(open[#open], "r1m2", "레벨이 모자란 줄의 다음 것(마을 밖의 그림자 — Lv.3)이 맨 끝에")
+	eq(Quests.state(book, 2, "r1m2"), "locked", "그 줄은 잠겨 있다")
 	for _, id in open do
 		expect(not Quests.def(id).auto, "저절로 받는 것은 시작 가능에 없다 " .. id)
 	end
 	-- 받으면 시작 가능에서 빠지고 진행 중에 들어간다
-	Quests.accept(book, 2, "r1s1")
-	expect(table.find(Quests.listOpen(book, 2), "r1s1") == nil and table.find(Quests.active(book), "r1s1") ~= nil, "받은 것은 진행 중으로")
+	expect(Quests.accept(book, 3, "r1m2"), "레벨이 되어 받는다")
+	expect(table.find(Quests.listOpen(book, 3), "r1m2") == nil and table.find(Quests.active(book), "r1m2") ~= nil, "받은 것은 진행 중으로")
 end
 
 -- ---- 7) 전직하면 그 레벨의 무기를 받는다(메이플스토리처럼) ----
@@ -253,6 +257,13 @@ do
 			expect(math.abs(n.x - step.x) > 60 or math.abs(n.y - step.y) > 48, ("자리가 주민 %s과 겹치지 않는다 %s"):format(n.name, def.name))
 		end
 		local book = {}
+		do -- (줄에서 그 앞의 것을 모두 끝냈다 — 퀘스트는 한 줄이다)
+			local d = def
+			while d.after do
+				book[d.after] = { done = true, c = {} }
+				d = Quests.def(d.after)
+			end
+		end
 		eq(#Quests.spotsIn(book, def.scene), 0, "받기 전에는 자리가 없다 " .. def.name)
 		expect(Quests.accept(book, def.lv, def.id) == true, "받는다 " .. def.name)
 		local spots = Quests.spotsIn(book, def.scene)
@@ -321,8 +332,10 @@ do
 		end
 		return false
 	end
-	expect(has("r1", "r1cc", "city", "ct1"), "초승 고개: 수비대 야영지 → 은달 항구(성문 거리)")
-	expect(has("city", "ct1", "r1", "r1cc"), "은달 항구: 성문 거리 → 초승 고개")
+	-- 2026-10-13(사용자: "은달항구는  초승달 마을에서 갈수있게합니다"): 수비대 야영지 ↔ 성문 거리의 임시 문을 떼고, 초승달 마을의 작은 나루 ↔ 은달 항구의 부두
+	expect(has("r1", "town", "city", "ct5"), "초승 고개: 초승달 마을(작은 나루) → 은달 항구(부두)")
+	expect(has("city", "ct5", "r1", "town"), "은달 항구: 부두 → 초승 고개(초승달 마을)")
+	expect(not has("r1", "r1cc", "city") and not has("city", "ct1", "r1"), "수비대 야영지 ↔ 성문 거리의 길은 없다(「불타는 마을」을 건너뛸 수 없게)")
 	expect(has("city", "ct5", "r2", "r2t") and has("city", "ct5", "sea", "seat"), "은달 항구: 부두 → 수정 숲 · 물마루 바다")
 	expect(has("city", "ct4", "r3", "port"), "은달 항구: 하늘 승강장 → 등불 포구")
 	expect(has("sea", "seat", "city", "ct5"), "물마루 바다: 물마루 마을 → 은달 항구")
@@ -356,7 +369,7 @@ do
 		expect(found, ("길의 걸음마다 문이 있다 %s → %s"):format(path[i - 1], path[i]))
 	end
 	local joined = table.concat(path, " ")
-	expect(joined:find("r1cc ct1 ct2 ct3 ct5 r2t", 1, true) ~= nil, "야영지 → 성문 거리 → 광장 → 장터 → 부두 → 반달 나루: " .. joined)
+	eq(joined, "town ct5 r2t", "초승달 마을(나루) → 부두 → 반달 나루")
 	eq(#WM.path("town", "town"), 1, "제자리의 길은 한 장")
 	eq(WM.path("town", "없는맵"), nil, "없는 맵으로 가는 길은 없다")
 	local route = WM.route("in_shrine", "r2t")
@@ -364,11 +377,11 @@ do
 	for i = 2, #route do
 		expect(route[i].region ~= route[i - 1].region or route[i].node ~= route[i - 1].node, "이어서 같은 마디는 한 번만")
 	end
-	local text = WM.routeText(route)
+	local text = WM.routeText(WM.route("r1c3", "r2t")) -- 긴 길: 옛 망루 3층에서 반달 나루까지
 	expect(text:find("…", 1, true) ~= nil and text:sub(-#"반달 나루") == "반달 나루", "긴 길은 가운데를 줄인다: " .. text)
 	expect(pixelText.Measure("…", "small") > 0, "줄임표가 글꼴에 있다")
 	eq(WM.routeText(WM.route("town", "town")), "", "제자리면 빈 글")
-	eq(WM.routeText(WM.route("town", "hunt")), "마을 어귀 → 달그림자 사냥터", "짧은 길은 그대로")
+	eq(WM.routeText(WM.route("town", "hunt")), "마을 어귀 → 세 갈래 길 → 달그림자 사냥터", "짧은 길은 그대로") -- 2026-10-13: 달그림자 사냥터는 세 갈래 길의 가지가 됐다
 	eq(WM.routeText(nil), "", "길이 없으면 빈 글")
 
 	-- 지금 가야 할 곳
@@ -394,25 +407,25 @@ do
 		end
 	end
 	book.r1m1.done = true
-	goal = Quests.goal(book, 1)
-	local m2 = Quests.def("r1m2")
-	expect(goal ~= nil and goal.def.id == "r1m2" and goal.kind == "take" and goal.scene == Quests.giverScene(m2), "첫 메인을 끝내면: 둘째 메인을 받으러")
-	expect(Quests.accept(book, 1, "r1m2") == true, "둘째 메인을 받는다")
-	goal = Quests.goal(book, 1)
-	expect(goal.def.id == "r1m2" and goal.kind == "do" and goal.scene == m2.scene, "받으면: 그 퀘스트의 맵으로 하러")
-	line = WM.goalLine(book, 1, "town")
+	goal = Quests.goal(book, 2)
+	local m2 = Quests.def("r1s1")
+	expect(goal ~= nil and goal.def.id == "r1s1" and goal.kind == "take" and goal.scene == Quests.giverScene(m2), "첫 퀘스트를 끝내면: 줄의 다음 것(등불 심지)을 받으러")
+	expect(Quests.accept(book, 2, "r1s1") == true, "줄의 다음 것을 받는다")
+	goal = Quests.goal(book, 2)
+	expect(goal.def.id == "r1s1" and goal.kind == "do" and goal.scene == m2.scene, "받으면: 그 퀘스트의 맵으로 하러")
+	line = WM.goalLine(book, 2, "town")
 	expect(line:find("「" .. m2.name .. "」 하러 가는 길: ", 1, true) == 1 and line:find(SCENES.scenes[m2.scene].name, 1, true) ~= nil, "마을에서: " .. line)
 	for i, step in m2.steps do
-		book.r1m2.c[i] = step.n
+		book.r1s1.c[i] = step.n
 	end
-	goal = Quests.goal(book, 1)
-	expect(goal.def.id == "r1m2" and goal.kind == "back" and goal.scene == Quests.endScene(m2), "다 하면: 돌려주러")
+	goal = Quests.goal(book, 2)
+	expect(goal.def.id == "r1s1" and goal.kind == "back" and goal.scene == Quests.endScene(m2), "다 하면: 돌려주러")
 	-- 부탁만 하는 중이고 다음 메인은 레벨이 모자라면 갈 곳이 없다
-	book.r1m2.done = true
-	local next, why = Quests.nextMain(book, 1)
+	book.r1s1.done = true
+	local next, why = Quests.nextMain(book, 2)
 	if next and why == "level" then
-		eq(Quests.goal(book, 1), nil, "레벨이 모자라 다음 메인을 못 받으면 갈 곳이 없다")
-		eq((WM.goalLine(book, 1, "town")), "", "그때는 빈 글")
+		eq(Quests.goal(book, 2), nil, "레벨이 모자라 다음 메인을 못 받으면 갈 곳이 없다")
+		eq((WM.goalLine(book, 2, "town")), "", "그때는 빈 글")
 	end
 	-- 2차 전직 뒤(Lv.30 · 1지역의 메인을 다 끝냄): 2지역의 첫 메인을 받으러 — 길이 도시를 지난다
 	local done = {}
@@ -550,10 +563,10 @@ do
 	-- 은달 항구: 그림 위에 표시가 있고, 수비대 야영지에서 이어진다
 	expect(art.out.city ~= nil and #art.out.city >= 2, "은달 항구의 표시의 자리")
 	local out = WM.outCard("r1", "city")
-	expect(out.name == "은달 항구" and out.link == "수비대 야영지의 포탈로 간다", "은달 항구를 고르면: " .. out.link)
-	eq(WM.linkText("r1", "r1cc"), "은달 항구로 가는 포탈이 있다", "수비대 야영지를 고르면")
-	eq(WM.linkText("r1", "town"), "", "다른 지역으로 가는 문이 없는 곳은 빈 글")
-	expect(pixelText.Measure(out.link, "small") <= WM.SIDE_W and pixelText.Measure(WM.linkText("r1", "r1cc"), "small") <= WM.SIDE_W, "그 글이 글 칸에 들어간다")
+	expect(out.name == "은달 항구" and out.link == "초승달 마을의 포탈로 간다", "은달 항구를 고르면: " .. out.link)
+	eq(WM.linkText("r1", "town"), "은달 항구로 가는 포탈이 있다", "초승달 마을을 고르면")
+	eq(WM.linkText("r1", "r1cc"), "", "다른 지역으로 가는 문이 없는 곳은 빈 글")
+	expect(pixelText.Measure(out.link, "small") <= WM.SIDE_W and pixelText.Measure(WM.linkText("r1", "town"), "small") <= WM.SIDE_W, "그 글이 글 칸에 들어간다")
 	for _, ex in WM.exits("r1") do
 		expect(art.out[ex.to] ~= nil, "나가는 곳마다 그림 위에 표시가 있다 " .. ex.to)
 	end
@@ -563,15 +576,20 @@ do
 		for _, n in D.regions.r1.nodes do
 			local at = art.at[n.id]
 			local it = { id = n.id, x = at[1], y = at[2], r = WM.PIN[n.kind] or 4, w = pixelText.Measure(n.label, "small") }
-			if n.id == first then
-				table.insert(list, 1, it)
-			else
-				table.insert(list, it)
-			end
+			-- 게임의 차례(mapWindow의 rank): 내가 있는 곳 → 마을 · 쉼터 → 나머지
+			it.rank = if n.id == first then 1 elseif n.kind == "town" or n.kind == "village" or n.kind == "rest" then 5 else 6
+			it.at = #list
+			table.insert(list, it)
 		end
 		for to, at in art.out do
-			table.insert(list, { id = "out:" .. to, x = at[1], y = at[2], r = WM.PIN.out, w = pixelText.Measure(D.regions[to].name, "small") })
+			table.insert(list, { id = "out:" .. to, x = at[1], y = at[2], r = WM.PIN.out, w = pixelText.Measure(D.regions[to].name, "small"), rank = 5, at = #list })
 		end
+		table.sort(list, function(a, b)
+			if a.rank ~= b.rank then
+				return a.rank < b.rank
+			end
+			return a.at < b.at
+		end)
 		return list
 	end
 	local firsts = { false }
@@ -580,7 +598,13 @@ do
 	end
 	for _, first in firsts do
 		local list = items(if first then first else nil)
-		local placed = WM.placeLabels(list)
+		local lines = WM.lines("r1")
+		local placed = WM.placeLabels(list, lines)
+		if first == "r1cc" then
+			for _, l in lines do
+				print(("[LINE] %d %d %d %d"):format(l[1], l[2], l[3], l[4]))
+			end
+		end
 		local rects = {}
 		if first == "r1cc" then
 			-- 눈으로 볼 때 쓰는 자리(수비대 야영지에 있을 때): 공방의 그림 위에 이 네모들을 얹어 미리 본다
@@ -604,6 +628,40 @@ do
 				end
 				rects[it.id] = r
 			end
+		end
+		-- 이름표는 제 표시에 가장 가깝다(다른 곳의 표시 곁에 놓이면 그곳의 이름으로 읽힌다)
+		local function gap(r, pin): number
+			local dx = math.max(r.x - pin.x, 0, pin.x - (r.x + r.w))
+			local dy = math.max(r.y - pin.y, 0, pin.y - (r.y + r.h))
+			return math.sqrt(dx * dx + dy * dy) - pin.r
+		end
+		for _, it in list do
+			local r = rects[it.id]
+			if r then
+				local own = gap(r, it)
+				for _, pin in list do
+					if pin.id ~= it.id then
+						expect(gap(r, pin) > own, ("이름표가 제 표시에 가장 가깝다 %s(%.1f) · %s(%.1f) · 먼저 놓은 것 %s"):format(it.id, own, pin.id, gap(r, pin), tostring(first)))
+					end
+				end
+			end
+		end
+		-- 이어진 줄이 보인다(사용자 2026-10-13: "월드맵이랑 실제 포탈이랑 안맞잖아요"): 줄마다 점의 절반 넘게, 적어도 둘은 이름표에 가리지 않는다
+		for _, l in lines do
+			local all, seen = WM.linkDots(l[1], l[2], l[3], l[4]), 0
+			for _, d in all do
+				local hid = false
+				for _, r in rects do
+					if d[1] + 2 > r.x and d[1] < r.x + r.w and d[2] + 2 > r.y and d[2] < r.y + r.h then
+						hid = true
+						break
+					end
+				end
+				if not hid then
+					seen += 1
+				end
+			end
+			expect(seen >= 2 and seen * 2 > #all, ("이어진 줄이 이름표에 가리지 않는다 %s – %s(보이는 점 %d / %d · 먼저 놓은 것 %s)"):format(l[5], l[6], seen, #all, tostring(first)))
 		end
 	end
 end
@@ -682,7 +740,9 @@ do
 	state.scene = "r1cc"
 	view.refresh()
 	eq(sideName(), "수비대 야영지", "수비대 야영지에서 연 지도")
-	eq(sideLink(), "은달 항구로 가는 포탈이 있다", "수비대 야영지의 글에 포탈이 적힌다")
+	eq(sideLink(), "", "수비대 야영지에는 다른 지역으로 가는 문이 없다")
+	hits["Hit_town"]()
+	eq(sideLink(), "은달 항구로 가는 포탈이 있다", "초승달 마을의 글에 포탈이 적힌다")
 	for _, n in D.regions.r1.nodes do
 		expect(hits["Hit_" .. n.id] ~= nil, "누를 수 있는 표시 " .. n.id)
 		hits["Hit_" .. n.id]()
@@ -691,7 +751,7 @@ do
 	expect(hits["Hit_out:city"] ~= nil and hits["HitName_out:city"] ~= nil, "은달 항구의 표시와 이름표를 누를 수 있다")
 	hits["Hit_out:city"]()
 	eq(sideName(), "은달 항구", "은달 항구를 누르면")
-	eq(sideLink(), "수비대 야영지의 포탈로 간다", "어떻게 가는지 적힌다")
+	eq(sideLink(), "초승달 마을의 포탈로 간다", "어떻게 가는지 적힌다")
 	hits["HitName_r1bh"]()
 	eq(sideName(), "옛 은신처", "이름표를 눌러도 고른다")
 	view.destroy()

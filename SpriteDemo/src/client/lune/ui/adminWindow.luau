@@ -3,7 +3,7 @@
 --   여러 테스트용 편의 기능 … 누군가 해킹같은거해서 사용도 못해야하고 오직 어드민만 사용할수있어야합니다."
 --  이 창은 단추를 누르면 서버에 「Admin」 패킷으로 부탁만 한다. 들어줄지는 서버가 보낸 사람의 계정 번호로 정한다(server/lune/modules/admin.luau) —
 --   관리자가 아닌 사람이 이 창을 억지로 띄워 단추를 눌러도 서버는 아무 일도 하지 않는다. 그래서 창을 감추는 것(메뉴에 「관리」가 안 보인다)은 보기 좋으라고 하는 것이다.
---  탭 넷: 성장(경험치 배율 · 레벨 · 차수 · 스킬과 능력치 · 퀘스트) · 아이템(달돈 · 달가루 · 장비 한 벌 · 소비와 기타 아이템) · 이동(맵을 골라 옮겨 간다) · 전투(체력 · 무적 · 피해 배율)
+--  탭 넷: 성장(경험치 배율 · 레벨 · 차수 · 스킬과 능력치 · 퀘스트) · 아이템(달돈 · 달가루 · 장비 한 벌 · 소비와 기타 아이템 · 경매장의 시험 물건) · 이동(맵을 골라 옮겨 간다) · 전투(체력 · 무적 · 피해 배율)
 --  아래 줄에 서버의 대답이 뜬다(「Lv.30 · 1차」 · 「없는 단계다」).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
@@ -222,6 +222,11 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 					end, { h = 22, font = "small" }).frame.Name = "Do_goods_" .. g.id
 				end
 			end
+			-- 경매장을 혼자서 해 볼 때: 「시험 판매자」의 물건 셋(내 직업의 무기 · 모자 · 물약)을 올린다 → 은달 항구의 경매사에게서 산다. 다 보면 치운다
+			row(p, y + 56, "경매장 시험", {
+				{ text = "시험 물건 올리기", id = "mkfill", w = 112, on = function() ask("market", "fill") end },
+				{ text = "치우기", id = "mkclear", w = 56, on = function() ask("market", "clear") end },
+			})
 		elseif tab == "move" then
 			local groups = AdminWindow.places()
 			placeGroup = math.clamp(placeGroup, 1, #groups)

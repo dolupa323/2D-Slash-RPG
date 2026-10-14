@@ -13,6 +13,7 @@ local Layout = require(lune.ui.layout)
 local Format = require(lune.ui.format)
 local Stage = require(script.Parent.stage)
 local Ui = require(script.Parent.ui.ui)
+local HpBar = require(script.Parent.ui.hpBar) -- 체력 바의 효과(플레이어의 체력 바와 같은 셈)
 
 local C = Ui.COLOR
 local M = Ui.M
@@ -32,6 +33,7 @@ function BossView.init(root: Frame)
 	BossView.box = box
 	BossView.name = Ui.text(box, "", 0, 0, B.w, { font = "body", color = C.gold, align = "center", outline = true })
 	BossView.bar = Ui.bar(box, 0, B.barY, B.w, B.h, C.hp)
+	BossView.barFx = HpBar.attach(BossView.bar, B.w, B.h) -- 닳은 자리가 밝게 남았다 줄어든다 · 번쩍임(사용자 2026-10-13: "몬스터 체력바도  유저 체력바처럼 고도화 되어야합니다.")
 	BossView.hpText = Ui.text(box, "", B.pad, B.barY + math.floor((B.h - M.small) / 2), B.w - B.pad * 2, { align = "center", outline = true, z = 6 })
 	BossView.pat = Ui.text(box, "", 0, B.patY, B.w, { font = "body", color = PINK, align = "center", outline = true })
 	BossView.shownName, BossView.shownHp, BossView.shownPat = nil, nil, nil
@@ -233,15 +235,23 @@ function BossView:update(dt: number)
 			BossView.shownName = shown.info.name
 			BossView.name:set(shown.info.name)
 		end
+		if BossView.shownMob ~= shown then
+			BossView.shownMob = shown -- 다른 보스 · 다시 나타난 보스: 효과 없이 그대로 놓는다
+			BossView.shownHp = nil
+			BossView.barFx:reset()
+		end
 		if BossView.shownHp ~= shown.hp then
 			BossView.shownHp = shown.hp
-			BossView.bar:set(shown.hp / shown.info.maxHp)
+			BossView.barFx:set(math.max(0, shown.hp) / shown.info.maxHp, math.max(0, shown.hp))
 			BossView.hpText:set(BossView.hpLabel(shown.hp, shown.info.maxHp, Layout.BOSS.w - Layout.BOSS.pad * 2, Ui.measure))
 		end
 		if BossView.shownPat ~= shownPat then
 			BossView.shownPat = shownPat
 			BossView.pat:set(shownPat)
 		end
+		BossView.barFx:step(dt)
+	else
+		BossView.shownMob = nil
 	end
 end
 

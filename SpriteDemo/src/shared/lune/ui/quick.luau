@@ -111,6 +111,35 @@ function Q.start(skills)
 	return out
 end
 
+-- 스마트폰의 단추 배치. 단추가 있는 칸은 Q.TOUCH뿐이다(공방 basics.js의 TOUCH —
+--  사용자 2026-10-13(폰에서 해 보고): "모바일에서 상호작용 버튼 아래에 있는 버튼 없애고" → 칸 1의 단추가 없어졌다. 칸 2 ~ 12의 열하나).
+--  단추가 없는 칸에 놓인 것은 단추가 있는 첫 빈 칸으로 옮긴다(빈 칸이 없으면 뺀다) — 새 캐릭터의 물약은 칸 5로, 전에 칸 1에 놓아 둔 것도 들어올 때 옮겨진다.
+--  공방 js/lune/design/ui.js의 quickTouchFix와 같은 셈(data/ui.generated.luau의 quick.touchCheck로 맞춰 본다)
+Q.TOUCH = UI.quick.touch
+local hasTouch = {}
+for _, i in Q.TOUCH do
+	hasTouch[i] = true
+end
+function Q.touchFix(slots)
+	local out = copy(slots)
+	for k = 1, Q.N do
+		if not hasTouch[k] and out[k] then
+			for _, j in Q.TOUCH do
+				if not out[j] then
+					out[j] = out[k]
+					break
+				end
+			end
+			out[k] = false
+		end
+	end
+	return out
+end
+-- 새 캐릭터의 스마트폰 배치: 처음 차림(Q.start)에서 단추가 없는 칸의 것을 옮긴 것
+function Q.touchStart(skills)
+	return Q.touchFix(Q.start(skills))
+end
+
 -- 밖에서 온 칸들(클라이언트가 보낸 것 · 저장된 것)을 살핀다: 꼭 N칸, 칸마다 false · 놓아도 되는 것(ok(id)가 참 — 배운 스킬 · 소비 아이템), 겹치는 것 없이.
 --  말이 되면 깨끗한 칸들을, 아니면 nil을 돌려준다
 function Q.clean(list: any, ok: (string) -> boolean)

@@ -18,7 +18,17 @@ function L.rect(r, gw: number?, gh: number?)
 	local fy = if r.at:sub(1, 1) == "b" then 1 else 0
 	local side = r.at:sub(2, 2)
 	local fx = if side == "r" then 1 elseif side == "c" then 0.5 else 0
-	return { x = r.x + math.floor((w - UI.grid.w) * fx + 0.5), y = r.y + math.floor((h - UI.grid.h) * fy + 0.5), w = r.w, h = r.h }
+	local out = { x = r.x + math.floor((w - UI.grid.w) * fx + 0.5), y = r.y + math.floor((h - UI.grid.h) * fy + 0.5), w = r.w, h = r.h }
+	-- 좁은 격자에서 왼쪽 이웃(tight.beside)에 닿는 칸은 줄어든 폭(tight.w)으로 — 오른쪽 끝은 그대로 둔다.
+	--  메뉴 단추: 여덟이 넓은 간격으로는 가장 작은 격자(768)의 스킬 칸에 닿는다
+	if r.tight then
+		local o = L.rect(UI.hud[r.tight.beside], w, h)
+		if out.x < o.x + o.w + r.tight.gap then
+			out.x += out.w - r.tight.w
+			out.w = r.tight.w
+		end
+	end
+	return out
 end
 
 -- 게임 세계의 배율 s에서 화면 틀의 배율과 격자(client/lune/stage.luau와 같은 셈)
@@ -30,11 +40,10 @@ end
 -- ---------- 늘 보이는 화면 ----------
 L.VITALS = D.vitals -- 왼쪽 아래 덩어리: 윗줄에 레벨 · 이름 / 체력 바(숫자는 바 안) / 가는 경험치 줄과 그 옆의 %
 L.SKILLS = D.skills -- 스킬 칸: 두 줄 x 여섯. 칸 위에 키 딱지(높이 keyUp)
-L.MENU = D.menu -- 창을 여는 단추: 여섯까지, 오른쪽 끝에 붙여. 그림 아래에 이름(labels = 칸에 맞춘 짧은 이름)
+L.MENU = D.menu -- 창을 여는 단추: 여덟까지(row의 차례 + 「메뉴」), 오른쪽 끝에 붙여. 그림 아래에 이름(labels = 칸에 맞춘 짧은 이름)
 L.PARTY = D.party -- 파티원 칸: 한 사람 = 이름 한 줄 + 가는 체력 줄. ask = 초대 알림(위쪽 가운데)
 L.DEATH = D.death -- 쓰러졌을 때 묻는 상자(위쪽 가운데): 제목 · 묻는 글 · 안내 · 단추 하나
 L.QUEST = D.quest -- 퀘스트 알리미: 이름 한 줄(본문 글씨) · 할 일 한 줄(작은 글씨) · 퀘스트 사이
-L.CHAT = D.chat -- 채팅: 평소에는 채팅 칸에 마지막 몇 줄, 쓸 때는 넓은 판(open)
 L.TAG = D.tag -- 이름표: 한 줄의 높이(쌓을 때) · 발밑에서 아래로 띄우는 만큼 · 가장 넓을 때
 L.MOBBAR = D.mobBar -- 졸개의 체력 띠: 크기(화면 틀의 점) · 발밑에서 위로(게임의 도트)
 L.BOSS = D.boss -- 스토리 보스의 체력: 화면 위 가운데 — 이름(y) 아래(barY)에 넓은 바(안에 숫자 · pad = 좌우 여백), 그 아래(patY)에 패턴의 이름
@@ -55,16 +64,15 @@ function L.menuLabel(id: string, name: string): string
 	return L.MENU.labels[id] or name
 end
 
--- n개 가운데 i째 단추의 x(메뉴 칸 틀 안)
-function L.menuX(i: number, n: number): number
-	return UI.hud.menu.w - (n - i + 1) * L.MENU.pitch + (L.MENU.pitch - L.MENU.slot)
+-- 화면 틀의 격자 폭이 gw일 때 메뉴 단추의 간격: 그 격자에서의 칸의 폭에서 나온다(넓은 칸 → pitch, 좁은 격자의 칸 → tight)
+function L.menuPitch(gw: number?): number
+	return (L.rect(UI.hud.menu, gw).w - L.MENU.slot) / (L.MENU.max - 1)
 end
 
--- 쓰는 중의 채팅 판의 자리(아래 끝은 채팅 칸의 아래 끝에서 dy 아래)
-function L.chatOpen()
-	local c, o = UI.hud.chat, L.CHAT.open
-	local h = o.pad + o.lines * L.CHAT.line + 4 + L.CHAT.field + o.pad
-	return { at = c.at, x = c.x + o.dx, y = c.y + c.h - h + o.dy, w = o.w, h = h }
+-- n개 가운데 i째 단추의 x(메뉴 칸 틀 안 — 틀은 넓은 칸의 폭 그대로이고 단추는 오른쪽 끝에 붙는다). gw = 화면 틀의 격자 폭
+function L.menuX(i: number, n: number, gw: number?): number
+	local p = L.menuPitch(gw)
+	return UI.hud.menu.w - (n - i + 1) * p + (p - L.MENU.slot)
 end
 
 -- ---------- 창(화면 오른쪽 · 왼쪽의 옆 판) ----------
@@ -74,6 +82,7 @@ L.DETAIL = D.detail -- 아이템 상세(창 옆의 작은 판): 그림 칸과 �
 L.STORE = D.store -- 창고: 가방과 같은 짜임 — 탭 줄(gridY) 아래에 칸, 그 아래 footH에 「정렬」(sortW)과 안내 글
 L.EQUIP = D.equip -- 장비 창: 왼쪽 = 칸 하나 + 글(textW), 오른쪽 = 장신구 네 칸
 L.SHOP = D.shop -- 상점의 한 줄: [아이콘 칸 iconS] 이름(nameW) · [달돈 그림] 값(priceW) · 사는 단추(buyW)
+L.AUCTION = D.auction -- 경매장(넓은 창): 탭 셋 · 분류 단추 · 목록의 줄 · 판매 양식 · 아래의 알림 줄 — 공방 js/lune/design/ui.js의 UILAYOUT.auction
 L.DAILY = D.daily -- 일일 의뢰: 머리글(top) 아래 의뢰마다 한 칸(row — 맵의 이름 · 의뢰의 이름 · 오른쪽 단추 btnW · 진행 띠 barH), 가르는 줄 아래 보상 두 줄(payRow — 이름표 labelW)
 L.SOUND = D.sound -- 소리 설정: 줄마다 이름(labelW) · 「−」(btn) · 칸 steps개(seg x barH · 사이 gap) · 「+」 · %(pctW). 아래 muteY에 「모두 끄기 / 켜기」(muteW)
 L.CRAFT = D.craft -- 제작(대장장이): 탭(tabH) 아래에 장비마다 한 줄(row) — 윗줄 = [아이콘 칸] 이름 · [달돈] 삯(feeW) · 「제작」(makeW x makeH), 아랫줄 = 재료 둘([그림] 이름 가진 수/드는 수 — 하나에 matW)
@@ -83,6 +92,19 @@ L.SKILL = D.skill -- 스킬 창: 차수 탭 · 안내 줄 · 스킬들(cols줄 x
 -- 능력치 창의 속(폭 · 높이). n = 능력치의 수
 function L.statBody(n: number): (number, number)
 	return L.STAT.w, L.STAT.top + n * L.STAT.row + 8 + M.button + 14 + 20
+end
+
+-- 스마트폰의 메뉴(「메뉴」 단추를 누르면 뜨는 창 이름의 단추들). 사용자 2026-10-13(폰에서 해 보고): "메뉴탭 열었을때 스크롤이 되어야해 모든메뉴를 접근할수가 없다"
+--  단추가 n개일 때: 판은 화면 틀(높이 uiH)에 들어가는 만큼만 서고, 넘치는 단추는 그 안에서 위아래로 밀어서 본다.
+--  돌려주는 것: w · h = 판의 크기 / top = 판의 윗자리(기준 격자) / viewH = 단추들이 보이는 높이 / contentH = 단추들의 높이 / scroll = 밀어야 다 보이는가 / btnW = 단추의 폭(막대의 자리를 뺀 것)
+L.TOUCHMENU = D.touchMenu
+function L.touchMenu(n: number, uiH: number)
+	local K = L.TOUCHMENU
+	local contentH = math.max(1, n) * K.row - (K.row - K.btnH)
+	local room = math.max(K.row, math.floor(uiH - K.top - K.bottom - K.pad * 2))
+	local viewH = math.min(contentH, room)
+	local scroll = contentH > viewH
+	return { w = K.w, h = viewH + K.pad * 2, top = K.top, viewH = viewH, contentH = contentH, scroll = scroll, btnW = K.w - K.pad * 2 - (if scroll then K.bar + K.pad else 0) }
 end
 
 -- 스킬 창의 속(폭 · 높이)과 스킬 목록의 폭

@@ -51,19 +51,20 @@ do
 	Quests.accept(book, 1, "r1m1")
 	eq(#Quests.guide(book, 1, NAMES), 0, "첫 퀘스트를 하는 중에는 길잡이가 없다(하는 일이 알리미에 있다)")
 	done(book, "r1m1")
-	local g = Quests.guide(book, 1, NAMES)
-	eq(g[1].kind, "open", "첫 기술을 끝내면 다음 메인을 받을 수 있다고 적는다")
-	eq(g[1].title, "! 마을 밖의 그림자", "다음 메인의 이름")
+	-- (2026-10-13: 퀘스트는 한 줄이다 — 첫 기술 → 등불 심지 → 마을 밖의 그림자 … 길잡이는 줄의 다음 것 하나만 적는다. 알리미는 이제 길잡이를 띄우지 않는다 — 퀘스트 창의 「시작 가능」이 쓴다)
+	local g = Quests.guide(book, 2, NAMES)
+	eq(g[1].kind, "open", "첫 기술을 끝내면 줄의 다음 것을 받을 수 있다고 적는다")
+	eq(g[1].title, "! 등불 심지", "줄의 다음 것의 이름")
 	eq(g[1].line, "샛별에게 받는다 · 초승달 마을", "누구에게 · 어디서")
+	eq(#g, 1, "하나만 적는다(한 번에 받을 수 있는 것은 하나다)")
 	-- 레벨이 모자라면 그 레벨을 적는다
-	Quests.accept(book, 1, "r1m2")
-	eq(#Quests.guide(book, 1, NAMES), 0, "메인을 하는 중에는 다음 메인을 적지 않는다(Lv.1에는 받을 부탁도 없다)")
-	done(book, "r1m2")
+	Quests.accept(book, 2, "r1s1")
+	eq(#Quests.guide(book, 2, NAMES), 0, "하는 중에는 다음 것을 적지 않는다")
+	done(book, "r1s1")
 	g = Quests.guide(book, 2, NAMES)
-	eq(g[1].kind, "level", "다음 메인이 레벨 때문에 잠겨 있다")
-	eq(g[1].line, "Lv.4부터 받는다", "몇 레벨부터인지 적는다")
-	eq(g[2].kind, "side", "받을 수 있는 부탁도 적는다")
-	eq(g[2].title, "! 등불 심지", "Lv.2의 부탁")
+	eq(g[1].kind, "level", "줄의 다음 것(마을 밖의 그림자)이 레벨 때문에 잠겨 있다")
+	eq(g[1].line, "Lv.3부터 받는다", "몇 레벨부터인지 적는다")
+	eq(#g, 1, "받을 부탁이 따로 쌓이지 않는다")
 	-- 주는 주민이 선 곳: 그 퀘스트의 지역 안에서, 몬스터가 없는 맵을 먼저
 	eq(Quests.giverPlace(Quests.def("r1m3")), "촌장의 집", "촌장은 제 집 안에 있다")
 	eq(Quests.giverPlace(Quests.def("r1m6")), "수비대 야영지", "차돌은 야영지에 있다")
@@ -84,8 +85,14 @@ end
 do
 	local book, level = {}, 1
 	local order = {}
-	for i = 1, 9 do
-		local id = "r1m" .. i
+	local line = {}
+	for _, def in Quests.list do
+		if def.region == "r1" and def.kind == "main" then
+			table.insert(line, def.id) -- 줄의 차례(자료의 차례)
+		end
+	end
+	eq(#line, 20, "1지역의 줄 스물(2026-10-14 — 망루 3층의 「굴러다니는 투구」를 더했다)")
+	for _, id in line do
 		local def = Quests.def(id)
 		expect(def ~= nil and def.playable, "1지역의 메인을 할 수 있다 " .. id)
 		level = math.max(level, def.lv)
@@ -138,11 +145,11 @@ do
 	-- 부탁: 1지역의 열을 모두 할 수 있다(2026-10-13 — 사용자: "부탁퀘스트 필요합니다." 남아 있던 하나 「묵은 도토리」는 굴의 주인을 불러내는 퀘스트였는데, 고갯마루 노인의 사냥 부탁(굴 두더지 스물)으로 고쳤다)
 	local sides = 0
 	for _, def in Quests.list do
-		if def.region == "r1" and def.kind == "side" and def.playable then
+		if def.region == "r1" and string.match(def.id, "^r1s%d+$") and def.playable then
 			sides += 1
 		end
 	end
-	eq(sides, 10, "1지역의 부탁 열을 모두 할 수 있다")
+	eq(sides, 11, "1지역의 옛 부탁 열하나(이제 줄의 걸음이다)를 모두 할 수 있다")
 end
 
 -- ---- 4) 조작 안내의 글 ----
@@ -187,7 +194,7 @@ do
 	check(s, "사당 밖으로", "사당 안: 나가는 법")
 	s.scene = "town"
 	check(s, "샛별", "마을: 뛰는 법 · 내려가는 법 · 샛별이 있는 곳")
-	Quests.accept(s.quests, 1, "r1m2")
+	expect(Quests.accept(s.quests, 2, "r1s1"), "줄의 다음 것(등불 심지 — 첫 사냥)을 받는다")
 	check(s, "마을 어귀", "퀘스트를 받았다: 나가는 문")
 	s.scene = "r1a1"
 	check(s, "수습 검병", "사냥터: 기술")
@@ -211,7 +218,7 @@ do
 	--  ① 처음 점수를 받은 Lv.2가 지나면 능력치 · 스킬을 찍으라는 글은 뜨지 않는다
 	s = base()
 	done(s.quests, "r1m1")
-	s.quests.r1m2 = { done = false, c = { 0 } }
+	s.quests.r1s1 = { done = false, c = { 0 } }
 	s.level, s.ap, s.sp, s.scene = 3, 5, 3, "r1a1"
 	for _, touch in { false, true } do
 		s.touch = touch
@@ -221,7 +228,7 @@ do
 	--  ② 첫 사냥 퀘스트를 돌려준 뒤로는 어떤 안내도 뜨지 않는다(점수가 남아도 · 주울 것이 있어도 · 체력이 낮아도)
 	s = base()
 	done(s.quests, "r1m1")
-	done(s.quests, "r1m2")
+	done(s.quests, "r1s1")
 	for _, level in { 2, 3, 4, 5 } do
 		s.level, s.ap, s.sp, s.scene, s.drop, s.hpShare, s.potions = level, 5, 3, "r1a1", true, 0.2, 10
 		for _, touch in { false, true } do
@@ -261,15 +268,16 @@ do
 	-- 새 캐릭터: 「첫 기술」을 돌려줄 차례
 	local book = {}
 	local rows, height, shown, guided = QuestHud.layout(book, names, 1)
-	expect(shown == 0 and guided == 1, "새 캐릭터: 받은 퀘스트가 없고 「받을 수 있는 퀘스트」에 첫 기술")
+	expect(shown == 0 and guided == 0, "새 캐릭터: 받은 퀘스트가 없다 — 받을 수 있는 퀘스트는 알리미에 적지 않는다(사용자 2026-10-13: \"퀘스트 ui에 받을수있는 퀘스트 띄우지마세요\")")
 	Quests.accept(book, 1, "r1m1")
 	rows, height, shown, guided = QuestHud.layout(book, names, 1)
 	expect(shown == 1 and rows[1].kind == "quest" and rows[1].tag == "main" and rows[1].name == "첫 기술" and rows[2].kind == "ready", "받은 뒤: 메인 「첫 기술」과 돌려줄 사람")
 	expect(height > QuestHud.HEAD and height <= QuestHud.H, "판의 높이는 칸 안")
 	-- 메인 하나를 하는 중 + 받을 수 있는 부탁
 	book.r1m1.done = true
-	Quests.accept(book, 2, "r1m2")
-	rows, height, shown, guided = QuestHud.layout(book, names, 2)
+	book.r1s1 = { done = true, c = {} }
+	expect(Quests.accept(book, 3, "r1m2"), "줄의 다음 것을 받는다")
+	rows, height, shown, guided = QuestHud.layout(book, names, 3)
 	local step = nil
 	for _, r in rows do
 		if r.kind == "step" then
@@ -277,7 +285,7 @@ do
 		end
 	end
 	expect(shown == 1 and step ~= nil and step.text == "수습 검병" and step.count == "0/5" and step.have == 0 and step.n == 5, "할 일은 글과 숫자로 갈라 적는다")
-	expect(guided >= 1, "남는 자리에 받을 수 있는 퀘스트를 적는다")
+	eq(guided, 0, "하는 중에도 받을 수 있는 퀘스트는 적지 않는다")
 	book.r1m2.c[1] = 3
 	rows = QuestHud.layout(book, names, 2)
 	for _, r in rows do
@@ -314,17 +322,18 @@ do
 			expect(pixelText.Measure(g.title, "body") <= INNER and pixelText.Measure(g.line, "small") <= INNER - 2, ("길잡이의 글이 판에 들어간다 — %s / %s"):format(g.title, g.line))
 		end
 	end
-	-- 여럿을 하는 중이어도 판은 칸의 높이를 넘지 않는다
+	-- 여럿을 하는 중이어도 판은 칸의 높이를 넘지 않는다: 적은 것은 모두 적되(높이는 길어진다) 판은 칸까지만이고 그 안에서 스크롤한다(2026-10-13 — 사용자: "스크롤을 넣어야죠")
 	local many = {}
 	for _, def in Quests.list do
 		if def.playable and def.region == "r1" then
 			many[def.id] = { done = false, c = {} }
 		end
 	end
-	rows, height, shown = QuestHud.layout(many, names, 30)
-	expect(height <= QuestHud.H and shown >= 2, ("여럿을 받아도 판은 칸 안이다(높이 %d · 적은 것 %d)"):format(height, shown))
-	-- 스마트폰: 손가락 단추에 닿지 않게 더 낮은 칸 — 그 높이를 주면 그 안에서 끊는다
+	local info
+	rows, height, shown, guided, info = QuestHud.layout(many, names, 30)
+	expect(info.view <= QuestHud.H and info.scroll == (height > QuestHud.H) and shown == #Quests.active(many), ("여럿을 받아도 판은 칸 안이다(판 %d · 적은 것의 높이 %d · 적은 것 %d)"):format(info.view, height, shown))
+	-- 스마트폰: 손가락 단추에 닿지 않게 더 낮은 칸 — 판은 그 높이까지만
 	expect(QuestHud.H_TOUCH <= QuestHud.H, "스마트폰의 칸은 PC보다 높지 않다")
-	rows, height, shown = QuestHud.layout(many, names, 30, QuestHud.H_TOUCH)
-	expect(height <= QuestHud.H_TOUCH and shown >= 1, ("스마트폰의 칸 안이다(높이 %d · 적은 것 %d)"):format(height, shown))
+	rows, height, shown, guided, info = QuestHud.layout(many, names, 30, QuestHud.H_TOUCH)
+	expect(info.view <= QuestHud.H_TOUCH and info.scroll and shown == #Quests.active(many), ("스마트폰의 칸 안이다(판 %d · 적은 것 %d)"):format(info.view, shown))
 end

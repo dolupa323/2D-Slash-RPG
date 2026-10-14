@@ -59,6 +59,30 @@ function Ui.box(parent: Instance, x: number, y: number, w: number, h: number, co
 	return f
 end
 
+-- 스크롤하는 칸: 속(contentH)이 칸(h)보다 길면 세로로 스크롤한다(마우스 휠 · 손가락으로 끌기). 오른쪽 끝에 가는 민트 막대(barW점)가 지금 자리를 보여 준다.
+--  속이 칸보다 짧으면 막대도 스크롤도 없다(그냥 틀). 안에 놓는 것의 좌표는 속의 위에서부터
+Ui.SCROLL_IMAGE = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+function Ui.scroll(parent: Instance, x: number, y: number, w: number, h: number, contentH: number, barW: number?): ScrollingFrame
+	local f = Instance.new("ScrollingFrame")
+	local long = contentH > h
+	f.Name = "Scroll"
+	f.Position = UDim2.fromOffset(x, y)
+	f.Size = UDim2.fromOffset(w, h)
+	f.CanvasSize = UDim2.fromOffset(0, math.max(h, contentH))
+	f.BackgroundTransparency = 1
+	f.BorderSizePixel = 0
+	f.ScrollingDirection = Enum.ScrollingDirection.Y
+	f.ScrollingEnabled = long
+	f.ScrollBarThickness = if long then barW or 3 else 0
+	f.ScrollBarImageColor3 = C.accent
+	f.ScrollBarImageTransparency = 0.15
+	f.TopImage, f.MidImage, f.BottomImage = Ui.SCROLL_IMAGE, Ui.SCROLL_IMAGE, Ui.SCROLL_IMAGE -- 모서리가 둥글지 않은 곧은 막대
+	f.VerticalScrollBarInset = Enum.ScrollBarInset.None
+	f.ElasticBehavior = Enum.ElasticBehavior.Never
+	f.Parent = parent
+	return f
+end
+
 function Ui.group(parent: Instance, x: number, y: number, w: number, h: number, name: string?): Frame
 	local f = Ui.box(parent, x, y, w, h, C.panel, 1)
 	if name then
@@ -265,6 +289,29 @@ function Ui.hit(parent: Instance): TextButton
 	hit.ZIndex = 9
 	hit.Parent = parent
 	return hit
+end
+
+-- 글을 적는 칸(틀 + Roblox의 글자 입력 칸 — 경매장의 값 · 찾기). 돌려주는 것: 입력 칸(TextBox — .Text를 읽고, 바뀐 것은 GetPropertyChangedSignal("Text")로 듣는다)
+--  적는 글은 Roblox의 글씨다(도트 글씨는 그려서 찍는 것이라 입력 칸에 쓸 수 없다 — 처음 화면의 이름 칸과 같다)
+function Ui.field(parent: Instance, x: number, y: number, w: number, h: number, placeholder: string): TextBox
+	local frame = Ui.group(parent, x, y, w, h, "Field")
+	Ui.part(frame, "uField", 0, 0, w, h)
+	local box = Instance.new("TextBox")
+	box.Name = "Input"
+	box.BackgroundTransparency = 1
+	box.Position = UDim2.fromOffset(6, 0)
+	box.Size = UDim2.new(1, -12, 1, 0)
+	box.Font = Enum.Font.SourceSans
+	box.TextSize = 12
+	box.TextColor3 = C.text
+	box.PlaceholderText = placeholder
+	box.PlaceholderColor3 = C.off
+	box.TextXAlignment = Enum.TextXAlignment.Left
+	box.ClearTextOnFocus = false
+	box.Text = ""
+	box.ZIndex = 6
+	box.Parent = frame
+	return box
 end
 
 -- 단추(높이 26 — 글 12와 위아래 여백 7). opts.main = 그 창에서 가장 하고 싶은 일(민트로 칠한다 — 창마다 하나쯤) · opts.h = 다른 높이 · opts.font

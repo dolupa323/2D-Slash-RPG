@@ -190,11 +190,12 @@ end
 
 -- 재는 자리: 레벨 · 장면 · 몬스터(그 레벨의 사냥터에서 가장 많은 몬스터)
 local SPOTS = {
+	-- 2026-10-14부터 한 맵에 한 종류: 마을 어귀 = 수습 검병 · 달그림자 사냥터 = 검병 · 깊은 곳 = 포자 주머니 · 야영지 = 재까마귀
 	{ lv = 1, scene = "r1a1", kind = "trainee" },
-	{ lv = 2, scene = "r1a1", kind = "shroom" },
+	{ lv = 2, scene = "r1a1", kind = "trainee" },
 	{ lv = 3, scene = "hunt", kind = "warrior" },
-	{ lv = 5, scene = "hunt", kind = "spearman" },
-	{ lv = 6, scene = "r1a3", kind = "warrior" },
+	{ lv = 5, scene = "hunt", kind = "warrior" },
+	{ lv = 6, scene = "r1a3", kind = "puff" },
 	{ lv = 9, scene = "r1a4", kind = "crow" },
 }
 
@@ -208,6 +209,7 @@ for _, class in CLASSES.order do
 		handlers.Ready(p)
 		local made = handlers.Chars(p, "create", "잰다" .. uid, class)
 		handlers.Chars(p, "enter", made.id)
+		World.wake(p) -- (새 캐릭터는 꿈에서 시작한다 — 꿈은 마친 것으로)
 		local h = World.session(p).hero
 		while h.level < spot.lv do
 			Hero.gainXp(h, N.xpNeed(h.level) - h.xp)

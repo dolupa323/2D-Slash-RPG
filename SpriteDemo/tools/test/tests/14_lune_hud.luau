@@ -49,7 +49,7 @@ eq(select(1, L.gridFor(5)), G.w, "게임 5배(1080p)의 격자 폭")
 eq(select(2, L.gridFor(5)), G.h, "게임 5배(1080p)의 격자 높이")
 
 -- ---------- 늘 보이는 화면의 칸: 세 격자에서 화면 안에 있고, 서로 겹치지 않고, 싸움터 가운데를 가리지 않는다 ----------
-for _, key in { "party", "boss", "buffs", "quest", "chat", "menu", "vitals", "skills" } do
+for _, key in { "party", "boss", "buffs", "quest", "menu", "vitals", "skills" } do
 	expect(UI.hud[key] ~= nil, "지금 쓰는 화면 칸 " .. key)
 end
 expect(UI.hud.minimap == nil, "미니맵은 없다(사용자 결정 2026-10-07)")
@@ -70,7 +70,10 @@ for _, g in GRIDS do
 	end
 end
 eq(L.rect(UI.hud.menu, G.w, G.h).x, UI.hud.menu.x, "기준 격자에서는 적힌 자리 그대로")
-eq(L.rect(UI.hud.menu, G.min.w, G.min.h).x + UI.hud.menu.w, G.min.w - (G.w - UI.hud.menu.x - UI.hud.menu.w), "오른쪽에 붙는 칸은 오른쪽 끝에서의 거리가 같다")
+do
+	local mr = L.rect(UI.hud.menu, G.min.w, G.min.h)
+	eq(mr.x + mr.w, G.min.w - (G.w - UI.hud.menu.x - UI.hud.menu.w), "오른쪽에 붙는 칸은 오른쪽 끝에서의 거리가 같다(좁은 격자에서 폭이 줄어도)")
+end
 eq(L.rect(UI.hud.vitals, G.min.w, G.min.h).y + UI.hud.vitals.h, G.min.h - (G.h - UI.hud.vitals.y - UI.hud.vitals.h), "아래에 붙는 칸은 아래 끝에서의 거리가 같다")
 
 -- 숫자를 짧게
@@ -142,7 +145,37 @@ expect(measure("999") <= K.slot - 2, "물약 수가 칸에 들어감")
 expect(measure("120") <= K.slot, "다시 쓰기까지 남은 초가 칸에 들어감")
 
 local m, MN = UI.hud.menu, L.MENU
-expect(MN.max * MN.pitch - (MN.pitch - MN.slot) <= m.w, "메뉴 단추 여섯이 칸의 폭 안")
+eq(MN.max * MN.pitch - (MN.pitch - MN.slot), m.w, "메뉴 단추 여덟이 넓은 간격으로 칸의 폭에 꼭 맞는다")
+eq(MN.max, #MN.row + 1, "늘 보이는 단추 = 설계의 차례(row) + 「메뉴」")
+-- 가장 작은 격자(768 — 1080p 창 모드 · 노트북): 여덟이 넓은 간격으로는 스킬 칸에 닿는다 → 촘촘한 간격으로 줄어든다
+do
+	eq(L.menuPitch(G.w), MN.pitch, "기준 격자에서는 넓은 간격")
+	eq(L.menuPitch(G.max.w), MN.pitch, "가장 큰 격자에서도")
+	eq(L.menuPitch(G.min.w), MN.tight, "가장 작은 격자에서는 촘촘한 간격")
+	eq(m.tight.w, MN.max * MN.tight - (MN.tight - MN.slot), "줄어든 칸의 폭 = 촘촘한 간격으로 여덟")
+	expect(MN.tight >= MN.slot + 2, "촘촘해도 단추끼리 붙지 않는다")
+	local sk = L.rect(UI.hud.skills, G.min.w, G.min.h)
+	local first = L.rect({ at = m.at, x = m.x, y = m.y, w = m.w, h = m.h }, G.min.w, G.min.h).x + L.menuX(1, MN.max, G.min.w) -- 틀은 넓은 폭 그대로 — 그 안의 첫 단추
+	expect(first >= sk.x + sk.w + m.tight.gap, ("가장 작은 격자에서 첫 메뉴 단추(%d)가 스킬 칸(%d까지)에 닿지 않는다"):format(first, sk.x + sk.w))
+	eq(L.menuX(MN.max, MN.max, G.min.w) + MN.slot, m.w, "촘촘해도 마지막 단추는 칸의 오른쪽 끝")
+	-- 이름표: 이웃한 두 이름 사이에 틈이 남는다(세 글자 이름끼리 붙어 한 줄로 읽히지 않게 — 그래서 「경매」가 퀘스트와 월드맵 사이)
+	local names = {}
+	for _, id in MN.row do
+		local name
+		for _, w in UI.windows do
+			if w.id == id then
+				name = L.menuLabel(id, w.name)
+			end
+		end
+		expect(name ~= nil, "메뉴 단추의 창이 창 목록에 있다 " .. id)
+		table.insert(names, name or "")
+	end
+	table.insert(names, L.menuLabel("more", "메뉴"))
+	for i = 1, #names - 1 do
+		local gap = MN.tight - (measure(names[i]) + measure(names[i + 1])) / 2
+		expect(gap >= MN.labelGap, ("촘촘한 간격에서 「%s」와 「%s」 사이의 틈 %.1f"):format(names[i], names[i + 1], gap))
+	end
+end
 expect(MN.labelY + M.small + 1 <= m.h, "메뉴 단추의 그림과 그 아래의 이름이 칸의 높이 안")
 expect(MN.labelW <= MN.pitch, "이름의 폭이 옆 단추의 이름과 겹치지 않는다")
 eq(L.menuX(MN.max, MN.max) + MN.slot, m.w, "마지막 단추가 칸의 오른쪽 끝에 붙는다")
@@ -151,13 +184,13 @@ do
 	local shown = 0
 	for _, w in UI.windows do
 		local label = L.menuLabel(w.id, w.name)
-		-- 메뉴 단추로 놓이는 창(앞의 다섯)의 이름은 한 줄에 들어가야 한다
-		if w.id == "bag" or w.id == "equip" or w.id == "stat" or w.id == "skill" or w.id == "quest" then
+		-- 메뉴 단추로 놓이는 창(설계의 row)의 이름은 한 줄에 들어가야 한다
+		if table.find(MN.row, w.id) then
 			expect(measure(label) <= MN.labelW, ("메뉴 단추의 이름 「%s」(폭 %d)이 %d에 들어감"):format(label, measure(label), MN.labelW))
 			shown += 1
 		end
 	end
-	eq(shown, 5, "메뉴 단추로 놓이는 창 다섯")
+	eq(shown, #MN.row, "메뉴 단추로 놓이는 창 일곱")
 	expect(measure(L.menuLabel("more", "메뉴")) <= MN.labelW, "「메뉴」 단추의 이름")
 end
 
@@ -168,7 +201,31 @@ eq(F.split(30, 1, { 20, 20 }, 10), nil, "다 못 들어가면 nil")
 eq(F.key("LeftShift"), "Shift", "키 이름")
 eq(F.key("Q"), "Q", "글자 키는 그대로")
 
--- ---------- 말풍선: 주민의 말이 말풍선의 줄 수에 다 들어가고, 가장 큰 말풍선도 가장 작은 화면에 들어간다 ----------
+-- ---------- 대화창(2026-10-14): 가장 작은 화면 틀(스마트폰 · 작은 창)에도 양옆 여백을 남기고 들어가고, 강조 낱말을 바르게 칠하고, 한 글자씩 자른다 ----------
+do
+	local D = F.DIALOG
+	expect(D.w + D.margin * 2 <= G.min.w, "대화창이 가장 작은 격자의 폭 안(양옆 여백까지)")
+	local h = D.padY + D.lines * M.bodyLine + D.foot
+	expect(h + D.bottom + D.plateH <= G.min.h / 2, "대화창(이름표까지)이 가장 작은 격자의 아래 절반 안 — 주인공과 주민을 가리지 않는다")
+	eq(F.DIALOG_TEXT_W, D.w - D.padX * 2, "대사의 폭 = 판의 폭 - 양옆 여백")
+	expect(D.button[2] >= 24 and D.button[1] >= 60, "수락 · 거절 단추는 손가락으로 누를 만한 크기")
+	expect(D.cps >= 15 and D.cps <= 60, "글자가 한 글자씩 나오는 빠르기")
+	expect(#F.TALK_KEYS > 50, "강조 낱말이 설계 자료에서 모였다")
+	local text = "어귀의 수습 검병부터 쫓아 주세요."
+	local segs = F.talkSegments(text, { text }, nil, { "수습 검병", "검병" })
+	eq(#segs, 1, "한 줄")
+	eq(#segs[1], 3, "앞 · 강조 · 뒤 세 조각")
+	eq(segs[1][2].t, "수습 검병", "긴 낱말이 통째로 칠해진다")
+	expect(segs[1][2].key and not segs[1][1].key and not segs[1][3].key, "강조인 조각만 key")
+	local part = F.talkSegments(text, { text }, 6, { "수습 검병" })
+	eq(part[1][1].t, "어귀의 ", "한 글자씩: 앞의 네 글자")
+	eq(part[1][2].t, "수습", "한 글자씩: 강조 낱말의 앞 두 글자까지")
+	local two = F.talkSegments("굽잇길의 폭탄병일세. 조심하게.", { "굽잇길의 폭탄병일세.", "조심하게." }, 13, { "폭탄병" })
+	eq(two[1][2].t, "폭탄병", "첫 줄의 강조")
+	eq(two[2][1].t, "조심", "줄을 넘어 센다(첫 줄 11자 + 둘째 줄 2자)")
+end
+
+-- ---------- 말풍선(이제 주민의 혼잣말만): 주민의 말이 말풍선의 줄 수에 다 들어가고, 가장 큰 말풍선도 가장 작은 화면에 들어간다 ----------
 local B = F.BUBBLE
 expect(B.textW + B.padX * 2 + 16 <= G.min.w, "말풍선이 가장 작은 격자의 폭 안")
 local said = 0
@@ -241,36 +298,17 @@ do
 		local bottom = feet + L.TAG.down + L.TAG.h
 		expect(bottom <= L.rect(UI.hud.skills, G.min.w, G.min.h).y + K.keyUp, ("발밑의 이름표(아래 끝 %d)가 스킬 칸의 아랫줄 위"):format(bottom))
 	end
-	-- 채팅 줄
-	eq(Tags.chatLine("near", "달토끼", "안녕"), "달토끼: 안녕", "둘레의 글")
-	eq(Tags.chatLine("party", "달토끼", "가자"), "[파티] 달토끼: 가자", "파티의 글")
-	eq(Tags.chatLine("near", nil, "알림"), "알림", "이름이 없는 글")
-	eq(Tags.chatClean("  안녕  "), "안녕", "앞뒤 빈칸을 뗀다")
-	eq(Tags.chatClean("한 줄\n두 줄"), "한 줄 두 줄", "줄바꿈은 빈칸으로")
-	eq(Tags.chatClean("   "), nil, "빈 글은 보내지 않는다")
-	eq(Tags.chatClean(""), nil, "빈 글")
-	eq(Tags.chatClean(42), nil, "글이 아닌 것")
-	eq(#Tags.chatClean(string.rep("a", 200)), 80, "여든 자까지만")
-	-- 평소의 채팅 글: 채팅 칸에 세 줄
-	local c, CH = UI.hud.chat, L.CHAT
-	expect(math.floor(c.h / CH.line) >= 3, "채팅 칸에 세 줄이 들어간다")
-	expect(c.y + c.h <= UI.hud.vitals.y, "채팅 글이 체력 덩어리 위에서 끝난다")
-	-- 쓰는 중의 채팅 판: 세 격자에서 화면 안에 있고 체력 덩어리 위에서 끝난다. 긴 글도 세 줄 안에 들어간다
-	local o = L.chatOpen()
-	for _, g in GRIDS do
-		local r = L.rect(o, g.w, g.h)
-		expect(r.x >= 0 and r.y >= 0 and r.x + r.w <= g.w, "쓰는 중의 채팅 판이 화면 안 " .. g.name)
-		expect(r.y + r.h <= L.rect(UI.hud.vitals, g.w, g.h).y, "쓰는 중의 채팅 판이 체력 덩어리 위에서 끝난다 " .. g.name)
-		expect(apart(r, L.rect(UI.hud.party, g.w, g.h)), "쓰는 중의 채팅 판이 파티원 칸과 겹치지 않는다 " .. g.name)
+	-- 채팅: Roblox의 기본 채팅을 그대로 쓴다(사용자 2026-10-13: "우리가 자체 채팅을 구현하는게 아니라 로블록스 채팅이 있어요 …") — 우리가 그리는 채팅 칸 · 쓰는 판 · 폰의 단추와 그 셈은 없다
+	expect(UI.hud.chat == nil and UI.hudTouch.chat == nil and UI.layout.chat == nil, "우리 채팅 칸과 그 치수는 없다")
+	expect(Tags.chatLine == nil and Tags.chatClean == nil and L.chatOpen == nil and L.CHAT == nil, "우리 채팅 판의 셈은 없다")
+	for _, t in UI.touch do
+		expect(t.act ~= "chat", "폰의 「채팅」 단추는 없다(Roblox의 채팅 단추로 연다)")
 	end
-	expect(apart(o, UI.hud.skills), "쓰는 중의 채팅 판이 스킬 칸과 겹치지 않는다(1080p)")
-	local textW = CH.open.w - CH.open.pad * 2
-	local long = Tags.chatLine("party", "가나다라마바사아자차카타", string.rep("가", 80))
-	local fitted = pixelText.Fit(long, textW, 3, "small")
-	local lines = string.split(fitted, "\n")
-	expect(#lines <= 3, "긴 글도 세 줄까지")
-	for _, line in lines do
-		expect(measure(line) <= textW, "채팅 줄이 판 안")
+	local CU = UI.chatUi
+	expect(CU.tabs == true and CU.party.channel == "파티", "채널 탭이 켜져 있다 — 「파티」 채널에 쓸 수 있다")
+	expect(CU.window.alpha >= 0 and CU.window.alpha <= 1 and CU.window.width > 0 and CU.window.height > 0, "Roblox 채팅 창에 거는 값이 말이 된다")
+	for _, hex in { CU.window.back, CU.window.text, CU.window.dim, CU.nameColor, CU.party.color } do
+		expect(hex:match("^#%x%x%x%x%x%x$") ~= nil, "색은 #rrggbb " .. hex)
 	end
-	expect(CH.field >= M.small + 8, "쓰는 칸의 높이에 글과 여백이 들어간다")
+	expect(CU.gap >= 0 and CU.keep > UI.hud.vitals.h, "파티원 칸을 띄우는 만큼 · 화면 아래에 남기는 높이(체력 덩어리보다 크다)")
 end

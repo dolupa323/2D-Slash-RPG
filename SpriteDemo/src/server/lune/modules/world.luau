@@ -24,8 +24,12 @@ local Items = require(lune.sim.items)
 local Party = require(lune.sim.party)
 local Quests = require(lune.sim.quests)
 local Daily = require(lune.sim.daily) -- 일일 의뢰(마을의 게시판)
+local Tutorial = require(lune.sim.tutorial) -- 튜토리얼 「달빛 꿈」(2026-10-14)
+local Market = require(lune.sim.market) -- 경매장의 셈(장부를 바꾸는 법 · 맡긴 것과 견주는 법)
+local Format = require(lune.ui.format) -- 글 속의 {이름}을 채운다(경매장의 알림)
 local Kit = require(lune.sim.kit)
 local Buffs = require(lune.sim.buffs)
+local Quick = require(lune.ui.quick) -- 스마트폰의 단추 배치(단추가 없는 칸의 것을 옮긴다)
 local Passives = require(lune.sim.passives) -- 2~4차의 패시브(충격파 · 넘치는 힘 · 꺼지지 않는 불은 여기서 때를 본다)
 local CLASSES = require(lune.data["classes.generated"])
 local Store = require(script.Parent.store)
@@ -143,6 +147,8 @@ end
 local function selfView(s)
 	local view = Hero.view(s.hero)
 	view.buffs = Buffs.view(s.hero, World.now)
+	view.tut = Tutorial.pack(s.hero.tut) -- 튜토리얼의 진행(꿈의 미션 판)
+	view.tutSkip = s.acct ~= nil and s.acct.tutDone == true -- 「건너뛰기」를 보일까(이 계정이 한 번 끝냈다)
 	view.haste = Buffs.haste(s.hero)
 	-- 관리자에게만: 관리 창을 여는 단추가 보이고(화면), 지금 켜 둔 시험용 값들을 안다. 관리자가 아니면 이 칸들이 아예 없다
 	if Admin.is(s.player) then
@@ -240,6 +246,7 @@ local function guestHero(userId: number, class: string, level: number?, mode: st
 	-- 확인용 캐릭터는 그 레벨의 차수까지 전직한 것으로 친다(2~4차를 바로 본다). 전직 퀘스트를 보려면 LuneGuest = "new"로 만들어 Debug로 레벨을 올린다
 	Hero.advanceAll(h)
 	h.quests[Quests.FIRST.quest] = { done = true, c = {} } -- 첫 퀘스트(사제에게 기술을 배운다)도 끝낸 것으로
+	h.tut = Tutorial.finished() -- 꿈(튜토리얼)도 깬 것으로
 	for _, tier in CLASSES.classes[class].tiers do
 		if tier.job <= h.job then
 			for _, sk in tier.skills do
@@ -288,6 +295,7 @@ local function guestHero(userId: number, class: string, level: number?, mode: st
 			end
 		end
 	end
+	h.tslots = Quick.touchFix(h.tslots) -- 스마트폰에는 칸 1의 단추가 없다(2026-10-13) — 거기 놓인 것은 단추가 있는 빈 칸으로
 	Hero.recalc(h)
 	h.hp = h.maxHp
 	return h
@@ -388,6 +396,7 @@ function World.addPlayer(player)
 				while h.level < row[3] do
 					Hero.gainXp(h, N.xpNeed(h.level) - h.xp)
 				end
+				h.tut = Tutorial.finished()
 				h.quests[Quests.FIRST.quest] = { done = true, c = {} } -- 자란 캐릭터다: 첫 퀘스트는 끝낸 것으로(전직 퀘스트는 그대로 — Lv.31 캐릭터로 「2차 전직」을 받은 모습을 본다)
 				Hero.autoStat(h)
 				local data = Hero.pack(h)
@@ -476,11 +485,21 @@ local function leaveWorld(s)
 	end
 end
 
+-- 경매장의 일(저장소를 기다리는 중)이 끝나기를 기다린다: 값을 치른 물건 · 받은 대금이 가방에 들어오기 전에 저장하고 나가지 않게(길어도 MARKET_WAIT초)
+local MARKET_WAIT = 15
+local function marketIdle(s)
+	local waited = 0
+	while s.marketBusy and waited < MARKET_WAIT do
+		waited += task.wait(0.1) or 0.1
+	end
+end
+
 function World.removePlayer(player)
 	local s = sessions[player]
 	sessions[player] = nil
 	byUser[player.UserId] = nil
 	if s and s.hero then
+		marketIdle(s)
 		saveAccount(s)
 	end
 	-- 저장을 끝낸 뒤에 계정의 잠금을 푼다(다른 서버로 옮겨 가면 그 서버가 바로 잡는다)
@@ -613,6 +632,7 @@ local function onChars(player, action: string, a: any, b: any)
 	local acct = s.acct
 	if action == "leave" then
 		if s.hero then
+			marketIdle(s) -- 경매장의 일이 끝난 뒤에 나온다(받을 것이 그 캐릭터의 가방에 들어간 뒤에)
 			leaveWorld(s)
 			markName(s)
 		end
@@ -701,6 +721,9 @@ local function onChars(player, action: string, a: any, b: any)
 		acct.last = c.id
 		-- 첫 퀘스트를 아직 끝내지 않은 새 캐릭터는 사당 안(사제의 방)에서 시작한다 — 그 밖에는 마을의 시작 자리
 		local startKey = Quests.firstScene(hero.quests, hero.level) or SCENES.start
+		if not hero.tut.done and SCENES.scenes[Tutorial.SCENE] then
+			startKey = Tutorial.SCENE -- 꿈에서 깨지 않은 새 캐릭터는 꿈(튜토리얼)에서 시작한다(2026-10-14)
+		end
 		if not SCENES.scenes[startKey] then
 			startKey = SCENES.start
 		end
@@ -801,6 +824,85 @@ local function onMove(player, x: number, y: number, dir: number)
 	hero.x, hero.y, hero.dir = x, y, dir
 end
 
+local tutChanged: (any) -> () -- 튜토리얼의 진행이 바뀌었을 때(아래 applyResult 앞에서 채운다)
+-- 튜토리얼의 미션을 넘겼다(before째부터 지금 앞까지): 넘긴 미션마다 경험치(design/tutorial.js의 xp — 수련 인형 앞까지는 Lv.1 몫의 share씩, upAt 미션에서 Lv.2가 되게 채운다).
+--  「경험치 · 레벨 업」이 화면에 뜨게 Gain을 보낸다. 그 뒤의 미션은 경험치가 없다
+local function tutAdvanced(s, before: number)
+	local h = s.hero
+	local X = Tutorial.DATA.xp
+	local upIndex = 0
+	for i, def in Tutorial.STEPS do
+		if def.id == X.upAt then
+			upIndex = i
+		end
+	end
+	local gained, ups = 0, 0
+	for i = before, math.min(h.tut.step - 1, Tutorial.TOTAL) do
+		if h.level == 1 and i <= upIndex then
+			local left = N.xpNeed(1) - h.xp
+			local amount = if i == upIndex then left else math.min(math.floor(N.xpNeed(1) * X.share), left - 1)
+			if amount > 0 then
+				ups += Hero.gainXp(h, amount)
+				gained += amount
+			end
+		end
+	end
+	if gained > 0 then
+		fire("Gain", s.player, { xp = gained, ups = ups, level = h.level })
+	end
+	-- 「능력치 찍기 · 스킬 찍기」의 차례인데 이미 다 찍었다(미션 전에 창을 열어 찍었다): 그 미션은 끝난 것으로 넘긴다 — 찍을 점수가 없어 막히지 않게
+	while true do
+		local d = Tutorial.current(h.tut)
+		local k = if d then Tutorial.kind(d) else ""
+		if (k == "stat" and (h.ap or 0) <= 0) or (k == "sp" and (h.sp or 0) <= 0) then
+			Tutorial.onEvent(h.tut, k)
+		else
+			break
+		end
+	end
+	tutChanged(s)
+end
+-- 서버가 아는 일(잡기 · 줍기 · 물약 · 능력치 · 스킬)이 꿈에서 일어났다
+local function tutEvent(s, kind: string)
+	if s.scene ~= Tutorial.SCENE or s.hero.tut.done then
+		return
+	end
+	local before = s.hero.tut.step
+	if Tutorial.onEvent(s.hero.tut, kind) then
+		tutAdvanced(s, before)
+	elseif kind == "kill" then
+		tutChanged(s) -- 셋 가운데 몇을 잡았는지(판의 셈)
+	end
+end
+-- 튜토리얼(꿈): "done" n = 화면만 아는 n째 미션(걷기 · 뛰기 · 내려가기 · 말 걸기 · 기술 · 창)을 끝냈다 · "skip" = 꿈을 건너뛰고 사당에서 깨어난다(이 계정이 한 번 끝낸 뒤에만)
+local function onTut(player, action: string, n: any)
+	local s = sessions[player]
+	if not s or not s.hero or s.scene ~= Tutorial.SCENE or s.hero.tut.done then
+		return nil
+	end
+	if action == "done" then
+		local before = s.hero.tut.step
+		if Tutorial.report(s.hero.tut, n) then
+			tutAdvanced(s, before)
+		end
+		return { tut = Tutorial.pack(s.hero.tut) }
+	elseif action == "skip" and s.acct and s.acct.tutDone and s.hero.alive then
+		Tutorial.finish(s.hero.tut)
+		local to = Tutorial.DATA.exit
+		local dest = SCENES.scenes[to]
+		local from = s.scene
+		place(s, to, dest.spawn.x, dest.spawn.y)
+		s.dirty = true
+		sendSelf(s)
+		local room = roomOf(to):describe(s.hero.id)
+		room.who = roster(to)
+		sendWho(from)
+		sendWho(to)
+		return { scene = to, x = dest.spawn.x, y = dest.spawn.y, room = room }
+	end
+	return nil
+end
+
 local function onTravel(player, to: string)
 	local s = sessions[player]
 	if not s or not s.hero or not s.hero.alive then
@@ -809,8 +911,12 @@ local function onTravel(player, to: string)
 	local scene = SCENES.scenes[s.scene]
 	for _, p in scene.portals do
 		if p.to == to and math.abs(p.x - s.hero.x) <= 28 and math.abs(p.y - s.hero.y) <= 28 then
-			if p.need and not Quests.reached(s.hero.quests, p.need) then
-				return nil -- 그 퀘스트를 받아야 열리는 문(달의 사당 안의 「사당 지하」 — 메인 「불타는 마을」): 화면에도 보이지 않는다
+			if not Quests.portalOpen(s.hero.quests, p) then
+				return nil -- 그 퀘스트를 받아야 · 끝내야 열리는 문(달의 사당 안의 「사당 지하」 · 마을의 나루): 화면에도 보이지 않는다
+			end
+			local waking = s.scene == Tutorial.SCENE
+			if waking and not Tutorial.canExit(s.hero.tut) then
+				return nil -- 꿈의 빛나는 문: 미션을 다 하기 전에는 열리지 않는다
 			end
 			local dest = SCENES.scenes[to]
 			local x, y = dest.spawn.x, dest.spawn.y
@@ -821,6 +927,14 @@ local function onTravel(player, to: string)
 			end
 			local from = s.scene
 			place(s, to, x, y)
+			if waking then -- 꿈에서 깨어났다: 튜토리얼을 마친다 · 이 계정의 다음 캐릭터는 건너뛸 수 있다
+				Tutorial.finish(s.hero.tut)
+				if s.acct then
+					s.acct.tutDone = true
+				end
+				s.dirty = true
+				sendSelf(s)
+			end
 			local room = roomOf(to):describe(s.hero.id)
 			room.who = roster(to)
 			sendWho(from)
@@ -841,6 +955,9 @@ local function onReturn(player)
 	end
 	Hero.revive(s.hero)
 	local homeKey = if s.hero.home and SCENES.homes[s.hero.home] and SCENES.scenes[s.hero.home] then s.hero.home else SCENES.start
+	if not s.hero.tut.done and SCENES.scenes[Tutorial.SCENE] then
+		homeKey = Tutorial.SCENE -- 꿈(튜토리얼)에서 쓰러지면 꿈의 처음으로(마을로 나가지 않는다)
+	end
 	local scene = SCENES.scenes[homeKey]
 	local from = s.scene
 	place(s, homeKey, scene.spawn.x, scene.spawn.y, true)
@@ -851,6 +968,16 @@ local function onReturn(player)
 	sendWho(from)
 	sendWho(s.scene)
 	sendParty(Party.members(book, s.hero.id))
+end
+
+-- 튜토리얼(꿈)의 진행이 바뀌었다: 저장할 것으로 적고 내 상태를 보낸다. 물약 미션의 차례가 되면 꿈속에서 조금 다친다(체력이 가득하면 물약을 마실 수 없다 — 체력 60%)
+tutChanged = function(s)
+	s.dirty = true
+	local def = Tutorial.current(s.hero.tut)
+	if def and Tutorial.kind(def) == "potion" and s.hero.hp > s.hero.maxHp * 0.6 then
+		s.hero.hp = math.floor(s.hero.maxHp * 0.6)
+	end
+	sendSelf(s)
 end
 
 -- 판정의 결과를 방에 푼다: 맞은 것 · 잡은 것(경험치 · 퀘스트 · 떨어진 것) · 달 수정 · 내 상태. cur = 때린 사람의 자리 · key = 그 방
@@ -881,6 +1008,16 @@ local function applyResult(cur, key: string, result)
 				for n, q in Quests.drops(gs.hero.quests, kill.kind, key, questRng) do
 					local d = roomOf(key):addDrop({ kind = "quest", amount = 1, quest = q.quest, step = q.step, name = q.name, icon = q.icon, goods = q.goods }, kill.x - n * 9, kill.y, gs.hero.id)
 					fire("DropAdd", gs.player, Room.dropView(d))
+				end
+				-- 튜토리얼(꿈): 수련 인형을 센다 · 잡은 사람 앞에 물약 하나를 반드시 떨어뜨린다(줍기 미션 — design/tutorial.js의 dropItem)
+				if key == Tutorial.SCENE and not gs.hero.tut.done then
+					tutEvent(gs, "kill")
+					local pid = Items.potionFor(1).id
+					local g = Items.goods(pid)
+					if g then
+						local d = roomOf(key):addDrop({ kind = "goods", goods = pid, amount = 1, name = g.name, icon = g.icon }, kill.x + 10, kill.y, gs.hero.id)
+						fire("DropAdd", gs.player, Room.dropView(d))
+					end
 				end
 				if gain.xp > 0 then -- 스토리 보스는 경험치를 주지 않는다(퀘스트만 센다)
 					fire("Gain", gs.player, { xp = gain.xp, ups = gain.ups, level = gain.level })
@@ -1247,6 +1384,7 @@ local function onPickup(player, dropId: number)
 	local drop, why = roomOf(s.scene):pickup(s.hero, dropId)
 	if drop then
 		toRoom(s.scene, "DropGone", drop.id, player.UserId, drop.amount)
+		tutEvent(s, "pickup") -- 튜토리얼(꿈): 주웠다
 		if drop.kind == "money" then
 			sendSelf(s)
 		else
@@ -1391,6 +1529,7 @@ local function onPotion(player, id: any)
 	local healed, why = Hero.drink(s.hero, id)
 	if healed then
 		sendBag(s)
+		tutEvent(s, "potion") -- 튜토리얼(꿈): 물약을 마셨다
 	elseif why then
 		fire("ItemDone", player, { action = "use", ok = false, why = why })
 	end
@@ -1400,6 +1539,7 @@ local function onStatAdd(player, stat: string, n: number)
 	local s = sessions[player]
 	if s and s.hero and Hero.addStat(s.hero, stat, n) then
 		sendSelf(s)
+		tutEvent(s, "stat") -- 튜토리얼(꿈): 능력치를 찍었다
 	end
 end
 
@@ -1446,6 +1586,7 @@ local function onStatAuto(player)
 	local s = sessions[player]
 	if s and s.hero and Hero.autoStat(s.hero) > 0 then
 		sendSelf(s)
+		tutEvent(s, "stat")
 	end
 end
 
@@ -1453,6 +1594,7 @@ local function onSkillUp(player, id: string)
 	local s = sessions[player]
 	if s and s.hero and Hero.skillUp(s.hero, id) then
 		sendSelf(s)
+		tutEvent(s, "sp") -- 튜토리얼(꿈): 스킬 포인트를 찍었다
 	end
 end
 
@@ -1460,6 +1602,7 @@ local function onSkillAuto(player)
 	local s = sessions[player]
 	if s and s.hero and Hero.autoSkill(s.hero) > 0 then
 		sendSelf(s)
+		tutEvent(s, "sp")
 	end
 end
 
@@ -1578,8 +1721,527 @@ local function onDaily(player, action: string, region: any, i: any)
 	return reply(true, nil, reward)
 end
 
--- 파티: 초대 · 받기 · 거절 · 나가기. Lv.10부터(공방 「기본 · UI」 탭의 UNLOCK). 초대는 같은 맵에 있는 사람에게만.
-local PARTY_FROM = 10
+-- ---------- 경매장 ----------
+--  사용자 2026-10-06: "경매장으로 전부 거래가능하게 할겁니다" · 2026-10-13: "경매장 부터 진행합시다.  알아서 조사하고 판단하고 해서  경매장 구현 해보세요"
+--  **사용자 2026-10-13(처음 만든 것을 보고): "메이플 식 경매장을 말하는거긴합니다."** — 메이플 옥션 방식: 메뉴에서 어디서나 연다(주민 앞이 아니어도 된다) ·
+--   소비와 기타 아이템은 개당 가격으로 올리고 낱개로 팔린다 · 올릴 때 보증금 · 산 것은 「완료」에 「낙찰」로 들어와 「수령」한다 · 대금 수령 · 반환 · 재등록 · 모두 받기.
+--  셈은 sim/market.luau, 장부는 Store.marketRead / marketUpdate(분류마다 문서 하나 — UpdateAsync로만 바꾼다).
+--  물건 · 달돈이 복사되거나 사라지지 않게 하는 차례(바꾸지 말 것 — tools/test/tests/41_lune_market.luau가 하나씩 일부러 고장을 내서 본다):
+--   올리기   = 가방에서 뺀다 · 보증금을 낸다 → 계정의 「맡긴 것」에 적는다 → **계정을 저장한다** → 장부에 줄을 더한다
+--              (저장하지 못했으면 올리지 않는다 · 장부가 찼으면 되돌린다 · 저장소가 답하지 않으면 적혔는지 모르니 맡긴 채로 둔다 — 「완료」가 장부와 견주어 알려 준다)
+--   사기     = 달돈을 먼저 뺀다 → 장부의 줄에서 남은 수를 줄인다(남은 수만큼만 된다) → 산 것을 「맡긴 것」에 「낙찰」로 적는다 → 계정을 바로 저장한다. 못 샀으면 달돈을 돌려준다
+--   대금 수령 = (판매 중인 채로) 팔린 만큼의 대금을 받고 「맡긴 것」의 받은 수(got)를 늘린다 — 장부는 고치지 않는다(받은 것의 기록은 판 사람의 계정이다)
+--   끝내기   = (취소 · 반환 · 재등록 · 다 팔린 것) 줄을 닫는다(남은 수가 굳는다) → 남은 것을 돌려받고 대금을 받고 맡긴 것에서 지운다 → **계정을 저장한다** → 저장됐을 때에만 장부의 줄을 지운다
+--  어느 차례에서 서버가 꺼져도 「맡긴 것」과 장부의 줄이 남아 다음에 같은 셈을 다시 한다(Market.resolve). 값을 치른 뒤 저장하기 전에 꺼지는 한 곳만 산 것이 사라진다(바로 저장해 그 틈을 줄였다).
+--  사람마다 한 번에 하나만 처리한다(s.marketBusy) · 처리하는 동안에는 나가는 저장 · 서버의 닫힘이 기다린다(marketIdle · saving).
+local MARKET = Market.DATA
+local MWHY = Market.WHY
+local MWORDS = Market.WORDS
+local MARKET_FRESH = 2 -- 「지금의 것」을 달라고 해도 이만큼(초) 안에 읽은 것은 다시 읽지 않는다(새로 고침을 마구 눌러도 저장소를 덜 읽는다 — 사고 닫는 것은 어차피 UpdateAsync가 지금의 문서로 판단한다)
+local marketCache = {} -- [장부] = { at = 읽은 때(os.clock), doc } — 구경하는 사람들이 같은 문서를 MARKET.cache초 동안 같이 본다
+local function marketKeep(board: string, doc: any)
+	marketCache[board] = { at = os.clock(), doc = doc }
+end
+local function marketDoc(board: string, force: boolean?): (boolean, any)
+	local c = marketCache[board]
+	if c and os.clock() - c.at < (if force then MARKET_FRESH else MARKET.cache) then
+		return true, c.doc
+	end
+	local ok, doc = Store.marketRead(board)
+	if ok then
+		marketKeep(board, doc)
+	end
+	return ok, doc
+end
+-- 계정을 지금 저장한다 → 됐는가(저장소를 못 쓰는 Studio에서는 메모리에 둔 것으로 친다). 안 됐으면 틈틈이 도는 저장이 다시 한다
+local function saveNow(s): boolean
+	if not s.acct or not s.loaded or s.guest then
+		return false
+	end
+	commit(s)
+	s.dirty, s.soon = false, nil
+	saving += 1
+	local ok, done = pcall(Store.saveAccount, s.player.UserId, Account.pack(s.acct))
+	saving -= 1
+	if (ok and done == true) or Store.isOffline() then
+		return true
+	end
+	s.dirty = true
+	return false
+end
+-- 그 물건(장부의 꼴)이 가방에 들어가는가 · 넣는다
+local function marketRoom(h, row): boolean
+	local it = Market.unpack(row)
+	if not it then
+		return false
+	elseif it.item then
+		return Bag.room(h, it.item) >= it.n
+	end
+	return Bag.free(h, "gear") >= 1
+end
+local function marketGive(h, row): boolean
+	local it = Market.unpack(row)
+	if not it then
+		return false
+	elseif it.item then
+		return Bag.give(h, it.item, it.n) == true
+	end
+	return Bag.add(h, it) ~= nil
+end
+-- 「완료」에 맡아 둔다(산 것 · 그 사이에 가방이 차서 못 넣은 것) → 그 번호
+local function marketHold(s, row, paid: number, now: number): string
+	local book = s.acct.market
+	local id = "h_" .. Market.nextToken(book, now)
+	book.list[id] = { hold = true, it = row, p = paid, t = now, e = now }
+	return id
+end
+-- 돌려받는다: 가방에 넣고, 그 사이에 가방이 찼으면 맡아 둔다 → 가방에 들어갔는가
+local function marketTake(s, row, now: number): boolean
+	if marketGive(s.hero, row) then
+		return true
+	end
+	marketHold(s, row, 0, now)
+	return false
+end
+-- 「맡긴 것」 하나를 장부와 견준다 → 읽었는가, 그 줄(없으면 nil), 견준 답
+local function marketLook(s, id: string, hd, now: number, force: boolean?)
+	if hd.hold then
+		return true, nil, Market.resolve(hd, nil, now)
+	end
+	local got, doc = marketDoc(hd.b, force)
+	if not got then
+		return false, nil, nil
+	end
+	local entry = Market.entryIn(doc, id, s.player.UserId, now)
+	return true, entry, Market.resolve(hd, entry, now)
+end
+-- 내 것의 모습(판매 탭 · 완료 탭이 나눠 쓴다): 줄마다 { id, it, p(개당 — 산 것은 치른 값), t, e, state, n, left, sold, due, pay(지금 받을 대금 — 수수료를 뗀 것), deposit(함께 돌아오는 보증금) }
+--  state = hold(낙찰 — 수령할 것) · selling · ended(미판매 — 반환 / 재등록) · soldout(다 팔렸다) · back(장부에 없다 — 반환). 보관 기간이 지난 것은 여기서 지운다
+local function marketMine(s, now: number, force: boolean?)
+	local book, rows = s.acct.market, {}
+	local ids = {}
+	for id in book.list do
+		table.insert(ids, id)
+	end
+	for _, id in ids do
+		local hd = book.list[id]
+		if hd.hold then
+			table.insert(rows, { id = id, it = hd.it, p = hd.p, t = hd.t, e = hd.t, state = "hold", n = Market.units(hd.it), left = 0, sold = 0, due = 0, pay = 0, deposit = 0 })
+		else
+			local ok, _, r = marketLook(s, id, hd, now, force)
+			if ok and r.state == "void" then
+				book.list[id] = nil
+				s.dirty = true
+			else
+				-- 장부를 읽지 못했으면 그대로 둔다(판매 중으로 보인다)
+				local q = if ok then r else { state = "selling", n = Market.units(hd.it), left = Market.units(hd.it) - (hd.got or 0), sold = hd.got or 0, due = 0 }
+				local am = Market.amount(hd, q)
+				table.insert(rows, { id = id, it = hd.it, p = hd.p, t = hd.t, e = hd.e, state = q.state, n = q.n, left = q.left, sold = q.sold, due = q.due, pay = am.pay, deposit = am.deposit })
+			end
+		end
+	end
+	table.sort(rows, function(a, b)
+		if a.t ~= b.t then
+			return a.t < b.t
+		end
+		return a.id < b.id
+	end)
+	return rows
+end
+-- 맡아 둔 것(낙찰 · 못 넣은 것)을 받는다 → 됐는가, 까닭
+local function marketReceive(s, id: string, hd): (boolean, string?)
+	if not marketGive(s.hero, hd.it) then
+		return false, MWHY.bag
+	end
+	s.acct.market.list[id] = nil
+	saveSoon(s)
+	return true, nil
+end
+-- 판매 중인 채로, 팔린 만큼의 대금만 받는다(장부는 고치지 않는다 — 받은 수는 계정에 적는다) → 받은 대금, 수수료
+local function marketCollect(s, hd, r): (number, number)
+	local am = Market.amount(hd, r)
+	s.hero.money += am.pay
+	hd.got = (hd.got or 0) + r.due
+	saveSoon(s)
+	return am.pay, am.fee
+end
+-- 끝낸다(취소 · 반환 · 재등록 · 다 팔린 것의 마지막 대금): 줄을 닫는다 → 남은 것을 돌려받고(relist면 새로 올린다) 대금을 받고 맡긴 것에서 지운다 → 계정을 저장한다 → 저장됐을 때에만 줄을 지운다
+--  돌려주는 것: 됐는가, 까닭, { left(돌려받은 수), pay, fee, deposit, inBag(가방에 들어갔는가), relisted, lost }
+local function marketFinish(s, id: string, hd, now: number, relist: boolean?)
+	local h, book, userId = s.hero, s.acct.market, s.player.UserId
+	local ok, entry, r = marketLook(s, id, hd, now, true)
+	if not ok then
+		return false, MWHY.off, nil
+	elseif r.state == "void" then
+		book.list[id] = nil
+		saveSoon(s)
+		return true, nil, { lost = true, left = 0, pay = 0, fee = 0, deposit = 0, inBag = true }
+	end
+	local left = r.left
+	if relist then
+		if left <= 0 or r.state == "selling" then
+			return false, MWHY.gone, nil
+		elseif h.money < MARKET.deposit then
+			return false, MWHY.deposit, nil
+		end
+	elseif left > 0 and not marketRoom(h, Market.withUnits(hd.it, left)) then
+		return false, MWHY.bag, nil
+	end
+	if entry and left > 0 then
+		-- 닫는다: 그 사이에 더 팔렸으면 남은 수가 줄어 있다(늘지는 않는다)
+		local wrote, res, l2, after = Store.marketUpdate(hd.b, function(old)
+			return Market.txClose(old, id, userId, now)
+		end)
+		if not wrote then
+			marketCache[hd.b] = nil
+			return false, MWHY.off, nil
+		end
+		marketKeep(hd.b, after)
+		if res == "none" then
+			entry = nil
+			r = Market.resolve(hd, nil, now)
+			left = r.left
+		else
+			left = math.min(left, if typeof(l2) == "number" then l2 else left)
+			r = Market.resolve(hd, { l = left, c = 1, e = hd.e }, now)
+		end
+	end
+	local am = Market.amount(hd, r)
+	h.money += am.pay + am.deposit
+	book.list[id] = nil
+	local out = { left = left, pay = am.pay, fee = am.fee, deposit = am.deposit, inBag = true, relisted = false, lost = false }
+	local newId, newRow = nil, nil
+	if left > 0 then
+		local row = Market.withUnits(hd.it, left)
+		if relist then
+			-- 같은 값 · 같은 기간으로 다시 올린다(보증금을 다시 낸다)
+			local hours = math.floor((hd.e - hd.t) / 3600 + 0.5)
+			if not Market.hoursOk(hours) then
+				hours = MARKET.hours[1]
+			end
+			h.money -= MARKET.deposit
+			newId, newRow = Market.nextId(book, userId, now), row
+			book.list[newId] = { b = hd.b, it = row, p = hd.p, t = now, e = now + hours * 3600, got = 0, d = MARKET.deposit }
+			out.relisted = true
+		else
+			out.inBag = marketTake(s, row, now)
+		end
+	end
+	local saved = saveNow(s)
+	if saved and entry then
+		local wrote, _, _, after = Store.marketUpdate(hd.b, function(old)
+			return Market.txSettle(old, id, userId, now)
+		end)
+		if wrote then
+			marketKeep(hd.b, after)
+		else
+			marketCache[hd.b] = nil
+		end
+	end
+	if newId and saved then
+		local nh = book.list[newId]
+		local fresh = Market.entry(newId, userId, s.name, newRow, nh.p, (nh.e - nh.t) / 3600, now)
+		local wrote, whyFull, _, after = Store.marketUpdate(hd.b, function(old)
+			return Market.txList(old, fresh, now)
+		end)
+		if wrote and whyFull then
+			-- 분류가 가득 찼다: 다시 올리지 않고 돌려받는다(보증금도)
+			book.list[newId] = nil
+			h.money += MARKET.deposit
+			out.relisted = false
+			out.inBag = marketTake(s, newRow, now)
+			saveSoon(s)
+		elseif wrote then
+			marketKeep(hd.b, after)
+		else
+			marketCache[hd.b] = nil -- 적혔는지 모른다: 맡긴 채로 둔다(「완료」가 견준다)
+		end
+	end
+	sendSelf(s)
+	sendBag(s)
+	return true, nil, out
+end
+-- 끝낸 결과의 알림 글
+local function marketFinishMsg(hd, out): string
+	if out.lost then
+		return MWORDS.lost
+	end
+	local parts = {}
+	if out.relisted then
+		table.insert(parts, Format.fill(MWORDS.relisted, { name = Market.nameOf(Market.withUnits(hd.it, out.left)) }))
+	elseif out.left > 0 then
+		table.insert(parts, if out.inBag then Format.fill(MWORDS.returned, { name = Market.nameOf(Market.withUnits(hd.it, out.left)) }) else MWORDS.kept)
+	end
+	if out.pay > 0 or out.fee > 0 then
+		local text = Format.fill(MWORDS.paid, { n = Format.comma(out.pay), fee = Format.comma(out.fee) })
+		if out.deposit > 0 then
+			text ..= Format.fill(MWORDS.paidDeposit, { n = Format.comma(out.deposit) })
+		end
+		table.insert(parts, text)
+	end
+	return table.concat(parts, " · ")
+end
+local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
+	local s = sessions[player]
+	if not s or not s.hero or not s.acct then
+		return nil
+	end
+	local h, now, userId, book = s.hero, os.time(), player.UserId, s.acct.market
+	local function reply(ok: boolean?, why: string?, extra: any)
+		local out = extra or {}
+		out.ok, out.why, out.now = ok == true, why, now
+		out.used, out.max = Market.count(book), MARKET.slots
+		return out
+	end
+	if s.guest then
+		return reply(nil, MWHY.guest)
+	elseif not h.alive then
+		return reply(nil, MWHY.dead)
+	elseif s.marketBusy then
+		return reply(nil, MWHY.busy)
+	end
+	local function listing(board: string, doc: any)
+		return { rows = Market.rows(doc, now, userId), trades = Market.trades(doc, now), board = board }
+	end
+	local function work()
+		if action == "mine" then
+			return reply(true, nil, { mine = marketMine(s, now, a == true) })
+		elseif action == "browse" then
+			-- a = 장부 · b = 지금의 것으로(새로 고침). 목록과 시세(그 분류의 최근 거래)를 함께 준다
+			if not Market.isBoard(a) then
+				return reply(nil, MWHY.item)
+			end
+			local got, doc = marketDoc(a, b == true)
+			if not got then
+				return reply(nil, MWHY.off)
+			end
+			return reply(true, nil, listing(a, doc))
+		elseif action == "list" then
+			-- a = 가방의 탭 · b = 칸 · c = 수(묶음) · d = { 값(개당), 시간 }
+			local price, hours = if typeof(d) == "table" then d[1] else nil, if typeof(d) == "table" then d[2] else nil
+			if (a ~= "gear" and a ~= "use" and a ~= "etc") or typeof(b) ~= "number" or b ~= math.floor(b) or b < 1 or b > Bag.size(h) then
+				return reply(nil, MWHY.item)
+			end
+			local held = h[a][b]
+			if not held then
+				return reply(nil, MWHY.item)
+			elseif not Market.priceOk(price) or not Market.hoursOk(hours) then
+				return reply(nil, MWHY.price)
+			elseif Market.count(book) >= MARKET.slots then
+				return reply(nil, MWHY.slots)
+			end
+			local row
+			if a == "gear" then
+				row = Market.pack(held)
+			else
+				if typeof(c) ~= "number" or c ~= math.floor(c) or c < 1 or c > held.n then
+					return reply(nil, MWHY.item)
+				end
+				row = { g = held.item, n = c }
+			end
+			local can, whyNot = Market.sellable(Market.unpack(row))
+			local board = Market.boardOf(row)
+			if not can or not board then
+				return reply(nil, whyNot or MWHY.item)
+			elseif h.money < MARKET.deposit then
+				return reply(nil, MWHY.deposit)
+			end
+			-- 가방에서 빼고 보증금을 낸 뒤 맡긴 것에 적고, 계정을 먼저 저장한다
+			if a == "gear" then
+				h.gear[b] = false
+			else
+				held.n -= row.n
+				if held.n <= 0 then
+					h[a][b] = false
+				end
+			end
+			h.money -= MARKET.deposit
+			local id = Market.nextId(book, userId, now)
+			book.list[id] = { b = board, it = row, p = price, t = now, e = now + hours * 3600, got = 0, d = MARKET.deposit }
+			local function undo() -- 올리지 않았다: 가방으로 되돌리고 보증금을 돌려준다(그 사이에 가방이 찼으면 맡아 둔다)
+				book.list[id] = nil
+				h.money += MARKET.deposit
+				marketTake(s, row, now)
+				saveSoon(s)
+				sendBag(s)
+				sendSelf(s)
+			end
+			if not saveNow(s) then
+				undo()
+				return reply(nil, MWHY.save)
+			end
+			local entry = Market.entry(id, userId, s.name, row, price, hours, now)
+			local wrote, whyFull, _, doc = Store.marketUpdate(board, function(old)
+				return Market.txList(old, entry, now)
+			end)
+			sendBag(s)
+			sendSelf(s)
+			if not wrote then
+				-- 저장소가 답하지 않았다: 줄이 적혔는지 알 수 없다 — 되돌리면 물건이 둘이 될 수 있으니 맡긴 채로 둔다(「완료」가 장부와 견준다: 줄이 있으면 판매 중, 없으면 반환)
+				marketCache[board] = nil
+				return reply(nil, MWORDS.unsure, { mine = marketMine(s, now, false) })
+			elseif whyFull then
+				undo()
+				return reply(nil, whyFull)
+			end
+			marketKeep(board, doc)
+			return reply(true, nil, { msg = Format.fill(MWORDS.listed, { name = Market.nameOf(row) }), mine = marketMine(s, now, false) })
+		elseif action == "buy" then
+			-- a = 장부 · b = 줄 · c = 사는 수 · d = 본 값(개당)
+			if not Market.isBoard(a) or typeof(b) ~= "string" or not Market.priceOk(d) or typeof(c) ~= "number" or c ~= math.floor(c) or c < 1 or c > 9999 then
+				return reply(nil, MWHY.gone)
+			end
+			local got, doc = marketDoc(a, false)
+			local seen = if got then Market.entryById(doc, b) else nil
+			if got and not seen then
+				got, doc = marketDoc(a, true)
+				seen = if got then Market.entryById(doc, b) else nil
+			end
+			if not got then
+				return reply(nil, MWHY.off)
+			elseif not seen or Market.stateOf(seen, now) ~= "selling" or not Market.unpack(seen.it) then
+				return reply(nil, MWHY.gone, listing(a, doc))
+			elseif seen.u == userId then
+				return reply(nil, MWHY.mine)
+			elseif c > seen.l then
+				return reply(nil, MWHY.count, listing(a, doc))
+			end
+			local cost = d * c
+			if h.money < cost then
+				return reply(nil, MWHY.money)
+			elseif Market.holds(book) >= MARKET.holdMax then
+				return reply(nil, MWHY.hold)
+			end
+			local token = Market.nextToken(book, now)
+			h.money -= cost -- 먼저 뺀다(저장소를 기다리는 동안 같은 달돈을 다른 데 쓰지 못한다) — 못 사면 돌려준다
+			local wrote, why, entry, after = Store.marketUpdate(a, function(old)
+				return Market.txBuy(old, b, userId, c, d, now, token)
+			end)
+			if not wrote then
+				-- 저장소가 답하지 않았다: 다시 읽어, 이 구매가 적혀 있으면 산 것이다
+				local again, doc2 = Store.marketRead(a)
+				local mineNow = if again then Market.boughtBy(doc2, b, userId, token) else nil
+				if mineNow then
+					wrote, why, entry, after = true, nil, mineNow, doc2
+				end
+			end
+			if not wrote or why or not entry then
+				h.money += cost
+				if wrote then
+					marketKeep(a, after)
+				else
+					marketCache[a] = nil
+				end
+				return reply(nil, why or MWHY.off, listing(a, if wrote then after else doc))
+			end
+			marketKeep(a, after)
+			-- 산 것은 「완료」에 「낙찰」로 들어온다(거기서 수령한다 — 메이플 옥션)
+			local row = Market.withUnits(entry.it, c)
+			marketHold(s, row, cost, now)
+			saveNow(s) -- 값을 치른 물건은 바로 저장한다
+			sendSelf(s)
+			local extra = listing(a, after)
+			extra.msg = Format.fill(MWORDS.bought, { name = Market.nameOf(row) })
+			extra.mine = marketMine(s, now, false)
+			return reply(true, nil, extra)
+		elseif action == "settle" then
+			-- a = 내 것의 번호 · b = 하려는 일: "take" 수령(낙찰) · "collect" 대금 수령 · "back" 판매 취소 / 반환 · "relist" 재등록
+			local hd = if typeof(a) == "string" then book.list[a] else nil
+			if not hd then
+				return reply(nil, MWHY.gone, { mine = marketMine(s, now, false) })
+			end
+			if hd.hold then
+				local ok, why = marketReceive(s, a, hd)
+				if not ok then
+					return reply(nil, why)
+				end
+				sendBag(s)
+				return reply(true, nil, { msg = Format.fill(MWORDS.taken, { name = Market.nameOf(hd.it) }), mine = marketMine(s, now, false) })
+			end
+			if b == "collect" then
+				local ok, _, r = marketLook(s, a, hd, now, true)
+				if not ok then
+					return reply(nil, MWHY.off)
+				elseif r.state == "selling" then
+					-- 아직 팔리는 중: 팔린 만큼의 대금만 받는다
+					if r.due <= 0 then
+						return reply(nil, MWHY.nothing, { mine = marketMine(s, now, false) })
+					end
+					local pay, fee = marketCollect(s, hd, r)
+					sendSelf(s)
+					return reply(true, nil, { msg = Format.fill(MWORDS.paid, { n = Format.comma(pay), fee = Format.comma(fee) }), mine = marketMine(s, now, false) })
+				end
+			elseif b ~= "back" and b ~= "relist" then
+				return reply(nil, MWHY.item)
+			end
+			local ok, why, out = marketFinish(s, a, hd, now, b == "relist")
+			if not ok then
+				return reply(nil, why, { mine = marketMine(s, now, false) })
+			end
+			return reply(true, nil, { msg = marketFinishMsg(hd, out), mine = marketMine(s, now, false) })
+		elseif action == "all" then
+			-- 모두 받기: 낙찰을 수령하고, 팔린 것의 대금을 받고, 끝난 것(미판매 · 다 팔린 것)을 돌려받는다. 판매 중인 것은 그대로 둔다(대금만 받는다)
+			local ids = {}
+			for id in book.list do
+				table.insert(ids, id)
+			end
+			table.sort(ids)
+			local done, stuck, paid = 0, false, 0
+			for _, id in ids do
+				local hd = book.list[id]
+				if hd and hd.hold then
+					if marketReceive(s, id, hd) then
+						done += 1
+					else
+						stuck = true
+					end
+				elseif hd then
+					local ok, _, r = marketLook(s, id, hd, now, true)
+					if not ok then
+						stuck = true
+					elseif r.state == "selling" then
+						if r.due > 0 then
+							paid += marketCollect(s, hd, r)
+							done += 1
+						end
+					else
+						local fine, _, out = marketFinish(s, id, hd, now, false)
+						if fine then
+							done += 1
+							paid += if out then out.pay + out.deposit else 0
+						else
+							stuck = true
+						end
+					end
+				end
+			end
+			sendSelf(s)
+			sendBag(s)
+			local msg = if done == 0 then (if stuck then MWHY.bag else MWORDS.allNone) else Format.fill(if stuck then MWORDS.allPart else MWORDS.allDone, { n = done })
+			return reply(done > 0, if done == 0 then msg else nil, { msg = if done > 0 then msg else nil, mine = marketMine(s, now, false), paid = paid })
+		end
+		return reply(nil, MWHY.item)
+	end
+	s.marketBusy = true
+	saving += 1
+	local ok, out = pcall(work)
+	saving -= 1
+	s.marketBusy = nil
+	if not ok then
+		warn("[lune] 경매장을 처리하다 오류: " .. tostring(out))
+		return reply(nil, MWHY.off)
+	end
+	return out
+end
+
+-- 파티: 초대 · 받기 · 거절 · 나가기. 처음부터 맺는다(사용자 2026-10-13: "게임시작부터 그냥 열리면되지 왜 10부터인가요?" — 전에는 Lv.10부터였다). 초대는 같은 맵에 있는 사람에게만.
+--  문턱은 공방의 창 목록(data/ui.generated.luau의 windows — 파티 창이 열리는 레벨)에서 읽는다: 화면과 서버가 같은 수를 쓴다
+local PARTY_FROM = 1
+for _, w in require(ReplicatedStorage.shared.lune.data["ui.generated"]).windows do
+	if w.id == "party" then
+		PARTY_FROM = w.from
+	end
+end
 local function partyNote(player, why: string)
 	fire("ItemDone", player, { action = "party", ok = false, why = why })
 end
@@ -1697,6 +2359,24 @@ function World.jump(player, key: string): boolean
 	sendSelf(s)
 	sendWho(from)
 	sendWho(s.scene)
+	return true
+end
+
+-- 꿈(튜토리얼)을 마친 것으로 하고 사당에서 깨어나게 한다(자동 검사 · 관리 — 2026-10-14). 꿈 밖에 있어도 튜토리얼을 마친 것으로 고친다
+function World.wake(player): boolean
+	local s = sessions[player]
+	if not s or not s.hero then
+		return false
+	end
+	Tutorial.finish(s.hero.tut)
+	if s.acct then
+		s.acct.tutDone = true
+	end
+	s.dirty = true
+	if s.scene == Tutorial.SCENE then
+		return World.jump(player, Tutorial.DATA.exit)
+	end
+	sendSelf(s)
 	return true
 end
 
@@ -1877,6 +2557,48 @@ local function onAdmin(player, what: string, a: any, b: any, c: any)
 		fire("Quests", player, Quests.view(h.quests))
 		sendBag(s)
 		return done(("할 일 %d개를 채웠다 — 돌려주러 간다"):format(n))
+	elseif what == "market" then
+		-- 경매장을 혼자서 해 볼 때: 「시험 판매자」의 물건 셋(내 직업의 무기 · 모자 · 물약)을 올린다(fill) · 그 물건들을 모두 치운다(clear).
+		--  판 사람이 없는 줄(번호 0)이라 사도 대금은 아무에게도 가지 않는다. 물건을 만들어 내는 일이니 관리자만 — 위에서 계정 번호로 가렸다
+		local now = os.time()
+		if a == "fill" then
+			local stage = Items.stageOf(h.level)
+			local weapon = Items.make("weapon", stage, 4, h.class)
+			weapon.star = math.min(3, Items.starCap(stage))
+			local potion = Items.potionFor(h.level)
+			local rows = { { Market.pack(weapon), 1000 }, { Market.pack(Items.make("hat", stage, 3)), 300 } }
+			if potion then
+				table.insert(rows, { { g = potion.id, n = math.min(10, potion.stack) }, 500 })
+			end
+			local n = 0
+			for i, r in rows do
+				local board = Market.boardOf(r[1])
+				if board then
+					local entry = Market.entry(("0_%d_%d"):format(now, i), 0, "시험 판매자", r[1], r[2], MARKET.hours[1], now)
+					local wrote, why = Store.marketUpdate(board, function(old)
+						return Market.txList(old, entry, now)
+					end)
+					if wrote and not why then
+						n += 1
+					end
+					marketCache[board] = nil
+				end
+			end
+			return { ok = n > 0, msg = ("경매장에 시험 물건 %d개를 올렸다"):format(n) }
+		elseif a == "clear" then
+			local n = 0
+			for _, board in Market.boards() do
+				local wrote, removed = Store.marketUpdate(board, function(old)
+					return Market.txPurge(old, 0, now)
+				end)
+				if wrote and typeof(removed) == "number" then
+					n += removed
+				end
+				marketCache[board] = nil
+			end
+			return { ok = true, msg = ("경매장의 시험 물건 %d개를 치웠다"):format(n) }
+		end
+		return no("모르는 일이다")
 	elseif what == "goto" then
 		if typeof(a) ~= "string" or not SCENES.scenes[a] then
 			return no("없는 맵이다")
@@ -2205,6 +2927,7 @@ function World.start()
 	Net.OnServer("Ready", onReady)
 	Net.OnServer("Move", onMove)
 	Net.OnServer("Travel", onTravel)
+	Net.OnServer("Tut", onTut)
 	Net.OnServer("Skill", onSkill)
 	Net.OnServer("Return", onReturn)
 	Net.OnServer("Pickup", onPickup)
@@ -2216,6 +2939,7 @@ function World.start()
 	Net.OnServer("Keys", onKeys)
 	Net.OnServer("Sound", onSound)
 	Net.OnServer("Daily", onDaily)
+	Net.OnServer("Market", onMarket)
 	Net.OnServer("Item", onItem)
 	Net.OnServer("Party", onParty)
 	Net.OnServer("Quest", onQuest)

@@ -1,109 +1,256 @@
--- 주민과의 대화 — 그 주민 머리 위의 흰 말풍선(산나비처럼: 흰 속 · 어두운 테두리 한 점 · 아래 그림자 · 꼬리. 얼굴 칸 · 이름표를 따로 두지 않는다).
---  주민 앞에서 ↑를 누르면 뜨고, 한 번 더 누르면 다음 말, 마지막 말 뒤에는 닫힌다. 말풍선을 눌러도 ↑와 같다(스마트폰).
---  말풍선 위에는 퀘스트의 이름(노랑), 아래에는 지금 ↑가 하는 일(「↑ 다음」 · 「↑ 받는다」 · 「↑ 끝낸다」 · 「↑ 닫기」)이 적힌다. 말이 더 남았으면 말풍선 귀퉁이에 파란 점.
---  말은 장면 자료(공방 js/lune/design/town.js에서 내보낸 것)의 lines, 또는 퀘스트의 대사(받을 때 · 하는 중 · 돌려줄 때 — data/quests.generated.luau).
---  퀘스트의 대사는 마지막 말에서 ↑(또는 말풍선)를 누르면 그 일(받기 · 돌려주기)이 일어난다 — 그 전에 자리를 뜨면 아무 일도 없다.
---  말풍선은 글씨의 층(화면 틀의 고운 격자)에 그리고, 화면마다 주민의 자리(게임 세계의 도트)를 따라간다(Talk.place).
+-- 주민과의 대화 — 둘로 나눈다(2026-10-14):
+--  사용자: "npc 대화 뜨는건 그냥 idle 일때 혼잣말할때만 말풍선 형태로 말하고 상호작용해서 퀘스트 받거나 대화할때는 일반 도트 게임처럼 … 대화창이떠서 말을 듣는"
+--  둘째 판(같은 날): "대화창 색감이 우리 게임 ui와 맞지않습니다. 그리고 글씨는 한글자씩 도트게임스타일로 … 캐릭터이미지 안떠도 됩니다. 그리고 좌우로 너무 대화창 넓습니다.
+--    또, 모바일에서도 정확히 나오게 크로스 플랫폼 고려해서"
+--  ① 대화창(Talk.start · next · accept · decline · close): ↑로 말을 걸면 화면 아래 가운데의 어두운 판(창과 같은 판 uPanel). 판의 위 테두리에 이름표(어두운 판 · 민트 테두리 · 흰 이름 + 노랑 퀘스트 이름),
+--     대사는 한 글자씩(DIALOG.cps) · 강조 낱말(몬스터 · 물건 · 곳 · 사람)은 민트. 말이 다 나오면 오른쪽 아래에 「↑ 다음 · 닫기 · 완료」, 받을 퀘스트의 마지막 말이면 「수락 · 거절」 단추.
+--     나오는 중에 ↑ · 스페이스 · 판을 누르면 그 말이 한 번에 다 나오고, 한 번 더 누르면 다음 말. X · Esc = 거절(닫기). 판 · 단추를 눌러도 같다(스마트폰).
+--     폭은 DIALOG.w(화면 틀이 좁으면 양옆 margin을 남기고 줄인다) — 화면 틀이 바뀌면(창 크기 · 폰을 돌림) 매 화면 다시 놓는다(Talk.place).
+--  ② 혼잣말(Talk.say): 주민 머리 위의 흰 말풍선(산나비처럼) — 단추 · 안내 없이 한 줄, IDLE.show초 뒤에 사라진다. 누가 언제 말할지는 boot.luau가 정한다(IDLE).
+--  모양은 공방 시험 탭(js/lune/ui/paint.js의 dialog · bubble)과 같게 짓는다. 값은 공방 js/lune/design/ui.js의 DIALOG · BUBBLE · IDLE(→ shared/lune/ui/format.luau).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local Format = require(ReplicatedStorage.shared.lune.ui.format)
 local pixelText = require(script.Parent.Parent.Parent.modules.ui.pixelText)
 local Stage = require(script.Parent.Parent.stage)
 local Overlay = require(script.Parent.Parent.overlay)
 local Ui = require(script.Parent.ui)
+local WORDS = require(ReplicatedStorage.shared.lune.data["ui.generated"]).words
 
 local C = Ui.COLOR
-local B = Format.BUBBLE -- 자동 검사가 주민의 말이 이 폭 · 줄 수에 들어가는지 본다
-local LINE = Ui.M.bodyLine
+local M = Ui.M
+local B = Format.BUBBLE -- 혼잣말 말풍선(자동 검사가 주민의 말이 이 폭 · 줄 수에 들어가는지 본다)
+local D = Format.DIALOG -- 대화창
+local LINE = M.bodyLine
+local MAX_SEGS = 8 -- 한 줄에 나뉘는 조각(강조 낱말 앞뒤)의 수 — 넘으면 나머지를 한 조각에 붙인다
 
 local Talk = {}
 Talk.npc = nil :: any
 Talk.index = 0
-Talk.TEXT_W = B.textW
-Talk.LINES = B.lines
-Talk.onToggle = nil :: ((any) -> ())? -- 말풍선이 뜨고 닫힐 때(뜨면 그 주민, 닫히면 nil) — 그 주민 머리 위의 퀘스트 표시가 그동안 숨는다
+Talk.TEXT_W = Format.DIALOG_TEXT_W -- 대화창 대사의 폭(자동 검사가 퀘스트 대사가 이 폭 · 줄 수에 들어가는지 본다)
+Talk.LINES = D.lines
+Talk.BUBBLE_W = B.textW
+Talk.onFinish = nil :: ((any) -> ())? -- 대화를 끝까지 들었다(마지막 말 뒤에 넘겼다 — 튜토리얼의 「말 걸기」 미션)
+Talk.onToggle = nil :: ((any) -> ())? -- 대화창이 뜨고 닫힐 때(뜨면 그 주민, 닫히면 nil) — 머리 위 퀘스트 표시 · 아래쪽 화면 · 터치 단추를 그동안 숨긴다
 
 local root: Frame
-local bubble: Frame
-local back, tail, body, title, key, hint, more
+-- 대화창
+local box: Frame
+local panel: Frame
+local plateEdge: { Frame }, plateIn: Frame
+local nameText, titleText
+local rows: { { any } } = {} -- 줄마다 조각 글
+local hintText, hintKey
+local acceptBtn, declineBtn
 local lines: { string } = {}
 local onEnd: (() -> ())? = nil
 local endHint: string? = nil
-local size = { w = 0, h = 0 }
+local started = 0 -- 지금 말이 나오기 시작한 때(os.clock)
+local fitted: { string } = {} -- 지금 말을 폭에 맞춰 바꾼 줄들
+local total = 0 -- 지금 말의 글자 수
+local drawn = -1 -- 그려 둔 글자 수(바뀔 때만 다시 그린다)
+local layoutKey = "" -- 놓은 화면 틀(바뀌면 다시 놓는다)
+local nameStr, hintStr = "", "" -- 이름표의 이름 · 아래 줄의 안내(폭을 재는 데 쓴다)
+-- 혼잣말
+local chat: Frame
+local chatBack, chatTail, chatBody
+local chatNpc: any = nil
+local chatTill = 0
+local chatSize = { w = 0, h = 0 }
+
+local function utf8len(s: string): number
+	return utf8.len(s) or #s
+end
 
 function Talk.init()
 	root = Stage.group(Overlay.root, "Talk", 60)
-	root.Visible = false
-	bubble = Ui.group(root, 0, 0, 1, 1, "Bubble")
-	back = Ui.part(bubble, "uBubble", 0, 0, 12, 14)
-	tail = Ui.part(bubble, "uTail", 0, 0)
-	tail.ZIndex = 2
-	body = Ui.text(bubble, "", B.padX, B.padY, Talk.TEXT_W, { font = "body", lines = Talk.LINES, line = LINE, color = C.bubbleInk, z = 3 })
-	more = Ui.box(bubble, 0, 0, 4, 4, C.mark)
-	more.Name = "More"
-	more.ZIndex = 3
-	title = Ui.text(bubble, "", 2, -14, 300, { color = C.gold, outline = true })
-	key = Ui.keycap(bubble, "↑", 0, 0)
-	hint = Ui.text(bubble, "", 0, 0, 120, { color = C.accent, outline = true })
-	local hit = Ui.hit(bubble)
+	-- ① 대화창
+	box = Ui.group(root, 0, 0, 1, 1, "Dialog")
+	box.Visible = false
+	panel = Ui.panel(box, 0, 0, 1, 1)
+	local hit = Ui.hit(box) -- 판 아무 데나 누르면 다음(스마트폰) — 단추는 이 위에 놓는다
 	hit.Name = "Next"
 	hit.Activated:Connect(function()
 		if Talk.npc then
 			Talk.next(Talk.npc)
 		end
 	end)
+	-- 이름표: 민트 한 점 테두리(모서리 한 점 깎기 — 사각형 둘을 겹친다) · 어두운 속
+	plateEdge = { Ui.box(box, 0, 0, 1, 1, C.accent), Ui.box(box, 0, 0, 1, 1, C.accent) }
+	plateIn = Ui.box(box, 0, 0, 1, 1, C.ink)
+	nameText = Ui.text(box, "", 0, 0, 200, { font = "body", color = C.text })
+	titleText = Ui.text(box, "", 0, 0, 240, { color = C.gold })
+	for r = 1, D.lines do
+		rows[r] = {}
+		for k = 1, MAX_SEGS do
+			rows[r][k] = Ui.text(box, "", 0, 0, 2000, { font = "body", color = C.text })
+		end
+	end
+	hintText = Ui.text(box, "", 0, 0, 120, { color = C.dim })
+	hintKey = Ui.keycap(box, "↑", 0, 0)
+	acceptBtn = Ui.button(box, WORDS.accept or "수락", 0, 0, D.button[1], function()
+		Talk.accept()
+	end, { main = true, h = D.button[2] })
+	declineBtn = Ui.button(box, WORDS.decline or "거절", 0, 0, D.button[1], function()
+		Talk.decline()
+	end, { h = D.button[2] })
+	-- X · Esc = 거절(닫기) — 대화창이 떠 있을 때만
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if processed or not Talk.npc then
+			return
+		end
+		if input.KeyCode == Enum.KeyCode.X or input.KeyCode == Enum.KeyCode.Escape then
+			Talk.decline()
+		end
+	end)
+	-- ② 혼잣말 말풍선
+	chat = Ui.group(root, 0, 0, 1, 1, "Chat")
+	chat.Visible = false
+	chatBack = Ui.part(chat, "uBubble", 0, 0, 12, 14)
+	chatTail = Ui.part(chat, "uTail", 0, 0)
+	chatTail.ZIndex = 2
+	chatBody = Ui.text(chat, "", B.padX, B.padY, B.textW, { font = "body", lines = B.lines, line = LINE, color = C.bubbleInk, z = 3 })
 end
 
--- 말 한 토막이 말풍선에서 차지하는 크기(폭 · 줄 수)
-function Talk.measure(text: string): (number, number)
-	local fitted = pixelText.Fit(text, Talk.TEXT_W, Talk.LINES, "body")
-	local w = pixelText.Measure(fitted, "body")
-	return w, #string.split(fitted, "\n")
+-- 대화창의 자리와 크기: 화면 아래 가운데 · 폭 = DIALOG.w(좁은 화면 틀이면 양옆 margin을 남기고 줄인다)
+local function dims()
+	local w = math.min(D.w, Stage.uiW - D.margin * 2)
+	local h = D.padY + D.lines * LINE + D.foot
+	return math.floor((Stage.uiW - w) / 2), Stage.uiH - D.bottom - h, w, h
+end
+
+-- 버튼 · 안내 · 이름표의 자리(화면 틀이 바뀌거나 말이 바뀔 때)
+local function layout()
+	local x, y, w, h = dims()
+	box.Position = UDim2.fromOffset(x, y)
+	box.Size = UDim2.fromOffset(w, h)
+	panel.Size = UDim2.fromOffset(w, h)
+	panel:FindFirstChild("Back").Size = UDim2.fromOffset(w, h)
+	-- 이름표: 판의 위 테두리에 걸친다
+	local nameW = Ui.measure(nameStr, "body")
+	local tW = select(1, titleText:size())
+	local titleW = if tW > 0 then math.min(tW, w - nameW - 60) + 12 else 0
+	local pw, ph, px, py = nameW + 12 + titleW, D.plateH, D.padX - 6, -math.floor(D.plateH / 2)
+	plateEdge[1].Position, plateEdge[1].Size = UDim2.fromOffset(px + 1, py), UDim2.fromOffset(pw - 2, ph)
+	plateEdge[2].Position, plateEdge[2].Size = UDim2.fromOffset(px, py + 1), UDim2.fromOffset(pw, ph - 2)
+	plateIn.Position, plateIn.Size = UDim2.fromOffset(px + 1, py + 1), UDim2.fromOffset(pw - 2, ph - 2)
+	nameText:move(D.padX, py + math.floor((ph - M.body) / 2))
+	titleText:move(D.padX + nameW + 12, py + math.floor((ph - M.small) / 2))
+	-- 아래 줄: 「수락 · 거절」 또는 「↑ 다음」
+	local bw, bh = D.button[1], D.button[2]
+	local cy = h - bh - 6
+	local dx = w - D.padX - bw
+	declineBtn.frame.Position = UDim2.fromOffset(dx, cy)
+	acceptBtn.frame.Position = UDim2.fromOffset(dx - 8 - bw, cy)
+	local hw = Ui.measure(hintStr)
+	hintText:move(w - D.padX - hw, cy + 8)
+	hintKey:move(w - D.padX - hw - 12, cy + 6)
+end
+
+-- 대사를 나온 글자까지 그린다(줄은 다 나왔을 때의 자리 그대로 — 한 글자씩 나와도 줄이 바뀌거나 출렁이지 않는다)
+local function paintText(shown: number)
+	local segs = Format.talkSegments(lines[Talk.index] or "", fitted, shown)
+	for r = 1, D.lines do
+		local list = segs[r] or {}
+		local cx = D.padX
+		local ty = D.padY + (r - 1) * LINE
+		for k = 1, MAX_SEGS do
+			local item = rows[r][k]
+			local seg = list[k]
+			if seg and k == MAX_SEGS and #list > MAX_SEGS then -- 조각이 너무 많으면 나머지를 이 조각에 붙인다(색은 앞의 것)
+				local rest = {}
+				for q = k, #list do
+					table.insert(rest, list[q].t)
+				end
+				seg = { t = table.concat(rest), key = false }
+			end
+			if seg then
+				item:set(seg.t)
+				item:color(if seg.key then C.accent else C.text)
+				item:move(cx, ty)
+				item:show(true)
+				cx += Ui.measure(seg.t, "body")
+			else
+				item:set("")
+				item:show(false)
+			end
+		end
+	end
+end
+
+local function full(): boolean
+	return drawn >= total
+end
+
+-- 말이 다 나왔을 때의 아래 줄
+local function paintFoot()
+	local last = Talk.index >= #lines
+	local done = full()
+	local offer = done and last and endHint == "수락"
+	acceptBtn.frame.Visible = offer
+	declineBtn.frame.Visible = offer
+	hintStr = if last and endHint then endHint elseif last then "닫기" else "다음"
+	hintText:set(hintStr)
+	hintText:color(if last and endHint then C.accent else C.dim)
+	layout() -- 자리를 먼저 놓고(키 딱지는 자리를 옮기면 다시 보인다) 보일지를 정한다
+	hintText:show(done and not offer)
+	hintKey.frame.Visible = done and not offer
 end
 
 local function show()
 	local text = lines[Talk.index]
-	body:set(text)
-	local tw, count = Talk.measure(text)
-	local last = Talk.index >= #lines
-	local hintText = if last and endHint then endHint elseif last then "닫기" else "다음"
-	local w = math.max(tw, 60) + B.padX * 2
-	local h = (count - 1) * LINE + 14 + B.padY * 2 -- 글 한 줄의 칸이 13(내림선 포함)
-	size.w, size.h = w, h
-	back.Size = UDim2.fromOffset(w, h + 2) -- 아래 두 점은 그림자
-	bubble.Size = UDim2.fromOffset(w, h + B.tail)
-	more.Position = UDim2.fromOffset(w - 10, h - 9)
-	more.Visible = not last
-	-- 말풍선 아래 오른쪽: 키 딱지와 그 키가 지금 하는 일
-	hint:set(hintText)
-	local hw = Ui.measure(hintText)
-	hint:move(w - hw, h + 7)
-	hint:color(if last and endHint then C.accent else C.text)
-	key:move(w - hw - 5 - math.floor(key.width / 2), h + 5)
-	if not root.Visible and Talk.onToggle then
+	fitted = string.split(pixelText.Fit(text, Talk.TEXT_W, D.lines, "body"), "\n")
+	total = 0
+	for _, ln in fitted do
+		total += utf8len(ln)
+	end
+	started, drawn = os.clock(), -1
+	if not box.Visible and Talk.onToggle then
 		Talk.onToggle(Talk.npc)
 	end
-	root.Visible = true
+	box.Visible = true
+	layoutKey = ""
 	Talk.place()
 end
 
--- 말풍선을 그 주민 머리 위에 놓는다(화면마다 — 카메라가 움직이면 따라간다). 화면 밖으로 나가지 않게 옆으로 민다(꼬리는 주민 쪽에 남는다)
+-- 매 화면: 글자를 한 글자씩 내보내고, 화면 틀이 바뀌었으면 다시 놓고, 혼잣말 말풍선은 그 주민을 따라간다
 function Talk.place()
-	local npc = Talk.npc
-	if not npc or not root.Visible then
-		return
+	if box and box.Visible then
+		local key = Stage.uiW .. "x" .. Stage.uiH
+		if key ~= layoutKey then
+			layoutKey = key
+			paintFoot() -- 다시 놓고 아래 줄의 보임도 다시 정한다
+		end
+		local shown = math.min(total, math.floor((os.clock() - started) * D.cps))
+		if shown ~= drawn then
+			drawn = shown
+			paintText(shown)
+			paintFoot()
+		end
 	end
-	local cx = Overlay.x(npc.x)
-	local bottom = Overlay.y(npc.y - (npc.h or 24) - B.up)
-	local left = math.clamp(cx - math.floor(size.w / 2), 8, math.max(8, Stage.uiW - size.w - 8))
-	bubble.Position = UDim2.fromOffset(left, bottom - size.h - B.tail)
-	tail.Position = UDim2.fromOffset(math.clamp(cx - left - 4, 6, size.w - 15), size.h - 1)
+	if chat and chat.Visible then
+		if os.clock() > chatTill or not chatNpc or chatNpc == Talk.npc then
+			chat.Visible, chatNpc = false, nil
+		else
+			local cx = Overlay.x(chatNpc.x)
+			local bottom = Overlay.y(chatNpc.y - (chatNpc.h or 24) - B.up)
+			local left = math.clamp(cx - math.floor(chatSize.w / 2), 8, math.max(8, Stage.uiW - chatSize.w - 8))
+			chat.Position = UDim2.fromOffset(left, bottom - chatSize.h - B.tail)
+			chatTail.Position = UDim2.fromOffset(math.clamp(cx - left - 4, 6, chatSize.w - 15), chatSize.h - 1)
+		end
+	end
 end
 
--- 말을 시작한다. questName = 말풍선 위에 적을 글(퀘스트 이름) · finish = 마지막 말 뒤에 일어날 일 · finishHint = 그 일의 이름(「받는다」)
+-- 말을 시작한다. questName = 이름표 뒤의 퀘스트 이름 · finish = 마지막 말 뒤에 일어날 일 · finishHint = 그 일의 이름(「수락」이면 「수락 · 거절」 단추, 「완료」면 「↑ 완료」)
 function Talk.start(npc, list: { string }, questName: string?, finish: (() -> ())?, finishHint: string?)
 	Talk.npc, Talk.index = npc, 1
 	lines, onEnd, endHint = list, finish, finishHint
-	title:set(questName or "")
+	nameStr = npc.name or npc.id or ""
+	nameText:set(nameStr)
+	titleText:set(questName or "")
+	if chatNpc == npc then
+		chat.Visible, chatNpc = false, nil
+	end
 	show()
 end
 
@@ -112,34 +259,91 @@ function Talk.with(npc): boolean
 	return Talk.npc == npc and Talk.index > 0
 end
 
--- 다음 말로(말하는 중이 아니면 그 주민의 평소 말을 시작한다). 대화가 끝났으면 false.
+-- 다음 말로: 나오는 중이면 그 말을 한 번에 다 보이고, 다 나왔으면 다음 말(마지막 말 뒤에는 그 일 — 수락 · 완료). 말하는 중이 아니면 그 주민의 평소 말을 시작한다. 대화가 끝났으면 false
 function Talk.next(npc): boolean
 	if Talk.npc ~= npc then
 		Talk.start(npc, npc.lines)
 		return true
 	end
-	Talk.index += 1
-	if Talk.index > #lines then
+	if not full() then
+		started = os.clock() - 999
+		Talk.place()
+		return true
+	end
+	if Talk.index >= #lines then
 		local finish = onEnd
 		Talk.close()
+		if Talk.onFinish then
+			Talk.onFinish(npc)
+		end
 		if finish then
 			finish()
 		end
 		return false
 	end
+	Talk.index += 1
 	show()
 	return true
+end
+
+-- 「수락」 단추(↑ · 스페이스와 같다)
+function Talk.accept()
+	if Talk.npc then
+		Talk.next(Talk.npc)
+	end
+end
+
+-- 「거절」 단추 · X · Esc: 나오는 중이면 그 말을 다 보이고, 다 나왔으면 아무 일도 하지 않고 닫는다(다시 말을 걸면 또 권한다)
+function Talk.decline()
+	if not Talk.npc then
+		return
+	end
+	if not full() then
+		started = os.clock() - 999
+		Talk.place()
+		return
+	end
+	Talk.close()
 end
 
 function Talk.close()
 	Talk.npc, Talk.index = nil, 0
 	lines, onEnd, endHint = {}, nil, nil
-	if root then
-		if root.Visible and Talk.onToggle then
+	if box then
+		if box.Visible and Talk.onToggle then
 			Talk.onToggle(nil)
 		end
-		root.Visible = false
+		box.Visible = false
 	end
+end
+
+-- 혼잣말: 그 주민 머리 위에 한 줄(단추 · 안내 없이) — seconds초 뒤에 사라진다. 대화창으로 말하는 주민은 혼잣말을 하지 않는다
+function Talk.say(npc, text: string, seconds: number?)
+	if not chat or npc == Talk.npc then
+		return
+	end
+	chatBody:set(text)
+	local fittedChat = pixelText.Fit(text, B.textW, B.lines, "body")
+	local tw = pixelText.Measure(fittedChat, "body")
+	local count = #string.split(fittedChat, "\n")
+	local w = math.max(tw, 60) + B.padX * 2
+	local h = (count - 1) * LINE + 14 + B.padY * 2
+	chatSize.w, chatSize.h = w, h
+	chatBack.Size = UDim2.fromOffset(w, h + 2)
+	chat.Size = UDim2.fromOffset(w, h + B.tail)
+	chatNpc, chatTill = npc, os.clock() + (seconds or Format.IDLE.show)
+	chat.Visible = true
+	Talk.place()
+end
+
+-- 지금 혼잣말을 하는 주민(없으면 nil)
+function Talk.saying(): any
+	return if chat and chat.Visible then chatNpc else nil
+end
+
+-- 대화창의 자리(화면 틀의 점 — 자동 검사 · 터치가 쓴다)
+function Talk.rect(): (number, number, number, number)
+	return dims()
 end
 
 return Talk

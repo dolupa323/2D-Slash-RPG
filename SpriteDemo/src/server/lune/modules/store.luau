@@ -7,7 +7,7 @@
 --  아직 하지 않은 것: 같은 계정이 두 서버에 동시에 들어왔을 때의 잠금(여럿이 하는 단계에서 넣는다).
 local DataStoreService = game:GetService("DataStoreService")
 
-local NAME = { account = "LuneAccount_v1", names = "LuneNames_v1", old = "LuneHero_v1", rankInfo = "LuneRankInfo_v1" }
+local NAME = { account = "LuneAccount_v1", names = "LuneNames_v1", old = "LuneHero_v1", rankInfo = "LuneRankInfo_v1", market = "LuneMarket_v2" }
 local RANK = { level = "LuneRankLevel_v1", power = "LuneRankPower_v1", robux = "LuneRankRobux_v1" } -- 순위판(OrderedDataStore): 열쇠 → 점수
 local RETRIES = 3
 local WAIT = 1
@@ -15,7 +15,7 @@ local WAIT = 1
 local Store = {}
 
 local stores = {}
-local memory = { account = {}, names = {} } -- DataStore를 못 쓸 때의 임시 저장
+local memory = { account = {}, names = {}, market = {} } -- DataStore를 못 쓸 때의 임시 저장
 local offline = false
 
 local function getStore(which: string)
@@ -338,6 +338,54 @@ function Store.rankInfoRemove(key: string)
 			ds:RemoveAsync(key)
 		end)
 	end
+end
+
+-- ---------- 경매장의 장부 ----------
+--  분류마다 문서 하나(LuneMarket_v2의 열쇠 b_<분류> — v1은 2026-10-13의 첫 꼴: 메이플 옥션 방식으로 바꾸며 버렸다). 문서를 바꾸는 것은 UpdateAsync 하나로만 한다 — 두 서버가 같은 줄을 같이 바꾸려 해도 한쪽만 된다(셈은 shared/lune/sim/market.luau의 tx…).
+--  저장소를 못 쓰면(Studio에서 API 접근이 꺼져 있을 때) 이 서버의 메모리에 둔다 — 그 판 안에서는 올리고 살 수 있다(끄면 사라진다).
+--  잠깐 말을 듣지 않는다고 메모리로 넘어가지는 않는다(장부는 여러 서버가 같이 본다 — 이 서버만의 장부가 생기면 안 된다): 못 읽고 못 썼다고 알릴 뿐이다.
+-- 장부를 읽는다 → 읽었는가, 문서(없으면 nil)
+function Store.marketRead(key: string): (boolean, any)
+	local ds = getStore("market")
+	if not ds or offline then
+		return true, memory.market[key]
+	end
+	local ok, result = try(function()
+		return ds:GetAsync("b_" .. key)
+	end)
+	if not ok then
+		warn(("[lune] 경매장의 장부 %s를 읽지 못했다: %s"):format(key, tostring(result)))
+		return false, nil
+	end
+	return true, result
+end
+
+-- 장부를 바꾼다. fn(지금의 문서) → 새 문서(nil이면 그대로 둔다), 결과 둘. 돌려주는 것: 저장소가 답했는가, 그 결과 둘, 바꾼 뒤의 문서.
+--  fn은 여러 번 불릴 수 있다(다른 서버가 먼저 쓰면 저장소가 다시 부른다 · 답이 늦으면 우리가 다시 해 본다) — 받은 문서만 보고, 다시 불려도 같은 답을 내야 한다.
+--  false가 돌아오면 적혔는지 알 수 없다(부른 쪽이 그렇게 다룬다)
+function Store.marketUpdate(key: string, fn: (any) -> (any, any, any)): (boolean, any, any, any)
+	local ds = getStore("market")
+	if not ds or offline then
+		local new, a, b = fn(memory.market[key])
+		if new ~= nil then
+			memory.market[key] = new
+		end
+		return true, a, b, memory.market[key]
+	end
+	local a, b, doc
+	local ok, err = try(function()
+		ds:UpdateAsync("b_" .. key, function(old)
+			local new
+			new, a, b = fn(old)
+			doc = if new ~= nil then new else old
+			return new
+		end)
+	end)
+	if not ok then
+		warn(("[lune] 경매장의 장부 %s에 쓰지 못했다: %s"):format(key, tostring(err)))
+		return false, nil, nil, nil
+	end
+	return true, a, b, doc
 end
 
 function Store.isOffline(): boolean

@@ -18,7 +18,7 @@ local WORDS = UI.skillWords
 local QWORDS = UI.quick.words
 local COMBAT = require(lune.data["combat.generated"])
 local BONUS = COMBAT.rules.targetBonus -- 사냥기 · 보스기가 맞는 상대에게 더 주는 피해(%)
-local EFFECTS = COMBAT.kitEffects -- 온오프 사출기 · 핵심 장치 · 패시브의 레벨마다의 효과 글([스킬][레벨])
+local SkillDamage = require(lune.ui.skillDamage) -- 그 레벨의 효과 글: 사출기 · 장치 · 패시브 · 버프의 효과와 공격 스킬의 % 피해(사용자 2026-10-13: "스킬 퍼뎀같은거 스킬 창에 설명에 나와있어야해  메이플처럼")
 local READY = COMBAT.ready -- 게임에 들어와 있는 스킬. 여기에 없는 스킬은 + 단추가 꺼져 있고 「아직 준비 중」이라고 적힌다(서버도 찍어 주지 않는다 — sim/hero.luau의 skillUp)
 local TYPES = CLASSES.types
 
@@ -74,6 +74,7 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 	local auto = Ui.button(body, WORDS.auto, listW - S.autoW, S.infoY, S.autoW, function()
 		ctx.send("SkillAuto")
 	end, { main = true, h = 22, font = "small" })
+	SkillWindow.autoFrame = auto.frame -- 튜토리얼(꿈)의 「스킬 찍기」 미션에서 반짝인다(2026-10-14)
 	-- 전직하며 받은 공짜 초기화(설계: "전직하면 SP 초기화 한 번이 공짜"): 남아 있을 때만 탭의 오른쪽에 단추가 보인다. 잘못 누르지 않게 두 번 눌러야 한다(「정말 초기화?」 — 3초 안에)
 	local RESET_X, RESET_W = (S.tabW + S.tabGap) * 4 + 8, 96
 	local resetHolder = Ui.group(body, RESET_X, -2, RESET_W, 20, "Reset")
@@ -156,7 +157,8 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 	local detailBonus = Ui.text(body, "", dx, S.slot + 14, S.detailW, { color = C.accent }) -- 사냥기 · 보스기의 쓰임(일반 몬스터 · 보스에게 피해 +%)
 	local detailText = Ui.text(body, "", dx, S.slot + 14, S.detailW, { lines = S.textLines, line = S.textLine })
 	local detailNote = Ui.text(body, "", dx, S.slot + 14, S.detailW, { color = C.dim })
-	-- 온오프 사출기 · 핵심 장치 · 패시브: 설명 아래에 그 레벨의 효과를 숫자로(지금의 것 · + 를 누르면 되는 것)
+	-- 설명 아래에 그 레벨의 효과를 숫자로(지금의 것 · + 를 누르면 되는 것): 온오프 사출기 · 핵심 장치 · 패시브 · 버프의 효과, 공격 스킬의 % 피해
+	--  「지금 Lv.n」과 「다음 Lv.n+1」이 나란히 적혀, 한 레벨을 찍으면 얼마가 오르는지 보인다(사용자 2026-10-13: "스킬레벨 추가로 찍으면 퍼뎀올라가는것도 보여야하고")
 	local effects = {}
 	for i = 1, 2 do
 		effects[i] = {
@@ -239,11 +241,10 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 			local below = top + math.max(1, math.floor(th / S.textLine + 0.5)) * S.textLine
 			detailNote:move(dx, below + 6)
 			-- 그 레벨의 효과: 지금(배웠을 때) · 다음(마스터가 아닐 때)
-			local list = EFFECTS[sk.id]
 			local y = below + S.effGap + (if note ~= "" then S.textLine + 6 else 0)
 			for i, e in effects do
 				local at = lv + i - 1
-				local text = if list then list[at] else nil
+				local text = if at >= 1 and at <= sk.max then SkillDamage.text(sk.id, at) else nil
 				e.label:set(if text then Format.fill(if i == 1 then WORDS.now else WORDS.next, { lv = at }) else "")
 				e.label:color(if i == 1 then C.accent else C.dim)
 				e.text:set(text or "")

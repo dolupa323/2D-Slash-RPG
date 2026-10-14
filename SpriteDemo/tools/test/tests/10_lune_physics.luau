@@ -90,7 +90,7 @@ do
 					outs += 1
 				else
 					local under = S.scenes[q.to]
-					expect(typeof(q.need) == "string" and under ~= nil and under.indoor == true, p.to .. " 의 다른 문은 퀘스트로 열리는 지하다 — " .. tostring(q.to))
+					expect((typeof(q.need) == "string" or typeof(q.need) == "table") and under ~= nil and under.indoor == true, p.to .. " 의 다른 문은 퀘스트로 열리는 지하다 — " .. tostring(q.to))
 					expect(under ~= nil and #under.portals == 1 and under.portals[1].to == p.to, tostring(q.to) .. " 에서 올라오는 문은 하나 — 그 방으로")
 				end
 			end

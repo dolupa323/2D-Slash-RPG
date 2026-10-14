@@ -66,6 +66,13 @@ function Daily.sync(h, region: string, now: number)
 	local day = Daily.dayOf(now)
 	local st = h.daily[region]
 	if st and st.day == day then
+		-- 마릿수의 설계가 바뀌었으면 아직 내지 않은 의뢰를 새 수로 맞춘다(2026-10-13: 30 → 8 — 받아 둔 30마리짜리가 자정까지 남지 않게)
+		for _, t in st.tasks do
+			if t.st ~= Daily.DONE and t.n ~= DATA.kills then
+				t.n = DATA.kills
+				t.have = math.min(t.have, t.n)
+			end
+		end
 		return st, false
 	end
 	st = { day = day, tasks = Daily.pick(region, h.level, day), bonus = false }
@@ -172,9 +179,9 @@ function Daily.tracked(view: any)
 	local out = {}
 	for region in DATA.boards do
 		local board = view and view.boards and view.boards[region]
-		for _, t in (if board then board.tasks else {}) do
+		for i, t in (if board then board.tasks else {}) do
 			if t.st == Daily.ON then
-				table.insert(out, { name = t.name, place = t.place, n = t.n, have = t.have })
+				table.insert(out, { name = t.name, place = t.place, n = t.n, have = t.have, region = region, i = i }) -- region · i = 길찾기가 그 의뢰를 가리킬 때 쓴다
 			end
 		end
 	end

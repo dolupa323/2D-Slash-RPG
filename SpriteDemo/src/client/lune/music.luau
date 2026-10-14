@@ -1,4 +1,7 @@
--- 음악 — 장면마다의 배경 음악과 짧은 징글(퀘스트 완료 · 레벨 업 · 쓰러짐 · 숨은 방).
+-- 음악 — 장면마다의 배경 음악과 짧은 징글(레벨 업 · 전직), 효과음(줍기 · 완료 · 수락 …).
+--  때릴 때 · 맞을 때 · 대쉬의 소리는 없다(사용자 2026-10-14: "플레이어랑 몬스터 때릴 때 나는 소리랑 맞을때 나는 소리 전부 빼겠습니다. 대쉬 소리 빼겠습니다.") · 뛰기 소리도 없다("점프소리도 제거하세요").
+--  다만 내 타의 데미지 숫자가 뜰 때마다 「damage」가 한 번씩 난다(사용자가 고른 소리 — 틈 0: 여러 마리 · 여러 타가 겹쳐도 하나하나 난다).
+--  2026-10-14 사용자가 소리를 다시 골라 올렸다 — 퀘스트 완료 · 사망 · 숨은 방에는 징글이 없고(배경 음악을 줄이지 않는다) 효과음만 난다.
 --  사용자 2026-10-10: "소리는 … 뮤직에셋 가져왔습니다. 이걸 알맞게 배치해보고 추후 제가 어색한게있으면 말해드릴게요"
 --  어느 곡을 어디에 트는지 · 곡마다의 크기는 shared/lune/data/music.generated.luau(공방의 js/lune/design/music.js — 배치는 모두 제안이다).
 --  배경 음악: 장면이 바뀌면 그 장면의 곡으로 천천히(fade초) 넘어간다. 같은 곡이면 끊지 않고 이어 튼다(마을 → 건물 안).
@@ -105,7 +108,7 @@ function Music.jingle(key: string)
 	duckT = math.max(duckT, def.sec)
 end
 
--- 효과음을 한 번 낸다(타격 · 쓰러뜨림 · 맞음 · 줍기 — 공방 music.js의 sfx). 올린 번호가 없으면 아무 소리도 나지 않는다.
+-- 효과음을 한 번 낸다(줍기 · 완료 · 수락 … — 공방 music.js의 sfx). 올린 번호가 없으면 아무 소리도 나지 않는다.
 --  같은 소리는 gap초 안에 다시 내지 않는다(연타 · 여럿을 한꺼번에 칠 때 뭉개지지 않게). 돌려주는 것: 소리를 냈는가
 local sfxAt: { [string]: number } = {}
 function Music.sfx(key: string): boolean
@@ -129,17 +132,6 @@ function Music.sfx(key: string): boolean
 	end)
 	sound:Play()
 	return true
-end
-
--- 타격의 소리: 셋 가운데 하나를 돌려 가며(같은 소리만 되풀이되지 않게). 센 타격 · 치명타는 제 소리
-local hitTurn = 0
-function Music.hit(big: boolean?)
-	if big then
-		Music.sfx("hitBig")
-	else
-		hitTurn = hitTurn % 3 + 1
-		Music.sfx("hit" .. hitTurn)
-	end
 end
 
 -- 모두 켜고 끈다(소리 설정). 돌려주는 것: 지금 켜져 있는가

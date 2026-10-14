@@ -1,4 +1,5 @@
 -- 스마트폰(터치) 단추 — 공방 「기본 · UI」 탭의 스마트폰 화면 배치(data/ui.generated.luau의 touch)를 그대로 그린다.
+--  「채팅」 단추는 없다(2026-10-13): 채팅은 Roblox의 기본 채팅이고, 폰에서는 화면 위의 Roblox 채팅 단추로 연다(chat.luau).
 --  사용자 결정(2026-10-06): 스마트폰 터치 조작을 지원한다. 터치 화면이면 저절로 켜진다(Studio에서는 화면 틀의 속성 Touch = true로 켜 볼 수 있다).
 --  사용자 2026-10-08(폰에서 해 보고): "모바일버튼을 누르고 거기에 배치할수있는 선택지가 나오고 그걸선택하면 그버튼에 배치되는식 … 소비템이던, 스킬이던
 --    현재 사냥,보스,대쉬이렇게 글씨로 적혀있는것도 드래그앤 드랍으로 바꿀수있어야 … 이동형 터치패드도 동그라미만 있는게 아니라 그 가운데 잡고 돌리는 동그라미가 하나 더
@@ -352,8 +353,6 @@ local function makeAct(t)
 		actButton = b
 	elseif t.act == "menu" then
 		b.label = Ui.text(b.mid, "메뉴", -40, -7, 80, { font = "body", align = "center", outline = true })
-	elseif t.act == "chat" then
-		b.label = Ui.text(b.mid, "채팅", -40, -6, 80, { align = "center", outline = true })
 	end
 	local finger: InputObject? = nil
 	b.hit.InputBegan:Connect(function(input)
@@ -372,8 +371,6 @@ local function makeAct(t)
 			opts.onAct(true)
 		elseif t.act == "menu" then
 			opts.onMenu()
-		elseif t.act == "chat" then
-			opts.onChat()
 		end
 	end)
 	b.release = function(input: InputObject)
@@ -515,6 +512,19 @@ end
 
 -- ---------- 밖에서 알려 주는 것 ----------
 -- 칸들에 놓인 것(PC의 퀵슬롯과 같은 열두 칸)
+-- 단추 하나의 틀(튜토리얼의 꿈이 그 단추를 반짝이게 한다 — 2026-10-14): name = "pad"(조이스틱) · "jump" · "interact" · "menu" · "slot"(arg = 칸 번호)
+function Touch.frameOf(name: string, arg: number?): GuiObject?
+	if name == "pad" then
+		return if pad then pad.frame else nil
+	end
+	for _, b in buttons do
+		if (name == "slot" and b.t.slot == arg) or (name ~= "slot" and b.t.act == name) then
+			return b.frame
+		end
+	end
+	return nil
+end
+
 function Touch.setSlots(slots)
 	state.slots = slots or {}
 	if root then

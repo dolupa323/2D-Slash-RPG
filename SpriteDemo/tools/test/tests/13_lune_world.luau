@@ -88,6 +88,7 @@ local rawReady
 local function toTown(p, r)
 	if r and r.self and r.scene ~= SCENES.start then
 		local n0 = #sent
+		World.wake(p) -- 새 캐릭터는 꿈(튜토리얼 — 2026-10-14)에서 시작한다: 꿈은 마친 것으로 하고
 		World.jump(p, SCENES.start)
 		for i = #sent, n0 + 1, -1 do
 			sent[i] = nil
@@ -257,8 +258,13 @@ eq(handlers.Chars(p2, "check", "moonaxe").ok, true, "그 이름을 다른 사람
 -- 들어가기
 local first = handlers.Chars(p1, "enter", 1)
 expect(first ~= nil and first.self.class == "axion", "캐릭터를 골라 들어간다")
--- 새 캐릭터는 사당 안(첫 퀘스트를 주는 사제의 방)의 문 앞에서 시작한다 — 뒤의 검사는 마을의 시작 자리에서 본다
-eq(first.scene, "in_shrine", "새 캐릭터는 사당 안에서 시작한다")
+-- 새 캐릭터는 꿈(튜토리얼 「달빛 꿈」 — 2026-10-14)에서 시작하고, 꿈에서 깨면 사당 안(첫 퀘스트를 주는 사제의 방)의 문 앞이다 — 뒤의 검사는 마을의 시작 자리에서 본다
+eq(first.scene, "dream", "새 캐릭터는 꿈(튜토리얼)에서 시작한다")
+expect(first.self.tut and first.self.tut.step == 1 and not first.self.tut.done, "튜토리얼의 첫 미션부터")
+expect(first.self.tutSkip ~= true, "처음 하는 계정은 꿈을 건너뛸 수 없다")
+World.wake(p1)
+first = handlers.Ready(p1)
+eq(first.scene, "in_shrine", "꿈에서 깨면 사당 안이다")
 eq(first.x, SCENES.scenes.in_shrine.spawn.x, "사당의 문 앞")
 expect((first.quests or {}).r1m1 == nil, "첫 퀘스트 「첫 기술」도 저절로 받지 않는다(사제에게 말을 걸어 받는다 — 2026-10-11)")
 do
@@ -871,14 +877,29 @@ do
 	run(0.3)
 	local heroes = last("Heroes", pa)
 	expect(heroes ~= nil and heroes[1] == SCENES.start and #heroes[2] >= 2, "방 사람들의 자리가 온다")
-	-- 파티는 Lv.10부터
+	-- 파티는 게임을 시작할 때부터(사용자 2026-10-13: "게임시작부터 그냥 열리면되지 왜 10부터인가요?" — 전에는 Lv.10부터였다): 방금 만든 Lv.1 둘이 바로 맺는다
 	local sa, sb = World.session(pa), World.session(pb)
+	expect(sa.hero.level == 1 and sb.hero.level == 1, "둘 다 방금 만든 Lv.1이다")
 	table.clear(sent)
 	handlers.Party(pa, "invite", 202)
-	expect(last("ItemDone", pa)[1].why == "파티는 Lv.10부터 맺는다", "Lv.10 전에는 초대하지 못한다")
+	expect(last("ItemDone", pa) == nil or last("ItemDone", pa)[1].action ~= "party", "Lv.1도 초대할 수 있다(레벨의 문턱이 없다)")
+	local askFirst = last("PartyAsk", pb)
+	expect(askFirst ~= nil and askFirst[1].from == 201, "Lv.1인 상대에게 초대가 간다")
+	handlers.Party(pb, "accept")
+	expect(World.sameParty(201, 202), "Lv.1끼리 파티가 됐다")
+	handlers.Party(pb, "leave")
+	expect(not World.sameParty(201, 202), "(다음 확인을 위해 흩어진다)")
+	do
+		local UIDATA = req("ReplicatedStorage/shared/lune/data/ui.generated")
+		for _, w in UIDATA.windows do
+			if w.id == "party" then
+				eq(w.from, 1, "파티 창은 처음부터 열려 있다")
+			end
+		end
+	end
+	table.clear(sent)
 	Hero2.gainXp(sa.hero, 20000)
 	Hero2.gainXp(sb.hero, 20000)
-	expect(sa.hero.level >= 10 and sb.hero.level >= 10, "둘 다 Lv.10을 넘겼다")
 	-- 다른 맵에 있는 사람은 초대하지 못한다
 	handlers.Ready(pc)
 	handlers.Choose(pc, "mooni")
@@ -926,7 +947,8 @@ do
 	end
 	expect(target ~= nil, "잡을 졸개가 있다")
 	sa.hero.invuln, sb.hero.invuln = 999, 999
-	sa.jumped, sb.jumped, sb.stale = true, nil, true
+	sa.jumped, sb.jumped = true, true -- 다음 자리 보고는 거리와 상관없이 받는다(둘 다)
+	sa.stale, sb.stale = nil, nil
 	handlers.Move(pa, target.x - 12, target.y, 1)
 	handlers.Move(pb, target.x - 30, target.y, 1)
 	local xpB, lvB = sb.hero.xp, sb.hero.level
@@ -1033,6 +1055,9 @@ do
 	expect(q1 ~= nil and q1[1].r1m1.done == true and q1[2] == "r1m1", "사제 앞에서 첫 메인을 끝낸다")
 	expect(hq.money > money0 and hq.level >= 2, "보상(달돈 · 경험치)을 받는다")
 	expect(last("Gain")[1].quest == "첫 기술", "경험치 알림에 퀘스트 이름이 온다")
+	-- (퀘스트는 한 줄이다 — 2026-10-13: 첫 기술 → 등불 심지 → 마을 밖의 그림자. 여기서는 등불 심지를 끝낸 것으로 하고 Lv.3으로 올려 그다음 것을 본다)
+	hq.quests.r1s1 = { done = true, c = {} }
+	hq.level = math.max(hq.level, 3)
 	-- 받기: 주는 사람 앞에서
 	at("master")
 	table.clear(sent)
@@ -1080,9 +1105,9 @@ do
 	handlers.Quest(pq, "complete", "r1m2")
 	expect(last("ItemDone")[1].ok == false, "마을 밖에서는 돌려주지 못한다")
 	expect(goTo(pq, SCENES.start) ~= nil, "마을로")
-	at("guide")
+	at("elder")
 	handlers.Quest(pq, "complete", "r1m2")
-	eq(Quests.state(hq.quests, hq.level, "r1m2"), "done", "샛별에게 돌려준다")
+	eq(Quests.state(hq.quests, hq.level, "r1m2"), "done", "촌장에게 돌려준다(다음 퀘스트를 주는 사람 — 줄이 끊기지 않는다)")
 	eq(Quests.mark(hq.quests, 4, "elder"), "!", "다음 메인(빈 갑옷)은 Lv.4가 되면 촌장에게서")
 	eq(Quests.mark(hq.quests, 3, "elder"), nil, "Lv.3에는 아직 표시가 없다")
 	-- 모으는 퀘스트의 물건은 가방의 기타 탭에 들어가는 진짜 아이템이다 — 가방에 든 수가 곧 퀘스트의 숫자(사용자 2026-10-08)
@@ -1152,9 +1177,20 @@ do
 				defU = d
 			end
 		end
-		expect(defU ~= nil and defU.playable and defU.steps[1].type == "use", "「할아버지의 옛이야기」는 ↑를 누르는 퀘스트다")
-		local stepU = defU.steps[1]
+		-- 2026-10-14: 샘가의 바위 게 여덟을 먼저 쫓는다(한 맵에 한 종류 — 무너진 다리 = 바위 게) → 할 일은 둘: [1] 바위 게 · [2] 샘 앞에서 ↑
+		local ui, ki = nil, nil
+		for i, st in (defU and defU.steps or {}) do
+			if st.type == "use" then
+				ui = i
+			elseif st.type == "kill" then
+				ki = i
+			end
+		end
+		expect(defU ~= nil and defU.playable and ui ~= nil, "「할아버지의 옛이야기」에는 ↑를 누르는 일이 있다")
+		expect(ki ~= nil and defU.steps[ki].mob == "crab", "「할아버지의 옛이야기」는 바위 게도 쫓는다")
+		local stepU = defU.steps[ui]
 		hq.level = math.max(hq.level, defU.lv)
+		Quests.finishBefore(hq.quests, defU.id) -- (줄에서 그 앞의 것을 모두 끝냈다 — 퀘스트는 한 줄이다)
 		at(defU.giver)
 		handlers.Quest(pq, "accept", defU.id)
 		eq(Quests.state(hq.quests, hq.level, defU.id), "active", "노인에게 받는다")
@@ -1164,16 +1200,17 @@ do
 		table.clear(sent)
 		handlers.Quest(pq, "use", defU.id)
 		expect(last("ItemDone") ~= nil and last("ItemDone")[1].why == "그 자리 앞이 아니다", "멀리서는 물을 뜨지 못한다")
-		eq(hq.quests[defU.id].c[1] or 0, 0, "숫자는 그대로")
+		eq(hq.quests[defU.id].c[ui] or 0, 0, "숫자는 그대로")
+		hq.quests[defU.id].c[ki] = defU.steps[ki].n -- (바위 게는 다 쫓았다 — 잡는 일은 다른 시험이 본다)
 		hq.x, hq.y = stepU.x - 12, stepU.y
 		table.clear(sent)
 		handlers.Quest(pq, "use", defU.id)
 		local qu = last("Quests")
-		expect(qu ~= nil and qu[1][defU.id].c[1] == 1 and qu[1][defU.id].done == false, "샘 앞에서 ↑ — 숫자가 올라 화면으로 간다")
+		expect(qu ~= nil and qu[1][defU.id].c[ui] == 1 and qu[1][defU.id].done == false, "샘 앞에서 ↑ — 숫자가 올라 화면으로 간다")
 		eq(Quests.state(hq.quests, hq.level, defU.id), "ready", "돌려주러 간다")
 		table.clear(sent)
 		handlers.Quest(pq, "use", defU.id)
-		expect(hq.quests[defU.id].c[1] == 1 and last("ItemDone")[1].why == "여기서 할 일이 없다", "한 번 더 눌러도 더 오르지 않는다")
+		expect(hq.quests[defU.id].c[ui] == 1 and last("ItemDone")[1].why == "여기서 할 일이 없다", "한 번 더 눌러도 더 오르지 않는다")
 		at(defU.endNpc)
 		local moneyU = hq.money
 		handlers.Quest(pq, "complete", defU.id)
@@ -1486,7 +1523,7 @@ do
 	-- 멀리 간 자리: 평소에는 받지 않고 화면을 되돌린다(Warp) · 2~4차의 스킬을 쓴 직후에는 받는다(순간이동 · 돌진)
 	run(3)
 	-- 맵의 시작 자리에서 먼 곳으로 걸어가 둔다(시작 자리로 온 보고는 늘 받는다 — 떨어졌다 돌아온 것)
-	local far = SCENES.scenes.hunt.spawn.x + 400
+	local far = SCENES.scenes.hunt.spawn.x + 150 -- (2026-10-14: 사냥터가 38칸 = 608점이 되어 400점 + 200점은 맵 밖이다)
 	while math.abs(hc.x - far) > 1 do
 		handlers.Move(pc, hc.x + math.clamp(far - hc.x, -60, 60), hc.y, 1)
 	end
@@ -1711,6 +1748,7 @@ do
 	-- 창고지기 앞에 선다(창고는 Lv.4부터라 레벨도 올려 둔다)
 	local function atKeeper()
 		local s = World.session(px)
+		World.wake(px) -- (새 캐릭터는 꿈에서 시작한다 — 꿈은 마친 것으로)
 		Hero3.gainXp(s.hero, 20000)
 		local n, key = keeper()
 		goTo(px, key)
@@ -2019,7 +2057,10 @@ do
 		local list = got(name, pj)
 		return list[#list] and list[#list].args
 	end
-	eq(start.scene, "in_shrine", "새 캐릭터는 사당 안에서 시작한다")
+	eq(start.scene, "dream", "새 캐릭터는 꿈(튜토리얼)에서 시작한다")
+	World.wake(pj)
+	start = handlers.Ready(pj)
+	eq(start.scene, "in_shrine", "꿈에서 깨면 사당 안이다")
 	eq(start.self.job, 1, "1차로 시작한다")
 	-- 첫 퀘스트: 사제 앞에서 돌려준다 → 다시 들어오면 마을의 시작 자리
 	local master
@@ -2064,7 +2105,7 @@ do
 	eq(Hero.view(hj).job, 1, "화면에도 1차로 보낸다(스킬 창의 II 탭이 잠겨 있다)")
 	eq(hj.skills.ax_crescent, nil, "2차의 사냥기가 아직 없다")
 	local jobDef = Quests.def("job2")
-	eq(jobDef.scene, "r1c3", "전직 퀘스트의 물건은 망루 3층에서 모은다")
+	eq(jobDef.scene, "in_cellar", "전직 퀘스트의 물건은 사제의 바로 아래 — 사당 지하에서 모은다(2026-10-13: 망루 3층에서 옮겼다 — \"2차 전직 조건 너무 오래걸리고 어렵습니다\")")
 	-- 조각이 모자라면 돌려주지 못한다
 	local n2, key2 = master, "in_shrine"
 	goTo(pj, key2)
@@ -2083,12 +2124,13 @@ do
 	handlers.Quest(pj, "complete", "job2")
 	expect(last("ItemDone")[1].ok == false, "조각이 모자라면 전직하지 못한다")
 	eq(hj.job, 1, "그대로 1차다")
-	-- 조각 열 개: 망루 3층의 수련 인형이 떨어뜨린다(여기서는 가방에 넣어 준다 — 떨어지고 줍는 것은 위의 퀘스트 검사가 본다)
+	-- 조각 다섯 개: 사당 지하의 수련 인형이 떨어뜨린다(여기서는 가방에 넣어 준다 — 실제로 잡아 줍는 것은 아래 사당 지하의 검사가 본다)
 	local step = jobDef.steps[1]
-	eq(step.n, 10, "열 개")
-	Bag.give(hj, step.item, 10)
+	eq(step.n, 4, "네 개(2026-10-13: 열 → 다섯 → 넷 — 방에 나오는 수련 인형의 수 그대로)")
+	eq(step.pct, 100, "잡을 때마다 하나")
+	Bag.give(hj, step.item, step.n)
 	Hero.syncQuests(hj)
-	expect(Quests.isReady(hj.quests, "job2"), "열 개를 모으면 돌려줄 수 있다")
+	expect(Quests.isReady(hj.quests, "job2"), "다섯 개를 모으면 돌려줄 수 있다")
 	eq(handlers.Quest(pj, "drop", "job2"), nil, "전직 퀘스트는 그만둘 수 없다(아무 일도 없다)")
 	expect(hj.quests.job2 ~= nil, "그만두지 못했다")
 	local slotWas = table.find(hj.slots, "ax_slam")
@@ -2320,7 +2362,7 @@ do
 	local def = Quests.def("r1m9")
 	expect(def ~= nil and def.name == "불타는 마을" and def.scene == "in_cellar", "1지역의 마지막 메인 「불타는 마을」은 사당 지하에서 한다")
 	local step = def.steps[1]
-	expect(#def.steps == 1 and step.type == "kill" and step.n >= 8, "할 일 = 지하로 밀려든 병사를 잡는다")
+	expect(#def.steps == 1 and step.type == "kill" and step.n >= 3, "할 일 = 지하로 밀려든 병사를 잡는다")
 	local cellar, shrine = SCENES.scenes.in_cellar, SCENES.scenes.in_shrine
 	expect(cellar ~= nil and cellar.story == true and cellar.rest == false and cellar.indoor == true, "사당 지하: 이야기의 방 · 쉬는 곳이 아니다")
 	local down = nil
@@ -2329,11 +2371,22 @@ do
 			down = pt
 		end
 	end
-	expect(down ~= nil and down.need == "r1m9", "사당 안에 지하로 내려가는 문이 있다(「불타는 마을」을 받아야 열린다)")
-	expect(#cellar.mobs >= 3, "지하에 병사의 자리가 있다")
+	expect(down ~= nil and typeof(down.need) == "table" and table.find(down.need, "r1m9") ~= nil and table.find(down.need, "job2") ~= nil, "사당 안에 지하로 내려가는 문이 있다(「불타는 마을」이나 2차 전직을 받아야 열린다)")
+	local soldiers, dummies = 0, 0
+	local jobStep = Quests.def("job2").steps[1]
 	for _, m in cellar.mobs do
-		expect(m.kind == step.mob and m.lv == def.lv, "지하의 병사 = 퀘스트가 잡으라는 것 · 그 레벨")
+		if m.kind == step.mob then
+			soldiers += 1
+			eq(m.lv, def.lv, "지하의 병사는 그 퀘스트의 레벨")
+		else
+			dummies += 1
+			eq(m.kind, jobStep.mob, "병사가 아닌 것은 2차 전직의 수련 인형이다")
+		end
 	end
+	expect(soldiers >= 3 and dummies >= 3, "지하에 병사의 자리와 수련 인형의 자리가 있다")
+	-- 나오는 수 = 잡으라는 수(사용자 2026-10-13: "4마리 만 나오고  4마리 잡기를 퀘스트에 넣던지  사람들은 일반적으로 나오는 몬스터를 잡고 포탈을 타고 나가지 다시 젠된다는생각을 안해요 퀘스트의 경우")
+	eq(step.n, soldiers, "「불타는 마을」: 잡으라는 수 = 지하에 나오는 병사의 수")
+	eq(jobStep.n, dummies, "2차 전직: 모으라는 조각의 수 = 지하에 나오는 수련 인형의 수")
 	local tablet = cellar.npcs and cellar.npcs[1]
 	expect(tablet ~= nil and tablet.stone == true and #tablet.lines >= 1, "지하에 읽을거리(비석)가 있다")
 
@@ -2365,10 +2418,10 @@ do
 	expect(trip ~= nil and trip.scene == "in_cellar" and sc.scene == "in_cellar", "받은 뒤에는 내려간다")
 	expect(math.abs(hc.x - cellar.portals[1].x) <= 1, "올라가는 문 앞에 선다")
 	local room = World.room("in_cellar")
-	local function standing(): number
+	local function standing(kind: string?): number
 		local n = 0
 		for _, m in room.mobs do
-			if m.state ~= "gone" then
+			if m.state ~= "gone" and m.kind == (kind or step.mob) then
 				n += 1
 			end
 		end
@@ -2376,9 +2429,10 @@ do
 	end
 	-- 병사가 하나씩 나타난다
 	run(0.2)
-	expect(standing() < #room.mobs, "한꺼번에 나타나지 않는다(하나씩)")
+	expect(standing() < soldiers, "한꺼번에 나타나지 않는다(하나씩)")
 	run(4)
-	eq(standing(), #room.mobs, "조금 뒤에는 병사가 모두 나와 있다")
+	eq(standing(), soldiers, "조금 뒤에는 병사가 모두 나와 있다")
+	eq(standing(jobStep.mob), 0, "2차 전직을 하는 사람이 없으면 수련 인형은 나오지 않는다")
 	-- 열둘을 잡는다
 	table.clear(sent)
 	local killed = 0
@@ -2388,7 +2442,7 @@ do
 		end
 		local target
 		for _, m in room.mobs do
-			if m.state ~= "dead" and m.state ~= "gone" and m.state ~= "spawn" then
+			if m.kind == step.mob and m.state ~= "dead" and m.state ~= "gone" and m.state ~= "spawn" then
 				target = m
 				break
 			end
@@ -2407,7 +2461,7 @@ do
 		end
 	end
 	expect(Quests.isReady(hc.quests, "r1m9"), ("병사 %d을 잡았다(잡은 수 %d)"):format(step.n, killed))
-	expect(killed >= step.n - 1, "쓰러뜨린 병사는 다시 밀려든다(자리 넷으로 열둘을 채운다)")
+	expect(killed >= step.n - 1 and killed <= step.n, "나온 병사만 잡으면 끝난다(다시 나오기를 기다리지 않는다)")
 	-- 다 잡으면 남은 병사가 사라진다 · 다시 나오지 않는다
 	run(0.2)
 	eq(standing(), 0, "다 잡으면 병사가 모두 사라진다")
@@ -2422,8 +2476,9 @@ do
 	eq(standing(), 0, "그 퀘스트를 하지 않는 사람에게는 병사가 나오지 않는다")
 	-- 촌장에게 돌려준다: 경험치와 달돈 · 끝
 	local elderAt = nil
-	for key, scn in SCENES.scenes do
-		for _, n in scn.npcs or {} do
+	do
+		local key = Quests.endScene(def) -- 돌려줄 주민이 선 맵(여러 맵에 서 있으면 그 퀘스트의 것)
+		for _, n in SCENES.scenes[key].npcs or {} do
 			if n.id == def.endNpc then
 				elderAt = { key = key, x = n.x, y = n.y }
 			end
@@ -2440,6 +2495,63 @@ do
 	expect(handlers.Travel(pc, "in_cellar") ~= nil, "끝낸 뒤에도 내려갈 수 있다")
 	run(3)
 	eq(standing(), 0, "끝낸 뒤의 지하에는 병사가 없다")
+	-- 2차 전직(job2): 「불타는 마을」을 하지 않았어도 전직 퀘스트를 받으면 내려갈 수 있고, 수련 인형만 나온다 — 잡으면 조각이 떨어지고 주우면 센다
+	local pj2 = person({ UserId = 373, Name = "jobber" })
+	handlers.Ready(pj2)
+	expect(handlers.Choose(pj2, "axion", "달빛조각") ~= nil, "2차 전직을 해 볼 캐릭터")
+	local sj2 = World.session(pj2)
+	local hj2 = sj2.hero
+	HeroC.setLevel(hj2, 30)
+	HeroC.autoStat(hj2)
+	HeroC.maxSkills(hj2)
+	hj2.invuln = 9999
+	expect(goTo(pj2, "in_shrine") ~= nil or sj2.scene == "in_shrine", "사당 안으로")
+	sj2.jumped, sj2.stale = true, nil
+	hj2.x, hj2.y = down.x, down.y
+	expect(handlers.Travel(pj2, "in_cellar") == nil, "전직 퀘스트를 받기 전에는 내려가지 못한다")
+	hj2.quests.job2 = { done = false, c = {} }
+	expect(handlers.Travel(pj2, "in_cellar") ~= nil and sj2.scene == "in_cellar", "전직 퀘스트를 받으면 내려간다(「불타는 마을」을 하지 않았어도)")
+	run(4)
+	eq(standing(jobStep.mob), dummies, "수련 인형이 나온다")
+	eq(standing(), 0, "병사는 나오지 않는다(「불타는 마을」을 하는 사람이 없다)")
+	table.clear(sent)
+	local got2 = 0
+	for _ = 1, 400 do
+		if Quests.isReady(hj2.quests, "job2") then
+			break
+		end
+		-- 떨어진 조각을 줍는다
+		for _, e in got("DropAdd", pj2) do
+			local d = e.args[1]
+			if d and d.kind == "quest" and not d.taken then
+				d.taken = true
+				sj2.jumped, sj2.stale = true, nil
+				handlers.Move(pj2, d.x, d.y, 1)
+				handlers.Pickup(pj2, d.id)
+				got2 += 1
+			end
+		end
+		local target
+		for _, m in room.mobs do
+			if m.kind == jobStep.mob and m.state ~= "dead" and m.state ~= "gone" and m.state ~= "spawn" then
+				target = m
+				break
+			end
+		end
+		if target and not Quests.isReady(hj2.quests, "job2") then
+			target.hp = 1
+			sj2.jumped, sj2.stale = true, nil
+			handlers.Move(pj2, math.clamp(target.x - 12, 8, 376), target.y, 1)
+			castSlam(pj2, hj2.x, hj2.y, 1)
+			run(1.2)
+		else
+			run(0.5)
+		end
+	end
+	expect(Quests.isReady(hj2.quests, "job2"), ("수련 인형에게서 조각 %d개를 모았다(주운 수 %d)"):format(jobStep.n, got2))
+	run(0.2)
+	eq(standing(jobStep.mob), 0, "다 모으면 수련 인형이 사라진다")
 	World.removePlayer(pc)
 	World.removePlayer(pv)
+	World.removePlayer(pj2)
 end

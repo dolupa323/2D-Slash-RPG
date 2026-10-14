@@ -11,8 +11,8 @@ local DT = 1 / 20
 
 -- 어느 몬스터가 어느 장면에 몇 마리(배치 표의 1지역 — 달그림자 사냥터의 장면 이름은 hunt)
 local PLACE = {
-	r1a1 = { shroom = 3 }, hunt = { bigshroom = 3 }, r1a3 = { puff = 4 }, r1a4 = { crow = 4 }, r1b1 = { piglet = 4 }, r1b2 = { goat = 5 },
-	r1b3 = { bat = 2, crab = 3 }, r1b4 = { mole = 5 }, r1c1 = { helm = 4 }, r1c2 = { torch = 4 }, r1c3 = { dummy = 4 },
+	-- 1지역(2026-10-14 — 한 맵에 한 종류): 제 몬스터가 주인인 맵. 나머지 맵의 주인은 병사다(아래 ONE). 수련 인형은 사당 지하(2차 전직 동안만)
+	r1a3 = { puff = 11 }, r1a4 = { crow = 9 }, r1b3 = { crab = 5 }, r1b4 = { mole = 11 }, r1c3 = { helm = 9 }, in_cellar = { dummy = 4 },
 	-- 2지역 수정이 자라는 숲(2026-10-09 밤): 병사 없이 제 몬스터만
 	r2a1 = { stump = 9 }, r2a2 = { snail = 11 }, r2a3 = { frog = 8 }, r2a4 = { spider = 9 },
 	r2b1 = { fox = 9 }, r2b2 = { bud = 12 }, r2b3 = { quill = 10 }, r2b4 = { dshard = 9 },
@@ -25,8 +25,10 @@ local PLACE = {
 	-- 3지역의 분화구 · 4지역의 내성과 봉인의 회랑
 	r3d3 = { scorpion = 10 }, r4c2 = { book = 6 }, r4d1 = { eye = 10 }, r4d2 = { mage = 9 },
 }
--- 퀘스트가 잡으라고 하는 병사는 그 장면에 남아 있어야 한다
-local KEEP = { r1a1 = "trainee", hunt = "warrior", r1a4 = "archer", r1b2 = "bomber", r1c1 = "ewarrior" }
+-- 1지역의 사냥터: 한 맵에 한 종류 · 한 종류는 한 맵(사용자 2026-10-14: "퀘스트에는 등장하지도않는 폭탄병이랑 큰 달버섯이 맵구조의 절반 젠을 담당해버리는겁니다 … 궁병이 중복으로 등장할 이유가없음")
+local ONE = { r1a1 = "trainee", hunt = "warrior", r1a3 = "puff", r1a4 = "crow", r1b1 = "archer", r1b2 = "bomber", r1b3 = "crab", r1b4 = "mole", r1c1 = "ewarrior", r1c2 = "earcher", r1c3 = "helm" }
+-- 1지역에서 빠져 쉬는 제 몬스터(맵이 모자라 — 2026-10-14): 싸움 수치와 그림은 남는다 · 어느 장면에도 없다. 동작 시험은 빌린 자리에서 그 레벨로 한다
+local BENCH = { shroom = 2, bigshroom = 5, piglet = 12, goat = 15, bat = 16, torch = 24 }
 
 -- ---- 1) 자료의 짜임 ----
 local newKinds = 0
@@ -85,19 +87,39 @@ for key, want in PLACE do
 		expect(placed[kind] == nil, "한 몬스터는 한 장면에만 " .. kind)
 		placed[kind] = key
 	end
-	if KEEP[key] then
-		expect((count[KEEP[key]] or 0) >= 3, ("%s에 퀘스트의 병사 %s가 남아 있다"):format(key, KEEP[key]))
+end
+do
+	local owner = {}
+	for key, kind in ONE do
+		local scene = SCENES.scenes[key]
+		local kinds = {}
+		for _, m in scene.mobs do
+			kinds[m.kind] = true
+		end
+		local n = 0
+		for k in kinds do
+			n += 1
+			expect(owner[k] == nil, ("%s가 두 맵에 있다(%s · %s)"):format(k, tostring(owner[k]), key))
+			owner[k] = key
+		end
+		expect(n == 1 and kinds[kind], ("%s에는 %s 한 종류만"):format(key, kind))
+	end
+	for key, scene in SCENES.scenes do
+		if scene.region == "r1" and not scene.story and not scene.tut and #scene.mobs > 0 then -- tut = 튜토리얼의 꿈(사냥터가 아니다)
+			expect(ONE[key] ~= nil, "1지역의 사냥터는 모두 표에 있다 " .. key)
+		end
 	end
 end
 for kind, m in COMBAT.mobs do
 	if m.bare and not m.story then
-		expect(placed[kind] ~= nil, "놓이지 않은 새 몬스터 " .. kind)
+		expect((placed[kind] ~= nil) ~= (BENCH[kind] ~= nil), "새 몬스터는 놓였거나 쉰다(둘 다는 아니다) " .. kind)
 	end
 end
 -- 새 몬스터는 표에 없는 장면에는 없다
 for key, scene in SCENES.scenes do
 	for _, m in scene.mobs do
-		if COMBAT.mobs[m.kind].bare then
+		-- 이야기의 방(사당 지하 — 2차 전직의 수련 인형)은 사냥터가 아니다: 그 퀘스트를 하는 동안에만 나온다(2026-10-13)
+		if COMBAT.mobs[m.kind].bare and not scene.story and not scene.tut then -- tut = 튜토리얼의 꿈(2026-10-14 — 수련 인형을 빌려 쓴다)
 			eq(placed[m.kind], key, ("%s는 %s에만"):format(m.kind, tostring(placed[m.kind])))
 		end
 	end
@@ -117,14 +139,18 @@ local function fresh(class, lv)
 end
 -- 그 종류 한 마리만 있는 방(그 몬스터가 놓인 장면에서 구간이 가장 넓은 자리)
 local function solo(kind, seed)
-	local scene = SCENES.scenes[placed[kind]]
+	local scene = SCENES.scenes[placed[kind] or "hunt"] -- 쉬는 몬스터는 달그림자 사냥터의 자리를 빌린다
 	local def = nil
 	for _, m in scene.mobs do
-		if m.kind == kind and (not def or m.range[2] - m.range[1] > def.range[2] - def.range[1]) then
+		if (m.kind == kind or BENCH[kind]) and (not def or m.range[2] - m.range[1] > def.range[2] - def.range[1]) then
 			def = m
 		end
 	end
 	assert(def, kind .. "가 없다")
+	if BENCH[kind] then
+		def = table.clone(def)
+		def.kind, def.lv = kind, BENCH[kind]
+	end
 	local one = { w = scene.w, h = scene.h, rows = scene.rows, spawn = scene.spawn, mobs = { def } }
 	local r = Room.new("solo", one, Random.new(seed))
 	for _ = 1, 30 do

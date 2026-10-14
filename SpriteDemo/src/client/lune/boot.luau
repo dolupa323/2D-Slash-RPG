@@ -35,8 +35,12 @@ local SkillWindow = require(script.Parent.ui.skillWindow)
 local KeysWindow = require(script.Parent.ui.keysWindow)
 local SoundWindow = require(script.Parent.ui.soundWindow) -- 소리 설정(메뉴 → 「소리 설정」)
 local DailyWindow = require(script.Parent.ui.dailyWindow) -- 일일 의뢰(마을의 의뢰 게시판 앞에서 ↑)
+local AuctionWindow = require(script.Parent.ui.auctionWindow) -- 경매장(메뉴 · Y — 은달 항구의 경매사 앞에서 ↑로도)
+local TALK_HOLD = { first = 0.35, next = 0.16 } -- 말하는 중에 뛰기 키를 누르고 있으면: 처음 넘어가기까지 · 그 뒤 한 마디씩 넘어가는 사이(초)
 local Talk = require(script.Parent.ui.talk)
 local Ui = require(script.Parent.ui.ui)
+local TutView = require(script.Parent.tutorial) -- 튜토리얼 「달빛 꿈」의 미션 판(2026-10-14)
+local Tutorial = require(lune.sim.tutorial)
 local Kit = require(script.Parent.ui.kit) -- 부품 그림(퀘스트의 자리 위에 뜨는 「!」)
 local Touch = require(script.Parent.touch)
 local Items = require(lune.sim.items)
@@ -56,6 +60,8 @@ local PartyWindow = require(script.Parent.ui.partyWindow)
 local Chat = require(script.Parent.chat)
 local Quests = require(lune.sim.quests)
 local Daily = require(lune.sim.daily) -- 일일 의뢰(마을의 게시판)
+local Navi = require(lune.ui.navi) -- 퀘스트 길찾기(셈)
+local NaviArrow = require(script.Parent.naviArrow) -- 길찾기의 화살표(캐릭터 머리 위)
 local QuestHud = require(script.Parent.questHud)
 local Guide = require(script.Parent.guide)
 local QuestWindow = require(script.Parent.ui.questWindow)
@@ -74,6 +80,7 @@ local RULES = COMBAT.rules
 local UI_HUD = require(lune.data["ui.generated"]).hud
 local QUICK = require(lune.data["ui.generated"]).quick -- 퀵슬롯(칸 수 · 칸마다의 기본 키 · 글)
 local Quick = require(lune.ui.quick)
+local Layout = require(lune.ui.layout)
 local QuickEdit = require(script.Parent.ui.quickEdit)
 
 local Boot = {}
@@ -99,6 +106,10 @@ local state = {
 	npcNames = {} :: { [string]: string }, -- 주민 id → 이름(알리미의 「샛별에게 간다」)
 	drawQuests = nil :: any, -- 퀘스트가 바뀌었을 때 화면(표시 · 알리미 · 창)을 고치는 함수
 	daily = nil :: any, -- 일일 의뢰의 상태(서버가 준 것 — sim/daily.luau의 view)
+	navi = nil :: string?, -- 길찾기를 켠 퀘스트(알리미의 화살표 단추 — 이름표)
+	naviDir = nil :: string?, -- 지금 화살표의 방향(공중에 뜬 동안에는 땅에 있을 때의 것을 그대로 둔다)
+	naviScene = nil :: string?, -- 그 방향을 셈한 맵
+	naviArrow = nil :: any, -- 머리 위의 화살표
 	fetchDaily = nil :: any, -- 일일 의뢰의 상태를 서버에 다시 묻는 함수(들어왔을 때 · 레벨이 올랐을 때)
 	jobSeen = {} :: { [string]: boolean }, -- 받았다고 알린 전직 퀘스트(「달이 부른다」는 받는 순간 한 번만 뜬다)
 	spots = {} :: { any }, -- 이 장면에서 ↑를 누를 수 있는 퀘스트의 자리들 { quest, x, y, place, act, mark(! 그림), tag(「↑ 물을 뜬다」) }
@@ -243,7 +254,7 @@ local function enterScene(key: string, x: number, y: number, room)
 	clear("이름표의 층", state.over, "Destroy") -- 이름표(내 것 포함) · 체력 띠 · 알림 글은 이 층과 함께 사라진다
 	table.clear(state.spots) -- 퀘스트의 자리 표시도 위의 두 층과 함께 사라졌다(새 장면의 것은 아래 drawQuests가 만든다)
 	if MUSIC.hidden[key] and state.sceneKey ~= key then
-		Music.jingle("strange") -- 숨은 방에 들어섰다
+		Music.sfx("secret3") -- 숨은 방에 들어섰다(징글이 아니라 효과음 — 사용자 2026-10-14: 숨은 방 진입 징글은 없다)
 	end
 	state.sceneKey = key
 	Music.scene(key) -- 그 장면의 배경 음악(같은 곡이면 이어 튼다)
@@ -519,6 +530,9 @@ end
 
 -- 새 캐릭터는 첫 퀘스트 「첫 기술」을 끝내야(사제에게 말을 걸어야) 기술을 쓴다 — 그때 스킬 칸이 생긴다
 local function skillsLocked(): boolean
+	if state.sceneKey == Tutorial.SCENE then
+		return false -- 꿈(튜토리얼)에서는 첫 사냥기를 써 본다(사제에게 배우기 전이어도)
+	end
 	return state.me ~= nil and Quests.isNew(state.quests or {}, state.me.level)
 end
 
@@ -736,6 +750,39 @@ local function step()
 		return
 	end
 
+	-- 말하는 중에는 뛰기 키(Space)로도 다음 말로 넘긴다 — 누르고 있으면 쭉 넘어간다(마지막 말에서는 그 일을 한다: 수락 · 완료)
+	--  사용자 2026-10-13: "스페이스로 쭉 스킵  퀘스트 받고 … 다시 돌아와서 완료하고 스페이스꾹 누르면 다음 퀘스트 하나 받아지고 이렇게 퀘스트 루프가 자연스럽게"
+	if Talk.npc then
+		local skip = false
+		if Input.take("jump") then
+			skip, state.talkHold = true, os.clock() + TALK_HOLD.first
+		elseif Input.held("jump") and state.talkHold and os.clock() >= state.talkHold then
+			skip, state.talkHold = true, os.clock() + TALK_HOLD.next
+		end
+		if skip then
+			Talk.next(Talk.npc)
+		end
+	else
+		state.talkHold = nil
+	end
+	-- 대화창이 떠 있는 동안에는 걷지 않고 스킬도 쓰지 않는다 — ↑로도 넘긴다(2026-10-14: 일반 도트 게임의 대화창처럼)
+	if Talk.npc then
+		if Input.take("up") then
+			Talk.next(Talk.npc)
+		end
+		P.step(scene, body, { mx = 0 }, STEP)
+		return
+	end
+	-- 퀘스트를 돌려준 자리에서 그 주민이 줄 것이 또 있으면 말을 잇는다(서버가 끝냈다고 알려 온 뒤에) — 끝내고 그대로 다음 것을 받는다
+	local chain = state.chain
+	if chain then
+		if os.clock() > chain.till or state.sceneKey ~= chain.scene or math.abs(chain.npc.x - body.x) > 44 then
+			state.chain = nil
+		elseif not Talk.npc and state.quests and state.quests[chain.done] and state.quests[chain.done].done then
+			state.chain = nil
+			state.questTalk(chain.npc)
+		end
+	end
 	-- 문 앞에서 ↑: 서버에 묻고, 허락하면 그 장면으로
 	local wantUp = Input.take("up") and body.ground and not state.skill
 	if wantUp then
@@ -761,6 +808,7 @@ local function step()
 		local spot = nearSpot(body.x, body.y)
 		if spot then
 			Net.FireServer("Quest", "use", spot.quest)
+			Music.sfx("secret4") -- 살펴보기(샘에서 물 뜨기 · 깃발 꺼내기 …)
 			if state.fx then
 				state.fx:float(spot.act, spot.x, spot.y - 34, Effects.MINT, 1.2)
 			end
@@ -772,16 +820,8 @@ local function step()
 			local at = Quests.atNpc(state.quests, if state.me then state.me.level else 1, npc.id, scene.region)
 			if Talk.with(npc) then
 				Talk.next(npc) -- 말하는 중이면 다음 말로
-			elseif #at.ready > 0 then
-				local def = Quests.def(at.ready[1])
-				Talk.start(npc, def.done, def.name, function()
-					Net.FireServer("Quest", "complete", def.id)
-				end, "끝낸다")
-			elseif #at.offer > 0 then
-				local def = Quests.def(at.offer[1])
-				Talk.start(npc, def.offer, def.name, function()
-					Net.FireServer("Quest", "accept", def.id)
-				end, "받는다")
+			elseif state.questTalk(npc) then
+				-- 퀘스트의 말을 시작했다(돌려줄 것부터, 없으면 받을 것 하나)
 			elseif state.openNpc and state.openNpc(npc) then
 				-- 상점 · 강화 · 창고가 열렸다
 			elseif #at.wait > 0 then
@@ -890,6 +930,9 @@ local function step()
 			state.dir = mx
 		end
 		input = { mx = mx, jump = Input.take("jump"), down = Input.held("down") }
+		if input.jump and input.down and body.ground and P.onPlatform(scene, body) then
+			TutView.dropped = true -- 튜토리얼: 얇은 발판을 내려왔다(↓ + 뛰기)
+		end
 	end
 	if state.push then
 		-- 보스의 포효에 밀려나는 중(기술을 쓰는 중이 아니면)
@@ -1078,7 +1121,27 @@ local function draw(dt: number)
 		clearPips()
 	end
 	state.fx:update(state.now, dt)
-	Talk.place() -- 말풍선은 그 주민을 따라간다
+	-- 주민의 혼잣말(2026-10-14 — 머리 위 말풍선은 이것만): 가까이(IDLE.near) 있는 주민이 IDLE.gap초마다 한 줄. 한 번에 한 명 · 대화창이 떠 있으면 쉰다
+	if state.view and not Talk.npc and not Talk.saying() then
+		state.idleT = state.idleT or setmetatable({}, { __mode = "k" })
+		local I = Format.IDLE
+		for _, npc in state.view.npcs do
+			local d = npc.def
+			local said = d.idle or d.lines
+			if said and #said > 0 and not d.stone then -- 게시판 · 비석(stone)은 혼잣말을 하지 않는다
+				local t = (state.idleT[d] or (I.gap[1] + math.random() * (I.gap[2] - I.gap[1]))) - dt
+				state.idleT[d] = t
+				if t <= 0 then
+					state.idleT[d] = I.gap[1] + math.random() * (I.gap[2] - I.gap[1])
+					if math.abs(d.x - body.x) < I.near and math.abs(d.y - body.y) < 80 then
+						Talk.say(d, said[math.random(#said)])
+						break
+					end
+				end
+			end
+		end
+	end
+	Talk.place() -- 대화창의 글자가 한 글자씩 나오고, 혼잣말 말풍선은 그 주민을 따라간다
 end
 
 -- 장치의 모습을 화면에 옮긴다(내 상태가 올 때마다): 걸음 · 뛰는 힘의 배수 · 켜 둔 사출기의 칸 · 버프 자리(켜 둔 사출기) · 영혼과 열기(직업 묶음이 그린다)
@@ -1215,12 +1278,10 @@ local function listen()
 						state.holdAt, state.holdNow = state.now, state.now
 						state.holdT = if h.big or h.dead then H.holdBig else H.hold
 					end
-					-- 소리(효과음을 올린 뒤에 난다): 내가 때린 타만 — 쓰러뜨렸으면 그 소리도
+					-- 데미지 소리: 내 타의 숫자가 뜰 때마다 한 번(사용자 2026-10-14: "출력되는 데미지는 이소리를 아주 짧게 재생합니다. 한 틱당 한번재생" —
+					--  3타 기술이 한 마리에 맞으면 타타타 세 번, 세 마리에 같이 맞으면 마리마다 — 그래서 이 소리는 틈(gap)이 0이다). 다른 사람의 타는 소리 없이 숫자만(내 판단)
 					if by == state.myId then
-						Music.hit(h.big)
-						if h.dead then
-							Music.sfx("kill")
-						end
+						Music.sfx("damage")
 					end
 				end
 				-- 따로 나가는 타(사출기 · 장치): 그 직업의 이펙트가 날아가 닿는 순간에 숫자가 뜬다(달빛 도끼 · 표창 · 도깨비불 · 수정 조각 · 불티 · 불꽃).
@@ -1276,8 +1337,7 @@ local function listen()
 		end
 	end)
 	Net.OnClient("Hurt", function(e)
-		state.fx:number(e.dmg, state.body.x, state.body.y - 22, Effects.HURT) -- 머리 바로 위에서 뜬다(졸개의 숫자가 발밑에서 16 위인 것과 같은 느낌)
-		Music.sfx("hurt")
+		state.fx:number(e.dmg, state.body.x, state.body.y - 22, Effects.HURT) -- 머리 바로 위에서 뜬다(졸개의 숫자가 발밑에서 16 위인 것과 같은 느낌) · 맞는 소리는 없다(사용자 2026-10-14)
 		state.blink = RULES.invuln
 		if not state.skill then
 			state.hurtT = 0.25 -- 기술을 쓰는 중이 아니면 맞는 동작을 잠깐 보인다
@@ -1287,7 +1347,7 @@ local function listen()
 			state.deadT = 0
 			state.skill = nil
 			state.fx:float("쓰러졌다", state.body.x, state.body.y - 46, Effects.PINK, 2.2)
-			Music.jingle("death")
+			Music.sfx("gameover") -- 효과음(배경 음악은 줄이지 않는다 — 사용자 2026-10-14: 사망 징글은 없다)
 		end
 	end)
 	Net.OnClient("Gain", function(e)
@@ -1398,8 +1458,14 @@ local function listen()
 		-- 방금 받은 퀘스트: 머리 위에 「○○ 수락」
 		for id, st in book do
 			local q = Quests.def(id)
-			if q and not st.done and not (state.quests or {})[id] and state.fx then
-				state.fx:float(("「%s」 수락"):format(q.name), state.body.x, state.body.y - 84, Effects.MINT, 2)
+			if q and not st.done and not (state.quests or {})[id] then
+				if state.fx then
+					state.fx:float(("「%s」 수락"):format(q.name), state.body.x, state.body.y - 84, Effects.MINT, 2)
+				end
+				-- 메인 · 전직 퀘스트는 받으면 길찾기가 켜진다(사용자 2026-10-13: "메인 퀘스트는 수락하면  길찾기가 활성화가 되는게 디폴트입니다") — 알리미의 화살표 단추로 끈다
+				if q.kind == "main" or q.kind == "job" then
+					state.navi = id
+				end
 			end
 		end
 		state.quests = book
@@ -1409,18 +1475,24 @@ local function listen()
 		local def = doneId and Quests.def(doneId)
 		if def and state.fx and def.kind ~= "job" then -- 전직은 화면 가운데의 큰 알림이 알린다
 			state.fx:float(("「%s」 완료"):format(def.name), state.body.x, state.body.y - 84, Effects.GOLD, 2.2) -- 쌓인 이름표 · 레벨 업 글씨보다 위에
-			Music.jingle("complete")
+			Music.sfx("success") -- 효과음(사용자 2026-10-14: 퀘스트 완료 징글은 없다)
 		end
 		-- 사제에게 첫 기술을 배웠다: 스킬 칸이 생긴다
 		if lockedWas and not skillsLocked() then
 			Hud.setLocked(false)
 			Guide.banner("기술을 배웠다", "화면 아래에 스킬 칸이 생겼다", 4)
 		end
+		-- 그 퀘스트를 끝내야 열리는 문이 열렸다(초승달 마을의 작은 나루 — 「불타는 마을」): 어디에 무엇이 열렸는지 알린다
+		if def then
+			for _, o in Quests.opens(def.id) do
+				Guide.banner(Quests.OPENED.head, Quests.OPENED.line:format(o.place, o.label), 7)
+			end
+		end
 		-- 전직 퀘스트: 받을 수 있게 됐다("달이 부른다") · 돌려줘서 전직했다
 		jobCall()
 		if def and def.kind == "job" and def.reward.job then
 			Guide.banner(("%d차 전직"):format(def.reward.job), "스킬 창에 새 스킬이 열렸다 — 사냥기와 보스기가 새것으로 바뀌었다", 6)
-			Music.jingle("victory")
+			Music.jingle("jobup")
 		end
 	end)
 	Net.OnClient("Bag", function(bag)
@@ -1533,6 +1605,8 @@ function Boot.start()
 	-- 서버가 준 캐릭터를 화면의 상태에 얹는다(처음 들어올 때 · 캐릭터 고르기 화면에서 다른 캐릭터로 들어올 때)
 	local function adopt(got)
 		state.me = got.self
+		state.navi = nil -- 길찾기는 캐릭터마다 다시 켠다
+		Hud.resetHp() -- 들어온 캐릭터의 체력에서 다시 시작한다(앞 캐릭터와 견준 효과가 뜨지 않게)
 		state.myId, state.myName = got.id, got.name
 		state.quests = got.quests or {}
 		state.bag = got.bag
@@ -1558,7 +1632,7 @@ function Boot.start()
 		end)
 		-- 칸에 놓인 것은 서버가 저장해 둔 것(없으면 처음 차림)
 		state.slots = got.self.slots or Quick.start(CLASSES.classes[state.who].skills)
-		state.touchSlots = got.self.tslots or Quick.start(CLASSES.classes[state.who].skills) -- 스마트폰의 단추 배치(PC의 퀵슬롯과 따로 저장한다)
+		state.touchSlots = got.self.tslots or Quick.touchStart(CLASSES.classes[state.who].skills) -- 스마트폰의 단추 배치(PC의 퀵슬롯과 따로 저장한다 · 단추가 없는 칸 1은 비운다)
 	end
 	adopt(first)
 	-- 퀵슬롯: 키는 스킬이 아니라 칸에 붙는다(칸마다 하나 — 공방의 QUICK.keys)
@@ -1573,7 +1647,12 @@ function Boot.start()
 	end
 	-- 메뉴 단추: 앞의 여섯(가방 · 장비 · 능력치 · 스킬 · 퀘스트 · 월드맵 — 열린 것만)은 그림 단추로, 나머지 창과 키 설정은 「메뉴」 단추 안에
 	--  월드맵은 2026-10-11에 꺼냈다(사용자: "이 기본 버튼에 월드맵도 있어야합니다. 메뉴를 누르고 월드맵누르는게 아니라")
-	local MAIN = { bag = true, equip = true, stat = true, skill = true, quest = true, map = true }
+	-- 화면 아래의 그림 단추(나머지 창은 「메뉴」 안에): 무엇을 어느 차례로 놓는가는 설계에 있다(공방 design/ui.js의 menu.row).
+	--  경매장은 2026-10-13에 꺼냈다(사용자: "경매장도 아이콘써서 버튼으로 해주세요")
+	local MAIN = {}
+	for _, id in Layout.MENU.row do
+		MAIN[id] = true
+	end
 	-- 관리자인가(서버가 내 상태에 admin 칸을 넣어 줬는가) — 「메뉴」 안에 「관리」가 보인다. 관리자가 아닌 사람이 창을 억지로 띄워도 서버는 명령을 듣지 않는다
 	local function isAdmin(): boolean
 		return state.me ~= nil and state.me.admin ~= nil
@@ -1636,9 +1715,13 @@ function Boot.start()
 		end
 		Hud.setSlots(list)
 		Touch.setSlots(state.touchSlots) -- 스마트폰의 칸 단추(놓인 것은 PC와 따로다)
-		local menu = {}
+		local menu, open = {}, {}
 		for _, w in Windows.list() do
-			if MAIN[w.id] then
+			open[w.id] = w
+		end
+		for _, id in Layout.MENU.row do
+			local w = open[id]
+			if w then
 				table.insert(menu, { id = w.id, name = w.name, key = keyName("win:" .. w.id) })
 			end
 		end
@@ -1665,6 +1748,31 @@ function Boot.start()
 		end
 		Windows.open("bag", nil, true) -- 가방 창이 아직 열리지 않은 레벨(Lv.1)이어도 같이 띄운다 — 창고 · 상점은 가방과 짝이다
 	end
+	-- 그 주민과 퀘스트의 말을 시작한다: 돌려줄 것이 있으면 그것부터, 없으면 받을 것 하나(한 번에 하나만 — 퀘스트는 한 줄이다). 시작했으면 true
+	--  돌려주면 state.chain에 적어 둔다 — 서버가 끝냈다고 알려 오면 그 주민이 줄 다음 것으로 말이 이어진다(그리는 고리가 잇는다)
+	state.questTalk = function(npc): boolean
+		if state.sceneKey == Tutorial.SCENE then
+			return false -- 꿈(튜토리얼)의 샛별은 퀘스트를 주지 않는다
+		end
+		local level = if state.me then state.me.level else 1
+		local at = Quests.atNpc(state.quests or {}, level, npc.id, SCENES.scenes[state.sceneKey].region)
+		if #at.ready > 0 then
+			local def = Quests.def(at.ready[1])
+			Talk.start(npc, def.done, def.name, function()
+				state.chain = { npc = npc, scene = state.sceneKey, done = def.id, till = os.clock() + 3 }
+				Net.FireServer("Quest", "complete", def.id)
+			end, "완료")
+			return true
+		elseif #at.offer > 0 then
+			local def = Quests.def(at.offer[1])
+			Talk.start(npc, def.offer, def.name, function()
+				Net.FireServer("Quest", "accept", def.id)
+				Music.sfx("secret2") -- 퀘스트 수락
+			end, "수락")
+			return true
+		end
+		return false
+	end
 	state.openNpc = function(npc): boolean
 		local kind = Items.data.NPCDO[npc.id]
 		local level = state.me.level
@@ -1677,6 +1785,9 @@ function Boot.start()
 				state.fetchDaily() -- 날이 바뀌었으면 새 의뢰가 온다
 			end
 			Windows.open("daily", nil, true)
+		elseif kind == "auction" then
+			-- 경매사: 경매장 창(넓은 창 — 다른 창을 닫고 혼자 뜬다). 메뉴의 「경매장」(Y)으로 여는 것과 같은 창이다(메이플 옥션 방식 — 주민에게서 멀어져도 닫히지 않는다)
+			Windows.open("auction", nil, true)
 		elseif kind == "hall" then
 			-- 명예의 전당의 비석: 그 비석의 순위판을 연다(hall_level → "level")
 			Windows.open("hall", string.match(npc.id, "^hall_(%a+)$") or "level", true)
@@ -1706,6 +1817,13 @@ function Boot.start()
 		end,
 		quests = function()
 			return state.quests
+		end,
+		-- 길찾기를 켠 퀘스트 · 일일 의뢰의 모습(월드맵의 「가는 길」이 그 퀘스트를 따른다)
+		navi = function()
+			return state.navi
+		end,
+		daily = function()
+			return state.daily
 		end,
 		-- 명예의 전당의 순위(서버에 묻는다)
 		rank = function()
@@ -1820,7 +1938,7 @@ function Boot.start()
 			end
 			state.daily = res.view
 			if res.reward then
-				Music.jingle("complete")
+				Music.sfx("success")
 				if state.fx then
 					state.fx:float(Format.fill(Daily.WORDS.got, { name = res.reward.name }), state.body.x, state.body.y - 84, Effects.GOLD, 2.2)
 					if res.reward.dust > 0 then
@@ -1833,6 +1951,14 @@ function Boot.start()
 			if state.drawQuests then
 				state.drawQuests()
 			end
+		end,
+		-- 경매장: 서버에 부탁하고 답을 기다린다(창이 그 답으로 다시 그린다 — ui/auctionWindow.luau). 답이 없으면 nil
+		market = function(action: string, a: any, b: any, c: any, d: any)
+			local ok, res = pcall(Net.Invoke, "Market", action, a, b, c, d)
+			if ok and typeof(res) == "table" then
+				return res
+			end
+			return nil
 		end,
 		-- 소리 설정을 바꿨다: 계정에 저장한다
 		saveSound = function()
@@ -1905,6 +2031,7 @@ function Boot.start()
 	Windows.register("keys", KeysWindow)
 	Windows.register("sound", SoundWindow)
 	Windows.register("daily", DailyWindow) -- 일일 의뢰(마을의 의뢰 게시판 앞에서 ↑)
+	Windows.register("auction", AuctionWindow) -- 경매장(메뉴 · Y — 메이플 옥션 방식. 은달 항구의 경매사 앞에서 ↑로도)
 	Windows.register("bag", BagWindow)
 	Windows.register("equip", EquipWindow)
 	Windows.register("shop", ShopWindow)
@@ -1921,13 +2048,33 @@ function Boot.start()
 	-- 여기까지가 기본 키다. 저장해 둔 것이 있으면 그 위에 입힌다(사용자 결정: 기본 키를 주되 자유롭게 바꾼다)
 	Input.markDefaults()
 	Input.import(first.self.keys)
+	state.drawKeyHints = drawKeyHints -- 튜토리얼(꿈)에서 가방 단추를 넣고 뺄 때 다시 그린다
 	drawKeyHints()
 
 	Talk.init()
+	TutView.init(Stage.ui)
+	Talk.onFinish = function(npc)
+		if state.sceneKey == Tutorial.SCENE then
+			TutView.talked = npc.id -- 튜토리얼: 그 주민과 말을 끝냈다
+		end
+	end
+	TutView.onSkip = function()
+		goScene(function()
+			local ok, res = pcall(Net.Invoke, "Tut", "skip", nil)
+			return if ok then res else nil
+		end)
+	end
 	PartyHud.init(Hud.root, function(name: string, ...)
 		Net.FireServer(name, ...)
 	end)
-	Chat.init(Hud.root)
+	-- 채팅은 Roblox의 기본 채팅이다(chat.luau — 창 · 입력줄 · 채널 탭을 켜고 색과 이름만 맞춘다). 글을 치는 동안에는 게임의 키를 받지 않고, PC에서는 파티원 칸을 채팅 창의 아래로 내린다
+	Chat.init()
+	Input.typing = Chat.focused
+	local function placeParty()
+		PartyHud.setTop(if Touch.on then 0 else Chat.bottom)
+	end
+	Chat.onMoved = placeParty
+	state.placeParty = placeParty
 	QuestHud.init(Hud.root)
 	BossView.init(Hud.root)
 	Guide.init(Hud.root)
@@ -1956,10 +2103,47 @@ function Boot.start()
 		end
 		return nil, nil
 	end
+	state.slotOf, state.keyName = slotOf, keyName -- 튜토리얼의 미션 판이 쓴다
+	-- 튜토리얼(꿈)에서 반짝일 단추를 이름으로 찾는다(2026-10-14): pc:skill · pc:potion = 아래의 칸 · menu:<창> = 아래의 그림 단추 · inside:stat|skill = 창 안의 자동 단추 ·
+	--  touch:pad|jump|interact|menu = 스마트폰 단추 · touch:skill|potion = 그것이 놓인 스마트폰 칸 · touchmenu:<창> = 열린 스마트폰 메뉴의 그 줄
+	local function slotWith(list, want: string): number?
+		for i = 1, Quick.N do
+			local what = list[i]
+			if what then
+				if want == "potion" and Quick.item(what) then
+					return i
+				elseif want ~= "potion" and COMBAT.skills[what] and COMBAT.skills[what].type == "mob" then
+					return i
+				end
+			end
+		end
+		return nil
+	end
+	state.tutFind = function(name: string): GuiObject?
+		local kind, arg = string.match(name, "^([%w]+):(.+)$")
+		if kind == "pc" then
+			local i = slotWith(state.slots, arg)
+			return if i and Hud.slots[i] then Hud.slots[i].frame else nil
+		elseif kind == "menu" then
+			local m = Hud.menu and Hud.menu[arg]
+			return if m then m.frame else nil
+		elseif kind == "inside" then
+			return if arg == "stat" then StatWindow.autoFrame elseif arg == "skill" then SkillWindow.autoFrame else nil
+		elseif kind == "touch" then
+			if arg == "skill" or arg == "potion" then
+				local i = slotWith(state.touchSlots or {}, arg)
+				return if i then Touch.frameOf("slot", i) else nil
+			end
+			return Touch.frameOf(arg)
+		elseif kind == "touchmenu" then
+			return state.touchMenuItems and state.touchMenuItems[arg] or nil
+		end
+		return nil
+	end
 	state.guide = function()
 		local me = state.me
-		if not me or state.dead or not state.view or not state.body then
-			return nil
+		if not me or state.dead or not state.view or not state.body or state.sceneKey == Tutorial.SCENE then
+			return nil -- 꿈(튜토리얼)에서는 미션 판이 가르친다
 		end
 		local npc = state.view:npcNear(state.body.x, state.body.y)
 		return Guide.pick({
@@ -1977,10 +2161,14 @@ function Boot.start()
 			slotOf = slotOf,
 		})
 	end
-	-- 말풍선이 떠 있는 주민의 머리 위 표시는 그동안 숨는다
+	-- 대화창이 떠 있는 동안: 그 주민의 머리 위 표시 · 아래쪽 화면(체력 · 스킬 칸 · 단추) · 스마트폰의 터치 단추를 숨긴다(대화창은 판 · 단추를 눌러 넘긴다 — 2026-10-14)
 	Talk.onToggle = function(npc)
 		if state.view then
 			state.view:setTalking(if npc then npc.id else nil)
+		end
+		Hud.root.Visible = npc == nil
+		if Touch.root then
+			Touch.root.Visible = npc == nil and Touch.on
 		end
 	end
 	-- 퀘스트가 바뀌면: 주민 머리 위의 표시 · 알리미 · 열려 있는 창
@@ -2002,10 +2190,21 @@ function Boot.start()
 		end
 	end)
 	state.fetchDaily() -- 들어온 캐릭터의 일일 의뢰(알리미 · 게시판 위의 표시)
+	-- 길찾기(알리미의 화살표 단추): 누른 퀘스트를 켜고(같은 것을 다시 누르면 끈다) 알리미를 다시 그린다. 화살표는 그리는 고리가 장마다 놓는다
+	state.naviArrow = NaviArrow.new()
+	QuestHud.onNavi = function(key: string)
+		state.navi = if state.navi == key then nil else key
+		if state.drawQuests then
+			state.drawQuests()
+		end
+	end
 	state.drawQuests = function()
 		local level = if state.me then state.me.level else 1
 		if state.view then
 			state.view:setMarks(function(npcId: string)
+				if state.sceneKey == Tutorial.SCENE then
+					return nil -- 꿈(튜토리얼)에는 퀘스트 표시가 없다
+				end
 				-- 의뢰 게시판: 낼 의뢰가 있으면 「?」 · 안 받은 의뢰가 있으면 「!」
 				for region, board in Daily.DATA.boards do
 					if board.npc == npcId and board.scene == state.sceneKey then
@@ -2016,14 +2215,18 @@ function Boot.start()
 			end)
 			-- 그 퀘스트를 받아야 열리는 문(달의 사당 안의 「사당 지하」 — 메인 「불타는 마을」): 받기 전에는 보이지 않는다
 			state.view:setPortals(function(p)
-				return p.need == nil or Quests.reached(state.quests, p.need)
+				return Quests.portalOpen(state.quests, p)
 			end)
 		end
+		-- 길찾기: 켜 둔 퀘스트에 더 안내할 것이 없으면(끝냈다 · 의뢰가 바뀌었다) 끈다
+		if state.navi and not Navi.target(state.navi, state.quests, level, state.daily) then
+			state.navi = nil
+		end
+		QuestHud.navi = state.navi
 		QuestHud.set(state.quests, state.npcNames, level, Daily.tracked(state.daily))
 		drawSpots() -- 맵에 놓인 것 앞에서 ↑를 누르는 퀘스트의 자리
 		Windows.refresh(state.me)
 	end
-	Input.onEnter = Chat.open
 
 	-- 스마트폰 단추(터치 화면이면 저절로 켜진다)
 	local touchMenu: Frame? = nil
@@ -2096,9 +2299,10 @@ function Boot.start()
 		onToggle = function(on: boolean)
 			Hud.setTouch(on)
 			QuestHud.setTouch(on)
-			Chat.setTouch(on)
+			if state.placeParty then
+				state.placeParty() -- 폰에서는 파티원 칸을 제자리에(채팅 창은 Roblox 단추로 여닫는다)
+			end
 		end,
-		onChat = Chat.open,
 		-- 메뉴: 창 이름이 적힌 큰 단추들
 		onMenu = function()
 			if touchMenu then
@@ -2107,19 +2311,25 @@ function Boot.start()
 				return
 			end
 			local items = Windows.list() -- 키 설정은 넣지 않는다(손가락 단추에는 바꿀 키가 없다)
+			state.touchMenuItems = {}
 			if state.me ~= nil and state.me.admin ~= nil then
 				table.insert(items, { id = "admin", name = "관리" }) -- 관리자에게만
 			end
 			table.insert(items, { id = "@arrange", name = "단추 배치" }) -- 스킬 · 물약을 단추에 놓는다
 			table.insert(items, { id = "@chars", name = "캐릭터 선택" }) -- 저장하고 캐릭터 고르기 화면으로 돌아간다
 			table.insert(items, { id = "sound", name = "소리 설정" }) -- 배경 음악 · 효과음의 크기
-				local w, rowH = 240, 40
-			local h = #items * rowH + 12
-			local holder = Stage.place(Stage.ui, "TouchMenu", "tc", 480 - w / 2, 60, w, h)
+			-- 단추가 화면보다 길면(폰의 화면 틀은 768x432 — 단추 열셋이면 520) 판은 화면에 들어가는 만큼만 서고, 그 안에서 위아래로 민다
+			--  사용자 2026-10-13(폰에서 해 보고): "메뉴탭 열었을때 스크롤이 되어야해 모든메뉴를 접근할수가 없다" — 치수는 Layout.touchMenu(공방 ui.js의 UILAYOUT.touchMenu)
+			local m = Layout.touchMenu(#items, Stage.uiH)
+			local K = Layout.TOUCHMENU
+			local holder = Stage.place(Stage.ui, "TouchMenu", "tc", 480 - m.w / 2, m.top, m.w, m.h)
 			holder.ZIndex = 160
-			local panel = Ui.panel(holder, 0, 0, w, h)
+			local panel = Ui.panel(holder, 0, 0, m.w, m.h)
+			local list = Ui.scroll(panel, K.pad, K.pad, m.w - K.pad * 2, m.viewH, m.contentH, K.bar)
+			list.Name = "List"
+			list.ZIndex = 2
 			for i, win in items do
-				Ui.button(panel, win.name, 8, 8 + (i - 1) * rowH, w - 16, function()
+				local itemBtn = Ui.button(list, win.name, 0, (i - 1) * K.row, m.btnW, function()
 					holder:Destroy()
 					touchMenu = nil
 					if win.id == "@arrange" then
@@ -2129,7 +2339,8 @@ function Boot.start()
 					else
 						Windows.toggle(win.id)
 					end
-				end, { h = 36, font = "body", main = win.id == "@arrange" })
+				end, { h = K.btnH, font = "body", main = win.id == "@arrange" })
+				state.touchMenuItems[win.id] = itemBtn.frame -- 튜토리얼(꿈)이 그 줄을 반짝이게 한다
 			end
 			touchMenu = holder
 		end,
@@ -2166,7 +2377,6 @@ function Boot.start()
 		while Windows.closeTop() do
 		end
 		Talk.close()
-		Chat.close()
 		local left = Net.Invoke("Chars", "leave", nil, nil)
 		if not (left and left.select) then
 			state.paused, Input.paused = false, false
@@ -2229,6 +2439,55 @@ function Boot.start()
 			step()
 		end
 		draw(dt)
+		Hud.step(dt) -- 체력 바의 효과
+		QuestHud.step(state.now) -- 켠 길찾기 단추의 빛
+		-- 길찾기의 화살표: 켜 둔 퀘스트의 지금 진행에 맞는 쪽을 머리 위에(쓰러졌거나 장면을 바꾸는 중에는 숨긴다)
+		if state.naviArrow then
+			local dirNow = nil
+			if state.navi and not state.dead and not state.busy and state.me then
+				Navi.prepare(state.sceneKey) -- 이 맵의 발판과 길을 조금씩 잰다(다 재면 화살표가 발판을 따라 가리킨다)
+				if state.body.ground or state.naviDir == nil or state.naviScene ~= state.sceneKey then
+					local mobs = {}
+					if state.mobs then
+						for _, m in state.mobs.mobs do
+							if m.state ~= "gone" and m.state ~= "dead" then
+								table.insert(mobs, m)
+							end
+						end
+					end
+					local arrow = Navi.arrow(state.navi, state.sceneKey, state.body.x, state.body.y, state.quests, state.me.level, state.daily, mobs)
+					state.naviDir, state.naviScene = if arrow then arrow.dir else "none", state.sceneKey
+				end
+				-- 뛰어오른 동안에는 땅에 있을 때의 방향을 그대로 둔다(공중에서는 선 발판이 없어 길을 셈하지 못한다 — 화살표가 깜빡이지 않게)
+				dirNow = state.naviDir
+			else
+				state.naviDir = nil
+			end
+			state.naviArrow:set(dirNow, state.body.x, state.body.y, state.now)
+		end
+		if state.me and state.body then
+			if state.skill then
+				TutView.cast = true -- 튜토리얼: 기술을 썼다
+			end
+			-- 꿈(튜토리얼)에서는 Lv.1이어도 가방이 열린다(「가방 열기」 미션) — 꿈을 나서면 거둔다. 바뀌면 화면 아래의 단추 줄을 다시 그린다
+			local dreaming = state.sceneKey == Tutorial.SCENE
+			if (Windows.extra.bag == true) ~= dreaming then
+				Windows.extra.bag = if dreaming then true else nil
+				if not dreaming then
+					Windows.close("bag")
+				end
+				if state.drawKeyHints then
+					state.drawKeyHints()
+				end
+			end
+			local skillKey, skillName = state.slotOf("mob")
+			TutView.update({
+				tut = state.me.tut, skip = state.me.tutSkip, scene = state.sceneKey, zones = SCENES.scenes[state.sceneKey] and SCENES.scenes[state.sceneKey].tut,
+				body = state.body, touch = Touch.on, key = state.keyName, dt = dt,
+				skill = if skillKey then ("%s 키 「%s」"):format(skillKey, skillName or "") else nil, potion = (state.slotOf("potion")),
+				windows = { bag = Windows.isOpen("bag"), stat = Windows.isOpen("stat"), skill = Windows.isOpen("skill") }, find = state.tutFind,
+			})
+		end
 		Guide.step(dt)
 		markT += dt
 		if markT >= 0.25 then

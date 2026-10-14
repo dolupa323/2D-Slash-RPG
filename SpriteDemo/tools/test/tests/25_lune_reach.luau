@@ -29,7 +29,7 @@ do
 		local track = MUSIC.scene[sceneKey]
 		expect(typeof(track) == "string" and MUSIC.tracks[track] ~= nil, sceneKey .. ": 배경 음악")
 	end
-	for _, j in { "complete", "victory", "death", "strange" } do
+	for _, j in { "victory", "jobup" } do -- 레벨 업 · 전직(2026-10-14 사용자: 퀘스트 완료 · 사망 · 숨은 방에는 징글이 없다 — 효과음만)
 		expect(MUSIC.jingles[j] ~= nil and MUSIC.jingles[j].sec > 0, "징글 " .. j)
 	end
 	expect(MUSIC.tracks[MUSIC.title] ~= nil, "처음 화면의 곡")
@@ -141,6 +141,19 @@ local function graphOf(sc)
 						add(fly(sc, sx, y, true, function(i)
 							return if i <= j[2] or j[2] == 0 then j[1] else j[3], i == 1, false
 						end))
+					end
+				end
+				-- 튜토리얼의 꿈(sc.tut — 2026-10-14): 「두 번 뛰기」 미션의 높은 바위는 일부러 한 번 뛰기로 닿지 않는다 — 공중에서 한 번 더 뛰는 길도 센다(다른 맵의 기준은 그대로 한 번 뛰기)
+				if sc.tut then
+					for _, sx in starts do
+						for _, j in JUMPS do
+							for _, again in { 12, 20, 26 } do
+								sims += 1
+								add(fly(sc, sx, y, true, function(i)
+									return if i <= j[2] or j[2] == 0 then j[1] else j[3], i == 1 or i == again, false
+								end))
+							end
+						end
 					end
 				end
 				if P.cell(sc, tx, ty) == "=" then

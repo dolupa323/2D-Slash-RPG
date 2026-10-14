@@ -270,15 +270,25 @@ eq(Hero.skillLevel(thin, "mn_spin"), 1, "처음부터 주는 기술은 늘 있�
 
 -- ---- 3) 방: 졸개의 움직임 ----
 local scene = SCENES.scenes.hunt
--- 졸개 한 마리만 있는 방(다른 졸개가 끼어들지 않게) — 사냥터에서 그 종류의 넓은 자리 하나를 골라 온다
+-- 졸개 한 마리만 있는 방(다른 졸개가 끼어들지 않게) — 사냥터의 넓은 자리 하나에 그 종류를 세운다.
+--   2026-10-14부터 한 맵에 한 종류다(사냥터 = 검병만) — 레벨은 그 종류가 사는 맵의 것을 쓴다
 local function soloRoom(kind, seed)
-	local def = nil
+	local spot, lv = nil, nil
 	for _, m in scene.mobs do
-		if m.kind == kind and m.range[2] - m.range[1] >= 40 and not def then
-			def = m
+		if m.range[2] - m.range[1] >= 40 and not spot then
+			spot = m
 		end
 	end
-	assert(def, "사냥터에 " .. kind .. "가 없다")
+	for _, sc in SCENES.scenes do
+		for _, m in sc.mobs do
+			if m.kind == kind and not lv then
+				lv = m.lv
+			end
+		end
+	end
+	assert(spot and lv, "어느 맵에도 " .. kind .. "가 없다")
+	local def = table.clone(spot)
+	def.kind, def.lv = kind, lv
 	local one = { w = scene.w, h = scene.h, rows = scene.rows, spawn = scene.spawn, mobs = { def } }
 	local r = Room.new("solo", one, Random.new(seed))
 	for _ = 1, 30 do
@@ -393,7 +403,7 @@ end
 local room4, bomber = soloRoom("bomber", 13)
 expect(bomber ~= nil, "폭탄병이 있다")
 if bomber then
-	local victim = fresh("mooni", 4)
+	local victim = fresh("mooni", bomber.lv) -- 맞는 쪽도 폭탄병의 레벨(2026-10-14부터 폭탄병은 굽잇길 Lv.14에만 산다 — 전에는 사냥터의 Lv.5를 Lv.4가 맞았다)
 	victim.x, victim.y = math.clamp(bomber.x + 24, bomber.a, bomber.b), bomber.y
 	local burst, hurtN = false, 0
 	local hp0 = bomber.hp
@@ -423,7 +433,7 @@ if bomber then
 	expect(hurtN >= 3, ("되풀이해 터뜨린다(%d번)"):format(hurtN))
 	-- 맞으면 다른 몬스터처럼 멈칫하고, 잡히면 경험치를 준다
 	-- (경험치는 잡은 기술의 길로 준다 — 4)의 검사가 본다)
-	room4:damageMob(bomber, 99999, victim.x, victim.id)
+	room4:damageMob(bomber, bomber.hp + 1, victim.x, victim.id) -- (남은 체력보다 큰 한 방 — Lv.14의 체력은 99999를 넘는다)
 	expect(bomber.state == "dead", "폭탄병도 잡힌다")
 end
 
