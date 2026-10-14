@@ -252,11 +252,17 @@ do
 	expect(#first.hits == 1 and first.hits[1].mark == core.time and first.hits[1].crit == nil, "베기에 맞으면 표식 8초(처음 맞을 때는 표식이 없었다)")
 	expect(a.marks ~= nil and a.marks[h.id] == room.time + core.time, "졸개에 표식이 남는다")
 	-- 표식이 있는 적에게 치명타 30%: 피해 1.5배
-	local crits, n = 0, 600
-	for _ = 1, n do
+	--  크리티컬은 줄(숫자 하나)마다 따로 굴린다(타수 나누기 — 2026-10-14) — 줄마다 센다
+	local crits, n = 0, 0
+	for _ = 1, 600 do
 		local e = strike(room, h, "rv_double", 1, nil).hits[1]
+		for i in e.lines or { e.dmg } do
+			n += 1
+			if (e.crits and e.crits[i]) or (not e.crits and e.crit) then
+				crits += 1
+			end
+		end
 		if e.crit then
-			crits += 1
 			expect(e.big == true, "치명타는 센 타로 뜬다")
 		end
 	end

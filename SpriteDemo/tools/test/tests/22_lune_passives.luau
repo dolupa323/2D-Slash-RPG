@@ -345,25 +345,31 @@ do
 	chance = Passives.crit(hero("axion", { rv_mastery = 10 }), false)
 	eq(chance, BASE, "남의 직업의 패시브는 듣지 않는다")
 	-- 방에서: 치명타가 그 확률로 터지고 그 배수로 들어간다(marked = 표식을 달아 두고 친다)
+	--  타수 나누기(2026-10-14)부터 크리티컬은 줄마다 따로 굴린다 — 줄(숫자 하나)마다 센다(사용자: "모든타수가 별개로 크리티컬 확률이 적용되는겁니다")
 	local function crits(class: string, id: string, skills, marked: boolean): (number, number)
 		local h = hero(class, skills)
 		local room, foe = arena(56, h)
 		local hit = COMBAT.skills[id].hits[1]
-		local n, sumCrit, sumPlain, plain = 0, 0, 0, 0
-		for _ = 1, 6000 do
+		local n, sumCrit, sumPlain, plain, all = 0, 0, 0, 0, 0
+		for _ = 1, 2000 do
 			foe.x, foe.state = h.x + 20, "idle"
 			foe.marks = if marked then { [h.id] = room.time + 5 } else nil
 			local e = room:skillHit(h, hit, h.x, h.y, 1, 1, nil, COMBAT.skills[id].type, id).hits[1]
-			if e.crit then
-				n += 1
-				sumCrit += e.dmg
-				expect(e.big, "치명타의 숫자는 크게(밝은 색으로) 뜬다")
-			else
-				plain += 1
-				sumPlain += e.dmg
+			local lines = e.lines or { e.dmg }
+			for i, d in lines do
+				all += 1
+				local crit = if e.crits then e.crits[i] == true else e.crit == true
+				if crit then
+					n += 1
+					sumCrit += d
+					expect(e.big and e.crit, "크리티컬이 든 타는 센 타 · crit으로 온다(화면은 크리티컬인 줄만 밝은 색)")
+				else
+					plain += 1
+					sumPlain += d
+				end
 			end
 		end
-		return n / 6000, (sumCrit / math.max(1, n)) / (sumPlain / math.max(1, plain))
+		return n / all, (sumCrit / math.max(1, n)) / (sumPlain / math.max(1, plain))
 	end
 	local rateA, mulA = crits("axion", "ax_combo", { ax_combo = 20 }, false)
 	near(rateA, BASE / 100, 0.25, "액시온: 치명타 5%쯤")

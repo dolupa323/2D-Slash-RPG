@@ -77,6 +77,7 @@ local STEP = 1 / 60
 local MAX_STEPS = 5 -- 한 화면에 따라잡는 걸음 수(멈칫했다가 순간이동하지 않게)
 local REPORT = 0.1 -- 내 자리를 서버에 알리는 간격(초)
 local RULES = COMBAT.rules
+local LINES = RULES.lines -- 타수 나누기: 줄이 뜨는 사이(stagger초) · 줄 사이의 높이(rise점) — 공방 design/combat.js의 COMBAT.lines
 local UI_HUD = require(lune.data["ui.generated"]).hud
 local QUICK = require(lune.data["ui.generated"]).quick -- 퀵슬롯(칸 수 · 칸마다의 기본 키 · 글)
 local Quick = require(lune.ui.quick)
@@ -1263,18 +1264,29 @@ local function listen()
 			local m = state.mobs and state.mobs:get(h.mob)
 			if m then
 				m.hp = h.hp
-				-- 시험 탭과 같은 자리 · 같은 색: 발밑에서 16도트 위(우두머리는 30)에서 뜬다. 센 타격(치명타도)은 때린 사람 직업의 밝은 색.
+				-- 시험 탭과 같은 자리 · 같은 색: 발밑에서 16도트 위(우두머리는 30)에서 뜬다. 치명타는 때린 사람 직업의 밝은 색(보통의 타는 희다).
 				--  맞는 순간 파편이 튀고, 쓰러지면 세모 파편이 터진다(시험 탭의 hurt)
-				local function land()
-					state.fx:number(h.dmg, m.x, m.info.y - MobsView.topOf(m), if h.big then Effects.BIG[tone] else Effects.DEAL, h.big)
+				--  타수 나누기(sim/lines.luau): 한 타가 여러 줄(h.lines — 줄마다의 피해, 합 = h.dmg)로 오면 메이플처럼 한 줄씩 stagger초 사이로 rise점씩 위에 쌓여 뜬다(다다다다).
+				--   번쩍임 · 파편 · 멈칫은 첫 줄에, 쓰러지는 파편은 마지막 줄에. 데미지 소리는 줄마다
+				local lines = h.lines or { h.dmg }
+				local function land(line: number)
+					local first, last = line == 1, line == #lines
+					-- 색: 보통의 타는 흰 숫자, 크리티컬만 때린 사람 직업의 밝은 색 숫자(사용자 2026-10-14: "크리티컬이 아닌 일반공격이 하얀색, 크리티컬이 뜨는게 색깔들어간 데미지 폰트") — 센 타도 크리티컬이 아니면 희다.
+					--  크리티컬은 줄마다 따로 굴린다(h.crits[몇째 줄] — 서버의 Room:strike). crits가 없으면 그 타 전체가 크리티컬인가(h.crit — 흘리기 · 쪼개지 않은 타)
+					local crit = if h.crits then h.crits[line] == true else h.crit == true
+					state.fx:number(lines[line], m.x, m.info.y - MobsView.topOf(m) - LINES.rise * (line - 1), if crit then Effects.BIG[tone] else Effects.DEAL, crit)
 					-- 타격감(공방 combat.js의 hit): 몬스터가 하얗게 번쩍이며 때린 쪽의 반대로 조금 밀리고, 맞은 자리에 불꽃과 파편이 튄다.
 					--  내가 직접 때린 타(따로 나가는 사출기 · 장치의 타는 빼고)에는 그림이 잠깐 멈칫한다 — gap초에 한 번만(연타가 굼떠지지 않게)
 					local a = actorOf(by)
 					local dir = if m.x >= (if a then a.x else state.body.x) then 1 else -1
-					MobsView.hit(m, state.now, dir)
-					state.cast:hurt(m, Cast.tone(tone), h.big, h.dead, dir)
+					if first then
+						MobsView.hit(m, state.now, dir)
+					end
+					if first or (last and h.dead) then
+						state.cast:hurt(m, Cast.tone(tone), h.big, h.dead and last, dir)
+					end
 					local H = RULES.hit
-					if by == state.myId and not h.proc and state.now - state.holdAt >= H.gap then
+					if first and by == state.myId and not h.proc and state.now - state.holdAt >= H.gap then
 						state.holdAt, state.holdNow = state.now, state.now
 						state.holdT = if h.big or h.dead then H.holdBig else H.hold
 					end
@@ -1286,8 +1298,21 @@ local function listen()
 				end
 				-- 따로 나가는 타(사출기 · 장치): 그 직업의 이펙트가 날아가 닿는 순간에 숫자가 뜬다(달빛 도끼 · 표창 · 도깨비불 · 수정 조각 · 불티 · 불꽃).
 				--  그 사람이 아직 화면에 없으면(방금 들어왔다) 숫자만 바로 띄운다
-				if not (h.proc and state.cast:proc(actorOf(by), h.proc, m, h.sx, h.sy, land, h)) then
-					land()
+				if not (h.proc and state.cast:proc(actorOf(by), h.proc, m, h.sx, h.sy, function()
+					land(1)
+				end, h)) then
+					land(1)
+				end
+				-- 둘째 줄부터: stagger초 사이로 하나씩(그 사이에 장면이 바뀌었으면 띄우지 않는다)
+				if #lines > 1 then
+					local mobsNow = state.mobs
+					for line = 2, #lines do
+						task.delay((line - 1) * LINES.stagger, function()
+							if state.mobs == mobsNow then
+								land(line)
+							end
+						end)
+					end
 				end
 				-- 표식(리븐): 졸개 머리 위에 남는다
 				if h.dead then

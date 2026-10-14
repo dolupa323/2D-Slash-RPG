@@ -17,7 +17,7 @@ return {
 		jobup = { id = "rbxassetid://80598227621761", volume = 0.4, sec = 1.3 },
 	},
 	sfx = {
-		damage = { id = "rbxassetid://102904154168830", volume = 0.5, gap = 0 },
+		damage = { id = "rbxassetid://140612589056574", volume = 0.15, gap = 0, upto = 0.2 },
 		coin = { id = "rbxassetid://79292770217834", volume = 0.4, gap = 0.05 },
 		pick = { id = "rbxassetid://111062578947331", volume = 0.6, gap = 0.05 },
 		gameover = { id = "rbxassetid://107365336695883", volume = 0.6, gap = 1 },

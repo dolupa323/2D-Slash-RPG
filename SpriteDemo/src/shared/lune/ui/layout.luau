@@ -167,11 +167,12 @@ function L.detailHeight(ratio: number, nameLines: number, rows: number, noteLine
 	return h + K.pad
 end
 
--- 장비 창의 속(폭 · 높이)과 오른쪽 덩이의 왼쪽 끝
+-- 장비 창의 속(폭 · 높이)과 오른쪽 덩이의 왼쪽 끝. 높이 = 왼쪽의 다섯 칸과 오른쪽(장신구 두 줄 + 가르는 줄 + 능력치 표) 가운데 큰 것
 function L.equipBody(ratio: number): (number, number, number)
 	local s = L.cellFor(ratio)
 	local rx = s + L.EQUIP.gap + L.EQUIP.textW + L.EQUIP.gap
-	return rx + L.EQUIP.accCols * s, math.max(5 * (s + 2) - 2, 2 * s + 150), rx
+	local sheet = L.EQUIP.sheet
+	return rx + L.EQUIP.accCols * s, math.max(5 * (s + 2) - 2, 2 * s + 12 + sheet.top + #sheet.rows * sheet.row + 4), rx
 end
 
 return L

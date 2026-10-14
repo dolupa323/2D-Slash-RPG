@@ -14,6 +14,7 @@ local root = script.Parent.Parent
 local COMBAT = require(root.data["combat.generated"])
 local Hero = require(root.sim.hero)
 local Caster = require(root.sim.caster)
+local Lines = require(root.sim.lines) -- 타수 나누기: 한 타를 몇 줄로(2026-10-14)
 local Format = require(script.Parent.format)
 
 local WORDS = COMBAT.dmgWords
@@ -61,9 +62,14 @@ function SkillDamage.firstText(id: string, lv: number): string?
 			same = false
 		end
 	end
+	-- 타수 나누기(sim/lines.luau): 한 타가 L줄로 쪼개진다 — 모두의 줄 수와 합을 적는다(줄마다의 %는 반올림하면 한 레벨 올린 것이 묻혀서 합으로. 공방 design/combat.js의 damageText와 같은 글)
+	local L = Lines.first(id)
+	local n = #main * L
 	local out
-	if #main == 1 then
+	if n == 1 then
 		out = Format.fill(WORDS.one, { pct = round(sum) })
+	elseif L > 1 then
+		out = Format.fill(WORDS.sum, { n = n, pct = round(sum) })
 	elseif same then
 		out = Format.fill(WORDS.same, { pct = round(main[1].pct), n = #main })
 	else
@@ -101,9 +107,10 @@ function SkillDamage.cast(id: string, lv: number)
 	if pct < 0.5 or p.measured <= 0 then
 		return nil
 	end
-	local n = round(p.hits)
-	local kind = if def.w then "full" elseif math.abs(p.hits - n) > 0.01 then "avg" elseif n <= 1 then "one" else "sum"
-	return { pct = pct, n = n, kind = kind, time = p.time }
+	local L = Caster.lines(id) -- 타수 나누기: 한 타를 L줄로 — 적는 횟수는 줄의 수
+	local n = round(p.hits) * L
+	local kind = if def.w then "full" elseif math.abs(p.hits - round(p.hits)) > 0.01 then "avg" elseif n <= 1 then "one" else "sum"
+	return { pct = pct, n = n, kind = kind, time = p.time, lines = L }
 end
 
 function SkillDamage.castText(id: string, lv: number): string?

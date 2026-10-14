@@ -17,6 +17,7 @@ local Kit = require(script.Parent.kit)
 local Buffs = require(script.Parent.buffs)
 local Passives = require(script.Parent.passives)
 local Physics = require(script.Parent.physics)
+local Lines = require(script.Parent.lines) -- 타수 나누기(한 타를 여러 줄로)
 
 local CAST = COMBAT.cast
 local RULE = COMBAT.castRule
@@ -215,9 +216,18 @@ local function unitOf(hero, id: string, lv: number): number
 	return def.rate * (base.time + def.cdTime) * scale * charge / p.w
 end
 
+-- 그 스킬의 한 타를 몇 줄로 적는가(타수 나누기 — sim/lines.luau): 빈 방에서 잰 「붙어 있는 적 한 마리가 한 번 쓸 때 맞는 타의 수」로. 극딜기(큰 기술 — nuke)는 더 많이
+function Caster.lines(id: string): number
+	local def = CAST[id]
+	if not def then
+		return 1
+	end
+	return Lines.count(Caster.profile(id, 0).hits, def.type == "nuke")
+end
+
 function Caster:context(a, id: string, lv: number, mates)
 	local def = CAST[id]
-	return { id = id, lv = lv, kind = if def.type == "mob" or def.type == "boss" then def.type else nil, unit = if self.probe then 1 else unitOf(a.hero, id, lv), mates = mates }
+	return { id = id, lv = lv, kind = if def.type == "mob" or def.type == "boss" then def.type else nil, unit = if self.probe then 1 else unitOf(a.hero, id, lv), lines = if self.probe then 1 else Caster.lines(id), mates = mates }
 end
 
 -- 졸개 하나에게 몫 w의 타. 맞았으면 true(landed에 적는다)
@@ -252,8 +262,10 @@ function Caster:strike(a, m, w: number, o, landed): boolean
 	-- 패시브가 그 적에게 붙이는 것(넘어진 적 · 체력 · 거리 · 이어 맞히기 · 모은 단계 · 옛 사냥기)
 	local mul, crit = Passives.vs(hero, m, { skill = ctx.id, charge = ctx.lv, now = room.time }), false
 	-- 치명타: 모든 직업의 기술 타가 확률로(1차와 같은 셈 — sim/room.luau의 skillHit). 흘리기 = 피한 뒤의 첫 베기는 반드시
+	-- 여러 줄로 쪼개지는 타는 줄마다 따로 굴린다(sim/room.luau의 Room:strike의 crit — 흘리기의 반드시 크리티컬은 그 베기의 줄 모두)
 	local critChance, critMul, sure = Passives.crit(hero, room:marksOf(hero, m) > 0)
-	if sure or (critChance > 0 and room.rng:NextNumber(0, 100) < critChance) then
+	local perLine = not o.proc and (ctx.lines or 1) > 1 and not sure
+	if sure or (not perLine and critChance > 0 and room.rng:NextNumber(0, 100) < critChance) then
 		crit = true
 		mul *= critMul
 		if sure then
@@ -269,7 +281,7 @@ function Caster:strike(a, m, w: number, o, landed): boolean
 		extra.crit = true
 	end
 	-- 밀리는 것: 미는 타(kb)만 조금 민다 — 빠르게 여러 번 치는 기술(난도질 · 난타 · 놓인 불길)이 적을 범위 밖으로 밀어내지 않게(시험 탭도 미는 타만 민다)
-	local dead = room:strike(hero, m, dmg, if o.kb then hero.x else m.x, ctx.mates, a.out, extra)
+	local dead, dealt = room:strike(hero, m, dmg, if o.kb then hero.x else m.x, ctx.mates, a.out, extra, if o.proc then nil else ctx.lines, if perLine then { chance = critChance, mul = critMul } else nil) -- 타수 나누기: 사출기처럼 따라 나가는 타는 한 줄
 	m.dead = if dead then 0 else -1
 	if dead then
 		m.cracks, m.bind, m.rend, m.stun, m.mark = 0, 0, 0, 0, 0
@@ -284,7 +296,7 @@ function Caster:strike(a, m, w: number, o, landed): boolean
 			end
 		end
 	end
-	table.insert(landed, { mob = m, dmg = dmg, dead = dead })
+	table.insert(landed, { mob = m, dmg = dealt, dead = dead })
 	return true
 end
 

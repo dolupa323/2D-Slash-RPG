@@ -922,6 +922,31 @@ function Hero.unpack(id: any, data: any)
 end
 
 -- 클라이언트에 보내는 내 상태
+-- 장비 창의 능력치 표(2026-10-14 — 사용자: "장비 탭에 … 현재 스텟, 공격력 등 여러 수치가 다 출력되어야하고 크리티컬 확률, 크리티컬 데미지 이런것도 다 나와야합니다").
+--  서버가 피해 · 맞는 피해를 셈하는 바로 그 값들이다(지금 걸린 버프 · 패시브 · 리퍼의 영혼까지):
+--  atk = 100% 한 타의 피해 { 작게, 크게 }(전투력 x 영혼 x 버프 x 패시브 x 피해 숫자의 배율 · 흩어짐 ±spread% — 메이플의 스탯 공격력. 사냥기 · 보스기가 맞는 상대에게는 +targetBonus%, 치명타는 그 위에 곱한다)
+--  crit = 치명타 확률(%) · critDmg = 치명타 피해(%) · dmg = 주는 피해(버프 · 영혼 +%) · final = 최종 피해(패시브 +%) · haste = 공격 속도(+%)
+--  cut = 받는 피해가 줄어드는 몫(버프 · 패시브 %) · guard = 방어구가 줄여 주는 피해(%, 내 레벨의 몬스터에게) · run · jump = 이동 속도 · 점프력(%)
+function Hero.sheet(h)
+	local dmg = Kit.attack(h) * Buffs.dmg(h)
+	local final = Passives.atk(h)
+	local base = Hero.powerRaw(h) * dmg * final * RULES.dmgScale
+	local chance, mul = Passives.crit(h, false)
+	local run, jump = Kit.move(h)
+	return {
+		atk = { math.floor(base * (1 - RULES.spread / 100) + 0.5), math.floor(base * (1 + RULES.spread / 100) + 0.5) },
+		crit = chance,
+		critDmg = mul * 100,
+		dmg = (dmg - 1) * 100,
+		final = (final - 1) * 100,
+		haste = (Buffs.haste(h) - 1) * 100,
+		cut = (1 - Buffs.cut(h) * Passives.cut(h, false)) * 100,
+		guard = Items.cut(Bag.worn(h), h.level),
+		run = run * 100,
+		jump = jump * 100,
+	}
+end
+
 function Hero.view(h)
 	return {
 		class = h.class,
@@ -941,6 +966,7 @@ function Hero.view(h)
 		sps = { math.max(0, Hero.spLeft(h, 1)), math.max(0, Hero.spLeft(h, 2)), math.max(0, Hero.spLeft(h, 3)), math.max(0, Hero.spLeft(h, 4)) }, -- 차수마다 남은 스킬 포인트
 		skills = h.skills,
 		power = Hero.power(h),
+		sheet = Hero.sheet(h), -- 장비 창의 능력치 표(위의 Hero.sheet)
 		keys = h.keys,
 		slots = h.slots,
 		tslots = h.tslots,

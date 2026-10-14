@@ -13,6 +13,7 @@ local Kit = require(script.Parent.kit)
 local Buffs = require(script.Parent.buffs)
 local Caster = require(script.Parent.caster) -- 2~4차의 쓰는 스킬(직업 묶음의 그 스킬을 방이 돌린다)
 local Passives = require(script.Parent.passives) -- 2~4차의 패시브
+local Lines = require(script.Parent.lines) -- 타수 나누기(한 타를 여러 줄로)
 local Quests = require(script.Parent.quests) -- 스토리 보스: 그 퀘스트를 하는 사람이 있을 때만 선다
 local BossPat = require(script.Parent.bosspat) -- 스토리 보스: 표시된 자리 · 도약 · 물결의 자리와 시간(화면과 같은 셈)
 local RULES = COMBAT.rules
@@ -1071,10 +1072,34 @@ end
 
 -- 졸개 하나에게 피해를 넣고 일을 적는다(out.hits — 쓰러지면 out.kills에 경험치 · 떨어지는 것까지). 쓰러졌으면 true.
 --  extra = 그 타에 붙는 표시: proc(사출기 · 장치의 이름 — "echo" · "star" · "wisp" · "shard" · "ember" · "flame" · "reson") · sx · sy(그것이 날아오는 자리) · crit(치명타) · big(센 타)
-function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra): boolean
+--  lines = 그 타를 몇 줄로 적는가(타수 나누기 — sim/lines.luau. 없으면 1): 피해는 한 번에 넣고(타 하나 = out.hits의 한 칸, dmg = 합), 줄로 쪼갠 숫자는
+--   그 칸의 lines = { 줄마다의 피해 … }(합 = dmg)로 붙인다 — 화면이 줄을 하나씩 위로 쌓아 띄운다(client/lune/boot.luau의 Hits)
+--  crit = { chance(%), mul } — 줄마다 크리티컬을 따로 굴린다(사용자 2026-10-14: "한스킬의 스킬이여도 모든타수가 별개로 크리티컬 확률이 적용되는겁니다").
+--   그때 dmg는 크리티컬 전의 피해다. 크리티컬이 터진 줄만 mul배 · 칸의 crits = { [몇째 줄] = true } · 하나라도 터지면 칸의 crit · big. 합(dmg)은 크리티컬까지 든 것
+--  돌려주는 것: 쓰러졌는가 · 실제로 넣은 피해
+function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, lines: number?, crit): (boolean, number)
 	-- 갈라짐(액시온의 쪼개기)이 걸린 적은 누구에게 맞든 더 아프다
 	if (mob.rend or 0) > 0 then
 		dmg = math.max(1, math.floor(dmg * (1 + CASTRULE.rend) + 0.5))
+	end
+	local parts, crits = nil, nil
+	if (lines or 1) > 1 then
+		self.lineRng = self.lineRng or Random.new() -- 줄마다의 흔들림은 따로 굴린다(피해를 굴리는 self.rng의 차례를 바꾸지 않게)
+		parts = Lines.split(dmg, lines :: number, self.lineRng)
+		if #parts <= 1 then
+			parts = nil
+		elseif crit and crit.chance > 0 then
+			local total = 0
+			for i, d in parts do
+				if self.rng:NextNumber(0, 100) < crit.chance then
+					parts[i] = math.max(1, math.floor(d * crit.mul + 0.5))
+					crits = crits or {}
+					crits[i] = true
+				end
+				total += parts[i]
+			end
+			dmg = total
+		end
 	end
 	local dead = self:damageMob(mob, dmg, fromX, hero.id)
 	local entry = { mob = mob.id, dmg = dmg, hp = mob.hp, dead = dead }
@@ -1082,6 +1107,12 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra): 
 		for k, v in extra do
 			entry[k] = v
 		end
+	end
+	if parts then
+		entry.lines = parts
+	end
+	if crits then
+		entry.crits, entry.crit, entry.big = crits, true, true
 	end
 	table.insert(out.hits, entry)
 	if dead then
@@ -1119,7 +1150,7 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra): 
 				end
 			end
 			table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = 0, ups = 0, gains = gains, loot = {} })
-			return dead
+			return dead, dmg
 		end
 		local list = mates or { hero }
 		local share = Party.share(#list)
@@ -1148,7 +1179,7 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra): 
 		end
 		table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = myXp, ups = myUps, gains = gains, drop = drop, loot = loot })
 	end
-	return dead
+	return dead, dmg
 end
 
 -- 사출기 · 장치가 따로 넣는 한 타(그 졸개 하나에게). (sx, sy) = 그것이 날아오는 자리(화면이 그린다)
@@ -1339,6 +1370,7 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 	local _, _, sure = Passives.crit(hero) -- 흘리기(리븐): 피한 뒤의 첫 베기는 반드시 치명타
 	local out = { hits = {}, kills = {} }
 	local follows = skillId ~= nil and Kit.follows(skillId) and COMBAT.skills[skillId].who == hero.class
+	local lines = Lines.first(skillId) -- 1차의 사냥기 · 보스기: 한 타를 몇 줄로(sim/lines.luau)
 	local landed = {} -- 이 타(제 범위)에 맞은 것들 { mob, dmg, dead }
 	local big = Buffs.big(hero) * Passives.reach(hero) -- 거신 · 낫 숙련 · 영혼 주머니: 기술이 닿는 거리(앞 · 위)가 그만큼 는다
 	-- 상자 하나를 (cx, cy)에서 푼다. share = 피해의 몫(수정의 공명은 그 일부) · tag = 그 타에 붙는 표시(없으면 기술의 제 타)
@@ -1360,8 +1392,10 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 			local fit = if (kind == "mob" and mob.def.boss) or (kind == "boss" and not mob.def.boss) then 1 else 1 + RULES.targetBonus / 100
 			local mul = hit.mul * (scale or 1) * boost * share * Passives.vs(hero, mob, info)
 			-- 치명타: 모든 직업의 기술 타가 확률로(기본 + 패시브 + 리븐의 표식이 있는 적). 흘리기 = 피한 뒤의 첫 베기는 반드시
+			-- 여러 줄로 쪼개지는 기술의 제 타는 줄마다 따로 굴린다(아래 strike의 crit — 흘리기의 반드시 크리티컬은 그 베기의 줄 모두)
 			local critChance, critMul = Passives.crit(hero, self:marksOf(hero, mob) > 0)
-			local crit = sure or (critChance > 0 and self.rng:NextNumber(0, 100) < critChance)
+			local perLine = not tag and lines > 1 and not sure
+			local crit = sure or (not perLine and critChance > 0 and self.rng:NextNumber(0, 100) < critChance)
 			if crit then
 				mul *= critMul
 			end
@@ -1373,7 +1407,7 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 			if crit then
 				extra.crit = true
 			end
-			local dead = self:strike(hero, mob, dmg, cx, mates, out, extra)
+			local dead, dealt = self:strike(hero, mob, dmg, cx, mates, out, extra, if tag then nil else lines, if perLine then { chance = critChance, mul = critMul } else nil) -- 타수 나누기: 기술의 제 타만(사출기 · 공명은 한 줄)
 			if not tag then
 				Passives.onHit(hero, mob, self.time) -- 이어 맞힌 수 · 이어 때린 수(살라맨더의 주먹 숙련 · 몰아붙이기)
 				if not dead and (hit.pull or 0) > 0 then
@@ -1381,7 +1415,7 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 					local toward = if mob.x > x then -1 else 1
 					mob.x = math.clamp(mob.x + toward * math.min(hit.pull, math.max(0, math.abs(mob.x - x) - 10)), mob.a, mob.b)
 				end
-				table.insert(landed, { mob = mob, dmg = dmg, dead = dead })
+				table.insert(landed, { mob = mob, dmg = dealt, dead = dead })
 			end
 		end
 	end

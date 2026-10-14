@@ -712,6 +712,24 @@ do
 		expect(ow + eow + WIN.edge * 2 <= gw - 40, ("게임 %d배: 가방과 장비 창이 양쪽에 떠도 가운데가 남는다(%d + %d / %d)"):format(s, ow, eow, gw))
 		expect(rx >= cell + EQ.gap + EQ.textW and ew - rx == EQ.accCols * cell, "장비 창의 두 덩이가 겹치지 않는다")
 		expect(ew - rx >= 150, ("게임 %d배: 장비 창의 이름 · 단추 칸의 폭 %d"):format(s, ew - rx))
+		-- 능력치 표(2026-10-14): 칸마다 이름 + 값이 그 칸에 든다(가장 긴 값으로) · 표가 창의 높이 안
+		do
+			local Sheet = req("ReplicatedStorage/shared/lune/ui/sheet")
+			local MAX = N.MAX_LEVEL
+			local big = Hero.new(1, "axion")
+			big.level = MAX
+			big.stats = { str = N.apAt(MAX), dex = N.apAt(MAX), int = N.apAt(MAX), luk = N.apAt(MAX), hp = N.apAt(MAX) }
+			local worst = { class = "axion", stats = big.stats, power = 9.99e7, maxHp = N.hpOf("axion", MAX, N.apAt(MAX)) * 2,
+				-- 주는 피해 · 최종 피해 · 공격 속도 · 받는 피해는 두 자리까지 본다: 다섯 직업의 스킬을 다 마스터하고 버프를 다 걸어도 56% · 50% · 35% · 66%(2026-10-14에 재 봄)
+				sheet = { atk = { 9.99e8, 9.99e8 }, crit = 99.5, critDmg = 999.5, dmg = 99, final = 99, haste = 99, cut = 99, guard = 99, run = 199, jump = 199 } }
+			local values = Sheet.values(worst)
+			for _, c in Sheet.cells(ew - rx) do
+				local need = width(Sheet.name(c.id)) + 4 + width(values[c.id] or "")
+				expect(need <= c.w, ("게임 %d배: 능력치 표의 %s(%s)가 제 칸(%d)에 든다 — %d"):format(s, c.id, tostring(values[c.id]), c.w, need))
+				expect(c.x + c.w <= ew - rx, "칸이 오른쪽 덩이 안")
+			end
+			expect(2 * cell + 12 + Sheet.height() <= eh, ("게임 %d배: 능력치 표가 장비 창 안(%d / %d)"):format(s, 2 * cell + 12 + Sheet.height(), eh))
+		end
 		-- 가방: 탭 셋과 가방 수 글(과 줄 넘기는 단추)이 한 줄에 · 단추 셋의 글이 단추 안에
 		local tabs = 0
 		for _, name in D.BAG.tabs do

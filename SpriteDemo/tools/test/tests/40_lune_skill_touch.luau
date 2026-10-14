@@ -107,7 +107,8 @@ do
 				expect(math.abs(got - want) <= n * 0.51, ("적힌 %% = 서버의 피해 %s Lv.%d (적힌 대로면 %.1f, 실제 %d)"):format(sk.id, lv, want, got))
 				-- 글에 적힌 합(정수)도 그 피해와 반올림 안에서 맞는다
 				local list = numbers(SkillDamage.text(sk.id, lv))
-				local shown = if #list == 1 and n > 1 then list[1] * n else list[1]
+				local text = SkillDamage.text(sk.id, lv)
+				local shown = if text:find("번에 나눠", 1, true) then list[1] elseif #list == 1 and n > 1 then list[1] * n else list[1] -- 「n번에 나눠 모두 x%」는 합 · 「x%의 피해로 n번」은 한 타의 것
 				near(got / (Hero.powerRaw(h) * RULES.dmgScale * fit) * 100, shown, 0.02, ("글에 적힌 수 = 실제 피해 %s Lv.%d"):format(sk.id, lv))
 			end
 		end
@@ -202,7 +203,7 @@ do
 		end
 	end
 	expect(shown >= 35, "쓰는 스킬 서른다섯 넘게 % 피해가 적힌다 — " .. shown)
-	expect(kinds.one > 0 and kinds.sum > 0, "한 타짜리와 여러 타짜리가 다 있다")
+	expect(kinds.sum > 0, "여러 타(줄)짜리가 있다 — 타수 나누기(2026-10-14)로 한 타짜리도 여러 줄로 적힌다")
 	eq(kinds.full, 2, "장치를 다 갖췄을 때가 기준인 스킬 둘(공명 폭발 · 열 방출)")
 	-- 2차 레벨 1은 1차 마스터보다 세다는 것이 적힌 수로도 보인다(같은 시간으로 견준다 — 사용자 2026-10-08)
 	for class, c in CLASSES.classes do

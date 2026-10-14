@@ -10394,6 +10394,7 @@ return {
 		reviveWait = 2,
 		critChance = 5,
 		critMul = 1.5,
+		lines = { per = 8, nuke = 15, max = 15, jitter = 0.15, stagger = 0.045, rise = 7 },
 		spike = 5,
 		rest = { wait = 2, every = 1, heal = 10 },
 		startPotions = 10,
@@ -12082,16 +12083,16 @@ return {
 		sl_ember = { "주먹이 맞을 때마다 불티 — 그 타 피해의 12.6%", "주먹이 맞을 때마다 불티 — 그 타 피해의 13.2%", "주먹이 맞을 때마다 불티 — 그 타 피해의 13.8%", "주먹이 맞을 때마다 불티 — 그 타 피해의 14.4%", "주먹이 맞을 때마다 불티 — 그 타 피해의 15%", "주먹이 맞을 때마다 불티 — 그 타 피해의 15.6%", "주먹이 맞을 때마다 불티 — 그 타 피해의 16.2%", "주먹이 맞을 때마다 불티 — 그 타 피해의 16.8%", "주먹이 맞을 때마다 불티 — 그 타 피해의 17.4%", "주먹이 맞을 때마다 불티 — 그 타 피해의 18%" },
 		sl_heat = { "맞힐 때마다 열기 +10 · 50부터 달아오름: 맞힐 때마다 불꽃 — 그 타 피해의 14%", "맞힐 때마다 열기 +10 · 50부터 달아오름: 맞힐 때마다 불꽃 — 그 타 피해의 14.7%", "맞힐 때마다 열기 +10 · 50부터 달아오름: 맞힐 때마다 불꽃 — 그 타 피해의 15.3%", "맞힐 때마다 열기 +10 · 50부터 달아오름: 맞힐 때마다 불꽃 — 그 타 피해의 16%", "맞힐 때마다 열기 +10 · 50부터 달아오름: 맞힐 때마다 불꽃 — 그 타 피해의 16.7%", "맞힐 때마다 열기 +10 · 50부터 달아오름: 맞힐 때마다 불꽃 — 그 타 피해의 17.3%", "맞힐 때마다 열기 +10 · 50부터 달아오름: 맞힐 때마다 불꽃 — 그 타 피해의 18%", "맞힐 때마다 열기 +10 · 50부터 달아오름: 맞힐 때마다 불꽃 — 그 타 피해의 18.7%", "맞힐 때마다 열기 +10 · 50부터 달아오름: 맞힐 때마다 불꽃 — 그 타 피해의 19.3%", "맞힐 때마다 열기 +10 · 50부터 달아오름: 맞힐 때마다 불꽃 — 그 타 피해의 20%" },
 		sl_blood = { "초마다 최대 체력의 0.3%를 되찾는다 · 달아오름 동안 걸음 +7%", "초마다 최대 체력의 0.4%를 되찾는다 · 달아오름 동안 걸음 +7.3%", "초마다 최대 체력의 0.4%를 되찾는다 · 달아오름 동안 걸음 +7.7%", "초마다 최대 체력의 0.4%를 되찾는다 · 달아오름 동안 걸음 +8%", "초마다 최대 체력의 0.4%를 되찾는다 · 달아오름 동안 걸음 +8.3%", "초마다 최대 체력의 0.4%를 되찾는다 · 달아오름 동안 걸음 +8.7%", "초마다 최대 체력의 0.4%를 되찾는다 · 달아오름 동안 걸음 +9%", "초마다 최대 체력의 0.5%를 되찾는다 · 달아오름 동안 걸음 +9.3%", "초마다 최대 체력의 0.5%를 되찾는다 · 달아오름 동안 걸음 +9.7%", "초마다 최대 체력의 0.5%를 되찾는다 · 달아오름 동안 걸음 +10%" },
-		ax_slam = { "2번에 나눠 모두 143%의 피해(100% + 43%) · 범위 밖으로 번진 타 43% · 쓰는 시간 0.9초", "2번에 나눠 모두 147%의 피해(103% + 44%) · 범위 밖으로 번진 타 44% · 쓰는 시간 0.9초", "2번에 나눠 모두 150%의 피해(105% + 45%) · 범위 밖으로 번진 타 45% · 쓰는 시간 0.9초", "2번에 나눠 모두 153%의 피해(107% + 46%) · 범위 밖으로 번진 타 46% · 쓰는 시간 0.9초", "2번에 나눠 모두 156%의 피해(109% + 47%) · 범위 밖으로 번진 타 47% · 쓰는 시간 0.9초", "2번에 나눠 모두 160%의 피해(112% + 48%) · 범위 밖으로 번진 타 48% · 쓰는 시간 0.9초", "2번에 나눠 모두 163%의 피해(114% + 49%) · 범위 밖으로 번진 타 49% · 쓰는 시간 0.9초", "2번에 나눠 모두 166%의 피해(116% + 50%) · 범위 밖으로 번진 타 50% · 쓰는 시간 0.9초", "2번에 나눠 모두 169%의 피해(119% + 51%) · 범위 밖으로 번진 타 51% · 쓰는 시간 0.9초", "2번에 나눠 모두 173%의 피해(121% + 52%) · 범위 밖으로 번진 타 52% · 쓰는 시간 0.9초", "2번에 나눠 모두 176%의 피해(123% + 53%) · 범위 밖으로 번진 타 53% · 쓰는 시간 0.9초", "2번에 나눠 모두 179%의 피해(125% + 54%) · 범위 밖으로 번진 타 54% · 쓰는 시간 0.9초", "2번에 나눠 모두 182%의 피해(128% + 55%) · 범위 밖으로 번진 타 55% · 쓰는 시간 0.9초", "2번에 나눠 모두 186%의 피해(130% + 56%) · 범위 밖으로 번진 타 56% · 쓰는 시간 0.9초", "2번에 나눠 모두 189%의 피해(132% + 57%) · 범위 밖으로 번진 타 57% · 쓰는 시간 0.9초", "2번에 나눠 모두 192%의 피해(134% + 58%) · 범위 밖으로 번진 타 58% · 쓰는 시간 0.9초", "2번에 나눠 모두 195%의 피해(137% + 59%) · 범위 밖으로 번진 타 59% · 쓰는 시간 0.9초", "2번에 나눠 모두 198%의 피해(139% + 60%) · 범위 밖으로 번진 타 60% · 쓰는 시간 0.9초", "2번에 나눠 모두 202%의 피해(141% + 61%) · 범위 밖으로 번진 타 61% · 쓰는 시간 0.9초", "2번에 나눠 모두 205%의 피해(143% + 61%) · 범위 밖으로 번진 타 61% · 쓰는 시간 0.9초" },
-		ax_combo = { "3번에 나눠 모두 287%의 피해(72% + 72% + 143%) · 쓰는 시간 1.2초", "3번에 나눠 모두 293%의 피해(73% + 73% + 147%) · 쓰는 시간 1.2초", "3번에 나눠 모두 300%의 피해(75% + 75% + 150%) · 쓰는 시간 1.2초", "3번에 나눠 모두 306%의 피해(77% + 77% + 153%) · 쓰는 시간 1.2초", "3번에 나눠 모두 313%의 피해(78% + 78% + 156%) · 쓰는 시간 1.2초", "3번에 나눠 모두 319%의 피해(80% + 80% + 160%) · 쓰는 시간 1.2초", "3번에 나눠 모두 326%의 피해(81% + 81% + 163%) · 쓰는 시간 1.2초", "3번에 나눠 모두 332%의 피해(83% + 83% + 166%) · 쓰는 시간 1.2초", "3번에 나눠 모두 339%의 피해(85% + 85% + 169%) · 쓰는 시간 1.2초", "3번에 나눠 모두 345%의 피해(86% + 86% + 173%) · 쓰는 시간 1.2초", "3번에 나눠 모두 352%의 피해(88% + 88% + 176%) · 쓰는 시간 1.2초", "3번에 나눠 모두 358%의 피해(90% + 90% + 179%) · 쓰는 시간 1.2초", "3번에 나눠 모두 365%의 피해(91% + 91% + 182%) · 쓰는 시간 1.2초", "3번에 나눠 모두 371%의 피해(93% + 93% + 186%) · 쓰는 시간 1.2초", "3번에 나눠 모두 378%의 피해(94% + 94% + 189%) · 쓰는 시간 1.2초", "3번에 나눠 모두 384%의 피해(96% + 96% + 192%) · 쓰는 시간 1.2초", "3번에 나눠 모두 390%의 피해(98% + 98% + 195%) · 쓰는 시간 1.2초", "3번에 나눠 모두 397%의 피해(99% + 99% + 198%) · 쓰는 시간 1.2초", "3번에 나눠 모두 403%의 피해(101% + 101% + 202%) · 쓰는 시간 1.2초", "3번에 나눠 모두 410%의 피해(102% + 102% + 205%) · 쓰는 시간 1.2초" },
-		rv_fan = { "92%의 피해로 공격 · 쓰는 시간 0.6초", "94%의 피해로 공격 · 쓰는 시간 0.6초", "96%의 피해로 공격 · 쓰는 시간 0.6초", "98%의 피해로 공격 · 쓰는 시간 0.6초", "100%의 피해로 공격 · 쓰는 시간 0.6초", "102%의 피해로 공격 · 쓰는 시간 0.6초", "104%의 피해로 공격 · 쓰는 시간 0.6초", "106%의 피해로 공격 · 쓰는 시간 0.6초", "108%의 피해로 공격 · 쓰는 시간 0.6초", "110%의 피해로 공격 · 쓰는 시간 0.6초", "112%의 피해로 공격 · 쓰는 시간 0.6초", "114%의 피해로 공격 · 쓰는 시간 0.6초", "116%의 피해로 공격 · 쓰는 시간 0.6초", "118%의 피해로 공격 · 쓰는 시간 0.6초", "121%의 피해로 공격 · 쓰는 시간 0.6초", "123%의 피해로 공격 · 쓰는 시간 0.6초", "125%의 피해로 공격 · 쓰는 시간 0.6초", "127%의 피해로 공격 · 쓰는 시간 0.6초", "129%의 피해로 공격 · 쓰는 시간 0.6초", "131%의 피해로 공격 · 쓰는 시간 0.6초" },
-		rv_double = { "3번에 나눠 모두 173%의 피해(58% + 29% + 87%) · 쓰는 시간 0.7초", "3번에 나눠 모두 177%의 피해(59% + 29% + 89%) · 쓰는 시간 0.7초", "3번에 나눠 모두 181%의 피해(60% + 30% + 90%) · 쓰는 시간 0.7초", "3번에 나눠 모두 185%의 피해(62% + 31% + 92%) · 쓰는 시간 0.7초", "3번에 나눠 모두 189%의 피해(63% + 31% + 94%) · 쓰는 시간 0.7초", "3번에 나눠 모두 193%의 피해(64% + 32% + 96%) · 쓰는 시간 0.7초", "3번에 나눠 모두 197%의 피해(66% + 33% + 98%) · 쓰는 시간 0.7초", "3번에 나눠 모두 200%의 피해(67% + 33% + 100%) · 쓰는 시간 0.7초", "3번에 나눠 모두 204%의 피해(68% + 34% + 102%) · 쓰는 시간 0.7초", "3번에 나눠 모두 208%의 피해(69% + 35% + 104%) · 쓰는 시간 0.7초", "3번에 나눠 모두 212%의 피해(71% + 35% + 106%) · 쓰는 시간 0.7초", "3번에 나눠 모두 216%의 피해(72% + 36% + 108%) · 쓰는 시간 0.7초", "3번에 나눠 모두 220%의 피해(73% + 37% + 110%) · 쓰는 시간 0.7초", "3번에 나눠 모두 224%의 피해(75% + 37% + 112%) · 쓰는 시간 0.7초", "3번에 나눠 모두 228%의 피해(76% + 38% + 114%) · 쓰는 시간 0.7초", "3번에 나눠 모두 232%의 피해(77% + 39% + 116%) · 쓰는 시간 0.7초", "3번에 나눠 모두 236%의 피해(79% + 39% + 118%) · 쓰는 시간 0.7초", "3번에 나눠 모두 239%의 피해(80% + 40% + 120%) · 쓰는 시간 0.7초", "3번에 나눠 모두 243%의 피해(81% + 41% + 122%) · 쓰는 시간 0.7초", "3번에 나눠 모두 247%의 피해(82% + 41% + 124%) · 쓰는 시간 0.7초" },
-		rp_double = { "2번에 나눠 모두 108%의 피해(46% + 62%) · 쓰는 시간 0.7초", "2번에 나눠 모두 111%의 피해(47% + 63%) · 쓰는 시간 0.7초", "2번에 나눠 모두 113%의 피해(49% + 65%) · 쓰는 시간 0.7초", "2번에 나눠 모두 116%의 피해(50% + 66%) · 쓰는 시간 0.7초", "2번에 나눠 모두 118%의 피해(51% + 67%) · 쓰는 시간 0.7초", "2번에 나눠 모두 121%의 피해(52% + 69%) · 쓰는 시간 0.7초", "2번에 나눠 모두 123%의 피해(53% + 70%) · 쓰는 시간 0.7초", "2번에 나눠 모두 125%의 피해(54% + 72%) · 쓰는 시간 0.7초", "2번에 나눠 모두 128%의 피해(55% + 73%) · 쓰는 시간 0.7초", "2번에 나눠 모두 130%의 피해(56% + 74%) · 쓰는 시간 0.7초", "2번에 나눠 모두 133%의 피해(57% + 76%) · 쓰는 시간 0.7초", "2번에 나눠 모두 135%의 피해(58% + 77%) · 쓰는 시간 0.7초", "2번에 나눠 모두 138%의 피해(59% + 79%) · 쓰는 시간 0.7초", "2번에 나눠 모두 140%의 피해(60% + 80%) · 쓰는 시간 0.7초", "2번에 나눠 모두 142%의 피해(61% + 81%) · 쓰는 시간 0.7초", "2번에 나눠 모두 145%의 피해(62% + 83%) · 쓰는 시간 0.7초", "2번에 나눠 모두 147%의 피해(63% + 84%) · 쓰는 시간 0.7초", "2번에 나눠 모두 150%의 피해(64% + 86%) · 쓰는 시간 0.7초", "2번에 나눠 모두 152%의 피해(65% + 87%) · 쓰는 시간 0.7초", "2번에 나눠 모두 155%의 피해(66% + 88%) · 쓰는 시간 0.7초" },
-		rp_hook = { "2번에 나눠 모두 149%의 피해(64% + 85%) · 쓰는 시간 0.6초", "2번에 나눠 모두 152%의 피해(65% + 87%) · 쓰는 시간 0.6초", "2번에 나눠 모두 155%의 피해(67% + 89%) · 쓰는 시간 0.6초", "2번에 나눠 모두 159%의 피해(68% + 91%) · 쓰는 시간 0.6초", "2번에 나눠 모두 162%의 피해(70% + 93%) · 쓰는 시간 0.6초", "2번에 나눠 모두 166%의 피해(71% + 95%) · 쓰는 시간 0.6초", "2번에 나눠 모두 169%의 피해(72% + 97%) · 쓰는 시간 0.6초", "2번에 나눠 모두 172%의 피해(74% + 98%) · 쓰는 시간 0.6초", "2번에 나눠 모두 176%의 피해(75% + 100%) · 쓰는 시간 0.6초", "2번에 나눠 모두 179%의 피해(77% + 102%) · 쓰는 시간 0.6초", "2번에 나눠 모두 182%의 피해(78% + 104%) · 쓰는 시간 0.6초", "2번에 나눠 모두 186%의 피해(80% + 106%) · 쓰는 시간 0.6초", "2번에 나눠 모두 189%의 피해(81% + 108%) · 쓰는 시간 0.6초", "2번에 나눠 모두 192%의 피해(82% + 110%) · 쓰는 시간 0.6초", "2번에 나눠 모두 196%의 피해(84% + 112%) · 쓰는 시간 0.6초", "2번에 나눠 모두 199%의 피해(85% + 114%) · 쓰는 시간 0.6초", "2번에 나눠 모두 202%의 피해(87% + 116%) · 쓰는 시간 0.6초", "2번에 나눠 모두 206%의 피해(88% + 118%) · 쓰는 시간 0.6초", "2번에 나눠 모두 209%의 피해(90% + 120%) · 쓰는 시간 0.6초", "2번에 나눠 모두 213%의 피해(91% + 121%) · 쓰는 시간 0.6초" },
-		mn_spin = { "144%의 피해로 공격 · 쓰는 시간 0.9초", "148%의 피해로 공격 · 쓰는 시간 0.9초", "151%의 피해로 공격 · 쓰는 시간 0.9초", "154%의 피해로 공격 · 쓰는 시간 0.9초", "157%의 피해로 공격 · 쓰는 시간 0.9초", "161%의 피해로 공격 · 쓰는 시간 0.9초", "164%의 피해로 공격 · 쓰는 시간 0.9초", "167%의 피해로 공격 · 쓰는 시간 0.9초", "170%의 피해로 공격 · 쓰는 시간 0.9초", "174%의 피해로 공격 · 쓰는 시간 0.9초", "177%의 피해로 공격 · 쓰는 시간 0.9초", "180%의 피해로 공격 · 쓰는 시간 0.9초", "183%의 피해로 공격 · 쓰는 시간 0.9초", "187%의 피해로 공격 · 쓰는 시간 0.9초", "190%의 피해로 공격 · 쓰는 시간 0.9초", "193%의 피해로 공격 · 쓰는 시간 0.9초", "196%의 피해로 공격 · 쓰는 시간 0.9초", "200%의 피해로 공격 · 쓰는 시간 0.9초", "203%의 피해로 공격 · 쓰는 시간 0.9초", "206%의 피해로 공격 · 쓰는 시간 0.9초" },
-		mn_thrust = { "208%의 피해로 공격 · 쓰는 시간 0.9초", "213%의 피해로 공격 · 쓰는 시간 0.9초", "218%의 피해로 공격 · 쓰는 시간 0.9초", "222%의 피해로 공격 · 쓰는 시간 0.9초", "227%의 피해로 공격 · 쓰는 시간 0.9초", "232%의 피해로 공격 · 쓰는 시간 0.9초", "236%의 피해로 공격 · 쓰는 시간 0.9초", "241%의 피해로 공격 · 쓰는 시간 0.9초", "246%의 피해로 공격 · 쓰는 시간 0.9초", "251%의 피해로 공격 · 쓰는 시간 0.9초", "255%의 피해로 공격 · 쓰는 시간 0.9초", "260%의 피해로 공격 · 쓰는 시간 0.9초", "265%의 피해로 공격 · 쓰는 시간 0.9초", "269%의 피해로 공격 · 쓰는 시간 0.9초", "274%의 피해로 공격 · 쓰는 시간 0.9초", "279%의 피해로 공격 · 쓰는 시간 0.9초", "283%의 피해로 공격 · 쓰는 시간 0.9초", "288%의 피해로 공격 · 쓰는 시간 0.9초", "293%의 피해로 공격 · 쓰는 시간 0.9초", "298%의 피해로 공격 · 쓰는 시간 0.9초" },
-		sl_beam = { "56%의 피해로 3번 공격 · 쓰는 시간 1.0초", "57%의 피해로 3번 공격 · 쓰는 시간 1.0초", "58%의 피해로 3번 공격 · 쓰는 시간 1.0초", "59%의 피해로 3번 공격 · 쓰는 시간 1.0초", "61%의 피해로 3번 공격 · 쓰는 시간 1.0초", "62%의 피해로 3번 공격 · 쓰는 시간 1.0초", "63%의 피해로 3번 공격 · 쓰는 시간 1.0초", "64%의 피해로 3번 공격 · 쓰는 시간 1.0초", "66%의 피해로 3번 공격 · 쓰는 시간 1.0초", "67%의 피해로 3번 공격 · 쓰는 시간 1.0초", "68%의 피해로 3번 공격 · 쓰는 시간 1.0초", "69%의 피해로 3번 공격 · 쓰는 시간 1.0초", "71%의 피해로 3번 공격 · 쓰는 시간 1.0초", "72%의 피해로 3번 공격 · 쓰는 시간 1.0초", "73%의 피해로 3번 공격 · 쓰는 시간 1.0초", "74%의 피해로 3번 공격 · 쓰는 시간 1.0초", "76%의 피해로 3번 공격 · 쓰는 시간 1.0초", "77%의 피해로 3번 공격 · 쓰는 시간 1.0초", "78%의 피해로 3번 공격 · 쓰는 시간 1.0초", "79%의 피해로 3번 공격 · 쓰는 시간 1.0초" },
-		sl_punch = { "2번에 나눠 모두 184%의 피해(69% + 115%) · 쓰는 시간 0.8초", "2번에 나눠 모두 188%의 피해(71% + 118%) · 쓰는 시간 0.8초", "2번에 나눠 모두 192%의 피해(72% + 120%) · 쓰는 시간 0.8초", "2번에 나눠 모두 196%의 피해(74% + 123%) · 쓰는 시간 0.8초", "2번에 나눠 모두 200%의 피해(75% + 125%) · 쓰는 시간 0.8초", "2번에 나눠 모두 205%의 피해(77% + 128%) · 쓰는 시간 0.8초", "2번에 나눠 모두 209%의 피해(78% + 130%) · 쓰는 시간 0.8초", "2번에 나눠 모두 213%의 피해(80% + 133%) · 쓰는 시간 0.8초", "2번에 나눠 모두 217%의 피해(81% + 136%) · 쓰는 시간 0.8초", "2번에 나눠 모두 221%의 피해(83% + 138%) · 쓰는 시간 0.8초", "2번에 나눠 모두 225%의 피해(85% + 141%) · 쓰는 시간 0.8초", "2번에 나눠 모두 230%의 피해(86% + 143%) · 쓰는 시간 0.8초", "2번에 나눠 모두 234%의 피해(88% + 146%) · 쓰는 시간 0.8초", "2번에 나눠 모두 238%의 피해(89% + 149%) · 쓰는 시간 0.8초", "2번에 나눠 모두 242%의 피해(91% + 151%) · 쓰는 시간 0.8초", "2번에 나눠 모두 246%의 피해(92% + 154%) · 쓰는 시간 0.8초", "2번에 나눠 모두 250%의 피해(94% + 156%) · 쓰는 시간 0.8초", "2번에 나눠 모두 254%의 피해(95% + 159%) · 쓰는 시간 0.8초", "2번에 나눠 모두 259%의 피해(97% + 162%) · 쓰는 시간 0.8초", "2번에 나눠 모두 263%의 피해(99% + 164%) · 쓰는 시간 0.8초" },
+		ax_slam = { "8번에 나눠 모두 143%의 피해 · 범위 밖으로 번진 타 43% · 쓰는 시간 0.9초", "8번에 나눠 모두 147%의 피해 · 범위 밖으로 번진 타 44% · 쓰는 시간 0.9초", "8번에 나눠 모두 150%의 피해 · 범위 밖으로 번진 타 45% · 쓰는 시간 0.9초", "8번에 나눠 모두 153%의 피해 · 범위 밖으로 번진 타 46% · 쓰는 시간 0.9초", "8번에 나눠 모두 156%의 피해 · 범위 밖으로 번진 타 47% · 쓰는 시간 0.9초", "8번에 나눠 모두 160%의 피해 · 범위 밖으로 번진 타 48% · 쓰는 시간 0.9초", "8번에 나눠 모두 163%의 피해 · 범위 밖으로 번진 타 49% · 쓰는 시간 0.9초", "8번에 나눠 모두 166%의 피해 · 범위 밖으로 번진 타 50% · 쓰는 시간 0.9초", "8번에 나눠 모두 169%의 피해 · 범위 밖으로 번진 타 51% · 쓰는 시간 0.9초", "8번에 나눠 모두 173%의 피해 · 범위 밖으로 번진 타 52% · 쓰는 시간 0.9초", "8번에 나눠 모두 176%의 피해 · 범위 밖으로 번진 타 53% · 쓰는 시간 0.9초", "8번에 나눠 모두 179%의 피해 · 범위 밖으로 번진 타 54% · 쓰는 시간 0.9초", "8번에 나눠 모두 182%의 피해 · 범위 밖으로 번진 타 55% · 쓰는 시간 0.9초", "8번에 나눠 모두 186%의 피해 · 범위 밖으로 번진 타 56% · 쓰는 시간 0.9초", "8번에 나눠 모두 189%의 피해 · 범위 밖으로 번진 타 57% · 쓰는 시간 0.9초", "8번에 나눠 모두 192%의 피해 · 범위 밖으로 번진 타 58% · 쓰는 시간 0.9초", "8번에 나눠 모두 195%의 피해 · 범위 밖으로 번진 타 59% · 쓰는 시간 0.9초", "8번에 나눠 모두 198%의 피해 · 범위 밖으로 번진 타 60% · 쓰는 시간 0.9초", "8번에 나눠 모두 202%의 피해 · 범위 밖으로 번진 타 61% · 쓰는 시간 0.9초", "8번에 나눠 모두 205%의 피해 · 범위 밖으로 번진 타 61% · 쓰는 시간 0.9초" },
+		ax_combo = { "9번에 나눠 모두 287%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 293%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 300%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 306%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 313%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 319%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 326%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 332%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 339%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 345%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 352%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 358%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 365%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 371%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 378%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 384%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 390%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 397%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 403%의 피해 · 쓰는 시간 1.2초", "9번에 나눠 모두 410%의 피해 · 쓰는 시간 1.2초" },
+		rv_fan = { "8번에 나눠 모두 92%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 94%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 96%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 98%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 100%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 102%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 104%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 106%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 108%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 110%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 112%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 114%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 116%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 118%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 121%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 123%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 125%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 127%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 129%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 131%의 피해 · 쓰는 시간 0.6초" },
+		rv_double = { "9번에 나눠 모두 173%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 177%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 181%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 185%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 189%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 193%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 197%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 200%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 204%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 208%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 212%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 216%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 220%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 224%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 228%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 232%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 236%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 239%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 243%의 피해 · 쓰는 시간 0.7초", "9번에 나눠 모두 247%의 피해 · 쓰는 시간 0.7초" },
+		rp_double = { "8번에 나눠 모두 108%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 111%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 113%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 116%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 118%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 121%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 123%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 125%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 128%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 130%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 133%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 135%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 138%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 140%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 142%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 145%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 147%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 150%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 152%의 피해 · 쓰는 시간 0.7초", "8번에 나눠 모두 155%의 피해 · 쓰는 시간 0.7초" },
+		rp_hook = { "8번에 나눠 모두 149%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 152%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 155%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 159%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 162%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 166%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 169%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 172%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 176%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 179%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 182%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 186%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 189%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 192%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 196%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 199%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 202%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 206%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 209%의 피해 · 쓰는 시간 0.6초", "8번에 나눠 모두 213%의 피해 · 쓰는 시간 0.6초" },
+		mn_spin = { "8번에 나눠 모두 144%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 148%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 151%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 154%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 157%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 161%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 164%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 167%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 170%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 174%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 177%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 180%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 183%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 187%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 190%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 193%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 196%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 200%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 203%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 206%의 피해 · 쓰는 시간 0.9초" },
+		mn_thrust = { "8번에 나눠 모두 208%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 213%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 218%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 222%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 227%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 232%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 236%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 241%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 246%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 251%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 255%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 260%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 265%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 269%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 274%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 279%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 283%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 288%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 293%의 피해 · 쓰는 시간 0.9초", "8번에 나눠 모두 298%의 피해 · 쓰는 시간 0.9초" },
+		sl_beam = { "9번에 나눠 모두 167%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 170%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 174%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 178%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 182%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 185%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 189%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 193%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 197%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 200%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 204%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 208%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 212%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 215%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 219%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 223%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 227%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 230%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 234%의 피해 · 쓰는 시간 1.0초", "9번에 나눠 모두 238%의 피해 · 쓰는 시간 1.0초" },
+		sl_punch = { "8번에 나눠 모두 184%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 188%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 192%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 196%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 200%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 205%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 209%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 213%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 217%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 221%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 225%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 230%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 234%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 238%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 242%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 246%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 250%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 254%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 259%의 피해 · 쓰는 시간 0.8초", "8번에 나눠 모두 263%의 피해 · 쓰는 시간 0.8초" },
 		ax_breath = { "공격 속도 +17.5% — 60초", "공격 속도 +18.3% — 60초", "공격 속도 +19.2% — 60초", "공격 속도 +20% — 60초", "공격 속도 +20.8% — 60초", "공격 속도 +21.7% — 60초", "공격 속도 +22.5% — 60초", "공격 속도 +23.3% — 60초", "공격 속도 +24.2% — 60초", "공격 속도 +25% — 60초" },
 		rv_quick = { "공격 속도 +17.5% — 60초", "공격 속도 +18.3% — 60초", "공격 속도 +19.2% — 60초", "공격 속도 +20% — 60초", "공격 속도 +20.8% — 60초", "공격 속도 +21.7% — 60초", "공격 속도 +22.5% — 60초", "공격 속도 +23.3% — 60초", "공격 속도 +24.2% — 60초", "공격 속도 +25% — 60초" },
 		rp_chill = { "공격 속도 +17.5% — 60초", "공격 속도 +18.3% — 60초", "공격 속도 +19.2% — 60초", "공격 속도 +20% — 60초", "공격 속도 +20.8% — 60초", "공격 속도 +21.7% — 60초", "공격 속도 +22.5% — 60초", "공격 속도 +23.3% — 60초", "공격 속도 +24.2% — 60초", "공격 속도 +25% — 60초" },
@@ -16481,7 +16482,7 @@ return {
 		jobup = { id = "rbxassetid://80598227621761", volume = 0.4, sec = 1.3 },
 	},
 	sfx = {
-		damage = { id = "rbxassetid://102904154168830", volume = 0.5, gap = 0 },
+		damage = { id = "rbxassetid://140612589056574", volume = 0.15, gap = 0, upto = 0.2 },
 		coin = { id = "rbxassetid://79292770217834", volume = 0.4, gap = 0.05 },
 		pick = { id = "rbxassetid://111062578947331", volume = 0.6, gap = 0.05 },
 		gameover = { id = "rbxassetid://107365336695883", volume = 0.6, gap = 1 },
@@ -34203,7 +34204,29 @@ return {
 		bag = { cols = 6, rows = 4, gridY = 22, footH = 74, footY = 10, purseY = 39, gap = 8, countW = 70, scrollW = 36, sortW = 64, growW = 118 },
 		store = { gridY = 22, footH = 46, footY = 10, sortW = 64 },
 		detail = { w = 232, pad = 12, gap = 8, nameLines = 2, nameLine = 16, subGap = 4, rowTop = 10, rowH = 16, labelW = 80, noteTop = 8, noteLine = 15, noteLines = 2, btnTop = 10, btnGap = 6, btnCols = 3, stepW = 34, closeW = 16 },
-		equip = { textW = 70, accCols = 4, gap = 8 },
+		equip = {
+			textW = 70,
+			accCols = 4,
+			gap = 8,
+			sheet = {
+				top = 8,
+				row = 14,
+				colGap = 8,
+				rows = {
+					{ "atk" },
+					{ "power", "maxHp" },
+					{ "str", "dex" },
+					{ "int", "luk" },
+					{ "hp", "guard" },
+					{ "critRate" },
+					{ "critDmg" },
+					{ "dmg", "final" },
+					{ "haste", "cut" },
+					{ "run", "jump" },
+				},
+				names = { atk = "공격력", power = "전투력", maxHp = "최대 체력", guard = "방어", critRate = "크리티컬 확률", critDmg = "크리티컬 데미지", dmg = "주는 피해", final = "최종 피해", haste = "공격 속도", cut = "받는 피해", run = "이동 속도", jump = "점프력" },
+			},
+		},
 		daily = { w = 300, top = 24, row = 56, btnW = 68, barH = 4, payY = 8, payRow = 22, labelW = 84 },
 		sound = {
 			w = 300,
@@ -41361,6 +41384,7 @@ local Kit = require(script.Parent.kit)
 local Buffs = require(script.Parent.buffs)
 local Passives = require(script.Parent.passives)
 local Physics = require(script.Parent.physics)
+local Lines = require(script.Parent.lines) -- 타수 나누기(한 타를 여러 줄로)
 
 local CAST = COMBAT.cast
 local RULE = COMBAT.castRule
@@ -41559,9 +41583,18 @@ local function unitOf(hero, id: string, lv: number): number
 	return def.rate * (base.time + def.cdTime) * scale * charge / p.w
 end
 
+-- 그 스킬의 한 타를 몇 줄로 적는가(타수 나누기 — sim/lines.luau): 빈 방에서 잰 「붙어 있는 적 한 마리가 한 번 쓸 때 맞는 타의 수」로. 극딜기(큰 기술 — nuke)는 더 많이
+function Caster.lines(id: string): number
+	local def = CAST[id]
+	if not def then
+		return 1
+	end
+	return Lines.count(Caster.profile(id, 0).hits, def.type == "nuke")
+end
+
 function Caster:context(a, id: string, lv: number, mates)
 	local def = CAST[id]
-	return { id = id, lv = lv, kind = if def.type == "mob" or def.type == "boss" then def.type else nil, unit = if self.probe then 1 else unitOf(a.hero, id, lv), mates = mates }
+	return { id = id, lv = lv, kind = if def.type == "mob" or def.type == "boss" then def.type else nil, unit = if self.probe then 1 else unitOf(a.hero, id, lv), lines = if self.probe then 1 else Caster.lines(id), mates = mates }
 end
 
 -- 졸개 하나에게 몫 w의 타. 맞았으면 true(landed에 적는다)
@@ -41596,8 +41629,10 @@ function Caster:strike(a, m, w: number, o, landed): boolean
 	-- 패시브가 그 적에게 붙이는 것(넘어진 적 · 체력 · 거리 · 이어 맞히기 · 모은 단계 · 옛 사냥기)
 	local mul, crit = Passives.vs(hero, m, { skill = ctx.id, charge = ctx.lv, now = room.time }), false
 	-- 치명타: 모든 직업의 기술 타가 확률로(1차와 같은 셈 — sim/room.luau의 skillHit). 흘리기 = 피한 뒤의 첫 베기는 반드시
+	-- 여러 줄로 쪼개지는 타는 줄마다 따로 굴린다(sim/room.luau의 Room:strike의 crit — 흘리기의 반드시 크리티컬은 그 베기의 줄 모두)
 	local critChance, critMul, sure = Passives.crit(hero, room:marksOf(hero, m) > 0)
-	if sure or (critChance > 0 and room.rng:NextNumber(0, 100) < critChance) then
+	local perLine = not o.proc and (ctx.lines or 1) > 1 and not sure
+	if sure or (not perLine and critChance > 0 and room.rng:NextNumber(0, 100) < critChance) then
 		crit = true
 		mul *= critMul
 		if sure then
@@ -41613,7 +41648,7 @@ function Caster:strike(a, m, w: number, o, landed): boolean
 		extra.crit = true
 	end
 	-- 밀리는 것: 미는 타(kb)만 조금 민다 — 빠르게 여러 번 치는 기술(난도질 · 난타 · 놓인 불길)이 적을 범위 밖으로 밀어내지 않게(시험 탭도 미는 타만 민다)
-	local dead = room:strike(hero, m, dmg, if o.kb then hero.x else m.x, ctx.mates, a.out, extra)
+	local dead, dealt = room:strike(hero, m, dmg, if o.kb then hero.x else m.x, ctx.mates, a.out, extra, if o.proc then nil else ctx.lines, if perLine then { chance = critChance, mul = critMul } else nil) -- 타수 나누기: 사출기처럼 따라 나가는 타는 한 줄
 	m.dead = if dead then 0 else -1
 	if dead then
 		m.cracks, m.bind, m.rend, m.stun, m.mark = 0, 0, 0, 0, 0
@@ -41628,7 +41663,7 @@ function Caster:strike(a, m, w: number, o, landed): boolean
 			end
 		end
 	end
-	table.insert(landed, { mob = m, dmg = dmg, dead = dead })
+	table.insert(landed, { mob = m, dmg = dealt, dead = dead })
 	return true
 end
 
@@ -43547,6 +43582,31 @@ function Hero.unpack(id: any, data: any)
 end
 
 -- 클라이언트에 보내는 내 상태
+-- 장비 창의 능력치 표(2026-10-14 — 사용자: "장비 탭에 … 현재 스텟, 공격력 등 여러 수치가 다 출력되어야하고 크리티컬 확률, 크리티컬 데미지 이런것도 다 나와야합니다").
+--  서버가 피해 · 맞는 피해를 셈하는 바로 그 값들이다(지금 걸린 버프 · 패시브 · 리퍼의 영혼까지):
+--  atk = 100% 한 타의 피해 { 작게, 크게 }(전투력 x 영혼 x 버프 x 패시브 x 피해 숫자의 배율 · 흩어짐 ±spread% — 메이플의 스탯 공격력. 사냥기 · 보스기가 맞는 상대에게는 +targetBonus%, 치명타는 그 위에 곱한다)
+--  crit = 치명타 확률(%) · critDmg = 치명타 피해(%) · dmg = 주는 피해(버프 · 영혼 +%) · final = 최종 피해(패시브 +%) · haste = 공격 속도(+%)
+--  cut = 받는 피해가 줄어드는 몫(버프 · 패시브 %) · guard = 방어구가 줄여 주는 피해(%, 내 레벨의 몬스터에게) · run · jump = 이동 속도 · 점프력(%)
+function Hero.sheet(h)
+	local dmg = Kit.attack(h) * Buffs.dmg(h)
+	local final = Passives.atk(h)
+	local base = Hero.powerRaw(h) * dmg * final * RULES.dmgScale
+	local chance, mul = Passives.crit(h, false)
+	local run, jump = Kit.move(h)
+	return {
+		atk = { math.floor(base * (1 - RULES.spread / 100) + 0.5), math.floor(base * (1 + RULES.spread / 100) + 0.5) },
+		crit = chance,
+		critDmg = mul * 100,
+		dmg = (dmg - 1) * 100,
+		final = (final - 1) * 100,
+		haste = (Buffs.haste(h) - 1) * 100,
+		cut = (1 - Buffs.cut(h) * Passives.cut(h, false)) * 100,
+		guard = Items.cut(Bag.worn(h), h.level),
+		run = run * 100,
+		jump = jump * 100,
+	}
+end
+
 function Hero.view(h)
 	return {
 		class = h.class,
@@ -43566,6 +43626,7 @@ function Hero.view(h)
 		sps = { math.max(0, Hero.spLeft(h, 1)), math.max(0, Hero.spLeft(h, 2)), math.max(0, Hero.spLeft(h, 3)), math.max(0, Hero.spLeft(h, 4)) }, -- 차수마다 남은 스킬 포인트
 		skills = h.skills,
 		power = Hero.power(h),
+		sheet = Hero.sheet(h), -- 장비 창의 능력치 표(위의 Hero.sheet)
 		keys = h.keys,
 		slots = h.slots,
 		tslots = h.tslots,
@@ -44287,6 +44348,89 @@ function Kit.view(h)
 end
 
 return Kit
+
+end
+MODULES['ReplicatedStorage/shared/lune/sim/lines'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
+-- 타수 나누기(2026-10-14) — 공격 스킬의 한 타를 여러 줄(숫자 여럿)로 쪼갠다. 피해의 합은 그대로다.
+--  사용자: "현재 스킬들 거의다 타수가 너무 적습니다. 동일데미지에서 타수분할을 하세요 7~8번 다다다다다 데미지가 올라오는맛이 있어야합니다.
+--   극딜기의 경우 더 높은 타수가 들어가야하구요 100% 데미지로 1타가 아닌 10% 데미지로 10번 이런식이여야합니다."
+--  규칙은 공방 design/combat.js의 COMBAT.lines(→ combat.generated의 rules.lines): 한 번 쓸 때 붙어 있는 적 한 마리가 받는 줄이 per(극딜기 = 큰 기술은 nuke)쯤 되게
+--   타마다의 줄 수 = per ÷ (한 번 쓸 때 그 적이 맞는 타의 수)를 반올림(1 ~ max), 그래도 per - 1보다 적으면 한 줄 더. 공방의 linesFor · firstLines와 같은 셈이다(스킬 창의 글이 같은 수를 적는다).
+--  쪼개는 것은 서버(sim/room.luau의 Room:strike — 피해는 한 번에 넣고 숫자만 여러 줄로 적는다), 줄을 하나씩 위로 쌓아 띄우는 것은 화면(client/lune/boot.luau의 Hits).
+local root = script.Parent.Parent
+local COMBAT = require(root.data["combat.generated"])
+
+local R = COMBAT.rules.lines
+
+local Lines = {}
+Lines.R = R
+
+-- 타마다의 줄 수. hits = 한 번 쓸 때 그 적이 맞는 타의 수(평균이어도 된다) · nuke = 극딜기
+function Lines.count(hits: number, nuke: boolean?): number
+	if not hits or hits <= 0 then
+		return 1
+	end
+	local per = if nuke then R.nuke else R.per
+	local L = math.clamp(math.floor(per / hits + 0.5), 1, R.max)
+	if hits * L < per - 1 then
+		L = math.min(R.max, L + 1) -- 반올림으로 모자라면(여섯 타 → 1줄씩 = 6) 한 줄 더: 적어도 per - 1(보통 7 · 극딜기 14)
+	end
+	return L
+end
+
+-- 1차의 사냥기 · 보스기: 가운데 타(범위 밖으로 번진 타 — except — 는 빼고)의 수로 정한다. 공격 스킬이 아니면 1
+local first: { [string]: number } = {}
+function Lines.first(id: string?): number
+	if not id then
+		return 1
+	end
+	local got = first[id]
+	if got then
+		return got
+	end
+	local def = COMBAT.skills[id]
+	local n = 0
+	if def and def.job == 1 and def.hits then
+		for _, h in def.hits do
+			if not h.except then
+				n += 1
+			end
+		end
+	end
+	got = if n > 0 then Lines.count(n, false) else 1
+	first[id] = got
+	return got
+end
+
+-- 피해 total을 n줄로 쪼갠다(줄마다 ±jitter만큼 다르게 — 합은 꼭 total, 줄마다 1 이상). rng = 방의 Random(없으면 고르게 나눈다)
+function Lines.split(total: number, n: number, rng: Random?): { number }
+	n = math.clamp(math.floor(n), 1, math.max(1, math.floor(total)))
+	if n == 1 then
+		return { total }
+	end
+	local weights, sum = table.create(n), 0
+	for i = 1, n do
+		local w = 1 + (if rng then rng:NextNumber(-R.jitter, R.jitter) else 0)
+		weights[i] = w
+		sum += w
+	end
+	local out, given, acc = table.create(n), 0, 0
+	for i = 1, n do
+		acc += weights[i]
+		local upto = if i == n then total else math.floor(total * acc / sum + 0.5)
+		local d = math.max(1, upto - given)
+		if i < n then
+			d = math.min(d, total - given - (n - i)) -- 남은 줄이 1씩은 가져가게
+		else
+			d = total - given
+		end
+		out[i] = d
+		given += d
+	end
+	return out
+end
+
+return Lines
 
 end
 MODULES['ReplicatedStorage/shared/lune/sim/market'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
@@ -46242,6 +46386,7 @@ local Kit = require(script.Parent.kit)
 local Buffs = require(script.Parent.buffs)
 local Caster = require(script.Parent.caster) -- 2~4차의 쓰는 스킬(직업 묶음의 그 스킬을 방이 돌린다)
 local Passives = require(script.Parent.passives) -- 2~4차의 패시브
+local Lines = require(script.Parent.lines) -- 타수 나누기(한 타를 여러 줄로)
 local Quests = require(script.Parent.quests) -- 스토리 보스: 그 퀘스트를 하는 사람이 있을 때만 선다
 local BossPat = require(script.Parent.bosspat) -- 스토리 보스: 표시된 자리 · 도약 · 물결의 자리와 시간(화면과 같은 셈)
 local RULES = COMBAT.rules
@@ -47300,10 +47445,34 @@ end
 
 -- 졸개 하나에게 피해를 넣고 일을 적는다(out.hits — 쓰러지면 out.kills에 경험치 · 떨어지는 것까지). 쓰러졌으면 true.
 --  extra = 그 타에 붙는 표시: proc(사출기 · 장치의 이름 — "echo" · "star" · "wisp" · "shard" · "ember" · "flame" · "reson") · sx · sy(그것이 날아오는 자리) · crit(치명타) · big(센 타)
-function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra): boolean
+--  lines = 그 타를 몇 줄로 적는가(타수 나누기 — sim/lines.luau. 없으면 1): 피해는 한 번에 넣고(타 하나 = out.hits의 한 칸, dmg = 합), 줄로 쪼갠 숫자는
+--   그 칸의 lines = { 줄마다의 피해 … }(합 = dmg)로 붙인다 — 화면이 줄을 하나씩 위로 쌓아 띄운다(client/lune/boot.luau의 Hits)
+--  crit = { chance(%), mul } — 줄마다 크리티컬을 따로 굴린다(사용자 2026-10-14: "한스킬의 스킬이여도 모든타수가 별개로 크리티컬 확률이 적용되는겁니다").
+--   그때 dmg는 크리티컬 전의 피해다. 크리티컬이 터진 줄만 mul배 · 칸의 crits = { [몇째 줄] = true } · 하나라도 터지면 칸의 crit · big. 합(dmg)은 크리티컬까지 든 것
+--  돌려주는 것: 쓰러졌는가 · 실제로 넣은 피해
+function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, lines: number?, crit): (boolean, number)
 	-- 갈라짐(액시온의 쪼개기)이 걸린 적은 누구에게 맞든 더 아프다
 	if (mob.rend or 0) > 0 then
 		dmg = math.max(1, math.floor(dmg * (1 + CASTRULE.rend) + 0.5))
+	end
+	local parts, crits = nil, nil
+	if (lines or 1) > 1 then
+		self.lineRng = self.lineRng or Random.new() -- 줄마다의 흔들림은 따로 굴린다(피해를 굴리는 self.rng의 차례를 바꾸지 않게)
+		parts = Lines.split(dmg, lines :: number, self.lineRng)
+		if #parts <= 1 then
+			parts = nil
+		elseif crit and crit.chance > 0 then
+			local total = 0
+			for i, d in parts do
+				if self.rng:NextNumber(0, 100) < crit.chance then
+					parts[i] = math.max(1, math.floor(d * crit.mul + 0.5))
+					crits = crits or {}
+					crits[i] = true
+				end
+				total += parts[i]
+			end
+			dmg = total
+		end
 	end
 	local dead = self:damageMob(mob, dmg, fromX, hero.id)
 	local entry = { mob = mob.id, dmg = dmg, hp = mob.hp, dead = dead }
@@ -47311,6 +47480,12 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra): 
 		for k, v in extra do
 			entry[k] = v
 		end
+	end
+	if parts then
+		entry.lines = parts
+	end
+	if crits then
+		entry.crits, entry.crit, entry.big = crits, true, true
 	end
 	table.insert(out.hits, entry)
 	if dead then
@@ -47348,7 +47523,7 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra): 
 				end
 			end
 			table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = 0, ups = 0, gains = gains, loot = {} })
-			return dead
+			return dead, dmg
 		end
 		local list = mates or { hero }
 		local share = Party.share(#list)
@@ -47377,7 +47552,7 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra): 
 		end
 		table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = myXp, ups = myUps, gains = gains, drop = drop, loot = loot })
 	end
-	return dead
+	return dead, dmg
 end
 
 -- 사출기 · 장치가 따로 넣는 한 타(그 졸개 하나에게). (sx, sy) = 그것이 날아오는 자리(화면이 그린다)
@@ -47568,6 +47743,7 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 	local _, _, sure = Passives.crit(hero) -- 흘리기(리븐): 피한 뒤의 첫 베기는 반드시 치명타
 	local out = { hits = {}, kills = {} }
 	local follows = skillId ~= nil and Kit.follows(skillId) and COMBAT.skills[skillId].who == hero.class
+	local lines = Lines.first(skillId) -- 1차의 사냥기 · 보스기: 한 타를 몇 줄로(sim/lines.luau)
 	local landed = {} -- 이 타(제 범위)에 맞은 것들 { mob, dmg, dead }
 	local big = Buffs.big(hero) * Passives.reach(hero) -- 거신 · 낫 숙련 · 영혼 주머니: 기술이 닿는 거리(앞 · 위)가 그만큼 는다
 	-- 상자 하나를 (cx, cy)에서 푼다. share = 피해의 몫(수정의 공명은 그 일부) · tag = 그 타에 붙는 표시(없으면 기술의 제 타)
@@ -47589,8 +47765,10 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 			local fit = if (kind == "mob" and mob.def.boss) or (kind == "boss" and not mob.def.boss) then 1 else 1 + RULES.targetBonus / 100
 			local mul = hit.mul * (scale or 1) * boost * share * Passives.vs(hero, mob, info)
 			-- 치명타: 모든 직업의 기술 타가 확률로(기본 + 패시브 + 리븐의 표식이 있는 적). 흘리기 = 피한 뒤의 첫 베기는 반드시
+			-- 여러 줄로 쪼개지는 기술의 제 타는 줄마다 따로 굴린다(아래 strike의 crit — 흘리기의 반드시 크리티컬은 그 베기의 줄 모두)
 			local critChance, critMul = Passives.crit(hero, self:marksOf(hero, mob) > 0)
-			local crit = sure or (critChance > 0 and self.rng:NextNumber(0, 100) < critChance)
+			local perLine = not tag and lines > 1 and not sure
+			local crit = sure or (not perLine and critChance > 0 and self.rng:NextNumber(0, 100) < critChance)
 			if crit then
 				mul *= critMul
 			end
@@ -47602,7 +47780,7 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 			if crit then
 				extra.crit = true
 			end
-			local dead = self:strike(hero, mob, dmg, cx, mates, out, extra)
+			local dead, dealt = self:strike(hero, mob, dmg, cx, mates, out, extra, if tag then nil else lines, if perLine then { chance = critChance, mul = critMul } else nil) -- 타수 나누기: 기술의 제 타만(사출기 · 공명은 한 줄)
 			if not tag then
 				Passives.onHit(hero, mob, self.time) -- 이어 맞힌 수 · 이어 때린 수(살라맨더의 주먹 숙련 · 몰아붙이기)
 				if not dead and (hit.pull or 0) > 0 then
@@ -47610,7 +47788,7 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 					local toward = if mob.x > x then -1 else 1
 					mob.x = math.clamp(mob.x + toward * math.min(hit.pull, math.max(0, math.abs(mob.x - x) - 10)), mob.a, mob.b)
 				end
-				table.insert(landed, { mob = mob, dmg = dmg, dead = dead })
+				table.insert(landed, { mob = mob, dmg = dealt, dead = dead })
 			end
 		end
 	end
@@ -49241,11 +49419,12 @@ function L.detailHeight(ratio: number, nameLines: number, rows: number, noteLine
 	return h + K.pad
 end
 
--- 장비 창의 속(폭 · 높이)과 오른쪽 덩이의 왼쪽 끝
+-- 장비 창의 속(폭 · 높이)과 오른쪽 덩이의 왼쪽 끝. 높이 = 왼쪽의 다섯 칸과 오른쪽(장신구 두 줄 + 가르는 줄 + 능력치 표) 가운데 큰 것
 function L.equipBody(ratio: number): (number, number, number)
 	local s = L.cellFor(ratio)
 	local rx = s + L.EQUIP.gap + L.EQUIP.textW + L.EQUIP.gap
-	return rx + L.EQUIP.accCols * s, math.max(5 * (s + 2) - 2, 2 * s + 150), rx
+	local sheet = L.EQUIP.sheet
+	return rx + L.EQUIP.accCols * s, math.max(5 * (s + 2) - 2, 2 * s + 12 + sheet.top + #sheet.rows * sheet.row + 4), rx
 end
 
 return L
@@ -50227,6 +50406,105 @@ end
 return Q
 
 end
+MODULES['ReplicatedStorage/shared/lune/ui/sheet'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
+-- 장비 창의 능력치 표 — 줄 · 칸의 자리와 값의 글(화면 없이 셈한다: 창은 client/lune/ui/equipWindow.luau, 글이 칸에 드는지는 15_lune_items가 본다).
+--  사용자 2026-10-14: "장비 탭에 지금 전투력, 방어력만 표기되는데 여기에 현재 스텟, 공격력 등 여러 수치가 다 출력되어야하고 크리티컬 확률, 크리티컬 데미지 이런것도 다 나와야합니다."
+--  줄의 차례 · 이름은 공방 design/ui.js의 UILAYOUT.equip.sheet, 수는 서버가 셈한 내 상태의 sheet(sim/hero.luau의 Hero.sheet)와 능력치 · 전투력 · 최대 체력.
+local root = script.Parent.Parent
+local N = require(root.config.numbers)
+local Layout = require(script.Parent.layout)
+local Format = require(script.Parent.format)
+
+local SH = Layout.EQUIP.sheet
+local STATS = N.data.STATS
+
+local Sheet = {}
+Sheet.SH = SH
+
+-- 칸들의 자리(오른쪽 덩이의 왼쪽 위가 0, 0 · 가르는 줄 바로 아래부터). width = 오른쪽 덩이의 폭. { id, x, y, w }의 목록
+function Sheet.cells(width: number)
+	local colW = math.floor((width - SH.colGap) / 2)
+	local out = {}
+	for r, row in SH.rows do
+		local y = SH.top + (r - 1) * SH.row
+		for c, id in row do
+			if #row == 1 then
+				table.insert(out, { id = id, x = 0, y = y, w = width })
+			else
+				table.insert(out, { id = id, x = (c - 1) * (colW + SH.colGap), y = y, w = colW })
+			end
+		end
+	end
+	return out
+end
+
+-- 표의 높이(가르는 줄 아래부터)
+function Sheet.height(): number
+	return SH.top + #SH.rows * SH.row
+end
+
+-- 칸의 이름
+function Sheet.name(id: string): string
+	return SH.names[id] or STATS.names[id] or id
+end
+
+-- 그 직업에게 그 능력치가 무엇인가: "main"(주) · "sub"(부) · "none"(안 쓴다). 능력치가 아니면 nil
+function Sheet.tone(class: string, id: string): string?
+	if STATS.names[id] == nil then
+		return nil
+	end
+	local pair = STATS.classes[class]
+	if id == "hp" then
+		return "hp"
+	end
+	return if pair[1] == id then "main" elseif pair[2] == id then "sub" else "none"
+end
+
+-- 수의 글: 만 넘으면 짧게(「1.2만」) · 아니면 쉼표
+local function num(n: number): string
+	return if n >= 1e4 then Format.short(n) else Format.comma(n)
+end
+-- %의 수: 정수면 정수, 아니면 소수 한 자리
+local function p(v: number): string
+	local r = math.floor(v + 0.5)
+	if math.abs(v - r) < 0.05 then
+		return tostring(r)
+	end
+	return ("%.1f"):format(v)
+end
+
+-- 칸마다의 값 { [id] = 글 }. me = 서버가 보낸 내 상태(sheet · stats · power · maxHp · class)
+function Sheet.values(me)
+	local s = me.sheet
+	local out = {}
+	if not s then
+		return out
+	end
+	out.atk = ("%s ~ %s"):format(num(s.atk[1]), num(s.atk[2]))
+	out.power = Format.short(me.power)
+	out.maxHp = num(me.maxHp)
+	for _, id in STATS.order do
+		out[id] = tostring(STATS.base + (me.stats[id] or 0))
+	end
+	-- 두 칸짜리 줄의 %는 정수로(가장 작은 화면에서 칸이 78점 — 소수까지 적으면 넘친다)
+	local function i(v: number): string
+		return tostring(math.floor(v + 0.5))
+	end
+	out.guard = i(s.guard) .. "%"
+	out.critRate = p(s.crit) .. "%" -- 크리티컬은 한 줄을 다 쓰니 소수 한 자리까지
+	out.critDmg = p(s.critDmg) .. "%"
+	out.dmg = "+" .. i(math.max(0, s.dmg)) .. "%"
+	out.final = "+" .. i(math.max(0, s.final)) .. "%"
+	out.haste = "+" .. i(math.max(0, s.haste)) .. "%"
+	out.cut = if s.cut >= 0.5 then "-" .. i(s.cut) .. "%" else "0%"
+	out.run = i(s.run) .. "%"
+	out.jump = i(s.jump) .. "%"
+	return out
+end
+
+return Sheet
+
+end
 MODULES['ReplicatedStorage/shared/lune/ui/skillDamage'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 스킬 창의 「지금 Lv.n · 다음 Lv.n+1」에 적는 공격 스킬의 % 피해.
 --  사용자 2026-10-13: "스킬 퍼뎀같은거 스킬 창에 설명에 나와있어야해  메이플처럼 / 스킬레벨 추가로 찍으면 퍼뎀올라가는것도 보여야하고"
@@ -50244,6 +50522,7 @@ local root = script.Parent.Parent
 local COMBAT = require(root.data["combat.generated"])
 local Hero = require(root.sim.hero)
 local Caster = require(root.sim.caster)
+local Lines = require(root.sim.lines) -- 타수 나누기: 한 타를 몇 줄로(2026-10-14)
 local Format = require(script.Parent.format)
 
 local WORDS = COMBAT.dmgWords
@@ -50291,9 +50570,14 @@ function SkillDamage.firstText(id: string, lv: number): string?
 			same = false
 		end
 	end
+	-- 타수 나누기(sim/lines.luau): 한 타가 L줄로 쪼개진다 — 모두의 줄 수와 합을 적는다(줄마다의 %는 반올림하면 한 레벨 올린 것이 묻혀서 합으로. 공방 design/combat.js의 damageText와 같은 글)
+	local L = Lines.first(id)
+	local n = #main * L
 	local out
-	if #main == 1 then
+	if n == 1 then
 		out = Format.fill(WORDS.one, { pct = round(sum) })
+	elseif L > 1 then
+		out = Format.fill(WORDS.sum, { n = n, pct = round(sum) })
 	elseif same then
 		out = Format.fill(WORDS.same, { pct = round(main[1].pct), n = #main })
 	else
@@ -50331,9 +50615,10 @@ function SkillDamage.cast(id: string, lv: number)
 	if pct < 0.5 or p.measured <= 0 then
 		return nil
 	end
-	local n = round(p.hits)
-	local kind = if def.w then "full" elseif math.abs(p.hits - n) > 0.01 then "avg" elseif n <= 1 then "one" else "sum"
-	return { pct = pct, n = n, kind = kind, time = p.time }
+	local L = Caster.lines(id) -- 타수 나누기: 한 타를 L줄로 — 적는 횟수는 줄의 수
+	local n = round(p.hits) * L
+	local kind = if def.w then "full" elseif math.abs(p.hits - round(p.hits)) > 0.01 then "avg" elseif n <= 1 then "one" else "sum"
+	return { pct = pct, n = n, kind = kind, time = p.time, lines = L }
 end
 
 function SkillDamage.castText(id: string, lv: number): string?
@@ -59737,6 +60022,7 @@ local STEP = 1 / 60
 local MAX_STEPS = 5 -- 한 화면에 따라잡는 걸음 수(멈칫했다가 순간이동하지 않게)
 local REPORT = 0.1 -- 내 자리를 서버에 알리는 간격(초)
 local RULES = COMBAT.rules
+local LINES = RULES.lines -- 타수 나누기: 줄이 뜨는 사이(stagger초) · 줄 사이의 높이(rise점) — 공방 design/combat.js의 COMBAT.lines
 local UI_HUD = require(lune.data["ui.generated"]).hud
 local QUICK = require(lune.data["ui.generated"]).quick -- 퀵슬롯(칸 수 · 칸마다의 기본 키 · 글)
 local Quick = require(lune.ui.quick)
@@ -60923,18 +61209,29 @@ local function listen()
 			local m = state.mobs and state.mobs:get(h.mob)
 			if m then
 				m.hp = h.hp
-				-- 시험 탭과 같은 자리 · 같은 색: 발밑에서 16도트 위(우두머리는 30)에서 뜬다. 센 타격(치명타도)은 때린 사람 직업의 밝은 색.
+				-- 시험 탭과 같은 자리 · 같은 색: 발밑에서 16도트 위(우두머리는 30)에서 뜬다. 치명타는 때린 사람 직업의 밝은 색(보통의 타는 희다).
 				--  맞는 순간 파편이 튀고, 쓰러지면 세모 파편이 터진다(시험 탭의 hurt)
-				local function land()
-					state.fx:number(h.dmg, m.x, m.info.y - MobsView.topOf(m), if h.big then Effects.BIG[tone] else Effects.DEAL, h.big)
+				--  타수 나누기(sim/lines.luau): 한 타가 여러 줄(h.lines — 줄마다의 피해, 합 = h.dmg)로 오면 메이플처럼 한 줄씩 stagger초 사이로 rise점씩 위에 쌓여 뜬다(다다다다).
+				--   번쩍임 · 파편 · 멈칫은 첫 줄에, 쓰러지는 파편은 마지막 줄에. 데미지 소리는 줄마다
+				local lines = h.lines or { h.dmg }
+				local function land(line: number)
+					local first, last = line == 1, line == #lines
+					-- 색: 보통의 타는 흰 숫자, 크리티컬만 때린 사람 직업의 밝은 색 숫자(사용자 2026-10-14: "크리티컬이 아닌 일반공격이 하얀색, 크리티컬이 뜨는게 색깔들어간 데미지 폰트") — 센 타도 크리티컬이 아니면 희다.
+					--  크리티컬은 줄마다 따로 굴린다(h.crits[몇째 줄] — 서버의 Room:strike). crits가 없으면 그 타 전체가 크리티컬인가(h.crit — 흘리기 · 쪼개지 않은 타)
+					local crit = if h.crits then h.crits[line] == true else h.crit == true
+					state.fx:number(lines[line], m.x, m.info.y - MobsView.topOf(m) - LINES.rise * (line - 1), if crit then Effects.BIG[tone] else Effects.DEAL, crit)
 					-- 타격감(공방 combat.js의 hit): 몬스터가 하얗게 번쩍이며 때린 쪽의 반대로 조금 밀리고, 맞은 자리에 불꽃과 파편이 튄다.
 					--  내가 직접 때린 타(따로 나가는 사출기 · 장치의 타는 빼고)에는 그림이 잠깐 멈칫한다 — gap초에 한 번만(연타가 굼떠지지 않게)
 					local a = actorOf(by)
 					local dir = if m.x >= (if a then a.x else state.body.x) then 1 else -1
-					MobsView.hit(m, state.now, dir)
-					state.cast:hurt(m, Cast.tone(tone), h.big, h.dead, dir)
+					if first then
+						MobsView.hit(m, state.now, dir)
+					end
+					if first or (last and h.dead) then
+						state.cast:hurt(m, Cast.tone(tone), h.big, h.dead and last, dir)
+					end
 					local H = RULES.hit
-					if by == state.myId and not h.proc and state.now - state.holdAt >= H.gap then
+					if first and by == state.myId and not h.proc and state.now - state.holdAt >= H.gap then
 						state.holdAt, state.holdNow = state.now, state.now
 						state.holdT = if h.big or h.dead then H.holdBig else H.hold
 					end
@@ -60946,8 +61243,21 @@ local function listen()
 				end
 				-- 따로 나가는 타(사출기 · 장치): 그 직업의 이펙트가 날아가 닿는 순간에 숫자가 뜬다(달빛 도끼 · 표창 · 도깨비불 · 수정 조각 · 불티 · 불꽃).
 				--  그 사람이 아직 화면에 없으면(방금 들어왔다) 숫자만 바로 띄운다
-				if not (h.proc and state.cast:proc(actorOf(by), h.proc, m, h.sx, h.sy, land, h)) then
-					land()
+				if not (h.proc and state.cast:proc(actorOf(by), h.proc, m, h.sx, h.sy, function()
+					land(1)
+				end, h)) then
+					land(1)
+				end
+				-- 둘째 줄부터: stagger초 사이로 하나씩(그 사이에 장면이 바뀌었으면 띄우지 않는다)
+				if #lines > 1 then
+					local mobsNow = state.mobs
+					for line = 2, #lines do
+						task.delay((line - 1) * LINES.stagger, function()
+							if state.mobs == mobsNow then
+								land(line)
+							end
+						end)
+					end
 				end
 				-- 표식(리븐): 졸개 머리 위에 남는다
 				if h.dead then
@@ -65822,6 +66132,16 @@ function Music.sfx(key: string): boolean
 	sound.Name = "Sfx_" .. key
 	sound.SoundId = def.id
 	sound.Volume = def.volume * gain("sfx")
+	if def.upto then
+		-- 앞에서부터 upto초까지만 튼다(데미지 소리 — 사용자 2026-10-14: "이 음성파일의 절반 만 재생합니다")
+		sound.PlaybackRegionsEnabled = true
+		sound.PlaybackRegion = NumberRange.new(0, def.upto)
+		task.delay(def.upto + 0.5, function()
+			if sound.Parent then
+				sound:Destroy() -- 구간 끝에서 Ended가 오지 않아도 치운다
+			end
+		end)
+	end
 	sound.Parent = folder
 	sound.Ended:Connect(function()
 		sound:Destroy()
@@ -70729,15 +71049,17 @@ return DeathBox
 
 end
 MODULES['Client/lune/ui/equipWindow'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
--- 장비 창 — 13부위. 왼쪽에 무기와 방어구 넷(칸 옆에 「Lv.10 +2」), 오른쪽 위에 장신구 여덟(네 칸 x 두 줄). 오른쪽 아래에 전투력과 방어.
+-- 장비 창 — 13부위. 왼쪽에 무기와 방어구 넷(칸 옆에 「Lv.10 +2」), 오른쪽 위에 장신구 여덟(네 칸 x 두 줄). 오른쪽 아래에 능력치 표.
+--  능력치 표(2026-10-14 — 사용자: "장비 탭에 지금 전투력, 방어력만 표기되는데 여기에 현재 스텟, 공격력 등 여러 수치가 다 출력되어야하고 크리티컬 확률, 크리티컬 데미지 이런것도 다 나와야합니다."):
+--   공격력 · 전투력 · 최대 체력 · 다섯 능력치 · 방어 · 치명타(확률 · 피해) · 주는 피해 · 최종 피해 · 공격 속도 · 받는 피해 · 이동 속도 · 점프력. 줄과 값의 글은 shared/lune/ui/sheet.luau
 --  부위를 누르면 그 장비의 상세가 창 옆의 작은 판에 뜬다(ui/itemDetail.luau) — 「해제」로 가방에 넣고, 대장장이 앞에서는 「강화」로 강화 창에 올린다.
 --   사용자 2026-10-08: "장비 탭에서 각각의 장비를 선택하면 그 해당장비가 장비창 옆에 작은모달이 떠서 아이템 스펙이 나와야합니다."
 --  같은 부위를 두 번 누르면 해제(가방에서 두 번 누르면 장착인 것과 짝). 화면 오른쪽 · 왼쪽의 옆 판(ui/windows.luau). 칸의 크기는 장비 그림의 크기(화면 틀의 배율)를 따른다.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local Items = require(lune.sim.items)
-local Format = require(lune.ui.format)
 local ItemInfo = require(lune.ui.itemInfo)
+local Sheet = require(lune.ui.sheet) -- 능력치 표의 칸 · 값의 글
 local Layout = require(lune.ui.layout) -- 치수(자동 검사가 같은 값을 본다)
 local WORDS = require(lune.data["ui.generated"]).words
 local Stage = require(script.Parent.Parent.stage)
@@ -70808,8 +71130,14 @@ function EquipWindow.build(body: Frame, ctx, w: number, _h: number)
 	end
 	local ny = 2 * S + 12
 	Ui.line(body, RX, ny, nameW)
-	local power = Ui.text(body, "", RX, ny + 10, nameW, { color = C.gold })
-	local guard = Ui.text(body, "", RX, ny + 26, nameW)
+	-- 능력치 표: 칸마다 이름(왼쪽 · 흐리게 — 능력치는 주 노랑 · 부 민트 · 안 쓰는 것 흐림)과 값(오른쪽)
+	local sheet = {}
+	for _, cell in Sheet.cells(nameW) do
+		local label = Ui.text(body, Sheet.name(cell.id), RX + cell.x, ny + cell.y, cell.w, { color = C.dim })
+		local value = Ui.text(body, "", RX + cell.x, ny + cell.y, cell.w, { color = if cell.id == "power" then C.gold else C.text, align = "right" })
+		sheet[cell.id] = { label = label, value = value }
+	end
+	local TONE = { main = C.gold, sub = C.accent, none = C.dim, hp = C.text }
 
 	-- 고른 부위의 상세 판(창 옆)
 	local function detail(bag, me)
@@ -70851,13 +71179,9 @@ function EquipWindow.build(body: Frame, ctx, w: number, _h: number)
 			return
 		end
 		detail(bag, me)
-		local worn = {}
 		for id, row in rows do
 			local it = bag.equip[id]
 			row.cell:set(it, { selected = id == selected })
-			if it then
-				table.insert(worn, it)
-			end
 			if row.text then
 				if it then
 					row.text:set(if it.star > 0 then ("Lv.%d +%d"):format(it.stage, it.star) else ("Lv.%d"):format(it.stage))
@@ -70868,8 +71192,14 @@ function EquipWindow.build(body: Frame, ctx, w: number, _h: number)
 				end
 			end
 		end
-		power:set(("전투력 %s"):format(Format.short(me.power)))
-		guard:set(("방어 %d%%"):format(math.floor(Items.cut(worn, me.level) + 0.5)))
+		local values = Sheet.values(me)
+		for id, cell in sheet do
+			cell.value:set(values[id] or "")
+			local tone = Sheet.tone(me.class, id)
+			if tone then
+				cell.label:color(TONE[tone])
+			end
+		end
 	end
 
 	function view.destroy()
@@ -82954,6 +83284,24 @@ do
 		expect(ow + eow + WIN.edge * 2 <= gw - 40, ("게임 %d배: 가방과 장비 창이 양쪽에 떠도 가운데가 남는다(%d + %d / %d)"):format(s, ow, eow, gw))
 		expect(rx >= cell + EQ.gap + EQ.textW and ew - rx == EQ.accCols * cell, "장비 창의 두 덩이가 겹치지 않는다")
 		expect(ew - rx >= 150, ("게임 %d배: 장비 창의 이름 · 단추 칸의 폭 %d"):format(s, ew - rx))
+		-- 능력치 표(2026-10-14): 칸마다 이름 + 값이 그 칸에 든다(가장 긴 값으로) · 표가 창의 높이 안
+		do
+			local Sheet = req("ReplicatedStorage/shared/lune/ui/sheet")
+			local MAX = N.MAX_LEVEL
+			local big = Hero.new(1, "axion")
+			big.level = MAX
+			big.stats = { str = N.apAt(MAX), dex = N.apAt(MAX), int = N.apAt(MAX), luk = N.apAt(MAX), hp = N.apAt(MAX) }
+			local worst = { class = "axion", stats = big.stats, power = 9.99e7, maxHp = N.hpOf("axion", MAX, N.apAt(MAX)) * 2,
+				-- 주는 피해 · 최종 피해 · 공격 속도 · 받는 피해는 두 자리까지 본다: 다섯 직업의 스킬을 다 마스터하고 버프를 다 걸어도 56% · 50% · 35% · 66%(2026-10-14에 재 봄)
+				sheet = { atk = { 9.99e8, 9.99e8 }, crit = 99.5, critDmg = 999.5, dmg = 99, final = 99, haste = 99, cut = 99, guard = 99, run = 199, jump = 199 } }
+			local values = Sheet.values(worst)
+			for _, c in Sheet.cells(ew - rx) do
+				local need = width(Sheet.name(c.id)) + 4 + width(values[c.id] or "")
+				expect(need <= c.w, ("게임 %d배: 능력치 표의 %s(%s)가 제 칸(%d)에 든다 — %d"):format(s, c.id, tostring(values[c.id]), c.w, need))
+				expect(c.x + c.w <= ew - rx, "칸이 오른쪽 덩이 안")
+			end
+			expect(2 * cell + 12 + Sheet.height() <= eh, ("게임 %d배: 능력치 표가 장비 창 안(%d / %d)"):format(s, 2 * cell + 12 + Sheet.height(), eh))
+		end
 		-- 가방: 탭 셋과 가방 수 글(과 줄 넘기는 단추)이 한 줄에 · 단추 셋의 글이 단추 안에
 		local tabs = 0
 		for _, name in D.BAG.tabs do
@@ -85996,11 +86344,17 @@ do
 	expect(#first.hits == 1 and first.hits[1].mark == core.time and first.hits[1].crit == nil, "베기에 맞으면 표식 8초(처음 맞을 때는 표식이 없었다)")
 	expect(a.marks ~= nil and a.marks[h.id] == room.time + core.time, "졸개에 표식이 남는다")
 	-- 표식이 있는 적에게 치명타 30%: 피해 1.5배
-	local crits, n = 0, 600
-	for _ = 1, n do
+	--  크리티컬은 줄(숫자 하나)마다 따로 굴린다(타수 나누기 — 2026-10-14) — 줄마다 센다
+	local crits, n = 0, 0
+	for _ = 1, 600 do
 		local e = strike(room, h, "rv_double", 1, nil).hits[1]
+		for i in e.lines or { e.dmg } do
+			n += 1
+			if (e.crits and e.crits[i]) or (not e.crits and e.crit) then
+				crits += 1
+			end
+		end
 		if e.crit then
-			crits += 1
 			expect(e.big == true, "치명타는 센 타로 뜬다")
 		end
 	end
@@ -87945,25 +88299,31 @@ do
 	chance = Passives.crit(hero("axion", { rv_mastery = 10 }), false)
 	eq(chance, BASE, "남의 직업의 패시브는 듣지 않는다")
 	-- 방에서: 치명타가 그 확률로 터지고 그 배수로 들어간다(marked = 표식을 달아 두고 친다)
+	--  타수 나누기(2026-10-14)부터 크리티컬은 줄마다 따로 굴린다 — 줄(숫자 하나)마다 센다(사용자: "모든타수가 별개로 크리티컬 확률이 적용되는겁니다")
 	local function crits(class: string, id: string, skills, marked: boolean): (number, number)
 		local h = hero(class, skills)
 		local room, foe = arena(56, h)
 		local hit = COMBAT.skills[id].hits[1]
-		local n, sumCrit, sumPlain, plain = 0, 0, 0, 0
-		for _ = 1, 6000 do
+		local n, sumCrit, sumPlain, plain, all = 0, 0, 0, 0, 0
+		for _ = 1, 2000 do
 			foe.x, foe.state = h.x + 20, "idle"
 			foe.marks = if marked then { [h.id] = room.time + 5 } else nil
 			local e = room:skillHit(h, hit, h.x, h.y, 1, 1, nil, COMBAT.skills[id].type, id).hits[1]
-			if e.crit then
-				n += 1
-				sumCrit += e.dmg
-				expect(e.big, "치명타의 숫자는 크게(밝은 색으로) 뜬다")
-			else
-				plain += 1
-				sumPlain += e.dmg
+			local lines = e.lines or { e.dmg }
+			for i, d in lines do
+				all += 1
+				local crit = if e.crits then e.crits[i] == true else e.crit == true
+				if crit then
+					n += 1
+					sumCrit += d
+					expect(e.big and e.crit, "크리티컬이 든 타는 센 타 · crit으로 온다(화면은 크리티컬인 줄만 밝은 색)")
+				else
+					plain += 1
+					sumPlain += d
+				end
 			end
 		end
-		return n / 6000, (sumCrit / math.max(1, n)) / (sumPlain / math.max(1, plain))
+		return n / all, (sumCrit / math.max(1, n)) / (sumPlain / math.max(1, plain))
 	end
 	local rateA, mulA = crits("axion", "ax_combo", { ax_combo = 20 }, false)
 	near(rateA, BASE / 100, 0.25, "액시온: 치명타 5%쯤")
@@ -94056,7 +94416,9 @@ do
 	end
 	-- 데미지 소리(사용자: "출력되는 데미지는 이소리를 아주 짧게 재생합니다. 한 틱당 한번재생"): 타마다 · 마리마다 한 번씩 — 같은 순간에 여럿이 떠도 하나도 거르지 않는다(틈 0)
 	local dmg = MUSIC.sfx.damage
-	expect(dmg ~= nil and dmg.id == "rbxassetid://102904154168830" and dmg.gap == 0 and dmg.volume == 0.5, "데미지 소리: 사용자의 Sound(번호 · 크기 0.5) · 틈 0")
+	expect(dmg ~= nil and dmg.id == "rbxassetid://140612589056574" and dmg.gap == 0, "데미지 소리: 사용자의 Sound 「DOD Punch 4」 · 틈 0")
+	-- "이 음성파일의 절반 만 재생합니다"(0.3425초) → "데미지 소리 출력 더짧게, 소리 줄이고" → 0.2초 · 크기 0.3(Sound의 0.5에서)
+	expect(dmg.upto ~= nil and dmg.upto < 0.3425 and dmg.volume < 0.5, "데미지 소리는 절반보다 짧게 · 0.5보다 작게")
 	-- 싸움의 소리(때릴 때 · 맞을 때 · 쓰러뜨림 · 대쉬)는 없다 — 자료에도, 화면 코드에도(Music.hit · Music.swing이 없다)
 	for _, k in { "slash", "whoosh", "whoosh2", "hit1", "hit2", "hit3", "hitBig", "kill", "hurt", "dash", "jump" } do
 		eq(MUSIC.sfx[k], nil, "효과음 " .. k .. "는 없다")
@@ -96273,7 +96635,8 @@ do
 				expect(math.abs(got - want) <= n * 0.51, ("적힌 %% = 서버의 피해 %s Lv.%d (적힌 대로면 %.1f, 실제 %d)"):format(sk.id, lv, want, got))
 				-- 글에 적힌 합(정수)도 그 피해와 반올림 안에서 맞는다
 				local list = numbers(SkillDamage.text(sk.id, lv))
-				local shown = if #list == 1 and n > 1 then list[1] * n else list[1]
+				local text = SkillDamage.text(sk.id, lv)
+				local shown = if text:find("번에 나눠", 1, true) then list[1] elseif #list == 1 and n > 1 then list[1] * n else list[1] -- 「n번에 나눠 모두 x%」는 합 · 「x%의 피해로 n번」은 한 타의 것
 				near(got / (Hero.powerRaw(h) * RULES.dmgScale * fit) * 100, shown, 0.02, ("글에 적힌 수 = 실제 피해 %s Lv.%d"):format(sk.id, lv))
 			end
 		end
@@ -96368,7 +96731,7 @@ do
 		end
 	end
 	expect(shown >= 35, "쓰는 스킬 서른다섯 넘게 % 피해가 적힌다 — " .. shown)
-	expect(kinds.one > 0 and kinds.sum > 0, "한 타짜리와 여러 타짜리가 다 있다")
+	expect(kinds.sum > 0, "여러 타(줄)짜리가 있다 — 타수 나누기(2026-10-14)로 한 타짜리도 여러 줄로 적힌다")
 	eq(kinds.full, 2, "장치를 다 갖췄을 때가 기준인 스킬 둘(공명 폭발 · 열 방출)")
 	-- 2차 레벨 1은 1차 마스터보다 세다는 것이 적힌 수로도 보인다(같은 시간으로 견준다 — 사용자 2026-10-08)
 	for class, c in CLASSES.classes do
@@ -98650,6 +99013,323 @@ eq(second and second.scene, Tut.SCENE, "둘째 캐릭터도 꿈에서 시작한�
 expect(second and second.self.tutSkip == true, "한 번 끝낸 계정은 「건너뛰기」가 보인다")
 local skipped = handlers.Tut(p2, "skip", nil)
 expect(skipped ~= nil and skipped.scene == Tut.DATA.exit and World.session(p2).hero.tut.done, "건너뛰면 사당에서 깨어난다")
+
+end)
+runTest('43_lune_lines', function()
+-- 「달의 계승자」 — 타수 나누기(2026-10-14): 공격 스킬의 한 타를 여러 줄(숫자 여럿)로 쪼갠다. 피해의 합은 그대로다.
+--  사용자: "현재 스킬들 거의다 타수가 너무 적습니다. 동일데미지에서 타수분할을 하세요 7~8번 다다다다다 데미지가 올라오는맛이 있어야합니다.
+--   극딜기의 경우 더 높은 타수가 들어가야하구요 100% 데미지로 1타가 아닌 10% 데미지로 10번 이런식이여야합니다."
+--  보는 것: ① 줄 수의 규칙(sim/lines.luau = 공방 design/combat.js의 linesFor) ② 쪼갠 줄의 합 = 그 타의 피해, 줄마다 1 이상, 줄마다 조금씩 다르다
+--           ③ 1차의 사냥기 · 보스기 · 2~4차의 쓰는 스킬을 붙어 있는 졸개에게 쓰면 한 번에 숫자가 7번 넘게(극딜기는 14번 넘게) 뜬다
+--           ④ 사출기처럼 따라 나가는 타는 쪼개지 않는다 ⑤ 피해의 합은 쪼개기 전과 같다(줄은 숫자만 나눈다)
+local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
+local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+local Room = req("ReplicatedStorage/shared/lune/sim/room")
+local Caster = req("ReplicatedStorage/shared/lune/sim/caster")
+local Lines = req("ReplicatedStorage/shared/lune/sim/lines")
+local _ = Room
+local RULES = COMBAT.rules
+local R = RULES.lines
+local CAST = COMBAT.cast
+local SUB = 1 / 60
+local X, Y = 2000, 176
+
+-- ---- 1) 줄 수의 규칙 ----
+eq(R.per, 8, "보통은 한 번에 8줄쯤(사용자: 7~8번)")
+expect(R.nuke > R.per, "극딜기는 더 많이")
+eq(Lines.count(1, false), 8, "한 타 = 8줄")
+eq(Lines.count(2, false), 4, "두 타 = 4줄씩")
+eq(Lines.count(3, false), 3, "세 타 = 3줄씩(9)")
+eq(Lines.count(6, false), 2, "여섯 타 = 2줄씩(12 — 1줄씩이면 6이라 모자란다)")
+eq(Lines.count(12, false), 1, "열두 타 = 1줄씩")
+eq(Lines.count(1, true), R.nuke, "극딜기 한 타 = nuke줄")
+eq(Lines.count(0, false), 1, "타가 없으면 1")
+for hits = 1, 30 do
+	for _, nuke in { false, true } do
+		local L = Lines.count(hits, nuke)
+		local per = if nuke then R.nuke else R.per
+		expect(L >= 1 and L <= R.max, "1 ~ max줄")
+		expect(hits * L >= per - 1 or L == R.max, ("한 번에 적어도 %d번(타 %d)"):format(per - 1, hits))
+	end
+end
+
+-- ---- 2) 쪼개기 ----
+do
+	local rng = Random.new(7)
+	for _, total in { 1, 5, 8, 9, 37, 1234, 98765 } do
+		for _, n in { 1, 3, 8, 15 } do
+			local parts = Lines.split(total, n, rng)
+			local sum, ok = 0, true
+			for _, d in parts do
+				sum += d
+				ok = ok and d >= 1 and d == math.floor(d)
+			end
+			eq(sum, total, ("합 = 그 타의 피해(%d를 %d줄)"):format(total, n))
+			expect(ok, "줄마다 1 이상의 정수")
+			eq(#parts, math.min(n, total), "줄 수(피해가 줄 수보다 작으면 피해만큼)")
+		end
+	end
+	local parts = Lines.split(10000, 8, rng)
+	local differ = false
+	for i = 2, #parts do
+		differ = differ or parts[i] ~= parts[1]
+	end
+	expect(differ, "줄마다 숫자가 조금씩 다르다(메이플처럼)")
+	for _, d in parts do
+		expect(math.abs(d - 1250) <= 1250 * R.jitter * 1.3 + 2, "한 줄은 고른 몫에서 크게 벗어나지 않는다")
+	end
+end
+
+local function hero(class: string, skills)
+	local h = Hero.new(1, class)
+	h.level = 120
+	h.skills = {}
+	for id, lv in skills do
+		h.skills[id] = lv
+	end
+	Hero.recalc(h)
+	h.hp = h.maxHp
+	h.x, h.y, h.dir = X, Y, 1
+	return h
+end
+-- 한 칸이 띄우는 숫자의 수 · 그 칸의 줄 합이 피해와 같은가
+local function count(e): number
+	if e.lines then
+		local sum = 0
+		for _, d in e.lines do
+			sum += d
+		end
+		eq(sum, e.dmg, "줄의 합 = 그 타의 피해")
+		return #e.lines
+	end
+	return 1
+end
+
+-- ---- 2b) 크리티컬은 줄마다 따로 굴린다(사용자 2026-10-14: "한 스킬이 5%로 크리티컬이 발동되어서 타수 전부다 크리티컬이 뜨는게 아니라 … 모든타수가 별개로 크리티컬 확률이 적용되는겁니다") ----
+do
+	local def = COMBAT.skills.rv_fan -- 한 타 = 8줄
+	local h = hero(def.who, { [def.id or "rv_fan"] = 1 })
+	h.skills.rv_fan = 1
+	local room, foe = Caster.makeDry(X + 14, Y)
+	local keep = RULES.critChance
+	RULES.critChance = 50
+	local hits, mixed, critLines, allLines = 0, 0, 0, 0
+	for _ = 1, 200 do
+		foe.hp, foe.state, foe.x = foe.maxHp, "idle", X + 14 -- 쓰러져도 다시 세운다
+		local res = room:skillHit(h, def.hits[1], h.x, h.y, 1, 1, nil, def.type, "rv_fan")
+		for _, e in res.hits do
+			if e.mob == foe.id and e.lines then
+				hits += 1
+				local n, sum = 0, 0
+				for i, d in e.lines do
+					sum += d
+					allLines += 1
+					if e.crits and e.crits[i] then
+						n += 1
+						critLines += 1
+					end
+				end
+				eq(sum, e.dmg, "줄의 합 = 그 타의 피해(크리티컬까지)")
+				if n > 0 and n < #e.lines then
+					mixed += 1
+				end
+				expect((n > 0) == (e.crit == true), "한 줄이라도 크리티컬이면 그 타는 crit")
+			end
+		end
+	end
+	RULES.critChance = keep
+	expect(hits >= 190, "한 타 = 여러 줄로 왔다 — " .. hits)
+	expect(mixed > hits * 0.9, ("한 타 안에서 크리티컬인 줄과 아닌 줄이 섞인다(%d / %d)"):format(mixed, hits))
+	expect(math.abs(critLines / allLines - 0.5) < 0.05, ("줄마다 50%%로 따로 터진다(%.3f)"):format(critLines / allLines))
+end
+do
+	-- 2~4차: 붙어 있는 적에게 열 번 — 줄마다 따로(크리티컬 5%면 한 타의 줄이 다 크리티컬인 일은 거의 없다)
+	local id = "ax_crescent"
+	local def = CAST[id]
+	local h = hero(def.who, { [id] = 1 })
+	local room, foe = Caster.makeDry(X + (def.at or 14), Y)
+	local c = Caster.new(room)
+	c.dry = true
+	local keep = RULES.critChance
+	RULES.critChance = 50
+	local a = c:actor(h)
+	for _ = 1, 10 do
+		h.x, h.y, h.dir = X, Y, 1
+		foe.x, foe.hp, foe.state = X + (def.at or 14), foe.maxHp, "idle"
+		c:dryCast(h, id, 0, function()
+			room.time += SUB
+			c:sub(SUB)
+		end)
+	end
+	RULES.critChance = keep
+	local mixed, lined = 0, 0
+	for _, e in a.out.hits do
+		if e.lines and not e.proc then
+			lined += 1
+			local n = 0
+			for i in e.lines do
+				if e.crits and e.crits[i] then
+					n += 1
+				end
+			end
+			if n > 0 and n < #e.lines then
+				mixed += 1
+			end
+		end
+	end
+	expect(lined > 0 and mixed > lined * 0.7, ("2차 기술도 줄마다 따로(%d / %d)"):format(mixed, lined))
+end
+
+-- ---- 3) 1차의 사냥기 · 보스기: 붙어 있는 졸개에게 한 번 다 맞히면 숫자가 7번 넘게 ----
+do
+	local seen = 0
+	for id, def in COMBAT.skills do
+		if def.job ~= 1 or #def.hits == 0 or (def.type ~= "mob" and def.type ~= "boss") then
+			continue
+		end
+		seen += 1
+		local L = Lines.first(id)
+		local h = hero(def.who, { [id] = 1 })
+		local room, foe = Caster.makeDry(X + 14, Y)
+		local numbers = 0
+		for _, hit in def.hits do
+			if hit.except then
+				continue -- 가운데 타의 범위 밖의 적만 맞는 타
+			end
+			foe.hp = foe.maxHp
+			local res = room:skillHit(h, hit, h.x, h.y, 1, 1, nil, def.type, id)
+			for _, e in res.hits do
+				if e.mob == foe.id and not e.proc then
+					numbers += count(e)
+					if L > 1 then
+						expect(e.lines ~= nil and #e.lines == L, ("%s: 한 타가 %d줄"):format(id, L))
+					end
+				end
+			end
+		end
+		expect(numbers >= R.per - 1, ("%s: 한 번에 숫자가 %d번 넘게 뜬다(실제 %d)"):format(id, R.per - 2, numbers))
+	end
+	expect(seen >= 10, "1차 공격 스킬을 다 봤다 — " .. seen)
+end
+
+-- ---- 4) 2~4차의 쓰는 스킬: 열 번 쓴 평균이 한 번에 7번(극딜기 14번) 넘게 · 사출기의 타는 한 줄 ----
+do
+	local seen, nukes = 0, 0
+	for id, def in CAST do
+		local p = Caster.profile(id, 0)
+		if p.measured <= 0 or def.rate <= 0 or def.w then
+			continue -- 피해가 없는 것 · 장치를 다 갖췄을 때가 기준인 것(공명 폭발 · 열 방출 — 빈 방에서는 다 못 맞힌다)
+		end
+		seen += 1
+		local nuke = def.type == "nuke"
+		if nuke then
+			nukes += 1
+		end
+		eq(Caster.lines(id), Lines.count(p.hits, nuke), "줄 수 = 잰 타의 수로 정한 것 " .. id)
+		local h = hero(def.who, { [id] = 1 })
+		local room, foe = Caster.makeDry(X + (def.at or 14), Y)
+		local c = Caster.new(room)
+		c.dry = true
+		local function tick()
+			room.time += SUB
+			foe.rend = 0
+			c:sub(SUB)
+		end
+		local a = c:actor(h)
+		for _ = 1, 10 do
+			h.x, h.y, h.dir = X, Y, 1
+			foe.x, foe.stun, foe.bind, foe.bindImm, foe.hp = X + (def.at or 14), 0, 0, 0, foe.maxHp
+			if id == "sl_vent" then
+				h.kit.heat = 0
+			end
+			c:dryCast(h, id, 0, tick)
+		end
+		local guard = 0
+		while (#c.timers > 0 or #c.shots > 0) and guard < 20 do
+			tick()
+			guard += SUB
+		end
+		local numbers = 0
+		for _, e in a.out.hits do
+			if e.mob == foe.id then
+				if e.proc then
+					expect(e.lines == nil, "따라 나가는 타(사출기 · 장치)는 쪼개지 않는다 " .. id)
+				else
+					numbers += count(e)
+				end
+			end
+		end
+		local per = if nuke then R.nuke else R.per
+		expect(numbers / 10 >= (per - 1) * 0.85, ("%s: 한 번 쓰면 숫자가 %d번쯤 뜬다(열 번 평균 %.1f)"):format(id, per - 1, numbers / 10))
+	end
+	expect(seen >= 30, "쓰는 스킬을 다 봤다 — " .. seen)
+	expect(nukes >= 4, "극딜기(큰 기술)도 봤다 — " .. nukes)
+end
+
+end)
+runTest('44_lune_sheet', function()
+-- 「달의 계승자」 — 장비 창의 능력치 표(2026-10-14): 서버가 셈하는 값(sim/hero.luau의 Hero.sheet) · 표에 적히는 글(shared/lune/ui/sheet.luau).
+--  사용자: "장비 탭에 지금 전투력, 방어력만 표기되는데 여기에 현재 스텟, 공격력 등 여러 수치가 다 출력되어야하고 크리티컬 확률, 크리티컬 데미지 이런것도 다 나와야합니다."
+local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
+local N = req("ReplicatedStorage/shared/lune/config/numbers")
+local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+local Room = req("ReplicatedStorage/shared/lune/sim/room")
+local Caster = req("ReplicatedStorage/shared/lune/sim/caster")
+local Sheet = req("ReplicatedStorage/shared/lune/ui/sheet")
+local _ = Room
+local RULES = COMBAT.rules
+local STATS = N.data.STATS
+
+local h = Hero.new(1, "axion")
+local s = Hero.sheet(h)
+expect(Hero.view(h).sheet ~= nil, "내 상태에 능력치 표가 실려 간다")
+eq(s.crit, RULES.critChance, "치명타 확률 = 기본 5%")
+eq(s.critDmg, RULES.critMul * 100, "치명타 피해 = 150%")
+eq(s.dmg, 0, "버프가 없으면 주는 피해 +0%")
+eq(s.haste, 0, "버프가 없으면 공격 속도 +0%")
+eq(s.run, 100, "이동 속도 100%")
+-- 공격력 = 100% 한 타의 피해의 범위: 서버가 실제로 주는 피해와 맞는다(흩어짐 ±spread%)
+local base = Hero.powerRaw(h) * RULES.dmgScale
+expect(math.abs(s.atk[1] - base * (1 - RULES.spread / 100)) <= 1 and math.abs(s.atk[2] - base * (1 + RULES.spread / 100)) <= 1, "공격력의 범위 = 전투력 x 10 x (1 ± 흩어짐)")
+do
+	-- 보스기(보정이 없는 상대 = 일반 몬스터)로 한 번 쳐 본 피해가 「공격력 x 그 타의 %」 범위 안
+	local def = COMBAT.skills.ax_combo
+	local room, foe = Caster.makeDry(2014, 176)
+	h.x, h.y, h.dir = 2000, 176, 1
+	h.skills.ax_combo = 1
+	local keep = RULES.critChance
+	RULES.critChance = 0
+	for _ = 1, 20 do
+		foe.hp = foe.maxHp
+		local res = room:skillHit(h, def.hits[1], h.x, h.y, 1, Hero.skillScale(1, def.max), nil, "boss", "ax_combo")
+		local mul = def.hits[1].mul * Hero.skillScale(1, def.max)
+		for _, e in res.hits do
+			expect(e.dmg >= s.atk[1] * mul - 1 and e.dmg <= s.atk[2] * mul + 1, ("한 타의 피해(%d)가 공격력 x %%의 범위 안(%d ~ %d)"):format(e.dmg, s.atk[1] * mul, s.atk[2] * mul))
+		end
+	end
+	RULES.critChance = keep
+end
+-- 표의 글
+local v = Sheet.values({ class = "axion", stats = h.stats, power = 1234, maxHp = 56789, sheet = s })
+eq(v.str, tostring(STATS.base + h.stats.str), "힘 = 처음 값 + 찍은 점수(능력치 창과 같은 수)")
+eq(v.maxHp, "5.7만", "만 넘는 체력은 짧게")
+eq(v.critRate, "5%", "크리티컬 확률은 제 줄에")
+eq(v.critDmg, "150%", "크리티컬 데미지는 제 줄에")
+eq(Sheet.name("critRate"), "크리티컬 확률", "이름: 크리티컬 확률(사용자의 말)")
+eq(Sheet.name("critDmg"), "크리티컬 데미지", "이름: 크리티컬 데미지(사용자의 말)")
+eq(v.dmg, "+0%", "주는 피해")
+eq(v.cut, "0%", "받는 피해가 줄지 않으면 0%")
+eq(Sheet.tone("axion", "str"), "main", "액시온의 주 능력치 = 힘")
+eq(Sheet.tone("axion", "dex"), "sub", "부 능력치 = 민첩")
+eq(Sheet.tone("axion", "luk"), "none", "안 쓰는 능력치")
+eq(Sheet.tone("axion", "atk"), nil, "능력치가 아닌 칸")
+local names = {}
+for _, c in Sheet.cells(200) do
+	names[c.id] = true
+end
+for _, id in { "atk", "power", "maxHp", "str", "dex", "int", "luk", "hp", "guard", "critRate", "critDmg", "dmg", "final", "haste", "cut", "run", "jump" } do
+	expect(names[id], "표에 있다: " .. id)
+end
 
 end)
 finish()

@@ -95,7 +95,9 @@ do
 	end
 	-- 데미지 소리(사용자: "출력되는 데미지는 이소리를 아주 짧게 재생합니다. 한 틱당 한번재생"): 타마다 · 마리마다 한 번씩 — 같은 순간에 여럿이 떠도 하나도 거르지 않는다(틈 0)
 	local dmg = MUSIC.sfx.damage
-	expect(dmg ~= nil and dmg.id == "rbxassetid://102904154168830" and dmg.gap == 0 and dmg.volume == 0.5, "데미지 소리: 사용자의 Sound(번호 · 크기 0.5) · 틈 0")
+	expect(dmg ~= nil and dmg.id == "rbxassetid://140612589056574" and dmg.gap == 0, "데미지 소리: 사용자의 Sound 「DOD Punch 4」 · 틈 0")
+	-- "이 음성파일의 절반 만 재생합니다"(0.3425초) → "데미지 소리 출력 더짧게, 소리 줄이고" → 0.2초 · 크기 0.3(Sound의 0.5에서)
+	expect(dmg.upto ~= nil and dmg.upto < 0.3425 and dmg.volume < 0.5, "데미지 소리는 절반보다 짧게 · 0.5보다 작게")
 	-- 싸움의 소리(때릴 때 · 맞을 때 · 쓰러뜨림 · 대쉬)는 없다 — 자료에도, 화면 코드에도(Music.hit · Music.swing이 없다)
 	for _, k in { "slash", "whoosh", "whoosh2", "hit1", "hit2", "hit3", "hitBig", "kill", "hurt", "dash", "jump" } do
 		eq(MUSIC.sfx[k], nil, "효과음 " .. k .. "는 없다")

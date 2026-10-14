@@ -126,6 +126,16 @@ function Music.sfx(key: string): boolean
 	sound.Name = "Sfx_" .. key
 	sound.SoundId = def.id
 	sound.Volume = def.volume * gain("sfx")
+	if def.upto then
+		-- 앞에서부터 upto초까지만 튼다(데미지 소리 — 사용자 2026-10-14: "이 음성파일의 절반 만 재생합니다")
+		sound.PlaybackRegionsEnabled = true
+		sound.PlaybackRegion = NumberRange.new(0, def.upto)
+		task.delay(def.upto + 0.5, function()
+			if sound.Parent then
+				sound:Destroy() -- 구간 끝에서 Ended가 오지 않아도 치운다
+			end
+		end)
+	end
 	sound.Parent = folder
 	sound.Ended:Connect(function()
 		sound:Destroy()
