@@ -51,10 +51,13 @@ do
 	for _, class in CLASSES.order do
 		local pair = STATS.classes[class]
 		for _, lv in { 1, 12, 30, 61, 100, 150 } do
-			local gain = N.statGain(class, lv)
-			-- 주 · 부 능력치: 그 레벨의 점수를 다 주 능력치에 넣은 것에서 50점을 덜어 냈다가 다시 넣으면 전투력이 50 x 설명의 값만큼 오른다(반올림 1 안에서)
+			-- 주 · 부 능력치(2026-10-15 스펙): 1점 = 스탯 공격력 +4 · +1 x 공격력 / 100(지금 낀 무기로). 전투력은 거기에 패시브 · 크리티컬의 기댓값(k)을 곱한다
+			--  그 레벨의 점수를 다 주스탯에 넣은 것에서 50점을 덜어 냈다가 다시 넣으면 전투력이 50 x 설명의 값 x k만큼 오른다(반올림 1 안에서)
 			local h = Hero.new(1, class)
 			h.level = lv
+			local sp0 = Hero.specView(h)
+			local gain = N.statGain(class, lv, sp0.atk)
+			gain = { main = gain.main * sp0.k, sub = gain.sub * sp0.k, hp = gain.hp }
 			local all = N.apAt(lv)
 			if all >= 50 then
 				h.stats[pair[1]] = all - 50
@@ -506,12 +509,16 @@ do
 		for _, step in def.steps do
 			local hint = Q9.stepHint(def, step)
 			local mob = COMBAT.mobs[step.mob]
-			expect(mob ~= nil or step.type == "use", "할 일의 졸개가 있다 " .. def.id) -- ↑를 누르는 일에는 졸개가 없다
+			expect(mob ~= nil or step.type == "use" or step.type == "visit" or step.type == "meet", "할 일의 졸개가 있다 " .. def.id) -- ↑를 누르는 일 · 들르는 일 · 만나기(2026-10-16)에는 졸개가 없다
 			if step.type == "use" then
 				expect(hint:find(step.place, 1, true) ~= nil and hint:find("↑", 1, true) ~= nil, "어느 자리에서 ↑를 누르는지 적는다: " .. hint)
 				expect(small(Q9.trackText(step, step.n)) <= UI.hud.quest.w, "알리미의 줄이 칸 안: " .. Q9.trackText(step, step.n))
 			end
-			if def.scene then
+			if step.type == "visit" then
+				expect(hint:find(step.name, 1, true) ~= nil, "들를 맵을 적는다: " .. hint)
+			elseif step.type == "meet" then
+				expect(hint:find(step.name, 1, true) ~= nil, "만날 사람을 적는다: " .. hint) -- 그 사람이 선 방(대장간 · 의뢰소 …)의 이름과 함께
+			elseif def.scene then
 				expect(hint:find(SCENES9.scenes[def.scene].name, 1, true) ~= nil, "어디인지 적는다: " .. hint)
 			end
 			if step.type == "gather" then

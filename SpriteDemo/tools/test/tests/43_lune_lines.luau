@@ -17,21 +17,30 @@ local SUB = 1 / 60
 local X, Y = 2000, 176
 
 -- ---- 1) 줄 수의 규칙 ----
-eq(R.per, 8, "보통은 한 번에 8줄쯤(사용자: 7~8번)")
-expect(R.nuke > R.per, "극딜기는 더 많이")
-eq(Lines.count(1, false), 8, "한 타 = 8줄")
-eq(Lines.count(2, false), 4, "두 타 = 4줄씩")
-eq(Lines.count(3, false), 3, "세 타 = 3줄씩(9)")
-eq(Lines.count(6, false), 2, "여섯 타 = 2줄씩(12 — 1줄씩이면 6이라 모자란다)")
-eq(Lines.count(12, false), 1, "열두 타 = 1줄씩")
-eq(Lines.count(1, true), R.nuke, "극딜기 한 타 = nuke줄")
-eq(Lines.count(0, false), 1, "타가 없으면 1")
-for hits = 1, 30 do
-	for _, nuke in { false, true } do
-		local L = Lines.count(hits, nuke)
-		local per = if nuke then R.nuke else R.per
-		expect(L >= 1 and L <= R.max, "1 ~ max줄")
-		expect(hits * L >= per - 1 or L == R.max, ("한 번에 적어도 %d번(타 %d)"):format(per - 1, hits))
+-- 차수마다(2026-10-15 — 사용자: "현재 저 차수 스킬은 타수가 너무 많습니다. 타수는 밸런스 있게 맞추고"): 1차 3 · 2차 4 · 3차 6 · 4차 8(7~8번은 4차에서)
+eq(R.per[1], 3, "1차는 한 번에 3줄쯤")
+eq(R.per[4], 8, "4차는 한 번에 8줄쯤(10-14: 7~8번)")
+for job = 2, 4 do
+	expect(R.per[job] > R.per[job - 1], ("%d차는 %d차보다 줄이 많다"):format(job, job - 1))
+	expect(R.nuke[job] > R.per[job], ("%d차의 극딜기는 더 많이"):format(job))
+end
+eq(Lines.count(1, false, 4), 8, "4차 한 타 = 8줄")
+eq(Lines.count(2, false, 4), 4, "4차 두 타 = 4줄씩")
+eq(Lines.count(3, false, 4), 3, "4차 세 타 = 3줄씩(9)")
+eq(Lines.count(6, false, 4), 2, "4차 여섯 타 = 2줄씩(12 — 1줄씩이면 6이라 모자란다)")
+eq(Lines.count(12, false, 4), 1, "열두 타 = 1줄씩")
+eq(Lines.count(1, false, 1), 3, "1차 한 타 = 3줄")
+eq(Lines.count(3, false, 1), 1, "1차 세 타 = 1줄씩")
+eq(Lines.count(1, true, 4), R.nuke[4], "4차 극딜기 한 타 = nuke줄")
+eq(Lines.count(0, false, 1), 1, "타가 없으면 1")
+for job = 1, 4 do
+	for hits = 1, 30 do
+		for _, nuke in { false, true } do
+			local L = Lines.count(hits, nuke, job)
+			local per = (if nuke then R.nuke else R.per)[job]
+			expect(L >= 1 and L <= R.max, "1 ~ max줄")
+			expect(hits * L >= per - 1 or L == R.max, ("%d차: 한 번에 적어도 %d번(타 %d)"):format(job, per - 1, hits))
+		end
 	end
 end
 
@@ -89,7 +98,7 @@ end
 
 -- ---- 2b) 크리티컬은 줄마다 따로 굴린다(사용자 2026-10-14: "한 스킬이 5%로 크리티컬이 발동되어서 타수 전부다 크리티컬이 뜨는게 아니라 … 모든타수가 별개로 크리티컬 확률이 적용되는겁니다") ----
 do
-	local def = COMBAT.skills.rv_fan -- 한 타 = 8줄
+	local def = COMBAT.skills.rv_fan -- 1차 한 타 = 3줄(2026-10-15부터 — 차수마다)
 	local h = hero(def.who, { [def.id or "rv_fan"] = 1 })
 	h.skills.rv_fan = 1
 	local room, foe = Caster.makeDry(X + 14, Y)
@@ -121,7 +130,9 @@ do
 	end
 	RULES.critChance = keep
 	expect(hits >= 190, "한 타 = 여러 줄로 왔다 — " .. hits)
-	expect(mixed > hits * 0.9, ("한 타 안에서 크리티컬인 줄과 아닌 줄이 섞인다(%d / %d)"):format(mixed, hits))
+	local L1 = Lines.first("rv_fan")
+	local want = 1 - 2 * 0.5 ^ L1 -- 줄마다 50%로 따로 굴리면 L줄이 섞일 확률
+	expect(mixed > hits * want * 0.85, ("한 타 안에서 크리티컬인 줄과 아닌 줄이 섞인다(%d / %d — %d줄이면 %.0f%%쯤)"):format(mixed, hits, L1, want * 100))
 	expect(math.abs(critLines / allLines - 0.5) < 0.05, ("줄마다 50%%로 따로 터진다(%.3f)"):format(critLines / allLines))
 end
 do
@@ -189,7 +200,7 @@ do
 				end
 			end
 		end
-		expect(numbers >= R.per - 1, ("%s: 한 번에 숫자가 %d번 넘게 뜬다(실제 %d)"):format(id, R.per - 2, numbers))
+		expect(numbers >= R.per[1] - 1, ("%s: 한 번에 숫자가 %d번 넘게 뜬다(실제 %d)"):format(id, R.per[1] - 2, numbers))
 	end
 	expect(seen >= 10, "1차 공격 스킬을 다 봤다 — " .. seen)
 end
@@ -207,7 +218,7 @@ do
 		if nuke then
 			nukes += 1
 		end
-		eq(Caster.lines(id), Lines.count(p.hits, nuke), "줄 수 = 잰 타의 수로 정한 것 " .. id)
+		eq(Caster.lines(id), Lines.count(p.hits, nuke, CAST[id].job), "줄 수 = 잰 타의 수로 정한 것(그 차수의 규칙) " .. id)
 		local h = hero(def.who, { [id] = 1 })
 		local room, foe = Caster.makeDry(X + (def.at or 14), Y)
 		local c = Caster.new(room)
@@ -241,7 +252,7 @@ do
 				end
 			end
 		end
-		local per = if nuke then R.nuke else R.per
+		local per = (if nuke then R.nuke else R.per)[def.job]
 		expect(numbers / 10 >= (per - 1) * 0.85, ("%s: 한 번 쓰면 숫자가 %d번쯤 뜬다(열 번 평균 %.1f)"):format(id, per - 1, numbers / 10))
 	end
 	expect(seen >= 30, "쓰는 스킬을 다 봤다 — " .. seen)

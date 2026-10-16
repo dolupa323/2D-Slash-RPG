@@ -1,15 +1,15 @@
 {
  "chars_1.png": {
-  "hash": "ec5ac2e9c53eb38be1e073df28ae729e",
-  "id": "rbxassetid://112972897282794"
+  "hash": "f2399408653fceb9cd16f4998b5b4641",
+  "id": "rbxassetid://139441060788562"
  },
  "far.png": {
   "hash": "ac7617c702b29f03c3218f81f38b19ab",
   "id": "rbxassetid://70389067240845"
  },
  "villagers.png": {
-  "hash": "5a09ad77224ce9bc1792b2edeffec8ab",
-  "id": "rbxassetid://123191782513089"
+  "hash": "06b34904f9de773bee6a5b17fc225b78",
+  "id": "rbxassetid://96495918767937"
  },
  "ground_town_2.png": {
   "hash": "194550519172b6f52d4ec0a61d0607b5",
@@ -44,8 +44,8 @@
   "id": "rbxassetid://124122137516265"
  },
  "ground_town_1.png": {
-  "hash": "d6570df4bd9f0d60872fa84db75aedd0",
-  "id": "rbxassetid://116361915210824"
+  "hash": "02fd11be514549cd502032684022f1a7",
+  "id": "rbxassetid://125524698830662"
  },
  "ground_r1a1_1.png": {
   "hash": "150afa9cc55f8859ddd47f36d810aefc",
@@ -56,8 +56,8 @@
   "id": "rbxassetid://105450659975716"
  },
  "ui_kit.png": {
-  "hash": "9439d069e5b6377d41717eb603ca2974",
-  "id": "rbxassetid://126302724063295"
+  "hash": "0f22903c6f4a545187c4f9eeef0179ce",
+  "id": "rbxassetid://127701484464218"
  },
  "font_small_2.png": {
   "hash": "a39c57d23acf7233f3419f3f15021ff7",
@@ -84,8 +84,8 @@
   "id": "rbxassetid://122937040402111"
  },
  "chars_mask_1.png": {
-  "hash": "255f8eea03283ecf01f1b4c6cb1f3831",
-  "id": "rbxassetid://98985363588121"
+  "hash": "423495f9ce9727531ea67eed70abe3e2",
+  "id": "rbxassetid://126243488570499"
  },
  "back_in_forge.png": {
   "hash": "b51d1e319cf677a8d0f0ce0a85752024",
@@ -296,16 +296,16 @@
   "id": "rbxassetid://105088993635856"
  },
  "chars_2.png": {
-  "hash": "8dbb149bfb42ea8f33967358820fd669",
-  "id": "rbxassetid://95682183956144"
+  "hash": "c6cf60fed89214cbc60740304c5df646",
+  "id": "rbxassetid://137790187349475"
  },
  "ground_r2b3_2.png": {
   "hash": "5ab61b982be63132f8be7920125c1cdb",
   "id": "rbxassetid://88569035446839"
  },
  "chars_mask_2.png": {
-  "hash": "3d05685f213f2a4586871b5b6025c960",
-  "id": "rbxassetid://114495232866901"
+  "hash": "731981d3c798b872f7ea01056aa83119",
+  "id": "rbxassetid://81660708288554"
  },
  "ground_r2b1_2.png": {
   "hash": "c6791ddd14da3aa7b4f513a6fecef26f",
@@ -880,8 +880,8 @@
   "id": "rbxassetid://102843140318075"
  },
  "chars_3.png": {
-  "hash": "587f10509e2e90e5edd2a335ee9d2cf1",
-  "id": "rbxassetid://127814669315780"
+  "hash": "f2d9f8469ce59c1be5a0b399d30ee650",
+  "id": "rbxassetid://115100258865930"
  },
  "chars_4.png": {
   "hash": "a5307478dd644876cb3d15b1f1e86434",
@@ -892,8 +892,8 @@
   "id": "rbxassetid://108149976755839"
  },
  "chars_mask_3.png": {
-  "hash": "dc6e6623bb140bf5f27ada0f94a3c7d4",
-  "id": "rbxassetid://134909608050052"
+  "hash": "0ddf4e736a6f9ed695b4a76ac4849af1",
+  "id": "rbxassetid://127347765790302"
  },
  "chars_mask_4.png": {
   "hash": "8d933227add7ce55d1ac30f995a00629",
@@ -958,5 +958,205 @@
  "ground_dream_1.png": {
   "hash": "294117d391f98f8ece24126d5fd46f2a",
   "id": "rbxassetid://86568380381663"
+ },
+ "cine_mural_salamander.png": {
+  "hash": "6d12afc9a1b6354774c6dbade743581d",
+  "id": "rbxassetid://106361966737710"
+ },
+ "cine_mural_mooni.png": {
+  "hash": "d751c3384bca93ec68888ddbc1767b7b",
+  "id": "rbxassetid://112784522891949"
+ },
+ "cine_mural_reaper.png": {
+  "hash": "5c4752c4569da49f9439ba437c8cad15",
+  "id": "rbxassetid://76473369861673"
+ },
+ "cine_mural_axion.png": {
+  "hash": "7ec4c7107db8d5822772cbb5884cd524",
+  "id": "rbxassetid://75681092154576"
+ },
+ "cine_mural_riven.png": {
+  "hash": "e7bf45cb02a11912a255d853f7f3c521",
+  "id": "rbxassetid://99331828874405"
+ },
+ "near_r1cc.png": {
+  "hash": "bb03375987df5f51ac467f784514ad50",
+  "id": "rbxassetid://111427056380401"
+ },
+ "back_ct_auction.png": {
+  "hash": "deafe13cc3852b66545fc6fa950088b7",
+  "id": "rbxassetid://111002919148565"
+ },
+ "ship_ship_out.png": {
+  "hash": "be5dfd3fd43d3471e172fa301dde9bf0",
+  "id": "rbxassetid://92462106500365"
+ },
+ "ship_ship_home.png": {
+  "hash": "be5dfd3fd43d3471e172fa301dde9bf0",
+  "id": "rbxassetid://102557987604449"
+ },
+ "props_ct.png": {
+  "hash": "4aa2901f2653ebbbfff8145558973112",
+  "id": "rbxassetid://94023395622194"
+ },
+ "back_ct_office.png": {
+  "hash": "5e153aa9400d0ec7ea4520ba10489714",
+  "id": "rbxassetid://130229467844565"
+ },
+ "near_ct.png": {
+  "hash": "9d0624362c3461e585b8cfac6630d585",
+  "id": "rbxassetid://123959722179055"
+ },
+ "back_ct_smith.png": {
+  "hash": "bcd17774700516c8583933b45ff423a9",
+  "id": "rbxassetid://136337303330969"
+ },
+ "ground_ct_3.png": {
+  "hash": "dc4e083f1c99109e11cf4cd22519021d",
+  "id": "rbxassetid://122444051043555"
+ },
+ "ground_ct_1.png": {
+  "hash": "bb1dc1f819cb972d453c79ca2d23216f",
+  "id": "rbxassetid://76598854780556"
+ },
+ "ground_ct_2.png": {
+  "hash": "169001cd845510e2ac3c5c69999ac70e",
+  "id": "rbxassetid://75898659253993"
+ },
+ "back_ct_store.png": {
+  "hash": "0e8f9936582a121b75be9512e461625d",
+  "id": "rbxassetid://126366947246540"
+ },
+ "back_ct_storage.png": {
+  "hash": "ff6ed8a98fbb5ffd9bfb6a1bcf573479",
+  "id": "rbxassetid://134573437628573"
+ },
+ "far_ct.png": {
+  "hash": "a7fa6205cfef49befed1d17220a532c2",
+  "id": "rbxassetid://97327830237568"
+ },
+ "sea_ship_home.png": {
+  "hash": "b672b0352c803f21f99aade12f2482fe",
+  "id": "rbxassetid://126176094324469"
+ },
+ "sea_ship_out.png": {
+  "hash": "b672b0352c803f21f99aade12f2482fe",
+  "id": "rbxassetid://80754181448263"
+ },
+ "back_ct_scribe.png": {
+  "hash": "c31dd3eb08ae241221ce8faebd01a9e7",
+  "id": "rbxassetid://91218960586498"
+ },
+ "back_ct_maid.png": {
+  "hash": "34c35418a8407263f6fc587d7d24867a",
+  "id": "rbxassetid://129403102377941"
+ },
+ "back_ct_spice.png": {
+  "hash": "10372c42d90eb4903433f4bca1be080b",
+  "id": "rbxassetid://117260792010676"
+ },
+ "back_ct_inn.png": {
+  "hash": "55db0f0224a00042b1663cc92ad2ea72",
+  "id": "rbxassetid://110896398622871"
+ },
+ "back_ct_fisher.png": {
+  "hash": "ed9e5f7f1c94a4da7c5505dd9276b8da",
+  "id": "rbxassetid://128557373754841"
+ },
+ "ladder.png": {
+  "hash": "7a7495ade56927ac0c2cc4bded421113",
+  "id": "rbxassetid://97882390366255"
+ },
+ "back_ct_harbor.png": {
+  "hash": "3e6666e68368d959c09d92c79f444e28",
+  "id": "rbxassetid://96974337406579"
+ },
+ "back_ct_stable.png": {
+  "hash": "c9545f82b7a77e6256eb993f9755e53e",
+  "id": "rbxassetid://110252516764726"
+ },
+ "back_ct_musician.png": {
+  "hash": "f0318931239048db53e6afa702862f8c",
+  "id": "rbxassetid://117717247885748"
+ },
+ "back_ct_oldhouse.png": {
+  "hash": "02a50fca1cac68122744f1972677a533",
+  "id": "rbxassetid://98177958007897"
+ },
+ "back_ct_flower.png": {
+  "hash": "f60bd33b9806450e0f335e1a9b5365d0",
+  "id": "rbxassetid://111657630555738"
+ },
+ "back_ct_guardpost.png": {
+  "hash": "b3f2d2f5821f2b18c7a6f793a79dd97b",
+  "id": "rbxassetid://77243987648482"
+ },
+ "ship_ship_sea_out.png": {
+  "hash": "be5dfd3fd43d3471e172fa301dde9bf0",
+  "id": "rbxassetid://102557987604449"
+ },
+ "sea_air_home.png": {
+  "hash": "acd597c5cbf2b24bad497c33e03ad050",
+  "id": "rbxassetid://112775081132374"
+ },
+ "sea_ship_sea_home.png": {
+  "hash": "b672b0352c803f21f99aade12f2482fe",
+  "id": "rbxassetid://126176094324469"
+ },
+ "ship_ship_sea_home.png": {
+  "hash": "be5dfd3fd43d3471e172fa301dde9bf0",
+  "id": "rbxassetid://102557987604449"
+ },
+ "sea_ship_sea_out.png": {
+  "hash": "b672b0352c803f21f99aade12f2482fe",
+  "id": "rbxassetid://126176094324469"
+ },
+ "ship_air_out.png": {
+  "hash": "8fb6a3f337c7089b0d8d56c9ee86912f",
+  "id": "rbxassetid://108949678734397"
+ },
+ "ship_air_home.png": {
+  "hash": "8fb6a3f337c7089b0d8d56c9ee86912f",
+  "id": "rbxassetid://108949678734397"
+ },
+ "back_ct_terrace.png": {
+  "hash": "4af78909e1735afa826791c9df26a8da",
+  "id": "rbxassetid://82185564261733"
+ },
+ "back_ct_tower.png": {
+  "hash": "906469402040ca9258499028d1966fe8",
+  "id": "rbxassetid://111423026181041"
+ },
+ "vista_ct_terrace.png": {
+  "hash": "0697c156d23f24f68426d7321a7fe4fd",
+  "id": "rbxassetid://72001134778535"
+ },
+ "sea_air_out.png": {
+  "hash": "acd597c5cbf2b24bad497c33e03ad050",
+  "id": "rbxassetid://112775081132374"
+ },
+ "back_ct_castle.png": {
+  "hash": "3cc5fa1407029876dc8da7cb30d90ede",
+  "id": "rbxassetid://122227497315667"
+ },
+ "worldmap_city.png": {
+  "hash": "841791a21fd274dc699b747089c8569b",
+  "id": "rbxassetid://122109754685398"
+ },
+ "worldmap_sea.png": {
+  "hash": "8f00544d6ed5b63685397b656bf5b2ac",
+  "id": "rbxassetid://92576107471427"
+ },
+ "worldmap_r4.png": {
+  "hash": "c5368b9a91cb0f7f1fd90011cf1d7149",
+  "id": "rbxassetid://140105596121121"
+ },
+ "worldmap_r2.png": {
+  "hash": "bcb52925d7c1b1eaedac95f3e83085c9",
+  "id": "rbxassetid://92148763829364"
+ },
+ "worldmap_r3.png": {
+  "hash": "ed34bb6cb664512f3614c03db188a6c4",
+  "id": "rbxassetid://139284205415304"
  }
 }

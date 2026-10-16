@@ -185,7 +185,12 @@ end
 
 -- 맵 하나의 틀을 만든다(발판까지 — 길은 Mesh.work가 조금씩 잰다)
 local cache = {}
+-- 토벌의 방(rf1#3)은 그 장면(rf1)의 틀을 같이 쓴다 — 들어갈 때마다 새 틀이 쌓이지 않게(2026-10-16)
+local function baseKey(k: string): string
+	return string.match(k, "^(.-)#%d+$") or k
+end
 function Mesh.of(sceneKey: string)
+	sceneKey = baseKey(sceneKey)
 	local mesh = cache[sceneKey]
 	if mesh then
 		return mesh
@@ -289,7 +294,7 @@ function Mesh.work(sceneKey: string, budget: number?): boolean
 end
 
 function Mesh.ready(sceneKey: string): boolean
-	local mesh = cache[sceneKey]
+	local mesh = cache[baseKey(sceneKey)]
 	return mesh ~= nil and mesh.ready
 end
 

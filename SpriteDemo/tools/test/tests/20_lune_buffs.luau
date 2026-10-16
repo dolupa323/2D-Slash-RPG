@@ -274,6 +274,7 @@ do
 		end
 		return sum, n, marked
 	end
+	r.dmgBoost = 50 -- (2026-10-15: 새 스펙에서 Lv.1 피해 숫자가 작아 반올림이 커서 키워 잰다 — 관리자의 시험용 배율과 같은 것)
 	local own = slash()
 	expect(own > 0, "베기가 맞았다")
 	local s0, n0 = echoes(1)

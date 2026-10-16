@@ -1490,6 +1490,117 @@
                공방: 시험 탭의 단추 줄도 여덟 · 경매장 시연에 수량 칸 / 남은 수량 / 상세(`?lunedemo=auctiondetail`) · `?lunezoom=4`(화면 틀의 가장 작은 격자로 본다 — 확인용). 그림 `assetpack/lune/dev/AUCTION_2 · 5 · 7*.png` · `MENU_8_*.png`.
                검사: 전체 483,594개 통과 · 가상 플레이(29번, `LUNE_PLAY=`) 다섯 직업 모두 Lv.30 · 2차 전직(Lv.10은 「이름 없는 비석」을 끝낼 때 — 7~8분). 줄의 대사 19개를 다시 읽었다(「망루 앞의 차돌」 → 「수비대 야영지의 차돌」).
                보지 못한 것: 게임 화면(Play 안 함) — 수량 칸의 타자 · 스페이스를 누르고 있을 때의 빠르기 · 실제 화면의 화살표 · 스마트폰. 물은 것: Lv.10 뒤의 빈 곳을 채울지 · 사이드 10개를 메인 줄에 넣은 것 · 주문서 5장 · 단추의 이름 「경매」와 자리.
+          ✔ S156 **은달 항구 2차 — 모든 건물의 실내 · 큰 성과 경관 · 사다리 · 성문 → 반달 나루 · 배와 비행선 · 모든 지역의 월드맵(2026-10-16 밤)** — 사용자가 고른 것: 성문 → 반달 나루 → 사냥터 · 배 · 비행선 모두 탈것 · 모든 건물 · 모든 지역.
+               길: maps.js ct 성문 [109.4 r2t] 하나만 걸어서 나간다 · r2t 서쪽 [2.6 ct 「은달 항구로」] · seat · port의 ct 포탈 뺌 · ferryman(노을)을 ct 부두 34.6 · seat 14.4로 · skyhand(나래) port 9.4 row 9.
+               탈것: city.js VOYAGE = routes 배열(id · from · npc · kind ship/airship · ship · to · at · dest · need · lines · locked) + deck(갑판의 말) · sim/voyage.luau(route(scene, npc) · routesFrom · isCrew · onShip · open(book, r)) · world onSail(player, npcId) · packets Sail(t.string) · boot sailTalk(r.lines) · navi/worldmap/quests.opens가 routes를 돈다.
+                 갑판: build_lune_cityrooms가 탈것마다(ship_out · ship_home · ship_sea_out · ship_sea_home · air_out · air_home) — 비행선 = raw_airship_deck.png + cloudStrip(발밑 구름 d -70) + 먼 산(rock d -8). music.js air_ = 항구의 곡(제 선택).
+               실내: CITYROOMS 열넷 더함(ct_harbor · ct_inn · ct_fisher · ct_stable · ct_spice · ct_guardpost · ct_musician · ct_flower · ct_oldhouse · ct_scribe · ct_maid · ct_castle(doors → ct_terrace) · ct_terrace(out ct_castle · vista) · ct_tower) — 그림 city/indoor/raw_<방>.png(make_prompts_round2.py).
+                 사람: dolsoe · nurung · cityhost · galmae · galgi · dahong · hangyeol · saebyeok · solgae를 방 안으로(FOLK where · people.js) · guildclerk 2층 79.4. 이야기 st_dock · st_manor · st_tower를 방 안으로 · st_oldhouse(새 — 제 것) · 달조각 넷을 빈 집으로 · manorwall 101.6.
+               성: looks/raw_city5_kit.png → castle 221x159(harbor 소품) · ct 3층 96(관저 · 깃발 · 가로등 뺌). 경관: raw_vista_city.png → vistaPicture(16단 + 민트 · 분홍) → maps/ct_terrace/vista.png · scene.vista { img, title, sub, x, act } → export vista_ct_terrace.png · client vistaView.luau(FADE 0.7 · HOLD 3.2 · 0.9 · HUD 위) · boot 들어설 때 · ↑ 가운데 · 탭 같은 셈(?lunedemo=vista).
+               사다리: maps.js ladders [칸, 위 줄, 아래 줄] → build_lune_maps(딛는 자리 확인 · maps/ladder.png 16x16을 그린다) → scene.ladders · ladderImg → export → physics(ladderAt · climb — CLIMB 80 · GRAB 7 · ↑ 잡기 · 꼭대기 ↓ 잡기(뛰기 없이) · 뛰기 놓기 · 기술 · 대쉬면 놓기 · clipOf idle) · boot input.up · sceneView 16점 조각을 쌓아 그린다 · 탭 climbStep. ct에 셋(57 · 71.2 · 115.4).
+               월드맵: worldmap/make_prompts_regions.py → raw_city · r2 · sea · r3 · r4 → build_lune_worldmap → journey.js WORLDART(그림을 보고 적은 자리 · out) · export(좌표 1 넘으면 붙임) · worldmap.luau peopleLine(사람 9 + 외 n명) · 이름 둘 줄임(분화구 — 기슭 · 비탈 · 가장자리 / 봉인의 회랑 — 계단 · 쐐기의 방).
+               대사: 강 위의 나루(성문) · 다홍의 짐(성문 옆 향신료 가게) · 편지(갈매의 집) · 노래(서기의 방) · 누룽(여관 부엌) · 새벽(성의 하녀 · 성의 등불 기름 · 성 담장) 고침.
+               검사: 규칙(탈것 · 사다리 · 방의 사람 · 방 안의 ↑ 자리 · 월드맵의 지역 WORLDMAP_MORE) · 테스트 10(사다리) · 54(탈것 여섯 · 방 열여덟 · 성 ↔ 테라스 · 경관) · 13 · 28 · 38 고침 · 전체 실패 0 · Studio 동기화 · 그림 30장 올림. 보지 못한 것: Play(사다리 · 경관 · 탈것) · 폰.
+          ✔ S155 **귀환 주문서 = 가장 가까운 마을(2026-10-16 · 사용자: "마을귀환 주문서라는게 가장가까운 마을로 이동하는 귀환주문서지 초승달마을로 고정 귀환하는 주문서가 아닙니다")** — 전에는 늘 SCENES.start(초승달 마을).
+               export: 장면마다 ret = 문을 가장 적게 지나 닿는 HOMES의 마을(같으면 HOMES의 앞) · 마을 자신 · 꿈 · 배의 갑판 = false. journey.js HOMES에 seat(물마루 마을) 더함(아랫마을 광장 r4a4는 몬스터가 있어 뺌 — 4지역의 맵은 등불 포구로) · 검사의 마을 목록에 continents.js의 마을.
+               서버 onPotion(scroll): 이미 마을 · 배 위(「배 위에서는 쓸 수 없다」) · ret 없음(「여기서는 쓸 수 없다」) → World.jump(ret). items.js RETURNSCROLL 글 「가장 가까운 마을로」. 배 시간 60 → 10초(사용자 "배타는 시간 더 짧게 10초정도").
+               검사: 13(맵마다 가는 마을 · 토벌의 방 · 배 · 꿈 · 모든 장면에 ret) · 전체 실패 0. Studio는 Play 중이라 동기화를 보지 못함.
+          ✔ S154 **은달 항구 다시 짓기 — 한 장 · 배 · 만나면 열림(2026-10-16 저녁 · 사용자: "대도시에 쓸데없이 포탈만 이리저리로 복잡하게 … 호감도는 왜만드는거고 … 왜 그냥 포탈이에요")** — 고른 것: 한 장의 큰 도시 · 배 위에서 시간을 보낸다 · 호감도를 빼고 만나면 열림.
+               도시: maps.js ct 한 장(136x34 · look harbor = city + port 소품 합침 · 1층 row 30 거리 · 2층 thin 40~98 row 22 광장 · 3층 thin 70~132 row 14 관저 · 소품 · 사람 · 문에 row). ct1~ct6 지움(디스크의 maps/ct1~6 폴더는 남김 — 지우지 않음).
+                 문: 방 다섯(ct_store 41 · ct_smith 61 · ct_storage 75 row 30 / ct_auction 45.6 · ct_office 76 row 22) + 도시 밖 셋(r2t 2.6 · seat 34 · port 120). 숨은 이야기 · 달조각 · 퀘스트 자리에 row(questplay tileSpot · city.js groundY).
+               방: tools/build_lune_cityrooms.mjs(Codex raw_ct_*.png → 한 화면 · 문 26 → ct) · city.js CITYROOMS. 배: raw_ship_deck.png(바깥 투명 · deckLine) → maps/ship_out · ship_home(layers 하늘 · 먼 바닷가 d -14 · 물결 sea.png d -40 · 배 · flags ship rest · 선장 · 문 없음).
+               배: city.js VOYAGE(time 10 — 처음 60 → 사용자 "배타는 시간 더 짧게 10초정도" · captain · need r1m9 · routes town → ship_out → ct(at 19,30) · ct → ship_home → town) → city.generated.voyage · sim/voyage.luau(route · onShip · open · leftText).
+                 서버 world: onSail(선장 앞 · open · moveTo 갑판 · s.voyage · Voyage 이벤트) · tick이 때가 되면 내림(voyageLanding — at 또는 선장 왼쪽) · place()가 배 밖이면 s.voyage를 지움. packets Sail · Voyage.
+                 화면: boot state.sailTalk(선장 → 「탑승」) · voyageView(위 가운데 「○○까지 n초」 — riftHud 자리) · sceneView 레이어 d(흘러감). town.js harbor = 선장(포탈 없음). 사람 captain 너울(raw_people12).
+                 길: navi path에 배 한 걸음 · aim = 선장(갑판이면 here) · worldmap hopsOf(문 + 배 — nodeOf · exits · path) · ROWS_MAX 5 · info 주민 10명 + 외 n명 · Quests.opens(r1m9) = 「선장 — 은달 항구로 가는 배」.
+               만나면 열림: city.js MEET(citysmith · citykeeper · auctioneer · clerk · warden — opens · lines) · bond.luau 새로(met · shard · story · kill · tome · open — 호감도 · 선물 뺌, 예전 저장의 pts 버림).
+                 서버: nearNpc가 Bond.opened를 봄(제작 · 창고 · 경매사 말) · onDaily · onRift = 「먼저 인사를 나눠야 한다」 · onBond meet(→ Quests.onMeet) · 받을 때 이미 만난 사람 onMeet. cq02 할 일 meet x5(questplay stepOf meet).
+                 화면: boot openNpc가 처음이면 인사(Talk, 제목 = 구실, 단추 「인사」) → Bond meet → 알림 → 그 창. 지움: rapportWindow · paintRapport · UILAYOUT.rapport · layout L.RAPPORT · 선물 넷 · 업적 friend.
+               공방: luneTab(호감도 뺌 · MEET 인사 · 선장 「탑승」 → 갑판 → VOYAGE.time 뒤 내림 · paintVoyageHud · 레이어 d · ?lunedemo=meet · meetwarden · voyage · voyageend) · 검사 규칙(도시 한 장 · 1지역 → 도시 문 없음 · 선장 · 갑판 · MEET · 호감도가 남지 않음 · 방에 선 사람 · 층이 다르면 겹치지 않음).
+               검사: 54 새로(만나면 열림 · 배의 흐름 — 364) · 55(의뢰소 · 인사 · 도시 대장장이) · 56 · 10(갑판) · 17 · 18 · 27 · 28 · 38 고침 · 전체 실패 0 · Studio 동기화 · 그림 16장 올림.
+               보지 못한 것: Play · 시험 탭에서 배가 닿는 순간(헤드리스는 시간이 안 흐름). 물은 것(devplan ask): 발판 밑을 벽으로 채울지 · 들어올 때 마지막 마을에서 시작할지(지금은 늘 초승달 마을 — 2편도 매번 배).
+          ✔ S153 **글 맞춤 · 퍼널 · 옛 주인 후보(2026-10-16)** — 사이드 퀘스트 넷 · 메인 「검은 수정」의 설명을 할 일과 주는 사람에 맞춤(PLAY2의 text) · analytics Part2Quest 퍼널(LINE2 열둘 — 테스트 50) ·
+               옛 주인 후보: bossdesign/r2 raw_r2_T1~T3(천년 수정목) · Z1~Z3(달자라) → board2.py → dev/BOSS22 · devplan ask(넣을지 · 고를지). 게임은 그대로.
+               후보 열둘을 게임 크기로(키 85점 · 13색 · 주인공과 3배): bossdesign/r2/scale_board.py → dev/BOSS23. 마지막 전체 검사 469,592 · 실패 0 · Studio 동기화 확인.
+          ✔ S152 **확인 보강(2026-10-16)** — 테스트 56(2편의 퀘스트 모두를 받기 → 할 일 → 보상까지 셈으로 · 302) · 테스트 55에 화면 코드(토벌 창 · 위의 판 · 끝의 판)를 그리지 않고 돌림 · worldmap.nodeOf 캐시 = 바탕 장면.
+               보스 패턴 초안 bosses.js R2BOSS_PLAN(그림자 사수 7 · 부단장 7 — 「물러서기」만 새 셈) · devplan: 레벨 곡선 물음(30→60 사냥만 약 1만 9천 마리 · 퀘스트가 약 34%).
+          ✔ S151 **장터 거리의 대장장이 담금 · 창고지기 한아름(2026-10-16)** — 도시에 대장장이 · 창고지기가 없었다(바람의 말과 어긋남). people.js citysmith · citykeeper(Codex raw_people11 — 첫 그림 정면이라 다시 · 눈 fix) · maps ct3 18.8 · 38.2 · NPCDO smith/store · ROLE_NPC
+               게임: ForgeWindow.title = 연 대장장이(boot openNpc가 ForgeWindow.opener를 적음 · windows.luau title nil → 이름) · 창고 제목은 「창고」 그대로. villagers.png 올림(123222851711135). 테스트 55에 도시 대장장이 제작.
+          ✔ S150 **2편 제작 재료 · 장비 · 보스 후보(2026-10-16 · 자리 비움 동안)** — 빈 곳: 제작 재료 · 대장장이 제작이 Lv.29에서 끝나 있었다.
+               items.js MATS mat_ore4~6(수정 · 흑수정 · 월은 광석) · mat_hide4~6(이끼 · 여우 털 · 비늘 가죽 — Lv.30 · 40 · 50대 15%) · CRAFT.need 30/40/50(한 벌 153~187마리) — 이름 · 숫자 내 것
+               아이콘 Codex raw_etc_9.png → etc_sheets.json · build_lune_icons · build_lune_ui → ui_kit.png 올림(127701484464218). 제작 탭이 여섯이 되어 UILAYOUT.craft.note를 비우고 hint에 합침(아래 줄)
+               테스트 15 고침(재료 Lv.30대 2 · Lv.60 0 · 제작법 30 · 아래 줄 폭). 안내인 바람의 「항구의 첫날」 끝 말에 토벌대장 소개 두 줄. naviMesh 캐시 = 바탕 장면(rf1#3 → rf1)
+               보스 후보(게임은 그대로): bossdesign/r2 — 그림자 사수 S1 검은 수정 순찰자 · S2 뿔 풍뎅이 사수 · S3 그림자 허수아비 / 타락한 부단장 C3 망령 대장(10-15에 살려 둔 것) · K2 수정에 묶인 기사 · K3 잿빛 심문관 → dev/BOSS21 · devplan ask
+          ✔ S149 **수정 틈 토벌 — 반복 던전 · 2편 업적(2026-10-16 · 같은 자리 비움 동안 · 10-15 「반복 콘텐츠는 대도시 이후」)** — 로스트아크 카오스 던전 · 메이플 몬스터파크 참고. 모두 내 제안(devplan ask).
+               공방: design/city.js RIFT · riftWaves · riftPay · riftGame(단계 rf1 Lv.30 r2a1 · rf2 Lv.40 r2b1 · rf3 Lv.50 r2c1 · 물결 셋 + 정예 둘(체력 6배 · 힘 1.5배 · 분홍 look) · 하루 2번 · 5분 · 완료 30초 뒤 광장)
+               토벌대장 무진(warden — Codex raw_people10.png · 눈 고침 fix) = 역할 주민(NPCDO rift) · ct2 57 · basics WINDOWS rift · ui.js UILAYOUT rift/riftHud/riftEnd · paint.js paintRift/paintRiftHud/paintRiftEnd
+               시험 탭: SCENES에 rf1~3(바탕 맵의 그림) · ?lunedemo=rift · riftrun · riftelite · riftend · 토벌대장 ↑ → 창 → 입장. music.js rf* = dark
+               export: scenes.generated에 rf1~3(바탕 장면을 빌림 · 문 하나 → ct2 · warps 없음 · mobs에 wave/elite) + scenes 메타테이블(rf1#3 → rf1) · city.generated.rift
+               게임: sim/rift.luau(기록 h.rift · 방의 셈 start/step/view/due · rollGear) · room.luau(wave/elite · 다시 안 나옴 · 정예 체력/힘) · hero pack/unpack ·
+               world.luau(onRift view/enter — 토벌대장 앞 · 레벨 · rf<n>#번호 방 · 같은 맵 파티원 · tick: RiftView 알림 · 완료 보상 riftPay · due → 토벌대장 앞 · 빈 방 닫음 · 문으로 나오면 토벌대장 앞 · World.hasRoom)
+               packets Rift · RiftView · RiftPay · client ui/riftWindow · riftView(위의 판 · 끝의 판) · mobsView 정예 look · music 방 이름 #번호 · 업적 count rift/shard/story/friend(+7개)
+               확인: 규칙 검사(토벌 규칙 더함) · 테스트 55(657) · 전체(23 · 48은 rift 장면을 빼도록 고침) · villagers.png 올림(126819372033542) · Studio 동기화. Play로는 보지 않음.
+          ✔ S148 **2편(Lv.30~59) — 은달 항구 · 사람 · 호감도 · 흩어진 퀘스트 · 모험의 서(2026-10-16 · 사용자: "30~ 60 구간을 제작 … 대도시로 진입해서 사람들과 커넥션 … 로스트아크로 치면 베른 북부 첫 진입 … 퀘스트는 필수 진행이 아니라, 여기저기 흩어져있고" · 8시간 자리 비움)** —
+               설계: 공방 design/city.js(CITYLIFE.study · RAPPORT · GIFTS · FOLK 13 + FOLK_OLD(하늬) · CITYQUESTS cq01~cq25 · CITY_SPOTS · STORIES 7 · SHARDS 25 · TOME · cityGame()) → export city.generated.luau.
+               사람 그림: Codex raw_people6~9.png → build_lune_people.mjs(villagers_all.png를 32칸마다 접음 — npcCols; 게임 sceneView · cineView · 탭 cellX/cellY). 아이콘 raw_etc_7 · 8(퀘스트 물건 10 · 선물 4 · shard_moon). 올림: villagers.png · ui_kit.png.
+               퀘스트: questplay.js — cityQuest(cq · region false = 도시 · cq01만 r1) · QUESTS 차례 r1 → 도시 → r2~ · SCATTER ['r2'](부탁끼리 앞뒤 없음) · 새 할 일 visit(at — Quests.onVisit · world place()) · rapport(Quests.setStages · stageOf — 서버는 함수, 화면은 표) · reward.gifts · play.text ·
+               npcScene이 지역에 없으면 어디서든 · PLAY2 메인 7~9(보스 대신: 검은 결정 20 + 아치(ridgearch) · 향로 20 · 제단(pyre)) · job3(종탑 종지기 · 달빛 서린 종 조각 4 — 그림 fragment) · 탐색 tileSpot(아래에서 찾은 땅).
+               게임: sim/bond.luau(호감도 · 선물 · 단계 보상 · 달조각 touchShard · 숨은 이야기 read · 몬스터 onKill · 모험의 서 area/claimTome · view/pack/unpack · h.bond 캐릭터마다) · gift.luau(items) · hero(bond 저장 · questDone 선물 · open tome · Bond.questDone) ·
+               world(onBond "view · talk · gift · claim · read · tome" · BondView(shard · quest · open) · onMove의 달조각 · place의 onVisit · 처치 Bond.onKill · describe.bond) · packets Bond · BondView · client ui/rapportWindow · tomeWindow · boot(state.bond · setBond · bondTalk · 대화 끝 「↑ 호감도」 ·
+               숨은 이야기 = 자리(drawSpots) · 달조각 그림(drawShards) · 메뉴(menu 창 — 출석 · 업적도 이제 뜬다) · 메뉴 점) · 일일 의뢰 지역마다(daily.js boards.r2 = ct2 clerk from 33 · Daily.regionAt · dailyWindow arg) · 선물 = RARE(from 30).
+               장면: cine.js c2_arrive(cq01 · ct5 들어올 때) · c2_end(r2m9 끝). 공방 탭: paint.js paintRapport · paintTome · luneTab BOND_DEMO(?lunedemo=rapport · rapport2 · tome · tome2 · 도시 사람 말 → 호감도 · 달조각 줍기 · 숨은 이야기).
+               검사: 54(새) · 15 · 17 · 18 · 27 · 28 · 38 고침 · 설계 규칙(2편 블록 · 일일 게시판 · 도시 퀘스트는 지역 줄 밖). 보지 못한 것: Play · 폰. 물은 것: 계정 공유 여부 · 사람 · 이야기 · 선물 가게 · 2편 보스 · 다음 반복 콘텐츠 · 3차 전직 자리.
+          ✔ S147 **강화 · 대장장이 · 스펙 다시 짬(2026-10-15 · 사용자: "강화 섹션이 문제가 많습니다 … 데미지가 어떤 계산식으로 적용되는지 지금 개판이에요 싹다 다시 확인하세요")** —
+               스펙: 공방 numbers.js 2-1 `SPEC`(스탯 공격력 = (주 x4 + 부) x 공격력 x (1+공%) /100 x (1+데미지%) x (1+최종%) · 한 타 = 스탯 공격력 x 스킬% x 0.9~1.1 x 맞는 상대 1.5 x 크리 · 전투력 = 버프 뺀 스탯 공격력 x 크리 기댓값 ·
+               받는 피해 감소 = 60 x D / (D + 4 x armorDef(몹Lv))) · 무기 공격력 20 + 1.5L · 방어구 올스탯 3 + L/2 · 방어력 5 + L · 장신구 올스탯 절반 · 성능 -10/-5/0/+5/+10% · 별 % 4/9(무기) · 6/12(방어구) · 모두 22성(STARCAP 하나) ·
+               정수 0 · 달가루 적어도 1 · `COMBAT.rules.dmgScale` 10 → 1 · 몬스터 체력 = 7.5 x refAttack(L) x ease(옛 값은 mobHpOld · 보스 설계의 LOADOUTS는 옛 powerOf — unitHp · unitPow로 바꿔 씀).
+               게임: config/numbers(weaponAtk · armorStat · armorDef · starPct · statAtk · refAttack · cutOf) · sim/items(options · sum · cut · transfer 뺌) · sim/hero(spec · attackBase · power · specView · sheet) · sim/passives(atkPct · finalMul) ·
+               ui/itemInfo(specOf · refSpec · wearDiff · optText · 이름에 +n 없음 · stars) · ui/starText · Ui.stars · itemDetail(별이 맨 위) · itemCell(★N) · equipWindow(Lv.N ★N) · auctionView(★N 공격력 x) · statWindow · sheet.
+               대장장이: client/lune/ui/forgeWindow.luau 새로(탭 제작 · 강화 · 제작 그림 → ItemDetail · 고를 칸 = 장착 중 먼저 · ui.forgeDrop(가방에서 끌어다) · 연출 STRIKES 0.05/0.4/0.75 · REVEAL 1.05 · END 1.9 · BindToRenderStep · 칸 = 건너뛰기 ·
+               되살리기 · RESULT.restore) · shopWindow의 대장장이 상점 · buildCraft 뺌 · 달가루 = 잡화 상인 · 대장장이는 사지 않음 · Bag.transfer 뺌.
+               공방(시험 탭이 본보기): items.js 4-4(enhanceInfo · enhanceRoll · forgeLines · forgeGain · forgeChoices · craftInfo · FORGEWORDS · aucSub) · paint.js paintForge · paintForgeAfter(연출) · 옛 paintCraft 지움 ·
+               luneTab J = 대장장이 창 · ?lunedemo=forge · forgecraft · forgedetail · forgeanim · forgeok · forgedrop · forgeboom · forgebroken · 고를 칸 휠 · 경매장 줄도 게임의 셈(aucSub). export checks.forge → 테스트 53이 강화 줄의 글을 맞춰 본다.
+               용어: 치명타 → 크리티컬 · 최종 피해 → 최종 데미지 · 주는 피해 → 데미지 · 없는 효과를 적은 설명 고침. 검사 53(새) · 11 · 12 · 13 · 15 · 18 · 20 · 22 · 29 · 40 · 41 · 44 고침.
+               29번: 직업마다 따로 돌리면 다섯 모두 2차 전직(0:23~0:26 · 쓰러짐 0). 다섯을 한 번에 돌리면 넷째가 「옛 망루」 1층의 정예 검병을 못 잡고 멈춘다(봇의 서는 자리 문제로 보임) — 사용자가 그만두라 함("이 테스트루프 의미도없는거 그만돌리세요"), 더 보지 않음.
+               보지 못한 것: Play(대장장이 창 · 연출 · 끌어다 놓기) · 폰. 물은 것: 별 % · 성능 % · 낮은 레벨 22성이 싸다(Lv.1 무기 달가루 504) · 달가루를 상인이 파는 것 · 정수를 다시 넣을지 · 강화 소리.
+          ✔ S146 **출석 · 업적(2026-10-15 · 사용자: "출석보상, 업적 만들어야합니다" — 판 · 목록 · 보상은 내 제안)** — 공방 design/attend.js(28칸 · 한국 자정 · 큰 칸 7/14/21/28 · 보상) · achieve.js(27개 · 410점 · 브론즈/실버/골드 · goal.kind)
+               → export attend.generated · achieve.generated · ui.js UILAYOUT.attend · achieve · basics.js WINDOWS attend · achieve(메뉴에서).
+               게임: sim/gift.luau(보상 꾸러미 — 물약은 그 레벨의 것 · 다 안 들어가면 안 줌) · sim/attend.luau(checkIn · claim · view) · sim/achieve.luau(지역 = 장면의 region · killed · visited · forged · check · claim · claimAll · view) ·
+               account.luau의 att · ach(계정의 것) · world.luau(onAttend · onAchieve · achTick 1초 — 쓰러짐 · 자정 · check / 처치 · 분해 · 제작 · 강화 · 일일 · 파티 · 경매 대금 · 들른 맵의 셈 · selfView attReady · achReady) ·
+               packets Attend · Achieve · AchDone · AttendNew · ui/attendWindow · achieveWindow · touch.luau 메뉴의 점 · boot(창 등록 · ctx · 그날 처음이면 출석 창 · 업적 띠 = Guide.banner).
+               공방: paint.js paintAttend · paintAchieve · achBanner · luneTab ?lunedemo=attend · attendfull · achieve1~6 · achbanner. 검사: 51 · 52 + 규칙(글이 줄에 들어간다). 게임 488,177개 통과. Play 안 함.
+          ✔ S145 **플레이어 데이터 기록(2026-10-15)** — server/modules/analytics.luau(AnalyticsService: 온보딩 19단계 · MainQuest · Level 퍼널 · LevelUp · JobAdvanced · Death · DailyDone · Enhance · 달돈의 경제(60초 묶음)) ·
+               요청은 Analytics.wrap으로 감싼다(무엇이 달돈을 바꿨나) · 관리자 · 확인용 · 봇은 안 적음 · Studio는 안 보냄 · hero.played(논 시간 · 저장). 검사 50. 게임 이름 「[Pixel RPG] 달의계승자」(store.js · 썸네일의 영문 줄을 뺌).
+          ✔ S144 **최종 점검 — 시작 ~ 2차 전직(2026-10-15)** — 다섯 직업 모두 2차 전직(0:23~0:25 · 쓰러짐 0) · 연출 13개의 사람 · 일일 의뢰 Lv.10~30 · 첫 강화 · 고친 것: 버린 퀘스트 설명의 작업 메모 · 노인의 옛 혼잣말(맵 파일) ·
+               옛 망루 설명의 깃발 · 문 이름의 「(임시)」 → 규칙 검사가 막는다(플레이어 글의 작업 메모 · 맵 파일의 옛 혼잣말).
+          ✔ S143 **오류 · 명예의 전당 · 가방 스크롤(2026-10-15)** — ① 「quests:563 attempt to concatenate string with boolean」(매 화면): 줄에서 뺀 퀘스트를 하는 중이던 캐릭터 → 길찾기가 돌려줄 주민(false)을 찾다 멈춤.
+               `Q.npcScene`이 주민이 없으면 nil · `Q.unpack`이 할 수 없게 된 퀘스트의 「하는 중」을 지운다(끝낸 것은 남김) — 테스트 17. (주황 경고 UIBlox FoundationProvider = 로블록스 코어, 우리 코드 아님)
+               ② 명예의 전당에서 관리자 계정 빼기: `Admin.isId` · `Rank.userOf(key)` → rankBoards가 관리자의 줄을 거름 · pushRank는 관리자면 올리지 않고 한 번 지움 · addSpent도 건너뜀 · onRank의 rankSent nil 막음(관리자가 순위를 물으면 오류였을 것) — 테스트 13
+               ③ 가방 = 스크롤: bagWindow의 ▲▼를 없애고 칸을 Ui.scroll 안에(늘린 만큼 칸을 만든다 · 막대 3점) · 스마트폰은 칸을 HOLD 0.3초 누르고 밀어야 끌기(quickEdit의 extra.hold · onStart — 끄는 동안 스크롤을 세움) — 테스트 49. 시험 탭의 가방은 24칸 본보기라 그대로.
+               검사: 게임 487,521개 + 49 통과 · Studio(새 창 id 60840a33…)에 Rojo로 들어온 것 확인. Play 안 함.
+          ✔ S142 **해 보신 뒤 열 가지(2026-10-15)** — 소리 1/3(수락 0.17 · 완료 0.18 · 데미지 0.05 — music.js) · 타수를 차수마다(COMBAT.lines.per = [3,4,6,8] · nuke = [5,7,10,15] — `Lines.count(hits, nuke, job)`, Caster.lines가 CAST.job을 넘긴다)
+               · 간이 포탈(maps.js `warpsFor` · `WARP` → scenes.generated `warps` · `warpAlpha` · 서버 `Net "Hop"`(world.luau onHop → Warp) · sceneView는 문 그림을 28%로 · `warpNear` · 시험 탭 nearWarp) — 몬스터가 사는 맵 57곳(in_cellar · dream 빼고), 다른 맵으로 가는 문(portals)과 따로
+               · 말풍선(Talk.hush — enterScene) · Lv.30까지 줄로(questplay `LINE_FIT = 30` · 「주민이 안 바뀐다」 규칙은 `LINE_HEAD = 10`) · 세 갈래 길 문 17 → 11.8칸
+               · 줄 20 → 14(빠진 여섯 = PLAY.side에서 `DROPPED_1015`로 — 이름표는 그대로라 받을 수 없음 · quests.js에 dropped) · 옛 망루 + 깃발 찾기(spot flag) · 마을 밖의 그림자 + 물약 10 · 불타는 마을 = espearman(town.js cellars · combat FIELD)
+               · 일일 의뢰가 줄에 남은 몬스터를 피함(`Quests.lineMobs` → `Daily.pick(..., skip)` · 공방 dailyPick) · 망루 아래(r1b4) 지움(그림 폴더는 maps/_removed_1015 · mole은 bench) · r1_sight = r1m2 enter
+               · 명예의 전당 = 비석에 새긴 글(town.js stones `face` · build_lune_town2 · export npcs.face · 게임 `client/lune/hallStones.luau`(Net Rank · 30초) · NPCDO에서 hall_* 뺌 · npcNear가 비석을 건너뜀 · 시험 탭 in_hall)
+               검사: 공방 규칙 통과 · 게임 478,967개(새 47 비석 · 48 간이 포탈) · 그림 2장 올림 · Rojo 확인. Play 안 함.
+          ✔ S141 **퀘스트 연출(장면) · 1지역 메인 줄의 이야기** — 2026-10-15. 사용자: "현재 메인 퀘스트 라인 너무스토리 몰입이 안됩니다 … 뭐해라, 뭐잡아라 반복 … 몰입되는 중간에 연출이 있는것도아니고 다른게임들 어떻게 스토리 진행하는지 좀 파악하고 만들어야합니다." (같은 때 두 보스의 걷기를 늦춤: 성벽 거인 34→20 · 간수 24→15)
+               조사(로스트아크 · 메이플 · 던파 · 엘소드 · WoW · FF14) = 설계 `cine.js`의 STUDY_CINE → 「줄거리 · 세계」 탭(storyTab의 lineHtml — 조사 · 끌고 가는 질문 · 장마다 퀘스트 · 대사 · 장면).
+               자료: 공방 `js/lune/design/cine.js` — CINE(장면 13: when = { quest, on = before · enter · accept · goal · complete, map } · steps) · CHAPTERS(1편의 장 다섯 — 장의 첫 퀘스트를 받을 때 카드) · LOOK(불타는 마을 동안 town · in_shrine · in_cellar의 붉은 덮개) · PICTURES(벽 그림 — 직업마다 한 장) · CINE_LOOK · WEAPON_WORD.
+                 대사 = `questplay.js` PLAY(1지역 20개 다시 씀 — 이름 · 할 일 · 마릿수 · 주민은 그대로). 「@id 」 = 그 사람이 말한다(@hero = 내 캐릭터) — 게임의 Talk.speaker가 이름표를 바꾼다. 설명 글 = world.js MAIN · quests.js SIDE(낡은 달력 · 옛이야기 · 깃발).
+               셈: 공방 `js/lune/cine.js` = 게임 `shared/lune/cine.luau`(같은 셈 — Cine.new · step · input · findAll · before · lookAt · known). 그리기: 시험 탭 `luneTab.js`(「연출」 고르개 · `&lunecine=<id>&lunecinestep=<n>` 화면 확인용) = 게임 `client/lune/cineView.luau`(세계를 덮는 층 55 · 글 · 단추 층 70 · 말은 Talk.cine).
+               게임의 연결(boot.luau): Quests 이벤트에서 accept · goal · complete를 줄 세움 · 맵에 들어서 막이 걷히면 enter · before · 줄은 playCine가 하나씩(막 · 쓰러짐 · 주민과 말하는 중에는 기다림) · 장면 동안 step은 넘기기만(↑ · 스페이스 · Esc 건너뛰기) · 돌려준 뒤 다음 퀘스트의 말(state.chain)은 장면이 끝날 때까지 기다림 · 맵을 바꾸면 장면을 끝내고 줄을 비움.
+                 sceneView: camOverride(카메라) · npcOver(주민의 자리 · 쪽 · 숨김 · 걷기). 서버: Net "Cine" on/off(h.inCine — Hero.hurt · Room:hurtHero가 막음 · 90초에 저절로 풂) · seen(h.cine에 적어 저장 — Hero.pack의 cine · Hero.view의 cine).
+               벽 그림: `assetpack/lune/cine/` — raw_mural.png(Codex · 본 = ref_heroes_lineup.png) → dots_mural → mural_clean(돌 색의 외톨이 점만 지움) → mural_lift(돌 바탕 한 단계 밝힘) → mural_<직업>.png(얼굴 지움 — 칼자국, 내 직업만 반쯤). 만든 법 = 그 폴더의 mural_dots.py → mural_clean.py → (밝히기는 한 줄 — UP 표) → mural_scratch.py.
+                 게임 그림 cine_mural_<직업>.png 다섯 올림(ids.json). 검사: 공방 규칙(장면의 사람 · 맵 · 1지역 앞부분의 큰 낱말 · 「@id」) · 게임 497,253개(새 45_lune_cine · 46_lune_cineview — 화면 코드를 가짜 화면에 끝까지 그림). Play 안 함(사용자가 볼 차례).
+          ✔ S140 **새 스토리 보스 둘 — 성벽 거인 · 쇠사슬 간수(sprite-gen 시트)** — 2026-10-15. 사용자: 새 디자인 채택 → sprite-gen으로 동작 시트 → 성벽 거인 「오케이 좋습니다」 → "오케이 게임에 적용해보세요".
+               자리: id는 그대로(towerlieutenant = 성벽 거인 · scoutcaptain = 쇠사슬 간수 — 퀘스트 r1m7 · r1m8 · 망루 꼭대기). 이름은 공방 자료 전부(world · questplay · quests · story · journey · maps · music · numbers · startplan · basicsTab)와 관리 창 단추에서 바꿈.
+               시트: `dino-workshop/assetpack/lune/bossanim/<rampart|jailer>/`(sprite-sheet-alpha.png + manifest.json · 만든 법 = plan_*.py · rig/ · 그 폴더의 도구들) → 설계 `bosses.js`의 `BOSS_SHEET`(동작마다 poses · holds · fps · hit · swing) →
+                 `build_lune_boss_made.mjs`가 그 보스는 BOSS_MADE 대신 시트를 띠로 옮김 → `build_lune_bosses.mjs`(그림판의 몸 = 시트의 대기 칸) → export. `storyBoss().anim`도 BOSS_SHEET에서(`sheetSeq`).
+               `swing`(새 값): 예고의 끝에 보여 주는 휘두르는 장 수 — `bossfx.js` · `shared/lune/bossfx.luau`의 body(없으면 1 — 옛 보스 그대로). 테스트 24가 「멈춘 장 = hit - swing」 · 「휘두르는 첫 장」을 본다. 검사: 시트 동작의 fps 4~20.
+               이펙트: 성벽 거인 = 부관의 것 그대로(자리만 — BOSS_FX). 간수 = 새 일곱(`build_lune_boss_fx_prompts.py`의 FX['scoutcaptain'] · Codex는 sprite-gen의 생성기로 · 색의 본 = 간수의 새 그림 `PAL_FROM`). 옛 붉은 것은 `monsters/fx_captain_1013/` · `FXART_CAPTAIN_1013`.
+               검사: 규칙 통과 · 그림판 6장 올림(chars_1~3 · 마스크) · 게임 검사 496,492개 통과 · Studio에 Rojo로 들어온 것 확인. Play 안 함(사용자가 볼 차례).
           ✔ S49 보스의 설계(글만) — 1지역의 보상 보스 셋(검은엄니 · 부관의 필드 보스 · 정찰대장의 무기와 노말/하드)은 쓰지 않는다고 `world.js` BOSSRULES 맨 위에 적음 · `basics.js` UNLOCK에서 Lv.10 보스 수첩 / Lv.20 옛 주인 / Lv.28 지역 보스 노말을 뺌 · WEAPON.ways를 상점 · 몬스터 · 제작 · 스토리 보스로 고침 · startplan의 차례 ④ ⑤와 「보스」 줄을 고침.
               **남은 것**: 보스 사다리의 자료(OLD · TIERS · LADDER · numbers.js의 구간과 드랍표)는 옛 설계 그대로다 — 장비를 주는 보스가 어느 구간부터 나올지 정할 때 다시 짠다(얽힌 검사가 많다). 굴(멧돼지 굴) · 망루 꼭대기는 게임에 빈 방으로 남아 있다. 도르래 줄은 만들지 않는다.
           ☐ (옛 메모) 보스 — 메이플 조사 — Lv.1~29는 직업 스토리뿐 보스 없음 · Lv.30~59 테마던전의 스토리 보스(보상은 퀘스트 완료가 준다) · 보상을 주는 첫 보스는 Lv.50 이지 자쿰(하루 한 번) · Lv.65 발록(출처 grandislibrary Level Content Guide).

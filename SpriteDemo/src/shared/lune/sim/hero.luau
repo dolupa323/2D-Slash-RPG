@@ -7,6 +7,8 @@ local Items = require(script.Parent.items)
 local Bag = require(script.Parent.bag)
 local Quests = require(script.Parent.quests)
 local Daily = require(script.Parent.daily)
+local Bond = require(script.Parent.bond)
+local Rift = require(script.Parent.rift)
 local Tutorial = require(script.Parent.tutorial)
 local Kit = require(script.Parent.kit) -- 1차의 온오프 사출기 · 핵심 장치 · 패시브
 local Buffs = require(script.Parent.buffs) -- 2~4차의 버프
@@ -153,21 +155,46 @@ function Hero.spLeft(h, job: number): number
 	return spEarnedIn(h.level, job, h.class) - spSpentIn(h.class, h.job, h.skills, job)
 end
 
--- 능력치 효율: 다 주 능력치에 찍었을 때 1
-function Hero.eff(h): number
+-- ---------- 스펙(2026-10-15 — 공방 numbers.js 2-1: 메이플의 스탯 공격력 방식) ----------
+--  사용자 2026-10-15: "어디는 전투력 어디는 공격력 강화하면 뭐가오르는건지 하나도 직관적이지가 않아요 … 데미지가 어떤 계산식으로 적용되는지 … 싹다 다시"
+--  스탯 공격력 = (주스탯 x 4 + 부스탯) x 공격력 x (1 + 공격력%) / 100 x (1 + 데미지%) x (1 + 최종 데미지%)
+--   · 주스탯 · 부스탯(그리고 화면의 힘 · 민첩 · 지능 · 운) = 처음 4 + 찍은 점수 + 장비의 올스탯 · 공격력 = 무기의 공격력(별까지) · 방어력 = 방어구의 합
+--   · 공격력% = 패시브(Passives.atkPct) x 리퍼의 영혼(Kit.attack) · 데미지% = 버프(Buffs.dmg) · 최종 데미지 = 패시브(Passives.finalMul)
+--  피해 = 스탯 공격력 x 스킬 % x (0.9 ~ 1.1) x (맞는 상대면 1.5) x (크리티컬이면 크리티컬 데미지) — 셈은 sim/room.luau · caster.luau(Hero.powerRaw x 영혼 x 버프 x 패시브)
+function Hero.spec(h)
 	local pair = STATS.classes[h.class]
-	local main, sub = h.stats[pair[1]], h.stats[pair[2]]
-	return N.statAttack(STATS.base + main, STATS.base + sub) / N.statAttack(STATS.base + N.apAt(h.level), STATS.base)
+	local gear = Items.sum(Bag.worn(h))
+	local stats = {}
+	for id, pts in h.stats do
+		stats[id] = STATS.base + pts + (if id == "hp" then 0 else gear.stat)
+	end
+	return { main = stats[pair[1]], sub = stats[pair[2]], atk = gear.atk, def = gear.def, stats = stats, gearStat = gear.stat }
 end
-
--- 전투력 = 10 × (0.3 × 능력치 효율 × 1.07^레벨 + 0.7 × 장비 점수). 장비 점수 = 끼고 있는 장비의 점수를 더해 부위 가중치의 합으로 나눈 것(sim/items.luau)
-function Hero.power(h): number
-	return Items.power(h.level, Hero.eff(h), Bag.worn(h))
+-- 곱하기 전의 스탯 공격력 = (주스탯 x 4 + 부스탯) x 공격력 / 100
+function Hero.attackBase(h): number
+	local sp = Hero.spec(h)
+	return N.statAtk(sp.main, sp.sub, sp.atk)
 end
--- 반올림하기 전의 전투력(피해의 셈에 쓴다 — 능력치 1점도 피해에 그대로 들어가게)
+-- 크리티컬의 기댓값(1 + 확률 x (데미지 배수 - 1)) — 전투력에 넣는다
+local function critExp(h): number
+	local chance, mul = Passives.crit(h, false)
+	return 1 + chance / 100 * (mul - 1)
+end
+-- 전투력 = 버프를 뺀 스탯 공격력 x 크리티컬의 기댓값 — 한 숫자로 견주는 힘(명예의 전당 · 「장착하면 전투력 +n」). 영혼 · 피의 계약처럼 싸우는 동안 변하는 것은 넣지 않는다
+--  sp = 이미 셈한 Hero.spec(내 상태를 보낼 때 한 번만 셈한다)
+function Hero.power(h, sp: any?): number
+	local s = sp or Hero.spec(h)
+	return math.floor(N.statAtk(s.main, s.sub, s.atk) * (1 + Passives.atkPct(h)) * (1 + Passives.sumOf(h, "final")) * critExp(h) + 0.5)
+end
+-- 피해의 셈이 쓰는 값(= 곱하기 전의 스탯 공격력). 그 위에 영혼(Kit.attack) · 버프(Buffs.dmg) · 패시브(Passives.atk)를 곱한다
 --  관리자의 시험용 피해 배율(h.dmgBoost — 저장하지 않는다)은 여기에만 곱한다: 보이는 전투력과 순위(Hero.power)는 그대로다
 function Hero.powerRaw(h): number
-	return Items.powerRaw(h.level, Hero.eff(h), Bag.worn(h)) * (h.dmgBoost or 1)
+	return Hero.attackBase(h) * (h.dmgBoost or 1)
+end
+-- 아이템 상세의 「장착하면 전투력 +n」을 셈하는 재료(화면에 보낸다 — shared/lune/ui/itemInfo.luau): 주스탯 · 부스탯 · 공격력 · k(전투력 = statAtk x k)
+function Hero.specView(h, spec: any?)
+	local sp = spec or Hero.spec(h)
+	return { main = sp.main, sub = sp.sub, atk = sp.atk, k = (1 + Passives.atkPct(h)) * (1 + Passives.sumOf(h, "final")) * critExp(h) }
 end
 
 -- 끼고 있는 방어구가 줄여 주는 피해 %(그 레벨의 몬스터에게 맞을 때)
@@ -228,7 +255,12 @@ function Hero.new(id: any, class: string)
 	Bag.give(h, Items.potionFor(1).id, RULES.startPotions) -- 처음 받는 물약(가방의 소비 탭 첫 칸)
 	h.quests = {} -- 퀘스트의 상태(sim/quests.luau의 book)
 	h.daily = {} -- 일일 의뢰의 상태(sim/daily.luau — 지역마다 그날의 의뢰들)
+	h.rift = Rift.new() -- 수정 틈 토벌의 하루 보상 횟수(sim/rift.luau — 2026-10-16)
+	h.bond = Bond.new() -- 2편의 만나면 열림 · 모험의 서 · 달조각 · 숨은 이야기(sim/bond.luau — 2026-10-16)
 	h.tut = Tutorial.new() -- 튜토리얼 「달빛 꿈」(sim/tutorial.luau): 새 캐릭터는 꿈에서 시작한다(2026-10-14). 되살린 · 자란 캐릭터는 마친 것으로 고쳐 둔다
+	h.cine = {} -- 본 퀘스트 연출(장면) { [id] = true } — 한 캐릭터에 한 번만 튼다(2026-10-15 — shared/lune/cine.luau)
+	h.inCine = false -- 장면이 도는 중(맞지 않는다 — 저장하지 않는다. 서버가 90초 뒤에 저절로 푼다)
+	h.played = 0 -- 이 캐릭터로 논 시간(초 · 저장한다 — 서버가 센다. 로블록스 분석의 LevelUp 값 · 2026-10-15)
 	Quests.start(h.quests, h.level) -- (저절로 받는 퀘스트는 이제 없다 — 첫 퀘스트도 사제에게 말을 걸어 받는다)
 	h.maxHp = maxHpOf(h)
 	h.hp = h.maxHp
@@ -528,7 +560,7 @@ end
 -- ---------- 맞기 · 물약 · 쓰러짐 ----------
 -- 맞는다. 실제로 들어간 피해를 돌려준다(무적 중이거나 쓰러져 있으면 0).
 function Hero.hurt(h, amount: number): number
-	if not h.alive or h.invuln > 0 or h.god then -- god = 관리자의 시험용 무적(저장하지 않는다)
+	if not h.alive or h.invuln > 0 or h.god or h.inCine then -- god = 관리자의 시험용 무적(저장하지 않는다) · inCine = 퀘스트 연출이 도는 중
 		return 0
 	end
 	local dmg = math.max(1, math.floor(amount + 0.5))
@@ -672,6 +704,9 @@ function Hero.questDone(h, id: any)
 	if reward.gear then
 		Bag.add(h, Items.make(reward.gear.slot, reward.gear.stage, Items.NORMAL, h.class)) -- 보상의 장비는 내 직업의 것 · 성능은 보통
 	end
+	if reward.open == "tome" then
+		h.bond.open = true -- 모험의 서가 열린다(「항구의 첫날」)
+	end
 	Hero.syncQuests(h) -- 같은 물건을 모으는 다른 퀘스트의 숫자
 	if reward.job then
 		Hero.advance(h, reward.job) -- 전직 퀘스트: 다음 차수가 열린다
@@ -794,8 +829,22 @@ function Hero.pack(h)
 		bag = Bag.pack(h),
 		quests = Quests.pack(h.quests),
 		daily = Daily.pack(h.daily),
+		bond = Bond.pack(h.bond),
+		rift = Rift.pack(h.rift),
 		tut = Tutorial.pack(h.tut),
+		cine = Hero.cineList(h),
+		played = math.floor(h.played or 0),
 	}
+end
+
+-- 본 장면의 목록(저장 · 화면에 보내는 꼴 — 글의 배열)
+function Hero.cineList(h): { string }
+	local list = {}
+	for id in h.cine do
+		table.insert(list, id)
+	end
+	table.sort(list)
+	return list
 end
 
 local function whole(v: any, min: number, max: number): boolean
@@ -824,7 +873,18 @@ function Hero.unpack(id: any, data: any)
 	local oldBag = Bag.unpack(h, data.bag) -- 장비가 생기기 전에 저장된 캐릭터는 처음 차림을 받는다
 	h.quests = Quests.unpack(data.quests)
 	h.daily = Daily.unpack(data.daily) -- 일일 의뢰가 생기기 전의 저장 = 빈 것(게시판에 가면 오늘의 의뢰를 받는다)
+	h.rift = Rift.unpack(data.rift) -- 토벌의 하루 보상 횟수(그 전의 저장 = 오늘 아직 안 함)
+	h.bond = Bond.unpack(data.bond) -- 2편의 만나면 열림 · 모험의 서(2026-10-16 — 그 전의 저장 = 빈 것 · 예전 호감도의 점수는 버린다)
 	h.tut = Tutorial.unpack(data.tut) -- 튜토리얼이 생기기 전의 캐릭터(2026-10-14 이전) = 마친 것
+	h.cine = {} -- 본 장면(퀘스트 연출이 생기기 전의 저장 = 아무것도 안 봤다 — 장면은 퀘스트를 받고 · 다 하고 · 돌려줄 때 트므로 지난 퀘스트의 장면은 다시 나오지 않는다)
+	if typeof(data.cine) == "table" then
+		for i, id in data.cine do
+			if typeof(id) == "string" and #id <= 40 and i <= 400 then
+				h.cine[id] = true
+			end
+		end
+	end
+	h.played = if whole(data.played, 0, 1e10) then data.played else 0 -- (이것이 생기기 전의 저장 = 0부터 센다)
 	Quests.jobsDone(h.quests, h.job) -- 이미 닿은 차수의 전직 퀘스트는 끝낸 것으로(다시 받지 않게)
 	autoJobs(h)
 	Quests.start(h.quests, h.level) -- 퀘스트가 생기기 전에 저장된 캐릭터도 첫 메인을 받는다
@@ -924,31 +984,43 @@ end
 -- 클라이언트에 보내는 내 상태
 -- 장비 창의 능력치 표(2026-10-14 — 사용자: "장비 탭에 … 현재 스텟, 공격력 등 여러 수치가 다 출력되어야하고 크리티컬 확률, 크리티컬 데미지 이런것도 다 나와야합니다").
 --  서버가 피해 · 맞는 피해를 셈하는 바로 그 값들이다(지금 걸린 버프 · 패시브 · 리퍼의 영혼까지):
---  atk = 100% 한 타의 피해 { 작게, 크게 }(전투력 x 영혼 x 버프 x 패시브 x 피해 숫자의 배율 · 흩어짐 ±spread% — 메이플의 스탯 공격력. 사냥기 · 보스기가 맞는 상대에게는 +targetBonus%, 치명타는 그 위에 곱한다)
+--  (2026-10-14의 꼴 — 아래 2026-10-15 줄이 지금의 것) atk = 100% 한 타의 피해 { 작게, 크게 }(전투력 x 영혼 x 버프 x 패시브 x 피해 숫자의 배율 · 흩어짐 ±spread% — 메이플의 스탯 공격력. 사냥기 · 보스기가 맞는 상대에게는 +targetBonus%, 치명타는 그 위에 곱한다)
 --  crit = 치명타 확률(%) · critDmg = 치명타 피해(%) · dmg = 주는 피해(버프 · 영혼 +%) · final = 최종 피해(패시브 +%) · haste = 공격 속도(+%)
 --  cut = 받는 피해가 줄어드는 몫(버프 · 패시브 %) · guard = 방어구가 줄여 주는 피해(%, 내 레벨의 몬스터에게) · run · jump = 이동 속도 · 점프력(%)
-function Hero.sheet(h)
-	local dmg = Kit.attack(h) * Buffs.dmg(h)
-	local final = Passives.atk(h)
-	local base = Hero.powerRaw(h) * dmg * final * RULES.dmgScale
+--  2026-10-15 스펙을 다시 짜며: atk = 스탯 공격력 { 작게, 크게 }(지금 걸린 버프 · 영혼까지 — 흩어짐 ±spread%) · attack = 공격력(무기 x 공격력%) · def = 방어력 ·
+--   stats = 힘 · 민첩 · 지능 · 운 · 체력(처음 4 + 찍은 점수 + 장비의 올스탯) · gearStat = 장비의 올스탯 · dmg = 데미지 % · final = 최종 데미지 % ·
+--   cut = 받는 피해 감소 %(방어력 · 버프 · 패시브 · 무니의 지키는 마음 — 내 레벨의 몬스터에게 맞을 때. 피하기는 넣지 않는다)
+function Hero.sheet(h, spec: any?)
+	local sp = spec or Hero.spec(h)
+	local attack = sp.atk * (1 + Passives.atkPct(h)) * Kit.attack(h)
+	local dmg = Buffs.dmg(h)
+	local final = Passives.finalMul(h)
+	local base = N.statAtk(sp.main, sp.sub, attack) * dmg * final * (h.dmgBoost or 1) * RULES.dmgScale
 	local chance, mul = Passives.crit(h, false)
 	local run, jump = Kit.move(h)
+	local guard = Items.cut(Bag.worn(h), h.level)
 	return {
 		atk = { math.floor(base * (1 - RULES.spread / 100) + 0.5), math.floor(base * (1 + RULES.spread / 100) + 0.5) },
+		attack = math.floor(attack + 0.5),
+		def = sp.def,
+		stats = sp.stats,
+		gearStat = sp.gearStat,
 		crit = chance,
 		critDmg = mul * 100,
 		dmg = (dmg - 1) * 100,
 		final = (final - 1) * 100,
 		haste = (Buffs.haste(h) - 1) * 100,
-		cut = (1 - Buffs.cut(h) * Passives.cut(h, false)) * 100,
-		guard = Items.cut(Bag.worn(h), h.level),
+		cut = (1 - (1 - guard / 100) * Buffs.cut(h) * Passives.cut(h, false) * Kit.cut(h, false)) * 100,
+		guard = guard,
 		run = run * 100,
 		jump = jump * 100,
 	}
 end
 
 function Hero.view(h)
+	local sp = Hero.spec(h) -- 스펙은 한 번만 셈한다(전투력 · 상세의 재료 · 능력치 표가 같이 쓴다)
 	return {
+		cine = Hero.cineList(h), -- 본 퀘스트 연출(화면이 다시 틀지 않게)
 		class = h.class,
 		level = h.level,
 		xp = h.xp,
@@ -965,8 +1037,9 @@ function Hero.view(h)
 		forged = h.forged == true, -- 강화를 해 본 적이 있는가(아니면 강화 창이 「첫 강화」를 알린다)
 		sps = { math.max(0, Hero.spLeft(h, 1)), math.max(0, Hero.spLeft(h, 2)), math.max(0, Hero.spLeft(h, 3)), math.max(0, Hero.spLeft(h, 4)) }, -- 차수마다 남은 스킬 포인트
 		skills = h.skills,
-		power = Hero.power(h),
-		sheet = Hero.sheet(h), -- 장비 창의 능력치 표(위의 Hero.sheet)
+		power = Hero.power(h, sp),
+		spec = Hero.specView(h, sp), -- 아이템 상세의 「장착하면 전투력 +n」을 셈하는 재료(2026-10-15)
+		sheet = Hero.sheet(h, sp), -- 장비 창의 능력치 표(위의 Hero.sheet)
 		keys = h.keys,
 		slots = h.slots,
 		tslots = h.tslots,

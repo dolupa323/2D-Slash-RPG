@@ -100,7 +100,7 @@ do
 	expect(n <= 3, ("마을에서 망루까지 지나는 사냥터는 %d곳(셋을 넘지 않는다)"):format(n))
 end
 -- 가지가 된 사냥터들도 모두 걸어서 닿는다 · 돌아올 수 있다
-for _, key in { "hunt", "r1a3", "r1a4", "r1b2", "r1b4", "r1bh", "r1bl", "r1c3", "r1c4" } do
+for _, key in { "hunt", "r1a3", "r1a4", "r1b2", "r1bh", "r1bl", "r1c3", "r1c4" } do -- 망루 아래(r1b4)는 2026-10-15에 지웠다
 	expect(hops("town", key) ~= nil and hops(key, "town") ~= nil, key .. " — 마을에서 닿고 마을로 돌아온다")
 end
 -- 사당 지하: 월드맵에 마디가 있다

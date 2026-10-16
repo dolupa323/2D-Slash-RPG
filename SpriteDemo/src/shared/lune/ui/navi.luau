@@ -13,6 +13,7 @@ local lune = script.Parent.Parent
 local SCENES = require(lune.data["scenes.generated"])
 local Quests = require(lune.sim.quests)
 local Daily = require(lune.sim.daily)
+local Voyage = require(lune.sim.voyage) -- 배(초승달 마을 ↔ 은달 항구 — 문 대신 선장에게 말을 건다 · 2026-10-16)
 local Mesh = require(script.Parent.naviMesh) -- 그 맵의 발판과 건너가는 길(화살표가 맵을 알고 가리킨다)
 
 local Navi = {}
@@ -66,6 +67,11 @@ function Navi.target(key: any, book, level: number, daily: any)
 		if (st.c[i] or 0) < step.n then
 			if step.type == "use" then
 				return { scene = def.scene, kind = "spot", x = step.x, y = step.y }
+			elseif step.type == "visit" then
+				return { scene = step.at, kind = "visit" } -- 그 맵에 들어가면 된다(2026-10-16)
+			elseif step.type == "meet" then
+				local scene = Quests.npcScene(def, step.npc) -- 그 사람에게 말을 건다(처음 인사 — 2026-10-16)
+				return if scene then { scene = scene, kind = "npc", npc = step.npc } else nil
 			end
 			return { scene = def.scene, kind = "hunt", mob = step.mob, only = step.only == true }
 		end
@@ -97,6 +103,23 @@ function Navi.path(from: any, to: any, book): { string }?
 				table.insert(queue, p.to)
 			end
 		end
+		-- 탈것: 그 사람에게 말을 걸면 건넌다(갑판에서는 닿는 곳으로) — 문처럼 한 걸음으로 친다
+		local hops = {}
+		for _, r in Voyage.routesFrom(key) do
+			if Voyage.open(book, r) then
+				table.insert(hops, r.to)
+			end
+		end
+		local onShip = Voyage.onShip(key)
+		if onShip then
+			hops = { onShip.to }
+		end
+		for _, hop in hops do
+			if SCENES.scenes[hop] and prev[hop] == nil then
+				prev[hop] = key
+				table.insert(queue, hop)
+			end
+		end
 	end
 	return nil
 end
@@ -119,6 +142,19 @@ function Navi.aim(sceneKey: string, x: number, y: number, target, book, mobs: an
 		for _, p in SCENES.scenes[sceneKey].portals do
 			if p.to == path[2] and Quests.portalOpen(book, p) then
 				return p.x, p.y, "portal", p
+			end
+		end
+		-- 배로 건넌다: 선장 앞으로(갑판 위면 기다린다 — 배가 닿으면 내린다)
+		if Voyage.onShip(sceneKey) then
+			return x, y, "here", nil
+		end
+		for _, r in Voyage.routesFrom(sceneKey) do
+			if r.to == path[2] then
+				for _, n in SCENES.scenes[sceneKey].npcs or {} do
+					if n.id == r.npc then
+						return n.x, n.y, "npc", nil -- 그 탈것의 사람 앞으로
+					end
+				end
 			end
 		end
 		return nil

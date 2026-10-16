@@ -1,4 +1,4 @@
--- 장비의 셈 — 이름 · 점수 · 떨어지는 것 · 강화 · 분해 · 별 옮기기. 화면도 서버도 모르는 순수한 셈이다.
+-- 장비의 셈 — 이름 · 옵션 · 떨어지는 것 · 강화 · 분해. 화면도 서버도 모르는 순수한 셈이다(별 옮기기는 2026-10-15에 뺐다).
 --  수치는 data/items.generated.luau(공방 js/lune/design/items.js와 numbers.js · basics.js · economy.js에서 내보낸 것). 식은 공방과 같은 것을 다시 짰다 —
 --  tools/test/tests/15_lune_items.luau가 공방에서 셈한 값(checks)과 맞춰 본다.
 --  장비 하나 = { id(가진 사람 안에서의 번호), slot, stage(장비 단계), q(성능 단 1 낡은 … 5 빼어난), star, who(무기만: 어느 직업의 것),
@@ -132,41 +132,59 @@ function Items.name(it): string
 	return ("%sLv.%d %s"):format(head, it.stage, Items.baseName(it))
 end
 
--- ---------- 점수 · 전투력 · 방어 ----------
-function Items.score(it): number
+-- ---------- 옵션 · 방어 ----------  (2026-10-15 — 공방 numbers.js 2-1 · items.js의 gearOpt와 같은 셈)
+--  무기 = 공격력 · 방어구 = 올스탯 · 방어력 · 장신구 = 올스탯(방어구의 절반). 성능이 기본 옵션에 % 로, 별이 그 위에 % 로 붙는다(레벨이 높은 장비일수록 기본 옵션이 커서 별 하나에 더 오른다).
+--  돌려주는 것 { base = 별 없이, total = 별까지 } — 각각 { atk } 또는 { stat, def } 또는 { stat }. 부서진 것(흔적)은 모두 0
+local SPEC = N.data.SPEC
+function Items.options(it)
+	local q = 1 + D.QUALITY[it.q].bonus / 100
+	local base
+	if it.slot == "weapon" then
+		base = { atk = round(N.weaponAtk(it.stage) * q) }
+	elseif ARMOR[it.slot] then
+		base = { stat = round(N.armorStat(it.stage) * q), def = round(N.armorDef(it.stage) * q) }
+	else
+		base = { stat = round(N.armorStat(it.stage) * SPEC.acc.stat * q) }
+	end
+	local total = {}
 	if it.broken then
-		return 0
+		for k in base do
+			base[k], total[k] = 0, 0
+		end
+		return { base = base, total = total }
 	end
-	return SLOT[it.slot].w * POWER.grow ^ it.stage * D.STAR ^ it.star * (1 + D.QUALITY[it.q].bonus / 100)
-end
-
--- list = 끼고 있는 장비들(차례는 상관없다)
-function Items.gearScore(list): number
-	local sum = 0
-	for _, it in list do
-		sum += Items.score(it)
+	local pct = N.starPct(if it.slot == "weapon" then "weapon" else "armor", it.star) / 100
+	for k, v in base do
+		total[k] = round(v * (1 + pct))
 	end
-	return sum / D.WSUM
+	return { base = base, total = total }
 end
 
-function Items.power(level: number, eff: number, list): number
-	return round(Items.powerRaw(level, eff, list))
-end
--- 반올림하기 전의 전투력 — 피해를 셈할 때 쓴다. 화면의 전투력(정수)으로 셈하면 능력치 1점(낮은 레벨에서 +0.3쯤)이 반올림에 묻혀 피해가 그대로일 때가 있다
---  (사용자 2026-10-07: "스킬을찍거나, 스텟이 증가했을때 데미지가 증가하고있는지 확인하세요")
-function Items.powerRaw(level: number, eff: number, list): number
-	return POWER.base * (POWER.levelShare * eff * POWER.grow ^ level + POWER.itemShare * Items.gearScore(list))
-end
-
--- 방어구가 줄여 주는 피해 %: 부위마다 4분의 1씩(빈 부위 · 부서진 것은 0)
-function Items.cut(list, mobLv: number): number
-	local sum = 0
+-- 끼고 있는 장비들의 옵션 합 { atk, stat, def } — 피해 · 맞는 피해마다 불리므로 장비마다 표를 만들지 않고 바로 셈한다(Items.options와 같은 셈)
+function Items.sum(list)
+	local atk, stat, def = 0, 0, 0
 	for _, it in list do
-		if ARMOR[it.slot] and not it.broken then
-			sum += N.armorCut(it.stage, mobLv)
+		if not it.broken then
+			local q = 1 + D.QUALITY[it.q].bonus / 100
+			if it.slot == "weapon" then
+				atk += round(round(N.weaponAtk(it.stage) * q) * (1 + N.starPct("weapon", it.star) / 100))
+			else
+				local k = 1 + N.starPct("armor", it.star) / 100
+				if ARMOR[it.slot] then
+					stat += round(round(N.armorStat(it.stage) * q) * k)
+					def += round(round(N.armorDef(it.stage) * q) * k)
+				else
+					stat += round(round(N.armorStat(it.stage) * SPEC.acc.stat * q) * k)
+				end
+			end
 		end
 	end
-	return sum / #D.ARMOR
+	return { atk = atk, stat = stat, def = def }
+end
+
+-- 받는 피해 감소 %: 끼고 있는 방어구의 방어력 합으로(같은 레벨 방어구 넷 = 30% · 빈 부위 · 부서진 것은 0)
+function Items.cut(list, mobLv: number): number
+	return N.cutOf(Items.sum(list).def, mobLv)
 end
 
 function Items.starCap(stage: number): number
@@ -266,7 +284,7 @@ end
 function Items.rollRare(rng, mobLv: number, mul: number?): { string }
 	local out = {}
 	for _, r in D.RARE do
-		if rng:NextNumber(0, 100) < r.pct * (mul or 1) then
+		if mobLv >= (r.from or 0) and rng:NextNumber(0, 100) < r.pct * (mul or 1) then -- from = 그 레벨부터의 몬스터(선물 — 2026-10-16)
 			if r.id == "potion" then
 				table.insert(out, Items.potionFor(mobLv).id)
 			elseif r.goods then
@@ -322,10 +340,11 @@ end
 -- star성에서 다음 별을 시도할 때 드는 달가루
 function Items.enhanceDust(stage: number, star: number): number
 	local unit = (stage / 10) ^ 3
+	-- 적어도 1(2026-10-15 — 상한을 풀며 Lv.1 장비가 공짜로 22성까지 가지 않게)
 	if star < E.lowBelow then
-		return round(unit * (star + 1) / E.lowDiv)
+		return math.max(1, round(unit * (star + 1) / E.lowDiv))
 	end
-	return round(unit * (star + 1) ^ E.highPow / E.highDiv)
+	return math.max(1, round(unit * (star + 1) ^ E.highPow / E.highDiv))
 end
 
 -- 그 별까지 한 번씩 붙었다고 본 달가루
@@ -344,7 +363,7 @@ function Items.enhanceInfo(it, guard: boolean?, first: boolean?)
 	if it.broken then
 		return { can = false, why = "부서짐" }
 	end
-	if s >= Items.starCap(it.stage) or s >= E.max then
+	if s >= E.max then -- 모든 장비가 22성까지(사용자 2026-10-15)
 		return { can = false, why = "상한" }
 	end
 	local row = E.table[s + 1]
@@ -409,16 +428,12 @@ function Items.restore(it, spare): boolean
 	return true
 end
 
--- ---------- 분해 · 별 옮기기 ----------
+-- ---------- 분해 ----------
 function Items.dismantle(it): number
 	-- Lv.10부터는 적어도 1(분해했는데 0이 나오지 않게 — 공방의 dismantleDust와 같은 셈)
 	return math.max(if it.stage >= 10 then 1 else 0, round(D.DUST.dismantle * (it.stage / 10) ^ 3 + D.DUST.back / 100 * Items.starDust(it.stage, it.star)))
 end
 
--- 옛 장비의 별을 새 장비로 옮겼을 때 새 장비의 별(옛 별에서 하나를 뺀 만큼, 새 장비의 상한까지 — 이미 더 높으면 그대로)
-function Items.transfer(from, to): number
-	return math.max(to.star, math.min(Items.starCap(to.stage), math.max(0, from.star - 1)))
-end
 
 -- ---------- 상점 ----------
 -- 그 물건의 값(물약도 단마다 따로 판다 — 값이 레벨을 따라 달라지지 않는다)

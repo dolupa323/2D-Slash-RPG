@@ -44,7 +44,8 @@ function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 			return
 		end
 		hideTip()
-		local t = Format.statTip(last.class, id, last.level)
+		local sh = last.sheet
+		local t = Format.statTip(last.class, id, last.level, if sh then sh.attack * (1 + sh.dmg / 100) * (1 + sh.final / 100) else nil) -- 1점의 값 = 스탯 공격력이 오르는 만큼(지금 낀 무기로 — 2026-10-15)
 		local color = TIPCOLOR[t.kind]
 		local inner = TIP.w - TIP.pad * 2
 		local frame = Ui.group(body, 0, 0, TIP.w, 10, "Tip")
@@ -133,14 +134,14 @@ function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 			local row = rows[id]
 			local used = id == "hp" or id == pair[1] or id == pair[2]
 			row.tag:set(if id == pair[1] then MARK.main elseif id == pair[2] then MARK.sub else "")
-			row.value:set(tostring(STATS.base + me.stats[id]))
+			row.value:set(tostring(if me.sheet and me.sheet.stats then me.sheet.stats[id] else STATS.base + me.stats[id])) -- 처음 4 + 찍은 점수 + 장비의 올스탯(2026-10-15)
 			row.name:color(if used then C.text else C.off)
 			row.value:color(if used then C.text else C.off)
 			row.plus:setEnabled(me.ap > 0)
 		end
 		auto:setEnabled(me.ap > 0)
 		power:set(("전투력 %s"):format(Format.short(me.power)))
-		hp:set(("체력 %s"):format(Format.short(me.maxHp)))
+		hp:set(("최대 체력 %s"):format(Format.short(me.maxHp))) -- 「체력」은 능력치의 이름이라 「최대 체력」(2026-10-15)
 		-- 떠 있는 설명은 새 값으로(레벨이 오르면 1점의 값이 달라진다)
 		if tip then
 			local id = tip.id

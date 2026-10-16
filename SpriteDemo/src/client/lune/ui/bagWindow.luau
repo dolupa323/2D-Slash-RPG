@@ -1,4 +1,7 @@
--- 가방 창 — 화면 오른쪽의 옆 판. 탭 셋(장비 · 소비 · 기타), 세 탭 모두 칸 여섯 x 넷이다(48칸까지 늘리면 ▲▼로 줄을 넘긴다).
+-- 가방 창 — 화면 오른쪽의 옆 판. 탭 셋(장비 · 소비 · 기타), 세 탭 모두 칸 여섯 x 넷이 보인다(늘리면 48칸까지 — 칸들이 위아래로 스크롤된다).
+--  2026-10-15 사용자: "인벤토리 위아래 버튼으로 움직이는게아니라 스크롤이어야합니다. 모바일에서도 정상작동하게"
+--   → ▲▼로 한 줄씩 넘기던 것을 없애고 칸들을 스크롤 틀(ScrollingFrame — 마우스 휠 · 손가락으로 밀기)에 넣었다. 오른쪽 끝에 가는 민트 막대.
+--   스마트폰: 칸 위를 그냥 밀면 스크롤, 칸을 잠깐(HOLD초) 누르고 있다가 밀면 아이템을 끈다(끄는 동안은 스크롤이 서 있다). PC는 휠로 스크롤하고 끌기는 그대로.
 --  사용자 2026-10-08: "지금 인벤토리 구조도 잘못되어있는데 … 품목이 고정되어있고 거기서 수량 1/8 이런식으로 표기하는게 인벤토리가 아닙니다."
 --  → 가방은 탭마다 진짜 칸이다(공방 js/lune/design/items.js의 BAGPLAY — 셈은 shared/lune/sim/bag.luau):
 --   · 칸에는 장비 하나 또는 소비 · 기타 아이템의 묶음(그림과 오른쪽 아래의 수)이 놓인다. 빈 칸은 비어 있고, 놓인 자리는 내가 옮기기 전까지 그대로다.
@@ -32,6 +35,8 @@ local COLS, ROWS = BAG.cols, BAG.rows
 local GRID_Y = BAG.gridY -- 칸들의 윗줄
 local KEYS = D.BAG.keys -- 탭의 이름표("gear" · "use" · "etc")
 local DOUBLE = 0.4 -- 이 안에 같은 칸을 다시 누르면 두 번 누른 것(초)
+local HOLD = 0.3 -- 스마트폰: 칸을 이만큼(초) 누르고 있다가 밀어야 아이템을 끈다(그 전에 밀면 스크롤)
+local BAR = 3 -- 스크롤 막대의 두께(화면 틀의 점 — 칸의 오른쪽 끝에 겹친다)
 
 local BagWindow = { side = "right" } -- 가방은 늘 오른쪽에 뜬다(같이 열린 창은 왼쪽으로 간다)
 BagWindow.COLS, BagWindow.ROWS = COLS, ROWS
@@ -61,13 +66,13 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 	local ui = ctx.ui
 	local S = ItemCell.size()
 	local tab = 1
-	local top = 0 -- 맨 윗줄이 몇째 줄인가(가방을 늘린 뒤 ▲▼로 넘긴다)
 	local sel = nil :: { tab: string, slot: number, id: any }? -- 고른 칸(id = 장비의 번호 · 묶음의 이름표 — 칸의 것이 바뀌면 고른 것을 푼다)
 	local ask = nil :: { kind: string, n: number? }? -- 수를 고르는 중(버리기 · 맡기기 · 팔기 · 나누기 — 장비 팔기는 n 없이 묻기만)
 	local hot: number? = nil -- 끌던 것을 놓을 칸
 	local lastClick = { slot = 0, t = 0 }
 	local dragEnd = 0 -- 마지막으로 끌기를 끝낸 때(그 직후에 오는 "눌렀다"는 끌기의 끝이지 누른 것이 아니다)
 	local view = {}
+	local gridRoot: ScrollingFrame -- 칸들의 스크롤 틀(아래에서 만든다 — 탭 단추가 맨 위로 되돌린다)
 
 	local function key(): string
 		return KEYS[tab]
@@ -90,22 +95,15 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 	for i, name in D.BAG.tabs do
 		tabs[i] = Ui.tab(body, name, tx, 0, function()
 			if tab ~= i then
-				tab, top = i, 0
+				tab = i
 				unselect()
+				gridRoot.CanvasPosition = Vector2.zero -- 다른 탭은 맨 위부터
 				redraw()
 			end
 		end)
 		tx += tabs[i].width + 16
 	end
 	local count = Ui.text(body, "", w - BAG.countW, 0, BAG.countW, { align = "right", color = C.dim }) -- 찬 칸 / 가방의 칸
-	local up = Ui.button(body, "▲", w - 36, -3, 17, function()
-		top = math.max(0, top - 1)
-		view.refresh()
-	end, { h = 17 })
-	local down = Ui.button(body, "▼", w - 17, -3, 17, function()
-		top += 1
-		view.refresh()
-	end, { h = 17 })
 
 	-- 고른 칸의 것으로 할 수 있는 일(상세 판의 단추 · 두 번 누르기가 같이 쓴다)
 	local function wear(it)
@@ -125,20 +123,23 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		return nil
 	end
 
-	local gridRoot = Ui.group(body, 0, GRID_Y, COLS * S, ROWS * S, "Grid")
+	gridRoot = Ui.scroll(body, 0, GRID_Y, COLS * S, ROWS * S, ROWS * S, BAR) -- 칸들(늘린 가방은 위아래로 스크롤)
+	gridRoot.Name = "Grid"
 	local cells = {}
-	-- 화면의 그 자리에 있는 칸(가방의 몇째 칸인가 — 없으면 nil). 끌던 것을 놓을 때 쓴다
+	-- 화면의 그 자리에 있는 칸(가방의 몇째 칸인가 — 없으면 nil). 끌던 것을 놓을 때 쓴다 — 스크롤 틀 밖(가려진 칸)은 아니다
 	local function slotAt(at: Vector2): number?
 		local bag = ctx.bag()
-		local i = ItemCell.at(cells, at)
-		local n = if i then top * COLS + i else nil
+		if not ItemCell.over(gridRoot, at) then
+			return nil
+		end
+		local n = ItemCell.at(cells, at)
 		return if n and bag and n <= bag.size then n else nil
 	end
-	for i = 1, COLS * ROWS do
+	local function makeCell(i: number)
 		local col, row = (i - 1) % COLS, math.floor((i - 1) / COLS)
 		local cell
 		cell = ItemCell.new(gridRoot, col * S, row * S, function(it)
-			local n = top * COLS + i
+			local n = i
 			local now = os.clock()
 			-- 끌어서 놓은 것은 누른 것이 아니다(끌기를 끝낼 때 놓은 자리의 칸에도 "눌렀다"가 온다 — 그대로 받으면 방금 옮긴 것의 고르기가 풀린다)
 			if ctx.quick.dragging() or now - dragEnd < 0.2 then
@@ -169,11 +170,15 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			if not it then
 				return
 			end
-			local from, tabKey = top * COLS + i, key()
+			local from, tabKey = i, key()
 			local moved = false
 			ctx.quick.press(if tabKey == "use" then it.item else nil, nil, input, {
 				icon = ItemCell.icon(it),
 				size = S,
+				hold = HOLD, -- 스마트폰: 잠깐 누르고 있다가 밀어야 끈다(그 전에 밀면 스크롤)
+				onStart = function()
+					gridRoot.ScrollingEnabled = false -- 끄는 동안은 칸들이 움직이지 않는다
+				end,
 				onMove = function(at: Vector2)
 					moved = true
 					local to = slotAt(at)
@@ -217,6 +222,11 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 						end
 						return true
 					end
+					-- 대장장이 창 위에 놓았다: 그 장비를 강화할 장비로 올린다(2026-10-15 — 사용자: "강화에 드래그앤 드랍으로 둘수가 없음")
+					if tabKey == "gear" and ui.forgeDrop and ui.forgeDrop(at) then
+						ctx.toForge(it.id)
+						return true
+					end
 					-- 상점 창 위에 놓았다: 그것을 고르고 팔지 묻는다(상세 판에 — 팔 수 없는 것이면 상세만 뜬다)
 					if ui.shopDrop and ui.shopDrop(at) then
 						choose(tabKey, from, it)
@@ -230,6 +240,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					if moved then
 						dragEnd = os.clock()
 					end
+					view.refresh() -- 스크롤을 다시 켠다(칸이 넷 줄을 넘을 때)
 					if ui.storeHover then
 						ui.storeHover(nil, nil)
 					end
@@ -242,6 +253,10 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		end)
 	end
 
+	for i = 1, COLS * ROWS do
+		makeCell(i)
+	end
+
 	-- 창고에서 끌어 온 것을 놓는 자리(ui/shopWindow.luau의 창고가 묻는다): 가방 창 위인가 · 그 탭의 어느 칸인가.
 	--  다른 탭이 열려 있었으면 그 탭으로 넘긴다(찾은 것이 보이게)
 	local panel = body.Parent :: GuiObject
@@ -251,7 +266,8 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		end
 		local slot = if tabKey == key() then slotAt(at) else nil
 		if tabKey ~= key() then
-			tab, top = table.find(KEYS, tabKey) or tab, 0
+			tab = table.find(KEYS, tabKey) or tab
+			gridRoot.CanvasPosition = Vector2.zero
 			unselect()
 		end
 		return true, slot
@@ -259,7 +275,8 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 	-- 창고에서 「찾기」로 찾았을 때: 가방이 그 탭을 보여 준다(찾은 것이 보이게)
 	ui.bagShow = function(tabKey: string)
 		if tabKey ~= key() then
-			tab, top = table.find(KEYS, tabKey) or tab, 0
+			tab = table.find(KEYS, tabKey) or tab
+			gridRoot.CanvasPosition = Vector2.zero
 			unselect()
 		end
 	end
@@ -464,15 +481,15 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			button:setOn(i == tab)
 		end
 		local list = bag[key()]
-		-- 줄 넘기기: 늘린 가방은 네 줄을 넘는다
+		-- 스크롤: 늘린 가방은 네 줄을 넘는다 — 넘는 만큼 칸을 만들고 스크롤 틀의 속을 늘린다
 		local rows = math.ceil(bag.size / COLS)
-		top = math.clamp(top, 0, math.max(0, rows - ROWS))
+		for i = #cells + 1, rows * COLS do
+			makeCell(i)
+		end
 		local scroll = rows > ROWS
-		up.frame.Visible = scroll
-		down.frame.Visible = scroll
-		up:setEnabled(top > 0)
-		down:setEnabled(top < rows - ROWS)
-		count:move(if scroll then w - BAG.countW - BAG.scrollW - 4 else w - BAG.countW, 0)
+		gridRoot.CanvasSize = UDim2.fromOffset(0, math.max(ROWS, rows) * S)
+		gridRoot.ScrollingEnabled = scroll and not ctx.quick.dragging()
+		gridRoot.ScrollBarThickness = if scroll then BAR else 0
 		local used = 0
 		for i = 1, bag.size do
 			if list[i] then
@@ -482,9 +499,9 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		count:set(("%d / %d"):format(used, bag.size))
 		detail(bag, me) -- 고른 것이 사라졌으면 여기서 풀린다
 		for i, cell in cells do
-			local at = top * COLS + i
-			local item = list[at] or nil
-			cell:set(item, { locked = at > bag.size, selected = sel ~= nil and sel.tab == key() and sel.slot == at, hot = hot == at })
+			cell.frame.Visible = i <= rows * COLS -- 줄여진 적은 없지만, 넘치는 칸은 숨긴다
+			local item = list[i] or nil
+			cell:set(item, { locked = i > bag.size, selected = sel ~= nil and sel.tab == key() and sel.slot == i, hot = hot == i })
 		end
 		-- 가방 늘리기(세 탭이 함께 늘어난다 — 값이 적혀 있다). 다 늘렸으면 단추가 없다
 		grow.frame.Visible = bag.growCost ~= false

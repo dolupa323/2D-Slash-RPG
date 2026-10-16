@@ -25,6 +25,7 @@ local Party = require(lune.sim.party)
 local Quests = require(lune.sim.quests)
 local Daily = require(lune.sim.daily) -- 일일 의뢰(마을의 게시판)
 local Tutorial = require(lune.sim.tutorial) -- 튜토리얼 「달빛 꿈」(2026-10-14)
+local Cine = require(lune.cine) -- 퀘스트 연출(2026-10-15): 본 장면의 id를 거른다
 local Market = require(lune.sim.market) -- 경매장의 셈(장부를 바꾸는 법 · 맡긴 것과 견주는 법)
 local Format = require(lune.ui.format) -- 글 속의 {이름}을 채운다(경매장의 알림)
 local Kit = require(lune.sim.kit)
@@ -34,6 +35,12 @@ local Passives = require(lune.sim.passives) -- 2~4차의 패시브(충격파 · 
 local CLASSES = require(lune.data["classes.generated"])
 local Store = require(script.Parent.store)
 local Admin = require(script.Parent.admin) -- 누가 관리자인가(서버에만 있다)
+local Analytics = require(script.Parent.analytics) -- 플레이어 데이터 기록(로블록스 분석 — 2026-10-15)
+local Attend = require(lune.sim.attend) -- 출석(계정에 하루 한 칸 — 2026-10-15)
+local Achieve = require(lune.sim.achieve) -- 업적(계정이 같이 쌓는다 — 2026-10-15)
+local Rift = require(lune.sim.rift) -- 수정 틈 토벌(은달 항구의 반복 던전 — 2026-10-16)
+local Voyage = require(lune.sim.voyage) -- 배(초승달 마을 ↔ 은달 항구 — 선장에게 말을 건다 · 2026-10-16)
+local Bond = require(lune.sim.bond) -- 2편의 호감도 · 모험의 서 · 달조각 · 숨은 이야기(캐릭터마다 — 2026-10-16)
 
 local TICK = 1 / 20
 local SNAP_EVERY = 2 -- 걸음 몇 번에 한 번 졸개의 모습을 보낸다(초당 10번)
@@ -150,6 +157,10 @@ local function selfView(s)
 	view.tut = Tutorial.pack(s.hero.tut) -- 튜토리얼의 진행(꿈의 미션 판)
 	view.tutSkip = s.acct ~= nil and s.acct.tutDone == true -- 「건너뛰기」를 보일까(이 계정이 한 번 끝냈다)
 	view.haste = Buffs.haste(s.hero)
+	if s.acct then
+		view.attReady = Attend.ready(s.acct.att) -- 받을 출석 칸 · 업적 보상의 수(「메뉴」 단추의 점 — 2026-10-15)
+		view.achReady = Achieve.ready(s.acct.ach)
+	end
 	-- 관리자에게만: 관리 창을 여는 단추가 보이고(화면), 지금 켜 둔 시험용 값들을 안다. 관리자가 아니면 이 칸들이 아예 없다
 	if Admin.is(s.player) then
 		view.admin = { xp = s.hero.xpBoost or 1, dmg = s.hero.dmgBoost or 1, god = s.hero.god == true }
@@ -183,6 +194,9 @@ end
 --  pushed = 서버가 먼저 옮겼다(화면은 아직 모른다 — 마을로 돌아가기 · 관리 이동 · 확인용 명령): 화면이 그것을 알기 전에 보낸 옛 자리의 보고가 뒤따라 올 수 있다.
 --   문(Travel)은 화면이 멈춰 서서 서버에 묻는 것이라 그런 보고가 없다
 local function place(s, key: string, x: number, y: number, pushed: boolean?)
+	if not Voyage.onShip(key) then
+		s.voyage = nil -- 배에서 내렸다(닿았거나 · 귀환 주문서 · 쓰러져 돌아감)
+	end
 	s.scene = key
 	s.hero.x, s.hero.y = x, y
 	s.skill = nil
@@ -193,6 +207,14 @@ local function place(s, key: string, x: number, y: number, pushed: boolean?)
 	if SCENES.homes[key] and s.hero.home ~= key then
 		s.hero.home = key
 		s.dirty = true
+	end
+	if s.acct then
+		Achieve.visited(s.acct.ach, key) -- 업적: 그 지역의 맵을 모두 들른다
+	end
+	-- 퀘스트의 「들르기」(2026-10-16 — 「항구의 첫날」처럼 도시를 둘러보는 퀘스트)
+	if #Quests.onVisit(s.hero.quests, key) > 0 then
+		s.dirty = true
+		fire("Quests", s.player, Quests.view(s.hero.quests))
 	end
 	s.loading = World.now
 	s.stale = if pushed then World.now else nil
@@ -315,6 +337,8 @@ local function commit(s)
 	end
 end
 
+-- 명예의 전당의 판(서버가 Rank.REFRESH초마다 한 번 읽어 둔 것 — 아래 rankBoards). pushRank가 관리자의 줄을 지우면 비운다
+local rankCache, rankAt = nil, -math.huge
 -- 명예의 전당: 지금 하는 캐릭터의 레벨 · 전투력을 순위판에 올린다(달라졌을 때만). 임시 계정의 것은 이 서버의 메모리에만 둔다(저장소에 쓰지 않는다)
 local function pushRank(s)
 	if not s.hero or not s.acct or not s.cid or s.name == "" then
@@ -322,6 +346,17 @@ local function pushRank(s)
 	end
 	local h = s.hero
 	local key = Rank.charKey(s.player.UserId, s.cid)
+	-- 관리자 계정의 캐릭터는 명예의 전당에 올리지 않는다(2026-10-15 사용자: "명예의 전당집계에서 제 어드민 계정 캐릭터들은 올라가면안됩니다") — 이미 올라간 것은 지운다(한 번)
+	if Admin.is(s.player) then
+		if s.rankCleared ~= key then
+			s.rankCleared = key
+			Store.rankRemove("level", key)
+			Store.rankRemove("power", key)
+			Store.rankInfoRemove(key)
+			rankCache = nil
+		end
+		return
+	end
 	local sent = s.rankSent or {}
 	s.rankSent = sent
 	local level, power = Rank.levelScore(h.level, h.xp, Hero.xpNeed(h)), Hero.power(h)
@@ -468,11 +503,13 @@ function World.addPlayer(player)
 	if adopted then
 		saveAccount(s)
 	end
+	Analytics.joined(s)
 end
 
 -- 세계에서 나온다(캐릭터 고르기 화면으로 · 나갈 때): 저장하고, 파티에서 빠지고, 방 사람들의 이름표에서도 빠진다
 local function leaveWorld(s)
 	if s.hero then
+		Analytics.finish(s) -- 모아 둔 달돈의 기록을 보낸다
 		saveAccount(s)
 	end
 	local had, scene = s.hero ~= nil, s.scene
@@ -500,6 +537,7 @@ function World.removePlayer(player)
 	byUser[player.UserId] = nil
 	if s and s.hero then
 		marketIdle(s)
+		Analytics.finish(s)
 		saveAccount(s)
 	end
 	-- 저장을 끝낸 뒤에 계정의 잠금을 푼다(다른 서버로 옮겨 가면 그 서버가 바로 잡는다)
@@ -536,12 +574,16 @@ end
 function World.room(key: string)
 	return roomOf(key)
 end
+-- 그 방이 열려 있는가(만들지 않고 본다 — 빈 토벌의 방을 닫았는지 볼 때)
+function World.hasRoom(key: string): boolean
+	return rooms[key] ~= nil
+end
 
 -- ---------- 패킷 ----------
 local function describe(s)
 	local room = roomOf(s.scene):describe(s.hero.id)
 	room.who = roster(s.scene)
-	return { self = selfView(s), bag = Bag.view(s.hero), quests = Quests.view(s.hero.quests), scene = s.scene, x = s.hero.x, y = s.hero.y, room = room, id = s.hero.id, name = s.name }
+	return { self = selfView(s), bag = Bag.view(s.hero), quests = Quests.view(s.hero.quests), bond = Bond.view(s.hero, os.time()), scene = s.scene, x = s.hero.x, y = s.hero.y, room = room, id = s.hero.id, name = s.name }
 end
 
 local function onReady(player)
@@ -660,6 +702,7 @@ local function onChars(player, action: string, a: any, b: any)
 		data.bag.store = nil
 		local c = Account.add(acct, a, b, data, os.time())
 		saveAccount(s)
+		Analytics.made(s)
 		return { ok = true, id = c.id, select = Account.view(acct) }
 	elseif action == "name" then
 		local c = Account.find(acct, a)
@@ -734,6 +777,13 @@ local function onChars(player, action: string, a: any, b: any)
 		s.rankSent = nil
 		markName(s)
 		pushRank(s) -- 들어오자마자 순위판에 올린다(명예의 전당)
+		Analytics.begin(s) -- 이 캐릭터의 기록을 시작한다(레벨 · 퀘스트 · 달돈을 이 때부터 견준다)
+		-- 출석: 오늘 처음이면 칸이 찬다(어느 캐릭터든 계정에 하루 한 칸) — 화면이 판을 물을 때 「오늘 처음」(fresh)이라 알려 창을 한 번 띄운다
+		if Attend.checkIn(acct.att, os.time()) then
+			Achieve.add(acct.ach, "attend")
+			s.attFresh = true
+		end
+		s.achAlive = hero.alive
 		task.defer(sendWho, s.scene) -- 먼저 와 있던 사람들에게 내가 왔다고 알린다
 		sendParty({ player.UserId })
 		return describe(s)
@@ -743,14 +793,20 @@ end
 
 -- ---------- 명예의 전당 ----------
 --  판 셋의 위 열 줄. 서버가 Rank.REFRESH초마다 한 번만 읽어 둔 것을 준다(물을 때마다 저장소를 읽지 않는다).
-local rankCache, rankAt = nil, -math.huge
 local function rankBoards()
 	if rankCache and World.now - rankAt < Rank.REFRESH then
 		return rankCache
 	end
 	local boards = {}
 	for _, board in Rank.BOARDS do
-		boards[board] = Rank.view(board, Store.rankTop(board, Rank.TOP + 5), Store.rankInfoGet) -- 이름을 모르는 줄이 빠질 것을 생각해 조금 넉넉히 읽는다
+		-- 관리자 계정의 줄은 거른다(지금 들어와 있지 않은 관리자의 캐릭터가 예전에 올라가 있어도 — 2026-10-15)
+		local rows = {}
+		for _, row in Store.rankTop(board, Rank.TOP + 10) do -- 이름을 모르는 줄 · 관리자의 줄이 빠질 것을 생각해 넉넉히 읽는다
+			if not Admin.isId(Rank.userOf(row.key)) then
+				table.insert(rows, row)
+			end
+		end
+		boards[board] = Rank.view(board, rows, Store.rankInfoGet)
 	end
 	rankCache, rankAt = boards, World.now
 	return boards
@@ -761,9 +817,10 @@ local function onRank(player)
 	if not s or not s.hero then
 		return nil
 	end
-	pushRank(s) -- 내 것은 방금의 값으로
-	if s.rankFresh ~= s.rankSent.level then
-		s.rankFresh = s.rankSent.level
+	pushRank(s) -- 내 것은 방금의 값으로(관리자는 올리지 않는다 — rankSent가 없다)
+	local sent = s.rankSent
+	if sent and s.rankFresh ~= sent.level then
+		s.rankFresh = sent.level
 		rankCache = nil -- 내 레벨이 달라졌으면 다시 읽는다(내가 판에 있는지 바로 보이게)
 	end
 	return rankBoards()
@@ -776,6 +833,10 @@ function World.addSpent(player, robux: number)
 		return
 	end
 	s.acct.spent += math.floor(robux)
+	if Admin.is(player) then
+		saveAccount(s)
+		return -- 관리자 계정은 후원 판에 올리지 않는다(2026-10-15)
+	end
 	local key = Rank.userKey(player.UserId)
 	if s.name ~= "" then
 		Store.rankInfoSet(key, { name = s.name, class = if s.hero then s.hero.class else false }, s.guest == true)
@@ -783,6 +844,12 @@ function World.addSpent(player, robux: number)
 	Store.rankSet("robux", key, s.acct.spent, s.guest == true)
 	rankCache = nil
 	saveAccount(s)
+end
+
+-- 달조각이 있는 맵들(자리 보고마다 볼 맵만)
+local SHARD_SCENES = {}
+for _, x in Bond.DATA.shards do
+	SHARD_SCENES[x.scene] = true
 end
 
 local function onMove(player, x: number, y: number, dir: number)
@@ -822,9 +889,21 @@ local function onMove(player, x: number, y: number, dir: number)
 	end
 	s.jumped = false
 	hero.x, hero.y, hero.dir = x, y, dir
+	-- 달조각(2026-10-16 — 로스트아크의 모코코 씨앗): 닿으면 줍는다
+	if SHARD_SCENES[s.scene] then
+		local id = Bond.touchShard(hero.bond, s.scene, x, y)
+		if id then
+			s.dirty = true
+			if s.acct then
+				Achieve.add(s.acct.ach, "shard") -- 업적: 달조각(2026-10-16)
+			end
+			fire("BondView", player, Bond.view(hero, os.time()), { kind = "shard", id = id })
+		end
+	end
 end
 
 local tutChanged: (any) -> () -- 튜토리얼의 진행이 바뀌었을 때(아래 applyResult 앞에서 채운다)
+local riftExitSpot: () -> (number, number) -- 토벌에서 나와 서는 곳 = 토벌대장 앞(아래 onRift 곁에서 채운다)
 -- 튜토리얼의 미션을 넘겼다(before째부터 지금 앞까지): 넘긴 미션마다 경험치(design/tutorial.js의 xp — 수련 인형 앞까지는 Lv.1 몫의 share씩, upAt 미션에서 Lv.2가 되게 채운다).
 --  「경험치 · 레벨 업」이 화면에 뜨게 Gain을 보낸다. 그 뒤의 미션은 경험치가 없다
 local function tutAdvanced(s, before: number)
@@ -903,6 +982,52 @@ local function onTut(player, action: string, n: any)
 	return nil
 end
 
+-- 퀘스트 연출(장면 — shared/lune/cine.luau): 장면이 도는 동안은 맞지 않는다(90초가 넘으면 저절로 풀린다 — 화면이 「끝났다」를 못 보냈을 때). 본 장면은 캐릭터에 적는다
+local function onCine(player, action: string, id: any)
+	local s = sessions[player]
+	if not s or not s.hero then
+		return
+	end
+	local h = s.hero
+	if action == "on" then
+		h.inCine = true
+		local at = os.clock()
+		s.cineAt = at
+		task.delay(90, function()
+			if s.cineAt == at then
+				h.inCine = false
+			end
+		end)
+	elseif action == "off" then
+		h.inCine = false
+		s.cineAt = nil
+	elseif action == "seen" and Cine.known(id) and not h.cine[id] then
+		h.cine[id] = true
+		s.dirty = true
+	end
+end
+
+-- 간이 포탈(2026-10-15 — 사용자: "사냥터 안에서 끝에서 끝으로 이동하는 간이 포탈 … 메이플에 있습니다"): 그 앞에 서 있으면 같은 맵의 짝 자리로 옮기고 화면에 알린다(Warp)
+local function onHop(player, id: string)
+	local s = sessions[player]
+	if not s or not s.hero or not s.hero.alive then
+		return
+	end
+	local warps = SCENES.scenes[s.scene].warps or {}
+	for _, w in warps do
+		if w.id == id and math.abs(w.x - s.hero.x) <= 28 and math.abs(w.y - s.hero.y) <= 28 then
+			for _, t in warps do
+				if t.id == w.at then
+					s.hero.x, s.hero.y = t.x, t.y
+					s.jumped = true -- 다음 자리 보고는 거리와 상관없이 받는다
+					fire("Warp", player, t.x, t.y)
+					return
+				end
+			end
+		end
+	end
+end
+
 local function onTravel(player, to: string)
 	local s = sessions[player]
 	if not s or not s.hero or not s.hero.alive then
@@ -924,6 +1049,9 @@ local function onTravel(player, to: string)
 				if back.to == s.scene then
 					x, y = back.x, back.y
 				end
+			end
+			if Rift.tierOfKey(s.scene) then
+				x, y = riftExitSpot() -- 토벌에서 나왔다: 토벌대장 앞
 			end
 			local from = s.scene
 			place(s, to, x, y)
@@ -994,6 +1122,10 @@ local function applyResult(cur, key: string, result)
 		for _, gain in kill.gains do
 			local gs = byUser[gain.hero]
 			if gs then
+				if gs.acct then
+					Achieve.killed(gs.acct.ach, kill.kind, key, #kill.gains > 1) -- 업적: 처치 · 파티로 처치(함께 잡은 사람이 있다) · 그 지역의 몬스터 종류
+				end
+				Bond.onKill(gs.hero.bond, kill.kind) -- 모험의 서: 그곳의 몬스터 종류마다 100마리
 				-- 퀘스트: 함께 잡은 사람 모두에게 잡은 것으로 쳐 준다
 				if #Quests.onKill(gs.hero.quests, kill.kind, key) > 0 then
 					gs.dirty = true
@@ -1399,7 +1531,7 @@ end
 local NPC_REACH = 64
 local function nearNpc(s, kind: string): boolean
 	for _, n in SCENES.scenes[s.scene].npcs or {} do
-		if Items.data.NPCDO[n.id] == kind and math.abs(n.x - s.hero.x) <= NPC_REACH and math.abs(n.y - s.hero.y) <= 40 then
+		if Items.data.NPCDO[n.id] == kind and Bond.opened(s.hero.bond, n.id) and math.abs(n.x - s.hero.x) <= NPC_REACH and math.abs(n.y - s.hero.y) <= 40 then -- 만나면 열리는 사람은 인사를 나눈 뒤(2026-10-16)
 			return true
 		end
 	end
@@ -1422,6 +1554,9 @@ local function onItem(player, action: string, a: any, b: any, c: any, d: any)
 		ok, why = Bag.unequip(h, a)
 	elseif action == "dismantle" then
 		result, why = Bag.dismantle(h, a)
+		if result and s.acct then
+			Achieve.add(s.acct.ach, "dismantle") -- 업적: 장비를 n개 분해한다
+		end
 		ok = result ~= nil
 	elseif action == "grow" then
 		ok, why = Bag.grow(h)
@@ -1435,7 +1570,7 @@ local function onItem(player, action: string, a: any, b: any, c: any, d: any)
 		ok, why = Bag.split(h, a, b, c, d) -- 탭 · 칸 · 덜어 낼 수 · 놓을 칸(안 주면 첫 빈 칸)
 	elseif action == "sell" then
 		-- 상점에 판다: 어느 상점(잡화 상인 · 대장장이) 앞에서나. 탭 · 칸 · 팔 수
-		if not nearNpc(s, "shop") and not nearNpc(s, "smith") then
+		if not nearNpc(s, "shop") then -- 잡화 상인만 사 준다(2026-10-15 — 대장장이는 상점이 없다: 제작 · 강화만)
 			why = "파는 사람 앞이 아니다"
 		else
 			result, why = Bag.sell(h, a, b, c)
@@ -1457,19 +1592,32 @@ local function onItem(player, action: string, a: any, b: any, c: any, d: any)
 		else
 			local made
 			made, why = Bag.craft(h, a, itemRng)
+			if made and s.acct then
+				Achieve.add(s.acct.ach, "craft") -- 업적: 대장간에서 장비를 처음 만든다
+			end
 			ok = made ~= nil
 			result = if made then { slot = made.slot, stage = made.stage, q = made.q, star = made.star, who = made.who } else nil
 		end
-	elseif action == "enhance" or action == "transfer" or action == "restore" then
+	elseif action == "enhance" or action == "restore" then -- (별 옮기기 「transfer」는 2026-10-15에 뺐다)
 		if h.level < OPEN.forge then
 			why = ("Lv.%d부터 한다"):format(OPEN.forge)
 		elseif not nearNpc(s, "smith") then
 			why = "대장장이 앞이 아니다"
 		elseif action == "enhance" then
+			local it = Bag.find(h, a)
+			local aim = if it then (it.star or 0) + 1 else 0
 			result, why = Bag.enhance(h, a, itemRng, b == true)
 			ok = result ~= nil
-		elseif action == "transfer" then
-			ok, why = Bag.transfer(h, a, b)
+			if ok then
+				Analytics.custom(s, "Enhance", aim, result) -- 값 = 노린 별 · 결과(ok · fail · drop · boom)
+				if s.acct then
+					if result == "ok" then
+						Achieve.forged(s.acct.ach, aim) -- 업적: 장비 하나를 n성까지
+					else
+						Achieve.add(s.acct.ach, "fail") -- 업적(숨김): 강화가 처음으로 붙지 않는다
+					end
+				end
+			end
 		else
 			ok, why = Bag.restore(h, a, b)
 		end
@@ -1503,17 +1651,25 @@ local function onPotion(player, id: any)
 	if not s or not s.hero then
 		return
 	end
-	-- 귀환 주문서: 쓰면 마을(쓰러졌을 때 돌아가는 곳)로 돌아간다. 쓰러져 있을 때 · 이미 마을일 때는 쓰이지 않는다(주문서도 줄지 않는다)
+	-- 귀환 주문서: 쓰면 그 맵에서 가장 가까운 마을(장면의 ret — 문을 가장 적게 지나 닿는 마을 · 작은 마을, export가 셈한다)로 돌아간다.
+	--  사용자 2026-10-16: "마을귀환 주문서라는게 가장가까운 마을로 이동하는 귀환주문서지 초승달마을로 고정 귀환하는 주문서가 아닙니다" (전에는 늘 초승달 마을이었다)
+	--  쓰러져 있을 때 · 이미 마을일 때 · 배 위 · 꿈에서는 쓰이지 않는다(주문서도 줄지 않는다)
 	local goods = Items.goods(id)
 	if goods and goods.kind == "scroll" then
 		local h = s.hero
+		local here = SCENES.scenes[s.scene]
+		local to = here and here.ret
 		local why = nil
 		if not h.alive then
 			return
 		elseif Bag.count(h, goods.id) <= 0 then
 			why = "가진 주문서가 없다"
-		elseif s.scene == SCENES.start then
+		elseif SCENES.homes[s.scene] then
 			why = "이미 마을이다"
+		elseif Voyage.onShip(s.scene) then
+			why = "배 위에서는 쓸 수 없다"
+		elseif not to or not SCENES.scenes[to] then
+			why = "여기서는 쓸 수 없다"
 		end
 		if why then
 			fire("ItemDone", player, { action = "use", ok = false, why = why })
@@ -1521,7 +1677,7 @@ local function onPotion(player, id: any)
 		end
 		Bag.take(h, goods.id, 1)
 		s.skill = nil
-		World.jump(player, SCENES.start)
+		World.jump(player, to)
 		sendBag(s)
 		sendParty(Party.members(book, player.UserId)) -- 파티원이 어느 맵에 있는지 바뀌었다
 		return
@@ -1643,6 +1799,11 @@ local function onQuest(player, action: string, id: any)
 			why = "여기서는 받을 수 없는 퀘스트다" -- 주민은 제가 선 지역의 퀘스트만 준다(전직 퀘스트는 사제가 어디서든 준다)
 		else
 			ok, why = Quests.accept(h.quests, h.level, id)
+			if ok then
+				for npc in h.bond.met do
+					Quests.onMeet(h.quests, npc) -- 받기 전에 이미 인사를 나눈 사람(「항구의 첫날」의 만나기 — 2026-10-16)
+				end
+			end
 		end
 	elseif action == "complete" then
 		if not nearNpcId(s, def.endNpc) then
@@ -1651,6 +1812,9 @@ local function onQuest(player, action: string, id: any)
 			local reward, ups = Hero.questDone(h, id)
 			if reward then
 				ok, done = true, id
+				if reward.open == "tome" then
+					fire("BondView", player, Bond.view(h, os.time()), { kind = "open" })
+				end
 				fire("Gain", player, { xp = reward.xp, ups = ups, level = h.level, quest = def.name })
 				if ups > 0 then
 					sendWho(s.scene)
@@ -1699,6 +1863,8 @@ local function onDaily(player, action: string, region: any, i: any)
 		return reply(nil, "모르는 일이다", nil)
 	elseif not h.alive or s.scene ~= board.scene or not nearNpcId(s, board.npc) then
 		return reply(nil, Daily.WORDS.far, nil)
+	elseif not Bond.opened(h.bond, board.npc) then
+		return reply(nil, "먼저 인사를 나눠야 한다", nil) -- 만나면 열리는 사람(의뢰 접수원 — 2026-10-16)
 	elseif h.level < Daily.FROM then
 		return reply(nil, Daily.WORDS.early, nil)
 	end
@@ -1711,6 +1877,10 @@ local function onDaily(player, action: string, region: any, i: any)
 		return reply(nil, why, nil)
 	end
 	local ups = Hero.gainXp(h, reward.xp)
+	Analytics.custom(s, "DailyDone", 1, region)
+	if s.acct then
+		Achieve.add(s.acct.ach, "daily") -- 업적: 일일 의뢰를 n개
+	end
 	fire("Gain", player, { xp = reward.xp, ups = ups, level = h.level })
 	if ups > 0 then
 		fire("Quests", player, Quests.view(h.quests)) -- 레벨이 되어 받을 수 있게 된 퀘스트
@@ -1719,6 +1889,312 @@ local function onDaily(player, action: string, region: any, i: any)
 	sendSelf(s) -- 달돈 · 레벨
 	sendBag(s) -- 달가루(덤)
 	return reply(true, nil, reward)
+end
+
+-- ---------- 출석 · 업적(2026-10-15) ----------
+--  사용자: "출석보상, 업적 만들어야합니다". 셈은 shared/lune/sim/attend.luau · achieve.luau, 표는 계정의 것(acct.att · acct.ach — 어느 캐릭터로 들어가도 같다).
+--  보상은 「받기」를 누른 캐릭터에게(물약은 그 캐릭터의 레벨의 것). 해낸 업적은 화면 위의 띠(AchDone)로 알리고, 받을 것의 수는 내 상태(attReady · achReady)로 보낸다(「메뉴」의 점).
+
+-- 업적을 셀 때의 사정: 계정의 캐릭터들 가운데 가장 높은 레벨 · 차수, 직업마다의 레벨, 지금 캐릭터의 퀘스트, 지금 가진 장비의 가장 높은 별, 출석의 표
+local function achCtx(s)
+	local h = s.hero
+	local ctx = { level = h.level, job = h.job, classes = { [h.class] = h.level }, quests = h.quests, star = 0, att = s.acct.att }
+	for _, c in s.acct.chars do
+		if c.id ~= s.cid and typeof(c.hero) == "table" then
+			local lv = if typeof(c.hero.level) == "number" then c.hero.level else 1
+			local job = if typeof(c.hero.job) == "number" then c.hero.job else 1
+			ctx.level = math.max(ctx.level, lv)
+			ctx.job = math.max(ctx.job, job)
+			ctx.classes[c.class] = math.max(ctx.classes[c.class] or 0, lv)
+		end
+	end
+	for _, it in h.equip do
+		ctx.star = math.max(ctx.star, it.star or 0)
+	end
+	for _, it in h.gear do
+		if it then
+			ctx.star = math.max(ctx.star, it.star or 0)
+		end
+	end
+	return ctx
+end
+
+-- 새로 해낸 업적을 적고 알린다(화면 위의 띠 · 메뉴의 점)
+local function achCheck(s)
+	if not s.hero or not s.acct then
+		return
+	end
+	local fresh = Achieve.check(s.acct.ach, achCtx(s))
+	if #fresh > 0 then
+		s.dirty = true
+		fire("AchDone", s.player, fresh)
+		sendSelf(s)
+	end
+end
+
+-- 출석: "view" = 판(오늘 처음 들어와 칸이 찼으면 fresh — 화면이 창을 한 번 띄운다) · "claim" = 받지 않은 칸을 앞에서부터 모두
+local function onAttend(player, action: string)
+	local s = sessions[player]
+	if not s or not s.hero or not s.acct then
+		return nil
+	end
+	local now = os.time()
+	local att = s.acct.att
+	if action == "claim" then
+		local got, why = Attend.claim(att, s.hero)
+		if got > 0 then
+			s.dirty = true
+			sendBag(s) -- 가방 · 달돈 · 달가루 · 메뉴의 점
+		end
+		return { view = Attend.view(att, now), got = got, why = why }
+	end
+	local fresh = s.attFresh == true
+	s.attFresh = nil
+	return { view = Attend.view(att, now), fresh = fresh }
+end
+
+-- 2편의 도시 생활(2026-10-16 — sim/bond.luau): "view" · "meet" 사람(처음 인사 — 그 사람 앞: 그 사람의 기능이 열리고 「만나기」가 찬다) ·
+--  "read" 이야기(숨은 이야기 — 그 앞에서 ↑) · "tome" 곳, %(모험의 서의 보상). 돌려주는 것 { ok, why, view, note }
+--  (사용자 2026-10-16 "호감도는 왜만드는거고" — 호감도의 talk · gift · claim은 뺐다)
+local function onBond(player, action: string, a: any, b: any)
+	local s = sessions[player]
+	if not s or not s.hero then
+		return nil
+	end
+	local h, now = s.hero, os.time()
+	local ok, why, note = true, nil, nil
+	if action == "meet" then
+		if not nearNpcId(s, a) then
+			ok, why = false, "그 사람 앞이 아니다"
+		elseif not Bond.isMeet(a) then
+			ok, why = false, "인사할 사람이 아니다"
+		else
+			local first = Bond.meet(h.bond, a)
+			if first then
+				s.dirty = true
+				if #Quests.onMeet(h.quests, a) > 0 then
+					fire("Quests", player, Quests.view(h.quests))
+				end
+			end
+			note = { kind = "meet", npc = a, first = first, opens = Bond.DATA.meet[a].opens }
+		end
+	elseif action == "read" then
+		local first, w = Bond.read(h.bond, a, s.scene, h.x, h.y)
+		if first == nil then
+			ok, why = false, w
+		else
+			if first then
+				s.dirty = true
+				if s.acct then
+					Achieve.add(s.acct.ach, "story") -- 업적: 숨은 이야기
+				end
+			end
+			note = { kind = "story", id = a, first = first }
+		end
+	elseif action == "tome" then
+		local r, w = Bond.claimTome(h, h.quests, a, b)
+		if r then
+			s.dirty = true
+			note = { kind = "tome", area = a, pct = b, reward = r }
+			sendBag(s)
+		else
+			ok, why = false, w
+		end
+	elseif action ~= "view" then
+		ok, why = false, "모르는 일이다"
+	end
+	return { ok = ok, why = why, view = Bond.view(h, now), note = note }
+end
+
+-- 업적: "view" = 점수와 업적마다의 진행 · "claim" id = 그 업적의 보상 · "all" = 받을 것을 모두
+-- ---------- 수정 틈 토벌(2026-10-16 — sim/rift.luau · 공방 design/city.js의 RIFT) ----------
+--  광장의 토벌대장 앞에서 「입장」: 같은 맵에 있는 파티원(그 단계의 레벨이 되는 사람)이 함께 rf1#번호의 따로 된 방으로 간다.
+--  방이 완료되면 그 방의 사람마다 보상(하루 횟수가 남았으면) · back초 뒤 광장으로. 실패하면 조금 뒤 광장으로. 빈 토벌의 방은 치운다
+local riftSerial = 0
+riftExitSpot = function(): (number, number)
+	local sc = SCENES.scenes[Rift.DATA.scene]
+	for _, n in sc.npcs or {} do
+		if n.id == Rift.DATA.npc then
+			return n.x - 24, n.y
+		end
+	end
+	return sc.spawn.x, sc.spawn.y
+end
+-- 그 사람을 그 장면의 (x, y)로 옮긴다(화면에는 Revive로 — World.jump와 같다)
+local function moveTo(s, key: string, x: number, y: number)
+	local from = s.scene
+	place(s, key, x, y, true)
+	local room = roomOf(key):describe(s.hero.id)
+	room.who = roster(key)
+	fire("Revive", s.player, { scene = key, x = x, y = y, room = room })
+	sendSelf(s)
+	sendWho(from)
+	sendWho(key)
+	sendParty(Party.members(book, s.hero.id))
+end
+local function riftReply(s, ok: boolean?, why: string?)
+	local now = os.time()
+	return { ok = ok == true, why = why, left = Rift.left(s.hero.rift, now), clears = s.hero.rift.clears }
+end
+local function onRift(player, action: string, id: any)
+	local s = sessions[player]
+	if not s or not s.hero then
+		return nil
+	end
+	if action == "view" then
+		return riftReply(s, true)
+	elseif action ~= "enter" then
+		return riftReply(s, nil, "모르는 일이다")
+	end
+	local t = Rift.tier(id)
+	if not t then
+		return riftReply(s, nil, "모르는 토벌이다")
+	elseif s.scene ~= Rift.DATA.scene or not nearNpcId(s, Rift.DATA.npc) then
+		return riftReply(s, nil, "토벌대장 앞에서 들어갈 수 있다")
+	elseif not Bond.opened(s.hero.bond, Rift.DATA.npc) then
+		return riftReply(s, nil, "먼저 인사를 나눠야 한다") -- 만나면 열리는 사람(토벌대장 — 2026-10-16)
+	end
+	local why = Rift.canEnter(s.hero, t)
+	if why then
+		return riftReply(s, nil, why)
+	end
+	riftSerial += 1
+	local key = t.id .. "#" .. riftSerial
+	local room = roomOf(key)
+	local sc = SCENES.scenes[key]
+	local going = { s }
+	for _, uid in Party.members(book, player.UserId) do
+		local ms = byUser[uid]
+		if ms and ms ~= s and ms.hero and ms.scene == s.scene and #going < Rift.DATA.party and not Rift.canEnter(ms.hero, t) then
+			table.insert(going, ms) -- 같은 맵의 파티원이 함께 들어간다
+		end
+	end
+	for i, ms in going do
+		moveTo(ms, key, sc.spawn.x + (i - 1) * 12, sc.spawn.y)
+		Analytics.custom(ms, "RiftEnter", 1, t.id)
+	end
+	toRoom(key, "RiftView", Rift.view(room))
+	return riftReply(s, true)
+end
+-- 완료: 그 방의 사람마다 보상(오늘 횟수가 남았으면 경험치 · 달돈 · 달가루 · 확률로 장비). 횟수가 없으면 보상 없이 끝낸 수만 센다
+local function riftPay(key: string, room)
+	local t = Rift.tier(room.rift.tier)
+	local now = os.time()
+	for _, s in inRoom(key) do
+		local h = s.hero
+		h.rift.clears += 1
+		s.dirty = true
+		if s.acct then
+			Achieve.add(s.acct.ach, "rift") -- 업적: 토벌을 n번
+		end
+		Analytics.custom(s, "RiftClear", 1, t.id)
+		if not Rift.use(h.rift, now) then
+			fire("RiftPay", s.player, { none = true, left = 0 })
+			continue
+		end
+		local pay = t.pay
+		local ups = Hero.gainXp(h, pay.xp)
+		h.money += pay.money
+		h.dust += pay.dust
+		local gear = Rift.rollGear(t, room.lootRng, h.class)
+		local full = false
+		if gear then
+			if Bag.add(h, gear) then
+				sendBag(s)
+			else
+				gear, full = nil, true
+			end
+		end
+		fire("Gain", s.player, { xp = pay.xp, ups = ups, level = h.level })
+		if ups > 0 then
+			fire("Quests", s.player, Quests.view(h.quests))
+			sendWho(key)
+		end
+		sendSelf(s)
+		sendBag(s)
+		fire("RiftPay", s.player, { xp = pay.xp, money = pay.money, dust = pay.dust, gear = gear, gearName = if gear then Items.name(gear) else nil, full = full, left = Rift.left(h.rift, now) })
+	end
+end
+
+-- ---------- 탈것(2026-10-16 — sim/voyage.luau · 공방 design/city.js의 VOYAGE) ----------
+--  그 탈것의 사람(선장 · 뱃사공 · 승강장 일꾼) 앞에서 「탑승」 → 갑판(ship_out · ship_sea_out · air_out …)으로 옮기고, time초 뒤 tick이 닿는 곳에 내려 준다.
+--  npcId = 말을 건 사람(한 장면에 탈것이 여럿 — 은달 항구: 선장 · 뱃사공 · 승강장 일꾼). 돌려주는 것 { ok, why, time, dest }.
+--  화면에는 Voyage 이벤트로 { left, dest }(갑판에 오름) · { arrived = 장면 }(닿음)
+local function voyageLanding(r): (number, number)
+	local sc = SCENES.scenes[r.to]
+	if r.at then
+		return r.at[1] * SCENES.tile, r.at[2] * SCENES.tile
+	end
+	for _, n in sc.npcs or {} do
+		if n.id == r.npc then
+			return n.x - 32, n.y -- 그 사람의 왼쪽(닿는 곳에도 같은 사람이 서서 돌아가는 길을 태운다)
+		end
+	end
+	return sc.spawn.x, sc.spawn.y
+end
+local function onSail(player, npcId: any)
+	local s = sessions[player]
+	if not s or not s.hero or not s.hero.alive then
+		return nil
+	end
+	local r = Voyage.route(s.scene, if typeof(npcId) == "string" then npcId else nil)
+	if not r or not nearNpcId(s, r.npc) then
+		return { ok = false, why = "태워 주는 사람 앞에서 오른다" }
+	elseif not Voyage.open(s.hero.quests, r) then
+		return { ok = false, why = r.locked or "아직은 탈 수 없다" }
+	end
+	local sc = SCENES.scenes[r.ship]
+	moveTo(s, r.ship, sc.spawn.x, sc.spawn.y)
+	s.voyage = { at = World.now + Voyage.DATA.time, route = r }
+	fire("Voyage", player, { left = Voyage.DATA.time, dest = r.dest, to = r.to })
+	Analytics.custom(s, "Sail", 1, r.to)
+	return { ok = true, time = Voyage.DATA.time, dest = r.dest }
+end
+
+local function onAchieve(player, action: string, id: any)
+	local s = sessions[player]
+	if not s or not s.hero or not s.acct then
+		return nil
+	end
+	local a = s.acct.ach
+	achCheck(s) -- 창을 연 그때의 것으로
+	local got, why = 0, nil
+	if action == "claim" then
+		local ok
+		ok, why = Achieve.claim(a, s.hero, id)
+		got = if ok then 1 else 0
+	elseif action == "all" then
+		got, why = Achieve.claimAll(a, s.hero)
+	end
+	if got > 0 then
+		s.dirty = true
+		sendBag(s)
+	end
+	return { view = Achieve.view(a, achCtx(s)), got = got, why = why }
+end
+
+-- 시계(1초마다): 업적을 보고, 쓰러졌는지 보고, 게임 중에 자정이 지났으면 출석 칸을 채운다
+local function achTick(s, dt: number)
+	if not s.hero or not s.acct then
+		return
+	end
+	s.achT = (s.achT or 0) + dt
+	if s.achT < 1 then
+		return
+	end
+	s.achT = 0
+	local alive = s.hero.alive
+	if s.achAlive and not alive then
+		Achieve.add(s.acct.ach, "death") -- 업적(숨김): 처음으로 쓰러진다
+	end
+	s.achAlive = alive
+	if Attend.checkIn(s.acct.att, os.time()) then
+		Achieve.add(s.acct.ach, "attend")
+		s.dirty = true
+		fire("AttendNew", s.player)
+		sendSelf(s)
+	end
+	achCheck(s)
 end
 
 -- ---------- 경매장 ----------
@@ -1862,6 +2338,9 @@ local function marketCollect(s, hd, r): (number, number)
 	local am = Market.amount(hd, r)
 	s.hero.money += am.pay
 	hd.got = (hd.got or 0) + r.due
+	if am.pay > 0 and s.acct then
+		Achieve.add(s.acct.ach, "sold") -- 업적: 경매장에서 물건이 처음 팔린다(대금을 받을 때 센다)
+	end
 	saveSoon(s)
 	return am.pay, am.fee
 end
@@ -2273,6 +2752,13 @@ local function onParty(player, action: string, target: any)
 		fire("PartyAsk", player, { from = false })
 		if not party then
 			return partyNote(player, why)
+		end
+		-- 업적: 다른 사람과 처음 파티를 맺는다 — 들어온 사람과 파티의 다른 사람들 모두(이미 해낸 사람에게는 셈만 오른다)
+		for _, uid in party.members do
+			local ms = byUser[uid]
+			if ms and ms.acct then
+				Achieve.add(ms.acct.ach, "party")
+			end
 		end
 		sendParty(party.members)
 	elseif action == "decline" then
@@ -2818,12 +3304,27 @@ function World.tick(dt: number)
 		end
 		if s.hero then
 			Hero.tick(s.hero, dt) -- 쓰러진 사람은 저절로 일어나지 않는다(마을로 돌아갈지 묻는다 — onReturn)
+			if not s.guest then
+				s.hero.played = (s.hero.played or 0) + dt -- 이 캐릭터로 논 시간(저장한다)
+			end
+			Analytics.tick(s, dt) -- 레벨 · 퀘스트 · 쓰러짐을 1초마다 보고, 달돈을 60초마다 보낸다
+			achTick(s, dt) -- 업적 · 출석(1초마다)
 		end
 	end
 	-- 파티원의 체력과 자리(어느 맵)를 1초에 한 번 알린다
 	if ticks % 20 == 0 then
 		for _, party in book.parties do
 			sendParty(party.members)
+		end
+	end
+	-- 배: 때가 되면 닿는 곳(선장 곁)에 내려 준다
+	for _, vs in sessions do
+		if vs.voyage and vs.hero and World.now >= vs.voyage.at then
+			local r = vs.voyage.route
+			vs.voyage = nil
+			local x, y = voyageLanding(r)
+			moveTo(vs, r.to, x, y)
+			fire("Voyage", vs.player, { arrived = r.to, dest = r.dest })
 		end
 	end
 	-- 방: 사람이 있는 방만 돌린다
@@ -2906,6 +3407,25 @@ function World.tick(dt: number)
 					end
 				end
 			end
+			if room.rift then
+				-- 토벌: 바뀐 상태를 알리고, 완료면 보상 · 때가 되면 광장으로
+				if room.rift.changed then
+					room.rift.changed = false
+					toRoom(key, "RiftView", Rift.view(room))
+					if room.rift.state == "clear" and not room.rift.paid then
+						room.rift.paid = true
+						riftPay(key, room)
+					end
+				end
+				if Rift.due(room) then
+					local x, y = riftExitSpot()
+					for _, s in here do
+						if s.hero.alive then
+							moveTo(s, Rift.DATA.scene, x, y)
+						end
+					end
+				end
+			end
 			if ticks % SNAP_EVERY == 0 and #room.mobs > 0 then
 				toRoom(key, "Snap", key, room:snapshot())
 			end
@@ -2917,6 +3437,8 @@ function World.tick(dt: number)
 				end
 				toRoom(key, "Heroes", key, list)
 			end
+		elseif Rift.tierOfKey(key) then
+			rooms[key] = nil -- 아무도 없는 토벌의 방은 닫는다(다시 들어가면 새 방)
 		elseif room.bosses then
 			room:idle() -- 아무도 없는 방: 서 있던 스토리 보스를 치운다(다시 들어오면 체력이 가득한 채 새로 선다)
 		end
@@ -2924,25 +3446,38 @@ function World.tick(dt: number)
 end
 
 function World.start()
+	-- 플레이어 데이터 기록(server/lune/modules/analytics.luau): 관리자 · 확인용 캐릭터 · 봇은 적지 않는다. 달돈 · 진행을 바꾸는 요청은 Analytics.wrap으로 감싼다(무엇이 달돈을 바꿨는가)
+	Analytics.init({
+		skip = function(s)
+			return s.guest == true or isBot(s.player) or Admin.isId(s.player.UserId)
+		end,
+	})
 	Net.OnServer("Ready", onReady)
 	Net.OnServer("Move", onMove)
-	Net.OnServer("Travel", onTravel)
-	Net.OnServer("Tut", onTut)
-	Net.OnServer("Skill", onSkill)
-	Net.OnServer("Return", onReturn)
-	Net.OnServer("Pickup", onPickup)
-	Net.OnServer("Potion", onPotion)
+	Net.OnServer("Travel", Analytics.wrap("Travel", onTravel, World.session))
+	Net.OnServer("Tut", Analytics.wrap("Tut", onTut, World.session))
+	Net.OnServer("Cine", Analytics.wrap("Cine", onCine, World.session))
+	Net.OnServer("Hop", Analytics.wrap("Hop", onHop, World.session))
+	Net.OnServer("Skill", Analytics.wrap("Skill", onSkill, World.session))
+	Net.OnServer("Return", Analytics.wrap("Return", onReturn, World.session))
+	Net.OnServer("Pickup", Analytics.wrap("Pickup", onPickup, World.session))
+	Net.OnServer("Potion", Analytics.wrap("Potion", onPotion, World.session))
 	Net.OnServer("Chars", onChars)
 	Net.OnServer("Rank", onRank)
 	Net.OnServer("Debug", onDebug)
 	Net.OnServer("Admin", onAdmin)
 	Net.OnServer("Keys", onKeys)
 	Net.OnServer("Sound", onSound)
-	Net.OnServer("Daily", onDaily)
-	Net.OnServer("Market", onMarket)
-	Net.OnServer("Item", onItem)
+	Net.OnServer("Daily", Analytics.wrap("Daily", onDaily, World.session))
+	Net.OnServer("Attend", Analytics.wrap("Attend", onAttend, World.session))
+	Net.OnServer("Achieve", Analytics.wrap("Achieve", onAchieve, World.session))
+	Net.OnServer("Bond", Analytics.wrap("Bond", onBond, World.session))
+	Net.OnServer("Rift", Analytics.wrap("Rift", onRift, World.session))
+	Net.OnServer("Sail", Analytics.wrap("Sail", onSail, World.session))
+	Net.OnServer("Market", Analytics.wrap("Market", onMarket, World.session))
+	Net.OnServer("Item", Analytics.wrap("Item", onItem, World.session))
 	Net.OnServer("Party", onParty)
-	Net.OnServer("Quest", onQuest)
+	Net.OnServer("Quest", Analytics.wrap("Quest", onQuest, World.session))
 	onSkill2 = onSkill
 	Net.OnServer("Slots", onSlots)
 	Net.OnServer("TouchSlots", onTouchSlots)

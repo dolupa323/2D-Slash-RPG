@@ -94,6 +94,17 @@ function SceneView.new(view: Frame, key: string, scene, tagLayer: Frame)
 	end
 	put(back, scene.back)
 	put(front, scene.front)
+	-- 사다리(2026-10-16 밤 — scene.ladders: x · top · bottom 도트): 16점 한 칸을 세로로 쌓는다(땅 앞 · 문 · 주민 · 캐릭터 뒤). 꼭대기는 발판 위로 반 칸 솟는다
+	local ladderLayer = Stage.group(world, "Ladders", 21)
+	for i, l in scene.ladders or {} do
+		local top = l.top - 8
+		for k = 0, math.ceil((l.bottom - top) / 16) - 1 do
+			local h = math.min(16, l.bottom - top - k * 16)
+			local piece = Stage.image(ladderLayer, ("Ladder%d_%d"):format(i, k), ASSETS[scene.ladderImg] or "", 16, h)
+			piece.ImageRectSize = Vector2.new(16, h)
+			piece.Position = UDim2.fromOffset(round(l.x - 8), top + k * 16)
+		end
+	end
 
 	for i, g in scene.ground do
 		local label = Stage.image(ground, "Ground" .. i, ASSETS[g.img] or "", g.w, g.h)
@@ -158,6 +169,17 @@ function SceneView.new(view: Frame, key: string, scene, tagLayer: Frame)
 		end
 	end
 
+	-- 간이 포탈(2026-10-15 — 사용자: "사냥터 안에서 끝에서 끝으로 이동하는 간이 포탈 거의 투명하게"): 문과 같은 그림을 거의 투명하게 · 앞에 서면 「↑ 오른쪽 끝으로」.
+	--  다른 맵으로 가는 문(scene.portals)과 따로다(scene.warps — 공방 maps.js의 warpsFor). 그림은 문과 함께 돌린다(self.portals에 warp = true로 넣는다)
+	for i, w in scene.warps or {} do
+		local glow = Stage.image(self.portalLayer, "Warp_" .. w.id, ASSETS[PORTAL.img] or "", PORTAL.w, PORTAL.h)
+		glow.ImageRectSize = Vector2.new(PORTAL.w, PORTAL.h)
+		glow.ImageTransparency = 1 - (scene.warpAlpha or 0.28)
+		glow.Position = UDim2.fromOffset(round(w.x - PORTAL.w / 2), w.y - PORTAL.h)
+		table.insert(self.portals, { label = glow, phase = i * 0.5, frame = -1, def = w, open = true, warp = true })
+		tag("↑ " .. w.label, w.x, w.y - PORTAL.h, -(Ui.TAG_H + 2), C.accent, w)
+	end
+
 	self.camX, self.camY = 0, 0
 	self.camYf = nil -- 세로 카메라(소수까지) — 첫 update에서 주인공 자리로 잡는다
 	self.lastClock = nil
@@ -168,8 +190,9 @@ end
 --  보통 맵: 세로는 따라가지 않는다 — 땅의 윗면이 늘 화면의 같은 높이(Kit.GROUND)에 온다. 뛸 때마다 화면이 출렁이지 않는다.
 --  층이 있는 맵(scene.tall): 선 층의 발밑이 화면의 Kit.GROUND에 오게 부드럽게 따라간다 — 땅을 딛고 있을 때의 높이만 따르고(뛸 때마다 출렁이지 않게),
 --   화면 밖으로 나가려 하면 바로 따라간다. 공방 시험 탭(luneTab.js의 followCam)과 같은 식이다.
+-- camOverride = 장면(퀘스트 연출 — cineView.luau)이 카메라를 옮겨 둔 가로 자리(없으면 캐릭터) · npcOver = 장면이 옮긴 주민 { [id] = { x, dir, hidden, walk } }
 function SceneView:update(heroX: number, heroY: number, clock: number, grounded: boolean?)
-	local cx = round(math.clamp(heroX - G.VIEW_W / 2, 0, math.max(0, self.width - G.VIEW_W)))
+	local cx = round(math.clamp((self.camOverride or heroX) - G.VIEW_W / 2, 0, math.max(0, self.width - G.VIEW_W)))
 	local cy = G.GROUND_Y - Kit.GROUND
 	if self.scene.tall then
 		local top = math.max(0, self.height - Kit.GROUND - (G.GROUND_Y - Kit.GROUND)) -- 카메라가 내려갈 수 있는 끝
@@ -218,6 +241,9 @@ function SceneView:update(heroX: number, heroY: number, clock: number, grounded:
 		-- f 2 = 맵과 똑같이 움직이는 벽(망루 · 종탑의 안 — 세로로 쌓인 벽 / 회랑 — 가로로 이어 붙는 벽): 카메라와 1:1로 민다
 		local lock = l.f >= 2
 		local ox = if lock then -(cx % l.w) else -(round(cx * l.f) % l.w)
+		if l.d then
+			ox = -((round(cx * l.f) - math.floor(clock * l.d)) % l.w) -- 흘러가는 겹(배의 갑판 뒤의 바다 — d = 1초에 미는 점, 음수면 왼쪽으로 · 2026-10-16)
+		end
 		-- 층이 있는 맵 · 실내는 공방 시험 탭의 식 그대로(멀수록 세로로도 덜 따라온다 — 실내의 방 그림은 f = 0이라 화면에 붙어 있다)
 		local oy = if lock then l.y - cy elseif self.scene.tall or self.scene.indoor then round(l.y - cy * l.f * 0.5) else l.y - cy
 		for c, label in layer.labels do
@@ -228,15 +254,26 @@ function SceneView:update(heroX: number, heroY: number, clock: number, grounded:
 	-- 주민: 가까이 오면 주인공 쪽을 본다(그림은 오른쪽을 본다)
 	for i, npc in self.npcs do
 		local n = npc.def
+		local o = self.npcOver and self.npcOver[n.id]
 		local dir = n.dir
-		if math.abs(n.x - heroX) < 70 and heroX ~= n.x then
+		if o and o.dir then
+			dir = o.dir
+		elseif math.abs(n.x - heroX) < 70 and heroX ~= n.x then
 			dir = if heroX > n.x then 1 else -1
 		end
-		local frame = math.floor(clock * 1.6 + (i - 1) * 0.4) % 2
+		-- 장면이 옮긴 주민: 그 자리에(걷는 동안은 두 장을 빨리 돌린다) · 숨긴 주민은 보이지 않는다. 장면이 끝나면 제자리로
+		local nx = if o and o.x then o.x else n.x
+		if npc.atX ~= nx then
+			npc.atX = nx
+			npc.label.Position = UDim2.fromOffset(round(nx - npc.nw / 2), n.y - npc.nh)
+		end
+		npc.label.Visible = not n.stone and not (o and o.hidden)
+		local frame = math.floor(clock * (if o and o.walk then 8 else 1.6) + (i - 1) * 0.4) % 2
 		local key = dir .. ":" .. frame
 		if npc.shown ~= key then
 			npc.shown = key
-			local x, y = n.cell * npc.nw, frame * npc.nh
+			local cols = self.scene.npcCols or 999 -- 그림판을 cols칸마다 접었다(2026-10-16) — 줄마다 서 있는 동작 2장
+			local x, y = (n.cell % cols) * npc.nw, (n.cell // cols * 2 + frame) * npc.nh
 			if dir >= 0 then
 				npc.label.ImageRectOffset = Vector2.new(x, y)
 				npc.label.ImageRectSize = Vector2.new(npc.nw, npc.nh)
@@ -284,7 +321,7 @@ end
 --  닫힌 문은 포탈의 그림도 「↑ 어디로」도 없고, 앞에서 ↑를 눌러도 지나가지 못한다(서버도 같은 것을 본다 — world.luau의 onTravel)
 function SceneView:setPortals(openOf: (any) -> boolean)
 	for _, pt in self.portals do
-		pt.open = openOf(pt.def) == true
+		pt.open = pt.warp == true or openOf(pt.def) == true -- 간이 포탈은 늘 열려 있다
 		pt.label.Visible = pt.open
 	end
 end
@@ -333,7 +370,7 @@ function SceneView:npcNear(x: number, y: number)
 	local best, bestD = nil, 30
 	for _, npc in self.npcs do
 		local d = math.abs(npc.def.x - x)
-		if d < bestD and math.abs(npc.def.y - y) < 24 then
+		if d < bestD and math.abs(npc.def.y - y) < 24 and not npc.def.stone then -- 명예의 전당의 비석은 말을 걸지 않는다(순위는 비석에 새겨져 있다 — hallStones.luau)
 			best, bestD = npc.def, d
 		end
 	end
@@ -346,6 +383,16 @@ function SceneView:portalNear(x: number, y: number)
 		-- 문 가운데에서 26도트 안(서버는 28까지 받는다). 맵 끝의 문은 벽에 붙어 서서도 들어갈 수 있어야 한다 — 16으로 두었더니 벽까지 달려간 뒤에는 들어가지 못했다
 		if math.abs(p.x - x) < 26 and math.abs(p.y - y) < 4 and self:portalOpen(p) then
 			return p
+		end
+	end
+	return nil
+end
+
+-- 주인공 가까이에 있는 간이 포탈(없으면 nil) — 앞에서 ↑를 누르면 같은 맵의 짝으로(boot.luau → 서버 Hop)
+function SceneView:warpNear(x: number, y: number)
+	for _, w in self.scene.warps or {} do
+		if math.abs(w.x - x) < 16 and math.abs(w.y - y) < 24 then
+			return w
 		end
 	end
 	return nil

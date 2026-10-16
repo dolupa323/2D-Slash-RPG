@@ -2,7 +2,9 @@
 --  공방 「횡스크롤 시험」 탭(dino-workshop/js/lune/luneTab.js)의 step()을 그대로 옮겼다.
 --  장면의 칸(rows): "#" 막힌 칸 · "=" 아래에서 올라탈 수 있는 얇은 발판(↓를 누른 채 뛰기를 누르면 내려간다 — 하단 점프) · "^" 가시 · "." 빈 칸.
 --  body = { x, y, vx, vy, ground, air = 땅을 떠난 뒤 공중에서 뛴 수(2단 점프 — 땅에 닿으면 0) } — (x, y)는 발밑 가운데.  input = { mx = -1 | 0 | 1, jump = 이번 걸음에 뛰기를 눌렀나, down = ↓를 누르고 있나, speed = 빠르기 배수(없으면 1),
---          vx = 가로 빠르기를 직접 준다(대쉬 · 기술 중의 이동), float = 떨어지지 않는다(대쉬) }
+--          vx = 가로 빠르기를 직접 준다(대쉬 · 기술 중의 이동), float = 떨어지지 않는다(대쉬), up = ↑를 누르고 있나(사다리) }
+--  사다리(scene.ladders = { { x, top, bottom } } — 도트, 2026-10-16 밤): ↑를 누르면 잡고 곧게 오르고, ↓로 내린다. 오르는 동작 없이 쭉 미끄러지듯 — 사용자: "사다리 만들어서 기어올라가게도 만들고
+--   올라가는 모션없이 그냥 쭈욱올라가게 간단하게 만들면됩니다". 꼭대기의 발판 위에서 ↓(뛰기 없이)를 누르면 잡고 내려간다(메이플처럼 — ↓ + 뛰기는 그대로 하단 점프). 뛰기 = 놓고 뛰어내린다
 local G = require(script.Parent.Parent.config.game)
 local COMBAT = require(script.Parent.Parent.data["combat.generated"])
 -- 바닷속(scene.sea): 걷기는 조금 느리고, 뛰면 느리게 높이 떴다가 천천히 가라앉는다(공방 combat.js의 sea — 시험 탭과 같은 숫자)
@@ -10,6 +12,8 @@ local SEA = COMBAT.rules.sea
 
 local T = G.TILE
 local HALF = G.BOX_W / 2
+local CLIMB = 80 -- 사다리를 오르내리는 빠르기(점/초 — 달리기 92보다 조금 느리게 · 제가 정한 것)
+local GRAB = 7 -- 사다리 가운데에서 이만큼 안이면 잡는다(점)
 
 local P = {}
 
@@ -66,6 +70,16 @@ function P.onPlatform(scene, body): boolean
 	return found
 end
 
+-- 그 자리에서 잡을 수 있는 사다리(번호 · 사다리) — 가로가 사다리 가운데에서 GRAB 안 · 세로가 꼭대기와 바닥 사이(양 끝 포함)
+function P.ladderAt(scene, x: number, y: number): (number?, any)
+	for i, l in scene.ladders or {} do
+		if math.abs(x - l.x) <= GRAB and y >= l.top - 0.5 and y <= l.bottom + 0.5 then
+			return i, l
+		end
+	end
+	return nil, nil
+end
+
 function P.newBody(scene)
 	return { x = scene.spawn.x, y = scene.spawn.y, vx = 0, vy = 0, ground = false }
 end
@@ -82,6 +96,39 @@ end
 function P.step(scene, body, input, dt: number): string?
 	local mx = input.mx or 0
 	local sea = if scene.sea then SEA else nil
+	-- 사다리: 잡기(↑ — 꼭대기 아래에서 · ↓ — 꼭대기의 발판 위에서, 뛰기 없이)
+	if not body.climb and not input.float and input.vx == nil and (input.up or (input.down and not input.jump and body.ground)) then
+		local i, l = P.ladderAt(scene, body.x, body.y)
+		if l and input.up and body.y > l.top + 0.5 then
+			body.climb = i
+		elseif l and input.down and math.abs(body.y - l.top) < 1 then
+			body.climb, body.y = i, l.top + 1
+		end
+	end
+	if body.climb then
+		local l = (scene.ladders or {})[body.climb]
+		if not l or input.float or input.vx ~= nil then
+			body.climb = nil -- 사다리가 없는 장면으로 옮겼다 · 기술(대쉬)로 떨어져 나갔다
+		elseif input.jump then
+			body.climb = nil -- 뛰기: 놓는다(옆으로 누르고 있으면 그쪽으로 조금 뛰어내린다)
+			body.vy = if mx ~= 0 then -G.JUMP * 0.5 else 0
+			body.ground = false
+			input = table.clone(input)
+			input.jump = false
+		else
+			body.vx, body.vy, body.air = 0, 0, 0
+			body.x = l.x
+			local ny = body.y + ((if input.down then 1 else 0) - (if input.up then 1 else 0)) * CLIMB * dt
+			if ny <= l.top then
+				body.y, body.climb, body.ground = l.top, nil, true -- 꼭대기: 위의 발판에 선다
+			elseif ny >= l.bottom then
+				body.y, body.climb, body.ground = l.bottom, nil, true -- 바닥에 닿았다
+			else
+				body.y, body.ground = ny, false
+			end
+			return nil
+		end
+	end
 	-- body.run · body.jump = 걸음 · 뛰는 힘의 배수(패시브 — 리븐의 날랜 몸 · 살라맨더의 뜨거운 피. 없으면 1)
 	body.vx = if input.vx ~= nil then input.vx else mx * G.RUN * (input.speed or 1) * (body.run or 1) * (if sea then sea.run else 1)
 	if input.jump and not body.ground and not input.float and (body.air or 0) < G.AIR_JUMPS then
@@ -148,6 +195,9 @@ end
 
 -- 지금 보일 동작 이름(서 있기 · 달리기 · 뛰기 · 떨어지기)
 function P.clipOf(body, mx: number): string
+	if body.climb then
+		return "idle" -- 사다리: 오르는 동작 없이 서 있는 모습 그대로 미끄러진다(사용자 2026-10-16 밤)
+	end
 	if not body.ground then
 		return if body.vy < 0 then "jump" else "fall"
 	end

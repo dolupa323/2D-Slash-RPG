@@ -5,7 +5,7 @@
 --  구간은 화면이 잇는다(Skill 패킷 — 누르고 있는 구간을 뗀 때 · 이어 누른 때 · 땅에 닿은 때는 화면만 안다). 여기서는 그 구간이 너무 이르지 않은지만 보고,
 --  구간 안의 일(장 번호에 걸린 타 · 되풀이 타 · 늦게 터지는 것 · 날아가는 것)은 서버의 시간으로 터뜨린다.
 --  피해: 묶음에 적힌 값(3 · 6 · 12 …)은 "몫"이다. 스킬마다 빈 방에서 열 번 써 보고(profile) "붙어 있는 적 한 마리가 다 맞았을 때의 몫의 합 W"와 "한 번 쓰는 시간 T"를 재서,
---   몫 w인 타의 피해 = 전투력 x rate x (T + cdTime) x 스킬 레벨의 세기 x w / W — 그 합이 설계의 피해(공방 design/combat.js의 CASTRULE)가 된다.
+--   몫 w인 타의 피해 = 스탯 공격력(2026-10-15 — 예전의 전투력) x rate x (T + cdTime) x 스킬 레벨의 세기 x w / W — 그 합이 설계의 피해(공방 design/combat.js의 CASTRULE)가 된다.
 --  사출기 · 표식 · 영혼 · 열기 · 수정처럼 "맞힌 뒤에 따라붙는 것"은 묶음의 onHit이 아니라 1차와 같은 길(Room:kitAfter — 수치는 KIT1 · KITUP)로 붙는다.
 local root = script.Parent.Parent
 local COMBAT = require(root.data["combat.generated"])
@@ -222,7 +222,7 @@ function Caster.lines(id: string): number
 	if not def then
 		return 1
 	end
-	return Lines.count(Caster.profile(id, 0).hits, def.type == "nuke")
+	return Lines.count(Caster.profile(id, 0).hits, def.type == "nuke", def.job) -- 차수마다 줄의 수가 다르다
 end
 
 function Caster:context(a, id: string, lv: number, mates)

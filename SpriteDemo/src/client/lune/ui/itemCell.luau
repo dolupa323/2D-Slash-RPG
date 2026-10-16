@@ -66,15 +66,17 @@ function ItemCell.tier(it): string?
 	return TIER[it.q]
 end
 
--- 글로 적는 장비(한 줄): 이름 +별
+-- 글로 적는 장비(한 줄): 이름(2026-10-15부터 「+별」을 붙이지 않는다 — 별은 상세 판의 이름 위에 별 그림으로)
 function ItemCell.label(it): string
 	local name = Items.name(it)
 	if it.broken then
 		return name .. " (부서짐)"
-	elseif it.star > 0 then
-		return ("%s +%d"):format(name, it.star)
 	end
 	return name
+end
+-- 칸 귀퉁이의 별 표시(좁은 칸이라 글 하나로): 「★5」 — 별이 없으면 빈 글
+function ItemCell.starMark(star: number): string
+	return if star > 0 then "★" .. star else ""
 end
 
 -- 성능 단의 글: 보통이면 빈 글
@@ -129,7 +131,7 @@ function ItemCell.new(parent: Instance, x: number, y: number, onClick: (any) -> 
 		if it and it.item then
 			star:set(tostring(it.n)) -- 묶음: 수
 		else
-			star:set(if it and it.star > 0 then "+" .. it.star else "")
+			star:set(if it then ItemCell.starMark(it.star) else "") -- 장비: 「★5」(2026-10-15 — 「+5」에서)
 		end
 		local broken = it ~= nil and it.broken == true
 		icon.ImageColor3 = if broken then Color3.fromRGB(90, 90, 100) else Color3.new(1, 1, 1)

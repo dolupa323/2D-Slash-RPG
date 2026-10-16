@@ -32,6 +32,9 @@ Talk.LINES = D.lines
 Talk.BUBBLE_W = B.textW
 Talk.onFinish = nil :: ((any) -> ())? -- 대화를 끝까지 들었다(마지막 말 뒤에 넘겼다 — 튜토리얼의 「말 걸기」 미션)
 Talk.onToggle = nil :: ((any) -> ())? -- 대화창이 뜨고 닫힐 때(뜨면 그 주민, 닫히면 nil) — 머리 위 퀘스트 표시 · 아래쪽 화면 · 터치 단추를 그동안 숨긴다
+-- 여러 사람이 말하는 대화(2026-10-15 — 퀘스트 연출): 말 앞에 「@id 」가 붙으면 그 사람의 이름표로 바꾼다(@hero = 내 캐릭터). 이름은 boot.luau가 알려 준다
+Talk.nameOf = nil :: ((string) -> string?)?
+Talk.CINE = { id = "__cine", name = "", x = 0, y = 0, cine = true } -- 장면(cineView.luau)이 대화창에 말을 띄울 때의 「주민」 — 이름은 말마다 바뀐다
 
 local root: Frame
 -- 대화창
@@ -51,6 +54,8 @@ local total = 0 -- 지금 말의 글자 수
 local drawn = -1 -- 그려 둔 글자 수(바뀔 때만 다시 그린다)
 local layoutKey = "" -- 놓은 화면 틀(바뀌면 다시 놓는다)
 local nameStr, hintStr = "", "" -- 이름표의 이름 · 아래 줄의 안내(폭을 재는 데 쓴다)
+local baseName = "" -- 말을 건 주민의 이름(「@id 」가 붙은 말이 끝나면 이 이름으로 돌아온다)
+local curText = "" -- 지금 말(「@id 」를 뗀 것)
 -- 혼잣말
 local chat: Frame
 local chatBack, chatTail, chatBody
@@ -71,7 +76,7 @@ function Talk.init()
 	local hit = Ui.hit(box) -- 판 아무 데나 누르면 다음(스마트폰) — 단추는 이 위에 놓는다
 	hit.Name = "Next"
 	hit.Activated:Connect(function()
-		if Talk.npc then
+		if Talk.npc and Talk.npc ~= Talk.CINE then -- 장면의 말은 장면이 넘긴다(화면 위의 누르는 판 — cineView.luau)
 			Talk.next(Talk.npc)
 		end
 	end)
@@ -96,7 +101,7 @@ function Talk.init()
 	end, { h = D.button[2] })
 	-- X · Esc = 거절(닫기) — 대화창이 떠 있을 때만
 	UserInputService.InputBegan:Connect(function(input, processed)
-		if processed or not Talk.npc then
+		if processed or not Talk.npc or Talk.npc == Talk.CINE then -- 장면의 말: Esc는 장면의 건너뛰기(cineView.luau)
 			return
 		end
 		if input.KeyCode == Enum.KeyCode.X or input.KeyCode == Enum.KeyCode.Escape then
@@ -134,6 +139,10 @@ local function layout()
 	plateEdge[1].Position, plateEdge[1].Size = UDim2.fromOffset(px + 1, py), UDim2.fromOffset(pw - 2, ph)
 	plateEdge[2].Position, plateEdge[2].Size = UDim2.fromOffset(px, py + 1), UDim2.fromOffset(pw, ph - 2)
 	plateIn.Position, plateIn.Size = UDim2.fromOffset(px + 1, py + 1), UDim2.fromOffset(pw - 2, ph - 2)
+	local plate = nameStr ~= "" -- 이름이 없는 말(장면의 속마음)은 이름표를 달지 않는다
+	plateEdge[1].Visible, plateEdge[2].Visible, plateIn.Visible = plate, plate, plate
+	nameText:show(plate)
+	titleText:show(plate)
 	nameText:move(D.padX, py + math.floor((ph - M.body) / 2))
 	titleText:move(D.padX + nameW + 12, py + math.floor((ph - M.small) / 2))
 	-- 아래 줄: 「수락 · 거절」 또는 「↑ 다음」
@@ -149,7 +158,7 @@ end
 
 -- 대사를 나온 글자까지 그린다(줄은 다 나왔을 때의 자리 그대로 — 한 글자씩 나와도 줄이 바뀌거나 출렁이지 않는다)
 local function paintText(shown: number)
-	local segs = Format.talkSegments(lines[Talk.index] or "", fitted, shown)
+	local segs = Format.talkSegments(curText, fitted, shown)
 	for r = 1, D.lines do
 		local list = segs[r] or {}
 		local cx = D.padX
@@ -189,7 +198,7 @@ local function paintFoot()
 	local offer = done and last and endHint == "수락"
 	acceptBtn.frame.Visible = offer
 	declineBtn.frame.Visible = offer
-	hintStr = if last and endHint then endHint elseif last then "닫기" else "다음"
+	hintStr = if Talk.npc == Talk.CINE then "다음" elseif last and endHint then endHint elseif last then "닫기" else "다음" -- 장면의 말은 늘 「다음」(장면이 이어진다)
 	hintText:set(hintStr)
 	hintText:color(if last and endHint then C.accent else C.dim)
 	layout() -- 자리를 먼저 놓고(키 딱지는 자리를 옮기면 다시 보인다) 보일지를 정한다
@@ -197,8 +206,20 @@ local function paintFoot()
 	hintKey.frame.Visible = done and not offer
 end
 
+-- 말 앞의 「@id 」: 그 사람의 이름과 뗀 말(없으면 nil과 그 말 그대로)
+function Talk.speaker(text: string): (string?, string)
+	local id, rest = string.match(text, "^@(%w+) (.*)$")
+	if id then
+		return (Talk.nameOf and Talk.nameOf(id)) or id, rest
+	end
+	return nil, text
+end
+
 local function show()
-	local text = lines[Talk.index]
+	local who, text = Talk.speaker(lines[Talk.index] or "")
+	curText = text
+	nameStr = who or baseName
+	nameText:set(nameStr)
 	fitted = string.split(pixelText.Fit(text, Talk.TEXT_W, D.lines, "body"), "\n")
 	total = 0
 	for _, ln in fitted do
@@ -245,13 +266,33 @@ end
 function Talk.start(npc, list: { string }, questName: string?, finish: (() -> ())?, finishHint: string?)
 	Talk.npc, Talk.index = npc, 1
 	lines, onEnd, endHint = list, finish, finishHint
-	nameStr = npc.name or npc.id or ""
+	baseName = npc.name or npc.id or ""
+	nameStr = baseName
 	nameText:set(nameStr)
 	titleText:set(questName or "")
 	if chatNpc == npc then
 		chat.Visible, chatNpc = false, nil
 	end
 	show()
+end
+
+-- 장면(퀘스트 연출)의 한 말: name = 이름표(nil이면 이름표 없이 — 속마음) · text = 말. text가 nil이면 닫는다. 넘기는 것은 장면이 한다(Talk.cineFull · Talk.cineReveal)
+function Talk.cine(name: string?, text: string?)
+	if not text then
+		if Talk.npc == Talk.CINE then
+			Talk.close()
+		end
+		return
+	end
+	Talk.CINE.name = name or ""
+	Talk.start(Talk.CINE, { text }, nil, nil, nil)
+end
+function Talk.cineFull(): boolean
+	return full()
+end
+function Talk.cineReveal()
+	started = os.clock() - 999
+	Talk.place()
 end
 
 -- 지금 이 주민과 말하는 중인가
@@ -334,6 +375,14 @@ function Talk.say(npc, text: string, seconds: number?)
 	chatNpc, chatTill = npc, os.clock() + (seconds or Format.IDLE.show)
 	chat.Visible = true
 	Talk.place()
+end
+
+-- 혼잣말 말풍선을 바로 거둔다 — 장면(맵)을 바꿀 때(2026-10-15 사용자: "npc 가 혼잣말 하는데 다음포탈로 넘어가면 그 말풍선이 그대로 있는 문제" —
+--  말풍선은 화면 틀의 층에 있어 맵을 지워도 남고, 시간이 다 될 때까지 옛 주민의 자리에 떠 있었다)
+function Talk.hush()
+	if chat then
+		chat.Visible, chatNpc, chatTill = false, nil, 0
+	end
 end
 
 -- 지금 혼잣말을 하는 주민(없으면 nil)

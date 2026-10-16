@@ -133,7 +133,7 @@ function EquipWindow.build(body: Frame, ctx, w: number, _h: number)
 			row.cell:set(it, { selected = id == selected })
 			if row.text then
 				if it then
-					row.text:set(if it.star > 0 then ("Lv.%d +%d"):format(it.stage, it.star) else ("Lv.%d"):format(it.stage))
+					row.text:set(if it.star > 0 then ("Lv.%d ★%d"):format(it.stage, it.star) else ("Lv.%d"):format(it.stage)) -- 별(2026-10-15 — 「+n」에서)
 					row.text:color(ItemCell.color(it))
 				else
 					row.text:set(row.slot.name)

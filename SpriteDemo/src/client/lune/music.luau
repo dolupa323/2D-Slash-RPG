@@ -86,7 +86,7 @@ end
 
 -- 그 장면의 곡을 튼다
 function Music.scene(sceneKey: string)
-	Music.play(MUSIC.scene[sceneKey])
+	Music.play(MUSIC.scene[sceneKey] or MUSIC.scene[string.match(sceneKey, "^(.-)#%d+$") or ""]) -- 토벌의 방(rf1#3)은 그 장면(rf1)의 곡
 end
 
 -- 짧은 징글을 한 번 튼다(배경 음악은 그동안 줄인다)
@@ -110,8 +110,9 @@ end
 
 -- 효과음을 한 번 낸다(줍기 · 완료 · 수락 … — 공방 music.js의 sfx). 올린 번호가 없으면 아무 소리도 나지 않는다.
 --  같은 소리는 gap초 안에 다시 내지 않는다(연타 · 여럿을 한꺼번에 칠 때 뭉개지지 않게). 돌려주는 것: 소리를 냈는가
+--  whole = upto가 있는 소리도 끝까지 튼다(데미지 소리: 줄마다는 짧게 다다다다, 그 타의 마지막 줄만 끝까지 — 사용자 2026-10-14)
 local sfxAt: { [string]: number } = {}
-function Music.sfx(key: string): boolean
+function Music.sfx(key: string, whole: boolean?): boolean
 	local def = MUSIC.sfx and MUSIC.sfx[key]
 	if not def or def.id == "" or gain("sfx") <= 0 then
 		return false
@@ -126,7 +127,7 @@ function Music.sfx(key: string): boolean
 	sound.Name = "Sfx_" .. key
 	sound.SoundId = def.id
 	sound.Volume = def.volume * gain("sfx")
-	if def.upto then
+	if def.upto and not whole then
 		-- 앞에서부터 upto초까지만 튼다(데미지 소리 — 사용자 2026-10-14: "이 음성파일의 절반 만 재생합니다")
 		sound.PlaybackRegionsEnabled = true
 		sound.PlaybackRegion = NumberRange.new(0, def.upto)

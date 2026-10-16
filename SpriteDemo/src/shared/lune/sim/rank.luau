@@ -27,6 +27,11 @@ end
 function Rank.userKey(userId: number): string
 	return ("u%d"):format(userId)
 end
+-- 열쇠의 사람 번호(모르는 꼴이면 nil) — 관리자의 줄을 거를 때(2026-10-15)
+function Rank.userOf(key: string): number?
+	local id = string.match(key, "^c(%d+)_") or string.match(key, "^u(%d+)$")
+	return if id then tonumber(id) else nil
+end
 
 -- 판에 적는 값의 글(레벨은 Lv.N · 전투력과 후원은 숫자)
 function Rank.valueText(board: string, score: number): string

@@ -30,7 +30,17 @@ for key, sc in S.scenes do
 	if sc.indoor then
 		-- 건물의 실내: 방 그림 한 장(층)이 바닥까지 다 그린다 — 바닥 그림 · 소품 그림이 없고, 한 화면이다
 		eq(x, 0, key .. " 실내에는 바닥 그림이 없다")
-		expect(#sc.layers == 1 and sc.layers[1].f == 0 and sc.layers[1].w == S.view[1] and sc.layers[1].h == S.view[2], key .. " 실내는 화면만 한 방 그림 한 장")
+		if sc.ship then
+			-- 배의 갑판(2026-10-16): 하늘 · 흘러가는 바다(d — 점/초) · 배 한 장(화면만 한 그림, 맨 위)
+			local top = sc.layers[#sc.layers]
+			local drift = false
+			for _, l in sc.layers do
+				drift = drift or (typeof(l.d) == "number" and l.d ~= 0)
+			end
+			expect(#sc.layers >= 2 and top.f == 0 and top.w == S.view[1] and top.h == S.view[2] and drift, key .. " 배는 흘러가는 바다 위에 화면만 한 배 그림 한 장")
+		else
+			expect(#sc.layers == 1 and sc.layers[1].f == 0 and sc.layers[1].w == S.view[1] and sc.layers[1].h == S.view[2], key .. " 실내는 화면만 한 방 그림 한 장")
+		end
 		eq(sc.w * T, S.view[1], key .. " 실내는 한 화면 폭")
 		expect(not sc.tall, key .. " 실내는 카메라가 세로로 움직이지 않는다")
 	else
@@ -432,4 +442,43 @@ for _, key in { "r1c1", "r1c2", "r1c3", "r2c3", "r4b3" } do
 	local b = P.newBody(sc)
 	b.x, b.y, b.vx, b.vy, b.ground = 12 * T, 37 * T, 0, 0, true
 	expect(not P.onPlatform(sc, b), key .. ": 맨 아래층은 땅이다")
+end
+
+-- ---- 사다리(2026-10-16 밤 — 사용자: "사다리 만들어서 기어올라가게도 만들고 올라가는 모션없이 그냥 쭈욱올라가게") ----
+--  ↑ = 잡고 곧게 오른다(사다리 가운데로) · 꼭대기의 발판에 선다 · 꼭대기에서 ↓ = 잡고 내려간다 · 뛰기 = 놓는다 · ↓ + 뛰기 = 하단 점프(잡지 않는다) · 오르는 동안 서 있는 모습
+do
+	local ct = S.scenes.ct
+	expect(ct.ladders ~= nil and #ct.ladders >= 3 and A[ct.ladderImg] ~= nil, "은달 항구에 사다리 셋 · 그림이 에셋 목록에")
+	for i, l in ct.ladders do
+		expect(l.top < l.bottom and l.x > 0 and l.x < ct.w * T, "사다리의 자리 " .. i)
+	end
+	local l = ct.ladders[1]
+	local body = { x = l.x + 4, y = l.bottom, vx = 0, vy = 0, ground = true }
+	for _ = 1, 3 do
+		P.step(ct, body, { mx = 0, up = true }, DT)
+	end
+	expect(body.climb ~= nil and body.x == l.x and body.y < l.bottom, "↑ = 잡고 오른다 · 사다리 가운데로")
+	eq(P.clipOf(body, 0), "idle", "오르는 동작 없이 서 있는 모습")
+	local t = 3 * DT
+	while body.climb and t < 10 do
+		P.step(ct, body, { mx = 1, up = true }, DT) -- (옆으로 눌러도 사다리 위에서는 옆으로 가지 않는다)
+		t += DT
+	end
+	expect(body.climb == nil and body.y == l.top and body.ground, "꼭대기의 발판에 선다")
+	expect(math.abs(t - (l.bottom - l.top) / 80) < 0.2, ("곧은 빠르기(80점/초) — %.2f초"):format(t))
+	P.step(ct, body, { mx = 0 }, DT)
+	eq(body.y, l.top, "꼭대기에 그대로 선다")
+	P.step(ct, body, { mx = 0, down = true }, DT)
+	expect(body.climb ~= nil and body.y > l.top, "꼭대기에서 ↓ = 잡고 내려간다")
+	P.step(ct, body, { mx = 0, jump = true }, DT)
+	expect(body.climb == nil, "뛰기 = 놓는다")
+	body.x, body.y, body.vx, body.vy, body.ground, body.climb = l.x, l.top, 0, 0, true, nil
+	P.step(ct, body, { mx = 0, down = true, jump = true }, DT)
+	expect(body.climb == nil and not body.ground, "꼭대기에서 ↓ + 뛰기는 하단 점프(사다리를 잡지 않는다)")
+	local far = { x = l.x + 40, y = l.bottom, vx = 0, vy = 0, ground = true }
+	P.step(ct, far, { mx = 0, up = true }, DT)
+	expect(far.climb == nil, "사다리에서 멀면 ↑로 잡지 않는다")
+	local dash = { x = l.x, y = l.bottom - 20, vx = 0, vy = 0, ground = false, climb = 1 }
+	P.step(ct, dash, { mx = 0, vx = 120, float = true }, DT)
+	expect(dash.climb == nil, "기술(대쉬)로 움직이면 사다리를 놓는다")
 end

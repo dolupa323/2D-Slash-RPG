@@ -243,14 +243,15 @@ end
 -- 능력치 하나의 설명(능력치 창에서 마우스를 올렸을 때): { kind(main 주 · sub 부 · none 이 직업은 안 쓴다 · hp 체력), title(능력치 이름), tag, lines }
 --  사용자 2026-10-07: "능력치에 각각 스텟별로 마우스 올리면 호버로 스텟 효과를 보여줘야합니다. 뭔지알고 스텟을찍으라는건지"
 --  그 직업에게 무엇을 해 주는지와, 지금 레벨에서 1점에 얼마가 오르는지를 실제 숫자로 적는다(공방 js/lune/ui/paint.js의 statTip과 같은 글 — 테스트 14가 맞춰 본다)
-function F.statTip(class: string, id: string, level: number)
+--  atk = 1점의 값을 셈할 공격력(지금의 공격력 x 데미지 x 최종 데미지 — 2026-10-15 · 안 주면 그 레벨의 기준 무기)
+function F.statTip(class: string, id: string, level: number, atk: number?)
 	local N = require(script.Parent.Parent.config.numbers)
 	local CLASSES = require(script.Parent.Parent.data["classes.generated"])
 	local TIP = require(script.Parent.Parent.data["ui.generated"]).statTip
 	local STATS = N.data.STATS
 	local pair = STATS.classes[class]
 	local kind = if id == "hp" then "hp" elseif id == pair[1] then "main" elseif id == pair[2] then "sub" else "none"
-	local gain = N.statGain(class, level)
+	local gain = N.statGain(class, level, atk)
 	local users = {}
 	for _, c in TIP.order do
 		local q = STATS.classes[c]

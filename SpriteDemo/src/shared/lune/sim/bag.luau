@@ -596,27 +596,7 @@ local function take(h, where: string, index: any)
 	end
 end
 
--- 별 옮기기: from의 별(하나 낮춰)을 to로. from은 사라진다. 끼고 있던 것을 옮겼으면 새것을 낀다(낄 수 있을 때)
-function Bag.transfer(h, fromId: any, toId: any): (boolean?, string?)
-	local from, fromWhere, fromIndex = Bag.find(h, fromId)
-	local to, toWhere = Bag.find(h, toId)
-	if not from or not to or fromWhere == "store" or toWhere == "store" or from == to then
-		return nil, "가진 장비가 아니다"
-	elseif from.slot ~= to.slot then
-		return nil, "같은 부위끼리만 옮긴다"
-	elseif from.broken or to.broken then
-		return nil, "부서진 장비다"
-	elseif Items.transfer(from, to) <= to.star then
-		return nil, "옮길 별이 없다"
-	end
-	to.star = Items.transfer(from, to)
-	to.fails = 0
-	take(h, fromWhere, fromIndex)
-	if fromWhere == "equip" and toWhere == "gear" and Bag.canWear(h, to) then
-		Bag.equip(h, to.id)
-	end
-	return true
-end
+-- (별 옮기기 Bag.transfer는 2026-10-15에 뺐다 — 사용자: "별을 옮겨올 장비는 뭐에요 이런거 하라고 한적없는데 왜 만든건지 이거 없애고")
 
 -- 부서진 장비를 같은 장비 하나로 되살린다(spare는 가방에 있는 것 — 사라진다)
 function Bag.restore(h, brokenId: any, spareId: any): (boolean?, string?)

@@ -170,8 +170,8 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 			y = row(p, y, "퀘스트", { { text = "하는 중인 것의 할 일 채우기", id = "qfill", w = 170, on = function() ask("quests", "fill") end } })
 			-- 스토리 보스 · 사당 지하를 바로 해 볼 때: 그 메인을 받은 것으로 한다(앞의 메인은 끝낸 것으로 · 레벨이 모자라면 올린다) → 「이동」 탭에서 망루 꼭대기로(「불타는 마을」은 마을의 달의 사당으로)
 			y = row(p, y, "보스 퀘스트", {
-				{ text = "망루의 부관", id = "qboss1", w = 88, on = function() ask("quests", "to", "r1m7") end },
-				{ text = "정찰대장", id = "qboss2", w = 72, on = function() ask("quests", "to", "r1m8") end },
+				{ text = "성벽 거인", id = "qboss1", w = 76, on = function() ask("quests", "to", "r1m7") end }, -- 2026-10-15 보스의 새 이름(망루의 부관 → 성벽 거인 · 정찰대장 → 쇠사슬 간수)
+				{ text = "쇠사슬 간수", id = "qboss2", w = 88, on = function() ask("quests", "to", "r1m8") end },
 				{ text = "불타는 마을", id = "qcellar", w = 86, on = function() ask("quests", "to", "r1m9") end }, -- 사당 지하(달의 사당 안의 포탈로 내려간다 — 2026-10-13)
 			})
 			Ui.text(p, "레벨 · 차수를 바꾸면 능력치와 스킬을 다시 찍는다.", 0, y + 4, w, { color = C.off })

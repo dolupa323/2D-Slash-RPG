@@ -83,7 +83,14 @@ L.STORE = D.store -- 창고: 가방과 같은 짜임 — 탭 줄(gridY) 아래�
 L.EQUIP = D.equip -- 장비 창: 왼쪽 = 칸 하나 + 글(textW), 오른쪽 = 장신구 네 칸
 L.SHOP = D.shop -- 상점의 한 줄: [아이콘 칸 iconS] 이름(nameW) · [달돈 그림] 값(priceW) · 사는 단추(buyW)
 L.AUCTION = D.auction -- 경매장(넓은 창): 탭 셋 · 분류 단추 · 목록의 줄 · 판매 양식 · 아래의 알림 줄 — 공방 js/lune/design/ui.js의 UILAYOUT.auction
+L.CINE = D.cine -- 퀘스트 연출(장면 — 2026-10-15): 장의 이름 · 보스의 이름 · 종이 · 「건너뛰기」의 자리(공방 js/lune/design/ui.js의 UILAYOUT.cine)
 L.DAILY = D.daily -- 일일 의뢰: 머리글(top) 아래 의뢰마다 한 칸(row — 맵의 이름 · 의뢰의 이름 · 오른쪽 단추 btnW · 진행 띠 barH), 가르는 줄 아래 보상 두 줄(payRow — 이름표 labelW)
+L.ATTEND = D.attend -- 출석(2026-10-15): 머리글(top) · 칸 cols x rows(cell · gap) · 가르는 줄 아래(lineY) 받을 것 한 줄(rowH) · 안내와 「받기」(btnW)
+L.RIFT = D.rift -- 수정 틈 토벌(2026-10-16): 머리글(top) 아래 단계마다 한 칸(row — 이름 · 「입장」 btnW · 몬스터 · 보상) · 아래 안내(footY)
+L.RIFT_HUD = D.riftHud -- 토벌 중 화면 위 가운데의 판(w x h · y)
+L.RIFT_END = D.riftEnd -- 토벌이 끝났을 때 가운데의 판(w · 줄 row · pad)
+L.TOME = D.tome -- 모험의 서(2026-10-16): 이름과 %(headY) · 띠(barY · barH) · 칸 다섯(partY · partRow · partBarX · partBarW) · 보상 다섯(rewardY · rewardH) · 몬스터(mobY · mobRow)
+L.ACHIEVE = D.achieve -- 업적(2026-10-15): 점수 · 등급의 띠(barY · barH) · 탭(tabY) · 줄의 스크롤(listY · row x rows · 오른쪽 sideW · 「받기」 btnW · 진행 띠 barW · 막대 scrollW) · 「모두 받기」(footY · allW)
 L.SOUND = D.sound -- 소리 설정: 줄마다 이름(labelW) · 「−」(btn) · 칸 steps개(seg x barH · 사이 gap) · 「+」 · %(pctW). 아래 muteY에 「모두 끄기 / 켜기」(muteW)
 L.CRAFT = D.craft -- 제작(대장장이): 탭(tabH) 아래에 장비마다 한 줄(row) — 윗줄 = [아이콘 칸] 이름 · [달돈] 삯(feeW) · 「제작」(makeW x makeH), 아랫줄 = 재료 둘([그림] 이름 가진 수/드는 수 — 하나에 matW)
 L.STAT = D.stat -- 능력치 창: 속의 폭 · 줄(top부터 row씩) · 주/부의 자리 · 값의 오른쪽 끝 · + 단추의 폭 · tip = 능력치에 마우스를 올렸을 때 창 옆에 뜨는 설명 판
@@ -153,11 +160,15 @@ function L.detailButtonW(n: number): number
 	return math.floor((L.detailInner() - L.DETAIL.btnGap * (n - 1)) / n)
 end
 
--- 상세 판의 높이: nameLines = 이름의 줄 수 · rows = 줄 수 · noteLines = 알림 글의 줄 수(모두 더한 것) · btnRows = 단추 줄 수
-function L.detailHeight(ratio: number, nameLines: number, rows: number, noteLines: number, btnRows: number): number
+-- 상세 판 맨 위의 별(장비 — 2026-10-15)이 차지하는 높이: starRows = 별의 줄 수(22성이면 2 · 소비 · 기타 아이템은 0)
+function L.detailStarsH(starRows: number): number
+	return if starRows > 0 then starRows * L.DETAIL.starRow + L.DETAIL.starGap else 0
+end
+-- 상세 판의 높이: nameLines = 이름의 줄 수 · rows = 줄 수 · noteLines = 알림 글의 줄 수(모두 더한 것) · btnRows = 단추 줄 수 · starRows = 맨 위 별의 줄 수(없으면 0)
+function L.detailHeight(ratio: number, nameLines: number, rows: number, noteLines: number, btnRows: number, starRows: number?): number
 	local K = L.DETAIL
 	local head = math.max(L.cellFor(ratio), nameLines * K.nameLine + K.subGap + M.small)
-	local h = K.pad + head + K.rowTop + rows * K.rowH
+	local h = K.pad + L.detailStarsH(starRows or 0) + head + K.rowTop + rows * K.rowH
 	if noteLines > 0 then
 		h += K.noteTop + noteLines * K.noteLine
 	end

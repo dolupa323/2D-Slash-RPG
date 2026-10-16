@@ -45,14 +45,13 @@ function V.isStack(it): boolean
 	return it.item ~= nil
 end
 
--- 이름: 장비 = 이름 +별 · 묶음 = 이름 x수
+-- 이름: 장비 = 이름(별은 이름 아래 줄의 「★5」 · 상세 판의 이름 위 — 2026-10-15) · 묶음 = 이름 x수
 function V.name(it): string
 	if it.item then
 		local g = Items.goods(it.item)
 		return if it.n > 1 then ("%s x%d"):format(g.name, it.n) else g.name
 	end
-	local name = Items.name(it)
-	return if it.star > 0 then ("%s +%d"):format(name, it.star) else name
+	return Items.name(it)
 end
 -- 수를 뺀 이름(살 때 묻는 글 — 수는 따로 적는다)
 function V.bare(it): string
@@ -74,8 +73,13 @@ function V.sub(it, me, worn: any): (string, string)
 	elseif me.level < need then
 		return Format.fill(IW.needLv, { n = need }), "red"
 	end
-	local head = ("%s +%s"):format(IW.power, Format.short(ItemInfo.power(it)))
-	local d = ItemInfo.wearDiff(it, worn)
+	-- 머리: 「★5 · 공격력 +73」(무기) · 「★2 · 올스탯 +9」(방어구 — 방어력은 상세 판에) — 2026-10-15 스펙(그 전에는 「전투력 +n」)
+	local o = Items.options(it).total
+	local head = if o.atk then ("%s %s"):format(IW.atk, Format.short(o.atk)) else ("%s %s"):format(IW.stat, Format.short(o.stat or 0)) -- 줄이 좁아 「+」 없이
+	if it.star > 0 then
+		head = ("★%d %s"):format(it.star, head)
+	end
+	local d = ItemInfo.wearDiff(it, worn, me.spec or ItemInfo.refSpec(me.level))
 	if d > 0 then
 		return head .. " · " .. Format.fill(IW.wearUp, { n = Format.short(d) }), "accent"
 	elseif d < 0 then

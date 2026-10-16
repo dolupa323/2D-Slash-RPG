@@ -12,7 +12,7 @@ local DT = 1 / 20
 -- 어느 몬스터가 어느 장면에 몇 마리(배치 표의 1지역 — 달그림자 사냥터의 장면 이름은 hunt)
 local PLACE = {
 	-- 1지역(2026-10-14 — 한 맵에 한 종류): 제 몬스터가 주인인 맵. 나머지 맵의 주인은 병사다(아래 ONE). 수련 인형은 사당 지하(2차 전직 동안만)
-	r1a3 = { puff = 11 }, r1a4 = { crow = 9 }, r1b3 = { crab = 5 }, r1b4 = { mole = 11 }, r1c3 = { helm = 9 }, in_cellar = { dummy = 4 },
+	r1a3 = { puff = 11 }, r1a4 = { crow = 9 }, r1b3 = { crab = 5 }, r1c3 = { helm = 9 }, in_cellar = { dummy = 4 }, -- 망루 아래(r1b4 · 굴 두더지)는 2026-10-15에 지웠다
 	-- 2지역 수정이 자라는 숲(2026-10-09 밤): 병사 없이 제 몬스터만
 	r2a1 = { stump = 9 }, r2a2 = { snail = 11 }, r2a3 = { frog = 8 }, r2a4 = { spider = 9 },
 	r2b1 = { fox = 9 }, r2b2 = { bud = 12 }, r2b3 = { quill = 10 }, r2b4 = { dshard = 9 },
@@ -26,9 +26,9 @@ local PLACE = {
 	r3d3 = { scorpion = 10 }, r4c2 = { book = 6 }, r4d1 = { eye = 10 }, r4d2 = { mage = 9 },
 }
 -- 1지역의 사냥터: 한 맵에 한 종류 · 한 종류는 한 맵(사용자 2026-10-14: "퀘스트에는 등장하지도않는 폭탄병이랑 큰 달버섯이 맵구조의 절반 젠을 담당해버리는겁니다 … 궁병이 중복으로 등장할 이유가없음")
-local ONE = { r1a1 = "trainee", hunt = "warrior", r1a3 = "puff", r1a4 = "crow", r1b1 = "archer", r1b2 = "bomber", r1b3 = "crab", r1b4 = "mole", r1c1 = "ewarrior", r1c2 = "earcher", r1c3 = "helm" }
+local ONE = { r1a1 = "trainee", hunt = "warrior", r1a3 = "puff", r1a4 = "crow", r1b1 = "archer", r1b2 = "bomber", r1b3 = "crab", r1c1 = "ewarrior", r1c2 = "earcher", r1c3 = "helm" }
 -- 1지역에서 빠져 쉬는 제 몬스터(맵이 모자라 — 2026-10-14): 싸움 수치와 그림은 남는다 · 어느 장면에도 없다. 동작 시험은 빌린 자리에서 그 레벨로 한다
-local BENCH = { shroom = 2, bigshroom = 5, piglet = 12, goat = 15, bat = 16, torch = 24 }
+local BENCH = { shroom = 2, bigshroom = 5, piglet = 12, goat = 15, bat = 16, torch = 24, mole = 19 } -- mole: 2026-10-15 망루 아래를 지워서 쉰다
 
 -- ---- 1) 자료의 짜임 ----
 local newKinds = 0
@@ -119,7 +119,7 @@ end
 for key, scene in SCENES.scenes do
 	for _, m in scene.mobs do
 		-- 이야기의 방(사당 지하 — 2차 전직의 수련 인형)은 사냥터가 아니다: 그 퀘스트를 하는 동안에만 나온다(2026-10-13)
-		if COMBAT.mobs[m.kind].bare and not scene.story and not scene.tut then -- tut = 튜토리얼의 꿈(2026-10-14 — 수련 인형을 빌려 쓴다)
+		if COMBAT.mobs[m.kind].bare and not scene.story and not scene.tut and not scene.rift then -- tut = 튜토리얼의 꿈(2026-10-14 — 수련 인형을 빌려 쓴다) · rift = 수정 틈 토벌(2026-10-16 — 사냥터의 몬스터를 물결로 빌려 쓰는 던전: 사냥터가 아니다)
 			eq(placed[m.kind], key, ("%s는 %s에만"):format(m.kind, tostring(placed[m.kind])))
 		end
 	end

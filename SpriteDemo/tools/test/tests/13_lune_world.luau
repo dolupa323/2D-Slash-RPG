@@ -817,7 +817,10 @@ do
 		run(1.5)
 		stand("smith")
 		handlers.Item(p3, "sell", "gear", junkAt)
-		expect(h3.gear[junkAt] == false and h3.money == money0 + 2 * one + Items.sellPrice(junk), "대장장이도 사 준다(장비)")
+		expect(h3.gear[junkAt] == junk and h3.money == money0 + 2 * one, "대장장이는 사 주지 않는다(2026-10-15 — 상점이 없다: 제작 · 강화만)")
+		stand("merchant")
+		handlers.Item(p3, "sell", "gear", junkAt)
+		expect(h3.gear[junkAt] == false and h3.money == money0 + 2 * one + Items.sellPrice(junk), "잡화 상인은 장비도 사 준다")
 		local m2 = h3.money
 		handlers.Item(p3, "sell", "gear", junkAt)
 		handlers.Item(p3, "sell", "use", 1, 99999)
@@ -1926,6 +1929,27 @@ do
 	eq(handlers.Chars(ph2, "delete", m2.id, "전당둘").ok, true, "캐릭터를 지운다")
 	run(Rank.REFRESH + 1)
 	eq(find(handlers.Rank(ph1).level, "전당둘"), nil, "지운 캐릭터는 순위판에서 빠진다")
+	-- 관리자 계정의 캐릭터는 판에 오르지 않는다(2026-10-15 사용자: "명예의 전당집계에서 제 어드민 계정 캐릭터들은 올라가면안됩니다")
+	--  예전에 올라가 있던 줄(들어오기 전의 것)도 판에서 거르고, 들어오면 지운다 · 후원도 오르지 않는다
+	local Admin13 = req("ServerScriptService/server/lune/modules/admin")
+	local adminId = next(Admin13.IDS)
+	rankDisk.level = rankDisk.level or {}
+	rankDisk.level[Rank.charKey(adminId, 1)] = Rank.levelScore(99, 0, 100) -- 예전에 올라가 있던 관리자의 캐릭터
+	rankInfo[Rank.charKey(adminId, 1)] = { name = "전당옛것", class = "axion" }
+	local pa = person({ UserId = adminId, Name = "admin" })
+	rawReady(pa)
+	local ma = handlers.Chars(pa, "create", "전당셋", "mooni")
+	handlers.Chars(pa, "enter", ma.id)
+	Hero4.gainXp(World.session(pa).hero, 90000)
+	World.addSpent(pa, 1000)
+	run(Rank.REFRESH + 1)
+	local ab = handlers.Rank(pa)
+	eq(find(ab.level, "전당셋"), nil, "관리자의 캐릭터는 레벨 판에 없다")
+	eq(find(ab.power, "전당셋"), nil, "전투력 판에도 없다")
+	eq(find(ab.robux, "전당셋"), nil, "후원 판에도 없다")
+	eq(find(ab.level, "전당옛것"), nil, "예전에 올라가 있던 관리자의 줄도 거른다")
+	expect(find(ab.level, "전당하나") ~= nil, "다른 사람은 그대로 오른다")
+	World.removePlayer(pa)
 	World.removePlayer(ph1)
 	World.removePlayer(ph2)
 	eq(Rank.levelOf(Rank.levelScore(37, 50, 100)), 37, "레벨 순위의 점수에서 레벨을 다시 읽는다")
@@ -2217,8 +2241,9 @@ do
 	eq(Bag.used(hc, "gear"), gearWas + 1, "가방에 들어온다")
 	eq(hc.money, 1000 - r.money, "삯이 빠진다")
 	expect(#got("Bag", pc) >= 1, "가방이 다시 온다")
-	-- 귀환 주문서: 마을 밖에서 쓰면 마을의 시작 자리로 · 주문서가 하나 준다 · 마을에서는 쓰이지 않는다
-	Bag.give(hc, "scroll_return", 3)
+	-- 귀환 주문서: 마을 밖에서 쓰면 그 맵에서 가장 가까운 마을의 시작 자리로 · 주문서가 하나 준다 · 마을에서는 쓰이지 않는다
+	--  (사용자 2026-10-16: "가장가까운 마을로 이동하는 귀환주문서지 초승달마을로 고정 귀환하는 주문서가 아닙니다")
+	Bag.give(hc, "scroll_return", 12)
 	table.clear(sent)
 	handlers.Potion(pc, "scroll_return")
 	eq(sc.scene, SCENES.start, "마을의 건물 안에서 써도 마을의 시작 자리로 나온다")
@@ -2234,6 +2259,32 @@ do
 	handlers.Potion(pc, "scroll_return")
 	eq(Bag.count(hc, "scroll_return"), before - 1, "마을에서는 쓰이지 않는다(주문서도 줄지 않는다)")
 	expect(last("ItemDone")[1].ok == false and last("ItemDone")[1].why == "이미 마을이다", "까닭을 알린다")
+	-- 가장 가까운 마을: 고갯길 너머는 고갯마루 주막 · 은달 항구의 건물 안과 토벌의 방은 은달 항구 · 수정 숲은 반달 나루 · 바다는 물마루 마을
+	for _, c in { { "r1b1", "r1bv" }, { "r1c2", "r1bv" }, { "r1a3", "town" }, { "ct_smith", "ct" }, { "ct_office", "ct" }, { "r2a1", "r2t" }, { "sea1", "seat" } } do
+		World.jump(pc, c[1]) -- (2편의 장면은 배를 건너야 해서 문으로 걷는 goTo가 닿지 않는다)
+		handlers.Potion(pc, "scroll_return")
+		eq(sc.scene, c[2], ("%s에서 쓰면 가장 가까운 마을 %s로"):format(c[1], c[2]))
+		eq(hc.x, SCENES.scenes[c[2]].spawn.x, "그 마을의 시작 자리 " .. c[2])
+	end
+	World.jump(pc, "rf1#77")
+	handlers.Potion(pc, "scroll_return")
+	eq(sc.scene, "ct", "토벌의 방(rf1#번호)에서는 은달 항구로")
+	-- 쓰이지 않는 곳: 배 위 · 꿈(주문서도 줄지 않는다)
+	for _, c in { { "ship_out", "배 위에서는 쓸 수 없다" }, { "dream", "여기서는 쓸 수 없다" } } do
+		World.jump(pc, c[1])
+		local n0 = Bag.count(hc, "scroll_return")
+		table.clear(sent)
+		handlers.Potion(pc, "scroll_return")
+		expect(sc.scene == c[1] and Bag.count(hc, "scroll_return") == n0 and last("ItemDone")[1].why == c[2], c[1] .. ": " .. c[2])
+	end
+	-- 모든 장면: 마을이 아니면 가장 가까운 마을이 있고(배 · 꿈 말고), 그 마을은 돌아가는 곳(homes)이다
+	for key, scn in SCENES.scenes do
+		if SCENES.homes[key] then
+			expect(scn.ret == false, "마을 자신은 돌아갈 곳이 없다 " .. key)
+		elseif key ~= "dream" and not scn.ship then -- (꿈 · 배와 비행선의 갑판은 쓸 수 없다)
+			expect(typeof(scn.ret) == "string" and SCENES.homes[scn.ret] == true, ("가장 가까운 마을이 있다 %s → %s"):format(key, tostring(scn.ret)))
+		end
+	end
 	-- 물약은 그대로 마신다(귀환 주문서를 넣으며 망가지지 않았다)
 	hc.hp = 1
 	handlers.Potion(pc, "potion1")

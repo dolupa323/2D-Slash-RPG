@@ -19,7 +19,11 @@ function Admin.is(player: any): boolean
 	if typeof(player) ~= "Instance" and typeof(player) ~= "table" then
 		return false
 	end
-	local id = player.UserId
+	return Admin.isId(player.UserId)
+end
+
+-- 그 계정 번호가 관리자인가(명예의 전당이 관리자의 줄을 거른다 — 2026-10-15)
+function Admin.isId(id: any): boolean
 	if typeof(id) ~= "number" or id <= 0 then
 		return false
 	end

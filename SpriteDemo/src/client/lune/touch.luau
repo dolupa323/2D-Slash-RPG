@@ -36,6 +36,7 @@ local root: Frame = nil
 local buttons = {} -- 누르는 단추들 { t, frame, stroke, hit, … }
 local slotButtons = {} -- [칸] = 단추
 local actButton = nil
+local menuDot: Frame? = nil -- 「메뉴」 단추 오른쪽 위의 노란 점(받을 출석 · 업적이 있다 — 2026-10-15)
 local pad = nil -- 조이스틱 { frame, knob, radius }
 local chooser: Frame? = nil -- 놓을 것의 목록
 local selected: number? = nil -- 배치 중에 고른 칸
@@ -353,6 +354,12 @@ local function makeAct(t)
 		actButton = b
 	elseif t.act == "menu" then
 		b.label = Ui.text(b.mid, "메뉴", -40, -7, 80, { font = "body", align = "center", outline = true })
+		local dot = Ui.box(b.mid, math.floor(t.w / 2) - 8, -math.floor(t.h / 2) + 2, 6, 6, Ui.COLOR.ink)
+		Ui.box(dot, 1, 1, 4, 4, Ui.COLOR.gold)
+		dot.Name = "Dot"
+		dot.ZIndex = 12
+		dot.Visible = false
+		menuDot = dot
 	end
 	local finger: InputObject? = nil
 	b.hit.InputBegan:Connect(function(input)
@@ -570,6 +577,13 @@ function Touch.setCounts()
 end
 
 -- 상호작용 단추가 할 일: "pickup"(떨어진 물건) · "portal"(문) · "npc"(주민) · nil(가까이에 아무것도 없다)
+-- 「메뉴」 단추의 점(PC의 「메뉴」 단추와 같은 노란 점 — 받을 출석 칸 · 업적 보상이 있을 때)
+function Touch.markMenu(on: boolean)
+	if menuDot then
+		menuDot.Visible = on
+	end
+end
+
 function Touch.setAct(kind: string?)
 	if state.act ~= kind then
 		state.act = kind

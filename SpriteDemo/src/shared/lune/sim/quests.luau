@@ -18,8 +18,13 @@ function Q.def(id: any)
 	return if typeof(id) == "string" then byId[id] else nil
 end
 
--- 할 일 하나를 화면에 적는 꼴: 「수습 검병 3/5」
+-- 할 일 하나를 화면에 적는 꼴: 「수습 검병 3/5」 · 들르는 일은 「달맞이 광장 들르기」 · 다 했으면 「… ✓」
 function Q.stepText(step, have: number): string
+	if step.type == "visit" then
+		return ("%s 들르기%s"):format(step.name, if have >= step.n then " ✓" else "")
+	elseif step.type == "meet" then
+		return ("%s 만나기%s"):format(step.name, if have >= step.n then " ✓" else "") -- 처음 인사(2026-10-16 — 만나면 그 사람의 기능이 열린다)
+	end
 	return ("%s %d/%d"):format(step.name, math.min(have, step.n), step.n)
 end
 
@@ -49,6 +54,12 @@ function Q.stepHint(def, step): string
 		return ("%s의 %s%s 잡으면 떨어진다"):format(place, name, josa(name, "을", "를"))
 	elseif step.type == "use" then
 		return ("%s — %s 앞에서 ↑"):format(place, step.place) -- 맵에 놓인 것 앞에서 ↑를 누르는 일
+	elseif step.type == "visit" then
+		return ("%s에 가 본다"):format(step.name) -- 그 맵에 들어가면 된다(2026-10-16)
+	elseif step.type == "meet" then
+		local at = Q.npcScene(def, step.npc)
+		local sc = at and SCENES.scenes[at]
+		return ("%s — %s에게 말을 건다"):format(if sc then sc.name else place, step.name)
 	end
 	return ("%s에 있다"):format(place)
 end
@@ -116,6 +127,22 @@ local function activeCount(book): number
 		end
 	end
 	return n
+end
+
+-- 그 지역의 퀘스트 줄에서 아직 끝내지 않은 퀘스트가 잡게 하는 몬스터 { [몬스터] = true } — 일일 의뢰가 피한다(sim/daily.luau — 2026-10-15
+--  사용자: "메인퀘스트에서 궁병잡는거 중간에 일일퀘스트도 자연스럽게하면 너무 반복됩니다")
+function Q.lineMobs(book, region: string): { [string]: boolean }
+	local out = {}
+	for _, def in D.list do
+		if def.line and def.region == region and def.playable and not (book[def.id] and book[def.id].done) then
+			for _, step in def.steps do
+				if step.mob then
+					out[step.mob] = true
+				end
+			end
+		end
+	end
+	return out
 end
 
 -- 받는다
@@ -205,6 +232,40 @@ function Q.onKill(book, mobKind: string, scene: string): { string }
 	return changed
 end
 
+-- 그 맵에 들어갔다: 하는 중인 퀘스트의 「들르기」가 된다(2026-10-16 — 「항구의 첫날」처럼 도시를 둘러보는 퀘스트). 바뀐 퀘스트들
+function Q.onVisit(book, scene: string): { string }
+	local changed = {}
+	for id, st in book do
+		local def = byId[id]
+		if def and not st.done then
+			for i, step in def.steps do
+				if step.type == "visit" and step.at == scene and (st.c[i] or 0) < step.n then
+					st.c[i] = step.n
+					table.insert(changed, id)
+				end
+			end
+		end
+	end
+	return changed
+end
+
+-- 그 사람과 처음 인사를 나눴다: 하는 중인 퀘스트의 「만나기」가 된다(2026-10-16 — 「항구의 첫날」). 바뀐 퀘스트들
+function Q.onMeet(book, npc: string): { string }
+	local changed = {}
+	for id, st in book do
+		local def = byId[id]
+		if def and not st.done then
+			for i, step in def.steps do
+				if step.type == "meet" and step.npc == npc and (st.c[i] or 0) < step.n then
+					st.c[i] = step.n
+					table.insert(changed, id)
+				end
+			end
+		end
+	end
+	return changed
+end
+
 -- 그 장면의 그 몬스터를 아직 잡아야 하는가(하는 중인 퀘스트의 못 다 한 잡기). 스토리 보스는 이것이 참인 사람이 방에 있을 때만 서 있다(sim/room.luau)
 -- 그 퀘스트에 닿았는가: 받았거나(하는 중) 끝냈다 — 그 퀘스트를 받아야 열리는 문(장면의 portals의 need — 사당 지하)이 쓴다
 --  id가 표면 그 가운데 하나라도(사당 지하 = 「불타는 마을」 또는 2차 전직)
@@ -264,6 +325,20 @@ function Q.opens(id: any)
 			if hit then
 				table.insert(out, { scene = key, place = sc.name, label = p.label })
 			end
+		end
+	end
+	-- 탈것(2026-10-16 — 문 대신 사람): 그 퀘스트를 끝내야 태우는 탈것(마을 → 은달 항구의 배 — sim/voyage.luau의 open과 같은 자물쇠)
+	local V = require(script.Parent.Parent.data["city.generated"]).voyage
+	for _, r in V.routes do
+		local from = SCENES.scenes[r.from]
+		if r.need == id and from then
+			local who = nil
+			for _, n in from.npcs or {} do
+				if n.id == r.npc then
+					who = n.role
+				end
+			end
+			table.insert(out, { scene = r.from, place = from.name, label = ("%s — %s로 가는 %s"):format(who or "배", r.dest, if r.kind == "airship" then "비행선" else "배") })
 		end
 	end
 	table.sort(out, function(a, b)
@@ -543,7 +618,10 @@ end
 --  여러 맵에 서 있으면(샛별 · 반달 · 하늬) 그 퀘스트를 하는 맵에서 문으로 가장 가까운 곳 — 같으면 몬스터가 없는 맵, 그다음은 이름표의 차례. 못 찾으면 nil
 local placeOf = {}
 -- 그 주민이 서 있는 장면의 이름표(월드맵이 그 맵에 ! 를 찍는다). 못 찾으면 nil
-function Q.npcScene(def, npcId: string): string?
+function Q.npcScene(def, npcId: string?): string?
+	if typeof(npcId) ~= "string" then
+		return nil -- 주는 · 돌려받는 주민이 없는 퀘스트(놀이 자료가 없다 — 2026-10-15에 줄에서 뺀 것): 갈 곳이 없다
+	end
 	local cacheKey = def.id .. "|" .. npcId
 	if placeOf[cacheKey] ~= nil then
 		return placeOf[cacheKey] or nil
@@ -568,6 +646,17 @@ function Q.npcScene(def, npcId: string): string?
 	local keys = {}
 	for key, sc in SCENES.scenes do
 		if sc.region == def.region then
+			for _, n in sc.npcs or {} do
+				if n.id == npcId then
+					table.insert(keys, key)
+					break
+				end
+			end
+		end
+	end
+	if #keys == 0 then
+		-- 그 지역에 없는 사람(2026-10-16 — 촌장이 주고 도시의 안내인이 돌려받는 「큰 항구로」 · 도시의 안내인이 주고 나루의 견습 기사가 돌려받는 「강 위의 나루」): 어디든
+		for key, sc in SCENES.scenes do
 			for _, n in sc.npcs or {} do
 				if n.id == npcId then
 					table.insert(keys, key)
@@ -616,6 +705,18 @@ function Q.goal(book, level: number)
 					return { def = def, scene = scene, kind = "back" }
 				end
 			elseif def.scene then
+				-- 들르는 일이 남았으면 그 맵으로(차례대로 — 2026-10-16)
+				local st = book[id]
+				for i, step in def.steps do
+					if step.type == "visit" and (st.c[i] or 0) < step.n then
+						return { def = def, scene = step.at, kind = "do" }
+					elseif step.type == "meet" and (st.c[i] or 0) < step.n then
+						local at = Q.npcScene(def, step.npc) -- 만날 사람이 선 곳(차례대로)
+						if at then
+							return { def = def, scene = at, kind = "do", npc = step.npc }
+						end
+					end
+				end
 				return { def = def, scene = def.scene, kind = "do" }
 			end
 		end
@@ -745,7 +846,9 @@ function Q.unpack(data: any)
 	end
 	for id, row in data do
 		local def = Q.def(id)
-		if def and typeof(row) == "table" then
+		-- 하는 중이던 퀘스트가 이제 할 수 없는 것이면(2026-10-15에 줄에서 뺀 등불 심지 · 낡은 달력 …) 지운다 — 끝낼 수도, 돌려줄 주민도 없어 알리미 · 길찾기에 남는다.
+		--  끝낸 것은 그대로 둔다(줄의 앞뒤 · 열리는 문이 끝낸 것을 본다)
+		if def and typeof(row) == "table" and (row.d == 1 or def.playable) then
 			local st = { done = row.d == 1, c = {} }
 			if typeof(row.c) == "table" then
 				for i, step in def.steps do

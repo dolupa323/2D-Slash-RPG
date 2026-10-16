@@ -1,5 +1,5 @@
 -- 상점 · 창고 창 — 주민에게 말을 걸면 가방과 나란히 뜬다(공방 「기본 · UI」 탭). arg = 누구의 것인가:
---   "merchant" 잡화 상인(물약 · Lv.1 방어구) · "smith" 대장장이(달가루 · Lv.10 무기와 방어구) · "store" 창고지기(맡겨 둔 것)
+--   "merchant" 잡화 상인(물약 · 귀환 주문서 · Lv.1 방어구 · 달가루) · "store" 창고지기(맡겨 둔 것). 대장장이는 상점이 없다(2026-10-15 — 제작 · 강화는 ui/forgeWindow.luau)
 --  값과 물건은 공방 설계 자료(js/lune/design/items.js의 STOCK)에서 온다. 사고 팔고 맡기는 것은 서버에 부탁한다(Item).
 --  사용자 2026-10-08: "소비, 기타아이템도 창고에 맡길수있어야하고, 상점에 팔기 가능해야하고 묶음나누기 가능해야하고 창고에 드래그앤 드랍으로 맡기기가능해야합니다."
 --   · 창고는 가방과 같은 짜임이다: 탭 셋(장비 · 소비 · 기타) · 탭마다 칸 여섯 x 넷. 가방의 것을 끌어다 창고의 칸에 놓으면 맡겨지고(놓은 칸에 — 묶음은 전부),
@@ -40,7 +40,7 @@ local DOUBLE = 0.4 -- 이 안에 같은 칸을 다시 누르면 두 번 누른 �
 
 local ShopWindow = {}
 ShopWindow.NAME_W, ShopWindow.PRICE_W, ShopWindow.BUY_W = SHOP.nameW, SHOP.priceW, SHOP.buyW -- 물건 이름 · 값 · 사는 단추(들)의 칸
-ShopWindow.TITLE = { merchant = "잡화 상인 반달", smith = "대장장이 무쇠뿔", craft = "대장장이 무쇠뿔 — 제작", store = WORDS.storeName }
+ShopWindow.TITLE = { merchant = "잡화 상인 반달", store = WORDS.storeName }
 
 function ShopWindow.title(arg: string): string
 	return ShopWindow.TITLE[arg] or "상점"
@@ -50,7 +50,7 @@ function ShopWindow.size(arg: string): (number, number)
 	if arg == "store" then
 		return Layout.storeBody(Stage.ratio, D.BAG.storeBase)
 	end
-	return W, MAX_ROWS * ROW + Ui.M.button + 12 + 32
+	return W, MAX_ROWS * ROW + 32 -- (2026-10-15: 대장장이의 단추 줄을 뺐다 — 상점은 잡화 상인뿐)
 end
 
 local function stockOf(npc: string)
@@ -372,156 +372,11 @@ local function buildStore(body: Frame, ctx, w: number)
 	return view
 end
 
--- 제작(대장장이 — 사용자 2026-10-11: "안뜨면 재료를 모아서 대장장이에서 만들수도 있구요"): 단계의 탭(Lv.1 · Lv.10 · Lv.20) 아래에 장비마다 한 줄.
---  윗줄 = 장비의 이름 · 삯(달돈) · 「제작」, 아랫줄 = 드는 재료 「강철 광석 12/20 · 질긴 가죽 3/5」(가진 수/드는 수 — 다 모였으면 풀빛). 만든 것의 성능은 보통 이상이다.
-ShopWindow.CRAFT_ROW = CRAFT.row
-ShopWindow.CRAFT_MAKE_W, ShopWindow.CRAFT_FEE_W = CRAFT.makeW, CRAFT.feeW
-ShopWindow.CRAFT_NOTE = CRAFT.note
-ShopWindow.CRAFT_MATS = 2 -- 한 줄에 그리는 재료의 수(레시피의 재료는 둘이다 — 광석 · 가죽)
--- 한 줄의 재료들 { { icon 그림 이름, text 「청동 광석 3/5」(가진 수/드는 수), ok 그 재료가 모였는가 } … } 와 다 모였는가
-function ShopWindow.craftParts(recipe, bag)
-	local parts, enough = {}, true
-	for _, need in recipe.needs do
-		local have = Bag.countIn(bag, need.item)
-		local g = Items.goods(need.item)
-		table.insert(parts, { icon = g.icon, text = ("%s %d/%d"):format(g.name, math.min(have, 9999), need.n), ok = have >= need.n })
-		enough = enough and have >= need.n
-	end
-	return parts, enough
-end
-
-local function buildCraft(body: Frame, ctx, w: number, h: number)
-	local view = {}
-	local ui = ctx.ui
-	local stages = {}
-	for _, r in D.RECIPES do
-		if not table.find(stages, r.stage) then
-			table.insert(stages, r.stage)
-		end
-	end
-	table.sort(stages)
-	-- 처음 보이는 탭: 내 레벨로 만들 수 있는 가장 높은 단계
-	local tab = 1
-	local me0 = ctx.me()
-	for i, st in stages do
-		if me0 and me0.level >= st then
-			tab = i
-		end
-	end
-	local tabs = {}
-	local tx = 0
-	for i, st in stages do
-		tabs[i] = Ui.tab(body, "Lv." .. st, tx, 0, function()
-			if tab ~= i then
-				tab = i
-				ui.craftResult = nil
-				view.refresh()
-			end
-		end)
-		tx += tabs[i].width + 16
-	end
-	Ui.text(body, ShopWindow.CRAFT_NOTE, tx, 0, w - tx, { align = "right", color = C.dim })
-	local perStage = 0
-	for _, r in D.RECIPES do
-		if r.stage == stages[1] then
-			perStage += 1
-		end
-	end
-	local rows = {}
-	local bw, fw = ShopWindow.CRAFT_MAKE_W, ShopWindow.CRAFT_FEE_W
-	for i = 1, perStage do
-		local y = CRAFT.tabH + (i - 1) * CRAFT.row
-		local row = {}
-		-- 윗줄: [만들 장비의 그림] 이름 · [달돈] 삯 · 「제작」
-		row.cell = Ui.slot(body, 0, y, IC)
-		row.cell.frame.Name = "Icon"
-		row.icon = Ui.smallIcon(row.cell.frame, "coin", 3, 3)
-		row.name = Ui.text(body, "", TX, y + 5, w - TX - bw - 8 - fw - 22, { font = "body" })
-		row.coin = Ui.smallIcon(body, "coin", w - bw - 8 - fw - 19, y + 3)
-		row.fee = Ui.text(body, "", w - bw - 8 - fw, y + 7, fw, { align = "right", color = C.gold })
-		row.make = Ui.button(body, "제작", w - bw, y + 1, bw, function()
-			if row.recipe then
-				ctx.send("Item", "craft", row.recipe.id)
-			end
-		end, { h = CRAFT.makeH })
-		-- 아랫줄: 재료마다 [그림] 이름 가진 수/드는 수(모였으면 풀빛). 아직 못 만드는 장비는 그 자리에 「Lv.10부터 만든다」
-		row.mats = {}
-		for k = 1, ShopWindow.CRAFT_MATS do
-			local mx = TX + (k - 1) * CRAFT.matW
-			row.mats[k] = { icon = Ui.smallIcon(body, "coin", mx, y + 25), text = Ui.text(body, "", mx + 21, y + 29, CRAFT.matW - 25, { color = C.dim }) }
-		end
-		row.lock = Ui.text(body, "", TX, y + 29, w - TX, { color = C.dim })
-		rows[i] = row
-	end
-	local fy = h - 28
-	local by = fy - Ui.M.button - 12
-	local result = Ui.text(body, "", 0, by - 18, w, { color = C.accent })
-	local half = math.floor((w - 6) / 2)
-	Ui.button(body, "상점", 0, by, half, function()
-		ctx.openService("smithShop")
-	end)
-	local forge = Ui.button(body, "강화", half + 6, by, w - half - 6, function()
-		ctx.openService("forge")
-	end)
-	Ui.line(body, 0, fy - 6, w)
-	local money = BagWindow.purse(body, "coin", -3, fy, 90)
-	Ui.text(body, CRAFT.hint, 96, fy + 4, w - 96, { align = "right", color = C.dim })
-
-	function view.refresh()
-		local bag, me = ctx.bag(), ctx.me()
-		if not bag or not me then
-			return
-		end
-		for i, t in tabs do
-			t:setOn(i == tab)
-		end
-		local k = 0
-		for _, r in D.RECIPES do
-			if r.stage == stages[tab] then
-				k += 1
-				local row = rows[k]
-				if row then
-					row.recipe = r
-					local open = me.level >= r.from
-					local item = Items.make(r.slot, r.stage, D.NORMAL, me.class)
-					Ui.setWorldIcon(row.icon, ItemCell.icon(item))
-					row.name:set(Items.name(item))
-					row.name:color(if open then C.text else C.dim)
-					local parts, enough = ShopWindow.craftParts(r, bag)
-					for j, m in row.mats do
-						local q = if open then parts[j] else nil
-						Ui.setWorldIcon(m.icon, if q then q.icon else nil)
-						m.text:set(if q then q.text else "")
-						m.text:color(if q and q.ok then C.green else C.dim)
-					end
-					row.lock:set(if open then "" else ("Lv.%d부터 만든다"):format(r.from))
-					row.fee:set(if open then Format.short(r.money) else "")
-					row.coin.Visible = open
-					row.make.frame.Visible = open
-					row.make:setEnabled(enough and me.money >= r.money)
-				end
-			end
-		end
-		local made = ui.craftResult
-		result:set(if made then ("%s — 만들었다"):format(ItemCell.label(made)) else "")
-		if made then
-			result:color(ItemCell.color(made))
-		end
-		forge:setEnabled(me.level >= D.OPEN.forge)
-		money:set(Format.short(me.money))
-	end
-
-	function view.destroy()
-		ui.craftResult = nil
-	end
-	return view
-end
+-- (제작은 2026-10-15에 대장장이 창으로 옮겼다 — ui/forgeWindow.luau. 대장장이의 상점은 없앴다: 사용자 "상점 없어야함 제작, 강화만 하는곳임")
 
 function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 	if arg == "store" then
 		return buildStore(body, ctx, w)
-	elseif arg == "craft" then
-		return buildCraft(body, ctx, w, h)
 	end
 	local view = {}
 	local ui = ctx.ui
@@ -554,18 +409,6 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 		rows[i] = { stock = stock, icon = icon, coin = coin, name = name, price = price, one = one, ten = ten, lock = lock }
 	end
 	local fy = h - 28
-	-- 대장장이의 상점: 아래에 단추 둘 — 「제작하러 가기」(재료로 장비를 만든다) · 「강화하러 가기」(Lv.8부터)
-	local halfW = math.floor((w - 6) / 2)
-	if arg == "smith" then
-		Ui.button(body, "제작하러 가기", 0, fy - Ui.M.button - 12, halfW, function()
-			ctx.openService("craft")
-		end, { main = true })
-	end
-	local swap = if arg == "smith"
-		then Ui.button(body, "강화하러 가기", halfW + 6, fy - Ui.M.button - 12, w - halfW - 6, function()
-			ctx.openService("forge")
-		end)
-		else nil
 	Ui.line(body, 0, fy - 6, w)
 	local money = BagWindow.purse(body, "coin", -3, fy, 90)
 	local dust = BagWindow.purse(body, "dust", 96, fy, 90)
@@ -584,9 +427,6 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 			local stock = row.stock
 			local cost = Items.stockPrice(stock, me.level)
 			local label = stock.name
-			if stock.id == "w10" then
-				label = Items.name(Items.make("weapon", stock.item.stage, D.NORMAL, me.class))
-			end
 			local open = me.level >= stock.from
 			Ui.setWorldIcon(row.icon, ShopWindow.stockIcon(stock, me.class))
 			row.coin.Visible = open
@@ -600,9 +440,6 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 				row.ten.frame.Visible = open
 				row.ten:setEnabled(me.money >= cost * 10)
 			end
-		end
-		if swap then
-			swap:setEnabled(me.level >= D.OPEN.forge)
 		end
 		money:set(Format.short(me.money))
 		dust:set(Format.short(bag.dust))

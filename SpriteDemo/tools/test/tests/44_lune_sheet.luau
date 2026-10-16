@@ -41,14 +41,15 @@ do
 end
 -- 표의 글
 local v = Sheet.values({ class = "axion", stats = h.stats, power = 1234, maxHp = 56789, sheet = s })
-eq(v.str, tostring(STATS.base + h.stats.str), "힘 = 처음 값 + 찍은 점수(능력치 창과 같은 수)")
+eq(v.str, tostring(STATS.base + h.stats.str + Hero.spec(h).gearStat), "힘 = 처음 값 + 찍은 점수 + 장비의 올스탯(2026-10-15 — 능력치 창과 같은 수)")
+expect(v.attack ~= nil and v.def ~= nil, "공격력 · 방어력 칸(2026-10-15)")
 eq(v.maxHp, "5.7만", "만 넘는 체력은 짧게")
 eq(v.critRate, "5%", "크리티컬 확률은 제 줄에")
 eq(v.critDmg, "150%", "크리티컬 데미지는 제 줄에")
 eq(Sheet.name("critRate"), "크리티컬 확률", "이름: 크리티컬 확률(사용자의 말)")
 eq(Sheet.name("critDmg"), "크리티컬 데미지", "이름: 크리티컬 데미지(사용자의 말)")
 eq(v.dmg, "+0%", "주는 피해")
-eq(v.cut, "0%", "받는 피해가 줄지 않으면 0%")
+eq(v.cut, tostring(math.floor(Hero.sheet(h).cut + 0.5)) .. "%", "받는 피해 감소 = 방어력 · 버프 · 패시브(같은 레벨 방어구면 30%쯤)")
 eq(Sheet.tone("axion", "str"), "main", "액시온의 주 능력치 = 힘")
 eq(Sheet.tone("axion", "dex"), "sub", "부 능력치 = 민첩")
 eq(Sheet.tone("axion", "luk"), "none", "안 쓰는 능력치")
@@ -57,6 +58,6 @@ local names = {}
 for _, c in Sheet.cells(200) do
 	names[c.id] = true
 end
-for _, id in { "atk", "power", "maxHp", "str", "dex", "int", "luk", "hp", "guard", "critRate", "critDmg", "dmg", "final", "haste", "cut", "run", "jump" } do
+for _, id in { "atk", "power", "maxHp", "attack", "def", "str", "dex", "int", "luk", "hp", "critRate", "critDmg", "dmg", "final", "haste", "cut", "run", "jump" } do
 	expect(names[id], "표에 있다: " .. id)
 end

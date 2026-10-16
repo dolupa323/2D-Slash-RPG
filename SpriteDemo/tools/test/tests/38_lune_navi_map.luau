@@ -161,6 +161,10 @@ for _, def in Quests.list do
 			stages += 1
 			if step.type == "use" then
 				expect(t ~= nil and t.kind == "spot" and t.scene == def.scene and t.x == step.x and t.y == step.y, ("살펴볼 자리로 %s #%d"):format(def.id, i))
+			elseif step.type == "visit" then
+				expect(t ~= nil and t.kind == "visit" and t.scene == step.at, ("들를 맵으로 %s #%d"):format(def.id, i)) -- 2026-10-16
+			elseif step.type == "meet" then
+				expect(t ~= nil and t.kind == "npc" and t.npc == step.npc and npcIn(t.scene, step.npc), ("만날 사람에게 %s #%d"):format(def.id, i)) -- 2026-10-16(만나면 열림)
 			else
 				expect(t ~= nil and t.kind == "hunt" and t.scene == def.scene and t.mob == step.mob, ("잡을 · 모을 몬스터의 사냥터로 %s #%d"):format(def.id, i))
 				expect(t == nil or mobIn(t.scene, step.mob), ("그 사냥터에 그 몬스터가 있다 %s #%d — %s의 %s"):format(def.id, i, def.scene, tostring(step.mob)))
@@ -256,53 +260,67 @@ do
 			book[def.id] = { done = true, c = {} }
 		end
 	end
-	-- 「불타는 마을」: 받기 전 = 주는 주민 · 받으면 사당 지하의 정예 검병
+	-- 「불타는 마을」: 받기 전 = 주는 주민 · 받으면 사당 지하의 정예 창병
 	local def = Quests.def("r1m9")
 	local t = Navi.target("r1m9", book, 30, nil)
 	expect(t ~= nil and t.kind == "npc" and t.npc == def.giver, "「불타는 마을」 받기 전")
 	Quests.accept(book, 30, "r1m9")
 	t = Navi.target("r1m9", book, 30, nil)
-	expect(t ~= nil and t.kind == "hunt" and t.scene == "in_cellar" and t.mob == "ewarrior", "「불타는 마을」 받은 뒤: 사당 지하")
+	expect(t ~= nil and t.kind == "hunt" and t.scene == "in_cellar" and t.mob == "espearman", "「불타는 마을」 받은 뒤: 사당 지하(정예 창병 — 2026-10-15)")
 	eq(walk("town", t, book), 2, "마을에서 사당 지하까지 문 둘(사당 → 계단)")
 end
 
--- 끝내야 열리는 문: 초승달 마을의 작은 나루(은달 항구로 가는 배)는 「불타는 마을」을 끝낸 뒤에만
---  사용자 2026-10-13: "은달항구는  초승달 마을에서 갈수있게합니다. 불타는 마을 퀘스트 안깨면 못가게만하고   대장간 넘어로 작은 항구같은 느낌으로 포탈 만들고 포탈 타면  은달항구가는식으로"
+-- 은달 항구로 가는 배: 초승달 마을의 포구(대장간 너머)에 선 선장 — 「불타는 마을」을 끝낸 뒤에만 태운다
+--  사용자 2026-10-13: "은달항구는  초승달 마을에서 갈수있게합니다. 불타는 마을 퀘스트 안깨면 못가게만하고   대장간 넘어로 작은 항구같은 느낌으로 …"
+--  사용자 2026-10-16: "왜 대도시로 넘어갈때 배타는건 구현을 안합니까 왜 그냥 포탈이에요" → 문(포탈)을 떼고 선장 → 배의 갑판 → 은달 항구(sim/voyage.luau)
 do
-	local harbor, forge = nil, nil
+	local Voyage = req("ReplicatedStorage/shared/lune/sim/voyage")
+	local captain, forge = nil, nil
+	for _, n in SCENES.scenes.town.npcs do
+		if n.id == "captain" then
+			captain = n
+		end
+	end
 	for _, p in SCENES.scenes.town.portals do
-		if p.to == "ct5" then
-			harbor = p
-		elseif p.to == "in_forge" then
+		expect(string.sub(p.to, 1, 2) ~= "ct", "마을에 은달 항구로 가는 문(포탈)이 없다 — 배로 간다")
+		if p.to == "in_forge" then
 			forge = p
 		end
 	end
-	expect(harbor ~= nil and harbor.done == "r1m9" and harbor.need == nil, "마을에 은달 항구의 부두로 가는 문이 있다(「불타는 마을」을 끝내야 열린다)")
-	expect(forge ~= nil and harbor.x > forge.x + 40 and harbor.x <= SCENES.scenes.town.w * 16 - 12, "그 문은 대장간 너머(마을의 오른쪽 끝)에 있다")
-	local back = false
-	for _, p in SCENES.scenes.ct5.portals do
-		back = back or p.to == "town"
-	end
-	expect(back, "부두에 초승달 마을로 돌아오는 배가 있다")
-	-- 문이 열렸는가: 없으면 · 받기만 했으면 닫혀 있고, 끝내면 열린다
-	expect(not Quests.portalOpen({}, harbor), "퀘스트가 없으면 닫혀 있다")
-	expect(not Quests.portalOpen({ r1m9 = { done = false, c = { 4 } } }, harbor), "받기만 해서는(다 잡았어도) 닫혀 있다")
-	expect(Quests.portalOpen({ r1m9 = { done = true, c = {} } }, harbor), "끝내면 열린다")
+	expect(captain ~= nil, "마을의 포구에 선장이 선다")
+	expect(forge ~= nil and captain and captain.x > forge.x + 40 and captain.x <= SCENES.scenes.town.w * 16 - 12, "선장은 대장간 너머(마을의 오른쪽 끝)에 있다")
+	expect(npcIn("ct", "captain"), "은달 항구의 부두에도 선장(돌아오는 배)")
+	-- 배에 오를 수 있는가: 없으면 · 받기만 했으면 못 타고, 끝내면 탄다 · 돌아오는 배는 늘 탄다
+	local TR, CR = Voyage.route("town", "captain"), Voyage.route("ct", "captain")
+	expect(not Voyage.open({}, TR), "퀘스트가 없으면 태우지 않는다")
+	expect(not Voyage.open({ r1m9 = { done = false, c = { 4 } } }, TR), "받기만 해서는(다 잡았어도) 태우지 않는다")
+	expect(Voyage.open({ r1m9 = { done = true, c = {} } }, TR), "끝내면 태운다")
+	expect(Voyage.open({}, CR), "돌아오는 배는 늘 탄다")
 	expect(Quests.finished({ r1m9 = { done = true, c = {} } }, "r1m9") and not Quests.finished({}, "r1m9") and not Quests.finished(nil, "r1m9"), "끝냈는가")
-	-- 길찾기 · 월드맵의 길도 같은 규칙이다
-	expect(Navi.path("town", "ct5", {}) == nil and Navi.path("town", "ct2", { r1m9 = { done = false, c = {} } }) == nil, "끝내기 전에는 은달 항구로 가는 길이 없다")
-	local path = Navi.path("town", "ct5", { r1m9 = { done = true, c = {} } })
-	expect(path ~= nil and #path == 2, "끝내면 마을에서 부두까지 문 하나")
-	-- 다른 길로는 은달 항구에 갈 수 없다(수비대 야영지의 임시 문을 뗐다): 1지역의 어느 맵에서도
+	-- 길찾기의 길도 같은 규칙이다(배는 한 걸음)
+	expect(Navi.path("town", "ct", {}) == nil and Navi.path("town", "ct", { r1m9 = { done = false, c = {} } }) == nil, "끝내기 전에는 은달 항구로 가는 길이 없다")
+	local path = Navi.path("town", "ct", { r1m9 = { done = true, c = {} } })
+	expect(path ~= nil and #path == 2 and path[2] == "ct", "끝내면 마을에서 은달 항구까지 배 한 번")
+	local back = Navi.path("ct", "town", {})
+	expect(back ~= nil and #back == 2, "돌아오는 배")
+	-- 겨누는 곳: 마을에서는 선장 · 갑판 위에서는 기다린다 · 닿은 뒤에는 그 사람
+	local goal = { scene = "ct_smith", kind = "npc", npc = "citysmith" }
+	local done = { r1m9 = { done = true, c = {} } }
+	local ax, ay, kind = Navi.aim("town", 100, 176, goal, done, {})
+	expect(kind == "npc" and captain and ax == captain.x and ay == captain.y, "마을에서는 선장에게로")
+	local _, _, kind2 = Navi.aim("ship_out", 100, 176, goal, done, {})
+	eq(kind2, "here", "갑판 위에서는 화살표를 거둔다(배가 닿기를 기다린다)")
+	local _, _, kind3, door = Navi.aim("ct", 100, 480, goal, done, {})
+	expect(kind3 == "portal" and door and door.to == "ct_smith", "항구에 닿으면 대장간의 문으로")
+	-- 다른 길로는 은달 항구에 갈 수 없다: 1지역의 어느 맵에서도 다른 지역으로 가는 문이 없다
 	for key, sc in SCENES.scenes do
 		if sc.region == "r1" then
 			for _, p in sc.portals or {} do
 				local to = SCENES.scenes[p.to]
-				expect(to == nil or to.region == "r1" or (key == "town" and p.to == "ct5"), ("1지역에서 다른 지역으로 가는 문은 마을의 나루뿐이다 %s → %s"):format(key, p.to))
+				expect(to == nil or to.region == "r1", ("1지역에서 다른 지역으로 가는 문이 없다(배로만) %s → %s"):format(key, p.to))
 			end
 		end
 	end
-	-- 그 맵의 사람(안 끝낸 사람)에게는 그 문이 사당 지하의 문처럼 보이지 않는다 — 화면이 같은 셈(Quests.portalOpen)으로 가린다. 서버도 지나가게 두지 않는다(테스트 30)
 end
 
 -- 방향: 멀면 왼쪽 · 오른쪽, 가로로 다 왔으면 위 · 아래, 문 · 주민 앞이면 ↑(enter), 그 몬스터 곁이면 거둔다

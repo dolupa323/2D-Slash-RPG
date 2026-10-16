@@ -77,7 +77,7 @@ handlers.Move(p, h.x, h.y, 1)
 Hero.setLevel(h, 30)
 expect(World.jump(p, "r1bv"), "주막에 들른다")
 eq(h.home, "r1bv", "돌아올 곳이 주막이 된다")
-expect(World.jump(p, "r1b4"), "주막 너머의 사냥터로")
+expect(World.jump(p, "r1b3"), "주막 너머의 사냥터로(무너진 다리 — 망루 아래는 2026-10-15에 지웠다)")
 eq(h.home, "r1bv", "사냥터는 돌아올 곳이 아니다 — 마지막으로 들른 마을 그대로")
 h.alive, h.hp, h.revive = false, 0, 0
 handlers.Return(p)

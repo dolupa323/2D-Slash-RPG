@@ -468,6 +468,7 @@ do
 	near(finisher(3) / finisher(0), (18 + 3 * 8) / 18, 0.06, "암살의 마무리: 표식 셋이면 18 → 42")
 	-- 스미는 독: 표식이 있는 적은 초마다 독 — 표식 하나마다 초당 피해의 10%
 	local v = hero("riven", { rv_mark = 10, rv_venom = 10, rv_mark2 = 10 })
+	v.dmgBoost = 50 -- (2026-10-15: 새 스펙에서 피해 숫자가 작아 반올림이 커서 키워 잰다)
 	local room2, foe2 = arena(58, v)
 	local function poison(n: number): number
 		foe2.marks, foe2.markN = { [v.id] = room2.time + 99 }, { [v.id] = n }

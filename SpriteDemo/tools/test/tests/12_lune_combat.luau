@@ -8,11 +8,20 @@ local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
 local CLASSES = req("ReplicatedStorage/shared/lune/data/classes.generated")
 local Room = req("ReplicatedStorage/shared/lune/sim/room")
 local Items = req("ReplicatedStorage/shared/lune/sim/items")
--- 본보기 차림: 열세 부위를 모두 내 레벨의 장비로 — 능력치를 다 주 능력치에 찍으면 전투력이 "본보기 전투력"(10 × 1.07^레벨)이 된다
+-- 본보기 차림: 무기와 방어구 넷을 내 레벨의 보통 장비로(장신구는 벗는다) — 능력치를 다 주스탯에 찍으면 스탯 공격력이 "그 레벨의 기준 스탯 공격력"(N.refAttack)에 가깝다
+--  (2026-10-15 스펙 — 예전에는 열세 부위 · 전투력 10 x 1.07^레벨. 장비의 옵션은 부위마다 반올림해서 기준과 몇 % 다를 수 있다)
 local function dressRef(h)
 	for _, slot in Items.data.SLOTS do
-		h.equip[slot.id] = Items.make(slot.id, h.level, nil, h.class)
+		h.equip[slot.id] = if table.find(Items.data.GEAR, slot.id) then Items.make(slot.id, h.level, nil, h.class) else nil
 	end
+end
+-- 그 레벨의 본보기 차림(보통 · 별 없음)의 스탯 공격력 — 장비의 옵션을 부위마다 반올림한 그대로
+local function refRounded(L: number): number
+	local a = math.floor(N.armorStat(L) + 0.5)
+	return N.statAtk(4 + 5 * (L - 1) + 4 * a, 4 + 4 * a, math.floor(N.weaponAtk(L) + 0.5))
+end
+local function nearRef(power: number, L: number): boolean
+	return power == math.floor(refRounded(L) + 0.5) and math.abs(refRounded(L) - N.refAttack(L)) / N.refAttack(L) < 0.15
 end
 local startPower = {}
 for _, c in Items.data.checks.startPower do
@@ -77,9 +86,11 @@ local h = Hero.new(1, "axion")
 h.auto = false -- 저절로 찍기를 끄고 점수가 쌓이는 것을 본다
 eq(h.level, 1, "새 캐릭터는 Lv.1")
 eq(h.hp, N.hpOf("axion", 1), "체력이 다 차 있다")
-eq(Hero.power(h), startPower.axion, "처음 차림의 전투력(공방과 같다)")
+-- 이 파일은 크리티컬을 0으로 둔다 — 전투력 = 스탯 공격력(공방의 처음 전투력은 크리티컬 5% · 1.5배의 기댓값까지 넣은 것)
+eq(Hero.power(h), math.floor(Hero.attackBase(h) + 0.5), "크리티컬이 없으면 전투력 = 스탯 공격력")
+eq(math.floor(Hero.attackBase(h) * 1.025 + 0.5), startPower.axion, "처음 차림의 전투력(공방과 같다 — 크리티컬 5% · 1.5배)")
 dressRef(h)
-eq(Hero.power(h), N.refPower(1), "본보기 차림이면 본보기 전투력")
+expect(nearRef(Hero.power(h), 1), "본보기 차림이면 기준 스탯 공격력")
 -- 경험치: 딱 필요한 만큼이면 한 레벨
 local need = N.xpNeed(1)
 eq(Hero.gainXp(h, need - 1), 0, "모자라면 그대로")
@@ -161,7 +172,7 @@ for _, class in CLASSES.order do
 		end
 	end
 	eq(started, 3, "사냥기 · 보스기 · 이동기 " .. class)
-	eq(Hero.power(fresh), startPower[class], "Lv.1의 전투력(처음 차림) " .. class)
+	eq(math.floor(Hero.attackBase(fresh) * 1.025 + 0.5), startPower[class], "Lv.1의 전투력(처음 차림) " .. class)
 end
 -- 스킬 레벨의 세기: 공방의 식과 같다
 for _, c in CLASSES.scaleCheck do
@@ -181,7 +192,7 @@ eq(st.level, 3, "Lv.3")
 eq(st.ap, 10, "찍지 않은 점수 10")
 dressRef(st)
 local weak = Hero.power(st)
-expect(weak < N.refPower(3), "점수를 안 찍으면 전투력이 모자라다")
+expect(weak < refRounded(3) * 0.8, "점수를 안 찍으면 전투력이 한참 모자라다")
 eq(Hero.addStat(st, "luk", 11), false, "가진 것보다 많이는 못 찍는다")
 eq(Hero.addStat(st, "luk", 0), false, "0점은 못 찍는다")
 eq(Hero.addStat(st, "luk", 1.5), false, "소수는 못 찍는다")
@@ -192,13 +203,13 @@ local hp0 = st.maxHp
 eq(Hero.addStat(st, "hp", 4), true, "체력에 4점")
 expect(st.maxHp >= hp0, "체력에 찍으면 체력 상한이 는다")
 eq(st.maxHp, N.hpOf("riven", 3, 4), "체력 상한의 식")
-expect(Hero.power(st) > weak and Hero.power(st) < N.refPower(3), "주 능력치에 찍은 만큼 전투력이 오른다(체력에 찍은 만큼은 모자라다)")
+expect(Hero.power(st) > weak and Hero.power(st) < Hero.power(st) + 1 and Hero.attackBase(st) < refRounded(3), "주스탯에 찍은 만큼 전투력이 오른다(체력에 찍은 만큼은 모자라다)")
 local all = Hero.new(6, "riven")
 all.auto = false
 Hero.gainXp(all, N.xpNeed(1) + N.xpNeed(2))
 eq(Hero.autoStat(all), 10, "자동으로 찍기: 남은 것을 모두 주 능력치에")
 dressRef(all)
-eq(Hero.power(all), N.refPower(3), "다 주 능력치에 찍으면 본보기 전투력")
+expect(nearRef(Hero.power(all), 3), "다 주스탯에 찍으면 기준 스탯 공격력")
 -- 스킬 올리기
 eq(Hero.skillUp(all, "rv_fan"), true, "스킬 포인트로 한 레벨")
 eq(Hero.skillLevel(all, "rv_fan"), 2, "칼날 부채 Lv.2")
@@ -232,7 +243,7 @@ eq(auto.ap, 0, "저절로: 능력치 점수가 남지 않는다")
 eq(auto.sp, 0, "저절로: 스킬 포인트가 남지 않는다")
 eq(auto.stats.dex, 15, "살라맨더의 주 능력치는 민첩")
 dressRef(auto)
-eq(Hero.power(auto), N.refPower(4), "본보기 전투력")
+expect(nearRef(Hero.power(auto), 4), "기준 스탯 공격력")
 
 -- ---- 2-2) 저장 꼴 ----
 local saved = Hero.pack(all)

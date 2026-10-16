@@ -35,9 +35,22 @@ local SkillWindow = require(script.Parent.ui.skillWindow)
 local KeysWindow = require(script.Parent.ui.keysWindow)
 local SoundWindow = require(script.Parent.ui.soundWindow) -- 소리 설정(메뉴 → 「소리 설정」)
 local DailyWindow = require(script.Parent.ui.dailyWindow) -- 일일 의뢰(마을의 의뢰 게시판 앞에서 ↑)
+local AttendWindow = require(script.Parent.ui.attendWindow) -- 출석(메뉴 → 「출석」 · 그날 처음 들어오면 한 번 — 2026-10-15)
+local AchieveWindow = require(script.Parent.ui.achieveWindow) -- 업적(메뉴 → 「업적」 — 2026-10-15)
+local VoyageView = require(script.Parent.voyageView) -- 배의 갑판에서 「○○까지 n초」(2026-10-16)
+local VistaView = require(script.Parent.vistaView) -- 성의 테라스에 들어서면 화면 가득 잠깐 보이는 경관(2026-10-16 밤)
+local TomeWindow = require(script.Parent.ui.tomeWindow) -- 모험의 서(메뉴 → 「모험의 서」 — 2026-10-16)
+local RiftWindow = require(script.Parent.ui.riftWindow) -- 수정 틈 토벌(광장의 토벌대장 앞에서 ↑ — 2026-10-16)
+local Voyage = require(lune.sim.voyage) -- 배(2026-10-16)
+local RiftView = require(script.Parent.riftView) -- 토벌 중의 판(물결 · 남은 몬스터 · 시간) · 끝의 판(보상)
+local Bond = require(ReplicatedStorage.shared.lune.sim.bond) -- 2편의 호감도 · 모험의 서 · 달조각 · 숨은 이야기(셈 — 화면은 서버가 준 view를 그린다)
+local AchieveSim = require(ReplicatedStorage.shared.lune.sim.achieve) -- 업적 달성의 띠(이름 · 할 일)
 local AuctionWindow = require(script.Parent.ui.auctionWindow) -- 경매장(메뉴 · Y — 은달 항구의 경매사 앞에서 ↑로도)
 local TALK_HOLD = { first = 0.35, next = 0.16 } -- 말하는 중에 뛰기 키를 누르고 있으면: 처음 넘어가기까지 · 그 뒤 한 마디씩 넘어가는 사이(초)
 local Talk = require(script.Parent.ui.talk)
+local CineView = require(script.Parent.cineView) -- 퀘스트 연출(장면 — 2026-10-15)
+local HallStones = require(script.Parent.hallStones) -- 명예의 전당: 비석에 새긴 순위(2026-10-15)
+local Cine = require(lune.cine)
 local Ui = require(script.Parent.ui.ui)
 local TutView = require(script.Parent.tutorial) -- 튜토리얼 「달빛 꿈」의 미션 판(2026-10-14)
 local Tutorial = require(lune.sim.tutorial)
@@ -79,6 +92,7 @@ local REPORT = 0.1 -- 내 자리를 서버에 알리는 간격(초)
 local RULES = COMBAT.rules
 local LINES = RULES.lines -- 타수 나누기: 줄이 뜨는 사이(stagger초) · 줄 사이의 높이(rise점) — 공방 design/combat.js의 COMBAT.lines
 local UI_HUD = require(lune.data["ui.generated"]).hud
+local UI_DATA = require(lune.data["ui.generated"]) -- 창의 목록(키 없이 「메뉴」 안에 두는 창 — menu · need)
 local QUICK = require(lune.data["ui.generated"]).quick -- 퀵슬롯(칸 수 · 칸마다의 기본 키 · 글)
 local Quick = require(lune.ui.quick)
 local Layout = require(lune.ui.layout)
@@ -88,6 +102,9 @@ local Boot = {}
 local mySkills = {} -- 내 직업의 기술(사냥기 · 보스기 · 이동기 차례로) { id, name, type, order, cd }
 
 local state = {
+	bond = nil :: any, -- 2편의 도시 생활(서버의 Bond.view — 2026-10-16)
+	rift = nil :: any, -- 수정 틈 토벌의 내 기록(서버의 onRift — { left, clears, why })
+	shards = {} :: { any }, -- 이 장면의 아직 못 주운 달조각 { id, x, y, frame }
 	who = "axion",
 	sceneKey = SCENES.start,
 	view = nil :: any,
@@ -126,6 +143,11 @@ local state = {
 		forgeTarget = nil :: number?,
 		forgeMat = nil :: number?,
 		forgeResult = nil :: string?,
+		forgeSeq = 0, -- 강화의 결과가 온 횟수(대장장이 창의 연출이 결과를 기다린다 — 2026-10-15)
+		forgeWhy = nil :: string?, -- 강화가 안 된 까닭
+		forgeTab = nil :: string?, -- 대장장이 창을 그 탭으로(다른 창에서 장비를 올렸을 때)
+		forgeDrop = nil :: any, -- 가방의 장비를 끌어다 대장장이 창에 놓는 자리
+		craftResult = nil :: any,
 		detail = nil :: string?,
 		bagDrop = nil :: any,
 		bagHover = nil :: any,
@@ -236,6 +258,13 @@ end
 local function enterScene(key: string, x: number, y: number, room)
 	local scene = SCENES.scenes[key]
 	assert(scene, "없는 장면 " .. tostring(key))
+	-- 퀘스트 연출: 도는 장면은 끝낸다(장면이 세운 것은 이전 맵의 층에 있다) · 줄도 비운다(그 주민 앞에서 틀려던 것 — 새 맵의 장면은 들어선 뒤에 다시 줄 세운다)
+	if CineView.active() then
+		CineView.stop()
+	end
+	state.cineQueue = {}
+	Talk.hush() -- 주민의 혼잣말 말풍선(화면 틀의 층에 있어 맵을 지워도 남는다)
+	HallStones.leave()
 	-- 이전 장면의 것을 치운다. 하나를 치우다 오류가 나도 나머지를 마저 치우고 새 장면을 그린다 — 치우기는 이 함수의 맨 앞이라, 여기서 멈추면 새 장면이 통째로 안 그려진다
 	--  (2026-10-13: 이펙트를 치우다 난 오류 하나로 문을 지난 뒤의 화면이 깨졌다 — 캐릭터와 몬스터가 없고 이전 맵이 남았다). 오류는 출력 창에 알린다
 	local function clear(what: string, thing: any, method: string)
@@ -254,6 +283,7 @@ local function enterScene(key: string, x: number, y: number, room)
 	clear("맵", state.view, "destroy")
 	clear("이름표의 층", state.over, "Destroy") -- 이름표(내 것 포함) · 체력 띠 · 알림 글은 이 층과 함께 사라진다
 	table.clear(state.spots) -- 퀘스트의 자리 표시도 위의 두 층과 함께 사라졌다(새 장면의 것은 아래 drawQuests가 만든다)
+	table.clear(state.shards) -- 달조각도(새 장면의 것은 drawQuests가 만든다)
 	if MUSIC.hidden[key] and state.sceneKey ~= key then
 		Music.sfx("secret3") -- 숨은 방에 들어섰다(징글이 아니라 효과음 — 사용자 2026-10-14: 숨은 방 진입 징글은 없다)
 	end
@@ -261,6 +291,7 @@ local function enterScene(key: string, x: number, y: number, room)
 	Music.scene(key) -- 그 장면의 배경 음악(같은 곡이면 이어 튼다)
 	state.over = Overlay.layer("Scene", 10)
 	state.view = SceneView.new(Stage.view, key, scene, state.over)
+	HallStones.enter(scene, state.over) -- 명예의 전당이면 비석 면에 순위를 새긴다
 	state.body = P.newBody(scene)
 	state.body.x, state.body.y = x, y
 	if state.me then
@@ -268,6 +299,15 @@ local function enterScene(key: string, x: number, y: number, room)
 	end
 	state.sprite = Sprite.new(state.view.heroLayer, state.who)
 	state.mobs = MobsView.new(state.view.mobLayer, room, state.over)
+	RiftView.enter(room.rift) -- 토벌의 방이면 위 가운데의 판(아니면 숨긴다)
+	if not Voyage.onShip(key) then
+		VoyageView.stop() -- 배에서 내렸다
+	end
+	if scene.vista then
+		VistaView.show(scene.vista) -- 경관(성의 테라스): 들어설 때마다 한 번
+	else
+		VistaView.stop()
+	end
 	table.clear(state.npcNames)
 	for _, sc in SCENES.scenes do
 		for _, n in sc.npcs or {} do
@@ -510,8 +550,17 @@ local function drawSpots()
 	if not state.view or not state.over then
 		return
 	end
-	for _, sp in Quests.spotsIn(state.quests or {}, state.sceneKey) do
+	local spots = Quests.spotsIn(state.quests or {}, state.sceneKey)
+	-- 숨은 이야기(2026-10-16 — 그 앞에서 ↑로 읽는다): 아직 안 읽은 것만 「!」가 뜬다(읽은 것도 다시 읽을 수 있다 — 표시 없이)
+	for _, st in Bond.DATA.stories do
+		if st.scene == state.sceneKey then
+			local read = state.bond ~= nil and state.bond.story[st.id] == true
+			table.insert(spots, { story = st.id, x = st.x, y = st.y, up = 30, act = st.act, place = st.name, quiet = read })
+		end
+	end
+	for _, sp in spots do
 		sp.mark = Kit.part(state.view.topLayer, SceneView.MARK["!"], 0, 0)
+		sp.mark.Visible = not sp.quiet
 		sp.mark.Name = "SpotMark"
 		sp.mark.ZIndex = 6
 		sp.tag = Ui.tag(state.over, ("↑ %s"):format(sp.act), Ui.COLOR.accent, 220)
@@ -519,6 +568,33 @@ local function drawSpots()
 		table.insert(state.spots, sp)
 	end
 end
+-- 달조각(2026-10-16 — 로스트아크의 모코코 씨앗): 이 장면의 아직 못 주운 것을 땅 위에 띄운다(닿으면 서버가 줍는다 — BondView)
+local function clearShards()
+	for _, sh in state.shards do
+		sh.frame:Destroy()
+	end
+	table.clear(state.shards)
+end
+local function drawShards()
+	clearShards()
+	if not state.view then
+		return
+	end
+	for _, x in Bond.DATA.shards do
+		if x.scene == state.sceneKey and not (state.bond and state.bond.shard[x.id]) then
+			local frame = Kit.group(state.view.topLayer, 0, 0, Kit.ICON, Kit.ICON)
+			Kit.icon(frame, "shard_moon", 0, 0)
+			local scale = Instance.new("UIScale")
+			scale.Scale = 0.75
+			scale.Parent = frame
+			frame.Name = "Shard_" .. x.id
+			frame.ZIndex = 6
+			table.insert(state.shards, { id = x.id, x = x.x, y = x.y, frame = frame })
+		end
+	end
+end
+state.drawShards = drawShards
+
 -- 가까이에 있는 자리(없으면 nil)
 local function nearSpot(x: number, y: number)
 	for _, sp in state.spots do
@@ -750,6 +826,20 @@ local function step()
 		P.step(scene, body, { mx = 0 }, STEP)
 		return
 	end
+	-- 퀘스트 연출(장면)이 도는 동안: 걷지 않고 스킬도 쓰지 않는다. ↑ · 스페이스 = 넘기기(스페이스를 누르고 있으면 쭉) · Esc = 건너뛰기(cineView.luau)
+	if CineView.active() then
+		local go = Input.take("up")
+		if Input.take("jump") then
+			go, state.talkHold = true, os.clock() + TALK_HOLD.first
+		elseif Input.held("jump") and state.talkHold and os.clock() >= state.talkHold then
+			go, state.talkHold = true, os.clock() + TALK_HOLD.next
+		end
+		if go then
+			CineView.input("next")
+		end
+		P.step(scene, body, { mx = 0 }, STEP)
+		return
+	end
 
 	-- 말하는 중에는 뛰기 키(Space)로도 다음 말로 넘긴다 — 누르고 있으면 쭉 넘어간다(마지막 말에서는 그 일을 한다: 수락 · 완료)
 	--  사용자 2026-10-13: "스페이스로 쭉 스킵  퀘스트 받고 … 다시 돌아와서 완료하고 스페이스꾹 누르면 다음 퀘스트 하나 받아지고 이렇게 퀘스트 루프가 자연스럽게"
@@ -777,7 +867,9 @@ local function step()
 	-- 퀘스트를 돌려준 자리에서 그 주민이 줄 것이 또 있으면 말을 잇는다(서버가 끝냈다고 알려 온 뒤에) — 끝내고 그대로 다음 것을 받는다
 	local chain = state.chain
 	if chain then
-		if os.clock() > chain.till or state.sceneKey ~= chain.scene or math.abs(chain.npc.x - body.x) > 44 then
+		if CineView.active() or #state.cineQueue > 0 then
+			chain.till = os.clock() + 3 -- 돌려준 뒤의 장면이 끝날 때까지 다음 퀘스트의 말을 기다린다
+		elseif os.clock() > chain.till or state.sceneKey ~= chain.scene or math.abs(chain.npc.x - body.x) > 44 then
 			state.chain = nil
 		elseif not Talk.npc and state.quests and state.quests[chain.done] and state.quests[chain.done].done then
 			state.chain = nil
@@ -786,6 +878,11 @@ local function step()
 	end
 	-- 문 앞에서 ↑: 서버에 묻고, 허락하면 그 장면으로
 	local wantUp = Input.take("up") and body.ground and not state.skill
+	local hop = wantUp and state.view:warpNear(body.x, body.y)
+	if hop then
+		Net.FireServer("Hop", hop.id) -- 간이 포탈: 서버가 같은 맵의 짝 자리로 옮기고 Warp로 알린다(막 없이 바로)
+		wantUp = false
+	end
 	if wantUp then
 		local portal = state.view:portalNear(body.x, body.y)
 		if portal then
@@ -805,9 +902,29 @@ local function step()
 			end)
 			return
 		end
+		-- 경관의 자리(성의 테라스 가운데)에서 ↑: 경관을 다시 본다(2026-10-16 밤)
+		if scene.vista and scene.vista.x and math.abs(body.x - scene.vista.x) <= 40 and not VistaView.showing() then
+			VistaView.show(scene.vista)
+			return
+		end
 		-- 퀘스트의 자리 앞이면(샘 · 깃발): 서버에 알린다 — 숫자가 오르면 그 자리의 표시가 사라진다
 		local spot = nearSpot(body.x, body.y)
-		if spot then
+		if spot and spot.story then
+			-- 숨은 이야기: 서버가 그 앞인지 보고 적어 둔다 → 대화창에 글을 띄운다(2026-10-16)
+			local st = Bond.story(spot.story)
+			task.spawn(function()
+				local ok, res = pcall(Net.Invoke, "Bond", "read", spot.story)
+				if ok and res and res.ok and st then
+					state.setBond(res.view)
+					Talk.start({ id = "__story", name = st.name, x = st.x, y = st.y }, st.text, Bond.DATA.tome.words.part.story)
+					if res.note and res.note.first and state.fx then
+						Music.sfx("secret4")
+						state.fx:float(Format.fill(Bond.DATA.tome.words.read, { name = st.name }), st.x, st.y - 40, Effects.MINT, 1.6)
+					end
+				end
+			end)
+			return
+		elseif spot then
 			Net.FireServer("Quest", "use", spot.quest)
 			Music.sfx("secret4") -- 살펴보기(샘에서 물 뜨기 · 깃발 꺼내기 …)
 			if state.fx then
@@ -823,6 +940,8 @@ local function step()
 				Talk.next(npc) -- 말하는 중이면 다음 말로
 			elseif state.questTalk(npc) then
 				-- 퀘스트의 말을 시작했다(돌려줄 것부터, 없으면 받을 것 하나)
+			elseif state.sailTalk(npc) then
+				-- 선장: 배에 오를까 묻는다(2026-10-16)
 			elseif state.openNpc and state.openNpc(npc) then
 				-- 상점 · 강화 · 창고가 열렸다
 			elseif #at.wait > 0 then
@@ -930,7 +1049,7 @@ local function step()
 		if mx ~= 0 then
 			state.dir = mx
 		end
-		input = { mx = mx, jump = Input.take("jump"), down = Input.held("down") }
+		input = { mx = mx, jump = Input.take("jump"), down = Input.held("down"), up = Input.held("up") } -- up = 사다리를 오른다(2026-10-16 밤)
 		if input.jump and input.down and body.ground and P.onPlatform(scene, body) then
 			TutView.dropped = true -- 튜토리얼: 얇은 발판을 내려왔다(↓ + 뛰기)
 		end
@@ -972,6 +1091,84 @@ local function step()
 end
 
 local paintBuffs: () -> () -- 버프 자리를 그린다(아래에서 짓는다)
+
+-- ---------- 퀘스트 연출(장면 — 2026-10-15) ----------
+--  사용자: "현재 메인 퀘스트 라인 너무스토리 몰입이 안됩니다 … 몰입되는 중간에 연출이 있는것도아니고 다른게임들 어떻게 스토리 진행하는지 좀 파악하고 만들어야합니다."
+--  때(공방 js/lune/design/cine.js): 퀘스트를 받은 뒤(accept — 장의 첫 퀘스트면 장의 이름) · 할 일을 다 한 순간(goal) · 돌려준 뒤(complete) · 그 퀘스트를 하는 중에 맵에 들어섰을 때(enter) · 받기 전에 그 맵에 들어섰을 때(before)
+--  한 캐릭터에 한 번만(서버가 캐릭터에 적는다 — me.cine). 줄을 서서 하나씩 튼다(막이 덮였거나 · 쓰러졌거나 · 주민과 말하는 중에는 기다린다)
+state.cineQueue = {}
+state.cineSeen = {}
+local function cineSeen()
+	local seen = table.clone(state.cineSeen)
+	if state.me and state.me.cine then
+		for _, id in state.me.cine do
+			seen[id] = true
+		end
+	end
+	for _, c in state.cineQueue do
+		seen[c.id] = true
+	end
+	return seen
+end
+local function queueCine(list)
+	for _, c in list do
+		table.insert(state.cineQueue, c)
+	end
+end
+local function cineWorld()
+	return {
+		hero = function()
+			return { x = state.body.x, y = state.body.y, dir = state.dir }
+		end,
+		npc = function(id: string)
+			if not state.view then
+				return nil
+			end
+			for _, npc in state.view.npcs do
+				if npc.def.id == id then
+					return { x = npc.def.x, y = npc.def.y, dir = npc.def.dir, name = npc.def.name }
+				end
+			end
+			return nil
+		end,
+		npcName = function(id: string)
+			local a = CineView.npcArt(id)
+			return a and a.name
+		end,
+		boss = function()
+			if not state.mobs then
+				return nil
+			end
+			for _, m in state.mobs.mobs do
+				if m.def.story and m.state ~= "dead" then
+					return { x = m.x, y = m.y }
+				end
+			end
+			return nil
+		end,
+		cls = state.who,
+		heroName = state.myName,
+	}
+end
+-- 줄의 맨 앞 장면을 튼다(틀 수 있을 때)
+local function playCine()
+	if CineView.active() or #state.cineQueue == 0 or state.busy or state.dead or Curtain.covered() or not state.view then
+		return
+	end
+	if Talk.npc and Talk.npc ~= Talk.CINE then
+		return
+	end
+	local def = table.remove(state.cineQueue, 1)
+	if state.cineSeen[def.id] or (state.me and state.me.cine and table.find(state.me.cine, def.id)) then
+		return
+	end
+	Net.FireServer("Cine", "on", nil) -- 그동안 맞지 않는다
+	Hud.root.Visible = false
+	if Touch.root then
+		Touch.root.Visible = false
+	end
+	CineView.play(def, cineWorld(), state.view.mobLayer)
+end
 
 local function draw(dt: number)
 	local body = state.body
@@ -1039,13 +1236,51 @@ local function draw(dt: number)
 		me.pose = { clip = clip, f = Sprite.frameAt(char, clip, state.clipT, clip == "jump") - 1 }
 	end
 	state.view.shakeX, state.view.shakeY = cast.sx, cast.sy
+	-- 퀘스트 연출(장면): 맵에 들어섰을 때의 장면을 줄 세우고, 줄의 맨 앞을 튼다. 도는 동안은 카메라 · 주민의 자리 · 내 캐릭터가 보는 쪽이 장면의 것
+	if state.cineScene ~= state.sceneKey and not state.busy and not Curtain.covered() and state.quests then
+		state.cineScene = state.sceneKey
+		local seen = cineSeen()
+		queueCine(Cine.before(state.sceneKey, state.quests, seen))
+		for id, st in state.quests do
+			if not st.done then
+				queueCine(Cine.findAll("enter", id, state.sceneKey, seen))
+			end
+		end
+	end
+	playCine()
+	CineView.update(dt)
+	local cst = CineView.state()
+	state.view.camOverride = if cst then cst.cam else nil
+	state.view.npcOver = if cst then cst.over else nil
+	if cst then
+		if cst.over.hero and cst.over.hero.dir then
+			state.dir = cst.over.hero.dir
+		end
+		if cst.shakeT > 0 then
+			state.view.shakeX += math.random(-cst.shakeA, cst.shakeA)
+			state.view.shakeY += math.random(-cst.shakeA, cst.shakeA)
+		end
+	end
+	-- 퀘스트 동안의 맵 모습(불타는 마을의 붉은 하늘 — 장면 밖에서도)
+	do
+		local active = {}
+		for id, st in state.quests or {} do
+			active[id] = not st.done
+		end
+		local hex, a = Cine.lookAt(state.sceneKey, active)
+		CineView.setLook(if hex then Color3.fromHex(hex) else nil, a)
+	end
 	state.view:update(body.x, body.y, state.now, body.ground)
+	HallStones.update()
 	-- 스마트폰의 상호작용 단추가 지금 할 일: 떨어진 물건 → 문 → 주민의 차례로 가까운 것
 	if Touch.on then
-		Touch.setAct(if state.dead then nil elseif state.fx and state.fx:dropNear(body.x, body.y, RULES.pickup) then "pickup" elseif state.view:portalNear(body.x, body.y) then "portal" elseif nearSpot(body.x, body.y) then "spot" elseif state.view:npcNear(body.x, body.y) then "npc" else nil)
+		Touch.setAct(if state.dead then nil elseif state.fx and state.fx:dropNear(body.x, body.y, RULES.pickup) then "pickup" elseif state.view:portalNear(body.x, body.y) or state.view:warpNear(body.x, body.y) then "portal" elseif nearSpot(body.x, body.y) then "spot" elseif state.view:npcNear(body.x, body.y) then "npc" else nil)
 	end
 	state.mobs:update(if held then state.holdNow else state.now) -- 멈칫하는 동안은 몬스터의 그림도 멈춘 순간 그대로(하얗게 번쩍인 채)
 	state.boss:update(dt)
+	RiftView.update(dt)
+	VoyageView.update(dt)
+	VistaView.update(dt)
 	state.others:update(state.now, state.partySet)
 	-- 다른 사람들: 그 사람의 자리에서 그 사람의 기술의 이펙트가 돈다
 	for id, o in state.others.list do
@@ -1072,6 +1307,11 @@ local function draw(dt: number)
 	for _, t in state.view:tagList() do
 		table.insert(tags, t)
 	end
+	-- 달조각: 땅 위에서 천천히 오르내린다
+	for i, sh in state.shards do
+		local bob = math.floor(math.sin(state.clock * 2.4 + i) * 2 + 0.5)
+		sh.frame.Position = UDim2.fromOffset(math.floor(sh.x - Kit.ICON * 0.375 + 0.5), sh.y - Kit.ICON * 0.75 - 6 + bob)
+	end
 	-- 퀘스트의 자리: 「!」는 늘 그 위에서 까딱이고, 「↑ 물을 뜬다」는 가까이 섰을 때만 뜬다
 	for i, sp in state.spots do
 		local mw, mh = sp.mark.Size.X.Offset, sp.mark.Size.Y.Offset
@@ -1087,9 +1327,10 @@ local function draw(dt: number)
 		t.move = true
 		table.insert(tags, t)
 	end
+	local cineHide = CineView.hideTags() -- 장면의 암전 · 큰 그림 위로 이름표가 비치지 않게
 	for i, on in Tags.visible(tags, Ui.TAG_H) do
 		local t = tags[i]
-		t.frame.Visible = on
+		t.frame.Visible = on and not cineHide
 		if t.move then
 			t.frame.Position = UDim2.fromOffset(t.x, t.y)
 		end
@@ -1224,6 +1465,9 @@ local function listen()
 		Hud.setLocked(skillsLocked()) -- 스킬 칸의 잠금은 내 상태가 올 때마다 맞춘다(레벨이 먼저 오르는 경우에도 풀린다)
 		applyKit(me)
 		Hud.setSelf(me)
+		local mark = (me.attReady or 0) + (me.achReady or 0) > 0 or (state.bond ~= nil and Bond.ready(state.bond)) -- 받을 출석 칸 · 업적 보상(2026-10-15) · 호감도 · 모험의 서의 보상(2026-10-16)
+		Hud.markMenu("more", mark)
+		Touch.markMenu(mark)
 		Windows.refresh(me)
 		if state.tag and state.tagLevel ~= me.level then
 			state.tagLevel = me.level
@@ -1292,8 +1536,9 @@ local function listen()
 					end
 					-- 데미지 소리: 내 타의 숫자가 뜰 때마다 한 번(사용자 2026-10-14: "출력되는 데미지는 이소리를 아주 짧게 재생합니다. 한 틱당 한번재생" —
 					--  3타 기술이 한 마리에 맞으면 타타타 세 번, 세 마리에 같이 맞으면 마리마다 — 그래서 이 소리는 틈(gap)이 0이다). 다른 사람의 타는 소리 없이 숫자만(내 판단)
+					--  줄마다는 짧게(다다다다) 내다가 그 타의 마지막 줄은 끝까지 낸다(사용자 2026-10-14: "데미지 출력음 다다다다 하다가 마지막 출력음은 끝까지 출력")
 					if by == state.myId then
-						Music.sfx("damage")
+						Music.sfx("damage", last)
 					end
 				end
 				-- 따로 나가는 타(사출기 · 장치): 그 직업의 이펙트가 날아가 닿는 순간에 숫자가 뜬다(달빛 도끼 · 표창 · 도깨비불 · 수정 조각 · 불티 · 불꽃).
@@ -1493,6 +1738,21 @@ local function listen()
 				end
 			end
 		end
+		-- 퀘스트 연출: 받은 퀘스트(장의 이름 · 받은 뒤의 장면) · 할 일을 다 한 퀘스트 · 돌려준 퀘스트의 장면을 줄 세운다(들어올 때의 첫 상태는 거른다)
+		if state.quests then
+			local old, seen = state.quests, cineSeen()
+			for id, st in book do
+				if not st.done and not old[id] then
+					queueCine(Cine.findAll("accept", id, nil, seen))
+				end
+				if old[id] and Quests.isReady(book, id) and not Quests.isReady(old, id) then
+					queueCine(Cine.findAll("goal", id, state.sceneKey, seen))
+				end
+			end
+			if doneId then
+				queueCine(Cine.findAll("complete", doneId, nil, seen))
+			end
+		end
 		state.quests = book
 		if state.drawQuests then
 			state.drawQuests()
@@ -1528,8 +1788,13 @@ local function listen()
 	end)
 	-- 물건을 다룬 결과: 안 됐으면 까닭을 머리 위에, 강화의 결과는 강화 창에
 	Net.OnClient("ItemDone", function(e)
-		if e.action == "enhance" and e.ok then
-			state.ui.forgeResult = e.result
+		if e.action == "enhance" then
+			-- 대장장이 창의 연출이 이 결과를 기다린다(번호가 오르면 보인다) — 안 됐으면 까닭을 창의 결과 줄에
+			state.ui.forgeResult = if e.ok then e.result else nil
+			state.ui.forgeWhy = if e.ok then nil else e.why
+			state.ui.forgeSeq = (state.ui.forgeSeq or 0) + 1
+		elseif e.action == "restore" and e.ok then
+			state.ui.forgeResult, state.ui.forgeWhy, state.ui.forgeMat = "restore", nil, nil -- 「되살렸다 — 12성」(대장장이 창의 RESULT — 붉은 「안 된 까닭」 줄이 아니다)
 		elseif e.action == "dismantle" and e.ok and state.fx then
 			state.fx:float("+" .. Format.short(e.result) .. " 달가루", state.body.x, state.body.y - 34, Effects.MINT)
 		elseif e.action == "sell" and e.ok and state.fx then
@@ -1634,6 +1899,7 @@ function Boot.start()
 		Hud.resetHp() -- 들어온 캐릭터의 체력에서 다시 시작한다(앞 캐릭터와 견준 효과가 뜨지 않게)
 		state.myId, state.myName = got.id, got.name
 		state.quests = got.quests or {}
+		state.bond = got.bond
 		state.bag = got.bag
 		state.who = got.self.class
 		state.dead, state.skill, state.party = false, nil, nil
@@ -1700,6 +1966,12 @@ function Boot.start()
 				table.insert(items, { id = w.id, name = w.name })
 			end
 		end
+		-- 키 없이 「메뉴」 안에 두는 창(공방 basics.js의 via '메뉴에서' — 출석 · 업적 · 호감도 · 모험의 서). need = 'tome'이면 모험의 서를 받은 뒤(「항구의 첫날」 — 2026-10-16)
+		for _, w in UI_DATA.windows do
+			if w.menu and Windows.info(w.id) and (not w.need or (state.bond and state.bond.open)) then
+				table.insert(items, { id = w.id, name = w.name })
+			end
+		end
 		table.insert(items, { id = "keys", name = "키 설정" })
 		if isAdmin() then
 			table.insert(items, { id = "admin", name = "관리" })
@@ -1757,17 +2029,12 @@ function Boot.start()
 			Hud.setSelf(state.me)
 		end
 	end
-	-- 주민이 해 주는 일의 창을 연다(가방이 옆에 같이 뜬다). kind = merchant · store · forge · smithShop
-	local function openService(kind: string)
+	-- 주민이 해 주는 일의 창을 연다(가방이 옆에 같이 뜬다). kind = merchant · store · forge(대장장이 — arg = 처음 탭 "craft" · "enhance")
+	--  2026-10-15: 대장장이의 상점을 없앴다(사용자: "상점 없어야함 제작, 강화만 하는곳임") — 대장장이 창 하나에 제작 · 강화 탭
+	local function openService(kind: string, arg: any)
 		if kind == "forge" then
 			Windows.close("shop")
-			Windows.open("forge", nil)
-		elseif kind == "smithShop" then
-			Windows.close("forge")
-			Windows.open("shop", "smith")
-		elseif kind == "craft" then
-			Windows.close("forge")
-			Windows.open("shop", "craft") -- 대장장이의 제작(재료 → 장비)
+			Windows.open("forge", arg)
 		else
 			Windows.open("shop", kind)
 		end
@@ -1798,18 +2065,69 @@ function Boot.start()
 		end
 		return false
 	end
+	-- 탈것(2026-10-16): 떠나는 탈것의 사람(마을의 선장 · 부두의 선장과 뱃사공 · 꼭대기의 승강장 일꾼)에게 말을 걸면 「○○로 가는 배」 → 「탑승」 → 서버가 갑판으로 옮긴다
+	state.sailTalk = function(npc): boolean
+		local r = Voyage.route(state.sceneKey, npc.id)
+		if not r then
+			return false -- 갑판 위의 사람 · 탈것이 없는 사람은 그냥 말만 한다
+		end
+		local W = Voyage.DATA.words
+		if not Voyage.open(state.quests or {}, r) then
+			Talk.start(npc, { r.locked or "아직은 탈 수 없다." }, npc.role)
+			return true
+		end
+		Talk.start(npc, r.lines, npc.role, function()
+			task.spawn(function()
+				local ok, res = pcall(Net.Invoke, "Sail", npc.id)
+				if ok and res and not res.ok and res.why and state.fx and state.body then
+					state.fx:float(res.why, state.body.x, state.body.y - 46, Effects.MINT, 1.6)
+				end
+			end)
+		end, W.board)
+		return true
+	end
 	state.openNpc = function(npc): boolean
+		-- 만나면 열림(2026-10-16 — 호감도 대신): 그 사람에게 처음 말을 걸면 인사(누구이고 무엇을 하는지)를 나누고, 끝나면 그 기능이 열려 바로 그 창이 뜬다
+		if Bond.isMeet(npc.id) and state.bond and not (state.bond.met or {})[npc.id] then
+			local m = Bond.DATA.meet[npc.id]
+			Talk.start(npc, m.lines, npc.role, function()
+				task.spawn(function()
+					local ok, res = pcall(Net.Invoke, "Bond", "meet", npc.id)
+					if ok and res and res.view then
+						state.setBond(res.view, res.note)
+						if res.ok and state.view and state.view:npcNear(state.body.x, state.body.y) == npc then
+							state.openNpc(npc) -- 열린 그 창을 바로
+						end
+					end
+				end)
+			end, "인사")
+			return true
+		end
 		local kind = Items.data.NPCDO[npc.id]
+		local who = if npc.role and npc.name then npc.role .. " " .. npc.name else nil -- 창의 제목(대장장이 · 창고지기가 마을 · 도시에 따로 있다 — 2026-10-16)
+		ForgeWindow.opener = who -- (창고는 계정의 것이라 제목이 늘 「창고」다)
 		local level = state.me.level
 		if kind == "daily" then
 			-- 의뢰 게시판: 일일 의뢰 창(Lv.10부터 — 그 앞에는 「Lv.10부터 의뢰를 받을 수 있다」는 말만 뜬다)
-			if level < Daily.FROM then
-				return false
+			local dregion = Daily.regionAt(state.sceneKey, npc.id)
+			local dboard = dregion and Daily.DATA.boards[dregion]
+			if not dboard or level < math.max(Daily.FROM, dboard.from or 0) then
+				return false -- 아직 열리지 않았다(은달 항구의 의뢰소는 Lv.30부터 — 그 앞에는 그냥 말을 건다)
 			end
 			if state.fetchDaily then
 				state.fetchDaily() -- 날이 바뀌었으면 새 의뢰가 온다
 			end
-			Windows.open("daily", nil, true)
+			Windows.open("daily", Daily.regionAt(state.sceneKey, npc.id), true) -- 그 게시판의 지역(초승달 마을 · 은달 항구 — 2026-10-16)
+		elseif kind == "rift" then
+			-- 토벌대장: 토벌 창(단계 · 남은 보상 — 들어가는 레벨은 단계마다 창이 가른다)
+			task.spawn(function()
+				local ok, res = pcall(Net.Invoke, "Rift", "view")
+				if ok and res then
+					state.rift = res
+					Windows.refresh(state.me)
+				end
+			end)
+			Windows.open("rift", nil, true)
 		elseif kind == "auction" then
 			-- 경매사: 경매장 창(넓은 창 — 다른 창을 닫고 혼자 뜬다). 메뉴의 「경매장」(Y)으로 여는 것과 같은 창이다(메이플 옥션 방식 — 주민에게서 멀어져도 닫히지 않는다)
 			Windows.open("auction", nil, true)
@@ -1820,7 +2138,7 @@ function Boot.start()
 			openService("merchant")
 		elseif kind == "smith" then
 			-- 대장장이: 강화가 열린 뒤(Lv.8)에는 강화 창부터, 그 전에는 상점부터(상점에서 「제작하러 가기」로 재료 제작을 한다 — 제작은 Lv.1부터)
-			openService(if level >= Items.data.OPEN.forge then "forge" else "smithShop")
+			openService("forge", if level >= Items.data.OPEN.forge then "enhance" else "craft") -- 강화가 열리기 전(Lv.8)에는 제작 탭부터
 		elseif kind == "store" and level >= Items.data.OPEN.store then
 			openService("store")
 		else
@@ -1903,7 +2221,7 @@ function Boot.start()
 		openService = openService,
 		-- 강화 창에 장비를 올린다(가방 · 장비 창의 「올리기」)
 		toForge = function(id: number)
-			ForgeWindow.put(state.ui, id)
+			ForgeWindow.put(state.ui, id, state.bag)
 			Windows.refresh(state.me)
 		end,
 		-- 열린 창이 바뀌었다: 가방 옆에 무엇이 열려 있는지 적어 두고 모두 다시 그린다
@@ -1951,6 +2269,98 @@ function Boot.start()
 		end,
 		resetKeys = function()
 			Input.reset()
+		end,
+		-- 출석 · 업적(2026-10-15): 서버가 준 판 · 받기(서버가 정한다). 창을 열 때 지금의 것을 받아 온다
+		attend = function()
+			return state.attend
+		end,
+		attendFetch = function()
+			task.spawn(function()
+				local ok, res = pcall(Net.Invoke, "Attend", "view")
+				if ok and res and res.view then
+					state.attend = res.view
+					if state.me then
+						Windows.refresh(state.me)
+					end
+				end
+			end)
+		end,
+		attendDo = function(action: string)
+			local ok, res = pcall(Net.Invoke, "Attend", action)
+			if not ok or not res then
+				return nil
+			end
+			state.attend = res.view
+			return res
+		end,
+		ach = function()
+			return state.ach
+		end,
+		achFetch = function()
+			task.spawn(function()
+				local ok, res = pcall(Net.Invoke, "Achieve", "view")
+				if ok and res and res.view then
+					state.ach = res.view
+					if state.me then
+						Windows.refresh(state.me)
+					end
+				end
+			end)
+		end,
+		-- 2편의 도시 생활(2026-10-16): 서버가 준 상태 · 받기 · 선물(서버가 정한다 — 선물은 그 사람 앞이어야 한다)
+		bond = function()
+			return state.bond
+		end,
+		bondFetch = function()
+			task.spawn(function()
+				local ok, res = pcall(Net.Invoke, "Bond", "view")
+				if ok and res and res.view then
+					state.setBond(res.view)
+				end
+			end)
+		end,
+		bondDo = function(action: string, a: any, b: any)
+			local ok, res = pcall(Net.Invoke, "Bond", action, a, b)
+			if not ok or not res then
+				return nil
+			end
+			if res.view then
+				state.setBond(res.view, res.note)
+			end
+			return res
+		end,
+		nearNpc = function(id: string): boolean
+			local body = state.body
+			for _, n in SCENES.scenes[state.sceneKey].npcs or {} do
+				if n.id == id and body and math.abs(n.x - body.x) <= 60 and math.abs(n.y - body.y) <= 40 then
+					return true
+				end
+			end
+			return false
+		end,
+		-- 수정 틈 토벌: 내 기록(남은 보상) · 들어가기(서버가 정한다 — 토벌대장 앞이어야 한다. 들어가면 서버가 옮긴다)
+		rift = function()
+			return state.rift
+		end,
+		riftDo = function(action: string, id: any)
+			local ok, res = pcall(Net.Invoke, "Rift", action, id)
+			if not ok or not res then
+				return nil
+			end
+			state.rift = res
+			if not res.ok and res.why and state.fx and state.body then
+				state.fx:float(res.why, state.body.x, state.body.y - 46, Effects.MINT, 1.6)
+			end
+			Windows.refresh(state.me)
+			return res
+		end,
+		achDo = function(action: string, id: string?)
+			local ok, res = pcall(Net.Invoke, "Achieve", action, id)
+			if not ok or not res then
+				return nil
+			end
+			state.ach = res.view
+			return res
 		end,
 		-- 일일 의뢰: 서버가 준 상태 · 받기와 내기(서버가 정한다 — 게시판 앞이어야 한다)
 		daily = function()
@@ -2056,6 +2466,10 @@ function Boot.start()
 	Windows.register("keys", KeysWindow)
 	Windows.register("sound", SoundWindow)
 	Windows.register("daily", DailyWindow) -- 일일 의뢰(마을의 의뢰 게시판 앞에서 ↑)
+	Windows.register("attend", AttendWindow) -- 출석(메뉴 → 「출석」 · 그날 처음 들어오면 한 번)
+	Windows.register("achieve", AchieveWindow) -- 업적(메뉴 → 「업적」)
+	Windows.register("tome", TomeWindow) -- 모험의 서(메뉴 → 「모험의 서」 — 2026-10-16)
+	Windows.register("rift", RiftWindow) -- 수정 틈 토벌(토벌대장 앞에서 ↑ — 2026-10-16)
 	Windows.register("auction", AuctionWindow) -- 경매장(메뉴 · Y — 메이플 옥션 방식. 은달 항구의 경매사 앞에서 ↑로도)
 	Windows.register("bag", BagWindow)
 	Windows.register("equip", EquipWindow)
@@ -2077,6 +2491,24 @@ function Boot.start()
 	drawKeyHints()
 
 	Talk.init()
+	CineView.init(Overlay.root) -- 퀘스트 연출(장면): 세계를 덮는 것(대화창 아래) · 글 · 단추(대화창 위)
+	CineView.onEnd = function(def)
+		state.cineSeen[def.id] = true
+		Net.FireServer("Cine", "seen", def.id)
+		Net.FireServer("Cine", "off", nil)
+		Hud.root.Visible = Talk.npc == nil
+		if Touch.root then
+			Touch.root.Visible = Talk.npc == nil and Touch.on
+		end
+	end
+	-- 여러 사람이 말하는 대화의 이름표(「@id 」): hero = 내 캐릭터의 이름 · 주민 = 그 주민의 이름
+	Talk.nameOf = function(id: string)
+		if id == "hero" then
+			return state.myName
+		end
+		local a = CineView.npcArt(id)
+		return a and a.name
+	end
 	TutView.init(Stage.ui)
 	Talk.onFinish = function(npc)
 		if state.sceneKey == Tutorial.SCENE then
@@ -2102,6 +2534,9 @@ function Boot.start()
 	state.placeParty = placeParty
 	QuestHud.init(Hud.root)
 	BossView.init(Hud.root)
+	RiftView.init(Hud.root)
+	VoyageView.init(Hud.root)
+	VistaView.init(Hud.root)
 	Guide.init(Hud.root)
 	-- 전직해서 칸이 바뀌었다(서버가 윗차수의 사냥기 · 보스기를 앞 차수의 자리에 넣었다)
 	state.onJob = function(me)
@@ -2191,9 +2626,9 @@ function Boot.start()
 		if state.view then
 			state.view:setTalking(if npc then npc.id else nil)
 		end
-		Hud.root.Visible = npc == nil
+		Hud.root.Visible = npc == nil and not CineView.active() -- 장면이 도는 동안은 말이 끝나도 숨긴 채
 		if Touch.root then
-			Touch.root.Visible = npc == nil and Touch.on
+			Touch.root.Visible = npc == nil and Touch.on and not CineView.active()
 		end
 	end
 	-- 퀘스트가 바뀌면: 주민 머리 위의 표시 · 알리미 · 열려 있는 창
@@ -2215,6 +2650,110 @@ function Boot.start()
 		end
 	end)
 	state.fetchDaily() -- 들어온 캐릭터의 일일 의뢰(알리미 · 게시판 위의 표시)
+	-- 출석(2026-10-15): 그날 처음 들어왔으면(서버가 fresh로 알린다) 출석 창을 한 번 띄운다 — 꿈(튜토리얼) · 장면 연출 중에는 띄우지 않는다
+	state.fetchAttend = function()
+		task.spawn(function()
+			local ok, res = pcall(Net.Invoke, "Attend", "view")
+			if not ok or not res or not res.view then
+				return
+			end
+			state.attend = res.view
+			if res.fresh and state.sceneKey ~= Tutorial.SCENE and not CineView.active() and not Windows.isOpen("attend") then
+				Windows.open("attend")
+			elseif state.me then
+				Windows.refresh(state.me)
+			end
+		end)
+	end
+	state.fetchAttend()
+	Net.OnClient("AttendNew", function()
+		state.fetchAttend() -- 게임 중에 자정이 지나 칸이 찼다
+	end)
+	-- 업적 달성: 화면 위 가운데의 띠(길잡이의 큰 알림 — 노란 제목 「업적 달성 · 이름」 + 할 일 한 줄) · 소리는 없다(퀘스트 완료와 같다). 열린 업적 창은 다시 받아 온다
+	-- 2편의 도시 생활(2026-10-16): 서버가 준 상태를 얹는다 — 「우호」부터 열리는 퀘스트 · 달조각 · 숨은 이야기의 표시 · 창 · 메뉴의 점. note = 무슨 일이 있었나(알림 글)
+	state.setBond = function(view, note)
+		if typeof(view) ~= "table" then
+			return
+		end
+		local wasOpen = state.bond and state.bond.open
+		state.bond = view
+		if state.drawQuests then
+			state.drawQuests() -- 자리 · 달조각을 다시
+		end
+		local mark = Bond.ready(view) or (state.me ~= nil and ((state.me.attReady or 0) + (state.me.achReady or 0) > 0))
+		Hud.markMenu("more", mark)
+		Touch.markMenu(mark)
+		local body = state.body
+		if note and state.fx and body then
+			if note.kind == "shard" then
+				local have, total = 0, 0
+				for _, a in view.tome do
+					have += a.parts.shard[1]
+					total += a.parts.shard[2]
+				end
+				Music.sfx("secret3")
+				state.fx:float(Format.fill(Bond.DATA.tome.words.found, { a = have, b = total }), body.x, body.y - 60, Effects.MINT, 1.8)
+			elseif note.kind == "meet" and note.first then
+				Music.sfx("secret2")
+				Guide.banner(note.opens, "인사를 나눴다 — 이제 맡길 수 있다", 2.5) -- 만나면 열림(2026-10-16)
+			elseif note.kind == "open" then
+				Guide.banner(Bond.DATA.tome.words.title, "메뉴 → 「모험의 서」", 2.5)
+			end
+		end
+		if state.me then
+			Windows.refresh(state.me)
+		end
+	end
+	-- 배(2026-10-16 — sim/voyage.luau): 갑판에 올랐다 · 닿았다
+	Net.OnClient("Voyage", function(v)
+		if typeof(v) ~= "table" then
+			return
+		end
+		if v.arrived then
+			VoyageView.stop()
+			Guide.banner(Format.fill(Voyage.DATA.words.arrive, { dest = v.dest or "" }), "", 2.2)
+		elseif v.left then
+			VoyageView.start(v.left, v.dest or "")
+		end
+	end)
+	-- 수정 틈 토벌(2026-10-16): 방의 상태가 바뀌었다 · 완료의 보상
+	Net.OnClient("RiftView", function(view)
+		RiftView.set(view)
+		if view and view.state == "clear" then
+			Music.sfx("success")
+		end
+	end)
+	Net.OnClient("RiftPay", function(p)
+		RiftView.pay(p)
+		if state.rift and p then
+			state.rift.left = p.left or state.rift.left
+		end
+	end)
+	Net.OnClient("BondView", function(view, note)
+		state.setBond(view, note)
+	end)
+	Net.OnClient("AchDone", function(ids)
+		if typeof(ids) ~= "table" then
+			return
+		end
+		for _, id in ids do
+			local def = AchieveSim.BY[id]
+			if def then
+				Guide.banner(("%s · %s"):format(AchieveSim.WORDS.banner, def.name), def.text, 2.5)
+			end
+		end
+		if Windows.isOpen("achieve") then
+			task.spawn(function()
+				local ok, res = pcall(Net.Invoke, "Achieve", "view")
+				if ok and res and res.view then
+					state.ach = res.view
+					if state.me then
+						Windows.refresh(state.me)
+					end
+				end
+			end)
+		end
+	end)
 	-- 길찾기(알리미의 화살표 단추): 누른 퀘스트를 켜고(같은 것을 다시 누르면 끈다) 알리미를 다시 그린다. 화살표는 그리는 고리가 장마다 놓는다
 	state.naviArrow = NaviArrow.new()
 	QuestHud.onNavi = function(key: string)
@@ -2233,7 +2772,7 @@ function Boot.start()
 				-- 의뢰 게시판: 낼 의뢰가 있으면 「?」 · 안 받은 의뢰가 있으면 「!」
 				for region, board in Daily.DATA.boards do
 					if board.npc == npcId and board.scene == state.sceneKey then
-						return if level >= Daily.FROM and state.daily then Daily.mark(state.daily.boards[region]) else nil
+						return if level >= math.max(Daily.FROM, board.from or 0) and state.daily then Daily.mark(state.daily.boards[region]) else nil
 					end
 				end
 				return Quests.mark(state.quests, level, npcId, SCENES.scenes[state.sceneKey].region)
@@ -2250,6 +2789,7 @@ function Boot.start()
 		QuestHud.navi = state.navi
 		QuestHud.set(state.quests, state.npcNames, level, Daily.tracked(state.daily))
 		drawSpots() -- 맵에 놓인 것 앞에서 ↑를 누르는 퀘스트의 자리
+		drawShards() -- 달조각(2026-10-16)
 		Windows.refresh(state.me)
 	end
 
@@ -2429,6 +2969,8 @@ function Boot.start()
 		adopt(got)
 		state.daily = nil
 		state.fetchDaily() -- 바꿔 들어온 캐릭터의 일일 의뢰
+		state.attend, state.ach = nil, nil
+		state.fetchAttend() -- 출석 칸(오늘 처음이면 창이 뜬다 — 계정에 하루 한 번이라 대개는 이미 찼다)
 		Windows.resetLevel(got.self.level)
 		Input.reset()
 		Input.import(got.self.keys)
@@ -2469,7 +3011,7 @@ function Boot.start()
 		-- 길찾기의 화살표: 켜 둔 퀘스트의 지금 진행에 맞는 쪽을 머리 위에(쓰러졌거나 장면을 바꾸는 중에는 숨긴다)
 		if state.naviArrow then
 			local dirNow = nil
-			if state.navi and not state.dead and not state.busy and state.me then
+			if state.navi and not state.dead and not state.busy and state.me and not CineView.active() then -- 장면이 도는 동안은 화살표를 숨긴다
 				Navi.prepare(state.sceneKey) -- 이 맵의 발판과 길을 조금씩 잰다(다 재면 화살표가 발판을 따라 가리킨다)
 				if state.body.ground or state.naviDir == nil or state.naviScene ~= state.sceneKey then
 					local mobs = {}

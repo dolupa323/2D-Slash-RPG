@@ -90,7 +90,24 @@ function Passives.count(h, key: string, base: number): number
 end
 
 -- ---------- 주는 피해 ----------
--- 공격력에 늘 곱하는 것: 공격력 + · 최종 피해 + · 피의 계약(잃은 체력만큼)
+-- 공격력% (패시브의 「공격력 +」의 합 — 스탯 공격력의 공격력에 곱한다. 2026-10-15 스펙의 낱말)
+function Passives.atkPct(h): number
+	return sum(h, "atk")
+end
+-- 그 효과의 합(배운 패시브들의 fx[key] x 세기)
+function Passives.sumOf(h, key: string): number
+	return sum(h, key)
+end
+-- 최종 데미지의 배수(패시브의 「최종 데미지 +」 · 피의 계약 — 잃은 체력만큼)
+function Passives.finalMul(h): number
+	local mul = 1 + sum(h, "final")
+	local pact = sum(h, "pact")
+	if pact > 0 and h.maxHp > 0 then
+		mul *= 1 + pact * math.clamp(1 - h.hp / h.maxHp, 0, 1)
+	end
+	return mul
+end
+-- 공격력에 늘 곱하는 것: 공격력% · 최종 데미지 · 피의 계약(잃은 체력만큼) — 피해의 셈이 쓴다(= (1 + 공격력%) x 최종 데미지의 배수)
 function Passives.atk(h): number
 	local mul = (1 + sum(h, "atk")) * (1 + sum(h, "final"))
 	local pact = sum(h, "pact")

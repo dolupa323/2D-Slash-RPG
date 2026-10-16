@@ -16,6 +16,7 @@ local Passives = require(script.Parent.passives) -- 2~4차의 패시브
 local Lines = require(script.Parent.lines) -- 타수 나누기(한 타를 여러 줄로)
 local Quests = require(script.Parent.quests) -- 스토리 보스: 그 퀘스트를 하는 사람이 있을 때만 선다
 local BossPat = require(script.Parent.bosspat) -- 스토리 보스: 표시된 자리 · 도약 · 물결의 자리와 시간(화면과 같은 셈)
+local Rift = require(script.Parent.rift) -- 수정 틈 토벌(물결로 몰려오는 반복 던전 — 2026-10-16)
 local RULES = COMBAT.rules
 local CASTRULE = COMBAT.castRule
 local KIT = COMBAT.kit
@@ -60,6 +61,9 @@ function Room.new(key: string, scene, rng)
 		local kind = COMBAT.mobs[def.kind]
 		-- 피해 숫자의 배율(dmgScale)과 쓰임의 보정(targetBonus — 맞는 갈래의 기술은 피해가 그만큼 더 뜬다)만큼 체력도 크다: 맞는 기술로 잡는 타수는 그대로다
 		local maxHp = math.max(1, math.floor(N.mobHp(def.lv) * kind.hp * RULES.dmgScale * (1 + RULES.targetBonus / 100) + 0.5))
+		if def.elite then
+			maxHp *= Rift.DATA.elite.hp -- 토벌의 정예: 체력이 몇 배
+		end
 		local mob = {
 			id = #self.mobs + 1,
 			kind = def.kind,
@@ -83,6 +87,8 @@ function Room.new(key: string, scene, rng)
 			struck = false,
 			respawn = 0,
 			alt = if kind.fly then kind.fly.alt else nil, -- 나는 몬스터: 지금 땅에서 뜬 높이(덮칠 때 내려왔다 올라간다)
+			wave = def.wave, -- 토벌의 물결(그 물결이 올 때 나온다 — 쓰러지면 다시 나오지 않는다)
+			elite = def.elite, -- 토벌의 정예
 		}
 		if scene.story then
 			mob.state, mob.away = "gone", true -- 이야기의 방(사당 지하): 그 퀘스트를 하는 사람이 올 때까지 없다(Room:stepStory)
@@ -122,6 +128,9 @@ function Room.new(key: string, scene, rng)
 			end
 		end
 	end
+	if scene.rift then
+		Rift.start(self, Rift.tier(scene.rift)) -- 토벌의 방: 물결이 올 때까지 몬스터가 없다
+	end
 	return self
 end
 
@@ -150,6 +159,9 @@ end
 
 -- 졸개가 사람을 친다. 들어간 피해가 있으면 일(hurt)을 적는다.
 function Room:hurtHero(events, h, mob, mul: number)
+	if h.inCine then -- 퀘스트 연출이 도는 동안은 맞지 않는다(피하기 · 버티기도 굴리지 않는다)
+		return
+	end
 	-- 리븐의 날랜 몸: 확률로 피한다(맞을 수 있을 때만 굴린다 — 피한 뒤에도 맞은 뒤처럼 잠깐은 다시 맞지 않는다)
 	local dodge = Kit.dodge(h) + Passives.dodge(h) -- 흘리기(4차): 회피 +
 	if dodge > 0 and h.alive and h.invuln <= 0 and self.rng:NextNumber(0, 1) < dodge then
@@ -165,6 +177,9 @@ function Room:hurtHero(events, h, mob, mul: number)
 	-- 끼고 있는 방어구만큼 덜 아프다. 무니의 지키는 마음은 거기에 더 줄인다(제 수정 곁에서는 두 배). 버프(달의 축복 · 수정 방벽 · 달의 성역)도 줄인다
 	-- 패시브(굳센 자세 — 기술을 쓰는 동안에는 더 · 달궈진 몸 — 달아오름 동안)도 줄인다
 	local casting = (h.actUntil or 0) > self.time or self.caster:acting(h)
+	if mob.elite then
+		mul *= Rift.DATA.elite.hit -- 토벌의 정예는 더 세게 친다
+	end
 	local raw = N.rawHit("mob", mob.lv) * (1 - Hero.cut(h, mob.lv) / 100) * mul * Kit.cut(h, self:nearCrystal(h)) * Buffs.cut(h) * Passives.cut(h, casting)
 	-- 죽음의 가호: 쓰러질 피해를 한 번 버틴다(체력 1로 남는다)
 	if h.alive and h.invuln <= 0 and raw >= h.hp and Buffs.ward(h) then
@@ -222,7 +237,7 @@ function Room:stepMob(mob, heroes, dt: number, events)
 	elseif mob.state == "dead" then
 		if mob.t >= DEAD_TIME then
 			mob.state, mob.respawn = "gone", RULES.respawn
-			if mob.add then
+			if mob.add or mob.wave then -- 토벌의 물결의 몬스터도 다시 나오지 않는다
 				mob.away = true -- 불려 나온 졸개는 저절로 다시 나오지 않는다
 			end
 		end
@@ -802,6 +817,9 @@ function Room:step(heroes, dt: number)
 	end
 	if self.scene and self.scene.story then
 		self:stepStory(heroes)
+	end
+	if self.rift then
+		Rift.step(self, heroes, dt) -- 토벌: 물결 · 제한 시간
 	end
 	for _, mob in self.mobs do
 		-- 졸개에 걸린 것이 풀려 간다: bind 묶임 · bindImm 다시 묶이지 않는 시간 · stun 넘어짐 · rend 갈라짐(받는 피해 +)
@@ -1817,7 +1835,7 @@ end
 function Room:describe(heroId: any?)
 	local mobs, drops = {}, {}
 	for i, mob in self.mobs do
-		mobs[i] = { id = mob.id, kind = mob.kind, lv = mob.lv, y = mob.y, maxHp = mob.maxHp, name = mob.def.name, boss = mob.boss or nil }
+		mobs[i] = { id = mob.id, kind = mob.kind, lv = mob.lv, y = mob.y, maxHp = mob.maxHp, name = mob.def.name, boss = mob.boss or nil, elite = mob.elite or nil }
 	end
 	for _, d in self.drops do
 		if d.kind == "quest" and d.owner ~= heroId then
@@ -1829,7 +1847,7 @@ function Room:describe(heroId: any?)
 	for i, c in self.crystals do
 		crystals[i] = Room.crystalView(c, self.time)
 	end
-	return { key = self.key, mobs = mobs, drops = drops, crystals = crystals, snap = self:snapshot() }
+	return { key = self.key, mobs = mobs, drops = drops, crystals = crystals, snap = self:snapshot(), rift = Rift.view(self) }
 end
 
 return Room

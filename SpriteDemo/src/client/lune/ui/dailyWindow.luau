@@ -27,9 +27,9 @@ function DailyWindow.taskName(t): string
 	return Format.fill(W.kill, { name = t.name, n = t.n })
 end
 
-function DailyWindow.build(body: Frame, ctx, w: number, _h: number)
+function DailyWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 	local view = {}
-	local region = Daily.REGION
+	local region = if typeof(arg) == "string" and Daily.DATA.boards[arg] then arg else Daily.REGION -- 연 게시판의 지역(은달 항구 = 수정 숲 — 2026-10-16)
 	Ui.text(body, W.head, 0, 2, w, { color = C.gold })
 	Ui.text(body, W.reset, 0, 2, w, { align = "right", color = C.dim })
 	local rows = {}

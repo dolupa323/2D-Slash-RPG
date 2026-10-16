@@ -42,6 +42,7 @@ end
 local function hero(class: string, skills)
 	local h = Hero.new(1, class)
 	h.level = 60
+	h.dmgBoost = 50 -- (2026-10-15: 새 스펙에서 Lv.1 차림의 피해 숫자가 작아 반올림이 커서 키워 잰다 — 관리자의 시험용 배율과 같은 것)
 	h.skills = {}
 	for id, lv in skills do
 		h.skills[id] = lv

@@ -71,11 +71,13 @@ function Sheet.values(me)
 	if not s then
 		return out
 	end
-	out.atk = ("%s ~ %s"):format(num(s.atk[1]), num(s.atk[2]))
+	out.atk = ("%s ~ %s"):format(num(s.atk[1]), num(s.atk[2])) -- 스탯 공격력
 	out.power = Format.short(me.power)
 	out.maxHp = num(me.maxHp)
+	out.attack = num(s.attack or 0) -- 공격력(무기 x 공격력% — 2026-10-15)
+	out.def = num(s.def or 0) -- 방어력(방어구의 합)
 	for _, id in STATS.order do
-		out[id] = tostring(STATS.base + (me.stats[id] or 0))
+		out[id] = tostring(if s.stats then s.stats[id] else STATS.base + (me.stats[id] or 0)) -- 처음 4 + 찍은 점수 + 장비의 올스탯
 	end
 	-- 두 칸짜리 줄의 %는 정수로(가장 작은 화면에서 칸이 78점 — 소수까지 적으면 넘친다)
 	local function i(v: number): string
@@ -87,7 +89,7 @@ function Sheet.values(me)
 	out.dmg = "+" .. i(math.max(0, s.dmg)) .. "%"
 	out.final = "+" .. i(math.max(0, s.final)) .. "%"
 	out.haste = "+" .. i(math.max(0, s.haste)) .. "%"
-	out.cut = if s.cut >= 0.5 then "-" .. i(s.cut) .. "%" else "0%"
+	out.cut = i(math.max(0, s.cut)) .. "%" -- 받는 피해 감소(방어력 · 버프 · 패시브 — 2026-10-15: 「받는 피해 -n%」에서 「받는 피해 감소 n%」로)
 	out.run = i(s.run) .. "%"
 	out.jump = i(s.jump) .. "%"
 	return out

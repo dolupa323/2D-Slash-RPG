@@ -218,7 +218,7 @@ function Windows.open(id: string, arg: any, force: boolean?)
 	end
 	local w, h = Ui.windowSize(bw, bh)
 	local holder = Stage.place(root, "Window_" .. id, "tr", 0, TOP, w, h)
-	local win = Ui.window(holder, if def.title then def.title(arg) else def.name, 0, 0, w, h, function()
+	local win = Ui.window(holder, (if def.title then def.title(arg) else nil) or def.name, 0, 0, w, h, function() -- title이 nil이면 공방의 이름
 		Windows.close(id)
 	end)
 	local view = def.build(win.body, ctx, win.w, win.h, arg)

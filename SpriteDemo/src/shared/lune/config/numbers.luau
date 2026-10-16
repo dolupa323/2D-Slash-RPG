@@ -3,7 +3,7 @@
 --  tools/test/tests/11_lune_numbers.luau가 공방에서 셈한 값(checks)과 맞춰 본다.
 local D = require(script.Parent.Parent.data["numbers.generated"])
 
-local C, POWER, BODY, STATS = D.CURVE, D.POWER, D.BODY, D.STATS
+local C, POWER, BODY, STATS, SPEC = D.CURVE, D.POWER, D.BODY, D.STATS, D.SPEC
 local MAX = D.MAX_LEVEL
 
 local N = {}
@@ -43,8 +43,38 @@ function N.easeAt(L: number): number
 	local e = C.ease
 	return if L >= e.upto then 1 else e.from + (1 - e.from) * (L - 1) / (e.upto - 1)
 end
+-- ---- 스펙(2026-10-15 — 공방 numbers.js 2-1의 SPEC: 메이플의 스탯 공격력 방식) ----
+--  스탯 공격력 = (주스탯 x 4 + 부스탯) x 공격력 / 100 (그 위에 공격력% · 데미지% · 최종 데미지%를 곱한다 — sim/hero.luau)
+function N.weaponAtk(stage: number): number -- 무기의 기본 공격력(보통)
+	return SPEC.weapon.atk0 + SPEC.weapon.atk1 * stage
+end
+function N.armorStat(stage: number): number -- 방어구의 기본 올스탯(보통)
+	return SPEC.armor.stat0 + SPEC.armor.stat1 * stage
+end
+function N.armorDef(stage: number): number -- 방어구의 기본 방어력(보통)
+	return SPEC.armor.def0 + SPEC.armor.def1 * stage
+end
+-- 별 n개가 기본 옵션에 붙인 %(kind = "weapon" | "armor" — 장신구도 방어구의 셈): 1~15성은 별마다 star[1], 16성부터 star[2]
+function N.starPct(kind: string, star: number): number
+	local pcts = if kind == "weapon" then SPEC.star.weapon else SPEC.star.armor
+	local k = SPEC.star.from - 1
+	return pcts[1] * math.min(star, k) + pcts[2] * math.max(0, star - k)
+end
+function N.statAtk(main: number, sub: number, atk: number): number
+	return (SPEC.main * main + SPEC.sub * sub) * atk / 100
+end
+-- 그 레벨의 기준 스탯 공격력: 같은 레벨 보통 무기 + 방어구 넷(별 없음) · 찍은 점수를 다 주스탯에
+function N.refAttack(L: number): number
+	local all = 4 * N.armorStat(L)
+	return N.statAtk(STATS.base + STATS.perLevel * (L - 1) + all, STATS.base + all, N.weaponAtk(L))
+end
+-- 받는 피해 감소 %: def = 끼고 있는 방어구의 방어력 합(같은 레벨 방어구 넷 = 30%)
+function N.cutOf(def: number, mobLv: number): number
+	return SPEC.cut.max * def / (def + 4 * N.armorDef(mobLv))
+end
+-- 일반 몬스터의 체력 = 7.5 x 그 레벨의 기준 스탯 공격력 x ease(2026-10-15 — 기준 차림으로 몬스터 하나에 드는 타수가 예전과 같다)
 function N.mobHp(L: number): number
-	return round(C.hp0 * C.hpR ^ L * N.easeAt(L))
+	return round(SPEC.hpK * N.refAttack(L) * N.easeAt(L))
 end
 function N.xpNeed(L: number): number -- 다음 레벨까지 필요한 경험치
 	return N.killsAt(L) * N.mobXp(L)
@@ -96,13 +126,13 @@ function N.hpOf(class: string, L: number, toHp: number?): number
 	return round(N.baseHp(L) * BODY.classHp[class] * (1 + (toHp or 0) * STATS.hpPerPoint / 100))
 end
 -- 능력치 1점의 효과 — 능력치 창에서 능력치에 마우스를 올리면 보여 주는 값(공방 numbers.js의 statGain과 같은 식).
---  main · sub = 주 · 부 능력치 1점이 전투력에 더하는 값(전투력 식의 "레벨 몫"이 능력치 효율에 곧게 비례하므로 장비와 상관없이 같다) · hp = 체력 1점이 최대 체력에 더하는 값
-function N.statGain(class: string, L: number)
-	local k = POWER.base * POWER.levelShare * POWER.grow ^ L / N.statAttack(STATS.base + N.apAt(L), STATS.base)
-	return { main = STATS.mainW * k, sub = STATS.subW * k, hp = N.baseHp(L) * BODY.classHp[class] * STATS.hpPerPoint / 100 }
+--  2026-10-15부터: main · sub = 주스탯 · 부스탯 1점이 스탯 공격력에 더하는 값(= 4 · 1 x 공격력 / 100 — atk = 지금 낀 무기의 공격력, 안 주면 그 레벨의 기준 무기) · hp = 체력 1점이 최대 체력에 더하는 값
+function N.statGain(class: string, L: number, atk: number?)
+	local a = atk or N.weaponAtk(L)
+	return { main = SPEC.main * a / 100, sub = SPEC.sub * a / 100, hp = N.baseHp(L) * BODY.classHp[class] * STATS.hpPerPoint / 100 }
 end
-function N.armorCut(armorLv: number, mobLv: number): number -- 방어구가 줄여 주는 피해 %
-	return math.max(BODY.armor.min, math.min(BODY.armor.max, BODY.armor.same + BODY.armor.per10 * (armorLv - mobLv) / 10))
+function N.armorCut(armorLv: number, mobLv: number): number -- 방어구 네 부위가 모두 그 단계(보통 · 별 없음)일 때 받는 피해 감소 %
+	return N.cutOf(4 * N.armorDef(armorLv), mobLv)
 end
 -- 한 방의 크기. kind = mob 일반 몬스터 · field 필드 보스 · lieutenant 부관 · boss · big · wipe
 function N.hitOf(kind: string, mobLv: number, armorLv: number?): number

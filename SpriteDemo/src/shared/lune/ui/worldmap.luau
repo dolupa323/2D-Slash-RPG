@@ -6,6 +6,21 @@ local SCENES = require(script.Parent.Parent.data["scenes.generated"])
 local COMBAT = require(script.Parent.Parent.data["combat.generated"])
 local Quests = require(script.Parent.Parent.sim.quests)
 local Navi = require(script.Parent.navi) -- 퀘스트 길찾기(켠 퀘스트가 있으면 「가는 길」이 그것을 따른다)
+local Voyage = require(script.Parent.Parent.sim.voyage) -- 배(초승달 마을 ↔ 은달 항구 — 2026-10-16)
+
+-- 그 장면에서 한 걸음에 닿는 곳: 문들 + 배(선장에게 말을 걸면 닿는 곳 · 갑판 위면 닿는 곳 — 문이 아니라 { to, ship = true }).
+--  사용자 2026-10-16 "왜 대도시로 넘어갈때 배타는건 구현을 안합니까 왜 그냥 포탈이에요" — 마을 ↔ 항구는 문이 없다. 지도의 길 · 이어지는 곳은 배도 길로 친다
+local function hopsOf(key: string)
+	local out = table.clone(SCENES.scenes[key].portals or {})
+	for _, r in Voyage.routesFrom(key) do
+		table.insert(out, { to = r.to, ship = true, need = r.need })
+	end
+	local onShip = Voyage.onShip(key)
+	if onShip then
+		table.insert(out, { to = onShip.to, ship = true })
+	end
+	return out
+end
 
 local WM = {}
 WM.data = D
@@ -52,6 +67,7 @@ function WM.nodeOf(sceneKey: any): (string?, string?)
 	if typeof(sceneKey) ~= "string" or not SCENES.scenes[sceneKey] then
 		return nil, nil
 	end
+	sceneKey = string.match(sceneKey, "^(.-)#%d+$") or sceneKey -- 토벌의 방(rf1#3) = 그 장면(rf1) — 캐시가 방마다 쌓이지 않게(2026-10-16)
 	local hit = nodeCache[sceneKey]
 	if hit ~= nil then
 		if hit == false then
@@ -71,7 +87,7 @@ function WM.nodeOf(sceneKey: any): (string?, string?)
 		end
 		-- 퀘스트를 받아야 열리는 문(need — 달의 사당 안의 「사당 지하」)은 늘 열린 문 다음에 따라간다: 사당 안은 지하가 아니라 마을의 마디다
 		local next, gated = {}, {}
-		for _, p in SCENES.scenes[key].portals or {} do
+		for _, p in hopsOf(key) do
 			if SCENES.scenes[p.to] and not seen[p.to] then
 				seen[p.to] = true
 				table.insert(if p.need or p.done then gated else next, p.to)
@@ -230,7 +246,7 @@ function WM.exits(rid: string)
 	local region = D.regions[rid]
 	for _, n in (if region then region.nodes else {}) do
 		for _, key in n.scenes do
-			for _, p in SCENES.scenes[key].portals or {} do
+			for _, p in hopsOf(key) do
 				local to = D.sceneNode[p.to]
 				if to and to.region ~= rid and not seen[n.id .. ">" .. to.region] then
 					seen[n.id .. ">" .. to.region] = true
@@ -262,7 +278,7 @@ function WM.exitsOf(rid: string, nodeId: string)
 end
 
 -- 마디 아래에 적는 줄들(그림): 짧은 이름 · 몬스터의 레벨(있으면) · 이어지는 지역마다 「→ 은달 항구」. { { text, kind = "name" | "level" | "exit", exit? } … }
-WM.ROWS_MAX = 4 -- 마디 아래에 적는 줄의 끝(이름 + 이어지는 지역 셋 — 은달 항구의 부두: 수정 숲 · 물마루 바다 · 초승 고개. 2026-10-13에 셋 → 넷)
+WM.ROWS_MAX = 5 -- 마디 아래에 적는 줄의 끝(이름 + 이어지는 지역 넷 — 은달 항구 한 장: 초승 고개(배) · 수정 숲 · 땅속 화롯골(비행선) · 물마루 바다. 2026-10-13에 셋 → 넷, 2026-10-16 도시를 한 장으로 합쳐 넷 → 다섯)
 function WM.rows(rid: string, node)
 	local rows = { { text = node.label, kind = "name" } }
 	local lv = WM.levelText(node)
@@ -286,7 +302,7 @@ function WM.path(from: any, to: any): { string }?
 	while queue[at] and not prev[to] do
 		local key = queue[at]
 		at += 1
-		for _, p in SCENES.scenes[key].portals or {} do
+		for _, p in hopsOf(key) do
 			if SCENES.scenes[p.to] and not prev[p.to] then
 				prev[p.to] = key
 				table.insert(queue, p.to)
@@ -404,6 +420,14 @@ function WM.regionLevels(rid: string): string
 end
 
 -- 장소 하나를 고르면 오른쪽 글 칸에 적는 것: { name(이름), sub(「사냥터 · Lv.14~15」), mobs(「폭탄병 · 바위 산양」), npcs(「주모 달래 · 반달」) }
+-- 사람 이름들을 한 줄의 글로 — cap명이 넘으면 앞의 cap명과 「외 n명」(큰 도시 — 은달 항구는 건물 안까지 스물 남짓)
+WM.CARD_PEOPLE = 9 -- 오른쪽 글 칸(두 줄 · 190점)에 적는 사람의 수
+function WM.peopleLine(names: { string }, cap: number): string
+	if #names <= cap then
+		return table.concat(names, " · ")
+	end
+	return table.concat(table.move(names, 1, cap, 1, {}), " · ") .. (" 외 %d명"):format(#names - cap)
+end
 function WM.card(rid: string, nodeId: string)
 	local n = WM.node(rid, nodeId)
 	if not n then
@@ -416,7 +440,7 @@ function WM.card(rid: string, nodeId: string)
 		sub = if lv ~= "" then ("%s · %s"):format(kind, lv) else kind,
 		link = WM.linkText(rid, nodeId),
 		mobs = table.concat(WM.mobNames(n), " · "),
-		npcs = table.concat(WM.npcNames(rid, nodeId), " · "),
+		npcs = WM.peopleLine(WM.npcNames(rid, nodeId), WM.CARD_PEOPLE),
 	}
 end
 
@@ -653,6 +677,7 @@ function WM.goalCard(book, level: number, sceneKey: any, navi: any, daily: any)
 end
 
 -- 마디 하나를 고르면 아래에 적는 두 줄: 「굽잇길 · 사냥터 · Lv.14~15」 / 「폭탄병 · 고갯길 염소」(주민이 있으면 「주민: 달래 · 반달」)
+WM.INFO_PEOPLE = 10 -- 아래 둘째 줄에 적는 주민의 수(넘으면 「외 n명」)
 function WM.info(rid: string, nodeId: string): (string, string)
 	local n = WM.node(rid, nodeId)
 	if not n then
@@ -669,6 +694,11 @@ function WM.info(rid: string, nodeId: string): (string, string)
 		table.insert(parts, table.concat(mobs, " · "))
 	end
 	local people = WM.npcNames(rid, nodeId)
+	if #people > WM.INFO_PEOPLE then -- 큰 도시(은달 항구 — 사람 스물 남짓)는 앞의 몇 사람과 「외 n명」(창의 폭 620에 든다)
+		local more = #people - WM.INFO_PEOPLE
+		people = table.move(people, 1, WM.INFO_PEOPLE, 1, {})
+		table.insert(people, ("외 %d명"):format(more))
+	end
 	if #people > 0 then
 		table.insert(parts, "주민: " .. table.concat(people, " · "))
 	end

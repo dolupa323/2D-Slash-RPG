@@ -143,8 +143,12 @@ for _, kind in kinds do
 				expect(c == p.clip and f == a.hit and stand == false, ("%s %s: 예고의 끝 = 치기 바로 앞의 장(%s %d)"):format(kind, p.id, c, f))
 				c, f = BossFx.body("tell", p, 0, 0, clips, anim, nil)
 				eq(f, 1, ("%s %s: 예고의 처음 = 첫 장"):format(kind, p.id))
-				c, f = BossFx.body("tell", p, p.tell - 0.12, 0, clips, anim, nil)
-				eq(f, a.hit - 1, ("%s %s: 예고의 끝 가까이 = 다 치켜든 자세에서 멈춰 있다(휘두르는 도중의 장에서 멈추지 않는다)"):format(kind, p.id))
+				-- swing = 예고의 끝에 차례로 보여 주는 휘두르는 도중의 장 수(공방 bosses.js의 BOSS_SHEET — 2026-10-15 성벽 거인 · 쇠사슬 간수의 내려치기는 둘). 없으면 하나
+				local s = a.swing or 1
+				c, f = BossFx.body("tell", p, p.tell - s / anim.fps - 0.02, 0, clips, anim, nil)
+				eq(f, a.hit - s, ("%s %s: 예고의 끝 가까이 = 다 치켜든 자세에서 멈춰 있다(휘두르는 도중의 장에서 멈추지 않는다)"):format(kind, p.id))
+				c, f = BossFx.body("tell", p, p.tell - s / anim.fps + 0.001, 0, clips, anim, nil)
+				eq(f, a.hit - s + 1, ("%s %s: 휘두르는 도중의 첫 장이 예고의 마지막 %d장 시간에 온다"):format(kind, p.id, s))
 				c, f = BossFx.body("act", p, 0, 0, clips, anim, nil)
 				eq(f, a.hit + 1, ("%s %s: 치는 순간 = 무기가 닿는 장"):format(kind, p.id))
 				c, f = BossFx.body("act", p, p.act, 0, clips, anim, nil)

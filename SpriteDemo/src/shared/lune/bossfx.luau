@@ -158,7 +158,7 @@ function BossFx.jump(fx, who: string, p, x: number, y: number)
 	end
 end
 
--- 체력 구간의 포효(「봉화를 올린다」 · 「늑대의 포효」): 몸의 뒤에서 솟는 그림 + 긴 흔들림. S = 그 보스의 싸움 자료
+-- 체력 구간의 포효(「불씨가 타오른다」 · 「간수의 포효」): 몸의 뒤에서 솟는 그림 + 긴 흔들림. S = 그 보스의 싸움 자료
 function BossFx.roar(fx, who: string, S, x: number, y: number, shake: ((number, number) -> ())?)
 	if S.phase and S.phase.fx then
 		fx.sprite(who, S.phase.fx, x, y, 1, { back = true })
@@ -258,12 +258,14 @@ function BossFx.body(state: string, p, t: number, now: number, clips, anim, tail
 	end
 	local a = if p and not p.dash and clips[p.clip] and anim then anim[p.clip] else nil
 	if state == "tell" and a then
-		-- 치기 바로 앞의 장(hit-1 — 휘두르는 도중)은 예고의 마지막 한 장 시간에만. 그 앞까지는 제 빠르기로 틀고 다 치켜든 자세(hit-2)에서 멈춰 기다린다
-		local lead = 1 / fps
+		-- 치기 바로 앞의 s장(hit-s ~ hit-1 — 휘두르는 도중)은 예고의 마지막 s장 시간에만 차례로. 그 앞까지는 제 빠르기로 틀고 다 치켜든 자세(hit-s-1)에서 멈춰 기다린다
+		--   swing = 휘두르는 도중의 장 수(공방 design/bosses.js의 BOSS_SHEET — 성벽 거인 · 쇠사슬 간수의 내려치기는 둘). 없으면 하나
+		local s = a.swing or 1
+		local lead = s / fps
 		if t >= p.tell - lead then
-			return p.clip, a.hit, false
+			return p.clip, min(a.hit - 1, a.hit - s + floor((t - (p.tell - lead)) * fps)) + 1, false
 		end
-		return p.clip, min(a.hit - 2, floor(t * max(fps, (a.hit - 1) / (p.tell - lead)))) + 1, false
+		return p.clip, min(a.hit - s - 1, floor(t * max(fps, (a.hit - s) / (p.tell - lead)))) + 1, false
 	elseif state == "act" and a then
 		return p.clip, min(a.to, a.hit + floor(t * fps)) + 1, false
 	elseif state == "dash" and clips.run then

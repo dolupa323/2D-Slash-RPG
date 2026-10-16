@@ -51,20 +51,20 @@ do
 	Quests.accept(book, 1, "r1m1")
 	eq(#Quests.guide(book, 1, NAMES), 0, "첫 퀘스트를 하는 중에는 길잡이가 없다(하는 일이 알리미에 있다)")
 	done(book, "r1m1")
-	-- (2026-10-13: 퀘스트는 한 줄이다 — 첫 기술 → 등불 심지 → 마을 밖의 그림자 … 길잡이는 줄의 다음 것 하나만 적는다. 알리미는 이제 길잡이를 띄우지 않는다 — 퀘스트 창의 「시작 가능」이 쓴다)
-	local g = Quests.guide(book, 2, NAMES)
+	-- (2026-10-13: 퀘스트는 한 줄이다 — 첫 기술 → 마을 밖의 그림자 → 빈 갑옷 …(2026-10-15 간소화로 「등불 심지」를 뺐다). 길잡이는 줄의 다음 것 하나만 적는다)
+	local g = Quests.guide(book, 3, NAMES)
 	eq(g[1].kind, "open", "첫 기술을 끝내면 줄의 다음 것을 받을 수 있다고 적는다")
-	eq(g[1].title, "! 등불 심지", "줄의 다음 것의 이름")
+	eq(g[1].title, "! 마을 밖의 그림자", "줄의 다음 것의 이름")
 	eq(g[1].line, "샛별에게 받는다 · 초승달 마을", "누구에게 · 어디서")
 	eq(#g, 1, "하나만 적는다(한 번에 받을 수 있는 것은 하나다)")
 	-- 레벨이 모자라면 그 레벨을 적는다
-	Quests.accept(book, 2, "r1s1")
-	eq(#Quests.guide(book, 2, NAMES), 0, "하는 중에는 다음 것을 적지 않는다")
-	done(book, "r1s1")
 	g = Quests.guide(book, 2, NAMES)
 	eq(g[1].kind, "level", "줄의 다음 것(마을 밖의 그림자)이 레벨 때문에 잠겨 있다")
 	eq(g[1].line, "Lv.3부터 받는다", "몇 레벨부터인지 적는다")
-	eq(#g, 1, "받을 부탁이 따로 쌓이지 않는다")
+	Quests.accept(book, 3, "r1m2")
+	eq(#Quests.guide(book, 3, NAMES), 0, "하는 중에는 다음 것을 적지 않는다")
+	done(book, "r1m2")
+	eq(#Quests.guide(book, 4, NAMES), 1, "받을 부탁이 따로 쌓이지 않는다")
 	-- 주는 주민이 선 곳: 그 퀘스트의 지역 안에서, 몬스터가 없는 맵을 먼저
 	eq(Quests.giverPlace(Quests.def("r1m3")), "촌장의 집", "촌장은 제 집 안에 있다")
 	eq(Quests.giverPlace(Quests.def("r1m6")), "수비대 야영지", "차돌은 야영지에 있다")
@@ -87,11 +87,11 @@ do
 	local order = {}
 	local line = {}
 	for _, def in Quests.list do
-		if def.region == "r1" and def.kind == "main" then
+		if def.region == "r1" and def.kind == "main" and not def.city then -- (2편의 「큰 항구로」는 줄 밖 — 2026-10-16)
 			table.insert(line, def.id) -- 줄의 차례(자료의 차례)
 		end
 	end
-	eq(#line, 20, "1지역의 줄 스물(2026-10-14 — 망루 3층의 「굴러다니는 투구」를 더했다)")
+	eq(#line, 14, "1지역의 줄 열넷(2026-10-15 간소화 — 같은 몬스터를 두 번 잡는 것을 뺐다)")
 	for _, id in line do
 		local def = Quests.def(id)
 		expect(def ~= nil and def.playable, "1지역의 메인을 할 수 있다 " .. id)
@@ -139,9 +139,11 @@ do
 	expect(table.find(Quests.atNpc(book, 30, "master", "r1").offer, "job2") ~= nil and table.find(Quests.atNpc(book, 30, "master", "r3").offer, "job2") ~= nil, "사제는 전직 퀘스트를 어디서든 준다")
 	local job = Quests.jobQuest(2)
 	expect(job ~= nil and job.lv == 30 and job.endNpc == "master", "2차 전직 퀘스트는 Lv.30 · 사제에게")
-	eq(Quests.jobQuest(3), nil, "3차 전직 퀘스트는 아직 없다(레벨만 되면 오른다)")
+	local job3 = Quests.jobQuest(3) -- 3차 전직(2026-10-16 — 2편의 끝): Lv.60 · 사제에게 · 종탑의 종지기
+	expect(job3 ~= nil and job3.lv == 60 and job3.endNpc == "master" and job3.scene == "r2c3" and job3.reward.job == 3, "3차 전직 퀘스트는 Lv.60 · 사제에게 · 수정 성당 종탑")
+	eq(Quests.jobQuest(4), nil, "4차 전직 퀘스트는 아직 없다(레벨만 되면 오른다)")
 	local main, why = Quests.nextMain(book, 30)
-	expect(main ~= nil and main.id == "r2m1" and why == "open", "Lv.30이면 2지역의 첫 메인을 받을 수 있다")
+	expect(main ~= nil and main.id == "cq01" and why == "open", "Lv.30이면 은달 항구로 가는 메인(「큰 항구로」 — 2026-10-16)을 받을 수 있다")
 	-- 부탁: 1지역의 열을 모두 할 수 있다(2026-10-13 — 사용자: "부탁퀘스트 필요합니다." 남아 있던 하나 「묵은 도토리」는 굴의 주인을 불러내는 퀘스트였는데, 고갯마루 노인의 사냥 부탁(굴 두더지 스물)으로 고쳤다)
 	local sides = 0
 	for _, def in Quests.list do
@@ -149,7 +151,7 @@ do
 			sides += 1
 		end
 	end
-	eq(sides, 11, "1지역의 옛 부탁 열하나(이제 줄의 걸음이다)를 모두 할 수 있다")
+	eq(sides, 5, "1지역의 옛 부탁 가운데 다섯이 줄의 걸음이다(2026-10-15 간소화 — 여섯은 뺐다)")
 end
 
 -- ---- 4) 조작 안내의 글 ----
@@ -194,7 +196,7 @@ do
 	check(s, "사당 밖으로", "사당 안: 나가는 법")
 	s.scene = "town"
 	check(s, "샛별", "마을: 뛰는 법 · 내려가는 법 · 샛별이 있는 곳")
-	expect(Quests.accept(s.quests, 2, "r1s1"), "줄의 다음 것(등불 심지 — 첫 사냥)을 받는다")
+	expect(Quests.accept(s.quests, 3, "r1m2"), "줄의 다음 것(마을 밖의 그림자 — 첫 사냥)을 받는다")
 	check(s, "마을 어귀", "퀘스트를 받았다: 나가는 문")
 	s.scene = "r1a1"
 	check(s, "수습 검병", "사냥터: 기술")
@@ -218,7 +220,7 @@ do
 	--  ① 처음 점수를 받은 Lv.2가 지나면 능력치 · 스킬을 찍으라는 글은 뜨지 않는다
 	s = base()
 	done(s.quests, "r1m1")
-	s.quests.r1s1 = { done = false, c = { 0 } }
+	s.quests.r1m2 = { done = false, c = { 0 } }
 	s.level, s.ap, s.sp, s.scene = 3, 5, 3, "r1a1"
 	for _, touch in { false, true } do
 		s.touch = touch
@@ -228,7 +230,7 @@ do
 	--  ② 첫 사냥 퀘스트를 돌려준 뒤로는 어떤 안내도 뜨지 않는다(점수가 남아도 · 주울 것이 있어도 · 체력이 낮아도)
 	s = base()
 	done(s.quests, "r1m1")
-	done(s.quests, "r1s1")
+	done(s.quests, "r1m2")
 	for _, level in { 2, 3, 4, 5 } do
 		s.level, s.ap, s.sp, s.scene, s.drop, s.hpShare, s.potions = level, 5, 3, "r1a1", true, 0.2, 10
 		for _, touch in { false, true } do
@@ -275,7 +277,6 @@ do
 	expect(height > QuestHud.HEAD and height <= QuestHud.H, "판의 높이는 칸 안")
 	-- 메인 하나를 하는 중 + 받을 수 있는 부탁
 	book.r1m1.done = true
-	book.r1s1 = { done = true, c = {} }
 	expect(Quests.accept(book, 3, "r1m2"), "줄의 다음 것을 받는다")
 	rows, height, shown, guided = QuestHud.layout(book, names, 3)
 	local step = nil
@@ -305,7 +306,7 @@ do
 			expect(pixelText.Measure(def.name, "body") <= nameW, ("퀘스트 이름이 판에 들어간다 %s(%d)"):format(def.name, pixelText.Measure(def.name, "body")))
 			for _, st in def.steps do
 				local label, count = QuestHud.split(Quests.trackText(st, st.n))
-				expect(count ~= nil, "할 일의 글 끝에 숫자가 있다 " .. def.name)
+				expect(count ~= nil or st.type == "visit" or st.type == "meet", "할 일의 글 끝에 숫자가 있다 " .. def.name) -- 「들르기」 · 「만나기」는 숫자 대신 ✓(2026-10-16)
 				expect(pixelText.Measure(label, "small") <= stepW, ("할 일의 글이 판에 들어간다 %s — %s(%d)"):format(def.name, label, pixelText.Measure(label, "small")))
 				expect(pixelText.Measure(count or "", "small") <= QuestHud.COUNT_W, "숫자가 제 칸에 들어간다 " .. def.name)
 			end

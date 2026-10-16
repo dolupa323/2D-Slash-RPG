@@ -16,11 +16,26 @@ end
 for _, c in C.names do
 	eq(Items.name(c[1]), c[2], "이름 " .. c[2])
 end
-for _, c in C.score do
-	near(Items.score(c[1]), c[2], "점수 " .. Items.name(c[1]))
+-- 장비의 옵션(2026-10-15 스펙 — 공방 items.js의 gearOpt): 기본 옵션 · 별까지 붙은 옵션
+for _, c in C.opt do
+	local o = Items.options(c[1])
+	for _, part in { "base", "total" } do
+		for k, v in c[2][part] do
+			eq(o[part][k], v, ("옵션 %s %s %s"):format(Items.name(c[1]), part, k))
+		end
+		for k in o[part] do
+			expect(c[2][part][k] ~= nil, ("옵션 %s: 공방에 없는 %s"):format(Items.name(c[1]), k))
+		end
+	end
 end
-for _, c in C.power do
-	eq(Items.power(c[1], c[2], c[3]), c[4], ("전투력 Lv.%d 효율 %s 장비 %d"):format(c[1], tostring(c[2]), #c[3]))
+-- 그 레벨 · 그 차림의 스펙과 전투력(찍은 점수는 다 주스탯 · 패시브 없이 — shared/lune/ui/itemInfo.luau의 specOf)
+local Info = req("ReplicatedStorage/shared/lune/ui/itemInfo")
+for _, c in C.spec do
+	local sp = Info.specOf(c[1], c[2])
+	eq(sp.main, c[3].main, ("스펙 Lv.%d 장비 %d 주스탯"):format(c[1], #c[2]))
+	eq(sp.sub, c[3].sub, ("스펙 Lv.%d 장비 %d 부스탯"):format(c[1], #c[2]))
+	eq(sp.atk, c[3].atk, ("스펙 Lv.%d 장비 %d 공격력"):format(c[1], #c[2]))
+	near(N.statAtk(sp.main, sp.sub, sp.atk) * sp.k, c[4], ("전투력 Lv.%d 장비 %d"):format(c[1], #c[2]))
 end
 for _, c in C.cut do
 	near(Items.cut(c[1], c[2]), c[3], ("방어 장비 %d · 몬스터 Lv.%d"):format(#c[1], c[2]))
@@ -43,9 +58,7 @@ end
 for _, c in C.dismantle do
 	eq(Items.dismantle(c[1]), c[2], "분해 " .. Items.name(c[1]))
 end
-for _, c in C.transfer do
-	eq(Items.transfer({ star = c[1], stage = c[2] }, { star = c[3], stage = c[4] }), c[5], ("별 옮기기 %d성(단계 %d) → %d성(단계 %d)"):format(c[1], c[2], c[3], c[4]))
-end
+expect(Items.transfer == nil, "별 옮기기는 없다(2026-10-15)")
 for _, c in C.stockPrice do
 	for i, L in { 1, 29, 30, 60, 100 } do
 		eq(Items.stockPrice(Items.stock(c[1]), L), c[2][i], ("상점 값 %s Lv.%d"):format(c[1], L))
@@ -209,12 +222,9 @@ end
 eq(Bag.buy(b, "nothing", 1), nil, "없는 물건")
 expect(Bag.buy(b, "a1_hat", 1), "Lv.1 모자")
 eq(b.gear[1].q, D.NORMAL, "상점의 것은 늘 보통")
-ok, why = Bag.buy(b, "w10", 1)
-expect(not ok and string.find(why, "Lv.10") ~= nil, "Lv.10 무기는 Lv.10부터")
+eq(Bag.buy(b, "w10", 1), nil, "대장장이가 팔던 Lv.10 무기는 없다(2026-10-15 — 대장장이는 제작 · 강화만)")
 b.level = 10
-expect(Bag.buy(b, "w10", 1), "Lv.10 무기")
-eq(b.gear[2].who, "salamander", "내 직업의 무기를 판다")
-eq(b.gear[2].stage, 10, "Lv.10")
+eq(Items.stock("dust").npc, "merchant", "달가루는 잡화 상인이 판다")
 expect(Bag.buy(b, "dust", 50), "달가루 쉰 개")
 eq(b.dust, 50, "달가루가 는다")
 
@@ -261,7 +271,7 @@ ok, why = Bag.enhance(f, w.id, rng)
 expect(not ok and why == "달가루가 모자란다", "달가루가 없으면 못 한다")
 f.dust = 1e9
 local tries, oks = 0, 0
-while w.star < Items.starCap(20) and tries < 500 do
+while w.star < 10 and tries < 500 do
 	local star0, dust0 = w.star, f.dust
 	local info = Items.enhanceInfo(w)
 	local result = Bag.enhance(f, w.id, rng)
@@ -275,10 +285,10 @@ while w.star < Items.starCap(20) and tries < 500 do
 		eq(w.star, star0, "별이 그대로")
 	end
 end
-eq(w.star, 5, "Lv.20 장비는 5성까지")
-ok, why = Bag.enhance(f, w.id, rng)
-expect(not ok and why == "더 붙일 수 없다", "상한을 넘지 못한다")
-near(Items.score(w), 4 * 1.07 ^ 20 * 1.04 ^ 5, "별 하나에 4%씩")
+eq(w.star, 10, "Lv.20 장비도 10성까지 막힘 없이 오른다")
+eq(Items.starCap(20), 22, "모든 장비가 22성까지(사용자 2026-10-15: \"장비별로 강화 제한이 있으면 안됩니다\")")
+eq(Items.starCap(1), 22, "Lv.1 장비도 22성까지")
+eq(Items.options(w).total.atk, math.floor(math.floor(N.weaponAtk(20) + 0.5) * (1 + 10 * N.data.SPEC.star.weapon[1] / 100) + 0.5), "무기의 별 하나 = 공격력 +4%(10성 = +40%)")
 -- 확률: 첫 별 95% · 열한째 별 50%
 local function rate(star, n)
 	local hit = 0
@@ -299,7 +309,7 @@ for star = 0, E.max - 1 do
 	local it = Items.make("weapon", 180, 3, "axion")
 	it.star = star
 	local info = Items.enhanceInfo(it)
-	eq(info.essence > 0, star >= 10 and star <= 14, "정수가 드는 별 " .. (star + 1))
+	eq(info.essence, 0, "정수는 들지 않는다(2026-10-15에 뺐다) " .. (star + 1))
 	eq(info.drops, star + 1 >= 16 and star ~= 15 and star ~= 20, "실패하면 떨어지는 별 " .. (star + 1))
 	eq(info.boom > 0, star + 1 >= 16, "부서질 수 있는 별 " .. (star + 1))
 	eq(info.guard, star + 1 == 16 or star + 1 == 17, "파괴 막기를 쓸 수 있는 별 " .. (star + 1))
@@ -327,7 +337,7 @@ for _ = 1, 3000 do
 			eq(it.star, star0 - 1, "한 단계 떨어진다")
 		elseif result == "boom" then
 			eq(it.star, math.min(E.boomTo, star0), "부서지면 12성 흔적")
-			eq(Items.score(it), 0, "부서진 것은 힘이 없다")
+			eq(Items.options(it).total.atk, 0, "부서진 것은 옵션이 없다")
 		end
 		lowest = math.min(lowest, it.star)
 	end
@@ -398,27 +408,8 @@ eq(sword.broken, false, "되살아났다")
 eq(sword.star, 12, "12성으로")
 eq(Bag.find(g, spare.id), nil, "쓴 장비는 사라진다")
 
--- ---- 8) 별 옮기기 ----
-local t = Hero.new(9, "riven")
-t.level = 30
-t.equip.weapon.star = 5
-local old = t.equip.weapon
-local new = Items.make("weapon", 20, 4, "riven")
-Bag.add(t, new)
-expect(Bag.transfer(t, old.id, new.id), "별을 옮긴다")
-eq(new.star, 4, "하나 낮아져 4성")
-eq(Bag.find(t, old.id), nil, "옛 장비는 사라진다")
-eq(t.equip.weapon, new, "끼고 있던 것을 옮겼으면 새것을 낀다")
-local hat = Items.make("hat", 20, 3)
-Bag.add(t, hat)
-ok, why = Bag.transfer(t, new.id, hat.id)
-expect(not ok and why == "같은 부위끼리만 옮긴다", "다른 부위로는 못 옮긴다")
-local plain = Items.make("weapon", 30, 3, "riven")
-Bag.add(t, plain)
-local zero = Items.make("weapon", 30, 3, "riven")
-Bag.add(t, zero)
-ok, why = Bag.transfer(t, zero.id, plain.id)
-expect(not ok and why == "옮길 별이 없다", "별이 없는 것은 옮길 것이 없다")
+-- ---- 8) 별 옮기기는 없다(2026-10-15 — 사용자: "이런거 하라고 한적없는데 왜 만든건지 이거 없애고") ----
+expect(Bag.transfer == nil, "가방에 별 옮기기가 없다")
 
 -- ---- 9) 창고 ----
 local k = Hero.new(10, "axion")
@@ -592,7 +583,26 @@ do
 	for _, r in D.RARE do
 		local id = if r.id == "potion" then Items.potionFor(25).id else r.goods
 		local pct = (goodsN[id] or 0) / kills * 100
-		expect(math.abs(pct - r.pct) < math.max(0.12, r.pct * 0.25), ("귀한 드롭 %s: 한 마리에 %s%% — %.2f"):format(id, tostring(r.pct), pct))
+		if (r.from or 0) > 25 then
+			expect(pct == 0, ("귀한 드롭 %s: Lv.%d 아래의 몬스터는 떨어뜨리지 않는다 — %.2f"):format(id, r.from, pct)) -- 선물(2026-10-16): Lv.30부터
+		else
+			expect(math.abs(pct - r.pct) < math.max(0.12, r.pct * 0.25), ("귀한 드롭 %s: 한 마리에 %s%% — %.2f"):format(id, tostring(r.pct), pct))
+		end
+	end
+	-- 선물은 Lv.30부터의 몬스터가 그 확률로 떨어뜨린다(2026-10-16)
+	do
+		local rng2, n2, got = Random.new(7), 40000, {}
+		for _ = 1, n2 do
+			for _, gid in Items.rollRare(rng2, 40) do
+				got[gid] = (got[gid] or 0) + 1
+			end
+		end
+		for _, r in D.RARE do
+			if (r.from or 0) > 0 then
+				local pct = (got[r.goods] or 0) / n2 * 100
+				expect(math.abs(pct - r.pct) < math.max(0.12, r.pct * 0.25), ("선물 %s: Lv.40 몬스터 한 마리에 %s%% — %.2f"):format(r.goods, tostring(r.pct), pct))
+			end
+		end
 	end
 end
 
@@ -609,10 +619,11 @@ do
 			expect(g ~= nil and g.tab == "etc" and g.kind == "mat" and g.sell > 0, "재료는 가방의 기타 탭에 놓이고 상점에 팔 수 있다 " .. id)
 		end
 	end
-	eq(#Items.matsAt(30), 0, "Lv.30부터의 재료는 아직 없다(그 지역을 다듬을 때 붙인다)")
+	eq(#Items.matsAt(30), 2, "Lv.30대의 재료(광석 · 가죽 — 2편, 2026-10-16)")
+	eq(#Items.matsAt(60), 0, "Lv.60부터의 재료는 아직 없다(그 지역을 다듬을 때 붙인다)")
 	expect(Items.matsAt(9)[1] ~= Items.matsAt(10)[1], "레벨대가 바뀌면 재료도 바뀐다")
 	-- 제작법: 단계 셋 x (무기 + 방어구 네 부위). 재료는 그 단계의 것 · 무기에는 광석이, 방어구에는 가죽이 더 든다
-	eq(#D.RECIPES, 15, "제작법 열다섯")
+	eq(#D.RECIPES, 30, "제작법 서른(Lv.1 · 10 · 20 · 30 · 40 · 50 — 2편까지, 2026-10-16)")
 	for _, r in D.RECIPES do
 		expect(Items.recipe(r.id) == r and r.money > 0 and r.from == r.stage, "제작법의 꼴 " .. r.id)
 		local ore, hide = 0, 0
@@ -878,7 +889,7 @@ do
 		expect(shopTx + 2 * CR.matW <= SHOP.w, "재료 두 칸이 창의 폭에 들어간다")
 		expect(18 + 25 <= CR.row, "한 줄에 윗줄(아이콘 칸)과 아랫줄(재료의 그림 18)이 들어간다")
 		expect(width("제작") <= CR.makeW - 6 and CR.makeH >= L.M.small + 6, "「제작」 단추의 글")
-		expect(width(CR.note) <= SHOP.w - 120 and width(CR.hint) <= SHOP.w - 96, "제작 창의 안내 글들")
+		expect(width(CR.note) <= SHOP.w - 120 and width(CR.hint) <= SHOP.w, "제작 창의 안내 글들(아래 줄은 창의 폭을 다 쓴다 — 2026-10-16)")
 	end
 	do
 		local count = {}
@@ -1410,7 +1421,7 @@ do
 	local ShopWindow = req("Client/lune/ui/shopWindow")
 	local ItemCell = req("Client/lune/ui/itemCell")
 	local w, hgt = ShopWindow.size("merchant")
-	expect(w + 36 <= 768 and hgt + 64 <= 432, "상점 · 제작 창이 스마트폰의 화면 틀(768x432)에 들어간다")
+	expect(w + 36 <= 768 and hgt + 64 <= 432, "상점 창이 스마트폰의 화면 틀(768x432)에 들어간다")
 
 	local function textW(t)
 		return pixelText.Measure(t.value, t.font)
@@ -1476,7 +1487,8 @@ do
 
 	-- 상점(잡화 상인 · 대장장이): 줄마다 [그림] 이름 · [달돈] 값 · 단추
 	local iconsSeen = 0
-	for _, npc in { "merchant", "smith" } do
+	eq(#ShopWindow.stockOf("smith"), 0, "대장장이는 아무것도 팔지 않는다(2026-10-15)")
+	for _, npc in { "merchant" } do
 		local stock = ShopWindow.stockOf(npc)
 		expect(#stock >= 1 and #stock <= L.SHOP.rows, "상점의 줄 수 " .. npc)
 		for _, class in CLASSES do
@@ -1545,118 +1557,7 @@ do
 		end
 	end
 
-	-- 제작: 탭마다, 줄마다 [그림] 이름 · [달돈] 삯 · 「제작」 / 재료마다 [그림] 이름 가진 수/드는 수
-	local CR = L.CRAFT
-	local stages = {}
-	for _, r in D.RECIPES do
-		if not table.find(stages, r.stage) then
-			table.insert(stages, r.stage)
-		end
-	end
-	table.sort(stages)
-	local richHero = Hero.new(901, "axion") -- 재료를 넉넉히 가진 사람
-	for _, r in D.RECIPES do
-		for _, need in r.needs do
-			if Bag.count(richHero, need.item) == 0 then
-				expect(Bag.give(richHero, need.item, 999) == true, "재료를 받는다 " .. need.item)
-			end
-		end
-	end
-	local rich = Bag.view(richHero)
-	local rowsSeen, greens = 0, 0
-	for _, class in CLASSES do
-		for _, level in { 1, 10, 30 } do
-			for _, bag in { emptyBag, rich } do
-				table.clear(made)
-				table.clear(tabClicks)
-				local body = frame("Body")
-				body.Parent = frame("Panel")
-				local view = ShopWindow.build(body, ctxOf(class, level, 999999, bag), w, hgt, "craft")
-				for _, stage in stages do
-					tabClicks["Lv." .. stage]()
-					view.refresh()
-					local list = {}
-					for _, r in D.RECIPES do
-						if r.stage == stage then
-							table.insert(list, r)
-						end
-					end
-					for i, r in list do
-						local y0 = CR.tabH + (i - 1) * CR.row
-						local top, low, cellIcon = {}, {}, nil
-						for _, e in made do
-							if e.kind == "icon" and e.parent ~= body then
-								continue
-							end
-							if e.y >= y0 and e.y < y0 + 24 then
-								table.insert(top, e)
-							elseif e.y >= y0 + 24 and e.y < y0 + CR.row then
-								table.insert(low, e)
-							end
-						end
-						local open = level >= r.from
-						local label = ("제작 %s(%s Lv.%d)"):format(r.id, class, level)
-						tidy(top, label .. " 윗줄")
-						tidy(low, label .. " 아랫줄")
-						local item = Items.make(r.slot, r.stage, D.NORMAL, class)
-						expect(ICONS[ItemCell.icon(item)] ~= nil, label .. " — 만들 장비의 그림이 아이콘 판에 있다")
-						local mats, lock = 0, nil
-						for _, e in low do
-							if e.kind == "icon" and e.Visible then
-								mats += 1
-								expect(ICONS[e.name] ~= nil, label .. " — 재료의 그림")
-							elseif e.kind == "text" and e.value:find("부터 만든다") then
-								lock = e
-							end
-						end
-						eq(mats, if open then #r.needs else 0, label .. " — 재료마다 그림 하나(아직 못 만드는 것은 없다)")
-						expect((lock ~= nil) == not open, label .. " — 못 만드는 것에만 「Lv.N부터 만든다」")
-						for _, e in top do
-							if e.kind == "button" then
-								expect(e.frame.Visible == open, label .. " — 「제작」 단추는 만들 수 있는 레벨에만")
-								if open then
-									eq(e.enabled, bag == rich, label .. " — 재료가 모여야 눌린다")
-									if bag == rich then
-										greens += 1
-									end
-								end
-							end
-						end
-						rowsSeen += 1
-					end
-					-- 줄의 그림(칸 안): 이 탭의 줄 수만큼 보인다
-					local shown = 0
-					for _, e in made do
-						if e.kind == "icon" and e.parent ~= body and e.Visible then
-							shown += 1
-						end
-					end
-					eq(shown, #list, ("제작 Lv.%d — 줄마다 만들 장비의 그림"):format(stage))
-					expect(CR.tabH + #list * CR.row <= hgt - 28 - L.M.button - 12 - 18, ("제작 Lv.%d — 줄들이 아래의 글 · 단추 위에서 끝난다"):format(stage))
-				end
-				view.destroy()
-			end
-		end
-	end
-	expect(rowsSeen > 0 and greens > 0, "제작의 줄과 눌리는 단추를 보았다")
-	-- 「제작」을 누르면 그 줄의 레시피가 서버로 간다
-	table.clear(made)
-	table.clear(sent)
-	local body = frame("Body")
-	body.Parent = frame("Panel")
-	local view = ShopWindow.build(body, ctxOf("riven", 30, 999999, rich), w, hgt, "craft")
-	view.refresh()
-	local pressed = 0
-	for _, e in made do
-		if e.kind == "button" and e.value == "제작" then
-			e.click()
-			pressed += 1
-		end
-	end
-	eq(#sent, pressed, "누른 만큼 서버로 간다")
-	for _, m in sent do
-		expect(m[1] == "Item" and m[2] == "craft" and typeof(m[3]) == "string", "「제작」이 보내는 것 = 그 레시피")
-	end
+	-- (제작은 2026-10-15에 대장장이 창으로 옮겼다 — 화면 검사는 53_lune_smith.luau)
 end
 
 -- ---- 퀘스트 창의 보상 줄 · 강화 창의 드는 것 줄을 화면 없이 지어 본다(client/lune/ui/questWindow.luau · forgeWindow.luau) ----
@@ -1869,61 +1770,6 @@ do
 		end
 	end
 
-	-- 3) 강화 창: 드는 것 두 줄(달가루 · 정수)의 그림과 글
-	local fw, fh = ForgeWindow.size()
-	expect(fw + 36 <= 768 and fh + 64 <= 432, "강화 창이 스마트폰의 화면 틀(768x432)에 들어간다")
-	for _, icon in ForgeWindow.COST_ICONS do
-		expect(ICONS[icon] ~= nil, "드는 것의 그림 " .. icon)
-	end
-	expect(ForgeWindow.COST >= 18 + 2, "드는 것의 줄이 그림(18)보다 높다")
-	local both, dustOnly, none = 0, 0, 0
-	local smith = Hero.new(921, "axion")
-	smith.dust, smith.essence = 99999999, 9999
-	for _, stage in { 1, 10, 20, 30, 60, 100, 150, 180 } do
-		local it = Items.make("weapon", stage, 3, "axion")
-		local at = Bag.add(smith, it)
-		expect(at ~= nil, "장비를 가방에 넣는다")
-		for star = 0, 25 do
-			it.star = star
-			local bag = Bag.view(smith)
-			for _, firstFree in { false, true } do
-				table.clear(made)
-				local body = frame("Body")
-				local uiState = { forgeTarget = it.id }
-				local view = ForgeWindow.build(body, {
-					ui = uiState,
-					bag = function() return bag end,
-					me = function() return { level = 200, class = "axion", forged = not firstFree } end,
-					send = function() end,
-					openService = function() end,
-				}, fw, fh)
-				view.refresh()
-				local icons = {}
-				for _, e in made do
-					if e.kind == "icon" then
-						table.insert(icons, e)
-					end
-				end
-				eq(#icons, 2, "강화 창의 그림은 둘(달가루 · 정수)")
-				local info = Items.enhanceInfo(it, false, firstFree and star == 0)
-				local texts = ForgeWindow.lines(it, info, bag)
-				for i, e in icons do
-					eq(e.name, ForgeWindow.COST_ICONS[i], "드는 것의 그림 차례")
-					eq(e.Visible, texts[3 + i] ~= "", ("강화 창 Lv.%d 별 %d — 드는 것이 있는 줄에만 그림(%s)"):format(stage, star, ForgeWindow.COST_ICONS[i]))
-					expect(pixelText.Measure(texts[3 + i], "small") <= fw - ForgeWindow.COST_TX, ("강화 창 — 드는 것의 글이 칸에 든다 「%s」"):format(texts[3 + i]))
-				end
-				if icons[1].Visible and icons[2].Visible then
-					both += 1
-				elseif icons[1].Visible then
-					dustOnly += 1
-				else
-					none += 1
-				end
-				tidy(body, fw, ("강화 창 Lv.%d 별 %d"):format(stage, star))
-			end
-		end
-		smith.gear[at] = false
-	end
-	expect(both > 0 and dustOnly > 0, ("달가루만 드는 강화 · 정수도 드는 강화를 둘 다 보았다(둘 다 %d · 달가루만 %d · 없음 %d)"):format(both, dustOnly, none))
+	-- (강화 창은 2026-10-15에 대장장이 창으로 다시 지었다 — 화면 검사는 53_lune_smith.luau)
 	ItemCell.new = realNew
 end

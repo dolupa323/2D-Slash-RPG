@@ -104,14 +104,21 @@ function ItemDetail.show(owner: string, spec)
 	shield.ZIndex = 1
 	shield.Name = "Shield"
 
+	-- 장비의 별(맨 위 — 2026-10-15: 이름 옆의 「+n」 대신 1성에 별 하나 · 22성까지의 빈 별도 흐리게)
+	local top = K.pad
+	if info.stars ~= nil and (info.starMax or 0) > 0 then
+		local starRows = math.ceil(info.starMax / 15)
+		Ui.stars(panel, K.pad, K.pad, inner, "center"):set(info.stars, info.starMax)
+		top += Layout.detailStarsH(starRows)
+	end
 	-- 그림 칸 · 이름 · 갈래 · 닫기
-	local cell = ItemCell.new(panel, K.pad, K.pad, function() end, S)
+	local cell = ItemCell.new(panel, K.pad, top, function() end, S)
 	cell:set(spec.item, {})
 	cell.hit.Active = false
 	local nameX = K.pad + S + 8
-	local name = Ui.text(panel, info.name, nameX, K.pad, Layout.detailNameW(Stage.ratio), { font = "body", lines = K.nameLines, line = K.nameLine, color = C[info.tone] or C.text })
+	local name = Ui.text(panel, info.name, nameX, top, Layout.detailNameW(Stage.ratio), { font = "body", lines = K.nameLines, line = K.nameLine, color = C[info.tone] or C.text })
 	local nameLines = linesOf(name, K.nameLine)
-	Ui.text(panel, info.sub, nameX, K.pad + nameLines * K.nameLine + K.subGap, inner - S - 8, { color = C.dim })
+	Ui.text(panel, info.sub, nameX, top + nameLines * K.nameLine + K.subGap, inner - S - 8, { color = C.dim })
 	Ui.closeButton(panel, K.w - K.pad - 10, K.pad, function()
 		if spec.onClose then
 			spec.onClose()
@@ -119,7 +126,7 @@ function ItemDetail.show(owner: string, spec)
 			ItemDetail.hide(owner)
 		end
 	end).ZIndex = 12
-	local y = K.pad + math.max(S, nameLines * K.nameLine + K.subGap + M.small)
+	local y = top + math.max(S, nameLines * K.nameLine + K.subGap + M.small)
 
 	-- 줄: 이름(흐린 글)과 값
 	Ui.line(panel, K.pad, y + math.floor(K.rowTop / 2), inner)

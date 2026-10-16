@@ -53,6 +53,16 @@ local packets = {
 	-- 일일 의뢰: 하는 일(view 보기 · accept 받기 · turn 내기)과 지역 · 몇째 의뢰. 받기와 내기는 그 게시판 앞에서만.
 	--  돌려주는 값 { ok, why, reward = { xp, money, dust, all, name }, view = sim/daily.luau의 view }
 	Daily = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } },
+	-- 출석(2026-10-15): "view" = 판 { view, fresh(오늘 처음 들어와 칸이 찼다 — 창을 한 번 띄운다) } · "claim" = 받지 않은 칸을 모두 받는다 { view, got, why }
+	Attend = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 2, Burst = 4 } },
+	-- 업적(2026-10-15): "view" = { view = { score, rows = { [id] = { have, need, st } } } } · "claim" id = 그 업적의 보상 · "all" = 받을 것을 모두 { view, got, why }
+	Achieve = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 3, Burst = 6 } },
+	-- 2편의 도시 생활(2026-10-16): "view" · "talk" 사람 · "gift" 사람, 선물 · "claim" 사람 · "read" 이야기 · "tome" 곳, % — 돌려주는 값 { ok, why, view, note } (server/lune/modules/world.luau의 onBond · 셈은 sim/bond.luau)
+	Bond = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 6, Burst = 12 } },
+	-- 수정 틈 토벌(2026-10-16): "view" · "enter" 단계 — 돌려주는 값 { ok, why, left, clears } (world.luau의 onRift · 셈은 sim/rift.luau)
+	-- 탈것(2026-10-16): 그 사람(선장 · 뱃사공 · 승강장 일꾼 — 이름표) 앞에서 오른다 — 돌려주는 값 { ok, why, time, dest } (world.luau의 onSail · 셈은 sim/voyage.luau)
+	Sail = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 2, Burst = 4 } },
+	Rift = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } },
 	-- 경매장(메이플 옥션 방식 — 메뉴에서 어디서나): "mine" 내 것(판매 · 완료 탭) · "browse" 분류의 목록과 시세(장부의 이름, 새로 고침) · "list" 올리기(탭, 칸, 수, { 개당 값, 시간 }) ·
 	--  "buy" 사기(장부, 줄, 수, 본 값) · "settle" 내 것 하나(번호, "take" 수령 · "collect" 대금 수령 · "back" 취소 / 반환 · "relist" 재등록) · "all" 모두 받기
 	--  돌려주는 값 { ok, why, msg, rows(목록) · trades(시세) · board, mine(내 것), used · max(판매 수), now } — server/lune/modules/world.luau의 onMarket · 셈은 sim/market.luau
@@ -69,6 +79,10 @@ local packets = {
 	Travel = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 2, Burst = 3 } },
 	-- 튜토리얼 「달빛 꿈」(2026-10-14): "done" n = 화면만 아는 n째 미션을 끝냈다(돌려주는 값 = 내 튜토리얼 상태) · "skip" = 꿈을 건너뛴다(이 계정의 캐릭터가 한 번 끝낸 뒤에만 — 돌려주는 값은 Travel과 같다)
 	Tut = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 4, Burst = 6 } },
+	-- 간이 포탈(2026-10-15): 사냥터 안의 그 포탈(id)로 짝의 자리에 간다 — 서버가 옮기고 Warp로 알린다(같은 맵 · 막 없이)
+	Hop = { Kind = "Event", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 2, Burst = 3 } },
+	-- 퀘스트 연출(2026-10-15 — shared/lune/cine.luau): "on" = 장면이 시작됐다(그동안 맞지 않는다 — 90초 뒤 저절로 풀린다) · "off" = 끝났다 · "seen" id = 그 장면을 봤다(다시 틀지 않게 캐릭터에 적는다)
+	Cine = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } },
 	-- 기술을 쓴다: 기술 id, 몇째 구간, 쓴 자리(x, y), 보는 쪽
 	Skill = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number, t.number, t.number, t.dir }, RateLimit = { PerSecond = 8, Burst = 10 } },
 	-- 떨어진 것을 줍는다(물건 번호)
@@ -95,6 +109,12 @@ local packets = {
 	PartyAsk = { Kind = "Event", Direction = "ServerToClient", Doc = "파티 초대 { from, name } — 초대가 사라졌으면 from = false" },
 	Quests = { Kind = "Event", Direction = "ServerToClient", Doc = "내 퀘스트의 상태 { [id] = { done, c = { 할 일마다의 수 } } } — 바뀔 때마다. 둘째 값 = 방금 끝낸 퀘스트의 id(없으면 nil)" },
 	DailyView = { Kind = "Event", Direction = "ServerToClient", Doc = "일일 의뢰의 상태(sim/daily.luau의 view) — 잡은 수가 오를 때마다" },
+	AchDone = { Kind = "Event", Direction = "ServerToClient", Doc = "새로 해낸 업적들의 id { … } — 화면 위의 띠 「업적 달성 · 이름」(2026-10-15)" },
+	Voyage = { Kind = "Event", Direction = "ServerToClient", Doc = "배: { left = 닿기까지 초, dest } 갑판에 올랐다 · { arrived = 장면, dest } 닿았다(2026-10-16)" },
+	RiftView = { Kind = "Event", Direction = "ServerToClient", Doc = "토벌의 방의 상태(sim/rift.luau의 view — 물결 · 남은 몬스터 · 시간 · 완료 · 실패, 2026-10-16)" },
+	RiftPay = { Kind = "Event", Direction = "ServerToClient", Doc = "토벌 완료의 보상 { xp, money, dust, gear(장비의 꼴 · 없으면 nil), full(가방이 차서 장비를 못 받았다), none(오늘 보상을 다 받았다), left }" },
+	BondView = { Kind = "Event", Direction = "ServerToClient", Doc = "2편의 도시 생활(sim/bond.luau의 view)과 알림 { kind = shard · quest · open, … } — 달조각을 주웠다 · 퀘스트로 호감도가 올랐다 · 모험의 서가 열렸다(2026-10-16)" },
+	AttendNew = { Kind = "Event", Direction = "ServerToClient", Doc = "게임 중에 자정이 지나 출석 칸이 찼다 — 출석 창을 띄운다(2026-10-15)" },
 	Bag = { Kind = "Event", Direction = "ServerToClient", Doc = "가방 · 장비 · 창고 · 달가루(sim/bag.luau의 view) — 바뀔 때마다" },
 	ItemDone = { Kind = "Event", Direction = "ServerToClient", Doc = "물건을 다룬 결과 { action, ok, why, result }" },
 	DropGone = { Kind = "Event", Direction = "ServerToClient", Doc = "물건 번호, 주운 사람(userId — 사라진 것이면 nil), 양" },

@@ -117,7 +117,7 @@ function QuickEdit.press(what: string?, from: number?, input: InputObject, extra
 		return
 	end
 	finish(nil)
-	pending = { what = what, from = from, start = Vector2.new(input.Position.X, input.Position.Y), input = input, moved = false, ghost = nil, extra = extra }
+	pending = { what = what, from = from, start = Vector2.new(input.Position.X, input.Position.Y), input = input, moved = false, ghost = nil, extra = extra, t0 = os.clock() }
 end
 
 -- 스킬 창이 열렸다 · 닫혔다: 닫히면 고르던 것 · 끌던 것을 그만둔다
@@ -164,8 +164,16 @@ function QuickEdit.init(h)
 		end
 		local at = Vector2.new(input.Position.X, input.Position.Y)
 		if not p.moved and (at - p.start).Magnitude > DRAG * Stage.uiScale then
+			-- 스마트폰에서 스크롤 틀 안의 칸(가방 — extra.hold): 잠깐 누르고 있지 않고 바로 밀었으면 끌기가 아니라 스크롤이다(2026-10-15)
+			if p.extra and p.extra.hold and p.input.UserInputType == Enum.UserInputType.Touch and os.clock() - (p.t0 or 0) < p.extra.hold then
+				pending = nil
+				return
+			end
 			-- 끌기 시작: 그림이 마우스를 따라오고 칸들이 반짝인다
 			p.moved = true
+			if p.extra and p.extra.onStart then
+				p.extra.onStart()
+			end
 			picked = nil
 			local size = if p.extra and p.extra.size then p.extra.size else SLOT
 			local ghost = Ui.group(Stage.ui, 0, 0, size, size, "DragGhost")

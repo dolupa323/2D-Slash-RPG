@@ -190,8 +190,7 @@ function Market.nameOf(row: any): string
 		local def = Items.goods(it.item)
 		return if it.n > 1 then ("%s x%d"):format(def.name, it.n) else def.name
 	end
-	local name = Items.name(it)
-	return if it.star > 0 then ("%s +%d"):format(name, it.star) else name
+	return Items.name(it) -- (2026-10-15부터 「+별」을 붙이지 않는다)
 end
 
 -- ---------- 값 ----------

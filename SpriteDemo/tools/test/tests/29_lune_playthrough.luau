@@ -59,6 +59,7 @@ local World = req("ServerScriptService/server/lune/modules/world")
 local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
 local Quests = req("ReplicatedStorage/shared/lune/sim/quests")
 local Items = req("ReplicatedStorage/shared/lune/sim/items")
+local ItemInfo = req("ReplicatedStorage/shared/lune/ui/itemInfo")
 local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
 World.start()
 
@@ -296,7 +297,7 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 			local it = h.gear[i]
 			if it and Bag.canWear(h, it) then
 				local cur = h.equip[it.slot]
-				if not cur or Items.score(it) > Items.score(cur) then
+				if not cur or ItemInfo.wearDiff(it, cur, Hero.specView(h)) > 0 then -- 바꾸면 전투력이 오르는가(2026-10-15 스펙 — 장비의 옵션으로)
 					handlers.Item(p, "equip", it.id)
 				end
 			end
@@ -428,25 +429,44 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 		while GEAR_AT[gearNext] and h.level >= GEAR_AT[gearNext] do
 			gearNext += 1
 		end
-		local seen, queue, at = { [s.scene] = true }, { s.scene }, 1
-		local where, who = nil, nil
-		while queue[at] and not where do
-			local key = queue[at]
-			at += 1
-			for _, n in SCENES.scenes[key].npcs or {} do
-				if Items.data.NPCDO[n.id] == "smith" then
-					where, who = key, n
-					break
+		-- 그 일을 하는 주민(NPCDO)을 가장 가까운 장면에서 찾아 그 앞으로 간다
+		local function goTo(kind: string): boolean
+			local seen, queue, at = { [s.scene] = true }, { s.scene }, 1
+			local where, who = nil, nil
+			while queue[at] and not where do
+				local key = queue[at]
+				at += 1
+				for _, n in SCENES.scenes[key].npcs or {} do
+					if Items.data.NPCDO[n.id] == kind then
+						where, who = key, n
+						break
+					end
+				end
+				for _, portal in SCENES.scenes[key].portals do
+					if not seen[portal.to] then
+						seen[portal.to] = true
+						table.insert(queue, portal.to)
+					end
 				end
 			end
-			for _, portal in SCENES.scenes[key].portals do
-				if not seen[portal.to] then
-					seen[portal.to] = true
-					table.insert(queue, portal.to)
+			return where ~= nil and travel(where) and walkTo(who.x + 8, who.y)
+		end
+		-- 달가루는 잡화 상인이 판다(2026-10-15 — 대장장이의 상점을 없앴다): 끼고 있는 것을 10성까지 올리는 데 드는 만큼(평균 시도 수로) · 달돈 500은 물약 값으로 남긴다
+		if h.level >= Items.data.OPEN.forge and goTo("shop") then
+			local want = 0
+			for _, it in h.equip do
+				for star = it.star, 9 do
+					local row = Items.data.ENHANCE.table[star + 1]
+					want += Items.enhanceDust(it.stage, star) * 100 / row[1]
 				end
+			end
+			local need = math.floor(math.max(0, want - h.dust))
+			local afford = math.floor(math.max(0, h.money - 500) / Items.stockPrice(Items.stock("dust")))
+			if math.min(need, afford) > 0 then
+				handlers.Item(p, "buy", "dust", math.min(need, afford))
 			end
 		end
-		if not where or not travel(where) or not walkTo(who.x + 8, who.y) then
+		if not goTo("smith") then
 			return
 		end
 		stat.forge += 1
@@ -458,12 +478,7 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 				handlers.Item(p, "craft", ("c%d_%s"):format(stage, slot))
 				if Bag.used(h, "gear") > used then
 					stat.crafted += 1
-				elseif stage == 10 and h.money > 1500 then
-					handlers.Item(p, "buy", if slot == "weapon" then "w10" else "a10_" .. slot, 1)
-					if Bag.used(h, "gear") > used then
-						stat.shopGear += 1
-					end
-				end
+				end -- (대장장이가 팔던 Lv.10 장비는 없다 — 2026-10-15)
 			end
 		end
 		tidy()
@@ -478,11 +493,7 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 					break
 				end
 				if h.dust < info.dust then
-					local need = info.dust - h.dust
-					if h.money - need * 20 < 500 then
-						break
-					end
-					handlers.Item(p, "buy", "dust", need)
+					break -- 달가루는 상인에게서 미리 사 왔다(대장장이는 팔지 않는다)
 				end
 				local star = it.star
 				handlers.Item(p, "enhance", it.id, false)
@@ -723,6 +734,7 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 	end)
 	stat.gear = gear
 	World.removePlayer(p)
+	World.removePlayer(p) -- 끝난 캐릭터는 내보낸다(남아 있으면 다음 직업을 도는 동안 그 캐릭터도 셈해 실제 시간이 늘어진다 — 2026-10-15)
 	return stat
 end
 

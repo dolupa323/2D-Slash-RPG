@@ -150,7 +150,8 @@ expect(lt.state == "run" or lt.state == "idle", "나타난 뒤 다가온다 — 
 -- 멀리 있으면 걸어온다
 local x0 = lt.x
 run(room, heroes, 2)
-expect(lt.x < x0 - 20, ("사람 쪽으로 걸어온다 %.0f → %.0f"):format(x0, lt.x))
+-- 2초 동안 걷는 빠르기의 절반 넘게 다가온다(쉬는 틈이 있다) — 2026-10-15 두 보스를 느리게(사용자: 「더 느릿느릿」 — 성벽 거인 20점/초)
+expect(lt.x < x0 - COMBAT.mobs.towerlieutenant.speed * 0.5, ("사람 쪽으로 걸어온다 %.0f → %.0f"):format(x0, lt.x))
 eq(lt.dir, -1, "사람을 본다")
 -- 닿을 거리가 되면 예고한다
 local saw = {}

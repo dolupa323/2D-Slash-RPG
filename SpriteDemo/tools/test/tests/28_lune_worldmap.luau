@@ -16,7 +16,12 @@ eq(#D.order, 6, "지역 넷과 은달 항구 · 물마루 바다")
 eq(table.concat(D.order, " "), "r1 city r2 r3 r4 sea", "탭의 차례: 초승 고개 → 은달 항구 → 수정 숲 → 땅속 화롯골 → 만월성 → 물마루 바다")
 for _, rid in D.order do
 	local region = D.regions[rid]
-	expect(region ~= nil and #region.nodes >= 6 and #region.links >= #region.nodes - 1, "지역의 마디와 길 " .. rid)
+	if rid == "city" then
+		-- 은달 항구 = 한 장의 큰 맵(2026-10-16 — 사용자 「한 장의 큰 도시」): 마디 하나, 길 없음
+		expect(region ~= nil and #region.nodes == 1 and region.nodes[1].id == "ct", "은달 항구는 마디 하나(한 장)")
+	else
+		expect(region ~= nil and #region.nodes >= 6 and #region.links >= #region.nodes - 1, "지역의 마디와 길 " .. rid)
+	end
 	local ids = {}
 	for _, n in region.nodes do
 		expect(ids[n.id] == nil, "마디의 이름표가 겹치지 않는다 " .. n.id)
@@ -139,13 +144,13 @@ do
 	marks = WM.marks("r1", book, 1)
 	eq(marks.town, "?", "첫 퀘스트는 받자마자 돌려줄 수 있다 — 사제가 있는 마을에 ?")
 	book.r1m1 = { done = true, c = {} }
-	marks = WM.marks("r1", book, 2)
-	eq(marks.town, "!", "첫 기술을 끝내면 샛별이 있는 마을에 !(줄의 다음 것 — 등불 심지)")
-	expect(Quests.accept(book, 2, "r1s1"), "등불 심지를 받는다")
-	marks = WM.marks("r1", book, 2)
+	marks = WM.marks("r1", book, 3)
+	eq(marks.town, "!", "첫 기술을 끝내면 샛별이 있는 마을에 !(줄의 다음 것 — 마을 밖의 그림자)")
+	expect(Quests.accept(book, 3, "r1m2"), "마을 밖의 그림자를 받는다")
+	marks = WM.marks("r1", book, 3)
 	eq(marks.town, nil, "하는 중에는 표시가 없다(한 번에 하나만 받는다)")
-	book.r1s1.c[1] = 5
-	marks = WM.marks("r1", book, 2)
+	book.r1m2.c[1] = 5
+	marks = WM.marks("r1", book, 3)
 	eq(marks.town, "?", "다 하면 돌려줄 마을에 ?")
 	-- Lv.20: 「옛 망루」는 수비대 야영지의 차돌이 준다
 	local b2 = {}
@@ -170,12 +175,11 @@ do
 	eq(#Quests.listOpen(book, 1), 0, "받은 뒤에는 받을 것이 없다(첫 기술을 하는 중)")
 	eq(#Quests.listDone(book), 0, "끝낸 것도 없다")
 	book.r1m1 = { done = true, c = {} }
-	local open = Quests.listOpen(book, 2)
-	eq(open[1], "r1s1", "시작 가능에는 줄의 다음 것(등불 심지)")
+	local open = Quests.listOpen(book, 3)
+	eq(open[1], "r1m2", "시작 가능에는 줄의 다음 것(마을 밖의 그림자)")
 	eq(#open, 1, "하나뿐이다(퀘스트는 한 줄이다)")
 	eq(Quests.listDone(book)[1], "r1m1", "완료에 첫 기술")
-	-- 메인을 다 하고 다음 메인이 레벨 때문에 잠겨 있으면 맨 끝에 뜬다(잠긴 채로)
-	book.r1s1 = { done = true, c = { 5 } }
+	-- 다음 메인이 레벨 때문에 잠겨 있으면 맨 끝에 뜬다(잠긴 채로)
 	open = Quests.listOpen(book, 2)
 	eq(open[#open], "r1m2", "레벨이 모자란 줄의 다음 것(마을 밖의 그림자 — Lv.3)이 맨 끝에")
 	eq(Quests.state(book, 2, "r1m2"), "locked", "그 줄은 잠겨 있다")
@@ -304,11 +308,13 @@ do
 		tabs += pixelText.Measure(D.regions[rid].name, "small") + TAB_GAP
 	end
 	expect(tabs - TAB_GAP <= W, ("탭 여섯이 창에 들어간다(%d)"):format(tabs - TAB_GAP))
-	-- 도시의 여섯 장 · 바다의 열 장이 제 지역의 마디다(전에는 가장 가까운 지역의 마디로 쳤다)
-	for _, key in { "ct1", "ct2", "ct3", "ct4", "ct5", "ct6" } do
+	-- 도시 한 장과 그 건물 · 바다의 열 장이 제 지역의 마디다(전에는 가장 가까운 지역의 마디로 쳤다)
+	for _, key in { "ct", "ct_store", "ct_smith", "ct_storage", "ct_auction", "ct_office", "ship_out" } do
 		local r, n = WM.nodeOf(key)
-		expect(r == "city" and n == key, "도시의 맵 " .. key)
+		expect(r == "city" and n == "ct", "은달 항구의 마디 " .. key)
 	end
+	local rh, nh = WM.nodeOf("ship_home")
+	expect(rh == "r1" and nh == "town", "돌아오는 배의 갑판은 초승달 마을 쪽")
 	for _, key in { "seat", "sea1", "sea2", "sea3", "seaf", "sea4", "sea5", "sea6", "sea7", "sea8" } do
 		local r, n = WM.nodeOf(key)
 		expect(r == "sea" and n == key, "바다의 맵 " .. key)
@@ -332,13 +338,13 @@ do
 		end
 		return false
 	end
-	-- 2026-10-13(사용자: "은달항구는  초승달 마을에서 갈수있게합니다"): 수비대 야영지 ↔ 성문 거리의 임시 문을 떼고, 초승달 마을의 작은 나루 ↔ 은달 항구의 부두
-	expect(has("r1", "town", "city", "ct5"), "초승 고개: 초승달 마을(작은 나루) → 은달 항구(부두)")
-	expect(has("city", "ct5", "r1", "town"), "은달 항구: 부두 → 초승 고개(초승달 마을)")
-	expect(not has("r1", "r1cc", "city") and not has("city", "ct1", "r1"), "수비대 야영지 ↔ 성문 거리의 길은 없다(「불타는 마을」을 건너뛸 수 없게)")
-	expect(has("city", "ct5", "r2", "r2t") and has("city", "ct5", "sea", "seat"), "은달 항구: 부두 → 수정 숲 · 물마루 바다")
-	expect(has("city", "ct4", "r3", "port"), "은달 항구: 하늘 승강장 → 등불 포구")
-	expect(has("sea", "seat", "city", "ct5"), "물마루 바다: 물마루 마을 → 은달 항구")
+	-- 2026-10-13(사용자: "은달항구는  초승달 마을에서 갈수있게합니다") · 2026-10-16(「배 위에서 시간을 보낸다」): 초승달 마을의 포구 ↔ 은달 항구의 부두 = 배
+	expect(has("r1", "town", "city", "ct"), "초승 고개: 초승달 마을(포구의 배) → 은달 항구")
+	expect(has("city", "ct", "r1", "town"), "은달 항구: 부두의 배 → 초승 고개(초승달 마을)")
+	expect(not has("r1", "r1cc", "city"), "수비대 야영지 → 도시의 길은 없다(「불타는 마을」을 건너뛸 수 없게)")
+	expect(has("city", "ct", "r2", "r2t") and has("city", "ct", "sea", "seat"), "은달 항구 → 수정 숲(나룻배) · 물마루 바다")
+	expect(has("city", "ct", "r3", "port"), "은달 항구: 비행선 → 등불 포구")
+	expect(has("sea", "seat", "city", "ct"), "물마루 바다: 물마루 마을 → 은달 항구")
 	local exits = 0
 	for _, rid in D.order do
 		for _, ex in WM.exits(rid) do
@@ -361,15 +367,19 @@ do
 	-- 가는 길: 문을 가장 적게 지나는 길
 	local path = WM.path("town", "r2t")
 	expect(path ~= nil and path[1] == "town" and path[#path] == "r2t", "초승달 마을에서 반달 나루까지 길이 있다")
+	local Voyage = req("ReplicatedStorage/shared/lune/sim/voyage")
 	for i = 2, #path do
 		local found = false
 		for _, p in SCENES.scenes[path[i - 1]].portals do
 			found = found or p.to == path[i]
 		end
-		expect(found, ("길의 걸음마다 문이 있다 %s → %s"):format(path[i - 1], path[i]))
+		for _, r in Voyage.routesFrom(path[i - 1]) do
+			found = found or r.to == path[i]
+		end
+		expect(found, ("길의 걸음마다 문 · 배가 있다 %s → %s"):format(path[i - 1], path[i]))
 	end
 	local joined = table.concat(path, " ")
-	eq(joined, "town ct5 r2t", "초승달 마을(나루) → 부두 → 반달 나루")
+	eq(joined, "town ct r2t", "초승달 마을(포구의 배) → 은달 항구 → 반달 나루(나룻배)")
 	eq(#WM.path("town", "town"), 1, "제자리의 길은 한 장")
 	eq(WM.path("town", "없는맵"), nil, "없는 맵으로 가는 길은 없다")
 	local route = WM.route("in_shrine", "r2t")
@@ -407,35 +417,40 @@ do
 		end
 	end
 	book.r1m1.done = true
-	goal = Quests.goal(book, 2)
-	local m2 = Quests.def("r1s1")
-	expect(goal ~= nil and goal.def.id == "r1s1" and goal.kind == "take" and goal.scene == Quests.giverScene(m2), "첫 퀘스트를 끝내면: 줄의 다음 것(등불 심지)을 받으러")
-	expect(Quests.accept(book, 2, "r1s1") == true, "줄의 다음 것을 받는다")
-	goal = Quests.goal(book, 2)
-	expect(goal.def.id == "r1s1" and goal.kind == "do" and goal.scene == m2.scene, "받으면: 그 퀘스트의 맵으로 하러")
-	line = WM.goalLine(book, 2, "town")
+	goal = Quests.goal(book, 3)
+	local m2 = Quests.def("r1m2")
+	expect(goal ~= nil and goal.def.id == "r1m2" and goal.kind == "take" and goal.scene == Quests.giverScene(m2), "첫 퀘스트를 끝내면: 줄의 다음 것(마을 밖의 그림자)을 받으러")
+	expect(Quests.accept(book, 3, "r1m2") == true, "줄의 다음 것을 받는다")
+	goal = Quests.goal(book, 3)
+	expect(goal.def.id == "r1m2" and goal.kind == "do" and goal.scene == m2.scene, "받으면: 그 퀘스트의 맵으로 하러")
+	line = WM.goalLine(book, 3, "town")
 	expect(line:find("「" .. m2.name .. "」 하러 가는 길: ", 1, true) == 1 and line:find(SCENES.scenes[m2.scene].name, 1, true) ~= nil, "마을에서: " .. line)
 	for i, step in m2.steps do
-		book.r1s1.c[i] = step.n
+		book.r1m2.c[i] = step.n
 	end
-	goal = Quests.goal(book, 2)
-	expect(goal.def.id == "r1s1" and goal.kind == "back" and goal.scene == Quests.endScene(m2), "다 하면: 돌려주러")
-	-- 부탁만 하는 중이고 다음 메인은 레벨이 모자라면 갈 곳이 없다
-	book.r1s1.done = true
-	local next, why = Quests.nextMain(book, 2)
+	goal = Quests.goal(book, 3)
+	expect(goal.def.id == "r1m2" and goal.kind == "back" and goal.scene == Quests.endScene(m2), "다 하면: 돌려주러")
+	-- 다음 메인은 레벨이 모자라면 갈 곳이 없다
+	book.r1m2.done = true
+	local next, why = Quests.nextMain(book, 3)
 	if next and why == "level" then
-		eq(Quests.goal(book, 2), nil, "레벨이 모자라 다음 메인을 못 받으면 갈 곳이 없다")
-		eq((WM.goalLine(book, 2, "town")), "", "그때는 빈 글")
+		eq(Quests.goal(book, 3), nil, "레벨이 모자라 다음 메인을 못 받으면 갈 곳이 없다")
+		eq((WM.goalLine(book, 3, "town")), "", "그때는 빈 글")
 	end
 	-- 2차 전직 뒤(Lv.30 · 1지역의 메인을 다 끝냄): 2지역의 첫 메인을 받으러 — 길이 도시를 지난다
 	local done = {}
 	for _, def in Quests.list do
-		if def.region == "r1" or def.kind == "job" then
+		if (def.region == "r1" and not def.city) or def.kind == "job" then
 			done[def.id] = { done = true, c = {} }
 		end
 	end
 	goal = Quests.goal(done, 30)
-	expect(goal ~= nil and goal.def.id == "r2m1" and goal.kind == "take", "1지역을 끝낸 Lv.30: 2지역의 첫 메인을 받으러")
+	expect(goal ~= nil and goal.def.id == "cq01" and goal.kind == "take", "1지역을 끝낸 Lv.30: 촌장에게 「큰 항구로」를 받으러(2026-10-16 — 2편의 도착)")
+	for _, id in { "cq01", "cq02" } do -- 도착 · 도시 둘러보기를 끝냈다
+		done[id] = { done = true, c = {} }
+	end
+	goal = Quests.goal(done, 30)
+	expect(goal ~= nil and goal.def.id == "r2m1" and goal.kind == "take", "도시를 둘러본 뒤: 2지역의 첫 메인을 받으러")
 	local line2, route2 = WM.goalLine(done, 30, "in_shrine")
 	local cityOn = false
 	for _, at in route2 do
@@ -702,7 +717,7 @@ do
 	MOCK("Client/lune/ui/kit", { part = function(parent, name) expect(typeof(name) == "string" and name ~= "", "퀘스트 표시의 부품 이름") return frame("Part", parent) end })
 	local MapWindow = req("Client/lune/ui/mapWindow")
 	local w, h = MapWindow.size()
-	expect(w == WM.ART_W + 12 + WM.SIDE_W and h == WM.ART_H, ("창의 속 크기(%d x %d)"):format(w, h))
+	expect(w == WM.ART_W + 12 + WM.SIDE_W and h == WM.ART_H + (if #WM.arted() > 1 then MapWindow.TAB_H else 0), ("창의 속 크기(%d x %d — 그림이 있는 지역이 둘 넘으면 위에 탭 줄)"):format(w, h))
 	expect(w + 36 <= 768 and h + 44 + 20 <= 432, "스마트폰의 화면 틀(768x432)에 들어간다")
 	local state = { scene = "town", level = 1, quests = {} }
 	local ctx = { scene = function() return state.scene end, me = function() return { level = state.level } end, quests = function() return state.quests end }

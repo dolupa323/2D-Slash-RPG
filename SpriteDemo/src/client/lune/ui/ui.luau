@@ -244,6 +244,34 @@ function Ui.text(parent: Instance, text: string, x: number, y: number, width: nu
 	return item
 end
 
+-- 장비의 별(스타포스 — 2026-10-15): 한 줄에 15개(다섯마다 띄운다), 붙은 별은 노랑 · 아직 안 붙은 별은 흐리게. (x, y) = 왼쪽 위 · width = 폭(align "center"면 그 가운데에).
+--  돌려주는 것 { set(n, max), height(max) } — 셈은 shared/lune/ui/starText.luau
+function Ui.stars(parent: Instance, x: number, y: number, width: number, align: string?)
+	local StarText = require(lune.ui.starText)
+	local rowH = Layout.DETAIL.starRow
+	local rows = {}
+	for r = 1, 2 do
+		rows[r] = {
+			on = Ui.text(parent, "", x, y + (r - 1) * rowH, width, { color = C.gold }),
+			off = Ui.text(parent, "", x, y + (r - 1) * rowH, width, { color = C.off }),
+		}
+	end
+	local item = { rows = rows }
+	function item.set(_, n: number, max: number)
+		local list = StarText.rows(n, max)
+		for r, row in rows do
+			local t = list[r]
+			local on, off = if t then t.on else "", if t then t.off else ""
+			local x0 = if align == "center" then x + math.floor((width - Ui.measure(on .. off)) / 2) else x
+			row.on:set(on)
+			row.on:move(x0, y + (r - 1) * rowH)
+			row.off:set(off)
+			row.off:move(x0 + (if on == "" then 0 else Ui.measure(on)), y + (r - 1) * rowH)
+		end
+	end
+	return item
+end
+
 -- 이름표: 판 없이 테두리를 두른 작은 글(발밑의 이름 · 문 위의 글). 글씨 모듈의 글(Frame · Width · SetText · SetColor · Destroy)처럼 쓴다
 Ui.TAG_H = M.small + 3 -- 이름표 한 줄이 차지하는 높이(쌓을 때 쓴다)
 --  plate = true: 플레이어(나 · 다른 사람)의 이름표 — 어두운 판에 민트의 가는 테두리를 두른다(data/ui.generated.luau의 layout.tag.plate).

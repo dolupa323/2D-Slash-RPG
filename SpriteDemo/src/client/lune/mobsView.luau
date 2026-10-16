@@ -5,6 +5,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local COMBAT = require(lune.data["combat.generated"])
+local RiftData = require(lune.data["city.generated"]).rift -- 토벌의 정예의 겉모습(2026-10-16)
 local BossFx = require(lune.bossfx) -- 스토리 보스: 동작 그림이 없을 때 대기 그림을 움직여 대신한다(pose)
 local BossPat = require(lune.sim.bosspat) -- 스토리 보스: 연속기의 시간 · 도약의 높이(서버와 같은 셈)
 local Sprite = require(script.Parent.sprite)
@@ -41,18 +42,24 @@ function MobsView.new(layer: Frame, room, tagLayer: Frame)
 		bar.frame.Name = "HpBar"
 		bar.frame.ZIndex = 5
 		bar.frame.Visible = false
-		local tag = Ui.tag(top, MobsView.tagText(info.lv or 1, info.name or COMBAT.mobs[info.kind].name), C.text, 260)
+		-- 토벌의 정예(2026-10-16): 같은 그림에 정예 병사와 같은 분홍 윤곽의 빛 · 불티(Rift.DATA.elite.look) · 이름표에 「정예」
+		local def = COMBAT.mobs[info.kind]
+		if info.elite then
+			def = setmetatable({ look = RiftData.elite.look }, { __index = def })
+		end
+		local name = info.name or COMBAT.mobs[info.kind].name
+		local tag = Ui.tag(top, MobsView.tagText(info.lv or 1, if info.elite then RiftData.elite.name .. " " .. name else name), C.text, 260)
 		tag.Frame.Visible = false
 		self.mobs[info.id] = {
 			info = info,
-			def = COMBAT.mobs[info.kind],
+			def = def,
 			sprite = Sprite.new(layer, COMBAT.mobs[info.kind].sprite, 2), -- 그림을 빌려 쓰는 졸개가 있다(수습 검병 = 검병의 그림)
 			white = Sprite.new(layer, COMBAT.mobs[info.kind].sprite, 3, true), -- 맞을 때의 흰 번쩍임(같은 자리의 흰 실루엣) — 모든 몬스터(시험 탭의 flashT. 전에는 제 맞는 그림이 없는 몬스터만 번쩍였다)
 			-- 터뜨리는 몬스터(폭탄병 · 포자 주머니): 터지는 그림에는 몸이 없다 — 터진 뒤의 장들에는 서 있는 몸을 밑에 그린다(터뜨려도 사라지지 않는다)
 			under = if COMBAT.mobs[info.kind].atk and COMBAT.mobs[info.kind].atk.burst then Sprite.new(layer, COMBAT.mobs[info.kind].sprite, 1) else nil,
 			-- 그림을 빌려 쓰는 몬스터(정예 검병 = 검병의 그림)를 가르는 겉모습(공방 combat.js의 look — 사용자 2026-10-11): 윤곽의 빛 = 흰 실루엣 넷을 한 점씩 비껴 몸 뒤에 · 불티 = 작은 점 셋
-			glow = MobsView.glowOf(layer, COMBAT.mobs[info.kind]),
-			embers = MobsView.embersOf(layer, COMBAT.mobs[info.kind]),
+			glow = MobsView.glowOf(layer, def),
+			embers = MobsView.embersOf(layer, def),
 			warn = MobsView.warnOf(layer, COMBAT.mobs[info.kind]), -- 스토리 보스: 예고하는 동안 깜박이는 분홍 윤곽
 			pat = 0, -- 스토리 보스가 지금 하는 패턴의 차례(서버가 보낸다 — 없으면 0)
 			alt = 0, -- 지금 땅에서 뜬 높이(나는 몬스터)

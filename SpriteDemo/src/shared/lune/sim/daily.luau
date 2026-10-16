@@ -7,12 +7,22 @@
 --  캐릭터의 표에 얹는 것: h.daily = { [지역] = { day = 그 의뢰들의 날, tasks = { { scene, mob, n, have, st } … }, bonus = 덤을 받았는가 } }
 --   st = 0 안 받음 · 1 하는 중(have가 n이 되면 낼 수 있다) · 2 냈다
 local DATA = require(script.Parent.Parent.data["daily.generated"])
+local Quests = require(script.Parent.quests) -- 줄의 몬스터를 피한다(Quests.lineMobs)
 
 local Daily = {}
 Daily.DATA = DATA
 Daily.FROM = DATA.from
 Daily.WORDS = DATA.words
-Daily.REGION = "r1" -- 지금 게시판이 있는 지역(다른 지역의 게시판은 그 지역을 만들 때 넣는다)
+Daily.REGION = "r1" -- 처음의 게시판(초승달 마을)
+-- 그 장면 · 그 주민(게시판 · 의뢰 접수원)이 맡은 지역(없으면 nil) — 2026-10-16: 지역마다 게시판(은달 항구 = 수정 숲)
+function Daily.regionAt(scene: string, npc: string?): string?
+	for region, b in DATA.boards do
+		if b.scene == scene and (npc == nil or b.npc == npc) then
+			return region
+		end
+	end
+	return nil
+end
 Daily.OPEN, Daily.ON, Daily.DONE = 0, 1, 2
 
 local function whole(v: any, lo: number, hi: number): boolean
@@ -40,12 +50,19 @@ function Daily.left(now: number): number
 end
 
 -- 그 레벨 · 그날의 의뢰들: 갈 수 있는 사냥터(그 몬스터의 가장 낮은 레벨 ≤ 내 레벨) 가운데 레벨이 높은 near곳에서 차례로 돈다(공방의 dailyPick과 같은 셈)
-function Daily.pick(region: string, level: number, day: number)
-	local top = {}
+--  skip = 피할 몬스터(퀘스트 줄에서 아직 끝내지 않은 퀘스트의 몬스터 — Quests.lineMobs): 지나온 사냥터에서 뽑는다. 다 빠지면 예전대로(2026-10-15)
+function Daily.pick(region: string, level: number, day: number, skip: { [string]: boolean }?)
+	local can, top = {}, {}
 	for _, q in DATA.boards[region].pool do
 		if q.lv[1] <= level then
-			table.insert(top, q)
+			table.insert(can, q)
+			if not (skip and skip[q.mob]) then
+				table.insert(top, q)
+			end
 		end
+	end
+	if #top == 0 then
+		top = can
 	end
 	while #top > DATA.near do
 		table.remove(top, 1)
@@ -60,7 +77,8 @@ end
 
 -- 오늘의 것으로 맞춘다(처음이거나 날이 바뀌었으면 새로 뽑는다). 돌려주는 것: 그 지역의 상태(아직 열리지 않은 레벨 · 게시판이 없는 지역이면 nil), 새로 뽑았는가
 function Daily.sync(h, region: string, now: number)
-	if h.level < DATA.from or not DATA.boards[region] then
+	local board = DATA.boards[region]
+	if not board or h.level < math.max(DATA.from, board.from or 0) then -- 게시판마다 여는 레벨(은달 항구의 것은 Lv.30 — 2026-10-16)
 		return nil, false
 	end
 	local day = Daily.dayOf(now)
@@ -75,7 +93,7 @@ function Daily.sync(h, region: string, now: number)
 		end
 		return st, false
 	end
-	st = { day = day, tasks = Daily.pick(region, h.level, day), bonus = false }
+	st = { day = day, tasks = Daily.pick(region, h.level, day, Quests.lineMobs(h.quests or {}, region)), bonus = false }
 	h.daily[region] = st
 	return st, true
 end

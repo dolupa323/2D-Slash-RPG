@@ -12,15 +12,17 @@ local R = COMBAT.rules.lines
 local Lines = {}
 Lines.R = R
 
--- 타마다의 줄 수. hits = 한 번 쓸 때 그 적이 맞는 타의 수(평균이어도 된다) · nuke = 극딜기
-function Lines.count(hits: number, nuke: boolean?): number
+-- 타마다의 줄 수. hits = 한 번 쓸 때 그 적이 맞는 타의 수(평균이어도 된다) · nuke = 극딜기 · job = 그 스킬의 차수
+--  (2026-10-15 — 사용자: "현재 저 차수 스킬은 타수가 너무 많습니다. 타수는 밸런스 있게 맞추고" → per · nuke가 차수마다 — 1차 3 · 2차 4 · 3차 6 · 4차 8줄, 극딜기 5 · 7 · 10 · 15줄)
+function Lines.count(hits: number, nuke: boolean?, job: number?): number
 	if not hits or hits <= 0 then
 		return 1
 	end
-	local per = if nuke then R.nuke else R.per
+	local tier = math.clamp(job or 4, 1, 4)
+	local per = (if nuke then R.nuke else R.per)[tier]
 	local L = math.clamp(math.floor(per / hits + 0.5), 1, R.max)
 	if hits * L < per - 1 then
-		L = math.min(R.max, L + 1) -- 반올림으로 모자라면(여섯 타 → 1줄씩 = 6) 한 줄 더: 적어도 per - 1(보통 7 · 극딜기 14)
+		L = math.min(R.max, L + 1) -- 반올림으로 모자라면 한 줄 더: 적어도 per - 1
 	end
 	return L
 end
@@ -44,7 +46,7 @@ function Lines.first(id: string?): number
 			end
 		end
 	end
-	got = if n > 0 then Lines.count(n, false) else 1
+	got = if n > 0 then Lines.count(n, false, 1) else 1
 	first[id] = got
 	return got
 end
