@@ -71,8 +71,9 @@ do
 		r, id = WM.nodeOf(key)
 		expect(r == "r1" and id == "r1c", "망루 1~3층은 한 마디다 " .. key)
 	end
-	r, id = WM.nodeOf("r2t")
-	expect(r == "r2" and id == "r2t", "2지역의 마을")
+	r, id = WM.nodeOf("r2a1")
+	expect(r == "r2" and id == "r2a1", "2지역의 첫 사냥터(성문 밖 숲길 — 2026-10-16 밤에 반달 나루를 뺐다)")
+	eq(WM.nodeOf("r2t"), nil, "뺀 반달 나루는 월드맵에 없다")
 	eq(WM.nodeOf("없는 맵"), nil, "없는 장면")
 	eq(WM.nodeOf(nil), nil, "장면이 없다")
 	-- 게임의 모든 장면이 문을 따라 어느 마디엔가 닿는다(지역의 맵 · 실내 · 숨은 방 · 도시와 바다는 이어진 지역의 마디로)
@@ -163,8 +164,8 @@ do
 	end
 	marks = WM.marks("r1", b2, 20)
 	eq(marks.r1cc, "!", "차돌이 있는 수비대 야영지에 !")
-	eq(WM.marks("r2", b2, 20).r2t, nil, "다른 지역에는 아직 표시가 없다(Lv.30부터)")
-	expect(WM.marks("r2", b2, 30).r2t == "!", "Lv.30이면 2지역의 마을에 !")
+	eq(WM.marks("r2", b2, 20).r2af, nil, "다른 지역에는 아직 표시가 없다(Lv.30부터)")
+	expect(WM.marks("city", b2, 30).ct == "!", "Lv.30이면 2지역의 마을(은달 항구 — 성문 앞의 하늬가 2편의 첫 메인을 준다)에 !")
 end
 
 -- ---- 6) 퀘스트 창의 세 목록(진행 중 · 시작 가능 · 완료) ----
@@ -342,7 +343,7 @@ do
 	expect(has("r1", "town", "city", "ct"), "초승 고개: 초승달 마을(포구의 배) → 은달 항구")
 	expect(has("city", "ct", "r1", "town"), "은달 항구: 부두의 배 → 초승 고개(초승달 마을)")
 	expect(not has("r1", "r1cc", "city"), "수비대 야영지 → 도시의 길은 없다(「불타는 마을」을 건너뛸 수 없게)")
-	expect(has("city", "ct", "r2", "r2t") and has("city", "ct", "sea", "seat"), "은달 항구 → 수정 숲(나룻배) · 물마루 바다")
+	expect(has("city", "ct", "r2", "r2a1") and has("city", "ct", "sea", "seat"), "은달 항구 → 수정 숲(큰 성문 → 성문 밖 숲길) · 물마루 바다")
 	expect(has("city", "ct", "r3", "port"), "은달 항구: 비행선 → 등불 포구")
 	expect(has("sea", "seat", "city", "ct"), "물마루 바다: 물마루 마을 → 은달 항구")
 	local exits = 0
@@ -365,8 +366,8 @@ do
 	expect(exits >= 8, "이어지는 곳을 모두 봤다")
 
 	-- 가는 길: 문을 가장 적게 지나는 길
-	local path = WM.path("town", "r2t")
-	expect(path ~= nil and path[1] == "town" and path[#path] == "r2t", "초승달 마을에서 반달 나루까지 길이 있다")
+	local path = WM.path("town", "r2a1")
+	expect(path ~= nil and path[1] == "town" and path[#path] == "r2a1", "초승달 마을에서 성문 밖 숲길까지 길이 있다")
 	local Voyage = req("ReplicatedStorage/shared/lune/sim/voyage")
 	for i = 2, #path do
 		local found = false
@@ -379,16 +380,16 @@ do
 		expect(found, ("길의 걸음마다 문 · 배가 있다 %s → %s"):format(path[i - 1], path[i]))
 	end
 	local joined = table.concat(path, " ")
-	eq(joined, "town ct r2t", "초승달 마을(포구의 배) → 은달 항구 → 반달 나루(나룻배)")
+	eq(joined, "town ct r2a1", "초승달 마을(포구의 배) → 은달 항구 → 성문 밖 숲길(큰 성문)")
 	eq(#WM.path("town", "town"), 1, "제자리의 길은 한 장")
 	eq(WM.path("town", "없는맵"), nil, "없는 맵으로 가는 길은 없다")
-	local route = WM.route("in_shrine", "r2t")
-	expect(route ~= nil and route[1].region == "r1" and route[1].node == "town" and route[#route].region == "r2" and route[#route].node == "r2t", "사당 안에서 떠나면 길은 초승달 마을부터")
+	local route = WM.route("in_shrine", "r2a1")
+	expect(route ~= nil and route[1].region == "r1" and route[1].node == "town" and route[#route].region == "r2" and route[#route].node == "r2a1", "사당 안에서 떠나면 길은 초승달 마을부터")
 	for i = 2, #route do
 		expect(route[i].region ~= route[i - 1].region or route[i].node ~= route[i - 1].node, "이어서 같은 마디는 한 번만")
 	end
-	local text = WM.routeText(WM.route("r1c3", "r2t")) -- 긴 길: 옛 망루 3층에서 반달 나루까지
-	expect(text:find("…", 1, true) ~= nil and text:sub(-#"반달 나루") == "반달 나루", "긴 길은 가운데를 줄인다: " .. text)
+	local text = WM.routeText(WM.route("r1c3", "r2a2")) -- 긴 길: 옛 망루 3층에서 수정 오솔길까지
+	expect(text:find("…", 1, true) ~= nil and text:sub(-#"수정 오솔길") == "수정 오솔길", "긴 길은 가운데를 줄인다: " .. text)
 	expect(pixelText.Measure("…", "small") > 0, "줄임표가 글꼴에 있다")
 	eq(WM.routeText(WM.route("town", "town")), "", "제자리면 빈 글")
 	eq(WM.routeText(WM.route("town", "hunt")), "마을 어귀 → 세 갈래 길 → 달그림자 사냥터", "짧은 길은 그대로") -- 2026-10-13: 달그림자 사냥터는 세 갈래 길의 가지가 됐다
@@ -456,7 +457,7 @@ do
 	for _, at in route2 do
 		cityOn = cityOn or at.region == "city"
 	end
-	expect(cityOn and route2[#route2].region == "r2", "그 길은 은달 항구를 지나 수정 숲에 닿는다: " .. line2)
+	expect(cityOn and route2[#route2].region == "city" and route2[#route2].node == "ct", "그 길은 은달 항구(큰 성문 앞의 하늬)에 닿는다 — 2026-10-16 밤에 반달 나루를 뺐다: " .. line2)
 
 	-- 가는 길의 글이 창의 폭에 들어간다: 메인 · 전직 퀘스트마다, 받으러 · 하러 · 돌려주러, 지도의 모든 맵에서
 	local longest, seen = 0, 0

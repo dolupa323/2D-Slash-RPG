@@ -458,7 +458,11 @@ do
 		P.step(ct, body, { mx = 0, up = true }, DT)
 	end
 	expect(body.climb ~= nil and body.x == l.x and body.y < l.bottom, "↑ = 잡고 오른다 · 사다리 가운데로")
-	eq(P.clipOf(body, 0), "idle", "오르는 동작 없이 서 있는 모습")
+	eq(P.clipOf(body, 0), "climb", "사다리 위 = 오르기 동작(사용자 2026-10-16 밤 \"사다리 올라가는 모션 만들어서 적용해줘\")")
+	for _, who in { "axion", "riven", "reaper", "mooni", "salamander" } do
+		local c = C.chars[who].clips.climb
+		expect(c ~= nil and #c.frames == 4, "오르기 동작 네 장 " .. who)
+	end
 	local t = 3 * DT
 	while body.climb and t < 10 do
 		P.step(ct, body, { mx = 1, up = true }, DT) -- (옆으로 눌러도 사다리 위에서는 옆으로 가지 않는다)

@@ -317,7 +317,7 @@ local function enterScene(key: string, x: number, y: number, room)
 	if state.drawQuests then
 		state.drawQuests()
 	end
-	state.others = Others.new(state.view.heroLayer, state.over, state.myId)
+	state.others = Others.new(state.view.heroLayer, state.over, state.myId, scene.ladders) -- 사다리 위의 다른 사람은 오르기 동작으로(2026-10-16 밤)
 	state.others.graveLayer = state.view.graveLayer
 	state.others:setWho(room.who or {})
 	state.grave = Grave.new(state.view.graveLayer) -- 내 비석(쓰러졌을 때만 보인다)
@@ -935,7 +935,7 @@ local function step()
 		-- 주민 앞이면: 해 주는 일(상점 · 강화 · 창고)이 있으면 그 창을 열고, 없으면 말을 건다(한 번 더 누르면 다음 말)
 		local npc = state.view:npcNear(body.x, body.y)
 		if npc then
-			local at = Quests.atNpc(state.quests, if state.me then state.me.level else 1, npc.id, scene.region)
+			local at = Quests.atNpc(state.quests, if state.me then state.me.level else 1, npc.id, scene.region, scene.also)
 			if Talk.with(npc) then
 				Talk.next(npc) -- 말하는 중이면 다음 말로
 			elseif state.questTalk(npc) then
@@ -1049,7 +1049,7 @@ local function step()
 		if mx ~= 0 then
 			state.dir = mx
 		end
-		input = { mx = mx, jump = Input.take("jump"), down = Input.held("down"), up = Input.held("up") } -- up = 사다리를 오른다(2026-10-16 밤)
+		input = { mx = mx, jump = Input.take("jump"), down = Input.held("down"), up = Input.held("up") or Input.held("climb") } -- up = 사다리를 오른다(2026-10-16 밤 · climb = 폰의 조이스틱을 위로 — 2026-10-17)
 		if input.jump and input.down and body.ground and P.onPlatform(scene, body) then
 			TutView.dropped = true -- 튜토리얼: 얇은 발판을 내려왔다(↓ + 뛰기)
 		end
@@ -1074,8 +1074,8 @@ local function step()
 	local clip = if state.skill then "skill" else P.clipOf(body, mx)
 	if clip ~= state.clip then
 		state.clip, state.clipT = clip, 0
-	else
-		state.clipT += STEP
+	elseif clip ~= "climb" or input.up or input.down then
+		state.clipT += STEP -- 사다리 위에서 멈춰 있으면 오르기 동작도 그 장에서 멈춘다
 	end
 
 	-- 내 자리를 서버에 알린다(바뀌었을 때만)
@@ -2047,7 +2047,8 @@ function Boot.start()
 			return false -- 꿈(튜토리얼)의 샛별은 퀘스트를 주지 않는다
 		end
 		local level = if state.me then state.me.level else 1
-		local at = Quests.atNpc(state.quests or {}, level, npc.id, SCENES.scenes[state.sceneKey].region)
+		local here = SCENES.scenes[state.sceneKey]
+		local at = Quests.atNpc(state.quests or {}, level, npc.id, here.region, here.also)
 		if #at.ready > 0 then
 			local def = Quests.def(at.ready[1])
 			Talk.start(npc, def.done, def.name, function()
@@ -2775,7 +2776,8 @@ function Boot.start()
 						return if level >= math.max(Daily.FROM, board.from or 0) and state.daily then Daily.mark(state.daily.boards[region]) else nil
 					end
 				end
-				return Quests.mark(state.quests, level, npcId, SCENES.scenes[state.sceneKey].region)
+				local here = SCENES.scenes[state.sceneKey]
+				return Quests.mark(state.quests, level, npcId, here.region, here.also)
 			end)
 			-- 그 퀘스트를 받아야 열리는 문(달의 사당 안의 「사당 지하」 — 메인 「불타는 마을」): 받기 전에는 보이지 않는다
 			state.view:setPortals(function(p)

@@ -171,7 +171,7 @@ do
 	eq(Q.state(b, 29, "r2m1"), "locked", "2지역의 첫 메인은 Lv.30부터")
 	eq(Q.state(b, 30, "r2m1"), "open", "Lv.30이면 1지역의 메인을 다 하지 않아도 받는다")
 	eq(Q.state(b, 40, "r2m2"), "locked", "2지역도 앞 메인을 끝내야 다음이 열린다")
-	expect(Q.accept(b, 30, "r2m1"), "반달 나루를 받는다")
+	expect(Q.accept(b, 30, "r2m1"), "「수정 숲으로」를 받는다")
 	eq(Q.state(b, 30, "r2m1"), "ready", "할 일이 없는 메인은 받자마자 돌려줄 수 있다(하늬에게 말을 건다)")
 	eq(Q.def("r2m1").giver, "squire", "하늬가 준다(뱃사공은 역할 주민이라 퀘스트를 주지 않는다 — 2026-10-11)")
 	eq(Q.def("r2m1").endNpc, "squire", "하늬에게 돌려준다")

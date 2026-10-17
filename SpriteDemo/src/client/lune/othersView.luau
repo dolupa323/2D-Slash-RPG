@@ -25,8 +25,9 @@ function Others.tagText(_level: number, name: string): string
 	return name
 end
 
-function Others.new(heroLayer: Frame, tagLayer: Frame, myId: any)
+function Others.new(heroLayer: Frame, tagLayer: Frame, myId: any, ladders: any)
 	local self = setmetatable({}, Others)
+	self.ladders = ladders or {} -- 이 장면의 사다리(사다리 위에 있으면 오르기 동작 — 2026-10-16 밤)
 	self.heroLayer, self.tagLayer, self.myId = heroLayer, tagLayer, myId
 	self.list = {} -- [번호] = 한 사람
 	self.fx = nil :: any -- 효과(effects.luau) — boot가 넣어 준다. 대쉬의 잔상 · 속도선을 여기에 그린다
@@ -206,7 +207,14 @@ function Others:update(now: number, party)
 			local n = #char.clips.death.frames
 			clip, frame = "death", math.min(n, math.floor((now - (o.deadAt or now)) * char.clips.death.fps) + 1)
 		elseif not act then
-			if now - o.airT < 0.25 then
+			local onLadder = false
+			for _, l in self.ladders do
+				onLadder = onLadder or (math.abs(o.x - l.x) <= 1 and o.y > l.top + 0.5 and o.y < l.bottom - 0.5)
+			end
+			if onLadder then
+				-- 사다리 위: 오르내리는 중이면 장이 넘어가고, 멈춰 있으면 첫 장
+				clip, frame = "climb", if now - o.airT < 0.25 then Sprite.frameAt(char, "climb", now, false) else 1
+			elseif now - o.airT < 0.25 then
 				clip, frame = "jump", Sprite.frameAt(char, "jump", (now - o.airT) + 0.2, true)
 			elseif now - o.moveT < 0.25 then
 				clip, frame = "run", Sprite.frameAt(char, "run", now, false)

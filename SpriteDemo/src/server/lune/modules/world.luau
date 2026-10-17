@@ -193,6 +193,32 @@ end
 
 --  pushed = 서버가 먼저 옮겼다(화면은 아직 모른다 — 마을로 돌아가기 · 관리 이동 · 확인용 명령): 화면이 그것을 알기 전에 보낸 옛 자리의 보고가 뒤따라 올 수 있다.
 --   문(Travel)은 화면이 멈춰 서서 서버에 묻는 것이라 그런 보고가 없다
+-- 다시 들어올 때 시작할 장면(과 자리 — 없으면 그 장면의 시작 자리): 마지막으로 있던 맵 그대로. 다만 —
+--  배 · 비행선의 갑판 = 그 탈것이 닿는 곳(내리는 자리) · 토벌의 방(rf1#번호) · 스토리 보스의 방 · 꿈 = 그 맵에서 가장 가까운 마을(ret)
+--  · 없어진 장면(맵을 고쳐 지웠다) = 마지막으로 들른 마을 · 시작 마을. 마지막 맵이 없는 옛 저장 = 마지막으로 들른 마을
+local voyageLanding: (any) -> (number, number)
+local function resumeScene(h): (string, number?, number?)
+	local key = h.last
+	local home = if h.home and SCENES.homes[h.home] and rawget(SCENES.scenes, h.home) then h.home else SCENES.start
+	if typeof(key) ~= "string" then
+		return home, nil, nil
+	end
+	local base = string.match(key, "^(.-)#%d+$") or key
+	local sc = rawget(SCENES.scenes, base)
+	if not sc then
+		return home, nil, nil
+	end
+	local ride = Voyage.onShip(base)
+	if ride then
+		local x, y = voyageLanding(ride)
+		return ride.to, x, y
+	end
+	if base ~= key or sc.rift or (sc.bosses and #sc.bosses > 0) or base == Tutorial.SCENE then
+		return if sc.ret and rawget(SCENES.scenes, sc.ret) then sc.ret else home, nil, nil
+	end
+	return base, nil, nil
+end
+
 local function place(s, key: string, x: number, y: number, pushed: boolean?)
 	if not Voyage.onShip(key) then
 		s.voyage = nil -- 배에서 내렸다(닿았거나 · 귀환 주문서 · 쓰러져 돌아감)
@@ -200,6 +226,7 @@ local function place(s, key: string, x: number, y: number, pushed: boolean?)
 	s.scene = key
 	s.hero.x, s.hero.y = x, y
 	s.skill = nil
+	s.hero.last = key -- 다시 들어오면 여기서 시작한다(resumeScene이 들어가면 안 되는 곳을 가린다)
 	Hero.arrive(s.hero) -- 들어선 뒤 잠깐은 피해를 받지 않는다
 	s.jumped = true -- 다음 자리 보고는 거리와 상관없이 받는다
 	-- 화면은 이제 막을 치고 새 장면의 그림을 불러온다: 화면이 열릴 때까지(첫 자리 보고 · 첫 기술 — arrived) 피해를 받지 않는다
@@ -760,18 +787,29 @@ local function onChars(player, action: string, a: any, b: any)
 			return { ok = false, why = "이 캐릭터를 읽을 수 없습니다" }
 		end
 		Bag.loadStore(hero, acct.store) -- 창고는 계정의 것: 어느 캐릭터로 들어가든 같은 창고다
+		-- 뺀 맵에 남은 저장(반달 나루 — 2026-10-16 밤): 마지막 맵 · 마지막으로 들른 마을을 그 자리를 대신하는 곳으로(scenes의 gone)
+		if hero.last and SCENES.gone[string.match(hero.last, "^(.-)#%d+$") or hero.last] then
+			hero.last = SCENES.gone[string.match(hero.last, "^(.-)#%d+$") or hero.last]
+		end
+		if hero.home and SCENES.gone[hero.home] then
+			hero.home = SCENES.gone[hero.home]
+		end
 		s.hero, s.cid, s.name = hero, c.id, c.name
 		acct.last = c.id
-		-- 첫 퀘스트를 아직 끝내지 않은 새 캐릭터는 사당 안(사제의 방)에서 시작한다 — 그 밖에는 마을의 시작 자리
-		local startKey = Quests.firstScene(hero.quests, hero.level) or SCENES.start
+		-- 첫 퀘스트를 아직 끝내지 않은 새 캐릭터는 사당 안(사제의 방)에서 시작한다 — 그 밖에는 마지막으로 있던 맵(없으면 마지막 마을 · 시작 마을)
+		--  사용자 2026-10-16 밤: "게임을 시작하면 항상 초승달마을에서 시작합니다" → 메이플처럼 나갔던 맵의 시작 자리에서 다시 시작한다(resumeScene)
+		local startKey, startX, startY = Quests.firstScene(hero.quests, hero.level), nil, nil
+		if not startKey then
+			startKey, startX, startY = resumeScene(hero)
+		end
 		if not hero.tut.done and SCENES.scenes[Tutorial.SCENE] then
 			startKey = Tutorial.SCENE -- 꿈에서 깨지 않은 새 캐릭터는 꿈(튜토리얼)에서 시작한다(2026-10-14)
 		end
 		if not SCENES.scenes[startKey] then
-			startKey = SCENES.start
+			startKey, startX, startY = SCENES.start, nil, nil
 		end
 		local scene = SCENES.scenes[startKey]
-		place(s, startKey, scene.spawn.x, scene.spawn.y)
+		place(s, startKey, startX or scene.spawn.x, startY or scene.spawn.y)
 		roomOf(s.scene)
 		s.dirty = true
 		s.rankSent = nil
@@ -1795,8 +1833,8 @@ local function onQuest(player, action: string, id: any)
 	elseif action == "accept" then
 		if not nearNpcId(s, def.giver) then
 			why = "퀘스트를 주는 사람 앞이 아니다"
-		elseif def.kind ~= "job" and SCENES.scenes[s.scene].region ~= def.region then
-			why = "여기서는 받을 수 없는 퀘스트다" -- 주민은 제가 선 지역의 퀘스트만 준다(전직 퀘스트는 사제가 어디서든 준다)
+		elseif not Quests.givesIn(def, SCENES.scenes[s.scene].region, SCENES.scenes[s.scene].also) then
+			why = "여기서는 받을 수 없는 퀘스트다" -- 주민은 제가 선 지역(과 also — 은달 항구 = 수정 숲)의 퀘스트만 준다(전직 퀘스트는 사제가 어디서든 준다)
 		else
 			ok, why = Quests.accept(h.quests, h.level, id)
 			if ok then
@@ -2120,7 +2158,7 @@ end
 --  그 탈것의 사람(선장 · 뱃사공 · 승강장 일꾼) 앞에서 「탑승」 → 갑판(ship_out · ship_sea_out · air_out …)으로 옮기고, time초 뒤 tick이 닿는 곳에 내려 준다.
 --  npcId = 말을 건 사람(한 장면에 탈것이 여럿 — 은달 항구: 선장 · 뱃사공 · 승강장 일꾼). 돌려주는 것 { ok, why, time, dest }.
 --  화면에는 Voyage 이벤트로 { left, dest }(갑판에 오름) · { arrived = 장면 }(닿음)
-local function voyageLanding(r): (number, number)
+function voyageLanding(r): (number, number)
 	local sc = SCENES.scenes[r.to]
 	if r.at then
 		return r.at[1] * SCENES.tile, r.at[2] * SCENES.tile

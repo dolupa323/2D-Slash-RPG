@@ -522,13 +522,14 @@ end
 
 -- 그 주민에게서 할 수 있는 것: ready = 돌려줄 것 · offer = 받을 것 · wait = 받아서 하는 중인 것(이 주민에게 돌려줄 것)
 --  region = 그 주민이 서 있는 맵의 지역(장면 자료의 region). 여러 맵에 서는 주민(샛별 · 반달 · 하늬 …)은 제가 선 지역의 퀘스트만 준다 — 돌려받는 것은 어디서든 한다. 주지 않으면(nil) 가리지 않는다
-function Q.atNpc(book, level: number, npc: string, region: any?)
+--  also = 그 맵에 선 사람이 더 주는 지역(장면 자료의 also — 은달 항구 = 성문 밖 수정 숲 r2: 2026-10-16 밤에 반달 나루를 빼고 하늬 · 버들이 도시로 왔다)
+function Q.atNpc(book, level: number, npc: string, region: any?, also: any?)
 	local out = { ready = {}, offer = {}, wait = {} }
 	for _, def in D.list do
 		local state = Q.state(book, level, def.id)
 		if def.endNpc == npc and state == "ready" then
 			table.insert(out.ready, def.id)
-		elseif def.giver == npc and state == "open" and not def.auto and (region == nil or def.region == region or def.kind == "job") then -- 전직 퀘스트는 사제가 어디서든 준다
+		elseif def.giver == npc and state == "open" and not def.auto and (region == nil or Q.givesIn(def, region, also)) then
 			table.insert(out.offer, def.id)
 		elseif def.endNpc == npc and state == "active" then
 			table.insert(out.wait, def.id)
@@ -537,9 +538,14 @@ function Q.atNpc(book, level: number, npc: string, region: any?)
 	return out
 end
 
+-- 그 지역(region · also)의 맵에 선 사람이 그 퀘스트를 주는가 — 서버의 받기도 같은 것으로 가린다. 전직 퀘스트는 사제가 어디서든 준다
+function Q.givesIn(def, region: any, also: any?): boolean
+	return def.region == region or (also ~= nil and also ~= false and def.region == also) or def.kind == "job"
+end
+
 -- 주민 머리 위의 표시: "?" 돌려줄 것이 있다 · "!" 줄 것이 있다 · nil
-function Q.mark(book, level: number, npc: string, region: any?): string?
-	local at = Q.atNpc(book, level, npc, region)
+function Q.mark(book, level: number, npc: string, region: any?, also: any?): string?
+	local at = Q.atNpc(book, level, npc, region, also)
 	return if #at.ready > 0 then "?" elseif #at.offer > 0 then "!" else nil
 end
 
@@ -645,7 +651,7 @@ function Q.npcScene(def, npcId: string?): string?
 	end
 	local keys = {}
 	for key, sc in SCENES.scenes do
-		if sc.region == def.region then
+		if Q.givesIn(def, sc.region, sc.also) and (def.kind ~= "job" or sc.region == def.region) then -- (은달 항구 = 수정 숲의 퀘스트도 — also)
 			for _, n in sc.npcs or {} do
 				if n.id == npcId then
 					table.insert(keys, key)

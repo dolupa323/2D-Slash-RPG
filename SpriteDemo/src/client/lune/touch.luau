@@ -472,13 +472,15 @@ local function makePad(t)
 		set("left", v.X < -radius * 0.2)
 		set("right", v.X > radius * 0.2)
 		set("down", v.Y > radius * 0.42) -- 아래로 민 채 「점프」를 누르면 발판에서 내려온다(하단 점프 — sim/physics.luau)
-		-- 위로 미는 것은 아무 일도 없다(문 · 주민은 상호작용 단추 — 사용자 2026-10-08)
+		-- 위로 밀면 사다리만 오른다("climb" — 문 · 주민은 그대로 상호작용 단추: 사용자 2026-10-08 「위로 미는 것은 아무 일도 없다」).
+		--  2026-10-17: 사다리를 넣으며 폰의 오르기를 빠뜨렸었다(조이스틱으로는 사다리를 탈 수 없었다)
+		set("climb", v.Y < -radius * 0.42)
 	end
 	pad.stop = function()
 		pad.finger = nil
 		knob.Position = UDim2.fromScale(0.5, 0.5)
 		knob.BackgroundTransparency = 0.45
-		for _, a in { "left", "right", "down" } do
+		for _, a in { "left", "right", "down", "climb" } do
 			Input.release(a)
 		end
 	end

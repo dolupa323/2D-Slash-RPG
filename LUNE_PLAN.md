@@ -1490,6 +1490,23 @@
                공방: 시험 탭의 단추 줄도 여덟 · 경매장 시연에 수량 칸 / 남은 수량 / 상세(`?lunedemo=auctiondetail`) · `?lunezoom=4`(화면 틀의 가장 작은 격자로 본다 — 확인용). 그림 `assetpack/lune/dev/AUCTION_2 · 5 · 7*.png` · `MENU_8_*.png`.
                검사: 전체 483,594개 통과 · 가상 플레이(29번, `LUNE_PLAY=`) 다섯 직업 모두 Lv.30 · 2차 전직(Lv.10은 「이름 없는 비석」을 끝낼 때 — 7~8분). 줄의 대사 19개를 다시 읽었다(「망루 앞의 차돌」 → 「수비대 야영지의 차돌」).
                보지 못한 것: 게임 화면(Play 안 함) — 수량 칸의 타자 · 스페이스를 누르고 있을 때의 빠르기 · 실제 화면의 화살표 · 스마트폰. 물은 것: Lv.10 뒤의 빈 곳을 채울지 · 사이드 10개를 메인 줄에 넣은 것 · 주문서 5장 · 단추의 이름 「경매」와 자리.
+          ✔ S160 **사다리 오르기 그림 다시(2026-10-17 · 사용자: "사다리올라가는거 정신병있냐? 누가 이따위로만들어")** — 첫 그림(키 34점 네모 몸 · 긴 팔 둘)이 팩 영웅과 다른 생물이었다.
+               tools/build_lune_climb.py를 새로: BODY = 영웅마다 대기 그림에서 옮긴 뒷모습 틀(폭 · 키 · 뿔 · 발 · 색 그대로, 얼굴만 뺌) · 올린 팔 = 두 기둥 사이(8 · 11열 — 기둥 옆이면 같은 색이라 안 보였다) · 내린 손 = 어깨 옆 · 반대 발 듦 · 등의 무기.
+               4칸 = 왼손 위 둘 · 오른손 위 둘(fps 8). 공방 탭에 ?lunehero=번호(화면 확인용). 올림 chars_2 · 3 · mask_2 · 3. 검사 전체 490,420개 통과. 사진의 검은 막대 = 살라맨더의 열기 게이지.
+          ✔ S159 **반달 나루를 뺐다(2026-10-16 밤 · 사용자: "성지에서 바로 사냥터인데 반달나루가 굳이 필요해?" → 고름 「빼고, 사람은 은달 항구로」)**
+               길: ct 큰 성문 127.6 → r2a1(이름 「나루 뒷길」 → 「성문 밖 숲길」 · 왼쪽 문 → ct). r2t = maps.js SHELVED_MAPS(짓지도 내보내지도 않음 — 파일 · 그림은 그대로) · GONE { r2t: 'ct' } → scenes.gone(로그인 때 hero.last · home을 옮긴다).
+               사람: squire 113 · woodcutter 105.8(성문 앞) · beodeul 28.8(부두 — 「늙은 사공」, 내가 정한 구실) · dahong = ct_spice만. city.js CITY_ALSO = 'r2' → 장면의 also(ct · 방 20곳) → Quests.givesIn(atNpc · mark · npcScene · 서버 onQuest).
+               퀘스트: r2m1 「수정 숲으로」 · cq03 「성문 앞의 견습 기사」(말 전하기) · cq24 「성문 밖의 저녁」(region false) · 새는 나룻배 · 반달의 고향 집 · cq09 · cq13의 글. HUB.r2 = ct · SCENE_NOW ct. st_ferry → ct 123.6 「성문 탑의 머릿돌」(area city) · 달조각 r21 → r2a4 40.5/7.
+               설계: world.js r2 town = ct 「은달 항구」 · story.js 2편 hub · continents(도시 → 수정 숲 = walk · 나룻배 탈것 뺌) · journey(r2t 마디 · 길 · HOMES · WORLDART). 월드맵 r2: Codex가 나루 마을 → 도시의 동쪽 성문(prompt_r2b.txt · 옛 그림 raw_r2_v1_ferry.png) — 올림 worldmap_r2 · props_r2c1.
+               검사: 규칙 검사(성문 ↔ r2a1 · r2t가 남지 않았다) · 게임 전체 490,514개 통과(테스트 13 · 17 · 28 · 31 · 54) · 스튜디오 동기화 확인. Play 안 함.
+          ✔ S158 **큰 성문 · 2지역 사냥터 줄이기 · 나갔던 곳에서 시작(2026-10-16 밤 · 사용자: "성문같은 그림이 훨씬 크게 느껴져야합니다" · "반달나루 부터 … 사냥터들도 다 가로로 너무긴데" · "게임을 시작하면 항상 초승달마을에서 시작합니다")**
+               성문: looks/raw_city6_kit.png → bigate 230x162(build_lune_look2 — harbor 한 장은 폭 512로) · ct 127.6(포탈 r2t를 그 아치 안 · art false) · 향신료 가게 101.6 · 성문 초소 110 · 마루 119.6 · 긴 사다리 116.
+               사냥터: tools/shrink_lune_maps.mjs(가로 비율로 땅 · 발판 · 소품 · 몬스터 · 문 · 사람 · 스폰과 questplay/city.js의 tx · 달조각을 옮김 — 문은 끝에서의 거리를 지킨다) → tools/fix_lune_mobs.mjs(딛는 땅 · 발판 · 문 곁 3.6칸 · 겹침).
+                 r2a1 30 · r2a2 34 · r2a3 32 · r2a4 42 · r2b1 32 · r2b2 34(봉오리 10 — monsterPlace · 테스트 23) · r2b3 32 · r2b4 40 · r2c1 32 · r2c2 32 · r2af · r2bl · r2cl 30. tools/print_lune_map.mjs = 글자 그림. 바닥 그림 13장 올림.
+               시작: hero.last(place()가 적는다 · Hero.pack/unpack) · world resumeScene — 갑판 = 닿는 곳(voyageLanding) · rf#번호 · bosses · 꿈 = ret · 없는 장면 = home · 옛 저장 = home. 테스트 31(다시 들어오기 여섯) · 13(첫 퀘스트 뒤 = 사당 안).
+          ✔ S157 **사다리 오르기 동작 · 경관 화면 가득(2026-10-16 밤 · 사용자: "사다리 올라가는 모션 만들어서 적용해줘" · "테라스 뷰 보여주는거 잘려서나온다")** — 팩에 오르기가 없어 tools/build_lune_climb.py가 다섯 영웅마다 4장(등 · 팔다리 번갈아 · 무기 색 그대로)을 그려 chars/<영웅>_climb.png · chars.json clips.climb(build_lune_demo가 다시 돌려도 남긴다).
+               게임: physics.clipOf = "climb" · boot은 사다리 위에서 ↑ · ↓를 안 누르면 장을 멈춘다 · othersView(사다리 위면 climb — Others.new(…, scene.ladders)) · chars 판 둘 · 그늘판 둘 올림. 탭: clip climb · 멈춤 · ?lunedemo=climb · climb1~3.
+               경관: vistaView를 기준 격자(960x540) 대신 Stage.ui 전체(fromScale 1)에 — 화면 꼴에 따라 잘리던 것 · 이름은 아래 가운데 틀(AnchorPoint). 검사: 10(오르기 네 장) · 전체 실패 0 · Studio 동기화.
           ✔ S156 **은달 항구 2차 — 모든 건물의 실내 · 큰 성과 경관 · 사다리 · 성문 → 반달 나루 · 배와 비행선 · 모든 지역의 월드맵(2026-10-16 밤)** — 사용자가 고른 것: 성문 → 반달 나루 → 사냥터 · 배 · 비행선 모두 탈것 · 모든 건물 · 모든 지역.
                길: maps.js ct 성문 [109.4 r2t] 하나만 걸어서 나간다 · r2t 서쪽 [2.6 ct 「은달 항구로」] · seat · port의 ct 포탈 뺌 · ferryman(노을)을 ct 부두 34.6 · seat 14.4로 · skyhand(나래) port 9.4 row 9.
                탈것: city.js VOYAGE = routes 배열(id · from · npc · kind ship/airship · ship · to · at · dest · need · lines · locked) + deck(갑판의 말) · sim/voyage.luau(route(scene, npc) · routesFrom · isCrew · onShip · open(book, r)) · world onSail(player, npcId) · packets Sail(t.string) · boot sailTalk(r.lines) · navi/worldmap/quests.opens가 routes를 돈다.

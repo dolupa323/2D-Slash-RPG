@@ -171,7 +171,7 @@ local function routeNext(from, target)
 	end
 	return nil
 end
--- 주민을 찾는 차례: 같은 주민이 여러 장면에 있다(반달 = 잡화점 안 · 고갯마루 주막 · 반달 나루 / 샛별 = 마을 · 갈림목 쉼터들).
+-- 주민을 찾는 차례: 같은 주민이 여러 장면에 있다(반달 = 잡화점 안 · 고갯마루 주막 / 샛별 = 마을 · 갈림목 쉼터들).
 --  건물 안(in_) → 마을 → 나머지는 이름 차례 — 늘 같은 곳을 고른다
 local NPC_ORDER = {}
 for key in SCENES.scenes do
@@ -2108,7 +2108,7 @@ do
 	expect(hj.quests.r1m1.done == true, "한 번 더 말을 걸어 「첫 기술」을 끝낸다")
 	handlers.Chars(pj, "leave")
 	local back = handlers.Chars(pj, "enter", made.id)
-	eq(back.scene, SCENES.start, "첫 퀘스트를 끝낸 캐릭터는 마을에서 시작한다")
+	eq(back.scene, "in_shrine", "첫 퀘스트를 끝낸 캐릭터는 나갔던 곳(사당 안)에서 다시 시작한다 — 사용자 2026-10-16 밤: \"게임을 시작하면 항상 초승달마을에서 시작합니다\"")
 	sj = World.session(pj)
 	hj = sj.hero
 	-- Lv.29 → 30: 전직 퀘스트를 저절로 받고(화면에 알린다), 차수는 아직 1이다
@@ -2259,8 +2259,8 @@ do
 	handlers.Potion(pc, "scroll_return")
 	eq(Bag.count(hc, "scroll_return"), before - 1, "마을에서는 쓰이지 않는다(주문서도 줄지 않는다)")
 	expect(last("ItemDone")[1].ok == false and last("ItemDone")[1].why == "이미 마을이다", "까닭을 알린다")
-	-- 가장 가까운 마을: 고갯길 너머는 고갯마루 주막 · 은달 항구의 건물 안과 토벌의 방은 은달 항구 · 수정 숲은 반달 나루 · 바다는 물마루 마을
-	for _, c in { { "r1b1", "r1bv" }, { "r1c2", "r1bv" }, { "r1a3", "town" }, { "ct_smith", "ct" }, { "ct_office", "ct" }, { "r2a1", "r2t" }, { "sea1", "seat" } } do
+	-- 가장 가까운 마을: 고갯길 너머는 고갯마루 주막 · 은달 항구의 건물 안과 토벌의 방은 은달 항구 · 수정 숲의 어귀는 은달 항구(2026-10-16 밤 — 반달 나루를 뺐다) · 바다는 물마루 마을
+	for _, c in { { "r1b1", "r1bv" }, { "r1c2", "r1bv" }, { "r1a3", "town" }, { "ct_smith", "ct" }, { "ct_office", "ct" }, { "r2a1", "ct" }, { "sea1", "seat" } } do
 		World.jump(pc, c[1]) -- (2편의 장면은 배를 건너야 해서 문으로 걷는 goTo가 닿지 않는다)
 		handlers.Potion(pc, "scroll_return")
 		eq(sc.scene, c[2], ("%s에서 쓰면 가장 가까운 마을 %s로"):format(c[1], c[2]))

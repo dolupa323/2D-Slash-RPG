@@ -200,18 +200,9 @@ return {
 			full = "2지역 수정 숲(Lv.30~59)",
 			nodes = {
 				{
-					id = "r2t",
-					name = "반달 나루",
-					label = "반달 나루",
-					kind = "town",
-					x = 0.086,
-					y = 0.8455,
-					scenes = { "r2t" },
-				},
-				{
 					id = "r2a1",
-					name = "나루 뒷길",
-					label = "나루 뒷길",
+					name = "성문 밖 숲길",
+					label = "성문 밖 숲길",
 					kind = "hunt",
 					x = 0.226,
 					y = 0.8455,
@@ -354,7 +345,6 @@ return {
 				},
 			},
 			links = {
-				{ "r2t", "r2a1" },
 				{ "r2a1", "r2a2" },
 				{ "r2a2", "r2af" },
 				{ "r2af", "r2a3" },
@@ -374,7 +364,6 @@ return {
 			art = {
 				img = "worldmap_r2.png",
 				at = {
-					r2t = { 53, 182 },
 					r2a1 = { 100, 191 },
 					r2a2 = { 148, 186 },
 					r2af = { 200, 190 },
@@ -393,7 +382,7 @@ return {
 					r2c4 = { 170, 25 },
 				},
 				out = {
-					city = { 30, 40 },
+					city = { 52, 187 },
 				},
 			},
 		},
@@ -998,7 +987,6 @@ return {
 		r1c2 = { region = "r1", node = "r1c" },
 		r1c3 = { region = "r1", node = "r1c" },
 		r1c4 = { region = "r1", node = "r1c4" },
-		r2t = { region = "r2", node = "r2t" },
 		r2a1 = { region = "r2", node = "r2a1" },
 		r2a2 = { region = "r2", node = "r2a2" },
 		r2af = { region = "r2", node = "r2af" },

@@ -101,7 +101,7 @@ return {
 					scene = "r2a1",
 					mob = "stump",
 					name = "수정싹 그루터기",
-					place = "나루 뒷길",
+					place = "성문 밖 숲길",
 					lv = { 30, 33 },
 				},
 				{

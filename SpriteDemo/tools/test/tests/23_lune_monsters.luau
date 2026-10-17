@@ -15,7 +15,7 @@ local PLACE = {
 	r1a3 = { puff = 11 }, r1a4 = { crow = 9 }, r1b3 = { crab = 5 }, r1c3 = { helm = 9 }, in_cellar = { dummy = 4 }, -- 망루 아래(r1b4 · 굴 두더지)는 2026-10-15에 지웠다
 	-- 2지역 수정이 자라는 숲(2026-10-09 밤): 병사 없이 제 몬스터만
 	r2a1 = { stump = 9 }, r2a2 = { snail = 11 }, r2a3 = { frog = 8 }, r2a4 = { spider = 9 },
-	r2b1 = { fox = 9 }, r2b2 = { bud = 12 }, r2b3 = { quill = 10 }, r2b4 = { dshard = 9 },
+	r2b1 = { fox = 9 }, r2b2 = { bud = 10 }, r2b3 = { quill = 10 }, r2b4 = { dshard = 9 },
 	r2c1 = { golem = 10 }, r2c2 = { censer = 9 }, r2c3 = { bell = 9 },
 	-- 3지역 땅속 화롯골의 첫 구역(내려가는 굴)
 	r3a1 = { rat = 10 }, r3a2 = { stalag = 10 }, r3a3 = { kobold = 10 }, r3a4 = { cart = 8 },

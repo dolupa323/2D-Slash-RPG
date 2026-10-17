@@ -108,3 +108,73 @@ for _, bad in { "nowhere", "hunt", 7 } do
 	handlers.Return(p)
 	expect(hb.alive and s.scene == SCENES.start, "돌아올 곳이 깨졌으면 시작 마을 — " .. tostring(bad) .. " → " .. tostring(s.scene))
 end
+
+-- ---- 3) 다시 들어오면 마지막으로 있던 맵에서(2026-10-16 밤 — 사용자: "게임을 시작하면 항상 초승달마을에서 시작합니다") ----
+--  메이플처럼 나갔던 맵의 시작 자리 · 배 위였으면 닿는 곳 · 토벌의 방 · 스토리 보스의 방 · 꿈이면 그 맵에서 가장 가까운 마을 · 없어진 맵이면 마지막 마을
+do
+	local Voyage = req("ReplicatedStorage/shared/lune/sim/voyage")
+	local p2 = { UserId = 4102, Name = "길손4102", attrs = {}, SetAttribute = function(self, k, v) self.attrs[k] = v end }
+	handlers.Ready(p2)
+	local mk = handlers.Chars(p2, "create", "길손4102", "axion")
+	handlers.Chars(p2, "enter", mk.id)
+	local s2 = World.session(p2)
+	World.wake(p2) -- 꿈에서 깬다(튜토리얼을 마친다)
+	local function relog(prep: () -> ()?)
+		if prep then
+			prep()
+		end
+		World.removePlayer(p2) -- 저장하고 나간다
+		handlers.Ready(p2)
+		return handlers.Chars(p2, "enter", mk.id), World.session(p2)
+	end
+	-- 첫 퀘스트를 끝낸 캐릭터로(새 캐릭터는 사당에서 시작한다)
+	local Q = req("ReplicatedStorage/shared/lune/sim/quests")
+	local firstId = Q.FIRST and Q.FIRST.quest or nil
+	if firstId then
+		s2.hero.quests[firstId] = { done = true, c = {} }
+	end
+	Hero.setLevel(s2.hero, 30)
+	World.jump(p2, "r1bv")
+	World.jump(p2, "r1b3")
+	local got, ss = relog()
+	eq(ss.scene, "r1b3", "나갔던 사냥터(무너진 다리)에서 다시 시작한다")
+	eq(got.scene, "r1b3", "화면에도 그 장면")
+	eq(ss.hero.x, SCENES.scenes.r1b3.spawn.x, "그 맵의 시작 자리")
+	World.jump(p2, "ct_inn")
+	got, ss = relog()
+	eq(ss.scene, "ct_inn", "건물 안(여관)에서 나갔으면 그 안에서")
+	local r = Voyage.route("town", "captain")
+	got, ss = relog(function()
+		World.jump(p2, r.ship)
+	end)
+	eq(ss.scene, r.to, "배 위에서 나갔으면 배가 닿는 곳(은달 항구)")
+	eq(ss.hero.x, r.at[1] * SCENES.tile, "부두의 내리는 자리")
+	got, ss = relog(function()
+		World.jump(p2, "rf1#9")
+	end)
+	eq(ss.scene, SCENES.scenes.rf1.ret, "토벌의 방에서 나갔으면 가장 가까운 마을(은달 항구)")
+	got, ss = relog(function()
+		World.jump(p2, "r1c4")
+	end)
+	expect(ss.scene == SCENES.scenes.r1c4.ret and SCENES.homes[ss.scene], "스토리 보스의 방에서 나갔으면 가장 가까운 마을 — " .. tostring(ss.scene))
+	got, ss = relog(function()
+		World.jump(p2, "r2bs")
+		s2 = World.session(p2)
+		s2.hero.last = "nowhere_old_map"
+	end)
+	eq(ss.scene, "r2bs", "없어진 맵이면 마지막으로 들른 마을(기사단 본당)")
+	got, ss = relog(function()
+		World.session(p2).hero.last = nil
+	end)
+	eq(ss.scene, "r2bs", "마지막 맵이 없는 옛 저장 = 마지막으로 들른 마을")
+	-- 뺀 맵(반달 나루 r2t — 2026-10-16 밤)에 남은 저장: 마지막 맵 · 마지막으로 들른 마을 = 그 자리를 대신하는 은달 항구(scenes의 gone)
+	got, ss = relog(function()
+		local h = World.session(p2).hero
+		h.last, h.home = "r2t", "r2t"
+	end)
+	eq(ss.scene, "ct", "반달 나루에서 나간 저장은 은달 항구에서 시작한다")
+	eq(ss.hero.home, "ct", "마지막으로 들른 마을(반달 나루)도 은달 항구로")
+	local packed2 = Hero.pack(ss.hero)
+	expect(typeof(packed2.last) == "string", "저장에 마지막 맵이 들어간다")
+	World.removePlayer(p2)
+end

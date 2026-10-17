@@ -236,6 +236,7 @@ function Hero.new(id: any, class: string)
 		money = 0,
 		forged = false, -- 강화를 해 본 적이 있는가(첫 강화는 달가루 없이 반드시 붙는다 — sim/bag.luau의 Bag.enhance)
 		resets = 0, -- 공짜로 스킬을 되돌릴 수 있는 횟수(전직할 때마다 한 번 — 쌓이지 않는다. Hero.freeReset)
+		last = nil :: string?, -- 마지막으로 있던 장면(다시 들어오면 거기서 시작한다 — 2026-10-16 밤, 사용자: "게임을 시작하면 항상 초승달마을에서 시작합니다". world.luau의 resumeScene)
 		home = nil :: string?, -- 마지막으로 들른 마을 · 작은 마을(쓰러졌을 때 돌아가는 곳 — 없으면 시작 마을. 어느 장면이 마을인가는 scenes.generated의 homes · 서버가 본다)
 		hp = 0,
 		maxHp = 0,
@@ -824,6 +825,7 @@ function Hero.pack(h)
 		money = h.money,
 		forged = h.forged == true,
 		home = h.home or false,
+		last = h.last or false,
 		resets = h.resets or 0,
 		weak = math.floor(h.weak),
 		bag = Bag.pack(h),
@@ -866,6 +868,7 @@ function Hero.unpack(id: any, data: any)
 	h.weak = if whole(data.weak, 0, 3600) then data.weak else 0
 	-- 공짜 초기화: 이것이 생기기 전에 전직한 캐릭터(2026-10-11 이전 — 저장에 없다)는 한 번 받는다
 	h.resets = if whole(data.resets, 0, 1) then data.resets elseif data.resets == nil and h.job >= 2 then 1 else 0
+	h.last = if typeof(data.last) == "string" and #data.last <= 40 then data.last else nil -- 없는 장면이면 서버가 마지막 마을 · 시작 마을로(world.luau의 resumeScene)
 	h.home = if typeof(data.home) == "string" then data.home else nil -- 없는 장면 · 마을이 아닌 장면이면 서버가 시작 마을로 돌려보낸다(world.luau의 onReturn). 옛 저장의 towns(걷어낸 빠른 이동)는 읽지 않는다
 	h.forged = data.forged == true -- 이것이 생기기 전에 저장된 캐릭터(2026-10-11 이전)는 한 번 더 받는다(첫 강화가 공짜로 반드시 붙는다)
 	h.auto = data.auto == true

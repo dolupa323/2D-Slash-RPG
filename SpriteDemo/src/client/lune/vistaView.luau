@@ -18,24 +18,39 @@ local box: Frame = nil
 local image: ImageLabel = nil
 local title, sub
 
-function VistaView.init(root: Frame)
-	box = Stage.place(root, "Vista", "tl", 0, 0, Stage.REF_W, Stage.REF_H)
-	box.ZIndex = 900
+function VistaView.init(_root: Frame)
+	-- 게임 화면 틀(Stage.ui) 전체를 덮는다 — 기준 격자(960x540)에 맞추면 화면의 꼴(가로가 긴 PC · 폰)에 따라 오른쪽 · 아래가 비고 잘린다(사용자 2026-10-16 밤: "테라스 뷰 보여주는거 잘려서나온다")
+	box = Instance.new("Frame")
+	box.Name = "Vista"
+	box.BackgroundTransparency = 1
+	box.BorderSizePixel = 0
+	box.Size = UDim2.fromScale(1, 1)
+	box.ZIndex = 1000 -- HUD(100)보다 위
 	box.Visible = false
+	box.Parent = Stage.ui
 	image = Instance.new("ImageLabel")
 	image.Name = "Picture"
 	image.BackgroundColor3 = Color3.fromRGB(11, 15, 22)
 	image.BackgroundTransparency = 1
 	image.BorderSizePixel = 0
 	image.ResampleMode = Enum.ResamplerMode.Pixelated
-	image.ScaleType = Enum.ScaleType.Crop -- 화면의 꼴(PC · 폰)이 달라도 가득 채운다(넘치는 가장자리는 잘린다)
+	image.ScaleType = Enum.ScaleType.Crop -- 화면의 꼴이 그림(16:9)과 달라도 가득 채운다(넘치는 가장자리만 잘린다)
 	image.Size = UDim2.fromScale(1, 1)
 	image.ZIndex = 1
 	image.Parent = box
-	title = Ui.text(box, "", 0, Stage.REF_H - 70, Stage.REF_W, { align = "center", font = "body", color = C.text })
-	sub = Ui.text(box, "", 0, Stage.REF_H - 52, Stage.REF_W, { align = "center", color = C.accent })
-	for _, d in box:GetDescendants() do
-		if d ~= image and d:IsA("GuiObject") then
+	-- 곳의 이름: 아래 가운데(화면의 폭과 상관없이 가운데)
+	local caption = Instance.new("Frame")
+	caption.Name = "Caption"
+	caption.BackgroundTransparency = 1
+	caption.AnchorPoint = Vector2.new(0.5, 1)
+	caption.Position = UDim2.new(0.5, 0, 1, -40)
+	caption.Size = UDim2.fromOffset(Stage.REF_W, 36)
+	caption.ZIndex = 2
+	caption.Parent = box
+	title = Ui.text(caption, "", 0, 0, Stage.REF_W, { align = "center", font = "body", color = C.text })
+	sub = Ui.text(caption, "", 0, 18, Stage.REF_W, { align = "center", color = C.accent })
+	for _, d in caption:GetDescendants() do
+		if d:IsA("GuiObject") then
 			d.ZIndex = math.max(d.ZIndex, 2) -- 글은 그림 위
 		end
 	end
