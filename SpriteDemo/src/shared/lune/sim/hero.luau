@@ -544,7 +544,9 @@ function Hero.gainXp(h, amount: number): number
 			Hero.autoSkill(h)
 		end
 		h.maxHp = maxHpOf(h)
-		h.hp = h.maxHp -- 레벨이 오르면 체력이 다 찬다
+		if h.alive ~= false then
+			h.hp = h.maxHp -- 레벨이 오르면 체력이 다 찬다(쓰러져 있으면 그대로 — 파티원이 잡은 몫으로 오를 때 · 2026-10-18 검토)
+		end
 	end
 	return ups
 end
@@ -638,6 +640,30 @@ function Hero.canReturn(h): boolean
 end
 
 -- 맵에 들어섰다: 잠깐(RULES.arrive초) 피해를 받지 않는다 — 들어서자마자 맞지 않게(문 곁에도 몬스터가 있다. 공방 combat.js의 arrive)
+-- 방(맵)마다 시계가 따로다(방의 time은 0에서 시작해 사람이 있을 때만 흐르고, 토벌 방은 들 때마다 새로 짓는다).
+--  캐릭터에 적힌 방의 시각들을 새 방의 시계로 옮긴다 — delta = 새 방의 시각 − 옛 방의 시각(서버 world.luau의 place가 부른다 · 2026-10-18 검토:
+--  옛 방의 시계가 앞서 있으면 리퍼의 도깨비불 · 무니의 수정 조각 · 리븐의 독이 새 방의 시계가 따라잡을 때까지 멈췄고, 거꾸로면 살라맨더의 연속이 끝나지 않았다)
+local CLOCK_PASS = { "streakAt", "pressAt", "surge", "rekindle", "venom" }
+function Hero.shiftClock(h, delta: number)
+	if delta == 0 or delta ~= delta then
+		return
+	end
+	if h.kit and typeof(h.kit.at) == "number" then
+		h.kit.at += delta
+	end
+	if typeof(h.actUntil) == "number" then
+		h.actUntil += delta
+	end
+	local p = h.pass
+	if p then
+		for _, k in CLOCK_PASS do
+			if typeof(p[k]) == "number" then
+				p[k] += delta
+			end
+		end
+	end
+end
+
 function Hero.arrive(h)
 	h.invuln = math.max(h.invuln, RULES.arrive)
 end
@@ -683,6 +709,10 @@ function Hero.questDone(h, id: any)
 	-- 보상의 귀환 주문서(첫머리의 퀘스트 — 사용자 2026-10-13: "완전 초반부 퀘스트에서 마을귀환주문서를 뿌려야합니다")가 들어갈 칸이 없으면 돌려주지 못한다
 	if def and (def.reward.scrolls or 0) > 0 and Quests.isReady(h.quests, id) and Bag.room(h, Hero.SCROLL) < def.reward.scrolls then
 		return nil, "가방의 소비 칸이 모자란다"
+	end
+	-- 전직 퀘스트는 바로 다음 차수일 때만 돌려준다(2026-10-18 검토 — 끝냈는데 전직이 되지 않는 일이 없게)
+	if def and def.reward.job and Quests.isReady(h.quests, id) and def.reward.job ~= h.job + 1 then
+		return nil, "앞의 전직을 먼저 마쳐야 한다"
 	end
 	-- 보상의 장비(전직할 때 받는 무기)가 들어갈 칸이 없으면 돌려주지 못한다
 	if def and def.reward.gear and Quests.isReady(h.quests, id) and Bag.free(h) <= 0 then
@@ -734,16 +764,17 @@ end
 
 -- ---------- 키 설정 ----------
 -- 바꾼 키의 표를 받아 둔다. 꼴이 맞는 것만 담는다(하는 일 이름 · 키 이름은 글자와 숫자, 마흔여덟 개까지). 담았으면 true.
-local function cleanKeys(map: any)
+-- lenient = 저장된 것을 읽을 때: 맞지 않는 짝만 버리고 나머지는 지킨다(2026-10-18 검토 — 전에는 짝 하나 때문에 키 설정 전체가 처음으로 돌아갔다)
+local function cleanKeys(map: any, lenient: boolean?)
 	if typeof(map) ~= "table" then
 		return nil
 	end
 	local out, n = {}, 0
 	for action, key in map do
-		if typeof(action) ~= "string" or typeof(key) ~= "string" or #action > 40 or #key > 24 then
-			return nil
-		end
-		if not string.match(action, "^[%w:_]+$") or not string.match(key, "^%w+$") then
+		if typeof(action) ~= "string" or typeof(key) ~= "string" or #action > 40 or #key > 24 or not string.match(action, "^[%w:_]+$") or not string.match(key, "^%w+$") then
+			if lenient then
+				continue
+			end
 			return nil
 		end
 		n += 1
@@ -825,7 +856,7 @@ function Hero.pack(h)
 		money = h.money,
 		forged = h.forged == true,
 		home = h.home or false,
-		last = h.last or false,
+		last = (if h.alive == false then h.home else h.last) or false, -- 쓰러진 채 나가면 다시 들어올 때 마을에서(그 자리에서 가득 찬 채로 살아나지 않게 — 2026-10-18 검토)
 		resets = h.resets or 0,
 		weak = math.floor(h.weak),
 		bag = Bag.pack(h),
@@ -856,11 +887,11 @@ end
 -- 저장된 것에서 캐릭터를 되살린다. 꼴이 이상하면 nil(새로 골라야 한다).
 --  점수가 받은 것보다 많이 찍혀 있으면(식이 바뀌었거나 자료가 깨졌을 때) 찍은 것을 모두 되돌려 준다 — 레벨과 돈은 지킨다.
 function Hero.unpack(id: any, data: any)
-	if typeof(data) ~= "table" or not CLASSES.classes[data.class] or not whole(data.level, 1, N.MAX_LEVEL) then
+	if typeof(data) ~= "table" or not CLASSES.classes[data.class] or not whole(data.level, 1, 1e6) then
 		return nil
 	end
 	local h = Hero.new(id, data.class)
-	h.level = data.level
+	h.level = math.min(data.level, N.MAX_LEVEL) -- (최고 레벨이 줄었으면 그 레벨로 — 캐릭터를 못 쓰게 되지 않게 · 2026-10-18 검토)
 	-- 차수: 저장된 것(그 레벨에 닿을 수 있는 데까지). 전직 퀘스트가 생기기 전에 저장된 캐릭터(2026-10-10 이전)는 레벨만 되면 전직했으므로 그 레벨의 차수 그대로다
 	h.job = if whole(data.job, 1, #CLASSES.jobs) then math.min(data.job, Hero.jobAt(h.level)) else Hero.jobAt(h.level)
 	h.xp = if typeof(data.xp) == "number" and data.xp >= 0 and data.xp < N.xpNeed(h.level) then math.floor(data.xp) else 0
@@ -872,7 +903,7 @@ function Hero.unpack(id: any, data: any)
 	h.home = if typeof(data.home) == "string" then data.home else nil -- 없는 장면 · 마을이 아닌 장면이면 서버가 시작 마을로 돌려보낸다(world.luau의 onReturn). 옛 저장의 towns(걷어낸 빠른 이동)는 읽지 않는다
 	h.forged = data.forged == true -- 이것이 생기기 전에 저장된 캐릭터(2026-10-11 이전)는 한 번 더 받는다(첫 강화가 공짜로 반드시 붙는다)
 	h.auto = data.auto == true
-	h.keys = cleanKeys(data.keys) or {}
+	h.keys = cleanKeys(data.keys, true) or {}
 	local oldBag = Bag.unpack(h, data.bag) -- 장비가 생기기 전에 저장된 캐릭터는 처음 차림을 받는다
 	h.quests = Quests.unpack(data.quests)
 	h.daily = Daily.unpack(data.daily) -- 일일 의뢰가 생기기 전의 저장 = 빈 것(게시판에 가면 오늘의 의뢰를 받는다)
@@ -882,7 +913,7 @@ function Hero.unpack(id: any, data: any)
 	h.cine = {} -- 본 장면(퀘스트 연출이 생기기 전의 저장 = 아무것도 안 봤다 — 장면은 퀘스트를 받고 · 다 하고 · 돌려줄 때 트므로 지난 퀘스트의 장면은 다시 나오지 않는다)
 	if typeof(data.cine) == "table" then
 		for i, id in data.cine do
-			if typeof(id) == "string" and #id <= 40 and i <= 400 then
+			if typeof(id) == "string" and #id <= 40 and typeof(i) == "number" and i <= 400 then
 				h.cine[id] = true
 			end
 		end
@@ -941,15 +972,14 @@ function Hero.unpack(id: any, data: any)
 	if good then
 		for sid, lv in data.skills do
 			local def = skillDef(h.class, sid)
-			if def and whole(lv, 0, def.max) then
-				-- 게임에 아직 없는 스킬에 찍혀 있던 것(그 스킬을 막기 전의 저장)은 포인트로 돌려준다
+			if def and whole(lv, 0, 1e6) then
+				-- 게임에 아직 없는 스킬에 찍혀 있던 것(그 스킬을 막기 전의 저장)은 포인트로 돌려준다 · 최고 레벨이 줄었으면 그 레벨까지(넘친 것은 포인트로)
 				if READY[sid] then
-					skills[sid] = math.max(lv, base[sid] or 0)
+					skills[sid] = math.max(math.min(lv, def.max), base[sid] or 0)
 					spent += skills[sid] - (base[sid] or 0)
 				end
-			else
-				good = false
 			end
+			-- 없어진 스킬은 그것만 빼고 포인트로 돌려준다(2026-10-18 검토 — 전에는 스킬 하나 때문에 찍은 것을 모두 되돌렸다)
 		end
 	end
 	-- 차수마다: 열리지 않은 차수의 스킬은 없고, 그 차수에 쓴 포인트는 그 차수 동안 받은 것을 넘지 않는다
@@ -970,12 +1000,27 @@ function Hero.unpack(id: any, data: any)
 	end
 	-- 퀵슬롯: 저장된 것이 말이 되면 그대로, 아니면(퀵슬롯이 생기기 전에 저장된 캐릭터 포함) 처음 차림(Hero.new가 놓아 둔 것)
 	--  예전 저장의 물약 칸("potion" — 물약이 한 가지였을 때)은 그때 마시던 물약의 칸으로 바꾼다(놓아 둔 자리가 그대로 남는다)
+	--  칸 하나가 맞지 않으면(그 스킬의 포인트를 돌려받았다 · 아이템의 이름표가 바뀌었다) 그 칸만 비운다(2026-10-18 검토 — 전에는 배치 전체가 처음 차림으로 돌아갔다)
+	local function salvage(list)
+		if typeof(list) ~= "table" then
+			return list
+		end
+		local out, seen = table.create(Quick.N, false), {}
+		for i = 1, Quick.N do
+			local v = list[i]
+			if typeof(v) == "string" and #v <= 40 and not seen[v] and Hero.canSlot(h, v) then
+				seen[v] = true
+				out[i] = v
+			end
+		end
+		return out
+	end
 	if data.slots ~= nil then
-		Hero.setSlots(h, Quick.renew(data.slots, myPotion))
+		Hero.setSlots(h, salvage(Quick.renew(data.slots, myPotion)))
 	end
 	-- 스마트폰의 단추 배치: 저장된 것이 말이 되면 그대로, 없으면(이것이 생기기 전에 저장된 캐릭터) 처음 차림
 	if data.tslots ~= nil then
-		Hero.setSlots(h, Quick.renew(data.tslots, myPotion), true)
+		Hero.setSlots(h, salvage(Quick.renew(data.tslots, myPotion)), true)
 	end
 
 	h.kit.on = data.kitOn == true and Kit.level(h, "toggle") > 0

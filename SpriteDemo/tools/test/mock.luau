@@ -163,7 +163,27 @@ local Color3 = { fromRGB = function(r, g, b) return { __type = "Color3", R = r /
 	fromHex = function(hex) local h = hex:gsub("#", ""); assert(#h == 6 and h:match("^%x+$"), "색의 꼴이 틀렸다 " .. tostring(hex)); return { __type = "Color3", R = tonumber(h:sub(1, 2), 16) / 255, G = tonumber(h:sub(3, 4), 16) / 255, B = tonumber(h:sub(5, 6), 16) / 255, hex = "#" .. h:lower() } end }
 local UDim2 = { fromOffset = function(x, y) return { X = { Offset = x, Scale = 0 }, Y = { Offset = y, Scale = 0 } } end, new = function(xs, xo, ys, yo) return { X = { Offset = xo, Scale = xs }, Y = { Offset = yo, Scale = ys } } end, fromScale = function(xs, ys) return { X = { Offset = 0, Scale = xs }, Y = { Offset = 0, Scale = ys } } end }
 local Enum = setmetatable({}, { __index = function(_, k) return setmetatable({}, { __index = function(_, k2) return k .. "." .. k2 end }) end })
-local Instance = { new = function(class) return { ClassName = class } end }
+-- 만든 것의 사건(MouseEnter · Activated …)은 읽는 순간 가짜 신호가 된다(2026-10-18 — 화면 모듈을 화면 없이 돌릴 때: Connect로 받아 두고 테스트가 Fire로 부른다)
+local SIGNALS = { MouseEnter = true, MouseLeave = true, Activated = true, InputBegan = true, InputEnded = true, InputChanged = true, MouseButton1Click = true, MouseButton1Down = true, FocusLost = true, Changed = true }
+local function signalMock()
+	local sig = { fns = {} }
+	function sig:Connect(fn)
+		table.insert(self.fns, fn)
+		return { Disconnect = function() end }
+	end
+	function sig:Fire(...)
+		for _, f in self.fns do
+			f(...)
+		end
+	end
+	return sig
+end
+CREATED = {} -- 화면 모듈이 Instance.new로 만든 것들(테스트가 이름으로 찾아 사건을 부른다 — RESET이 비운다)
+local Instance = { new = function(class)
+	local inst = setmetatable({ ClassName = class }, { __index = function(t, k) if SIGNALS[k] then local sig = signalMock(); rawset(t, k, sig); return sig end return nil end })
+	table.insert(CREATED, inst)
+	return inst
+end }
 warnings = {}
 local function warnMock(...) table.insert(warnings, table.concat({ ... }, " ")) end
 local quietPrint = function() end
@@ -179,7 +199,7 @@ local function requireMock(target)
 end
 req = requireMock
 function MOCK(path, value) LOADED[path] = value end
-function RESET() table.clear(LOADED); table.clear(timers); table.clear(services); table.clear(warnings); clock.now = 1000 end
+function RESET() table.clear(LOADED); table.clear(timers); table.clear(services); table.clear(warnings); table.clear(CREATED); clock.now = 1000 end
 V = vec
 RandomNew = Random.new
 

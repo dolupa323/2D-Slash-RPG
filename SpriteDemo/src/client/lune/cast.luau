@@ -479,6 +479,22 @@ function Cast:chargeUp(a, lv: number)
 	self.fx.shards(a.x, a.y - 8, 4 + lv * 2, a.tone, { speed = 40, up = 60, kind = "dot", grav = -60, life = 0.4 })
 end
 
+-- 레벨이 올랐다(2026-10-18 — 메이플스토리처럼 캐릭터 둘레로 빛이 솟는다. 전에는 머리 위의 글씨와 소리뿐이었다): 큰 기운 · 발밑의 넓은 고리 · 위로 흩어지는 점(직업 색)
+--  시험 탭 js/lune/luneTab.js의 gainXp가 같은 값으로 그린다
+function Cast:levelUp(a)
+	self.fx.aura(a.x, a.y, a.tone, { r = 18, h = 46, life = 0.9 })
+	self.fx.ring(a.x, a.y - 2, 4, 34, a.tone, { squash = 0.35, back = true, life = 0.7 })
+	self.fx.shards(a.x, a.y - 10, 14, a.tone, { speed = 30, up = 90, kind = "dot", grav = -80, life = 0.9 })
+end
+
+-- 사냥터 정예가 나왔다(2026-10-18 — 시험 탭의 spawnElite와 같다): 그 자리에서 분홍 기운이 솟고 고리가 퍼지며 불티가 오른다
+function Cast:eliteRise(x: number, y: number)
+	local tone = Cast.tone("pink")
+	self.fx.aura(x, y, tone, { r = 16, h = 40, life = 1.1 })
+	self.fx.ring(x, y - 2, 4, 30, tone, { squash = 0.35, back = true, life = 0.8 })
+	self.fx.shards(x, y - 8, 12, tone, { speed = 26, up = 80, kind = "dot", grav = -60, life = 1 })
+end
+
 -- 사출기를 켰다(시험 탭: 켜는 순간 작은 기운)
 function Cast:toggled(a)
 	self.fx.aura(a.x, a.y, a.tone, { r = 10, h = 16, life = 0.35 })

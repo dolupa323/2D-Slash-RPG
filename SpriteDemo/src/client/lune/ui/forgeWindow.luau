@@ -122,6 +122,19 @@ function ForgeWindow.choices(bag)
 	return out
 end
 
+-- 가방(장착하지 않은 것)에 있는가 — 되살리기의 재료는 가방의 것만 받는다(서버의 Bag.restore와 같다 — 2026-10-18 검토)
+local function inGear(bag, id: number?): boolean
+	if not bag or not id then
+		return false
+	end
+	for _, it in bag.gear do
+		if it and it.id == id then
+			return true
+		end
+	end
+	return false
+end
+
 local function findIn(bag, id: number?)
 	if not bag or not id then
 		return nil
@@ -260,7 +273,9 @@ function ForgeWindow.build(body: Frame, ctx, w: number, h: number, arg: any)
 		row.coin = Ui.smallIcon(craftRoot, "coin", w - bw - 8 - fw - 19, y + 3)
 		row.fee = Ui.text(craftRoot, "", w - bw - 8 - fw, y + 7, fw, { align = "right", color = C.gold })
 		row.make = Ui.button(craftRoot, "제작", w - bw, y + 1, bw, function()
-			if row.recipe then
+			-- 빨리 두 번 누르면 두 번 만들어 재료를 두 번 썼다(2026-10-18 검토) — 0.8초 안의 다시 누름은 받지 않는다
+			if row.recipe and os.clock() - (ForgeWindow.craftAt or -9) > 0.8 then
+				ForgeWindow.craftAt = os.clock()
 				ctx.send("Item", "craft", row.recipe.id)
 			end
 		end, { h = CRAFT.makeH })
@@ -318,7 +333,7 @@ function ForgeWindow.build(body: Frame, ctx, w: number, h: number, arg: any)
 			return
 		end
 		anim = { t = 0, seq = ui.forgeSeq or 0, snap = table.clone(it), id = it.id, revealed = false }
-		ui.forgeResult = nil
+		ui.forgeResult, ui.forgeWhy = nil, nil -- 지난 「안 된 까닭」을 지운다(2026-10-18 검토)
 		ctx.send("Item", "enhance", it.id, guard)
 		view.startAnim()
 	end, { main = true })
@@ -342,11 +357,12 @@ function ForgeWindow.build(body: Frame, ctx, w: number, h: number, arg: any)
 				return
 			end
 			local cur = findIn(ctx.bag(), ui.forgeTarget)
-			if cur and cur.broken and cur.id ~= it.id and Items.same(cur, it) and not it.broken then
-				ui.forgeMat = it.id -- 부서진 것을 되살릴 같은 장비
+			if cur and cur.broken and cur.id ~= it.id and Items.same(cur, it) and not it.broken and inGear(ctx.bag(), it.id) then
+				ui.forgeMat = it.id -- 부서진 것을 되살릴 같은 장비(가방의 것만 — 장착한 것은 서버가 받지 않는다)
 			else
 				ui.forgeTarget, ui.forgeMat, ui.forgeResult = it.id, nil, nil
 			end
+			ui.forgeWhy = nil -- 다른 것을 골랐다: 지난 「안 된 까닭」을 지운다(2026-10-18 검토)
 			view.refresh()
 		end, S)
 		p.tag = Ui.text(p.cell.frame, "장착", 3, 2, S - 6, { outline = true, color = C.accent, z = 7 })
@@ -605,7 +621,7 @@ function ForgeWindow.build(body: Frame, ctx, w: number, h: number, arg: any)
 		starsUi:set(shown.star, D.ENHANCE.max)
 		name:set(ItemCell.label(shown))
 		name:color(ItemCell.color(shown))
-		local info = Items.enhanceInfo(shown, guard, me.forged ~= true and shown.star == 0) -- 첫 강화(별이 없는 장비의 첫 별)는 공짜로 반드시 붙는다
+		local info = Items.enhanceInfo(shown, guard, Items.firstFree(me.forged, me.level, shown)) -- 첫 강화(별이 없는 제 레벨 + 10까지의 장비의 첫 별)는 공짜로 반드시 붙는다 — 서버와 같은 셈
 		local texts = ForgeWindow.lines(shown, info, bag)
 		line1:set(texts[1])
 		line2:set(texts[2])
@@ -644,7 +660,7 @@ end
 function ForgeWindow.put(ui, id: number, bag: any)
 	local cur = findIn(bag, ui.forgeTarget)
 	local it = findIn(bag, id)
-	if cur and it and cur.broken and cur.id ~= it.id and Items.same(cur, it) and not it.broken then
+	if cur and it and cur.broken and cur.id ~= it.id and Items.same(cur, it) and not it.broken and inGear(bag, id) then
 		ui.forgeMat = id
 	else
 		ui.forgeTarget, ui.forgeMat = id, nil

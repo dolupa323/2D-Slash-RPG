@@ -115,6 +115,13 @@ function Q.state(book, level: number, id: string): string
 		return "locked"
 	elseif def.after and not (book[def.after] and book[def.after].done) then
 		return "locked"
+	elseif def.kind == "job" and def.reward.job and def.reward.job > 2 then
+		-- 전직은 차례대로(2026-10-18 검토): 앞 차수의 전직 퀘스트를 끝내야 받는다 — 2차를 건너뛰고 Lv.60에 3차를 받아 돌려주면
+		--  전직은 되지 않고(Hero.advance는 바로 다음 차수만) 퀘스트만 끝나 3차를 영영 못 했다
+		local prev = Q.jobQuest(def.reward.job - 1)
+		if prev and not (book[prev.id] and book[prev.id].done) then
+			return "locked"
+		end
 	end
 	return "open"
 end
@@ -541,6 +548,28 @@ end
 -- 그 지역(region · also)의 맵에 선 사람이 그 퀘스트를 주는가 — 서버의 받기도 같은 것으로 가린다. 전직 퀘스트는 사제가 어디서든 준다
 function Q.givesIn(def, region: any, also: any?): boolean
 	return def.region == region or (also ~= nil and also ~= false and def.region == also) or def.kind == "job"
+end
+
+-- 주민에게 말을 걸었을 때의 고르는 말(2026-10-18 — 메이플스토리의 NPC 대화처럼): 돌려줄 · 받을 · 하는 중인 퀘스트가 모두 합쳐 둘 넘으면
+--  줄마다 하나씩(돌려줄 것 → 받을 것 → 하는 중인 것 차례) + 마지막 줄 「대화하기」. rows = 대화창의 줄 수(넘는 퀘스트는 다음에 말을 걸 때 — 돌려주거나 받으면 줄이 빈다)
+--  하나뿐이면 nil(그것을 바로 말한다 — 전과 같다). 돌려주는 것 = { { kind = "ready" | "offer" | "wait" | "chat", id, text } }
+Q.MENU_WORDS = { ready = "완료 가능", offer = "새 퀘스트", wait = "진행 중", chat = "대화하기" }
+function Q.talkMenu(at, rows: number)
+	local n = #at.ready + #at.offer + #at.wait
+	if n < 2 then
+		return nil
+	end
+	local out = {}
+	for _, kind in { "ready", "offer", "wait" } do
+		for _, id in at[kind] do
+			if #out < rows - 1 then
+				local def = Q.def(id)
+				table.insert(out, { kind = kind, id = id, text = ("%s  「%s」"):format(Q.MENU_WORDS[kind], def and def.name or id) })
+			end
+		end
+	end
+	table.insert(out, { kind = "chat", text = Q.MENU_WORDS.chat })
+	return out
 end
 
 -- 주민 머리 위의 표시: "?" 돌려줄 것이 있다 · "!" 줄 것이 있다 · nil

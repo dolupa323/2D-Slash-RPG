@@ -55,6 +55,14 @@ function BagWindow.canWear(me, it): boolean
 	return not it.broken and (it.slot ~= "weapon" or it.who == me.class) and me.level >= Items.needLevel(it)
 end
 
+-- 지금 낀 것보다 좋은 장비인가(2026-10-18 — 칸의 왼쪽 위에 초록 ▲): 장착할 수 있고, 장착하면 전투력이 오른다(상세 판의 「장착하면 전투력 +n」과 같은 셈)
+function BagWindow.better(me, bag, it): boolean
+	if not it or it.item or typeof(it.stage) ~= "number" or typeof(it.q) ~= "number" or typeof(it.star) ~= "number" or not BagWindow.canWear(me, it) then
+		return false -- (장비의 꼴이 다 갖춰지지 않은 것 — 셈하지 않는다)
+	end
+	return ItemInfo.wearDiff(it, (bag.equip or {})[it.slot], me.spec or ItemInfo.refSpec(me.level or 1)) > 0 -- (장착한 것의 표가 없으면 빈 몸으로 셈한다)
+end
+
 -- 그림과 숫자(달돈 · 달가루 · 정수). (x, y) = 그림의 왼쪽 위 — 숫자는 그 오른쪽에
 local function purse(parent: Instance, icon: string, x: number, y: number, w: number)
 	Ui.smallIcon(parent, icon, x, y)
@@ -359,6 +367,20 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					end,
 					no = stopAsk,
 				})
+			elseif ask and ask.kind == "dismantle" then
+				-- 분해도 한 번 묻는다(2026-10-18 — 전에는 누르면 바로 사라졌다): 「이 장비를 분해할까요?  달가루 +n」 · 분해 · 취소
+				spec.ask = ItemDetail.ask("dismantle", nil, 1, 1, {
+					gain = function()
+						return Items.dismantle(it)
+					end,
+					gainWord = "gainDust",
+					yes = function()
+						ctx.send("Item", "dismantle", it.id)
+						unselect()
+						redraw()
+					end,
+					no = stopAsk,
+				})
 			else
 				ask = nil
 				button(WORDS.equip, function()
@@ -366,9 +388,8 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					redraw()
 				end, true, not can)
 				button(WORDS.dismantle, function()
-					ctx.send("Item", "dismantle", it.id)
-					unselect()
-					redraw()
+					ask = { kind = "dismantle" }
+					view.refresh()
 				end)
 				if service == "store" then
 					button(WORDS.toStore, function()
@@ -446,7 +467,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 						view.refresh()
 					end)
 				end
-				if service == "store" then
+				if service == "store" and def.kind ~= "quest" then -- 퀘스트 물건은 맡길 수 없다(sim/bag.luau의 storeIn)
 					button(WORDS.toStore, function()
 						if entry.n == 1 then
 							ctx.send("Item", "storeIn", tabKey, slot, 1)
@@ -501,7 +522,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		for i, cell in cells do
 			cell.frame.Visible = i <= rows * COLS -- 줄여진 적은 없지만, 넘치는 칸은 숨긴다
 			local item = list[i] or nil
-			cell:set(item, { locked = i > bag.size, selected = sel ~= nil and sel.tab == key() and sel.slot == i, hot = hot == i })
+			cell:set(item, { locked = i > bag.size, selected = sel ~= nil and sel.tab == key() and sel.slot == i, hot = hot == i, better = key() == "gear" and BagWindow.better(me, bag, item) })
 		end
 		-- 가방 늘리기(세 탭이 함께 늘어난다 — 값이 적혀 있다). 다 늘렸으면 단추가 없다
 		grow.frame.Visible = bag.growCost ~= false

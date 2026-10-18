@@ -82,7 +82,7 @@ for i, row in E.table do
 end
 for _, s in D.STOCK do
 	expect(D.NPCDO[s.npc] ~= nil, "상점 물건을 파는 주민 " .. s.id)
-	expect(typeof(s.price) == "number" and s.price > 0, "값이 있다 " .. s.id)
+	expect(Items.stockPrice(s, s.from) > 0, "값이 있다 " .. s.id) -- 레벨에 따라 오르는 것(perLv — 달빛 부적 · 능력치 초기화)은 그 물건을 살 수 있는 첫 레벨의 값
 	expect(s.goods == false or (Items.goods(s.goods) ~= nil and Items.goods(s.goods).tab == "use"), "상점의 소비 아이템은 아이템 목록에 있다 " .. s.id)
 end
 -- 가장 긴 장비 이름: 아이템 상세 판의 이름 칸(본문 글씨 두 줄 — 그림 칸의 오른쪽)에 별까지 붙여 들어간다
@@ -788,11 +788,11 @@ do
 		local kinds = 0
 		for kind, pair in WD.ask do
 			kinds += 1
-			local ask = if kind == "sell" or kind == "sellGear" then pair[1] .. "  " .. F.fill(WD.gain, { n = "9999.9만" }) else pair[1]
+			local ask = if kind == "sell" or kind == "sellGear" then pair[1] .. "  " .. F.fill(WD.gain, { n = "9999.9만" }) elseif kind == "dismantle" then pair[1] .. "  " .. F.fill(WD.gainDust, { n = "9999" }) else pair[1]
 			expect(width(ask) <= L.detailInner(), ("묻는 글 %s(폭 %d)이 판의 속(%d)에 들어간다"):format(ask, width(ask), L.detailInner()))
 			expect(widthBody(pair[2]) <= two - 6, "하는 단추의 글 " .. pair[2])
 		end
-		eq(kinds, 6, "수를 고르는 일: 버리기 · 맡기기 · 찾기 · 팔기 · 나누기 · 장비 팔기")
+		eq(kinds, 7, "수를 고르는 일: 버리기 · 맡기기 · 찾기 · 팔기 · 나누기 · 장비 팔기 · 분해(2026-10-18 — 분해도 한 번 묻는다)")
 		expect(widthBody(WD.askNo) <= two - 6, "그만두는 단추의 글")
 		expect(widthBody(WD.sort) <= L.STORE.sortW - 6, "창고의 정렬 단추의 글")
 		expect(width(WD.shopHint) <= SHOP.w - SHOP.hintX, "상점의 안내 글(끌어다 놓으면 판다)이 달돈 · 달가루의 오른쪽에 들어간다")
@@ -897,7 +897,7 @@ do
 			count[st.npc] = (count[st.npc] or 0) + 1
 		end
 		for npc, n in count do
-			expect(n <= SHOP.rows, ("상점 %s의 물건 %d가지가 창의 줄 수(%d) 안"):format(npc, n, SHOP.rows))
+			expect(n >= 1, ("상점 %s의 물건 %d가지(창의 줄 수 %d를 넘으면 목록이 스크롤한다 — 2026-10-18)"):format(npc, n, SHOP.rows))
 		end
 	end
 	expect(widthBody("사기") <= SHOP.buyW - 6 and widthBody("10") <= (SHOP.buyW - 6) / 2 - 6, "사는 단추의 글")
@@ -1087,7 +1087,8 @@ do
 	broken.bag.use = { { "no_such", 3 }, { "etc_cloth", 3 }, { P1, 201 }, { P1, 0 }, { P1, 2.5 }, "x", { P1, 9 } }
 	broken.bag.etc = { { P1, 1 } }
 	local fixed = Hero.unpack(34, broken)
-	expect(fixed ~= nil and Bag.used(fixed, "use") == 1 and fixed.use[7].item == P1 and fixed.use[7].n == 9, "꼴이 맞는 묶음만 남는다(그 칸에)")
+	-- 겹치는 수를 넘는 묶음(201)은 버리지 않고 겹치는 수(200)로 맞추고 넘친 1개는 첫 빈 칸에(2026-10-18 검토: 설계의 겹치는 수가 줄면 묶음째 사라졌다)
+	expect(fixed ~= nil and Bag.used(fixed, "use") == 3 and fixed.use[7].item == P1 and fixed.use[7].n == 9 and fixed.use[3].n == 200 and fixed.use[1].item == P1 and fixed.use[1].n == 1, "꼴이 맞는 묶음만 남는다(그 칸에) · 넘친 묶음은 맞춰 나눈다")
 	eq(Bag.used(fixed, "etc"), 0, "다른 탭의 아이템은 버린다")
 	-- 예전 저장(소비 · 기타 칸이 생기기 전): 숫자로만 갖고 있던 물약과 퀘스트의 물건이 가방의 아이템이 된다 — 잃는 것이 없다
 	local Q15 = req("ReplicatedStorage/shared/lune/sim/quests")
@@ -1217,9 +1218,9 @@ do
 	-- 찾기: 몇 개만 · 가방의 고른 칸에 · 전부(가방의 같은 묶음에 겹친다)
 	expect(Bag.storeOut(w, "use", 1, 10, 5) and w.use[5].item == P1 and w.use[5].n == 10 and w.store.use[1].n == n0 + 32, "열 개를 가방의 고른 칸(5)에")
 	expect(Bag.storeOut(w, "use", 7) and w.store.use[7] == false and w.use[5].n == 18, "한 묶음 전부를 찾는다 — 가방의 같은 묶음에 겹친다")
-	-- 기타 아이템도 맡긴다 · 탭끼리는 섞이지 않는다
-	Bag.give(w, "etc_plate", 6)
-	expect(Bag.storeIn(w, "etc", 1, 4) and w.store.etc[1].item == "etc_plate" and w.store.etc[1].n == 4 and w.etc[1].n == 2, "기타 아이템도 맡긴다")
+	-- 기타 아이템도 맡긴다(재료 — 퀘스트 물건은 맡길 수 없다: 2026-10-18) · 탭끼리는 섞이지 않는다
+	Bag.give(w, "mat_ore1", 6)
+	expect(Bag.storeIn(w, "etc", 1, 4) and w.store.etc[1].item == "mat_ore1" and w.store.etc[1].n == 4 and w.etc[1].n == 2, "기타 아이템도 맡긴다")
 	expect(Bag.stored(w, "gear") == 0 and Bag.stored(w, "use") == 2 and Bag.stored(w, "etc") == 1, "탭마다 칸이 따로다")
 	-- 창고 안에서 옮기기 · 정렬
 	expect(Bag.move(w, "use", 1, 10, true) and w.store.use[1] == false and w.store.use[10].item == P1, "창고 안에서 빈 칸으로 옮긴다")
@@ -1283,7 +1284,13 @@ do
 	local badS = Hero.pack(mv)
 	badS.bag.store = { gear = { { "wing", 1, 3, 0, "", 0, 0 }, { "hat", 1, 3, 0, "", 0, 0 } }, use = { { "etc_plate", 3 }, { P1, 5 }, { P1, 999 } }, etc = "x" }
 	local fixedS = Hero.unpack(44, badS)
-	expect(fixedS ~= nil and fixedS.store.gear[1] == false and fixedS.store.gear[2].slot == "hat" and Bag.stored(fixedS, "use") == 1 and fixedS.store.use[2].n == 5 and Bag.stored(fixedS, "etc") == 0, "꼴이 맞는 것만 남는다")
+	local storedUse = 0
+	for _, e in fixedS.store.use do
+		if e and e.item == P1 then
+			storedUse += e.n
+		end
+	end
+	expect(fixedS ~= nil and fixedS.store.gear[1] == false and fixedS.store.gear[2].slot == "hat" and fixedS.store.use[2].n == 5 and storedUse == 5 + 999 and Bag.stored(fixedS, "etc") == 0, "꼴이 맞는 것만 남는다 · 넘친 묶음(999)은 맞춰 나눠 잃지 않는다 — " .. storedUse)
 
 	-- 묶음 나누기
 	local sp = Hero.new(42, "axion")
@@ -1342,9 +1349,9 @@ do
 	end
 	for _, st in D.STOCK do
 		if st.goods then
-			expect(Items.goodsSell(st.goods) < st.price, "사서 되팔면 손해다 " .. st.id)
+			expect(Items.goodsSell(st.goods) < Items.stockPrice(st, st.from), "사서 되팔면 손해다 " .. st.id)
 		elseif st.item then
-			expect(Items.sellPrice({ slot = st.item.slot, stage = st.item.stage }) < st.price, "사서 되팔면 손해다 " .. st.id)
+			expect(Items.sellPrice({ slot = st.item.slot, stage = st.item.stage }) < Items.stockPrice(st, st.from), "사서 되팔면 손해다 " .. st.id)
 		end
 	end
 	for _, g in D.GOODS do
@@ -1372,6 +1379,7 @@ do
 		M = L.M,
 		cellSize = function() return 50 end,
 		group = function(_, _, _, _, _, name) return frame(name) end,
+		scroll = function(_, _, _, _, h, contentH) local f = frame("Scroll"); f.h, f.contentH = h, contentH; return f end, -- 상점의 목록(2026-10-18 — 물건이 줄보다 많으면 스크롤한다)
 		line = function() return frame("Line") end,
 		tab = function(_, text, _, _, onClick)
 			tabClicks[text] = onClick
@@ -1490,7 +1498,7 @@ do
 	eq(#ShopWindow.stockOf("smith"), 0, "대장장이는 아무것도 팔지 않는다(2026-10-15)")
 	for _, npc in { "merchant" } do
 		local stock = ShopWindow.stockOf(npc)
-		expect(#stock >= 1 and #stock <= L.SHOP.rows, "상점의 줄 수 " .. npc)
+		expect(#stock >= 1, "상점의 줄 수 " .. npc .. "(창의 줄보다 많으면 목록이 스크롤한다)")
 		for _, class in CLASSES do
 			for _, level in { 1, 10, 30 } do
 				table.clear(made)
@@ -1503,11 +1511,11 @@ do
 					local y0 = (i - 1) * (L.M.button + 4)
 					local row, slotN, itemIcon, coin = {}, 0, nil, nil
 					for _, e in made do
-						if e.y >= y0 and e.y < y0 + L.M.button + 4 then
+						if e.y >= y0 and e.y < y0 + L.M.button + 4 and e.parent ~= body then -- 줄의 것만(아래 줄의 달돈 · 안내는 창의 몸에 바로 — 줄들은 스크롤 틀 안이라 그 아래로 가려진다 · 2026-10-18)
 							if e.kind == "slot" then
 								slotN += 1
 								table.insert(row, e)
-							elseif e.kind == "icon" and e.parent ~= body then
+							elseif e.kind == "icon" and e.parent ~= body and not (e.parent and e.parent.Name == "Scroll") then -- (줄들은 상점 목록의 스크롤 틀 안 — 2026-10-18)
 								itemIcon = e -- 칸 안의 그림
 							elseif e.kind == "icon" then
 								coin = e
@@ -1529,7 +1537,7 @@ do
 				-- 칸 안의 그림: 줄의 수만큼 있고 모두 보인다(살 수 없는 것도 그림은 보인다)
 				local inCell, shown = 0, 0
 				for _, e in made do
-					if e.kind == "icon" and e.parent ~= body then
+					if e.kind == "icon" and e.parent ~= body and not (e.parent and (e.parent.Name == "Scroll" or e.parent.Name == "BackIcon")) then -- (되사기 줄의 칸은 따로 — 2026-10-18)
 						inCell += 1
 						shown += if e.Visible and ICONS[e.name] ~= nil then 1 else 0
 						expect(e.x == 3 and e.y == 3 and e.x + e.w <= L.SHOP.iconS - 3, "그림이 칸의 가운데에 든다")
@@ -1580,6 +1588,7 @@ do
 		cellSize = function() return 50 end,
 		measure = function(text: string, font: string?) return (pixelText.Measure(text, font or "small")) end,
 		group = function(_, _, _, _, _, name) return frame(name) end,
+		scroll = function(_, _, _, _, h, contentH) local f = frame("Scroll"); f.h, f.contentH = h, contentH; return f end, -- 상점의 목록(2026-10-18 — 물건이 줄보다 많으면 스크롤한다)
 		box = function() return frame("Box") end,
 		line = function() return frame("Line") end,
 		hit = function() return { Activated = { Connect = function() end } } end,

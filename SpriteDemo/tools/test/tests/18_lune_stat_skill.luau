@@ -340,7 +340,8 @@ do
 	expect(revived ~= nil and revived.slots[1] == "potion1" and COMBAT.skills[revived.slots[2]] ~= nil, "칸이 없던 저장도 처음 차림으로 되살아난다")
 	old.slots = { "potion1", "no_such_skill" }
 	revived = Hero.unpack(1, old)
-	expect(revived ~= nil and revived.slots[1] == "potion1" and COMBAT.skills[revived.slots[2]] ~= nil, "깨진 칸들도 처음 차림으로 되살아난다")
+	-- 깨진 칸은 그 칸만 비운다(2026-10-18 검토 — 전에는 칸 하나 때문에 배치 전체가 처음 차림으로 돌아갔다)
+	expect(revived ~= nil and revived.slots[1] == "potion1" and revived.slots[2] == false, "깨진 칸만 비우고 나머지는 지킨다")
 	-- 예전 저장의 물약 칸("potion" — 물약이 한 가지였을 때): 놓아 둔 자리 그대로, 그때 마시던 물약(내 레벨의 것)의 칸이 된다. PC · 스마트폰 배치 모두
 	do
 		local was = Hero.new(1, "axion")

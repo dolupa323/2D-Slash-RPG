@@ -92,6 +92,14 @@ local GLOW_AT = { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } } -- 윤곽의 빛: �
 local EMBER_X = { -9, -4, 1, 6, 10 } -- 불티 다섯이 피어오르는 자리(몸의 가운데에서 옆으로)
 local EMBER_BIG = 0.45 -- 피어오르는 길의 이만큼까지는 두 점, 그 뒤로는 한 점(한 점짜리 셋은 화면에서 보이지 않았다 — 2026-10-11 Play)
 local function rgbOf(c): Color3
+	-- 「#rrggbb」 글도 받는다(토벌 · 사냥터 정예의 겉모습 — city.js RIFT.elite.look은 글로 적혀 있다. 2026-10-18 검토: 배열로만 읽어 윤곽 · 불티가 검게 나왔다)
+	if typeof(c) == "string" then
+		local r, g, b = string.match(c, "^#?(%x%x)(%x%x)(%x%x)$")
+		if r then
+			return Color3.fromRGB(tonumber(r, 16) :: number, tonumber(g, 16) :: number, tonumber(b, 16) :: number)
+		end
+		return Color3.fromRGB(255, 255, 255)
+	end
 	return Color3.fromRGB(c[1], c[2], c[3])
 end
 -- 윤곽의 빛(흰 실루엣 넷) — look.aura가 있을 때만

@@ -141,7 +141,9 @@ do
 	expect(job ~= nil and job.lv == 30 and job.endNpc == "master", "2차 전직 퀘스트는 Lv.30 · 사제에게")
 	local job3 = Quests.jobQuest(3) -- 3차 전직(2026-10-16 — 2편의 끝): Lv.60 · 사제에게 · 종탑의 종지기
 	expect(job3 ~= nil and job3.lv == 60 and job3.endNpc == "master" and job3.scene == "r2c3" and job3.reward.job == 3, "3차 전직 퀘스트는 Lv.60 · 사제에게 · 수정 성당 종탑")
-	eq(Quests.jobQuest(4), nil, "4차 전직 퀘스트는 아직 없다(레벨만 되면 오른다)")
+	local job4 = Quests.jobQuest(4) -- 4차 전직(2026-10-18 — 전에는 Lv.100이 되면 저절로 올랐다): Lv.100 · 사제에게 · 외성 밖 들판의 정예 창병 · 넷
+	expect(job4 ~= nil and job4.lv == 100 and job4.endNpc == "master" and job4.scene == "r4a1" and job4.reward.job == 4, "4차 전직 퀘스트는 Lv.100 · 사제에게 · 외성 밖 들판")
+	expect(job4 ~= nil and job4.steps[1].n == 4, "2 · 3차처럼 넷을 모은다")
 	local main, why = Quests.nextMain(book, 30)
 	expect(main ~= nil and main.id == "cq01" and why == "open", "Lv.30이면 은달 항구로 가는 메인(「큰 항구로」 — 2026-10-16)을 받을 수 있다")
 	-- 부탁: 1지역의 열을 모두 할 수 있다(2026-10-13 — 사용자: "부탁퀘스트 필요합니다." 남아 있던 하나 「묵은 도토리」는 굴의 주인을 불러내는 퀘스트였는데, 고갯마루 노인의 사냥 부탁(굴 두더지 스물)으로 고쳤다)

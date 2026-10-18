@@ -141,8 +141,15 @@ function Stage.init()
 end
 
 -- 화면 틀의 격자가 바뀌면(창 크기가 바뀌어 배율이 달라지면) fn을 부른다
-function Stage.onResize(fn: () -> ())
+-- 돌려주는 것: 그 함수를 빼는 함수(화면을 닫을 때 — 2026-10-18 검토: 캐릭터 고르기를 열 때마다 하나씩 쌓여 닫힌 화면을 붙들고 있었다)
+function Stage.onResize(fn: () -> ()): () -> ()
 	table.insert(resized, fn)
+	return function()
+		local i = table.find(resized, fn)
+		if i then
+			table.remove(resized, i)
+		end
+	end
 end
 
 -- 도트 좌표에 놓는 그림 한 장(도트 그림용 설정)

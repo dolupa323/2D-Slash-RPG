@@ -22,6 +22,14 @@ local SLOT = K.slot -- 스킬 칸 한 변
 local KEY_UP = K.keyUp -- 칸 위의 키 딱지가 차지하는 높이
 local COLS, ROWS = K.cols, K.rows -- 스킬 칸: 두 줄 x 여섯
 local PIC = M.pic
+-- 설명 판(버프 · 경험치 · 퀵슬롯의 설명 — 2026-10-18): 능력치의 설명과 같은 판의 치수 · 제목의 색. 판을 짓는 함수들보다 위에 둔다(퀵슬롯의 설명이 먼저 쓴다)
+local TIP = Layout.STAT.tip
+local TIPCOLOR = { main = C.gold, sub = C.accent, none = C.dim }
+-- 손가락으로 누른 것인가(폰에서는 누를 때도 MouseEnter가 오고 MouseLeave는 오지 않는다 — 그때는 Activated로만 열고 닫는다)
+local UIS = game:GetService("UserInputService")
+local function touching(): boolean
+	return UIS:GetLastInputType() == Enum.UserInputType.Touch
+end
 -- 메뉴 단추의 그림(창의 이름표 → 그림)
 local MENU_PIC = { bag = "menu_bag", equip = "menu_equip", stat = "menu_stat", skill = "menu_skill", quest = "menu_quest", map = "menu_map", auction = "menu_auction", party = "menu_party", more = "menu_gear" }
 
@@ -75,6 +83,32 @@ function Hud.init()
 	Hud.xp = Ui.bar(box, 0, L.xpY, V.barW, V.xpH, C.accent)
 	Hud.xp.frame.Name = "Xp"
 	Hud.xpText = Ui.text(box, "0.00%", L.xpTextX, L.xpY - 3, L.xpTextW, { color = C.dim, outline = true })
+	-- 경험치 줄의 설명(2026-10-18 — 공방 ui.js XPTIP): 줄(과 그 옆의 %)에 마우스를 올리면(폰은 톡 — 한 번 더 톡 하면 닫힘) 덩어리 위에 지금 · 필요한 경험치와 남은 것
+	local xpOver = Instance.new("TextButton")
+	xpOver.Name = "XpOver"
+	xpOver.Text = ""
+	xpOver.BackgroundTransparency = 1
+	xpOver.Position = UDim2.fromOffset(0, L.xpY - 5)
+	xpOver.Size = UDim2.fromOffset(UI.hud.vitals.w, V.xpH + 10)
+	xpOver.ZIndex = 8
+	xpOver.Parent = box
+	xpOver.MouseEnter:Connect(function()
+		if not touching() then -- 손가락은 Activated로만(누를 때도 MouseEnter가 온다)
+			Hud.showXpTip(box)
+		end
+	end)
+	xpOver.MouseLeave:Connect(function()
+		if not touching() then
+			Hud.hideXpTip()
+		end
+	end)
+	xpOver.Activated:Connect(function(input)
+		if input and input.UserInputType == Enum.UserInputType.Touch and Hud.xpTip then
+			Hud.hideXpTip()
+		else
+			Hud.showXpTip(box)
+		end
+	end)
 
 	-- 스킬 칸: 어두운 칸에 그림 · 개수(오른쪽 아래) · 다시 쓰기까지 남은 시간(어두운 덮개와 초). 키 이름은 칸 위의 딱지에 적는다(그림을 가리지 않게).
 	--  퀵슬롯이다: 칸마다 키가 하나 붙어 있고, 물약 · 스킬을 칸에 놓아 쓴다(아래의 「퀵슬롯」)
@@ -90,7 +124,12 @@ function Hud.init()
 		veil.Name = "Veil"
 		veil.ZIndex = 3
 		veil.Visible = false
-		local slot = { frame = cell.frame, cell = cell, back = cell.frame:FindFirstChild("uSlot") :: ImageLabel, pic = pic, veil = veil, pad = pad, what = false :: any, id = nil :: string?, shown = nil :: string?, keyName = "" }
+		-- 다시 쓰기가 끝난 순간 그림이 한 번 하얗게 번쩍인다(2026-10-18 — 시험 탭의 sk.flash와 같다 · Hud.step이 흐리게 한다)
+		local ready = Ui.box(cell.frame, pad, pad, PIC, PIC, Color3.new(1, 1, 1), 1)
+		ready.Name = "Ready"
+		ready.ZIndex = 4
+		ready.Visible = false
+		local slot = { frame = cell.frame, cell = cell, back = cell.frame:FindFirstChild("uSlot") :: ImageLabel, pic = pic, veil = veil, ready = ready, readyT = 0, pad = pad, what = false :: any, id = nil :: string?, shown = nil :: string?, keyName = "" }
 		-- 퀵슬롯은 자리가 늘 같다(여섯 x 두 줄 — 칸마다 키 하나)
 		local px, py = Layout.slotPlace(i, COLS * ROWS)
 		cell.frame.Position = UDim2.fromOffset(px, py)
@@ -111,6 +150,17 @@ function Hud.init()
 		hit.InputBegan:Connect(function(input)
 			if Hud.onSlotPress then
 				Hud.onSlotPress(i, input)
+			end
+		end)
+		-- 칸의 설명(2026-10-18 — 메이플처럼 · PC): 마우스를 올리면 칸 위에 그 스킬 · 물건의 이름 · 효과(스킬 창을 열어 고치는 중이거나 끄는 중에는 띄우지 않는다)
+		hit.MouseEnter:Connect(function()
+			if not touching() then
+				Hud.showSlotTip(i)
+			end
+		end)
+		hit.MouseLeave:Connect(function()
+			if Hud.slotTipAt == i then
+				Hud.hideSlotTip()
 			end
 		end)
 		slot.key = Ui.keycap(cell.frame, "", math.floor(SLOT / 2), -KEY_UP)
@@ -165,7 +215,9 @@ end
 function Hud.setCounts()
 	for _, slot in Hud.slots do
 		if slot.item then
-			slot.count:set(tostring(if Hud.countOf then Hud.countOf(slot.item) else 0))
+			local n = if Hud.countOf then Hud.countOf(slot.item) else 0
+			slot.count:set(tostring(n))
+			slot.count:color(if n == 0 then C.red else C.text) -- 다 쓴 소비 아이템은 붉은 0(2026-10-18)
 		end
 	end
 end
@@ -187,7 +239,9 @@ function Hud.setSlots(list)
 		slot.veil.Visible = false
 		slot.wait:set("")
 		slot.shown = nil
-		slot.count:set(if slot.item then tostring(if Hud.countOf then Hud.countOf(slot.item) else 0) else "")
+		local n = if slot.item and Hud.countOf then Hud.countOf(slot.item) else 0
+		slot.count:set(if slot.item then tostring(n) else "")
+		slot.count:color(if slot.item and n == 0 then C.red else C.text)
 		if slot.id then
 			Hud.byId[slot.id] = slot
 		end
@@ -196,6 +250,35 @@ function Hud.setSlots(list)
 		end
 	end
 	Hud.paintSlots()
+end
+
+-- ---------- 칸의 설명(2026-10-18) ----------  글은 boot가 짓는다(Hud.slotTipOf(what) → { kind, title, tag, lines } · 없으면 띄우지 않는다)
+Hud.slotTipOf = nil :: ((string) -> any)?
+Hud.slotTipAt = nil :: number?
+local slotTip: Frame? = nil
+function Hud.hideSlotTip()
+	if slotTip then
+		slotTip:Destroy()
+		slotTip = nil
+	end
+	Hud.slotTipAt = nil
+end
+function Hud.showSlotTip(i: number)
+	Hud.hideSlotTip()
+	local slot = Hud.slots[i]
+	if not slot or not slot.what or Hud.edit or Hud.pick or Hud.touch or not Hud.slotTipOf then
+		return
+	end
+	local t = Hud.slotTipOf(slot.what)
+	if not t then
+		return
+	end
+	local frame, h = Hud.tipPanel(Hud.skillRoot, t, "SlotTip")
+	local px = Layout.slotPlace(i, COLS * ROWS)
+	local w = UI.hud.skills.w
+	frame.Position = UDim2.fromOffset(math.clamp(px + math.floor(SLOT / 2) - math.floor(TIP.w / 2), math.min(0, w - TIP.w), math.max(0, w - TIP.w)), -h - 4) -- 퀵슬롯 덩어리 위에(위 칸을 가리지 않게)
+	slotTip = frame
+	Hud.slotTipAt = i
 end
 
 -- 그 칸의 키 이름(딱지에 적힌 것)
@@ -277,6 +360,9 @@ function Hud.setCooldown(id: string, remain: number, total: number)
 	if slot.shown == key then
 		return
 	end
+	if slot.veil.Visible and rows == 0 then
+		slot.readyT = Hud.READY_T -- 다시 쓰기가 끝났다: 한 번 하얗게
+	end
 	slot.shown = key
 	slot.veil.Visible = rows > 0
 	slot.veil.Position = UDim2.fromOffset(slot.pad, slot.pad + (PIC - rows))
@@ -326,6 +412,9 @@ function Hud.setMenu(list, onClick: (string) -> ())
 		Hud.menu[item.id] = { frame = frame, cell = cell, label = label, dot = dot, flash = flash, mark = false, i = i, n = n }
 	end
 	Hud.setOpen(Hud.openSet or {})
+	for id, on in Hud.marks do -- 단추를 다시 지어도 점은 그대로(가방이 가득 찼다 · 찍을 점수 … — 2026-10-18)
+		Hud.markMenu(id, on)
+	end
 end
 
 -- 열려 있는 창의 단추는 민트(테두리와 이름). set = { [창 id] = true }
@@ -346,16 +435,120 @@ end
 
 -- 버프 자리를 그린다. list = { { pic = 그림(화면의 24도트 그림 이름), text = 그림 아래의 글(수 · 없으면 ""), hot = 밝게(달아오름) } … } — 오른쪽 끝부터 왼쪽으로 놓는다
 local BUFF_PITCH = PIC + 6
+-- ---------- 버프 그림의 설명(2026-10-18 — 공방 ui.js BUFFTIP · 시험 탭의 buffTipOf) ----------
+--  그림에 마우스를 올리면(폰은 톡 — 한 번 더 톡 하면 닫힌다) 버프 줄 아래에 능력치의 설명과 같은 판이 뜬다. 글은 boot의 paintBuffs가 칸마다 지어 준다(b.tip = { kind, title, tag, lines }).
+--  1초마다 칸을 다시 지어도 보던 칸의 설명은 이어서 뜬다(남은 시간이 바뀐다) — 마우스가 그 칸을 벗어났으면 닫는다
+local TIP_DOWN = 31 -- 판의 윗줄(버프 줄의 위에서 — 그림 밑의 남은 시간을 가리지 않게)
+Hud.buffList = {}
+Hud.tipAt = nil :: number? -- 설명이 떠 있는 칸의 차례
+local tipFrame: Frame? = nil
+local tipTouch = false -- 손가락으로 연 설명(마우스의 자리로 닫지 않는다)
+
+function Hud.hideBuffTip()
+	if tipFrame then
+		tipFrame:Destroy()
+		tipFrame = nil
+	end
+	Hud.tipAt = nil
+end
+
+-- 설명 판 하나를 parent에 짓는다(능력치의 설명과 같은 판): t = { kind, title, tag, lines }. 돌려주는 것 = 판 · 높이(자리는 부른 쪽이 놓는다)
+function Hud.tipPanel(parent: Instance, t, name: string): (Frame, number)
+	local color = TIPCOLOR[t.kind] or C.accent
+	local inner = TIP.w - TIP.pad * 2
+	local frame = Ui.group(parent, 0, 0, TIP.w, 10, name)
+	frame.ZIndex = 20
+	local back = Ui.part(frame, "uTip", 0, 0, TIP.w, 10)
+	local title = Ui.text(frame, t.title, TIP.pad, TIP.pad, inner, { font = "body", color = color })
+	if t.tag and t.tag ~= "" then
+		local tw = title:size()
+		Ui.text(frame, t.tag, TIP.pad + tw + 8, TIP.pad + 2, inner - tw - 8, { color = color })
+	end
+	local y = TIP.pad + TIP.title
+	for k, line in t.lines do
+		if line ~= "" then
+			local tint = if k > 1 then (if t.kind == "none" then C.dim else C.accent) elseif t.kind == "none" then C.red else C.text
+			local label = Ui.text(frame, line, TIP.pad, y, inner, { lines = TIP.lines, line = TIP.line, color = tint })
+			local _, lh = label:size()
+			y += math.max(1, math.floor(lh / TIP.line + 0.5)) * TIP.line
+		end
+	end
+	local h = y - (TIP.line - M.small) + TIP.pad
+	frame.Size = UDim2.fromOffset(TIP.w, h)
+	back.Size = UDim2.fromOffset(TIP.w, h)
+	return frame, h
+end
+
+function Hud.showBuffTip(i: number)
+	if tipFrame then
+		tipFrame:Destroy()
+		tipFrame = nil
+	end
+	local b = Hud.buffList[i]
+	if not b or not b.tip then
+		Hud.tipAt = nil
+		return
+	end
+	Hud.tipAt = i
+	local frame = Hud.tipPanel(Hud.buffRoot, b.tip, "BuffTip")
+	-- 그 그림의 오른쪽 끝에 맞춘다 — 화면 왼쪽 밖으로 나가면 민다
+	local left = UI.hud.buffs.w - i * BUFF_PITCH + 6 + PIC - TIP.w
+	local rootX = (Hud.buffRoot.AbsolutePosition.X - Stage.ui.AbsolutePosition.X) / Stage.uiScale -- (기준 격자 안의 자리 — 넓은 화면의 검은 띠를 빼고)
+	if rootX + left < 4 then
+		left = 4 - rootX
+	end
+	frame.Position = UDim2.fromOffset(left, TIP_DOWN)
+	tipFrame = frame
+end
+
+-- 마우스가 아직 그 칸 위에 있나(칸을 다시 지은 뒤 — 새 칸에는 MouseEnter가 오지 않을 수 있다)
+local function stillOver(frame: GuiObject): boolean
+	local at = game:GetService("UserInputService"):GetMouseLocation() - game:GetService("GuiService"):GetGuiInset()
+	local p, s = frame.AbsolutePosition, frame.AbsoluteSize
+	return at.X >= p.X and at.X < p.X + s.X and at.Y >= p.Y and at.Y < p.Y + s.Y
+end
+
 function Hud.setBuffs(list)
 	local key = {}
 	for i, b in list do
 		key[i] = b.pic .. ":" .. b.text .. ":" .. tostring(b.hot == true)
 	end
 	local sig = table.concat(key, "|")
+	Hud.buffList = list
 	if Hud.buffSig == sig then
 		return
 	end
 	Hud.buffSig = sig
+	-- 보던 칸의 설명을 새 글로(그 칸이 없어졌거나 마우스가 벗어났으면 닫는다)
+	local function refreshTip()
+		local at = Hud.tipAt
+		if at then
+			local item = Hud.buffs[at]
+			if item and (tipTouch or stillOver(item.frame)) then
+				Hud.showBuffTip(at)
+			else
+				Hud.hideBuffTip()
+			end
+		end
+	end
+	-- 그림 · 차례 · 강조가 그대로면(1초마다 남은 초만 바뀐다) 칸을 다시 짓지 않고 글만 바꾼다(2026-10-18 검토 — 1초마다 칸마다 7개를 만들고 지웠다)
+	local shapeKey = {}
+	for i, b in list do
+		shapeKey[i] = b.pic .. ":" .. tostring(b.hot == true) .. ":" .. tostring(b.text ~= "")
+	end
+	local shape = table.concat(shapeKey, "|")
+	if Hud.buffShape == shape and #Hud.buffs == #list then
+		for i, b in list do
+			local item = Hud.buffs[i]
+			if item.label and item.text ~= b.text then
+				item.label:set(b.text)
+				item.text = b.text
+			end
+		end
+		refreshTip()
+		return
+	end
+	Hud.buffShape = shape
 	for _, item in Hud.buffs do
 		item.frame:Destroy()
 	end
@@ -370,11 +563,42 @@ function Hud.setBuffs(list)
 			edge.Thickness = 1
 			edge.Parent = frame:FindFirstChild("Pic") or frame
 		end
+		local label = nil
 		if b.text ~= "" then
-			Ui.text(frame, b.text, -8, PIC + 2, PIC + 16, { align = "center", outline = true, color = if b.hot then C.gold else C.text })
+			label = Ui.text(frame, b.text, -8, PIC + 2, PIC + 16, { align = "center", outline = true, color = if b.hot then C.gold else C.text })
 		end
-		Hud.buffs[i] = { frame = frame }
+		-- 설명(마우스를 올리면 · 손가락으로 톡)
+		local over = Instance.new("TextButton")
+		over.Name = "Over"
+		over.Text = ""
+		over.BackgroundTransparency = 1
+		over.Size = UDim2.fromOffset(PIC, PIC + 14)
+		over.ZIndex = 8
+		over.Parent = frame
+		over.MouseEnter:Connect(function()
+			if touching() then
+				return -- 손가락은 Activated로만
+			end
+			tipTouch = false
+			Hud.showBuffTip(i)
+		end)
+		over.MouseLeave:Connect(function()
+			if Hud.tipAt == i and not tipTouch and not touching() then
+				Hud.hideBuffTip()
+			end
+		end)
+		over.Activated:Connect(function(input)
+			local touch = input and input.UserInputType == Enum.UserInputType.Touch
+			if touch and Hud.tipAt == i then
+				Hud.hideBuffTip()
+			else
+				tipTouch = touch == true
+				Hud.showBuffTip(i)
+			end
+		end)
+		Hud.buffs[i] = { frame = frame, label = label, text = b.text }
 	end
+	refreshTip()
 end
 
 -- 스마트폰 단추가 켜지면 키가 적힌 칸(스킬 칸 · 메뉴 단추)은 숨긴다 — 그 자리에 손가락 단추가 온다
@@ -393,7 +617,9 @@ function Hud.setTouch(on: boolean)
 end
 
 -- 메뉴 단추를 눈에 띄게(찍을 점수가 남았을 때 등)
+Hud.marks = {} :: { [string]: boolean } -- 단추마다 점이 켜져 있어야 하는가(단추를 다시 지을 때 되살린다)
 function Hud.markMenu(id: string, on: boolean)
+	Hud.marks[id] = on
 	local item = Hud.menu and Hud.menu[id]
 	if item and item.mark ~= on then
 		item.mark = on
@@ -466,11 +692,19 @@ function Hud.drawHp()
 end
 
 -- 장마다(boot의 그리는 고리가 부른다): 체력 바의 효과를 흘려보낸다
+Hud.READY_T = 0.3 -- 다시 쓰기가 끝난 칸이 하얗게 번쩍이는 시간(초)
 function Hud.step(dt: number)
 	local st = Hud.hpFx
 	if st and not HpFx.idle(st) then
 		HpFx.step(st, dt)
 		Hud.drawHp()
+	end
+	for _, slot in Hud.slots or {} do
+		if slot.readyT > 0 then
+			slot.readyT = math.max(0, slot.readyT - dt)
+			slot.ready.Visible = slot.readyT > 0
+			slot.ready.BackgroundTransparency = 1 - 0.6 * slot.readyT / Hud.READY_T
+		end
 	end
 end
 
@@ -485,7 +719,36 @@ function Hud.resetHp()
 	end
 end
 
+-- 경험치 줄의 설명: 덩어리(box) 위에 — 지금 / 필요한 경험치(%) · 다음 레벨까지
+Hud.xpTip = nil :: Frame?
+Hud.lastXp = nil :: { xp: number, need: number, level: number }?
+function Hud.hideXpTip()
+	if Hud.xpTip then
+		Hud.xpTip:Destroy()
+		Hud.xpTip = nil
+	end
+end
+function Hud.xpTipText(xp: number, need: number, level: number)
+	local W = UI.xpTip
+	local pct = ("%.2f"):format(math.clamp(xp / math.max(1, need), 0, 1) * 100)
+	return { kind = "main", title = W.title, tag = "Lv." .. level, lines = { Format.fill(W.now, { xp = Format.comma(xp), need = Format.comma(need), pct = pct }), Format.fill(W.left, { n = Format.comma(math.max(0, need - xp)) }) } }
+end
+function Hud.showXpTip(box: Instance)
+	Hud.hideXpTip()
+	local x = Hud.lastXp
+	if not x then
+		return
+	end
+	local frame, h = Hud.tipPanel(box, Hud.xpTipText(x.xp, x.need, x.level), "XpTip")
+	frame.Position = UDim2.fromOffset(0, -h - 6)
+	Hud.xpTip = frame
+end
+
 function Hud.setSelf(me)
+	Hud.lastXp = { xp = me.xp, need = me.need, level = me.level }
+	if Hud.xpTip then
+		Hud.showXpTip(Hud.xpTip.Parent :: Instance) -- 떠 있는 동안 경험치가 오르면 새 수로
+	end
 	local level = "Lv." .. me.level
 	Hud.level:set(level)
 	Hud.name:move(Ui.measure(level) + V.nameGap, V.nameY) -- 이름은 레벨 글 바로 뒤에

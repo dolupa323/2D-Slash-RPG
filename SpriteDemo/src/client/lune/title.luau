@@ -676,6 +676,7 @@ function Title.run(select, io)
 			if entered and entered.self then
 				result = entered
 			else
+				view = if entered and entered.select then entered.select else view -- 서버가 준 목록으로(그 사이 이름이 비워졌으면 그것이 보이게 — 2026-10-18 검토)
 				picked = #view.chars
 				showSelect(if entered then entered.why else TXT.failed)
 			end
@@ -796,11 +797,12 @@ function Title.run(select, io)
 			stageKey(input.KeyCode)
 		end
 	end))
-	Stage.onResize(function()
+	local unResize = Stage.onResize(function()
 		if over.Parent and stagePlace then
 			stagePlace()
 		end
 	end)
+	table.insert(connections, { Disconnect = function() unResize() end }) -- (닫을 때 함께 뺀다)
 
 	shadeFrom, shadeTo, shadeT = 0, 1, 0
 	shade.BackgroundTransparency = 0

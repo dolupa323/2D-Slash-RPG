@@ -28,14 +28,18 @@ end
 -- 소리 설정 { music = 배경 음악의 크기, sfx = 효과음의 크기(0~steps칸 — 한 칸 10%), on = 모두 켰는가 }. 계정의 것이다(캐릭터를 바꿔도 같다)
 --  사용자 2026-10-13: "소리조절 있어야합니다."
 function Account.soundDefault()
-	return { music = SOUND.start, sfx = SOUND.start, on = true }
+	return { music = SOUND.start, sfx = SOUND.start, on = true, fx = true, nums = true } -- fx · nums = 화면 설정(다른 사람의 스킬 효과 · 피해 숫자 — 2026-10-18)
 end
 -- 받은 것 · 저장된 것의 꼴을 본다: 맞으면 새 표, 아니면 nil
 function Account.cleanSound(v: any)
 	if typeof(v) ~= "table" or not whole(v.music, 0, SOUND.steps) or not whole(v.sfx, 0, SOUND.steps) or typeof(v.on) ~= "boolean" then
 		return nil
 	end
-	return { music = v.music, sfx = v.sfx, on = v.on }
+	-- 화면(2026-10-18 — 설정 창의 「화면」): fx = 다른 사람의 스킬 효과 · nums = 다른 사람의 피해 숫자를 보일지. 없으면(그 전의 저장) 켜짐 · 참거짓이 아니면 받지 않는다
+	if (v.fx ~= nil and typeof(v.fx) ~= "boolean") or (v.nums ~= nil and typeof(v.nums) ~= "boolean") then
+		return nil
+	end
+	return { music = v.music, sfx = v.sfx, on = v.on, fx = v.fx ~= false, nums = v.nums ~= false }
 end
 function Account.setSound(acct, v: any): boolean
 	local sound = Account.cleanSound(v)
@@ -49,7 +53,7 @@ end
 function Account.new()
 	-- spent = 이 계정이 게임에 쓴 로벅스(명예의 전당의 후원 판) · sound = 소리 설정
 	-- market = 경매장에 맡긴 것(올린 물건 · 아직 찾지 않은 것 — sim/market.luau). 창고처럼 계정의 캐릭터들이 같이 본다
-	return { next = 1, last = false, chars = {}, store = false, broken = {}, spent = 0, sound = Account.soundDefault(), market = Market.newBook(), tutDone = false, att = Attend.new(), ach = Achieve.new() } -- att = 출석(sim/attend.luau) · ach = 업적(sim/achieve.luau) — 계정의 것(2026-10-15) -- tutDone = 이 계정의 캐릭터가 튜토리얼 「달빛 꿈」을 한 번 끝냈다(그 뒤의 새 캐릭터는 건너뛸 수 있다)
+	return { next = 1, last = false, chars = {}, store = false, storeGot = {}, broken = {}, spent = 0, sound = Account.soundDefault(), market = Market.newBook(), tutDone = false, att = Attend.new(), ach = Achieve.new() } -- att = 출석(sim/attend.luau) · ach = 업적(sim/achieve.luau) — 계정의 것(2026-10-15) -- tutDone = 이 계정의 캐릭터가 튜토리얼 「달빛 꿈」을 한 번 끝냈다(그 뒤의 새 캐릭터는 건너뛸 수 있다)
 end
 
 -- 이름을 견줄 때의 꼴(영문은 소문자로 — Moon과 moon은 같은 이름이다)
@@ -399,7 +403,7 @@ function Account.pack(acct)
 	for _, raw in acct.broken do
 		table.insert(chars, raw)
 	end
-	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, spent = acct.spent, sound = acct.sound, market = Market.packBook(acct.market), tutDone = acct.tutDone == true, att = Attend.pack(acct.att), ach = Achieve.pack(acct.ach) }
+	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, storeGot = acct.storeGot, spent = acct.spent, sound = acct.sound, market = Market.packBook(acct.market), tutDone = acct.tutDone == true, att = Attend.pack(acct.att), ach = Achieve.pack(acct.ach) }
 end
 
 function Account.unpack(data: any)
@@ -422,6 +426,15 @@ function Account.unpack(data: any)
 	acct.next = math.max(if whole(data.next, 1, 9e9) then data.next else 1, top + 1)
 	acct.last = if Account.find(acct, data.last) then data.last else false
 	acct.store = if typeof(data.store) == "table" then data.store else false
+	-- 창고를 늘린 부탁들(2026-10-18 — 「창고 칸 +4」 보상: 계정에 한 번씩. 이름표 → true). 생기기 전의 저장 = 없음
+	acct.storeGot = {}
+	if typeof(data.storeGot) == "table" then
+		for id, on in data.storeGot do
+			if typeof(id) == "string" and #id <= 20 and on == true then
+				acct.storeGot[id] = true
+			end
+		end
+	end
 	acct.spent = if whole(data.spent, 0, 9e12) then data.spent else 0
 	acct.sound = Account.cleanSound(data.sound) or Account.soundDefault() -- 소리 설정이 생기기 전의 저장 = 처음 크기
 	acct.market = Market.unpackBook(data.market) -- 경매장이 생기기 전의 저장 = 맡긴 것 없음
@@ -446,6 +459,19 @@ function Account.view(acct)
 		table.insert(chars, { id = c.id, name = c.name, class = c.class, level = level })
 	end
 	return { chars = chars, max = Account.MAX, last = acct.last, sound = acct.sound } -- sound = 소리 설정(처음 화면부터 그 크기로 튼다)
+end
+
+-- 계정이 받은 창고 칸(탭마다 — 2026-10-18): 「창고 칸」 보상을 준 부탁마다 그 보상의 칸 수(quests의 정의를 본다)
+function Account.storeExtra(acct): number
+	local Quests = require(script.Parent.quests)
+	local n = 0
+	for id in acct.storeGot or {} do
+		local def = Quests.def(id)
+		if def and (def.reward.store or 0) > 0 then
+			n += def.reward.store
+		end
+	end
+	return n
 end
 
 return Account

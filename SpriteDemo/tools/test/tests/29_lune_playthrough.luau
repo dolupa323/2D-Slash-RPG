@@ -230,8 +230,10 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 			if not h.alive then
 				return false
 			end
-			s.jumped, s.stale = true, nil
-			handlers.Move(p, h.x, y, h.dir or 1)
+			-- 층을 바꾸는 것은 검사의 지름길이다(사다리 · 발판을 타는 길을 셈하지 않는다): 서버의 자리를 바로 옮긴다
+			--  (2026-10-18: 이동 판정이 「막 옮긴 직후」에도 아무 데나 받지 않게 되어 Move로는 먼 층으로 가지 못한다)
+			h.y = y
+			s.jumped, s.stale, s.moveAt = false, nil, nil
 		end
 		local guard = 0
 		while math.abs(h.x - x) > 1 do

@@ -41,6 +41,7 @@ function TomeWindow.build(body: Frame, ctx, w: number, _h: number)
 	local view = {}
 	local area = 1
 	local note, noteTone = nil, nil
+	local waiting = false -- 답을 기다리는 중(두 번 눌러 두 번 가지 않게 — 2026-10-18 검토)
 	local tabs = {}
 	local tx = 0
 	for i, a in D.tome.areas do
@@ -78,7 +79,12 @@ function TomeWindow.build(body: Frame, ctx, w: number, _h: number)
 		ru.icon = Ui.smallIcon(body, icon, x + math.floor(cellW / 2) - 9, S.rewardY + 14)
 		ru.num = Ui.text(body, num, x, S.rewardY + 24, math.floor(cellW / 2) + 18, { align = "right", outline = true })
 		ru.take = Ui.button(body, W.take, x + 4, S.rewardY + S.rewardH - 22, cellW - 8, function()
+			if waiting then
+				return
+			end
+			waiting = true
 			local res = ctx.bondDo("tome", D.tome.areas[area].id, r.pct)
+			waiting = false
 			note, noteTone = nil, nil
 			if res and res.why then
 				note, noteTone = res.why, C.red

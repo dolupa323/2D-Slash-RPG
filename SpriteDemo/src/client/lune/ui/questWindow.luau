@@ -1,6 +1,6 @@
 -- 퀘스트 창(J) — 메이플스토리의 퀘스트 창처럼 탭 셋: 「진행 중」 · 「시작 가능」 · 「완료」(2026-10-11 — 전에는 하는 중인 것 넷만 보였다).
 --  위에 그 탭의 목록(메인 · 전직은 노랑), 고르면 아래에 줄거리와 그 탭에 맞는 것:
---   진행 중 = 할 일(다 됐으면 풀빛) · 무엇을 어디서 잡는지 · 보상 · 주민의 부탁은 「그만두기」
+--   진행 중 = 할 일(다 됐으면 풀빛) · 무엇을 어디서 잡는지 · 보상 · 주민의 부탁은 「포기」(2026-10-18: 그만두기 → 메이플의 낱말)
 --   시작 가능 = 누구에게 · 어디서 받는지(「샛별 · 초승달 마을」) · 보상. 레벨이 모자란 다음 메인도 맨 끝에 흐리게 뜬다(「Lv.4가 되면 받는다」)
 --   완료 = 줄거리와 받은 보상
 --  받는 것과 돌려주는 것은 주민 앞에서 한다(머리 위의 ! · ?). 목록이 줄 수보다 길면 ▲ ▼로 넘긴다.
@@ -28,6 +28,8 @@ QuestWindow.TABS = TABS
 QuestWindow.TEXT_LINES = 5 -- 줄거리가 쓰는 줄 수
 QuestWindow.W = W
 
+QuestWindow.DROP, QuestWindow.DROP_SURE, QuestWindow.DROP_WAIT = "포기", "정말 포기", 3 -- 포기 단추 · 한 번 누른 뒤의 글 · 다시 누를 수 있는 초
+
 function QuestWindow.size(): (number, number)
 	return W, TAB_H + ROWS * ROW + 12 + QuestWindow.TEXT_LINES * 16 + 8 + 16 + 16 + 20 + Ui.M.button + 4
 end
@@ -54,6 +56,9 @@ function QuestWindow.rewardParts(reward, level: number, class: string)
 	if (reward.scrolls or 0) > 0 then
 		local scroll = Items.goods("scroll_return")
 		table.insert(parts, { icon = if scroll then scroll.icon else "scroll", text = ("x%d"):format(reward.scrolls) })
+	end
+	if (reward.store or 0) > 0 then
+		table.insert(parts, { text = ("창고 칸 +%d"):format(reward.store) }) -- 2026-10-18: 창고는 계정의 것(한 번만 늘어난다)
 	end
 	if reward.gear then
 		local it = Items.make(reward.gear.slot, reward.gear.stage, Items.data.NORMAL, class)
@@ -162,13 +167,34 @@ function QuestWindow.build(body: Frame, ctx, w: number, _h: number)
 			end
 		end
 	end
-	local drop = Ui.button(body, "그만두기", w - 100, y + 54, 100, function()
+	-- 포기: 모은 것이 사라지므로 한 번 더 묻는다 — 누르면 「정말 포기」로 바뀌고, 3초 안에 다시 누르면 포기한다(2026-10-18 — 전에는 한 번에 사라졌다)
+	local armed: { id: string, at: number }? = nil
+	local drop
+	drop = Ui.button(body, QuestWindow.DROP, w - 100, y + 54, 100, function()
 		if tab == 1 and selected[1] then
-			ctx.send("Quest", "drop", selected[1])
-			selected[1] = nil
+			if armed and armed.id == selected[1] and os.clock() - armed.at <= QuestWindow.DROP_WAIT then
+				armed = nil
+				drop:setText(QuestWindow.DROP)
+				ctx.send("Quest", "drop", selected[1])
+				selected[1] = nil
+			else
+				local mine = { id = selected[1], at = os.clock() }
+				armed = mine
+				drop:setText(QuestWindow.DROP_SURE)
+				task.delay(QuestWindow.DROP_WAIT, function()
+					if armed == mine then
+						armed = nil
+						drop:setText(QuestWindow.DROP)
+					end
+				end)
+			end
 		end
 	end)
 	function view.refresh()
+		if armed and (tab ~= 1 or armed.id ~= selected[1]) then
+			armed = nil -- 다른 퀘스트를 골랐다: 「정말 포기」를 되돌린다
+			drop:setText(QuestWindow.DROP)
+		end
 		local book = ctx.quests() or {}
 		local me = ctx.me()
 		local level = if me then me.level else 1

@@ -22,6 +22,7 @@ end
 function HallWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 	local board = if typeof(arg) == "string" then arg else "level"
 	local boards = nil -- 서버가 준 판들(아직이면 nil)
+	local failed = false -- 서버가 답하지 않았다(너무 자주 물음 · 잠깐의 오류) — 「기록이 없다」와 가른다(2026-10-18 검토)
 	local alive = true
 	local tabs = {}
 	local x = 0
@@ -61,7 +62,7 @@ function HallWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 		end
 		local list = if boards then boards[board] or {} else nil
 		note:show(list == nil or #list == 0)
-		note:set(if list == nil then "불러오는 중 …" else "아직 기록이 없습니다")
+		note:set(if list ~= nil then "아직 기록이 없습니다" elseif failed then "불러오지 못했습니다 · 다시 불러오는 중" else "불러오는 중 …")
 		headName:show(list ~= nil and #list > 0)
 		headValue:show(list ~= nil and #list > 0)
 		for i, row in rows do
@@ -74,10 +75,20 @@ function HallWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 	end
 	HallWindow.redraw()
 	task.spawn(function()
-		local got = ctx.rank()
-		if alive then
-			boards = got or {}
+		-- 답이 없으면(빠르기의 한도 · 잠깐의 오류) 「기록이 없다」로 보이지 않게 몇 번 더 묻는다
+		for _ = 1, 4 do
+			local got = ctx.rank()
+			if not alive then
+				return
+			end
+			if got then
+				boards, failed = got, false
+				HallWindow.redraw()
+				return
+			end
+			failed = true
 			HallWindow.redraw()
+			task.wait(1.5)
 		end
 	end)
 

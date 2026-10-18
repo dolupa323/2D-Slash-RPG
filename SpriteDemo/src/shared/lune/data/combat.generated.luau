@@ -32,6 +32,16 @@ return {
 		pickup = 20,
 		moneySpread = 20,
 	},
+	fieldElite = {
+		from = { "r2", "r3", "r4", "sea" },
+		every = 30,
+		hp = 10,
+		hit = 1.5,
+		xp = 10,
+		money = 10,
+		loot = 5,
+		words = { head = "정예 {name}", sub = "강한 기운이 이 맵에 퍼졌다" },
+	},
 	mobs = {
 		towerlieutenant = {
 			name = "성벽 거인",
@@ -315,6 +325,7 @@ return {
 			chase = 36,
 			see = 60,
 			hp = 0.6,
+			passive = true,
 			look = {
 				tint = { 159, 176, 196 },
 			},

@@ -372,7 +372,7 @@ end
 if shc then
 	table.clear(sent)
 	World.jump(p, "ct")
-	s.stale, s.jumped = nil, true -- (옮긴 직후의 늦은 보고 거르기를 끈다 — 화면이 연 뒤처럼)
+	s.stale, s.trust = nil, true -- (옮긴 직후의 늦은 보고 거르기를 끈다 — 화면이 연 뒤처럼)
 	hh.x, hh.y = shc.x - 30, shc.y
 	handlers.Move(p, shc.x, shc.y, 1)
 	local found = false

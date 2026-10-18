@@ -121,6 +121,8 @@ local packets = {
 	Shot = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 { id, x, y, dir, speed, range, kind(쏜 졸개의 종류 — 제 그림이 있는 것은 그 그림으로 날아간다) }" },
 	MobCast = { Kind = "Event", Direction = "ServerToClient", Doc = "몬스터의 마법이 뜸 { id, kind(쓴 몬스터의 종류), x, y, dir(쓴 몬스터가 보던 쪽 — 앞으로 뻗는 마법은 그쪽으로 그린다) } — 그 종류의 마법 그림(cast)이 그 자리에서 한 번 돈다. 맞는 것은 서버가 예고 뒤에 따로 알린다(Hurt)" },
 	ShotEnd = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 번호" },
+	Sold = { Kind = "Event", Direction = "ServerToClient", Doc = "경매장에 올린 내 물건이 팔렸다 { name(물건 이름), n(팔린 수) } — 획득 알림 한 줄 · 「경매」 단추의 점(2026-10-18)" },
+	Elite = { Kind = "Event", Direction = "ServerToClient", Doc = "사냥터 정예가 나옴 { room(그 맵), mob(졸개 번호), kind, x · y(나온 자리 — 그 자리에 분홍 기운이 솟는다 · 높이 — 그 자리로 옮겨 그린다) } — 화면 위 가운데에 알림(2026-10-18)" },
 	Burst = { Kind = "Event", Direction = "ServerToClient", Doc = "폭탄병이 터짐 { mob, x, y }" },
 	Crystal = { Kind = "Event", Direction = "ServerToClient", Doc = "무니의 달 수정 { add = { { id, owner, x, y, life } … }, gone = { id … } }" },
 	Dodge = { Kind = "Event", Direction = "ServerToClient", Doc = "내가 피했다(리븐의 날랜 몸)" },

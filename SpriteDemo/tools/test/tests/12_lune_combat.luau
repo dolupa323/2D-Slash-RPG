@@ -262,7 +262,11 @@ eq(Hero.power(back), Hero.power(all), "전투력이 같다")
 -- 이상한 자료
 eq(Hero.unpack(1, nil), nil, "없으면 nil")
 eq(Hero.unpack(1, { class = "wizard", level = 3 }), nil, "없는 직업")
-eq(Hero.unpack(1, { class = "axion", level = 999 }), nil, "레벨이 말이 안 됨")
+-- 최고 레벨을 넘는 레벨(설계의 최고 레벨이 줄었다)은 최고 레벨로 맞춘다(2026-10-18 검토 — 전에는 캐릭터에 들어갈 수 없게 됐다) · 0 이하 · 소수는 여전히 말이 안 된다
+local over = Hero.unpack(1, { class = "axion", level = 999 })
+expect(over ~= nil and over.level == N.MAX_LEVEL, "최고 레벨을 넘는 레벨은 최고 레벨로")
+eq(Hero.unpack(1, { class = "axion", level = 0 }), nil, "레벨이 말이 안 됨(0)")
+eq(Hero.unpack(1, { class = "axion", level = 2.5 }), nil, "레벨이 말이 안 됨(소수)")
 eq(Hero.unpack(1, { class = "axion", level = 2.5 }), nil, "레벨이 소수")
 -- 점수가 받은 것보다 많이 찍혀 있으면 되돌려 준다(레벨과 돈은 지킨다)
 local cheat = Hero.unpack(1, { class = "axion", level = 5, xp = 3, money = 77, potions = 4, stats = { str = 999, dex = 0, int = 0, luk = 0, hp = 0 }, skills = { ax_slam = 20, ax_combo = 20, ax_charge = 10 } })

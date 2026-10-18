@@ -27,6 +27,8 @@ local Windows = require(script.Parent.windows)
 local C = Ui.COLOR
 local D = Items.data
 local COLS = Layout.BAG.cols -- 창고의 칸: 가방과 같은 여섯 칸
+local BAR = 3 -- 늘린 창고의 스크롤 막대 두께(가방 창과 같다 — 2026-10-18)
+local HOLD = 0.3 -- 스마트폰: 잠깐 누르고 있다가 밀어야 끈다(그 전에 밀면 스크롤 — 가방 창과 같은 값)
 local ROW = Ui.M.button + 4 -- 상점의 한 줄
 local SHOP = Layout.SHOP
 local CRAFT = Layout.CRAFT
@@ -41,6 +43,8 @@ local DOUBLE = 0.4 -- 이 안에 같은 칸을 다시 누르면 두 번 누른 �
 local ShopWindow = {}
 ShopWindow.NAME_W, ShopWindow.PRICE_W, ShopWindow.BUY_W = SHOP.nameW, SHOP.priceW, SHOP.buyW -- 물건 이름 · 값 · 사는 단추(들)의 칸
 ShopWindow.TITLE = { merchant = "잡화 상인 반달", store = WORDS.storeName }
+ShopWindow.BACK_HEAD = "되사기 — 이번 접속에 판 것(판 값 그대로)" -- 2026-10-18
+ShopWindow.BACK_BUY = "되사기"
 
 function ShopWindow.title(arg: string): string
 	return ShopWindow.TITLE[arg] or "상점"
@@ -80,8 +84,12 @@ local function buildStore(body: Frame, ctx, w: number)
 	local view = {}
 	local ui = ctx.ui
 	local S = ItemCell.size()
-	local size = D.BAG.storeBase -- 탭 하나의 칸 수
-	local rowsN = math.ceil(size / COLS)
+	local base = D.BAG.storeBase -- 창의 높이는 처음 칸 수(네 줄)로 — 늘린 창고는 그 안에서 위아래로 민다
+	local rowsN = math.ceil(base / COLS)
+	local function sizeNow(): number
+		local bag = ctx.bag()
+		return if bag and bag.storeSize then bag.storeSize else base
+	end
 	local tab = 1
 	local sel = nil :: { tab: string, slot: number, id: any }? -- 고른 칸(id = 장비의 번호 · 묶음의 이름표)
 	local ask: number? = nil -- 찾을 수를 고르는 중이면 그 수
@@ -121,13 +129,18 @@ local function buildStore(body: Frame, ctx, w: number)
 	end
 	local count = Ui.text(body, "", w - Layout.BAG.countW, 0, Layout.BAG.countW, { align = "right", color = C.dim }) -- 찬 칸 / 창고의 칸
 
-	local gridRoot = Ui.group(body, 0, STORE.gridY, COLS * S, rowsN * S, "Grid")
+	local gridRoot = Ui.scroll(body, 0, STORE.gridY, COLS * S, rowsN * S, rowsN * S, BAR) -- 칸들(늘린 창고는 위아래로 스크롤)
+	gridRoot.Name = "Grid"
 	local cells = {}
 	local function slotAt(at: Vector2): number?
+		if not ItemCell.over(gridRoot, at) then
+			return nil -- 스크롤로 가려진 칸은 아니다
+		end
 		local i = ItemCell.at(cells, at)
-		return if i and i <= size then i else nil
+		return if i and i <= sizeNow() then i else nil
 	end
-	for i = 1, COLS * rowsN do
+	-- 칸 하나를 짓는다(2026-10-18 검토: 창고 칸을 늘려도(Bag.growStore) 처음 24칸만 지어 25칸부터 보이지도 꺼내지도 못했다 — 가방 창처럼 늘어난 만큼 더 짓고 위아래로 민다)
+	local function makeCell(i: number)
 		local col, row = (i - 1) % COLS, math.floor((i - 1) / COLS)
 		local cell
 		cell = ItemCell.new(gridRoot, col * S, row * S, function(it)
@@ -162,6 +175,10 @@ local function buildStore(body: Frame, ctx, w: number)
 			ctx.quick.press(nil, nil, input, {
 				icon = ItemCell.icon(it),
 				size = S,
+				hold = HOLD,
+				onStart = function()
+					gridRoot.ScrollingEnabled = false -- 끄는 동안은 칸들이 움직이지 않는다(늘린 창고는 스크롤한다)
+				end,
 				onMove = function(at: Vector2)
 					moved = true
 					local to = slotAt(at)
@@ -224,6 +241,9 @@ local function buildStore(body: Frame, ctx, w: number)
 			})
 		end)
 	end
+	for i = 1, COLS * rowsN do
+		makeCell(i)
+	end
 
 	-- 가방에서 끌어 온 것을 놓는 자리(ui/bagWindow.luau가 묻는다): 창고 창 위면 맡긴다 — 그 탭이 열려 있으면 놓은 칸에, 다른 탭이 열려 있었으면 그 탭으로 넘긴다
 	ui.storeDrop = function(at: Vector2, tabKey: string, from: number): boolean
@@ -272,7 +292,7 @@ local function buildStore(body: Frame, ctx, w: number)
 		local entry = if sel and list then list[sel.slot] else nil
 		if sel and sel.tab == "gear" and (not entry or entry.id ~= sel.id) then
 			entry = nil
-			for i = 1, size do
+			for i = 1, bag.storeSize do
 				local it = list[i]
 				if it and it.id == sel.id then
 					sel.slot, entry = i, it
@@ -347,8 +367,17 @@ local function buildStore(body: Frame, ctx, w: number)
 			button:setOn(i == tab)
 		end
 		local list = bag.store[key()]
+		-- 늘린 창고: 네 줄을 넘는 만큼 칸을 더 짓고 스크롤 틀의 속을 늘린다(가방 창과 같다)
+		local rows = math.ceil(bag.storeSize / COLS)
+		for i = #cells + 1, rows * COLS do
+			makeCell(i)
+		end
+		local scroll = rows > rowsN
+		gridRoot.CanvasSize = UDim2.fromOffset(0, math.max(rowsN, rows) * S)
+		gridRoot.ScrollingEnabled = scroll and not ctx.quick.dragging()
+		gridRoot.ScrollBarThickness = if scroll then BAR else 0
 		local used = 0
-		for i = 1, size do
+		for i = 1, bag.storeSize do
 			if list[i] then
 				used += 1
 			end
@@ -385,28 +414,48 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 	-- 상점: 물건마다 한 줄([그림] 이름 · [달돈] 값 · 사기). 물약(단마다 따로 판다 — 가방의 소비 탭에 들어온다)과 달가루는 열 개씩도 산다
 	local rows = {}
 	local bx = w - ShopWindow.BUY_W
-	for i, stock in stockOf(arg) do
+	-- 물건이 창의 줄(MAX_ROWS)보다 많으면 목록이 스크롤한다(2026-10-18 — 달빛 부적 · 능력치 초기화 주문서로 열둘이 됐다. 창은 스마트폰의 화면 틀에 들어가야 한다)
+	local stocks = stockOf(arg)
+	local list = Ui.scroll(body, 0, 0, w, MAX_ROWS * ROW, #stocks * ROW, 3)
+	for i, stock in stocks do
 		local y = (i - 1) * ROW
 		local many = stock.max > 1
 		-- [그 물건의 그림(칸 안에)] 이름 · [달돈] 값 · 사는 단추 — 살 수 없는 것도 그림은 보인다
-		local cell = Ui.slot(body, 0, y + 1, IC)
+		local cell = Ui.slot(list, 0, y + 1, IC)
 		cell.frame.Name = "Icon"
 		local icon = Ui.smallIcon(cell.frame, "coin", 3, 3)
-		local name = Ui.text(body, "", TX, y + 7, ShopWindow.NAME_W, { font = "body" })
-		local coin = Ui.smallIcon(body, "coin", bx - 8 - ShopWindow.PRICE_W - 19, y + 4)
-		local price = Ui.text(body, "", bx - 8 - ShopWindow.PRICE_W, y + 8, ShopWindow.PRICE_W, { align = "right", color = C.gold })
+		local name = Ui.text(list, "", TX, y + 7, ShopWindow.NAME_W, { font = "body" })
+		local coin = Ui.smallIcon(list, "coin", bx - 8 - ShopWindow.PRICE_W - 19, y + 4)
+		local price = Ui.text(list, "", bx - 8 - ShopWindow.PRICE_W, y + 8, ShopWindow.PRICE_W, { align = "right", color = C.gold })
 		local half = math.floor((ShopWindow.BUY_W - 6) / 2)
-		local one = Ui.button(body, if many then "1" else "사기", bx, y, if many then half else ShopWindow.BUY_W, function()
+		local one = Ui.button(list, if many then "1" else "사기", bx, y, if many then half else ShopWindow.BUY_W, function()
 			ctx.send("Item", "buy", stock.id, 1)
 		end)
 		local ten = if many
-			then Ui.button(body, "10", bx + half + 6, y, half, function()
+			then Ui.button(list, "10", bx + half + 6, y, half, function()
 				ctx.send("Item", "buy", stock.id, 10)
 			end)
 			else nil
 		-- 아직 살 수 없는 것은 값과 단추 자리에 "Lv.10부터"
-		local lock = Ui.text(body, "", TX + ShopWindow.NAME_W, y + 8, w - TX - ShopWindow.NAME_W, { align = "right", color = C.dim })
+		local lock = Ui.text(list, "", TX + ShopWindow.NAME_W, y + 8, w - TX - ShopWindow.NAME_W, { align = "right", color = C.dim })
 		rows[i] = { stock = stock, icon = icon, coin = coin, name = name, price = price, one = one, ten = ten, lock = lock }
+	end
+	-- 되사기(2026-10-18 — 메이플의 재구매): 물건의 줄 아래에 머리 한 줄 「되사기 — 이번 접속에 판 것」과 판 것들(가장 최근 것부터 · 판 값 그대로). 판 것이 없으면 감춘다
+	local backY = #stocks * ROW
+	local backHead = Ui.text(list, ShopWindow.BACK_HEAD, 0, backY + 8, w, { color = C.dim })
+	local backs = {}
+	for i = 1, Bag.BUYBACK do
+		local y = backY + i * ROW
+		local cell = Ui.slot(list, 0, y + 1, IC)
+		cell.frame.Name = "BackIcon"
+		local icon = Ui.smallIcon(cell.frame, "coin", 3, 3)
+		local name = Ui.text(list, "", TX, y + 7, ShopWindow.NAME_W, { font = "body" })
+		local coin = Ui.smallIcon(list, "coin", bx - 8 - ShopWindow.PRICE_W - 19, y + 4)
+		local price = Ui.text(list, "", bx - 8 - ShopWindow.PRICE_W, y + 8, ShopWindow.PRICE_W, { align = "right", color = C.gold })
+		local buy = Ui.button(list, ShopWindow.BACK_BUY, bx, y, ShopWindow.BUY_W, function()
+			ctx.send("Item", "buyback", i)
+		end)
+		backs[i] = { cell = cell, icon = icon, name = name, coin = coin, price = price, buy = buy }
 	end
 	local fy = h - 28
 	Ui.line(body, 0, fy - 6, w)
@@ -441,6 +490,26 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 				row.ten:setEnabled(me.money >= cost * 10)
 			end
 		end
+		-- 되사기의 줄들
+		local sold = bag.buyback or {}
+		backHead:show(#sold > 0)
+		for i, b in backs do
+			local e = sold[i]
+			local on = e ~= nil
+			b.cell.frame.Visible, b.coin.Visible, b.buy.frame.Visible = on, on, on
+			b.name:show(on)
+			b.price:show(on)
+			if e then
+				local goods = e.item and Items.goods(e.item)
+				Ui.setWorldIcon(b.icon, if e.gear then ItemCell.icon(e.gear) elseif goods then goods.icon else "")
+				b.name:set(if e.gear then ItemCell.label(e.gear) elseif goods then ("%s x%d"):format(goods.name, e.n) else "")
+				b.name:color(if e.gear then ItemCell.color(e.gear) else C.text)
+				b.price:set(Format.short(e.price))
+				b.buy:setEnabled(me.money >= e.price)
+			end
+		end
+		list.CanvasSize = UDim2.fromOffset(0, math.max(MAX_ROWS * ROW, #stocks * ROW + (if #sold > 0 then ROW * (#sold + 1) else 0)))
+		list.ScrollingEnabled = #stocks + (if #sold > 0 then #sold + 1 else 0) > MAX_ROWS
 		money:set(Format.short(me.money))
 		dust:set(Format.short(bag.dust))
 	end

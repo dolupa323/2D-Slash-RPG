@@ -358,12 +358,33 @@ do
 			error("API 접근이 꺼져 있다")
 		end,
 	})
+	SERVICE("RunService", { IsStudio = function() return true end, Heartbeat = { Connect = function() end } }) -- Studio다(메모리 모드는 Studio에서만 — 2026-10-18)
 	local Off = req("ServerScriptService/server/lune/modules/store")
 	local w2, a2, _, after2 = Off.marketUpdate("e", function(old)
 		return { v = 2, list = { { id = "m" } } }, old == nil
 	end)
 	local ok2, doc2 = Off.marketRead("e")
 	expect(w2 == true and a2 == true and after2.list[1].id == "m" and ok2 == true and doc2.list[1].id == "m" and Off.isOffline() == true, "저장소가 없으면 그 서버의 메모리에서 올리고 읽는다")
+	-- 라이브 서버(Studio가 아니다): 저장소를 못 열거나 못 읽어도 메모리 모드로 넘어가지 않는다 — 계정은 「읽지 못했다」로 알리고(빈 계정으로 다루지 않게) · 장부 · 이름 장부는 실패로 답한다(2026-10-18 검토)
+	RESET()
+	SERVICE("DataStoreService", {
+		GetDataStore = function()
+			error("잠깐 답하지 않는다")
+		end,
+		GetOrderedDataStore = function()
+			error("잠깐 답하지 않는다")
+		end,
+	})
+	SERVICE("RunService", { IsStudio = function() return false end, Heartbeat = { Connect = function() end } })
+	local Live = req("ServerScriptService/server/lune/modules/store")
+	local acct, failed = Live.loadAccount(55)
+	expect(acct == nil and failed == true, "라이브: 계정을 읽지 못하면 「읽지 못했다」(빈 계정이 아니다)")
+	local _, oldFailed = Live.loadOld(55)
+	expect(oldFailed == true, "라이브: 예전 저장도 「읽지 못했다」")
+	expect(Live.saveAccount(55, { v = 1 }) == false, "라이브: 저장하지 못했다고 답한다")
+	expect(Live.marketUpdate("e", function() return { v = 1 } end) == false and (Live.marketRead("e")) == false, "라이브: 장부는 이 서버만의 메모리로 가지 않는다")
+	expect(Live.nameOwner("달지기") == false and Live.claimName("달지기", 55) == nil, "라이브: 이름 장부를 못 쓰면 이름을 지을 수 없다")
+	expect(Live.isOffline() == false, "라이브: 서버 전체가 메모리 모드로 넘어가지 않는다")
 end
 
 -- ================= 3) 서버의 흐름 =================
@@ -439,12 +460,16 @@ local function server()
 	RESET()
 	clock.now = keep
 	local handlers = {}
+	local fired, published = {}, {} -- 보낸 것 · 다른 서버에 알린 것(「팔림」 — 2026-10-18)
 	MOCK("ReplicatedStorage/shared/lune/net/net", {
-		FireClient = function() end,
+		FireClient = function(name, player, ...)
+			table.insert(fired, { name = name, player = player, args = { ... } })
+		end,
 		OnServer = function(name, fn)
 			handlers[name] = fn
 		end,
 	})
+	SERVICE("MessagingService", { PublishAsync = function(_, topic, data) table.insert(published, { topic = topic, data = data }) end, SubscribeAsync = function() end })
 	local function signal()
 		return { Connect = function() end }
 	end
@@ -455,6 +480,8 @@ local function server()
 	local sv = {
 		World = req("ServerScriptService/server/lune/modules/world"),
 		h = handlers,
+		fired = fired,
+		published = published,
 		Market = req("ReplicatedStorage/shared/lune/sim/market"),
 		Bag = req("ReplicatedStorage/shared/lune/sim/bag"),
 		Items = req("ReplicatedStorage/shared/lune/sim/items"),
@@ -631,8 +658,18 @@ do
 	expect(sv.h.Market(pa, "buy", "u", potId, 1, 50).why == WHY.mine, "내가 올린 것은 못 산다")
 	expect(sv.h.Market(pb, "buy", "u", "없는줄", 1, 50).why == WHY.gone and sv.h.Market(pb, "buy", "nowhere", potId, 1, 50).why == WHY.gone and sv.h.Market(pb, "buy", "u", potId, 0, 50).why == WHY.gone and sv.h.Market(pb, "buy", "u", potId, 1.5, 50).why == WHY.gone and sv.h.Market(pb, "buy", "u", potId, 1, "쉰").why == WHY.gone, "없는 줄 · 없는 장부 · 0개 · 소수 · 값이 아닌 것")
 	table.clear(log)
+	table.clear(sv.fired)
 	r = sv.h.Market(pb, "buy", "u", potId, 3, 50)
 	expect(r.ok == true and hb.money == 4850 and boards.u.list[1].l == 7 and r.rows[1].l == 7 and r.rows[1].it.n == 7, "셋을 샀다: 150을 치르고 장부에는 일곱이 남았다")
+	-- 「팔림」(2026-10-18): 판 사람이 같은 서버에 있으면 그 사람에게 바로 — 다른 서버에는 알리지 않는다
+	local soldMsg = nil
+	for _, f in sv.fired do
+		if f.name == "Sold" then
+			soldMsg = f
+		end
+	end
+	expect(soldMsg ~= nil and soldMsg.player == pa and soldMsg.args[1].n == 3 and type(soldMsg.args[1].name) == "string", "판 사람에게 「팔림」(셋)")
+	expect(#sv.published == 0, "같은 서버면 다른 서버에 알리지 않는다")
 	expect(Bag.count(hb, potion.id) == 0 and Market.holds(sb.acct.market) == 1 and Market.count(sb.acct.market) == 0, "산 것은 가방이 아니라 「완료」에 들어온다(판매한 수로는 세지 않는다)")
 	local won = mineOf(r, function(m) return m.state == "hold" end)
 	expect(won ~= nil and won.it.g == potion.id and won.it.n == 3 and won.p == 150, "「완료」의 「낙찰」: 물약 셋 · 치른 값 150")
@@ -914,6 +951,8 @@ do
 	expect(r.ok == true and #r.rows == 1 and r.rows[1].id == shoesId, "다른 서버에서도 올린 것이 보인다")
 	r = sv2.h.Market(pb2, "buy", "a_shoes", shoesId, 1, 250)
 	expect(r.ok == true and hb2.money == moneyB - 250, "다른 서버에서 산다")
+	local pub = sv2.published[#sv2.published]
+	expect(pub ~= nil and pub.topic == "LuneSold" and pub.data.n == 1 and type(pub.data.u) == "number" and pub.data.u ~= pb2.UserId, "판 사람이 이 서버에 없으면 다른 서버들에 「팔림」을 알린다(MessagingService)")
 	local holdShoes = mineOf(r, function(m) return m.state == "hold" and m.it[1] == "shoes" end)
 	expect(holdShoes ~= nil, "「완료」에 신발이 있다")
 	sv2.World.removePlayer(pb2)

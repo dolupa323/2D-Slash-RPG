@@ -687,8 +687,12 @@ do
 	local texts = {} -- 만들어진 글들(이름 → 값)
 	local hits = {} -- 누를 수 있는 것들: [틀의 이름] = 눌렀을 때 부르는 것
 	local made = 0
+	local partyDots = 0 -- 파티원의 금빛 점(2026-10-18)
 	local function frame(name: string?, parent)
 		made += 1
+		if name == "Party" then
+			partyDots += 1
+		end
 		local f = { Name = name or "Frame", ZIndex = 1, parent = parent, Size = { X = { Offset = 7 }, Y = { Offset = 9 } } }
 		function f:Destroy()
 			self.destroyed = true
@@ -771,4 +775,18 @@ do
 	hits["HitName_r1bh"]()
 	eq(sideName(), "옛 은신처", "이름표를 눌러도 고른다")
 	view.destroy()
+	-- 파티원(2026-10-18): 이 지역에 있는 파티원마다 그 장소 곁에 금빛 점 — 다른 지역 · 장소가 없는 맵의 사람은 그리지 않는다
+	local party = { { id = 1, name = "나", scene = "town" }, { id = 2, name = "둘", scene = "town" }, { id = 3, name = "셋", scene = "town" }, { id = 4, name = "넷", scene = "ct" } }
+	ctx.party = function() return { members = party } end -- 서버의 PartyInfo 꼴(나도 들어 있다)
+	ctx.myId = function() return 1 end
+	state.scene, state.level, state.quests = "town", 10, {}
+	local view2 = MapWindow.build(frame("Body"), ctx, w, h)
+	partyDots = 0
+	view2.draw()
+	eq(partyDots, 2, "1지역을 보는 동안: 초승달 마을의 파티원 둘만(은달 항구의 사람은 그 지역에서)")
+	party[2].scene = "hunt"
+	partyDots = 0
+	view2.refresh()
+	eq(partyDots, 2, "파티원이 맵을 옮기면 다시 그린다")
+	view2.destroy()
 end

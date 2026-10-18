@@ -18,6 +18,7 @@ local Quests = require(script.Parent.quests) -- 스토리 보스: 그 퀘스트�
 local BossPat = require(script.Parent.bosspat) -- 스토리 보스: 표시된 자리 · 도약 · 물결의 자리와 시간(화면과 같은 셈)
 local Rift = require(script.Parent.rift) -- 수정 틈 토벌(물결로 몰려오는 반복 던전 — 2026-10-16)
 local RULES = COMBAT.rules
+local FE = COMBAT.fieldElite -- 사냥터 정예(2026-10-18 — 공방 combat.js FIELD_ELITE)
 local CASTRULE = COMBAT.castRule
 local KIT = COMBAT.kit
 local UP = COMBAT.kitUp -- 사출기 강화(2~4차 패시브)
@@ -48,7 +49,18 @@ function Room.new(key: string, scene, rng)
 	self.key = key
 	self.scene = scene
 	self.rng = rng
-	self.lootRng = Random.new(#key * 7919 + 101) -- 재료 · 귀한 드롭을 굴리는 난수(졸개의 움직임을 굴리는 난수와 따로 — 드롭을 더해도 싸움의 흐름이 달라지지 않는다)
+	-- 재료 · 귀한 드롭을 굴리는 난수(졸개의 움직임을 굴리는 난수와 따로 — 드롭을 더해도 싸움의 흐름이 달라지지 않는다).
+	--  씨앗 = 장면 이름의 글자 전부로(2026-10-18 검토: 전에는 이름의 길이만 써서 토벌의 방 rf1#1 ~ #9가 모두 같은 드롭 · 같은 완료 장비를 굴렸다).
+	--  토벌의 방(이름에 「#」)은 열 때마다 새로 짓는 방이라 그때의 시각도 섞는다 — 같은 방 번호여도 판마다 다르다
+	local seed = 0
+	for i = 1, #key do
+		seed = (seed * 31 + string.byte(key, i)) % 2147483629
+	end
+	if string.find(key, "#", 1, true) then
+		seed = (seed + os.time() * 1000 + math.floor(os.clock() * 1000)) % 2147483629
+	end
+	self.lootRng = Random.new(seed + 101)
+	self.keySeed = seed -- (사냥터 정예가 나오는 자리를 굴리는 씨앗에도 — eliteRng)
 	self.time = 0
 	self.mobs = {}
 	self.shots = {}
@@ -95,6 +107,32 @@ function Room.new(key: string, scene, rng)
 		end
 		table.insert(self.mobs, mob)
 	end
+	-- 사냥터 정예(2026-10-18 — 메이플의 엘리트 몬스터 · combat.js FIELD_ELITE): 2지역부터의 사냥터(scene.elite)는 졸개 목록 끝에 정예의 자리를 하나 잡아 둔다(번호가 바뀌지 않게).
+	--  처음에는 없다(state "gone" · away). 방에서 every마리를 잡으면 맵의 아무 몬스터 자리에서 나온다(Room:eliteCount) — 종류는 그 맵에 가장 많은 몬스터
+	if scene.elite and #self.mobs > 0 then
+		local count, kindOf = {}, nil
+		for _, m in self.mobs do
+			count[m.kind] = (count[m.kind] or 0) + 1
+			if not kindOf or count[m.kind] > count[kindOf] then
+				kindOf = m.kind
+			end
+		end
+		local like = nil
+		for _, m in self.mobs do
+			if m.kind == kindOf then
+				like = m
+				break
+			end
+		end
+		local maxHp = like.maxHp * FE.hp
+		local slot = {
+			id = #self.mobs + 1, kind = like.kind, def = like.def, lv = like.lv, homeX = like.homeX, y = like.y, a = like.a, b = like.b, x = like.homeX, dir = -1,
+			state = "gone", t = 0, hp = maxHp, maxHp = maxHp, cd = 0, wait = 0, goal = like.homeX, target = nil :: any, aggro = 0, struck = false, respawn = math.huge,
+			away = true, elite = true, fieldElite = true,
+		}
+		table.insert(self.mobs, slot)
+		self.eliteSlot, self.eliteKills = slot, 0
+	end
 	-- 스토리 보스(장면의 bosses — 공방 design/bosses.js의 STORYBOSS): 졸개의 목록 끝에 자리를 잡아 둔다(번호가 바뀌지 않게). 처음에는 없다(state "gone" · away) —
 	--  그 퀘스트를 하는 사람이 방에 있을 때만 나타난다(Room:stepPresence). 부르는 졸개(호령)의 자리도 미리 잡아 둔다(away — 불릴 때 나온다)
 	local function hpOf(lv: number, kind): number
@@ -116,7 +154,7 @@ function Room.new(key: string, scene, rng)
 				local ak = COMBAT.mobs[p.summon.kind]
 				local hp = hpOf(p.summon.lv, ak)
 				for i = 1, p.summon.max do
-					local x = p.summon.at[(i - 1) % #p.summon.at + 1]
+					local x = math.clamp(p.summon.at[(i - 1) % #p.summon.at + 1], def.range[1], def.range[2]) -- 보스의 구간 안에서 나온다(밖에서 나와 첫걸음에 28점 끌려 들어왔다 — 2026-10-18 검토)
 					local add = {
 						id = #self.mobs + 1, kind = p.summon.kind, def = ak, lv = p.summon.lv, homeX = x, y = def.y, a = def.range[1], b = def.range[2], x = x, dir = 1,
 						state = "gone", t = 0, hp = hp, maxHp = hp, cd = 0, wait = 0, goal = x, target = nil :: any, aggro = 0, struck = false, respawn = math.huge,
@@ -142,8 +180,16 @@ local function canSee(mob, h, range: number): boolean
 	return h.alive and math.abs(h.y - mob.y) <= SEE_Y and math.abs(h.x - mob.x) <= range
 end
 
--- 가장 가까운, 알아챌 수 있는 사람
+-- 가장 가까운, 알아챌 수 있는 사람. 비선공(def.passive — 첫 사냥터의 수습 검병 · 2026-10-18)은 맞은 뒤(aggro가 남은 동안)에만 알아챈다
 function Room:findTarget(mob, heroes)
+	if mob.def.passive then
+		-- 비선공은 때린 사람만 쫓는다(2026-10-18 검토: 가까운 다른 사람을 치는 일이 있었다) — 그 사람을 놓치면 아무도 치지 않는다
+		local h = if (mob.aggro or 0) > 0 and mob.target ~= nil then heroes[mob.target] else nil
+		if h and canSee(mob, h, mob.def.see * 1.6) and not Buffs.stealth(h) then
+			return mob.target
+		end
+		return nil
+	end
 	local best, bestD = nil, math.huge
 	for id, h in heroes do
 		local range = if mob.target == id then mob.def.see * 1.6 else mob.def.see
@@ -177,7 +223,9 @@ function Room:hurtHero(events, h, mob, mul: number)
 	-- 끼고 있는 방어구만큼 덜 아프다. 무니의 지키는 마음은 거기에 더 줄인다(제 수정 곁에서는 두 배). 버프(달의 축복 · 수정 방벽 · 달의 성역)도 줄인다
 	-- 패시브(굳센 자세 — 기술을 쓰는 동안에는 더 · 달궈진 몸 — 달아오름 동안)도 줄인다
 	local casting = (h.actUntil or 0) > self.time or self.caster:acting(h)
-	if mob.elite then
+	if mob.fieldElite then
+		mul *= FE.hit -- 사냥터 정예
+	elseif mob.elite then
 		mul *= Rift.DATA.elite.hit -- 토벌의 정예는 더 세게 친다
 	end
 	local raw = N.rawHit("mob", mob.lv) * (1 - Hero.cut(h, mob.lv) / 100) * mul * Kit.cut(h, self:nearCrystal(h)) * Buffs.cut(h) * Passives.cut(h, casting)
@@ -237,7 +285,7 @@ function Room:stepMob(mob, heroes, dt: number, events)
 	elseif mob.state == "dead" then
 		if mob.t >= DEAD_TIME then
 			mob.state, mob.respawn = "gone", RULES.respawn
-			if mob.add or mob.wave then -- 토벌의 물결의 몬스터도 다시 나오지 않는다
+			if mob.add or mob.wave or mob.fieldElite then -- 토벌의 물결의 몬스터 · 사냥터 정예도 다시 나오지 않는다(정예는 다시 every마리를 잡아야 나온다)
 				mob.away = true -- 불려 나온 졸개는 저절로 다시 나오지 않는다
 			end
 		end
@@ -331,8 +379,8 @@ function Room:stepMob(mob, heroes, dt: number, events)
 	end
 	mob.aggro = math.max(0, mob.aggro - dt)
 	local targetId = self:findTarget(mob, heroes)
-	if not targetId and mob.aggro > 0 and mob.target and heroes[mob.target] and heroes[mob.target].alive then
-		targetId = mob.target -- 맞았으면 멀리 있어도 한동안 쫓는다
+	if not targetId and mob.aggro > 0 and mob.target and heroes[mob.target] and heroes[mob.target].alive and not Buffs.stealth(heroes[mob.target]) then
+		targetId = mob.target -- 맞았으면 멀리 있어도 한동안 쫓는다(연막 속에 숨었으면 놓친다 — 2026-10-18 검토: 맞은 몬스터는 연막 속에서도 계속 쳤다)
 	end
 	mob.target = targetId
 	local target = targetId and heroes[targetId]
@@ -473,16 +521,30 @@ function Room:stepStory(heroes)
 	end
 end
 
--- 누가 서야 하는가: 이야기의 차례로, 그 보스를 잡는 퀘스트를 하는 중인 사람이 방에 있는 첫 보스 하나. 나머지는 없다
+-- 누가 서야 하는가: 이미 서 있는 보스(싸우는 중 — 그것을 잡을 사람이 방에 있다 · 쓰러지는 중)는 그대로 둔다. 없으면 이야기의 차례로,
+--  그 보스를 잡는 퀘스트를 하는 중인 사람이 방에 있는 첫 보스 하나. 나머지는 없다
+--  (2026-10-18 검토: 늘 이야기의 차례로 골라, 앞 퀘스트의 사람이 들어오면 다른 사람이 20%까지 깎은 보스가 사라지고 앞 보스가 섰다 · 쓰러지는 보스 위에 다음 보스가 섰다)
 function Room:stepPresence(heroes)
+	local function needed(mob): boolean
+		for _, h in heroes do
+			if Quests.wantsKill(h.quests, mob.kind, self.key) then
+				return true
+			end
+		end
+		return false
+	end
 	local want = nil
 	for _, mob in self.bosses do
-		if not want then
-			for _, h in heroes do
-				if Quests.wantsKill(h.quests, mob.kind, self.key) then
-					want = mob
-					break
-				end
+		if not mob.away and (mob.state == "dead" or needed(mob)) then
+			want = mob
+			break
+		end
+	end
+	if not want then
+		for _, mob in self.bosses do
+			if needed(mob) then
+				want = mob
+				break
 			end
 		end
 	end
@@ -808,10 +870,44 @@ function Room:stepBoss(mob, heroes, dt: number, events)
 end
 
 -- 한 걸음. 일어난 일의 목록을 돌려준다: hurt(사람이 맞음) · shot(화살이 생김) · shotEnd
+-- 경험치 · 떨어진 것을 나눌 사람들: 넘겨받은 파티원 가운데 지금 이 방에 살아 있는 사람만(쓴 사람은 늘 — 2026-10-18 검토: 2~4차 스킬 · 분신은
+--  쓰기 시작할 때의 파티원 목록을 끝까지 써서, 그사이 쓰러지거나 · 맵을 옮기거나 · 파티를 나간 사람도 경험치 · 퀘스트의 숫자를 받았다)
+function Room:liveMates(hero, mates)
+	if not mates then
+		return { hero }
+	end
+	if not self.here then
+		return mates -- (방을 아직 한 번도 돌리지 않았다 — 검사가 바로 친 때)
+	end
+	local out = {}
+	for _, m in mates do
+		if m == hero or (m.alive and self.here[m]) then
+			table.insert(out, m)
+		end
+	end
+	return out
+end
+
+-- 그 사람이 이 방을 떠났다(맵을 옮겼다 · 나갔다 · 캐릭터 고르기로 — 서버 world.luau가 부른다): 그 사람의 늦게 드는 타(붙는 불 · 분신)를 버린다.
+--  2026-10-18 검토: 떠난 리퍼의 붙는 불이 보스를 쓰러뜨려, 방의 아무도 그 몫을 받지 못했다(놓인 것은 stepPlaced가 이미 걷는다)
+function Room:forget(hero)
+	if self.laters then
+		for i = #self.laters, 1, -1 do
+			if self.laters[i].hero == hero then
+				table.remove(self.laters, i)
+			end
+		end
+	end
+end
+
 function Room:step(heroes, dt: number)
 	local events = {}
 	self.time += dt
 	self.heroes = heroes -- 지금 방에 있는 사람들(스토리 보스를 쓰러뜨리면 모두에게 잡은 것으로 친다 — Room:strike)
+	self.here = {} -- 그 사람들(값으로 찾는다 — Room:liveMates)
+	for _, h in heroes do
+		self.here[h] = true
+	end
 	if self.bosses then
 		self:stepPresence(heroes)
 	end
@@ -820,6 +916,12 @@ function Room:step(heroes, dt: number)
 	end
 	if self.rift then
 		Rift.step(self, heroes, dt) -- 토벌: 물결 · 제한 시간
+	end
+	if self.eliteNews then
+		-- 사냥터 정예가 나왔다: 방 사람들에게(화면이 알림을 띄우고 그 자리의 높이로 그린다)
+		local e = self.eliteNews
+		self.eliteNews = nil
+		table.insert(events, { type = "elite", mob = e.id, kind = e.kind, x = e.x, y = e.y })
 	end
 	for _, mob in self.mobs do
 		-- 졸개에 걸린 것이 풀려 간다: bind 묶임 · bindImm 다시 묶이지 않는 시간 · stun 넘어짐 · rend 갈라짐(받는 피해 +)
@@ -899,6 +1001,10 @@ function Room:step(heroes, dt: number)
 	if self.waves then
 		for i = #self.waves, 1, -1 do
 			local w = self.waves[i]
+			if w.mob and (w.mob.state == "dead" or w.mob.state == "gone") then
+				table.remove(self.waves, i) -- 보스가 쓰러지면 물결도 사라진다(터지는 자리처럼 — 2026-10-18 검토: 쓰러뜨린 뒤에 물결에 맞아 쓰러질 수 있었다)
+				continue
+			end
 			if (w.wait or 0) > 0 then
 				w.wait -= dt -- 연속 검기: 차례를 기다린다
 				continue
@@ -1002,7 +1108,7 @@ function Room:step(heroes, dt: number)
 					local n = self:marksOf(hero, mob)
 					if n > 0 and mob.state ~= "dead" and mob.state ~= "gone" and mob.state ~= "spawn" then
 						result = result or { hits = {}, kills = {} }
-						self:proc(hero, mob, power * N.data.POWER.dps * fx.venom * s * n * RULES.dmgScale * (1 + RULES.targetBonus / 100), "venom", mob.x, mob.y - 12, nil, result)
+						self:proc(hero, mob, power * N.data.POWER.dps * fx.venom * s * n * RULES.dmgScale * (1 + RULES.targetBonus / 100), "venom", mob.x, mob.y - 12, self.matesOf and self.matesOf(hero), result)
 					end
 				end
 				if result then
@@ -1170,12 +1276,17 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 			table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = 0, ups = 0, gains = gains, loot = {} })
 			return dead, dmg
 		end
-		local list = mates or { hero }
+		-- 사냥터 정예: 보통의 것을 잡으면 센다(정예 자신 · 토벌의 물결은 세지 않는다)
+		if self.eliteSlot and not mob.fieldElite and not mob.wave then
+			self:eliteCount()
+		end
+		local list = self:liveMates(hero, mates)
 		local share = Party.share(#list)
 		local gains, myXp, myUps = {}, 0, 0
+		local xpMul = if mob.fieldElite then FE.xp else 1 -- 사냥터 정예는 경험치가 xp배
 		for _, mate in list do
 			-- 사람마다 제 레벨 차이 · 벌칙을 넣은 경험치에 나눈 몫을 곱한다
-			local xp = math.max(1, math.floor(Hero.killXp(mate, mob.lv, mob.def.hp) * share + 0.5))
+			local xp = math.max(1, math.floor(Hero.killXp(mate, mob.lv, mob.def.hp) * xpMul * share + 0.5))
 			local ups = Hero.gainXp(mate, xp)
 			table.insert(gains, { hero = mate.id, xp = xp, ups = ups, level = mate.level })
 			if mate == hero then
@@ -1195,7 +1306,7 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 				d.friends = friends
 			end
 		end
-		table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = myXp, ups = myUps, gains = gains, drop = drop, loot = loot })
+		table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = myXp, ups = myUps, gains = gains, drop = drop, loot = loot, elite = mob.fieldElite or nil }) -- elite = 사냥터 정예(분석이 센다)
 	end
 	return dead, dmg
 end
@@ -1270,7 +1381,7 @@ function Room:stepPlaced(heroes, dt: number, events)
 			for _, mob in targets do
 				result = result or { hits = {}, kills = {} }
 				local roll = 1 + self.rng:NextNumber(-RULES.spread, RULES.spread) / 100
-				self:proc(hero, mob, power * def.mul * gap * p.pow * fit * roll, if def.tick then "field" else "summon", p.x, p.y - 12, nil, result)
+				self:proc(hero, mob, power * def.mul * gap * p.pow * fit * roll, if def.tick then "field" else "summon", p.x, p.y - 12, self.matesOf and self.matesOf(hero), result)
 			end
 		end
 		if def.pull then
@@ -1716,10 +1827,15 @@ end
 
 -- 잡은 졸개가 떨어뜨리는 달돈(열에 여섯). 장비와 달가루는 lootFor.
 function Room:dropFor(hero, mob)
-	if self.rng:NextNumber(0, 100) >= N.data.COIN.chance then
-		return nil
+	local base
+	if mob.fieldElite then
+		base = N.killMoney(mob.lv) * mob.def.hp * FE.money -- 사냥터 정예: 반드시 떨어지고 money배(보통 한 마리가 주는 달돈의 기댓값에)
+	else
+		if self.rng:NextNumber(0, 100) >= N.data.COIN.chance then
+			return nil
+		end
+		base = N.killMoney(mob.lv) * mob.def.hp / (N.data.COIN.chance / 100)
 	end
-	local base = N.killMoney(mob.lv) * mob.def.hp / (N.data.COIN.chance / 100)
 	local amount = base * (1 + self.rng:NextNumber(-RULES.moneySpread, RULES.moneySpread) / 100)
 	if hero.weak > 0 then
 		amount *= 1 - N.data.BODY.death.cut / 100
@@ -1734,6 +1850,9 @@ end
 function Room:lootFor(hero, mob)
 	local out = {}
 	local mul = if hero.weak > 0 then 1 - N.data.BODY.death.cut / 100 else 1
+	if mob.fieldElite then
+		mul *= FE.loot -- 사냥터 정예: 나올 확률이 loot배
+	end
 	-- 떨어지는 것은 모두 방의 드롭 난수로 굴린다(졸개의 움직임을 굴리는 난수와 따로 — 드롭의 확률을 고쳐도 싸움의 흐름이 달라지지 않는다)
 	local lootRng = self.lootRng or self.rng
 	local item = Items.rollDrop(lootRng, mob.lv, hero.class, mul)
@@ -1758,6 +1877,34 @@ function Room:lootFor(hero, mob)
 		goods(id)
 	end
 	return out
+end
+
+-- 사냥터 정예를 센다(보통의 졸개 하나를 잡을 때마다). 정예가 나와 있는 동안은 세지 않는다. every에 이르면 맵의 아무 몬스터 자리(그 종류의 자리)에서 나오고,
+--  다음 Room:step이 방 사람들에게 알린다(events "elite" — 화면이 알림을 띄우고 그 자리의 높이로 그린다)
+function Room:eliteCount()
+	local slot = self.eliteSlot
+	if not slot.away or slot.state ~= "gone" then
+		return
+	end
+	self.eliteKills += 1
+	if self.eliteKills < FE.every then
+		return
+	end
+	self.eliteKills = 0
+	local spots = {}
+	for _, m in self.mobs do
+		if m.kind == slot.kind and not m.fieldElite and not m.boss and not m.add and not m.wave then
+			table.insert(spots, m)
+		end
+	end
+	-- 나오는 자리는 따로 굴린다(졸개의 움직임 · 드롭의 난수 차례를 바꾸지 않게). 씨앗 = 장면 이름 전부 + 그때의 시각(2026-10-18 검토: 이름의 길이만 써서 서버가 뜰 때마다 같은 차례였다)
+	self.eliteRng = self.eliteRng or Random.new(((self.keySeed or 0) + os.time() + 7) % 2147483629)
+	local at = spots[self.eliteRng:NextInteger(1, #spots)]
+	slot.homeX, slot.y, slot.a, slot.b, slot.x, slot.goal, slot.dir = at.homeX, at.y, at.a, at.b, at.homeX, at.homeX, at.dir
+	slot.away, slot.state, slot.t, slot.hp, slot.target, slot.cd, slot.aggro, slot.struck = false, "spawn", 0, slot.maxHp, nil, 0, 0, false
+	slot.marks = nil
+	slot.bind, slot.bindImm, slot.stun, slot.rend, slot.cracks = 0, 0, 0, 0, 0
+	self.eliteNews = slot
 end
 
 -- 물건 하나를 (x, y)에 떨어뜨린다. owner = 얼마 동안 혼자 주울 수 있는 사람

@@ -19,6 +19,7 @@ local Hero = require(lune.sim.hero)
 local Account = require(lune.sim.account)
 local Rank = require(lune.sim.rank) -- 명예의 전당(순위판 셋)
 local Room = require(lune.sim.room)
+local Caster = require(lune.sim.caster) -- 몸을 옮기는 스킬의 목록(Caster.MOVERS — onMove)
 local Bag = require(lune.sim.bag)
 local Items = require(lune.sim.items)
 local Party = require(lune.sim.party)
@@ -45,6 +46,22 @@ local Bond = require(lune.sim.bond) -- 2편의 호감도 · 모험의 서 · 달
 local TICK = 1 / 20
 local SNAP_EVERY = 2 -- 걸음 몇 번에 한 번 졸개의 모습을 보낸다(초당 10번)
 local MOVE_SLACK = 90 -- 한 번의 보고에서 이보다 멀리 가 있으면 믿지 않는다(도트)
+-- 시간에 따른 몫(2026-10-18 검토): 보고마다 MOVE_SLACK까지 받으면 연달아 보내 순식간에 맵 끝까지 갔다(1초에 1,800점쯤) — 가로로는 1초에 MOVE_RATE점씩 차고
+--  MOVE_CAP점까지 모이는 몫 안에서만 받는다. 달리기 92점/초 · 버프 · 1차 대쉬(짧게 200~520점/초)가 넉넉히 들어간다. 맵을 옮긴 직후의 첫 보고는 JUMP_SLACK 안에서만
+local MOVE_RATE, MOVE_CAP, JUMP_SLACK = 300, 180, 360
+-- 위로 가는 몫(2026-10-18 검토: 세로는 보고마다 180점까지만 보아 연달아 보내면 날았다) — 1초에 UP_RATE점씩 차고 UP_CAP점까지.
+--  뛰기 57점 + 공중 뛰기 41점(0.8초쯤) · 사다리 1초에 80점 · 도약 49점이 넉넉히 든다. 떨어지는 것(아래로)은 세지 않는다
+local UP_RATE, UP_CAP = 240, 160
+-- 그 자리 가까이(MOVE_SLACK 안)에 맵의 바닥이 뚫린 칸이 있는가 — 거기서만 맵 아래로 떨어질 수 있다(onMove의 시작 자리 받기)
+local function holeNear(scene, x: number): boolean
+	local bottom = scene.h - 1
+	for tx = math.floor((x - MOVE_SLACK) / G.TILE), math.floor((x + MOVE_SLACK) / G.TILE) do
+		if tx >= 0 and tx < scene.w and string.sub(scene.rows[bottom + 1], tx + 1, tx + 1) ~= "#" then
+			return true
+		end
+	end
+	return false
+end
 -- 장면을 옮긴 뒤 화면이 열릴 때까지(화면은 막을 치고 새 장면의 그림을 불러온다 — client/lune/curtain.luau):
 --  LOAD_GUARD = 그동안 피해를 받지 않는 가장 긴 시간(초). 화면이 열려 첫 자리 보고나 첫 기술이 오면 거기서부터 보통의 들어선 뒤 보호(RULES.arrive)로 바뀐다
 --  LOAD_STALE = 서버가 먼저 옮긴 뒤(마을로 돌아가기 · 관리 이동) 이 시간(초) 안에 온, 옮겨 놓은 자리에서 먼 자리 보고는 옮겨지기 전에 떠난 늦은 보고로 보고 받지 않는다(옛 장면의 자리를 새 장면의 자리로 믿지 않는다)
@@ -55,6 +72,7 @@ local STOP_WAIT = 20 -- 서버가 닫힐 때 쓰고 있는 저장을 기다리�
 -- 같은 계정이 다른 서버에서 하는 중일 때(modules/store.luau의 잠금): 이만큼 다시 물어 보고(서버를 옮겨 올 때 앞 서버가 저장을 끝내고 잠금을 푼다) 끝내 안 풀리면 내보낸다
 local LOCK_TRIES, LOCK_WAIT = 6, 1.5
 local LOCK_KICK = "이 계정은 다른 서버에서 하는 중입니다. 잠시 뒤에 다시 들어와 주세요."
+local LOAD_KICK = "저장소가 지금 답하지 않습니다. 잠시 뒤에 다시 들어와 주세요." -- 계정을 읽지 못했다(2026-10-18 검토: 빈 계정으로 들여보내면 저장된 것을 덮어썼다)
 local function holdAccount(userId: number): boolean
 	return Store.lock == nil or Store.lock(userId) == true
 end
@@ -65,9 +83,36 @@ local function kick(player, text: string)
 end
 
 local World = {}
+-- 이동 몫을 지금까지의 시간만큼 채운다(onMove · skillPlace)
+--  흐른 시간 = 서버 시계(World.now)와 실제 시계(os.clock) 가운데 긴 것: 서버가 잠깐 멈추면 World.now는 0.25초까지만 흐르게 되어 있어(Heartbeat의 acc),
+--  그동안 정상으로 걸은 거리도 몫을 넘어 되돌려질 수 있었다(2026-10-18 검토 — 자동 검사는 World.now만 흘린다)
+local function refillMove(s)
+	local clock = os.clock()
+	local dt = math.max(0, World.now - (s.moveAt or World.now), clock - (s.moveClock or clock))
+	s.moveBudget = math.min(MOVE_CAP, (s.moveBudget or MOVE_CAP) + dt * MOVE_RATE)
+	s.upBudget = math.min(UP_CAP, (s.upBudget or UP_CAP) + dt * UP_RATE)
+	s.moveAt, s.moveClock = World.now, clock
+end
+-- 기술을 쓴 자리: 화면이 말한 자리가 서버가 아는 자리 곁(가로 40 · 세로 60)이면 받아 적는다 — 이동 몫에서 뺀다(2026-10-18 검토:
+--  몫 밖이라, 받아 주지 않을 기술 요청을 연달아 보내 1초에 300점 넘게 옆으로 · 480점 위아래로 갔다)
+local function skillPlace(s, x: number, y: number)
+	local hero = s.hero
+	local dx = math.abs(x - hero.x)
+	if dx > 40 or math.abs(y - hero.y) > 60 then
+		return
+	end
+	refillMove(s)
+	local up = math.max(0, hero.y - y)
+	if dx <= s.moveBudget and up <= s.upBudget then
+		s.moveBudget -= dx
+		s.upBudget -= up
+		hero.x, hero.y = x, y
+	end
+end
 World.now = 0
 
 local sessions = {} -- [Player] = { player, hero, scene, skill = { id, seg, at }, moved }
+local leaving = {} -- [UserId] = true — 나가며 저장하는 중(World.removePlayer · addPlayer가 기다린다)
 local rooms = {} -- [장면 이름] = Room
 local pending = {} -- 조금 뒤에 풀 판정들 { at, fn }
 local ticks = 0
@@ -97,6 +142,10 @@ local function roomOf(key: string)
 	if not room then
 		seed += 1
 		room = Room.new(key, SCENES.scenes[key], Random.new(seed))
+		-- 방이 스스로 치는 것(독 · 소환 · 장판)도 그 순간의 같은 맵 파티원과 경험치 · 퀘스트를 나눈다(2026-10-18 검토 — 전에는 쓴 사람 혼자)
+		room.matesOf = function(h)
+			return World.matesIn(key, h)
+		end
 		rooms[key] = room
 	end
 	return room
@@ -223,6 +272,12 @@ local function place(s, key: string, x: number, y: number, pushed: boolean?)
 	if not Voyage.onShip(key) then
 		s.voyage = nil -- 배에서 내렸다(닿았거나 · 귀환 주문서 · 쓰러져 돌아감)
 	end
+	-- 방마다 시계가 따로다: 캐릭터에 적힌 방의 시각을 새 방의 시계로(Hero.shiftClock — 2026-10-18 검토)
+	local fromRoom = if s.scene then rooms[s.scene] else nil
+	if fromRoom and s.scene ~= key then
+		Hero.shiftClock(s.hero, roomOf(key).time - fromRoom.time)
+		fromRoom:forget(s.hero) -- 떠난 방에 남은 늦은 타를 버린다(Room:forget)
+	end
 	s.scene = key
 	s.hero.x, s.hero.y = x, y
 	s.skill = nil
@@ -253,6 +308,15 @@ local function arrived(s)
 	if s.loading then
 		s.loading = nil
 		s.hero.invuln = COMBAT.rules.arrive
+		-- 화면이 열렸다: 방 사람들과 버프의 모습(거신의 큰 몸 등)을 서로 알린다(2026-10-18 검토 — 버프는 바뀔 때만 보내, 새로 온 사람에게는 먼저 와 있던 사람의 버프가 보이지 않았다)
+		if s.hero then
+			sendBuffs(s)
+			for _, other in inRoom(s.scene) do
+				if other ~= s and other.hero then
+					fire("Buffs", s.player, other.hero.id, Buffs.view(other.hero, World.now).list)
+				end
+			end
+		end
 	end
 end
 
@@ -405,6 +469,7 @@ end
 --  차례: 계정을 먼저 쓰고 순위판은 그 뒤에 쓴다(2026-10-12 — 그 앞에는 순위판(쓸 때마다 기다린다)을 먼저 써서, 서버가 닫히는 중이면 정작 계정이 마지막에 밀려 쓰이지 못할 수 있었다)
 --  saving = 지금 저장소에 쓰고 있는 것의 수: 서버가 닫힐 때 World.stop이 이것이 0이 될 때까지 기다린다(나가는 사람의 저장이 끝나기 전에 서버가 닫히지 않게)
 local saving = 0
+local stopping = false -- 서버가 닫히는 중(World.stop)
 local function saveAccount(s)
 	if not s.acct or not s.loaded then
 		return
@@ -416,11 +481,16 @@ local function saveAccount(s)
 	end
 	s.dirty, s.soon = false, nil
 	saving += 1
-	local ok, err = pcall(Store.saveAccount, s.player.UserId, Account.pack(s.acct))
+	local ok, done = pcall(Store.saveAccount, s.player.UserId, Account.pack(s.acct))
 	if not ok then
-		warn("[lune] 저장하다 오류: " .. tostring(err))
+		warn("[lune] 저장하다 오류: " .. tostring(done))
 	end
-	pcall(pushRank, s)
+	if not ok or done == false then
+		s.dirty = true -- 저장하지 못했다: 다음 틈틈이 저장에서 다시 해 본다(2026-10-18 검토 — 전에는 다른 것이 바뀔 때까지 다시 하지 않았다)
+	end
+	if not stopping then
+		pcall(pushRank, s) -- (서버가 닫히는 중이면 순위판은 건너뛴다 — 계정의 저장이 30초 안에 다 끝나게)
+	end
 	saving -= 1
 end
 
@@ -442,6 +512,15 @@ end
 -- 들어온 사람의 자리를 만든다. 계정을 읽어 둔다 — 캐릭터는 고르기 화면에서 들어갈 때 선다(onChars의 enter).
 --  계정이 없는데 예전 저장(계정이 생기기 전의 캐릭터 하나)이 있으면 그 캐릭터를 첫 캐릭터로 옮긴다(이름은 비어 있다 — 들어가기 전에 짓는다). 예전 저장은 그대로 둔다.
 function World.addPlayer(player)
+	if sessions[player] then
+		return
+	end
+	-- 같은 서버에서 막 나간 그 사람의 저장이 아직 쓰이는 중이면 끝날 때까지 기다린다(길어도 20초) — 그 전에 읽으면 옛 계정을 읽고,
+	--  앞 자리의 잠금 풀기가 새 자리의 잠금을 풀었다(잠금이 서버 번호로만 적힌다 — 2026-10-18 검토)
+	local waitedLeave = 0
+	while leaving[player.UserId] and waitedLeave < 20 do
+		waitedLeave += task.wait(0.2) or 0.2
+	end
 	if sessions[player] then
 		return
 	end
@@ -505,11 +584,46 @@ function World.addPlayer(player)
 		return
 	end
 	s.held = true
-	local data = Store.loadAccount(player.UserId)
-	local acct = if data then Account.unpack(data) else nil
+	-- 읽지 못했다(라이브의 저장소가 답하지 않는다): 빈 계정으로 들여보내면 나갈 때 저장된 것을 덮어쓴다 — 저장하지 않고 내보낸다(잠금도 푼다)
+	local function cannotRead()
+		s.guest, s.locked = true, true
+		if s.held and Store.unlock then
+			Store.unlock(player.UserId)
+		end
+		s.held = false
+		warn(("[lune] %d의 계정을 읽지 못했다 — 저장하지 않고 내보낸다"):format(player.UserId))
+		kick(player, LOAD_KICK)
+	end
+	if sessions[player] ~= s then
+		if Store.unlock then
+			Store.unlock(player.UserId) -- 잡는 사이에 나갔다: 잠금을 남기지 않는다(150초 동안 다른 서버로 못 들어갔다 — 2026-10-18 검토)
+		end
+		s.held = false
+		return
+	end
+	local data, failed = Store.loadAccount(player.UserId)
+	if failed then
+		cannotRead()
+		return
+	end
+	-- 계정을 푸는 데서 오류가 나면(망가진 저장) 읽지 못한 것으로 친다 — 덮어쓰지 않고 다시 들어오라고 알린다(2026-10-18 검토: 오류로 멈춰 40초 동안 검은 화면이었다)
+	local acct = nil
+	if data then
+		local okU, res = pcall(Account.unpack, data)
+		if not okU then
+			warn("[lune] 계정을 풀지 못했다: " .. tostring(res))
+			cannotRead()
+			return
+		end
+		acct = res
+	end
 	local adopted = false
 	if not acct and not data then
-		local old = Store.loadOld(player.UserId)
+		local old, oldFailed = Store.loadOld(player.UserId)
+		if oldFailed then
+			cannotRead()
+			return
+		end
 		if sessions[player] ~= s then
 			return -- 읽는 사이에 나갔다
 		end
@@ -534,13 +648,34 @@ function World.addPlayer(player)
 end
 
 -- 세계에서 나온다(캐릭터 고르기 화면으로 · 나갈 때): 저장하고, 파티에서 빠지고, 방 사람들의 이름표에서도 빠진다
+-- 파티에서 뺀다: 남은 파티원들을 돌려주고, 이 사람이 보낸 초대를 받은 사람들의 초대 상자를 닫는다(2026-10-18 검토: 30초 동안 남아 「받기」를 누르면 「받은 초대가 없다」)
+local function partyLeave(uid: number)
+	local left, _, cleared = Party.leave(book, uid)
+	for _, to in cleared or {} do
+		local ts = byUser[to]
+		if ts then
+			fire("PartyAsk", ts.player, { from = false })
+		end
+	end
+	return left
+end
+
+local KEEP_TIME = 600 -- 캐릭터 고르기로 나갔다가 이 시간(초) 안에 같은 캐릭터로 다시 들어오면 체력 · 다시 쓰기 · 물약 대기를 이어 간다
 local function leaveWorld(s)
 	if s.hero then
 		Analytics.finish(s) -- 모아 둔 달돈의 기록을 보낸다
 		saveAccount(s)
+		-- 체력 · 다시 쓰기(2~4차 · 버프) · 물약 대기는 저장하지 않는다 — 캐릭터 고르기를 오가 가득 찬 체력 · 다 돈 다시 쓰기로 돌아오지 않게 이 세션에 잠깐 둔다(2026-10-18 검토)
+		if s.cid then
+			s.keep = s.keep or {}
+			s.keep[s.cid] = { at = World.now, hp = s.hero.hp, alive = s.hero.alive, cds = table.clone(s.hero.cds or {}), potionWait = s.hero.potionWait }
+		end
 	end
 	local had, scene = s.hero ~= nil, s.scene
-	local left = Party.leave(book, s.player.UserId)
+	if s.hero and scene and rooms[scene] then
+		rooms[scene]:forget(s.hero) -- (캐릭터 고르기로 — 남은 늦은 타를 버린다)
+	end
+	local left = partyLeave(s.player.UserId)
 	s.hero, s.cid, s.skill, s.name = nil, nil, nil, ""
 	s.scene = SCENES.start
 	sendParty(left)
@@ -550,7 +685,7 @@ local function leaveWorld(s)
 end
 
 -- 경매장의 일(저장소를 기다리는 중)이 끝나기를 기다린다: 값을 치른 물건 · 받은 대금이 가방에 들어오기 전에 저장하고 나가지 않게(길어도 MARKET_WAIT초)
-local MARKET_WAIT = 15
+local MARKET_WAIT = 120 -- (2026-10-18 검토: 15초면 「모두 받기」 여럿 · 느린 저장소에서 경매장의 일이 끝나기 전에 저장하고 나가, 물건 · 달돈을 잃거나 서버를 옮기면 둘이 될 수 있었다)
 local function marketIdle(s)
 	local waited = 0
 	while s.marketBusy and waited < MARKET_WAIT do
@@ -562,16 +697,24 @@ function World.removePlayer(player)
 	local s = sessions[player]
 	sessions[player] = nil
 	byUser[player.UserId] = nil
+	-- 파티에서는 저장을 기다리기 전에 뺀다(2026-10-18 검토: 경매장 · 저장을 기다리는 동안(길면 15초) 나간 사람이 파티장으로 남았고, 저장이 오류를 내면 영영 남았다)
+	sendParty(partyLeave(player.UserId))
+	leaving[player.UserId] = true -- 나가며 저장하는 중(같은 서버로 곧바로 다시 들어오면 이 저장이 끝난 뒤에 읽는다 — addPlayer)
+	if s and s.hero and s.scene and rooms[s.scene] then
+		rooms[s.scene]:forget(s.hero) -- 나간 사람의 늦게 드는 타를 버린다(Room:forget)
+	end
 	if s and s.hero then
 		marketIdle(s)
-		Analytics.finish(s)
+		pcall(Analytics.finish, s)
 		saveAccount(s)
+	elseif s and s.dirty and s.loaded and not s.guest then
+		saveAccount(s) -- 캐릭터 고르기 화면에서 바꾼 것(소리 설정)을 남기고 나간다(2026-10-18 검토)
 	end
 	-- 저장을 끝낸 뒤에 계정의 잠금을 푼다(다른 서버로 옮겨 가면 그 서버가 바로 잡는다)
 	if s and s.held and Store.unlock then
 		Store.unlock(player.UserId)
 	end
-	sendParty(Party.leave(book, player.UserId))
+	leaving[player.UserId] = nil
 	if s and s.hero then
 		sendWho(s.scene)
 	end
@@ -588,8 +731,11 @@ function World.saveAll(onlyDirty: boolean?)
 				kick(s.player, LOCK_KICK)
 			end
 		end
-		if s.hero and s.loaded and not s.guest and (s.dirty or not onlyDirty) then
-			saveAccount(s)
+		if (s.hero or s.dirty) and s.loaded and not s.guest and (s.dirty or not onlyDirty) then -- 캐릭터 고르기 화면에서 바꾼 것(소리 설정)도(2026-10-18 검토)
+			local ok, err = pcall(saveAccount, s) -- 한 사람의 오류가 나머지의 저장을 막지 않게(2026-10-18 검토)
+			if not ok then
+				warn("[lune] 저장하다 오류: " .. tostring(err))
+			end
 		end
 	end
 end
@@ -616,9 +762,10 @@ end
 local function onReady(player)
 	World.addPlayer(player)
 	local s = sessions[player]
-	-- 저장된 것을 읽는 중이면 잠깐 기다린다
+	-- 저장된 것을 읽는 중이면 기다린다 — 잠금을 기다리고(6번 x 1.5초) 읽기를 다시 해 보는 동안(2026-10-18 검토: 10초면 모자라 검은 화면에 멈췄다).
+	--  그 사이에 내보내졌으면(다른 서버가 잡고 있다 · 읽지 못했다) 곧 끊긴다
 	local waited = 0
-	while s and not s.loaded and waited < 10 do
+	while s and not s.loaded and not s.locked and sessions[player] == s and waited < 40 do
 		task.wait(0.1)
 		waited += 0.1
 	end
@@ -645,6 +792,7 @@ local function filtered(name: string, userId: number): (boolean, boolean)
 	return asked, asked and clean == name
 end
 
+local NAME_BURST, NAME_GAP = 5, 3 -- 이름 확인(저장소에 묻는 것): 한 사람이 한 번에 5번까지 · 3초마다 한 번씩 다시 찬다
 local function nameFree(s, name: any, skip: any?): (boolean, string?)
 	local ok, why = Account.nameOk(name)
 	if not ok then
@@ -693,7 +841,7 @@ end
 --  delete(번호, 이름) → { ok, why, select }: 캐릭터를 지운다 — 그 캐릭터의 이름을 그대로 적어 보내야 한다(잘못 누른 것이 아님을 서버도 본다)
 --  enter(번호) → Ready와 같은 것(self · bag · room …): 그 캐릭터로 세계에 들어간다
 --  leave() → { select }: 세계에서 나와 고르기 화면으로(저장하고 나온다)
-local function onChars(player, action: string, a: any, b: any)
+local function onCharsInner(player, action: string, a: any, b: any)
 	local s = sessions[player]
 	if not s or not s.loaded or not s.acct then
 		return nil
@@ -710,6 +858,17 @@ local function onChars(player, action: string, a: any, b: any)
 		return nil
 	end
 	if action == "check" then
+		-- 저장소 · 글 거르기에 묻는 이름 확인은 한 사람이 한 번에 NAME_BURST번까지 · NAME_GAP초마다 한 번씩 다시 찬다(2026-10-18 검토: 새 이름을 1초에 두 번씩
+		--  끝없이 물어 서버의 저장소 몫을 다 쓰면, 들어오는 사람의 계정을 읽지 못해 내보내졌다). 이름의 꼴만 보는 것(글자 수 · 쓸 수 없는 글자)은 그대로 곧장 답한다
+		if Account.nameOk(a) then
+			local nowC = os.clock()
+			s.nameTokens = math.min(NAME_BURST, (s.nameTokens or NAME_BURST) + (nowC - (s.nameAt or nowC)) / NAME_GAP)
+			s.nameAt = nowC
+			if s.nameTokens < 1 then
+				return { ok = false, why = "잠시 뒤에 다시 확인해 주세요" }
+			end
+			s.nameTokens -= 1
+		end
 		local ok, why = nameFree(s, a)
 		return { ok = ok, why = why }
 	elseif action == "create" then
@@ -786,6 +945,14 @@ local function onChars(player, action: string, a: any, b: any)
 		if not hero then
 			return { ok = false, why = "이 캐릭터를 읽을 수 없습니다" }
 		end
+		-- 창고를 늘리는 부탁(「창고 칸 +4」 — 2026-10-18): 이 캐릭터가 이미 끝낸 것은 계정에 붙인다(그 보상이 생기기 전에 끝낸 캐릭터)
+		for id, st in hero.quests do
+			local def = Quests.def(id)
+			if st.done and def and (def.reward.store or 0) > 0 then
+				acct.storeGot[id] = true
+			end
+		end
+		hero.storeExtra = Account.storeExtra(acct)
 		Bag.loadStore(hero, acct.store) -- 창고는 계정의 것: 어느 캐릭터로 들어가든 같은 창고다
 		-- 뺀 맵에 남은 저장(반달 나루 — 2026-10-16 밤): 마지막 맵 · 마지막으로 들른 마을을 그 자리를 대신하는 곳으로(scenes의 gone)
 		if hero.last and SCENES.gone[string.match(hero.last, "^(.-)#%d+$") or hero.last] then
@@ -803,13 +970,36 @@ local function onChars(player, action: string, a: any, b: any)
 			startKey, startX, startY = resumeScene(hero)
 		end
 		if not hero.tut.done and SCENES.scenes[Tutorial.SCENE] then
-			startKey = Tutorial.SCENE -- 꿈에서 깨지 않은 새 캐릭터는 꿈(튜토리얼)에서 시작한다(2026-10-14)
+			startKey, startX, startY = Tutorial.SCENE, nil, nil -- 꿈에서 깨지 않은 새 캐릭터는 꿈(튜토리얼)에서 시작한다(2026-10-14) · 자리는 꿈의 시작 자리(이어하기의 자리를 쓰지 않는다 — 2026-10-18 검토)
 		end
 		if not SCENES.scenes[startKey] then
 			startKey, startX, startY = SCENES.start, nil, nil
 		end
 		local scene = SCENES.scenes[startKey]
 		place(s, startKey, startX or scene.spawn.x, startY or scene.spawn.y)
+		-- 꿈의 물약 미션에서 다시 들어왔다: 체력은 저장하지 않아 가득 찬 채라 물약을 마실 수 없다 — 그 미션이면 다시 조금 다친 채로(tutChanged와 같은 셈 · 2026-10-18 검토)
+		if startKey == Tutorial.SCENE then
+			local def = Tutorial.current(hero.tut)
+			if def and Tutorial.kind(def) == "potion" and hero.hp > hero.maxHp * 0.6 then
+				hero.hp = math.floor(hero.maxHp * 0.6)
+			end
+		end
+		-- 캐릭터 고르기로 잠깐 나갔다 온 같은 캐릭터: 체력 · 다시 쓰기 · 물약 대기를 이어 간다(leaveWorld의 keep — 쓰러진 채 나갔으면 마을에서 가득 찬 채로)
+		local kept = s.keep and s.keep[c.id]
+		if kept then
+			s.keep[c.id] = nil
+			if World.now - kept.at <= KEEP_TIME then
+				if kept.alive and kept.hp > 0 then
+					hero.hp = math.clamp(math.floor(kept.hp), 1, hero.hp) -- (꿈의 물약 미션이면 위에서 덜어 둔 체력보다 많아지지 않게)
+				end
+				for k, v in kept.cds do
+					if v > World.now then
+						hero.cds[k] = v
+					end
+				end
+				hero.potionWait = math.max(hero.potionWait or 0, (kept.potionWait or 0) - (World.now - kept.at))
+			end
+		end
 		roomOf(s.scene)
 		s.dirty = true
 		s.rankSent = nil
@@ -829,8 +1019,30 @@ local function onChars(player, action: string, a: any, b: any)
 	return nil
 end
 
+
+-- 캐릭터 만들기 · 들어가기 · 지우기 · 나오기는 한 사람에 하나씩(2026-10-18 검토): 저장소를 기다리는 사이에 「지우기」가 끼어들면, 지운 캐릭터로 들어가
+--  창고가 저장되지 않는 채 물건을 꺼내 경매에 올리면 물건이 둘이 됐다 · 만들기 둘을 같이 보내면 이름이 장부에만 남거나 같은 이름이 둘 생겼다. 이름 확인(check)은 읽기만 해서 막지 않는다
+local function onChars(player, action: string, a: any, b: any)
+	local s = sessions[player]
+	if action == "check" or not s then
+		return onCharsInner(player, action, a, b)
+	end
+	if s.charsBusy then
+		return { ok = false, why = "앞의 일을 처리하고 있습니다. 잠시만 기다려 주세요" }
+	end
+	s.charsBusy = true
+	local ok, res = pcall(onCharsInner, player, action, a, b)
+	s.charsBusy = false
+	if not ok then
+		warn("[lune] 캐릭터 일에서 오류: " .. tostring(res))
+		return nil
+	end
+	return res
+end
+
 -- ---------- 명예의 전당 ----------
 --  판 셋의 위 열 줄. 서버가 Rank.REFRESH초마다 한 번만 읽어 둔 것을 준다(물을 때마다 저장소를 읽지 않는다).
+
 local function rankBoards()
 	if rankCache and World.now - rankAt < Rank.REFRESH then
 		return rankCache
@@ -855,7 +1067,12 @@ local function onRank(player)
 	if not s or not s.hero then
 		return nil
 	end
-	pushRank(s) -- 내 것은 방금의 값으로(관리자는 올리지 않는다 — rankSent가 없다)
+	-- 내 것은 방금의 값으로(관리자는 올리지 않는다 — rankSent가 없다). 순위판에 쓰는 것은 한 사람이 30초에 한 번(2026-10-18 검토: 장비를 바꿔 끼며
+	--  순위판을 거듭 열면 열 때마다 저장소에 써서 서버의 쓰기 몫을 다 쓸 수 있었다 — 저장할 때마다도 쓴다)
+	if s.rankPushAt == nil or World.now - s.rankPushAt >= 30 then
+		s.rankPushAt = World.now
+		pushRank(s)
+	end
 	local sent = s.rankSent
 	if sent and s.rankFresh ~= sent.level then
 		s.rankFresh = sent.level
@@ -910,12 +1127,26 @@ local function onMove(player, x: number, y: number, dir: number)
 		s.stale = nil
 	end
 	arrived(s) -- 자리 보고가 왔다 = 화면이 열렸다
-	-- 그 맵의 시작 자리로 온 것은 받는다(맵 아래로 떨어지면 화면이 시작 자리로 돌려놓는다 — 이것까지 막으면 그 뒤로 자리가 영영 어긋난다)
-	local atSpawn = math.abs(x - scene.spawn.x) <= MOVE_SLACK and math.abs(y - scene.spawn.y) <= MOVE_SLACK * 2
-	if not s.jumped and not atSpawn and (math.abs(x - hero.x) > MOVE_SLACK or math.abs(y - hero.y) > MOVE_SLACK * 2) then
-		-- 순간이동하는 스킬을 쓴 직후에는 받는다(그 스킬이 갈 수 있는 거리 안에서)
+	-- 그 맵의 시작 자리로 온 것은 받는다(맵 아래로 떨어지면 화면이 시작 자리로 돌려놓는다 — 이것까지 막으면 그 뒤로 자리가 영영 어긋난다).
+	--  떨어질 수 있었을 때만이다: 서버가 아는 자리 가까이에 맵의 바닥이 뚫린 곳이 있을 때(2026-10-18 검토: 아무 데서나 시작 자리로 옮겨 보스의 패턴을 피할 수 있었다)
+	local atSpawn = math.abs(x - scene.spawn.x) <= MOVE_SLACK and math.abs(y - scene.spawn.y) <= MOVE_SLACK * 2 and holeNear(scene, hero.x)
+	local dx, dy = math.abs(x - hero.x), math.abs(y - hero.y)
+	refillMove(s)
+	if hero.warpMark then -- 서버가 몸을 옮기는 스킬을 돌렸다(sim/caster.luau) — 그 뒤의 첫 보고부터 WARP_TIME초
+		hero.warpAt, hero.warpMark = World.now, nil
+	end
+	local jumpedOk = s.jumped and dx <= JUMP_SLACK and dy <= JUMP_SLACK -- 맵을 옮긴 직후의 첫 보고(아무 데나가 아니라 넉넉한 거리 안 — 2026-10-18 검토)
+	-- 자동 검사만 세우는 표시: 다음 보고 하나를 거리와 상관없이 받는다(서버의 세션에만 있다 — 화면이 보내는 어떤 것으로도 서지 않는다).
+	--  검사가 졸개 곁 · 문 앞으로 사람을 바로 옮길 때 쓴다(전에는 s.jumped가 그 구실을 했다 — 2026-10-18에 그것을 좁혔다)
+	local trusted = s.trust == true
+	s.trust = nil
+	local up = math.max(0, hero.y - y) -- 위로 간 만큼(화면의 y는 아래로 는다)
+	if not trusted and not jumpedOk and not atSpawn and (dx > MOVE_SLACK or dy > MOVE_SLACK * 2 or dx > s.moveBudget or up > s.upBudget) then
+		-- 순간이동하는 스킬을 쓴 직후에는 받는다(그 스킬이 갈 수 있는 거리 안에서) — 한 번 쓰면 한 번만(2026-10-18 검토: 보고마다 받아 1.5초 동안 끝없이 갔다)
 		local warped = hero.warpAt ~= nil and World.now - hero.warpAt <= WARP_TIME and math.abs(x - hero.x) <= WARP_SLACK and math.abs(y - hero.y) <= MOVE_SLACK * 2
-		if not warped then
+		if warped then
+			hero.warpAt = nil
+		else
 			-- 순간이동은 믿지 않는다(서버가 아는 자리를 그대로 둔다) — 그리고 화면을 그 자리로 되돌린다.
 			--  되돌리지 않으면 그 뒤의 보고가 모두 멀어서, 서버가 아는 자리와 화면의 자리가 영영 어긋난다(2026-10-07의 가시 고장과 같은 일)
 			if World.now - (s.warpSent or -9) > 0.5 then
@@ -926,6 +1157,8 @@ local function onMove(player, x: number, y: number, dir: number)
 		end
 	end
 	s.jumped = false
+	s.moveBudget = math.max(0, s.moveBudget - dx)
+	s.upBudget = math.max(0, s.upBudget - up)
 	hero.x, hero.y, hero.dir = x, y, dir
 	-- 달조각(2026-10-16 — 로스트아크의 모코코 씨앗): 닿으면 줍는다
 	if SHARD_SCENES[s.scene] then
@@ -1028,6 +1261,18 @@ local function onCine(player, action: string, id: any)
 	end
 	local h = s.hero
 	if action == "on" then
+		-- 아직 안 본 장면 하나에 한 번만(2026-10-18 검토: 「on」을 90초마다 보내면 영원히 맞지 않았다 — 스토리 보스까지)
+		--  그 장면이 나올 때(맵 · 퀘스트 — Cine.fits)일 때만 · 틀면 본 것으로 적는다(나갔다 들어와 다시 틀지 못하게 — 2026-10-18 검토)
+		if not Cine.known(id) or h.cine[id] or not Cine.fits(id, s.scene, h.quests) then
+			return
+		end
+		s.cineOn = s.cineOn or {}
+		if s.cineOn[id] then
+			return
+		end
+		s.cineOn[id] = true
+		h.cine[id] = true
+		s.dirty = true
 		h.inCine = true
 		local at = os.clock()
 		s.cineAt = at
@@ -1130,6 +1375,9 @@ local function onReturn(player)
 	local room = roomOf(s.scene):describe(s.hero.id)
 	room.who = roster(s.scene)
 	fire("Revive", s.player, { scene = s.scene, x = s.hero.x, y = s.hero.y, room = room })
+	if homeKey == Tutorial.SCENE then
+		tutChanged(s) -- 꿈에서 되살아났다: 물약 미션이면 다시 조금 다친 채로(체력이 가득하면 물약을 마실 수 없어 미션이 막혔다 — 2026-10-18 검토)
+	end
 	sendSelf(s)
 	sendWho(from)
 	sendWho(s.scene)
@@ -1164,6 +1412,9 @@ local function applyResult(cur, key: string, result)
 					Achieve.killed(gs.acct.ach, kill.kind, key, #kill.gains > 1) -- 업적: 처치 · 파티로 처치(함께 잡은 사람이 있다) · 그 지역의 몬스터 종류
 				end
 				Bond.onKill(gs.hero.bond, kill.kind) -- 모험의 서: 그곳의 몬스터 종류마다 100마리
+				if kill.elite then
+					Analytics.custom(gs, "FieldElite", 1, key) -- 사냥터 정예를 잡았다(2026-10-18 — 맵마다 얼마나 자주 잡히는지로 30마리 · 10배를 맞춘다)
+				end
 				-- 퀘스트: 함께 잡은 사람 모두에게 잡은 것으로 쳐 준다
 				if #Quests.onKill(gs.hero.quests, kill.kind, key) > 0 then
 					gs.dirty = true
@@ -1233,6 +1484,7 @@ local function matesIn(key: string, hero)
 	end
 	return if #mates > 1 then mates else nil
 end
+World.matesIn = matesIn -- (방의 matesOf — roomOf가 이것보다 위에 있어 World를 거친다)
 
 -- 같은 맵에 쓰러져 있는 파티원들(reach 안 — 소생이 일으킨다)
 local function fallenIn(key: string, hero, reach: number)
@@ -1255,6 +1507,7 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 	local s = sessions[player]
 	if s and s.hero then
 		arrived(s) -- 기술을 쓴다 = 화면이 열렸다(옮긴 뒤의 긴 보호를 끝낸다)
+		s.hero.inCine = false -- 기술을 쓴다 = 장면을 보는 중이 아니다(장면 동안 맞지 않는 것을 싸움에 쓰지 못하게 — 2026-10-18 검토)
 	end
 	-- 온오프 사출기: 누르면 켜고 끈다(쓰는 동작이 없다 — 켜 두면 주력기가 맞을 때 저절로 나간다. sim/kit.luau)
 	if s and s.hero and s.hero.alive and Kit.isToggle(s.hero, id) then
@@ -1274,19 +1527,18 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 				roomOf(s.scene):place(hero, id, pow, result)
 				applyResult(s, s.scene, result)
 			end
-			if math.abs(x - hero.x) <= 40 and math.abs(y - hero.y) <= 60 then
-				hero.x, hero.y = x, y
-			end
+			skillPlace(s, x, y)
 			local reach = Buffs.data[id].fx.party
 			if reach then
-				local here = {}
+				-- Party.mates는 [번호] = 캐릭터(level을 본다)를 받는다 — 세션을 넘기면 level이 없어 오류가 났다(2026-10-18 검토: 파티원에게 버프가 가지 않았다)
+				local here, sessionOf = {}, {}
 				for _, o in inRoom(s.scene) do
 					if o.hero.alive then
-						here[o.hero.id] = o
+						here[o.hero.id], sessionOf[o.hero.id] = o.hero, o
 					end
 				end
 				for _, mid in Party.mates(book, hero.id, here) do
-					local o = here[mid]
+					local o = sessionOf[mid]
 					if o and o ~= s and math.abs(o.hero.x - hero.x) <= reach and math.abs(o.hero.y - hero.y) <= math.min(reach, 120) then
 						Buffs.give(o.hero, id, pow, hero.x, hero.y)
 						sendSelf(o)
@@ -1318,9 +1570,7 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 		if placed.cd > 0 then
 			hero.cds[id] = World.now + placed.cd
 		end
-		if math.abs(x - hero.x) <= 40 and math.abs(y - hero.y) <= 60 then
-			hero.x, hero.y = x, y
-		end
+		skillPlace(s, x, y)
 		hero.dir = dir
 		local result = { hits = {}, kills = {} }
 		roomOf(s.scene):place(hero, id, Hero.skillScale(hero.skills[id], placed.max), result)
@@ -1350,10 +1600,6 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 				return -- 1차의 기술을 쓰는 중이다
 			end
 		end
-		-- 쓴 자리: 서버가 아는 자리와 크게 다르지 않으면 화면이 말한 자리를 받아 적는다
-		if math.abs(x - hero.x) <= 40 and math.abs(y - hero.y) <= 60 then
-			hero.x, hero.y = x, y
-		end
 		local was = hero.dir
 		hero.dir = dir
 		local key = s.scene
@@ -1366,12 +1612,20 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 				return
 			end
 		end
+		-- 쓴 자리: 서버가 아는 자리와 크게 다르지 않으면 화면이 말한 자리를 받아 적는다(이동 몫 안에서) — 받아 주지 않는 기술이면 되돌린다(2026-10-18 검토)
+		local ox, oy, ob = hero.x, hero.y, s.moveBudget
+		skillPlace(s, x, y)
 		local ok, lv = roomOf(key).caster:begin(hero, id, seg, matesIn(key, hero), { fallen = fallen })
 		if not ok then
 			hero.dir = was
+			hero.x, hero.y, s.moveBudget = ox, oy, ob
 			return
 		end
-		hero.warpAt = now -- 이 스킬이 몸을 옮길 수 있다(순간이동 · 돌진) — 잠깐은 멀리 간 자리 보고도 받는다(onMove)
+		-- 이 스킬이 몸을 옮긴다(순간이동 · 돌진) — 잠깐은 멀리 간 자리 보고도 받는다(onMove). 몸을 옮기는 스킬만이다(2026-10-18 검토 — Caster.MOVERS:
+		--  서버가 그 스킬을 돌리며 g.move · g.teleport를 부른 적이 있는 것. 처음 쓰는 때는 그 순간에 hero.warpMark가 선다)
+		if Caster.MOVERS[id] then
+			hero.warpAt = now
+		end
 		if seg == 1 and castDef.cd > 0 then
 			hero.cds[id] = now + castDef.cd
 		end
@@ -1386,8 +1640,8 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 	if not s or not def or not s.hero or not s.hero.alive or def.who ~= s.hero.class or Hero.skillLevel(s.hero, id) < 1 then
 		return
 	end
-	if seg == 1 and roomOf(s.scene).caster:busy(s.hero) then
-		return -- 2~4차의 스킬을 쓰는 중이다
+	if roomOf(s.scene).caster:busy(s.hero) then
+		return -- 2~4차의 스킬을 쓰는 중이다(뒤 구간도 — 2026-10-18 검토: 전에는 첫 구간만 보아 겹쳐 쓸 수 있었다)
 	end
 	local haste = Buffs.haste(s.hero) -- 공격 속도 버프: 동작과 타격이 그만큼 빨라진다(이동기는 그대로)
 	if def.type == "move" then
@@ -1401,9 +1655,15 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 	local last = s.skill
 	local prev = def.segs[seg - 1]
 	local charged = nil -- 힘을 모아 쳤으면 { mul 피해의 배수, reach 더 닿는 거리, level 단계 }
+	-- 이 구간이 시작한 때로 적는 시각: 조금 일찍 온 요청(네트워크의 흔들림)은 받되, 시각은 앞 동작이 끝난 때로 적는다 —
+	--  일찍 받은 만큼이 쌓여 기술이 빨라지지 않게(2026-10-18 검토: 1차 연속기를 앞당겨 보내 1.7배쯤 빨랐다)
+	local start = now
 	if seg == 1 then
 		if last and now < last.free - 0.1 then
 			return -- 앞 기술이 아직 안 끝났다
+		end
+		if last and last.free > now then
+			start = last.free
 		end
 		if def.cd > 0 and s.cds and s.cds[id] and now < s.cds[id] then
 			return
@@ -1417,10 +1677,12 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 		local elapsed = now - last.at
 		local hold = if prev.charge then Kit.chargeTime(s.hero, id) else 0
 		local prevTime = prev.time / haste
-		local from = if segDef.next then prevTime * 0.4 else prevTime - 0.15
+		-- 화면은 앞 구간이 끝난 뒤에 다음 구간을 보낸다(boot) — 끝나기 0.15초 전부터 받는다(전에는 next를 앞 구간의 40%부터 받아 연속기를 앞당길 수 있었다)
+		local from = prevTime - 0.15
 		if elapsed < from or elapsed > prevTime + hold + 0.4 then
 			return
 		end
+		start = math.max(now, last.at + prevTime)
 		if prev.charge then
 			-- 모은 단계는 서버가 흐른 시간으로 셈한다(화면이 말한 단계를 믿지 않는다). 만월 동안에는 모으지 않아도 끝까지 모은 것으로 친다
 			local held = if Buffs.full(s.hero) then hold else elapsed - prevTime
@@ -1442,14 +1704,12 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 		return -- 저절로 이어지는 구간은 서버가 잇는다(화면이 보낼 일이 없다)
 	end
 	local hero = s.hero
-	-- 쓴 자리: 서버가 아는 자리와 크게 다르지 않으면 클라이언트가 말한 자리를 받아 적는다(판정은 맞는 순간의 자리로 한다)
-	if math.abs(x - hero.x) <= 40 and math.abs(y - hero.y) <= 60 then
-		hero.x, hero.y = x, y
-	end
+	-- 쓴 자리: 서버가 아는 자리와 크게 다르지 않으면 클라이언트가 말한 자리를 받아 적는다(판정은 맞는 순간의 자리로 한다 · 이동 몫 안에서)
+	skillPlace(s, x, y)
 	hero.dir = dir
 	-- 저절로 이어지는 뒤 구간은 한꺼번에 받는다 — 한 번 더 눌러 잇는 구간(next) · 힘을 모으는 구간(charge)의 다음 구간 앞에서 끊는다(그것들은 따로 온다)
-	local free = now + segDef.time / haste
-	local startAt = 0
+	local free = start + segDef.time / haste
+	local startAt = (start - now) * haste -- 늦은 판정의 때(아래 pending — 동작의 시간으로 적고 haste로 나눈다)도 그 시각부터
 	local segs = { seg }
 	for i = seg + 1, #def.segs do
 		if def.segs[i].next or def.segs[i - 1].charge then
@@ -1458,7 +1718,7 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 		table.insert(segs, i)
 		free += def.segs[i].time / haste
 	end
-	s.skill = { id = id, seg = segs[#segs], at = now, free = free }
+	s.skill = { id = id, seg = segs[#segs], at = start, free = free }
 	hero.actUntil = roomOf(s.scene).time + (free - now) -- 기술의 동작을 하는 동안(굳센 자세: 그동안은 받는 피해가 더 준다)
 	if def.cd > 0 then
 		s.cds = s.cds or {}
@@ -1474,11 +1734,11 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 	-- 쓰는 동작이 있는 설치(연막탄 · 수정 심기 · 저승문): 그 동작의 그 장에서 놓인다(연막탄은 그 자리에 버프가 걸린다)
 	if seg == 1 and placed and placed.cast == "seg" then
 		table.insert(pending, {
-			at = now + placed.at / haste,
+			at = start + placed.at / haste,
 			fn = function()
 				local cur = sessions[player]
-				if not cur or cur.scene ~= key or not cur.hero.alive then
-					return
+				if not cur or cur.scene ~= key or cur.hero ~= hero or not hero.alive then
+					return -- 나갔다 · 맵을 옮겼다 · 다른 캐릭터로 다시 들어왔다(2026-10-18 검토 — 옛 캐릭터의 스킬이 새 캐릭터로 맞지 않게)
 				end
 				local pow = Hero.skillScale(cur.hero.skills[id] or 0, placed.max)
 				local result = { hits = {}, kills = {} }
@@ -1504,11 +1764,11 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 		end
 		local wave = { box = { -110, 150, 30, 6 }, mul = base * shock.shock * shockS }
 		table.insert(pending, {
-			at = now + (last + 0.3) / haste,
+			at = start + (last + 0.3) / haste,
 			fn = function()
 				local cur = sessions[player]
-				if not cur or cur.scene ~= key or not cur.hero.alive then
-					return
+				if not cur or cur.scene ~= key or cur.hero ~= hero or not hero.alive then
+					return -- 나갔다 · 맵을 옮겼다 · 다른 캐릭터로 다시 들어왔다(2026-10-18 검토 — 옛 캐릭터의 스킬이 새 캐릭터로 맞지 않게)
 				end
 				applyResult(cur, key, roomOf(key):skillHit(cur.hero, wave, cur.hero.x, cur.hero.y, dir, Hero.scale(cur.hero, id), matesIn(key, cur.hero), def.type, nil, charged))
 			end,
@@ -1521,8 +1781,8 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 					at = now + (startAt + hit.at) / haste,
 					fn = function()
 						local cur = sessions[player]
-						if not cur or cur.scene ~= key or not cur.hero.alive then
-							return
+						if not cur or cur.scene ~= key or cur.hero ~= hero or not hero.alive then
+							return -- 나갔다 · 맵을 옮겼다 · 다른 캐릭터로 다시 들어왔다(2026-10-18 검토)
 						end
 						-- 맞는 순간의 자리에서 판정한다(걸으면서 쓰는 기술이 있다). 세기는 스킬 레벨을 따른다
 						-- 같은 맵의 파티원(레벨 차이 20 안쪽)과 경험치를 나눈다
@@ -1613,6 +1873,13 @@ local function onItem(player, action: string, a: any, b: any, c: any, d: any)
 		else
 			result, why = Bag.sell(h, a, b, c)
 			ok = result ~= nil
+		end
+	elseif action == "buyback" then
+		-- 되산다(2026-10-18): 잡화 상인 앞에서 · a = 되사기 목록의 차례
+		if not nearNpc(s, "shop") then
+			why = "파는 사람 앞이 아니다"
+		else
+			ok, why = Bag.buyBack(h, a)
 		end
 	elseif action == "buy" then
 		local stock = if typeof(a) == "string" then Items.stock(a) else nil
@@ -1720,6 +1987,35 @@ local function onPotion(player, id: any)
 		sendParty(Party.members(book, player.UserId)) -- 파티원이 어느 맵에 있는지 바뀌었다
 		return
 	end
+	-- 달빛 부적(쓰러진 벌칙을 푼다) · 능력치 초기화 주문서(찍은 능력치를 되돌린다) — 2026-10-18: 설계에만 있던 둘
+	if goods and (goods.kind == "charm" or goods.kind == "reset") then
+		local h = s.hero
+		local why = nil
+		if not h.alive then
+			return
+		elseif Bag.count(h, goods.id) <= 0 then
+			why = "가진 것이 없다"
+		elseif goods.kind == "charm" and (h.weak or 0) <= 0 then
+			why = "약해진 상태가 아니다"
+		elseif goods.kind == "reset" and (h.stats.str + h.stats.dex + h.stats.int + h.stats.luk + h.stats.hp) <= 0 then
+			why = "찍은 능력치가 없다"
+		end
+		if why then
+			fire("ItemDone", player, { action = "use", ok = false, why = why })
+			return
+		end
+		Bag.take(h, goods.id, 1)
+		if goods.kind == "charm" then
+			h.weak, h.weakWas = 0, nil
+		else
+			Hero.resetStats(h)
+		end
+		s.dirty = true
+		sendBag(s)
+		sendSelf(s)
+		fire("ItemDone", player, { action = "use", ok = true, why = if goods.kind == "charm" then "약해짐이 풀렸다" else "능력치를 모두 되돌렸다" })
+		return
+	end
 	local healed, why = Hero.drink(s.hero, id)
 	if healed then
 		sendBag(s)
@@ -1803,7 +2099,9 @@ end
 -- 전직하며 받은 공짜 초기화: 찍은 스킬을 모두 되돌린다(쓰러져 있거나 기술을 쓰는 중에는 안 된다)
 local function onSkillReset(player)
 	local s = sessions[player]
-	if s and s.hero and s.hero.alive and not s.skill and Hero.freeReset(s.hero) then
+	-- 「쓰는 중」 = 1차 기술의 동작이 아직 끝나지 않았다 · 2~4차 스킬이 도는 중(2026-10-18 검토: s.skill은 맵을 옮길 때만 지워져, 1차 기술을 한 번 쓰면 초기화가 말없이 막혔다)
+	local busy = s and s.hero and ((s.skill and World.now < s.skill.free) or roomOf(s.scene).caster:busy(s.hero))
+	if s and s.hero and s.hero.alive and not busy and Hero.freeReset(s.hero) then
 		s.dirty = true
 		sendSelf(s)
 	end
@@ -1850,10 +2148,14 @@ local function onQuest(player, action: string, id: any)
 			local reward, ups = Hero.questDone(h, id)
 			if reward then
 				ok, done = true, id
+				if (reward.store or 0) > 0 and s.acct and not s.acct.storeGot[id] then
+					s.acct.storeGot[id] = true -- 창고는 계정의 것 — 같은 부탁을 다른 캐릭터가 또 해도 한 번만 늘어난다
+					Bag.growStore(h, Account.storeExtra(s.acct))
+				end
 				if reward.open == "tome" then
 					fire("BondView", player, Bond.view(h, os.time()), { kind = "open" })
 				end
-				fire("Gain", player, { xp = reward.xp, ups = ups, level = h.level, quest = def.name })
+				fire("Gain", player, { xp = reward.xp, ups = ups, level = h.level, quest = def.name, money = reward.money }) -- money = 보상의 달돈(획득 알림 — 2026-10-18)
 				if ups > 0 then
 					sendWho(s.scene)
 				end
@@ -1919,7 +2221,7 @@ local function onDaily(player, action: string, region: any, i: any)
 	if s.acct then
 		Achieve.add(s.acct.ach, "daily") -- 업적: 일일 의뢰를 n개
 	end
-	fire("Gain", player, { xp = reward.xp, ups = ups, level = h.level })
+	fire("Gain", player, { xp = reward.xp, ups = ups, level = h.level, money = reward.money, dust = reward.dust }) -- 달돈 · 달가루도 획득 알림에(2026-10-18 검토)
 	if ups > 0 then
 		fire("Quests", player, Quests.view(h.quests)) -- 레벨이 되어 받을 수 있게 된 퀘스트
 		sendWho(s.scene)
@@ -2061,6 +2363,9 @@ end
 -- 그 사람을 그 장면의 (x, y)로 옮긴다(화면에는 Revive로 — World.jump와 같다)
 local function moveTo(s, key: string, x: number, y: number)
 	local from = s.scene
+	if not s.hero.alive then
+		Hero.revive(s.hero) -- 화면은 「Revive」를 받으면 살아난 것으로 본다 — 서버도 맞춘다(2026-10-18 검토: 쓰러진 채 옮겨지면 쓰러진 상자 없이 멈췄다)
+	end
 	place(s, key, x, y, true)
 	local room = roomOf(key):describe(s.hero.id)
 	room.who = roster(key)
@@ -2103,8 +2408,10 @@ local function onRift(player, action: string, id: any)
 	local going = { s }
 	for _, uid in Party.members(book, player.UserId) do
 		local ms = byUser[uid]
-		if ms and ms ~= s and ms.hero and ms.scene == s.scene and #going < Rift.DATA.party and not Rift.canEnter(ms.hero, t) then
-			table.insert(going, ms) -- 같은 맵의 파티원이 함께 들어간다
+		-- 같은 맵의 파티원이 함께 들어간다 — 그 사람도 토벌대장과 인사를 나눴고 · 장면(퀘스트 연출)을 보는 중이 아닐 때만(2026-10-18 검토: 인사 전의 파티원 · 장면 중인 파티원도 끌려갔다)
+		if ms and ms ~= s and ms.hero and ms.hero.alive and ms.scene == s.scene and #going < Rift.DATA.party and not Rift.canEnter(ms.hero, t)
+			and Bond.opened(ms.hero.bond, Rift.DATA.npc) and not ms.hero.inCine then
+			table.insert(going, ms)
 		end
 	end
 	for i, ms in going do
@@ -2143,7 +2450,7 @@ local function riftPay(key: string, room)
 				gear, full = nil, true
 			end
 		end
-		fire("Gain", s.player, { xp = pay.xp, ups = ups, level = h.level })
+		fire("Gain", s.player, { xp = pay.xp, ups = ups, level = h.level, money = pay.money, dust = pay.dust }) -- 달돈 · 달가루도 획득 알림에(2026-10-18 검토)
 		if ups > 0 then
 			fire("Quests", s.player, Quests.view(h.quests))
 			sendWho(key)
@@ -2256,14 +2563,27 @@ local marketCache = {} -- [장부] = { at = 읽은 때(os.clock), doc } — 구�
 local function marketKeep(board: string, doc: any)
 	marketCache[board] = { at = os.clock(), doc = doc }
 end
+-- 저장소를 다시 읽는 새로 고침(강제)은 한 사람이 10초에 한 번 — 둘러보기 · 내 목록 · 사기의 다시 읽기가 같이 쓴다(2026-10-18 검토: 서버의 읽기 몫을 다 쓸 수 있었다)
+local function canForce(s): boolean
+	if s.marketForceAt ~= nil and os.clock() - s.marketForceAt < 10 then
+		return false
+	end
+	s.marketForceAt = os.clock()
+	return true
+end
 local function marketDoc(board: string, force: boolean?): (boolean, any)
 	local c = marketCache[board]
 	if c and os.clock() - c.at < (if force then MARKET_FRESH else MARKET.cache) then
 		return true, c.doc
 	end
+	local started = os.clock()
 	local ok, doc = Store.marketRead(board)
-	if ok then
+	-- 읽는 사이에 더 새로운 장부(쓰고 받은 것)가 들어왔으면 이 읽기로 덮지 않는다 — 옛 사본이 새 것을 덮어 「돌려받기」가 잘못 나올 수 있었다(2026-10-18 검토)
+	local now = marketCache[board]
+	if ok and not (now and now.at > started) then
 		marketKeep(board, doc)
+	elseif ok and now then
+		return ok, now.doc
 	end
 	return ok, doc
 end
@@ -2404,8 +2724,9 @@ local function marketFinish(s, id: string, hd, now: number, relist: boolean?)
 	elseif left > 0 and not marketRoom(h, Market.withUnits(hd.it, left)) then
 		return false, MWHY.bag, nil
 	end
-	if entry and left > 0 then
-		-- 닫는다: 그 사이에 더 팔렸으면 남은 수가 줄어 있다(늘지는 않는다)
+	if left > 0 then
+		-- 닫는다: 그 사이에 더 팔렸으면 남은 수가 줄어 있다(늘지는 않는다). 둔 장부(사본)에 없어도 늘 장부에 묻는다 — 사본이 옛 것이면
+		--  팔리는 중인 물건을 「돌려받기」로 처리해 물건이 둘이 될 수 있었다(2026-10-18 검토). 장부의 답(none)이 맞는 답이다
 		local wrote, res, l2, after = Store.marketUpdate(hd.b, function(old)
 			return Market.txClose(old, id, userId, now)
 		end)
@@ -2419,6 +2740,7 @@ local function marketFinish(s, id: string, hd, now: number, relist: boolean?)
 			r = Market.resolve(hd, nil, now)
 			left = r.left
 		else
+			entry = entry or true -- (장부에 있었다: 끝낸 뒤에 장부의 줄을 정리한다 — txSettle)
 			left = math.min(left, if typeof(l2) == "number" then l2 else left)
 			r = Market.resolve(hd, { l = left, c = 1, e = hd.e }, now)
 		end
@@ -2498,6 +2820,42 @@ local function marketFinishMsg(hd, out): string
 	end
 	return table.concat(parts, " · ")
 end
+-- ---------- 경매장에서 내 물건이 팔렸다(2026-10-18) ----------
+--  산 사람의 서버가 알린다: 판 사람이 이 서버에 있으면 바로(「Sold」), 아니면 다른 서버들에(MessagingService의 SOLD_TOPIC — 그 사람이 있는 서버가 받아 알린다).
+--  화면은 획득 알림에 「팔림: 「이름」 xN」 한 줄 · 「경매」 단추에 점. 대금은 전처럼 「완료」에서 받는다(알림은 보이기만 — 못 받아도 잃는 것이 없다)
+local SOLD_TOPIC = "LuneSold"
+local function soldHere(userId: number, name: string, n: number): boolean
+	for p, s in sessions do
+		if p.UserId == userId and s.hero then
+			fire("Sold", p, { name = name, n = n })
+			return true
+		end
+	end
+	return false
+end
+function World.notifySold(userId: number, name: string, n: number)
+	if soldHere(userId, name, n) then
+		return
+	end
+	task.spawn(function()
+		pcall(function()
+			game:GetService("MessagingService"):PublishAsync(SOLD_TOPIC, { u = userId, name = name, n = n })
+		end)
+	end)
+end
+local function listenSold()
+	task.spawn(function()
+		pcall(function()
+			game:GetService("MessagingService"):SubscribeAsync(SOLD_TOPIC, function(msg)
+				local d = msg and msg.Data
+				if typeof(d) == "table" and typeof(d.u) == "number" and typeof(d.name) == "string" and typeof(d.n) == "number" then
+					soldHere(d.u, d.name, d.n)
+				end
+			end)
+		end)
+	end)
+end
+
 local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 	local s = sessions[player]
 	if not s or not s.hero or not s.acct then
@@ -2522,13 +2880,14 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 	end
 	local function work()
 		if action == "mine" then
-			return reply(true, nil, { mine = marketMine(s, now, a == true) })
+			return reply(true, nil, { mine = marketMine(s, now, a == true and canForce(s)) })
 		elseif action == "browse" then
 			-- a = 장부 · b = 지금의 것으로(새로 고침). 목록과 시세(그 분류의 최근 거래)를 함께 준다
 			if not Market.isBoard(a) then
 				return reply(nil, MWHY.item)
 			end
-			local got, doc = marketDoc(a, b == true)
+			-- 새로 고침(저장소를 다시 읽는다)은 한 사람이 10초에 한 번(2026-10-18 검토: 장부를 돌아가며 새로 고쳐 서버의 저장소 몫을 다 쓸 수 있었다) — 그 사이에는 둔 것을 보여 준다
+			local got, doc = marketDoc(a, b == true and canForce(s))
 			if not got then
 				return reply(nil, MWHY.off)
 			end
@@ -2610,7 +2969,7 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 			end
 			local got, doc = marketDoc(a, false)
 			local seen = if got then Market.entryById(doc, b) else nil
-			if got and not seen then
+			if got and not seen and canForce(s) then
 				got, doc = marketDoc(a, true)
 				seen = if got then Market.entryById(doc, b) else nil
 			end
@@ -2654,6 +3013,7 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 			marketKeep(a, after)
 			-- 산 것은 「완료」에 「낙찰」로 들어온다(거기서 수령한다 — 메이플 옥션)
 			local row = Market.withUnits(entry.it, c)
+			World.notifySold(seen.u, Market.nameOf(row), c) -- 판 사람에게 「팔림」(2026-10-18)
 			marketHold(s, row, cost, now)
 			saveNow(s) -- 값을 치른 물건은 바로 저장한다
 			sendSelf(s)
@@ -2807,7 +3167,7 @@ local function onParty(player, action: string, target: any)
 			partyNote(fs.player, ("%s — 초대를 거절했다"):format(s.name))
 		end
 	elseif action == "leave" then
-		local left = Party.leave(book, me)
+		local left = partyLeave(me)
 		sendParty(left)
 		sendParty({ me })
 	end
@@ -2876,6 +3236,9 @@ function World.jump(player, key: string): boolean
 		return false
 	end
 	local from = s.scene
+	if not s.hero.alive then
+		Hero.revive(s.hero) -- (moveTo와 같다 — 관리 이동으로 쓰러진 사람을 옮겼다)
+	end
 	place(s, key, scene.spawn.x, scene.spawn.y, true)
 	local room = roomOf(s.scene):describe(s.hero.id)
 	room.who = roster(s.scene)
@@ -3310,7 +3673,11 @@ function World.tick(dt: number)
 	for i = #pending, 1, -1 do
 		if pending[i].at <= World.now then
 			local job = table.remove(pending, i)
-			job.fn()
+			-- 하나가 잘못돼도(2026-10-18 검토) 나머지 판정 · 이 틱의 다른 일(버프 · 방 · 저장)은 이어 간다
+			local ok, err = pcall(job.fn)
+			if not ok then
+				warn("[lune] 늦은 판정: " .. tostring(err))
+			end
 		end
 	end
 	stepBots(dt)
@@ -3388,6 +3755,8 @@ function World.tick(dt: number)
 					toRoom(key, "MobCast", { id = e.id, kind = e.kind, x = e.x, y = e.y, dir = e.dir })
 				elseif e.type == "shotEnd" then
 					toRoom(key, "ShotEnd", e.id)
+				elseif e.type == "elite" then
+					toRoom(key, "Elite", { room = key, mob = e.mob, kind = e.kind, x = e.x, y = e.y }) -- 사냥터 정예가 나왔다(2026-10-18)
 				elseif e.type == "dropGone" then
 					toRoom(key, "DropGone", e.id, nil, 0)
 				elseif e.type == "crystalGone" then
@@ -3490,6 +3859,7 @@ function World.start()
 			return s.guest == true or isBot(s.player) or Admin.isId(s.player.UserId)
 		end,
 	})
+	listenSold() -- 다른 서버에서 내 서버의 사람의 물건이 팔렸다는 알림(2026-10-18)
 	Net.OnServer("Ready", onReady)
 	Net.OnServer("Move", onMove)
 	Net.OnServer("Travel", Analytics.wrap("Travel", onTravel, World.session))
@@ -3533,17 +3903,18 @@ function World.start()
 	end
 	local saveT = 0
 	RunService.Heartbeat:Connect(function(dt)
-		acc = math.min(acc + dt, TICK * 5)
-		while acc >= TICK do
-			acc -= TICK
-			World.tick(TICK)
-		end
+		-- 저장의 때를 먼저 센다(2026-10-18 검토: 틱에서 오류가 나면 그 뒤의 저장 세기까지 건너뛰어, 오류가 이어지면 영영 저장하지 않았다)
 		saveT += dt
 		if saveT >= SAVE_EVERY then
 			saveT = 0
 			task.spawn(World.saveAll, true)
 		end
 		World.saveDue()
+		acc = math.min(acc + dt, TICK * 5)
+		while acc >= TICK do
+			acc -= TICK
+			World.tick(TICK)
+		end
 	end)
 end
 
@@ -3561,7 +3932,19 @@ function World.saveDue()
 end
 
 function World.stop()
-	World.saveAll(false)
+	-- 서버가 닫힌다(Roblox가 기다려 주는 30초 안): 사람마다 따로 · 한꺼번에 저장한다 — 잠금 새로 고침 · 순위판은 건너뛴다
+	--  (2026-10-18 검토: 한 사람씩 차례로 잠금 · 계정 · 순위판을 써서, 사람이 많으면 뒤쪽 사람의 마지막 1분이 저장되지 못할 수 있었다)
+	stopping = true
+	for _, s in sessions do
+		if (s.hero or s.dirty) and s.loaded and not s.guest then
+			task.spawn(function()
+				local ok, err = pcall(saveAccount, s)
+				if not ok then
+					warn("[lune] 저장하다 오류: " .. tostring(err))
+				end
+			end)
+		end
+	end
 	-- 나가는 사람의 저장(World.removePlayer — 그 사람은 이미 sessions에서 빠져 위의 saveAll이 보지 못한다)이 아직 쓰이는 중이면 끝날 때까지 기다린다(길어도 STOP_WAIT초).
 	--  혼자 하다가 나가면 서버가 곧바로 닫힌다 — 기다리지 않으면 마지막에 바꾼 것(키 설정처럼 방금 바꾼 것)이 저장되지 못한 채 서버가 닫힐 수 있다
 	local waited = 0
@@ -3571,7 +3954,7 @@ function World.stop()
 	-- 서버가 닫힌다: 저장한 뒤에 잡고 있던 계정을 모두 푼다
 	for _, s in sessions do
 		if s.held and Store.unlock then
-			Store.unlock(s.player.UserId)
+			pcall(Store.unlock, s.player.UserId)
 		end
 	end
 end

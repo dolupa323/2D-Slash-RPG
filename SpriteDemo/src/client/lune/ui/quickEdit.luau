@@ -199,7 +199,8 @@ function QuickEdit.init(h)
 	end)
 	UserInputService.InputEnded:Connect(function(input)
 		local p = pending
-		if p and isPress(input) and (input == p.input or input.UserInputType == p.input.UserInputType) then
+		-- 손가락은 그 손가락만(2026-10-18 검토: 끄는 중에 조이스틱의 손가락을 떼면 거기에 놓였다) · 마우스는 단추가 같으면
+		if p and isPress(input) and (input == p.input or (input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType == p.input.UserInputType)) then
 			finish(Vector2.new(input.Position.X, input.Position.Y))
 		end
 	end)

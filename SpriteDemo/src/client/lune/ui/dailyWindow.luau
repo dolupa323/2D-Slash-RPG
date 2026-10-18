@@ -43,8 +43,11 @@ function DailyWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 		row.button = Ui.button(body, W.accept, w - S.btnW, by, S.btnW, function()
 			local board = ctx.daily() and ctx.daily().boards[region]
 			local t = board and board.tasks[i]
-			if t then
-				ctx.dailyDo(if t.st == Daily.OPEN then "accept" else "turn", region, i)
+			-- 두 번 톡 하면 두 번째가 「아직 다 잡지 못했다 · 이미 받은 의뢰다」를 띄웠다(2026-10-18 검토) — 0.8초 안의 다시 누름은 받지 않는다
+			local act = if t and t.st == Daily.OPEN then "accept" else "turn"
+			if t and (act ~= row.act or os.clock() - (row.at or -9) > 0.8) then -- 같은 일만 막는다(수락한 뒤 바로 보상 받기는 된다)
+				row.at, row.act = os.clock(), act
+				ctx.dailyDo(act, region, i)
 			end
 		end, { main = true })
 		row.count = Ui.text(body, "", w - S.btnW, by + math.floor((Ui.M.button - Ui.M.small) / 2), S.btnW, { align = "right", color = C.accent })

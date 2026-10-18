@@ -49,6 +49,9 @@ local function aliveMob(m): boolean
 	return m.state ~= "dead" and m.state ~= "gone" and m.state ~= "spawn"
 end
 
+-- 몸을 옮기는 스킬(g.move · g.teleport를 부른 적이 있는 것 — 2026-10-18 검토): 서버의 onMove가 이 스킬을 쓴 직후에만 먼 자리 보고를 받는다.
+--  전에는 아무 스킬이나 쓰면 1.5초 동안 보고마다 멀리 가는 것을 받아, 쉬운 공격을 이어 쓰며 맵을 순간이동하듯 건넜다
+Caster.MOVERS = {} :: { [string]: boolean }
 function Caster.is(id: any): boolean
 	return typeof(id) == "string" and CAST[id] ~= nil
 end
@@ -101,6 +104,17 @@ local function segNeed(hero, s): number
 		return 0
 	end
 	return segTime(hero.class, s)
+end
+
+-- 「때까지」 구간(till)이 있는 스킬인가(도약) — begin이 다시 시작하는 간격을 본다
+local TILL_GAP = 0.6
+local function hasTill(skill): boolean
+	for _, s in skill.segs or {} do
+		if s.till then
+			return true
+		end
+	end
+	return false
 end
 
 -- ---------- 방마다 하나 ----------
@@ -232,8 +246,8 @@ end
 
 -- 졸개 하나에게 몫 w의 타. 맞았으면 true(landed에 적는다)
 function Caster:strike(a, m, w: number, o, landed): boolean
-	if not aliveMob(m) then
-		return false
+	if not aliveMob(m) or not a.hero.alive then
+		return false -- 쓰러진 사람의 늦은 타 · 날아가는 것 · 그림자는 더 치지 않는다(2026-10-18 검토 — 놓인 것은 Room:stepPlaced가 이미 걷는다)
 	end
 	local hero, room, ctx = a.hero, self.room, a.ctx
 	-- 끌어당기기 · 넘어뜨리기: 보통 적만(묶인 적은 빼고)
@@ -458,11 +472,22 @@ local function makeG(self, a)
 		return p
 	end
 	-- 몸을 옮기는 것: 걷기 · 뛰기는 화면이 하고 제 자리를 알려 온다(여기서는 재 볼 때만 흉내 낸다). 순간이동은 서버도 그 자리로 옮겨 적는다 —
-	--  화면이 알려 오는 자리가 멀어도 그 스킬을 쓴 직후에는 받는다(server world.luau의 onMove — 스킬을 받을 때 warpAt을 적는다)
+	--  화면이 알려 오는 자리가 멀어도 그 스킬을 쓴 직후에는 받는다(server world.luau의 onMove — 몸을 옮기는 스킬일 때만: Caster.MOVERS · hero.warpMark)
+	--  그 스킬을 처음 쓸 때 서버가 빈 방에서 한 번 재 보므로(Caster.profile — context가 부른다) 처음부터 MOVERS에 든다
+	local function moved()
+		local id = a.ctx and a.ctx.id or (a.skill and a.skill.id)
+		if id then
+			Caster.MOVERS[id] = true
+		end
+		if not self.dry and not self.probe then
+			hero.warpMark = true
+		end
+	end
 	function g.move(v: number, t: number)
 		if self.dry then
 			a.imp = { v = v * hero.dir, t = t }
 		end
+		moved()
 	end
 	function g.hop(v: number)
 		if self.dry then
@@ -480,6 +505,7 @@ local function makeG(self, a)
 				return false
 			end
 		end
+		moved()
 		hero.x = x
 		return true
 	end
@@ -534,7 +560,7 @@ local function makeG(self, a)
 			return
 		end
 		local s = Hero.skillScale(hero.skills[ctx.id] or 0, def.max) * (k or 1)
-		for _, mate in ctx.mates or { hero } do
+		for _, mate in (if room.liveMates then room:liveMates(hero, ctx.mates) else ctx.mates or { hero }) do -- 지금 이 방에 살아 있는 파티원만(쓰기 시작할 때의 목록이라 — 2026-10-18 검토)
 			if mate.alive and abs(mate.x - hero.x) <= h.reach and abs(mate.y - hero.y) <= 80 then
 				local amount = min(mate.maxHp - mate.hp, floor(mate.maxHp * h.hp * s + 0.5))
 				if amount > 0 then
@@ -703,6 +729,17 @@ function Caster:begin(hero, id: string, seg: number, mates, info): (boolean, num
 				return false, nil
 			end
 			endSkill(self, a)
+		end
+		-- 「때까지」 구간(뛰어올라 떨어질 때까지 — 도약)은 서버가 끝을 알 수 없어 다음 구간을 바로 받는다: 그래서 같은 기술을 다시 시작하는 데
+		--  빈 방에서 잰 한 번의 시간(Caster.profile)의 TILL_GAP배는 걸리게 한다(2026-10-18 검토 — 구간을 잇달아 보내 하늘에 있는 시간을 건너뛰면 보스에게 두세 배였다).
+		--  공중에서 쓰면 짧게 끝나는 것은 그대로 둔다(다시 쓰는 데만 조금 기다린다)
+		if not self.dry and hasTill(skill) then
+			a.began = a.began or {}
+			local at = a.began[id]
+			if at and self.room.time - at < Caster.profile(id, 0).time * TILL_GAP / Buffs.haste(hero) then
+				return false, nil
+			end
+			a.began[id] = self.room.time
 		end
 		ctx = self:context(a, id, 0, mates)
 		ctx.fallen = info and info.fallen

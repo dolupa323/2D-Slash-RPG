@@ -89,6 +89,7 @@ function AchieveWindow.build(body: Frame, ctx, w: number, _h: number)
 	local view = {}
 	local tab = 1
 	local note, noteTone = nil, nil
+	local waiting = false -- 답을 기다리는 중(두 번 눌러 두 번 가지 않게 — 2026-10-18 검토: 둘째의 「이미 받았다」가 첫째의 성공 글을 덮었다)
 	local score = Ui.text(body, "", 0, 0, w, { font = "body", color = C.gold })
 	local grade = Ui.text(body, "", 0, 2, w, { align = "right", color = C.accent })
 	local gradeBar = Ui.bar(body, 0, S.barY, w, S.barH, C.accent, C.panel2)
@@ -125,8 +126,10 @@ function AchieveWindow.build(body: Frame, ctx, w: number, _h: number)
 		r.count = Ui.text(f, "", S.barW + 6, 31, 80, { color = C.dim })
 		r.taken = Ui.text(f, W.taken, 0, 8, w, { align = "right", color = C.green })
 		r.take = Ui.button(f, W.take, w - S.btnW, 2, S.btnW, function()
-			if r.id then
+			if r.id and not waiting then
+				waiting = true
 				local res = ctx.achDo("claim", r.id)
+				waiting = false
 				note, noteTone = nil, nil
 				if res and res.why then
 					note, noteTone = res.why, C.red
@@ -146,7 +149,12 @@ function AchieveWindow.build(body: Frame, ctx, w: number, _h: number)
 	local fy = S.listY + S.rows * S.row + S.footY
 	Ui.line(body, 0, fy - 5, w)
 	local all = Ui.button(body, W.takeAll, 0, fy, S.allW, function()
+		if waiting then
+			return
+		end
+		waiting = true
 		local res = ctx.achDo("all")
+		waiting = false
 		note, noteTone = nil, nil
 		if res and res.why then
 			note, noteTone = W.full, C.red

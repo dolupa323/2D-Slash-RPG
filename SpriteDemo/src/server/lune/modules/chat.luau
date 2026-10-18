@@ -23,8 +23,12 @@ function Chat.start(World)
 				if not from then
 					return true
 				end
+				if from.UserId == target.UserId then
+					return true -- 제 말은 늘 제게 보인다
+				end
+				-- 같은 맵의 사람끼리만. 맵이 없는 사람(캐릭터 고르기 화면)은 주고받지 않는다(2026-10-18 검토: 전에는 모든 맵의 말을 주고받았다)
 				local a, b = World.sceneOf(from.UserId), World.sceneOf(target.UserId)
-				return a == nil or b == nil or a == b
+				return a ~= nil and a == b
 			end
 		end
 		local party = Instance.new("TextChannel")

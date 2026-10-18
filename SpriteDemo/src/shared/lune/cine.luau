@@ -430,6 +430,28 @@ function Cine.lookAt(map: string, active: { [string]: boolean }): (string?, numb
 	return nil, 0
 end
 
+-- 그 장면이 지금 나올 때인가(서버가 「장면을 튼다」를 받을 때 — 2026-10-18 검토: 안 본 장면을 아무 데서나 하나씩 틀어 장면마다 90초씩 맞지 않았다).
+--  맵이 정해진 장면은 그 맵에서만 · 받기 전(before)의 장면은 그 퀘스트를 받기 전에만 · 나머지(enter · goal · complete)는 그 퀘스트를 받은 뒤에만
+function Cine.fits(id: any, map: string?, book): boolean
+	for _, c in DATA.list do
+		if c.id == id then
+			local w = c.when
+			if w.map ~= nil and w.map ~= map then
+				return false
+			end
+			if w.quest ~= nil and book ~= nil then
+				local st = book[w.quest]
+				if w.on == "before" then
+					return st == nil
+				end
+				return st ~= nil
+			end
+			return true
+		end
+	end
+	return false
+end
+
 -- 알려진 장면 id인가(서버가 「봤다」를 받을 때 거른다)
 function Cine.known(id: any): boolean
 	if typeof(id) ~= "string" then

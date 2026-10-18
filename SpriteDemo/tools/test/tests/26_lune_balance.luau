@@ -91,7 +91,7 @@ local function goTo(player, target)
 		local hop = routeNext(ss.scene, target)
 		for _, portal in SCENES.scenes[ss.scene].portals do
 			if portal.to == hop then
-				ss.jumped, ss.stale = true, nil
+				ss.trust, ss.stale = true, nil
 				handlers.Move(player, portal.x, portal.y, 1)
 			end
 		end
@@ -150,7 +150,7 @@ local function hunt(p, sceneKey: string, kind: string, n: number)
 			local t0, casts = World.now, 0
 			local lost = 0
 			while mob.hp > 0 and casts < 60 do
-				s.jumped, s.stale = true, nil
+				s.trust, s.stale = true, nil
 				h.x, h.y = mob.x - stand, mob.y
 				handlers.Move(p, h.x, h.y, 1)
 				local before = h.hp
@@ -242,7 +242,7 @@ end
 
 -- 직업 사이의 차이: 같은 자리에서 가장 빠른 직업과 가장 느린 직업
 for _, spot in SPOTS do
-	local fast, slow, safe, risky = math.huge, 0, math.huge, 0
+	local fast, slow, safe, risky = math.huge, 0, math.huge, -1 -- (risky는 -1부터: 모든 직업이 체력을 잃지 않은 곳(퍼프)에서도 누군가가 적힌다)
 	local who = {}
 	for _, class in CLASSES.order do
 		local r = table_[class][spot.lv]

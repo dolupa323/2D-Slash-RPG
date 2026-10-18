@@ -635,8 +635,31 @@ do
 	eq(#out.kills[1].gains, 2, "둘 다 잡은 것으로 친다")
 	Quests.onKill(b.quests, "towerlieutenant", KEY)
 	eq(#Quests.onKill(a.quests, "towerlieutenant", KEY), 0, "그 퀘스트가 없는 사람은 오르는 것이 없다")
+	run(r2, both, 0.2)
+	expect(c2.away, "쓰러지는 부관 위에 대장이 서지 않는다(쓰러지는 동작이 끝날 때까지 — 2026-10-18 검토)")
 	run(r2, both, (l2.def.story.fall or 0.9) + 0.6) -- 쓰러지는 동작이 다 보인 뒤에 사라진다(story.fall초 — 없으면 0.9초)
 	expect(l2.away and not c2.away, "부관이 사라진 뒤에 대장이 선다")
+end
+
+-- 싸우는 중인 보스는 앞 퀘스트의 사람이 들어와도 그대로 선다(2026-10-18 검토: 이야기의 차례로 늘 다시 골라, 대장을 20%까지 깎았는데 부관 퀘스트의 사람이 들어오면 대장이 사라지고 부관이 섰다)
+do
+	local r3 = Room.new(KEY, scene, Random.new(6))
+	local a = hero(21, 28, "r1m8")
+	a.invuln = 99
+	run(r3, { [21] = a }, 0.5)
+	local l3, c3 = bossOf(r3, "towerlieutenant"), bossOf(r3, "scoutcaptain")
+	expect(not c3.away and l3.away, "대장 퀘스트의 사람만 있으면 대장이 선다")
+	c3.hp = math.floor(c3.maxHp * 0.2)
+	local hpWas = c3.hp
+	local b = hero(22, 25, "r1m7")
+	b.invuln = 99
+	run(r3, { [21] = a, [22] = b }, 0.5)
+	expect(not c3.away and c3.hp <= hpWas and l3.away, "부관 퀘스트의 사람이 들어와도 싸우던 대장이 그대로 선다")
+	-- 대장을 쓰러뜨리면(대장 퀘스트의 사람만 있는 것이 아니다) 그 뒤에 부관이 선다
+	local out = { hits = {}, kills = {} }
+	r3:strike(a, c3, c3.hp, a.x, nil, out)
+	run(r3, { [21] = a, [22] = b }, (c3.def.story.fall or 0.9) + 0.6)
+	expect(c3.away and not l3.away, "대장이 쓰러진 뒤에 부관 퀘스트의 사람을 위해 부관이 선다")
 end
 
 -- ---- 3) 서버: 퀘스트를 하는 사람이 방에 들어오면 보스가 서고, 쓰러뜨리면 퀘스트만 찬다(경험치 알림 없음) · 방을 비우면 새로 선다 ----

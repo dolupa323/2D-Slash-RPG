@@ -56,6 +56,13 @@ local layoutKey = "" -- 놓은 화면 틀(바뀌면 다시 놓는다)
 local nameStr, hintStr = "", "" -- 이름표의 이름 · 아래 줄의 안내(폭을 재는 데 쓴다)
 local baseName = "" -- 말을 건 주민의 이름(「@id 」가 붙은 말이 끝나면 이 이름으로 돌아온다)
 local curText = "" -- 지금 말(「@id 」를 뗀 것)
+-- 고르는 말(Talk.menu — 2026-10-18, 메이플스토리의 NPC 대화처럼): 한 주민에게 할 일이 둘 넘게 있으면 줄마다 하나씩 보이고 고른다
+local menuItems: { any }? = nil -- 지금 고르는 줄들 { text, color } — nil이면 고르는 중이 아니다
+local menuPick: ((number) -> ())? = nil
+local menuSel = 1
+local menuRows = {} -- 줄마다 글
+local menuHits = {} -- 줄마다 누르는 판(스마트폰 · 마우스)
+local menuBar: Frame -- 고른 줄 밑의 띠
 -- 혼잣말
 local chat: Frame
 local chatBack, chatTail, chatBody
@@ -90,6 +97,23 @@ function Talk.init()
 		for k = 1, MAX_SEGS do
 			rows[r][k] = Ui.text(box, "", 0, 0, 2000, { font = "body", color = C.text })
 		end
+	end
+	-- 고르는 말의 줄: 고른 줄 밑에 어두운 민트 띠 · 줄을 누르면 그것을 고른다
+	menuBar = Ui.box(box, 0, 0, 1, 1, C.accentDark)
+	menuBar.Visible = false
+	for r = 1, D.lines do
+		menuRows[r] = Ui.text(box, "", 0, 0, 2000, { font = "body", color = C.text })
+		menuRows[r]:show(false)
+		local holder = Ui.group(box, 0, 0, 1, 1, "MenuRow" .. r)
+		holder.ZIndex = 10
+		holder.Visible = false
+		Ui.hit(holder).Activated:Connect(function()
+			if menuItems and Talk.npc and r <= #menuItems then
+				menuSel = r
+				Talk.next(Talk.npc)
+			end
+		end)
+		menuHits[r] = holder
 	end
 	hintText = Ui.text(box, "", 0, 0, 120, { color = C.dim })
 	hintKey = Ui.keycap(box, "↑", 0, 0)
@@ -154,10 +178,44 @@ local function layout()
 	local hw = Ui.measure(hintStr)
 	hintText:move(w - D.padX - hw, cy + 8)
 	hintKey:move(w - D.padX - hw - 12, cy + 6)
+	-- 고르는 말의 줄 · 띠 · 누르는 판
+	for r = 1, D.lines do
+		local ty = D.padY + (r - 1) * LINE
+		menuRows[r]:move(D.padX + 8, ty)
+		menuHits[r].Position = UDim2.fromOffset(D.padX - 4, ty - 3)
+		menuHits[r].Size = UDim2.fromOffset(w - D.padX * 2 + 8, LINE)
+	end
+	if menuItems then
+		menuBar.Position = UDim2.fromOffset(D.padX - 4, D.padY + (menuSel - 1) * LINE - 3)
+		menuBar.Size = UDim2.fromOffset(w - D.padX * 2 + 8, LINE)
+	end
+end
+
+-- 고르는 말을 그린다(줄 · 고른 줄의 띠) — 고르는 중이 아니면 모두 감춘다
+local function paintMenu()
+	for r = 1, D.lines do
+		local item = menuItems and menuItems[r]
+		menuRows[r]:set(if item then item.text else "")
+		if item then
+			menuRows[r]:color(item.color or C.text)
+		end
+		menuRows[r]:show(item ~= nil)
+		menuHits[r].Visible = item ~= nil
+	end
+	menuBar.Visible = menuItems ~= nil
 end
 
 -- 대사를 나온 글자까지 그린다(줄은 다 나왔을 때의 자리 그대로 — 한 글자씩 나와도 줄이 바뀌거나 출렁이지 않는다)
 local function paintText(shown: number)
+	if menuItems then -- 고르는 말: 대사 줄은 비운다(줄마다 고를 것이 선다)
+		for r = 1, D.lines do
+			for k = 1, MAX_SEGS do
+				rows[r][k]:set("")
+				rows[r][k]:show(false)
+			end
+		end
+		return
+	end
 	local segs = Format.talkSegments(curText, fitted, shown)
 	for r = 1, D.lines do
 		local list = segs[r] or {}
@@ -198,7 +256,7 @@ local function paintFoot()
 	local offer = done and last and endHint == "수락"
 	acceptBtn.frame.Visible = offer
 	declineBtn.frame.Visible = offer
-	hintStr = if Talk.npc == Talk.CINE then "다음" elseif last and endHint then endHint elseif last then "닫기" else "다음" -- 장면의 말은 늘 「다음」(장면이 이어진다)
+	hintStr = if menuItems then "고르기" elseif Talk.npc == Talk.CINE then "다음" elseif last and endHint then endHint elseif last then "닫기" else "다음" -- 장면의 말은 늘 「다음」(장면이 이어진다)
 	hintText:set(hintStr)
 	hintText:color(if last and endHint then C.accent else C.dim)
 	layout() -- 자리를 먼저 놓고(키 딱지는 자리를 옮기면 다시 보인다) 보일지를 정한다
@@ -264,6 +322,11 @@ end
 
 -- 말을 시작한다. questName = 이름표 뒤의 퀘스트 이름 · finish = 마지막 말 뒤에 일어날 일 · finishHint = 그 일의 이름(「수락」이면 「수락 · 거절」 단추, 「완료」면 「↑ 완료」)
 function Talk.start(npc, list: { string }, questName: string?, finish: (() -> ())?, finishHint: string?)
+	-- 고르는 말이 떠 있던 중에 다른 말(장면 · 이야기)이 오면 고르는 말을 걷는다 — 남아 있으면 말이 비고 다음 ↑가 옛 고르기를 했다(2026-10-18 검토)
+	if menuItems then
+		menuItems, menuPick = nil, nil
+		paintMenu()
+	end
 	Talk.npc, Talk.index = npc, 1
 	lines, onEnd, endHint = list, finish, finishHint
 	baseName = npc.name or npc.id or ""
@@ -295,6 +358,44 @@ function Talk.cineReveal()
 	Talk.place()
 end
 
+-- 고르는 말을 띄운다(2026-10-18): items = { { text, color } }(D.lines개까지 — 넘는 것은 버린다) · onPick(i) = 고른 줄
+--  ↓ = 다음 줄(Talk.menuMove) · ↑ · 스페이스 = 고른다(Talk.next) · 줄을 누르면 그것 · X · Esc = 닫기
+function Talk.menu(npc, items: { any }, onPick: (number) -> ())
+	local list = {}
+	for i = 1, math.min(#items, D.lines) do
+		list[i] = items[i]
+	end
+	menuItems, menuPick, menuSel = list, onPick, 1
+	Talk.npc, Talk.index = npc, 1
+	lines, onEnd, endHint = { "" }, nil, nil
+	baseName = npc.name or npc.id or ""
+	nameStr = baseName
+	nameText:set(nameStr)
+	titleText:set("")
+	if chatNpc == npc then
+		chat.Visible, chatNpc = false, nil
+	end
+	paintMenu()
+	show()
+end
+
+-- 고르는 중인가 · 고른 줄(자동 검사가 본다)
+function Talk.inMenu(): boolean
+	return menuItems ~= nil
+end
+function Talk.menuSelected(): number
+	return menuSel
+end
+
+-- 고른 줄을 옮긴다(d = 1 아래 · -1 위 — 끝에서는 처음으로)
+function Talk.menuMove(d: number)
+	if not menuItems or #menuItems == 0 then
+		return
+	end
+	menuSel = ((menuSel - 1 + d) % #menuItems) + 1
+	layout()
+end
+
 -- 지금 이 주민과 말하는 중인가
 function Talk.with(npc): boolean
 	return Talk.npc == npc and Talk.index > 0
@@ -302,6 +403,14 @@ end
 
 -- 다음 말로: 나오는 중이면 그 말을 한 번에 다 보이고, 다 나왔으면 다음 말(마지막 말 뒤에는 그 일 — 수락 · 완료). 말하는 중이 아니면 그 주민의 평소 말을 시작한다. 대화가 끝났으면 false
 function Talk.next(npc): boolean
+	if menuItems and Talk.npc == npc then -- 고르는 말: 고른 줄의 일을 한다(그 일이 새 말을 시작한다)
+		local pick, i = menuPick, menuSel
+		Talk.close()
+		if pick then
+			pick(i)
+		end
+		return true
+	end
 	if Talk.npc ~= npc then
 		Talk.start(npc, npc.lines)
 		return true
@@ -350,6 +459,12 @@ end
 function Talk.close()
 	Talk.npc, Talk.index = nil, 0
 	lines, onEnd, endHint = {}, nil, nil
+	if menuItems then
+		menuItems, menuPick = nil, nil
+		if menuBar then
+			paintMenu()
+		end
+	end
 	if box then
 		if box.Visible and Talk.onToggle then
 			Talk.onToggle(nil)

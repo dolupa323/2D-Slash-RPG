@@ -869,3 +869,25 @@ do
 		end
 	end
 end
+
+-- 정예의 겉모습은 「#rrggbb」 글로 적혀 있다(토벌 · 사냥터 정예 — city.js RIFT.elite.look): 윤곽 · 불티가 그 색이다(2026-10-18 검토: 배열로만 읽어 검게 나왔다)
+do
+	local CITY = req("ReplicatedStorage/shared/lune/data/city.generated")
+	local look = CITY.rift.elite.look
+	expect(typeof(look.aura) == "string", "토벌 정예의 겉모습은 글(#rrggbb)로 적혀 있다")
+	local someKind
+	for kind, def in COMBAT.mobs do
+		if def.sprite and not def.boss then
+			someKind = kind
+			break
+		end
+	end
+	local def = table.clone(COMBAT.mobs[someKind])
+	def.look = look
+	local glow = MobsView.glowOf(Instance.new("Frame"), def)
+	local c = glow and glow[1].label.ImageColor3
+	expect(c ~= nil and math.abs(c.R - 0xff / 255) < 0.01 and math.abs(c.G - 0x3e / 255) < 0.01 and math.abs(c.B - 0x9f / 255) < 0.01, "윤곽의 빛이 분홍(#ff3e9f)")
+	local embers = MobsView.embersOf(Instance.new("Frame"), def)
+	local e = embers and embers[1].BackgroundColor3
+	expect(e ~= nil and math.abs(e.R - 0xff / 255) < 0.01 and math.abs(e.G - 0x7e / 255) < 0.01, "불티가 분홍(#ff7ea2)")
+end

@@ -39,6 +39,7 @@ function RiftWindow.build(body: Frame, ctx, w: number, _h: number)
 	Ui.text(body, W.head, 0, 2, w, { color = C.gold })
 	local left = Ui.text(body, "", 0, 2, w, { align = "right", color = C.accent })
 	local rows = {}
+	local entering = false -- 「입장」의 답을 기다리는 중
 	for i, t in D.tiers do
 		local y = S.top + (i - 1) * S.row
 		local by = y - 3 -- 「입장」은 이름 줄의 오른쪽(아래 두 줄 = 몬스터 · 보상이 창의 폭을 다 쓴다)
@@ -50,7 +51,12 @@ function RiftWindow.build(body: Frame, ctx, w: number, _h: number)
 		row.name = Ui.text(body, t.name, 0, y, nameW + 2, { font = "body" })
 		row.need = Ui.text(body, Format.fill(W.need, { lv = t.lv }), nameW + 8, y + 2, 64, { color = C.dim })
 		row.button = Ui.button(body, W.enter, w - S.btnW, by, S.btnW, function()
+			if entering then
+				return -- 답을 기다리는 중(두 번 눌러 방에 든 뒤 「토벌대장 앞에서 …」가 뜨지 않게 — 2026-10-18 검토)
+			end
+			entering = true
 			ctx.riftDo("enter", t.id)
+			entering = false
 		end, { main = true })
 		local my = by + Ui.M.button + 3
 		Ui.text(body, RiftWindow.mobsText(t), 0, my, w, { color = C.dim })

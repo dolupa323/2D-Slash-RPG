@@ -114,6 +114,7 @@ function ItemCell.new(parent: Instance, x: number, y: number, onClick: (any) -> 
 	local icon = Ui.worldIcon(outer, nil, 0, 0, S)
 	local star = Ui.text(outer, "", 0, S - 13, S - 4, { align = "right", outline = true, color = C.text, z = 6 })
 	local cross = Ui.text(outer, "", 0, math.floor((S - 12) / 2), S, { font = "body", align = "center", outline = true, color = C.red, z = 6 })
+	local up = Ui.text(outer, "", 3, 2, 12, { outline = true, color = C.green, z = 6 }) -- 지금 낀 것보다 좋은 장비 ▲(2026-10-18 — opts.better)
 	local veil = Ui.box(outer, 1, 1, S - 2, S - 2, C.ink, 0.45) -- 아직 열리지 않은 칸
 	veil.Name = "Locked"
 	veil.ZIndex = 5
@@ -123,7 +124,7 @@ function ItemCell.new(parent: Instance, x: number, y: number, onClick: (any) -> 
 	cell.hit.Activated:Connect(function()
 		onClick(cell.item)
 	end)
-	-- it = 장비 · 묶음(없으면 빈 칸). opts = { locked 아직 열리지 않은 칸, selected 고른 칸, hot 끌던 것을 놓을 칸 }
+	-- it = 장비 · 묶음(없으면 빈 칸). opts = { locked 아직 열리지 않은 칸, selected 고른 칸, hot 끌던 것을 놓을 칸, better 지금 낀 것보다 좋은 장비(▲) }
 	function cell.set(_, it: any, opts)
 		opts = opts or {}
 		cell.item = it
@@ -136,6 +137,7 @@ function ItemCell.new(parent: Instance, x: number, y: number, onClick: (any) -> 
 		local broken = it ~= nil and it.broken == true
 		icon.ImageColor3 = if broken then Color3.fromRGB(90, 90, 100) else Color3.new(1, 1, 1)
 		cross:set(if broken then "×" else "")
+		up:set(if it and opts.better then "▲" else "")
 		slot:setOn(opts.selected == true or opts.hot == true)
 		veil.Visible = opts.locked == true
 	end

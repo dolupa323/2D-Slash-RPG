@@ -163,7 +163,27 @@ local Color3 = { fromRGB = function(r, g, b) return { __type = "Color3", R = r /
 	fromHex = function(hex) local h = hex:gsub("#", ""); assert(#h == 6 and h:match("^%x+$"), "색의 꼴이 틀렸다 " .. tostring(hex)); return { __type = "Color3", R = tonumber(h:sub(1, 2), 16) / 255, G = tonumber(h:sub(3, 4), 16) / 255, B = tonumber(h:sub(5, 6), 16) / 255, hex = "#" .. h:lower() } end }
 local UDim2 = { fromOffset = function(x, y) return { X = { Offset = x, Scale = 0 }, Y = { Offset = y, Scale = 0 } } end, new = function(xs, xo, ys, yo) return { X = { Offset = xo, Scale = xs }, Y = { Offset = yo, Scale = ys } } end, fromScale = function(xs, ys) return { X = { Offset = 0, Scale = xs }, Y = { Offset = 0, Scale = ys } } end }
 local Enum = setmetatable({}, { __index = function(_, k) return setmetatable({}, { __index = function(_, k2) return k .. "." .. k2 end }) end })
-local Instance = { new = function(class) return { ClassName = class } end }
+-- 만든 것의 사건(MouseEnter · Activated …)은 읽는 순간 가짜 신호가 된다(2026-10-18 — 화면 모듈을 화면 없이 돌릴 때: Connect로 받아 두고 테스트가 Fire로 부른다)
+local SIGNALS = { MouseEnter = true, MouseLeave = true, Activated = true, InputBegan = true, InputEnded = true, InputChanged = true, MouseButton1Click = true, MouseButton1Down = true, FocusLost = true, Changed = true }
+local function signalMock()
+	local sig = { fns = {} }
+	function sig:Connect(fn)
+		table.insert(self.fns, fn)
+		return { Disconnect = function() end }
+	end
+	function sig:Fire(...)
+		for _, f in self.fns do
+			f(...)
+		end
+	end
+	return sig
+end
+CREATED = {} -- 화면 모듈이 Instance.new로 만든 것들(테스트가 이름으로 찾아 사건을 부른다 — RESET이 비운다)
+local Instance = { new = function(class)
+	local inst = setmetatable({ ClassName = class }, { __index = function(t, k) if SIGNALS[k] then local sig = signalMock(); rawset(t, k, sig); return sig end return nil end })
+	table.insert(CREATED, inst)
+	return inst
+end }
 warnings = {}
 local function warnMock(...) table.insert(warnings, table.concat({ ... }, " ")) end
 local quietPrint = function() end
@@ -179,7 +199,7 @@ local function requireMock(target)
 end
 req = requireMock
 function MOCK(path, value) LOADED[path] = value end
-function RESET() table.clear(LOADED); table.clear(timers); table.clear(services); table.clear(warnings); clock.now = 1000 end
+function RESET() table.clear(LOADED); table.clear(timers); table.clear(services); table.clear(warnings); table.clear(CREATED); clock.now = 1000 end
 V = vec
 RandomNew = Random.new
 
@@ -5651,6 +5671,28 @@ function Cine.lookAt(map: string, active: { [string]: boolean }): (string?, numb
 	return nil, 0
 end
 
+-- 그 장면이 지금 나올 때인가(서버가 「장면을 튼다」를 받을 때 — 2026-10-18 검토: 안 본 장면을 아무 데서나 하나씩 틀어 장면마다 90초씩 맞지 않았다).
+--  맵이 정해진 장면은 그 맵에서만 · 받기 전(before)의 장면은 그 퀘스트를 받기 전에만 · 나머지(enter · goal · complete)는 그 퀘스트를 받은 뒤에만
+function Cine.fits(id: any, map: string?, book): boolean
+	for _, c in DATA.list do
+		if c.id == id then
+			local w = c.when
+			if w.map ~= nil and w.map ~= map then
+				return false
+			end
+			if w.quest ~= nil and book ~= nil then
+				local st = book[w.quest]
+				if w.on == "before" then
+					return st == nil
+				end
+				return st ~= nil
+			end
+			return true
+		end
+	end
+	return false
+end
+
 -- 알려진 장면 id인가(서버가 「봤다」를 받을 때 거른다)
 function Cine.known(id: any): boolean
 	if typeof(id) ~= "string" then
@@ -6249,7 +6291,7 @@ end
 MODULES['ReplicatedStorage/shared/lune/data/assets.generated'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/export_lune_game.mjs).
 -- 그림 파일 이름 → 로블록스 에셋 id. 비어 있으면 아직 올리지 않았거나 그림이 바뀐 것이다(tools/write_lune_ids.mjs).
-return { ["chars_1.png"] = "rbxassetid://139441060788562", ["chars_2.png"] = "rbxassetid://137790187349475", ["chars_3.png"] = "rbxassetid://86755105247089", ["chars_mask_1.png"] = "rbxassetid://126243488570499", ["chars_mask_2.png"] = "rbxassetid://81660708288554", ["chars_mask_3.png"] = "rbxassetid://105912119857543", ["sky.png"] = "rbxassetid://132220205436830", ["far.png"] = "rbxassetid://70389067240845", ["near_hunt.png"] = "rbxassetid://72094974796206", ["ground_hunt_1.png"] = "rbxassetid://124122137516265", ["props_hunt.png"] = "rbxassetid://126214212380510", ["near_town.png"] = "rbxassetid://135098639271756", ["ground_town_1.png"] = "rbxassetid://125524698830662", ["props_town.png"] = "rbxassetid://136592239384770", ["villagers.png"] = "rbxassetid://96495918767937", ["back_in_storage.png"] = "rbxassetid://136086571022108", ["back_in_store.png"] = "rbxassetid://104786944273081", ["back_in_elder.png"] = "rbxassetid://108350436672963", ["back_in_forge.png"] = "rbxassetid://74669737693063", ["back_in_hall.png"] = "rbxassetid://87816764644425", ["back_in_shrine.png"] = "rbxassetid://113277212188271", ["back_in_cellar.png"] = "rbxassetid://128001628966145", ["ground_r1a1_1.png"] = "rbxassetid://83422870736818", ["props_r1a1.png"] = "rbxassetid://92002234447597", ["ground_dream_1.png"] = "rbxassetid://86568380381663", ["ground_r1af_1.png"] = "rbxassetid://103216651480847", ["ground_r1a3_1.png"] = "rbxassetid://124425202970650", ["ground_r1a4_1.png"] = "rbxassetid://119900898562100", ["far_r1b1.png"] = "rbxassetid://135605898532339", ["near_r1b1.png"] = "rbxassetid://100112472273007", ["ground_r1b1_1.png"] = "rbxassetid://131538873933480", ["ground_r1b2_1.png"] = "rbxassetid://125436913697859", ["props_r1b2.png"] = "rbxassetid://83042854732492", ["ground_r1bv_1.png"] = "rbxassetid://136234171407413", ["far_r1b3.png"] = "rbxassetid://118137839897783", ["near_r1b3.png"] = "rbxassetid://78384160036601", ["ground_r1b3_1.png"] = "rbxassetid://128714839542604", ["far_r1cc.png"] = "rbxassetid://126898606308718", ["near_r1cc.png"] = "rbxassetid://111427056380401", ["ground_r1cc_1.png"] = "rbxassetid://140563003927168", ["wall_r1c1.png"] = "rbxassetid://97274081468167", ["ground_r1c1_1.png"] = "rbxassetid://135881037967181", ["ground_r1c2_1.png"] = "rbxassetid://105408422281804", ["ground_r1c3_1.png"] = "rbxassetid://135881037967181", ["far_r2a1.png"] = "rbxassetid://71001089643339", ["near_r2a1.png"] = "rbxassetid://108372695232877", ["ground_r2a1_1.png"] = "rbxassetid://97783772162382", ["props_r2a1.png"] = "rbxassetid://71716194623912", ["ground_r2a2_1.png"] = "rbxassetid://127167083533193", ["ground_r2af_1.png"] = "rbxassetid://119700029947186", ["ground_r2a3_1.png"] = "rbxassetid://96467128886126", ["ground_r2a4_1.png"] = "rbxassetid://91945530040703", ["far_r2b1.png"] = "rbxassetid://105088993635856", ["near_r2b1.png"] = "rbxassetid://129053830092616", ["ground_r2b1_1.png"] = "rbxassetid://85390131222251", ["ground_r2b2_1.png"] = "rbxassetid://76022564274420", ["ground_r2b3_1.png"] = "rbxassetid://129600416411291", ["ground_r2bs_1.png"] = "rbxassetid://74893044822636", ["ground_r2b4_1.png"] = "rbxassetid://132464048359953", ["ground_r2c1_1.png"] = "rbxassetid://128991620683760", ["props_r2c1.png"] = "rbxassetid://81470874675773", ["wall_r2c2.png"] = "rbxassetid://103202435470997", ["ground_r2c2_1.png"] = "rbxassetid://73281231351055", ["ground_r2c3_1.png"] = "rbxassetid://132180829815320", ["far_ct.png"] = "rbxassetid://97327830237568", ["near_ct.png"] = "rbxassetid://123959722179055", ["ground_ct_1.png"] = "rbxassetid://76598854780556", ["ground_ct_2.png"] = "rbxassetid://75898659253993", ["ground_ct_3.png"] = "rbxassetid://122444051043555", ["props_ct.png"] = "rbxassetid://97653285658066", ["ladder.png"] = "rbxassetid://97882390366255", ["far_port.png"] = "rbxassetid://123435927909095", ["near_port.png"] = "rbxassetid://109231585638799", ["ground_port_1.png"] = "rbxassetid://96286569225918", ["ground_port_2.png"] = "rbxassetid://93446056838006", ["props_port.png"] = "rbxassetid://118209609634733", ["wall_r3a1.png"] = "rbxassetid://129110072342137", ["ground_r3a1_1.png"] = "rbxassetid://94980156460881", ["ground_r3a2_1.png"] = "rbxassetid://115371653702417", ["ground_r3ah_1.png"] = "rbxassetid://104190957152391", ["ground_r3a3_1.png"] = "rbxassetid://139617641711313", ["ground_r3a4_1.png"] = "rbxassetid://129696743960344", ["ground_r3b1_1.png"] = "rbxassetid://100579465400704", ["ground_r3b2_1.png"] = "rbxassetid://89191322377324", ["wall_r3t.png"] = "rbxassetid://83371466762190", ["ground_r3t_1.png"] = "rbxassetid://109803440895253", ["ground_r3c1_1.png"] = "rbxassetid://102841182901287", ["ground_r3c2_1.png"] = "rbxassetid://106766208368351", ["ground_r3cs_1.png"] = "rbxassetid://71960457769945", ["ground_r3c3_1.png"] = "rbxassetid://99652398590150", ["far_r3d1.png"] = "rbxassetid://114699110116551", ["near_r3d1.png"] = "rbxassetid://137859042761236", ["ground_r3d1_1.png"] = "rbxassetid://119215034144231", ["props_r3d1.png"] = "rbxassetid://101664768791520", ["ground_r3d2_1.png"] = "rbxassetid://91605682715103", ["ground_r3d3_1.png"] = "rbxassetid://117690282135342", ["far_r4a1.png"] = "rbxassetid://98546761697916", ["near_r4a1.png"] = "rbxassetid://86561589617474", ["ground_r4a1_1.png"] = "rbxassetid://91413865949768", ["props_r4a1.png"] = "rbxassetid://100270543281385", ["ground_r4a2_1.png"] = "rbxassetid://123450907379422", ["ground_r4a3_1.png"] = "rbxassetid://102747556212822", ["ground_r4a4_1.png"] = "rbxassetid://122082811102368", ["wall_r4b1.png"] = "rbxassetid://98532234413640", ["ground_r4b1_1.png"] = "rbxassetid://101091008684854", ["ground_r4b2_1.png"] = "rbxassetid://130651758499629", ["wall_r4b3.png"] = "rbxassetid://107012347372334", ["ground_r4b3_1.png"] = "rbxassetid://83501151151882", ["ground_r4bh_1.png"] = "rbxassetid://102429194534326", ["ground_r4b4_1.png"] = "rbxassetid://104814700678255", ["wall_r4c1.png"] = "rbxassetid://71375264584180", ["ground_r4c1_1.png"] = "rbxassetid://117926899398608", ["wall_r4c2.png"] = "rbxassetid://88127748464340", ["ground_r4c2_1.png"] = "rbxassetid://83426822845522", ["props_r4c2.png"] = "rbxassetid://93139914776457", ["ground_r4ch_1.png"] = "rbxassetid://124784973350172", ["ground_r4c3_1.png"] = "rbxassetid://85860513650639", ["wall_r4d1.png"] = "rbxassetid://123616397829506", ["ground_r4d1_1.png"] = "rbxassetid://140620470511307", ["ground_r4d2_1.png"] = "rbxassetid://71827644951369", ["far_seat.png"] = "rbxassetid://120679010601692", ["near_seat.png"] = "rbxassetid://100563375056858", ["ground_seat_1.png"] = "rbxassetid://95415409535077", ["props_seat.png"] = "rbxassetid://126707896892610", ["ground_sea1_1.png"] = "rbxassetid://111050870916233", ["ground_sea2_1.png"] = "rbxassetid://128336008415877", ["ground_r3b3_1.png"] = "rbxassetid://135461963621909", ["ground_r3b4_1.png"] = "rbxassetid://138754789471021", ["ground_r4d3_1.png"] = "rbxassetid://103907280925748", ["ground_r4e1_1.png"] = "rbxassetid://88103557068445", ["wall_sea5.png"] = "rbxassetid://121989276042041", ["ground_sea5_1.png"] = "rbxassetid://93441789298456", ["ground_sea6_1.png"] = "rbxassetid://106957506571501", ["ground_r1c4_1.png"] = "rbxassetid://98020574553503", ["ground_r2c4_1.png"] = "rbxassetid://115753437369109", ["ground_r3d4_1.png"] = "rbxassetid://118468232445975", ["ground_r4d4_1.png"] = "rbxassetid://117778839393938", ["ground_sea8_1.png"] = "rbxassetid://100524578086246", ["ground_r4es_1.png"] = "rbxassetid://125574607301148", ["ground_r1bl_1.png"] = "rbxassetid://102105250491349", ["ground_r2bl_1.png"] = "rbxassetid://94977117622940", ["ground_r2cl_1.png"] = "rbxassetid://120682725194519", ["ground_r3al_1.png"] = "rbxassetid://84627906941424", ["ground_r3cl_1.png"] = "rbxassetid://81455567612452", ["ground_r4bl_1.png"] = "rbxassetid://103887471752415", ["ground_r4cl_1.png"] = "rbxassetid://133911299211715", ["ground_r4dl_1.png"] = "rbxassetid://78653230925094", ["ground_r1bh_1.png"] = "rbxassetid://115812173236187", ["ground_r2ah_1.png"] = "rbxassetid://118410034190596", ["ground_r2bh_1.png"] = "rbxassetid://132009986769568", ["ground_r3bh_1.png"] = "rbxassetid://88949438100971", ["ground_r4ah_1.png"] = "rbxassetid://92032601099726", ["ground_r4dh_1.png"] = "rbxassetid://139731007351262", ["ground_sea3_1.png"] = "rbxassetid://89333706529560", ["ground_seaf_1.png"] = "rbxassetid://136179698367792", ["ground_sea4_1.png"] = "rbxassetid://135048221384155", ["ground_sea7_1.png"] = "rbxassetid://109727061356930", ["back_ct_store.png"] = "rbxassetid://126366947246540", ["back_ct_smith.png"] = "rbxassetid://136337303330969", ["back_ct_storage.png"] = "rbxassetid://134573437628573", ["back_ct_auction.png"] = "rbxassetid://111002919148565", ["back_ct_office.png"] = "rbxassetid://130229467844565", ["back_ct_harbor.png"] = "rbxassetid://96974337406579", ["back_ct_inn.png"] = "rbxassetid://110896398622871", ["back_ct_fisher.png"] = "rbxassetid://128557373754841", ["back_ct_stable.png"] = "rbxassetid://110252516764726", ["back_ct_spice.png"] = "rbxassetid://117260792010676", ["back_ct_guardpost.png"] = "rbxassetid://77243987648482", ["back_ct_musician.png"] = "rbxassetid://117717247885748", ["back_ct_flower.png"] = "rbxassetid://111657630555738", ["back_ct_oldhouse.png"] = "rbxassetid://98177958007897", ["back_ct_scribe.png"] = "rbxassetid://91218960586498", ["back_ct_maid.png"] = "rbxassetid://129403102377941", ["back_ct_castle.png"] = "rbxassetid://122227497315667", ["back_ct_terrace.png"] = "rbxassetid://82185564261733", ["vista_ct_terrace.png"] = "rbxassetid://72001134778535", ["back_ct_tower.png"] = "rbxassetid://111423026181041", ["sea_ship_out.png"] = "rbxassetid://80754181448263", ["ship_ship_out.png"] = "rbxassetid://92462106500365", ["sea_ship_home.png"] = "rbxassetid://126176094324469", ["ship_ship_home.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_out.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_out.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_home.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_home.png"] = "rbxassetid://102557987604449", ["sea_air_out.png"] = "rbxassetid://112775081132374", ["ship_air_out.png"] = "rbxassetid://108949678734397", ["sea_air_home.png"] = "rbxassetid://112775081132374", ["ship_air_home.png"] = "rbxassetid://108949678734397", ["worldmap_r1.png"] = "rbxassetid://102843140318075", ["worldmap_city.png"] = "rbxassetid://122109754685398", ["worldmap_r2.png"] = "rbxassetid://100140236436154", ["worldmap_sea.png"] = "rbxassetid://92576107471427", ["worldmap_r3.png"] = "rbxassetid://139284205415304", ["worldmap_r4.png"] = "rbxassetid://140105596121121", ["ui_kit.png"] = "rbxassetid://127701484464218", ["font_small_1.png"] = "rbxassetid://105450659975716", ["font_small_2.png"] = "rbxassetid://107436252829336", ["font_small_o_1.png"] = "rbxassetid://97414893618224", ["font_small_o_2.png"] = "rbxassetid://103679168006398", ["font_body_o_1.png"] = "rbxassetid://111645782980424", ["font_body_o_2.png"] = "rbxassetid://83949705319808", ["font_body_o_3.png"] = "rbxassetid://122937040402111", ["portal.png"] = "rbxassetid://73946472428073", ["title_sky.png"] = "rbxassetid://127573656029589", ["title_clouds.png"] = "rbxassetid://89882326454014", ["title_ridge.png"] = "rbxassetid://129071355183212", ["title_logo.png"] = "rbxassetid://114259324331432", ["cine_mural_axion.png"] = "rbxassetid://75681092154576", ["cine_mural_riven.png"] = "rbxassetid://99331828874405", ["cine_mural_reaper.png"] = "rbxassetid://76473369861673", ["cine_mural_mooni.png"] = "rbxassetid://112784522891949", ["cine_mural_salamander.png"] = "rbxassetid://106361966737710" }
+return { ["chars_1.png"] = "rbxassetid://139441060788562", ["chars_2.png"] = "rbxassetid://137790187349475", ["chars_3.png"] = "rbxassetid://86755105247089", ["chars_mask_1.png"] = "rbxassetid://126243488570499", ["chars_mask_2.png"] = "rbxassetid://81660708288554", ["chars_mask_3.png"] = "rbxassetid://105912119857543", ["sky.png"] = "rbxassetid://132220205436830", ["far.png"] = "rbxassetid://70389067240845", ["near_hunt.png"] = "rbxassetid://72094974796206", ["ground_hunt_1.png"] = "rbxassetid://124122137516265", ["props_hunt.png"] = "rbxassetid://126214212380510", ["near_town.png"] = "rbxassetid://135098639271756", ["ground_town_1.png"] = "rbxassetid://125524698830662", ["props_town.png"] = "rbxassetid://136592239384770", ["villagers.png"] = "rbxassetid://96495918767937", ["back_in_storage.png"] = "rbxassetid://136086571022108", ["back_in_store.png"] = "rbxassetid://104786944273081", ["back_in_elder.png"] = "rbxassetid://108350436672963", ["back_in_forge.png"] = "rbxassetid://74669737693063", ["back_in_hall.png"] = "rbxassetid://87816764644425", ["back_in_shrine.png"] = "rbxassetid://113277212188271", ["back_in_cellar.png"] = "rbxassetid://128001628966145", ["ground_r1a1_1.png"] = "rbxassetid://83422870736818", ["props_r1a1.png"] = "rbxassetid://92002234447597", ["ground_dream_1.png"] = "rbxassetid://86568380381663", ["ground_r1af_1.png"] = "rbxassetid://103216651480847", ["ground_r1a3_1.png"] = "rbxassetid://124425202970650", ["ground_r1a4_1.png"] = "rbxassetid://119900898562100", ["far_r1b1.png"] = "rbxassetid://135605898532339", ["near_r1b1.png"] = "rbxassetid://100112472273007", ["ground_r1b1_1.png"] = "rbxassetid://131538873933480", ["ground_r1b2_1.png"] = "rbxassetid://125436913697859", ["props_r1b2.png"] = "rbxassetid://83042854732492", ["ground_r1bv_1.png"] = "rbxassetid://136234171407413", ["far_r1b3.png"] = "rbxassetid://118137839897783", ["near_r1b3.png"] = "rbxassetid://78384160036601", ["ground_r1b3_1.png"] = "rbxassetid://128714839542604", ["far_r1cc.png"] = "rbxassetid://126898606308718", ["near_r1cc.png"] = "rbxassetid://111427056380401", ["ground_r1cc_1.png"] = "rbxassetid://140563003927168", ["wall_r1c1.png"] = "rbxassetid://97274081468167", ["ground_r1c1_1.png"] = "rbxassetid://135881037967181", ["ground_r1c2_1.png"] = "rbxassetid://105408422281804", ["ground_r1c3_1.png"] = "rbxassetid://135881037967181", ["far_r2a1.png"] = "rbxassetid://71001089643339", ["near_r2a1.png"] = "rbxassetid://108372695232877", ["ground_r2a1_1.png"] = "rbxassetid://97783772162382", ["props_r2a1.png"] = "rbxassetid://71716194623912", ["ground_r2a2_1.png"] = "rbxassetid://127167083533193", ["ground_r2af_1.png"] = "rbxassetid://119700029947186", ["ground_r2a3_1.png"] = "rbxassetid://96467128886126", ["ground_r2a4_1.png"] = "rbxassetid://91945530040703", ["far_r2b1.png"] = "rbxassetid://105088993635856", ["near_r2b1.png"] = "rbxassetid://129053830092616", ["ground_r2b1_1.png"] = "rbxassetid://85390131222251", ["ground_r2b2_1.png"] = "rbxassetid://76022564274420", ["ground_r2b3_1.png"] = "rbxassetid://129600416411291", ["ground_r2bs_1.png"] = "rbxassetid://74893044822636", ["ground_r2b4_1.png"] = "rbxassetid://132464048359953", ["ground_r2c1_1.png"] = "rbxassetid://128991620683760", ["props_r2c1.png"] = "rbxassetid://81470874675773", ["wall_r2c2.png"] = "rbxassetid://103202435470997", ["ground_r2c2_1.png"] = "rbxassetid://73281231351055", ["ground_r2c3_1.png"] = "rbxassetid://132180829815320", ["far_ct.png"] = "rbxassetid://97327830237568", ["near_ct.png"] = "rbxassetid://123959722179055", ["ground_ct_1.png"] = "rbxassetid://76598854780556", ["ground_ct_2.png"] = "rbxassetid://75898659253993", ["ground_ct_3.png"] = "rbxassetid://122444051043555", ["props_ct.png"] = "rbxassetid://97653285658066", ["ladder.png"] = "rbxassetid://97882390366255", ["far_port.png"] = "rbxassetid://123435927909095", ["near_port.png"] = "rbxassetid://109231585638799", ["ground_port_1.png"] = "rbxassetid://96286569225918", ["ground_port_2.png"] = "rbxassetid://93446056838006", ["props_port.png"] = "rbxassetid://118209609634733", ["wall_r3a1.png"] = "rbxassetid://129110072342137", ["ground_r3a1_1.png"] = "rbxassetid://87088338783793", ["ground_r3a2_1.png"] = "rbxassetid://110586607494872", ["ground_r3ah_1.png"] = "rbxassetid://104190957152391", ["ground_r3a3_1.png"] = "rbxassetid://121121631436780", ["ground_r3a4_1.png"] = "rbxassetid://78659249870034", ["ground_r3b1_1.png"] = "rbxassetid://128556194381664", ["ground_r3b2_1.png"] = "rbxassetid://72136610127139", ["wall_r3t.png"] = "rbxassetid://83371466762190", ["ground_r3t_1.png"] = "rbxassetid://109803440895253", ["ground_r3c1_1.png"] = "rbxassetid://107949167237091", ["ground_r3c2_1.png"] = "rbxassetid://90516991888429", ["ground_r3cs_1.png"] = "rbxassetid://71960457769945", ["ground_r3c3_1.png"] = "rbxassetid://135669932767298", ["far_r3d1.png"] = "rbxassetid://114699110116551", ["near_r3d1.png"] = "rbxassetid://137859042761236", ["ground_r3d1_1.png"] = "rbxassetid://131514299450626", ["props_r3d1.png"] = "rbxassetid://101664768791520", ["ground_r3d2_1.png"] = "rbxassetid://94076994673843", ["ground_r3d3_1.png"] = "rbxassetid://89817150928070", ["far_r4a1.png"] = "rbxassetid://98546761697916", ["near_r4a1.png"] = "rbxassetid://86561589617474", ["ground_r4a1_1.png"] = "rbxassetid://108280608888790", ["props_r4a1.png"] = "rbxassetid://100270543281385", ["ground_r4a2_1.png"] = "rbxassetid://85486681117642", ["ground_r4a3_1.png"] = "rbxassetid://96575068202180", ["ground_r4a4_1.png"] = "rbxassetid://136066894609962", ["wall_r4b1.png"] = "rbxassetid://98532234413640", ["ground_r4b1_1.png"] = "rbxassetid://88887931673327", ["ground_r4b2_1.png"] = "rbxassetid://79877230107216", ["wall_r4b3.png"] = "rbxassetid://107012347372334", ["ground_r4b3_1.png"] = "rbxassetid://83501151151882", ["ground_r4bh_1.png"] = "rbxassetid://102429194534326", ["ground_r4b4_1.png"] = "rbxassetid://106845009391566", ["wall_r4c1.png"] = "rbxassetid://71375264584180", ["ground_r4c1_1.png"] = "rbxassetid://91599845869889", ["wall_r4c2.png"] = "rbxassetid://88127748464340", ["ground_r4c2_1.png"] = "rbxassetid://129647369434522", ["props_r4c2.png"] = "rbxassetid://93139914776457", ["ground_r4ch_1.png"] = "rbxassetid://124784973350172", ["ground_r4c3_1.png"] = "rbxassetid://123743019321609", ["wall_r4d1.png"] = "rbxassetid://123616397829506", ["ground_r4d1_1.png"] = "rbxassetid://72127690724163", ["ground_r4d2_1.png"] = "rbxassetid://131406388678943", ["far_seat.png"] = "rbxassetid://120679010601692", ["near_seat.png"] = "rbxassetid://100563375056858", ["ground_seat_1.png"] = "rbxassetid://95415409535077", ["props_seat.png"] = "rbxassetid://126707896892610", ["ground_sea1_1.png"] = "rbxassetid://116609311030052", ["ground_sea2_1.png"] = "rbxassetid://93028389629730", ["ground_r3b3_1.png"] = "rbxassetid://103749580294335", ["ground_r3b4_1.png"] = "rbxassetid://122662700242947", ["ground_r4d3_1.png"] = "rbxassetid://80335588821204", ["ground_r4e1_1.png"] = "rbxassetid://71537759534162", ["wall_sea5.png"] = "rbxassetid://121989276042041", ["ground_sea5_1.png"] = "rbxassetid://120770918735711", ["ground_sea6_1.png"] = "rbxassetid://82216607848324", ["ground_r1c4_1.png"] = "rbxassetid://98020574553503", ["ground_r2c4_1.png"] = "rbxassetid://115753437369109", ["ground_r3d4_1.png"] = "rbxassetid://118468232445975", ["ground_r4d4_1.png"] = "rbxassetid://117778839393938", ["ground_sea8_1.png"] = "rbxassetid://100524578086246", ["ground_r4es_1.png"] = "rbxassetid://125574607301148", ["ground_r1bl_1.png"] = "rbxassetid://102105250491349", ["ground_r2bl_1.png"] = "rbxassetid://94977117622940", ["ground_r2cl_1.png"] = "rbxassetid://120682725194519", ["ground_r3al_1.png"] = "rbxassetid://84627906941424", ["ground_r3cl_1.png"] = "rbxassetid://81455567612452", ["ground_r4bl_1.png"] = "rbxassetid://103887471752415", ["ground_r4cl_1.png"] = "rbxassetid://133911299211715", ["ground_r4dl_1.png"] = "rbxassetid://78653230925094", ["ground_r1bh_1.png"] = "rbxassetid://115812173236187", ["ground_r2ah_1.png"] = "rbxassetid://118410034190596", ["ground_r2bh_1.png"] = "rbxassetid://132009986769568", ["ground_r3bh_1.png"] = "rbxassetid://88949438100971", ["ground_r4ah_1.png"] = "rbxassetid://92032601099726", ["ground_r4dh_1.png"] = "rbxassetid://139731007351262", ["ground_sea3_1.png"] = "rbxassetid://73022952797720", ["ground_seaf_1.png"] = "rbxassetid://136179698367792", ["ground_sea4_1.png"] = "rbxassetid://133488858131653", ["ground_sea7_1.png"] = "rbxassetid://124740971075210", ["back_ct_store.png"] = "rbxassetid://126366947246540", ["back_ct_smith.png"] = "rbxassetid://136337303330969", ["back_ct_storage.png"] = "rbxassetid://134573437628573", ["back_ct_auction.png"] = "rbxassetid://111002919148565", ["back_ct_office.png"] = "rbxassetid://130229467844565", ["back_ct_harbor.png"] = "rbxassetid://96974337406579", ["back_ct_inn.png"] = "rbxassetid://110896398622871", ["back_ct_fisher.png"] = "rbxassetid://128557373754841", ["back_ct_stable.png"] = "rbxassetid://110252516764726", ["back_ct_spice.png"] = "rbxassetid://117260792010676", ["back_ct_guardpost.png"] = "rbxassetid://77243987648482", ["back_ct_musician.png"] = "rbxassetid://117717247885748", ["back_ct_flower.png"] = "rbxassetid://111657630555738", ["back_ct_oldhouse.png"] = "rbxassetid://98177958007897", ["back_ct_scribe.png"] = "rbxassetid://91218960586498", ["back_ct_maid.png"] = "rbxassetid://129403102377941", ["back_ct_castle.png"] = "rbxassetid://122227497315667", ["back_ct_terrace.png"] = "rbxassetid://82185564261733", ["vista_ct_terrace.png"] = "rbxassetid://72001134778535", ["back_ct_tower.png"] = "rbxassetid://111423026181041", ["sea_ship_out.png"] = "rbxassetid://80754181448263", ["ship_ship_out.png"] = "rbxassetid://92462106500365", ["sea_ship_home.png"] = "rbxassetid://126176094324469", ["ship_ship_home.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_out.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_out.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_home.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_home.png"] = "rbxassetid://102557987604449", ["sea_air_out.png"] = "rbxassetid://112775081132374", ["ship_air_out.png"] = "rbxassetid://108949678734397", ["sea_air_home.png"] = "rbxassetid://112775081132374", ["ship_air_home.png"] = "rbxassetid://108949678734397", ["worldmap_r1.png"] = "rbxassetid://102843140318075", ["worldmap_city.png"] = "rbxassetid://122109754685398", ["worldmap_r2.png"] = "rbxassetid://100140236436154", ["worldmap_sea.png"] = "rbxassetid://92576107471427", ["worldmap_r3.png"] = "rbxassetid://139284205415304", ["worldmap_r4.png"] = "rbxassetid://140105596121121", ["ui_kit.png"] = "rbxassetid://127701484464218", ["font_small_1.png"] = "rbxassetid://105450659975716", ["font_small_2.png"] = "rbxassetid://107436252829336", ["font_small_o_1.png"] = "rbxassetid://97414893618224", ["font_small_o_2.png"] = "rbxassetid://103679168006398", ["font_body_o_1.png"] = "rbxassetid://111645782980424", ["font_body_o_2.png"] = "rbxassetid://83949705319808", ["font_body_o_3.png"] = "rbxassetid://122937040402111", ["portal.png"] = "rbxassetid://73946472428073", ["title_sky.png"] = "rbxassetid://127573656029589", ["title_clouds.png"] = "rbxassetid://89882326454014", ["title_ridge.png"] = "rbxassetid://129071355183212", ["title_logo.png"] = "rbxassetid://114259324331432", ["cine_mural_axion.png"] = "rbxassetid://75681092154576", ["cine_mural_riven.png"] = "rbxassetid://99331828874405", ["cine_mural_reaper.png"] = "rbxassetid://76473369861673", ["cine_mural_mooni.png"] = "rbxassetid://112784522891949", ["cine_mural_salamander.png"] = "rbxassetid://106361966737710" }
 
 end
 MODULES['ReplicatedStorage/shared/lune/data/attend.generated'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
@@ -11385,7 +11427,7 @@ return {
 				{ say = "master", text = "수정 숲의 기사단에 옛 책이 있다." },
 				{ say = "master", text = "네 눈으로 보고 오너라. 그 뒤에 이야기하마." },
 				{ fade = 1, t = 0.8 },
-				{ card = "제1편 · 산골 아이 — 끝", sub = "다음 이야기 · 수정 숲" },
+				{ card = "제1편 · 산골 아이 — 끝", sub = "다음 이야기 · 은달 항구" },
 				{ fade = 0, t = 0.8 },
 				{ bars = 0 },
 			},
@@ -11430,7 +11472,7 @@ return {
 				},
 				{ face = "baram", dir = "hero" },
 				{ say = "baram", text = "배에서 내리신 분, 초승달 마을에서 오셨죠?" },
-				{ say = "baram", text = "촌장님 편지 받았어요. 제가 안내할게요!" },
+				{ say = "baram", text = "새로 오신 분이죠? 제가 안내할게요!" },
 				{ bars = 0 },
 			},
 		},
@@ -11754,7 +11796,7 @@ return {
 			x = 960,
 			y = 352,
 			name = "분수의 새김",
-			act = "새김을 읽는다",
+			act = "새김 읽기",
 			text = { "분수 둘레에 글이 새겨져 있다.", "「달이 지는 땅의 사람들이 처음 배를 댄 곳」", "그 아래 줄은 누가 정으로 쪼아 지웠다." },
 		},
 		{
@@ -11764,7 +11806,7 @@ return {
 			x = 120,
 			y = 176,
 			name = "탑의 옛 현판",
-			act = "현판을 올려다본다",
+			act = "현판 보기",
 			text = { "계단참에 걸린 현판은 두 겹이다.", "새 현판 「은달 항구」 뒤로 옛 글씨가 비친다.", "「… 왕조의 서쪽 항구」 — 앞 글자는 깎여 있다." },
 		},
 		{
@@ -11774,7 +11816,7 @@ return {
 			x = 112,
 			y = 176,
 			name = "성의 문장",
-			act = "문장을 살핀다",
+			act = "문장 살피기",
 			text = { "홀의 큰 깃발에 영주의 문장이 수놓여 있다.", "달 아래 날개를 편 무언가 — 새인지 박쥐인지 모르겠다.", "하녀가 오래 보지 말라며 고개를 젓는다." },
 		},
 		{
@@ -11784,7 +11826,7 @@ return {
 			x = 208,
 			y = 176,
 			name = "문설주의 눈금",
-			act = "눈금을 살핀다",
+			act = "눈금 살피기",
 			text = { "문설주에 아이들 키를 잰 눈금이 남아 있다.", "맨 위 눈금 옆에만 이름이 없다. 깎아 낸 자국뿐이다.", "이 집 사람들은 어디로 갔을까." },
 		},
 		{
@@ -11794,7 +11836,7 @@ return {
 			x = 144,
 			y = 176,
 			name = "항만 사무소의 게시",
-			act = "게시를 읽는다",
+			act = "게시 읽기",
 			text = { "「바다 건너 물마루 섬으로 가는 배 — 부두의 뱃사공 노을」", "「동쪽 대륙행 비행선 — 꼭대기의 승강장」", "누가 그 밑에 「멀미약은 어디서 팔아요?」라고 적어 두었다." },
 		},
 		{
@@ -11804,7 +11846,7 @@ return {
 			x = 1978,
 			y = 480,
 			name = "성문 탑의 머릿돌",
-			act = "머릿돌을 읽는다",
+			act = "머릿돌 읽기",
 			text = { "성문 탑의 머릿돌에 이름들이 새겨져 있다.", "성문을 처음 쌓은 사람들의 이름이다.", "맨 위의 이름 다섯은 긁혀서 읽을 수 없다." },
 		},
 		{
@@ -11814,7 +11856,7 @@ return {
 			x = 296,
 			y = 160,
 			name = "무기걸이 뒤의 벽화",
-			act = "벽화를 올려다본다",
+			act = "벽화 보기",
 			text = { "무기걸이 뒤 벽에 다섯 사람이 그려져 있다.", "얼굴은 모두 긁혀 있다.", "발치에 「잊으라」 한 마디만 또렷하다." },
 		},
 		{
@@ -11824,7 +11866,7 @@ return {
 			x = 157,
 			y = 160,
 			name = "기둥의 비문",
-			act = "비문을 읽는다",
+			act = "비문 읽기",
 			text = { "「수정 기사단, 숲을 지키다」", "기사들의 이름이 빼곡하다.", "삼백 년 동안 단장의 이름만 한 번도 바뀌지 않았다." },
 		},
 	},
@@ -11842,7 +11884,7 @@ return {
 			name = "정예",
 			look = { aura = "#ff3e9f", embers = "#ff7ea2" },
 		},
-		words = { title = "토벌", head = "수정 틈 토벌", left = "오늘 보상 {n}/{max}", enter = "입장", need = "Lv.{lv}부터", wave = "물결 {a}/{b}", eliteWave = "정예", mobs = "남은 몬스터 {n}", clear = "토벌 완료", fail = "시간이 다 됐다", back = "{n}초 뒤 의뢰소로", noPay = "오늘의 보상을 다 받았다 — 들어가도 보상은 없다", party = "같은 맵의 파티원이 함께 들어간다", time = "제한 시간 {m}분", pay = "완료 보상", gear = "장비 {p}%", ready = "곧 몰려온다", nogear = "장비는 나오지 않았다", full = "가방이 차서 장비를 받지 못했다" },
+		words = { title = "토벌", head = "수정 틈 토벌", left = "오늘 보상 {n}/{max}", enter = "입장", need = "Lv.{lv}부터", wave = "물결 {a}/{b}", eliteWave = "정예", mobs = "남은 몬스터 {n}", clear = "토벌 완료", fail = "시간이 다 됐다", back = "{n}초 뒤 의뢰소로", noPay = "오늘 보상은 다 받았다 — 이번엔 보상 없음", party = "같은 맵의 파티원이 함께 들어간다", time = "제한 시간 {m}분", pay = "완료 보상", gear = "장비 {p}%", ready = "곧 몰려온다", nogear = "장비는 나오지 않았다", full = "가방이 차서 장비를 받지 못했다" },
 		name = "수정 틈 토벌",
 		tiers = {
 			{
@@ -12318,6 +12360,16 @@ return {
 		pickup = 20,
 		moneySpread = 20,
 	},
+	fieldElite = {
+		from = { "r2", "r3", "r4", "sea" },
+		every = 30,
+		hp = 10,
+		hit = 1.5,
+		xp = 10,
+		money = 10,
+		loot = 5,
+		words = { head = "정예 {name}", sub = "강한 기운이 이 맵에 퍼졌다" },
+	},
 	mobs = {
 		towerlieutenant = {
 			name = "성벽 거인",
@@ -12601,6 +12653,7 @@ return {
 			chase = 36,
 			see = 60,
 			hp = 0.6,
+			passive = true,
 			look = {
 				tint = { 159, 176, 196 },
 			},
@@ -15222,6 +15275,8 @@ return {
 		{ id = "potion3", tab = "use", kind = "potion", name = "큰 달빛 물약", short = "큰 물약", icon = "potion_l", stack = 200, sell = 46, text = "마시면 체력을 70% 되찾는다.", lv = 60, heal = 70, from = false, quest = false, need = false },
 		{ id = "potion4", tab = "use", kind = "potion", name = "맑은 달빛 물약", short = "맑은 물약", icon = "potion_star", stack = 200, sell = 102, text = "마시면 체력을 100% 되찾는다.", lv = 100, heal = 100, from = false, quest = false, need = false },
 		{ id = "scroll_return", tab = "use", kind = "scroll", name = "귀환 주문서", short = "귀환", icon = "scroll", stack = 200, sell = 20, text = "쓰면 가장 가까운 마을로 돌아간다. 쓰러져 있을 때 · 배 위에서는 쓸 수 없다.", lv = false, heal = false, from = false, quest = false, need = false },
+		{ id = "charm", tab = "use", kind = "charm", name = "달빛 부적", short = "부적", icon = "charm", stack = 200, sell = 1, text = "쓰면 쓰러진 뒤의 벌칙(약해짐 — 경험치 · 물건을 80% 덜 얻는다)이 바로 풀린다.", lv = false, heal = false, from = false, quest = false, need = false },
+		{ id = "statreset", tab = "use", kind = "reset", name = "능력치 초기화 주문서", short = "초기화", icon = "paper", stack = 200, sell = 1, text = "쓰면 찍은 능력치(힘 · 민첩 · 지능 · 운 · 체력)를 모두 되돌려 다시 찍을 수 있다.", lv = false, heal = false, from = false, quest = false, need = false },
 		{ id = "etc_plate", tab = "etc", kind = "quest", name = "갑옷 조각", short = "갑옷 조각", icon = "etc_plate", stack = 9999, sell = 0, text = "속이 텅 빈 갑옷의 조각. 안에는 재뿐이다.", lv = false, heal = false, from = "검병", quest = "빈 갑옷", need = 8 },
 		{ id = "etc_order", tab = "etc", kind = "quest", name = "찢어진 명령서", short = "찢어진 명령서", icon = "etc_order", stack = 9999, sell = 0, text = "여럿이 나눠 가진 명령서의 조각. 붉은 도장이 찍혀 있다.", lv = false, heal = false, from = "재까마귀", quest = "발자국을 따라", need = 6 },
 		{ id = "etc_hinge", tab = "etc", kind = "quest", name = "쇠 경첩", short = "쇠 경첩", icon = "etc_hinge", stack = 9999, sell = 0, text = "갑옷의 이음매에 달린 쇠 경첩. 문에 달아도 된다.", lv = false, heal = false, from = "정예 궁병", quest = "마을 문 고치기", need = 12 },
@@ -15257,6 +15312,7 @@ return {
 		{ id = "etc_wedge", tab = "etc", kind = "quest", name = "쐐기 조각", short = "쐐기 조각", icon = "etc_wedge", stack = 9999, sell = 0, text = "봉인의 쐐기에서 깨져 나온 조각. 금 사이로 빛이 샌다.", lv = false, heal = false, from = "빛 먹는 것", quest = "깨진 쐐기 조각", need = 5 },
 		{ id = "etc_moonshard", tab = "etc", kind = "quest", name = "달빛 서린 조각", short = "달빛 서린 조각", icon = "etc_moonshard", stack = 9999, sell = 0, text = "달빛이 서린 갑옷 조각. 어두운 데서 초승달 모양으로 빛난다.", lv = false, heal = false, from = "낡은 수련 인형", quest = "2차 전직", need = 4 },
 		{ id = "fragment", tab = "etc", kind = "quest", name = "달빛 서린 종 조각", short = "달빛 서린 종 조각", icon = "fragment", stack = 9999, sell = 0, text = "종지기의 종에서 떨어진 조각. 달빛이 서려 은은하게 운다.", lv = false, heal = false, from = "종지기", quest = "3차 전직", need = 4 },
+		{ id = "etc_cloth", tab = "etc", kind = "quest", name = "바래지 않은 깃발 조각", short = "바래지 않은 깃발 조각", icon = "etc_cloth", stack = 9999, sell = 0, text = "옛 왕도의 깃발에서 찢겨 나온 조각. 오천 년이 지났는데도 빛이 바래지 않았다.", lv = false, heal = false, from = "정예 창병", quest = "4차 전직", need = 4 },
 		{ id = "mat_ore1", tab = "etc", kind = "mat", name = "청동 광석", short = "청동 광석", icon = "mat_ore1", stack = 9999, sell = 1, text = "청동이 박힌 돌. 대장장이가 Lv.1 장비를 만드는 데 쓴다.", lv = false, heal = false, from = "Lv.1~9 몬스터", quest = false, need = false },
 		{ id = "mat_ore2", tab = "etc", kind = "mat", name = "강철 광석", short = "강철 광석", icon = "mat_ore2", stack = 9999, sell = 4, text = "강철이 박힌 돌. 대장장이가 Lv.10 장비를 만드는 데 쓴다.", lv = false, heal = false, from = "Lv.10~19 몬스터", quest = false, need = false },
 		{ id = "mat_ore3", tab = "etc", kind = "mat", name = "미스릴 광석", short = "미스릴 광석", icon = "mat_ore3", stack = 9999, sell = 10, text = "미스릴이 박힌 돌. 대장장이가 Lv.20 장비를 만드는 데 쓴다.", lv = false, heal = false, from = "Lv.20~29 몬스터", quest = false, need = false },
@@ -15309,17 +15365,18 @@ return {
 	},
 	SELL = { rate = 0.2, weapon = 4.8, other = 2.4 },
 	STOCK = {
-		{ id = "potion1", npc = "merchant", name = "작은 달빛 물약", from = 1, price = 6, max = 99, item = false, goods = "potion1" },
-		{ id = "potion2", npc = "merchant", name = "달빛 물약", from = 30, price = 84, max = 99, item = false, goods = "potion2" },
-		{ id = "potion3", npc = "merchant", name = "큰 달빛 물약", from = 60, price = 230, max = 99, item = false, goods = "potion3" },
-		{ id = "potion4", npc = "merchant", name = "맑은 달빛 물약", from = 100, price = 510, max = 99, item = false, goods = "potion4" },
-		{ id = "scroll_return", npc = "merchant", name = "귀환 주문서", from = 1, price = 100, max = 99, item = false, goods = "scroll_return" },
+		{ id = "potion1", npc = "merchant", name = "작은 달빛 물약", from = 1, price = 6, perLv = false, max = 99, item = false, goods = "potion1" },
+		{ id = "potion2", npc = "merchant", name = "달빛 물약", from = 30, price = 84, perLv = false, max = 99, item = false, goods = "potion2" },
+		{ id = "potion3", npc = "merchant", name = "큰 달빛 물약", from = 60, price = 230, perLv = false, max = 99, item = false, goods = "potion3" },
+		{ id = "potion4", npc = "merchant", name = "맑은 달빛 물약", from = 100, price = 510, perLv = false, max = 99, item = false, goods = "potion4" },
+		{ id = "scroll_return", npc = "merchant", name = "귀환 주문서", from = 1, price = 100, perLv = false, max = 99, item = false, goods = "scroll_return" },
 		{
 			id = "a1_hat",
 			npc = "merchant",
 			name = "Lv.1 가죽 모자",
 			from = 1,
 			price = 18,
+			perLv = false,
 			max = 1,
 			item = { slot = "hat", stage = 1 },
 			goods = false,
@@ -15330,6 +15387,7 @@ return {
 			name = "Lv.1 가죽 옷",
 			from = 1,
 			price = 18,
+			perLv = false,
 			max = 1,
 			item = { slot = "suit", stage = 1 },
 			goods = false,
@@ -15340,6 +15398,7 @@ return {
 			name = "Lv.1 가죽 장갑",
 			from = 1,
 			price = 18,
+			perLv = false,
 			max = 1,
 			item = { slot = "glove", stage = 1 },
 			goods = false,
@@ -15350,11 +15409,14 @@ return {
 			name = "Lv.1 가죽 신발",
 			from = 1,
 			price = 18,
+			perLv = false,
 			max = 1,
 			item = { slot = "shoes", stage = 1 },
 			goods = false,
 		},
-		{ id = "dust", npc = "merchant", name = "달가루", from = 8, price = 20, max = 9999, item = false, goods = false },
+		{ id = "dust", npc = "merchant", name = "달가루", from = 8, price = 20, perLv = false, max = 9999, item = false, goods = false },
+		{ id = "charm", npc = "merchant", name = "달빛 부적", from = 10, price = false, perLv = 300, max = 10, item = false, goods = "charm" },
+		{ id = "statreset", npc = "merchant", name = "능력치 초기화 주문서", from = 10, price = false, perLv = 2000, max = 1, item = false, goods = "statreset" },
 	},
 	OPEN = { bag = 2, store = 1, forge = 8 },
 	NPCDO = { merchant = "shop", smith = "smith", keeper = "store", board = "daily", auctioneer = "auction", clerk = "daily", warden = "rift", citysmith = "smith", citykeeper = "store" },
@@ -15428,6 +15490,7 @@ return {
 			askSum = "「{name}」 — 합계 {price} 달돈",
 			stock = "남은 수량 {n}개",
 			of = "/ {n}개",
+			soldNote = "팔림: 「{name}」 x{n}",
 			wait = "처리 중…",
 			listed = "「{name}」을(를) 등록했다",
 			bought = "「{name}」을(를) 샀다 — 「완료」에서 수령한다",
@@ -16511,6 +16574,14 @@ return {
 				"dust",
 				{ 20, 20, 20, 20, 20 },
 			},
+			{
+				"charm",
+				{ 300, 8700, 9000, 18000, 30000 },
+			},
+			{
+				"statreset",
+				{ 2000, 58000, 60000, 120000, 200000 },
+			},
 		},
 		info = {
 			gear = {
@@ -17578,6 +17649,25 @@ return {
 							{ "종지기의 종에서 떨어진 조각. 달빛이 서려 은은하게 운다.", "text" },
 							{ "종지기에게서 나온다", "dim" },
 							{ "「3차 전직」에 4개가 든다", "dim" },
+						},
+					},
+				},
+				{
+					"etc_cloth",
+					12,
+					3,
+					{
+						name = "바래지 않은 깃발 조각",
+						tone = "text",
+						sub = "기타 아이템 · 퀘스트 아이템",
+						rows = {
+							{ "가진 수", "3개", "text" },
+							{ "한 칸에", "9999개까지", "dim" },
+						},
+						notes = {
+							{ "옛 왕도의 깃발에서 찢겨 나온 조각. 오천 년이 지났는데도 빛이 바래지 않았다.", "text" },
+							{ "정예 창병에게서 나온다", "dim" },
+							{ "「4차 전직」에 4개가 든다", "dim" },
 						},
 					},
 				},
@@ -19242,7 +19332,7 @@ return {
 			offer = { "또 달빛 꿈을 꾸었구나.", "…그 꿈 이야기는 누구에게도 하지 마라.", "오늘부터 기술을 가르쳐 주마. 배우겠느냐?" },
 			wait = { "먼저 몸부터 풀고 오너라." },
 			done = { "좋다. 몸이 먼저 기억하는구나.", "…처음 배우는 아이치고는 말이다.", "귀환 주문서도 챙겨라.", "문 밖의 샛별이 아까부터 너를 찾더구나." },
-			reward = { xp = 156, money = 73, potions = 0, scrolls = 5, open = false, job = false, gear = false },
+			reward = { xp = 156, money = 73, potions = 0, scrolls = 5, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1m2",
@@ -19265,7 +19355,7 @@ return {
 			offer = { "마침 잘 오셨어요. 큰일 났어요.", "어젯밤 마을 어귀에 낯선 병사들이 왔어요.", "밤새 불도 없이 서 있기만 했대요.", "말을 걸어도 대답이 없대요.", "다섯만 쫓아 보고 촌장님께 알려 주세요." },
 			wait = { "어귀의 수습 검병부터 쫓아 주세요.", "…가까이 가면 정말 숨소리가 안 들려요?" },
 			done = { "베니까 재가 되고 갑옷만 남았다고?", "허, 산짐승한테 홀린 게지.", "@hero 정말이에요. 속이 텅 비어 있었어요.", "…그렇게까지 말한다면 증거를 가져와 보게." },
-			reward = { xp = 291, money = 230, potions = 10, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 291, money = 230, potions = 10, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1m3",
@@ -19288,7 +19378,7 @@ return {
 			offer = { "갑옷 조각을 여덟 개만 가져오게.", "내 눈으로 보기 전엔 못 믿겠네." },
 			wait = { "어귀 너머 사냥터의 검병에게서 나온다네." },
 			done = { "…조각마다 재가 묻어 있구먼.", "속이 빈 갑옷이 걸어 다닌다니.", "이건 사람이 아니야. 내가 잘못 생각했네.", "창고를 열어 줄 테니 채비를 하게." },
-			reward = { xp = 492, money = 310, potions = 0, scrolls = 0, open = "store", job = false, gear = false },
+			reward = { xp = 492, money = 310, potions = 0, scrolls = 0, open = "store", job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s3",
@@ -19311,7 +19401,7 @@ return {
 			offer = { "샛별이 병사들의 발자국을 찾았다네.", "사냥터 깊은 곳으로 이어진다는군.", "헌데 포자가 길을 덮었어. 열둘만 터뜨려 주게." },
 			wait = { "달그림자 사냥터 너머 깊은 곳일세." },
 			done = { "길이 트였구먼. 발자국은 어디로 가던가?", "@hero 산 쪽이요. 불 꺼진 야영지가 있었어요.", "야영지라… 놈들이 진을 쳤던 게야." },
-			reward = { xp = 404, money = 320, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 404, money = 320, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 4 },
 		},
 		{
 			id = "r1m4",
@@ -19334,7 +19424,7 @@ return {
 			offer = { "그 야영지에 가 보게.", "놈들이 무엇을 하러 왔는지 알아야겠어." },
 			wait = { "야영지의 재까마귀가 종이를 물고 다닌다네.", "그 종이 여섯 장을 찾아오게." },
 			done = { "찢어진 명령서로구먼. 어디, 맞춰 보세." },
-			reward = { xp = 4242, money = 570, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 4242, money = 570, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1m5",
@@ -19357,7 +19447,7 @@ return {
 			offer = { "명령서대로 놈들이 고갯길을 막았네.", "장꾼도 아이들도 고개를 못 넘는다는군.", "고갯마루 주막의 노인을 찾아가 보게.", "이 고개에서 평생을 산 사람이야." },
 			wait = { "세 갈래 길 너머 고갯길 초입의 궁병일세." },
 			done = { "궁병을 뚫고 왔다고? 장하구먼.", "보름 영감이 보냈다고? 허허, 그 친구.", "저 위 망루에 다시 불이 켜진 걸 봤나?", "수비대가 쫓겨난 뒤로 꺼져 있던 망루라네." },
-			reward = { xp = 2161, money = 1100, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2161, money = 1100, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s6",
@@ -19380,7 +19470,7 @@ return {
 			offer = { "장꾼들이 굽잇길에서 짐을 털렸다네.", "헌데 이상한 말을 하더군.", "병사들이 아이들 얼굴만 들여다보더래.", "폭탄병 열둘만 혼내 주겠나?" },
 			wait = { "굽잇길의 폭탄병일세. 조심하게." },
 			done = { "덕분에 장삿길이 다시 열렸구먼.", "아이들 얼굴이라… 무얼 찾는 걸까." },
-			reward = { xp = 6033, money = 850, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 6033, money = 850, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s7",
@@ -19399,12 +19489,12 @@ return {
 			city = false,
 			steps = {
 				{ ["type"] = "kill", mob = "crab", only = false, name = "바위 게", n = 8, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
-				{ ["type"] = "use", mob = false, only = false, name = "샘에서 물 뜨기", n = 1, pct = 100, icon = false, item = false, spot = "spring", place = "돌무더기 밑의 샘", act = "물을 뜬다", x = 440, y = 128, up = 26, at = "r1b3", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "샘에서 물 뜨기", n = 1, pct = 100, icon = false, item = false, spot = "spring", place = "돌무더기 밑의 샘", act = "물 뜨기", x = 440, y = 128, up = 26, at = "r1b3", npc = false },
 			},
 			offer = { "목이 말라 이야기가 안 나오는구먼.", "다리 너머 샘에서 물 좀 떠다 주게.", "그럼 저 망루의 옛이야기를 해 주지." },
 			wait = { "무너진 다리 너머 돌무더기 밑일세.", "샘가의 바위 게부터 쫓게." },
 			done = { "시원하구먼. 자, 옛이야기 하나 하지." },
-			reward = { xp = 4602, money = 1200, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 4602, money = 1200, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1m6",
@@ -19423,12 +19513,12 @@ return {
 			city = false,
 			steps = {
 				{ ["type"] = "kill", mob = "ewarrior", only = false, name = "정예 검병", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
-				{ ["type"] = "use", mob = false, only = false, name = "깃발 찾기", n = 1, pct = 100, icon = false, item = false, spot = "flag", place = "상자 틈의 깃발", act = "깃발을 꺼낸다", x = 236, y = 400, up = 34, at = "r1c1", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "깃발 찾기", n = 1, pct = 100, icon = false, item = false, spot = "flag", place = "상자 틈의 깃발", act = "깃발 꺼내기", x = 236, y = 400, up = 34, at = "r1c1", npc = false },
 			},
 			offer = { "노인이 보냈다고? 마침 잘 왔어.", "망루는 원래 우리 수비대 초소였어.", "한 달 전 갑옷들이 밤새 몰려와 빼앗았지.", "1층의 정예병을 줄여 주고…", "상자 틈에 숨겨 둔 우리 깃발도 찾아 줘." },
 			wait = { "1층의 정예 검병이야. 조심해.", "깃발은 1층 상자 틈에 있어." },
 			done = { "혼자서 1층을 쓸었다고? 깃발까지!", "우리 아버지가 평생 지키던 깃발이야.", "놈들, 위층에서 무언가를 지키고 있어.", "그게 뭔지 알아내야 해." },
-			reward = { xp = 13227, money = 2000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 13227, money = 2000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s10",
@@ -19451,7 +19541,7 @@ return {
 			offer = { "3층엔 주인 없는 투구만 굴러다녀.", "꼭대기로 가는 길이야. 열둘만 부숴 줘." },
 			wait = { "망루 3층의 빈 투구야.", "투구가 쏘는 빛을 조심해." },
 			done = { "투구 속에도 재뿐이라고?", "꼭대기에서 쿵, 쿵 소리가 났다고?", "무언가 큰 놈이 꼭대기를 막고 있어." },
-			reward = { xp = 4324, money = 1700, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 4324, money = 1700, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1m7",
@@ -19474,7 +19564,7 @@ return {
 			offer = { "쿵 소리의 정체는 거인이야.", "성벽을 짊어지고 꼭대기 방을 막고 섰어.", "3층 맨 위의 문이야. 놈을 쓰러뜨려 줘." },
 			wait = { "3층 맨 위의 문으로 꼭대기에 올라가.", "망치를 치켜들면 물러나. 맞으면 아파." },
 			done = { "그 거인을 쓰러뜨렸다고? 정말 해냈군.", "벽에 그림이 있었다고? 무기를 든 다섯?", "노인의 옛이야기 그대로잖아.", "…그중 하나가 너를 닮았다고?" },
-			reward = { xp = 6355, money = 2600, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 6355, money = 2600, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s11",
@@ -19497,7 +19587,7 @@ return {
 			offer = { "아무래도 불안해. 놈들은 아이를 찾고 있어.", "마을 문부터 단단히 고쳐 둬야겠어.", "2층 정예 궁병의 쇠 경첩 열두 개면 돼." },
 			wait = { "망루 2층의 정예 궁병에게서 나와." },
 			done = { "열두 개면 문 두 짝을 다 달겠어.", "그런데 꼭대기에서 쇠사슬 소리가 나." },
-			reward = { xp = 9849, money = 1800, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 9849, money = 1800, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1m8",
@@ -19520,7 +19610,7 @@ return {
 			offer = { "거인이 쓰러지자 옥의 간수가 올라왔어.", "망루를 부리는 우두머리야.", "놈을 끝내면 망루를 되찾을 수 있어." },
 			wait = { "간수는 망루 꼭대기에 있어.", "등롱을 치켜들면 검병이 몰려와. 조심해." },
 			done = { "간수의 품에서 명령서가 나왔다고?", "영주님의 도장… 영주님이 왜?", "보름 밤까지라니, 오늘이잖아!", "저길 봐. 마을 하늘이 붉어!" },
-			reward = { xp = 8675, money = 3100, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 8675, money = 3100, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1m9",
@@ -19543,7 +19633,7 @@ return {
 			offer = { "병사들이 마을로 몰려갔어!", "사당 쪽이야. 놈들이 사당을 뒤지고 있어!", "어서 가! 나도 뒤따라갈게." },
 			wait = { "사당 안에서 지하로 내려가. 서둘러!" },
 			done = { "무사했구먼. 정말 다행이야.", "놈들이 찾던 건 닮은 아이였네.", "명령서 속 그 얼굴… 자네였어.", "알면서도 말하지 못했네. 미안하네.", "이 마을에 있으면 자네가 위험해.", "대장간 너머 나루에 은달 항구로 가는 배가 있네." },
-			reward = { xp = 8675, money = 3100, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 8675, money = 3100, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s1",
@@ -19564,7 +19654,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 49, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 49, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s2",
@@ -19585,7 +19675,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 131, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 131, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s4",
@@ -19606,7 +19696,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 276, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 276, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s5",
@@ -19627,7 +19717,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 374, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 374, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s8",
@@ -19648,7 +19738,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 780, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 780, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s9",
@@ -19669,7 +19759,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 1111, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1111, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq01",
@@ -19679,7 +19769,7 @@ return {
 			name = "큰 항구로",
 			lv = 30,
 			scene = "ct",
-			text = "촌장이 은달 항구에 가 보라고 한다. 마을 뒤 작은 포구의 선장에게 말을 걸어 배를 타면, 바다를 건너 항구의 부두에 닿는다.",
+			text = "촌장이 은달 항구에 가 보라고 한다. 마을 뒤 작은 나루의 선장에게 말을 걸어 배를 타면, 바다를 건너 항구의 부두에 닿는다.",
 			after = "r1m9",
 			giver = "elder",
 			endNpc = "baram",
@@ -19687,10 +19777,10 @@ return {
 			playable = true,
 			city = true,
 			steps = {  },
-			offer = { "마을을 지켜 줘서 고맙네.", "이제 자네는 이 산골에 머물 사람이 아니야.", "포구의 선장 배를 타고 은달 항구로 가게.", "부두의 안내인이 길을 알려 줄 걸세." },
-			wait = { "포구는 대장간 너머 바닷가에 있네.", "선장에게 말을 걸면 배에 태워 줄 걸세." },
+			offer = { "마을을 지켜 줘서 고맙네.", "이제 자네는 이 산골에 머물 사람이 아니야.", "나루의 선장 배를 타고 은달 항구로 가게.", "부두의 안내인에게 이 편지를 주게." },
+			wait = { "나루는 대장간 너머 바닷가에 있네.", "선장에게 말을 걸면 배에 태워 줄 걸세." },
 			done = { "이게 촌장님 편지군요. 어디 보자…", "「산골에서 크게 될 아이」래요. 헤헤.", "저는 바람, 새로 온 사람을 안내해요." },
-			reward = { xp = 521, money = 2200, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 521, money = 2200, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq02",
@@ -19717,7 +19807,7 @@ return {
 			offer = { "이 도시는 사람을 알아야 살기 편해요.", "장터 거리의 대장간과 창고부터 가 보세요.", "광장엔 경매장과 항구 의뢰소가 있어요.", "의뢰소엔 토벌대장님도 계세요.", "다 만나고 부두로 오세요!" },
 			wait = { "장터 거리 · 달맞이 광장의 건물 안이에요.", "문 앞에서 ↑를 누르면 들어가요." },
 			done = { "다 만나셨네요! 이제 이 도시 사람이에요.", "제작 · 강화는 담금 아저씨, 짐은 한아름 할아버지.", "토벌은 무진 대장님이 매일 열어요.", "이 「모험의 서」에 도시에서 한 일이 쌓여요." },
-			reward = { xp = 521, money = 2200, potions = 0, scrolls = 0, open = "tome", job = false, gear = false },
+			reward = { xp = 521, money = 2200, potions = 0, scrolls = 0, open = "tome", job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq03",
@@ -19737,8 +19827,8 @@ return {
 			steps = {  },
 			offer = { "성문 밖에 나가 보셨어요?", "성문을 나서면 바로 수정 숲이에요.", "성문 앞의 견습 기사님이 일손을 찾아요." },
 			wait = { "1층 동쪽 끝의 큰 성문 앞이에요.", "성문지기 마루 아저씨 옆이요." },
-			done = { "바람이 보냈어요? 마침 손이 필요했어요.", "하늬예요. 수정 기사단의 견습 기사요." },
-			reward = { xp = 606, money = 2300, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			done = { "바람이 보냈어요? 마침 손이 필요했어요.", "견습 기사는 늘 일손이 모자라거든요." },
+			reward = { xp = 606, money = 2300, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq04",
@@ -19759,7 +19849,7 @@ return {
 			offer = { "어이, 거기! 손 좀 빌려주게.", "향신료 가게의 다홍한테 이 짐 좀.", "성문 옆, 향 냄새 나는 집일세." },
 			wait = { "성문 옆의 향신료 가게야." },
 			done = { "어머, 내 짐! 돌쇠가 보냈군요.", "다홍이에요. 고마워요, 나그네님." },
-			reward = { xp = 521, money = 2200, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 521, money = 2200, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq05",
@@ -19782,7 +19872,7 @@ return {
 			offer = { "요즘 나룻배 짐이 이상해.", "상자마다 검은 수정이 들러붙어 와.", "끊긴 순찰로의 봉오리 탓이래.", "스물만 걷어 내 주게." },
 			wait = { "수정 숲 깊이, 끊긴 순찰로라네." },
 			done = { "오늘 짐은 깨끗하구먼!", "자네 덕에 허리가 다 펴졌네." },
-			reward = { xp = 3252, money = 3800, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 3252, money = 3800, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq06",
@@ -19805,7 +19895,7 @@ return {
 			offer = { "요즘 미끼 벌레가 씨가 말랐어.", "연못의 두꺼비들이 다 먹어 치운다더군.", "빛나는 연못의 두꺼비 스물만." },
 			wait = { "수정 숲의 빛나는 연못이라네." },
 			done = { "허허, 벌레가 다시 꼬이겠구먼.", "오늘 저녁은 내가 사지." },
-			reward = { xp = 1590, money = 3100, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1590, money = 3100, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq07",
@@ -19828,7 +19918,7 @@ return {
 			offer = { "내 은 낚싯바늘을 여우가 물어 갔어.", "쉰 해를 쓴 바늘이라네.", "물든 숲의 여우 놈일 거야." },
 			wait = { "등불꼬리 여우가 반짝이는 걸 좋아하지." },
 			done = { "이 바늘이야, 이 바늘!", "자네는 내 은인일세." },
-			reward = { xp = 2581, money = 3600, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2581, money = 3600, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq08",
@@ -19851,7 +19941,7 @@ return {
 			offer = { "수정 달팽이 껍질을 아세요?", "두드리면 종처럼 울려요.", "여덟 개만 있으면 악기를 만들어요." },
 			wait = { "수정 오솔길의 달팽이예요." },
 			done = { "들어 봐요, 이 소리!", "…이 소리로 옛 노래를 불러 볼게요." },
-			reward = { xp = 943, money = 2700, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 943, money = 2700, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq09",
@@ -19869,12 +19959,12 @@ return {
 			playable = true,
 			city = true,
 			steps = {
-				{ ["type"] = "use", mob = false, only = false, name = "노랫말 옮겨 적기", n = 1, pct = 100, icon = false, item = false, spot = "songwall", place = "빈집 벽의 노랫말", act = "노랫말을 적는다", x = 330, y = 160, up = 30, at = "r2ah", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "노랫말 옮겨 적기", n = 1, pct = 100, icon = false, item = false, spot = "songwall", place = "빈집 벽의 노랫말", act = "노랫말 적기", x = 330, y = 160, up = 30, at = "r2ah", npc = false },
 			},
 			offer = { "노래의 둘째 마디를 못 찾았어요.", "수정에 덮인 빈집 벽에 있대요.", "옮겨 적어 와 줄래요?" },
 			wait = { "빛나는 연못의 수정 틈 너머 빈집이에요." },
 			done = { "「다섯이 저마다 … 를 들고」…", "또 낱말이 빠져 있어요.", "누가 일부러 지운 것 같아요." },
-			reward = { xp = 1235, money = 2900, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1235, money = 2900, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq10",
@@ -19895,7 +19985,7 @@ return {
 			offer = { "노래의 빈칸이 다섯이에요.", "언덕의 서기님은 옛 기록을 다 봤대요.", "이 악보를 보여 줄래요?" },
 			wait = { "맨 위층, 서기의 방이에요." },
 			done = { "…빈칸이 다섯이라고 했소?", "금서고의 책에도 긁힌 이름이 다섯이오.", "우연이라기엔… 아니, 아무것도 아니오." },
-			reward = { xp = 5398, money = 4600, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 5398, money = 4600, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq11",
@@ -19913,12 +20003,12 @@ return {
 			playable = true,
 			city = true,
 			steps = {
-				{ ["type"] = "use", mob = false, only = false, name = "별꽃 꺾기", n = 1, pct = 100, icon = false, item = false, spot = "starflower", place = "물가의 별꽃", act = "별꽃을 꺾는다", x = 405, y = 176, up = 22, at = "r2a3", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "별꽃 꺾기", n = 1, pct = 100, icon = false, item = false, spot = "starflower", place = "물가의 별꽃", act = "별꽃 꺾기", x = 405, y = 176, up = 22, at = "r2a3", npc = false },
 			},
 			offer = { "별꽃이 다 팔렸어요…", "연못 물가에만 피거든요.", "딱 한 송이만 꺾어다 줄래요?" },
 			wait = { "빛나는 연못의 물가예요!" },
 			done = { "와, 진짜 별꽃이다!", "이건 안 팔고 제가 가질래요." },
-			reward = { xp = 1394, money = 3000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1394, money = 3000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq12",
@@ -19941,7 +20031,7 @@ return {
 			offer = { "엄마 리본이 바람에 날아갔어요.", "숲 쪽으로 날아갔대요.", "거미줄에 걸렸을까요…?" },
 			wait = { "쓰러진 거목의 수정 거미예요." },
 			done = { "엄마 리본이다!", "엄마가 엄청 좋아할 거예요!" },
-			reward = { xp = 2041, money = 3300, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2041, money = 3300, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq13",
@@ -19964,7 +20054,7 @@ return {
 			offer = { "새 국을 끓여 볼 참이야.", "수정싹 그루터기의 연한 싹이 필요해.", "성문 밖 숲길에서 열 개만." },
 			wait = { "큰 성문을 나서면 바로 숲길이야." },
 			done = { "오, 싱싱하구먼!", "첫 그릇은 자네 몫이야." },
-			reward = { xp = 606, money = 2300, potions = 10, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 606, money = 2300, potions = 10, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq14",
@@ -19987,7 +20077,7 @@ return {
 			offer = { "고깃짐이 또 털렸어!", "물든 숲의 여우 놈들이야.", "스물만 혼내 주게." },
 			wait = { "수정 숲 안쪽, 물든 숲이야." },
 			done = { "이제 고깃짐이 무사히 오겠구먼.", "오늘 고기는 자네 몫까지 떠 놨어." },
-			reward = { xp = 2581, money = 3600, potions = 10, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2581, money = 3600, potions = 10, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq15",
@@ -19997,7 +20087,7 @@ return {
 			name = "먼 데서 온 편지",
 			lv = 55,
 			scene = "ct",
-			text = "다홍이 바다 건너 장에서 받아 온 편지를 부두의 늙은 어부 갈매에게 전해 달라고 한다.",
+			text = "다홍이 바다 건너 장에서 받아 온 편지를 장터 거리의 늙은 어부 갈매에게 전해 달라고 한다.",
 			after = false,
 			giver = "dahong",
 			endNpc = "galmae",
@@ -20008,7 +20098,7 @@ return {
 			offer = { "바다 건너 장에서 편지를 받았어요.", "갈매 할아버지 앞으로요.", "…이름이 아주 오래된 글씨예요." },
 			wait = { "장터 거리, 갈매 할아버지 집이에요." },
 			done = { "편지라고? 이 늙은이한테?", "…섬에 두고 온 동생의 글씨구먼.", "고맙네. 정말 고맙네." },
-			reward = { xp = 7914, money = 5300, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 7914, money = 5300, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq16",
@@ -20031,7 +20121,7 @@ return {
 			offer = { "꼴에 달팽이 알이 묻어 왔어.", "말들이 꼴을 안 먹어!", "오솔길 달팽이 스물만 부탁해." },
 			wait = { "수정 숲의 수정 오솔길이야." },
 			done = { "말들이 다시 꼴을 먹어!", "고마워. 너 진짜 기사 같아." },
-			reward = { xp = 943, money = 2700, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 943, money = 2700, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq17",
@@ -20054,7 +20144,7 @@ return {
 			offer = { "기사단 초소에 박차가 남아 있대.", "고슴도치 가시에 걸려 있대.", "다섯 개만 구해 줄래? 꼭 갖고 싶어." },
 			wait = { "수정 숲의 기사단 초소야." },
 			done = { "진짜 기사의 박차다…!", "근데 기사들은 다 어디 갔을까?" },
-			reward = { xp = 4281, money = 4200, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 4281, money = 4200, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq18",
@@ -20077,7 +20167,7 @@ return {
 			offer = { "돛줄이 또 끊어졌어!", "수정 거미 실이 쇠줄보다 질기대.", "실타래 열 개만 구해 줘." },
 			wait = { "쓰러진 거목의 수정 거미야." },
 			done = { "이걸로 돛줄을 꼬면 안 끊어질 거야.", "고마워. 비행선이 더 높이 날 거야!" },
-			reward = { xp = 1805, money = 3200, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1805, money = 3200, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq19",
@@ -20100,7 +20190,7 @@ return {
 			offer = { "골렘 심장석은 공중에 떠!", "엔진에 넣으면 더 멀리 날아.", "성당 앞뜰의 골렘 새끼 거야." },
 			wait = { "수정 성당의 앞뜰이야." },
 			done = { "떠, 떠! 진짜 뜨네!", "이걸로 동쪽 대륙까지 단숨이야." },
-			reward = { xp = 6294, money = 4900, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 6294, money = 4900, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq20",
@@ -20123,7 +20213,7 @@ return {
 			offer = { "시험 비행 날이 잡혔어!", "근데 성당 쪽 연기가 뱃길을 가려.", "회랑의 향로 스물만 꺼 줘." },
 			wait = { "수정 성당의 회랑이야." },
 			done = { "하늘이 맑아졌어!", "첫 비행 땐 꼭 너를 태울게. 약속!" },
-			reward = { xp = 7914, money = 5300, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 7914, money = 5300, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq21",
@@ -20146,7 +20236,7 @@ return {
 			offer = { "성의 등불 기름이 떨어졌어요.", "여우의 꼬리 불이 가장 오래 타요.", "여덟 개만 구해 주실래요?" },
 			wait = { "수정 숲의 물든 숲이에요." },
 			done = { "오늘 밤도 등불을 켤 수 있겠어요.", "…등불이 꺼지면 영주님이 화를 내세요." },
-			reward = { xp = 2300, money = 3500, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2300, money = 3500, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq22",
@@ -20164,12 +20254,12 @@ return {
 			playable = true,
 			city = true,
 			steps = {
-				{ ["type"] = "use", mob = false, only = false, name = "담장 밑 살피기", n = 1, pct = 100, icon = false, item = false, spot = "manorwall", place = "성 담장 밑", act = "담장을 살핀다", x = 1626, y = 224, up = 30, at = "ct", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "담장 밑 살피기", n = 1, pct = 100, icon = false, item = false, spot = "manorwall", place = "성 담장 밑", act = "담장 살피기", x = 1626, y = 224, up = 30, at = "ct", npc = false },
 			},
 			offer = { "…밤마다 담장 밑에서 소리가 나요.", "무언가 무거운 게 끌리는 소리요.", "낮에 한 번만 살펴봐 주실래요?" },
 			wait = { "맨 위층, 성 담장의 오른쪽 끝이에요." },
 			done = { "이게… 비늘이요? 이렇게 큰?", "누가 큰 짐승을 들여왔나 봐요.", "…아무한테도 말하지 말아 주세요." },
-			reward = { xp = 6830, money = 5000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 6830, money = 5000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq23",
@@ -20187,12 +20277,12 @@ return {
 			playable = true,
 			city = true,
 			steps = {
-				{ ["type"] = "use", mob = false, only = false, name = "책등 살피기", n = 1, pct = 100, icon = false, item = false, spot = "scratchedbook", place = "긁힌 책등", act = "책등을 살핀다", x = 288, y = 176, up = 30, at = "r2bh", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "책등 살피기", n = 1, pct = 100, icon = false, item = false, spot = "scratchedbook", place = "긁힌 책등", act = "책등 살피기", x = 288, y = 176, up = 30, at = "r2bh", npc = false },
 			},
 			offer = { "기사단의 금서고를 아시오?", "이름을 긁어낸 책이 있다고 적혀 있소.", "그 책등을 한 번 봐 주시오." },
-			wait = { "수정 숲의 기사단 본당 근처라오." },
+			wait = { "수정 숲의 기사단 초소, 잠긴 문 너머라오." },
 			done = { "다섯 자리가 다 긁혀 있었다고?", "…기록을 지운 자가 있다는 뜻이오.", "이 일은 우리 둘만 알고 있읍시다." },
-			reward = { xp = 3959, money = 4100, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 3959, money = 4100, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq24",
@@ -20215,7 +20305,7 @@ return {
 			offer = { "해가 지면 그루터기가 성문까지 기어 와.", "장작 하러 나가는 사람들이 무서워해.", "성문 밖 숲길의 그루터기 스물만." },
 			wait = { "1층 동쪽 끝의 큰 성문 밖이 숲길일세." },
 			done = { "오늘 밤은 다들 편히 자겠구먼.", "고맙네, 젊은이." },
-			reward = { xp = 808, money = 2600, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 808, money = 2600, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq25",
@@ -20238,7 +20328,7 @@ return {
 			offer = { "거미 독도 묽히면 약이에요.", "진통제를 만들 참이에요.", "독주머니 여덟 개만요. 조심해요!" },
 			wait = { "쓰러진 거목의 수정 거미예요." },
 			done = { "조심히 가져왔네요, 잘했어요.", "이 약은 당신 몫도 있어요." },
-			reward = { xp = 2041, money = 3300, potions = 20, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2041, money = 3300, potions = 20, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m1",
@@ -20248,7 +20338,7 @@ return {
 			name = "수정 숲으로",
 			lv = 30,
 			scene = "ct",
-			text = "기사단에 옛 책을 보여 달라고 하지만 문전에서 돌려보내진다. 견습 기사 하늬가 따라나선다.",
+			text = "성문의 견습 기사 하늬에게 기사단의 옛 책을 보여 달라고 하지만 돌려보내진다. 숲 일을 도우면 말해 보겠다고 한다.",
 			after = false,
 			giver = "squire",
 			endNpc = "squire",
@@ -20259,7 +20349,7 @@ return {
 			offer = { "기사단의 옛 책을 보러 오셨다고요?", "옛 책은 아무에게나 안 보여 줘요." },
 			wait = { "…그래도 방법이 없진 않아요." },
 			done = { "…그래도 방법이 없진 않아요.", "숲 일을 도와주시면 말씀드려 볼게요." },
-			reward = { xp = 5947, money = 3400, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 5947, money = 3400, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m2",
@@ -20282,7 +20372,7 @@ return {
 			offer = { "성문 밖 숲길에 마물이 퍼졌어요.", "수정싹 그루터기 열둘만 부탁해요." },
 			wait = { "이 성문을 나서면 바로 숲길이에요." },
 			done = { "혼자서 다 처리했어요? 대단해요.", "요즘 숲의 수정이 이상해요." },
-			reward = { xp = 6920, money = 3500, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 6920, money = 3500, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m3",
@@ -20305,7 +20395,7 @@ return {
 			offer = { "순찰대가 돌아오지 않고 있어요.", "연못에서 흔적을 찾아 주세요." },
 			wait = { "두꺼비가 반짝이는 걸 물어 가요." },
 			done = { "순찰대 표식이 맞아요. 그런데…", "이 화살은 우리 것이 아니에요." },
-			reward = { xp = 14100, money = 4300, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 14100, money = 4300, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m4",
@@ -20327,8 +20417,8 @@ return {
 			},
 			offer = { "순찰로의 수정이 검게 물들었어요.", "수정 봉오리 열다섯을 걷어 주세요." },
 			wait = { "물든 숲을 지나면 끊긴 순찰로예요." },
-			done = { "순찰대의 깃발이 여기 있었군요.", "초소까지 가 봐야겠어요." },
-			reward = { xp = 33308, money = 5600, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			done = { "순찰대의 발자국이 여기서 끊겼네요.", "초소까지 가 봐야겠어요." },
+			reward = { xp = 33308, money = 5600, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m5",
@@ -20350,8 +20440,8 @@ return {
 			},
 			offer = { "초소가 고슴도치 떼에 덮였어요.", "몰아내고 안을 살펴봐 주세요." },
 			wait = { "초소는 끊긴 순찰로 끝에 있어요." },
-			done = { "초소 안에 이 명령서가 있었다고요?", "\"금서고의 기록을 모두 태울 것.\"" },
-			reward = { xp = 45178, money = 6100, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			done = { "초소 안에 이 명령서가 있었다고요?", "\"금서고의 옛 기록을 남김없이 태울 것.\"" },
+			reward = { xp = 45178, money = 6100, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m6",
@@ -20372,7 +20462,7 @@ return {
 			offer = { "명령서를 들고 본당으로 가요.", "보여 드릴 벽화가 있어요." },
 			wait = { "본당의 벽화를 봐 주세요." },
 			done = { "다섯 사람의 얼굴이 긁혀 있죠?", "원래 그래요. 다들 그렇게 배워요." },
-			reward = { xp = 52743, money = 6500, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 52743, money = 6500, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m7",
@@ -20391,12 +20481,12 @@ return {
 			city = false,
 			steps = {
 				{ ["type"] = "kill", mob = "dshard", only = false, name = "검은 결정", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
-				{ ["type"] = "use", mob = false, only = false, name = "명령서 통 열기", n = 1, pct = 100, icon = false, item = false, spot = "ridgearch", place = "무너진 아치 밑", act = "통을 연다", x = 554, y = 112, up = 34, at = "r2b4", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "명령서 통 열기", n = 1, pct = 100, icon = false, item = false, spot = "ridgearch", place = "무너진 아치 밑", act = "통 열기", x = 554, y = 112, up = 34, at = "r2b4", npc = false },
 			},
 			offer = { "명령서를 나르던 사수가 능선으로 달아났대요.", "능선의 검은 결정이 길을 막아요.", "끝의 무너진 아치까지 가 주세요." },
 			wait = { "본당 옆문이 그림자 능선이에요.", "아치 밑에 무언가 있을 거예요." },
 			done = { "사수는 놓쳤지만 명령서 통이 남았네요.", "「기록은 모두 수정 성당으로」…", "부단장님이 거기 계세요." },
-			reward = { xp = 61605, money = 6900, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 61605, money = 6900, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m8",
@@ -20419,7 +20509,7 @@ return {
 			offer = { "부단장님이 기록을 싣고 성당에 들어갔어요.", "회랑에 향로가 떠다니며 연기를 뿜어요.", "향로를 걷어 내고 길을 터 주세요." },
 			wait = { "성당 앞뜰 너머 수정 회랑이에요." },
 			done = { "회랑의 연기가 걷혔어요.", "종탑 위에서 불빛이… 무언가를 태워요!" },
-			reward = { xp = 77950, money = 7600, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 77950, money = 7600, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m9",
@@ -20437,12 +20527,12 @@ return {
 			playable = true,
 			city = false,
 			steps = {
-				{ ["type"] = "use", mob = false, only = false, name = "기록 건지기", n = 1, pct = 100, icon = false, item = false, spot = "pyre", place = "타는 제단", act = "기록을 건진다", x = 582, y = 160, up = 40, at = "r2c4", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "기록 건지기", n = 1, pct = 100, icon = false, item = false, spot = "pyre", place = "타는 제단", act = "기록 건지기", x = 582, y = 160, up = 40, at = "r2c4", npc = false },
 			},
 			offer = { "부단장님이 제단에서 기록을 태워요!", "…부단장님 눈이 검게 물들었어요.", "한 장이라도 건져 주세요!" },
 			wait = { "종탑 꼭대기 문이 제단 앞이에요." },
 			done = { "다섯 사람의 무기가 적혀 있어요.", "도끼 · 창 · 낫 · 대검 · 불…", "…이건 당신이 든 무기잖아요?", "부단장님은 불길 너머로 사라졌어요." },
-			reward = { xp = 112732, money = 8700, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 112732, money = 8700, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s1",
@@ -20465,7 +20555,7 @@ return {
 			offer = { "내 나룻배 바닥이 또 새는구먼.", "그루터기의 끈끈한 진이면 때울 수 있지." },
 			wait = { "성문 밖 숲길의 그루터기에서 나온다네." },
 			done = { "이거면 감쪽같이 때우겠구먼.", "고맙네. 짐 나를 일 있으면 말하게." },
-			reward = { xp = 3221, money = 2300, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 3221, money = 2300, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 4 },
 		},
 		{
 			id = "r2s2",
@@ -20483,12 +20573,12 @@ return {
 			playable = true,
 			city = false,
 			steps = {
-				{ ["type"] = "use", mob = false, only = false, name = "옛집의 장부 보기", n = 1, pct = 100, icon = false, item = false, spot = "oldledger", place = "옛집의 장부", act = "장부를 본다", x = 150, y = 176, up = 26, at = "r2ah", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "옛집의 장부 보기", n = 1, pct = 100, icon = false, item = false, spot = "oldledger", place = "옛집의 장부", act = "장부 보기", x = 150, y = 176, up = 26, at = "r2ah", npc = false },
 			},
 			offer = { "반달이네 옛집에 가 봤나?", "빛나는 연못 뒤 수정 틈 너머일세.", "그 집 장부가 아직 있을 거야." },
 			wait = { "빛나는 연못의 수정 틈으로 들어가게." },
 			done = { "장부에 반달 아버지 글씨가 있다고?", "…마지막 장이 뜯겨 나갔구먼.", "그 집안은 무언가를 숨겨 왔네." },
-			reward = { xp = 5009, money = 2700, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 5009, money = 2700, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s3",
@@ -20511,7 +20601,7 @@ return {
 			offer = { "의무실의 약이 다 떨어졌어요.", "두꺼비 등의 빛 이끼가 약이 돼요." },
 			wait = { "빛나는 연못의 이끼 두꺼비예요." },
 			done = { "이만큼이면 한 달은 쓰겠어요.", "…고마워요. 정말로요." },
-			reward = { xp = 7409, money = 0, potions = 10, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 7409, money = 0, potions = 10, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s4",
@@ -20532,7 +20622,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 15506, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 15506, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s5",
@@ -20553,7 +20643,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 17278, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 17278, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s6",
@@ -20576,7 +20666,7 @@ return {
 			offer = { "초소에 있던 동기들의 이름표예요.", "고슴도치 가시에 걸려 있을 거예요." },
 			wait = { "기사단 초소의 고슴도치예요." },
 			done = { "하나, 둘… 다 아는 이름이에요.", "닦아서 본당 벽에 걸어 둘게요." },
-			reward = { xp = 22744, money = 4200, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 22744, money = 4200, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s7",
@@ -20599,7 +20689,7 @@ return {
 			offer = { "능선에 검은 결정이 떠다녀요.", "장꾼들이 못 넘어와요. 서른만 부탁해요." },
 			wait = { "본당 옆문이 그림자 능선이에요." },
 			done = { "능선이 조용해졌다면서요?", "장삿길이 다시 열렸어요. 고마워요!" },
-			reward = { xp = 26689, money = 4500, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 26689, money = 4500, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s8",
@@ -20622,7 +20712,7 @@ return {
 			offer = { "기사단의 옛 장부가 흩어졌어요.", "골렘 새끼들이 낱장을 삼켰대요." },
 			wait = { "성당 앞뜰의 결정 골렘 새끼예요." },
 			done = { "차례대로 맞춰 볼게요. 어…?", "삼백 년 내내 같은 글씨예요." },
-			reward = { xp = 33441, money = 4900, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 33441, money = 4900, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s9",
@@ -20643,7 +20733,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 38944, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 38944, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s10",
@@ -20663,10 +20753,10 @@ return {
 			steps = {
 				{ ["type"] = "gather", mob = "bell", only = false, name = "종 조각", n = 8, pct = 50, icon = "etc_bellpiece", item = "etc_bellpiece", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
-			offer = { "수정 성당의 종이 멈췄다 하오.", "종지기들이 종을 깨뜨려 놓았다더군.", "조각 여덟을 모아 오시오." },
-			wait = { "수정 성당의 종탑이오." },
-			done = { "종 조각의 무늬를 보시오.", "…이것도 다섯 칸이 비었소." },
-			reward = { xp = 45263, money = 5500, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			offer = { "수정 성당의 종이 멈췄대요.", "종지기들이 종을 깨뜨려 놓았대요.", "조각 여덟을 모아 와 주세요." },
+			wait = { "수정 성당의 종탑이에요." },
+			done = { "종 조각의 무늬 좀 보세요.", "…여기도 다섯 칸이 비어 있어요." },
+			reward = { xp = 45263, money = 5500, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m1",
@@ -20689,7 +20779,7 @@ return {
 			offer = { "기록의 끝줄이 이 굴을 가리켜요.", "입구의 굴쥐부터 쫓아 주실래요?" },
 			wait = { "포구의 큰 굴로 들어가면 굴 입구예요." },
 			done = { "굴쥐가 줄었어요. 내려갈 만해요.", "아래 야영지에 상인들이 있대요." },
-			reward = { xp = 110701, money = 9100, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 110701, money = 9100, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m2",
@@ -20710,7 +20800,7 @@ return {
 			offer = { "화롯골이 문을 닫아걸었대요.", "야영지의 소금 장수가 잘 알아요." },
 			wait = { "젖은 굴을 지나면 상인들의 야영지예요." },
 			done = { "지상 사람이 불씨를 훔쳤다는 거야.", "서른 해 소금을 댔는데 쫓겨났네." },
-			reward = { xp = 147891, money = 10000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 147891, money = 10000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m3",
@@ -20733,7 +20823,7 @@ return {
 			offer = { "불씨는 수레에 실려 나갔을 걸세.", "식은 광산에서 자국을 찾아 주게." },
 			wait = { "코볼트가 수레의 못을 주워 가더군." },
 			done = { "그을린 못이라… 불씨 수레가 맞네.", "바퀴 자국이 지상 광산 쪽이라고?" },
-			reward = { xp = 169931, money = 11000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 169931, money = 11000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m4",
@@ -20756,7 +20846,7 @@ return {
 			offer = { "자국을 따라가면 용암 굴이라네.", "불씨 길의 지렁이를 조심하게." },
 			wait = { "뜨거운 굴 다음이 불씨 길이라네." },
 			done = { "쉿. 저 위 굴에 도둑들이 살아.", "어른들은 내 말을 안 믿어 줘." },
-			reward = { xp = 275117, money = 12000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 275117, money = 12000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m5",
@@ -20779,7 +20869,7 @@ return {
 			offer = { "불씨 길 발판 위에 굴 입구가 있어.", "도둑을 혼내 주면 다들 믿을 거야." },
 			wait = { "불씨 길의 높은 발판 위 굴 입구야." },
 			done = { "진짜 도둑은 따로 있었구먼.", "미안하네. 화롯골의 문을 열겠네." },
-			reward = { xp = 336652, money = 13000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 336652, money = 13000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m6",
@@ -20802,7 +20892,7 @@ return {
 			offer = { "불씨가 줄어 화로에 재가 날리네.", "둘레길의 재 회오리를 걷어 주게." },
 			wait = { "문 앞을 지나 오른쪽이 둘레길이네." },
 			done = { "화로가 숨을 쉬는구먼. 고맙네.", "보여 줄 것이 있네. 따라오게." },
-			reward = { xp = 469433, money = 15000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 469433, money = 15000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m7",
@@ -20823,7 +20913,7 @@ return {
 			offer = { "화로 가장 안쪽에 옛 벽화가 있네.", "우리는 그것을 지우지 않았지." },
 			wait = { "식어 가는 불길 너머 벽화의 방이네." },
 			done = { "검은 용 앞에 선 다섯 용사일세.", "용사들은 용과 함께 봉인되었지." },
-			reward = { xp = 739589, money = 17000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 739589, money = 17000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m8",
@@ -20846,7 +20936,7 @@ return {
 			offer = { "누가 산을 터뜨렸네! 벽화를 묻으려고.", "기슭의 폭탄병부터 막아 주게." },
 			wait = { "벽화의 방 굴 문 밖이 화산 기슭이네." },
 			done = { "길이 열렸구먼. 그런데 저 소리는…", "분화구에서 무언가 일어나고 있네." },
-			reward = { xp = 896866, money = 18000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 896866, money = 18000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m9",
@@ -20867,7 +20957,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 1393601, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1393601, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s1",
@@ -20890,7 +20980,7 @@ return {
 			offer = { "굴 안이 너무 어두워요.", "굴쥐 수염이 횃불 심지로 딱이에요." },
 			wait = { "굴 입구의 굴쥐에게서 나와요." },
 			done = { "기름을 먹이면 오래 타요.", "이제 야영지가 밤에도 밝겠어요." },
-			reward = { xp = 105230, money = 6200, potions = 10, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 105230, money = 6200, potions = 10, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s2",
@@ -20911,7 +21001,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 172090, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 172090, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s3",
@@ -20934,7 +21024,7 @@ return {
 			offer = { "할아버지가 일하던 갱이에요.", "코볼트가 등잔 조각을 주워 갔어요." },
 			wait = { "식은 광산의 곡괭이 코볼트예요." },
 			done = { "다 맞추니 옛 등잔이 됐어요.", "갱 맨 밑의 제단에 올리는 거래요." },
-			reward = { xp = 184629, money = 7500, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 184629, money = 7500, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s4",
@@ -20957,7 +21047,7 @@ return {
 			offer = { "우리 수레가 광차 길에 끌려갔네.", "폭주 광차 스물만 세워 주게." },
 			wait = { "식은 광산 다음이 광차 길일세." },
 			done = { "수레가 돌아왔구먼! 살았네.", "짐이 생기면 우리가 맡아 주지." },
-			reward = { xp = 197575, money = 7700, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 197575, money = 7700, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 4 },
 		},
 		{
 			id = "r3s5",
@@ -20980,7 +21070,7 @@ return {
 			offer = { "도둑들이 빈 단지를 버리고 갔어.", "지렁이가 삼켰어. 찾아다 줄래?" },
 			wait = { "불씨 길의 굴 지렁이야." },
 			done = { "이걸 보여 주면 어른들도 믿겠지?", "고마워. 이건 내 보물이야." },
-			reward = { xp = 260040, money = 8400, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 260040, money = 8400, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s6",
@@ -21003,7 +21093,7 @@ return {
 			offer = { "소굴에 우리 불씨가 쌓여 있어.", "도둑들한테서 되찾아다 줘." },
 			wait = { "소굴의 불씨 도둑이 갖고 있어." },
 			done = { "아직 따뜻해! 살아 있는 불씨야.", "이걸로 큰 화로를 다시 지필 거야." },
-			reward = { xp = 318089, money = 9000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 318089, money = 9000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s7",
@@ -21026,7 +21116,7 @@ return {
 			offer = { "창고에 화약통이 잔뜩 쌓였다지.", "열 통만 가져오게. 쇠테는 녹여 쓰겠네." },
 			wait = { "소굴 너머 화약 창고의 폭탄병일세." },
 			done = { "화약은 버리고 쇠테만 쓰는 걸세.", "불은 터뜨리라고 있는 게 아닐세." },
-			reward = { xp = 362612, money = 9300, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 362612, money = 9300, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s8",
@@ -21047,7 +21137,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 441977, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 441977, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s9",
@@ -21070,7 +21160,7 @@ return {
 			offer = { "도깨비가 알껍데기를 주워 갔어.", "조각 여덟 개만 찾아다 줘." },
 			wait = { "식어 가는 불길의 굴뚝 도깨비야." },
 			done = { "붙이니까 알 하나가 됐어!", "못가에 놓으면 어미가 올라온대." },
-			reward = { xp = 503748, money = 10000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 503748, money = 10000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s10",
@@ -21091,7 +21181,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 896675, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 896675, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m1",
@@ -21112,7 +21202,7 @@ return {
 			offer = { "다들 외성 밖에 모였어요!", "할멈께 먼저 인사드리세요." },
 			wait = { "야영지 천막 앞에 계세요." },
 			done = { "왔구먼. 벽화의 끝 그림이 여기일세.", "먼저 아랫마을부터 되찾아야 하네." },
-			reward = { xp = 1089948, money = 21000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1089948, money = 21000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m2",
@@ -21135,7 +21225,7 @@ return {
 			offer = { "외성이 무너진 틈으로 들어가요.", "틈을 지키는 검병부터 치워 주세요." },
 			wait = { "들판 오른쪽 끝이 무너진 성벽이에요." },
 			done = { "길이 열렸어요. 저 너머가 불탄 거리…", "아랫마을 사람들이 숨어 있대요." },
-			reward = { xp = 1395734, money = 22000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1395734, money = 22000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m3",
@@ -21158,7 +21248,7 @@ return {
 			offer = { "광장을 점령군이 차지했어요.", "기사상부터 쓰러뜨려 주세요." },
 			wait = { "불탄 거리 다음이 아랫마을 광장이에요." },
 			done = { "광장이 조용해졌어요!", "이제 사람들이 돌아올 수 있어요." },
-			reward = { xp = 1781544, money = 23000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1781544, money = 23000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m4",
@@ -21181,7 +21271,7 @@ return {
 			offer = { "이제 성벽을 넘어야 해요.", "성벽 위의 폭탄병을 뚫어 주세요." },
 			wait = { "성벽 아래를 지나 성벽 위로 가요." },
 			done = { "성벽을 넘었어요! 저 아래가 내성…", "왕도의 깃발이 걸려 있어요." },
-			reward = { xp = 2411739, money = 25000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2411739, money = 25000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m5",
@@ -21204,7 +21294,7 @@ return {
 			offer = { "내성에는 왕도의 근위병이 있어요.", "뜰의 창병부터 줄여 주세요." },
 			wait = { "성벽 속 통로를 지나면 내성 뜰이에요." },
 			done = { "대신들의 깃발이 걸려 있다고요?", "봉인을 살피러 온 거예요. 서둘러요." },
-			reward = { xp = 4127455, money = 29000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 4127455, money = 29000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m6",
@@ -21227,7 +21317,7 @@ return {
 			offer = { "봉인으로 내려가는 계단이에요.", "감시하는 눈이 온통 깔려 있어요." },
 			wait = { "숙소의 계단 문 아래가 그 계단이에요." },
 			done = { "봉인의 회랑까지 길이 났어요.", "오늘 밤은 쉬어요. 내일이 고비예요." },
-			reward = { xp = 8333581, money = 34000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 8333581, money = 34000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m7",
@@ -21248,7 +21338,7 @@ return {
 			offer = { "촌장님이 숙소에 와 계세요.", "하실 말씀이 있으시대요." },
 			wait = { "왔는가." },
 			done = { "초승달 마을은 용사의 가문이었네.", "사당에서 배운 것이 그 가르침일세." },
-			reward = { xp = 15683335, money = 38000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 15683335, money = 38000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m8",
@@ -21269,7 +21359,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 16605351, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 16605351, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m9",
@@ -21290,7 +21380,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 18604718, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 18604718, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s1",
@@ -21313,7 +21403,7 @@ return {
 			offer = { "야영지에 울타리가 없어 불안해요.", "창병의 부러진 창대를 엮을게요." },
 			wait = { "들판의 정예 창병에게서 나와요." },
 			done = { "이만하면 튼튼하게 두르겠어요.", "오늘 밤은 다들 푹 자겠네요." },
-			reward = { xp = 1899578, money = 14000, potions = 10, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1899578, money = 14000, potions = 10, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s2",
@@ -21334,7 +21424,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 2584265, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2584265, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s3",
@@ -21357,7 +21447,7 @@ return {
 			offer = { "광장에 점령군의 보급이 쌓였어요.", "상자 여덟 개만 되찾아 주실래요?" },
 			wait = { "아랫마을 광장의 기사상 밑이에요." },
 			done = { "이걸로 마을 곳간을 다시 열어요.", "다들 한시름 놓겠어요!" },
-			reward = { xp = 3102502, money = 16000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 3102502, money = 16000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 4 },
 		},
 		{
 			id = "r4s4",
@@ -21380,7 +21470,7 @@ return {
 			offer = { "수로의 문은 우리 집안이 지었소.", "궁병들이 열쇠를 넷으로 나눠 가졌소." },
 			wait = { "성벽 아래의 정예 궁병이오." },
 			done = { "넷을 맞추니 수문 열쇠가 됐소.", "옛 수로의 문에 꽂으면 되오." },
-			reward = { xp = 3295187, money = 16000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 3295187, money = 16000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s5",
@@ -21401,7 +21491,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 4456525, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 4456525, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s6",
@@ -21424,7 +21514,7 @@ return {
 			offer = { "저항군의 무기가 다 무뎌졌어요.", "창병의 쇠 덧판을 벗겨다 주세요." },
 			wait = { "성문 앞의 정예 창병이에요." },
 			done = { "좋은 쇠네요. 대장간에 넘길게요.", "스무 자루는 고치겠대요." },
-			reward = { xp = 5660397, money = 18000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 5660397, money = 18000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s7",
@@ -21447,7 +21537,7 @@ return {
 			offer = { "종탑의 시계는 아버지가 돌봤어요.", "책 사이에 톱니가 끼어 있대요." },
 			wait = { "기사의 회랑의 떠도는 책이에요." },
 			done = { "아버지의 연장으로 맞춰 볼게요.", "됐어요! 멈춘 태엽이에요." },
-			reward = { xp = 7609620, money = 20000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 7609620, money = 20000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s8",
@@ -21470,7 +21560,7 @@ return {
 			offer = { "회랑에 옛 기사들의 방패가 있었어요.", "검병들이 떼어 갔어요. 되찾아 줘요." },
 			wait = { "기사의 회랑의 정예 검병이에요." },
 			done = { "하나씩 이름을 읽어 드릴게요.", "이제 회랑이 다시 회랑 같아요." },
-			reward = { xp = 9625217, money = 21000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 9625217, money = 21000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s9",
@@ -21493,7 +21583,7 @@ return {
 			offer = { "무기고에 용 비늘이 들어 있다네.", "검병에게서 여섯 장만 되찾아 주게." },
 			wait = { "무기고의 정예 검병일세." },
 			done = { "깎으면 피리가 되지. 용 비늘 피리.", "둥지 쪽으로는 함부로 가지 말게." },
-			reward = { xp = 13652591, money = 22000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 13652591, money = 22000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s10",
@@ -21516,7 +21606,7 @@ return {
 			offer = { "깨진 쐐기를 거두어야 하네.", "빛 먹는 것들이 물고 다닌다네." },
 			wait = { "회랑 너머 깨진 쐐기의 방일세." },
 			done = { "오천 년을 버틴 쐐기일세.", "수고했네. 제단에 올려 두겠네." },
-			reward = { xp = 21649194, money = 25000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 21649194, money = 25000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "job2",
@@ -21547,6 +21637,7 @@ return {
 				open = false,
 				job = 2,
 				gear = { slot = "weapon", stage = 30 },
+				store = 0,
 			},
 		},
 		{
@@ -21567,7 +21658,7 @@ return {
 			steps = {
 				{ ["type"] = "gather", mob = "bell", only = false, name = "달빛 서린 종 조각", n = 4, pct = 100, icon = "fragment", item = "fragment", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
-			offer = { "기록을 건졌다고? …그래, 때가 됐구나.", "수정 성당의 종탑에 달빛이 서린 종이 있다.", "그 조각 넷을 가져오너라." },
+			offer = { "때가 됐구나. 달빛이 너를 다시 부른다.", "수정 성당의 종탑에 달빛이 서린 종이 있다.", "그 조각 넷을 가져오너라." },
 			wait = { "수정 성당 종탑의 종지기다.", "네 개를 모으거든 다시 오너라." },
 			done = { "종이 너를 알아보았구나.", "이제 한 단계 더 깊은 힘이다. 받아라." },
 			reward = {
@@ -21578,6 +21669,39 @@ return {
 				open = false,
 				job = 3,
 				gear = { slot = "weapon", stage = 60 },
+				store = 0,
+			},
+		},
+		{
+			id = "job4",
+			kind = "job",
+			line = false,
+			region = "r4",
+			name = "4차 전직",
+			lv = 100,
+			scene = "r4a1",
+			text = "외성 밖 들판의 정예 창병에게서 바래지 않은 깃발 조각 네 개를 모아 사제에게 가져간다.",
+			after = false,
+			giver = "master",
+			endNpc = "master",
+			auto = false,
+			playable = true,
+			city = false,
+			steps = {
+				{ ["type"] = "gather", mob = "espearman", only = false, name = "바래지 않은 깃발 조각", n = 4, pct = 100, icon = "etc_cloth", item = "etc_cloth", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
+			},
+			offer = { "때가 됐구나. 마지막 달빛이 너를 부른다.", "외성 밖 들판의 정예 창병들이 옛 깃발을 지녔다.", "바래지 않은 조각 넷을 가져오너라." },
+			wait = { "외성 밖 들판의 정예 창병이다.", "네 개를 모으거든 다시 오너라." },
+			done = { "오천 년을 바래지 않은 깃발이구나.", "이제 마지막 힘이다. 받아라." },
+			reward = {
+				xp = 0,
+				money = 0,
+				potions = 0,
+				scrolls = 0,
+				open = false,
+				job = 4,
+				gear = { slot = "weapon", stage = 100 },
+				store = 0,
 			},
 		},
 	},
@@ -21799,6 +21923,7 @@ local M = {
 					lv = 3,
 				},
 			},
+			elite = false,
 			ret = "town",
 		},
 		town = {
@@ -21888,6 +22013,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -21964,6 +22090,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -22014,6 +22141,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -22064,6 +22192,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -22114,6 +22243,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -22164,6 +22294,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -22250,6 +22381,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -22357,6 +22489,7 @@ local M = {
 					lv = 28,
 				},
 			},
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -22534,6 +22667,7 @@ local M = {
 					lv = 1,
 				},
 			},
+			elite = false,
 			ret = "town",
 		},
 		dream = {
@@ -22667,6 +22801,7 @@ local M = {
 					lv = 1,
 				},
 			},
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -22802,6 +22937,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -23017,6 +23153,7 @@ local M = {
 					lv = 7,
 				},
 			},
+			elite = false,
 			ret = "town",
 		},
 		r1a4 = {
@@ -23199,6 +23336,7 @@ local M = {
 					lv = 9,
 				},
 			},
+			elite = false,
 			ret = "town",
 		},
 		r1b1 = {
@@ -23366,6 +23504,7 @@ local M = {
 					lv = 11,
 				},
 			},
+			elite = false,
 			ret = "r1bv",
 		},
 		r1b2 = {
@@ -23545,6 +23684,7 @@ local M = {
 					lv = 14,
 				},
 			},
+			elite = false,
 			ret = "r1bv",
 		},
 		r1bv = {
@@ -23662,6 +23802,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -23855,6 +23996,7 @@ local M = {
 					lv = 17,
 				},
 			},
+			elite = false,
 			ret = "r1bv",
 		},
 		r1cc = {
@@ -23967,6 +24109,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -24200,6 +24343,7 @@ local M = {
 					lv = 21,
 				},
 			},
+			elite = false,
 			ret = "r1bv",
 		},
 		r1c2 = {
@@ -24402,6 +24546,7 @@ local M = {
 					lv = 24,
 				},
 			},
+			elite = false,
 			ret = "r1bv",
 		},
 		r1c3 = {
@@ -24598,6 +24743,7 @@ local M = {
 					lv = 25,
 				},
 			},
+			elite = false,
 			ret = "r1bv",
 		},
 		r2a1 = {
@@ -24784,6 +24930,7 @@ local M = {
 					lv = 31,
 				},
 			},
+			elite = true,
 			ret = "ct",
 		},
 		r2a2 = {
@@ -24989,6 +25136,7 @@ local M = {
 					lv = 34,
 				},
 			},
+			elite = true,
 			ret = "ct",
 		},
 		r2af = {
@@ -25107,6 +25255,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -25333,6 +25482,7 @@ local M = {
 					lv = 37,
 				},
 			},
+			elite = true,
 			ret = "ct",
 		},
 		r2a4 = {
@@ -25526,6 +25676,7 @@ local M = {
 					lv = 39,
 				},
 			},
+			elite = true,
 			ret = "ct",
 		},
 		r2b1 = {
@@ -25713,6 +25864,7 @@ local M = {
 					lv = 41,
 				},
 			},
+			elite = true,
 			ret = "r2bs",
 		},
 		r2b2 = {
@@ -25903,6 +26055,7 @@ local M = {
 					lv = 44,
 				},
 			},
+			elite = true,
 			ret = "r2bs",
 		},
 		r2b3 = {
@@ -26093,6 +26246,7 @@ local M = {
 					lv = 47,
 				},
 			},
+			elite = true,
 			ret = "r2bs",
 		},
 		r2bs = {
@@ -26208,6 +26362,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -26429,6 +26584,7 @@ local M = {
 					lv = 49,
 				},
 			},
+			elite = true,
 			ret = "r2bs",
 		},
 		r2c1 = {
@@ -26606,6 +26762,7 @@ local M = {
 					lv = 51,
 				},
 			},
+			elite = true,
 			ret = "r2bs",
 		},
 		r2c2 = {
@@ -26771,6 +26928,7 @@ local M = {
 					lv = 54,
 				},
 			},
+			elite = true,
 			ret = "r2bs",
 		},
 		r2c3 = {
@@ -26947,6 +27105,7 @@ local M = {
 					lv = 56,
 				},
 			},
+			elite = true,
 			ret = "r2bs",
 		},
 		ct = {
@@ -27119,6 +27278,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ladders = {
 				{ x = 912, top = 352, bottom = 480 },
 				{ x = 1139, top = 224, bottom = 352 },
@@ -27415,6 +27575,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -27465,7 +27626,7 @@ local M = {
 			name = "굴 입구",
 			region = "r3",
 			also = false,
-			w = 44,
+			w = 30,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -27475,12 +27636,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#232931",
-			rows = { "............................................", "............................................", "............................................", "............................................", "............................................", "............................................", "......................==....................", "............................................", "................====............====........", "#########...................................", "##############...........#####..............", "############################################", "############################################", "############################################" },
+			rows = { "..............................", "..............................", "..............................", "..............................", "..............................", "..............................", "...............==.............", "..............................", "...........====.......====....", "######........................", "##########.......###..........", "##############################", "##############################", "##############################" },
 			layers = {
 				{ img = "wall_r3a1.png", w = 384, h = 768, f = 0.3, y = 0 },
 			},
 			ground = {
-				{ img = "ground_r3a1_1.png", x = 0, w = 704, h = 224 },
+				{ img = "ground_r3a1_1.png", x = 0, w = 480, h = 224 },
 			},
 			props = "props_port.png",
 			rects = {
@@ -27566,108 +27727,108 @@ local M = {
 				pond = { x = 35, y = 744, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "gate", x = 664, y = 177 },
-				{ id = "caveexit", x = 64, y = 145 },
-				{ id = "rledge1", x = 288, y = 156 },
-				{ id = "rledge2", x = 368, y = 120 },
-				{ id = "rledge3", x = 544, y = 157 },
-				{ id = "rockpillar", x = 234, y = 177 },
-				{ id = "glowshrooms", x = 454, y = 161 },
-				{ id = "rockpillar", x = 490, y = 177 },
-				{ id = "stalagmites2", x = 624, y = 177 },
-				{ id = "rocks", x = 192, y = 161 },
-				{ id = "rocks", x = 330, y = 177 },
+				{ id = "gate", x = 440, y = 177 },
+				{ id = "caveexit", x = 43, y = 145 },
+				{ id = "rledge1", x = 208, y = 156 },
+				{ id = "rledge2", x = 256, y = 120 },
+				{ id = "rledge3", x = 384, y = 157 },
+				{ id = "rockpillar", x = 160, y = 177 },
+				{ id = "glowshrooms", x = 310, y = 161 },
+				{ id = "stalagmites2", x = 426, y = 177 },
+				{ id = "rocks", x = 131, y = 161 },
+				{ id = "rocks", x = 224, y = 177 },
 			},
 			front = {  },
-			spawn = { x = 96, y = 144 },
+			spawn = { x = 65.6, y = 144 },
 			portals = {
-				{ x = 64, y = 144, to = "port", label = "등불 포구로", h = 39 },
-				{ x = 664, y = 176, to = "r3a2", label = "젖은 굴로", h = 60 },
+				{ x = 43, y = 144, to = "port", label = "등불 포구로", h = 39 },
+				{ x = 440, y = 176, to = "r3a2", label = "젖은 굴로", h = 60 },
 			},
 			warps = {
-				{ id = "warp1", x = 104, y = 144, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 632, y = 176, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp1", x = 88, y = 144, at = "warp2", label = "오른쪽 끝으로" },
+				{ id = "warp2", x = 408, y = 176, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "rat",
-					x = 168,
+					x = 115.2,
 					y = 160,
-					range = { 152, 214.4 },
+					range = { 104, 145.6 },
 					lv = 61,
 				},
 				{
 					kind = "rat",
-					x = 198.4,
+					x = 136,
 					y = 160,
-					range = { 160, 214.4 },
+					range = { 108.8, 145.6 },
 					lv = 61,
 				},
 				{
 					kind = "rat",
-					x = 288,
+					x = 196.8,
 					y = 176,
-					range = { 232, 390.4 },
+					range = { 161.6, 265.6 },
 					lv = 61,
 				},
 				{
 					kind = "rat",
-					x = 281.6,
+					x = 192,
 					y = 128,
-					range = { 264, 310.4 },
+					range = { 180.8, 211.2 },
 					lv = 61,
 				},
 				{
 					kind = "rat",
-					x = 352,
+					x = 240,
 					y = 176,
-					range = { 240, 390.4 },
+					range = { 163.2, 265.6 },
 					lv = 61,
 				},
 				{
 					kind = "rat",
-					x = 385.6,
+					x = 262.4,
 					y = 176,
-					range = { 256, 390.4 },
+					range = { 174.4, 265.6 },
 					lv = 61,
 				},
 				{
 					kind = "rat",
-					x = 424,
+					x = 289.6,
 					y = 160,
-					range = { 408, 470.4 },
+					range = { 278.4, 318.4 },
 					lv = 61,
 				},
 				{
 					kind = "rat",
-					x = 454.4,
+					x = 310.4,
 					y = 160,
-					range = { 416, 470.4 },
+					range = { 283.2, 318.4 },
 					lv = 61,
 				},
 				{
 					kind = "rat",
-					x = 544,
+					x = 371.2,
 					y = 176,
-					range = { 488, 563.2 },
+					range = { 332.8, 382.4 },
 					lv = 61,
 				},
 				{
 					kind = "rat",
-					x = 504,
+					x = 344,
 					y = 176,
-					range = { 496, 563.2 },
+					range = { 337.6, 382.4 },
 					lv = 61,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		r3a2 = {
 			name = "젖은 굴",
 			region = "r3",
 			also = false,
-			w = 49,
+			w = 32,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -27677,12 +27838,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#232931",
-			rows = { ".................................................", ".................................................", ".................................................", ".................................................", ".................................................", ".................................................", ".................................................", ".................................................", "........................==.......................", "........====.................====..........######", "..................####.................##########", "######........#############........##############", "#################################################", "#################################################" },
+			rows = { "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................==..............", ".....====..........====.....####", "............##...........#######", "####.....#########.....#########", "################################", "################################" },
 			layers = {
 				{ img = "wall_r3a1.png", w = 384, h = 768, f = 0.3, y = 0 },
 			},
 			ground = {
-				{ img = "ground_r3a2_1.png", x = 0, w = 784, h = 224 },
+				{ img = "ground_r3a2_1.png", x = 0, w = 512, h = 224 },
 			},
 			props = "props_port.png",
 			rects = {
@@ -27768,111 +27929,108 @@ local M = {
 				pond = { x = 35, y = 744, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "gate", x = 744, y = 145 },
+				{ id = "gate", x = 472, y = 145 },
 				{ id = "gate", x = 32, y = 177 },
-				{ id = "rledge1", x = 160, y = 172 },
-				{ id = "rledge3", x = 496, y = 173 },
-				{ id = "rledge2", x = 400, y = 152 },
-				{ id = "pond", x = 112, y = 193 },
-				{ id = "pond", x = 144, y = 193 },
-				{ id = "pond", x = 176, y = 193 },
-				{ id = "pond", x = 208, y = 193 },
-				{ id = "pond", x = 448, y = 193 },
-				{ id = "pond", x = 480, y = 193 },
-				{ id = "pond", x = 512, y = 193 },
-				{ id = "pond", x = 544, y = 193 },
-				{ id = "stalagmites", x = 86, y = 177 },
-				{ id = "stalagmites2", x = 262, y = 177 },
-				{ id = "rockpillar", x = 314, y = 161 },
-				{ id = "glowshrooms", x = 368, y = 177 },
-				{ id = "stalagmites2", x = 598, y = 177 },
-				{ id = "rockpillar", x = 650, y = 161 },
-				{ id = "glowshrooms", x = 694, y = 145 },
-				{ id = "rocks", x = 422, y = 177 },
+				{ id = "rledge1", x = 112, y = 172 },
+				{ id = "rledge3", x = 336, y = 173 },
+				{ id = "rledge2", x = 272, y = 152 },
+				{ id = "stalagmites", x = 56, y = 177 },
+				{ id = "pond", x = 94, y = 193 },
+				{ id = "pond", x = 136, y = 193 },
+				{ id = "stalagmites2", x = 171, y = 177 },
+				{ id = "rockpillar", x = 205, y = 161 },
+				{ id = "glowshrooms", x = 240, y = 177 },
+				{ id = "pond", x = 293, y = 193 },
+				{ id = "pond", x = 334, y = 193 },
+				{ id = "stalagmites2", x = 390, y = 177 },
+				{ id = "rockpillar", x = 424, y = 161 },
+				{ id = "glowshrooms", x = 453, y = 145 },
+				{ id = "rocks", x = 275, y = 177 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 32, y = 176, to = "r3a1", label = "굴 입구로", h = 60 },
-				{ x = 744, y = 144, to = "r3ah", label = "지상 상인의 야영지로", h = 60 },
+				{ x = 472, y = 144, to = "r3ah", label = "지상 상인의 야영지로", h = 60 },
 			},
 			warps = {
-				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 712, y = 144, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp1", x = 72, y = 192, at = "warp2", label = "오른쪽 끝으로" },
+				{ id = "warp2", x = 440, y = 160, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "stalag",
-					x = 236.8,
+					x = 155.2,
 					y = 176,
-					range = { 232, 278.4 },
+					range = { 152, 182.4 },
 					lv = 64,
 				},
 				{
 					kind = "stalag",
-					x = 144,
+					x = 94.4,
 					y = 192,
-					range = { 104, 214.4 },
+					range = { 89.6, 140.8 },
+					lv = 64,
+				},
+				{
+					kind = "stalag",
+					x = 179.2,
+					y = 176,
+					range = { 152, 182.4 },
+					lv = 64,
+				},
+				{
+					kind = "stalag",
+					x = 200,
+					y = 160,
+					range = { 193.6, 222.4 },
+					lv = 64,
+				},
+				{
+					kind = "stalag",
+					x = 216,
+					y = 160,
+					range = { 193.6, 222.4 },
+					lv = 64,
+				},
+				{
+					kind = "stalag",
+					x = 260.8,
+					y = 176,
+					range = { 235.2, 275.2 },
+					lv = 64,
+				},
+				{
+					kind = "stalag",
+					x = 323.2,
+					y = 192,
+					range = { 289.6, 360 },
+					lv = 64,
+				},
+				{
+					kind = "stalag",
+					x = 388.8,
+					y = 176,
+					range = { 371.2, 388.8 },
 					lv = 64,
 				},
 				{
 					kind = "stalag",
 					x = 273.6,
-					y = 176,
-					range = { 232, 278.4 },
+					y = 128,
+					range = { 257.6, 286.4 },
 					lv = 64,
 				},
 				{
 					kind = "stalag",
-					x = 307.2,
-					y = 160,
-					range = { 296, 342.4 },
-					lv = 64,
-				},
-				{
-					kind = "stalag",
-					x = 331.2,
-					y = 160,
-					range = { 296, 342.4 },
-					lv = 64,
-				},
-				{
-					kind = "stalag",
-					x = 400,
-					y = 176,
-					range = { 360, 422.4 },
-					lv = 64,
-				},
-				{
-					kind = "stalag",
-					x = 496,
-					y = 192,
-					range = { 440, 550.4 },
-					lv = 64,
-				},
-				{
-					kind = "stalag",
-					x = 608,
-					y = 176,
-					range = { 568, 614.4 },
-					lv = 64,
-				},
-				{
-					kind = "stalag",
-					x = 643.2,
-					y = 160,
-					range = { 632, 678.4 },
-					lv = 64,
-				},
-				{
-					kind = "stalag",
-					x = 667.2,
-					y = 160,
-					range = { 632, 678.4 },
+					x = 120,
+					y = 144,
+					range = { 89.6, 142.4 },
 					lv = 64,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		r3ah = {
@@ -28002,6 +28160,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -28065,7 +28224,7 @@ local M = {
 			name = "식은 광산",
 			region = "r3",
 			also = false,
-			w = 48,
+			w = 32,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -28075,12 +28234,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#12161c",
-			rows = { "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "............................=====...............", "............====........................==......", ".................#########......................", "......#####......#########........#####.........", "################################################", "################################################", "################################################" },
+			rows = { "................................", "................................", "................................", "................................", "................................", "................................", "................................", "...................=====........", "........====...............==...", "...........######...............", "....###....######......###......", "################################", "################################", "################################" },
 			layers = {
 				{ img = "wall_r3a1.png", w = 384, h = 768, f = 0.3, y = 0 },
 			},
 			ground = {
-				{ img = "ground_r3a3_1.png", x = 0, w = 768, h = 224 },
+				{ img = "ground_r3a3_1.png", x = 0, w = 512, h = 224 },
 			},
 			props = "props_port.png",
 			rects = {
@@ -28166,111 +28325,112 @@ local M = {
 				pond = { x = 35, y = 744, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "hoist", x = 659, y = 129 },
-				{ id = "gate", x = 728, y = 177 },
-				{ id = "gate", x = 362, y = 145 },
+				{ id = "hoist", x = 440, y = 129 },
+				{ id = "gate", x = 472, y = 177 },
+				{ id = "gate", x = 242, y = 145 },
 				{ id = "gate", x = 32, y = 177 },
-				{ id = "trestle2", x = 225, y = 151 },
-				{ id = "trestle1", x = 488, y = 135 },
-				{ id = "trestle3", x = 656, y = 151 },
-				{ id = "toolrack", x = 138, y = 161 },
-				{ id = "minecart", x = 224, y = 177 },
-				{ id = "timberframe", x = 294, y = 145 },
-				{ id = "minecart", x = 678, y = 177 },
-				{ id = "rocks", x = 522, y = 177 },
+				{ id = "trestle2", x = 161, y = 151 },
+				{ id = "trestle1", x = 344, y = 135 },
+				{ id = "trestle3", x = 448, y = 151 },
+				{ id = "toolrack", x = 91, y = 161 },
+				{ id = "minecart", x = 149, y = 177 },
+				{ id = "timberframe", x = 197, y = 145 },
+				{ id = "minecart", x = 453, y = 177 },
+				{ id = "rocks", x = 347, y = 177 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 32, y = 176, to = "r3ah", label = "지상 상인의 야영지로", h = 60 },
-				{ x = 362, y = 144, to = "r3a4", label = "광차 길로", h = 60 },
-				{ x = 728, y = 176, to = "r3b1", label = "뜨거운 굴로", h = 60 },
-				{ x = 659, y = 128, to = "r3al", label = "광산의 맨 밑으로", h = 44 },
+				{ x = 242, y = 144, to = "r3a4", label = "광차 길로", h = 60 },
+				{ x = 472, y = 176, to = "r3b1", label = "뜨거운 굴로", h = 60 },
+				{ x = 440, y = 128, to = "r3al", label = "광산의 맨 밑으로", h = 44 },
 			},
 			warps = {
-				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 696, y = 176, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp1", x = 72, y = 160, at = "warp2", label = "오른쪽 끝으로" },
+				{ id = "warp2", x = 440, y = 176, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "kobold",
-					x = 196.8,
+					x = 131.2,
 					y = 176,
-					range = { 184, 262.4 },
+					range = { 123.2, 174.4 },
 					lv = 67,
 				},
 				{
 					kind = "kobold",
-					x = 120,
+					x = 89.6,
 					y = 160,
-					range = { 104, 166.4 },
+					range = { 89.6, 110.4 },
 					lv = 67,
 				},
 				{
 					kind = "kobold",
-					x = 150.4,
+					x = 100.8,
 					y = 160,
-					range = { 112, 166.4 },
+					range = { 89.6, 110.4 },
 					lv = 67,
 				},
 				{
 					kind = "kobold",
-					x = 224,
+					x = 148.8,
 					y = 176,
-					range = { 184, 262.4 },
+					range = { 123.2, 174.4 },
 					lv = 67,
 				},
 				{
 					kind = "kobold",
-					x = 249.6,
+					x = 166.4,
 					y = 176,
-					range = { 184, 262.4 },
+					range = { 123.2, 174.4 },
 					lv = 67,
 				},
 				{
 					kind = "kobold",
-					x = 480,
+					x = 320,
 					y = 112,
-					range = { 456, 518.4 },
+					range = { 305.6, 345.6 },
 					lv = 67,
 				},
 				{
 					kind = "kobold",
-					x = 448,
+					x = 299.2,
 					y = 176,
-					range = { 438.4, 534.4 },
+					range = { 299.2, 356.8 },
 					lv = 67,
 				},
 				{
 					kind = "kobold",
-					x = 520,
+					x = 347.2,
 					y = 176,
-					range = { 438.4, 534.4 },
+					range = { 299.2, 356.8 },
 					lv = 67,
 				},
 				{
 					kind = "kobold",
-					x = 564.8,
-					y = 160,
-					range = { 552, 603 },
+					x = 161.6,
+					y = 128,
+					range = { 129.6, 184 },
 					lv = 67,
 				},
 				{
 					kind = "kobold",
-					x = 590.4,
-					y = 160,
-					range = { 552, 603 },
+					x = 340.8,
+					y = 112,
+					range = { 305.6, 382.4 },
 					lv = 67,
 				},
 			},
+			elite = true,
 			ret = "r3t",
 		},
 		r3a4 = {
 			name = "광차 길",
 			region = "r3",
 			also = false,
-			w = 60,
+			w = 40,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -28280,12 +28440,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#12161c",
-			rows = { "............................................................", "............................................................", "............................................................", "............................................................", "............................................................", "............................................................", "............................................................", "............................................................", "............=========..==.............=========.............", ".................................................###########", "............................########.............###########", "############################################################", "############################################################", "############################################################" },
+			rows = { "........................................", "........................................", "........................................", "........................................", "........................................", "........................................", "........................................", "........................................", "........=========........========.......", ".................................#######", "...................#####.........#######", "########################################", "########################################", "########################################" },
 			layers = {
 				{ img = "wall_r3a1.png", w = 384, h = 768, f = 0.3, y = 0 },
 			},
 			ground = {
-				{ img = "ground_r3a4_1.png", x = 0, w = 960, h = 224 },
+				{ img = "ground_r3a4_1.png", x = 0, w = 640, h = 224 },
 			},
 			props = "props_port.png",
 			rects = {
@@ -28372,19 +28532,19 @@ local M = {
 			},
 			back = {
 				{ id = "gate", x = 32, y = 177 },
-				{ id = "trestle1", x = 232, y = 151 },
-				{ id = "trestle2", x = 305, y = 151 },
-				{ id = "trestle3", x = 384, y = 151 },
-				{ id = "trestle1", x = 648, y = 151 },
-				{ id = "trestle2", x = 721, y = 151 },
-				{ id = "timberframe", x = 104, y = 177 },
-				{ id = "minelamp", x = 166, y = 177 },
-				{ id = "oreheap", x = 416, y = 177 },
-				{ id = "toolrack", x = 506, y = 161 },
-				{ id = "minelamp", x = 590, y = 177 },
-				{ id = "winch", x = 854, y = 145 },
-				{ id = "timberframe", x = 954, y = 145 },
-				{ id = "rocks", x = 768, y = 177 },
+				{ id = "trestle1", x = 168, y = 151 },
+				{ id = "trestle2", x = 209, y = 151 },
+				{ id = "trestle3", x = 256, y = 151 },
+				{ id = "trestle1", x = 440, y = 151 },
+				{ id = "trestle2", x = 497, y = 151 },
+				{ id = "timberframe", x = 69, y = 177 },
+				{ id = "minelamp", x = 110, y = 177 },
+				{ id = "oreheap", x = 277, y = 177 },
+				{ id = "toolrack", x = 338, y = 161 },
+				{ id = "minelamp", x = 394, y = 177 },
+				{ id = "winch", x = 570, y = 145 },
+				{ id = "timberframe", x = 634, y = 145 },
+				{ id = "rocks", x = 512, y = 177 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 176 },
@@ -28393,74 +28553,75 @@ local M = {
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 888, y = 144, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 568, y = 144, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "cart",
-					x = 256,
+					x = 171.2,
 					y = 176,
-					range = { 160, 438.4 },
+					range = { 107.2, 292.8 },
 					lv = 69,
 				},
 				{
 					kind = "cart",
-					x = 390.4,
+					x = 260.8,
 					y = 176,
-					range = { 176, 438.4 },
+					range = { 116.8, 292.8 },
 					lv = 69,
 				},
 				{
 					kind = "cart",
-					x = 257.6,
+					x = 171.2,
 					y = 128,
-					range = { 200, 262.4 },
+					range = { 132.8, 174.4 },
 					lv = 69,
 				},
 				{
 					kind = "cart",
-					x = 560,
+					x = 372.8,
 					y = 160,
-					range = { 456, 566.4 },
+					range = { 305.6, 377.6 },
 					lv = 69,
 				},
 				{
 					kind = "cart",
-					x = 672,
+					x = 448,
 					y = 176,
-					range = { 584, 774.4 },
+					range = { 388.8, 516.8 },
 					lv = 69,
 				},
 				{
 					kind = "cart",
-					x = 672,
+					x = 448,
 					y = 128,
-					range = { 616, 678.4 },
+					range = { 411.2, 452.8 },
 					lv = 69,
 				},
 				{
 					kind = "cart",
-					x = 912,
+					x = 608,
 					y = 144,
-					range = { 792, 950.4 },
+					range = { 529.6, 633.6 },
 					lv = 69,
 				},
 				{
 					kind = "cart",
-					x = 945.6,
+					x = 630.4,
 					y = 144,
-					range = { 800, 950.4 },
+					range = { 532.8, 633.6 },
 					lv = 69,
 				},
 			},
+			elite = true,
 			ret = "r3t",
 		},
 		r3b1 = {
 			name = "뜨거운 굴",
 			region = "r3",
 			also = false,
-			w = 48,
+			w = 32,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -28470,12 +28631,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#12161c",
-			rows = { "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "........====................====..........######", "..................####................##########", "######........############........##############", "######^^^^^^^^############^^^^^^^^##############", "################################################" },
+			rows = { "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", ".....====..........====.....####", "............###..........#######", "####.....########......#########", "####^^^^^########^^^^^^#########", "################################" },
 			layers = {
 				{ img = "wall_r3a1.png", w = 384, h = 768, f = 0.3, y = 0 },
 			},
 			ground = {
-				{ img = "ground_r3b1_1.png", x = 0, w = 768, h = 224 },
+				{ img = "ground_r3b1_1.png", x = 0, w = 512, h = 224 },
 			},
 			props = "props_port.png",
 			rects = {
@@ -28561,118 +28722,115 @@ local M = {
 				pond = { x = 35, y = 744, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "gate", x = 728, y = 145 },
+				{ id = "gate", x = 472, y = 145 },
 				{ id = "gate", x = 32, y = 177 },
-				{ id = "lledge1", x = 161, y = 175 },
-				{ id = "lledge3", x = 480, y = 175 },
+				{ id = "lledge1", x = 113, y = 175 },
+				{ id = "lledge3", x = 336, y = 175 },
+				{ id = "lava", x = 80, y = 208 },
 				{ id = "lava", x = 112, y = 208 },
-				{ id = "lava", x = 144, y = 208 },
-				{ id = "lava", x = 176, y = 208 },
-				{ id = "lava", x = 208, y = 208 },
-				{ id = "lava", x = 432, y = 208 },
-				{ id = "lava", x = 464, y = 208 },
-				{ id = "lava", x = 496, y = 208 },
-				{ id = "lava", x = 528, y = 208 },
-				{ id = "firetotem", x = 88, y = 177 },
-				{ id = "lavafall", x = 221, y = 209 },
-				{ id = "lavamound", x = 278, y = 177 },
-				{ id = "chainpost", x = 378, y = 177 },
-				{ id = "lavafall", x = 541, y = 209 },
-				{ id = "embervent", x = 586, y = 177 },
-				{ id = "firetotem", x = 646, y = 161 },
-				{ id = "obsidian2", x = 672, y = 145 },
-				{ id = "rocks", x = 243, y = 177 },
+				{ id = "lava", x = 288, y = 208 },
+				{ id = "lava", x = 320, y = 208 },
+				{ id = "lava", x = 352, y = 208 },
+				{ id = "firetotem", x = 59, y = 177 },
+				{ id = "lavafall", x = 147, y = 209 },
+				{ id = "lavamound", x = 186, y = 177 },
+				{ id = "chainpost", x = 251, y = 177 },
+				{ id = "lavafall", x = 360, y = 209 },
+				{ id = "embervent", x = 390, y = 177 },
+				{ id = "firetotem", x = 430, y = 161 },
+				{ id = "rocks", x = 162, y = 177 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 32, y = 176, to = "r3a3", label = "식은 광산으로", h = 60 },
-				{ x = 728, y = 144, to = "r3b2", label = "불씨 길로", h = 60 },
+				{ x = 472, y = 144, to = "r3b2", label = "불씨 길로", h = 60 },
 			},
 			warps = {
-				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 696, y = 144, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp1", x = 88, y = 144, at = "warp2", label = "오른쪽 끝으로" },
+				{ id = "warp2", x = 440, y = 160, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "slag",
-					x = 243.2,
+					x = 161.6,
 					y = 176,
-					range = { 232, 278.4 },
+					range = { 155.2, 185.6 },
 					lv = 71,
 				},
 				{
 					kind = "slag",
-					x = 267.2,
+					x = 177.6,
 					y = 176,
-					range = { 232, 278.4 },
+					range = { 155.2, 185.6 },
 					lv = 71,
 				},
 				{
 					kind = "slag",
-					x = 152,
+					x = 100.8,
 					y = 144,
-					range = { 136, 182.4 },
+					range = { 91.2, 121.6 },
 					lv = 71,
 				},
 				{
 					kind = "slag",
-					x = 371.2,
+					x = 248,
 					y = 176,
-					range = { 360, 406.4 },
+					range = { 241.6, 270.4 },
 					lv = 71,
 				},
 				{
 					kind = "slag",
-					x = 307.2,
+					x = 204.8,
 					y = 160,
-					range = { 296, 342.4 },
+					range = { 196.8, 228.8 },
 					lv = 71,
 				},
 				{
 					kind = "slag",
-					x = 331.2,
+					x = 220.8,
 					y = 160,
-					range = { 296, 342.4 },
+					range = { 196.8, 228.8 },
+					lv = 71,
+				},
+				{
+					kind = "slag",
+					x = 264,
+					y = 176,
+					range = { 241.6, 270.4 },
+					lv = 71,
+				},
+				{
+					kind = "slag",
+					x = 315.2,
+					y = 144,
+					range = { 305.6, 334.4 },
 					lv = 71,
 				},
 				{
 					kind = "slag",
 					x = 395.2,
 					y = 176,
-					range = { 360, 406.4 },
+					range = { 369.6, 398.4 },
 					lv = 71,
 				},
 				{
 					kind = "slag",
-					x = 472,
-					y = 144,
-					range = { 456, 502.4 },
-					lv = 71,
-				},
-				{
-					kind = "slag",
-					x = 592,
-					y = 176,
-					range = { 552, 598.4 },
-					lv = 71,
-				},
-				{
-					kind = "slag",
-					x = 656,
-					y = 160,
-					range = { 616, 662.4 },
+					x = 120,
+					y = 208,
+					range = { 89.6, 142.4 },
 					lv = 71,
 				},
 			},
+			elite = true,
 			ret = "r3t",
 		},
 		r3b2 = {
 			name = "불씨 길",
 			region = "r3",
 			also = false,
-			w = 51,
+			w = 40,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -28682,12 +28840,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#12161c",
-			rows = { "...................................................", "...................................................", "...................................................", "...................................................", "...................................................", "...................................................", ".....................................===...........", "........................===........................", "...................................................", "............====...................====............", "......####............#######................######", "##########........###############........##########", "##########^^^^^^^^###############^^^^^^^^##########", "###################################################" },
+			rows = { "........................................", "........................................", "........................................", "........................................", "........................................", "........................................", ".............................===........", "...................===..................", "........................................", ".........====..............====.........", ".....###.........######............#####", "########......############......########", "########^^^^^^############^^^^^^########", "########################################" },
 			layers = {
 				{ img = "wall_r3a1.png", w = 384, h = 768, f = 0.3, y = 0 },
 			},
 			ground = {
-				{ img = "ground_r3b2_1.png", x = 0, w = 816, h = 224 },
+				{ img = "ground_r3b2_1.png", x = 0, w = 640, h = 224 },
 			},
 			props = "props_port.png",
 			rects = {
@@ -28773,117 +28931,115 @@ local M = {
 				pond = { x = 35, y = 744, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "cavemouth", x = 616, y = 97 },
-				{ id = "gate", x = 776, y = 161 },
+				{ id = "cavemouth", x = 483, y = 97 },
+				{ id = "gate", x = 600, y = 161 },
 				{ id = "gate", x = 32, y = 177 },
-				{ id = "lledge1", x = 225, y = 175 },
-				{ id = "lledge3", x = 592, y = 175 },
-				{ id = "lledge2", x = 408, y = 141 },
-				{ id = "lledge2", x = 616, y = 125 },
+				{ id = "lledge1", x = 177, y = 175 },
+				{ id = "lledge3", x = 464, y = 175 },
+				{ id = "lledge2", x = 328, y = 141 },
+				{ id = "lledge2", x = 488, y = 125 },
+				{ id = "lava", x = 144, y = 208 },
 				{ id = "lava", x = 176, y = 208 },
 				{ id = "lava", x = 208, y = 208 },
-				{ id = "lava", x = 240, y = 208 },
-				{ id = "lava", x = 272, y = 208 },
-				{ id = "lava", x = 544, y = 208 },
-				{ id = "lava", x = 576, y = 208 },
-				{ id = "lava", x = 608, y = 208 },
-				{ id = "lava", x = 640, y = 208 },
-				{ id = "embervent", x = 77, y = 177 },
-				{ id = "firetotem", x = 118, y = 161 },
-				{ id = "lavafall", x = 269, y = 209 },
-				{ id = "lavamound", x = 342, y = 177 },
-				{ id = "chainpost", x = 448, y = 161 },
-				{ id = "obsidian2", x = 477, y = 177 },
-				{ id = "lavafall", x = 637, y = 209 },
-				{ id = "embervent", x = 682, y = 177 },
-				{ id = "glowshrooms", x = 397, y = 113 },
-				{ id = "rocks", x = 310, y = 177 },
+				{ id = "lava", x = 432, y = 208 },
+				{ id = "lava", x = 464, y = 208 },
+				{ id = "lava", x = 496, y = 208 },
+				{ id = "embervent", x = 61, y = 177 },
+				{ id = "firetotem", x = 93, y = 161 },
+				{ id = "lavafall", x = 211, y = 209 },
+				{ id = "lavamound", x = 269, y = 177 },
+				{ id = "glowshrooms", x = 312, y = 113 },
+				{ id = "chainpost", x = 352, y = 161 },
+				{ id = "lavafall", x = 499, y = 209 },
+				{ id = "embervent", x = 534, y = 177 },
+				{ id = "rocks", x = 243, y = 177 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 32, y = 176, to = "r3b1", label = "뜨거운 굴로", h = 60 },
-				{ x = 776, y = 160, to = "r3t", label = "화롯골로", h = 60 },
-				{ x = 408, y = 112, to = "r3bh", label = "좁은 틈으로", h = 40 },
-				{ x = 616, y = 96, to = "r3b3", label = "도둑의 소굴로", h = 50 },
+				{ x = 600, y = 160, to = "r3t", label = "화롯골로", h = 60 },
+				{ x = 320, y = 112, to = "r3bh", label = "좁은 틈으로", h = 40 },
+				{ x = 483, y = 96, to = "r3b3", label = "도둑의 소굴로", h = 50 },
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 744, y = 160, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 568, y = 160, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "worm",
-					x = 107.2,
-					y = 160,
-					range = { 107.2, 107.2 },
-					lv = 74,
-				},
-				{
-					kind = "worm",
-					x = 147.2,
-					y = 160,
-					range = { 147.2, 147.2 },
-					lv = 74,
-				},
-				{
-					kind = "worm",
-					x = 203.2,
+					x = 464,
 					y = 144,
-					range = { 203.2, 203.2 },
+					range = { 464, 464 },
 					lv = 74,
 				},
 				{
 					kind = "worm",
-					x = 243.2,
-					y = 144,
-					range = { 243.2, 243.2 },
-					lv = 74,
-				},
-				{
-					kind = "worm",
-					x = 337.6,
-					y = 176,
-					range = { 337.6, 337.6 },
-					lv = 74,
-				},
-				{
-					kind = "worm",
-					x = 363.2,
+					x = 115.2,
 					y = 160,
-					range = { 363.2, 363.2 },
+					range = { 115.2, 115.2 },
 					lv = 74,
 				},
 				{
 					kind = "worm",
-					x = 451.2,
+					x = 320,
 					y = 160,
-					range = { 451.2, 451.2 },
+					range = { 320, 320 },
 					lv = 74,
 				},
 				{
 					kind = "worm",
-					x = 504,
-					y = 176,
-					range = { 504, 504 },
-					lv = 74,
-				},
-				{
-					kind = "worm",
-					x = 592,
+					x = 190.4,
 					y = 144,
-					range = { 592, 592 },
+					range = { 190.4, 190.4 },
 					lv = 74,
 				},
 				{
 					kind = "worm",
-					x = 704,
+					x = 262.4,
 					y = 176,
-					range = { 704, 704 },
+					range = { 262.4, 262.4 },
+					lv = 74,
+				},
+				{
+					kind = "worm",
+					x = 531.2,
+					y = 176,
+					range = { 531.2, 531.2 },
+					lv = 74,
+				},
+				{
+					kind = "worm",
+					x = 464,
+					y = 208,
+					range = { 464, 464 },
+					lv = 74,
+				},
+				{
+					kind = "worm",
+					x = 395.2,
+					y = 176,
+					range = { 395.2, 395.2 },
+					lv = 74,
+				},
+				{
+					kind = "worm",
+					x = 206.4,
+					y = 208,
+					range = { 206.4, 206.4 },
+					lv = 74,
+				},
+				{
+					kind = "worm",
+					x = 161.6,
+					y = 208,
+					range = { 161.6, 161.6 },
 					lv = 74,
 				},
 			},
+			elite = true,
 			ret = "r3t",
 		},
 		r3t = {
@@ -29009,6 +29165,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -29059,7 +29216,7 @@ local M = {
 			name = "화로 둘레길",
 			region = "r3",
 			also = false,
-			w = 48,
+			w = 32,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -29069,12 +29226,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#12161c",
-			rows = { "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "...................===..........................", "...............................===..............", "..............====..............................", ".......................######...................", "........######.........######.......######......", "################################################", "################################################", "################################################" },
+			rows = { "................................", "................................", "................................", "................................", "................................", "................................", ".............===................", ".....................===........", ".........====...................", "...............####.............", ".....####......####.....####....", "################################", "################################", "################################" },
 			layers = {
 				{ img = "wall_r3t.png", w = 384, h = 768, f = 0.3, y = 0 },
 			},
 			ground = {
-				{ img = "ground_r3c1_1.png", x = 0, w = 768, h = 224 },
+				{ img = "ground_r3c1_1.png", x = 0, w = 512, h = 224 },
 			},
 			props = "props_port.png",
 			rects = {
@@ -29160,107 +29317,107 @@ local M = {
 				pond = { x = 35, y = 744, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "gate", x = 728, y = 177 },
+				{ id = "gate", x = 472, y = 177 },
 				{ id = "gate", x = 32, y = 177 },
-				{ id = "catwalk1", x = 256, y = 148 },
-				{ id = "catwalk2", x = 328, y = 116 },
-				{ id = "catwalk3", x = 520, y = 132 },
-				{ id = "firebanner", x = 96, y = 177 },
-				{ id = "bellows", x = 458, y = 145 },
-				{ id = "trough", x = 566, y = 177 },
-				{ id = "furnace", x = 666, y = 161 },
-				{ id = "firebanner", x = 678, y = 177 },
+				{ id = "catwalk1", x = 176, y = 148 },
+				{ id = "catwalk2", x = 232, y = 116 },
+				{ id = "catwalk3", x = 360, y = 132 },
+				{ id = "firebanner", x = 64, y = 177 },
+				{ id = "bellows", x = 306, y = 177 },
+				{ id = "trough", x = 378, y = 177 },
+				{ id = "furnace", x = 443, y = 161 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 32, y = 176, to = "r3t", label = "화롯골로", h = 60 },
-				{ x = 728, y = 176, to = "r3c2", label = "식어 가는 불길로", h = 60 },
+				{ x = 472, y = 176, to = "r3c2", label = "식어 가는 불길로", h = 60 },
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 696, y = 176, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 440, y = 160, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "cinder",
-					x = 113.6,
-					y = 176,
-					range = { 88, 118.4 },
+					x = 235.2,
+					y = 96,
+					range = { 209.6, 254.4 },
 					lv = 81,
 				},
 				{
 					kind = "cinder",
-					x = 155.2,
+					x = 104,
 					y = 160,
-					range = { 136, 214.4 },
+					range = { 91.2, 142.4 },
 					lv = 81,
 				},
 				{
 					kind = "cinder",
-					x = 195.2,
+					x = 129.6,
 					y = 160,
-					range = { 144, 214.4 },
+					range = { 96, 142.4 },
 					lv = 81,
 				},
 				{
 					kind = "cinder",
-					x = 248,
+					x = 164.8,
 					y = 128,
-					range = { 232, 278.4 },
+					range = { 155.2, 185.6 },
 					lv = 81,
 				},
 				{
 					kind = "cinder",
-					x = 256,
+					x = 171.2,
 					y = 176,
-					range = { 232, 358.4 },
+					range = { 155.2, 238.4 },
 					lv = 81,
 				},
 				{
 					kind = "cinder",
-					x = 336,
+					x = 224,
 					y = 176,
-					range = { 232, 358.4 },
+					range = { 155.2, 238.4 },
 					lv = 81,
 				},
 				{
 					kind = "cinder",
-					x = 395.2,
+					x = 264,
 					y = 144,
-					range = { 376, 454.4 },
+					range = { 251.2, 302.4 },
 					lv = 81,
 				},
 				{
 					kind = "cinder",
-					x = 435.2,
+					x = 289.6,
 					y = 144,
-					range = { 384, 454.4 },
+					range = { 256, 302.4 },
 					lv = 81,
 				},
 				{
 					kind = "cinder",
-					x = 544,
+					x = 363.2,
 					y = 176,
-					range = { 472, 566.4 },
+					range = { 315.2, 377.6 },
 					lv = 81,
 				},
 				{
 					kind = "cinder",
-					x = 656,
+					x = 414.4,
 					y = 160,
-					range = { 584, 662.4 },
+					range = { 388.8, 414.4 },
 					lv = 81,
 				},
 			},
+			elite = true,
 			ret = "r3t",
 		},
 		r3c2 = {
 			name = "식어 가는 불길",
 			region = "r3",
 			also = false,
-			w = 56,
+			w = 34,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -29270,12 +29427,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#12161c",
-			rows = { "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................===.............................", "......................................===...............", "...................====.................................", "............................########....................", "..........#######...........########.......#############", "########################################################", "########################################################", "########################################################" },
+			rows = { "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", "...............===................", ".......................===........", "............====..................", ".................#####............", "......####.......#####....########", "##################################", "##################################", "##################################" },
 			layers = {
 				{ img = "wall_r3t.png", w = 384, h = 768, f = 0.3, y = 0 },
 			},
 			ground = {
-				{ img = "ground_r3c2_1.png", x = 0, w = 896, h = 224 },
+				{ img = "ground_r3c2_1.png", x = 0, w = 544, h = 224 },
 			},
 			props = "props_port.png",
 			rects = {
@@ -29361,87 +29518,88 @@ local M = {
 				pond = { x = 35, y = 744, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "cavemouth", x = 752, y = 161 },
-				{ id = "gate", x = 856, y = 161 },
+				{ id = "cavemouth", x = 456, y = 161 },
+				{ id = "gate", x = 504, y = 161 },
 				{ id = "gate", x = 32, y = 177 },
-				{ id = "catwalk1", x = 336, y = 148 },
-				{ id = "catwalk2", x = 408, y = 116 },
-				{ id = "catwalk3", x = 632, y = 132 },
-				{ id = "firebanner", x = 112, y = 177 },
-				{ id = "ashheap", x = 406, y = 177 },
-				{ id = "bellows", x = 570, y = 145 },
-				{ id = "firebanner", x = 806, y = 161 },
+				{ id = "catwalk1", x = 224, y = 148 },
+				{ id = "catwalk2", x = 264, y = 116 },
+				{ id = "catwalk3", x = 392, y = 132 },
+				{ id = "firebanner", x = 69, y = 177 },
+				{ id = "ashheap", x = 246, y = 177 },
+				{ id = "bellows", x = 346, y = 145 },
+				{ id = "firebanner", x = 490, y = 161 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 32, y = 176, to = "r3c1", label = "화로 둘레길로", h = 60 },
-				{ x = 856, y = 160, to = "r3cs", label = "벽화의 방으로", h = 60 },
-				{ x = 752, y = 160, to = "r3cl", label = "용암 못으로", h = 50 },
+				{ x = 504, y = 160, to = "r3cs", label = "벽화의 방으로", h = 60 },
+				{ x = 456, y = 160, to = "r3cl", label = "용암 못으로", h = 50 },
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 824, y = 160, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 424, y = 160, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "chimney",
-					x = 145.6,
-					y = 176,
-					range = { 88, 150.4 },
+					x = 267.2,
+					y = 96,
+					range = { 241.6, 286.4 },
 					lv = 84,
 				},
 				{
 					kind = "chimney",
-					x = 256,
+					x = 155.2,
 					y = 160,
-					range = { 168, 262.4 },
+					range = { 102.4, 158.4 },
+					lv = 84,
+				},
+				{
+					kind = "chimney",
+					x = 198.4,
+					y = 128,
+					range = { 193.6, 217.6 },
+					lv = 84,
+				},
+				{
+					kind = "chimney",
+					x = 224,
+					y = 176,
+					range = { 169.6, 265.6 },
+					lv = 84,
+				},
+				{
+					kind = "chimney",
+					x = 292.8,
+					y = 144,
+					range = { 276.8, 344 },
 					lv = 84,
 				},
 				{
 					kind = "chimney",
 					x = 328,
-					y = 128,
-					range = { 312, 358.4 },
-					lv = 84,
-				},
-				{
-					kind = "chimney",
-					x = 368,
-					y = 176,
-					range = { 280, 438.4 },
-					lv = 84,
-				},
-				{
-					kind = "chimney",
-					x = 483.2,
 					y = 144,
-					range = { 456, 566.4 },
+					range = { 281.6, 344 },
 					lv = 84,
 				},
 				{
 					kind = "chimney",
-					x = 539.2,
-					y = 144,
-					range = { 464, 566.4 },
-					lv = 84,
-				},
-				{
-					kind = "chimney",
-					x = 624,
+					x = 379.2,
 					y = 112,
-					range = { 616, 646.4 },
+					range = { 374.4, 392 },
 					lv = 84,
 				},
 				{
 					kind = "chimney",
-					x = 624,
+					x = 379.2,
 					y = 176,
-					range = { 584, 652.8 },
+					range = { 355.2, 396.8 },
 					lv = 84,
 				},
 			},
+			elite = true,
 			ret = "r3t",
 		},
 		r3cs = {
@@ -29568,6 +29726,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -29592,7 +29751,7 @@ local M = {
 			name = "화로 깊은 곳",
 			region = "r3",
 			also = false,
-			w = 44,
+			w = 30,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -29602,12 +29761,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#12161c",
-			rows = { "............................................", "............................................", "............................................", "............................................", "............................................", "............................................", "............................................", "................................===.........", ".................====.......................", ".......................#######......########", "........#######........#######......########", "############################################", "############################################", "############################################" },
+			rows = { "..............................", "..............................", "..............................", "..............................", "..............................", "..............................", "..............................", "......................===.....", "............====..............", "................####.....#####", ".....#####......####.....#####", "##############################", "##############################", "##############################" },
 			layers = {
 				{ img = "wall_r3t.png", w = 384, h = 768, f = 0.3, y = 0 },
 			},
 			ground = {
-				{ img = "ground_r3c3_1.png", x = 0, w = 704, h = 224 },
+				{ img = "ground_r3c3_1.png", x = 0, w = 480, h = 224 },
 			},
 			props = "props_port.png",
 			rects = {
@@ -29694,13 +29853,13 @@ local M = {
 			},
 			back = {
 				{ id = "gate", x = 32, y = 177 },
-				{ id = "catwalk1", x = 304, y = 148 },
-				{ id = "catwalk2", x = 536, y = 132 },
-				{ id = "furnace", x = 198, y = 161 },
-				{ id = "ashheap", x = 346, y = 177 },
-				{ id = "bellows", x = 474, y = 145 },
-				{ id = "trough", x = 550, y = 177 },
-				{ id = "furnace", x = 666, y = 145 },
+				{ id = "catwalk1", x = 224, y = 148 },
+				{ id = "catwalk2", x = 376, y = 132 },
+				{ id = "furnace", x = 136, y = 161 },
+				{ id = "ashheap", x = 235, y = 177 },
+				{ id = "bellows", x = 323, y = 177 },
+				{ id = "trough", x = 376, y = 177 },
+				{ id = "furnace", x = 442, y = 145 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 176 },
@@ -29709,74 +29868,75 @@ local M = {
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 632, y = 144, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 408, y = 144, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "anvil",
-					x = 113.6,
-					y = 176,
-					range = { 88, 118.4 },
+					x = 379.2,
+					y = 112,
+					range = { 353.6, 398.4 },
 					lv = 87,
 				},
 				{
 					kind = "anvil",
-					x = 160,
+					x = 108.8,
 					y = 160,
-					range = { 136, 230.4 },
+					range = { 92.8, 156.8 },
 					lv = 87,
 				},
 				{
 					kind = "anvil",
-					x = 206.4,
+					x = 140.8,
 					y = 160,
-					range = { 144, 230.4 },
+					range = { 97.6, 156.8 },
 					lv = 87,
 				},
 				{
 					kind = "anvil",
-					x = 320,
+					x = 217.6,
 					y = 176,
-					range = { 248, 358.4 },
+					range = { 169.6, 244.8 },
 					lv = 87,
 				},
 				{
 					kind = "anvil",
-					x = 400,
+					x = 272,
 					y = 144,
-					range = { 376, 470.4 },
+					range = { 257.6, 318.4 },
 					lv = 87,
 				},
 				{
 					kind = "anvil",
-					x = 446.4,
+					x = 304,
 					y = 144,
-					range = { 384, 470.4 },
+					range = { 262.4, 318.4 },
 					lv = 87,
 				},
 				{
 					kind = "anvil",
-					x = 536,
+					x = 364.8,
 					y = 176,
-					range = { 488, 566.4 },
+					range = { 332.8, 385.6 },
 					lv = 87,
 				},
 				{
 					kind = "anvil",
-					x = 640,
+					x = 436.8,
 					y = 144,
-					range = { 584, 694.4 },
+					range = { 401.6, 473.6 },
 					lv = 87,
 				},
 			},
+			elite = true,
 			ret = "r3t",
 		},
 		r3d1 = {
 			name = "화산 기슭",
 			region = "r3",
 			also = false,
-			w = 48,
+			w = 32,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -29786,14 +29946,14 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#12161c",
-			rows = { "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "..............................====..............", "..................===...........................", "......................######.............#######", ".........######.......######........############", "################################################", "################################################", "################################################" },
+			rows = { "................................", "................................", "................................", "................................", "................................", "................................", "................................", "....................====........", "............===.................", "...............####........#####", "......####.....####.....########", "################################", "################################", "################################" },
 			layers = {
 				{ img = "sky.png", w = 384, h = 216, f = 0.03, y = 0 },
 				{ img = "far_r3d1.png", w = 768, h = 168, f = 0.14, y = 44 },
 				{ img = "near_r3d1.png", w = 768, h = 128, f = 0.34, y = 92 },
 			},
 			ground = {
-				{ img = "ground_r3d1_1.png", x = 0, w = 768, h = 224 },
+				{ img = "ground_r3d1_1.png", x = 0, w = 512, h = 224 },
 			},
 			props = "props_r3d1.png",
 			rects = {
@@ -29832,109 +29992,110 @@ local M = {
 				pond = { x = 192, y = 212, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "gate", x = 728, y = 145 },
+				{ id = "gate", x = 472, y = 145 },
 				{ id = "gate", x = 32, y = 177 },
-				{ id = "crust2", x = 313, y = 157 },
-				{ id = "crust3", x = 512, y = 140 },
-				{ id = "blastface", x = 106, y = 177 },
-				{ id = "fumarole", x = 192, y = 161 },
-				{ id = "lavabomb", x = 346, y = 177 },
-				{ id = "charredtree", x = 390, y = 145 },
-				{ id = "kegs", x = 442, y = 145 },
-				{ id = "fumarole", x = 560, y = 177 },
-				{ id = "obsidianblades", x = 624, y = 161 },
-				{ id = "rocks", x = 256, y = 177 },
+				{ id = "crust2", x = 217, y = 157 },
+				{ id = "crust3", x = 352, y = 140 },
+				{ id = "blastface", x = 70, y = 177 },
+				{ id = "fumarole", x = 128, y = 161 },
+				{ id = "lavabomb", x = 230, y = 177 },
+				{ id = "charredtree", x = 261, y = 145 },
+				{ id = "kegs", x = 294, y = 145 },
+				{ id = "fumarole", x = 373, y = 177 },
+				{ id = "obsidianblades", x = 416, y = 161 },
+				{ id = "rocks", x = 171, y = 177 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 32, y = 176, to = "r3cs", label = "벽화의 방으로", h = 60 },
-				{ x = 728, y = 144, to = "r3d2", label = "갈라진 비탈로", h = 60 },
+				{ x = 472, y = 144, to = "r3d2", label = "갈라진 비탈로", h = 60 },
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 696, y = 144, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 440, y = 144, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "bomber",
-					x = 99.2,
-					y = 176,
-					range = { 88, 134.4 },
+					x = 356.8,
+					y = 112,
+					range = { 321.6, 382.4 },
 					lv = 91,
 				},
 				{
 					kind = "espearman",
-					x = 123.2,
-					y = 176,
-					range = { 88, 134.4 },
+					x = 219.2,
+					y = 128,
+					range = { 193.6, 238.4 },
 					lv = 92,
 				},
 				{
 					kind = "bomber",
-					x = 171.2,
+					x = 113.6,
 					y = 160,
-					range = { 152, 230.4 },
+					range = { 100.8, 153.6 },
 					lv = 91,
 				},
 				{
 					kind = "bomber",
-					x = 211.2,
+					x = 140.8,
 					y = 160,
-					range = { 160, 230.4 },
+					range = { 107.2, 153.6 },
 					lv = 91,
 				},
 				{
 					kind = "espearman",
-					x = 320,
+					x = 212.8,
 					y = 176,
-					range = { 248, 342.4 },
+					range = { 164.8, 228.8 },
 					lv = 92,
 				},
 				{
 					kind = "bomber",
-					x = 379.2,
+					x = 252.8,
 					y = 144,
-					range = { 360, 438.4 },
+					range = { 241.6, 292.8 },
 					lv = 91,
 				},
 				{
 					kind = "espearman",
-					x = 419.2,
+					x = 280,
 					y = 144,
-					range = { 368, 438.4 },
+					range = { 244.8, 292.8 },
 					lv = 92,
 				},
 				{
 					kind = "bomber",
-					x = 512,
+					x = 340.8,
 					y = 176,
-					range = { 456, 566.4 },
+					range = { 305.6, 377.6 },
 					lv = 91,
 				},
 				{
 					kind = "bomber",
-					x = 560,
+					x = 372.8,
 					y = 176,
-					range = { 464, 566.4 },
+					range = { 308.8, 377.6 },
 					lv = 91,
 				},
 				{
 					kind = "espearman",
-					x = 616,
+					x = 411.2,
 					y = 160,
-					range = { 584, 646.4 },
+					range = { 388.8, 414.4 },
 					lv = 92,
 				},
 			},
+			elite = true,
 			ret = "r3t",
 		},
 		r3d2 = {
 			name = "갈라진 비탈",
 			region = "r3",
 			also = false,
-			w = 64,
+			w = 42,
 			h = 24,
 			tall = true,
 			indoor = false,
@@ -29944,14 +30105,14 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#12161c",
-			rows = { "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", ".......................................................#########", ".......................................====............#########", "..............................................####..############", "..............................................####^^############", ".....................................###########################", ".....................===.............###########################", "............................####..##############################", "............................####^^##############################", "...................#############################################", "...................#############################################", "..........####..################################################", "..........####^^################################################", "################################################################", "################################################################", "################################################################" },
+			rows = { "..........................................", "..........................................", "..........................................", "..........................................", "..........................................", "..........................................", "..........................................", "..........................................", "..........................................", "....................................######", "..........................====......######", "..............................###.########", "..............................###^########", "........................##################", "..............===.......##################", "..................###.####################", "..................###^####################", "............##############################", "............##############################", ".......##..###############################", ".......##^^###############################", "##########################################", "##########################################", "##########################################" },
 			layers = {
 				{ img = "sky.png", w = 384, h = 216, f = 0.03, y = 0 },
 				{ img = "far_r3d1.png", w = 768, h = 168, f = 0.14, y = 31 },
 				{ img = "near_r3d1.png", w = 768, h = 128, f = 0.34, y = 98 },
 			},
 			ground = {
-				{ img = "ground_r3d2_1.png", x = 0, w = 1024, h = 384 },
+				{ img = "ground_r3d2_1.png", x = 0, w = 672, h = 384 },
 			},
 			props = "props_r3d1.png",
 			rects = {
@@ -29990,116 +30151,115 @@ local M = {
 				pond = { x = 192, y = 212, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "gate", x = 984, y = 145 },
+				{ id = "gate", x = 632, y = 145 },
 				{ id = "gate", x = 32, y = 337 },
-				{ id = "crust2", x = 361, y = 253 },
-				{ id = "crust3", x = 656, y = 188 },
-				{ id = "lava", x = 240, y = 336 },
-				{ id = "lava", x = 528, y = 272 },
-				{ id = "lava", x = 816, y = 208 },
-				{ id = "blastface", x = 96, y = 337 },
-				{ id = "kegs", x = 186, y = 305 },
-				{ id = "charredtree", x = 278, y = 305 },
-				{ id = "fumarole", x = 416, y = 273 },
-				{ id = "kegs", x = 474, y = 241 },
-				{ id = "obsidianblades", x = 566, y = 241 },
-				{ id = "lavabomb", x = 704, y = 209 },
-				{ id = "charredtree", x = 762, y = 177 },
-				{ id = "blastface", x = 938, y = 145 },
-				{ id = "rocks", x = 138, y = 337 },
-				{ id = "rocks", x = 326, y = 273 },
-				{ id = "rocks", x = 614, y = 209 },
+				{ id = "crust2", x = 249, y = 253 },
+				{ id = "crust3", x = 448, y = 188 },
+				{ id = "lava", x = 160, y = 336 },
+				{ id = "blastface", x = 62, y = 337 },
+				{ id = "kegs", x = 122, y = 305 },
+				{ id = "charredtree", x = 182, y = 305 },
+				{ id = "fumarole", x = 274, y = 273 },
+				{ id = "kegs", x = 310, y = 241 },
+				{ id = "obsidianblades", x = 371, y = 241 },
+				{ id = "lavabomb", x = 462, y = 209 },
+				{ id = "charredtree", x = 499, y = 177 },
+				{ id = "blastface", x = 616, y = 145 },
+				{ id = "rocks", x = 90, y = 337 },
+				{ id = "rocks", x = 214, y = 273 },
+				{ id = "rocks", x = 403, y = 209 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 336 },
 			portals = {
 				{ x = 32, y = 336, to = "r3d1", label = "화산 기슭으로", h = 60 },
-				{ x = 984, y = 144, to = "r3d3", label = "분화구 가장자리로", h = 60 },
+				{ x = 632, y = 144, to = "r3d3", label = "분화구 가장자리로", h = 60 },
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 336, at = "warp2", label = "맨 위로" },
-				{ id = "warp2", x = 952, y = 144, at = "warp1", label = "맨 아래로" },
+				{ id = "warp2", x = 600, y = 144, at = "warp1", label = "맨 아래로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "bomber",
-					x = 192,
+					x = 126.4,
 					y = 304,
-					range = { 168, 214.4 },
+					range = { 113.6, 140.8 },
 					lv = 94,
 				},
 				{
 					kind = "earcher",
-					x = 280,
+					x = 184,
 					y = 304,
-					range = { 264, 294.4 },
+					range = { 177.6, 190.4 },
 					lv = 94,
 				},
 				{
 					kind = "bomber",
-					x = 368,
+					x = 241.6,
 					y = 272,
-					range = { 312, 438.4 },
+					range = { 204.8, 286.4 },
 					lv = 94,
 				},
 				{
 					kind = "bomber",
-					x = 408,
+					x = 267.2,
 					y = 272,
-					range = { 320, 438.4 },
+					range = { 209.6, 286.4 },
 					lv = 94,
 				},
 				{
 					kind = "bomber",
-					x = 360,
+					x = 236.8,
 					y = 224,
-					range = { 344, 374.4 },
+					range = { 225.6, 246.4 },
 					lv = 94,
 				},
 				{
 					kind = "earcher",
-					x = 480,
+					x = 315.2,
 					y = 240,
-					range = { 456, 502.4 },
+					range = { 299.2, 329.6 },
 					lv = 94,
 				},
 				{
 					kind = "bomber",
-					x = 568,
+					x = 372.8,
 					y = 240,
-					range = { 552, 582.4 },
+					range = { 361.6, 382.4 },
 					lv = 94,
 				},
 				{
 					kind = "bomber",
-					x = 656,
+					x = 430.4,
 					y = 208,
-					range = { 600, 726.4 },
+					range = { 393.6, 476.8 },
 					lv = 94,
 				},
 				{
 					kind = "bomber",
-					x = 656,
+					x = 430.4,
 					y = 160,
-					range = { 632, 678.4 },
+					range = { 417.6, 444.8 },
 					lv = 94,
 				},
 				{
 					kind = "earcher",
-					x = 768,
+					x = 504,
 					y = 176,
-					range = { 744, 790.4 },
+					range = { 488, 518.4 },
 					lv = 94,
 				},
 			},
+			elite = true,
 			ret = "r3t",
 		},
 		r3d3 = {
 			name = "분화구 가장자리",
 			region = "r3",
 			also = false,
-			w = 48,
+			w = 32,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -30109,14 +30269,14 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#12161c",
-			rows = { "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "........====................=====.........######", "..................####................##########", "######........############........##############", "######^^^^^^^^############^^^^^^^^##############", "################################################" },
+			rows = { "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", ".....====..........=====....####", "............###..........#######", "####.....########......#########", "####^^^^^########^^^^^^#########", "################################" },
 			layers = {
 				{ img = "sky.png", w = 384, h = 216, f = 0.03, y = 0 },
 				{ img = "far_r3d1.png", w = 768, h = 168, f = 0.14, y = 44 },
 				{ img = "near_r3d1.png", w = 768, h = 128, f = 0.34, y = 92 },
 			},
 			ground = {
-				{ img = "ground_r3d3_1.png", x = 0, w = 768, h = 224 },
+				{ img = "ground_r3d3_1.png", x = 0, w = 512, h = 224 },
 			},
 			props = "props_r3d1.png",
 			rects = {
@@ -30155,116 +30315,114 @@ local M = {
 				pond = { x = 192, y = 212, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "gate", x = 728, y = 145 },
+				{ id = "gate", x = 472, y = 145 },
 				{ id = "gate", x = 32, y = 177 },
-				{ id = "crust3", x = 160, y = 172 },
-				{ id = "crust1", x = 489, y = 174 },
+				{ id = "crust3", x = 112, y = 172 },
+				{ id = "crust1", x = 345, y = 174 },
+				{ id = "lava", x = 80, y = 208 },
 				{ id = "lava", x = 112, y = 208 },
-				{ id = "lava", x = 144, y = 208 },
-				{ id = "lava", x = 176, y = 208 },
-				{ id = "lava", x = 208, y = 208 },
-				{ id = "lava", x = 432, y = 208 },
-				{ id = "lava", x = 464, y = 208 },
-				{ id = "lava", x = 496, y = 208 },
-				{ id = "lava", x = 528, y = 208 },
-				{ id = "lavabomb", x = 272, y = 177 },
-				{ id = "fumarole", x = 336, y = 161 },
-				{ id = "blastface", x = 394, y = 177 },
-				{ id = "fumarole", x = 592, y = 177 },
-				{ id = "obsidianblades", x = 662, y = 161 },
-				{ id = "rocks", x = 256, y = 177 },
-				{ id = "rocks", x = 576, y = 177 },
+				{ id = "lava", x = 288, y = 208 },
+				{ id = "lava", x = 320, y = 208 },
+				{ id = "lava", x = 352, y = 208 },
+				{ id = "lavabomb", x = 181, y = 177 },
+				{ id = "fumarole", x = 224, y = 161 },
+				{ id = "blastface", x = 262, y = 177 },
+				{ id = "fumarole", x = 395, y = 177 },
+				{ id = "obsidianblades", x = 442, y = 161 },
+				{ id = "rocks", x = 171, y = 177 },
+				{ id = "rocks", x = 384, y = 177 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 32, y = 176, to = "r3d2", label = "갈라진 비탈로", h = 60 },
-				{ x = 728, y = 144, to = "r3d4", label = "분화구로", h = 60 },
+				{ x = 472, y = 144, to = "r3d4", label = "분화구로", h = 60 },
 			},
 			warps = {
-				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 696, y = 144, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp1", x = 88, y = 144, at = "warp2", label = "오른쪽 끝으로" },
+				{ id = "warp2", x = 440, y = 160, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "scorpion",
-					x = 236.8,
+					x = 158.4,
 					y = 176,
-					range = { 232, 278.4 },
+					range = { 155.2, 185.6 },
 					lv = 96,
 				},
 				{
 					kind = "scorpion",
-					x = 152,
+					x = 100.8,
 					y = 144,
-					range = { 136, 182.4 },
+					range = { 91.2, 121.6 },
 					lv = 96,
 				},
 				{
 					kind = "scorpion",
-					x = 272,
+					x = 180.8,
 					y = 176,
-					range = { 232, 278.4 },
+					range = { 155.2, 185.6 },
 					lv = 96,
 				},
 				{
 					kind = "scorpion",
-					x = 307.2,
+					x = 204.8,
 					y = 160,
-					range = { 296, 342.4 },
+					range = { 196.8, 228.8 },
 					lv = 96,
 				},
 				{
 					kind = "scorpion",
-					x = 331.2,
+					x = 220.8,
 					y = 160,
-					range = { 296, 342.4 },
+					range = { 196.8, 228.8 },
 					lv = 96,
 				},
 				{
 					kind = "scorpion",
-					x = 400,
+					x = 267.2,
 					y = 176,
-					range = { 360, 406.4 },
+					range = { 241.6, 270.4 },
 					lv = 96,
 				},
 				{
 					kind = "scorpion",
-					x = 480,
+					x = 320,
 					y = 144,
-					range = { 456, 518.4 },
+					range = { 305.6, 345.6 },
 					lv = 96,
 				},
 				{
 					kind = "scorpion",
-					x = 593.6,
+					x = 395.2,
 					y = 176,
-					range = { 552, 598.4 },
+					range = { 369.6, 398.4 },
 					lv = 96,
 				},
 				{
 					kind = "scorpion",
-					x = 646.4,
-					y = 160,
-					range = { 616, 662.4 },
+					x = 120,
+					y = 208,
+					range = { 89.6, 142.4 },
 					lv = 96,
 				},
 				{
 					kind = "scorpion",
-					x = 566.4,
+					x = 376,
 					y = 176,
-					range = { 552, 598.4 },
+					range = { 369.6, 398.4 },
 					lv = 96,
 				},
 			},
+			elite = true,
 			ret = "r3t",
 		},
 		r4a1 = {
 			name = "외성 밖 들판",
 			region = "r4",
 			also = false,
-			w = 48,
+			w = 34,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -30274,14 +30432,14 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#a9bccb",
-			rows = { "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................====............", "...................===..........................", "........................#######.................", "...........######.......#######.......##########", "################################################", "################################################", "################################################" },
+			rows = { "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", "........................====......", "................===...............", "...................#####..........", "...........####....#####....######", "##################################", "##################################", "##################################" },
 			layers = {
 				{ img = "sky.png", w = 384, h = 216, f = 0.03, y = 0 },
 				{ img = "far_r4a1.png", w = 768, h = 168, f = 0.14, y = 44 },
 				{ img = "near_r4a1.png", w = 768, h = 128, f = 0.34, y = 92 },
 			},
 			ground = {
-				{ img = "ground_r4a1_1.png", x = 0, w = 768, h = 224 },
+				{ img = "ground_r4a1_1.png", x = 0, w = 544, h = 224 },
 			},
 			props = "props_r4a1.png",
 			rects = {
@@ -30343,93 +30501,94 @@ local M = {
 				pond = { x = 37, y = 582, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "gate", x = 728, y = 161 },
+				{ id = "gate", x = 504, y = 161 },
 				{ id = "gate", x = 32, y = 177 },
-				{ id = "wallfrag2", x = 329, y = 164 },
-				{ id = "wallfrag1", x = 544, y = 140 },
+				{ id = "wallfrag2", x = 281, y = 164 },
+				{ id = "wallfrag1", x = 416, y = 140 },
 				{ id = "tent", x = 122, y = 177 },
-				{ id = "deadtree", x = 218, y = 161 },
-				{ id = "stakes", x = 368, y = 177 },
-				{ id = "obanner", x = 422, y = 145 },
-				{ id = "grass", x = 288, y = 177 },
-				{ id = "rocks", x = 592, y = 177 },
+				{ id = "deadtree", x = 197, y = 161 },
+				{ id = "stakes", x = 291, y = 177 },
+				{ id = "obanner", x = 326, y = 145 },
+				{ id = "grass", x = 242, y = 177 },
+				{ id = "rocks", x = 434, y = 177 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 32, y = 176, to = "port", label = "등불 포구로", h = 60 },
-				{ x = 728, y = 160, to = "r4a2", label = "무너진 성벽으로", h = 60 },
+				{ x = 504, y = 160, to = "r4a2", label = "무너진 성벽으로", h = 60 },
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 696, y = 160, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 472, y = 160, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "espearman",
-					x = 203.2,
+					x = 187.2,
 					y = 160,
-					range = { 184, 262.4 },
+					range = { 177.6, 224 },
 					lv = 101,
 				},
 				{
 					kind = "espearman",
-					x = 243.2,
+					x = 212.8,
 					y = 160,
-					range = { 192, 262.4 },
+					range = { 180.8, 224 },
 					lv = 101,
 				},
 				{
 					kind = "espearman",
-					x = 320,
+					x = 260.8,
 					y = 176,
-					range = { 280, 374.4 },
+					range = { 241.6, 296 },
 					lv = 101,
 				},
 				{
 					kind = "espearman",
-					x = 369.6,
+					x = 292.8,
 					y = 176,
-					range = { 288, 374.4 },
+					range = { 241.6, 296 },
 					lv = 101,
 				},
 				{
 					kind = "espearman",
-					x = 448,
+					x = 342.4,
 					y = 144,
-					range = { 392, 486.4 },
+					range = { 307.2, 366.4 },
 					lv = 101,
 				},
 				{
 					kind = "espearman",
-					x = 481.6,
+					x = 363.2,
 					y = 144,
-					range = { 400, 486.4 },
+					range = { 312, 366.4 },
 					lv = 101,
 				},
 				{
 					kind = "espearman",
-					x = 536,
+					x = 396.8,
 					y = 112,
-					range = { 520, 566.4 },
+					range = { 387.2, 414.4 },
 					lv = 101,
 				},
 				{
 					kind = "espearman",
-					x = 560,
+					x = 412.8,
 					y = 176,
-					range = { 504, 598.4 },
+					range = { 385.6, 436.8 },
 					lv = 101,
 				},
 				{
 					kind = "espearman",
-					x = 640,
-					y = 160,
-					range = { 616, 672 },
+					x = 273.6,
+					y = 128,
+					range = { 257.6, 286.4 },
 					lv = 101,
 				},
 			},
+			elite = true,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -30493,7 +30652,7 @@ local M = {
 			name = "무너진 성벽",
 			region = "r4",
 			also = false,
-			w = 64,
+			w = 42,
 			h = 24,
 			tall = true,
 			indoor = false,
@@ -30503,14 +30662,14 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#7c8ea2",
-			rows = { "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................====............", ".......................................................#########", ".......................................................#########", "..............................................##################", "...............................===............##################", ".....................................###########################", ".....................................###########################", "............................####################################", ".............===............####################################", "...................#############################################", "...................#############################################", "..........######################################################", "..........######################################################", "################################################################", "################################################################", "################################################################" },
+			rows = { "..........................................", "..........................................", "..........................................", "..........................................", "..........................................", "..........................................", "..........................................", "..........................................", "................................====......", "....................................######", "....................................######", "..............................############", "....................===.......############", "........................##################", "........................##################", "..................########################", ".........===......########################", "............##############################", "............##############################", ".......###################################", ".......###################################", "##########################################", "##########################################", "##########################################" },
 			layers = {
 				{ img = "sky.png", w = 384, h = 216, f = 0.03, y = 0 },
 				{ img = "far_r4a1.png", w = 768, h = 168, f = 0.14, y = 31 },
 				{ img = "near_r4a1.png", w = 768, h = 128, f = 0.34, y = 98 },
 			},
 			ground = {
-				{ img = "ground_r4a2_1.png", x = 0, w = 1024, h = 384 },
+				{ img = "ground_r4a2_1.png", x = 0, w = 672, h = 384 },
 			},
 			props = "props_r4a1.png",
 			rects = {
@@ -30572,112 +30731,113 @@ local M = {
 				pond = { x = 37, y = 582, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "gate", x = 984, y = 145 },
+				{ id = "gate", x = 632, y = 145 },
 				{ id = "gate", x = 32, y = 337 },
-				{ id = "wallfrag2", x = 233, y = 292 },
-				{ id = "wallfrag3", x = 520, y = 225 },
-				{ id = "wallfrag1", x = 800, y = 156 },
-				{ id = "breach", x = 102, y = 337 },
-				{ id = "stakes", x = 266, y = 305 },
-				{ id = "deadtree", x = 374, y = 273 },
-				{ id = "colonnade", x = 560, y = 241 },
-				{ id = "kingstatue", x = 666, y = 209 },
-				{ id = "obanner", x = 854, y = 177 },
-				{ id = "burnthouse", x = 915, y = 145 },
-				{ id = "rocks", x = 192, y = 305 },
-				{ id = "rocks", x = 480, y = 241 },
-				{ id = "rocks", x = 762, y = 177 },
+				{ id = "wallfrag2", x = 169, y = 292 },
+				{ id = "wallfrag3", x = 344, y = 225 },
+				{ id = "wallfrag1", x = 544, y = 156 },
+				{ id = "breach", x = 67, y = 337 },
+				{ id = "stakes", x = 174, y = 305 },
+				{ id = "deadtree", x = 246, y = 273 },
+				{ id = "colonnade", x = 368, y = 241 },
+				{ id = "kingstatue", x = 437, y = 209 },
+				{ id = "obanner", x = 560, y = 177 },
+				{ id = "burnthouse", x = 600, y = 145 },
+				{ id = "rocks", x = 126, y = 305 },
+				{ id = "rocks", x = 315, y = 241 },
+				{ id = "rocks", x = 499, y = 177 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 336 },
 			portals = {
 				{ x = 32, y = 336, to = "r4a1", label = "외성 밖 들판으로", h = 60 },
-				{ x = 984, y = 144, to = "r4a3", label = "불탄 거리로", h = 60 },
+				{ x = 632, y = 144, to = "r4a3", label = "불탄 거리로", h = 60 },
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 336, at = "warp2", label = "맨 위로" },
-				{ id = "warp2", x = 952, y = 144, at = "warp1", label = "맨 아래로" },
+				{ id = "warp2", x = 600, y = 144, at = "warp1", label = "맨 아래로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "espearman",
-					x = 224,
+					x = 147.2,
 					y = 304,
-					range = { 168, 294.4 },
+					range = { 113.6, 190.4 },
 					lv = 104,
 				},
 				{
 					kind = "ewarrior",
-					x = 232,
+					x = 152,
 					y = 256,
-					range = { 216, 246.4 },
+					range = { 145.6, 161.6 },
 					lv = 105,
 				},
 				{
 					kind = "ewarrior",
-					x = 368,
+					x = 241.6,
 					y = 272,
-					range = { 312, 438.4 },
+					range = { 204.8, 286.4 },
 					lv = 105,
 				},
 				{
 					kind = "espearman",
-					x = 512,
+					x = 336,
 					y = 240,
-					range = { 456, 582.4 },
+					range = { 299.2, 382.4 },
 					lv = 104,
 				},
 				{
 					kind = "espearman",
-					x = 520,
+					x = 340.8,
 					y = 192,
-					range = { 504, 534.4 },
+					range = { 331.2, 350.4 },
 					lv = 104,
 				},
 				{
 					kind = "ewarrior",
-					x = 656,
+					x = 430.4,
 					y = 208,
-					range = { 600, 726.4 },
+					range = { 393.6, 476.8 },
 					lv = 105,
 				},
 				{
 					kind = "espearman",
-					x = 696,
+					x = 456,
 					y = 208,
-					range = { 608, 726.4 },
+					range = { 398.4, 476.8 },
 					lv = 104,
 				},
 				{
 					kind = "ewarrior",
-					x = 800,
+					x = 524.8,
 					y = 176,
-					range = { 744, 870.4 },
+					range = { 488, 571.2 },
 					lv = 105,
 				},
 				{
 					kind = "espearman",
-					x = 832,
+					x = 545.6,
 					y = 176,
-					range = { 752, 870.4 },
+					range = { 492.8, 571.2 },
 					lv = 104,
 				},
 				{
 					kind = "ewarrior",
-					x = 792,
+					x = 520,
 					y = 128,
-					range = { 776, 822.4 },
+					range = { 513.6, 539.2 },
 					lv = 105,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		r4a3 = {
 			name = "불탄 거리",
 			region = "r4",
 			also = false,
-			w = 56,
+			w = 34,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -30687,14 +30847,14 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#a9bccb",
-			rows = { "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "......................................====..............", "..................................===...................", "....................===.................................", "..........................#######.......................", "..........########........#######......########.........", "########################################################", "########################################################", "########################################################" },
+			rows = { "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", ".......................====.......", ".....................===..........", "............===...................", "................####..............", "......#####.....####....#####.....", "##################################", "##################################", "##################################" },
 			layers = {
 				{ img = "sky.png", w = 384, h = 216, f = 0.03, y = 0 },
 				{ img = "far_r4a1.png", w = 768, h = 168, f = 0.14, y = 44 },
 				{ img = "near_r4a1.png", w = 768, h = 128, f = 0.34, y = 92 },
 			},
 			ground = {
-				{ img = "ground_r4a3_1.png", x = 0, w = 896, h = 224 },
+				{ img = "ground_r4a3_1.png", x = 0, w = 544, h = 224 },
 			},
 			props = "props_r4a1.png",
 			rects = {
@@ -30756,120 +30916,120 @@ local M = {
 				pond = { x = 37, y = 582, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "gate", x = 856, y = 177 },
+				{ id = "gate", x = 504, y = 177 },
 				{ id = "gate", x = 32, y = 177 },
-				{ id = "wallfrag3", x = 344, y = 161 },
-				{ id = "wallfrag2", x = 569, y = 148 },
-				{ id = "wallfrag1", x = 640, y = 124 },
-				{ id = "burnthouse", x = 106, y = 177 },
-				{ id = "burnthouse", x = 240, y = 161 },
-				{ id = "burnthouse", x = 406, y = 177 },
-				{ id = "colonnade", x = 496, y = 145 },
-				{ id = "burnthouse", x = 618, y = 177 },
-				{ id = "kingstatue", x = 720, y = 161 },
-				{ id = "mint", x = 627, y = 97 },
-				{ id = "grass", x = 304, y = 177 },
-				{ id = "rocks", x = 528, y = 177 },
-				{ id = "grass", x = 778, y = 177 },
+				{ id = "wallfrag3", x = 216, y = 161 },
+				{ id = "wallfrag2", x = 361, y = 148 },
+				{ id = "wallfrag1", x = 400, y = 124 },
+				{ id = "burnthouse", x = 64, y = 177 },
+				{ id = "burnthouse", x = 146, y = 161 },
+				{ id = "burnthouse", x = 246, y = 177 },
+				{ id = "colonnade", x = 301, y = 145 },
+				{ id = "burnthouse", x = 374, y = 177 },
+				{ id = "kingstatue", x = 437, y = 161 },
+				{ id = "grass", x = 184, y = 177 },
+				{ id = "rocks", x = 320, y = 177 },
+				{ id = "grass", x = 472, y = 177 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 32, y = 176, to = "r4a2", label = "무너진 성벽으로", h = 60 },
-				{ x = 856, y = 176, to = "r4a4", label = "아랫마을 광장으로", h = 60 },
-				{ x = 640, y = 96, to = "r4ah", label = "무너진 담 너머로", h = 40 },
+				{ x = 504, y = 176, to = "r4a4", label = "아랫마을 광장으로", h = 60 },
+				{ x = 389, y = 96, to = "r4ah", label = "무너진 담 너머로", h = 40 },
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 824, y = 176, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 472, y = 176, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "banner",
-					x = 145.6,
-					y = 176,
-					range = { 88, 150.4 },
+					x = 219.2,
+					y = 128,
+					range = { 193.6, 238.4 },
+					lv = 107,
+				},
+				{
+					kind = "ewarrior",
+					x = 136,
+					y = 160,
+					range = { 102.4, 169.6 },
+					lv = 107,
+				},
+				{
+					kind = "banner",
+					x = 166.4,
+					y = 160,
+					range = { 107.2, 169.6 },
+					lv = 107,
+				},
+				{
+					kind = "banner",
+					x = 203.2,
+					y = 128,
+					range = { 198.4, 217.6 },
 					lv = 107,
 				},
 				{
 					kind = "ewarrior",
 					x = 224,
-					y = 160,
-					range = { 168, 278.4 },
-					lv = 107,
-				},
-				{
-					kind = "banner",
-					x = 273.6,
-					y = 160,
-					range = { 176, 278.4 },
-					lv = 107,
-				},
-				{
-					kind = "banner",
-					x = 336,
-					y = 128,
-					range = { 328, 358.4 },
-					lv = 107,
-				},
-				{
-					kind = "ewarrior",
-					x = 368,
 					y = 176,
-					range = { 296, 406.4 },
+					range = { 179.2, 246.4 },
 					lv = 107,
 				},
 				{
 					kind = "banner",
-					x = 480,
+					x = 291.2,
 					y = 144,
-					range = { 424, 518.4 },
+					range = { 257.6, 315.2 },
 					lv = 107,
 				},
 				{
 					kind = "ewarrior",
-					x = 513.6,
+					x = 312,
 					y = 144,
-					range = { 432, 518.4 },
+					range = { 262.4, 315.2 },
 					lv = 107,
 				},
 				{
 					kind = "banner",
-					x = 568,
+					x = 212.8,
 					y = 176,
-					range = { 536, 614.4 },
+					range = { 177.6, 254.4 },
 					lv = 107,
 				},
 				{
 					kind = "ewarrior",
-					x = 688,
+					x = 113.6,
 					y = 160,
-					range = { 632, 742.4 },
+					range = { 97.6, 174.4 },
 					lv = 107,
 				},
 				{
 					kind = "banner",
-					x = 737.6,
-					y = 160,
-					range = { 640, 742.4 },
+					x = 193.6,
+					y = 176,
+					range = { 177.6, 254.4 },
 					lv = 107,
 				},
 				{
 					kind = "ewarrior",
-					x = 784,
-					y = 176,
-					range = { 760, 800 },
+					x = 270.4,
+					y = 144,
+					range = { 257.6, 318.4 },
 					lv = 107,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		r4a4 = {
 			name = "아랫마을 광장",
 			region = "r4",
 			also = false,
-			w = 56,
+			w = 34,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -30879,14 +31039,14 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#a9bccb",
-			rows = { "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", ".................====........===........................", "...........................................#############", ".........######...................#######..#############", "########################################################", "########################################################", "########################################################" },
+			rows = { "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", "..........====....===.............", "..........................########", ".....####............####.########", "##################################", "##################################", "##################################" },
 			layers = {
 				{ img = "sky.png", w = 384, h = 216, f = 0.03, y = 0 },
 				{ img = "far_r4a1.png", w = 768, h = 168, f = 0.14, y = 44 },
 				{ img = "near_r4a1.png", w = 768, h = 128, f = 0.34, y = 92 },
 			},
 			ground = {
-				{ img = "ground_r4a4_1.png", x = 0, w = 896, h = 224 },
+				{ img = "ground_r4a4_1.png", x = 0, w = 544, h = 224 },
 			},
 			props = "props_r4a1.png",
 			rects = {
@@ -30948,108 +31108,108 @@ local M = {
 				pond = { x = 37, y = 582, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "portcullis", x = 856, y = 145 },
+				{ id = "portcullis", x = 504, y = 145 },
 				{ id = "gate", x = 32, y = 177 },
-				{ id = "wallfrag1", x = 304, y = 156 },
-				{ id = "wallfrag2", x = 489, y = 164 },
-				{ id = "obanner", x = 106, y = 177 },
-				{ id = "burnthouse", x = 234, y = 161 },
-				{ id = "kingstatue", x = 400, y = 177 },
-				{ id = "burnthouse", x = 634, y = 161 },
-				{ id = "obanner", x = 672, y = 177 },
-				{ id = "breach", x = 778, y = 145 },
-				{ id = "grass", x = 256, y = 177 },
+				{ id = "wallfrag1", x = 192, y = 156 },
+				{ id = "wallfrag2", x = 313, y = 164 },
+				{ id = "obanner", x = 64, y = 177 },
+				{ id = "burnthouse", x = 142, y = 161 },
+				{ id = "kingstatue", x = 243, y = 177 },
+				{ id = "burnthouse", x = 384, y = 161 },
+				{ id = "breach", x = 472, y = 145 },
+				{ id = "grass", x = 155, y = 177 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 32, y = 176, to = "r4a3", label = "불탄 거리로", h = 60 },
-				{ x = 856, y = 144, to = "r4b1", label = "성벽 아래로", h = 51 },
+				{ x = 504, y = 144, to = "r4b1", label = "성벽 아래로", h = 51 },
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 824, y = 144, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 472, y = 144, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "statue",
-					x = 171.2,
+					x = 104,
 					y = 160,
-					range = { 152, 230.4 },
+					range = { 92.8, 139.2 },
 					lv = 109,
 				},
 				{
 					kind = "espearman",
-					x = 211.2,
+					x = 128,
 					y = 160,
-					range = { 160, 230.4 },
+					range = { 97.6, 139.2 },
 					lv = 109,
 				},
 				{
 					kind = "statue",
-					x = 320,
+					x = 193.6,
 					y = 176,
-					range = { 248, 342.4 },
+					range = { 150.4, 208 },
 					lv = 109,
 				},
 				{
 					kind = "earcher",
-					x = 360,
+					x = 219.2,
 					y = 176,
-					range = { 248, 534.4 },
+					range = { 150.4, 324.8 },
 					lv = 110,
 				},
 				{
 					kind = "statue",
-					x = 448,
+					x = 272,
 					y = 176,
-					range = { 416, 534.4 },
+					range = { 252.8, 324.8 },
 					lv = 109,
 				},
 				{
 					kind = "espearman",
-					x = 528,
+					x = 320,
 					y = 176,
-					range = { 432, 534.4 },
+					range = { 262.4, 324.8 },
 					lv = 109,
 				},
 				{
 					kind = "statue",
-					x = 592,
+					x = 360,
 					y = 160,
-					range = { 552, 646.4 },
+					range = { 337.6, 392 },
 					lv = 109,
 				},
 				{
 					kind = "espearman",
-					x = 641.6,
+					x = 388.8,
 					y = 160,
-					range = { 560, 646.4 },
+					range = { 340.8, 392 },
 					lv = 109,
 				},
 				{
 					kind = "statue",
-					x = 752,
+					x = 446.4,
 					y = 144,
-					range = { 696, 800 },
+					range = { 422.4, 446.4 },
 					lv = 109,
 				},
 				{
 					kind = "earcher",
-					x = 712,
+					x = 432,
 					y = 144,
-					range = { 696, 800 },
+					range = { 422.4, 446.4 },
 					lv = 110,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		r4b1 = {
 			name = "성벽 아래",
 			region = "r4",
 			also = false,
-			w = 48,
+			w = 32,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -31059,12 +31219,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#697b90",
-			rows = { "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "......................====......................", "..................................===...........", ".................====...........................", "..........#####...........######......##########", "..........#####...........######......##########", "################################################", "################################################", "################################################" },
+			rows = { "................................", "................................", "................................", "................................", "................................", "................................", "...............====.............", ".......................===......", "...........====.................", ".......###.......####....#######", ".......###.......####....#######", "################################", "################################", "################################" },
 			layers = {
 				{ img = "wall_r4b1.png", w = 384, h = 768, f = 2, y = 0 },
 			},
 			ground = {
-				{ img = "ground_r4b1_1.png", x = 0, w = 768, h = 224 },
+				{ img = "ground_r4b1_1.png", x = 0, w = 512, h = 224 },
 			},
 			props = "props_r4a1.png",
 			rects = {
@@ -31126,113 +31286,114 @@ local M = {
 				pond = { x = 37, y = 582, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "door", x = 384, y = 97 },
-				{ id = "walltower", x = 712, y = 145 },
-				{ id = "door", x = 320, y = 177 },
+				{ id = "door", x = 256, y = 97 },
+				{ id = "walltower", x = 456, y = 145 },
+				{ id = "door", x = 213, y = 177 },
 				{ id = "portcullis", x = 38, y = 177 },
-				{ id = "scaffold1", x = 304, y = 155 },
-				{ id = "scaffold3", x = 568, y = 139 },
-				{ id = "scaffold1", x = 384, y = 123 },
-				{ id = "weaponrack", x = 122, y = 177 },
-				{ id = "trebuchet", x = 192, y = 145 },
-				{ id = "siegeladder", x = 394, y = 177 },
-				{ id = "weaponrack", x = 474, y = 145 },
-				{ id = "trebuchet", x = 598, y = 177 },
-				{ id = "wbrazier", x = 650, y = 145 },
-				{ id = "rocks", x = 346, y = 177 },
+				{ id = "scaffold1", x = 208, y = 155 },
+				{ id = "scaffold3", x = 392, y = 139 },
+				{ id = "scaffold1", x = 272, y = 123 },
+				{ id = "weaponrack", x = 82, y = 177 },
+				{ id = "trebuchet", x = 128, y = 145 },
+				{ id = "siegeladder", x = 262, y = 177 },
+				{ id = "weaponrack", x = 315, y = 145 },
+				{ id = "trebuchet", x = 398, y = 177 },
+				{ id = "wbrazier", x = 434, y = 145 },
+				{ id = "rocks", x = 230, y = 177 },
 			},
 			front = {  },
-			spawn = { x = 64, y = 176 },
+			spawn = { x = 43.2, y = 176 },
 			portals = {
 				{ x = 38, y = 176, to = "r4a4", label = "아랫마을 광장으로", h = 51 },
-				{ x = 320, y = 176, to = "r4b4", label = "성문 앞으로", h = 57 },
-				{ x = 712, y = 144, to = "r4b2", label = "성벽 위로", h = 67 },
-				{ x = 384, y = 96, to = "r4bl", label = "옛 수로로", h = 57 },
+				{ x = 213, y = 176, to = "r4b4", label = "성문 앞으로", h = 57 },
+				{ x = 456, y = 144, to = "r4b2", label = "성벽 위로", h = 67 },
+				{ x = 256, y = 96, to = "r4bl", label = "옛 수로로", h = 57 },
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 680, y = 144, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 424, y = 144, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "espearman",
-					x = 108.8,
+					x = 96,
 					y = 176,
-					range = { 94.4, 150.4 },
+					range = { 96, 110.4 },
 					lv = 112,
 				},
 				{
 					kind = "earcher",
-					x = 136,
+					x = 96,
 					y = 176,
-					range = { 94.4, 150.4 },
+					range = { 96, 110.4 },
 					lv = 111,
 				},
 				{
 					kind = "espearman",
-					x = 179.2,
+					x = 120,
 					y = 144,
-					range = { 168, 230.4 },
+					range = { 113.6, 153.6 },
 					lv = 112,
 				},
 				{
 					kind = "earcher",
-					x = 200,
+					x = 132.8,
 					y = 144,
-					range = { 168, 227.2 },
+					range = { 113.6, 152 },
 					lv = 111,
 				},
 				{
 					kind = "espearman",
-					x = 220.8,
+					x = 147.2,
 					y = 144,
-					range = { 176, 230.4 },
+					range = { 116.8, 153.6 },
 					lv = 112,
 				},
 				{
 					kind = "earcher",
-					x = 497.6,
+					x = 331.2,
 					y = 144,
-					range = { 424, 502.4 },
+					range = { 313.6, 334.4 },
 					lv = 111,
 				},
 				{
 					kind = "espearman",
-					x = 464,
+					x = 313.6,
 					y = 144,
-					range = { 432, 502.4 },
+					range = { 313.6, 334.4 },
 					lv = 112,
 				},
 				{
 					kind = "espearman",
-					x = 560,
+					x = 372.8,
 					y = 176,
-					range = { 520, 598.4 },
+					range = { 347.2, 398.4 },
 					lv = 112,
 				},
 				{
 					kind = "earcher",
-					x = 593.6,
+					x = 395.2,
 					y = 176,
-					range = { 520, 598.4 },
+					range = { 347.2, 398.4 },
 					lv = 111,
 				},
 				{
 					kind = "espearman",
-					x = 633.6,
-					y = 144,
-					range = { 616, 656 },
+					x = 385.6,
+					y = 112,
+					range = { 369.6, 398.4 },
 					lv = 112,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		r4b2 = {
 			name = "성벽 위",
 			region = "r4",
 			also = false,
-			w = 56,
+			w = 34,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -31242,14 +31403,14 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#697b90",
-			rows = { "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "..........######...................###########..........", "..........######.......====........###########..........", "#####################........###########################", "#####################........###########################", "########################################################" },
+			rows = { "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", "......####...........#######......", "......####....====...#######......", "#############.....################", "#############.....################", "##################################" },
 			layers = {
 				{ img = "sky.png", w = 384, h = 216, f = 0.03, y = 0 },
 				{ img = "far_r4a1.png", w = 768, h = 168, f = 0.14, y = 44 },
 				{ img = "near_r4a1.png", w = 768, h = 128, f = 0.34, y = 92 },
 			},
 			ground = {
-				{ img = "ground_r4b2_1.png", x = 0, w = 896, h = 224 },
+				{ img = "ground_r4b2_1.png", x = 0, w = 544, h = 224 },
 			},
 			props = "props_r4a1.png",
 			rects = {
@@ -31311,101 +31472,101 @@ local M = {
 				pond = { x = 37, y = 582, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "walltower", x = 856, y = 177 },
-				{ id = "door", x = 656, y = 145 },
+				{ id = "walltower", x = 504, y = 177 },
+				{ id = "door", x = 398, y = 145 },
 				{ id = "walltower", x = 38, y = 177 },
-				{ id = "scaffold1", x = 400, y = 187 },
-				{ id = "battlement", x = 128, y = 177 },
-				{ id = "obanner", x = 192, y = 145 },
-				{ id = "battlement", x = 314, y = 177 },
-				{ id = "wbrazier", x = 550, y = 177 },
-				{ id = "obanner", x = 586, y = 145 },
-				{ id = "weaponrack", x = 720, y = 145 },
+				{ id = "scaffold1", x = 256, y = 187 },
+				{ id = "battlement", x = 78, y = 177 },
+				{ id = "obanner", x = 117, y = 145 },
+				{ id = "battlement", x = 190, y = 177 },
+				{ id = "wbrazier", x = 334, y = 177 },
+				{ id = "weaponrack", x = 437, y = 145 },
 			},
 			front = {  },
-			spawn = { x = 64, y = 176 },
+			spawn = { x = 38.4, y = 176 },
 			portals = {
 				{ x = 38, y = 176, to = "r4b1", label = "성벽 아래로", h = 67 },
-				{ x = 656, y = 144, to = "r4bh", label = "성벽 속 통로로", h = 57 },
-				{ x = 856, y = 176, to = "r4b3", label = "망대로", h = 67 },
+				{ x = 398, y = 144, to = "r4bh", label = "성벽 속 통로로", h = 57 },
+				{ x = 504, y = 176, to = "r4b3", label = "망대로", h = 67 },
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 824, y = 176, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 472, y = 176, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "bomber",
-					x = 108.8,
-					y = 176,
-					range = { 94.4, 150.4 },
+					x = 132.8,
+					y = 144,
+					range = { 97.6, 158.4 },
 					lv = 115,
 				},
 				{
 					kind = "earcher",
-					x = 136,
-					y = 176,
-					range = { 94.4, 150.4 },
+					x = 260.8,
+					y = 160,
+					range = { 225.6, 286.4 },
 					lv = 114,
 				},
 				{
 					kind = "earcher",
-					x = 182.4,
+					x = 110.4,
 					y = 144,
-					range = { 168, 246.4 },
+					range = { 102.4, 150.4 },
 					lv = 114,
 				},
 				{
 					kind = "bomber",
-					x = 241.6,
+					x = 147.2,
 					y = 144,
-					range = { 168, 246.4 },
+					range = { 102.4, 150.4 },
 					lv = 115,
 				},
 				{
 					kind = "bomber",
-					x = 312,
+					x = 188.8,
 					y = 176,
-					range = { 264, 326.4 },
+					range = { 161.6, 198.4 },
 					lv = 115,
 				},
 				{
 					kind = "bomber",
-					x = 400,
+					x = 243.2,
 					y = 208,
-					range = { 344, 454.4 },
+					range = { 209.6, 275.2 },
 					lv = 115,
 				},
 				{
 					kind = "earcher",
-					x = 486.4,
+					x = 296,
 					y = 176,
-					range = { 472, 550.4 },
+					range = { 289.6, 334.4 },
 					lv = 114,
 				},
 				{
 					kind = "bomber",
-					x = 528,
+					x = 320,
 					y = 176,
-					range = { 472, 550.4 },
+					range = { 289.6, 334.4 },
 					lv = 115,
 				},
 				{
 					kind = "bomber",
-					x = 760,
-					y = 176,
-					range = { 744, 800 },
+					x = 270.4,
+					y = 208,
+					range = { 209.6, 286.4 },
 					lv = 115,
 				},
 				{
 					kind = "bomber",
-					x = 795.2,
-					y = 176,
-					range = { 752, 800 },
+					x = 238.4,
+					y = 160,
+					range = { 225.6, 286.4 },
 					lv = 115,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		r4b3 = {
@@ -31587,6 +31748,7 @@ local M = {
 					lv = 117,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		r4bh = {
@@ -31691,6 +31853,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -31741,7 +31904,7 @@ local M = {
 			name = "성문 앞",
 			region = "r4",
 			also = false,
-			w = 48,
+			w = 32,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -31751,12 +31914,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#697b90",
-			rows = { "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", ".................................====...........", "...................===..................########", ".........#######........#######.........########", ".........#######........#######.........########", "################################################", "################################################", "################################################" },
+			rows = { "................................", "................................", "................................", "................................", "................................", "................................", "................................", "......................====......", ".............===...........#####", "......#####.....#####......#####", "......#####.....#####......#####", "################################", "################################", "################################" },
 			layers = {
 				{ img = "wall_r4b1.png", w = 384, h = 768, f = 2, y = 0 },
 			},
 			ground = {
-				{ img = "ground_r4b4_1.png", x = 0, w = 768, h = 224 },
+				{ img = "ground_r4b4_1.png", x = 0, w = 512, h = 224 },
 			},
 			props = "props_r4a1.png",
 			rects = {
@@ -31819,104 +31982,104 @@ local M = {
 			},
 			back = {
 				{ id = "door", x = 42, y = 177 },
-				{ id = "scaffold2", x = 328, y = 155 },
-				{ id = "scaffold1", x = 560, y = 139 },
-				{ id = "weaponrack", x = 122, y = 177 },
-				{ id = "trebuchet", x = 240, y = 145 },
-				{ id = "siegeladder", x = 278, y = 177 },
-				{ id = "trebuchet", x = 480, y = 145 },
-				{ id = "weaponrack", x = 518, y = 177 },
-				{ id = "wbrazier", x = 678, y = 129 },
+				{ id = "scaffold2", x = 232, y = 155 },
+				{ id = "scaffold1", x = 384, y = 139 },
+				{ id = "weaponrack", x = 82, y = 177 },
+				{ id = "trebuchet", x = 160, y = 145 },
+				{ id = "trebuchet", x = 320, y = 145 },
+				{ id = "weaponrack", x = 346, y = 177 },
+				{ id = "wbrazier", x = 453, y = 129 },
 			},
 			front = {  },
-			spawn = { x = 80, y = 176 },
+			spawn = { x = 52.8, y = 176 },
 			portals = {
 				{ x = 42, y = 176, to = "r4b1", label = "성벽 아래로", h = 57 },
 			},
 			warps = {
 				{ id = "warp1", x = 88, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 696, y = 128, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 440, y = 128, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "bomber",
-					x = 107.2,
-					y = 176,
-					range = { 99.2, 134.4 },
+					x = 388.8,
+					y = 112,
+					range = { 353.6, 414.4 },
 					lv = 119,
 				},
 				{
 					kind = "espearman",
-					x = 124.8,
-					y = 176,
-					range = { 99.2, 134.4 },
-					lv = 119,
-				},
-				{
-					kind = "earcher",
-					x = 208,
-					y = 144,
-					range = { 152, 246.4 },
-					lv = 120,
-				},
-				{
-					kind = "espearman",
-					x = 241.6,
-					y = 144,
-					range = { 160, 246.4 },
-					lv = 119,
-				},
-				{
-					kind = "bomber",
-					x = 336,
-					y = 176,
-					range = { 264, 374.4 },
-					lv = 119,
-				},
-				{
-					kind = "espearman",
-					x = 369.6,
-					y = 176,
-					range = { 272, 374.4 },
-					lv = 119,
-				},
-				{
-					kind = "earcher",
-					x = 448,
-					y = 144,
-					range = { 392, 486.4 },
-					lv = 120,
-				},
-				{
-					kind = "bomber",
-					x = 481.6,
-					y = 144,
-					range = { 400, 486.4 },
-					lv = 119,
-				},
-				{
-					kind = "espearman",
-					x = 576,
-					y = 176,
-					range = { 504, 630.4 },
-					lv = 119,
-				},
-				{
-					kind = "earcher",
-					x = 736,
+					x = 235.2,
 					y = 128,
-					range = { 648, 758.4 },
+					range = { 209.6, 254.4 },
+					lv = 119,
+				},
+				{
+					kind = "earcher",
+					x = 139.2,
+					y = 144,
+					range = { 100.8, 164.8 },
+					lv = 120,
+				},
+				{
+					kind = "espearman",
+					x = 161.6,
+					y = 144,
+					range = { 107.2, 164.8 },
+					lv = 119,
+				},
+				{
+					kind = "bomber",
+					x = 224,
+					y = 176,
+					range = { 177.6, 249.6 },
+					lv = 119,
+				},
+				{
+					kind = "espearman",
+					x = 246.4,
+					y = 176,
+					range = { 180.8, 249.6 },
+					lv = 119,
+				},
+				{
+					kind = "earcher",
+					x = 299.2,
+					y = 144,
+					range = { 260.8, 324.8 },
+					lv = 120,
+				},
+				{
+					kind = "bomber",
+					x = 321.6,
+					y = 144,
+					range = { 267.2, 324.8 },
+					lv = 119,
+				},
+				{
+					kind = "espearman",
+					x = 384,
+					y = 176,
+					range = { 337.6, 420.8 },
+					lv = 119,
+				},
+				{
+					kind = "earcher",
+					x = 491.2,
+					y = 128,
+					range = { 433.6, 505.6 },
 					lv = 120,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		r4c1 = {
 			name = "내성 뜰",
 			region = "r4",
 			also = false,
-			w = 48,
+			w = 32,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -31926,13 +32089,13 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#47546a",
-			rows = { "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", ".................===..........=====.............", ".........#####........######....................", ".........#####........######....................", "################################################", "################################################", "################################################" },
+			rows = { "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "...........===......=====.......", "......###......####.............", "......###......####.............", "################################", "################################", "################################" },
 			layers = {
 				{ img = "sky.png", w = 384, h = 216, f = 0.03, y = 0 },
 				{ img = "wall_r4c1.png", w = 384, h = 256, f = 2, y = 88 },
 			},
 			ground = {
-				{ img = "ground_r4c1_1.png", x = 0, w = 768, h = 224 },
+				{ img = "ground_r4c1_1.png", x = 0, w = 512, h = 224 },
 			},
 			props = "props_r4a1.png",
 			rects = {
@@ -31994,108 +32157,109 @@ local M = {
 				pond = { x = 37, y = 582, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "keepfacade", x = 710, y = 177 },
+				{ id = "keepfacade", x = 474, y = 177 },
 				{ id = "door", x = 38, y = 177 },
-				{ id = "gallery2", x = 296, y = 149 },
-				{ id = "gallery1", x = 520, y = 147 },
-				{ id = "arcade", x = 134, y = 177 },
-				{ id = "guardpost", x = 256, y = 177 },
-				{ id = "dummies", x = 336, y = 177 },
-				{ id = "knightplinth", x = 378, y = 145 },
-				{ id = "deadhedge", x = 502, y = 177 },
-				{ id = "guardpost", x = 586, y = 177 },
-				{ id = "knightplinth", x = 634, y = 177 },
+				{ id = "gallery2", x = 200, y = 149 },
+				{ id = "gallery1", x = 360, y = 147 },
+				{ id = "arcade", x = 90, y = 177 },
+				{ id = "guardpost", x = 171, y = 177 },
+				{ id = "dummies", x = 224, y = 177 },
+				{ id = "knightplinth", x = 251, y = 145 },
+				{ id = "deadhedge", x = 334, y = 177 },
+				{ id = "guardpost", x = 390, y = 177 },
+				{ id = "knightplinth", x = 422, y = 177 },
 			},
 			front = {  },
-			spawn = { x = 64, y = 176 },
+			spawn = { x = 43.2, y = 176 },
 			portals = {
 				{ x = 38, y = 176, to = "r4bh", label = "성벽 속 통로로", h = 57 },
-				{ x = 710, y = 176, to = "r4c2", label = "기사의 회랑으로", h = 67 },
+				{ x = 474, y = 176, to = "r4c2", label = "기사의 회랑으로", h = 67 },
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 664, y = 176, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 440, y = 176, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "espearman",
-					x = 104,
-					y = 176,
-					range = { 94.4, 134.4 },
+					x = 203.2,
+					y = 128,
+					range = { 177.6, 222.4 },
 					lv = 121,
 				},
 				{
 					kind = "ewarrior",
-					x = 124.8,
-					y = 176,
-					range = { 94.4, 134.4 },
+					x = 366.4,
+					y = 128,
+					range = { 321.6, 398.4 },
 					lv = 122,
 				},
 				{
 					kind = "espearman",
-					x = 168,
+					x = 112,
 					y = 144,
-					range = { 152, 214.4 },
+					range = { 100.8, 142.4 },
 					lv = 121,
 				},
 				{
 					kind = "ewarrior",
-					x = 198.4,
+					x = 132.8,
 					y = 144,
-					range = { 160, 214.4 },
+					range = { 107.2, 142.4 },
 					lv = 122,
 				},
 				{
 					kind = "espearman",
-					x = 288,
+					x = 192,
 					y = 176,
-					range = { 232, 342.4 },
+					range = { 155.2, 228.8 },
 					lv = 121,
 				},
 				{
 					kind = "ewarrior",
-					x = 337.6,
+					x = 225.6,
 					y = 176,
-					range = { 240, 342.4 },
+					range = { 160, 228.8 },
 					lv = 122,
 				},
 				{
 					kind = "espearman",
-					x = 379.2,
+					x = 252.8,
 					y = 144,
-					range = { 360, 438.4 },
+					range = { 241.6, 292.8 },
 					lv = 121,
 				},
 				{
 					kind = "ewarrior",
-					x = 419.2,
+					x = 280,
 					y = 144,
-					range = { 368, 438.4 },
+					range = { 244.8, 292.8 },
 					lv = 122,
 				},
 				{
 					kind = "espearman",
-					x = 512,
+					x = 340.8,
 					y = 176,
-					range = { 456, 595.2 },
+					range = { 305.6, 396.8 },
 					lv = 121,
 				},
 				{
 					kind = "ewarrior",
-					x = 552,
+					x = 368,
 					y = 176,
-					range = { 464, 604.8 },
+					range = { 308.8, 403.2 },
 					lv = 122,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		r4c2 = {
 			name = "기사의 회랑",
 			region = "r4",
 			also = false,
-			w = 60,
+			w = 40,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -32105,12 +32269,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#47546a",
-			rows = { "............................................................", "............................................................", "............................................................", "............................................................", "............................................................", "............................................................", "............................................................", "....................................====....................", ".................===..........=====...............===.......", ".....................#####................######............", ".....................#####................######............", "############################################################", "############################################################", "############################################################" },
+			rows = { "........................................", "........................................", "........................................", "........................................", "........................................", "........................................", "........................................", "........................====............", "...........===......=====........===....", "..............###...........####........", "..............###...........####........", "########################################", "########################################", "########################################" },
 			layers = {
 				{ img = "wall_r4c2.png", w = 384, h = 768, f = 2, y = 26 },
 			},
 			ground = {
-				{ img = "ground_r4c2_1.png", x = 0, w = 960, h = 224 },
+				{ img = "ground_r4c2_1.png", x = 0, w = 640, h = 224 },
 			},
 			props = "props_r4c2.png",
 			rects = {
@@ -32160,107 +32324,108 @@ local M = {
 				pond = { x = 220, y = 329, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "stairarch", x = 826, y = 129 },
-				{ id = "gdoor", x = 912, y = 177 },
+				{ id = "stairarch", x = 550, y = 129 },
+				{ id = "gdoor", x = 592, y = 177 },
 				{ id = "gdoor", x = 45, y = 177 },
-				{ id = "shelf2", x = 296, y = 155 },
-				{ id = "shelf1", x = 520, y = 155 },
-				{ id = "shelf3", x = 608, y = 139 },
-				{ id = "shelf2", x = 824, y = 155 },
-				{ id = "gcolumn", x = 112, y = 177 },
-				{ id = "bookcase", x = 176, y = 177 },
-				{ id = "portraits", x = 304, y = 161 },
-				{ id = "bookcase", x = 400, y = 145 },
-				{ id = "gcolumn", x = 438, y = 177 },
-				{ id = "armor", x = 506, y = 177 },
-				{ id = "portraits", x = 640, y = 161 },
-				{ id = "bookcase", x = 736, y = 145 },
-				{ id = "bookheap", x = 832, y = 177 },
+				{ id = "shelf2", x = 200, y = 155 },
+				{ id = "shelf1", x = 360, y = 155 },
+				{ id = "shelf3", x = 416, y = 139 },
+				{ id = "shelf2", x = 552, y = 155 },
+				{ id = "gcolumn", x = 75, y = 177 },
+				{ id = "bookcase", x = 117, y = 177 },
+				{ id = "portraits", x = 203, y = 161 },
+				{ id = "bookcase", x = 267, y = 145 },
+				{ id = "gcolumn", x = 293, y = 177 },
+				{ id = "armor", x = 338, y = 177 },
+				{ id = "portraits", x = 427, y = 161 },
+				{ id = "bookcase", x = 491, y = 145 },
+				{ id = "bookheap", x = 555, y = 177 },
 			},
 			front = {  },
-			spawn = { x = 80, y = 176 },
+			spawn = { x = 52.8, y = 176 },
 			portals = {
 				{ x = 45, y = 176, to = "r4c1", label = "내성 뜰로", h = 58 },
-				{ x = 912, y = 176, to = "r4ch", label = "옛 근위대 숙소로", h = 58 },
-				{ x = 826, y = 128, to = "r4cl", label = "멈춘 종탑으로", h = 53 },
+				{ x = 592, y = 176, to = "r4ch", label = "옛 근위대 숙소로", h = 58 },
+				{ x = 550, y = 128, to = "r4cl", label = "멈춘 종탑으로", h = 53 },
 			},
 			warps = {
 				{ id = "warp1", x = 88, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 872, y = 176, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 552, y = 176, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "book",
-					x = 148.8,
+					x = 102.4,
 					y = 176,
-					range = { 144, 230.4 },
+					range = { 102.4, 153.6 },
 					lv = 126,
 				},
 				{
 					kind = "ewarrior",
-					x = 214.4,
+					x = 142.4,
 					y = 176,
-					range = { 147.2, 326.4 },
+					range = { 102.4, 217.6 },
 					lv = 126,
 				},
 				{
 					kind = "book",
-					x = 288,
+					x = 192,
 					y = 176,
-					range = { 240, 326.4 },
+					range = { 160, 217.6 },
 					lv = 126,
 				},
 				{
 					kind = "book",
-					x = 360,
+					x = 240,
 					y = 144,
-					range = { 344, 406.4 },
+					range = { 228.8, 270.4 },
 					lv = 126,
 				},
 				{
 					kind = "ewarrior",
-					x = 390.4,
+					x = 260.8,
 					y = 144,
-					range = { 352, 406.4 },
+					range = { 235.2, 270.4 },
 					lv = 126,
 				},
 				{
 					kind = "book",
-					x = 512,
+					x = 340.8,
 					y = 176,
-					range = { 424, 560 },
+					range = { 283.2, 372.8 },
 					lv = 126,
 				},
 				{
 					kind = "ewarrior",
-					x = 576,
+					x = 384,
 					y = 176,
-					range = { 432, 662.4 },
+					range = { 288, 441.6 },
 					lv = 126,
 				},
 				{
 					kind = "book",
-					x = 640,
+					x = 427.2,
 					y = 176,
-					range = { 560, 662.4 },
+					range = { 372.8, 441.6 },
 					lv = 126,
 				},
 				{
 					kind = "book",
-					x = 753.6,
+					x = 492.8,
 					y = 144,
-					range = { 680, 758.4 },
+					range = { 452.8, 492.8 },
 					lv = 126,
 				},
 				{
 					kind = "ewarrior",
-					x = 800,
-					y = 176,
-					range = { 776, 856 },
+					x = 420.8,
+					y = 112,
+					range = { 385.6, 446.4 },
 					lv = 126,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		r4ch = {
@@ -32354,6 +32519,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -32430,7 +32596,7 @@ local M = {
 			name = "무기고",
 			region = "r4",
 			also = false,
-			w = 44,
+			w = 30,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -32440,12 +32606,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#47546a",
-			rows = { "............................................", "............................................", "............................................", "............................................", "............................................", "............................................", "............................................", "............................................", "....................=====............====...", "...........######..........#######..........", "...........######..........#######..........", "############################################", "############################################", "############################################" },
+			rows = { "..............................", "..............................", "..............................", "..............................", "..............................", "..............................", "..............................", "..............................", "..............=====......====.", ".......#####......#####.......", ".......#####......#####.......", "##############################", "##############################", "##############################" },
 			layers = {
 				{ img = "wall_r4c2.png", w = 384, h = 768, f = 2, y = 26 },
 			},
 			ground = {
-				{ img = "ground_r4c3_1.png", x = 0, w = 704, h = 224 },
+				{ img = "ground_r4c3_1.png", x = 0, w = 480, h = 224 },
 			},
 			props = "props_r4c2.png",
 			rects = {
@@ -32495,112 +32661,113 @@ local M = {
 				pond = { x = 220, y = 329, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "gdoor", x = 621, y = 129 },
+				{ id = "gdoor", x = 424, y = 129 },
 				{ id = "gdoor", x = 45, y = 177 },
-				{ id = "shelf1", x = 360, y = 155 },
-				{ id = "shelf3", x = 624, y = 155 },
-				{ id = "gcolumn", x = 106, y = 177 },
-				{ id = "armor", x = 160, y = 177 },
-				{ id = "armor", x = 224, y = 145 },
-				{ id = "gcolumn", x = 294, y = 177 },
-				{ id = "armor", x = 378, y = 177 },
-				{ id = "armor", x = 426, y = 177 },
-				{ id = "armor", x = 480, y = 145 },
-				{ id = "armor", x = 528, y = 145 },
-				{ id = "gcolumn", x = 566, y = 177 },
-				{ id = "armor", x = 640, y = 177 },
-				{ id = "armor", x = 688, y = 177 },
+				{ id = "shelf1", x = 264, y = 155 },
+				{ id = "shelf3", x = 432, y = 155 },
+				{ id = "gcolumn", x = 72, y = 177 },
+				{ id = "armor", x = 109, y = 177 },
+				{ id = "armor", x = 152, y = 145 },
+				{ id = "gcolumn", x = 200, y = 177 },
+				{ id = "armor", x = 258, y = 177 },
+				{ id = "armor", x = 290, y = 145 },
+				{ id = "armor", x = 328, y = 145 },
+				{ id = "armor", x = 360, y = 145 },
+				{ id = "gcolumn", x = 386, y = 177 },
+				{ id = "armor", x = 437, y = 177 },
+				{ id = "armor", x = 464, y = 177 },
 			},
 			front = {  },
-			spawn = { x = 80, y = 176 },
+			spawn = { x = 54.4, y = 176 },
 			portals = {
 				{ x = 45, y = 176, to = "r4ch", label = "옛 근위대 숙소로", h = 58 },
-				{ x = 621, y = 128, to = "r4dl", label = "뒷문으로 — 산길", h = 58 },
+				{ x = 424, y = 128, to = "r4dl", label = "뒷문으로 — 산길", h = 58 },
 			},
 			warps = {
 				{ id = "warp1", x = 88, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 632, y = 176, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 408, y = 176, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "ewarrior",
-					x = 116.8,
-					y = 176,
-					range = { 101, 166.4 },
+					x = 270.4,
+					y = 128,
+					range = { 225.6, 302.4 },
 					lv = 130,
 				},
 				{
 					kind = "ewarrior",
-					x = 150.4,
-					y = 176,
-					range = { 101, 166.4 },
-					lv = 130,
-				},
-				{
-					kind = "ewarrior",
-					x = 203.2,
+					x = 158.4,
 					y = 144,
-					range = { 184, 262.4 },
+					range = { 113.6, 190.4 },
 					lv = 130,
 				},
 				{
 					kind = "ewarrior",
-					x = 243.2,
+					x = 139.2,
 					y = 144,
-					range = { 192, 262.4 },
+					range = { 124.8, 179.2 },
 					lv = 130,
 				},
 				{
 					kind = "ewarrior",
-					x = 336,
-					y = 176,
-					range = { 280, 422.4 },
-					lv = 130,
-				},
-				{
-					kind = "ewarrior",
-					x = 400,
-					y = 176,
-					range = { 288, 422.4 },
-					lv = 130,
-				},
-				{
-					kind = "ewarrior",
-					x = 488,
+					x = 166.4,
 					y = 144,
-					range = { 440, 534.4 },
+					range = { 131.2, 179.2 },
 					lv = 130,
 				},
 				{
 					kind = "ewarrior",
-					x = 529.6,
+					x = 228.8,
+					y = 176,
+					range = { 193.6, 286.4 },
+					lv = 130,
+				},
+				{
+					kind = "ewarrior",
+					x = 272,
+					y = 176,
+					range = { 196.8, 286.4 },
+					lv = 130,
+				},
+				{
+					kind = "ewarrior",
+					x = 332.8,
 					y = 144,
-					range = { 448, 534.4 },
+					range = { 300.8, 364.8 },
 					lv = 130,
 				},
 				{
 					kind = "ewarrior",
-					x = 608,
-					y = 176,
-					range = { 552, 694.4 },
+					x = 361.6,
+					y = 144,
+					range = { 305.6, 364.8 },
 					lv = 130,
 				},
 				{
 					kind = "ewarrior",
-					x = 689.6,
+					x = 241.6,
+					y = 128,
+					range = { 225.6, 302.4 },
+					lv = 130,
+				},
+				{
+					kind = "ewarrior",
+					x = 225.6,
 					y = 176,
-					range = { 560, 694.4 },
+					range = { 193.6, 286.4 },
 					lv = 130,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		r4d1 = {
 			name = "내려가는 계단",
 			region = "r4",
 			also = false,
-			w = 64,
+			w = 42,
 			h = 24,
 			tall = true,
 			indoor = false,
@@ -32610,12 +32777,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#2f3742",
-			rows = { "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................................", "................................................====............", ".......................................................#########", ".......................................................#########", "..............................................##################", "...............................===............##################", ".....................................###########################", ".....................................###########################", "............................####################################", ".............===............####################################", "...................#############################################", "...................#############################################", "..........######################################################", "..........######################################################", "################################################################", "################################################################", "################################################################" },
+			rows = { "..........................................", "..........................................", "..........................................", "..........................................", "..........................................", "..........................................", "..........................................", "..........................................", "................................====......", "....................................######", "....................................######", "..............................############", "....................===.......############", "........................##################", "........................##################", "..................########################", ".........===......########################", "............##############################", "............##############################", ".......###################################", ".......###################################", "##########################################", "##########################################", "##########################################" },
 			layers = {
 				{ img = "wall_r4d1.png", w = 384, h = 768, f = 2, y = -24 },
 			},
 			ground = {
-				{ img = "ground_r4d1_1.png", x = 0, w = 1024, h = 384 },
+				{ img = "ground_r4d1_1.png", x = 0, w = 672, h = 384 },
 			},
 			props = "props_r4c2.png",
 			rects = {
@@ -32665,114 +32832,115 @@ local M = {
 				pond = { x = 220, y = 329, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "stairarch", x = 976, y = 145 },
+				{ id = "stairarch", x = 624, y = 145 },
 				{ id = "stairarch", x = 42, y = 337 },
-				{ id = "chainslab2", x = 232, y = 286 },
-				{ id = "chainslab3", x = 520, y = 223 },
-				{ id = "chainslab1", x = 800, y = 158 },
-				{ id = "wardlamp", x = 106, y = 337 },
-				{ id = "runepillar", x = 186, y = 305 },
-				{ id = "chainanchor", x = 262, y = 305 },
-				{ id = "wedge", x = 352, y = 273 },
-				{ id = "wardlamp", x = 416, y = 273 },
-				{ id = "runepillar", x = 474, y = 241 },
-				{ id = "brokenwedge", x = 550, y = 241 },
-				{ id = "wardlamp", x = 624, y = 209 },
-				{ id = "wedge", x = 698, y = 209 },
-				{ id = "runepillar", x = 762, y = 177 },
-				{ id = "chainanchor", x = 838, y = 177 },
-				{ id = "wardlamp", x = 912, y = 145 },
+				{ id = "chainslab2", x = 168, y = 286 },
+				{ id = "chainslab3", x = 344, y = 223 },
+				{ id = "chainslab1", x = 544, y = 158 },
+				{ id = "wardlamp", x = 69, y = 337 },
+				{ id = "runepillar", x = 122, y = 305 },
+				{ id = "chainanchor", x = 173, y = 305 },
+				{ id = "wedge", x = 230, y = 273 },
+				{ id = "wardlamp", x = 274, y = 273 },
+				{ id = "runepillar", x = 310, y = 241 },
+				{ id = "brokenwedge", x = 362, y = 241 },
+				{ id = "wardlamp", x = 410, y = 209 },
+				{ id = "wedge", x = 458, y = 209 },
+				{ id = "runepillar", x = 499, y = 177 },
+				{ id = "chainanchor", x = 550, y = 177 },
+				{ id = "wardlamp", x = 598, y = 145 },
 			},
 			front = {  },
-			spawn = { x = 944, y = 144 },
+			spawn = { x = 619.2, y = 144 },
 			portals = {
 				{ x = 42, y = 336, to = "r4d2", label = "봉인의 회랑으로", h = 53 },
-				{ x = 976, y = 144, to = "r4ch", label = "옛 근위대 숙소로", h = 53 },
+				{ x = 624, y = 144, to = "r4ch", label = "옛 근위대 숙소로", h = 53 },
 			},
 			warps = {
 				{ id = "warp1", x = 88, y = 336, at = "warp2", label = "맨 위로" },
-				{ id = "warp2", x = 936, y = 144, at = "warp1", label = "맨 아래로" },
+				{ id = "warp2", x = 584, y = 144, at = "warp1", label = "맨 아래로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "eye",
-					x = 224,
+					x = 147.2,
 					y = 304,
-					range = { 168, 294.4 },
+					range = { 113.6, 190.4 },
 					lv = 134,
 				},
 				{
 					kind = "eye",
-					x = 232,
+					x = 152,
 					y = 256,
-					range = { 216, 246.4 },
+					range = { 145.6, 161.6 },
 					lv = 134,
 				},
 				{
 					kind = "eye",
-					x = 368,
+					x = 241.6,
 					y = 272,
-					range = { 312, 438.4 },
+					range = { 204.8, 286.4 },
 					lv = 134,
 				},
 				{
 					kind = "eye",
-					x = 408,
+					x = 267.2,
 					y = 272,
-					range = { 320, 438.4 },
+					range = { 209.6, 286.4 },
 					lv = 134,
 				},
 				{
 					kind = "eye",
-					x = 512,
+					x = 336,
 					y = 240,
-					range = { 456, 582.4 },
+					range = { 299.2, 382.4 },
+					lv = 134,
+				},
+				{
+					kind = "eye",
+					x = 340.8,
+					y = 192,
+					range = { 331.2, 350.4 },
+					lv = 134,
+				},
+				{
+					kind = "eye",
+					x = 430.4,
+					y = 208,
+					range = { 393.6, 476.8 },
+					lv = 134,
+				},
+				{
+					kind = "eye",
+					x = 456,
+					y = 208,
+					range = { 398.4, 476.8 },
+					lv = 134,
+				},
+				{
+					kind = "eye",
+					x = 524.8,
+					y = 176,
+					range = { 488, 566.4 },
 					lv = 134,
 				},
 				{
 					kind = "eye",
 					x = 520,
-					y = 192,
-					range = { 504, 534.4 },
-					lv = 134,
-				},
-				{
-					kind = "eye",
-					x = 656,
-					y = 208,
-					range = { 600, 726.4 },
-					lv = 134,
-				},
-				{
-					kind = "eye",
-					x = 696,
-					y = 208,
-					range = { 608, 726.4 },
-					lv = 134,
-				},
-				{
-					kind = "eye",
-					x = 800,
-					y = 176,
-					range = { 744, 870.4 },
-					lv = 134,
-				},
-				{
-					kind = "eye",
-					x = 792,
 					y = 128,
-					range = { 776, 822.4 },
+					range = { 513.6, 539.2 },
 					lv = 134,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		r4d2 = {
 			name = "봉인의 회랑",
 			region = "r4",
 			also = false,
-			w = 56,
+			w = 34,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -32782,12 +32950,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#2f3742",
-			rows = { "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "...................................===..................", "........................................................", "..................====......===..............===........", "........######..................#########...............", "........######..................#########...............", "########################################################", "########################################################", "########################################################" },
+			rows = { "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", ".....................===..........", "..................................", "...........====..===.......===....", ".....####..........######.........", ".....####..........######.........", "##################################", "##################################", "##################################" },
 			layers = {
 				{ img = "wall_r4d1.png", w = 384, h = 768, f = 2, y = -24 },
 			},
 			ground = {
-				{ img = "ground_r4d2_1.png", x = 0, w = 896, h = 224 },
+				{ img = "ground_r4d2_1.png", x = 0, w = 544, h = 224 },
 			},
 			props = "props_r4c2.png",
 			rects = {
@@ -32837,99 +33005,99 @@ local M = {
 				pond = { x = 220, y = 329, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "stairarch", x = 856, y = 177 },
+				{ id = "stairarch", x = 504, y = 177 },
 				{ id = "stairarch", x = 42, y = 177 },
-				{ id = "chainslab1", x = 320, y = 158 },
-				{ id = "chainslab3", x = 472, y = 159 },
-				{ id = "chainslab2", x = 744, y = 158 },
-				{ id = "chainslab2", x = 584, y = 126 },
-				{ id = "runepillar", x = 118, y = 177 },
-				{ id = "wedge", x = 176, y = 145 },
-				{ id = "wardlamp", x = 256, y = 177 },
-				{ id = "runepillar", x = 390, y = 177 },
-				{ id = "wedge", x = 566, y = 145 },
-				{ id = "wardlamp", x = 640, y = 145 },
-				{ id = "chainanchor", x = 698, y = 177 },
-				{ id = "brokenwedge", x = 810, y = 177 },
-				{ id = "wardlamp", x = 598, y = 97 },
+				{ id = "chainslab1", x = 208, y = 158 },
+				{ id = "chainslab3", x = 296, y = 159 },
+				{ id = "chainslab2", x = 456, y = 158 },
+				{ id = "chainslab2", x = 360, y = 126 },
+				{ id = "runepillar", x = 72, y = 177 },
+				{ id = "wedge", x = 107, y = 145 },
+				{ id = "wardlamp", x = 155, y = 177 },
+				{ id = "runepillar", x = 237, y = 177 },
+				{ id = "wedge", x = 344, y = 145 },
+				{ id = "wardlamp", x = 389, y = 145 },
+				{ id = "chainanchor", x = 424, y = 177 },
+				{ id = "brokenwedge", x = 491, y = 177 },
 			},
 			front = {  },
-			spawn = { x = 80, y = 176 },
+			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 42, y = 176, to = "r4d1", label = "내려가는 계단으로", h = 53 },
-				{ x = 584, y = 96, to = "r4dh", label = "돌판 뒤의 문으로", h = 40 },
-				{ x = 856, y = 176, to = "r4d3", label = "깨진 쐐기의 방으로", h = 53 },
+				{ x = 355, y = 96, to = "r4dh", label = "돌판 뒤의 문으로", h = 40 },
+				{ x = 504, y = 176, to = "r4d3", label = "깨진 쐐기의 방으로", h = 53 },
 			},
 			warps = {
-				{ id = "warp1", x = 88, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 824, y = 176, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp1", x = 88, y = 144, at = "warp2", label = "오른쪽 끝으로" },
+				{ id = "warp2", x = 472, y = 176, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "mage",
-					x = 148.8,
+					x = 99.2,
 					y = 144,
-					range = { 136, 214.4 },
+					range = { 99.2, 129.6 },
 					lv = 138,
 				},
 				{
 					kind = "mage",
-					x = 176,
+					x = 107.2,
 					y = 144,
-					range = { 136, 214.4 },
+					range = { 99.2, 129.6 },
 					lv = 138,
 				},
 				{
 					kind = "mage",
-					x = 201.6,
+					x = 123.2,
 					y = 144,
-					range = { 144, 214.4 },
+					range = { 99.2, 129.6 },
 					lv = 138,
 				},
 				{
 					kind = "mage",
-					x = 368,
+					x = 224,
 					y = 176,
-					range = { 232, 502.4 },
+					range = { 145.6, 297.6 },
 					lv = 138,
 				},
 				{
 					kind = "mage",
-					x = 480,
+					x = 291.2,
 					y = 176,
-					range = { 240, 502.4 },
+					range = { 145.6, 297.6 },
 					lv = 138,
 				},
 				{
 					kind = "mage",
-					x = 576,
-					y = 144,
-					range = { 520, 646.4 },
-					lv = 138,
-				},
-				{
-					kind = "mage",
-					x = 641.6,
-					y = 144,
-					range = { 528, 646.4 },
-					lv = 138,
-				},
-				{
-					kind = "mage",
-					x = 742.4,
+					x = 212.8,
 					y = 128,
-					range = { 728, 758.4 },
+					range = { 177.6, 238.4 },
 					lv = 138,
 				},
 				{
 					kind = "mage",
-					x = 704,
+					x = 432,
 					y = 176,
-					range = { 664, 755.2 },
+					range = { 412.8, 446.4 },
+					lv = 138,
+				},
+				{
+					kind = "mage",
+					x = 196.8,
+					y = 176,
+					range = { 145.6, 297.6 },
+					lv = 138,
+				},
+				{
+					kind = "mage",
+					x = 427.2,
+					y = 176,
+					range = { 412.8, 446.4 },
 					lv = 138,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		seat = {
@@ -33052,6 +33220,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -33089,7 +33258,7 @@ local M = {
 			name = "갯바위 해변",
 			region = false,
 			also = false,
-			w = 48,
+			w = 38,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -33099,14 +33268,14 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#1b2028",
-			rows = { "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", ".......................==.......................", ".........===.................===..........######", ".................#####................##########", "#######......##############......###############", "################################################", "################################################" },
+			rows = { "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "..................==..................", ".......===.............===.......#####", ".............####.............########", "######....###########.....############", "######################################", "######################################" },
 			layers = {
 				{ img = "sky.png", w = 384, h = 216, f = 0.03, y = 0 },
 				{ img = "far_seat.png", w = 768, h = 168, f = 0.14, y = 70 },
 				{ img = "near_seat.png", w = 768, h = 128, f = 0.34, y = 120 },
 			},
 			ground = {
-				{ img = "ground_sea1_1.png", x = 0, w = 768, h = 224 },
+				{ img = "ground_sea1_1.png", x = 0, w = 608, h = 224 },
 			},
 			props = "props_seat.png",
 			rects = {
@@ -33176,118 +33345,115 @@ local M = {
 				pond = { x = 0, y = 723, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "gate", x = 728, y = 145 },
-				{ id = "shoremark", x = 282, y = 161 },
+				{ id = "gate", x = 568, y = 145 },
+				{ id = "shoremark", x = 222, y = 161 },
 				{ id = "gate", x = 32, y = 177 },
-				{ id = "trock1", x = 168, y = 170 },
-				{ id = "trock2", x = 380, y = 150 },
-				{ id = "trock3", x = 487, y = 174 },
-				{ id = "pond", x = 128, y = 193 },
-				{ id = "pond", x = 160, y = 193 },
-				{ id = "pond", x = 192, y = 193 },
-				{ id = "pond", x = 448, y = 193 },
-				{ id = "pond", x = 480, y = 193 },
-				{ id = "pond", x = 512, y = 193 },
-				{ id = "seastack", x = 96, y = 177 },
-				{ id = "beachboat", x = 234, y = 177 },
-				{ id = "seastack", x = 429, y = 177 },
-				{ id = "driftwood", x = 576, y = 177 },
-				{ id = "shoremark", x = 614, y = 161 },
-				{ id = "seastack", x = 682, y = 145 },
-				{ id = "rocks", x = 256, y = 177 },
-				{ id = "rocks", x = 544, y = 177 },
+				{ id = "trock1", x = 136, y = 170 },
+				{ id = "trock2", x = 300, y = 150 },
+				{ id = "trock3", x = 391, y = 174 },
+				{ id = "seastack", x = 77, y = 177 },
+				{ id = "pond", x = 126, y = 193 },
+				{ id = "beachboat", x = 186, y = 177 },
+				{ id = "seastack", x = 339, y = 193 },
+				{ id = "pond", x = 381, y = 193 },
+				{ id = "driftwood", x = 456, y = 177 },
+				{ id = "shoremark", x = 486, y = 161 },
+				{ id = "seastack", x = 539, y = 145 },
+				{ id = "rocks", x = 203, y = 177 },
+				{ id = "rocks", x = 430, y = 177 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 32, y = 176, to = "seat", label = "물마루 마을로", h = 60 },
-				{ x = 282, y = 160, to = "sea3", label = "바다로 — 얕은 여울", h = 28 },
-				{ x = 728, y = 144, to = "sea2", label = "등대 곶으로", h = 60 },
+				{ x = 222, y = 160, to = "sea3", label = "바다로 — 얕은 여울", h = 28 },
+				{ x = 568, y = 144, to = "sea2", label = "등대 곶으로", h = 60 },
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 696, y = 144, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 536, y = 144, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "clam",
-					x = 156.8,
+					x = 124.8,
 					y = 144,
-					range = { 156.8, 156.8 },
+					range = { 124.8, 124.8 },
 					lv = 47,
 				},
 				{
 					kind = "clam",
-					x = 363.2,
+					x = 288,
 					y = 176,
-					range = { 363.2, 363.2 },
+					range = { 288, 288 },
 					lv = 47,
 				},
 				{
 					kind = "clam",
-					x = 192,
+					x = 152,
 					y = 192,
-					range = { 192, 192 },
+					range = { 152, 152 },
 					lv = 47,
 				},
 				{
 					kind = "clam",
-					x = 419.2,
+					x = 331.2,
 					y = 176,
-					range = { 419.2, 419.2 },
+					range = { 331.2, 331.2 },
 					lv = 47,
 				},
 				{
 					kind = "clam",
-					x = 476.8,
+					x = 377.6,
 					y = 144,
-					range = { 476.8, 476.8 },
+					range = { 377.6, 377.6 },
 					lv = 47,
 				},
 				{
 					kind = "clam",
-					x = 539.2,
+					x = 427.2,
 					y = 176,
-					range = { 539.2, 539.2 },
+					range = { 427.2, 427.2 },
 					lv = 47,
 				},
 				{
 					kind = "clam",
-					x = 595.2,
+					x = 472,
 					y = 176,
-					range = { 595.2, 595.2 },
+					range = { 472, 472 },
 					lv = 47,
 				},
 				{
 					kind = "clam",
-					x = 512,
+					x = 404.8,
 					y = 192,
-					range = { 512, 512 },
+					range = { 404.8, 404.8 },
 					lv = 47,
 				},
 				{
 					kind = "clam",
-					x = 619.2,
-					y = 160,
-					range = { 619.2, 619.2 },
+					x = 304,
+					y = 128,
+					range = { 304, 304 },
 					lv = 47,
 				},
 				{
 					kind = "clam",
-					x = 659.2,
+					x = 510.4,
 					y = 160,
-					range = { 659.2, 659.2 },
+					range = { 510.4, 510.4 },
 					lv = 47,
 				},
 			},
+			elite = true,
 			ret = "seat",
 		},
 		sea2 = {
 			name = "등대 곶",
 			region = false,
 			also = false,
-			w = 56,
+			w = 38,
 			h = 26,
 			tall = true,
 			indoor = false,
@@ -33297,14 +33463,14 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#1b2028",
-			rows = { "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "...................................==...################", "........................................################", "..........................===...........################", "................................########################", "................................########################", "........................################################", "..........===...........################################", "................########################################", "................########################################", "........################################################", "........################################################", "########################################################", "########################################################", "########################################################" },
+			rows = { "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "........................==.###########", "...........................###########", "..................===......###########", "......................################", "......................################", "................######################", ".......===......######################", "...........###########################", "...........###########################", ".....#################################", ".....#################################", "######################################", "######################################", "######################################" },
 			layers = {
 				{ img = "sky.png", w = 384, h = 216, f = 0.03, y = 0 },
 				{ img = "far_seat.png", w = 768, h = 168, f = 0.14, y = 59 },
 				{ img = "near_seat.png", w = 768, h = 128, f = 0.34, y = 131 },
 			},
 			ground = {
-				{ img = "ground_sea2_1.png", x = 0, w = 896, h = 416 },
+				{ img = "ground_sea2_1.png", x = 0, w = 608, h = 416 },
 			},
 			props = "props_seat.png",
 			rects = {
@@ -33375,18 +33541,18 @@ local M = {
 			},
 			back = {
 				{ id = "gate", x = 32, y = 369 },
-				{ id = "trock1", x = 184, y = 314 },
-				{ id = "trock3", x = 439, y = 254 },
-				{ id = "trock2", x = 572, y = 214 },
-				{ id = "driftwood", x = 96, y = 369 },
-				{ id = "seastack", x = 237, y = 337 },
-				{ id = "tidepool", x = 320, y = 305 },
-				{ id = "seastack", x = 499, y = 273 },
-				{ id = "shoremark", x = 608, y = 241 },
-				{ id = "driftwood", x = 666, y = 193 },
-				{ id = "lighthouse", x = 822, y = 193 },
-				{ id = "rocks", x = 150, y = 337 },
-				{ id = "rocks", x = 442, y = 273 },
+				{ id = "trock1", x = 136, y = 314 },
+				{ id = "trock3", x = 311, y = 254 },
+				{ id = "trock2", x = 396, y = 214 },
+				{ id = "driftwood", x = 66, y = 369 },
+				{ id = "seastack", x = 160, y = 337 },
+				{ id = "tidepool", x = 218, y = 305 },
+				{ id = "seastack", x = 339, y = 273 },
+				{ id = "shoremark", x = 413, y = 241 },
+				{ id = "driftwood", x = 451, y = 193 },
+				{ id = "lighthouse", x = 558, y = 193 },
+				{ id = "rocks", x = 102, y = 337 },
+				{ id = "rocks", x = 299, y = 273 },
 			},
 			front = {  },
 			spawn = { x = 48, y = 368 },
@@ -33395,81 +33561,82 @@ local M = {
 			},
 			warps = {
 				{ id = "warp1", x = 72, y = 368, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 824, y = 192, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 536, y = 192, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "barnacle",
-					x = 216,
+					x = 147.2,
 					y = 336,
-					range = { 216, 216 },
+					range = { 147.2, 147.2 },
 					lv = 52,
 				},
 				{
 					kind = "barnacle",
-					x = 288,
+					x = 195.2,
 					y = 304,
-					range = { 288, 288 },
+					range = { 195.2, 195.2 },
 					lv = 52,
 				},
 				{
 					kind = "barnacle",
-					x = 352,
+					x = 238.4,
 					y = 304,
-					range = { 352, 352 },
+					range = { 238.4, 238.4 },
 					lv = 52,
 				},
 				{
 					kind = "barnacle",
-					x = 408,
+					x = 276.8,
 					y = 272,
-					range = { 408, 408 },
+					range = { 276.8, 276.8 },
 					lv = 52,
 				},
 				{
 					kind = "barnacle",
-					x = 480,
+					x = 326.4,
 					y = 272,
-					range = { 480, 480 },
+					range = { 326.4, 326.4 },
 					lv = 52,
 				},
 				{
 					kind = "barnacle",
-					x = 536,
+					x = 363.2,
 					y = 240,
-					range = { 536, 536 },
+					range = { 363.2, 363.2 },
 					lv = 52,
 				},
 				{
 					kind = "barnacle",
-					x = 617.6,
+					x = 419.2,
 					y = 240,
-					range = { 617.6, 617.6 },
+					range = { 419.2, 419.2 },
 					lv = 52,
 				},
 				{
 					kind = "barnacle",
-					x = 696,
+					x = 465.6,
 					y = 192,
-					range = { 696, 696 },
+					range = { 465.6, 465.6 },
 					lv = 52,
 				},
 				{
 					kind = "barnacle",
-					x = 752,
+					x = 510.4,
 					y = 192,
-					range = { 752, 752 },
+					range = { 510.4, 510.4 },
 					lv = 52,
 				},
 			},
+			elite = true,
 			ret = "seat",
 		},
 		r3b3 = {
 			name = "불씨 도둑의 소굴",
 			region = "r3",
 			also = false,
-			w = 56,
+			w = 34,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -33479,12 +33646,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#12161c",
-			rows = { "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "....................===...........====......===.........", "........................................................", "........................#########.................######", "..........#########.....#########.......########..######", "########################################################", "########################################################", "########################################################" },
+			rows = { "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", "............===......====..===....", "..................................", "...............#####..........####", "......######...#####....#####.####", "##################################", "##################################", "##################################" },
 			layers = {
 				{ img = "wall_r3a1.png", w = 384, h = 768, f = 0.3, y = 0 },
 			},
 			ground = {
-				{ img = "ground_r3b3_1.png", x = 0, w = 896, h = 224 },
+				{ img = "ground_r3b3_1.png", x = 0, w = 544, h = 224 },
 			},
 			props = "props_port.png",
 			rects = {
@@ -33570,112 +33737,112 @@ local M = {
 				pond = { x = 35, y = 744, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "gate", x = 851, y = 145 },
+				{ id = "gate", x = 499, y = 145 },
 				{ id = "caveexit", x = 45, y = 177 },
-				{ id = "lledge2", x = 344, y = 141 },
-				{ id = "lledge3", x = 576, y = 143 },
-				{ id = "lledge2", x = 728, y = 141 },
-				{ id = "tent", x = 214, y = 161 },
-				{ id = "cargo", x = 269, y = 161 },
-				{ id = "campfire", x = 342, y = 177 },
-				{ id = "bedrolls", x = 432, y = 145 },
-				{ id = "barrels", x = 493, y = 145 },
-				{ id = "lanternline", x = 586, y = 177 },
-				{ id = "crate", x = 672, y = 161 },
-				{ id = "tent", x = 720, y = 161 },
-				{ id = "firetotem", x = 822, y = 145 },
-				{ id = "cargo", x = 870, y = 145 },
+				{ id = "lledge2", x = 216, y = 141 },
+				{ id = "lledge3", x = 368, y = 143 },
+				{ id = "lledge2", x = 456, y = 141 },
+				{ id = "tent", x = 130, y = 161 },
+				{ id = "cargo", x = 163, y = 161 },
+				{ id = "campfire", x = 208, y = 177 },
+				{ id = "bedrolls", x = 262, y = 145 },
+				{ id = "barrels", x = 299, y = 145 },
+				{ id = "lanternline", x = 355, y = 177 },
+				{ id = "crate", x = 408, y = 161 },
+				{ id = "tent", x = 437, y = 161 },
+				{ id = "firetotem", x = 499, y = 145 },
 			},
 			front = {  },
-			spawn = { x = 83.2, y = 176 },
+			spawn = { x = 51.2, y = 176 },
 			portals = {
 				{ x = 45, y = 176, to = "r3b2", label = "불씨 길로", h = 39 },
-				{ x = 851, y = 144, to = "r3b4", label = "화약 창고로", h = 60 },
+				{ x = 499, y = 144, to = "r3b4", label = "화약 창고로", h = 60 },
 			},
 			warps = {
 				{ id = "warp1", x = 88, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 808, y = 144, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 472, y = 176, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "thief",
-					x = 128,
-					y = 176,
-					range = { 104, 150.4 },
-					lv = 78,
-				},
-				{
-					kind = "thief",
-					x = 208,
-					y = 160,
-					range = { 168, 294.4 },
-					lv = 78,
-				},
-				{
-					kind = "thief",
-					x = 264,
-					y = 160,
-					range = { 168, 294.4 },
-					lv = 78,
-				},
-				{
-					kind = "thief",
-					x = 336,
-					y = 176,
-					range = { 312, 374.4 },
-					lv = 78,
-				},
-				{
-					kind = "thief",
-					x = 432,
-					y = 144,
-					range = { 392, 518.4 },
-					lv = 78,
-				},
-				{
-					kind = "thief",
-					x = 488,
-					y = 144,
-					range = { 392, 518.4 },
-					lv = 78,
-				},
-				{
-					kind = "thief",
-					x = 576,
-					y = 176,
-					range = { 536, 630.4 },
-					lv = 78,
-				},
-				{
-					kind = "thief",
-					x = 672,
-					y = 160,
-					range = { 648, 758.4 },
-					lv = 78,
-				},
-				{
-					kind = "thief",
-					x = 728,
-					y = 160,
-					range = { 648, 758.4 },
-					lv = 78,
-				},
-				{
-					kind = "thief",
-					x = 576,
+					x = 219.2,
 					y = 112,
-					range = { 552, 598.4 },
+					range = { 193.6, 238.4 },
+					lv = 78,
+				},
+				{
+					kind = "thief",
+					x = 126.4,
+					y = 160,
+					range = { 102.4, 179.2 },
+					lv = 78,
+				},
+				{
+					kind = "thief",
+					x = 160,
+					y = 160,
+					range = { 102.4, 179.2 },
+					lv = 78,
+				},
+				{
+					kind = "thief",
+					x = 203.2,
+					y = 176,
+					range = { 193.6, 227.2 },
+					lv = 78,
+				},
+				{
+					kind = "thief",
+					x = 262.4,
+					y = 144,
+					range = { 241.6, 315.2 },
+					lv = 78,
+				},
+				{
+					kind = "thief",
+					x = 296,
+					y = 144,
+					range = { 241.6, 315.2 },
+					lv = 78,
+				},
+				{
+					kind = "thief",
+					x = 350.4,
+					y = 176,
+					range = { 324.8, 382.4 },
+					lv = 78,
+				},
+				{
+					kind = "thief",
+					x = 408,
+					y = 160,
+					range = { 393.6, 441.6 },
+					lv = 78,
+				},
+				{
+					kind = "thief",
+					x = 441.6,
+					y = 160,
+					range = { 393.6, 441.6 },
+					lv = 78,
+				},
+				{
+					kind = "thief",
+					x = 350.4,
+					y = 112,
+					range = { 337.6, 363.2 },
 					lv = 78,
 				},
 			},
+			elite = true,
 			ret = "r3t",
 		},
 		r3b4 = {
 			name = "화약 창고",
 			region = "r3",
 			also = false,
-			w = 44,
+			w = 30,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -33685,12 +33852,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#12161c",
-			rows = { "............................................", "............................................", "............................................", "............................................", "............................................", "............................................", "............................................", "....................===.............====....", "............................................", ".........#########........#########.........", ".........#########........#########...######", "############################################", "############################################", "############################################" },
+			rows = { "..............................", "..............................", "..............................", "..............................", "..............................", "..............................", "..............................", "..............===........====.", "..............................", "......######......######......", "......######......######..####", "##############################", "##############################", "##############################" },
 			layers = {
 				{ img = "wall_r3a1.png", w = 384, h = 768, f = 0.3, y = 0 },
 			},
 			ground = {
-				{ img = "ground_r3b4_1.png", x = 0, w = 704, h = 224 },
+				{ img = "ground_r3b4_1.png", x = 0, w = 480, h = 224 },
 			},
 			props = "props_port.png",
 			rects = {
@@ -33777,102 +33944,99 @@ local M = {
 			},
 			back = {
 				{ id = "gate", x = 42, y = 177 },
-				{ id = "lledge2", x = 344, y = 141 },
-				{ id = "lledge3", x = 608, y = 143 },
-				{ id = "barrels", x = 106, y = 177 },
-				{ id = "barrels", x = 176, y = 145 },
-				{ id = "crate", x = 234, y = 145 },
-				{ id = "cargo", x = 266, y = 145 },
-				{ id = "barrels", x = 378, y = 177 },
-				{ id = "crate", x = 403, y = 177 },
-				{ id = "barrels", x = 454, y = 145 },
-				{ id = "cargo", x = 496, y = 145 },
-				{ id = "crate", x = 531, y = 145 },
-				{ id = "barrels", x = 640, y = 161 },
-				{ id = "cargo", x = 678, y = 161 },
+				{ id = "lledge2", x = 248, y = 141 },
+				{ id = "lledge3", x = 432, y = 143 },
+				{ id = "barrels", x = 72, y = 177 },
+				{ id = "barrels", x = 120, y = 145 },
+				{ id = "crate", x = 160, y = 145 },
+				{ id = "barrels", x = 258, y = 177 },
+				{ id = "barrels", x = 310, y = 145 },
+				{ id = "cargo", x = 338, y = 145 },
+				{ id = "barrels", x = 437, y = 161 },
 			},
 			front = {  },
-			spawn = { x = 80, y = 176 },
+			spawn = { x = 54.4, y = 176 },
 			portals = {
 				{ x = 42, y = 176, to = "r3b3", label = "도둑의 소굴로", h = 60 },
 			},
 			warps = {
 				{ id = "warp1", x = 88, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 632, y = 160, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 408, y = 176, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "bomber",
-					x = 192,
+					x = 131.2,
 					y = 144,
-					range = { 152, 278.4 },
+					range = { 104, 190.4 },
 					lv = 80,
 				},
 				{
 					kind = "bomber",
-					x = 248,
+					x = 169.6,
 					y = 144,
-					range = { 152, 278.4 },
+					range = { 104, 190.4 },
 					lv = 80,
 				},
 				{
 					kind = "bomber",
-					x = 320,
+					x = 217.6,
 					y = 176,
-					range = { 296, 406.4 },
+					range = { 201.6, 276.8 },
 					lv = 80,
 				},
 				{
 					kind = "bomber",
-					x = 376,
+					x = 256,
 					y = 176,
-					range = { 296, 406.4 },
+					range = { 201.6, 276.8 },
 					lv = 80,
 				},
 				{
 					kind = "bomber",
-					x = 456,
+					x = 310.4,
 					y = 144,
-					range = { 424, 550.4 },
+					range = { 289.6, 376 },
 					lv = 80,
 				},
 				{
 					kind = "bomber",
-					x = 512,
+					x = 348.8,
 					y = 144,
-					range = { 424, 550.4 },
+					range = { 289.6, 376 },
 					lv = 80,
 				},
 				{
 					kind = "bomber",
-					x = 582.4,
+					x = 396.8,
 					y = 176,
-					range = { 568, 598.4 },
+					range = { 387.2, 408 },
 					lv = 80,
 				},
 				{
 					kind = "bomber",
-					x = 648,
+					x = 441.6,
 					y = 160,
-					range = { 616, 694.4 },
+					range = { 419.2, 473.6 },
 					lv = 80,
 				},
 				{
 					kind = "bomber",
-					x = 342.4,
+					x = 233.6,
 					y = 112,
-					range = { 328, 358.4 },
+					range = { 225.6, 244.8 },
 					lv = 80,
 				},
 			},
+			elite = true,
 			ret = "r3t",
 		},
 		r4d3 = {
 			name = "깨진 쐐기의 방",
 			region = "r4",
 			also = false,
-			w = 56,
+			w = 34,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -33882,12 +34046,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#2f3742",
-			rows = { "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "..............................................===.......", "......................====..............................", ".........................................===............", "............#########.........#########.................", "............#########.........#########.................", "########################################################", "########################################################", "########################################################" },
+			rows = { "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", "............................===...", ".............====.................", ".........................===......", ".......######.....######..........", ".......######.....######..........", "##################################", "##################################", "##################################" },
 			layers = {
 				{ img = "wall_r4d1.png", w = 384, h = 768, f = 2, y = -24 },
 			},
 			ground = {
-				{ img = "ground_r4d3_1.png", x = 0, w = 896, h = 224 },
+				{ img = "ground_r4d3_1.png", x = 0, w = 544, h = 224 },
 			},
 			props = "props_r4c2.png",
 			rects = {
@@ -33937,104 +34101,104 @@ local M = {
 				pond = { x = 220, y = 329, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "stairarch", x = 854, y = 177 },
+				{ id = "stairarch", x = 502, y = 177 },
 				{ id = "stairarch", x = 42, y = 177 },
-				{ id = "chainslab1", x = 384, y = 142 },
-				{ id = "chainslab3", x = 680, y = 159 },
-				{ id = "chainslab2", x = 760, y = 126 },
-				{ id = "runepillar", x = 112, y = 177 },
-				{ id = "brokenwedge", x = 166, y = 177 },
-				{ id = "brokenwedge", x = 262, y = 145 },
-				{ id = "wedge", x = 426, y = 177 },
-				{ id = "brokenwedge", x = 544, y = 145 },
-				{ id = "chainanchor", x = 640, y = 177 },
-				{ id = "brokenwedge", x = 714, y = 177 },
-				{ id = "runepillar", x = 778, y = 177 },
-				{ id = "wardlamp", x = 816, y = 177 },
+				{ id = "chainslab1", x = 240, y = 142 },
+				{ id = "chainslab3", x = 424, y = 159 },
+				{ id = "chainslab2", x = 472, y = 126 },
+				{ id = "runepillar", x = 69, y = 177 },
+				{ id = "brokenwedge", x = 101, y = 177 },
+				{ id = "brokenwedge", x = 160, y = 145 },
+				{ id = "wedge", x = 259, y = 177 },
+				{ id = "brokenwedge", x = 330, y = 145 },
+				{ id = "chainanchor", x = 389, y = 177 },
+				{ id = "brokenwedge", x = 434, y = 177 },
+				{ id = "runepillar", x = 472, y = 177 },
 			},
 			front = {  },
-			spawn = { x = 80, y = 176 },
+			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 42, y = 176, to = "r4d2", label = "봉인의 회랑으로", h = 53 },
-				{ x = 854, y = 176, to = "r4d4", label = "성문으로", h = 53 },
+				{ x = 502, y = 176, to = "r4d4", label = "성문으로", h = 53 },
 			},
 			warps = {
 				{ id = "warp1", x = 88, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 808, y = 176, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 456, y = 176, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "gloom",
-					x = 128,
-					y = 176,
-					range = { 104, 182.4 },
+					x = 244.8,
+					y = 112,
+					range = { 209.6, 270.4 },
 					lv = 142,
 				},
 				{
 					kind = "gloom",
-					x = 240,
+					x = 145.6,
 					y = 144,
-					range = { 200, 326.4 },
+					range = { 121.6, 198.4 },
 					lv = 142,
 				},
 				{
 					kind = "gloom",
-					x = 296,
+					x = 179.2,
 					y = 144,
-					range = { 200, 326.4 },
+					range = { 121.6, 198.4 },
 					lv = 142,
 				},
 				{
 					kind = "gloom",
-					x = 384,
+					x = 233.6,
 					y = 176,
-					range = { 344, 470.4 },
+					range = { 209.6, 284.8 },
 					lv = 142,
 				},
 				{
 					kind = "gloom",
-					x = 440,
+					x = 267.2,
 					y = 176,
-					range = { 344, 470.4 },
+					range = { 209.6, 284.8 },
 					lv = 142,
 				},
 				{
 					kind = "gloom",
-					x = 528,
+					x = 320,
 					y = 144,
-					range = { 488, 614.4 },
+					range = { 296, 372.8 },
 					lv = 142,
 				},
 				{
 					kind = "gloom",
-					x = 584,
+					x = 355.2,
 					y = 144,
-					range = { 488, 614.4 },
+					range = { 296, 372.8 },
 					lv = 142,
 				},
 				{
 					kind = "gloom",
-					x = 672,
+					x = 408,
 					y = 176,
-					range = { 632, 790.4 },
+					range = { 385.6, 444.8 },
 					lv = 142,
 				},
 				{
 					kind = "gloom",
-					x = 744,
+					x = 444.8,
 					y = 176,
-					range = { 632, 790.4 },
+					range = { 385.6, 444.8 },
 					lv = 142,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		r4e1 = {
 			name = "틈새 회랑",
 			region = "r4",
 			also = false,
-			w = 48,
+			w = 32,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -34044,12 +34208,12 @@ local M = {
 			sea = false,
 			sky = "#5a6a82",
 			deep = "#2f3742",
-			rows = { "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "................................................", "...................===............====..........", "................................................", "........................#########...............", "..........########......#########......#########", "################################################", "################################################", "################################################" },
+			rows = { "................................", "................................", "................................", "................................", "................................", "................................", "................................", ".............===.......====.....", "................................", "................######..........", ".......#####....######....######", "################################", "################################", "################################" },
 			layers = {
 				{ img = "wall_r4d1.png", w = 384, h = 768, f = 2, y = -24 },
 			},
 			ground = {
-				{ img = "ground_r4e1_1.png", x = 0, w = 768, h = 224 },
+				{ img = "ground_r4e1_1.png", x = 0, w = 512, h = 224 },
 			},
 			props = "props_r4c2.png",
 			rects = {
@@ -34100,98 +34264,99 @@ local M = {
 			},
 			back = {
 				{ id = "stairarch", x = 42, y = 177 },
-				{ id = "chainslab2", x = 328, y = 142 },
-				{ id = "chainslab1", x = 576, y = 142 },
-				{ id = "wardlamp", x = 112, y = 177 },
-				{ id = "brokenwedge", x = 214, y = 161 },
-				{ id = "runepillar", x = 342, y = 177 },
-				{ id = "brokenwedge", x = 448, y = 145 },
-				{ id = "chainanchor", x = 582, y = 177 },
-				{ id = "brokenwedge", x = 672, y = 161 },
-				{ id = "runepillar", x = 730, y = 161 },
+				{ id = "chainslab2", x = 232, y = 142 },
+				{ id = "chainslab1", x = 400, y = 142 },
+				{ id = "wardlamp", x = 75, y = 177 },
+				{ id = "brokenwedge", x = 142, y = 161 },
+				{ id = "runepillar", x = 229, y = 177 },
+				{ id = "brokenwedge", x = 299, y = 145 },
+				{ id = "chainanchor", x = 389, y = 177 },
+				{ id = "brokenwedge", x = 448, y = 161 },
+				{ id = "runepillar", x = 474, y = 161 },
 			},
 			front = {  },
-			spawn = { x = 80, y = 176 },
+			spawn = { x = 52.8, y = 176 },
 			portals = {
 				{ x = 42, y = 176, to = "r4es", label = "봉인의 문 앞으로", h = 53 },
 			},
 			warps = {
 				{ id = "warp1", x = 88, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 696, y = 160, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 440, y = 160, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "pool",
-					x = 128,
-					y = 176,
-					range = { 104, 150.4 },
+					x = 235.2,
+					y = 112,
+					range = { 209.6, 254.4 },
 					lv = 148,
 				},
 				{
 					kind = "pool",
-					x = 200,
+					x = 132.8,
 					y = 160,
-					range = { 168, 278.4 },
+					range = { 113.6, 185.6 },
 					lv = 148,
 				},
 				{
 					kind = "pool",
-					x = 256,
+					x = 171.2,
 					y = 160,
-					range = { 168, 278.4 },
+					range = { 113.6, 185.6 },
 					lv = 148,
 				},
 				{
 					kind = "pool",
-					x = 329.6,
+					x = 219.2,
 					y = 176,
-					range = { 296, 374.4 },
+					range = { 196.8, 249.6 },
 					lv = 148,
 				},
 				{
 					kind = "pool",
-					x = 432,
+					x = 288,
 					y = 144,
-					range = { 392, 518.4 },
+					range = { 260.8, 345.6 },
 					lv = 148,
 				},
 				{
 					kind = "pool",
-					x = 488,
+					x = 324.8,
 					y = 144,
-					range = { 392, 518.4 },
+					range = { 260.8, 345.6 },
 					lv = 148,
 				},
 				{
 					kind = "pool",
-					x = 569.6,
+					x = 379.2,
 					y = 176,
-					range = { 536, 614.4 },
+					range = { 356.8, 409.6 },
 					lv = 148,
 				},
 				{
 					kind = "pool",
-					x = 672,
+					x = 448,
 					y = 160,
-					range = { 632, 758.4 },
+					range = { 420.8, 505.6 },
 					lv = 148,
 				},
 				{
 					kind = "pool",
-					x = 728,
+					x = 484.8,
 					y = 160,
-					range = { 632, 758.4 },
+					range = { 420.8, 505.6 },
 					lv = 148,
 				},
 			},
+			elite = true,
 			ret = "port",
 		},
 		sea5 = {
 			name = "해초 숲",
 			region = false,
 			also = false,
-			w = 48,
+			w = 36,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -34201,12 +34366,12 @@ local M = {
 			sea = true,
 			sky = "#5a6a82",
 			deep = "#2f3742",
-			rows = { "................................................", "................................................", "................................................", "................................................", "................................................", "..............................===...............", ".................===............................", "................................................", "......................#######...................", ".........#######......#######......#######......", ".........#######......#######......#######......", "################################################", "################################################", "################################################" },
+			rows = { "....................................", "....................................", "....................................", "....................................", "....................................", ".......................===..........", ".............===....................", "....................................", ".................#####..............", ".......#####.....#####....######....", ".......#####.....#####....######....", "####################################", "####################################", "####################################" },
 			layers = {
 				{ img = "wall_sea5.png", w = 384, h = 768, f = 0.3, y = -60 },
 			},
 			ground = {
-				{ img = "ground_sea5_1.png", x = 0, w = 768, h = 224 },
+				{ img = "ground_sea5_1.png", x = 0, w = 576, h = 224 },
 			},
 			props = "props_seat.png",
 			rects = {
@@ -34276,113 +34441,114 @@ local M = {
 				pond = { x = 0, y = 723, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "reefarch", x = 723, y = 177 },
+				{ id = "reefarch", x = 531, y = 177 },
 				{ id = "reefarch", x = 42, y = 177 },
-				{ id = "coral3", x = 297, y = 125 },
-				{ id = "coral2", x = 504, y = 109 },
-				{ id = "kelp", x = 93, y = 177 },
-				{ id = "kelp", x = 131, y = 177 },
-				{ id = "kelp", x = 208, y = 145 },
-				{ id = "kelp", x = 301, y = 177 },
-				{ id = "kelp", x = 336, y = 177 },
-				{ id = "fancoral", x = 384, y = 129 },
-				{ id = "kelp", x = 426, y = 129 },
-				{ id = "kelp", x = 474, y = 177 },
-				{ id = "kelp", x = 525, y = 177 },
-				{ id = "kelp", x = 592, y = 145 },
-				{ id = "tubecoral", x = 637, y = 145 },
-				{ id = "kelp", x = 682, y = 177 },
+				{ id = "coral3", x = 233, y = 125 },
+				{ id = "coral2", x = 392, y = 109 },
+				{ id = "kelp", x = 70, y = 177 },
+				{ id = "kelp", x = 98, y = 177 },
+				{ id = "kelp", x = 157, y = 145 },
+				{ id = "kelp", x = 226, y = 177 },
+				{ id = "kelp", x = 253, y = 177 },
+				{ id = "fancoral", x = 288, y = 129 },
+				{ id = "kelp", x = 320, y = 129 },
+				{ id = "kelp", x = 355, y = 177 },
+				{ id = "kelp", x = 394, y = 177 },
+				{ id = "kelp", x = 445, y = 145 },
+				{ id = "tubecoral", x = 478, y = 145 },
+				{ id = "kelp", x = 512, y = 177 },
 			},
 			front = {  },
-			spawn = { x = 80, y = 176 },
+			spawn = { x = 60.8, y = 176 },
 			portals = {
 				{ x = 42, y = 176, to = "seaf", label = "공기 방울 쉼터로", h = 42 },
-				{ x = 723, y = 176, to = "sea6", label = "난파선 무덤으로", h = 42 },
+				{ x = 531, y = 176, to = "sea6", label = "난파선 무덤으로", h = 42 },
 			},
 			warps = {
 				{ id = "warp1", x = 88, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 680, y = 176, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 504, y = 144, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "tangle",
-					x = 169.6,
-					y = 144,
-					range = { 169.6, 169.6 },
+					x = 392,
+					y = 80,
+					range = { 392, 392 },
 					lv = 57,
 				},
 				{
 					kind = "urchin",
-					x = 217.6,
+					x = 163.2,
 					y = 144,
-					range = { 152, 246.4 },
+					range = { 113.6, 185.6 },
 					lv = 60,
 				},
 				{
 					kind = "tangle",
-					x = 281.6,
-					y = 176,
-					range = { 281.6, 281.6 },
+					x = 232,
+					y = 96,
+					range = { 232, 232 },
 					lv = 57,
 				},
 				{
 					kind = "urchin",
-					x = 320,
+					x = 240,
 					y = 176,
-					range = { 264, 342.4 },
+					range = { 198.4, 256 },
 					lv = 60,
 				},
 				{
 					kind = "tangle",
-					x = 374.4,
+					x = 102.4,
+					y = 176,
+					range = { 102.4, 102.4 },
+					lv = 57,
+				},
+				{
+					kind = "urchin",
+					x = 318.4,
 					y = 128,
-					range = { 374.4, 374.4 },
-					lv = 57,
-				},
-				{
-					kind = "urchin",
-					x = 424,
-					y = 128,
-					range = { 360, 454.4 },
+					range = { 273.6, 340.8 },
 					lv = 60,
 				},
 				{
 					kind = "tangle",
-					x = 489.6,
-					y = 176,
-					range = { 489.6, 489.6 },
+					x = 120,
+					y = 144,
+					range = { 120, 120 },
 					lv = 57,
 				},
 				{
 					kind = "urchin",
-					x = 528,
+					x = 396.8,
 					y = 176,
-					range = { 472, 550.4 },
+					range = { 353.6, 412.8 },
 					lv = 60,
 				},
 				{
 					kind = "tangle",
-					x = 582.4,
+					x = 430.4,
 					y = 144,
-					range = { 582.4, 582.4 },
+					range = { 430.4, 430.4 },
 					lv = 57,
 				},
 				{
 					kind = "urchin",
-					x = 633.6,
+					x = 473.6,
 					y = 144,
-					range = { 568, 662.4 },
+					range = { 425.6, 473.6 },
 					lv = 60,
 				},
 			},
+			elite = true,
 			ret = "seat",
 		},
 		sea6 = {
 			name = "난파선 무덤",
 			region = false,
 			also = false,
-			w = 56,
+			w = 34,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -34392,12 +34558,12 @@ local M = {
 			sea = true,
 			sky = "#5a6a82",
 			deep = "#2f3742",
-			rows = { "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", "........................======................====......", "........................................................", "...............................====.....................", "..............########..............########............", "..............########..............########............", "########################################################", "########################################################", "########################################################" },
+			rows = { "..................................", "..................................", "..................................", "..................................", "..................................", "..................................", "...............======.......====..", "..................................", "...................====...........", ".........####.........#####.......", ".........####.........#####.......", "##################################", "##################################", "##################################" },
 			layers = {
 				{ img = "wall_sea5.png", w = 384, h = 768, f = 0.3, y = -60 },
 			},
 			ground = {
-				{ img = "ground_sea6_1.png", x = 0, w = 896, h = 224 },
+				{ img = "ground_sea6_1.png", x = 0, w = 544, h = 224 },
 			},
 			props = "props_seat.png",
 			rects = {
@@ -34467,99 +34633,100 @@ local M = {
 				pond = { x = 0, y = 723, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "quayarch", x = 851, y = 177 },
+				{ id = "quayarch", x = 499, y = 177 },
 				{ id = "reefarch", x = 112, y = 177 },
 				{ id = "quayarch", x = 45, y = 177 },
-				{ id = "deck1", x = 432, y = 128 },
-				{ id = "deck3", x = 528, y = 157 },
-				{ id = "deck2", x = 768, y = 128 },
-				{ id = "brokenmast", x = 198, y = 177 },
-				{ id = "sunkboat", x = 278, y = 145 },
-				{ id = "brokenmast", x = 362, y = 177 },
-				{ id = "shipanchor", x = 426, y = 177 },
-				{ id = "amphorae", x = 474, y = 177 },
-				{ id = "brokenmast", x = 554, y = 177 },
-				{ id = "sunkboat", x = 640, y = 145 },
-				{ id = "shipanchor", x = 720, y = 177 },
-				{ id = "brokenmast", x = 806, y = 177 },
+				{ id = "deck1", x = 288, y = 128 },
+				{ id = "deck3", x = 336, y = 157 },
+				{ id = "deck2", x = 480, y = 128 },
+				{ id = "brokenmast", x = 120, y = 177 },
+				{ id = "sunkboat", x = 170, y = 145 },
+				{ id = "brokenmast", x = 219, y = 177 },
+				{ id = "shipanchor", x = 259, y = 177 },
+				{ id = "amphorae", x = 288, y = 177 },
+				{ id = "brokenmast", x = 336, y = 177 },
+				{ id = "sunkboat", x = 389, y = 145 },
+				{ id = "shipanchor", x = 437, y = 177 },
+				{ id = "brokenmast", x = 490, y = 177 },
 			},
 			front = {  },
-			spawn = { x = 80, y = 176 },
+			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 45, y = 176, to = "sea4", label = "산호밭으로(서쪽 길)", h = 54 },
 				{ x = 112, y = 176, to = "sea5", label = "해초 숲으로(동쪽 길)", h = 42 },
-				{ x = 851, y = 176, to = "sea7", label = "가라앉은 항구로", h = 54 },
+				{ x = 499, y = 176, to = "sea7", label = "가라앉은 항구로", h = 54 },
 			},
 			warps = {
-				{ id = "warp1", x = 152, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 808, y = 176, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp1", x = 152, y = 144, at = "warp2", label = "오른쪽 끝으로" },
+				{ id = "warp2", x = 456, y = 176, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "mimic",
-					x = 182.4,
+					x = 318.4,
+					y = 96,
+					range = { 318.4, 318.4 },
+					lv = 65,
+				},
+				{
+					kind = "mimic",
+					x = 441.6,
 					y = 176,
-					range = { 182.4, 182.4 },
+					range = { 441.6, 441.6 },
 					lv = 65,
 				},
 				{
 					kind = "mimic",
-					x = 249.6,
+					x = 190.4,
 					y = 144,
-					range = { 249.6, 249.6 },
+					range = { 190.4, 190.4 },
 					lv = 65,
 				},
 				{
 					kind = "mimic",
-					x = 313.6,
-					y = 144,
-					range = { 313.6, 313.6 },
+					x = 248,
+					y = 176,
+					range = { 248, 248 },
 					lv = 65,
 				},
 				{
 					kind = "mimic",
-					x = 406.4,
+					x = 275.2,
 					y = 96,
-					range = { 406.4, 406.4 },
+					range = { 275.2, 275.2 },
 					lv = 65,
 				},
 				{
 					kind = "mimic",
-					x = 454.4,
-					y = 96,
-					range = { 454.4, 454.4 },
-					lv = 65,
-				},
-				{
-					kind = "mimic",
-					x = 521.6,
+					x = 316.8,
 					y = 128,
-					range = { 521.6, 521.6 },
+					range = { 316.8, 316.8 },
 					lv = 65,
 				},
 				{
 					kind = "mimic",
-					x = 601.6,
+					x = 361.6,
 					y = 144,
-					range = { 601.6, 601.6 },
+					range = { 361.6, 361.6 },
 					lv = 65,
 				},
 				{
 					kind = "mimic",
-					x = 665.6,
+					x = 404.8,
 					y = 144,
-					range = { 665.6, 665.6 },
+					range = { 404.8, 404.8 },
 					lv = 65,
 				},
 				{
 					kind = "mimic",
-					x = 761.6,
-					y = 96,
-					range = { 761.6, 761.6 },
+					x = 291.2,
+					y = 176,
+					range = { 291.2, 291.2 },
 					lv = 65,
 				},
 			},
+			elite = true,
 			ret = "seat",
 		},
 		r1c4 = {
@@ -34653,6 +34820,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			bosses = {
 				{
 					kind = "towerlieutenant",
@@ -34765,6 +34933,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "r2bs",
 		},
 		r3d4 = {
@@ -34846,6 +35015,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "r3t",
 		},
 		r4d4 = {
@@ -34948,6 +35118,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "port",
 		},
 		sea8 = {
@@ -35058,6 +35229,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "seat",
 		},
 		r4es = {
@@ -35147,6 +35319,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "port",
 		},
 		r1bl = {
@@ -35238,6 +35411,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "r1bv",
 		},
 		r2bl = {
@@ -35348,6 +35522,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "r2bs",
 		},
 		r2cl = {
@@ -35448,6 +35623,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "r2bs",
 		},
 		r3al = {
@@ -35574,6 +35750,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "r3t",
 		},
 		r3cl = {
@@ -35707,6 +35884,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "r3t",
 		},
 		r4bl = {
@@ -35815,6 +35993,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "port",
 		},
 		r4cl = {
@@ -35903,6 +36082,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "port",
 		},
 		r4dl = {
@@ -36006,6 +36186,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "port",
 		},
 		r1bh = {
@@ -36096,6 +36277,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "r1bv",
 		},
 		r2ah = {
@@ -36204,6 +36386,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "ct",
 		},
 		r2bh = {
@@ -36296,6 +36479,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "r2bs",
 		},
 		r3bh = {
@@ -36417,6 +36601,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "r3t",
 		},
 		r4ah = {
@@ -36517,6 +36702,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "port",
 		},
 		r4dh = {
@@ -36603,13 +36789,14 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "port",
 		},
 		sea3 = {
 			name = "얕은 여울",
 			region = false,
 			also = false,
-			w = 48,
+			w = 32,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -36619,12 +36806,12 @@ local M = {
 			sea = true,
 			sky = "#5a6a82",
 			deep = "#2f3742",
-			rows = { "................................................", "................................................", "................................................", "................................................", "................................................", "..........................===...................", "...........=====......................===.......", "..............................####..............", ".................####.........####..............", ".................####.........####..............", ".................####.........####..............", "################################################", "################################################", "################################################" },
+			rows = { "................................", "................................", "................................", "................................", "................................", ".................===............", ".......=====.............===....", "....................###.........", "...........###......###.........", "...........###......###.........", "...........###......###.........", "################################", "################################", "################################" },
 			layers = {
 				{ img = "wall_sea5.png", w = 384, h = 768, f = 0.3, y = -60 },
 			},
 			ground = {
-				{ img = "ground_sea3_1.png", x = 0, w = 768, h = 224 },
+				{ img = "ground_sea3_1.png", x = 0, w = 512, h = 224 },
 			},
 			props = "props_seat.png",
 			rects = {
@@ -36694,99 +36881,100 @@ local M = {
 				pond = { x = 0, y = 723, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "reefarch", x = 720, y = 177 },
+				{ id = "reefarch", x = 464, y = 177 },
 				{ id = "reefarch", x = 42, y = 177 },
-				{ id = "coral1", x = 216, y = 125 },
-				{ id = "coral2", x = 440, y = 109 },
-				{ id = "coral3", x = 633, y = 125 },
-				{ id = "kelp", x = 112, y = 177 },
-				{ id = "kelp", x = 358, y = 177 },
-				{ id = "kelp", x = 566, y = 177 },
-				{ id = "tubecoral", x = 650, y = 177 },
+				{ id = "coral1", x = 152, y = 125 },
+				{ id = "coral2", x = 296, y = 109 },
+				{ id = "coral3", x = 425, y = 125 },
+				{ id = "kelp", x = 75, y = 177 },
+				{ id = "kelp", x = 238, y = 177 },
+				{ id = "kelp", x = 378, y = 177 },
+				{ id = "tubecoral", x = 434, y = 177 },
 			},
 			front = {  },
-			spawn = { x = 80, y = 176 },
+			spawn = { x = 52.8, y = 176 },
 			portals = {
 				{ x = 42, y = 176, to = "sea1", label = "갯바위 해변으로", h = 42 },
-				{ x = 720, y = 176, to = "seaf", label = "공기 방울 쉼터로", h = 42 },
+				{ x = 464, y = 176, to = "seaf", label = "공기 방울 쉼터로", h = 42 },
 			},
 			warps = {
 				{ id = "warp1", x = 88, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 680, y = 176, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 424, y = 176, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "jelly",
-					x = 160,
+					x = 107.2,
 					y = 176,
-					range = { 118.4, 262.4 },
+					range = { 99.2, 174.4 },
 					lv = 52,
 				},
 				{
 					kind = "jelly",
-					x = 257.6,
+					x = 171.2,
 					y = 176,
-					range = { 128, 262.4 },
+					range = { 99.2, 174.4 },
 					lv = 52,
 				},
 				{
 					kind = "jelly",
-					x = 216,
+					x = 144,
 					y = 96,
-					range = { 184, 246.4 },
+					range = { 123.2, 164.8 },
 					lv = 52,
 				},
 				{
 					kind = "jelly",
-					x = 291.2,
+					x = 193.6,
 					y = 128,
-					range = { 280, 326.4 },
+					range = { 187.2, 217.6 },
 					lv = 52,
 				},
 				{
 					kind = "jelly",
-					x = 315.2,
+					x = 209.6,
 					y = 128,
-					range = { 280, 326.4 },
+					range = { 187.2, 217.6 },
 					lv = 52,
 				},
 				{
 					kind = "jelly",
-					x = 432,
+					x = 288,
 					y = 176,
-					range = { 344, 470.4 },
+					range = { 228.8, 313.6 },
 					lv = 52,
 				},
 				{
 					kind = "jelly",
-					x = 465.6,
+					x = 310.4,
 					y = 176,
-					range = { 352, 470.4 },
+					range = { 235.2, 313.6 },
 					lv = 52,
 				},
 				{
 					kind = "jelly",
-					x = 499.2,
+					x = 332.8,
 					y = 112,
-					range = { 488, 534.4 },
+					range = { 324.8, 356.8 },
 					lv = 52,
 				},
 				{
 					kind = "jelly",
-					x = 523.2,
+					x = 348.8,
 					y = 112,
-					range = { 488, 534.4 },
+					range = { 324.8, 356.8 },
 					lv = 52,
 				},
 				{
 					kind = "jelly",
-					x = 608,
+					x = 404.8,
 					y = 176,
-					range = { 552, 659.2 },
+					range = { 369.6, 406.4 },
 					lv = 52,
 				},
 			},
+			elite = true,
 			ret = "seat",
 		},
 		seaf = {
@@ -36899,6 +37087,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -36923,7 +37112,7 @@ local M = {
 			name = "산호밭",
 			region = false,
 			also = false,
-			w = 48,
+			w = 32,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -36933,12 +37122,12 @@ local M = {
 			sea = true,
 			sky = "#5a6a82",
 			deep = "#2f3742",
-			rows = { "................................................", "................................................", "................................................", "................................................", ".............................=====..............", "................===.............................", "................................................", ".....................######.....................", ".......######........######........#######......", ".......######........######........#######......", ".......######........######........#######......", "################################################", "################################################", "################################################" },
+			rows = { "................................", "................................", "................................", "................................", "...................=====........", "...........===..................", "................................", "..............####..............", ".....####.....####.....#####....", ".....####.....####.....#####....", ".....####.....####.....#####....", "################################", "################################", "################################" },
 			layers = {
 				{ img = "wall_sea5.png", w = 384, h = 768, f = 0.3, y = -60 },
 			},
 			ground = {
-				{ img = "ground_sea4_1.png", x = 0, w = 768, h = 224 },
+				{ img = "ground_sea4_1.png", x = 0, w = 512, h = 224 },
 			},
 			props = "props_seat.png",
 			rects = {
@@ -37008,108 +37197,107 @@ local M = {
 				pond = { x = 0, y = 723, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "reefarch", x = 720, y = 177 },
+				{ id = "reefarch", x = 464, y = 177 },
 				{ id = "reefarch", x = 42, y = 177 },
-				{ id = "coral2", x = 280, y = 109 },
-				{ id = "coral1", x = 504, y = 93 },
-				{ id = "tubecoral", x = 106, y = 177 },
-				{ id = "braincoral", x = 202, y = 129 },
-				{ id = "kelp", x = 224, y = 177 },
-				{ id = "fancoral", x = 426, y = 113 },
-				{ id = "kelp", x = 448, y = 177 },
-				{ id = "bigshell", x = 538, y = 177 },
-				{ id = "braincoral", x = 602, y = 129 },
+				{ id = "coral2", x = 200, y = 109 },
+				{ id = "coral1", x = 344, y = 93 },
+				{ id = "tubecoral", x = 70, y = 177 },
+				{ id = "braincoral", x = 134, y = 129 },
+				{ id = "fancoral", x = 283, y = 113 },
+				{ id = "bigshell", x = 358, y = 177 },
+				{ id = "braincoral", x = 402, y = 129 },
 			},
 			front = {  },
-			spawn = { x = 80, y = 176 },
+			spawn = { x = 52.8, y = 176 },
 			portals = {
 				{ x = 42, y = 176, to = "seaf", label = "공기 방울 쉼터로", h = 42 },
-				{ x = 720, y = 176, to = "sea6", label = "난파선 무덤으로", h = 42 },
+				{ x = 464, y = 176, to = "sea6", label = "난파선 무덤으로", h = 42 },
 			},
 			warps = {
-				{ id = "warp1", x = 88, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 680, y = 176, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp1", x = 88, y = 128, at = "warp2", label = "오른쪽 끝으로" },
+				{ id = "warp2", x = 440, y = 128, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "eel",
-					x = 220.8,
-					y = 176,
-					range = { 220.8, 220.8 },
-					lv = 58,
-				},
-				{
-					kind = "eel",
 					x = 152,
-					y = 128,
+					y = 176,
 					range = { 152, 152 },
 					lv = 58,
 				},
 				{
 					kind = "eel",
-					x = 193.6,
+					x = 344,
+					y = 64,
+					range = { 344, 344 },
+					lv = 58,
+				},
+				{
+					kind = "eel",
+					x = 129.6,
 					y = 128,
-					range = { 193.6, 193.6 },
+					range = { 129.6, 129.6 },
+					lv = 58,
+				},
+				{
+					kind = "eel",
+					x = 187.2,
+					y = 80,
+					range = { 187.2, 187.2 },
+					lv = 58,
+				},
+				{
+					kind = "eel",
+					x = 203.2,
+					y = 176,
+					range = { 203.2, 203.2 },
+					lv = 58,
+				},
+				{
+					kind = "eel",
+					x = 232,
+					y = 112,
+					range = { 232, 232 },
 					lv = 58,
 				},
 				{
 					kind = "eel",
 					x = 280,
-					y = 80,
+					y = 112,
 					range = { 280, 280 },
 					lv = 58,
 				},
 				{
 					kind = "eel",
-					x = 304,
+					x = 340.8,
 					y = 176,
-					range = { 304, 304 },
+					range = { 340.8, 340.8 },
 					lv = 58,
 				},
 				{
 					kind = "eel",
-					x = 347.2,
-					y = 112,
-					range = { 347.2, 347.2 },
-					lv = 58,
-				},
-				{
-					kind = "eel",
-					x = 419.2,
-					y = 112,
-					range = { 419.2, 419.2 },
-					lv = 58,
-				},
-				{
-					kind = "eel",
-					x = 512,
+					x = 299.2,
 					y = 176,
-					range = { 512, 512 },
+					range = { 299.2, 299.2 },
 					lv = 58,
 				},
 				{
 					kind = "eel",
-					x = 571.2,
+					x = 406.4,
 					y = 128,
-					range = { 571.2, 571.2 },
-					lv = 58,
-				},
-				{
-					kind = "eel",
-					x = 659.2,
-					y = 128,
-					range = { 659.2, 659.2 },
+					range = { 406.4, 406.4 },
 					lv = 58,
 				},
 			},
+			elite = true,
 			ret = "seat",
 		},
 		sea7 = {
 			name = "가라앉은 항구",
 			region = false,
 			also = false,
-			w = 56,
+			w = 34,
 			h = 14,
 			tall = false,
 			indoor = false,
@@ -37119,12 +37307,12 @@ local M = {
 			sea = true,
 			sky = "#5a6a82",
 			deep = "#2f3742",
-			rows = { "........................................................", "........................................................", "........................................................", "........................................................", "........................................................", ".........................................====...........", "......................======............................", "..............................########..................", "...........########...........########..................", "...........########...........########..........########", "...........########...........########..........########", "########################################################", "########################################################", "########################################################" },
+			rows = { "..................................", "..................................", "..................................", "..................................", "..................................", ".........................====.....", ".............======...............", "..................#####...........", ".......#####......#####...........", ".......#####......#####......#####", ".......#####......#####......#####", "##################################", "##################################", "##################################" },
 			layers = {
 				{ img = "wall_sea5.png", w = 384, h = 768, f = 0.3, y = -60 },
 			},
 			ground = {
-				{ img = "ground_sea7_1.png", x = 0, w = 896, h = 224 },
+				{ img = "ground_sea7_1.png", x = 0, w = 544, h = 224 },
 			},
 			props = "props_seat.png",
 			rects = {
@@ -37194,96 +37382,97 @@ local M = {
 				pond = { x = 0, y = 723, w = 32, h = 11 },
 			},
 			back = {
-				{ id = "quayarch", x = 845, y = 145 },
+				{ id = "quayarch", x = 493, y = 145 },
 				{ id = "quayarch", x = 45, y = 177 },
-				{ id = "deck1", x = 400, y = 128 },
-				{ id = "deck2", x = 688, y = 112 },
-				{ id = "harbourlamp", x = 122, y = 177 },
-				{ id = "drownedhouse", x = 282, y = 129 },
-				{ id = "brokenmast", x = 336, y = 177 },
-				{ id = "fallenguard", x = 432, y = 177 },
-				{ id = "harbourlamp", x = 506, y = 113 },
-				{ id = "drownedhouse", x = 598, y = 113 },
-				{ id = "shipanchor", x = 646, y = 177 },
-				{ id = "amphorae", x = 730, y = 177 },
-				{ id = "brokenmast", x = 790, y = 145 },
+				{ id = "deck1", x = 256, y = 128 },
+				{ id = "deck2", x = 432, y = 112 },
+				{ id = "harbourlamp", x = 74, y = 177 },
+				{ id = "drownedhouse", x = 171, y = 129 },
+				{ id = "brokenmast", x = 203, y = 177 },
+				{ id = "fallenguard", x = 262, y = 177 },
+				{ id = "harbourlamp", x = 307, y = 113 },
+				{ id = "drownedhouse", x = 363, y = 113 },
+				{ id = "shipanchor", x = 392, y = 177 },
+				{ id = "amphorae", x = 443, y = 177 },
+				{ id = "brokenmast", x = 480, y = 145 },
 			},
 			front = {  },
-			spawn = { x = 80, y = 176 },
+			spawn = { x = 48, y = 176 },
 			portals = {
 				{ x = 45, y = 176, to = "sea6", label = "난파선 무덤으로", h = 54 },
-				{ x = 845, y = 144, to = "sea8", label = "가라앉은 등대로", h = 54 },
+				{ x = 493, y = 144, to = "sea8", label = "가라앉은 등대로", h = 54 },
 			},
 			warps = {
 				{ id = "warp1", x = 88, y = 176, at = "warp2", label = "오른쪽 끝으로" },
-				{ id = "warp2", x = 808, y = 144, at = "warp1", label = "왼쪽 끝으로" },
+				{ id = "warp2", x = 456, y = 176, at = "warp1", label = "왼쪽 끝으로" },
 			},
 			warpAlpha = 0.28,
 			mobs = {
 				{
 					kind = "anchor",
-					x = 116.8,
-					y = 176,
-					range = { 101, 166.4 },
+					x = 420.8,
+					y = 80,
+					range = { 401.6, 435.2 },
 					lv = 71,
 				},
 				{
 					kind = "anchor",
-					x = 150.4,
-					y = 176,
-					range = { 101, 166.4 },
+					x = 264,
+					y = 96,
+					range = { 209.6, 302.4 },
 					lv = 71,
 				},
 				{
 					kind = "anchor",
-					x = 240,
+					x = 145.6,
 					y = 128,
-					range = { 184, 294.4 },
+					range = { 113.6, 179.2 },
 					lv = 71,
 				},
 				{
 					kind = "anchor",
-					x = 289.6,
+					x = 176,
 					y = 128,
-					range = { 192, 294.4 },
+					range = { 116.8, 179.2 },
 					lv = 71,
 				},
 				{
 					kind = "anchor",
-					x = 400,
+					x = 243.2,
 					y = 176,
-					range = { 312, 470.4 },
+					range = { 193.6, 284.8 },
 					lv = 71,
 				},
 				{
 					kind = "anchor",
-					x = 544,
+					x = 329.6,
 					y = 112,
-					range = { 488, 598.4 },
+					range = { 296, 363.2 },
 					lv = 71,
 				},
 				{
 					kind = "anchor",
-					x = 593.6,
+					x = 360,
 					y = 112,
-					range = { 496, 598.4 },
+					range = { 300.8, 363.2 },
 					lv = 71,
 				},
 				{
 					kind = "anchor",
-					x = 646.4,
+					x = 392,
 					y = 176,
-					range = { 616, 758.4 },
+					range = { 374.4, 435.2 },
 					lv = 71,
 				},
 				{
 					kind = "anchor",
-					x = 723.2,
+					x = 435.2,
 					y = 176,
-					range = { 616, 758.4 },
+					range = { 374.4, 435.2 },
 					lv = 71,
 				},
 			},
+			elite = true,
 			ret = "seat",
 		},
 		ct_store = {
@@ -37316,6 +37505,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -37366,6 +37556,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -37416,6 +37607,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -37466,6 +37658,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -37516,6 +37709,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -37579,6 +37773,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -37629,6 +37824,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -37692,6 +37888,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -37742,6 +37939,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -37792,6 +37990,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -37842,6 +38041,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "ct",
 		},
 		ct_musician = {
@@ -37874,6 +38074,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "ct",
 		},
 		ct_flower = {
@@ -37906,6 +38107,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "ct",
 		},
 		ct_oldhouse = {
@@ -37938,6 +38140,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "ct",
 		},
 		ct_scribe = {
@@ -37970,6 +38173,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -38020,6 +38224,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			ret = "ct",
 		},
 		ct_castle = {
@@ -38053,6 +38258,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -38103,7 +38309,8 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
-			vista = { img = "vista_ct_terrace.png", w = 384, h = 216, title = "은달 항구", sub = "대영주의 성에서 내려다본 밤", x = 192, act = "경치를 본다" },
+			elite = false,
+			vista = { img = "vista_ct_terrace.png", w = 384, h = 216, title = "은달 항구", sub = "대영주의 성에서 내려다본 밤", x = 192, act = "둘러보기" },
 			ret = "ct",
 		},
 		ct_tower = {
@@ -38136,6 +38343,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -38187,6 +38395,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -38238,6 +38447,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -38289,6 +38499,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -38340,6 +38551,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -38391,6 +38603,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -38442,6 +38655,7 @@ local M = {
 			warps = {  },
 			warpAlpha = 0.28,
 			mobs = {  },
+			elite = false,
 			npcSheet = "villagers.png",
 			npcCell = { 32, 26 },
 			npcCols = 32,
@@ -38853,6 +39067,7 @@ local M = {
 					wave = 4,
 				},
 			},
+			elite = false,
 			rift = "rf1",
 			bosses = nil,
 			npcs = nil,
@@ -39250,6 +39465,7 @@ local M = {
 					wave = 4,
 				},
 			},
+			elite = false,
 			rift = "rf2",
 			bosses = nil,
 			npcs = nil,
@@ -39654,6 +39870,7 @@ local M = {
 					wave = 4,
 				},
 			},
+			elite = false,
 			rift = "rf3",
 			bosses = nil,
 			npcs = nil,
@@ -39684,7 +39901,7 @@ return {
 	create = { gap = 60 },
 	heroes = { gap = 26, tint = "#1b212d" },
 	img = { sky = "title_sky.png", clouds = "title_clouds.png", ridge = "title_ridge.png", logo = "title_logo.png" },
-	text = { loading = "불러오는 중", start = "START", startHint = "Enter · Space · 화면을 눌러도 시작합니다", select = "캐릭터 선택", selectHint = "← → 고르기 · Enter 시작", empty = "빈 자리", enter = "게임 시작", create = "캐릭터 만들기", remove = "캐릭터 삭제", back = "뒤로", make = "만들기", createTitle = "캐릭터 만들기", createHint = "← → 직업 고르기", nameLabel = "이름", nameRule = "한글 2~6자 · 영문/숫자 4~12자", namePlaceholder = "이름을 적어 주세요", check = "중복 확인", checking = "확인하는 중 …", nameFree = "쓸 수 있는 이름입니다", needCheck = "이름을 적고 중복 확인을 눌러 주세요", full = "캐릭터를 더 만들 수 없습니다", noName = "이름이 없는 캐릭터입니다 — 이름을 지어야 들어갈 수 있습니다", giveName = "이름 짓기", nameTitle = "이름 짓기", setName = "정하기", removeTitle = "캐릭터 삭제", removeWarn = "지운 캐릭터는 되돌릴 수 없습니다. 창고의 물건은 남습니다.", removeAsk = "지우려면 캐릭터의 이름을 그대로 적어 주세요", removeDo = "지우기", cancel = "그만두기", wait = "잠시만 기다려 주세요 …", failed = "서버가 답하지 않습니다. 잠시 뒤에 다시 해 주세요" },
+	text = { loading = "불러오는 중", start = "START", startHint = "Enter · Space · 화면을 눌러도 시작합니다", select = "캐릭터 선택", selectHint = "← → 고르기 · Enter 시작", empty = "빈 자리", enter = "게임 시작", create = "캐릭터 만들기", remove = "캐릭터 삭제", back = "뒤로", make = "만들기", createTitle = "캐릭터 만들기", createHint = "← → 직업 고르기", nameLabel = "이름", nameRule = "한글 2~6자 · 영문/숫자 4~12자", namePlaceholder = "이름을 적어 주세요", check = "중복 확인", checking = "확인하는 중 …", nameFree = "쓸 수 있는 이름입니다", needCheck = "이름을 적고 중복 확인을 눌러 주세요", full = "캐릭터를 더 만들 수 없습니다", noName = "이름이 없는 캐릭터입니다 — 이름을 지어야 들어갈 수 있습니다", giveName = "이름 짓기", nameTitle = "이름 짓기", setName = "확인", removeTitle = "캐릭터 삭제", removeWarn = "지운 캐릭터는 되돌릴 수 없습니다. 창고의 물건은 남습니다.", removeAsk = "지우려면 캐릭터의 이름을 그대로 적어 주세요", removeDo = "삭제", cancel = "취소", wait = "잠시만 기다려 주세요 …", failed = "서버가 답하지 않습니다. 잠시 뒤에 다시 해 주세요" },
 	show = {
 		lead = 0.5,
 		rest = 2.4,
@@ -39730,11 +39947,13 @@ return {
 			name = "메뉴 단추",
 			tight = { w = 254, gap = 4, beside = "skills" },
 		},
+		gainLog = { at = "br", x = 724, y = 396, w = 220, h = 78, name = "획득 알림" },
 	},
 	hudTouch = {
 		vitals = { at = "bc", x = 356, y = 480, w = 248, h = 44, name = "체력과 직업 게이지" },
 		quest = { at = "tr", x = 724, y = 72, w = 220, h = 98, name = "퀘스트 알리미" },
 		buffs = { at = "tr", x = 648, y = 14, w = 174, h = 40, name = "버프" },
+		gainLog = { at = "tl", x = 16, y = 100, w = 220, h = 78, name = "획득 알림" },
 	},
 	windows = {
 		{ id = "bag", name = "가방", key = "I", from = 2, menu = false, need = false },
@@ -39750,7 +39969,7 @@ return {
 		{ id = "forge", name = "대장장이 무쇠뿔", key = false, from = 1, menu = false, need = false },
 		{ id = "keys", name = "키 설정", key = false, from = 1, menu = true, need = false },
 		{ id = "daily", name = "일일 의뢰", key = false, from = 10, menu = false, need = false },
-		{ id = "sound", name = "소리 설정", key = false, from = 1, menu = true, need = false },
+		{ id = "sound", name = "게임 설정", key = false, from = 1, menu = true, need = false },
 		{ id = "shop", name = "상점 · 창고", key = false, from = 1, menu = false, need = false },
 		{ id = "admin", name = "관리", key = false, from = 1, menu = false, need = false },
 		{ id = "hall", name = "명예의 전당", key = false, from = 1, menu = false, need = false },
@@ -39816,7 +40035,7 @@ return {
 			askText = "파티에 초대했다",
 			ask = { at = "tc", x = 360, y = 64, w = 240, h = 92, pad = 14 },
 		},
-		death = { at = "tc", x = 350, y = 150, w = 260, h = 112, pad = 14, title = "쓰러졌다", text = "마을로 돌아갈까요?", hint = "파티원이 되살려 주기를 기다려도 된다", yes = "마을로 돌아간다", titleY = 12, textY = 32, hintY = 50, buttonY = 72 },
+		death = { at = "tc", x = 350, y = 150, w = 260, h = 130, pad = 14, title = "쓰러졌다", text = "마을로 돌아갈까요?", weak = "약해짐 {m}분: 경험치 · 물건 80% 덜 얻음", hint = "파티원이 되살려 주기를 기다려도 된다", yes = "마을로 돌아가기", titleY = 12, textY = 32, weakY = 50, hintY = 68, buttonY = 90 },
 		quest = { title = 18, line = 14, gap = 6 },
 		tag = {
 			h = 13,
@@ -39826,6 +40045,8 @@ return {
 		},
 		mobBar = { w = 52, h = 6, up = 25 },
 		boss = { w = 300, h = 16, y = 18, barY = 18, patY = 38, pad = 6 },
+		mapName = { y = 16, w = 300, h = 34, nameY = 13, fadeIn = 0.3, hold = 2.2, fadeOut = 0.8 },
+		gainLog = { lines = 6, lineH = 13, life = 5, fade = 0.8, merge = 1.5 },
 		cine = { cardY = 0.4, titleX = 48, titleY = 0.58, noteW = 330, notePad = 16, skip = "건너뛰기", skipW = 76, skipH = 22, edge = 12 },
 		win = { pad = 18, head = 44, foot = 14, edge = 16, top = 16, bodyW = 300 },
 		bag = { cols = 6, rows = 4, gridY = 22, footH = 74, footY = 10, purseY = 39, gap = 8, countW = 70, scrollW = 36, sortW = 64, growW = 118 },
@@ -39861,7 +40082,7 @@ return {
 		rift = { w = 320, top = 26, row = 66, btnW = 60, footY = 8 },
 		riftHud = { w = 220, h = 38, y = 6 },
 		riftEnd = { w = 236, row = 20, pad = 12 },
-		tome = { w = 340, headY = 22, barY = 40, barH = 6, partY = 52, partRow = 20, partBarX = 92, partBarW = 150, rewardY = 160, rewardH = 58, mobY = 228, mobRow = 14 },
+		tome = { w = 340, headY = 22, barY = 40, barH = 6, partY = 52, partRow = 20, partBarX = 92, partBarW = 150, rewardY = 160, rewardH = 58, mobY = 232, mobRow = 14 },
 		achieve = { w = 340, barY = 16, barH = 6, tabY = 40, listY = 68, row = 46, rows = 5, sideW = 96, btnW = 64, barW = 150, footY = 8, allW = 96, scrollW = 3 },
 		sound = {
 			w = 300,
@@ -39877,7 +40098,7 @@ return {
 			start = 10,
 			muteY = 10,
 			muteW = 110,
-			title = "소리 설정",
+			title = "게임 설정",
 			rows = {
 				{ "music", "배경 음악" },
 				{ "sfx", "효과음" },
@@ -39885,6 +40106,19 @@ return {
 			mute = { "모두 끄기", "모두 켜기" },
 			off = "꺼 둠",
 			note = "효과음: 타격 · 줍기 · 완료 알림",
+			view = {
+				gap = 14,
+				head = "화면",
+				headH = 20,
+				btnW = 64,
+				rows = {
+					{ "fx", "다른 사람의 스킬 효과" },
+					{ "nums", "다른 사람의 피해 숫자" },
+				},
+				on = "켜짐",
+				off = "꺼짐",
+				note = "사람이 많은 맵에서 느려지면 꺼 두세요",
+			},
 		},
 		shop = { w = 300, iconS = 24, nameW = 120, priceW = 36, buyW = 82, rows = 10, hintX = 190 },
 		craft = { row = 44, tabH = 24, makeW = 58, makeH = 22, feeW = 34, matW = 135, note = "", hint = "재료는 몬스터가 떨어뜨린다 · 만든 장비의 성능은 보통 이상" },
@@ -39919,7 +40153,7 @@ return {
 		gap = { 7, 13 },
 		show = 3.6,
 	},
-	talkKeys = { "달빛 서린 종 조각", "지상 상인의 야영지", "불씨 도둑의 소굴", "쫓겨난 아이의 방", "도끼가 꽂힌 언덕", "낡은 수련 인형", "수정싹 그루터기", "결정 골렘 새끼", "봉인술사의 허물", "젖지 않은 종이", "달빛 서린 조각", "끈끈한 수정 진", "그을린 수레 못", "달그림자 사냥터", "사냥터 깊은 곳", "식어 가는 불길", "분화구 가장자리", "옛 근위대 숙소", "깨진 쐐기의 방", "수정 고슴도치", "등불꼬리 여우", "곡괭이 코볼트", "석순 흉내쟁이", "부서진 기사상", "봉인의 그림자", "입 벌린 궤짝", "거미줄 실타래", "거미 독주머니", "찢어진 명령서", "기사의 이름표", "빈 불씨 단지", "알껍데기 조각", "버려진 야영지", "고갯마루 주막", "수비대 야영지", "성문 밖 숲길", "연못가 갈림길", "성당 제단 앞", "화로 깊은 곳", "외성 밖 들판", "아랫마을 광장", "성벽 속 통로", "내려가는 계단", "쐐기지기의 방", "봉인의 문 앞", "고갯마루 노인", "포자 주머니", "골짜기 박쥐", "수정 달팽이", "이끼 두꺼비", "수정 봉오리", "떠도는 향로", "물총 따개비", "등불 해파리", "굴뚝 도깨비", "흑요석 전갈", "찢어진 깃발", "감시하는 눈", "빛 먹는 것", "은 낚싯바늘", "기사의 박차", "골렘 심장석", "폭탄 껍데기", "순찰대 표식", "장부의 낱장", "부러진 창대", "기사의 방패", "초승달 마을", "세 갈래 길", "고갯길 초입", "무너진 다리", "망루 꼭대기", "수정 오솔길", "빛나는 연못", "쓰러진 거목", "반달네 옛집", "끊긴 순찰로", "기사단 초소", "그림자 능선", "기사단 본당", "성당 뒤 못", "땅속 화롯골", "버려진 제단", "화로 둘레길", "갈라진 비탈", "성 아랫마을", "무너진 성벽", "기사의 회랑", "봉인의 회랑", "귀환 주문서", "수습 검병", "정예 검병", "정예 창병", "정예 궁병", "엄니 새끼", "바위 산양", "굴 두더지", "큰 달버섯", "검은 결정", "수정 거미", "진주 조개", "폭주 광차", "굴 지렁이", "쇳물 방울", "성난 모루", "재 회오리", "떠도는 책", "불씨 도둑", "해초 덩굴", "가시 성게", "울림 껍질", "분홍 리본", "여우 등불", "갑옷 조각", "굴쥐 수염", "등잔 조각", "불씨 단지", "보급 상자", "열쇠 조각", "쐐기 조각", "초승 고개", "마을 어귀", "옛 은신처", "멧돼지 굴", "망루 1층", "망루 2층", "망루 3층", "사당 지하", "은달 항구", "성당 앞뜰", "수정 회랑", "식은 광산", "뜨거운 굴", "화약 창고", "벽화의 방", "화산 기슭", "불탄 거리", "성벽 아래", "멈춘 종탑", "용의 둥지", "틈새 회랑", "보름 영감", "그믐 사제", "아궁 할멈", "바위 게", "빈 투구", "재까마귀", "횃불지기", "굴 곰치", "닻 망령", "종 조각", "기름 천", "달맞이꽃", "쇠 경첩", "빛 이끼", "쇠 덧판", "용 비늘", "달빛 꿈", "수정 숲", "물든 숲", "뿌리 굴", "굴 입구", "젖은 굴", "광차 길", "불씨 길", "용암 못", "성벽 위", "성문 앞", "옛 수로", "내성 뜰", "폭탄병", "달버섯", "종지기", "수정싹", "보따리", "화약통", "굽잇길", "금서고", "화롯골", "분화구", "만월성", "무기고", "무쇠뿔", "대장간", "수비대", "검병", "창병", "궁병", "굴쥐", "톱니", "종탑", "망대", "성문", "샛별", "반달", "초롱", "달래", "차돌", "여울", "하늬", "노을", "바우", "한돌", "아리", "도담", "새봄", "솔뫼", "숯돌", "바람", "돌쇠", "갈매", "가락", "보리", "누룽", "다홍", "갈기", "솔개", "새벽", "한결", "버들", "창고", "사당", "촌장" },
+	talkKeys = { "바래지 않은 깃발 조각", "달빛 서린 종 조각", "지상 상인의 야영지", "불씨 도둑의 소굴", "쫓겨난 아이의 방", "도끼가 꽂힌 언덕", "낡은 수련 인형", "수정싹 그루터기", "결정 골렘 새끼", "봉인술사의 허물", "젖지 않은 종이", "달빛 서린 조각", "끈끈한 수정 진", "그을린 수레 못", "달그림자 사냥터", "사냥터 깊은 곳", "식어 가는 불길", "분화구 가장자리", "옛 근위대 숙소", "깨진 쐐기의 방", "수정 고슴도치", "등불꼬리 여우", "곡괭이 코볼트", "석순 흉내쟁이", "부서진 기사상", "봉인의 그림자", "입 벌린 궤짝", "거미줄 실타래", "거미 독주머니", "찢어진 명령서", "기사의 이름표", "빈 불씨 단지", "알껍데기 조각", "버려진 야영지", "고갯마루 주막", "수비대 야영지", "성문 밖 숲길", "연못가 갈림길", "성당 제단 앞", "화로 깊은 곳", "외성 밖 들판", "아랫마을 광장", "성벽 속 통로", "내려가는 계단", "쐐기지기의 방", "봉인의 문 앞", "고갯마루 노인", "포자 주머니", "골짜기 박쥐", "수정 달팽이", "이끼 두꺼비", "수정 봉오리", "떠도는 향로", "물총 따개비", "등불 해파리", "굴뚝 도깨비", "흑요석 전갈", "찢어진 깃발", "감시하는 눈", "빛 먹는 것", "은 낚싯바늘", "기사의 박차", "골렘 심장석", "폭탄 껍데기", "순찰대 표식", "장부의 낱장", "부러진 창대", "기사의 방패", "초승달 마을", "세 갈래 길", "고갯길 초입", "무너진 다리", "망루 꼭대기", "수정 오솔길", "빛나는 연못", "쓰러진 거목", "반달네 옛집", "끊긴 순찰로", "기사단 초소", "그림자 능선", "기사단 본당", "성당 뒤 못", "땅속 화롯골", "버려진 제단", "화로 둘레길", "갈라진 비탈", "성 아랫마을", "무너진 성벽", "기사의 회랑", "봉인의 회랑", "귀환 주문서", "수습 검병", "정예 검병", "정예 창병", "정예 궁병", "엄니 새끼", "바위 산양", "굴 두더지", "큰 달버섯", "검은 결정", "수정 거미", "진주 조개", "폭주 광차", "굴 지렁이", "쇳물 방울", "성난 모루", "재 회오리", "떠도는 책", "불씨 도둑", "해초 덩굴", "가시 성게", "울림 껍질", "분홍 리본", "여우 등불", "갑옷 조각", "굴쥐 수염", "등잔 조각", "불씨 단지", "보급 상자", "열쇠 조각", "쐐기 조각", "초승 고개", "마을 어귀", "옛 은신처", "멧돼지 굴", "망루 1층", "망루 2층", "망루 3층", "사당 지하", "은달 항구", "성당 앞뜰", "수정 회랑", "식은 광산", "뜨거운 굴", "화약 창고", "벽화의 방", "화산 기슭", "불탄 거리", "성벽 아래", "멈춘 종탑", "용의 둥지", "틈새 회랑", "보름 영감", "그믐 사제", "아궁 할멈", "바위 게", "빈 투구", "재까마귀", "횃불지기", "굴 곰치", "닻 망령", "종 조각", "기름 천", "달맞이꽃", "쇠 경첩", "빛 이끼", "쇠 덧판", "용 비늘", "달빛 꿈", "수정 숲", "물든 숲", "뿌리 굴", "굴 입구", "젖은 굴", "광차 길", "불씨 길", "용암 못", "성벽 위", "성문 앞", "옛 수로", "내성 뜰", "폭탄병", "달버섯", "종지기", "수정싹", "보따리", "화약통", "굽잇길", "금서고", "화롯골", "분화구", "만월성", "무기고", "무쇠뿔", "대장간", "수비대", "검병", "창병", "궁병", "굴쥐", "톱니", "종탑", "망대", "성문", "샛별", "반달", "초롱", "달래", "차돌", "여울", "하늬", "노을", "바우", "한돌", "아리", "도담", "새봄", "솔뫼", "숯돌", "바람", "돌쇠", "갈매", "가락", "보리", "누룽", "다홍", "갈기", "솔개", "새벽", "한결", "버들", "창고", "사당", "촌장" },
 	tutorial = {
 		date = "2026-10-14",
 		said = "처음 게임을 시작하고 별도의 스타트맵을만들어서 거기서 조작을 알려주는 튜토리얼이 필요해 메이플스토리의 테라블링크를 예로들면 되겠다",
@@ -40071,20 +40305,33 @@ return {
 		accept = "수락",
 		decline = "거절",
 		ask = {
-			discard = { "몇 개를 버릴까요?", "버린다" },
-			store = { "몇 개를 맡길까요?", "맡긴다" },
-			take = { "몇 개를 찾을까요?", "찾는다" },
-			sell = { "몇 개를 팔까요?", "판다" },
-			split = { "몇 개를 나눌까요?", "나눈다" },
-			sellGear = { "이 장비를 팔까요?", "판다" },
+			discard = { "몇 개를 버릴까요?", "버리기" },
+			store = { "몇 개를 맡길까요?", "맡기기" },
+			take = { "몇 개를 찾을까요?", "찾기" },
+			sell = { "몇 개를 팔까요?", "팔기" },
+			split = { "몇 개를 나눌까요?", "나누기" },
+			sellGear = { "이 장비를 팔까요?", "팔기" },
+			dismantle = { "이 장비를 분해할까요?", "분해" },
 		},
-		askNo = "그만둔다",
+		askNo = "취소",
 		gain = "달돈 +{n}",
+		gainDust = "달가루 +{n}",
 		storeHint = "가방의 것을 끌어다 놓는다",
 		shopHint = "끌어다 놓으면 판다",
 		storeName = "창고",
 		essence = "정수",
+		bagFull = "가방의 {tab} 칸이 가득 찼다",
 	},
+	buffTip = {
+		left = "남은 시간 {t}",
+		min = "{m}분",
+		sec = "{s}초",
+		on = "켜 둠",
+		onLine = "키를 다시 누르면 꺼진다",
+		heat = "지금 열기 {n}",
+		weak = { title = "약해짐", text = "쓰러진 벌칙 — 경험치 · 물건을 80% 덜 얻는다", hint = "잡화 상인의 달빛 부적을 쓰면 바로 풀린다" },
+	},
+	xpTip = { title = "경험치", now = "{xp} / {need} ({pct}%)", left = "다음 레벨까지 {n}" },
 	statTip = {
 		main = {
 			tag = "주스탯",
@@ -45517,6 +45764,8 @@ local packets = {
 	Shot = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 { id, x, y, dir, speed, range, kind(쏜 졸개의 종류 — 제 그림이 있는 것은 그 그림으로 날아간다) }" },
 	MobCast = { Kind = "Event", Direction = "ServerToClient", Doc = "몬스터의 마법이 뜸 { id, kind(쓴 몬스터의 종류), x, y, dir(쓴 몬스터가 보던 쪽 — 앞으로 뻗는 마법은 그쪽으로 그린다) } — 그 종류의 마법 그림(cast)이 그 자리에서 한 번 돈다. 맞는 것은 서버가 예고 뒤에 따로 알린다(Hurt)" },
 	ShotEnd = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 번호" },
+	Sold = { Kind = "Event", Direction = "ServerToClient", Doc = "경매장에 올린 내 물건이 팔렸다 { name(물건 이름), n(팔린 수) } — 획득 알림 한 줄 · 「경매」 단추의 점(2026-10-18)" },
+	Elite = { Kind = "Event", Direction = "ServerToClient", Doc = "사냥터 정예가 나옴 { room(그 맵), mob(졸개 번호), kind, x · y(나온 자리 — 그 자리에 분홍 기운이 솟는다 · 높이 — 그 자리로 옮겨 그린다) } — 화면 위 가운데에 알림(2026-10-18)" },
 	Burst = { Kind = "Event", Direction = "ServerToClient", Doc = "폭탄병이 터짐 { mob, x, y }" },
 	Crystal = { Kind = "Event", Direction = "ServerToClient", Doc = "무니의 달 수정 { add = { { id, owner, x, y, life } … }, gone = { id … } }" },
 	Dodge = { Kind = "Event", Direction = "ServerToClient", Doc = "내가 피했다(리븐의 날랜 몸)" },
@@ -45562,14 +45811,18 @@ end
 -- 소리 설정 { music = 배경 음악의 크기, sfx = 효과음의 크기(0~steps칸 — 한 칸 10%), on = 모두 켰는가 }. 계정의 것이다(캐릭터를 바꿔도 같다)
 --  사용자 2026-10-13: "소리조절 있어야합니다."
 function Account.soundDefault()
-	return { music = SOUND.start, sfx = SOUND.start, on = true }
+	return { music = SOUND.start, sfx = SOUND.start, on = true, fx = true, nums = true } -- fx · nums = 화면 설정(다른 사람의 스킬 효과 · 피해 숫자 — 2026-10-18)
 end
 -- 받은 것 · 저장된 것의 꼴을 본다: 맞으면 새 표, 아니면 nil
 function Account.cleanSound(v: any)
 	if typeof(v) ~= "table" or not whole(v.music, 0, SOUND.steps) or not whole(v.sfx, 0, SOUND.steps) or typeof(v.on) ~= "boolean" then
 		return nil
 	end
-	return { music = v.music, sfx = v.sfx, on = v.on }
+	-- 화면(2026-10-18 — 설정 창의 「화면」): fx = 다른 사람의 스킬 효과 · nums = 다른 사람의 피해 숫자를 보일지. 없으면(그 전의 저장) 켜짐 · 참거짓이 아니면 받지 않는다
+	if (v.fx ~= nil and typeof(v.fx) ~= "boolean") or (v.nums ~= nil and typeof(v.nums) ~= "boolean") then
+		return nil
+	end
+	return { music = v.music, sfx = v.sfx, on = v.on, fx = v.fx ~= false, nums = v.nums ~= false }
 end
 function Account.setSound(acct, v: any): boolean
 	local sound = Account.cleanSound(v)
@@ -45583,7 +45836,7 @@ end
 function Account.new()
 	-- spent = 이 계정이 게임에 쓴 로벅스(명예의 전당의 후원 판) · sound = 소리 설정
 	-- market = 경매장에 맡긴 것(올린 물건 · 아직 찾지 않은 것 — sim/market.luau). 창고처럼 계정의 캐릭터들이 같이 본다
-	return { next = 1, last = false, chars = {}, store = false, broken = {}, spent = 0, sound = Account.soundDefault(), market = Market.newBook(), tutDone = false, att = Attend.new(), ach = Achieve.new() } -- att = 출석(sim/attend.luau) · ach = 업적(sim/achieve.luau) — 계정의 것(2026-10-15) -- tutDone = 이 계정의 캐릭터가 튜토리얼 「달빛 꿈」을 한 번 끝냈다(그 뒤의 새 캐릭터는 건너뛸 수 있다)
+	return { next = 1, last = false, chars = {}, store = false, storeGot = {}, broken = {}, spent = 0, sound = Account.soundDefault(), market = Market.newBook(), tutDone = false, att = Attend.new(), ach = Achieve.new() } -- att = 출석(sim/attend.luau) · ach = 업적(sim/achieve.luau) — 계정의 것(2026-10-15) -- tutDone = 이 계정의 캐릭터가 튜토리얼 「달빛 꿈」을 한 번 끝냈다(그 뒤의 새 캐릭터는 건너뛸 수 있다)
 end
 
 -- 이름을 견줄 때의 꼴(영문은 소문자로 — Moon과 moon은 같은 이름이다)
@@ -45933,7 +46186,7 @@ function Account.pack(acct)
 	for _, raw in acct.broken do
 		table.insert(chars, raw)
 	end
-	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, spent = acct.spent, sound = acct.sound, market = Market.packBook(acct.market), tutDone = acct.tutDone == true, att = Attend.pack(acct.att), ach = Achieve.pack(acct.ach) }
+	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, storeGot = acct.storeGot, spent = acct.spent, sound = acct.sound, market = Market.packBook(acct.market), tutDone = acct.tutDone == true, att = Attend.pack(acct.att), ach = Achieve.pack(acct.ach) }
 end
 
 function Account.unpack(data: any)
@@ -45956,6 +46209,15 @@ function Account.unpack(data: any)
 	acct.next = math.max(if whole(data.next, 1, 9e9) then data.next else 1, top + 1)
 	acct.last = if Account.find(acct, data.last) then data.last else false
 	acct.store = if typeof(data.store) == "table" then data.store else false
+	-- 창고를 늘린 부탁들(2026-10-18 — 「창고 칸 +4」 보상: 계정에 한 번씩. 이름표 → true). 생기기 전의 저장 = 없음
+	acct.storeGot = {}
+	if typeof(data.storeGot) == "table" then
+		for id, on in data.storeGot do
+			if typeof(id) == "string" and #id <= 20 and on == true then
+				acct.storeGot[id] = true
+			end
+		end
+	end
 	acct.spent = if whole(data.spent, 0, 9e12) then data.spent else 0
 	acct.sound = Account.cleanSound(data.sound) or Account.soundDefault() -- 소리 설정이 생기기 전의 저장 = 처음 크기
 	acct.market = Market.unpackBook(data.market) -- 경매장이 생기기 전의 저장 = 맡긴 것 없음
@@ -45980,6 +46242,19 @@ function Account.view(acct)
 		table.insert(chars, { id = c.id, name = c.name, class = c.class, level = level })
 	end
 	return { chars = chars, max = Account.MAX, last = acct.last, sound = acct.sound } -- sound = 소리 설정(처음 화면부터 그 크기로 튼다)
+end
+
+-- 계정이 받은 창고 칸(탭마다 — 2026-10-18): 「창고 칸」 보상을 준 부탁마다 그 보상의 칸 수(quests의 정의를 본다)
+function Account.storeExtra(acct): number
+	local Quests = require(script.Parent.quests)
+	local n = 0
+	for id in acct.storeGot or {} do
+		local def = Quests.def(id)
+		if def and (def.reward.store or 0) > 0 then
+			n += def.reward.store
+		end
+	end
+	return n
 end
 
 return Account
@@ -46082,8 +46357,8 @@ function Achieve.unpack(v: any)
 			return
 		end
 		for i, k in list do
-			if i > 2000 then
-				break
+			if typeof(i) ~= "number" or i > 2000 then
+				break -- (목록이 아닌 꼴로 저장된 것 — 숫자가 아닌 열쇠와 견주면 오류가 났다 · 2026-10-18 검토)
 			end
 			if typeof(k) == "string" and #k <= 40 and known(k) then
 				into[k] = true
@@ -46273,17 +46548,18 @@ end
 
 -- 받을 것을 모두(목록의 차례로) — 받은 수와(가방이 차서 멈췄으면) 까닭
 function Achieve.claimAll(a, h): (number, string?)
-	local n = 0
+	local n, last = 0, nil
 	for _, def in D.list do
 		if a.done[def.id] and not a.got[def.id] then
 			local ok, why = Achieve.claim(a, h, def.id)
-			if not ok then
-				return n, why
+			if ok then
+				n += 1
+			else
+				last = why -- 가방에 들지 않는 것은 건너뛰고 나머지(달돈 · 달가루만 주는 것 등)는 받는다(2026-10-18 검토 — 전에는 거기서 멈췄다)
 			end
-			n += 1
 		end
 	end
-	return n, nil
+	return n, last
 end
 
 -- 화면에 보내는 것: 점수 · 업적마다 { have, need, st } (st: 0 = 아직 안 보임(앞 단계) · 1 = 하는 중 · 2 = 해냄(받을 것) · 3 = 받음)
@@ -46449,9 +46725,25 @@ function Bag.size(h): number
 	return BAG.base + BAG.step * h.bagGrow
 end
 
--- 창고의 탭 하나의 칸 수(세 탭이 같다)
-function Bag.storeSize(_h): number
-	return BAG.storeBase
+-- 창고의 탭 하나의 칸 수(세 탭이 같다) — 24칸 + 계정이 받은 「창고 칸」 보상(h.storeExtra — 서버가 계정의 storeGot으로 맞춘다 · 2026-10-18)
+function Bag.storeSize(h): number
+	return BAG.storeBase + (if h and typeof(h.storeExtra) == "number" then h.storeExtra else 0)
+end
+
+-- 창고의 칸이 늘었다: 탭마다 빈 칸을 뒤에 붙인다(놓인 것은 그대로)
+function Bag.growStore(h, extra: number)
+	h.storeExtra = math.max(if typeof(h.storeExtra) == "number" then h.storeExtra else 0, extra) -- 줄이지는 않는다(2026-10-18 검토 — 줄면 뒤 칸의 것을 저장에서 잃는다)
+	local size = Bag.storeSize(h)
+	for _, tab in { "gear", "use", "etc" } do
+		local list = h.store and h.store[tab]
+		if list then
+			for i = 1, size do
+				if list[i] == nil then
+					list[i] = false
+				end
+			end
+		end
+	end
 end
 
 -- ---------- 칸들에서의 셈(가방의 탭과 창고의 탭이 같이 쓴다) ----------  list = 칸들 · size = 그 길이
@@ -46772,6 +47064,43 @@ function Bag.split(h, tab: any, slot: any, n: any, to: any): (boolean?, string?)
 end
 
 -- 상점에 판다(어느 상점 앞인지는 서버가 본다). 받은 달돈을 돌려준다. n = 묶음에서 팔 수(안 주면 전부 — 장비는 늘 하나). 퀘스트의 물건은 팔 수 없다
+-- ---------- 되사기(2026-10-18 — 메이플스토리의 재구매처럼) ----------
+--  상점에 판 것을 이번 접속 동안 가장 최근 BUYBACK개까지 기억한다(저장하지 않는다 — 나갔다 들어오면 비어 있다). 판 값 그대로 되산다
+Bag.BUYBACK = 10
+local function remember(h, tab: string, thing, price: number)
+	h.buyback = h.buyback or {}
+	table.insert(h.buyback, 1, { tab = tab, thing = thing, price = price })
+	while #h.buyback > Bag.BUYBACK do
+		table.remove(h.buyback)
+	end
+end
+
+-- 되산다: i = 되사기 목록의 차례(1 = 가장 최근에 판 것)
+function Bag.buyBack(h, i: any): (boolean?, string?)
+	local list = h.buyback or {}
+	if not whole(i, 1, #list) then
+		return nil, "없는 것이다"
+	end
+	local b = list[i]
+	if h.money < b.price then
+		return nil, "달돈이 모자란다"
+	end
+	if b.tab == "gear" then
+		if Bag.free(h) <= 0 then
+			return nil, FULL
+		end
+		Bag.add(h, b.thing)
+	else
+		local ok, why = Bag.give(h, b.thing.item, b.thing.n)
+		if not ok then
+			return nil, why
+		end
+	end
+	h.money -= b.price
+	table.remove(list, i)
+	return true
+end
+
 function Bag.sell(h, tab: any, slot: any, n: any): (number?, string?)
 	if not isTab(tab) or not whole(slot, 1, Bag.size(h)) or not h[tab][slot] then
 		return nil, "빈 칸이다"
@@ -46781,6 +47110,7 @@ function Bag.sell(h, tab: any, slot: any, n: any): (number?, string?)
 		local price = Items.sellPrice(e)
 		h.gear[slot] = false
 		h.money += price
+		remember(h, "gear", e, price)
 		return price
 	end
 	local one = Items.goodsSell(e.item)
@@ -46796,6 +47126,7 @@ function Bag.sell(h, tab: any, slot: any, n: any): (number?, string?)
 		h[tab][slot] = false
 	end
 	h.money += one * count
+	remember(h, tab, { item = e.item, n = count }, one * count)
 	return one * count
 end
 
@@ -46962,7 +47293,7 @@ function Bag.enhance(h, id: any, rng, guard: boolean?): (string?, string?)
 		return nil, "가진 장비가 아니다"
 	end
 	-- 그 캐릭터의 첫 강화: 달가루 없이 반드시 붙는다(한 번뿐). 별이 없는 장비에 첫 별을 붙일 때만이다 — 이 규칙이 생기기 전의 캐릭터가 높은 별에서 공짜로 넘어가지 못하게
-	local first = h.forged ~= true and it.star == 0
+	local first = Items.firstFree(h.forged, h.level, it) -- 제 레벨 + 10까지의 장비(사냥터에서 주운 조금 높은 것은 되게 · 2026-10-18 검토: 계정 창고의 훨씬 높은 장비에 공짜 첫 별을 붙이고 분해로 달가루를 받을 수 있었다)
 	local info = Items.enhanceInfo(it, guard, first)
 	if not info.can then
 		return nil, if info.why == "상한" then "더 붙일 수 없다" else "부서진 장비다"
@@ -47042,9 +47373,15 @@ local function carry(tab: any, src, srcSize: number, dst, dstSize: number, slot:
 end
 
 -- 가방의 칸의 것을 창고에 맡긴다(같은 탭의 창고로 — 장비 · 소비 · 기타 모두). n = 묶음에서 맡길 수(안 주면 전부) · to = 놓을 창고 칸(끌어다 놓은 칸 — 안 주면 알아서)
+Bag.NO_STORE = "퀘스트 물건은 맡길 수 없다"
 function Bag.storeIn(h, tab: any, slot: any, n: any, to: any): (boolean?, string?)
 	if not isTab(tab) then
 		return nil, "없는 탭이다"
+	end
+	-- 퀘스트 물건은 맡기지 않는다(메이플처럼 — 2026-10-18 검토): 창고는 계정의 캐릭터가 같이 써서, 한 캐릭터가 모은 것을 다른 캐릭터가 꺼내 그 퀘스트를 바로 끝냈다
+	local e = if tab ~= "gear" and whole(slot, 1, Bag.size(h)) then h[tab][slot] else nil
+	if e and Items.goods(e.item) and Items.goods(e.item).kind == "quest" then
+		return nil, Bag.NO_STORE
 	end
 	return carry(tab, h[tab], Bag.size(h), h.store[tab], Bag.storeSize(h), slot, n, to, "창고가 가득 찼다")
 end
@@ -47078,6 +47415,10 @@ local function unpackItem(row: any)
 		return nil
 	end
 	local it = { slot = row[1], stage = row[2], q = row[3], star = row[4], who = if row[5] ~= "" then row[5] else nil, fails = row[6], broken = row[7] == 1 }
+	-- 별이 그 단계의 상한을 넘으면(설계의 상한이 줄었다) 장비를 버리지 않고 상한으로 맞춘다(2026-10-18 검토)
+	if typeof(it.stage) == "number" and it.stage >= 1 and it.stage <= 200 and typeof(it.star) == "number" and it.star > Items.starCap(it.stage) then
+		it.star = Items.starCap(it.stage)
+	end
 	if not Items.valid(it) or typeof(it.fails) ~= "number" or it.fails < 0 or it.fails > 9 then
 		return nil
 	end
@@ -47131,11 +47472,28 @@ local function unpackStacks(list, size: number, tab: string, rows: any)
 	if typeof(rows) ~= "table" then
 		return
 	end
+	-- 겹치는 수를 넘는 묶음(설계의 겹치는 수가 줄었다)은 버리지 않고 그 수로 맞춘 뒤 넘친 것을 빈 칸에 나눠 놓는다(2026-10-18 검토 — 전에는 묶음째 버렸다)
+	local over = {}
 	for i = 1, size do
 		local row = rows[i]
 		local def = if typeof(row) == "table" then Items.goods(row[1]) else nil
-		if def and def.tab == tab and whole(row[2], 1, def.stack) then
-			list[i] = { item = def.id, n = row[2] }
+		if def and def.tab == tab and whole(row[2], 1, 1e6) then
+			list[i] = { item = def.id, n = math.min(row[2], def.stack) }
+			if row[2] > def.stack then
+				table.insert(over, { def = def, n = row[2] - def.stack })
+			end
+		end
+	end
+	for _, o in over do
+		for i = 1, size do
+			if o.n <= 0 then
+				break
+			end
+			if not list[i] then
+				local n = math.min(o.n, o.def.stack)
+				list[i] = { item = o.def.id, n = n }
+				o.n -= n
+			end
 		end
 	end
 end
@@ -47145,6 +47503,24 @@ end
 --  탭마다 칸들. 예전 저장(창고가 장비만 맡던 때 — 장비를 차례로 늘어놓은 것)은 장비 탭의 앞 칸부터 그대로 놓는다
 function Bag.loadStore(h, store: any)
 	local storeSize = Bag.storeSize(h)
+	-- 저장된 것이 지금의 칸 수보다 뒤에 있으면(퀘스트의 「창고 칸」 보상 자료가 줄었다 등) 그만큼 칸을 늘려 둔다 — 물건을 잃지 않게(2026-10-18 검토). 망가진 저장에 대비해 200칸까지
+	if typeof(store) == "table" then
+		local far = 0
+		for _, rows in { if typeof(store.gear) == "table" then store.gear else store, store.use, store.etc } do
+			if typeof(rows) == "table" then
+				for i, row in rows do
+					if typeof(i) == "number" and i == math.floor(i) and typeof(row) == "table" and i > far then
+						far = i
+					end
+				end
+			end
+		end
+		far = math.min(far, 200)
+		if far > storeSize then
+			h.storeExtra = far - BAG.storeBase
+			storeSize = far
+		end
+	end
 	h.store = { gear = blank(storeSize), use = blank(storeSize), etc = blank(storeSize) }
 	if typeof(store) ~= "table" then
 		return
@@ -47170,6 +47546,22 @@ function Bag.unpack(h, data: any): boolean
 	h.bagGrow = if whole(data.grow, 0, BAG.times) then data.grow else 0
 	h.dust = if whole(data.dust, 0, 9e15) then data.dust else 0
 	h.essence = if whole(data.essence, 0, 9e9) then data.essence else 0
+	-- 저장된 것이 지금의 가방 칸 수보다 뒤에 있으면(설계의 가방 칸이 줄었다) 넓히기를 그만큼 더 쳐 둔다 — 물건을 잃지 않게(창고의 loadStore와 같다 · 2026-10-18 검토)
+	do
+		local far = 0
+		for _, key in { "gear", "use", "etc" } do
+			if typeof(data[key]) == "table" then
+				for i, v in data[key] do
+					if typeof(i) == "number" and v and i > far then
+						far = i
+					end
+				end
+			end
+		end
+		while Bag.size(h) < far and h.bagGrow < BAG.times do
+			h.bagGrow += 1
+		end
+	end
 	local size, storeSize = Bag.size(h), Bag.storeSize(h)
 	h.gear, h.use, h.etc = blank(size), blank(size), blank(size)
 	for _, row in data.equip do
@@ -47226,6 +47618,33 @@ function Bag.view(h)
 	out.store = viewSlots(h.store, out.storeSize)
 	for slot, it in h.equip do
 		out.equip[slot] = viewItem(it)
+	end
+	-- 되사기 목록(가장 최근에 판 것부터): 장비 = gear(그 장비) · 소비 · 기타 = item · n · 값
+	out.buyback = {}
+	for i, b in h.buyback or {} do
+		out.buyback[i] = if b.tab == "gear" then { gear = viewItem(b.thing), price = b.price } else { item = b.thing.item, n = b.thing.n, price = b.price }
+	end
+	return out
+end
+
+-- 가득 찬 탭들(2026-10-18 — 보낸 것(Bag.view)에서): "gear" · "use" · "etc" 가운데 빈 칸이 없는 것. 화면이 가방 단추에 점을 찍고 획득 알림에 알린다
+Bag.TABS = { "gear", "use", "etc" }
+function Bag.fullTabs(view): { string }
+	local out = {}
+	for _, tab in Bag.TABS do
+		local list = view and view[tab]
+		if list then
+			local free = false
+			for i = 1, view.size or #list do
+				if not list[i] then
+					free = true
+					break
+				end
+			end
+			if not free then
+				table.insert(out, tab)
+			end
+		end
 	end
 	return out
 end
@@ -47864,6 +48283,9 @@ local function aliveMob(m): boolean
 	return m.state ~= "dead" and m.state ~= "gone" and m.state ~= "spawn"
 end
 
+-- 몸을 옮기는 스킬(g.move · g.teleport를 부른 적이 있는 것 — 2026-10-18 검토): 서버의 onMove가 이 스킬을 쓴 직후에만 먼 자리 보고를 받는다.
+--  전에는 아무 스킬이나 쓰면 1.5초 동안 보고마다 멀리 가는 것을 받아, 쉬운 공격을 이어 쓰며 맵을 순간이동하듯 건넜다
+Caster.MOVERS = {} :: { [string]: boolean }
 function Caster.is(id: any): boolean
 	return typeof(id) == "string" and CAST[id] ~= nil
 end
@@ -47916,6 +48338,17 @@ local function segNeed(hero, s): number
 		return 0
 	end
 	return segTime(hero.class, s)
+end
+
+-- 「때까지」 구간(till)이 있는 스킬인가(도약) — begin이 다시 시작하는 간격을 본다
+local TILL_GAP = 0.6
+local function hasTill(skill): boolean
+	for _, s in skill.segs or {} do
+		if s.till then
+			return true
+		end
+	end
+	return false
 end
 
 -- ---------- 방마다 하나 ----------
@@ -48047,8 +48480,8 @@ end
 
 -- 졸개 하나에게 몫 w의 타. 맞았으면 true(landed에 적는다)
 function Caster:strike(a, m, w: number, o, landed): boolean
-	if not aliveMob(m) then
-		return false
+	if not aliveMob(m) or not a.hero.alive then
+		return false -- 쓰러진 사람의 늦은 타 · 날아가는 것 · 그림자는 더 치지 않는다(2026-10-18 검토 — 놓인 것은 Room:stepPlaced가 이미 걷는다)
 	end
 	local hero, room, ctx = a.hero, self.room, a.ctx
 	-- 끌어당기기 · 넘어뜨리기: 보통 적만(묶인 적은 빼고)
@@ -48273,11 +48706,22 @@ local function makeG(self, a)
 		return p
 	end
 	-- 몸을 옮기는 것: 걷기 · 뛰기는 화면이 하고 제 자리를 알려 온다(여기서는 재 볼 때만 흉내 낸다). 순간이동은 서버도 그 자리로 옮겨 적는다 —
-	--  화면이 알려 오는 자리가 멀어도 그 스킬을 쓴 직후에는 받는다(server world.luau의 onMove — 스킬을 받을 때 warpAt을 적는다)
+	--  화면이 알려 오는 자리가 멀어도 그 스킬을 쓴 직후에는 받는다(server world.luau의 onMove — 몸을 옮기는 스킬일 때만: Caster.MOVERS · hero.warpMark)
+	--  그 스킬을 처음 쓸 때 서버가 빈 방에서 한 번 재 보므로(Caster.profile — context가 부른다) 처음부터 MOVERS에 든다
+	local function moved()
+		local id = a.ctx and a.ctx.id or (a.skill and a.skill.id)
+		if id then
+			Caster.MOVERS[id] = true
+		end
+		if not self.dry and not self.probe then
+			hero.warpMark = true
+		end
+	end
 	function g.move(v: number, t: number)
 		if self.dry then
 			a.imp = { v = v * hero.dir, t = t }
 		end
+		moved()
 	end
 	function g.hop(v: number)
 		if self.dry then
@@ -48295,6 +48739,7 @@ local function makeG(self, a)
 				return false
 			end
 		end
+		moved()
 		hero.x = x
 		return true
 	end
@@ -48349,7 +48794,7 @@ local function makeG(self, a)
 			return
 		end
 		local s = Hero.skillScale(hero.skills[ctx.id] or 0, def.max) * (k or 1)
-		for _, mate in ctx.mates or { hero } do
+		for _, mate in (if room.liveMates then room:liveMates(hero, ctx.mates) else ctx.mates or { hero }) do -- 지금 이 방에 살아 있는 파티원만(쓰기 시작할 때의 목록이라 — 2026-10-18 검토)
 			if mate.alive and abs(mate.x - hero.x) <= h.reach and abs(mate.y - hero.y) <= 80 then
 				local amount = min(mate.maxHp - mate.hp, floor(mate.maxHp * h.hp * s + 0.5))
 				if amount > 0 then
@@ -48518,6 +48963,17 @@ function Caster:begin(hero, id: string, seg: number, mates, info): (boolean, num
 				return false, nil
 			end
 			endSkill(self, a)
+		end
+		-- 「때까지」 구간(뛰어올라 떨어질 때까지 — 도약)은 서버가 끝을 알 수 없어 다음 구간을 바로 받는다: 그래서 같은 기술을 다시 시작하는 데
+		--  빈 방에서 잰 한 번의 시간(Caster.profile)의 TILL_GAP배는 걸리게 한다(2026-10-18 검토 — 구간을 잇달아 보내 하늘에 있는 시간을 건너뛰면 보스에게 두세 배였다).
+		--  공중에서 쓰면 짧게 끝나는 것은 그대로 둔다(다시 쓰는 데만 조금 기다린다)
+		if not self.dry and hasTill(skill) then
+			a.began = a.began or {}
+			local at = a.began[id]
+			if at and self.room.time - at < Caster.profile(id, 0).time * TILL_GAP / Buffs.haste(hero) then
+				return false, nil
+			end
+			a.began[id] = self.room.time
 		end
 		ctx = self:context(a, id, 0, mates)
 		ctx.fallen = info and info.fallen
@@ -49763,7 +50219,9 @@ function Hero.gainXp(h, amount: number): number
 			Hero.autoSkill(h)
 		end
 		h.maxHp = maxHpOf(h)
-		h.hp = h.maxHp -- 레벨이 오르면 체력이 다 찬다
+		if h.alive ~= false then
+			h.hp = h.maxHp -- 레벨이 오르면 체력이 다 찬다(쓰러져 있으면 그대로 — 파티원이 잡은 몫으로 오를 때 · 2026-10-18 검토)
+		end
 	end
 	return ups
 end
@@ -49857,6 +50315,30 @@ function Hero.canReturn(h): boolean
 end
 
 -- 맵에 들어섰다: 잠깐(RULES.arrive초) 피해를 받지 않는다 — 들어서자마자 맞지 않게(문 곁에도 몬스터가 있다. 공방 combat.js의 arrive)
+-- 방(맵)마다 시계가 따로다(방의 time은 0에서 시작해 사람이 있을 때만 흐르고, 토벌 방은 들 때마다 새로 짓는다).
+--  캐릭터에 적힌 방의 시각들을 새 방의 시계로 옮긴다 — delta = 새 방의 시각 − 옛 방의 시각(서버 world.luau의 place가 부른다 · 2026-10-18 검토:
+--  옛 방의 시계가 앞서 있으면 리퍼의 도깨비불 · 무니의 수정 조각 · 리븐의 독이 새 방의 시계가 따라잡을 때까지 멈췄고, 거꾸로면 살라맨더의 연속이 끝나지 않았다)
+local CLOCK_PASS = { "streakAt", "pressAt", "surge", "rekindle", "venom" }
+function Hero.shiftClock(h, delta: number)
+	if delta == 0 or delta ~= delta then
+		return
+	end
+	if h.kit and typeof(h.kit.at) == "number" then
+		h.kit.at += delta
+	end
+	if typeof(h.actUntil) == "number" then
+		h.actUntil += delta
+	end
+	local p = h.pass
+	if p then
+		for _, k in CLOCK_PASS do
+			if typeof(p[k]) == "number" then
+				p[k] += delta
+			end
+		end
+	end
+end
+
 function Hero.arrive(h)
 	h.invuln = math.max(h.invuln, RULES.arrive)
 end
@@ -49902,6 +50384,10 @@ function Hero.questDone(h, id: any)
 	-- 보상의 귀환 주문서(첫머리의 퀘스트 — 사용자 2026-10-13: "완전 초반부 퀘스트에서 마을귀환주문서를 뿌려야합니다")가 들어갈 칸이 없으면 돌려주지 못한다
 	if def and (def.reward.scrolls or 0) > 0 and Quests.isReady(h.quests, id) and Bag.room(h, Hero.SCROLL) < def.reward.scrolls then
 		return nil, "가방의 소비 칸이 모자란다"
+	end
+	-- 전직 퀘스트는 바로 다음 차수일 때만 돌려준다(2026-10-18 검토 — 끝냈는데 전직이 되지 않는 일이 없게)
+	if def and def.reward.job and Quests.isReady(h.quests, id) and def.reward.job ~= h.job + 1 then
+		return nil, "앞의 전직을 먼저 마쳐야 한다"
 	end
 	-- 보상의 장비(전직할 때 받는 무기)가 들어갈 칸이 없으면 돌려주지 못한다
 	if def and def.reward.gear and Quests.isReady(h.quests, id) and Bag.free(h) <= 0 then
@@ -49953,16 +50439,17 @@ end
 
 -- ---------- 키 설정 ----------
 -- 바꾼 키의 표를 받아 둔다. 꼴이 맞는 것만 담는다(하는 일 이름 · 키 이름은 글자와 숫자, 마흔여덟 개까지). 담았으면 true.
-local function cleanKeys(map: any)
+-- lenient = 저장된 것을 읽을 때: 맞지 않는 짝만 버리고 나머지는 지킨다(2026-10-18 검토 — 전에는 짝 하나 때문에 키 설정 전체가 처음으로 돌아갔다)
+local function cleanKeys(map: any, lenient: boolean?)
 	if typeof(map) ~= "table" then
 		return nil
 	end
 	local out, n = {}, 0
 	for action, key in map do
-		if typeof(action) ~= "string" or typeof(key) ~= "string" or #action > 40 or #key > 24 then
-			return nil
-		end
-		if not string.match(action, "^[%w:_]+$") or not string.match(key, "^%w+$") then
+		if typeof(action) ~= "string" or typeof(key) ~= "string" or #action > 40 or #key > 24 or not string.match(action, "^[%w:_]+$") or not string.match(key, "^%w+$") then
+			if lenient then
+				continue
+			end
 			return nil
 		end
 		n += 1
@@ -50044,7 +50531,7 @@ function Hero.pack(h)
 		money = h.money,
 		forged = h.forged == true,
 		home = h.home or false,
-		last = h.last or false,
+		last = (if h.alive == false then h.home else h.last) or false, -- 쓰러진 채 나가면 다시 들어올 때 마을에서(그 자리에서 가득 찬 채로 살아나지 않게 — 2026-10-18 검토)
 		resets = h.resets or 0,
 		weak = math.floor(h.weak),
 		bag = Bag.pack(h),
@@ -50075,11 +50562,11 @@ end
 -- 저장된 것에서 캐릭터를 되살린다. 꼴이 이상하면 nil(새로 골라야 한다).
 --  점수가 받은 것보다 많이 찍혀 있으면(식이 바뀌었거나 자료가 깨졌을 때) 찍은 것을 모두 되돌려 준다 — 레벨과 돈은 지킨다.
 function Hero.unpack(id: any, data: any)
-	if typeof(data) ~= "table" or not CLASSES.classes[data.class] or not whole(data.level, 1, N.MAX_LEVEL) then
+	if typeof(data) ~= "table" or not CLASSES.classes[data.class] or not whole(data.level, 1, 1e6) then
 		return nil
 	end
 	local h = Hero.new(id, data.class)
-	h.level = data.level
+	h.level = math.min(data.level, N.MAX_LEVEL) -- (최고 레벨이 줄었으면 그 레벨로 — 캐릭터를 못 쓰게 되지 않게 · 2026-10-18 검토)
 	-- 차수: 저장된 것(그 레벨에 닿을 수 있는 데까지). 전직 퀘스트가 생기기 전에 저장된 캐릭터(2026-10-10 이전)는 레벨만 되면 전직했으므로 그 레벨의 차수 그대로다
 	h.job = if whole(data.job, 1, #CLASSES.jobs) then math.min(data.job, Hero.jobAt(h.level)) else Hero.jobAt(h.level)
 	h.xp = if typeof(data.xp) == "number" and data.xp >= 0 and data.xp < N.xpNeed(h.level) then math.floor(data.xp) else 0
@@ -50091,7 +50578,7 @@ function Hero.unpack(id: any, data: any)
 	h.home = if typeof(data.home) == "string" then data.home else nil -- 없는 장면 · 마을이 아닌 장면이면 서버가 시작 마을로 돌려보낸다(world.luau의 onReturn). 옛 저장의 towns(걷어낸 빠른 이동)는 읽지 않는다
 	h.forged = data.forged == true -- 이것이 생기기 전에 저장된 캐릭터(2026-10-11 이전)는 한 번 더 받는다(첫 강화가 공짜로 반드시 붙는다)
 	h.auto = data.auto == true
-	h.keys = cleanKeys(data.keys) or {}
+	h.keys = cleanKeys(data.keys, true) or {}
 	local oldBag = Bag.unpack(h, data.bag) -- 장비가 생기기 전에 저장된 캐릭터는 처음 차림을 받는다
 	h.quests = Quests.unpack(data.quests)
 	h.daily = Daily.unpack(data.daily) -- 일일 의뢰가 생기기 전의 저장 = 빈 것(게시판에 가면 오늘의 의뢰를 받는다)
@@ -50101,7 +50588,7 @@ function Hero.unpack(id: any, data: any)
 	h.cine = {} -- 본 장면(퀘스트 연출이 생기기 전의 저장 = 아무것도 안 봤다 — 장면은 퀘스트를 받고 · 다 하고 · 돌려줄 때 트므로 지난 퀘스트의 장면은 다시 나오지 않는다)
 	if typeof(data.cine) == "table" then
 		for i, id in data.cine do
-			if typeof(id) == "string" and #id <= 40 and i <= 400 then
+			if typeof(id) == "string" and #id <= 40 and typeof(i) == "number" and i <= 400 then
 				h.cine[id] = true
 			end
 		end
@@ -50160,15 +50647,14 @@ function Hero.unpack(id: any, data: any)
 	if good then
 		for sid, lv in data.skills do
 			local def = skillDef(h.class, sid)
-			if def and whole(lv, 0, def.max) then
-				-- 게임에 아직 없는 스킬에 찍혀 있던 것(그 스킬을 막기 전의 저장)은 포인트로 돌려준다
+			if def and whole(lv, 0, 1e6) then
+				-- 게임에 아직 없는 스킬에 찍혀 있던 것(그 스킬을 막기 전의 저장)은 포인트로 돌려준다 · 최고 레벨이 줄었으면 그 레벨까지(넘친 것은 포인트로)
 				if READY[sid] then
-					skills[sid] = math.max(lv, base[sid] or 0)
+					skills[sid] = math.max(math.min(lv, def.max), base[sid] or 0)
 					spent += skills[sid] - (base[sid] or 0)
 				end
-			else
-				good = false
 			end
+			-- 없어진 스킬은 그것만 빼고 포인트로 돌려준다(2026-10-18 검토 — 전에는 스킬 하나 때문에 찍은 것을 모두 되돌렸다)
 		end
 	end
 	-- 차수마다: 열리지 않은 차수의 스킬은 없고, 그 차수에 쓴 포인트는 그 차수 동안 받은 것을 넘지 않는다
@@ -50189,12 +50675,27 @@ function Hero.unpack(id: any, data: any)
 	end
 	-- 퀵슬롯: 저장된 것이 말이 되면 그대로, 아니면(퀵슬롯이 생기기 전에 저장된 캐릭터 포함) 처음 차림(Hero.new가 놓아 둔 것)
 	--  예전 저장의 물약 칸("potion" — 물약이 한 가지였을 때)은 그때 마시던 물약의 칸으로 바꾼다(놓아 둔 자리가 그대로 남는다)
+	--  칸 하나가 맞지 않으면(그 스킬의 포인트를 돌려받았다 · 아이템의 이름표가 바뀌었다) 그 칸만 비운다(2026-10-18 검토 — 전에는 배치 전체가 처음 차림으로 돌아갔다)
+	local function salvage(list)
+		if typeof(list) ~= "table" then
+			return list
+		end
+		local out, seen = table.create(Quick.N, false), {}
+		for i = 1, Quick.N do
+			local v = list[i]
+			if typeof(v) == "string" and #v <= 40 and not seen[v] and Hero.canSlot(h, v) then
+				seen[v] = true
+				out[i] = v
+			end
+		end
+		return out
+	end
 	if data.slots ~= nil then
-		Hero.setSlots(h, Quick.renew(data.slots, myPotion))
+		Hero.setSlots(h, salvage(Quick.renew(data.slots, myPotion)))
 	end
 	-- 스마트폰의 단추 배치: 저장된 것이 말이 되면 그대로, 없으면(이것이 생기기 전에 저장된 캐릭터) 처음 차림
 	if data.tslots ~= nil then
-		Hero.setSlots(h, Quick.renew(data.tslots, myPotion), true)
+		Hero.setSlots(h, salvage(Quick.renew(data.tslots, myPotion)), true)
 	end
 
 	h.kit.on = data.kitOn == true and Kit.level(h, "toggle") > 0
@@ -50637,6 +51138,12 @@ end
 
 -- 다음 시도의 내용. guard = 파괴 막기를 켰는가 · first = 그 캐릭터의 첫 강화인가(달가루 없이 반드시 붙는다 — 공방 basics.js의 FORGE.first).
 --  { can(시도할 수 있는가), why, ok · fail · boom(%), dust, essence, drops(실패하면 떨어지는가), sure(반드시 성공인가), guard(파괴 막기를 쓸 수 있는 별인가), first(첫 강화인가) }
+-- 그 캐릭터의 첫 강화로 치는가(달가루 없이 반드시 붙는다): 강화를 해 본 적이 없고 · 별이 없는 장비이고 · 제 레벨 + 10까지의 장비.
+--  서버(Bag.enhance)와 화면(대장간 창)이 같은 셈을 쓴다(2026-10-18 검토: 화면은 「+10」을 보지 않아 높은 장비에도 「첫 강화」를 보이고, 서버는 보통 강화로 달가루를 받았다)
+function Items.firstFree(forged: any, level: number?, it): boolean
+	return forged ~= true and it.star == 0 and it.stage <= (level or 1) + 10
+end
+
 function Items.enhanceInfo(it, guard: boolean?, first: boolean?)
 	local s = it.star
 	if it.broken then
@@ -50646,7 +51153,8 @@ function Items.enhanceInfo(it, guard: boolean?, first: boolean?)
 		return { can = false, why = "상한" }
 	end
 	local row = E.table[s + 1]
-	local canGuard = table.find(E.guard.stars, s + 1) ~= nil
+	local sure = (it.fails or 0) >= E.chance -- 찬스 타임: 반드시 붙는다 — 파괴 방지가 필요 없다(2026-10-18 검토: 켜 두면 값만 세 배로 받았다)
+	local canGuard = table.find(E.guard.stars, s + 1) ~= nil and not sure and not first
 	local useGuard = guard == true and canGuard
 	local info = {
 		can = true,
@@ -50656,7 +51164,7 @@ function Items.enhanceInfo(it, guard: boolean?, first: boolean?)
 		dust = Items.enhanceDust(it.stage, s) * (if useGuard then E.guard.cost else 1),
 		essence = E.essence[s + 1],
 		drops = s + 1 >= E.dropFrom and table.find(E.floors, s) == nil,
-		sure = (it.fails or 0) >= E.chance,
+		sure = sure,
 		guard = canGuard,
 	}
 	if useGuard then
@@ -50716,7 +51224,11 @@ end
 
 -- ---------- 상점 ----------
 -- 그 물건의 값(물약도 단마다 따로 판다 — 값이 레벨을 따라 달라지지 않는다)
-function Items.stockPrice(stock, _level: number?): number
+-- 상점의 값: 레벨에 따라 오르는 것(달빛 부적 · 능력치 초기화 — perLv)은 내 레벨 x perLv(2026-10-18 — 설계 economy.js의 PRICE)
+function Items.stockPrice(stock, level: number?): number
+	if stock.perLv then
+		return stock.perLv * math.max(1, level or 1)
+	end
 	return stock.price
 end
 
@@ -51697,6 +52209,9 @@ function Party.accept(book, to: any, now: number)
 		return nil, "이미 파티가 있다"
 	end
 	local party = Party.of(book, ask.from)
+	if party and party.leader ~= ask.from then
+		return nil, "초대한 사람이 이제 파티장이 아니다" -- 초대한 뒤 남의 파티에 들어갔다(2026-10-18 검토)
+	end
 	if not party then
 		party = { id = book.nextId, leader = ask.from, members = { ask.from } }
 		book.nextId += 1
@@ -51719,11 +52234,20 @@ function Party.decline(book, to: any): any
 end
 
 -- 나간다(접속을 끊었을 때도). 돌려주는 것: 남은 사람들(흩어졌으면 그 마지막 한 사람까지), 흩어졌는가
-function Party.leave(book, who: any): ({ any }, boolean)
+-- 돌려주는 것: 남은 파티원들 · 파티가 흩어졌는가 · 초대가 지워진 사람들(그 사람들의 초대 상자를 닫게 — 2026-10-18 검토)
+function Party.leave(book, who: any): ({ any }, boolean, { any })
 	book.asks[who] = nil
+	-- 나간 사람이 보낸 초대도 지운다(2026-10-18 검토: 접속을 끊은 사람의 초대를 받으면 파티장이 없는 파티가 생겼다)
+	local cleared = {}
+	for to, ask in book.asks do
+		if ask.from == who then
+			book.asks[to] = nil
+			table.insert(cleared, to)
+		end
+	end
 	local party = Party.of(book, who)
 	if not party then
-		return {}, false
+		return {}, false, cleared
 	end
 	local index = table.find(party.members, who)
 	table.remove(party.members, index)
@@ -51734,12 +52258,12 @@ function Party.leave(book, who: any): ({ any }, boolean)
 			book.of[m] = nil
 		end
 		book.parties[party.id] = nil
-		return left, true
+		return left, true, cleared
 	end
 	if party.leader == who then
 		party.leader = party.members[1]
 	end
-	return left, false
+	return left, false, cleared
 end
 
 -- 함께 잡은 사람 수에 따른 보너스 %
@@ -52151,11 +52675,16 @@ end
 --  가시("^")는 닿아도 시작 자리로 돌려보내지 않는다 — 사용자 2026-10-07: "가시맞고 돌아가는거 없애세요 가시맞고 돌아간다음에 몬스터랑 전투도안되고 고장나네요"
 --   (2026-10-08부터는 닿으면 약한 피해를 입는다 — 위의 onSpike. 움직임은 그대로다)
 --   (고장난 까닭: 화면에서만 시작 자리로 옮겨지고 서버는 그 순간이동을 믿지 않아, 그 뒤로 서버가 아는 자리와 어긋났다. 맵 아래로 떨어진 때를 위해 서버는 시작 자리로 온 보고는 받는다 — world.luau의 onMove)
+P.GRAB_LOCK = 0.3 -- 사다리에서 뛰어 놓은 뒤 다시 잡지 않는 시간(초)
 function P.step(scene, body, input, dt: number): string?
 	local mx = input.mx or 0
 	local sea = if scene.sea then SEA else nil
 	-- 사다리: 잡기(↑ — 꼭대기 아래에서 · ↓ — 꼭대기의 발판 위에서, 뛰기 없이)
-	if not body.climb and not input.float and input.vx == nil and (input.up or (input.down and not input.jump and body.ground)) then
+	--  뛰어 놓은 뒤 GRAB_LOCK초 동안은 다시 잡지 않는다 — ↑를 누른 채(폰은 막대를 비스듬히) 뛰면 바로 다시 잡혀 뛰어내릴 수 없었다(2026-10-18 검토)
+	if (body.grabLock or 0) > 0 then
+		body.grabLock = math.max(0, body.grabLock - dt)
+	end
+	if not body.climb and (body.grabLock or 0) <= 0 and not input.float and input.vx == nil and (input.up or (input.down and not input.jump and body.ground)) then
 		local i, l = P.ladderAt(scene, body.x, body.y)
 		if l and input.up and body.y > l.top + 0.5 then
 			body.climb = i
@@ -52169,6 +52698,7 @@ function P.step(scene, body, input, dt: number): string?
 			body.climb = nil -- 사다리가 없는 장면으로 옮겼다 · 기술(대쉬)로 떨어져 나갔다
 		elseif input.jump then
 			body.climb = nil -- 뛰기: 놓는다(옆으로 누르고 있으면 그쪽으로 조금 뛰어내린다)
+			body.grabLock = P.GRAB_LOCK
 			body.vy = if mx ~= 0 then -G.JUMP * 0.5 else 0
 			body.ground = false
 			input = table.clone(input)
@@ -52383,6 +52913,13 @@ function Q.state(book, level: number, id: string): string
 		return "locked"
 	elseif def.after and not (book[def.after] and book[def.after].done) then
 		return "locked"
+	elseif def.kind == "job" and def.reward.job and def.reward.job > 2 then
+		-- 전직은 차례대로(2026-10-18 검토): 앞 차수의 전직 퀘스트를 끝내야 받는다 — 2차를 건너뛰고 Lv.60에 3차를 받아 돌려주면
+		--  전직은 되지 않고(Hero.advance는 바로 다음 차수만) 퀘스트만 끝나 3차를 영영 못 했다
+		local prev = Q.jobQuest(def.reward.job - 1)
+		if prev and not (book[prev.id] and book[prev.id].done) then
+			return "locked"
+		end
 	end
 	return "open"
 end
@@ -52809,6 +53346,28 @@ end
 -- 그 지역(region · also)의 맵에 선 사람이 그 퀘스트를 주는가 — 서버의 받기도 같은 것으로 가린다. 전직 퀘스트는 사제가 어디서든 준다
 function Q.givesIn(def, region: any, also: any?): boolean
 	return def.region == region or (also ~= nil and also ~= false and def.region == also) or def.kind == "job"
+end
+
+-- 주민에게 말을 걸었을 때의 고르는 말(2026-10-18 — 메이플스토리의 NPC 대화처럼): 돌려줄 · 받을 · 하는 중인 퀘스트가 모두 합쳐 둘 넘으면
+--  줄마다 하나씩(돌려줄 것 → 받을 것 → 하는 중인 것 차례) + 마지막 줄 「대화하기」. rows = 대화창의 줄 수(넘는 퀘스트는 다음에 말을 걸 때 — 돌려주거나 받으면 줄이 빈다)
+--  하나뿐이면 nil(그것을 바로 말한다 — 전과 같다). 돌려주는 것 = { { kind = "ready" | "offer" | "wait" | "chat", id, text } }
+Q.MENU_WORDS = { ready = "완료 가능", offer = "새 퀘스트", wait = "진행 중", chat = "대화하기" }
+function Q.talkMenu(at, rows: number)
+	local n = #at.ready + #at.offer + #at.wait
+	if n < 2 then
+		return nil
+	end
+	local out = {}
+	for _, kind in { "ready", "offer", "wait" } do
+		for _, id in at[kind] do
+			if #out < rows - 1 then
+				local def = Q.def(id)
+				table.insert(out, { kind = kind, id = id, text = ("%s  「%s」"):format(Q.MENU_WORDS[kind], def and def.name or id) })
+			end
+		end
+	end
+	table.insert(out, { kind = "chat", text = Q.MENU_WORDS.chat })
+	return out
 end
 
 -- 주민 머리 위의 표시: "?" 돌려줄 것이 있다 · "!" 줄 것이 있다 · nil
@@ -53422,6 +53981,7 @@ local Quests = require(script.Parent.quests) -- 스토리 보스: 그 퀘스트�
 local BossPat = require(script.Parent.bosspat) -- 스토리 보스: 표시된 자리 · 도약 · 물결의 자리와 시간(화면과 같은 셈)
 local Rift = require(script.Parent.rift) -- 수정 틈 토벌(물결로 몰려오는 반복 던전 — 2026-10-16)
 local RULES = COMBAT.rules
+local FE = COMBAT.fieldElite -- 사냥터 정예(2026-10-18 — 공방 combat.js FIELD_ELITE)
 local CASTRULE = COMBAT.castRule
 local KIT = COMBAT.kit
 local UP = COMBAT.kitUp -- 사출기 강화(2~4차 패시브)
@@ -53452,7 +54012,18 @@ function Room.new(key: string, scene, rng)
 	self.key = key
 	self.scene = scene
 	self.rng = rng
-	self.lootRng = Random.new(#key * 7919 + 101) -- 재료 · 귀한 드롭을 굴리는 난수(졸개의 움직임을 굴리는 난수와 따로 — 드롭을 더해도 싸움의 흐름이 달라지지 않는다)
+	-- 재료 · 귀한 드롭을 굴리는 난수(졸개의 움직임을 굴리는 난수와 따로 — 드롭을 더해도 싸움의 흐름이 달라지지 않는다).
+	--  씨앗 = 장면 이름의 글자 전부로(2026-10-18 검토: 전에는 이름의 길이만 써서 토벌의 방 rf1#1 ~ #9가 모두 같은 드롭 · 같은 완료 장비를 굴렸다).
+	--  토벌의 방(이름에 「#」)은 열 때마다 새로 짓는 방이라 그때의 시각도 섞는다 — 같은 방 번호여도 판마다 다르다
+	local seed = 0
+	for i = 1, #key do
+		seed = (seed * 31 + string.byte(key, i)) % 2147483629
+	end
+	if string.find(key, "#", 1, true) then
+		seed = (seed + os.time() * 1000 + math.floor(os.clock() * 1000)) % 2147483629
+	end
+	self.lootRng = Random.new(seed + 101)
+	self.keySeed = seed -- (사냥터 정예가 나오는 자리를 굴리는 씨앗에도 — eliteRng)
 	self.time = 0
 	self.mobs = {}
 	self.shots = {}
@@ -53499,6 +54070,32 @@ function Room.new(key: string, scene, rng)
 		end
 		table.insert(self.mobs, mob)
 	end
+	-- 사냥터 정예(2026-10-18 — 메이플의 엘리트 몬스터 · combat.js FIELD_ELITE): 2지역부터의 사냥터(scene.elite)는 졸개 목록 끝에 정예의 자리를 하나 잡아 둔다(번호가 바뀌지 않게).
+	--  처음에는 없다(state "gone" · away). 방에서 every마리를 잡으면 맵의 아무 몬스터 자리에서 나온다(Room:eliteCount) — 종류는 그 맵에 가장 많은 몬스터
+	if scene.elite and #self.mobs > 0 then
+		local count, kindOf = {}, nil
+		for _, m in self.mobs do
+			count[m.kind] = (count[m.kind] or 0) + 1
+			if not kindOf or count[m.kind] > count[kindOf] then
+				kindOf = m.kind
+			end
+		end
+		local like = nil
+		for _, m in self.mobs do
+			if m.kind == kindOf then
+				like = m
+				break
+			end
+		end
+		local maxHp = like.maxHp * FE.hp
+		local slot = {
+			id = #self.mobs + 1, kind = like.kind, def = like.def, lv = like.lv, homeX = like.homeX, y = like.y, a = like.a, b = like.b, x = like.homeX, dir = -1,
+			state = "gone", t = 0, hp = maxHp, maxHp = maxHp, cd = 0, wait = 0, goal = like.homeX, target = nil :: any, aggro = 0, struck = false, respawn = math.huge,
+			away = true, elite = true, fieldElite = true,
+		}
+		table.insert(self.mobs, slot)
+		self.eliteSlot, self.eliteKills = slot, 0
+	end
 	-- 스토리 보스(장면의 bosses — 공방 design/bosses.js의 STORYBOSS): 졸개의 목록 끝에 자리를 잡아 둔다(번호가 바뀌지 않게). 처음에는 없다(state "gone" · away) —
 	--  그 퀘스트를 하는 사람이 방에 있을 때만 나타난다(Room:stepPresence). 부르는 졸개(호령)의 자리도 미리 잡아 둔다(away — 불릴 때 나온다)
 	local function hpOf(lv: number, kind): number
@@ -53520,7 +54117,7 @@ function Room.new(key: string, scene, rng)
 				local ak = COMBAT.mobs[p.summon.kind]
 				local hp = hpOf(p.summon.lv, ak)
 				for i = 1, p.summon.max do
-					local x = p.summon.at[(i - 1) % #p.summon.at + 1]
+					local x = math.clamp(p.summon.at[(i - 1) % #p.summon.at + 1], def.range[1], def.range[2]) -- 보스의 구간 안에서 나온다(밖에서 나와 첫걸음에 28점 끌려 들어왔다 — 2026-10-18 검토)
 					local add = {
 						id = #self.mobs + 1, kind = p.summon.kind, def = ak, lv = p.summon.lv, homeX = x, y = def.y, a = def.range[1], b = def.range[2], x = x, dir = 1,
 						state = "gone", t = 0, hp = hp, maxHp = hp, cd = 0, wait = 0, goal = x, target = nil :: any, aggro = 0, struck = false, respawn = math.huge,
@@ -53546,8 +54143,16 @@ local function canSee(mob, h, range: number): boolean
 	return h.alive and math.abs(h.y - mob.y) <= SEE_Y and math.abs(h.x - mob.x) <= range
 end
 
--- 가장 가까운, 알아챌 수 있는 사람
+-- 가장 가까운, 알아챌 수 있는 사람. 비선공(def.passive — 첫 사냥터의 수습 검병 · 2026-10-18)은 맞은 뒤(aggro가 남은 동안)에만 알아챈다
 function Room:findTarget(mob, heroes)
+	if mob.def.passive then
+		-- 비선공은 때린 사람만 쫓는다(2026-10-18 검토: 가까운 다른 사람을 치는 일이 있었다) — 그 사람을 놓치면 아무도 치지 않는다
+		local h = if (mob.aggro or 0) > 0 and mob.target ~= nil then heroes[mob.target] else nil
+		if h and canSee(mob, h, mob.def.see * 1.6) and not Buffs.stealth(h) then
+			return mob.target
+		end
+		return nil
+	end
 	local best, bestD = nil, math.huge
 	for id, h in heroes do
 		local range = if mob.target == id then mob.def.see * 1.6 else mob.def.see
@@ -53581,7 +54186,9 @@ function Room:hurtHero(events, h, mob, mul: number)
 	-- 끼고 있는 방어구만큼 덜 아프다. 무니의 지키는 마음은 거기에 더 줄인다(제 수정 곁에서는 두 배). 버프(달의 축복 · 수정 방벽 · 달의 성역)도 줄인다
 	-- 패시브(굳센 자세 — 기술을 쓰는 동안에는 더 · 달궈진 몸 — 달아오름 동안)도 줄인다
 	local casting = (h.actUntil or 0) > self.time or self.caster:acting(h)
-	if mob.elite then
+	if mob.fieldElite then
+		mul *= FE.hit -- 사냥터 정예
+	elseif mob.elite then
 		mul *= Rift.DATA.elite.hit -- 토벌의 정예는 더 세게 친다
 	end
 	local raw = N.rawHit("mob", mob.lv) * (1 - Hero.cut(h, mob.lv) / 100) * mul * Kit.cut(h, self:nearCrystal(h)) * Buffs.cut(h) * Passives.cut(h, casting)
@@ -53641,7 +54248,7 @@ function Room:stepMob(mob, heroes, dt: number, events)
 	elseif mob.state == "dead" then
 		if mob.t >= DEAD_TIME then
 			mob.state, mob.respawn = "gone", RULES.respawn
-			if mob.add or mob.wave then -- 토벌의 물결의 몬스터도 다시 나오지 않는다
+			if mob.add or mob.wave or mob.fieldElite then -- 토벌의 물결의 몬스터 · 사냥터 정예도 다시 나오지 않는다(정예는 다시 every마리를 잡아야 나온다)
 				mob.away = true -- 불려 나온 졸개는 저절로 다시 나오지 않는다
 			end
 		end
@@ -53735,8 +54342,8 @@ function Room:stepMob(mob, heroes, dt: number, events)
 	end
 	mob.aggro = math.max(0, mob.aggro - dt)
 	local targetId = self:findTarget(mob, heroes)
-	if not targetId and mob.aggro > 0 and mob.target and heroes[mob.target] and heroes[mob.target].alive then
-		targetId = mob.target -- 맞았으면 멀리 있어도 한동안 쫓는다
+	if not targetId and mob.aggro > 0 and mob.target and heroes[mob.target] and heroes[mob.target].alive and not Buffs.stealth(heroes[mob.target]) then
+		targetId = mob.target -- 맞았으면 멀리 있어도 한동안 쫓는다(연막 속에 숨었으면 놓친다 — 2026-10-18 검토: 맞은 몬스터는 연막 속에서도 계속 쳤다)
 	end
 	mob.target = targetId
 	local target = targetId and heroes[targetId]
@@ -53877,16 +54484,30 @@ function Room:stepStory(heroes)
 	end
 end
 
--- 누가 서야 하는가: 이야기의 차례로, 그 보스를 잡는 퀘스트를 하는 중인 사람이 방에 있는 첫 보스 하나. 나머지는 없다
+-- 누가 서야 하는가: 이미 서 있는 보스(싸우는 중 — 그것을 잡을 사람이 방에 있다 · 쓰러지는 중)는 그대로 둔다. 없으면 이야기의 차례로,
+--  그 보스를 잡는 퀘스트를 하는 중인 사람이 방에 있는 첫 보스 하나. 나머지는 없다
+--  (2026-10-18 검토: 늘 이야기의 차례로 골라, 앞 퀘스트의 사람이 들어오면 다른 사람이 20%까지 깎은 보스가 사라지고 앞 보스가 섰다 · 쓰러지는 보스 위에 다음 보스가 섰다)
 function Room:stepPresence(heroes)
+	local function needed(mob): boolean
+		for _, h in heroes do
+			if Quests.wantsKill(h.quests, mob.kind, self.key) then
+				return true
+			end
+		end
+		return false
+	end
 	local want = nil
 	for _, mob in self.bosses do
-		if not want then
-			for _, h in heroes do
-				if Quests.wantsKill(h.quests, mob.kind, self.key) then
-					want = mob
-					break
-				end
+		if not mob.away and (mob.state == "dead" or needed(mob)) then
+			want = mob
+			break
+		end
+	end
+	if not want then
+		for _, mob in self.bosses do
+			if needed(mob) then
+				want = mob
+				break
 			end
 		end
 	end
@@ -54212,10 +54833,44 @@ function Room:stepBoss(mob, heroes, dt: number, events)
 end
 
 -- 한 걸음. 일어난 일의 목록을 돌려준다: hurt(사람이 맞음) · shot(화살이 생김) · shotEnd
+-- 경험치 · 떨어진 것을 나눌 사람들: 넘겨받은 파티원 가운데 지금 이 방에 살아 있는 사람만(쓴 사람은 늘 — 2026-10-18 검토: 2~4차 스킬 · 분신은
+--  쓰기 시작할 때의 파티원 목록을 끝까지 써서, 그사이 쓰러지거나 · 맵을 옮기거나 · 파티를 나간 사람도 경험치 · 퀘스트의 숫자를 받았다)
+function Room:liveMates(hero, mates)
+	if not mates then
+		return { hero }
+	end
+	if not self.here then
+		return mates -- (방을 아직 한 번도 돌리지 않았다 — 검사가 바로 친 때)
+	end
+	local out = {}
+	for _, m in mates do
+		if m == hero or (m.alive and self.here[m]) then
+			table.insert(out, m)
+		end
+	end
+	return out
+end
+
+-- 그 사람이 이 방을 떠났다(맵을 옮겼다 · 나갔다 · 캐릭터 고르기로 — 서버 world.luau가 부른다): 그 사람의 늦게 드는 타(붙는 불 · 분신)를 버린다.
+--  2026-10-18 검토: 떠난 리퍼의 붙는 불이 보스를 쓰러뜨려, 방의 아무도 그 몫을 받지 못했다(놓인 것은 stepPlaced가 이미 걷는다)
+function Room:forget(hero)
+	if self.laters then
+		for i = #self.laters, 1, -1 do
+			if self.laters[i].hero == hero then
+				table.remove(self.laters, i)
+			end
+		end
+	end
+end
+
 function Room:step(heroes, dt: number)
 	local events = {}
 	self.time += dt
 	self.heroes = heroes -- 지금 방에 있는 사람들(스토리 보스를 쓰러뜨리면 모두에게 잡은 것으로 친다 — Room:strike)
+	self.here = {} -- 그 사람들(값으로 찾는다 — Room:liveMates)
+	for _, h in heroes do
+		self.here[h] = true
+	end
 	if self.bosses then
 		self:stepPresence(heroes)
 	end
@@ -54224,6 +54879,12 @@ function Room:step(heroes, dt: number)
 	end
 	if self.rift then
 		Rift.step(self, heroes, dt) -- 토벌: 물결 · 제한 시간
+	end
+	if self.eliteNews then
+		-- 사냥터 정예가 나왔다: 방 사람들에게(화면이 알림을 띄우고 그 자리의 높이로 그린다)
+		local e = self.eliteNews
+		self.eliteNews = nil
+		table.insert(events, { type = "elite", mob = e.id, kind = e.kind, x = e.x, y = e.y })
 	end
 	for _, mob in self.mobs do
 		-- 졸개에 걸린 것이 풀려 간다: bind 묶임 · bindImm 다시 묶이지 않는 시간 · stun 넘어짐 · rend 갈라짐(받는 피해 +)
@@ -54303,6 +54964,10 @@ function Room:step(heroes, dt: number)
 	if self.waves then
 		for i = #self.waves, 1, -1 do
 			local w = self.waves[i]
+			if w.mob and (w.mob.state == "dead" or w.mob.state == "gone") then
+				table.remove(self.waves, i) -- 보스가 쓰러지면 물결도 사라진다(터지는 자리처럼 — 2026-10-18 검토: 쓰러뜨린 뒤에 물결에 맞아 쓰러질 수 있었다)
+				continue
+			end
 			if (w.wait or 0) > 0 then
 				w.wait -= dt -- 연속 검기: 차례를 기다린다
 				continue
@@ -54406,7 +55071,7 @@ function Room:step(heroes, dt: number)
 					local n = self:marksOf(hero, mob)
 					if n > 0 and mob.state ~= "dead" and mob.state ~= "gone" and mob.state ~= "spawn" then
 						result = result or { hits = {}, kills = {} }
-						self:proc(hero, mob, power * N.data.POWER.dps * fx.venom * s * n * RULES.dmgScale * (1 + RULES.targetBonus / 100), "venom", mob.x, mob.y - 12, nil, result)
+						self:proc(hero, mob, power * N.data.POWER.dps * fx.venom * s * n * RULES.dmgScale * (1 + RULES.targetBonus / 100), "venom", mob.x, mob.y - 12, self.matesOf and self.matesOf(hero), result)
 					end
 				end
 				if result then
@@ -54574,12 +55239,17 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 			table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = 0, ups = 0, gains = gains, loot = {} })
 			return dead, dmg
 		end
-		local list = mates or { hero }
+		-- 사냥터 정예: 보통의 것을 잡으면 센다(정예 자신 · 토벌의 물결은 세지 않는다)
+		if self.eliteSlot and not mob.fieldElite and not mob.wave then
+			self:eliteCount()
+		end
+		local list = self:liveMates(hero, mates)
 		local share = Party.share(#list)
 		local gains, myXp, myUps = {}, 0, 0
+		local xpMul = if mob.fieldElite then FE.xp else 1 -- 사냥터 정예는 경험치가 xp배
 		for _, mate in list do
 			-- 사람마다 제 레벨 차이 · 벌칙을 넣은 경험치에 나눈 몫을 곱한다
-			local xp = math.max(1, math.floor(Hero.killXp(mate, mob.lv, mob.def.hp) * share + 0.5))
+			local xp = math.max(1, math.floor(Hero.killXp(mate, mob.lv, mob.def.hp) * xpMul * share + 0.5))
 			local ups = Hero.gainXp(mate, xp)
 			table.insert(gains, { hero = mate.id, xp = xp, ups = ups, level = mate.level })
 			if mate == hero then
@@ -54599,7 +55269,7 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 				d.friends = friends
 			end
 		end
-		table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = myXp, ups = myUps, gains = gains, drop = drop, loot = loot })
+		table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = myXp, ups = myUps, gains = gains, drop = drop, loot = loot, elite = mob.fieldElite or nil }) -- elite = 사냥터 정예(분석이 센다)
 	end
 	return dead, dmg
 end
@@ -54674,7 +55344,7 @@ function Room:stepPlaced(heroes, dt: number, events)
 			for _, mob in targets do
 				result = result or { hits = {}, kills = {} }
 				local roll = 1 + self.rng:NextNumber(-RULES.spread, RULES.spread) / 100
-				self:proc(hero, mob, power * def.mul * gap * p.pow * fit * roll, if def.tick then "field" else "summon", p.x, p.y - 12, nil, result)
+				self:proc(hero, mob, power * def.mul * gap * p.pow * fit * roll, if def.tick then "field" else "summon", p.x, p.y - 12, self.matesOf and self.matesOf(hero), result)
 			end
 		end
 		if def.pull then
@@ -55120,10 +55790,15 @@ end
 
 -- 잡은 졸개가 떨어뜨리는 달돈(열에 여섯). 장비와 달가루는 lootFor.
 function Room:dropFor(hero, mob)
-	if self.rng:NextNumber(0, 100) >= N.data.COIN.chance then
-		return nil
+	local base
+	if mob.fieldElite then
+		base = N.killMoney(mob.lv) * mob.def.hp * FE.money -- 사냥터 정예: 반드시 떨어지고 money배(보통 한 마리가 주는 달돈의 기댓값에)
+	else
+		if self.rng:NextNumber(0, 100) >= N.data.COIN.chance then
+			return nil
+		end
+		base = N.killMoney(mob.lv) * mob.def.hp / (N.data.COIN.chance / 100)
 	end
-	local base = N.killMoney(mob.lv) * mob.def.hp / (N.data.COIN.chance / 100)
 	local amount = base * (1 + self.rng:NextNumber(-RULES.moneySpread, RULES.moneySpread) / 100)
 	if hero.weak > 0 then
 		amount *= 1 - N.data.BODY.death.cut / 100
@@ -55138,6 +55813,9 @@ end
 function Room:lootFor(hero, mob)
 	local out = {}
 	local mul = if hero.weak > 0 then 1 - N.data.BODY.death.cut / 100 else 1
+	if mob.fieldElite then
+		mul *= FE.loot -- 사냥터 정예: 나올 확률이 loot배
+	end
 	-- 떨어지는 것은 모두 방의 드롭 난수로 굴린다(졸개의 움직임을 굴리는 난수와 따로 — 드롭의 확률을 고쳐도 싸움의 흐름이 달라지지 않는다)
 	local lootRng = self.lootRng or self.rng
 	local item = Items.rollDrop(lootRng, mob.lv, hero.class, mul)
@@ -55162,6 +55840,34 @@ function Room:lootFor(hero, mob)
 		goods(id)
 	end
 	return out
+end
+
+-- 사냥터 정예를 센다(보통의 졸개 하나를 잡을 때마다). 정예가 나와 있는 동안은 세지 않는다. every에 이르면 맵의 아무 몬스터 자리(그 종류의 자리)에서 나오고,
+--  다음 Room:step이 방 사람들에게 알린다(events "elite" — 화면이 알림을 띄우고 그 자리의 높이로 그린다)
+function Room:eliteCount()
+	local slot = self.eliteSlot
+	if not slot.away or slot.state ~= "gone" then
+		return
+	end
+	self.eliteKills += 1
+	if self.eliteKills < FE.every then
+		return
+	end
+	self.eliteKills = 0
+	local spots = {}
+	for _, m in self.mobs do
+		if m.kind == slot.kind and not m.fieldElite and not m.boss and not m.add and not m.wave then
+			table.insert(spots, m)
+		end
+	end
+	-- 나오는 자리는 따로 굴린다(졸개의 움직임 · 드롭의 난수 차례를 바꾸지 않게). 씨앗 = 장면 이름 전부 + 그때의 시각(2026-10-18 검토: 이름의 길이만 써서 서버가 뜰 때마다 같은 차례였다)
+	self.eliteRng = self.eliteRng or Random.new(((self.keySeed or 0) + os.time() + 7) % 2147483629)
+	local at = spots[self.eliteRng:NextInteger(1, #spots)]
+	slot.homeX, slot.y, slot.a, slot.b, slot.x, slot.goal, slot.dir = at.homeX, at.y, at.a, at.b, at.homeX, at.homeX, at.dir
+	slot.away, slot.state, slot.t, slot.hp, slot.target, slot.cd, slot.aggro, slot.struck = false, "spawn", 0, slot.maxHp, nil, 0, 0, false
+	slot.marks = nil
+	slot.bind, slot.bindImm, slot.stun, slot.rend, slot.cracks = 0, 0, 0, 0, 0
+	self.eliteNews = slot
 end
 
 -- 물건 하나를 (x, y)에 떨어뜨린다. owner = 얼마 동안 혼자 주울 수 있는 사람
@@ -56455,6 +57161,8 @@ L.DEATH = D.death -- 쓰러졌을 때 묻는 상자(위쪽 가운데): 제목 ·
 L.QUEST = D.quest -- 퀘스트 알리미: 이름 한 줄(본문 글씨) · 할 일 한 줄(작은 글씨) · 퀘스트 사이
 L.TAG = D.tag -- 이름표: 한 줄의 높이(쌓을 때) · 발밑에서 아래로 띄우는 만큼 · 가장 넓을 때
 L.MOBBAR = D.mobBar -- 졸개의 체력 띠: 크기(화면 틀의 점) · 발밑에서 위로(게임의 도트)
+L.GAINLOG = D.gainLog -- 획득 알림(2026-10-18): 줄 수 · 줄 높이 · 머묾 · 흐려짐 · 합치는 초(자리는 UI.hud.gainLog)
+L.MAPNAME = D.mapName -- 맵 이름(2026-10-18): 위 가운데(보스 체력 칸의 자리) — 지역(작은 글) · 맵 이름(nameY · 본문 글) · 밝아짐 fadeIn · 머묾 hold · 흐려짐 fadeOut(초)
 L.BOSS = D.boss -- 스토리 보스의 체력: 화면 위 가운데 — 이름(y) 아래(barY)에 넓은 바(안에 숫자 · pad = 좌우 여백), 그 아래(patY)에 패턴의 이름
 
 -- 쓰는 칸이 n개일 때 i째 칸의 자리(스킬 칸 틀 안): 여섯까지는 아랫줄에 가운데로 모으고, 일곱째부터는 윗줄에 같은 식으로
@@ -56779,7 +57487,7 @@ function Navi.aim(sceneKey: string, x: number, y: number, target, book, mobs: an
 			if d < bd then
 				best, bd = m, d
 			end
-			if m == stick.mob then
+			if m == stick.mob or (m.id ~= nil and m.id == stick.mobId) then -- 화면은 장마다 새 표를 넘긴다 — 번호로도 같은 몬스터인지 본다(2026-10-18 검토)
 				kept, kd = m, d
 			end
 		end
@@ -56787,7 +57495,7 @@ function Navi.aim(sceneKey: string, x: number, y: number, target, book, mobs: an
 	if kept and kd <= bd + Navi.KEEP then
 		best = kept
 	end
-	stick.mob = best
+	stick.mob, stick.mobId = best, if best then best.id else nil
 	if best then
 		return best.x, best.y, "mob", nil
 	end
@@ -59170,7 +59878,7 @@ MODULES['ServerScriptService/server/lune/modules/analytics'] = function(script, 
 --  보는 곳: 크리에이터 대시보드 → 경험 → 분석(Analytics)
 --   · Funnels: 온보딩(접속 → 캐릭터 → 달빛 꿈의 미션 열하나 → 깨어남 → 첫 퀘스트 → Lv.5 · Lv.10) · MainQuest(1지역 줄 14개) · Part2Quest(2편의 길 열둘 — 2026-10-16) · Level(Lv.1 → 100)
 --   · Economy: 달돈(Money)이 어디서 들어오고(퀘스트 · 일일 의뢰 · 몬스터 · 상점에 팔기 · 경매 대금) 어디로 나가는가(상점 · 가방 늘리기 · 제작 · 대장간 · 경매)
---   · Explore(커스텀 이벤트): LevelUp(값 = 그 캐릭터로 논 분) · JobAdvanced(값 = 레벨) · Death(어느 맵) · DailyDone · Enhance(값 = 노린 별 · 결과) · RiftEnter · RiftClear(수정 틈 토벌 — 단계, 2026-10-16)
+--   · Explore(커스텀 이벤트): LevelUp(값 = 그 캐릭터로 논 분) · JobAdvanced(값 = 레벨) · Death(어느 맵) · DailyDone · Enhance(값 = 노린 별 · 결과) · RiftEnter · RiftClear(수정 틈 토벌 — 단계, 2026-10-16) · FieldElite(사냥터 정예를 잡음 — 맵, 2026-10-18)
 --  로블록스의 규칙(문서 2026-10 — 조사는 공방 「개발 진행」): 서버에서만 · 게시된 게임에서만 간다(Studio에서는 보내지 않는다 — 여기서도 Studio에서는 부르지 않고 Analytics.log에만 적는다).
 --   커스텀 필드 셋 = 직업 · 레벨 구간 · 그때의 것(맵 · 퀘스트) — 값은 글이고 셋의 조합이 8,000을 넘으면 「Other」로 묶인다 · 퍼널은 10개까지 · 커스텀 이벤트 이름은 100개까지이고 지울 수 없다(이름을 늘리지 않는다).
 --   1분에 120 + 20 x 동접 — 달돈은 갈래마다 모아 60초에 한 번(맵을 나갈 때 · 게임을 나갈 때도) 보낸다. 대시보드에는 보통 하루 뒤에 나온다(각 쪽의 View Events는 바로).
@@ -59621,8 +60329,12 @@ function Chat.start(World)
 				if not from then
 					return true
 				end
+				if from.UserId == target.UserId then
+					return true -- 제 말은 늘 제게 보인다
+				end
+				-- 같은 맵의 사람끼리만. 맵이 없는 사람(캐릭터 고르기 화면)은 주고받지 않는다(2026-10-18 검토: 전에는 모든 맵의 말을 주고받았다)
 				local a, b = World.sceneOf(from.UserId), World.sceneOf(target.UserId)
-				return a == nil or b == nil or a == b
+				return a ~= nil and a == b
 			end
 		end
 		local party = Instance.new("TextChannel")
@@ -59656,6 +60368,14 @@ MODULES['ServerScriptService/server/lune/modules/store'] = function(script, game
 --  DataStore 호출은 몇 번 다시 해 본다. Studio에서 API 접근이 꺼져 있으면 메모리에만 담아 둔다(Play를 끄면 사라진다 — 그때는 경고를 한 번 낸다).
 --  아직 하지 않은 것: 같은 계정이 두 서버에 동시에 들어왔을 때의 잠금(여럿이 하는 단계에서 넣는다).
 local DataStoreService = game:GetService("DataStoreService")
+-- 메모리 모드(offline)는 Studio에서만(2026-10-18 검토): 라이브 서버에서 한 번 읽기에 실패했다고 서버 전체가 메모리에만 저장하면 모두의 진행을 잃고 ·
+--  새로 들어온 사람은 빈 계정을 보고 · 이름 장부가 서버마다 따로 놀았다. 라이브에서는 그때그때 실패를 알리고(부른 쪽이 들여보내지 않는다) 다음에 다시 해 본다
+local function studio(): boolean
+	local ok, yes = pcall(function()
+		return game:GetService("RunService"):IsStudio()
+	end)
+	return ok and yes == true
+end
 
 local NAME = { account = "LuneAccount_v1", names = "LuneNames_v1", old = "LuneHero_v1", rankInfo = "LuneRankInfo_v1", market = "LuneMarket_v2" }
 local RANK = { level = "LuneRankLevel_v1", power = "LuneRankPower_v1", robux = "LuneRankRobux_v1" } -- 순위판(OrderedDataStore): 열쇠 → 점수
@@ -59677,9 +60397,11 @@ local function getStore(which: string)
 	end)
 	if ok then
 		stores[which] = result
-	else
+	elseif studio() then
 		offline = true
 		warn("[lune] 저장소를 열지 못해 메모리에만 저장한다: " .. tostring(result))
+	else
+		warn("[lune] 저장소를 열지 못했다(다음에 다시 해 본다): " .. tostring(result))
 	end
 	return stores[which]
 end
@@ -59699,46 +60421,66 @@ local function try(fn)
 	return false, last
 end
 
--- 읽는다. 돌려주는 것: 읽었는가, 읽은 값(없으면 nil). 읽지 못했으면(Studio에서 API 접근이 꺼져 있을 때) 그 뒤로는 메모리만 쓴다
-local function read(which: string, key: string): (boolean, any)
+-- 읽는다. 돌려주는 것: 읽었는가, 읽은 값(없으면 nil), 읽기에 실패했는가(라이브 — 부른 쪽이 「없음」으로 다루면 안 된다).
+--  Studio에서 읽지 못했으면(API 접근이 꺼져 있을 때) 그 뒤로는 메모리만 쓴다(실패가 아니라 메모리 모드)
+local function read(which: string, key: string): (boolean, any, boolean)
 	local ds = getStore(which)
 	if ds and not offline then
 		local ok, result = try(function()
 			return ds:GetAsync(key)
 		end)
 		if ok then
-			return true, result
+			return true, result, false
 		end
-		offline = true
-		warn("[lune] 저장소를 읽지 못해 메모리에만 저장한다: " .. tostring(result))
+		if studio() then
+			offline = true
+			warn("[lune] 저장소를 읽지 못해 메모리에만 저장한다: " .. tostring(result))
+			return false, nil, false
+		end
+		warn(("[lune] 저장소에서 %s를 읽지 못했다: %s"):format(key, tostring(result)))
+		return false, nil, true
 	end
-	return false, nil
+	return false, nil, not offline -- 저장소를 열지 못했다(라이브면 실패 · Studio의 메모리 모드면 실패가 아니다)
 end
 
 -- ---------- 계정 ----------
 -- 저장된 계정을 읽는다. 없으면 nil.
-function Store.loadAccount(userId: number)
-	local ok, result = read("account", "acct_" .. userId)
+-- 저장된 계정을 읽는다 → 계정(없으면 nil), 읽기에 실패했는가(true면 nil을 「새 계정」으로 다루면 안 된다 — 저장된 것을 빈 계정으로 덮어쓴다)
+function Store.loadAccount(userId: number): (any, boolean)
+	local ok, result, failed = read("account", "acct_" .. userId)
 	if ok then
-		return result
+		return result, false
 	end
-	return memory.account[userId]
+	if failed then
+		return nil, true
+	end
+	return memory.account[userId], false
 end
 
 -- 계정을 저장한다. 됐으면 true.
+-- 저장의 차례(계정마다): 다시 해 보는 사이에 더 새로운 저장이 나왔으면 옛 것은 그만 쓴다 — 늦게 다시 쓴 옛 것이 새 것을 덮지 않게(2026-10-18 검토)
+local saveSeq: { [number]: number } = {}
 function Store.saveAccount(userId: number, data): boolean
 	memory.account[userId] = data
 	local ds = getStore("account")
 	if not ds or offline then
 		return false
 	end
+	saveSeq[userId] = (saveSeq[userId] or 0) + 1
+	local mine = saveSeq[userId]
+	local stale = false
 	local ok, err = try(function()
+		if saveSeq[userId] ~= mine then
+			stale = true -- 더 새로운 저장이 이미 나갔다: 이것은 쓰지 않는다
+			return
+		end
 		ds:SetAsync("acct_" .. userId, data)
 	end)
 	if not ok then
 		warn(("[lune] %d의 저장에 실패했다: %s"):format(userId, tostring(err)))
 	end
-	return ok
+	-- 그만 쓴 옛 저장은 「저장했다」가 아니다(더 새로운 저장도 실패할 수 있다) — 경매장은 저장을 확인하고서야 장부를 바꾼다(2026-10-18 검토)
+	return ok and not stale
 end
 
 -- ---------- 계정의 잠금 ----------
@@ -59762,8 +60504,11 @@ end
 -- 이 서버가 그 계정을 잡는다(이미 잡고 있으면 시간을 새로 고친다). 다른 서버가 잡고 있으면 false
 function Store.lock(userId: number): boolean
 	local ds = getStore("account")
-	if not ds or offline then
+	if offline then
 		return true
+	end
+	if not ds then
+		return false -- 저장소를 열지 못했다(라이브): 잡지 못한 것으로(들여보내지 않는다)
 	end
 	local mine, job = true, jobId()
 	local ok, err = try(function()
@@ -59802,19 +60547,22 @@ function Store.unlock(userId: number)
 end
 
 -- 계정이 생기기 전의 저장(캐릭터 하나)을 읽는다. 없으면 nil. 쓰지도 지우지도 않는다.
-function Store.loadOld(userId: number)
-	local ok, result = read("old", "hero_" .. userId)
+function Store.loadOld(userId: number): (any, boolean)
+	local ok, result, failed = read("old", "hero_" .. userId)
 	if ok then
-		return result
+		return result, false
 	end
-	return nil
+	return nil, failed
 end
 
 -- ---------- 이름 장부 ----------
 -- 그 이름을 가진 사람의 번호. 아무도 없으면 nil. 읽지 못했으면 false(그때는 이름을 지을 수 없다고 답한다)
 function Store.nameOwner(key: string): any
-	if offline or not getStore("names") then
+	if offline then
 		return memory.names[key]
+	end
+	if not getStore("names") then
+		return false -- 장부를 열지 못했다(라이브): 이름을 지을 수 없다고 답한다
 	end
 	local ok, result = read("names", key)
 	if ok then
@@ -59826,12 +60574,15 @@ end
 -- 그 이름을 내 것으로 적는다. 비어 있거나 이미 내 것이면 true, 남의 것이면 false. 적지 못했으면 nil.
 function Store.claimName(key: string, userId: number, at: number?): boolean?
 	local ds = getStore("names")
-	if not ds or offline then
+	if offline then
 		if memory.names[key] ~= nil and memory.names[key] ~= userId then
 			return false
 		end
 		memory.names[key] = userId
 		return true
+	end
+	if not ds then
+		return nil -- 장부를 열지 못했다(라이브): 적지 못했다
 	end
 	local mine = false
 	local ok, err = try(function()
@@ -59854,10 +60605,13 @@ end
 -- 내 이름을 장부에서 지운다(캐릭터를 지웠을 때 — 그 이름을 다른 사람이 쓸 수 있게 된다). 남의 것은 건드리지 않는다.
 function Store.freeName(key: string, userId: number)
 	local ds = getStore("names")
-	if not ds or offline then
+	if offline then
 		if memory.names[key] == userId then
 			memory.names[key] = nil
 		end
+		return
+	end
+	if not ds then
 		return
 	end
 	try(function()
@@ -59886,9 +60640,11 @@ local function getRank(board: string)
 	end)
 	if ok then
 		ranks[board] = result
-	else
+	elseif studio() then
 		offline = true
 		warn("[lune] 순위판을 열지 못해 메모리에만 둔다: " .. tostring(result))
+	else
+		warn("[lune] 순위판을 열지 못했다(다음에 다시 해 본다): " .. tostring(result)) -- 라이브: 순위판 하나 때문에 서버 전체를 메모리 모드로 돌리지 않는다(2026-10-18 검토)
 	end
 	return ranks[board]
 end
@@ -59997,8 +60753,11 @@ end
 -- 장부를 읽는다 → 읽었는가, 문서(없으면 nil)
 function Store.marketRead(key: string): (boolean, any)
 	local ds = getStore("market")
-	if not ds or offline then
+	if offline then
 		return true, memory.market[key]
+	end
+	if not ds then
+		return false, nil -- (라이브) 이 서버만의 장부를 만들지 않는다
 	end
 	local ok, result = try(function()
 		return ds:GetAsync("b_" .. key)
@@ -60015,7 +60774,10 @@ end
 --  false가 돌아오면 적혔는지 알 수 없다(부른 쪽이 그렇게 다룬다)
 function Store.marketUpdate(key: string, fn: (any) -> (any, any, any)): (boolean, any, any, any)
 	local ds = getStore("market")
-	if not ds or offline then
+	if not ds and not offline then
+		return false, nil, nil, nil -- (라이브) 저장소를 열지 못했다
+	end
+	if offline then
 		local new, a, b = fn(memory.market[key])
 		if new ~= nil then
 			memory.market[key] = new
@@ -60067,6 +60829,7 @@ local Hero = require(lune.sim.hero)
 local Account = require(lune.sim.account)
 local Rank = require(lune.sim.rank) -- 명예의 전당(순위판 셋)
 local Room = require(lune.sim.room)
+local Caster = require(lune.sim.caster) -- 몸을 옮기는 스킬의 목록(Caster.MOVERS — onMove)
 local Bag = require(lune.sim.bag)
 local Items = require(lune.sim.items)
 local Party = require(lune.sim.party)
@@ -60093,6 +60856,22 @@ local Bond = require(lune.sim.bond) -- 2편의 호감도 · 모험의 서 · 달
 local TICK = 1 / 20
 local SNAP_EVERY = 2 -- 걸음 몇 번에 한 번 졸개의 모습을 보낸다(초당 10번)
 local MOVE_SLACK = 90 -- 한 번의 보고에서 이보다 멀리 가 있으면 믿지 않는다(도트)
+-- 시간에 따른 몫(2026-10-18 검토): 보고마다 MOVE_SLACK까지 받으면 연달아 보내 순식간에 맵 끝까지 갔다(1초에 1,800점쯤) — 가로로는 1초에 MOVE_RATE점씩 차고
+--  MOVE_CAP점까지 모이는 몫 안에서만 받는다. 달리기 92점/초 · 버프 · 1차 대쉬(짧게 200~520점/초)가 넉넉히 들어간다. 맵을 옮긴 직후의 첫 보고는 JUMP_SLACK 안에서만
+local MOVE_RATE, MOVE_CAP, JUMP_SLACK = 300, 180, 360
+-- 위로 가는 몫(2026-10-18 검토: 세로는 보고마다 180점까지만 보아 연달아 보내면 날았다) — 1초에 UP_RATE점씩 차고 UP_CAP점까지.
+--  뛰기 57점 + 공중 뛰기 41점(0.8초쯤) · 사다리 1초에 80점 · 도약 49점이 넉넉히 든다. 떨어지는 것(아래로)은 세지 않는다
+local UP_RATE, UP_CAP = 240, 160
+-- 그 자리 가까이(MOVE_SLACK 안)에 맵의 바닥이 뚫린 칸이 있는가 — 거기서만 맵 아래로 떨어질 수 있다(onMove의 시작 자리 받기)
+local function holeNear(scene, x: number): boolean
+	local bottom = scene.h - 1
+	for tx = math.floor((x - MOVE_SLACK) / G.TILE), math.floor((x + MOVE_SLACK) / G.TILE) do
+		if tx >= 0 and tx < scene.w and string.sub(scene.rows[bottom + 1], tx + 1, tx + 1) ~= "#" then
+			return true
+		end
+	end
+	return false
+end
 -- 장면을 옮긴 뒤 화면이 열릴 때까지(화면은 막을 치고 새 장면의 그림을 불러온다 — client/lune/curtain.luau):
 --  LOAD_GUARD = 그동안 피해를 받지 않는 가장 긴 시간(초). 화면이 열려 첫 자리 보고나 첫 기술이 오면 거기서부터 보통의 들어선 뒤 보호(RULES.arrive)로 바뀐다
 --  LOAD_STALE = 서버가 먼저 옮긴 뒤(마을로 돌아가기 · 관리 이동) 이 시간(초) 안에 온, 옮겨 놓은 자리에서 먼 자리 보고는 옮겨지기 전에 떠난 늦은 보고로 보고 받지 않는다(옛 장면의 자리를 새 장면의 자리로 믿지 않는다)
@@ -60103,6 +60882,7 @@ local STOP_WAIT = 20 -- 서버가 닫힐 때 쓰고 있는 저장을 기다리�
 -- 같은 계정이 다른 서버에서 하는 중일 때(modules/store.luau의 잠금): 이만큼 다시 물어 보고(서버를 옮겨 올 때 앞 서버가 저장을 끝내고 잠금을 푼다) 끝내 안 풀리면 내보낸다
 local LOCK_TRIES, LOCK_WAIT = 6, 1.5
 local LOCK_KICK = "이 계정은 다른 서버에서 하는 중입니다. 잠시 뒤에 다시 들어와 주세요."
+local LOAD_KICK = "저장소가 지금 답하지 않습니다. 잠시 뒤에 다시 들어와 주세요." -- 계정을 읽지 못했다(2026-10-18 검토: 빈 계정으로 들여보내면 저장된 것을 덮어썼다)
 local function holdAccount(userId: number): boolean
 	return Store.lock == nil or Store.lock(userId) == true
 end
@@ -60113,9 +60893,36 @@ local function kick(player, text: string)
 end
 
 local World = {}
+-- 이동 몫을 지금까지의 시간만큼 채운다(onMove · skillPlace)
+--  흐른 시간 = 서버 시계(World.now)와 실제 시계(os.clock) 가운데 긴 것: 서버가 잠깐 멈추면 World.now는 0.25초까지만 흐르게 되어 있어(Heartbeat의 acc),
+--  그동안 정상으로 걸은 거리도 몫을 넘어 되돌려질 수 있었다(2026-10-18 검토 — 자동 검사는 World.now만 흘린다)
+local function refillMove(s)
+	local clock = os.clock()
+	local dt = math.max(0, World.now - (s.moveAt or World.now), clock - (s.moveClock or clock))
+	s.moveBudget = math.min(MOVE_CAP, (s.moveBudget or MOVE_CAP) + dt * MOVE_RATE)
+	s.upBudget = math.min(UP_CAP, (s.upBudget or UP_CAP) + dt * UP_RATE)
+	s.moveAt, s.moveClock = World.now, clock
+end
+-- 기술을 쓴 자리: 화면이 말한 자리가 서버가 아는 자리 곁(가로 40 · 세로 60)이면 받아 적는다 — 이동 몫에서 뺀다(2026-10-18 검토:
+--  몫 밖이라, 받아 주지 않을 기술 요청을 연달아 보내 1초에 300점 넘게 옆으로 · 480점 위아래로 갔다)
+local function skillPlace(s, x: number, y: number)
+	local hero = s.hero
+	local dx = math.abs(x - hero.x)
+	if dx > 40 or math.abs(y - hero.y) > 60 then
+		return
+	end
+	refillMove(s)
+	local up = math.max(0, hero.y - y)
+	if dx <= s.moveBudget and up <= s.upBudget then
+		s.moveBudget -= dx
+		s.upBudget -= up
+		hero.x, hero.y = x, y
+	end
+end
 World.now = 0
 
 local sessions = {} -- [Player] = { player, hero, scene, skill = { id, seg, at }, moved }
+local leaving = {} -- [UserId] = true — 나가며 저장하는 중(World.removePlayer · addPlayer가 기다린다)
 local rooms = {} -- [장면 이름] = Room
 local pending = {} -- 조금 뒤에 풀 판정들 { at, fn }
 local ticks = 0
@@ -60145,6 +60952,10 @@ local function roomOf(key: string)
 	if not room then
 		seed += 1
 		room = Room.new(key, SCENES.scenes[key], Random.new(seed))
+		-- 방이 스스로 치는 것(독 · 소환 · 장판)도 그 순간의 같은 맵 파티원과 경험치 · 퀘스트를 나눈다(2026-10-18 검토 — 전에는 쓴 사람 혼자)
+		room.matesOf = function(h)
+			return World.matesIn(key, h)
+		end
 		rooms[key] = room
 	end
 	return room
@@ -60271,6 +61082,12 @@ local function place(s, key: string, x: number, y: number, pushed: boolean?)
 	if not Voyage.onShip(key) then
 		s.voyage = nil -- 배에서 내렸다(닿았거나 · 귀환 주문서 · 쓰러져 돌아감)
 	end
+	-- 방마다 시계가 따로다: 캐릭터에 적힌 방의 시각을 새 방의 시계로(Hero.shiftClock — 2026-10-18 검토)
+	local fromRoom = if s.scene then rooms[s.scene] else nil
+	if fromRoom and s.scene ~= key then
+		Hero.shiftClock(s.hero, roomOf(key).time - fromRoom.time)
+		fromRoom:forget(s.hero) -- 떠난 방에 남은 늦은 타를 버린다(Room:forget)
+	end
 	s.scene = key
 	s.hero.x, s.hero.y = x, y
 	s.skill = nil
@@ -60301,6 +61118,15 @@ local function arrived(s)
 	if s.loading then
 		s.loading = nil
 		s.hero.invuln = COMBAT.rules.arrive
+		-- 화면이 열렸다: 방 사람들과 버프의 모습(거신의 큰 몸 등)을 서로 알린다(2026-10-18 검토 — 버프는 바뀔 때만 보내, 새로 온 사람에게는 먼저 와 있던 사람의 버프가 보이지 않았다)
+		if s.hero then
+			sendBuffs(s)
+			for _, other in inRoom(s.scene) do
+				if other ~= s and other.hero then
+					fire("Buffs", s.player, other.hero.id, Buffs.view(other.hero, World.now).list)
+				end
+			end
+		end
 	end
 end
 
@@ -60453,6 +61279,7 @@ end
 --  차례: 계정을 먼저 쓰고 순위판은 그 뒤에 쓴다(2026-10-12 — 그 앞에는 순위판(쓸 때마다 기다린다)을 먼저 써서, 서버가 닫히는 중이면 정작 계정이 마지막에 밀려 쓰이지 못할 수 있었다)
 --  saving = 지금 저장소에 쓰고 있는 것의 수: 서버가 닫힐 때 World.stop이 이것이 0이 될 때까지 기다린다(나가는 사람의 저장이 끝나기 전에 서버가 닫히지 않게)
 local saving = 0
+local stopping = false -- 서버가 닫히는 중(World.stop)
 local function saveAccount(s)
 	if not s.acct or not s.loaded then
 		return
@@ -60464,11 +61291,16 @@ local function saveAccount(s)
 	end
 	s.dirty, s.soon = false, nil
 	saving += 1
-	local ok, err = pcall(Store.saveAccount, s.player.UserId, Account.pack(s.acct))
+	local ok, done = pcall(Store.saveAccount, s.player.UserId, Account.pack(s.acct))
 	if not ok then
-		warn("[lune] 저장하다 오류: " .. tostring(err))
+		warn("[lune] 저장하다 오류: " .. tostring(done))
 	end
-	pcall(pushRank, s)
+	if not ok or done == false then
+		s.dirty = true -- 저장하지 못했다: 다음 틈틈이 저장에서 다시 해 본다(2026-10-18 검토 — 전에는 다른 것이 바뀔 때까지 다시 하지 않았다)
+	end
+	if not stopping then
+		pcall(pushRank, s) -- (서버가 닫히는 중이면 순위판은 건너뛴다 — 계정의 저장이 30초 안에 다 끝나게)
+	end
 	saving -= 1
 end
 
@@ -60490,6 +61322,15 @@ end
 -- 들어온 사람의 자리를 만든다. 계정을 읽어 둔다 — 캐릭터는 고르기 화면에서 들어갈 때 선다(onChars의 enter).
 --  계정이 없는데 예전 저장(계정이 생기기 전의 캐릭터 하나)이 있으면 그 캐릭터를 첫 캐릭터로 옮긴다(이름은 비어 있다 — 들어가기 전에 짓는다). 예전 저장은 그대로 둔다.
 function World.addPlayer(player)
+	if sessions[player] then
+		return
+	end
+	-- 같은 서버에서 막 나간 그 사람의 저장이 아직 쓰이는 중이면 끝날 때까지 기다린다(길어도 20초) — 그 전에 읽으면 옛 계정을 읽고,
+	--  앞 자리의 잠금 풀기가 새 자리의 잠금을 풀었다(잠금이 서버 번호로만 적힌다 — 2026-10-18 검토)
+	local waitedLeave = 0
+	while leaving[player.UserId] and waitedLeave < 20 do
+		waitedLeave += task.wait(0.2) or 0.2
+	end
 	if sessions[player] then
 		return
 	end
@@ -60553,11 +61394,46 @@ function World.addPlayer(player)
 		return
 	end
 	s.held = true
-	local data = Store.loadAccount(player.UserId)
-	local acct = if data then Account.unpack(data) else nil
+	-- 읽지 못했다(라이브의 저장소가 답하지 않는다): 빈 계정으로 들여보내면 나갈 때 저장된 것을 덮어쓴다 — 저장하지 않고 내보낸다(잠금도 푼다)
+	local function cannotRead()
+		s.guest, s.locked = true, true
+		if s.held and Store.unlock then
+			Store.unlock(player.UserId)
+		end
+		s.held = false
+		warn(("[lune] %d의 계정을 읽지 못했다 — 저장하지 않고 내보낸다"):format(player.UserId))
+		kick(player, LOAD_KICK)
+	end
+	if sessions[player] ~= s then
+		if Store.unlock then
+			Store.unlock(player.UserId) -- 잡는 사이에 나갔다: 잠금을 남기지 않는다(150초 동안 다른 서버로 못 들어갔다 — 2026-10-18 검토)
+		end
+		s.held = false
+		return
+	end
+	local data, failed = Store.loadAccount(player.UserId)
+	if failed then
+		cannotRead()
+		return
+	end
+	-- 계정을 푸는 데서 오류가 나면(망가진 저장) 읽지 못한 것으로 친다 — 덮어쓰지 않고 다시 들어오라고 알린다(2026-10-18 검토: 오류로 멈춰 40초 동안 검은 화면이었다)
+	local acct = nil
+	if data then
+		local okU, res = pcall(Account.unpack, data)
+		if not okU then
+			warn("[lune] 계정을 풀지 못했다: " .. tostring(res))
+			cannotRead()
+			return
+		end
+		acct = res
+	end
 	local adopted = false
 	if not acct and not data then
-		local old = Store.loadOld(player.UserId)
+		local old, oldFailed = Store.loadOld(player.UserId)
+		if oldFailed then
+			cannotRead()
+			return
+		end
 		if sessions[player] ~= s then
 			return -- 읽는 사이에 나갔다
 		end
@@ -60582,13 +61458,34 @@ function World.addPlayer(player)
 end
 
 -- 세계에서 나온다(캐릭터 고르기 화면으로 · 나갈 때): 저장하고, 파티에서 빠지고, 방 사람들의 이름표에서도 빠진다
+-- 파티에서 뺀다: 남은 파티원들을 돌려주고, 이 사람이 보낸 초대를 받은 사람들의 초대 상자를 닫는다(2026-10-18 검토: 30초 동안 남아 「받기」를 누르면 「받은 초대가 없다」)
+local function partyLeave(uid: number)
+	local left, _, cleared = Party.leave(book, uid)
+	for _, to in cleared or {} do
+		local ts = byUser[to]
+		if ts then
+			fire("PartyAsk", ts.player, { from = false })
+		end
+	end
+	return left
+end
+
+local KEEP_TIME = 600 -- 캐릭터 고르기로 나갔다가 이 시간(초) 안에 같은 캐릭터로 다시 들어오면 체력 · 다시 쓰기 · 물약 대기를 이어 간다
 local function leaveWorld(s)
 	if s.hero then
 		Analytics.finish(s) -- 모아 둔 달돈의 기록을 보낸다
 		saveAccount(s)
+		-- 체력 · 다시 쓰기(2~4차 · 버프) · 물약 대기는 저장하지 않는다 — 캐릭터 고르기를 오가 가득 찬 체력 · 다 돈 다시 쓰기로 돌아오지 않게 이 세션에 잠깐 둔다(2026-10-18 검토)
+		if s.cid then
+			s.keep = s.keep or {}
+			s.keep[s.cid] = { at = World.now, hp = s.hero.hp, alive = s.hero.alive, cds = table.clone(s.hero.cds or {}), potionWait = s.hero.potionWait }
+		end
 	end
 	local had, scene = s.hero ~= nil, s.scene
-	local left = Party.leave(book, s.player.UserId)
+	if s.hero and scene and rooms[scene] then
+		rooms[scene]:forget(s.hero) -- (캐릭터 고르기로 — 남은 늦은 타를 버린다)
+	end
+	local left = partyLeave(s.player.UserId)
 	s.hero, s.cid, s.skill, s.name = nil, nil, nil, ""
 	s.scene = SCENES.start
 	sendParty(left)
@@ -60598,7 +61495,7 @@ local function leaveWorld(s)
 end
 
 -- 경매장의 일(저장소를 기다리는 중)이 끝나기를 기다린다: 값을 치른 물건 · 받은 대금이 가방에 들어오기 전에 저장하고 나가지 않게(길어도 MARKET_WAIT초)
-local MARKET_WAIT = 15
+local MARKET_WAIT = 120 -- (2026-10-18 검토: 15초면 「모두 받기」 여럿 · 느린 저장소에서 경매장의 일이 끝나기 전에 저장하고 나가, 물건 · 달돈을 잃거나 서버를 옮기면 둘이 될 수 있었다)
 local function marketIdle(s)
 	local waited = 0
 	while s.marketBusy and waited < MARKET_WAIT do
@@ -60610,16 +61507,24 @@ function World.removePlayer(player)
 	local s = sessions[player]
 	sessions[player] = nil
 	byUser[player.UserId] = nil
+	-- 파티에서는 저장을 기다리기 전에 뺀다(2026-10-18 검토: 경매장 · 저장을 기다리는 동안(길면 15초) 나간 사람이 파티장으로 남았고, 저장이 오류를 내면 영영 남았다)
+	sendParty(partyLeave(player.UserId))
+	leaving[player.UserId] = true -- 나가며 저장하는 중(같은 서버로 곧바로 다시 들어오면 이 저장이 끝난 뒤에 읽는다 — addPlayer)
+	if s and s.hero and s.scene and rooms[s.scene] then
+		rooms[s.scene]:forget(s.hero) -- 나간 사람의 늦게 드는 타를 버린다(Room:forget)
+	end
 	if s and s.hero then
 		marketIdle(s)
-		Analytics.finish(s)
+		pcall(Analytics.finish, s)
 		saveAccount(s)
+	elseif s and s.dirty and s.loaded and not s.guest then
+		saveAccount(s) -- 캐릭터 고르기 화면에서 바꾼 것(소리 설정)을 남기고 나간다(2026-10-18 검토)
 	end
 	-- 저장을 끝낸 뒤에 계정의 잠금을 푼다(다른 서버로 옮겨 가면 그 서버가 바로 잡는다)
 	if s and s.held and Store.unlock then
 		Store.unlock(player.UserId)
 	end
-	sendParty(Party.leave(book, player.UserId))
+	leaving[player.UserId] = nil
 	if s and s.hero then
 		sendWho(s.scene)
 	end
@@ -60636,8 +61541,11 @@ function World.saveAll(onlyDirty: boolean?)
 				kick(s.player, LOCK_KICK)
 			end
 		end
-		if s.hero and s.loaded and not s.guest and (s.dirty or not onlyDirty) then
-			saveAccount(s)
+		if (s.hero or s.dirty) and s.loaded and not s.guest and (s.dirty or not onlyDirty) then -- 캐릭터 고르기 화면에서 바꾼 것(소리 설정)도(2026-10-18 검토)
+			local ok, err = pcall(saveAccount, s) -- 한 사람의 오류가 나머지의 저장을 막지 않게(2026-10-18 검토)
+			if not ok then
+				warn("[lune] 저장하다 오류: " .. tostring(err))
+			end
 		end
 	end
 end
@@ -60664,9 +61572,10 @@ end
 local function onReady(player)
 	World.addPlayer(player)
 	local s = sessions[player]
-	-- 저장된 것을 읽는 중이면 잠깐 기다린다
+	-- 저장된 것을 읽는 중이면 기다린다 — 잠금을 기다리고(6번 x 1.5초) 읽기를 다시 해 보는 동안(2026-10-18 검토: 10초면 모자라 검은 화면에 멈췄다).
+	--  그 사이에 내보내졌으면(다른 서버가 잡고 있다 · 읽지 못했다) 곧 끊긴다
 	local waited = 0
-	while s and not s.loaded and waited < 10 do
+	while s and not s.loaded and not s.locked and sessions[player] == s and waited < 40 do
 		task.wait(0.1)
 		waited += 0.1
 	end
@@ -60693,6 +61602,7 @@ local function filtered(name: string, userId: number): (boolean, boolean)
 	return asked, asked and clean == name
 end
 
+local NAME_BURST, NAME_GAP = 5, 3 -- 이름 확인(저장소에 묻는 것): 한 사람이 한 번에 5번까지 · 3초마다 한 번씩 다시 찬다
 local function nameFree(s, name: any, skip: any?): (boolean, string?)
 	local ok, why = Account.nameOk(name)
 	if not ok then
@@ -60741,7 +61651,7 @@ end
 --  delete(번호, 이름) → { ok, why, select }: 캐릭터를 지운다 — 그 캐릭터의 이름을 그대로 적어 보내야 한다(잘못 누른 것이 아님을 서버도 본다)
 --  enter(번호) → Ready와 같은 것(self · bag · room …): 그 캐릭터로 세계에 들어간다
 --  leave() → { select }: 세계에서 나와 고르기 화면으로(저장하고 나온다)
-local function onChars(player, action: string, a: any, b: any)
+local function onCharsInner(player, action: string, a: any, b: any)
 	local s = sessions[player]
 	if not s or not s.loaded or not s.acct then
 		return nil
@@ -60758,6 +61668,17 @@ local function onChars(player, action: string, a: any, b: any)
 		return nil
 	end
 	if action == "check" then
+		-- 저장소 · 글 거르기에 묻는 이름 확인은 한 사람이 한 번에 NAME_BURST번까지 · NAME_GAP초마다 한 번씩 다시 찬다(2026-10-18 검토: 새 이름을 1초에 두 번씩
+		--  끝없이 물어 서버의 저장소 몫을 다 쓰면, 들어오는 사람의 계정을 읽지 못해 내보내졌다). 이름의 꼴만 보는 것(글자 수 · 쓸 수 없는 글자)은 그대로 곧장 답한다
+		if Account.nameOk(a) then
+			local nowC = os.clock()
+			s.nameTokens = math.min(NAME_BURST, (s.nameTokens or NAME_BURST) + (nowC - (s.nameAt or nowC)) / NAME_GAP)
+			s.nameAt = nowC
+			if s.nameTokens < 1 then
+				return { ok = false, why = "잠시 뒤에 다시 확인해 주세요" }
+			end
+			s.nameTokens -= 1
+		end
 		local ok, why = nameFree(s, a)
 		return { ok = ok, why = why }
 	elseif action == "create" then
@@ -60834,6 +61755,14 @@ local function onChars(player, action: string, a: any, b: any)
 		if not hero then
 			return { ok = false, why = "이 캐릭터를 읽을 수 없습니다" }
 		end
+		-- 창고를 늘리는 부탁(「창고 칸 +4」 — 2026-10-18): 이 캐릭터가 이미 끝낸 것은 계정에 붙인다(그 보상이 생기기 전에 끝낸 캐릭터)
+		for id, st in hero.quests do
+			local def = Quests.def(id)
+			if st.done and def and (def.reward.store or 0) > 0 then
+				acct.storeGot[id] = true
+			end
+		end
+		hero.storeExtra = Account.storeExtra(acct)
 		Bag.loadStore(hero, acct.store) -- 창고는 계정의 것: 어느 캐릭터로 들어가든 같은 창고다
 		-- 뺀 맵에 남은 저장(반달 나루 — 2026-10-16 밤): 마지막 맵 · 마지막으로 들른 마을을 그 자리를 대신하는 곳으로(scenes의 gone)
 		if hero.last and SCENES.gone[string.match(hero.last, "^(.-)#%d+$") or hero.last] then
@@ -60851,13 +61780,36 @@ local function onChars(player, action: string, a: any, b: any)
 			startKey, startX, startY = resumeScene(hero)
 		end
 		if not hero.tut.done and SCENES.scenes[Tutorial.SCENE] then
-			startKey = Tutorial.SCENE -- 꿈에서 깨지 않은 새 캐릭터는 꿈(튜토리얼)에서 시작한다(2026-10-14)
+			startKey, startX, startY = Tutorial.SCENE, nil, nil -- 꿈에서 깨지 않은 새 캐릭터는 꿈(튜토리얼)에서 시작한다(2026-10-14) · 자리는 꿈의 시작 자리(이어하기의 자리를 쓰지 않는다 — 2026-10-18 검토)
 		end
 		if not SCENES.scenes[startKey] then
 			startKey, startX, startY = SCENES.start, nil, nil
 		end
 		local scene = SCENES.scenes[startKey]
 		place(s, startKey, startX or scene.spawn.x, startY or scene.spawn.y)
+		-- 꿈의 물약 미션에서 다시 들어왔다: 체력은 저장하지 않아 가득 찬 채라 물약을 마실 수 없다 — 그 미션이면 다시 조금 다친 채로(tutChanged와 같은 셈 · 2026-10-18 검토)
+		if startKey == Tutorial.SCENE then
+			local def = Tutorial.current(hero.tut)
+			if def and Tutorial.kind(def) == "potion" and hero.hp > hero.maxHp * 0.6 then
+				hero.hp = math.floor(hero.maxHp * 0.6)
+			end
+		end
+		-- 캐릭터 고르기로 잠깐 나갔다 온 같은 캐릭터: 체력 · 다시 쓰기 · 물약 대기를 이어 간다(leaveWorld의 keep — 쓰러진 채 나갔으면 마을에서 가득 찬 채로)
+		local kept = s.keep and s.keep[c.id]
+		if kept then
+			s.keep[c.id] = nil
+			if World.now - kept.at <= KEEP_TIME then
+				if kept.alive and kept.hp > 0 then
+					hero.hp = math.clamp(math.floor(kept.hp), 1, hero.hp) -- (꿈의 물약 미션이면 위에서 덜어 둔 체력보다 많아지지 않게)
+				end
+				for k, v in kept.cds do
+					if v > World.now then
+						hero.cds[k] = v
+					end
+				end
+				hero.potionWait = math.max(hero.potionWait or 0, (kept.potionWait or 0) - (World.now - kept.at))
+			end
+		end
 		roomOf(s.scene)
 		s.dirty = true
 		s.rankSent = nil
@@ -60877,8 +61829,30 @@ local function onChars(player, action: string, a: any, b: any)
 	return nil
 end
 
+
+-- 캐릭터 만들기 · 들어가기 · 지우기 · 나오기는 한 사람에 하나씩(2026-10-18 검토): 저장소를 기다리는 사이에 「지우기」가 끼어들면, 지운 캐릭터로 들어가
+--  창고가 저장되지 않는 채 물건을 꺼내 경매에 올리면 물건이 둘이 됐다 · 만들기 둘을 같이 보내면 이름이 장부에만 남거나 같은 이름이 둘 생겼다. 이름 확인(check)은 읽기만 해서 막지 않는다
+local function onChars(player, action: string, a: any, b: any)
+	local s = sessions[player]
+	if action == "check" or not s then
+		return onCharsInner(player, action, a, b)
+	end
+	if s.charsBusy then
+		return { ok = false, why = "앞의 일을 처리하고 있습니다. 잠시만 기다려 주세요" }
+	end
+	s.charsBusy = true
+	local ok, res = pcall(onCharsInner, player, action, a, b)
+	s.charsBusy = false
+	if not ok then
+		warn("[lune] 캐릭터 일에서 오류: " .. tostring(res))
+		return nil
+	end
+	return res
+end
+
 -- ---------- 명예의 전당 ----------
 --  판 셋의 위 열 줄. 서버가 Rank.REFRESH초마다 한 번만 읽어 둔 것을 준다(물을 때마다 저장소를 읽지 않는다).
+
 local function rankBoards()
 	if rankCache and World.now - rankAt < Rank.REFRESH then
 		return rankCache
@@ -60903,7 +61877,12 @@ local function onRank(player)
 	if not s or not s.hero then
 		return nil
 	end
-	pushRank(s) -- 내 것은 방금의 값으로(관리자는 올리지 않는다 — rankSent가 없다)
+	-- 내 것은 방금의 값으로(관리자는 올리지 않는다 — rankSent가 없다). 순위판에 쓰는 것은 한 사람이 30초에 한 번(2026-10-18 검토: 장비를 바꿔 끼며
+	--  순위판을 거듭 열면 열 때마다 저장소에 써서 서버의 쓰기 몫을 다 쓸 수 있었다 — 저장할 때마다도 쓴다)
+	if s.rankPushAt == nil or World.now - s.rankPushAt >= 30 then
+		s.rankPushAt = World.now
+		pushRank(s)
+	end
 	local sent = s.rankSent
 	if sent and s.rankFresh ~= sent.level then
 		s.rankFresh = sent.level
@@ -60958,12 +61937,26 @@ local function onMove(player, x: number, y: number, dir: number)
 		s.stale = nil
 	end
 	arrived(s) -- 자리 보고가 왔다 = 화면이 열렸다
-	-- 그 맵의 시작 자리로 온 것은 받는다(맵 아래로 떨어지면 화면이 시작 자리로 돌려놓는다 — 이것까지 막으면 그 뒤로 자리가 영영 어긋난다)
-	local atSpawn = math.abs(x - scene.spawn.x) <= MOVE_SLACK and math.abs(y - scene.spawn.y) <= MOVE_SLACK * 2
-	if not s.jumped and not atSpawn and (math.abs(x - hero.x) > MOVE_SLACK or math.abs(y - hero.y) > MOVE_SLACK * 2) then
-		-- 순간이동하는 스킬을 쓴 직후에는 받는다(그 스킬이 갈 수 있는 거리 안에서)
+	-- 그 맵의 시작 자리로 온 것은 받는다(맵 아래로 떨어지면 화면이 시작 자리로 돌려놓는다 — 이것까지 막으면 그 뒤로 자리가 영영 어긋난다).
+	--  떨어질 수 있었을 때만이다: 서버가 아는 자리 가까이에 맵의 바닥이 뚫린 곳이 있을 때(2026-10-18 검토: 아무 데서나 시작 자리로 옮겨 보스의 패턴을 피할 수 있었다)
+	local atSpawn = math.abs(x - scene.spawn.x) <= MOVE_SLACK and math.abs(y - scene.spawn.y) <= MOVE_SLACK * 2 and holeNear(scene, hero.x)
+	local dx, dy = math.abs(x - hero.x), math.abs(y - hero.y)
+	refillMove(s)
+	if hero.warpMark then -- 서버가 몸을 옮기는 스킬을 돌렸다(sim/caster.luau) — 그 뒤의 첫 보고부터 WARP_TIME초
+		hero.warpAt, hero.warpMark = World.now, nil
+	end
+	local jumpedOk = s.jumped and dx <= JUMP_SLACK and dy <= JUMP_SLACK -- 맵을 옮긴 직후의 첫 보고(아무 데나가 아니라 넉넉한 거리 안 — 2026-10-18 검토)
+	-- 자동 검사만 세우는 표시: 다음 보고 하나를 거리와 상관없이 받는다(서버의 세션에만 있다 — 화면이 보내는 어떤 것으로도 서지 않는다).
+	--  검사가 졸개 곁 · 문 앞으로 사람을 바로 옮길 때 쓴다(전에는 s.jumped가 그 구실을 했다 — 2026-10-18에 그것을 좁혔다)
+	local trusted = s.trust == true
+	s.trust = nil
+	local up = math.max(0, hero.y - y) -- 위로 간 만큼(화면의 y는 아래로 는다)
+	if not trusted and not jumpedOk and not atSpawn and (dx > MOVE_SLACK or dy > MOVE_SLACK * 2 or dx > s.moveBudget or up > s.upBudget) then
+		-- 순간이동하는 스킬을 쓴 직후에는 받는다(그 스킬이 갈 수 있는 거리 안에서) — 한 번 쓰면 한 번만(2026-10-18 검토: 보고마다 받아 1.5초 동안 끝없이 갔다)
 		local warped = hero.warpAt ~= nil and World.now - hero.warpAt <= WARP_TIME and math.abs(x - hero.x) <= WARP_SLACK and math.abs(y - hero.y) <= MOVE_SLACK * 2
-		if not warped then
+		if warped then
+			hero.warpAt = nil
+		else
 			-- 순간이동은 믿지 않는다(서버가 아는 자리를 그대로 둔다) — 그리고 화면을 그 자리로 되돌린다.
 			--  되돌리지 않으면 그 뒤의 보고가 모두 멀어서, 서버가 아는 자리와 화면의 자리가 영영 어긋난다(2026-10-07의 가시 고장과 같은 일)
 			if World.now - (s.warpSent or -9) > 0.5 then
@@ -60974,6 +61967,8 @@ local function onMove(player, x: number, y: number, dir: number)
 		end
 	end
 	s.jumped = false
+	s.moveBudget = math.max(0, s.moveBudget - dx)
+	s.upBudget = math.max(0, s.upBudget - up)
 	hero.x, hero.y, hero.dir = x, y, dir
 	-- 달조각(2026-10-16 — 로스트아크의 모코코 씨앗): 닿으면 줍는다
 	if SHARD_SCENES[s.scene] then
@@ -61076,6 +62071,18 @@ local function onCine(player, action: string, id: any)
 	end
 	local h = s.hero
 	if action == "on" then
+		-- 아직 안 본 장면 하나에 한 번만(2026-10-18 검토: 「on」을 90초마다 보내면 영원히 맞지 않았다 — 스토리 보스까지)
+		--  그 장면이 나올 때(맵 · 퀘스트 — Cine.fits)일 때만 · 틀면 본 것으로 적는다(나갔다 들어와 다시 틀지 못하게 — 2026-10-18 검토)
+		if not Cine.known(id) or h.cine[id] or not Cine.fits(id, s.scene, h.quests) then
+			return
+		end
+		s.cineOn = s.cineOn or {}
+		if s.cineOn[id] then
+			return
+		end
+		s.cineOn[id] = true
+		h.cine[id] = true
+		s.dirty = true
 		h.inCine = true
 		local at = os.clock()
 		s.cineAt = at
@@ -61178,6 +62185,9 @@ local function onReturn(player)
 	local room = roomOf(s.scene):describe(s.hero.id)
 	room.who = roster(s.scene)
 	fire("Revive", s.player, { scene = s.scene, x = s.hero.x, y = s.hero.y, room = room })
+	if homeKey == Tutorial.SCENE then
+		tutChanged(s) -- 꿈에서 되살아났다: 물약 미션이면 다시 조금 다친 채로(체력이 가득하면 물약을 마실 수 없어 미션이 막혔다 — 2026-10-18 검토)
+	end
 	sendSelf(s)
 	sendWho(from)
 	sendWho(s.scene)
@@ -61212,6 +62222,9 @@ local function applyResult(cur, key: string, result)
 					Achieve.killed(gs.acct.ach, kill.kind, key, #kill.gains > 1) -- 업적: 처치 · 파티로 처치(함께 잡은 사람이 있다) · 그 지역의 몬스터 종류
 				end
 				Bond.onKill(gs.hero.bond, kill.kind) -- 모험의 서: 그곳의 몬스터 종류마다 100마리
+				if kill.elite then
+					Analytics.custom(gs, "FieldElite", 1, key) -- 사냥터 정예를 잡았다(2026-10-18 — 맵마다 얼마나 자주 잡히는지로 30마리 · 10배를 맞춘다)
+				end
 				-- 퀘스트: 함께 잡은 사람 모두에게 잡은 것으로 쳐 준다
 				if #Quests.onKill(gs.hero.quests, kill.kind, key) > 0 then
 					gs.dirty = true
@@ -61281,6 +62294,7 @@ local function matesIn(key: string, hero)
 	end
 	return if #mates > 1 then mates else nil
 end
+World.matesIn = matesIn -- (방의 matesOf — roomOf가 이것보다 위에 있어 World를 거친다)
 
 -- 같은 맵에 쓰러져 있는 파티원들(reach 안 — 소생이 일으킨다)
 local function fallenIn(key: string, hero, reach: number)
@@ -61303,6 +62317,7 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 	local s = sessions[player]
 	if s and s.hero then
 		arrived(s) -- 기술을 쓴다 = 화면이 열렸다(옮긴 뒤의 긴 보호를 끝낸다)
+		s.hero.inCine = false -- 기술을 쓴다 = 장면을 보는 중이 아니다(장면 동안 맞지 않는 것을 싸움에 쓰지 못하게 — 2026-10-18 검토)
 	end
 	-- 온오프 사출기: 누르면 켜고 끈다(쓰는 동작이 없다 — 켜 두면 주력기가 맞을 때 저절로 나간다. sim/kit.luau)
 	if s and s.hero and s.hero.alive and Kit.isToggle(s.hero, id) then
@@ -61322,19 +62337,18 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 				roomOf(s.scene):place(hero, id, pow, result)
 				applyResult(s, s.scene, result)
 			end
-			if math.abs(x - hero.x) <= 40 and math.abs(y - hero.y) <= 60 then
-				hero.x, hero.y = x, y
-			end
+			skillPlace(s, x, y)
 			local reach = Buffs.data[id].fx.party
 			if reach then
-				local here = {}
+				-- Party.mates는 [번호] = 캐릭터(level을 본다)를 받는다 — 세션을 넘기면 level이 없어 오류가 났다(2026-10-18 검토: 파티원에게 버프가 가지 않았다)
+				local here, sessionOf = {}, {}
 				for _, o in inRoom(s.scene) do
 					if o.hero.alive then
-						here[o.hero.id] = o
+						here[o.hero.id], sessionOf[o.hero.id] = o.hero, o
 					end
 				end
 				for _, mid in Party.mates(book, hero.id, here) do
-					local o = here[mid]
+					local o = sessionOf[mid]
 					if o and o ~= s and math.abs(o.hero.x - hero.x) <= reach and math.abs(o.hero.y - hero.y) <= math.min(reach, 120) then
 						Buffs.give(o.hero, id, pow, hero.x, hero.y)
 						sendSelf(o)
@@ -61366,9 +62380,7 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 		if placed.cd > 0 then
 			hero.cds[id] = World.now + placed.cd
 		end
-		if math.abs(x - hero.x) <= 40 and math.abs(y - hero.y) <= 60 then
-			hero.x, hero.y = x, y
-		end
+		skillPlace(s, x, y)
 		hero.dir = dir
 		local result = { hits = {}, kills = {} }
 		roomOf(s.scene):place(hero, id, Hero.skillScale(hero.skills[id], placed.max), result)
@@ -61398,10 +62410,6 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 				return -- 1차의 기술을 쓰는 중이다
 			end
 		end
-		-- 쓴 자리: 서버가 아는 자리와 크게 다르지 않으면 화면이 말한 자리를 받아 적는다
-		if math.abs(x - hero.x) <= 40 and math.abs(y - hero.y) <= 60 then
-			hero.x, hero.y = x, y
-		end
 		local was = hero.dir
 		hero.dir = dir
 		local key = s.scene
@@ -61414,12 +62422,20 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 				return
 			end
 		end
+		-- 쓴 자리: 서버가 아는 자리와 크게 다르지 않으면 화면이 말한 자리를 받아 적는다(이동 몫 안에서) — 받아 주지 않는 기술이면 되돌린다(2026-10-18 검토)
+		local ox, oy, ob = hero.x, hero.y, s.moveBudget
+		skillPlace(s, x, y)
 		local ok, lv = roomOf(key).caster:begin(hero, id, seg, matesIn(key, hero), { fallen = fallen })
 		if not ok then
 			hero.dir = was
+			hero.x, hero.y, s.moveBudget = ox, oy, ob
 			return
 		end
-		hero.warpAt = now -- 이 스킬이 몸을 옮길 수 있다(순간이동 · 돌진) — 잠깐은 멀리 간 자리 보고도 받는다(onMove)
+		-- 이 스킬이 몸을 옮긴다(순간이동 · 돌진) — 잠깐은 멀리 간 자리 보고도 받는다(onMove). 몸을 옮기는 스킬만이다(2026-10-18 검토 — Caster.MOVERS:
+		--  서버가 그 스킬을 돌리며 g.move · g.teleport를 부른 적이 있는 것. 처음 쓰는 때는 그 순간에 hero.warpMark가 선다)
+		if Caster.MOVERS[id] then
+			hero.warpAt = now
+		end
 		if seg == 1 and castDef.cd > 0 then
 			hero.cds[id] = now + castDef.cd
 		end
@@ -61434,8 +62450,8 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 	if not s or not def or not s.hero or not s.hero.alive or def.who ~= s.hero.class or Hero.skillLevel(s.hero, id) < 1 then
 		return
 	end
-	if seg == 1 and roomOf(s.scene).caster:busy(s.hero) then
-		return -- 2~4차의 스킬을 쓰는 중이다
+	if roomOf(s.scene).caster:busy(s.hero) then
+		return -- 2~4차의 스킬을 쓰는 중이다(뒤 구간도 — 2026-10-18 검토: 전에는 첫 구간만 보아 겹쳐 쓸 수 있었다)
 	end
 	local haste = Buffs.haste(s.hero) -- 공격 속도 버프: 동작과 타격이 그만큼 빨라진다(이동기는 그대로)
 	if def.type == "move" then
@@ -61449,9 +62465,15 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 	local last = s.skill
 	local prev = def.segs[seg - 1]
 	local charged = nil -- 힘을 모아 쳤으면 { mul 피해의 배수, reach 더 닿는 거리, level 단계 }
+	-- 이 구간이 시작한 때로 적는 시각: 조금 일찍 온 요청(네트워크의 흔들림)은 받되, 시각은 앞 동작이 끝난 때로 적는다 —
+	--  일찍 받은 만큼이 쌓여 기술이 빨라지지 않게(2026-10-18 검토: 1차 연속기를 앞당겨 보내 1.7배쯤 빨랐다)
+	local start = now
 	if seg == 1 then
 		if last and now < last.free - 0.1 then
 			return -- 앞 기술이 아직 안 끝났다
+		end
+		if last and last.free > now then
+			start = last.free
 		end
 		if def.cd > 0 and s.cds and s.cds[id] and now < s.cds[id] then
 			return
@@ -61465,10 +62487,12 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 		local elapsed = now - last.at
 		local hold = if prev.charge then Kit.chargeTime(s.hero, id) else 0
 		local prevTime = prev.time / haste
-		local from = if segDef.next then prevTime * 0.4 else prevTime - 0.15
+		-- 화면은 앞 구간이 끝난 뒤에 다음 구간을 보낸다(boot) — 끝나기 0.15초 전부터 받는다(전에는 next를 앞 구간의 40%부터 받아 연속기를 앞당길 수 있었다)
+		local from = prevTime - 0.15
 		if elapsed < from or elapsed > prevTime + hold + 0.4 then
 			return
 		end
+		start = math.max(now, last.at + prevTime)
 		if prev.charge then
 			-- 모은 단계는 서버가 흐른 시간으로 셈한다(화면이 말한 단계를 믿지 않는다). 만월 동안에는 모으지 않아도 끝까지 모은 것으로 친다
 			local held = if Buffs.full(s.hero) then hold else elapsed - prevTime
@@ -61490,14 +62514,12 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 		return -- 저절로 이어지는 구간은 서버가 잇는다(화면이 보낼 일이 없다)
 	end
 	local hero = s.hero
-	-- 쓴 자리: 서버가 아는 자리와 크게 다르지 않으면 클라이언트가 말한 자리를 받아 적는다(판정은 맞는 순간의 자리로 한다)
-	if math.abs(x - hero.x) <= 40 and math.abs(y - hero.y) <= 60 then
-		hero.x, hero.y = x, y
-	end
+	-- 쓴 자리: 서버가 아는 자리와 크게 다르지 않으면 클라이언트가 말한 자리를 받아 적는다(판정은 맞는 순간의 자리로 한다 · 이동 몫 안에서)
+	skillPlace(s, x, y)
 	hero.dir = dir
 	-- 저절로 이어지는 뒤 구간은 한꺼번에 받는다 — 한 번 더 눌러 잇는 구간(next) · 힘을 모으는 구간(charge)의 다음 구간 앞에서 끊는다(그것들은 따로 온다)
-	local free = now + segDef.time / haste
-	local startAt = 0
+	local free = start + segDef.time / haste
+	local startAt = (start - now) * haste -- 늦은 판정의 때(아래 pending — 동작의 시간으로 적고 haste로 나눈다)도 그 시각부터
 	local segs = { seg }
 	for i = seg + 1, #def.segs do
 		if def.segs[i].next or def.segs[i - 1].charge then
@@ -61506,7 +62528,7 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 		table.insert(segs, i)
 		free += def.segs[i].time / haste
 	end
-	s.skill = { id = id, seg = segs[#segs], at = now, free = free }
+	s.skill = { id = id, seg = segs[#segs], at = start, free = free }
 	hero.actUntil = roomOf(s.scene).time + (free - now) -- 기술의 동작을 하는 동안(굳센 자세: 그동안은 받는 피해가 더 준다)
 	if def.cd > 0 then
 		s.cds = s.cds or {}
@@ -61522,11 +62544,11 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 	-- 쓰는 동작이 있는 설치(연막탄 · 수정 심기 · 저승문): 그 동작의 그 장에서 놓인다(연막탄은 그 자리에 버프가 걸린다)
 	if seg == 1 and placed and placed.cast == "seg" then
 		table.insert(pending, {
-			at = now + placed.at / haste,
+			at = start + placed.at / haste,
 			fn = function()
 				local cur = sessions[player]
-				if not cur or cur.scene ~= key or not cur.hero.alive then
-					return
+				if not cur or cur.scene ~= key or cur.hero ~= hero or not hero.alive then
+					return -- 나갔다 · 맵을 옮겼다 · 다른 캐릭터로 다시 들어왔다(2026-10-18 검토 — 옛 캐릭터의 스킬이 새 캐릭터로 맞지 않게)
 				end
 				local pow = Hero.skillScale(cur.hero.skills[id] or 0, placed.max)
 				local result = { hits = {}, kills = {} }
@@ -61552,11 +62574,11 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 		end
 		local wave = { box = { -110, 150, 30, 6 }, mul = base * shock.shock * shockS }
 		table.insert(pending, {
-			at = now + (last + 0.3) / haste,
+			at = start + (last + 0.3) / haste,
 			fn = function()
 				local cur = sessions[player]
-				if not cur or cur.scene ~= key or not cur.hero.alive then
-					return
+				if not cur or cur.scene ~= key or cur.hero ~= hero or not hero.alive then
+					return -- 나갔다 · 맵을 옮겼다 · 다른 캐릭터로 다시 들어왔다(2026-10-18 검토 — 옛 캐릭터의 스킬이 새 캐릭터로 맞지 않게)
 				end
 				applyResult(cur, key, roomOf(key):skillHit(cur.hero, wave, cur.hero.x, cur.hero.y, dir, Hero.scale(cur.hero, id), matesIn(key, cur.hero), def.type, nil, charged))
 			end,
@@ -61569,8 +62591,8 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 					at = now + (startAt + hit.at) / haste,
 					fn = function()
 						local cur = sessions[player]
-						if not cur or cur.scene ~= key or not cur.hero.alive then
-							return
+						if not cur or cur.scene ~= key or cur.hero ~= hero or not hero.alive then
+							return -- 나갔다 · 맵을 옮겼다 · 다른 캐릭터로 다시 들어왔다(2026-10-18 검토)
 						end
 						-- 맞는 순간의 자리에서 판정한다(걸으면서 쓰는 기술이 있다). 세기는 스킬 레벨을 따른다
 						-- 같은 맵의 파티원(레벨 차이 20 안쪽)과 경험치를 나눈다
@@ -61661,6 +62683,13 @@ local function onItem(player, action: string, a: any, b: any, c: any, d: any)
 		else
 			result, why = Bag.sell(h, a, b, c)
 			ok = result ~= nil
+		end
+	elseif action == "buyback" then
+		-- 되산다(2026-10-18): 잡화 상인 앞에서 · a = 되사기 목록의 차례
+		if not nearNpc(s, "shop") then
+			why = "파는 사람 앞이 아니다"
+		else
+			ok, why = Bag.buyBack(h, a)
 		end
 	elseif action == "buy" then
 		local stock = if typeof(a) == "string" then Items.stock(a) else nil
@@ -61768,6 +62797,35 @@ local function onPotion(player, id: any)
 		sendParty(Party.members(book, player.UserId)) -- 파티원이 어느 맵에 있는지 바뀌었다
 		return
 	end
+	-- 달빛 부적(쓰러진 벌칙을 푼다) · 능력치 초기화 주문서(찍은 능력치를 되돌린다) — 2026-10-18: 설계에만 있던 둘
+	if goods and (goods.kind == "charm" or goods.kind == "reset") then
+		local h = s.hero
+		local why = nil
+		if not h.alive then
+			return
+		elseif Bag.count(h, goods.id) <= 0 then
+			why = "가진 것이 없다"
+		elseif goods.kind == "charm" and (h.weak or 0) <= 0 then
+			why = "약해진 상태가 아니다"
+		elseif goods.kind == "reset" and (h.stats.str + h.stats.dex + h.stats.int + h.stats.luk + h.stats.hp) <= 0 then
+			why = "찍은 능력치가 없다"
+		end
+		if why then
+			fire("ItemDone", player, { action = "use", ok = false, why = why })
+			return
+		end
+		Bag.take(h, goods.id, 1)
+		if goods.kind == "charm" then
+			h.weak, h.weakWas = 0, nil
+		else
+			Hero.resetStats(h)
+		end
+		s.dirty = true
+		sendBag(s)
+		sendSelf(s)
+		fire("ItemDone", player, { action = "use", ok = true, why = if goods.kind == "charm" then "약해짐이 풀렸다" else "능력치를 모두 되돌렸다" })
+		return
+	end
 	local healed, why = Hero.drink(s.hero, id)
 	if healed then
 		sendBag(s)
@@ -61851,7 +62909,9 @@ end
 -- 전직하며 받은 공짜 초기화: 찍은 스킬을 모두 되돌린다(쓰러져 있거나 기술을 쓰는 중에는 안 된다)
 local function onSkillReset(player)
 	local s = sessions[player]
-	if s and s.hero and s.hero.alive and not s.skill and Hero.freeReset(s.hero) then
+	-- 「쓰는 중」 = 1차 기술의 동작이 아직 끝나지 않았다 · 2~4차 스킬이 도는 중(2026-10-18 검토: s.skill은 맵을 옮길 때만 지워져, 1차 기술을 한 번 쓰면 초기화가 말없이 막혔다)
+	local busy = s and s.hero and ((s.skill and World.now < s.skill.free) or roomOf(s.scene).caster:busy(s.hero))
+	if s and s.hero and s.hero.alive and not busy and Hero.freeReset(s.hero) then
 		s.dirty = true
 		sendSelf(s)
 	end
@@ -61898,10 +62958,14 @@ local function onQuest(player, action: string, id: any)
 			local reward, ups = Hero.questDone(h, id)
 			if reward then
 				ok, done = true, id
+				if (reward.store or 0) > 0 and s.acct and not s.acct.storeGot[id] then
+					s.acct.storeGot[id] = true -- 창고는 계정의 것 — 같은 부탁을 다른 캐릭터가 또 해도 한 번만 늘어난다
+					Bag.growStore(h, Account.storeExtra(s.acct))
+				end
 				if reward.open == "tome" then
 					fire("BondView", player, Bond.view(h, os.time()), { kind = "open" })
 				end
-				fire("Gain", player, { xp = reward.xp, ups = ups, level = h.level, quest = def.name })
+				fire("Gain", player, { xp = reward.xp, ups = ups, level = h.level, quest = def.name, money = reward.money }) -- money = 보상의 달돈(획득 알림 — 2026-10-18)
 				if ups > 0 then
 					sendWho(s.scene)
 				end
@@ -61967,7 +63031,7 @@ local function onDaily(player, action: string, region: any, i: any)
 	if s.acct then
 		Achieve.add(s.acct.ach, "daily") -- 업적: 일일 의뢰를 n개
 	end
-	fire("Gain", player, { xp = reward.xp, ups = ups, level = h.level })
+	fire("Gain", player, { xp = reward.xp, ups = ups, level = h.level, money = reward.money, dust = reward.dust }) -- 달돈 · 달가루도 획득 알림에(2026-10-18 검토)
 	if ups > 0 then
 		fire("Quests", player, Quests.view(h.quests)) -- 레벨이 되어 받을 수 있게 된 퀘스트
 		sendWho(s.scene)
@@ -62109,6 +63173,9 @@ end
 -- 그 사람을 그 장면의 (x, y)로 옮긴다(화면에는 Revive로 — World.jump와 같다)
 local function moveTo(s, key: string, x: number, y: number)
 	local from = s.scene
+	if not s.hero.alive then
+		Hero.revive(s.hero) -- 화면은 「Revive」를 받으면 살아난 것으로 본다 — 서버도 맞춘다(2026-10-18 검토: 쓰러진 채 옮겨지면 쓰러진 상자 없이 멈췄다)
+	end
 	place(s, key, x, y, true)
 	local room = roomOf(key):describe(s.hero.id)
 	room.who = roster(key)
@@ -62151,8 +63218,10 @@ local function onRift(player, action: string, id: any)
 	local going = { s }
 	for _, uid in Party.members(book, player.UserId) do
 		local ms = byUser[uid]
-		if ms and ms ~= s and ms.hero and ms.scene == s.scene and #going < Rift.DATA.party and not Rift.canEnter(ms.hero, t) then
-			table.insert(going, ms) -- 같은 맵의 파티원이 함께 들어간다
+		-- 같은 맵의 파티원이 함께 들어간다 — 그 사람도 토벌대장과 인사를 나눴고 · 장면(퀘스트 연출)을 보는 중이 아닐 때만(2026-10-18 검토: 인사 전의 파티원 · 장면 중인 파티원도 끌려갔다)
+		if ms and ms ~= s and ms.hero and ms.hero.alive and ms.scene == s.scene and #going < Rift.DATA.party and not Rift.canEnter(ms.hero, t)
+			and Bond.opened(ms.hero.bond, Rift.DATA.npc) and not ms.hero.inCine then
+			table.insert(going, ms)
 		end
 	end
 	for i, ms in going do
@@ -62191,7 +63260,7 @@ local function riftPay(key: string, room)
 				gear, full = nil, true
 			end
 		end
-		fire("Gain", s.player, { xp = pay.xp, ups = ups, level = h.level })
+		fire("Gain", s.player, { xp = pay.xp, ups = ups, level = h.level, money = pay.money, dust = pay.dust }) -- 달돈 · 달가루도 획득 알림에(2026-10-18 검토)
 		if ups > 0 then
 			fire("Quests", s.player, Quests.view(h.quests))
 			sendWho(key)
@@ -62304,14 +63373,27 @@ local marketCache = {} -- [장부] = { at = 읽은 때(os.clock), doc } — 구�
 local function marketKeep(board: string, doc: any)
 	marketCache[board] = { at = os.clock(), doc = doc }
 end
+-- 저장소를 다시 읽는 새로 고침(강제)은 한 사람이 10초에 한 번 — 둘러보기 · 내 목록 · 사기의 다시 읽기가 같이 쓴다(2026-10-18 검토: 서버의 읽기 몫을 다 쓸 수 있었다)
+local function canForce(s): boolean
+	if s.marketForceAt ~= nil and os.clock() - s.marketForceAt < 10 then
+		return false
+	end
+	s.marketForceAt = os.clock()
+	return true
+end
 local function marketDoc(board: string, force: boolean?): (boolean, any)
 	local c = marketCache[board]
 	if c and os.clock() - c.at < (if force then MARKET_FRESH else MARKET.cache) then
 		return true, c.doc
 	end
+	local started = os.clock()
 	local ok, doc = Store.marketRead(board)
-	if ok then
+	-- 읽는 사이에 더 새로운 장부(쓰고 받은 것)가 들어왔으면 이 읽기로 덮지 않는다 — 옛 사본이 새 것을 덮어 「돌려받기」가 잘못 나올 수 있었다(2026-10-18 검토)
+	local now = marketCache[board]
+	if ok and not (now and now.at > started) then
 		marketKeep(board, doc)
+	elseif ok and now then
+		return ok, now.doc
 	end
 	return ok, doc
 end
@@ -62452,8 +63534,9 @@ local function marketFinish(s, id: string, hd, now: number, relist: boolean?)
 	elseif left > 0 and not marketRoom(h, Market.withUnits(hd.it, left)) then
 		return false, MWHY.bag, nil
 	end
-	if entry and left > 0 then
-		-- 닫는다: 그 사이에 더 팔렸으면 남은 수가 줄어 있다(늘지는 않는다)
+	if left > 0 then
+		-- 닫는다: 그 사이에 더 팔렸으면 남은 수가 줄어 있다(늘지는 않는다). 둔 장부(사본)에 없어도 늘 장부에 묻는다 — 사본이 옛 것이면
+		--  팔리는 중인 물건을 「돌려받기」로 처리해 물건이 둘이 될 수 있었다(2026-10-18 검토). 장부의 답(none)이 맞는 답이다
 		local wrote, res, l2, after = Store.marketUpdate(hd.b, function(old)
 			return Market.txClose(old, id, userId, now)
 		end)
@@ -62467,6 +63550,7 @@ local function marketFinish(s, id: string, hd, now: number, relist: boolean?)
 			r = Market.resolve(hd, nil, now)
 			left = r.left
 		else
+			entry = entry or true -- (장부에 있었다: 끝낸 뒤에 장부의 줄을 정리한다 — txSettle)
 			left = math.min(left, if typeof(l2) == "number" then l2 else left)
 			r = Market.resolve(hd, { l = left, c = 1, e = hd.e }, now)
 		end
@@ -62546,6 +63630,42 @@ local function marketFinishMsg(hd, out): string
 	end
 	return table.concat(parts, " · ")
 end
+-- ---------- 경매장에서 내 물건이 팔렸다(2026-10-18) ----------
+--  산 사람의 서버가 알린다: 판 사람이 이 서버에 있으면 바로(「Sold」), 아니면 다른 서버들에(MessagingService의 SOLD_TOPIC — 그 사람이 있는 서버가 받아 알린다).
+--  화면은 획득 알림에 「팔림: 「이름」 xN」 한 줄 · 「경매」 단추에 점. 대금은 전처럼 「완료」에서 받는다(알림은 보이기만 — 못 받아도 잃는 것이 없다)
+local SOLD_TOPIC = "LuneSold"
+local function soldHere(userId: number, name: string, n: number): boolean
+	for p, s in sessions do
+		if p.UserId == userId and s.hero then
+			fire("Sold", p, { name = name, n = n })
+			return true
+		end
+	end
+	return false
+end
+function World.notifySold(userId: number, name: string, n: number)
+	if soldHere(userId, name, n) then
+		return
+	end
+	task.spawn(function()
+		pcall(function()
+			game:GetService("MessagingService"):PublishAsync(SOLD_TOPIC, { u = userId, name = name, n = n })
+		end)
+	end)
+end
+local function listenSold()
+	task.spawn(function()
+		pcall(function()
+			game:GetService("MessagingService"):SubscribeAsync(SOLD_TOPIC, function(msg)
+				local d = msg and msg.Data
+				if typeof(d) == "table" and typeof(d.u) == "number" and typeof(d.name) == "string" and typeof(d.n) == "number" then
+					soldHere(d.u, d.name, d.n)
+				end
+			end)
+		end)
+	end)
+end
+
 local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 	local s = sessions[player]
 	if not s or not s.hero or not s.acct then
@@ -62570,13 +63690,14 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 	end
 	local function work()
 		if action == "mine" then
-			return reply(true, nil, { mine = marketMine(s, now, a == true) })
+			return reply(true, nil, { mine = marketMine(s, now, a == true and canForce(s)) })
 		elseif action == "browse" then
 			-- a = 장부 · b = 지금의 것으로(새로 고침). 목록과 시세(그 분류의 최근 거래)를 함께 준다
 			if not Market.isBoard(a) then
 				return reply(nil, MWHY.item)
 			end
-			local got, doc = marketDoc(a, b == true)
+			-- 새로 고침(저장소를 다시 읽는다)은 한 사람이 10초에 한 번(2026-10-18 검토: 장부를 돌아가며 새로 고쳐 서버의 저장소 몫을 다 쓸 수 있었다) — 그 사이에는 둔 것을 보여 준다
+			local got, doc = marketDoc(a, b == true and canForce(s))
 			if not got then
 				return reply(nil, MWHY.off)
 			end
@@ -62658,7 +63779,7 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 			end
 			local got, doc = marketDoc(a, false)
 			local seen = if got then Market.entryById(doc, b) else nil
-			if got and not seen then
+			if got and not seen and canForce(s) then
 				got, doc = marketDoc(a, true)
 				seen = if got then Market.entryById(doc, b) else nil
 			end
@@ -62702,6 +63823,7 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 			marketKeep(a, after)
 			-- 산 것은 「완료」에 「낙찰」로 들어온다(거기서 수령한다 — 메이플 옥션)
 			local row = Market.withUnits(entry.it, c)
+			World.notifySold(seen.u, Market.nameOf(row), c) -- 판 사람에게 「팔림」(2026-10-18)
 			marketHold(s, row, cost, now)
 			saveNow(s) -- 값을 치른 물건은 바로 저장한다
 			sendSelf(s)
@@ -62855,7 +63977,7 @@ local function onParty(player, action: string, target: any)
 			partyNote(fs.player, ("%s — 초대를 거절했다"):format(s.name))
 		end
 	elseif action == "leave" then
-		local left = Party.leave(book, me)
+		local left = partyLeave(me)
 		sendParty(left)
 		sendParty({ me })
 	end
@@ -62924,6 +64046,9 @@ function World.jump(player, key: string): boolean
 		return false
 	end
 	local from = s.scene
+	if not s.hero.alive then
+		Hero.revive(s.hero) -- (moveTo와 같다 — 관리 이동으로 쓰러진 사람을 옮겼다)
+	end
 	place(s, key, scene.spawn.x, scene.spawn.y, true)
 	local room = roomOf(s.scene):describe(s.hero.id)
 	room.who = roster(s.scene)
@@ -63358,7 +64483,11 @@ function World.tick(dt: number)
 	for i = #pending, 1, -1 do
 		if pending[i].at <= World.now then
 			local job = table.remove(pending, i)
-			job.fn()
+			-- 하나가 잘못돼도(2026-10-18 검토) 나머지 판정 · 이 틱의 다른 일(버프 · 방 · 저장)은 이어 간다
+			local ok, err = pcall(job.fn)
+			if not ok then
+				warn("[lune] 늦은 판정: " .. tostring(err))
+			end
 		end
 	end
 	stepBots(dt)
@@ -63436,6 +64565,8 @@ function World.tick(dt: number)
 					toRoom(key, "MobCast", { id = e.id, kind = e.kind, x = e.x, y = e.y, dir = e.dir })
 				elseif e.type == "shotEnd" then
 					toRoom(key, "ShotEnd", e.id)
+				elseif e.type == "elite" then
+					toRoom(key, "Elite", { room = key, mob = e.mob, kind = e.kind, x = e.x, y = e.y }) -- 사냥터 정예가 나왔다(2026-10-18)
 				elseif e.type == "dropGone" then
 					toRoom(key, "DropGone", e.id, nil, 0)
 				elseif e.type == "crystalGone" then
@@ -63538,6 +64669,7 @@ function World.start()
 			return s.guest == true or isBot(s.player) or Admin.isId(s.player.UserId)
 		end,
 	})
+	listenSold() -- 다른 서버에서 내 서버의 사람의 물건이 팔렸다는 알림(2026-10-18)
 	Net.OnServer("Ready", onReady)
 	Net.OnServer("Move", onMove)
 	Net.OnServer("Travel", Analytics.wrap("Travel", onTravel, World.session))
@@ -63581,17 +64713,18 @@ function World.start()
 	end
 	local saveT = 0
 	RunService.Heartbeat:Connect(function(dt)
-		acc = math.min(acc + dt, TICK * 5)
-		while acc >= TICK do
-			acc -= TICK
-			World.tick(TICK)
-		end
+		-- 저장의 때를 먼저 센다(2026-10-18 검토: 틱에서 오류가 나면 그 뒤의 저장 세기까지 건너뛰어, 오류가 이어지면 영영 저장하지 않았다)
 		saveT += dt
 		if saveT >= SAVE_EVERY then
 			saveT = 0
 			task.spawn(World.saveAll, true)
 		end
 		World.saveDue()
+		acc = math.min(acc + dt, TICK * 5)
+		while acc >= TICK do
+			acc -= TICK
+			World.tick(TICK)
+		end
 	end)
 end
 
@@ -63609,7 +64742,19 @@ function World.saveDue()
 end
 
 function World.stop()
-	World.saveAll(false)
+	-- 서버가 닫힌다(Roblox가 기다려 주는 30초 안): 사람마다 따로 · 한꺼번에 저장한다 — 잠금 새로 고침 · 순위판은 건너뛴다
+	--  (2026-10-18 검토: 한 사람씩 차례로 잠금 · 계정 · 순위판을 써서, 사람이 많으면 뒤쪽 사람의 마지막 1분이 저장되지 못할 수 있었다)
+	stopping = true
+	for _, s in sessions do
+		if (s.hero or s.dirty) and s.loaded and not s.guest then
+			task.spawn(function()
+				local ok, err = pcall(saveAccount, s)
+				if not ok then
+					warn("[lune] 저장하다 오류: " .. tostring(err))
+				end
+			end)
+		end
+	end
 	-- 나가는 사람의 저장(World.removePlayer — 그 사람은 이미 sessions에서 빠져 위의 saveAll이 보지 못한다)이 아직 쓰이는 중이면 끝날 때까지 기다린다(길어도 STOP_WAIT초).
 	--  혼자 하다가 나가면 서버가 곧바로 닫힌다 — 기다리지 않으면 마지막에 바꾼 것(키 설정처럼 방금 바꾼 것)이 저장되지 못한 채 서버가 닫힐 수 있다
 	local waited = 0
@@ -63619,7 +64764,7 @@ function World.stop()
 	-- 서버가 닫힌다: 저장한 뒤에 잡고 있던 계정을 모두 푼다
 	for _, s in sessions do
 		if s.held and Store.unlock then
-			Store.unlock(s.player.UserId)
+			pcall(Store.unlock, s.player.UserId)
 		end
 	end
 end
@@ -67899,6 +69044,9 @@ end
 
 -- 칸 크기가 바뀌었을 때(같은 글씨를 다른 폭에 맞춰 다시 그린다)
 function Label:SetMaxWidth(maxWidth: number?, maxLines: number?)
+	if self._maxWidth == maxWidth and self._maxLines == maxLines then
+		return -- 같은 폭이면 다시 그리지 않는다(내 상태가 올 때마다 이름을 다시 그렸다 — 2026-10-18 검토)
+	end
 	self._maxWidth, self._maxLines = maxWidth, maxLines
 	self:_render()
 end
@@ -68265,7 +69413,8 @@ local Windows = require(script.Parent.ui.windows)
 local StatWindow = require(script.Parent.ui.statWindow)
 local SkillWindow = require(script.Parent.ui.skillWindow)
 local KeysWindow = require(script.Parent.ui.keysWindow)
-local SoundWindow = require(script.Parent.ui.soundWindow) -- 소리 설정(메뉴 → 「소리 설정」)
+local SoundWindow = require(script.Parent.ui.soundWindow) -- 설정(메뉴 → 「설정」 — 소리 · 화면)
+local ViewOpts = require(script.Parent.viewOpts) -- 화면 설정: 다른 사람의 스킬 효과 · 피해 숫자를 보일지(2026-10-18)
 local DailyWindow = require(script.Parent.ui.dailyWindow) -- 일일 의뢰(마을의 의뢰 게시판 앞에서 ↑)
 local AttendWindow = require(script.Parent.ui.attendWindow) -- 출석(메뉴 → 「출석」 · 그날 처음 들어오면 한 번 — 2026-10-15)
 local AchieveWindow = require(script.Parent.ui.achieveWindow) -- 업적(메뉴 → 「업적」 — 2026-10-15)
@@ -68290,6 +69439,8 @@ local Kit = require(script.Parent.ui.kit) -- 부품 그림(퀘스트의 자리 �
 local Touch = require(script.Parent.touch)
 local Items = require(lune.sim.items)
 local Bag = require(lune.sim.bag)
+local Market = require(lune.sim.market) -- 경매장의 글(「팔림」 알림 — 2026-10-18)
+local REVIVE_GAP = require(lune.sim.party).LEVEL_GAP -- 소생이 닿는 레벨 차이(서버의 fallenIn과 같다)
 local Buffs = require(lune.sim.buffs) -- 2~4차의 버프(걸 수 있는지 · 다시 쓰기)
 local Kitset = require(lune.kitset) -- 직업 묶음(2~4차의 쓰는 스킬의 구간 — 동작과 이펙트)
 local Caster = require(lune.sim.caster) -- 2~4차의 쓰는 스킬의 셈(구간의 시간 · 모으는 단계 — 서버와 같은 것)
@@ -68309,6 +69460,8 @@ local Navi = require(lune.ui.navi) -- 퀘스트 길찾기(셈)
 local NaviArrow = require(script.Parent.naviArrow) -- 길찾기의 화살표(캐릭터 머리 위)
 local QuestHud = require(script.Parent.questHud)
 local Guide = require(script.Parent.guide)
+local MapName = require(script.Parent.mapName) -- 맵에 들어서면 위 가운데에 지역 · 맵 이름이 잠깐(2026-10-18)
+local GainLog = require(script.Parent.gainLog) -- 얻은 것을 줄로 쌓는 획득 알림(2026-10-18)
 local QuestWindow = require(script.Parent.ui.questWindow)
 local Grave = require(script.Parent.grave) -- 쓰러진 자리의 비석
 local DeathBox = require(script.Parent.ui.deathBox) -- 쓰러졌을 때 묻는 상자(마을로 돌아갈까요?)
@@ -68487,6 +69640,16 @@ local function crystalGone(id: number)
 	end
 end
 
+-- 막이 걷힌 뒤(2026-10-18): 경관이 있는 곳이면 경관(제 이름을 띄운다 — 맵 이름은 겹치므로 띄우지 않는다), 아니면 맵 이름
+local function afterLift()
+	local v = state.vistaPending
+	state.vistaPending = nil
+	if v then
+		VistaView.show(v)
+	else
+		MapName.show(state.sceneKey)
+	end
+end
 local function enterScene(key: string, x: number, y: number, room)
 	local scene = SCENES.scenes[key]
 	assert(scene, "없는 장면 " .. tostring(key))
@@ -68535,11 +69698,8 @@ local function enterScene(key: string, x: number, y: number, room)
 	if not Voyage.onShip(key) then
 		VoyageView.stop() -- 배에서 내렸다
 	end
-	if scene.vista then
-		VistaView.show(scene.vista) -- 경관(성의 테라스): 들어설 때마다 한 번
-	else
-		VistaView.stop()
-	end
+	VistaView.stop()
+	state.vistaPending = scene.vista -- 경관(성의 테라스): 들어설 때마다 한 번 — 막이 걷힌 뒤에 띄운다(afterLift — 2026-10-18 검토: 막 뒤에서 밝아지기가 먼저 지나갔다)
 	table.clear(state.npcNames)
 	for _, sc in SCENES.scenes do
 		for _, n in sc.npcs or {} do
@@ -68583,6 +69743,11 @@ local function enterScene(key: string, x: number, y: number, room)
 	}) -- 스토리 보스가 서는 방이면 그 예고와 이펙트 · 잔상 · 화면 흔들림(없는 방에서는 아무것도 하지 않는다)
 	state.actor = state.cast:actor(state.myId or 0, state.who, true)
 	state.actor.x, state.actor.y = x, y
+	-- 걸려 있는 버프의 모습(거신의 큰 몸 등) · 공격 속도를 새 장면의 몸에도(2026-10-18 검토: 문을 지나면 내 상태가 다시 오지 않아 사라졌다)
+	if state.buffs then
+		state.cast:setBuffs(state.actor, state.buffs)
+	end
+	state.actor.haste = state.haste or 1
 	-- 직업 묶음의 스킬이 내 몸을 옮긴다(밀고 나가기 · 뛰기 · 돌아보기 · 순간이동). 자리는 여기(화면)가 정하고 서버에 알린다
 	state.cast.control = {
 		move = function(v: number, t: number)
@@ -68654,7 +69819,9 @@ local function goScene(want: any)
 			end
 		end
 		Curtain.lift()
+		afterLift() -- 막이 걷히면 맵 이름(2026-10-18) · 경관이 있는 곳이면 경관
 		sceneRunning = false
+		Input.flush() -- 까만 동안 누른 것은 버린다
 		state.busy = false
 	end)
 end
@@ -68941,7 +70108,9 @@ local function trySkill(id: string, action: string?)
 		if castDef.heal and castDef.heal.revive then
 			local found = false
 			for oid, o in state.others.list do
-				if o.placed and not o.alive and state.partySet[oid] and math.abs(o.x - state.body.x) <= castDef.heal.reach and math.abs(o.y - state.body.y) <= 80 then
+				-- 레벨 차이도 서버와 같게(Party.LEVEL_GAP 20 — 2026-10-18 검토: 화면은 써지고 다시 쓰기가 돌았는데 서버는 아무것도 하지 않았다)
+				if o.placed and not o.alive and state.partySet[oid] and math.abs(o.x - state.body.x) <= castDef.heal.reach and math.abs(o.y - state.body.y) <= 80
+					and math.abs((o.level or 0) - (if state.me then state.me.level else 0)) <= REVIVE_GAP then
 					found = true
 				end
 			end
@@ -69051,7 +70220,7 @@ local function step()
 		if state.deadT >= RULES.reviveWait and not DeathBox.shown() then
 			DeathBox.show(Hud.root, function()
 				Net.FireServer("Return")
-			end)
+			end, math.ceil(((state.me and state.me.weak) or 0) / 60))
 		end
 	end
 	if state.dead or state.busy then
@@ -69090,6 +70259,9 @@ local function step()
 	end
 	-- 대화창이 떠 있는 동안에는 걷지 않고 스킬도 쓰지 않는다 — ↑로도 넘긴다(2026-10-14: 일반 도트 게임의 대화창처럼)
 	if Talk.npc then
+		if Talk.inMenu() and Input.take("down") then
+			Talk.menuMove(1) -- 고르는 말: ↓ = 다음 줄(2026-10-18)
+		end
 		if Input.take("up") then
 			Talk.next(Talk.npc)
 		end
@@ -69185,11 +70357,12 @@ local function step()
 		end
 	end
 	-- 일을 봐 주던 주민에게서 멀어지면 그 창이 닫힌다
-	if state.ui.npc and (state.sceneKey ~= state.ui.scene or math.abs(state.ui.npc.x - body.x) > 70) then
+	if state.ui.npc and (state.sceneKey ~= state.ui.scene or math.abs(state.ui.npc.x - body.x) > 60 or math.abs(state.ui.npc.y - body.y) > 40) then -- 서버의 nearNpc(가로 64 · 세로 40)보다 조금 안쪽에서 닫는다(2026-10-18 검토: 창은 열려 있는데 서버가 「앞이 아니다」라고 했다)
 		state.ui.npc = nil
 		Windows.close("shop")
 		Windows.close("forge")
 		Windows.close("daily")
+		Windows.close("rift") -- 토벌 창도(2026-10-18 검토: 「입장」 뒤 토벌의 방 안에서도 열려 있었다)
 	end
 	-- 말하던 주민에게서 멀어지면 대화가 닫힌다
 	if Talk.npc and math.abs(Talk.npc.x - body.x) > 44 then
@@ -69240,6 +70413,7 @@ local function step()
 		-- 2~4차의 스킬 중(시험 탭과 같은 법): 걸으며 쓰는 구간은 그 빠르기로 걷고(돌아볼 수 있는 구간은 돌아본다), 밀고 나가는 것(g.move)은 그 빠르기로,
 		--  뛰다가 쓴 것은 땅에 닿을 때까지 뛰던 기세를 잇고, float 구간은 떨어지지 않는다
 		local s = sk.s
+		body.climb = nil -- 기술을 쓰면 사다리를 놓는다(2026-10-18 검토 — 걸으며 쓰는 기술은 사다리에 붙은 채였다)
 		if mx ~= 0 and s.turn then
 			state.dir = mx
 		end
@@ -69267,6 +70441,7 @@ local function step()
 		Input.take("jump")
 	elseif sk then
 		-- 기술 중: 걷지 않는다(걸으며 쓰는 기술은 느리게 걷는다). 이동기(대쉬)는 보는 쪽으로 밀고 나가며 떨어지지 않는다
+		body.climb = nil -- 기술을 쓰면 사다리를 놓는다(2026-10-18 검토)
 		local moving = sk.vx ~= nil and sk.t < sk.move
 		local walk = sk.def.segs[sk.seg].walk or 0
 		if moving then
@@ -69323,6 +70498,10 @@ local function step()
 end
 
 local paintBuffs: () -> () -- 버프 자리를 그린다(아래에서 짓는다)
+-- 폰의 「메뉴」 단추의 점(2026-10-18): 받을 출석 · 업적 · 모험의 서(state.moreMark)에 더해 — 폰에서는 가방 · 경매 단추가 「메뉴」 안에 있어 그 점(가방이 가득 참 · 팔림)도 여기에 모은다
+local function phoneMark()
+	Touch.markMenu(state.moreMark == true or Hud.marks.bag == true or Hud.marks.auction == true)
+end
 
 -- ---------- 퀘스트 연출(장면 — 2026-10-15) ----------
 --  사용자: "현재 메인 퀘스트 라인 너무스토리 몰입이 안됩니다 … 몰입되는 중간에 연출이 있는것도아니고 다른게임들 어떻게 스토리 진행하는지 좀 파악하고 만들어야합니다."
@@ -69373,7 +70552,7 @@ local function cineWorld()
 			end
 			for _, m in state.mobs.mobs do
 				if m.def.story and m.state ~= "dead" then
-					return { x = m.x, y = m.y }
+					return { x = m.x, y = m.info.y } -- 높이는 info에(2026-10-18 검토: m.y는 없어 nil이었다)
 				end
 			end
 			return nil
@@ -69383,6 +70562,20 @@ local function cineWorld()
 	}
 end
 -- 줄의 맨 앞 장면을 튼다(틀 수 있을 때)
+-- 「메뉴」 판(PC · 폰) · 폰의 단추 배치를 닫는다: 장면 · 대화가 시작될 때(2026-10-18 검토: 그 판들이 대화창 · 장면 위에 떠서 누를 수 있었고,
+--  폰에서는 판을 닫는 「메뉴」 단추가 숨어 고를 수밖에 없었다)
+local function closeMenus()
+	if state.closeMore then
+		state.closeMore()
+	end
+	if state.closeTouchMenu then
+		state.closeTouchMenu()
+	end
+	if Touch.arranging then
+		Touch.arrange(false)
+	end
+end
+
 local function playCine()
 	if CineView.active() or #state.cineQueue == 0 or state.busy or state.dead or Curtain.covered() or not state.view then
 		return
@@ -69394,7 +70587,16 @@ local function playCine()
 	if state.cineSeen[def.id] or (state.me and state.me.cine and table.find(state.me.cine, def.id)) then
 		return
 	end
-	Net.FireServer("Cine", "on", nil) -- 그동안 맞지 않는다
+	-- 기술을 쓰는 중이면 그 기술을 멈춘다(2026-10-18 검토: 마지막 한 마리를 잡은 「목표 달성」 장면이 기술 도중에 오면 캐릭터가 휘두르는 자세로 굳었고, 장면 뒤에 남은 동작 · 대쉬가 나갔다)
+	state.skill, state.push = nil, nil
+	clearPips()
+	Net.FireServer("Cine", "on", def.id) -- 그동안 맞지 않는다(어느 장면인지 알린다 — 서버는 아직 안 본 장면만 받는다)
+	closeMenus()
+	for _ = 1, 20 do -- 열린 창도 닫는다(장면의 위에 그려지고 단추가 눌렸다)
+		if not Windows.closeTop() then
+			break
+		end
+	end
 	Hud.root.Visible = false
 	if Touch.root then
 		Touch.root.Visible = false
@@ -69506,7 +70708,7 @@ local function draw(dt: number)
 	HallStones.update()
 	-- 스마트폰의 상호작용 단추가 지금 할 일: 떨어진 물건 → 문 → 주민의 차례로 가까운 것
 	if Touch.on then
-		Touch.setAct(if state.dead then nil elseif state.fx and state.fx:dropNear(body.x, body.y, RULES.pickup) then "pickup" elseif state.view:portalNear(body.x, body.y) or state.view:warpNear(body.x, body.y) then "portal" elseif nearSpot(body.x, body.y) then "spot" elseif state.view:npcNear(body.x, body.y) then "npc" else nil)
+		Touch.setAct(if state.dead then nil elseif state.fx and state.fx:dropNear(body.x, body.y, RULES.pickup) then "pickup" elseif state.view:portalNear(body.x, body.y) or state.view:warpNear(body.x, body.y) then "portal" elseif nearSpot(body.x, body.y) then "spot" elseif state.view:npcNear(body.x, body.y) then "npc" elseif SCENES.scenes[state.sceneKey].vista and SCENES.scenes[state.sceneKey].vista.x and math.abs(body.x - SCENES.scenes[state.sceneKey].vista.x) <= 40 then "vista" else nil)
 	end
 	state.mobs:update(if held then state.holdNow else state.now) -- 멈칫하는 동안은 몬스터의 그림도 멈춘 순간 그대로(하얗게 번쩍인 채)
 	state.boss:update(dt)
@@ -69658,6 +70860,63 @@ local function applyKit(me)
 	syncKit()
 end
 
+-- 버프 그림의 설명(2026-10-18 — 공방 ui.js BUFFTIP · 시험 탭의 buffTipOf와 같은 글): 칸마다 { kind, title, tag, lines } — Hud가 마우스를 올리면 띄운다
+local BUFFTIP = UI_DATA.buffTip
+local SkillDamage = require(lune.ui.skillDamage)
+local skillInfo = {} -- [스킬] = 설계의 한 줄(이름 · 최고 레벨 · 설명) — 다섯 직업의 1차 스킬과 차수마다의 스킬
+for _, c in CLASSES.classes do
+	for _, sk in c.skills or {} do
+		skillInfo[sk.id] = sk
+	end
+	for _, tier in c.tiers or {} do
+		for _, sk in tier.skills or {} do
+			skillInfo[sk.id] = sk
+		end
+	end
+end
+local function leftText(s: number): string
+	local t = if s >= 60 then Format.fill(BUFFTIP.min, { m = math.ceil(s / 60) }) else Format.fill(BUFFTIP.sec, { s = math.ceil(s) })
+	return Format.fill(BUFFTIP.left, { t = t })
+end
+-- 그 스킬의 효과 한 줄: 내가 배운 스킬이면 그 레벨의 「지금」 글(스킬 창과 같다), 아니면(파티원이 건 버프) 스킬의 설명
+-- 그 레벨의 효과 글은 스킬과 레벨로만 정해진다 — 기억해 두고 다시 쓴다(버프 줄이 매 장면 부른다 · 2026-10-18 검토)
+local effectMemo: { [string]: string } = {}
+local function effectOf(id: string): string
+	local lv = state.me and state.me.skills and state.me.skills[id] or 0
+	local key = id .. ":" .. lv
+	local memo = effectMemo[key]
+	if memo then
+		return memo
+	end
+	local text = if lv > 0 then SkillDamage.text(id, lv) else nil
+	local out = text or (skillInfo[id] and skillInfo[id].text) or ""
+	effectMemo[key] = out
+	return out
+end
+local function nameOf(id: string): string
+	return skillInfo[id] and skillInfo[id].name or id
+end
+
+-- 퀵슬롯 칸의 설명(2026-10-18 — PC에서 칸에 마우스를 올리면): 스킬 = 이름 · 갈래 · Lv · 설명 · 그 레벨의 효과 / 소비 아이템 = 이름 · 가진 수 · 설명
+Hud.slotTipOf = function(what: string)
+	if Windows.isOpen("skill") then
+		return nil -- 스킬 창이 열려 있으면(칸을 고치는 중) 설명을 띄우지 않는다(시험 탭과 같다 — 2026-10-18 검토)
+	end
+	local goods = Items.goods(what)
+	if goods then
+		return { kind = "main", title = goods.name, tag = ("x%d"):format(Bag.countIn(state.bag, what)), lines = { goods.text or "" } }
+	end
+	local sk = skillInfo[what]
+	if not sk then
+		return nil
+	end
+	local lv = state.me and state.me.skills and state.me.skills[what] or 0
+	local typeName = CLASSES.types and CLASSES.types[sk.type] or ""
+	-- 효과 줄은 그 레벨의 효과가 있을 때만(배우지 않았으면 effectOf가 설명을 돌려줘 같은 글이 두 줄 나왔다 — 2026-10-18 검토)
+	local effect = if lv > 0 then SkillDamage.text(what, lv) else nil
+	return { kind = "sub", title = sk.name, tag = if lv > 0 then ("%s · Lv.%d"):format(typeName, lv) else typeName, lines = if effect and effect ~= "" and effect ~= sk.text then { sk.text or "", effect } else { sk.text or "" } }
+end
+
 -- 버프 자리(오른쪽 위): 켜 둔 사출기(시간 없이 맨 오른쪽) → 걸린 버프(건 차례로 — 그림 아래에 남은 초) → 열기(살라맨더).
 --  장마다 부르지만 글이 바뀔 때(1초에 한 번)만 다시 그린다(Hud.setBuffs)
 paintBuffs = function()
@@ -69668,18 +70927,23 @@ paintBuffs = function()
 	local k = KitSim.data[state.who]
 	local list = {}
 	if me.kit.on then
-		table.insert(list, { pic = "skill_" .. k.toggle.id, text = "" })
+		table.insert(list, { pic = "skill_" .. k.toggle.id, text = "", tip = { kind = "sub", title = nameOf(k.toggle.id), tag = BUFFTIP.on, lines = { effectOf(k.toggle.id), BUFFTIP.onLine } } })
 	end
 	local passed = state.now - (state.buffAt or state.now)
 	for _, b in state.buffs or {} do
 		local left = b.t - passed
 		if left > 0 then
-			table.insert(list, { pic = "skill_" .. b.id, text = tostring(math.ceil(left)), hot = left < 5 })
+			table.insert(list, { pic = "skill_" .. b.id, text = tostring(math.ceil(left)), hot = left < 5, tip = { kind = "sub", title = nameOf(b.id), tag = "", lines = { effectOf(b.id), leftText(left) } } })
 		end
 	end
 	-- 열기(살라맨더): 발밑의 막대(직업 묶음이 그린다)는 이름표에 가려 잘 보이지 않는다 — 버프 자리에 값을 같이 적는다(달아오르면 노랑)
 	if state.who == "salamander" and me.kit.heat > 0 then
-		table.insert(list, { pic = "skill_" .. k.core.id, text = tostring(me.kit.heat), hot = me.kit.hot })
+		table.insert(list, { pic = "skill_" .. k.core.id, text = tostring(me.kit.heat), hot = me.kit.hot, tip = { kind = "sub", title = nameOf(k.core.id), tag = "", lines = { Format.fill(BUFFTIP.heat, { n = me.kit.heat }), effectOf(k.core.id) } } })
+	end
+	-- 약해짐(쓰러진 벌칙 — 경험치 · 물건을 덜 얻는다): 해골 그림 · 1분이 넘으면 「N분」, 그 아래는 초(2026-10-18 — 전에는 보이지 않아 왜 덜 얻는지 알 수 없었다)
+	local weak = (state.weakLeft or 0) - (state.now - (state.weakAt or state.now))
+	if weak > 0 and not state.dead then
+		table.insert(list, { pic = "buff_death", text = if weak >= 60 then ("%d분"):format(math.ceil(weak / 60)) else tostring(math.ceil(weak)), tip = { kind = "none", title = BUFFTIP.weak.title, tag = "", lines = { BUFFTIP.weak.text, leftText(weak), BUFFTIP.weak.hint } } })
 	end
 	Hud.setBuffs(list)
 	QuestHud.setBuffs(#list > 0) -- 퀘스트 알리미는 버프가 없을 때만 그 자리로 올라붙는다
@@ -69691,15 +70955,25 @@ local function listen()
 	Net.OnClient("Self", function(me)
 		local jobWas = state.me and state.me.job
 		state.me = me
+		state.weakLeft, state.weakAt = me.weak or 0, state.now -- 쓰러진 벌칙(약해짐)의 남은 초 — 받은 때부터 화면이 센다(paintBuffs)
 		if jobWas and me.job and me.job > jobWas and state.onJob then
 			state.onJob(me) -- 전직했다: 윗차수의 사냥기 · 보스기가 놓인 칸을 서버의 것으로 맞춘다
+		elseif state.onJob and me.slots and me.skills then
+			-- 스킬을 되돌렸다(초기화): 서버가 칸에서 배우지 않은 스킬을 뺐다 — 화면의 칸도 서버의 것으로(2026-10-18 검토: 사라진 스킬이 칸에 남아 다음 고치기가 한 번 튕겼다)
+			for _, what in state.slots or {} do
+				if what and not Quick.item(what) and (me.skills[what] or 0) <= 0 then
+					state.onJob(me)
+					break
+				end
+			end
 		end
 		Hud.setLocked(skillsLocked()) -- 스킬 칸의 잠금은 내 상태가 올 때마다 맞춘다(레벨이 먼저 오르는 경우에도 풀린다)
 		applyKit(me)
 		Hud.setSelf(me)
 		local mark = (me.attReady or 0) + (me.achReady or 0) > 0 or (state.bond ~= nil and Bond.ready(state.bond)) -- 받을 출석 칸 · 업적 보상(2026-10-15) · 호감도 · 모험의 서의 보상(2026-10-16)
 		Hud.markMenu("more", mark)
-		Touch.markMenu(mark)
+		state.moreMark = mark
+		phoneMark()
 		Windows.refresh(me)
 		if state.tag and state.tagLevel ~= me.level then
 			state.tagLevel = me.level
@@ -69750,7 +71024,10 @@ local function listen()
 					-- 색: 보통의 타는 흰 숫자, 크리티컬만 때린 사람 직업의 밝은 색 숫자(사용자 2026-10-14: "크리티컬이 아닌 일반공격이 하얀색, 크리티컬이 뜨는게 색깔들어간 데미지 폰트") — 센 타도 크리티컬이 아니면 희다.
 					--  크리티컬은 줄마다 따로 굴린다(h.crits[몇째 줄] — 서버의 Room:strike). crits가 없으면 그 타 전체가 크리티컬인가(h.crit — 흘리기 · 쪼개지 않은 타)
 					local crit = if h.crits then h.crits[line] == true else h.crit == true
-					state.fx:number(lines[line], m.x, m.info.y - MobsView.topOf(m) - LINES.rise * (line - 1), if crit then Effects.BIG[tone] else Effects.DEAL, crit)
+					local mine = by == state.myId
+					if mine or ViewOpts.nums then -- 다른 사람의 피해 숫자는 설정의 「화면」에서 끌 수 있다(2026-10-18)
+						state.fx:number(lines[line], m.x, m.info.y - MobsView.topOf(m) - LINES.rise * (line - 1), if crit then Effects.BIG[tone] else Effects.DEAL, crit)
+					end
 					-- 타격감(공방 combat.js의 hit): 몬스터가 하얗게 번쩍이며 때린 쪽의 반대로 조금 밀리고, 맞은 자리에 불꽃과 파편이 튄다.
 					--  내가 직접 때린 타(따로 나가는 사출기 · 장치의 타는 빼고)에는 그림이 잠깐 멈칫한다 — gap초에 한 번만(연타가 굼떠지지 않게)
 					local a = actorOf(by)
@@ -69758,7 +71035,7 @@ local function listen()
 					if first then
 						MobsView.hit(m, state.now, dir)
 					end
-					if first or (last and h.dead) then
+					if (first or (last and h.dead)) and (mine or ViewOpts.fx) then -- 맞은 자리의 불꽃 · 파편(다른 사람의 것은 「스킬 효과」를 끄면 없다 — 몬스터의 번쩍임은 그대로)
 						state.cast:hurt(m, Cast.tone(tone), h.big, h.dead and last, dir)
 					end
 					local H = RULES.hit
@@ -69775,7 +71052,7 @@ local function listen()
 				end
 				-- 따로 나가는 타(사출기 · 장치): 그 직업의 이펙트가 날아가 닿는 순간에 숫자가 뜬다(달빛 도끼 · 표창 · 도깨비불 · 수정 조각 · 불티 · 불꽃).
 				--  그 사람이 아직 화면에 없으면(방금 들어왔다) 숫자만 바로 띄운다
-				if not (h.proc and state.cast:proc(actorOf(by), h.proc, m, h.sx, h.sy, function()
+				if not (h.proc and (by == state.myId or ViewOpts.fx) and state.cast:proc(actorOf(by), h.proc, m, h.sx, h.sy, function()
 					land(1)
 				end, h)) then
 					land(1)
@@ -69823,6 +71100,11 @@ local function listen()
 	Net.OnClient("Warp", function(x, y)
 		if state.body and typeof(x) == "number" and typeof(y) == "number" then
 			state.body.x, state.body.y, state.body.vx, state.body.vy = x, y, 0, 0
+			state.body.climb = nil -- 사다리를 잡고 있었으면 놓는다(그대로면 다음 장에 사다리로 끌려가 서버와 엇갈렸다 — 2026-10-18 검토)
+			state.push = nil -- 밀려나는 중 · 스킬이 몸을 밀고 나가는 중이면 멈춘다(그대로면 다시 멀어져 한 번 더 되돌려졌다 — 2026-10-18 검토)
+			if state.skill then
+				state.skill.imp = nil
+			end
 			state.sentX = -1
 		end
 	end)
@@ -69847,14 +71129,31 @@ local function listen()
 		if e.dead then
 			state.dead = true
 			state.deadT = 0
+			if Talk.npc and Talk.npc ~= Talk.CINE then
+				Talk.close() -- 대화창이 떠 있으면 닫는다(대화창이 늘 보이는 화면을 가려 쓰러진 상자가 보이지 않았다 — 2026-10-18 검토)
+			end
 			state.skill = nil
+			state.body.climb, state.push = nil, nil -- 사다리 위에서 쓰러지면 비석이 공중에 남지 않게(2026-10-18 검토)
 			state.fx:float("쓰러졌다", state.body.x, state.body.y - 46, Effects.PINK, 2.2)
 			Music.sfx("gameover") -- 효과음(배경 음악은 줄이지 않는다 — 사용자 2026-10-14: 사망 징글은 없다)
 		end
 	end)
 	Net.OnClient("Gain", function(e)
 		state.fx:float("+" .. e.xp, state.body.x, state.body.y - 34, Effects.MINT)
+		GainLog.xp(e.xp)
+		if typeof(e.money) == "number" and e.money > 0 then
+			GainLog.money(e.money) -- 퀘스트 · 일일 의뢰 · 토벌 보상의 달돈(2026-10-18)
+		end
+		if typeof(e.dust) == "number" and e.dust > 0 then
+			GainLog.dust(e.dust)
+		end
 		if e.ups > 0 then
+			GainLog.level(e.level)
+			-- 레벨 업 연출(2026-10-18): 화면 위쪽 가운데의 큰 알림 + 캐릭터 둘레의 빛(전에는 머리 위 글씨와 소리뿐이었다)
+			Guide.banner(("레벨 업! Lv.%d"):format(e.level), nil, 2.5)
+			if state.cast and state.actor then
+				state.cast:levelUp(state.actor)
+			end
 			state.fx:float("레벨 업! Lv." .. e.level, state.body.x, state.body.y - 48, Effects.GOLD, 1.8)
 			Music.jingle("victory")
 			if e.level >= Daily.FROM then
@@ -69880,19 +71179,35 @@ local function listen()
 		if d and taker == myId then
 			if d.kind == "gear" then
 				state.fx:float(ItemCell.label(d.item), d.x, d.y - 18, ItemCell.color(d.item), 1.6)
+				GainLog.item(ItemCell.label(d.item), ItemCell.color(d.item))
 			elseif d.kind == "quest" or d.kind == "goods" then
 				state.fx:float("+1 " .. tostring(d.name), d.x, d.y - 18, if d.kind == "quest" then Effects.GOLD else Effects.MINT, 1.2) -- 퀘스트의 물건은 노랑 · 재료와 물약은 민트
+				GainLog.item(tostring(d.name), if d.kind == "quest" then Ui.COLOR.gold else nil)
 			elseif d.kind == "dust" then
 				state.fx:float("+" .. Format.short(amount) .. " 달가루", d.x, d.y - 18, Effects.MINT)
+				GainLog.dust(amount or 0)
 			else
 				state.fx:float("+" .. Format.short(amount) .. " 달돈", d.x, d.y - 18, Effects.GOLD)
+				GainLog.money(amount or 0)
 			end
 		end
 	end)
 	-- 같은 맵의 다른 사람들: 이름표 · 자리 · 기술
 	Net.OnClient("Who", function(key, roster)
 		if key == state.sceneKey and state.others then
+			local before = {}
+			for id in state.others.list do
+				before[id] = true
+			end
 			state.others:setWho(roster)
+			-- 맵을 떠난 사람의 효과(영혼 · 수정 · 열기 · 버프의 모습)를 걷는다(2026-10-18 검토: 남아서 그 자리에 계속 그려졌다)
+			if state.cast then
+				for id in before do
+					if not state.others.list[id] and id ~= state.myId then
+						state.cast:drop(id)
+					end
+				end
+			end
 			Windows.refresh(state.me)
 		end
 	end)
@@ -69912,7 +71227,7 @@ local function listen()
 		-- 다른 사람이 버프를 건다 · 설치 · 소환을 놓는다(바로 놓이는 것): 그 순간의 이펙트
 		if Buffs.instant(skillId) or (COMBAT.placed[skillId] and COMBAT.placed[skillId].cast == "instant") then
 			local o = state.others and state.others.list[id]
-			if o and state.cast then
+			if o and state.cast and ViewOpts.fx then -- 다른 사람의 스킬 효과(설정의 「화면」에서 끌 수 있다 — 2026-10-18)
 				local a = state.cast:actor(id, o.class, false)
 				a.x, a.y, a.dir = x, y, dir
 				state.cast:instant(a, skillId)
@@ -69922,7 +71237,7 @@ local function listen()
 		-- 2~4차의 스킬 가운데 쓰는 동작이 없는 것(열 방출)
 		if COMBAT.cast[skillId] and Kitset.skill(skillId) and Kitset.skill(skillId).instant then
 			local o = state.others and state.others.list[id]
-			if o and state.cast then
+			if o and state.cast and ViewOpts.fx then -- 다른 사람의 스킬 효과(설정의 「화면」에서 끌 수 있다 — 2026-10-18)
 				local a = state.cast:actor(id, o.class, false)
 				a.x, a.y, a.dir = x, y, dir
 				state.cast:instant(a, skillId)
@@ -69934,7 +71249,7 @@ local function listen()
 			-- 그 사람의 기술의 이펙트(이동기는 othersView가 잔상 · 속도선을 낸다)
 			local o = state.others.list[id]
 			local def = COMBAT.skills[skillId] or COMBAT.cast[skillId]
-			if o and def and def.type ~= "move" and state.cast then
+			if o and def and def.type ~= "move" and state.cast and ViewOpts.fx then
 				local a = state.cast:actor(id, o.class, false)
 				a.x, a.y, a.dir = x, y, dir
 				state.cast:start(a, skillId, seg, lv or 0)
@@ -69992,6 +71307,7 @@ local function listen()
 		local def = doneId and Quests.def(doneId)
 		if def and state.fx and def.kind ~= "job" then -- 전직은 화면 가운데의 큰 알림이 알린다
 			state.fx:float(("「%s」 완료"):format(def.name), state.body.x, state.body.y - 84, Effects.GOLD, 2.2) -- 쌓인 이름표 · 레벨 업 글씨보다 위에
+			GainLog.quest(def.name)
 			Music.sfx("success") -- 효과음(사용자 2026-10-14: 퀘스트 완료 징글은 없다)
 		end
 		-- 사제에게 첫 기술을 배웠다: 스킬 칸이 생긴다
@@ -70014,6 +71330,18 @@ local function listen()
 	end)
 	Net.OnClient("Bag", function(bag)
 		state.bag = bag
+		-- 가방이 가득 찼다(2026-10-18): 가방 단추에 점 · 새로 가득 찬 탭은 획득 알림에 한 줄(들어올 때의 첫 상태는 알리지 않는다)
+		local full, now = Bag.fullTabs(bag), {}
+		Hud.markMenu("bag", #full > 0)
+		phoneMark()
+		for _, tab in full do
+			now[tab] = true
+			if state.bagFull and not state.bagFull[tab] then
+				local i = table.find(Bag.TABS, tab) or 1
+				GainLog.add("note", Format.fill(UI_DATA.words.bagFull, { tab = Items.data.BAG.tabs[i] }), Ui.COLOR.red)
+			end
+		end
+		state.bagFull = now
 		Hud.setCounts() -- 퀵슬롯에 놓인 소비 아이템의 수
 		Touch.setCounts()
 		Windows.refresh(state.me)
@@ -70025,12 +71353,16 @@ local function listen()
 			state.ui.forgeResult = if e.ok then e.result else nil
 			state.ui.forgeWhy = if e.ok then nil else e.why
 			state.ui.forgeSeq = (state.ui.forgeSeq or 0) + 1
+		elseif e.action == "restore" and not e.ok then
+			state.ui.forgeWhy = e.why -- 되살리기가 안 됐다: 대장장이 창의 결과 줄에(머리 위에만 떴다 — 2026-10-18 검토)
 		elseif e.action == "restore" and e.ok then
 			state.ui.forgeResult, state.ui.forgeWhy, state.ui.forgeMat = "restore", nil, nil -- 「되살렸다 — 12성」(대장장이 창의 RESULT — 붉은 「안 된 까닭」 줄이 아니다)
 		elseif e.action == "dismantle" and e.ok and state.fx then
 			state.fx:float("+" .. Format.short(e.result) .. " 달가루", state.body.x, state.body.y - 34, Effects.MINT)
 		elseif e.action == "sell" and e.ok and state.fx then
 			state.fx:float("+" .. Format.short(e.result) .. " 달돈", state.body.x, state.body.y - 34, Effects.GOLD) -- 상점에 팔았다
+		elseif e.action == "use" and e.ok and e.why and state.fx then
+			state.fx:float(e.why, state.body.x, state.body.y - 46, Effects.MINT, 1.6) -- 달빛 부적 · 능력치 초기화 주문서를 썼다(「약해짐이 풀렸다」 · 「능력치를 모두 되돌렸다」 — 2026-10-18 검토: 전에는 실패만 띄웠다)
 		elseif e.action == "craft" and e.ok and e.result then
 			state.ui.craftResult = e.result -- 대장장이가 만들어 준 장비(제작 창이 이름을 적는다)
 			if state.fx then
@@ -70057,15 +71389,44 @@ local function listen()
 			state.fx:endShot(id)
 		end
 	end)
+	-- 경매장에 올린 것이 팔렸다(2026-10-18 — 다른 서버의 구매도 서버가 옮겨 준다): 획득 알림 한 줄 · 「경매」 단추의 점(경매장을 열면 꺼진다)
+	Net.OnClient("Sold", function(e)
+		if typeof(e) ~= "table" then
+			return
+		end
+		GainLog.add("note", Format.fill(Market.WORDS.soldNote, { name = tostring(e.name), n = tonumber(e.n) or 1 }), Ui.COLOR.gold)
+		if not Windows.isOpen("auction") then
+			Hud.markMenu("auction", true)
+			phoneMark()
+		end
+	end)
+	-- 사냥터 정예가 나왔다(2026-10-18 — 공방 combat.js FIELD_ELITE): 나온 자리의 높이로 옮겨 그리고(다른 층의 자리일 수 있다) 화면 위 가운데에 알림
+	Net.OnClient("Elite", function(e)
+		if e.room ~= state.sceneKey then
+			return -- 그새 맵을 옮겼다
+		end
+		local m = state.mobs and state.mobs.mobs[e.mob]
+		if m then
+			m.info.y = e.y
+		end
+		if state.cast and e.x then
+			state.cast:eliteRise(e.x, e.y) -- 그 자리에서 분홍 기운이 솟는다
+		end
+		local def = COMBAT.mobs[e.kind]
+		local words = COMBAT.fieldElite.words
+		Guide.banner(Format.fill(words.head, { name = if def then def.name else "" }), words.sub, 3)
+	end)
 	-- 서버가 나를 다른 장면으로 옮겼다(마을로 돌아가기 · 관리 이동): 문을 지날 때와 같은 길로(막 → 그리기 → 그림 불러오기 → 막 걷기)
 	Net.OnClient("Revive", function(e)
 		state.dead = false
+		Input.flush() -- 쓰러져 있는 동안 누른 것은 버린다
 		DeathBox.hide()
 		goScene(e)
 	end)
 	-- 소생을 받아 그 자리에서 일어났다(관리의 「체력 채우기」로 일어났을 때도)
 	Net.OnClient("Raise", function(_e)
 		state.dead = false
+		Input.flush()
 		state.blink = 2
 		DeathBox.hide()
 		if state.fx then
@@ -70107,8 +71468,16 @@ function Boot.start()
 	Hud.root.Visible = false
 	preload({ "title_", "chars_", "ui_kit", "font_" }, nil)
 	local first = Net.Invoke("Ready")
+	for _ = 1, 30 do -- 서버가 아직 계정을 읽는 중이었다(답이 비었다): 조금 뒤 다시 묻는다(2026-10-18 검토 — 전에는 검은 화면에 멈췄다 · 서버는 잠긴 계정을 40초까지 기다린다)
+		if first then
+			break
+		end
+		task.wait(2)
+		first = Net.Invoke("Ready")
+	end
 	if first and first.select then
 		Music.import(first.select.sound) -- 계정에 저장된 소리 설정(처음 화면부터 그 크기로)
+		ViewOpts.import(first.select.sound) -- 같은 표의 화면 설정(다른 사람의 스킬 효과 · 피해 숫자)
 		Music.play(MUSIC.title)
 		-- 로딩 화면 → START → 캐릭터 고르기. 캐릭터로 들어가면 서버가 준 내 상태와 방을 받아 이어 간다(그동안 늘 보이는 화면은 숨긴다)
 		first = Title.run(first.select, {
@@ -70122,8 +71491,14 @@ function Boot.start()
 	else
 		preload(nil, nil) -- 확인용 임시 캐릭터(LuneGuest = 직업): 처음 화면 없이 바로 들어간다
 	end
+	if not (first and first.self) then
+		-- 끝내 받지 못했다: 검은 화면에 멈추지 않고 알린다(2026-10-18 검토 — 전에는 assert로 화면 코드가 멈춰 빈 화면만 남았다)
+		local why = Ui.text(Stage.ui, "서버에 연결하지 못했습니다. 다시 들어와 주세요.", 0, math.floor(Stage.uiH / 2) - 8, Stage.uiW, { font = "body", align = "center", outline = true })
+		why.label.Frame.ZIndex = 500
+		warn("[lune] 서버에서 캐릭터를 받지 못했다")
+		return
+	end
 	Hud.root.Visible = true
-	assert(first and first.self, "서버에서 캐릭터를 받지 못했다")
 	-- 서버가 준 캐릭터를 화면의 상태에 얹는다(처음 들어올 때 · 캐릭터 고르기 화면에서 다른 캐릭터로 들어올 때)
 	local function adopt(got)
 		state.me = got.self
@@ -70133,9 +71508,30 @@ function Boot.start()
 		state.quests = got.quests or {}
 		state.bond = got.bond
 		state.bag = got.bag
+		-- 가방이 가득 찼는가: 들어올 때의 것은 알리지 않고 가방 단추의 점만(캐릭터를 바꿔도 앞 캐릭터의 것이 남지 않게 — 2026-10-18)
+		state.bagFull = {}
+		local fullNow = Bag.fullTabs(got.bag)
+		for _, tab in fullNow do
+			state.bagFull[tab] = true
+		end
+		Hud.markMenu("bag", #fullNow > 0)
+		phoneMark()
 		state.who = got.self.class
 		state.dead, state.skill, state.party = false, nil, nil
 		table.clear(state.cds)
+		-- 캐릭터마다 다른 것(2026-10-18 검토): 본 장면(새 캐릭터가 첫 장면을 못 보던 것) · 약해짐의 남은 시간 · 꿈의 미션 판 · 메뉴의 점
+		table.clear(state.cineSeen)
+		table.clear(state.cineQueue)
+		state.cineScene = nil
+		state.weakLeft, state.weakAt = got.self.weak or 0, state.now
+		TutView.reset()
+		do
+			local me = got.self
+			local mark = (me.attReady or 0) + (me.achReady or 0) > 0 or (got.bond ~= nil and Bond.ready(got.bond))
+			Hud.markMenu("more", mark)
+			state.moreMark = mark
+			phoneMark()
+		end
 		-- 「달이 부른다」는 캐릭터마다 다시 센다(받을 수 있는 전직 퀘스트가 있으면 들어온 뒤 한 번 알린다)
 		table.clear(state.jobSeen)
 		Hud.setLocked(skillsLocked())
@@ -70187,6 +71583,7 @@ function Boot.start()
 			morePanel = nil
 		end
 	end
+	state.closeMore = closeMore -- (장면 · 대화가 시작되면 닫는다 — closeMenus)
 	local function toggleMore()
 		if morePanel then
 			closeMore()
@@ -70204,12 +71601,11 @@ function Boot.start()
 				table.insert(items, { id = w.id, name = w.name })
 			end
 		end
-		table.insert(items, { id = "keys", name = "키 설정" })
+		-- (키 설정 · 게임 설정은 위의 「메뉴에서」 창들에 든다 — 전에는 여기서 한 번 더 넣어 둘씩 보였다: 2026-10-18 검토)
 		if isAdmin() then
 			table.insert(items, { id = "admin", name = "관리" })
 		end
 		table.insert(items, { id = "@chars", name = "캐릭터 선택" }) -- 저장하고 캐릭터 고르기 화면으로 돌아간다
-		table.insert(items, { id = "sound", name = "소리 설정" }) -- 배경 음악 · 효과음의 크기
 		local w, rowH = 132, 28
 		local h = #items * rowH + 14
 		local r = UI_HUD.menu
@@ -70281,19 +71677,48 @@ function Boot.start()
 		local level = if state.me then state.me.level else 1
 		local here = SCENES.scenes[state.sceneKey]
 		local at = Quests.atNpc(state.quests or {}, level, npc.id, here.region, here.also)
-		if #at.ready > 0 then
-			local def = Quests.def(at.ready[1])
+		local function ready(id)
+			local def = Quests.def(id)
 			Talk.start(npc, def.done, def.name, function()
 				state.chain = { npc = npc, scene = state.sceneKey, done = def.id, till = os.clock() + 3 }
 				Net.FireServer("Quest", "complete", def.id)
 			end, "완료")
-			return true
-		elseif #at.offer > 0 then
-			local def = Quests.def(at.offer[1])
+		end
+		local function offer(id)
+			local def = Quests.def(id)
 			Talk.start(npc, def.offer, def.name, function()
 				Net.FireServer("Quest", "accept", def.id)
 				Music.sfx("secret2") -- 퀘스트 수락
 			end, "수락")
+		end
+		-- 할 일이 둘 넘으면(돌려줄 · 받을 · 하는 중인 퀘스트) 고르는 말(2026-10-18 — 메이플스토리의 NPC 대화처럼. 전에는 정해진 차례로 하나씩만 나왔다)
+		local menu = Quests.talkMenu(at, Talk.LINES)
+		if menu then
+			local items = {}
+			for _, m in menu do
+				table.insert(items, { text = m.text, color = if m.kind == "ready" then Ui.COLOR.gold elseif m.kind == "offer" then Ui.COLOR.accent elseif m.kind == "wait" then Ui.COLOR.dim else Ui.COLOR.text })
+			end
+			Input.take("down") -- 앞서 눌러 둔 ↓(아래 발판 · 사다리 · 폰의 막대)가 남아 첫 장에 줄을 옮기지 않게(2026-10-18 검토)
+			Talk.menu(npc, items, function(i)
+				local m = menu[i]
+				if m.kind == "ready" then
+					ready(m.id)
+				elseif m.kind == "offer" then
+					offer(m.id)
+				elseif m.kind == "wait" then
+					local def = Quests.def(m.id)
+					Talk.start(npc, def.wait, def.name)
+				else
+					Talk.start(npc, npc.lines)
+				end
+			end)
+			return true
+		end
+		if #at.ready > 0 then
+			ready(at.ready[1])
+			return true
+		elseif #at.offer > 0 then
+			offer(at.offer[1])
 			return true
 		end
 		return false
@@ -70391,6 +71816,9 @@ function Boot.start()
 		party = function()
 			return state.party
 		end,
+		myId = function() -- 내 번호(월드맵이 파티원 가운데 나를 뺀다 — 2026-10-18)
+			return state.myId
+		end,
 		quests = function()
 			return state.quests
 		end,
@@ -70468,6 +71896,11 @@ function Boot.start()
 				openSet[w.id] = Windows.isOpen(w.id)
 			end
 			Hud.setOpen(openSet)
+			if openSet.auction then
+				Hud.markMenu("auction", false) -- 경매장을 열었다: 「팔림」의 점을 끈다
+				phoneMark()
+			end
+			GainLog.setCovered(Windows.sideOpen("right"))
 			QuestHud.setCovered(Windows.sideOpen("right")) -- 오른쪽 창이 퀘스트 알리미의 자리를 덮는다 — 그동안은 알리미를 감춘다(글이 겹쳐 비친다)
 			QuickEdit.setOpen(Windows.isOpen("skill") or Windows.isOpen("bag")) -- 스킬 · 소비 아이템을 골라 놓는 것은 그 창이 열려 있을 때(칸끼리 끄는 것은 늘 된다)
 			Windows.refresh(state.me)
@@ -70630,7 +72063,7 @@ function Boot.start()
 		end,
 		-- 소리 설정을 바꿨다: 계정에 저장한다
 		saveSound = function()
-			Net.FireServer("Sound", Music.export())
+			Net.FireServer("Sound", ViewOpts.into(Music.export())) -- 소리 · 화면 설정을 한 표로
 		end,
 	})
 	-- 지금 쓰는 배치: 스마트폰 단추가 켜져 있으면 단추 배치(touchSlots), 아니면 PC의 퀵슬롯(slots). 스킬 창 · 가방에서 놓는 것도 지금 쓰는 쪽에 놓인다
@@ -70726,6 +72159,7 @@ function Boot.start()
 	Talk.init()
 	CineView.init(Overlay.root) -- 퀘스트 연출(장면): 세계를 덮는 것(대화창 아래) · 글 · 단추(대화창 위)
 	CineView.onEnd = function(def)
+		Input.flush() -- 장면 동안 누른 것은 버린다(넘기기 · 건너뛰기로 누른 ↑ · 스페이스가 남지 않게)
 		state.cineSeen[def.id] = true
 		Net.FireServer("Cine", "seen", def.id)
 		Net.FireServer("Cine", "off", nil)
@@ -70771,6 +72205,8 @@ function Boot.start()
 	VoyageView.init(Hud.root)
 	VistaView.init(Hud.root)
 	Guide.init(Hud.root)
+	MapName.init(Hud.root)
+	GainLog.init(Hud.root)
 	-- 전직해서 칸이 바뀌었다(서버가 윗차수의 사냥기 · 보스기를 앞 차수의 자리에 넣었다)
 	state.onJob = function(me)
 		state.slots = me.slots or state.slots
@@ -70859,6 +72295,9 @@ function Boot.start()
 		if state.view then
 			state.view:setTalking(if npc then npc.id else nil)
 		end
+		if npc then
+			closeMenus()
+		end
 		Hud.root.Visible = npc == nil and not CineView.active() -- 장면이 도는 동안은 말이 끝나도 숨긴 채
 		if Touch.root then
 			Touch.root.Visible = npc == nil and Touch.on and not CineView.active()
@@ -70900,6 +72339,9 @@ function Boot.start()
 	end
 	state.fetchAttend()
 	Net.OnClient("AttendNew", function()
+		if state.fetchDaily then
+			state.fetchDaily() -- 자정이 지났다: 일일 의뢰도 새로(2026-10-18 검토: 접속한 채 자정을 넘기면 어제의 의뢰가 남고 잡아도 세지 않았다)
+		end
 		state.fetchAttend() -- 게임 중에 자정이 지나 칸이 찼다
 	end)
 	-- 업적 달성: 화면 위 가운데의 띠(길잡이의 큰 알림 — 노란 제목 「업적 달성 · 이름」 + 할 일 한 줄) · 소리는 없다(퀘스트 완료와 같다). 열린 업적 창은 다시 받아 온다
@@ -70915,7 +72357,8 @@ function Boot.start()
 		end
 		local mark = Bond.ready(view) or (state.me ~= nil and ((state.me.attReady or 0) + (state.me.achReady or 0) > 0))
 		Hud.markMenu("more", mark)
-		Touch.markMenu(mark)
+		state.moreMark = mark
+		phoneMark()
 		local body = state.body
 		if note and state.fx and body then
 			if note.kind == "shard" then
@@ -71029,6 +72472,12 @@ function Boot.start()
 
 	-- 스마트폰 단추(터치 화면이면 저절로 켜진다)
 	local touchMenu: Frame? = nil
+	state.closeTouchMenu = function() -- (장면 · 대화가 시작되면 닫는다 — closeMenus)
+		if touchMenu then
+			touchMenu:Destroy()
+			touchMenu = nil
+		end
+	end
 	Touch.init({
 		-- 칸 단추에 놓을 수 있는 것: 물약과 배운(쓸 수 있는) 스킬 — 놓을 것의 목록에 뜬다
 		choices = function()
@@ -71098,6 +72547,7 @@ function Boot.start()
 		onToggle = function(on: boolean)
 			Hud.setTouch(on)
 			QuestHud.setTouch(on)
+			GainLog.setTouch(on)
 			if state.placeParty then
 				state.placeParty() -- 폰에서는 파티원 칸을 제자리에(채팅 창은 Roblox 단추로 여닫는다)
 			end
@@ -71110,13 +72560,18 @@ function Boot.start()
 				return
 			end
 			local items = Windows.list() -- 키 설정은 넣지 않는다(손가락 단추에는 바꿀 키가 없다)
+			-- 키 없이 「메뉴」 안에 두는 창(출석 · 업적 · 모험의 서 · 게임 설정 — PC의 「메뉴」와 같다). 전에는 빠져 폰에서는 출석 · 업적을 열 수 없었다(2026-10-18 검토)
+			for _, w in UI_DATA.windows do
+				if w.menu and w.id ~= "keys" and Windows.info(w.id) and (not w.need or (state.bond and state.bond.open)) then
+					table.insert(items, { id = w.id, name = w.name })
+				end
+			end
 			state.touchMenuItems = {}
 			if state.me ~= nil and state.me.admin ~= nil then
 				table.insert(items, { id = "admin", name = "관리" }) -- 관리자에게만
 			end
 			table.insert(items, { id = "@arrange", name = "단추 배치" }) -- 스킬 · 물약을 단추에 놓는다
 			table.insert(items, { id = "@chars", name = "캐릭터 선택" }) -- 저장하고 캐릭터 고르기 화면으로 돌아간다
-			table.insert(items, { id = "sound", name = "소리 설정" }) -- 배경 음악 · 효과음의 크기
 			-- 단추가 화면보다 길면(폰의 화면 틀은 768x432 — 단추 열셋이면 520) 판은 화면에 들어가는 만큼만 서고, 그 안에서 위아래로 민다
 			--  사용자 2026-10-13(폰에서 해 보고): "메뉴탭 열었을때 스크롤이 되어야해 모든메뉴를 접근할수가 없다" — 치수는 Layout.touchMenu(공방 ui.js의 UILAYOUT.touchMenu)
 			local m = Layout.touchMenu(#items, Stage.uiH)
@@ -71193,6 +72648,8 @@ function Boot.start()
 		end
 		DeathBox.hide()
 		Guide.clear()
+		PartyHud.ask(nil) -- 앞 캐릭터가 받은 파티 초대는 지운다(서버는 이미 지웠다 — 2026-10-18 검토)
+		closeMenus()
 		Music.play(MUSIC.title)
 		local got = Title.run(left.select, {
 			skipLoading = true,
@@ -71224,6 +72681,8 @@ function Boot.start()
 		task.spawn(function()
 			showLoaded() -- 그 장면의 그림이 다 불러와진 뒤에 막을 걷는다
 			Curtain.lift()
+			afterLift()
+			Input.flush()
 			state.busy = false
 		end)
 	end
@@ -71247,12 +72706,15 @@ function Boot.start()
 			local dirNow = nil
 			if state.navi and not state.dead and not state.busy and state.me and not CineView.active() then -- 장면이 도는 동안은 화살표를 숨긴다
 				Navi.prepare(state.sceneKey) -- 이 맵의 발판과 길을 조금씩 잰다(다 재면 화살표가 발판을 따라 가리킨다)
-				if state.body.ground or state.naviDir == nil or state.naviScene ~= state.sceneKey then
+				-- 땅에 서 있는 동안 1초에 10번만 다시 셈한다(맵이 바뀌었거나 방향이 없으면 바로 — 2026-10-18 검토: 매 장면 맵 사이의 길 · 발판 길을 다시 셈했다)
+				if state.naviDir == nil or state.naviScene ~= state.sceneKey or (state.body.ground and state.now - (state.naviAt or -9) >= 0.1) then
+					state.naviAt = state.now
 					local mobs = {}
 					if state.mobs then
-						for _, m in state.mobs.mobs do
+						for id, m in state.mobs.mobs do
 							if m.state ~= "gone" and m.state ~= "dead" then
-								table.insert(mobs, m)
+								-- 길찾기는 { id, kind, x, y }를 본다 — 화면의 몬스터는 종류 · 높이를 info에 둔다(2026-10-18 검토: 그대로 넘겨 종류가 맞지 않아 사냥터에서 화살표가 몬스터를 가리키지 않고 사라졌다)
+								table.insert(mobs, { id = id, kind = m.info.kind, x = m.x, y = m.info.y })
 							end
 						end
 					end
@@ -71290,6 +72752,8 @@ function Boot.start()
 			})
 		end
 		Guide.step(dt)
+		MapName.step(dt, (BossView.box ~= nil and BossView.box.Visible) or CineView.active() or Windows.anyOpen()) -- 보스 체력 · 퀘스트 연출이 그 자리를 쓰거나 창이 열리면(창의 윗부분과 겹친다 — 2026-10-18) 바로 사라진다. 보스 체력은 칸이 보일 때만(전에는 한 번 보인 보스의 이름이 남아, 첫 보스 뒤로 맵 이름이 영영 안 떴다 — 2026-10-18 검토)
+		GainLog.step(dt)
 		markT += dt
 		if markT >= 0.25 then
 			markT = 0
@@ -71301,6 +72765,8 @@ function Boot.start()
 	task.spawn(function()
 		showLoaded()
 		Curtain.lift()
+		afterLift()
+		Input.flush()
 		state.busy = false
 	end)
 	print(("[lune] 시작 — 장면 %s · 캐릭터 %s · 배율 x%s"):format(state.sceneKey, state.who, tostring(math.floor(Stage.scale * 100 + 0.5) / 100)))
@@ -72253,6 +73719,22 @@ function Cast:chargeUp(a, lv: number)
 	a.charge = lv
 	self.fx.ring(a.x, a.y - 8, 26 + lv * 8, 4, a.tone, { squash = 1, back = false, life = 0.25 })
 	self.fx.shards(a.x, a.y - 8, 4 + lv * 2, a.tone, { speed = 40, up = 60, kind = "dot", grav = -60, life = 0.4 })
+end
+
+-- 레벨이 올랐다(2026-10-18 — 메이플스토리처럼 캐릭터 둘레로 빛이 솟는다. 전에는 머리 위의 글씨와 소리뿐이었다): 큰 기운 · 발밑의 넓은 고리 · 위로 흩어지는 점(직업 색)
+--  시험 탭 js/lune/luneTab.js의 gainXp가 같은 값으로 그린다
+function Cast:levelUp(a)
+	self.fx.aura(a.x, a.y, a.tone, { r = 18, h = 46, life = 0.9 })
+	self.fx.ring(a.x, a.y - 2, 4, 34, a.tone, { squash = 0.35, back = true, life = 0.7 })
+	self.fx.shards(a.x, a.y - 10, 14, a.tone, { speed = 30, up = 90, kind = "dot", grav = -80, life = 0.9 })
+end
+
+-- 사냥터 정예가 나왔다(2026-10-18 — 시험 탭의 spawnElite와 같다): 그 자리에서 분홍 기운이 솟고 고리가 퍼지며 불티가 오른다
+function Cast:eliteRise(x: number, y: number)
+	local tone = Cast.tone("pink")
+	self.fx.aura(x, y, tone, { r = 16, h = 40, life = 1.1 })
+	self.fx.ring(x, y - 2, 4, 30, tone, { squash = 0.35, back = true, life = 0.8 })
+	self.fx.shards(x, y - 8, 12, tone, { speed = 26, up = 80, kind = "dot", grav = -60, life = 1 })
 end
 
 -- 사출기를 켰다(시험 탭: 켜는 순간 작은 기운)
@@ -74055,6 +75537,183 @@ end
 return FxArt
 
 end
+MODULES['Client/lune/gainLog'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
+-- 획득 알림 — 경험치 · 달돈 · 달가루 · 주운 것 · 레벨 업 · 퀘스트 완료를 화면 구석에 줄로 쌓는다(메이플스토리의 획득 메시지처럼).
+--  2026-10-18: 얻은 것은 머리 위에 잠깐 뜨는 글뿐이라 지나가면 다시 볼 수 없었다. 머리 위의 글은 그대로 두고, 여기 줄로도 남긴다.
+--  가장 아래가 새 줄. 줄마다 life초 뒤 fade초 동안 흐려져 사라진다. 같은 갈래(경험치 · 달돈 · 달가루)가 merge초 안에 이어 오면
+--  새 줄을 만들지 않고 마지막 줄의 수를 더한다(사냥 중에 줄이 넘치지 않게).
+--  자리 = 공방 basics.js의 HUD 「획득 알림」(PC: 오른쪽 아래 메뉴 단추 위 · 스마트폰: HUDTOUCH — 왼쪽 위 파티원 칸 아래) · 치수 = ui.js의 UILAYOUT.gainLog
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local lune = ReplicatedStorage.shared.lune
+local UI = require(lune.data["ui.generated"])
+local Layout = require(lune.ui.layout)
+local Format = require(lune.ui.format)
+local Stage = require(script.Parent.stage)
+local Ui = require(script.Parent.ui.ui)
+
+local C = Ui.COLOR
+local L = Layout.GAINLOG
+
+local GainLog = {}
+GainLog.lines = {} :: { any } -- { text, color, age, kind, amount } — 앞이 오래된 줄
+local box: Frame? = nil
+local rows = {} -- 미리 만든 글 칸(아래가 새 줄)
+local shown = {} -- 칸마다 지금 적힌 글 · 색(바뀔 때만 다시 그린다)
+GainLog.touch = false
+GainLog.covered = false
+
+local function rect()
+	local r = if GainLog.touch and UI.hudTouch.gainLog then UI.hudTouch.gainLog else UI.hud.gainLog
+	return r
+end
+
+function GainLog.init(root: Frame)
+	local r = UI.hud.gainLog
+	box = Stage.place(root, "GainLog", r.at, r.x, r.y, r.w, r.h)
+	for i = 1, L.lines do
+		rows[i] = Ui.text(box, "", 0, (i - 1) * L.lineH, r.w, { outline = true })
+		shown[i] = { text = "", color = nil }
+	end
+end
+
+-- 스마트폰 단추가 켜졌다 · 꺼졌다: 자리를 옮긴다
+function GainLog.setTouch(on: boolean)
+	GainLog.touch = on
+	if box then
+		local r = rect()
+		box.Position = Stage.atPosition(r.at, r.x, r.y)
+	end
+end
+
+-- 오른쪽 창이 그 자리를 덮었다(PC) — 그동안은 감춘다
+function GainLog.setCovered(on: boolean)
+	GainLog.covered = on
+	if box then
+		box.Visible = not (on and not GainLog.touch)
+	end
+end
+
+local MERGE = { xp = "경험치 +%s", money = "달돈 +%s", dust = "달가루 +%s" }
+local function textOf(kind: string, amount: number): string
+	return MERGE[kind]:format(if kind == "xp" then Format.comma(amount) else Format.short(amount))
+end
+
+-- 한 줄을 더한다. kind = xp · money · dust(같은 갈래가 이어 오면 합친다) · 그 밖(item · quest · level · note)은 늘 새 줄
+function GainLog.add(kind: string, text: string?, color: any?, amount: number?)
+	local last = GainLog.lines[#GainLog.lines]
+	if MERGE[kind] then
+		if last and last.kind == kind and last.age < L.merge then
+			last.amount += amount or 0
+			last.text = textOf(kind, last.amount)
+			last.age = 0
+			return
+		end
+		text = textOf(kind, amount or 0)
+	end
+	table.insert(GainLog.lines, { text = text or "", color = color or C.text, age = 0, kind = kind, amount = amount or 0 })
+	while #GainLog.lines > L.lines do
+		table.remove(GainLog.lines, 1)
+	end
+end
+function GainLog.xp(n: number)
+	if n > 0 then
+		GainLog.add("xp", nil, C.accent, n)
+	end
+end
+function GainLog.money(n: number)
+	if n > 0 then
+		GainLog.add("money", nil, C.gold, n)
+	end
+end
+function GainLog.dust(n: number)
+	if n > 0 then
+		GainLog.add("dust", nil, C.accent, n)
+	end
+end
+function GainLog.item(label: string, color: any?)
+	GainLog.add("item", ("획득: %s"):format(label), color or C.text)
+end
+function GainLog.level(level: number)
+	GainLog.add("level", ("레벨 업! Lv.%d"):format(level), C.gold)
+end
+function GainLog.quest(name: string)
+	GainLog.add("quest", ("퀘스트 완료: %s"):format(name), C.gold)
+end
+
+-- 0(안 보임) ~ 1 — 줄의 나이로
+function GainLog.alphaOf(age: number): number
+	if age <= L.life then
+		return 1
+	end
+	return math.max(0, 1 - (age - L.life) / L.fade)
+end
+
+-- 줄의 글자들과 처음 투명도(글이 바뀔 때 한 번 모은다 — 매 장면 GetDescendants · 속성을 읽지 않게 · 2026-10-18 검토)
+local function glyphsOf(row): { any }
+	local list = {}
+	local frame = row.label and row.label.Frame
+	if frame then
+		for _, d in frame:GetDescendants() do
+			if d:IsA("ImageLabel") then
+				table.insert(list, { d = d, base = d.ImageTransparency })
+			end
+		end
+	end
+	return list
+end
+local function fadeRow(was, a: number)
+	-- 흐림이 바뀔 때만 쓴다(다 보이는 동안은 아무것도 쓰지 않는다)
+	local q = math.floor(a * 64 + 0.5) / 64
+	if was.alpha == q then
+		return
+	end
+	was.alpha = q
+	for _, g in was.glyphs or {} do
+		g.d.ImageTransparency = g.base + (1 - g.base) * (1 - q)
+	end
+end
+
+-- 장마다: 줄의 나이를 더하고, 다 흐려진 줄을 지우고, 칸에 다시 적는다(아래 칸부터 새 줄)
+function GainLog.step(dt: number)
+	for i = #GainLog.lines, 1, -1 do
+		local line = GainLog.lines[i]
+		line.age += dt
+		if GainLog.alphaOf(line.age) <= 0 then
+			table.remove(GainLog.lines, i)
+		end
+	end
+	if not box then
+		return
+	end
+	local n = #GainLog.lines
+	for i = 1, L.lines do
+		local line = GainLog.lines[n - (L.lines - i)] -- 마지막 칸 = 가장 새 줄
+		local row, was = rows[i], shown[i]
+		local text, color = if line then line.text else "", if line then line.color else nil
+		if was.text ~= text then
+			row:set(text)
+			was.text = text
+			was.color = nil
+			was.glyphs = glyphsOf(row) -- (새 글의 글자들 — 처음 투명도와 함께)
+			was.alpha = nil
+		end
+		if color and was.color ~= color then
+			row:color(color)
+			was.color = color
+		end
+		if line then
+			fadeRow(was, GainLog.alphaOf(line.age))
+		end
+	end
+end
+
+function GainLog.clear()
+	table.clear(GainLog.lines)
+end
+
+return GainLog
+
+end
 MODULES['Client/lune/grave'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 비석 — 쓰러진 사람의 자리에 선다(사용자 2026-10-08: "죽으면 비석 세우고, 모달띄워서 마을로 갈거냐고 물어보는 딜레이를 넣읍시다").
 --  그림은 사냥터의 놓는 것 가운데 묘비(공방 assetpack/lune의 props — rects.grave)를 그대로 쓴다(새 그림이 아니다).
@@ -74355,6 +76014,14 @@ local SLOT = K.slot -- 스킬 칸 한 변
 local KEY_UP = K.keyUp -- 칸 위의 키 딱지가 차지하는 높이
 local COLS, ROWS = K.cols, K.rows -- 스킬 칸: 두 줄 x 여섯
 local PIC = M.pic
+-- 설명 판(버프 · 경험치 · 퀵슬롯의 설명 — 2026-10-18): 능력치의 설명과 같은 판의 치수 · 제목의 색. 판을 짓는 함수들보다 위에 둔다(퀵슬롯의 설명이 먼저 쓴다)
+local TIP = Layout.STAT.tip
+local TIPCOLOR = { main = C.gold, sub = C.accent, none = C.dim }
+-- 손가락으로 누른 것인가(폰에서는 누를 때도 MouseEnter가 오고 MouseLeave는 오지 않는다 — 그때는 Activated로만 열고 닫는다)
+local UIS = game:GetService("UserInputService")
+local function touching(): boolean
+	return UIS:GetLastInputType() == Enum.UserInputType.Touch
+end
 -- 메뉴 단추의 그림(창의 이름표 → 그림)
 local MENU_PIC = { bag = "menu_bag", equip = "menu_equip", stat = "menu_stat", skill = "menu_skill", quest = "menu_quest", map = "menu_map", auction = "menu_auction", party = "menu_party", more = "menu_gear" }
 
@@ -74408,6 +76075,32 @@ function Hud.init()
 	Hud.xp = Ui.bar(box, 0, L.xpY, V.barW, V.xpH, C.accent)
 	Hud.xp.frame.Name = "Xp"
 	Hud.xpText = Ui.text(box, "0.00%", L.xpTextX, L.xpY - 3, L.xpTextW, { color = C.dim, outline = true })
+	-- 경험치 줄의 설명(2026-10-18 — 공방 ui.js XPTIP): 줄(과 그 옆의 %)에 마우스를 올리면(폰은 톡 — 한 번 더 톡 하면 닫힘) 덩어리 위에 지금 · 필요한 경험치와 남은 것
+	local xpOver = Instance.new("TextButton")
+	xpOver.Name = "XpOver"
+	xpOver.Text = ""
+	xpOver.BackgroundTransparency = 1
+	xpOver.Position = UDim2.fromOffset(0, L.xpY - 5)
+	xpOver.Size = UDim2.fromOffset(UI.hud.vitals.w, V.xpH + 10)
+	xpOver.ZIndex = 8
+	xpOver.Parent = box
+	xpOver.MouseEnter:Connect(function()
+		if not touching() then -- 손가락은 Activated로만(누를 때도 MouseEnter가 온다)
+			Hud.showXpTip(box)
+		end
+	end)
+	xpOver.MouseLeave:Connect(function()
+		if not touching() then
+			Hud.hideXpTip()
+		end
+	end)
+	xpOver.Activated:Connect(function(input)
+		if input and input.UserInputType == Enum.UserInputType.Touch and Hud.xpTip then
+			Hud.hideXpTip()
+		else
+			Hud.showXpTip(box)
+		end
+	end)
 
 	-- 스킬 칸: 어두운 칸에 그림 · 개수(오른쪽 아래) · 다시 쓰기까지 남은 시간(어두운 덮개와 초). 키 이름은 칸 위의 딱지에 적는다(그림을 가리지 않게).
 	--  퀵슬롯이다: 칸마다 키가 하나 붙어 있고, 물약 · 스킬을 칸에 놓아 쓴다(아래의 「퀵슬롯」)
@@ -74423,7 +76116,12 @@ function Hud.init()
 		veil.Name = "Veil"
 		veil.ZIndex = 3
 		veil.Visible = false
-		local slot = { frame = cell.frame, cell = cell, back = cell.frame:FindFirstChild("uSlot") :: ImageLabel, pic = pic, veil = veil, pad = pad, what = false :: any, id = nil :: string?, shown = nil :: string?, keyName = "" }
+		-- 다시 쓰기가 끝난 순간 그림이 한 번 하얗게 번쩍인다(2026-10-18 — 시험 탭의 sk.flash와 같다 · Hud.step이 흐리게 한다)
+		local ready = Ui.box(cell.frame, pad, pad, PIC, PIC, Color3.new(1, 1, 1), 1)
+		ready.Name = "Ready"
+		ready.ZIndex = 4
+		ready.Visible = false
+		local slot = { frame = cell.frame, cell = cell, back = cell.frame:FindFirstChild("uSlot") :: ImageLabel, pic = pic, veil = veil, ready = ready, readyT = 0, pad = pad, what = false :: any, id = nil :: string?, shown = nil :: string?, keyName = "" }
 		-- 퀵슬롯은 자리가 늘 같다(여섯 x 두 줄 — 칸마다 키 하나)
 		local px, py = Layout.slotPlace(i, COLS * ROWS)
 		cell.frame.Position = UDim2.fromOffset(px, py)
@@ -74444,6 +76142,17 @@ function Hud.init()
 		hit.InputBegan:Connect(function(input)
 			if Hud.onSlotPress then
 				Hud.onSlotPress(i, input)
+			end
+		end)
+		-- 칸의 설명(2026-10-18 — 메이플처럼 · PC): 마우스를 올리면 칸 위에 그 스킬 · 물건의 이름 · 효과(스킬 창을 열어 고치는 중이거나 끄는 중에는 띄우지 않는다)
+		hit.MouseEnter:Connect(function()
+			if not touching() then
+				Hud.showSlotTip(i)
+			end
+		end)
+		hit.MouseLeave:Connect(function()
+			if Hud.slotTipAt == i then
+				Hud.hideSlotTip()
 			end
 		end)
 		slot.key = Ui.keycap(cell.frame, "", math.floor(SLOT / 2), -KEY_UP)
@@ -74498,7 +76207,9 @@ end
 function Hud.setCounts()
 	for _, slot in Hud.slots do
 		if slot.item then
-			slot.count:set(tostring(if Hud.countOf then Hud.countOf(slot.item) else 0))
+			local n = if Hud.countOf then Hud.countOf(slot.item) else 0
+			slot.count:set(tostring(n))
+			slot.count:color(if n == 0 then C.red else C.text) -- 다 쓴 소비 아이템은 붉은 0(2026-10-18)
 		end
 	end
 end
@@ -74520,7 +76231,9 @@ function Hud.setSlots(list)
 		slot.veil.Visible = false
 		slot.wait:set("")
 		slot.shown = nil
-		slot.count:set(if slot.item then tostring(if Hud.countOf then Hud.countOf(slot.item) else 0) else "")
+		local n = if slot.item and Hud.countOf then Hud.countOf(slot.item) else 0
+		slot.count:set(if slot.item then tostring(n) else "")
+		slot.count:color(if slot.item and n == 0 then C.red else C.text)
 		if slot.id then
 			Hud.byId[slot.id] = slot
 		end
@@ -74529,6 +76242,35 @@ function Hud.setSlots(list)
 		end
 	end
 	Hud.paintSlots()
+end
+
+-- ---------- 칸의 설명(2026-10-18) ----------  글은 boot가 짓는다(Hud.slotTipOf(what) → { kind, title, tag, lines } · 없으면 띄우지 않는다)
+Hud.slotTipOf = nil :: ((string) -> any)?
+Hud.slotTipAt = nil :: number?
+local slotTip: Frame? = nil
+function Hud.hideSlotTip()
+	if slotTip then
+		slotTip:Destroy()
+		slotTip = nil
+	end
+	Hud.slotTipAt = nil
+end
+function Hud.showSlotTip(i: number)
+	Hud.hideSlotTip()
+	local slot = Hud.slots[i]
+	if not slot or not slot.what or Hud.edit or Hud.pick or Hud.touch or not Hud.slotTipOf then
+		return
+	end
+	local t = Hud.slotTipOf(slot.what)
+	if not t then
+		return
+	end
+	local frame, h = Hud.tipPanel(Hud.skillRoot, t, "SlotTip")
+	local px = Layout.slotPlace(i, COLS * ROWS)
+	local w = UI.hud.skills.w
+	frame.Position = UDim2.fromOffset(math.clamp(px + math.floor(SLOT / 2) - math.floor(TIP.w / 2), math.min(0, w - TIP.w), math.max(0, w - TIP.w)), -h - 4) -- 퀵슬롯 덩어리 위에(위 칸을 가리지 않게)
+	slotTip = frame
+	Hud.slotTipAt = i
 end
 
 -- 그 칸의 키 이름(딱지에 적힌 것)
@@ -74610,6 +76352,9 @@ function Hud.setCooldown(id: string, remain: number, total: number)
 	if slot.shown == key then
 		return
 	end
+	if slot.veil.Visible and rows == 0 then
+		slot.readyT = Hud.READY_T -- 다시 쓰기가 끝났다: 한 번 하얗게
+	end
 	slot.shown = key
 	slot.veil.Visible = rows > 0
 	slot.veil.Position = UDim2.fromOffset(slot.pad, slot.pad + (PIC - rows))
@@ -74659,6 +76404,9 @@ function Hud.setMenu(list, onClick: (string) -> ())
 		Hud.menu[item.id] = { frame = frame, cell = cell, label = label, dot = dot, flash = flash, mark = false, i = i, n = n }
 	end
 	Hud.setOpen(Hud.openSet or {})
+	for id, on in Hud.marks do -- 단추를 다시 지어도 점은 그대로(가방이 가득 찼다 · 찍을 점수 … — 2026-10-18)
+		Hud.markMenu(id, on)
+	end
 end
 
 -- 열려 있는 창의 단추는 민트(테두리와 이름). set = { [창 id] = true }
@@ -74679,16 +76427,120 @@ end
 
 -- 버프 자리를 그린다. list = { { pic = 그림(화면의 24도트 그림 이름), text = 그림 아래의 글(수 · 없으면 ""), hot = 밝게(달아오름) } … } — 오른쪽 끝부터 왼쪽으로 놓는다
 local BUFF_PITCH = PIC + 6
+-- ---------- 버프 그림의 설명(2026-10-18 — 공방 ui.js BUFFTIP · 시험 탭의 buffTipOf) ----------
+--  그림에 마우스를 올리면(폰은 톡 — 한 번 더 톡 하면 닫힌다) 버프 줄 아래에 능력치의 설명과 같은 판이 뜬다. 글은 boot의 paintBuffs가 칸마다 지어 준다(b.tip = { kind, title, tag, lines }).
+--  1초마다 칸을 다시 지어도 보던 칸의 설명은 이어서 뜬다(남은 시간이 바뀐다) — 마우스가 그 칸을 벗어났으면 닫는다
+local TIP_DOWN = 31 -- 판의 윗줄(버프 줄의 위에서 — 그림 밑의 남은 시간을 가리지 않게)
+Hud.buffList = {}
+Hud.tipAt = nil :: number? -- 설명이 떠 있는 칸의 차례
+local tipFrame: Frame? = nil
+local tipTouch = false -- 손가락으로 연 설명(마우스의 자리로 닫지 않는다)
+
+function Hud.hideBuffTip()
+	if tipFrame then
+		tipFrame:Destroy()
+		tipFrame = nil
+	end
+	Hud.tipAt = nil
+end
+
+-- 설명 판 하나를 parent에 짓는다(능력치의 설명과 같은 판): t = { kind, title, tag, lines }. 돌려주는 것 = 판 · 높이(자리는 부른 쪽이 놓는다)
+function Hud.tipPanel(parent: Instance, t, name: string): (Frame, number)
+	local color = TIPCOLOR[t.kind] or C.accent
+	local inner = TIP.w - TIP.pad * 2
+	local frame = Ui.group(parent, 0, 0, TIP.w, 10, name)
+	frame.ZIndex = 20
+	local back = Ui.part(frame, "uTip", 0, 0, TIP.w, 10)
+	local title = Ui.text(frame, t.title, TIP.pad, TIP.pad, inner, { font = "body", color = color })
+	if t.tag and t.tag ~= "" then
+		local tw = title:size()
+		Ui.text(frame, t.tag, TIP.pad + tw + 8, TIP.pad + 2, inner - tw - 8, { color = color })
+	end
+	local y = TIP.pad + TIP.title
+	for k, line in t.lines do
+		if line ~= "" then
+			local tint = if k > 1 then (if t.kind == "none" then C.dim else C.accent) elseif t.kind == "none" then C.red else C.text
+			local label = Ui.text(frame, line, TIP.pad, y, inner, { lines = TIP.lines, line = TIP.line, color = tint })
+			local _, lh = label:size()
+			y += math.max(1, math.floor(lh / TIP.line + 0.5)) * TIP.line
+		end
+	end
+	local h = y - (TIP.line - M.small) + TIP.pad
+	frame.Size = UDim2.fromOffset(TIP.w, h)
+	back.Size = UDim2.fromOffset(TIP.w, h)
+	return frame, h
+end
+
+function Hud.showBuffTip(i: number)
+	if tipFrame then
+		tipFrame:Destroy()
+		tipFrame = nil
+	end
+	local b = Hud.buffList[i]
+	if not b or not b.tip then
+		Hud.tipAt = nil
+		return
+	end
+	Hud.tipAt = i
+	local frame = Hud.tipPanel(Hud.buffRoot, b.tip, "BuffTip")
+	-- 그 그림의 오른쪽 끝에 맞춘다 — 화면 왼쪽 밖으로 나가면 민다
+	local left = UI.hud.buffs.w - i * BUFF_PITCH + 6 + PIC - TIP.w
+	local rootX = (Hud.buffRoot.AbsolutePosition.X - Stage.ui.AbsolutePosition.X) / Stage.uiScale -- (기준 격자 안의 자리 — 넓은 화면의 검은 띠를 빼고)
+	if rootX + left < 4 then
+		left = 4 - rootX
+	end
+	frame.Position = UDim2.fromOffset(left, TIP_DOWN)
+	tipFrame = frame
+end
+
+-- 마우스가 아직 그 칸 위에 있나(칸을 다시 지은 뒤 — 새 칸에는 MouseEnter가 오지 않을 수 있다)
+local function stillOver(frame: GuiObject): boolean
+	local at = game:GetService("UserInputService"):GetMouseLocation() - game:GetService("GuiService"):GetGuiInset()
+	local p, s = frame.AbsolutePosition, frame.AbsoluteSize
+	return at.X >= p.X and at.X < p.X + s.X and at.Y >= p.Y and at.Y < p.Y + s.Y
+end
+
 function Hud.setBuffs(list)
 	local key = {}
 	for i, b in list do
 		key[i] = b.pic .. ":" .. b.text .. ":" .. tostring(b.hot == true)
 	end
 	local sig = table.concat(key, "|")
+	Hud.buffList = list
 	if Hud.buffSig == sig then
 		return
 	end
 	Hud.buffSig = sig
+	-- 보던 칸의 설명을 새 글로(그 칸이 없어졌거나 마우스가 벗어났으면 닫는다)
+	local function refreshTip()
+		local at = Hud.tipAt
+		if at then
+			local item = Hud.buffs[at]
+			if item and (tipTouch or stillOver(item.frame)) then
+				Hud.showBuffTip(at)
+			else
+				Hud.hideBuffTip()
+			end
+		end
+	end
+	-- 그림 · 차례 · 강조가 그대로면(1초마다 남은 초만 바뀐다) 칸을 다시 짓지 않고 글만 바꾼다(2026-10-18 검토 — 1초마다 칸마다 7개를 만들고 지웠다)
+	local shapeKey = {}
+	for i, b in list do
+		shapeKey[i] = b.pic .. ":" .. tostring(b.hot == true) .. ":" .. tostring(b.text ~= "")
+	end
+	local shape = table.concat(shapeKey, "|")
+	if Hud.buffShape == shape and #Hud.buffs == #list then
+		for i, b in list do
+			local item = Hud.buffs[i]
+			if item.label and item.text ~= b.text then
+				item.label:set(b.text)
+				item.text = b.text
+			end
+		end
+		refreshTip()
+		return
+	end
+	Hud.buffShape = shape
 	for _, item in Hud.buffs do
 		item.frame:Destroy()
 	end
@@ -74703,11 +76555,42 @@ function Hud.setBuffs(list)
 			edge.Thickness = 1
 			edge.Parent = frame:FindFirstChild("Pic") or frame
 		end
+		local label = nil
 		if b.text ~= "" then
-			Ui.text(frame, b.text, -8, PIC + 2, PIC + 16, { align = "center", outline = true, color = if b.hot then C.gold else C.text })
+			label = Ui.text(frame, b.text, -8, PIC + 2, PIC + 16, { align = "center", outline = true, color = if b.hot then C.gold else C.text })
 		end
-		Hud.buffs[i] = { frame = frame }
+		-- 설명(마우스를 올리면 · 손가락으로 톡)
+		local over = Instance.new("TextButton")
+		over.Name = "Over"
+		over.Text = ""
+		over.BackgroundTransparency = 1
+		over.Size = UDim2.fromOffset(PIC, PIC + 14)
+		over.ZIndex = 8
+		over.Parent = frame
+		over.MouseEnter:Connect(function()
+			if touching() then
+				return -- 손가락은 Activated로만
+			end
+			tipTouch = false
+			Hud.showBuffTip(i)
+		end)
+		over.MouseLeave:Connect(function()
+			if Hud.tipAt == i and not tipTouch and not touching() then
+				Hud.hideBuffTip()
+			end
+		end)
+		over.Activated:Connect(function(input)
+			local touch = input and input.UserInputType == Enum.UserInputType.Touch
+			if touch and Hud.tipAt == i then
+				Hud.hideBuffTip()
+			else
+				tipTouch = touch == true
+				Hud.showBuffTip(i)
+			end
+		end)
+		Hud.buffs[i] = { frame = frame, label = label, text = b.text }
 	end
+	refreshTip()
 end
 
 -- 스마트폰 단추가 켜지면 키가 적힌 칸(스킬 칸 · 메뉴 단추)은 숨긴다 — 그 자리에 손가락 단추가 온다
@@ -74726,7 +76609,9 @@ function Hud.setTouch(on: boolean)
 end
 
 -- 메뉴 단추를 눈에 띄게(찍을 점수가 남았을 때 등)
+Hud.marks = {} :: { [string]: boolean } -- 단추마다 점이 켜져 있어야 하는가(단추를 다시 지을 때 되살린다)
 function Hud.markMenu(id: string, on: boolean)
+	Hud.marks[id] = on
 	local item = Hud.menu and Hud.menu[id]
 	if item and item.mark ~= on then
 		item.mark = on
@@ -74799,11 +76684,19 @@ function Hud.drawHp()
 end
 
 -- 장마다(boot의 그리는 고리가 부른다): 체력 바의 효과를 흘려보낸다
+Hud.READY_T = 0.3 -- 다시 쓰기가 끝난 칸이 하얗게 번쩍이는 시간(초)
 function Hud.step(dt: number)
 	local st = Hud.hpFx
 	if st and not HpFx.idle(st) then
 		HpFx.step(st, dt)
 		Hud.drawHp()
+	end
+	for _, slot in Hud.slots or {} do
+		if slot.readyT > 0 then
+			slot.readyT = math.max(0, slot.readyT - dt)
+			slot.ready.Visible = slot.readyT > 0
+			slot.ready.BackgroundTransparency = 1 - 0.6 * slot.readyT / Hud.READY_T
+		end
 	end
 end
 
@@ -74818,7 +76711,36 @@ function Hud.resetHp()
 	end
 end
 
+-- 경험치 줄의 설명: 덩어리(box) 위에 — 지금 / 필요한 경험치(%) · 다음 레벨까지
+Hud.xpTip = nil :: Frame?
+Hud.lastXp = nil :: { xp: number, need: number, level: number }?
+function Hud.hideXpTip()
+	if Hud.xpTip then
+		Hud.xpTip:Destroy()
+		Hud.xpTip = nil
+	end
+end
+function Hud.xpTipText(xp: number, need: number, level: number)
+	local W = UI.xpTip
+	local pct = ("%.2f"):format(math.clamp(xp / math.max(1, need), 0, 1) * 100)
+	return { kind = "main", title = W.title, tag = "Lv." .. level, lines = { Format.fill(W.now, { xp = Format.comma(xp), need = Format.comma(need), pct = pct }), Format.fill(W.left, { n = Format.comma(math.max(0, need - xp)) }) } }
+end
+function Hud.showXpTip(box: Instance)
+	Hud.hideXpTip()
+	local x = Hud.lastXp
+	if not x then
+		return
+	end
+	local frame, h = Hud.tipPanel(box, Hud.xpTipText(x.xp, x.need, x.level), "XpTip")
+	frame.Position = UDim2.fromOffset(0, -h - 6)
+	Hud.xpTip = frame
+end
+
 function Hud.setSelf(me)
+	Hud.lastXp = { xp = me.xp, need = me.need, level = me.level }
+	if Hud.xpTip then
+		Hud.showXpTip(Hud.xpTip.Parent :: Instance) -- 떠 있는 동안 경험치가 오르면 새 수로
+	end
 	local level = "Lv." .. me.level
 	Hud.level:set(level)
 	Hud.name:move(Ui.measure(level) + V.nameGap, V.nameY) -- 이름은 레벨 글 바로 뒤에
@@ -74935,6 +76857,12 @@ function Input.held(action: string): boolean
 	return held[action] == true
 end
 
+-- 읽지 않은 「누른 순간」을 모두 버린다(누르고 있는 것은 그대로) — 막이 걷히거나 · 일어나거나 · 장면이 끝나 조작이 돌아올 때(2026-10-18 검토:
+--  문을 지나며 화면이 까만 동안 ↑를 한 번 더 누르면, 막이 걷히자마자 그 ↑로 들어온 문을 다시 지나 되돌아갔다 — 기술 · 뛰기 · 창 열기도 같았다)
+function Input.flush()
+	table.clear(pressed)
+end
+
 -- 누른 순간이었는가(읽으면 지운다)
 function Input.take(action: string): boolean
 	local was = pressed[action] == true
@@ -74997,6 +76925,128 @@ function Input.init()
 end
 
 return Input
+
+end
+MODULES['Client/lune/mapName'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
+-- 맵 이름 — 맵에 들어서면 화면 위 가운데에 지역 이름(작은 글)과 맵 이름(본문 글)이 잠깐 떴다가 흐려진다(메이플스토리처럼).
+--  2026-10-18: 미니맵을 두지 않기로 해서(사용자 2026-10-07) 지금 어느 맵인지 알려 주는 것이 화면에 없었다 — 월드맵을 열어야만 알았다.
+--  자리 = 보스 체력 칸(위 가운데 — 보스와 싸울 때만 쓰는 칸): 보스 체력이나 퀘스트 연출이 떠 있으면 맵 이름은 곧 사라진다.
+--  치수 · 시간 = 공방 js/lune/design/ui.js의 UILAYOUT.mapName(시험 탭이 같은 값으로 그린다). 글자(그림)의 투명도를 바꿔 흐리게 한다.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local lune = ReplicatedStorage.shared.lune
+local SCENES = require(lune.data["scenes.generated"])
+local WMD = require(lune.data["worldmap.generated"])
+local WM = require(lune.ui.worldmap)
+local Layout = require(lune.ui.layout)
+local Stage = require(script.Parent.stage)
+local Ui = require(script.Parent.ui.ui)
+
+local C = Ui.COLOR
+local L = Layout.MAPNAME
+
+local MapName = {}
+local box: Frame? = nil
+local region, name
+local t = -1
+local lastA: number? = nil -- 마지막으로 쓴 보이는 정도(같으면 다시 쓰지 않는다)
+
+function MapName.init(root: Frame)
+	box = Stage.place(root, "MapName", "tc", math.floor((Stage.REF_W - L.w) / 2), L.y, L.w, L.h)
+	region = Ui.text(box, "", 0, 0, L.w, { align = "center", outline = true, color = C.dim })
+	name = Ui.text(box, "", 0, L.nameY, L.w, { font = "body", align = "center", outline = true, color = C.text })
+	box.Visible = false
+end
+
+-- 장면의 이름표 → (지역 이름, 맵 이름). 지역 이름이 맵 이름과 같으면(은달 항구) 지역 줄은 비운다
+function MapName.titleOf(key: string): (string, string)
+	local base = string.match(key, "^(.-)#%d+$") or key
+	local sc = SCENES.scenes[base]
+	local mapName = if sc then sc.name or "" else ""
+	local rid = WM.nodeOf(base)
+	local regionName = if rid and WMD.regions[rid] then WMD.regions[rid].name else ""
+	if regionName == mapName then
+		regionName = ""
+	end
+	return regionName, mapName
+end
+
+-- 그 장면의 이름을 띄운다(장면이 바뀌고 막이 걷힌 뒤)
+function MapName.show(key: string?)
+	if not box or typeof(key) ~= "string" then
+		return
+	end
+	local r, n = MapName.titleOf(key)
+	if n == "" then
+		MapName.hide()
+		return
+	end
+	region:set(r)
+	name:set(n)
+	-- 글자의 처음 투명도(baseT)는 지우지 않는다: 같은 글이면 SetText가 글자를 다시 짓지 않아 지금의 흐려진 값이 남아 있다 — 지우면 그 흐려진 값을 처음 값으로 읽어
+	--  같은 지역의 둘째 맵부터 지역 줄이 · 같은 이름의 맵에 다시 들면 맵 이름이 보이지 않았다(2026-10-18 검토). 새로 지은 글자에는 아직 baseT가 없어 fade가 처음 값을 잰다
+	t = 0
+	box.Visible = true
+	lastA = nil -- (글자를 새로 지었을 수 있다 — 한 번은 꼭 쓴다)
+	MapName.fade(0)
+end
+
+function MapName.hide()
+	t = -1
+	if box then
+		box.Visible = false
+	end
+end
+
+-- a = 0(안 보임) ~ 1(다 보임). 보이는 정도가 바뀔 때만 글자를 훑는다(다 보이는 2초 남짓 동안은 아무것도 쓰지 않는다 — 2026-10-18 검토)
+function MapName.fade(a: number)
+	if not box then
+		return
+	end
+	local q = math.floor(a * 64 + 0.5) / 64
+	if lastA == q then
+		return
+	end
+	lastA = q
+	for _, d in box:GetDescendants() do
+		if d:IsA("ImageLabel") then
+			local base = d:GetAttribute("baseT")
+			if base == nil then
+				base = d.ImageTransparency
+				d:SetAttribute("baseT", base)
+			end
+			d.ImageTransparency = base + (1 - base) * (1 - a)
+		end
+	end
+end
+
+-- 지금 보이는 정도(0 ~ 1 · 안 떠 있으면 0) — 자동 검사가 본다
+function MapName.alpha(): number
+	if t < 0 then
+		return 0
+	end
+	if t < L.fadeIn then
+		return t / L.fadeIn
+	elseif t < L.fadeIn + L.hold then
+		return 1
+	end
+	return math.max(0, 1 - (t - L.fadeIn - L.hold) / L.fadeOut)
+end
+
+-- 장마다: blocked = 그 자리를 다른 것이 쓴다(보스 체력 · 퀘스트 연출) — 그러면 바로 사라진다
+function MapName.step(dt: number, blocked: boolean?)
+	if t < 0 then
+		return
+	end
+	t += dt
+	local a = MapName.alpha()
+	if a <= 0 or blocked then
+		MapName.hide()
+		return
+	end
+	MapName.fade(a)
+end
+
+return MapName
 
 end
 MODULES['Client/lune/mobsView'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
@@ -75094,6 +77144,14 @@ local GLOW_AT = { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } } -- 윤곽의 빛: �
 local EMBER_X = { -9, -4, 1, 6, 10 } -- 불티 다섯이 피어오르는 자리(몸의 가운데에서 옆으로)
 local EMBER_BIG = 0.45 -- 피어오르는 길의 이만큼까지는 두 점, 그 뒤로는 한 점(한 점짜리 셋은 화면에서 보이지 않았다 — 2026-10-11 Play)
 local function rgbOf(c): Color3
+	-- 「#rrggbb」 글도 받는다(토벌 · 사냥터 정예의 겉모습 — city.js RIFT.elite.look은 글로 적혀 있다. 2026-10-18 검토: 배열로만 읽어 윤곽 · 불티가 검게 나왔다)
+	if typeof(c) == "string" then
+		local r, g, b = string.match(c, "^#?(%x%x)(%x%x)(%x%x)$")
+		if r then
+			return Color3.fromRGB(tonumber(r, 16) :: number, tonumber(g, 16) :: number, tonumber(b, 16) :: number)
+		end
+		return Color3.fromRGB(255, 255, 255)
+	end
 	return Color3.fromRGB(c[1], c[2], c[3])
 end
 -- 윤곽의 빛(흰 실루엣 넷) — look.aura가 있을 때만
@@ -76973,6 +79031,7 @@ function Sprite:set(clip: string, frame: number, x: number, y: number, dir: numb
 	local label = self.label
 	if not f then
 		label.Visible = false -- 빈 장
+		self.lastF = nil
 		return
 	end
 	if self.page ~= f[1] then
@@ -76997,6 +79056,16 @@ function Sprite:set(clip: string, frame: number, x: number, y: number, dir: numb
 		self.fine = fine
 		label.ResampleMode = if fine then Enum.ResamplerMode.Default else Enum.ResamplerMode.Pixelated
 	end
+	-- 지난번과 같은 장 · 같은 자리 · 같은 쪽 · 같은 크기면 다시 쓰지 않는다(폰에서 매 장면 몬스터 · 사람마다 다섯 값을 새로 쓰던 것 — 2026-10-18 검토).
+	--  보이기만은 늘 맞춘다(부르는 쪽이 잠깐 숨겼다가 다시 그릴 때)
+	local flip = dir >= 0
+	if self.lastF == f and self.lastX == px and self.lastY == py and self.lastFlip == flip and self.lastS == s and self.lastOx == ox and self.lastOy == oy then
+		if not label.Visible then
+			label.Visible = true
+		end
+		return
+	end
+	self.lastF, self.lastX, self.lastY, self.lastFlip, self.lastS, self.lastOx, self.lastOy = f, px, py, flip, s, ox, oy
 	local function R(v: number): number
 		return if fine then v else math.floor(v + 0.5)
 	end
@@ -77164,8 +79233,15 @@ function Stage.init()
 end
 
 -- 화면 틀의 격자가 바뀌면(창 크기가 바뀌어 배율이 달라지면) fn을 부른다
-function Stage.onResize(fn: () -> ())
+-- 돌려주는 것: 그 함수를 빼는 함수(화면을 닫을 때 — 2026-10-18 검토: 캐릭터 고르기를 열 때마다 하나씩 쌓여 닫힌 화면을 붙들고 있었다)
+function Stage.onResize(fn: () -> ()): () -> ()
 	table.insert(resized, fn)
+	return function()
+		local i = table.find(resized, fn)
+		if i then
+			table.remove(resized, i)
+		end
+	end
 end
 
 -- 도트 좌표에 놓는 그림 한 장(도트 그림용 설정)
@@ -77903,6 +79979,7 @@ function Title.run(select, io)
 			if entered and entered.self then
 				result = entered
 			else
+				view = if entered and entered.select then entered.select else view -- 서버가 준 목록으로(그 사이 이름이 비워졌으면 그것이 보이게 — 2026-10-18 검토)
 				picked = #view.chars
 				showSelect(if entered then entered.why else TXT.failed)
 			end
@@ -78023,11 +80100,12 @@ function Title.run(select, io)
 			stageKey(input.KeyCode)
 		end
 	end))
-	Stage.onResize(function()
+	local unResize = Stage.onResize(function()
 		if over.Parent and stagePlace then
 			stagePlace()
 		end
 	end)
+	table.insert(connections, { Disconnect = function() unResize() end }) -- (닫을 때 함께 뺀다)
 
 	shadeFrom, shadeTo, shadeT = 0, 1, 0
 	shade.BackgroundTransparency = 0
@@ -78089,7 +80167,7 @@ local C = Ui.COLOR
 local PIC = 24 -- 그림 한 장(화면 틀의 점)
 local HOLD_FIRST, HOLD_NEXT = 0.3, 0.12 -- 공격 스킬을 누르고 있을 때: 처음 다시 누르기까지 · 그 뒤의 간격(초)
 local DRAG = Quick.DATA.drag -- 이만큼 움직이면 끌기로 본다(화면 틀의 점)
-local ACT_WORDS = { pickup = "줍기", portal = "들어가기", npc = "말 걸기", spot = "살펴보기" } -- spot = 맵에 놓인 것 앞(퀘스트의 자리)
+local ACT_WORDS = { pickup = "줍기", portal = "들어가기", npc = "말 걸기", spot = "살펴보기", vista = "둘러보기" } -- spot = 맵에 놓인 것 앞(퀘스트의 자리) · vista = 경관의 자리(성의 테라스 — 2026-10-18)
 
 local Touch = {}
 Touch.on = false
@@ -78174,7 +80252,9 @@ local function paintSlot(b)
 	Ui.setPic(b.pic, if what then Quick.pic(what) else nil)
 	b.plus:show(not what)
 	if what and Quick.item(what) then
-		b.count:set(tostring(if Hud.countOf then Hud.countOf(what) else 0)) -- 소비 아이템: 가방에 든 수
+		local n = if Hud.countOf then Hud.countOf(what) else 0
+		b.count:set(tostring(n)) -- 소비 아이템: 가방에 든 수
+		b.count:color(if n == 0 then Ui.COLOR.red else Ui.COLOR.text) -- 다 쓰면 붉은 0(2026-10-18)
 		b.count:show(true)
 	else
 		b.count:show(false)
@@ -78664,6 +80744,16 @@ function Touch.init(options)
 	Touch.root = root
 	build()
 	Stage.onResize(function()
+		-- 단추를 새로 짓기 전에 누르고 있던 것을 놓는다(2026-10-18 검토: 화면을 돌리면 막대 · 뛰기 · 상호작용이 눌린 채 남아 캐릭터가 계속 걸었다)
+		if pad and pad.stop then
+			pad.stop()
+		end
+		Input.release("jump")
+		opts.onAct(false)
+		for i in held do
+			Input.release("tslot:" .. i)
+		end
+		table.clear(held)
 		Touch.arrange(false)
 		build()
 	end)
@@ -78906,6 +80996,11 @@ local function place()
 	skipBtn.frame.Position = UDim2.fromOffset(P.w + 6, 4)
 end
 
+-- 다른 캐릭터로 들어왔다: 앞 캐릭터의 꿈에서 쌓인 것(내려옴 · 말을 끝냄 · 보낸 「끝냈다」)을 지운다(2026-10-18 검토 — 둘 다 꿈에 있으면 새 캐릭터의 미션이 바로 끝났다)
+function View.reset()
+	View.startX, View.talked, View.dropped, View.cast, pending, shownStep = nil, nil, false, false, false, -1
+end
+
 -- 매 화면. c = { tut(서버가 보낸 진행), skip(건너뛸 수 있나), scene(장면 이름표), zones(장면의 tut), body, touch, key(하는 일 → 키 이름), skill(첫 사냥기 「키 · 이름」), potion(물약 칸의 키), windows({ [id] = true }), dt, find(이름) → 반짝일 단추 }
 function View.update(c)
 	local t = c.tut
@@ -79063,6 +81158,7 @@ function AchieveWindow.build(body: Frame, ctx, w: number, _h: number)
 	local view = {}
 	local tab = 1
 	local note, noteTone = nil, nil
+	local waiting = false -- 답을 기다리는 중(두 번 눌러 두 번 가지 않게 — 2026-10-18 검토: 둘째의 「이미 받았다」가 첫째의 성공 글을 덮었다)
 	local score = Ui.text(body, "", 0, 0, w, { font = "body", color = C.gold })
 	local grade = Ui.text(body, "", 0, 2, w, { align = "right", color = C.accent })
 	local gradeBar = Ui.bar(body, 0, S.barY, w, S.barH, C.accent, C.panel2)
@@ -79099,8 +81195,10 @@ function AchieveWindow.build(body: Frame, ctx, w: number, _h: number)
 		r.count = Ui.text(f, "", S.barW + 6, 31, 80, { color = C.dim })
 		r.taken = Ui.text(f, W.taken, 0, 8, w, { align = "right", color = C.green })
 		r.take = Ui.button(f, W.take, w - S.btnW, 2, S.btnW, function()
-			if r.id then
+			if r.id and not waiting then
+				waiting = true
 				local res = ctx.achDo("claim", r.id)
+				waiting = false
 				note, noteTone = nil, nil
 				if res and res.why then
 					note, noteTone = res.why, C.red
@@ -79120,7 +81218,12 @@ function AchieveWindow.build(body: Frame, ctx, w: number, _h: number)
 	local fy = S.listY + S.rows * S.row + S.footY
 	Ui.line(body, 0, fy - 5, w)
 	local all = Ui.button(body, W.takeAll, 0, fy, S.allW, function()
+		if waiting then
+			return
+		end
+		waiting = true
 		local res = ctx.achDo("all")
+		waiting = false
 		note, noteTone = nil, nil
 		if res and res.why then
 			note, noteTone = W.full, C.red
@@ -79661,7 +81764,7 @@ function AttendWindow.build(body: Frame, ctx, w: number, _h: number)
 		label:set(text)
 		label:color(if hot then C.accent else C.dim)
 		local lw = Ui.measure(text)
-		gift.label:SetMaxWidth(math.max(10, w - lw - 8))
+		gift.label:SetMaxWidth(math.max(10, w - lw - 8), 1) -- 한 줄로(둘째 인자를 빼면 줄 수가 풀려 아래 줄로 넘쳤다 — 2026-10-18 검토)
 		gift:move(lw + 8, y + 2)
 		gift:set(if hot then Gift.text(AttendWindow.sum(v), W) else Gift.text(D.rewards[show] or {}, W))
 		noteText:set(note or W.note)
@@ -79806,6 +81909,12 @@ function AuctionWindow.build(body: Frame, ctx, w: number, h: number)
 				after(res)
 			end
 			paint()
+			-- 답을 기다리는 사이에 탭을 바꿨다(그때의 부탁은 busy라 버려졌다): 그 탭의 것을 이어서 받아 온다(2026-10-18 검토 — 판매 · 완료가 빈 목록으로 남았다)
+			if (tab == "sell" or tab == "done") and action ~= "mine" and not (res and res.mine) then
+				call("mine", false)
+			elseif (tab == "buy" or tab == "log") and action == "mine" then
+				call("browse", board(), false)
+			end
 		end)
 	end
 
@@ -80475,6 +82584,14 @@ function BagWindow.canWear(me, it): boolean
 	return not it.broken and (it.slot ~= "weapon" or it.who == me.class) and me.level >= Items.needLevel(it)
 end
 
+-- 지금 낀 것보다 좋은 장비인가(2026-10-18 — 칸의 왼쪽 위에 초록 ▲): 장착할 수 있고, 장착하면 전투력이 오른다(상세 판의 「장착하면 전투력 +n」과 같은 셈)
+function BagWindow.better(me, bag, it): boolean
+	if not it or it.item or typeof(it.stage) ~= "number" or typeof(it.q) ~= "number" or typeof(it.star) ~= "number" or not BagWindow.canWear(me, it) then
+		return false -- (장비의 꼴이 다 갖춰지지 않은 것 — 셈하지 않는다)
+	end
+	return ItemInfo.wearDiff(it, (bag.equip or {})[it.slot], me.spec or ItemInfo.refSpec(me.level or 1)) > 0 -- (장착한 것의 표가 없으면 빈 몸으로 셈한다)
+end
+
 -- 그림과 숫자(달돈 · 달가루 · 정수). (x, y) = 그림의 왼쪽 위 — 숫자는 그 오른쪽에
 local function purse(parent: Instance, icon: string, x: number, y: number, w: number)
 	Ui.smallIcon(parent, icon, x, y)
@@ -80779,6 +82896,20 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					end,
 					no = stopAsk,
 				})
+			elseif ask and ask.kind == "dismantle" then
+				-- 분해도 한 번 묻는다(2026-10-18 — 전에는 누르면 바로 사라졌다): 「이 장비를 분해할까요?  달가루 +n」 · 분해 · 취소
+				spec.ask = ItemDetail.ask("dismantle", nil, 1, 1, {
+					gain = function()
+						return Items.dismantle(it)
+					end,
+					gainWord = "gainDust",
+					yes = function()
+						ctx.send("Item", "dismantle", it.id)
+						unselect()
+						redraw()
+					end,
+					no = stopAsk,
+				})
 			else
 				ask = nil
 				button(WORDS.equip, function()
@@ -80786,9 +82917,8 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					redraw()
 				end, true, not can)
 				button(WORDS.dismantle, function()
-					ctx.send("Item", "dismantle", it.id)
-					unselect()
-					redraw()
+					ask = { kind = "dismantle" }
+					view.refresh()
 				end)
 				if service == "store" then
 					button(WORDS.toStore, function()
@@ -80866,7 +82996,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 						view.refresh()
 					end)
 				end
-				if service == "store" then
+				if service == "store" and def.kind ~= "quest" then -- 퀘스트 물건은 맡길 수 없다(sim/bag.luau의 storeIn)
 					button(WORDS.toStore, function()
 						if entry.n == 1 then
 							ctx.send("Item", "storeIn", tabKey, slot, 1)
@@ -80921,7 +83051,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		for i, cell in cells do
 			cell.frame.Visible = i <= rows * COLS -- 줄여진 적은 없지만, 넘치는 칸은 숨긴다
 			local item = list[i] or nil
-			cell:set(item, { locked = i > bag.size, selected = sel ~= nil and sel.tab == key() and sel.slot == i, hot = hot == i })
+			cell:set(item, { locked = i > bag.size, selected = sel ~= nil and sel.tab == key() and sel.slot == i, hot = hot == i, better = key() == "gear" and BagWindow.better(me, bag, item) })
 		end
 		-- 가방 늘리기(세 탭이 함께 늘어난다 — 값이 적혀 있다). 다 늘렸으면 단추가 없다
 		grow.frame.Visible = bag.growCost ~= false
@@ -80994,8 +83124,11 @@ function DailyWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 		row.button = Ui.button(body, W.accept, w - S.btnW, by, S.btnW, function()
 			local board = ctx.daily() and ctx.daily().boards[region]
 			local t = board and board.tasks[i]
-			if t then
-				ctx.dailyDo(if t.st == Daily.OPEN then "accept" else "turn", region, i)
+			-- 두 번 톡 하면 두 번째가 「아직 다 잡지 못했다 · 이미 받은 의뢰다」를 띄웠다(2026-10-18 검토) — 0.8초 안의 다시 누름은 받지 않는다
+			local act = if t and t.st == Daily.OPEN then "accept" else "turn"
+			if t and (act ~= row.act or os.clock() - (row.at or -9) > 0.8) then -- 같은 일만 막는다(수락한 뒤 바로 보상 받기는 된다)
+				row.at, row.act = os.clock(), act
+				ctx.dailyDo(act, region, i)
 			end
 		end, { main = true })
 		row.count = Ui.text(body, "", w - S.btnW, by + math.floor((Ui.M.button - Ui.M.small) / 2), S.btnW, { align = "right", color = C.accent })
@@ -81080,8 +83213,8 @@ function DeathBox.hide()
 	end
 end
 
--- root = 늘 보이는 화면의 틀 · onReturn = 「마을로 돌아간다」를 눌렀을 때
-function DeathBox.show(root: Instance, onReturn: () -> ())
+-- root = 늘 보이는 화면의 틀 · onReturn = 「마을로 돌아간다」를 눌렀을 때 · weakMin = 되살아난 뒤 약해짐이 남는 분(0이면 그 줄을 비운다 — Lv.10 아래는 벌칙이 없다)
+function DeathBox.show(root: Instance, onReturn: () -> (), weakMin: number?)
 	DeathBox.hide()
 	local holder = Stage.place(root, "DeathBox", D.at, D.x, D.y, D.w, D.h)
 	holder.ZIndex = 40
@@ -81089,6 +83222,9 @@ function DeathBox.show(root: Instance, onReturn: () -> ())
 	local inner = D.w - D.pad * 2
 	Ui.text(panel, D.title, D.pad, D.titleY, inner, { font = "body", color = C.gold })
 	Ui.text(panel, D.text, D.pad, D.textY, inner)
+	if weakMin and weakMin > 0 then -- 쓰러진 벌칙(2026-10-18 — 전에는 화면 어디에도 보이지 않았다)
+		Ui.text(panel, (string.gsub(D.weak, "{m}", tostring(weakMin))), D.pad, D.weakY, inner, { color = C.red })
+	end
 	Ui.text(panel, D.hint, D.pad, D.hintY, inner, { color = C.dim })
 	local sent = false
 	Ui.button(panel, D.yes, D.pad, D.buttonY, inner, function()
@@ -81397,6 +83533,19 @@ function ForgeWindow.choices(bag)
 	return out
 end
 
+-- 가방(장착하지 않은 것)에 있는가 — 되살리기의 재료는 가방의 것만 받는다(서버의 Bag.restore와 같다 — 2026-10-18 검토)
+local function inGear(bag, id: number?): boolean
+	if not bag or not id then
+		return false
+	end
+	for _, it in bag.gear do
+		if it and it.id == id then
+			return true
+		end
+	end
+	return false
+end
+
 local function findIn(bag, id: number?)
 	if not bag or not id then
 		return nil
@@ -81535,7 +83684,9 @@ function ForgeWindow.build(body: Frame, ctx, w: number, h: number, arg: any)
 		row.coin = Ui.smallIcon(craftRoot, "coin", w - bw - 8 - fw - 19, y + 3)
 		row.fee = Ui.text(craftRoot, "", w - bw - 8 - fw, y + 7, fw, { align = "right", color = C.gold })
 		row.make = Ui.button(craftRoot, "제작", w - bw, y + 1, bw, function()
-			if row.recipe then
+			-- 빨리 두 번 누르면 두 번 만들어 재료를 두 번 썼다(2026-10-18 검토) — 0.8초 안의 다시 누름은 받지 않는다
+			if row.recipe and os.clock() - (ForgeWindow.craftAt or -9) > 0.8 then
+				ForgeWindow.craftAt = os.clock()
 				ctx.send("Item", "craft", row.recipe.id)
 			end
 		end, { h = CRAFT.makeH })
@@ -81593,7 +83744,7 @@ function ForgeWindow.build(body: Frame, ctx, w: number, h: number, arg: any)
 			return
 		end
 		anim = { t = 0, seq = ui.forgeSeq or 0, snap = table.clone(it), id = it.id, revealed = false }
-		ui.forgeResult = nil
+		ui.forgeResult, ui.forgeWhy = nil, nil -- 지난 「안 된 까닭」을 지운다(2026-10-18 검토)
 		ctx.send("Item", "enhance", it.id, guard)
 		view.startAnim()
 	end, { main = true })
@@ -81617,11 +83768,12 @@ function ForgeWindow.build(body: Frame, ctx, w: number, h: number, arg: any)
 				return
 			end
 			local cur = findIn(ctx.bag(), ui.forgeTarget)
-			if cur and cur.broken and cur.id ~= it.id and Items.same(cur, it) and not it.broken then
-				ui.forgeMat = it.id -- 부서진 것을 되살릴 같은 장비
+			if cur and cur.broken and cur.id ~= it.id and Items.same(cur, it) and not it.broken and inGear(ctx.bag(), it.id) then
+				ui.forgeMat = it.id -- 부서진 것을 되살릴 같은 장비(가방의 것만 — 장착한 것은 서버가 받지 않는다)
 			else
 				ui.forgeTarget, ui.forgeMat, ui.forgeResult = it.id, nil, nil
 			end
+			ui.forgeWhy = nil -- 다른 것을 골랐다: 지난 「안 된 까닭」을 지운다(2026-10-18 검토)
 			view.refresh()
 		end, S)
 		p.tag = Ui.text(p.cell.frame, "장착", 3, 2, S - 6, { outline = true, color = C.accent, z = 7 })
@@ -81880,7 +84032,7 @@ function ForgeWindow.build(body: Frame, ctx, w: number, h: number, arg: any)
 		starsUi:set(shown.star, D.ENHANCE.max)
 		name:set(ItemCell.label(shown))
 		name:color(ItemCell.color(shown))
-		local info = Items.enhanceInfo(shown, guard, me.forged ~= true and shown.star == 0) -- 첫 강화(별이 없는 장비의 첫 별)는 공짜로 반드시 붙는다
+		local info = Items.enhanceInfo(shown, guard, Items.firstFree(me.forged, me.level, shown)) -- 첫 강화(별이 없는 제 레벨 + 10까지의 장비의 첫 별)는 공짜로 반드시 붙는다 — 서버와 같은 셈
 		local texts = ForgeWindow.lines(shown, info, bag)
 		line1:set(texts[1])
 		line2:set(texts[2])
@@ -81919,7 +84071,7 @@ end
 function ForgeWindow.put(ui, id: number, bag: any)
 	local cur = findIn(bag, ui.forgeTarget)
 	local it = findIn(bag, id)
-	if cur and it and cur.broken and cur.id ~= it.id and Items.same(cur, it) and not it.broken then
+	if cur and it and cur.broken and cur.id ~= it.id and Items.same(cur, it) and not it.broken and inGear(bag, id) then
 		ui.forgeMat = id
 	else
 		ui.forgeTarget, ui.forgeMat = id, nil
@@ -81956,6 +84108,7 @@ end
 function HallWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 	local board = if typeof(arg) == "string" then arg else "level"
 	local boards = nil -- 서버가 준 판들(아직이면 nil)
+	local failed = false -- 서버가 답하지 않았다(너무 자주 물음 · 잠깐의 오류) — 「기록이 없다」와 가른다(2026-10-18 검토)
 	local alive = true
 	local tabs = {}
 	local x = 0
@@ -81995,7 +84148,7 @@ function HallWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 		end
 		local list = if boards then boards[board] or {} else nil
 		note:show(list == nil or #list == 0)
-		note:set(if list == nil then "불러오는 중 …" else "아직 기록이 없습니다")
+		note:set(if list ~= nil then "아직 기록이 없습니다" elseif failed then "불러오지 못했습니다 · 다시 불러오는 중" else "불러오는 중 …")
 		headName:show(list ~= nil and #list > 0)
 		headValue:show(list ~= nil and #list > 0)
 		for i, row in rows do
@@ -82008,10 +84161,20 @@ function HallWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 	end
 	HallWindow.redraw()
 	task.spawn(function()
-		local got = ctx.rank()
-		if alive then
-			boards = got or {}
+		-- 답이 없으면(빠르기의 한도 · 잠깐의 오류) 「기록이 없다」로 보이지 않게 몇 번 더 묻는다
+		for _ = 1, 4 do
+			local got = ctx.rank()
+			if not alive then
+				return
+			end
+			if got then
+				boards, failed = got, false
+				HallWindow.redraw()
+				return
+			end
+			failed = true
 			HallWindow.redraw()
+			task.wait(1.5)
 		end
 	end)
 
@@ -82224,6 +84387,7 @@ function ItemCell.new(parent: Instance, x: number, y: number, onClick: (any) -> 
 	local icon = Ui.worldIcon(outer, nil, 0, 0, S)
 	local star = Ui.text(outer, "", 0, S - 13, S - 4, { align = "right", outline = true, color = C.text, z = 6 })
 	local cross = Ui.text(outer, "", 0, math.floor((S - 12) / 2), S, { font = "body", align = "center", outline = true, color = C.red, z = 6 })
+	local up = Ui.text(outer, "", 3, 2, 12, { outline = true, color = C.green, z = 6 }) -- 지금 낀 것보다 좋은 장비 ▲(2026-10-18 — opts.better)
 	local veil = Ui.box(outer, 1, 1, S - 2, S - 2, C.ink, 0.45) -- 아직 열리지 않은 칸
 	veil.Name = "Locked"
 	veil.ZIndex = 5
@@ -82233,7 +84397,7 @@ function ItemCell.new(parent: Instance, x: number, y: number, onClick: (any) -> 
 	cell.hit.Activated:Connect(function()
 		onClick(cell.item)
 	end)
-	-- it = 장비 · 묶음(없으면 빈 칸). opts = { locked 아직 열리지 않은 칸, selected 고른 칸, hot 끌던 것을 놓을 칸 }
+	-- it = 장비 · 묶음(없으면 빈 칸). opts = { locked 아직 열리지 않은 칸, selected 고른 칸, hot 끌던 것을 놓을 칸, better 지금 낀 것보다 좋은 장비(▲) }
 	function cell.set(_, it: any, opts)
 		opts = opts or {}
 		cell.item = it
@@ -82246,6 +84410,7 @@ function ItemCell.new(parent: Instance, x: number, y: number, onClick: (any) -> 
 		local broken = it ~= nil and it.broken == true
 		icon.ImageColor3 = if broken then Color3.fromRGB(90, 90, 100) else Color3.new(1, 1, 1)
 		cross:set(if broken then "×" else "")
+		up:set(if it and opts.better then "▲" else "")
 		slot:setOn(opts.selected == true or opts.hot == true)
 		veil.Visible = opts.locked == true
 	end
@@ -82310,7 +84475,7 @@ function ItemDetail.ask(kind: string, n: number?, lo: number, hi: number, o)
 	local words = WORDS.ask[kind]
 	local text = words[1]
 	if o.gain then
-		text = text .. "  " .. Format.fill(WORDS.gain, { n = Format.short(o.gain(n or 1)) })
+		text = text .. "  " .. Format.fill(WORDS[o.gainWord or "gain"], { n = Format.short(o.gain(n or 1)) }) -- gainWord = 받을 것의 글(분해 = 「달가루 +n」 — 2026-10-18)
 	end
 	local steps = nil
 	if n then
@@ -82760,6 +84925,19 @@ local function plate(parent: Instance, text: string, rect, color: Color3, name: 
 	return holder
 end
 
+-- 파티원(나를 뺀 것): ctx.party가 주는 파티(PartyInfo — members = { { id, name, scene } … })에서. 파티가 없으면 빈 표(2026-10-18)
+function MapWindow.partyOf(ctx): { any }
+	local info = if ctx.party then ctx.party() else nil
+	local me = if ctx.myId then ctx.myId() else nil
+	local out = {}
+	for _, m in (if typeof(info) == "table" then info.members else nil) or {} do
+		if m.id ~= me and typeof(m.scene) == "string" then
+			table.insert(out, m)
+		end
+	end
+	return out
+end
+
 function MapWindow.build(body: Frame, ctx, w: number, _h: number)
 	local view = {}
 	local regions = WM.arted()
@@ -82981,6 +85159,16 @@ function MapWindow.build(body: Frame, ctx, w: number, _h: number)
 				end)
 			end
 		end
+		-- 파티원(2026-10-18 — 메이플처럼): 이 지역에 있는 파티원마다 그 장소의 표시 왼쪽 아래에 작은 금빛 점(나란히 — 파티는 넷까지)
+		local count = {}
+		for _, m in MapWindow.partyOf(ctx) do
+			local pr, pn = WM.nodeOf(m.scene)
+			local at = if pr == rid and pn then A.at[pn] else nil
+			if at then
+				count[pn] = (count[pn] or 0) + 1
+				dot(group, at[1] - 7 - (count[pn] - 1) * 5, at[2] + 7, 2, C.gold, "Party")
+			end
+		end
 		-- 오른쪽 글 칸: 고른 곳(없으면 내가 있는 곳 — 다른 지역을 보는 중이면 그 지역의 첫 장소)
 		showSide(picked or mine or region.nodes[1].id)
 		best:set(bestText)
@@ -83002,6 +85190,9 @@ function MapWindow.build(body: Frame, ctx, w: number, _h: number)
 		end
 		local card = WM.goalCard(ctx.quests() or {}, level, ctx.scene(), if ctx.navi then ctx.navi() else nil, if ctx.daily then ctx.daily() else nil)
 		table.insert(parts, if card then card.title .. card.text else "")
+		for _, m in MapWindow.partyOf(ctx) do
+			table.insert(parts, tostring(m.scene)) -- 파티원이 옮기면 다시 그린다
+		end
 		local sig = table.concat(parts, "|")
 		if sig ~= last then
 			last = sig
@@ -83123,7 +85314,7 @@ end
 MODULES['Client/lune/ui/questWindow'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 퀘스트 창(J) — 메이플스토리의 퀘스트 창처럼 탭 셋: 「진행 중」 · 「시작 가능」 · 「완료」(2026-10-11 — 전에는 하는 중인 것 넷만 보였다).
 --  위에 그 탭의 목록(메인 · 전직은 노랑), 고르면 아래에 줄거리와 그 탭에 맞는 것:
---   진행 중 = 할 일(다 됐으면 풀빛) · 무엇을 어디서 잡는지 · 보상 · 주민의 부탁은 「그만두기」
+--   진행 중 = 할 일(다 됐으면 풀빛) · 무엇을 어디서 잡는지 · 보상 · 주민의 부탁은 「포기」(2026-10-18: 그만두기 → 메이플의 낱말)
 --   시작 가능 = 누구에게 · 어디서 받는지(「샛별 · 초승달 마을」) · 보상. 레벨이 모자란 다음 메인도 맨 끝에 흐리게 뜬다(「Lv.4가 되면 받는다」)
 --   완료 = 줄거리와 받은 보상
 --  받는 것과 돌려주는 것은 주민 앞에서 한다(머리 위의 ! · ?). 목록이 줄 수보다 길면 ▲ ▼로 넘긴다.
@@ -83151,6 +85342,8 @@ QuestWindow.TABS = TABS
 QuestWindow.TEXT_LINES = 5 -- 줄거리가 쓰는 줄 수
 QuestWindow.W = W
 
+QuestWindow.DROP, QuestWindow.DROP_SURE, QuestWindow.DROP_WAIT = "포기", "정말 포기", 3 -- 포기 단추 · 한 번 누른 뒤의 글 · 다시 누를 수 있는 초
+
 function QuestWindow.size(): (number, number)
 	return W, TAB_H + ROWS * ROW + 12 + QuestWindow.TEXT_LINES * 16 + 8 + 16 + 16 + 20 + Ui.M.button + 4
 end
@@ -83177,6 +85370,9 @@ function QuestWindow.rewardParts(reward, level: number, class: string)
 	if (reward.scrolls or 0) > 0 then
 		local scroll = Items.goods("scroll_return")
 		table.insert(parts, { icon = if scroll then scroll.icon else "scroll", text = ("x%d"):format(reward.scrolls) })
+	end
+	if (reward.store or 0) > 0 then
+		table.insert(parts, { text = ("창고 칸 +%d"):format(reward.store) }) -- 2026-10-18: 창고는 계정의 것(한 번만 늘어난다)
 	end
 	if reward.gear then
 		local it = Items.make(reward.gear.slot, reward.gear.stage, Items.data.NORMAL, class)
@@ -83285,13 +85481,34 @@ function QuestWindow.build(body: Frame, ctx, w: number, _h: number)
 			end
 		end
 	end
-	local drop = Ui.button(body, "그만두기", w - 100, y + 54, 100, function()
+	-- 포기: 모은 것이 사라지므로 한 번 더 묻는다 — 누르면 「정말 포기」로 바뀌고, 3초 안에 다시 누르면 포기한다(2026-10-18 — 전에는 한 번에 사라졌다)
+	local armed: { id: string, at: number }? = nil
+	local drop
+	drop = Ui.button(body, QuestWindow.DROP, w - 100, y + 54, 100, function()
 		if tab == 1 and selected[1] then
-			ctx.send("Quest", "drop", selected[1])
-			selected[1] = nil
+			if armed and armed.id == selected[1] and os.clock() - armed.at <= QuestWindow.DROP_WAIT then
+				armed = nil
+				drop:setText(QuestWindow.DROP)
+				ctx.send("Quest", "drop", selected[1])
+				selected[1] = nil
+			else
+				local mine = { id = selected[1], at = os.clock() }
+				armed = mine
+				drop:setText(QuestWindow.DROP_SURE)
+				task.delay(QuestWindow.DROP_WAIT, function()
+					if armed == mine then
+						armed = nil
+						drop:setText(QuestWindow.DROP)
+					end
+				end)
+			end
 		end
 	end)
 	function view.refresh()
+		if armed and (tab ~= 1 or armed.id ~= selected[1]) then
+			armed = nil -- 다른 퀘스트를 골랐다: 「정말 포기」를 되돌린다
+			drop:setText(QuestWindow.DROP)
+		end
 		local book = ctx.quests() or {}
 		local me = ctx.me()
 		local level = if me then me.level else 1
@@ -83569,7 +85786,8 @@ function QuickEdit.init(h)
 	end)
 	UserInputService.InputEnded:Connect(function(input)
 		local p = pending
-		if p and isPress(input) and (input == p.input or input.UserInputType == p.input.UserInputType) then
+		-- 손가락은 그 손가락만(2026-10-18 검토: 끄는 중에 조이스틱의 손가락을 떼면 거기에 놓였다) · 마우스는 단추가 같으면
+		if p and isPress(input) and (input == p.input or (input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType == p.input.UserInputType)) then
 			finish(Vector2.new(input.Position.X, input.Position.Y))
 		end
 	end)
@@ -83623,6 +85841,7 @@ function RiftWindow.build(body: Frame, ctx, w: number, _h: number)
 	Ui.text(body, W.head, 0, 2, w, { color = C.gold })
 	local left = Ui.text(body, "", 0, 2, w, { align = "right", color = C.accent })
 	local rows = {}
+	local entering = false -- 「입장」의 답을 기다리는 중
 	for i, t in D.tiers do
 		local y = S.top + (i - 1) * S.row
 		local by = y - 3 -- 「입장」은 이름 줄의 오른쪽(아래 두 줄 = 몬스터 · 보상이 창의 폭을 다 쓴다)
@@ -83634,7 +85853,12 @@ function RiftWindow.build(body: Frame, ctx, w: number, _h: number)
 		row.name = Ui.text(body, t.name, 0, y, nameW + 2, { font = "body" })
 		row.need = Ui.text(body, Format.fill(W.need, { lv = t.lv }), nameW + 8, y + 2, 64, { color = C.dim })
 		row.button = Ui.button(body, W.enter, w - S.btnW, by, S.btnW, function()
+			if entering then
+				return -- 답을 기다리는 중(두 번 눌러 방에 든 뒤 「토벌대장 앞에서 …」가 뜨지 않게 — 2026-10-18 검토)
+			end
+			entering = true
 			ctx.riftDo("enter", t.id)
+			entering = false
 		end, { main = true })
 		local my = by + Ui.M.button + 3
 		Ui.text(body, RiftWindow.mobsText(t), 0, my, w, { color = C.dim })
@@ -83716,6 +85940,8 @@ local Windows = require(script.Parent.windows)
 local C = Ui.COLOR
 local D = Items.data
 local COLS = Layout.BAG.cols -- 창고의 칸: 가방과 같은 여섯 칸
+local BAR = 3 -- 늘린 창고의 스크롤 막대 두께(가방 창과 같다 — 2026-10-18)
+local HOLD = 0.3 -- 스마트폰: 잠깐 누르고 있다가 밀어야 끈다(그 전에 밀면 스크롤 — 가방 창과 같은 값)
 local ROW = Ui.M.button + 4 -- 상점의 한 줄
 local SHOP = Layout.SHOP
 local CRAFT = Layout.CRAFT
@@ -83730,6 +85956,8 @@ local DOUBLE = 0.4 -- 이 안에 같은 칸을 다시 누르면 두 번 누른 �
 local ShopWindow = {}
 ShopWindow.NAME_W, ShopWindow.PRICE_W, ShopWindow.BUY_W = SHOP.nameW, SHOP.priceW, SHOP.buyW -- 물건 이름 · 값 · 사는 단추(들)의 칸
 ShopWindow.TITLE = { merchant = "잡화 상인 반달", store = WORDS.storeName }
+ShopWindow.BACK_HEAD = "되사기 — 이번 접속에 판 것(판 값 그대로)" -- 2026-10-18
+ShopWindow.BACK_BUY = "되사기"
 
 function ShopWindow.title(arg: string): string
 	return ShopWindow.TITLE[arg] or "상점"
@@ -83769,8 +85997,12 @@ local function buildStore(body: Frame, ctx, w: number)
 	local view = {}
 	local ui = ctx.ui
 	local S = ItemCell.size()
-	local size = D.BAG.storeBase -- 탭 하나의 칸 수
-	local rowsN = math.ceil(size / COLS)
+	local base = D.BAG.storeBase -- 창의 높이는 처음 칸 수(네 줄)로 — 늘린 창고는 그 안에서 위아래로 민다
+	local rowsN = math.ceil(base / COLS)
+	local function sizeNow(): number
+		local bag = ctx.bag()
+		return if bag and bag.storeSize then bag.storeSize else base
+	end
 	local tab = 1
 	local sel = nil :: { tab: string, slot: number, id: any }? -- 고른 칸(id = 장비의 번호 · 묶음의 이름표)
 	local ask: number? = nil -- 찾을 수를 고르는 중이면 그 수
@@ -83810,13 +86042,18 @@ local function buildStore(body: Frame, ctx, w: number)
 	end
 	local count = Ui.text(body, "", w - Layout.BAG.countW, 0, Layout.BAG.countW, { align = "right", color = C.dim }) -- 찬 칸 / 창고의 칸
 
-	local gridRoot = Ui.group(body, 0, STORE.gridY, COLS * S, rowsN * S, "Grid")
+	local gridRoot = Ui.scroll(body, 0, STORE.gridY, COLS * S, rowsN * S, rowsN * S, BAR) -- 칸들(늘린 창고는 위아래로 스크롤)
+	gridRoot.Name = "Grid"
 	local cells = {}
 	local function slotAt(at: Vector2): number?
+		if not ItemCell.over(gridRoot, at) then
+			return nil -- 스크롤로 가려진 칸은 아니다
+		end
 		local i = ItemCell.at(cells, at)
-		return if i and i <= size then i else nil
+		return if i and i <= sizeNow() then i else nil
 	end
-	for i = 1, COLS * rowsN do
+	-- 칸 하나를 짓는다(2026-10-18 검토: 창고 칸을 늘려도(Bag.growStore) 처음 24칸만 지어 25칸부터 보이지도 꺼내지도 못했다 — 가방 창처럼 늘어난 만큼 더 짓고 위아래로 민다)
+	local function makeCell(i: number)
 		local col, row = (i - 1) % COLS, math.floor((i - 1) / COLS)
 		local cell
 		cell = ItemCell.new(gridRoot, col * S, row * S, function(it)
@@ -83851,6 +86088,10 @@ local function buildStore(body: Frame, ctx, w: number)
 			ctx.quick.press(nil, nil, input, {
 				icon = ItemCell.icon(it),
 				size = S,
+				hold = HOLD,
+				onStart = function()
+					gridRoot.ScrollingEnabled = false -- 끄는 동안은 칸들이 움직이지 않는다(늘린 창고는 스크롤한다)
+				end,
 				onMove = function(at: Vector2)
 					moved = true
 					local to = slotAt(at)
@@ -83913,6 +86154,9 @@ local function buildStore(body: Frame, ctx, w: number)
 			})
 		end)
 	end
+	for i = 1, COLS * rowsN do
+		makeCell(i)
+	end
 
 	-- 가방에서 끌어 온 것을 놓는 자리(ui/bagWindow.luau가 묻는다): 창고 창 위면 맡긴다 — 그 탭이 열려 있으면 놓은 칸에, 다른 탭이 열려 있었으면 그 탭으로 넘긴다
 	ui.storeDrop = function(at: Vector2, tabKey: string, from: number): boolean
@@ -83961,7 +86205,7 @@ local function buildStore(body: Frame, ctx, w: number)
 		local entry = if sel and list then list[sel.slot] else nil
 		if sel and sel.tab == "gear" and (not entry or entry.id ~= sel.id) then
 			entry = nil
-			for i = 1, size do
+			for i = 1, bag.storeSize do
 				local it = list[i]
 				if it and it.id == sel.id then
 					sel.slot, entry = i, it
@@ -84036,8 +86280,17 @@ local function buildStore(body: Frame, ctx, w: number)
 			button:setOn(i == tab)
 		end
 		local list = bag.store[key()]
+		-- 늘린 창고: 네 줄을 넘는 만큼 칸을 더 짓고 스크롤 틀의 속을 늘린다(가방 창과 같다)
+		local rows = math.ceil(bag.storeSize / COLS)
+		for i = #cells + 1, rows * COLS do
+			makeCell(i)
+		end
+		local scroll = rows > rowsN
+		gridRoot.CanvasSize = UDim2.fromOffset(0, math.max(rowsN, rows) * S)
+		gridRoot.ScrollingEnabled = scroll and not ctx.quick.dragging()
+		gridRoot.ScrollBarThickness = if scroll then BAR else 0
 		local used = 0
-		for i = 1, size do
+		for i = 1, bag.storeSize do
 			if list[i] then
 				used += 1
 			end
@@ -84074,28 +86327,48 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 	-- 상점: 물건마다 한 줄([그림] 이름 · [달돈] 값 · 사기). 물약(단마다 따로 판다 — 가방의 소비 탭에 들어온다)과 달가루는 열 개씩도 산다
 	local rows = {}
 	local bx = w - ShopWindow.BUY_W
-	for i, stock in stockOf(arg) do
+	-- 물건이 창의 줄(MAX_ROWS)보다 많으면 목록이 스크롤한다(2026-10-18 — 달빛 부적 · 능력치 초기화 주문서로 열둘이 됐다. 창은 스마트폰의 화면 틀에 들어가야 한다)
+	local stocks = stockOf(arg)
+	local list = Ui.scroll(body, 0, 0, w, MAX_ROWS * ROW, #stocks * ROW, 3)
+	for i, stock in stocks do
 		local y = (i - 1) * ROW
 		local many = stock.max > 1
 		-- [그 물건의 그림(칸 안에)] 이름 · [달돈] 값 · 사는 단추 — 살 수 없는 것도 그림은 보인다
-		local cell = Ui.slot(body, 0, y + 1, IC)
+		local cell = Ui.slot(list, 0, y + 1, IC)
 		cell.frame.Name = "Icon"
 		local icon = Ui.smallIcon(cell.frame, "coin", 3, 3)
-		local name = Ui.text(body, "", TX, y + 7, ShopWindow.NAME_W, { font = "body" })
-		local coin = Ui.smallIcon(body, "coin", bx - 8 - ShopWindow.PRICE_W - 19, y + 4)
-		local price = Ui.text(body, "", bx - 8 - ShopWindow.PRICE_W, y + 8, ShopWindow.PRICE_W, { align = "right", color = C.gold })
+		local name = Ui.text(list, "", TX, y + 7, ShopWindow.NAME_W, { font = "body" })
+		local coin = Ui.smallIcon(list, "coin", bx - 8 - ShopWindow.PRICE_W - 19, y + 4)
+		local price = Ui.text(list, "", bx - 8 - ShopWindow.PRICE_W, y + 8, ShopWindow.PRICE_W, { align = "right", color = C.gold })
 		local half = math.floor((ShopWindow.BUY_W - 6) / 2)
-		local one = Ui.button(body, if many then "1" else "사기", bx, y, if many then half else ShopWindow.BUY_W, function()
+		local one = Ui.button(list, if many then "1" else "사기", bx, y, if many then half else ShopWindow.BUY_W, function()
 			ctx.send("Item", "buy", stock.id, 1)
 		end)
 		local ten = if many
-			then Ui.button(body, "10", bx + half + 6, y, half, function()
+			then Ui.button(list, "10", bx + half + 6, y, half, function()
 				ctx.send("Item", "buy", stock.id, 10)
 			end)
 			else nil
 		-- 아직 살 수 없는 것은 값과 단추 자리에 "Lv.10부터"
-		local lock = Ui.text(body, "", TX + ShopWindow.NAME_W, y + 8, w - TX - ShopWindow.NAME_W, { align = "right", color = C.dim })
+		local lock = Ui.text(list, "", TX + ShopWindow.NAME_W, y + 8, w - TX - ShopWindow.NAME_W, { align = "right", color = C.dim })
 		rows[i] = { stock = stock, icon = icon, coin = coin, name = name, price = price, one = one, ten = ten, lock = lock }
+	end
+	-- 되사기(2026-10-18 — 메이플의 재구매): 물건의 줄 아래에 머리 한 줄 「되사기 — 이번 접속에 판 것」과 판 것들(가장 최근 것부터 · 판 값 그대로). 판 것이 없으면 감춘다
+	local backY = #stocks * ROW
+	local backHead = Ui.text(list, ShopWindow.BACK_HEAD, 0, backY + 8, w, { color = C.dim })
+	local backs = {}
+	for i = 1, Bag.BUYBACK do
+		local y = backY + i * ROW
+		local cell = Ui.slot(list, 0, y + 1, IC)
+		cell.frame.Name = "BackIcon"
+		local icon = Ui.smallIcon(cell.frame, "coin", 3, 3)
+		local name = Ui.text(list, "", TX, y + 7, ShopWindow.NAME_W, { font = "body" })
+		local coin = Ui.smallIcon(list, "coin", bx - 8 - ShopWindow.PRICE_W - 19, y + 4)
+		local price = Ui.text(list, "", bx - 8 - ShopWindow.PRICE_W, y + 8, ShopWindow.PRICE_W, { align = "right", color = C.gold })
+		local buy = Ui.button(list, ShopWindow.BACK_BUY, bx, y, ShopWindow.BUY_W, function()
+			ctx.send("Item", "buyback", i)
+		end)
+		backs[i] = { cell = cell, icon = icon, name = name, coin = coin, price = price, buy = buy }
 	end
 	local fy = h - 28
 	Ui.line(body, 0, fy - 6, w)
@@ -84130,6 +86403,26 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 				row.ten:setEnabled(me.money >= cost * 10)
 			end
 		end
+		-- 되사기의 줄들
+		local sold = bag.buyback or {}
+		backHead:show(#sold > 0)
+		for i, b in backs do
+			local e = sold[i]
+			local on = e ~= nil
+			b.cell.frame.Visible, b.coin.Visible, b.buy.frame.Visible = on, on, on
+			b.name:show(on)
+			b.price:show(on)
+			if e then
+				local goods = e.item and Items.goods(e.item)
+				Ui.setWorldIcon(b.icon, if e.gear then ItemCell.icon(e.gear) elseif goods then goods.icon else "")
+				b.name:set(if e.gear then ItemCell.label(e.gear) elseif goods then ("%s x%d"):format(goods.name, e.n) else "")
+				b.name:color(if e.gear then ItemCell.color(e.gear) else C.text)
+				b.price:set(Format.short(e.price))
+				b.buy:setEnabled(me.money >= e.price)
+			end
+		end
+		list.CanvasSize = UDim2.fromOffset(0, math.max(MAX_ROWS * ROW, #stocks * ROW + (if #sold > 0 then ROW * (#sold + 1) else 0)))
+		list.ScrollingEnabled = #stocks + (if #sold > 0 then #sold + 1 else 0) > MAX_ROWS
 		money:set(Format.short(me.money))
 		dust:set(Format.short(bag.dust))
 	end
@@ -84450,6 +86743,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Layout = require(ReplicatedStorage.shared.lune.ui.layout)
 local Ui = require(script.Parent.ui)
 local Music = require(script.Parent.Parent.music)
+local ViewOpts = require(script.Parent.Parent.viewOpts) -- 화면(다른 사람의 스킬 효과 · 피해 숫자 — 2026-10-18)
 
 local C = Ui.COLOR
 local S = Layout.SOUND
@@ -84457,7 +86751,8 @@ local S = Layout.SOUND
 local SoundWindow = {}
 
 function SoundWindow.size(): (number, number)
-	return S.w, #S.rows * S.row + S.muteY + Ui.M.button
+	local V = S.view
+	return S.w, #S.rows * S.row + S.muteY + Ui.M.button + V.gap + V.headH + #V.rows * S.row + Ui.M.small
 end
 
 -- 줄 안에서의 자리: 첫 칸의 x · 「+」의 x
@@ -84514,6 +86809,24 @@ function SoundWindow.build(body: Frame, ctx, w: number, _h: number)
 		view.refresh()
 	end)
 	Ui.text(body, S.note, S.muteW + 8, my + math.floor((Ui.M.button - Ui.M.small) / 2), w - S.muteW - 8, { align = "right", color = C.dim })
+	-- 화면(2026-10-18 — 공방 시험 탭의 paintSound와 같은 모양): 가로줄 · 「화면」 · 줄마다 이름과 오른쪽 끝의 켜짐 / 꺼짐 단추 · 맨 아래 안내
+	local V = S.view
+	local vy = my + Ui.M.button + V.gap
+	Ui.box(body, 0, vy, w, 1, C.line)
+	Ui.text(body, V.head, 0, vy + 6, w, { color = C.dim })
+	local toggles = {}
+	for j, def in V.rows do
+		local key, name = def[1], def[2]
+		local y = vy + V.headH + (j - 1) * S.row
+		Ui.text(body, name, 0, y + math.floor((S.btn - Ui.M.body) / 2), w - V.btnW - 8, { font = "body" })
+		toggles[key] = Ui.button(body, V.on, w - V.btnW, y, V.btnW, function()
+			if ViewOpts.toggle(key) then
+				ctx.saveSound()
+				view.refresh()
+			end
+		end, { h = S.btn })
+	end
+	Ui.text(body, V.note, 0, vy + V.headH + #V.rows * S.row, w, { color = C.dim })
 
 	function view.refresh()
 		for _, row in rows do
@@ -84530,6 +86843,10 @@ function SoundWindow.build(body: Frame, ctx, w: number, _h: number)
 		end
 		mute:setText(S.mute[if Music.on then 1 else 2])
 		mute:setMain(not Music.on)
+		for key, b in toggles do
+			b:setText(if ViewOpts[key] then V.on else V.off)
+			b:setMain(ViewOpts[key] == true)
+		end
 	end
 	view.refresh()
 	return view
@@ -84608,7 +86925,8 @@ function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 		frame.Size = UDim2.fromOffset(TIP.w, h)
 		back.Size = UDim2.fromOffset(TIP.w, h)
 		local left = -Ui.WIN.pad - TIP.gap - TIP.w
-		if body.AbsolutePosition.X / Stage.uiScale + left < 4 then
+		-- 기준 격자 안의 자리로 잰다(화면이 넓으면 기준 격자 양옆에 검은 띠가 있다 — 2026-10-18 검토: 띠의 폭까지 더해 설명이 띠 속으로 나가 안 보였다)
+		if (body.AbsolutePosition.X - Stage.ui.AbsolutePosition.X) / Stage.uiScale + left < 4 then
 			left = w + Ui.WIN.pad + TIP.gap -- 왼쪽에 자리가 없다(창이 화면 왼쪽에 있다)
 		end
 		frame.Position = UDim2.fromOffset(left, rows[id].y - 2)
@@ -84757,6 +87075,13 @@ local layoutKey = "" -- 놓은 화면 틀(바뀌면 다시 놓는다)
 local nameStr, hintStr = "", "" -- 이름표의 이름 · 아래 줄의 안내(폭을 재는 데 쓴다)
 local baseName = "" -- 말을 건 주민의 이름(「@id 」가 붙은 말이 끝나면 이 이름으로 돌아온다)
 local curText = "" -- 지금 말(「@id 」를 뗀 것)
+-- 고르는 말(Talk.menu — 2026-10-18, 메이플스토리의 NPC 대화처럼): 한 주민에게 할 일이 둘 넘게 있으면 줄마다 하나씩 보이고 고른다
+local menuItems: { any }? = nil -- 지금 고르는 줄들 { text, color } — nil이면 고르는 중이 아니다
+local menuPick: ((number) -> ())? = nil
+local menuSel = 1
+local menuRows = {} -- 줄마다 글
+local menuHits = {} -- 줄마다 누르는 판(스마트폰 · 마우스)
+local menuBar: Frame -- 고른 줄 밑의 띠
 -- 혼잣말
 local chat: Frame
 local chatBack, chatTail, chatBody
@@ -84791,6 +87116,23 @@ function Talk.init()
 		for k = 1, MAX_SEGS do
 			rows[r][k] = Ui.text(box, "", 0, 0, 2000, { font = "body", color = C.text })
 		end
+	end
+	-- 고르는 말의 줄: 고른 줄 밑에 어두운 민트 띠 · 줄을 누르면 그것을 고른다
+	menuBar = Ui.box(box, 0, 0, 1, 1, C.accentDark)
+	menuBar.Visible = false
+	for r = 1, D.lines do
+		menuRows[r] = Ui.text(box, "", 0, 0, 2000, { font = "body", color = C.text })
+		menuRows[r]:show(false)
+		local holder = Ui.group(box, 0, 0, 1, 1, "MenuRow" .. r)
+		holder.ZIndex = 10
+		holder.Visible = false
+		Ui.hit(holder).Activated:Connect(function()
+			if menuItems and Talk.npc and r <= #menuItems then
+				menuSel = r
+				Talk.next(Talk.npc)
+			end
+		end)
+		menuHits[r] = holder
 	end
 	hintText = Ui.text(box, "", 0, 0, 120, { color = C.dim })
 	hintKey = Ui.keycap(box, "↑", 0, 0)
@@ -84855,10 +87197,44 @@ local function layout()
 	local hw = Ui.measure(hintStr)
 	hintText:move(w - D.padX - hw, cy + 8)
 	hintKey:move(w - D.padX - hw - 12, cy + 6)
+	-- 고르는 말의 줄 · 띠 · 누르는 판
+	for r = 1, D.lines do
+		local ty = D.padY + (r - 1) * LINE
+		menuRows[r]:move(D.padX + 8, ty)
+		menuHits[r].Position = UDim2.fromOffset(D.padX - 4, ty - 3)
+		menuHits[r].Size = UDim2.fromOffset(w - D.padX * 2 + 8, LINE)
+	end
+	if menuItems then
+		menuBar.Position = UDim2.fromOffset(D.padX - 4, D.padY + (menuSel - 1) * LINE - 3)
+		menuBar.Size = UDim2.fromOffset(w - D.padX * 2 + 8, LINE)
+	end
+end
+
+-- 고르는 말을 그린다(줄 · 고른 줄의 띠) — 고르는 중이 아니면 모두 감춘다
+local function paintMenu()
+	for r = 1, D.lines do
+		local item = menuItems and menuItems[r]
+		menuRows[r]:set(if item then item.text else "")
+		if item then
+			menuRows[r]:color(item.color or C.text)
+		end
+		menuRows[r]:show(item ~= nil)
+		menuHits[r].Visible = item ~= nil
+	end
+	menuBar.Visible = menuItems ~= nil
 end
 
 -- 대사를 나온 글자까지 그린다(줄은 다 나왔을 때의 자리 그대로 — 한 글자씩 나와도 줄이 바뀌거나 출렁이지 않는다)
 local function paintText(shown: number)
+	if menuItems then -- 고르는 말: 대사 줄은 비운다(줄마다 고를 것이 선다)
+		for r = 1, D.lines do
+			for k = 1, MAX_SEGS do
+				rows[r][k]:set("")
+				rows[r][k]:show(false)
+			end
+		end
+		return
+	end
 	local segs = Format.talkSegments(curText, fitted, shown)
 	for r = 1, D.lines do
 		local list = segs[r] or {}
@@ -84899,7 +87275,7 @@ local function paintFoot()
 	local offer = done and last and endHint == "수락"
 	acceptBtn.frame.Visible = offer
 	declineBtn.frame.Visible = offer
-	hintStr = if Talk.npc == Talk.CINE then "다음" elseif last and endHint then endHint elseif last then "닫기" else "다음" -- 장면의 말은 늘 「다음」(장면이 이어진다)
+	hintStr = if menuItems then "고르기" elseif Talk.npc == Talk.CINE then "다음" elseif last and endHint then endHint elseif last then "닫기" else "다음" -- 장면의 말은 늘 「다음」(장면이 이어진다)
 	hintText:set(hintStr)
 	hintText:color(if last and endHint then C.accent else C.dim)
 	layout() -- 자리를 먼저 놓고(키 딱지는 자리를 옮기면 다시 보인다) 보일지를 정한다
@@ -84965,6 +87341,11 @@ end
 
 -- 말을 시작한다. questName = 이름표 뒤의 퀘스트 이름 · finish = 마지막 말 뒤에 일어날 일 · finishHint = 그 일의 이름(「수락」이면 「수락 · 거절」 단추, 「완료」면 「↑ 완료」)
 function Talk.start(npc, list: { string }, questName: string?, finish: (() -> ())?, finishHint: string?)
+	-- 고르는 말이 떠 있던 중에 다른 말(장면 · 이야기)이 오면 고르는 말을 걷는다 — 남아 있으면 말이 비고 다음 ↑가 옛 고르기를 했다(2026-10-18 검토)
+	if menuItems then
+		menuItems, menuPick = nil, nil
+		paintMenu()
+	end
 	Talk.npc, Talk.index = npc, 1
 	lines, onEnd, endHint = list, finish, finishHint
 	baseName = npc.name or npc.id or ""
@@ -84996,6 +87377,44 @@ function Talk.cineReveal()
 	Talk.place()
 end
 
+-- 고르는 말을 띄운다(2026-10-18): items = { { text, color } }(D.lines개까지 — 넘는 것은 버린다) · onPick(i) = 고른 줄
+--  ↓ = 다음 줄(Talk.menuMove) · ↑ · 스페이스 = 고른다(Talk.next) · 줄을 누르면 그것 · X · Esc = 닫기
+function Talk.menu(npc, items: { any }, onPick: (number) -> ())
+	local list = {}
+	for i = 1, math.min(#items, D.lines) do
+		list[i] = items[i]
+	end
+	menuItems, menuPick, menuSel = list, onPick, 1
+	Talk.npc, Talk.index = npc, 1
+	lines, onEnd, endHint = { "" }, nil, nil
+	baseName = npc.name or npc.id or ""
+	nameStr = baseName
+	nameText:set(nameStr)
+	titleText:set("")
+	if chatNpc == npc then
+		chat.Visible, chatNpc = false, nil
+	end
+	paintMenu()
+	show()
+end
+
+-- 고르는 중인가 · 고른 줄(자동 검사가 본다)
+function Talk.inMenu(): boolean
+	return menuItems ~= nil
+end
+function Talk.menuSelected(): number
+	return menuSel
+end
+
+-- 고른 줄을 옮긴다(d = 1 아래 · -1 위 — 끝에서는 처음으로)
+function Talk.menuMove(d: number)
+	if not menuItems or #menuItems == 0 then
+		return
+	end
+	menuSel = ((menuSel - 1 + d) % #menuItems) + 1
+	layout()
+end
+
 -- 지금 이 주민과 말하는 중인가
 function Talk.with(npc): boolean
 	return Talk.npc == npc and Talk.index > 0
@@ -85003,6 +87422,14 @@ end
 
 -- 다음 말로: 나오는 중이면 그 말을 한 번에 다 보이고, 다 나왔으면 다음 말(마지막 말 뒤에는 그 일 — 수락 · 완료). 말하는 중이 아니면 그 주민의 평소 말을 시작한다. 대화가 끝났으면 false
 function Talk.next(npc): boolean
+	if menuItems and Talk.npc == npc then -- 고르는 말: 고른 줄의 일을 한다(그 일이 새 말을 시작한다)
+		local pick, i = menuPick, menuSel
+		Talk.close()
+		if pick then
+			pick(i)
+		end
+		return true
+	end
 	if Talk.npc ~= npc then
 		Talk.start(npc, npc.lines)
 		return true
@@ -85051,6 +87478,12 @@ end
 function Talk.close()
 	Talk.npc, Talk.index = nil, 0
 	lines, onEnd, endHint = {}, nil, nil
+	if menuItems then
+		menuItems, menuPick = nil, nil
+		if menuBar then
+			paintMenu()
+		end
+	end
 	if box then
 		if box.Visible and Talk.onToggle then
 			Talk.onToggle(nil)
@@ -85143,6 +87576,7 @@ function TomeWindow.build(body: Frame, ctx, w: number, _h: number)
 	local view = {}
 	local area = 1
 	local note, noteTone = nil, nil
+	local waiting = false -- 답을 기다리는 중(두 번 눌러 두 번 가지 않게 — 2026-10-18 검토)
 	local tabs = {}
 	local tx = 0
 	for i, a in D.tome.areas do
@@ -85180,7 +87614,12 @@ function TomeWindow.build(body: Frame, ctx, w: number, _h: number)
 		ru.icon = Ui.smallIcon(body, icon, x + math.floor(cellW / 2) - 9, S.rewardY + 14)
 		ru.num = Ui.text(body, num, x, S.rewardY + 24, math.floor(cellW / 2) + 18, { align = "right", outline = true })
 		ru.take = Ui.button(body, W.take, x + 4, S.rewardY + S.rewardH - 22, cellW - 8, function()
+			if waiting then
+				return
+			end
+			waiting = true
 			local res = ctx.bondDo("tome", D.tome.areas[area].id, r.pct)
+			waiting = false
 			note, noteTone = nil, nil
 			if res and res.why then
 				note, noteTone = res.why, C.red
@@ -86105,6 +88544,37 @@ function Windows.all()
 end
 
 return Windows
+
+end
+MODULES['Client/lune/viewOpts'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
+-- 화면 설정(2026-10-18 — 메뉴 → 「설정」의 「화면」 두 줄 · 공방 ui.js의 UILAYOUT.sound.view): 다른 사람의 스킬 효과(fx) · 다른 사람의 피해 숫자(nums)를 보일지.
+--  메이플 · 로스트아크의 「다른 캐릭터의 스킬 이펙트」처럼 — 사람이 많은 맵에서 폰이 버거울 때 끈다. 내 것은 늘 보인다. 몸의 움직임 · 몬스터의 맞는 모습 · 설치 · 소환은 그대로.
+--  소리 설정과 함께 계정에 저장된다(shared/lune/sim/account.luau의 sound.fx · sound.nums — 없으면 켜짐)
+local ViewOpts = { fx = true, nums = true }
+
+-- 저장된 설정을 얹는다(서버가 준 계정의 sound)
+function ViewOpts.import(sound: any)
+	if typeof(sound) == "table" then
+		ViewOpts.fx = sound.fx ~= false
+		ViewOpts.nums = sound.nums ~= false
+	end
+end
+
+-- 저장할 꼴에 얹는다(소리 설정의 표에 fx · nums를 더한다)
+function ViewOpts.into(t)
+	t.fx, t.nums = ViewOpts.fx, ViewOpts.nums
+	return t
+end
+
+function ViewOpts.toggle(key: string): boolean
+	if key ~= "fx" and key ~= "nums" then
+		return false
+	end
+	ViewOpts[key] = not ViewOpts[key]
+	return true
+end
+
+return ViewOpts
 
 end
 MODULES['Client/lune/vistaView'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
@@ -89808,6 +92278,14 @@ do
 	local dash = { x = l.x, y = l.bottom - 20, vx = 0, vy = 0, ground = false, climb = 1 }
 	P.step(ct, dash, { mx = 0, vx = 120, float = true }, DT)
 	expect(dash.climb == nil, "기술(대쉬)로 움직이면 사다리를 놓는다")
+	-- ↑를 누른 채(폰은 막대를 비스듬히) 옆으로 뛰어도 뛰어내린다 — 바로 다시 잡지 않는다(2026-10-18 검토)
+	local hold = { x = l.x, y = l.bottom - 30, vx = 0, vy = 0, ground = false, climb = 1 }
+	P.step(ct, hold, { mx = 1, up = true, jump = true }, DT)
+	expect(hold.climb == nil and hold.vy < 0, "↑ + 옆 + 뛰기 = 놓고 뛰어내린다")
+	for _ = 1, 5 do
+		P.step(ct, hold, { mx = 1, up = true }, DT)
+	end
+	expect(hold.climb == nil and hold.x > l.x, "↑를 누르고 있어도 곧바로 다시 잡지 않는다(옆으로 떨어져 나간다)")
 end
 
 end)
@@ -90147,7 +92625,11 @@ eq(Hero.power(back), Hero.power(all), "전투력이 같다")
 -- 이상한 자료
 eq(Hero.unpack(1, nil), nil, "없으면 nil")
 eq(Hero.unpack(1, { class = "wizard", level = 3 }), nil, "없는 직업")
-eq(Hero.unpack(1, { class = "axion", level = 999 }), nil, "레벨이 말이 안 됨")
+-- 최고 레벨을 넘는 레벨(설계의 최고 레벨이 줄었다)은 최고 레벨로 맞춘다(2026-10-18 검토 — 전에는 캐릭터에 들어갈 수 없게 됐다) · 0 이하 · 소수는 여전히 말이 안 된다
+local over = Hero.unpack(1, { class = "axion", level = 999 })
+expect(over ~= nil and over.level == N.MAX_LEVEL, "최고 레벨을 넘는 레벨은 최고 레벨로")
+eq(Hero.unpack(1, { class = "axion", level = 0 }), nil, "레벨이 말이 안 됨(0)")
+eq(Hero.unpack(1, { class = "axion", level = 2.5 }), nil, "레벨이 말이 안 됨(소수)")
 eq(Hero.unpack(1, { class = "axion", level = 2.5 }), nil, "레벨이 소수")
 -- 점수가 받은 것보다 많이 찍혀 있으면 되돌려 준다(레벨과 돈은 지킨다)
 local cheat = Hero.unpack(1, { class = "axion", level = 5, xp = 3, money = 77, potions = 4, stats = { str = 999, dex = 0, int = 0, luk = 0, hp = 0 }, skills = { ax_slam = 20, ax_combo = 20, ax_charge = 10 } })
@@ -90834,7 +93316,7 @@ local function goTo(player, target)
 		local hop = routeNext(ss.scene, target)
 		for _, portal in SCENES.scenes[ss.scene].portals do
 			if portal.to == hop then
-				ss.jumped, ss.stale = true, nil
+				ss.trust, ss.stale = true, nil
 				handlers.Move(player, portal.x, portal.y, 1)
 			end
 		end
@@ -90945,9 +93427,14 @@ do
 	handlers.Move(p1, spawn.x + 300, spawn.y, 1)
 	eq(s1.hero.x, spawn.x + 10, "먼 곳으로의 순간이동은 여전히 믿지 않는다")
 	local far = World.session(p1)
+	local town = SCENES.scenes.town
 	far.hero.x = spawn.x + 300 -- 서버가 아는 자리가 먼 곳일 때
+	run(1)
 	handlers.Move(p1, spawn.x, spawn.y, 1)
-	eq(s1.hero.x, spawn.x, "시작 자리로 돌아온 것은 받는다")
+	eq(s1.hero.x, spawn.x + 300, "바닥이 뚫린 곳이 없는 맵(마을)에서는 먼 곳에서 시작 자리로 온 것을 받지 않는다(2026-10-18 검토 — 보스의 패턴을 그렇게 피했다)")
+	far.hero.x = spawn.x -- (떨어져 돌아오는 것은 바닥이 뚫린 사냥터에서 본다 — 아래 「멀리 간 자리」)
+	handlers.Move(p1, spawn.x, spawn.y, 1)
+	eq(s1.hero.x, spawn.x, "시작 자리 곁의 보고는 받는다")
 	handlers.Move(p1, spawn.x + 10, spawn.y, 1)
 	eq(s1.hero.x, spawn.x + 10, "그 뒤의 자리 보고도 받는다(어긋나지 않는다)")
 end
@@ -90959,7 +93446,8 @@ eq(handlers.Travel(p1, "nowhere"), nil, "없는 장면으로는 못 간다")
 -- 문 앞으로 걸어가서 간다
 local gate = SCENES.scenes.town.portals[1]
 while math.abs(s1.hero.x - gate.x) > 10 do
-	handlers.Move(p1, s1.hero.x + (if gate.x > s1.hero.x then 1 else -1) * 60, gate.y, 1)
+	s1.trust = true -- (시간을 흘리지 않고 걷는다 — 이동 몫을 셈하지 않게)
+	handlers.Move(p1, s1.hero.x + math.clamp(gate.x - s1.hero.x, -60, 60), gate.y, 1)
 end
 local trip = handlers.Travel(p1, gate.to)
 expect(trip ~= nil and trip.scene == gate.to, "문으로 다음 맵(마을 어귀)에 간다")
@@ -90983,7 +93471,7 @@ do
 		if inside.indoor then
 			doors += 1
 			eq(handlers.Travel(p1, door.to), nil, "문 앞이 아니면 못 들어간다 " .. door.to)
-			s1.jumped, s1.stale = true, nil
+			s1.trust, s1.stale = true, nil
 			handlers.Move(p1, door.x, door.y, 1)
 			local into = handlers.Travel(p1, door.to)
 			expect(into ~= nil and into.scene == door.to, "문 앞에서 들어간다 " .. door.to)
@@ -91022,7 +93510,7 @@ run(1) -- 나타나는 동작이 끝날 때까지
 -- 졸개 옆으로 간다(순간이동은 안 되므로 걸어서)
 local function walkTo(x, y)
 	local s = World.session(p1)
-	s.jumped, s.stale = true, nil
+	s.trust, s.stale = true, nil
 	handlers.Move(p1, x, y, 1)
 end
 walkTo(foe.x - 20, foe.y)
@@ -91293,7 +93781,7 @@ do
 		local n, key = npc(id)
 		goTo(p3, key)
 		eq(s3.scene, key, "주민이 있는 곳으로 간다 " .. id)
-		s3.jumped, s3.stale = true, nil
+		s3.trust, s3.stale = true, nil
 		h3.x, h3.y = n.x + 10, n.y
 	end
 	local it = Items.make("hat", 1, 5)
@@ -91321,7 +93809,7 @@ do
 		goTo(p3, mkey)
 		eq(s3.scene, mkey, "잡화점 문으로 들어간다")
 		eq(h3.x, SCENES.scenes[mkey].portals[1].x, "들어가면 나가는 문 앞에 선다")
-		s3.jumped, s3.stale = true, nil
+		s3.trust, s3.stale = true, nil
 		h3.x, h3.y = m.x + 150, m.y -- 같은 방 안이지만 멀다
 	end
 	table.clear(sent)
@@ -91546,7 +94034,7 @@ do
 	handlers.Choose(pc, "mooni")
 	local sc = World.session(pc)
 	Hero2.gainXp(sc.hero, 20000)
-	sc.jumped, sc.stale = true, nil
+	sc.trust, sc.stale = true, nil
 	local gateC
 	for _, portal in SCENES.scenes[SCENES.start].portals do
 		gateC = portal
@@ -91569,6 +94057,49 @@ do
 	expect(info ~= nil and info[1].leader == 201 and #info[1].members == 2, "파티가 생겼다")
 	expect(last("PartyInfo", pb) ~= nil, "파티원도 받는다")
 	expect(World.sameParty(201, 202) and not World.sameParty(201, 203), "같은 파티인지 안다")
+	-- 파티 버프(2026-10-18 검토: 세션을 Party.mates에 넘겨 level이 없어 오류 — 파티원에게 버프가 가지 않았다): 가까운 파티원에게도 걸린다
+	do
+		local sa2, sb2 = World.session(pa), World.session(pb)
+		sa2.hero.skills.ax_roar = 1
+		sb2.hero.x, sb2.hero.y = sa2.hero.x + 10, sa2.hero.y
+		local ok = pcall(handlers.Skill, pa, "ax_roar", 1, sa2.hero.x, sa2.hero.y, 1)
+		expect(ok, "파티 버프를 써도 오류가 없다")
+		expect(sa2.hero.buffs.ax_roar ~= nil, "쓴 사람에게 걸린다")
+		expect(sb2.hero.buffs.ax_roar ~= nil, "가까운 파티원에게도 걸린다")
+		sa2.hero.skills.ax_roar = nil
+		sa2.hero.buffs.ax_roar, sb2.hero.buffs.ax_roar = nil, nil
+	end
+	-- 장면 동안 맞지 않는 것(Cine "on")은 아직 안 본 장면 하나에 한 번만 · 기술을 쓰면 풀린다(2026-10-18 검토: 「on」만 되풀이해 보내면 영원히 맞지 않았다)
+	do
+		local sa3 = World.session(pa)
+		handlers.Cine(pa, "on", nil)
+		expect(not sa3.hero.inCine, "어느 장면인지 없으면 받지 않는다")
+		handlers.Cine(pa, "on", "없는장면")
+		expect(not sa3.hero.inCine, "없는 장면은 받지 않는다")
+		sa3.hero.cine["r1_wake"] = true
+		handlers.Cine(pa, "on", "r1_wake")
+		expect(not sa3.hero.inCine, "이미 본 장면은 받지 않는다")
+		sa3.hero.cine["r1_wake"] = nil
+		handlers.Cine(pa, "on", "r1_wake")
+		expect(not sa3.hero.inCine, "그 장면이 나오는 맵(사당)이 아니면 받지 않는다(2026-10-18 검토)")
+		local keepScene, keepQ = sa3.scene, sa3.hero.quests.r1m1
+		sa3.scene, sa3.hero.quests.r1m1 = "in_shrine", { done = false, c = {} }
+		handlers.Cine(pa, "on", "r1_wake")
+		expect(not sa3.hero.inCine, "받기 전의 장면은 그 퀘스트를 받은 뒤에는 받지 않는다")
+		sa3.hero.quests.r1m1 = nil
+		handlers.Cine(pa, "on", "r1_wake")
+		expect(sa3.hero.inCine == true, "안 본 장면이 나올 때면 그동안 맞지 않는다")
+		expect(sa3.hero.cine["r1_wake"] == true, "틀면 본 것으로 적는다(나갔다 들어와 다시 틀지 못한다)")
+		sa3.scene, sa3.hero.quests.r1m1 = keepScene, keepQ
+		handlers.Skill(pa, "ax_slam", 1, sa3.hero.x, sa3.hero.y, 1)
+		expect(not sa3.hero.inCine, "기술을 쓰면 풀린다")
+		handlers.Cine(pa, "off", nil)
+		sa3.hero.cine["r1_wake"] = nil
+		sa3.scene, sa3.hero.quests.r1m1 = "in_shrine", nil
+		handlers.Cine(pa, "on", "r1_wake")
+		expect(not sa3.hero.inCine, "같은 장면은 한 접속에 한 번만")
+		sa3.scene, sa3.hero.quests.r1m1 = keepScene, keepQ
+	end
 	eq(World.sceneOf(203), "hunt", "어느 맵에 있는지 안다")
 	-- 파티원의 체력은 1초에 한 번 다시 온다
 	table.clear(sent)
@@ -91588,7 +94119,7 @@ do
 	end
 	expect(target ~= nil, "잡을 졸개가 있다")
 	sa.hero.invuln, sb.hero.invuln = 999, 999
-	sa.jumped, sb.jumped = true, true -- 다음 자리 보고는 거리와 상관없이 받는다(둘 다)
+	sa.trust, sb.trust = true, true -- 다음 자리 보고는 거리와 상관없이 받는다(둘 다)
 	sa.stale, sb.stale = nil, nil
 	handlers.Move(pa, target.x - 12, target.y, 1)
 	handlers.Move(pb, target.x - 30, target.y, 1)
@@ -91596,7 +94127,7 @@ do
 	table.clear(sent)
 	local killed = false
 	for _ = 1, 60 do
-		sa.jumped, sa.stale = true, nil
+		sa.trust, sa.stale = true, nil
 		handlers.Move(pa, math.clamp(target.x - 12, 8, 1500), target.y, 1)
 		castSlam(pa, sa.hero.x, sa.hero.y, 1)
 		run(1.2)
@@ -91630,7 +94161,7 @@ do
 	-- 거절
 	handlers.Ready(pb)
 	local sb2 = World.session(pb)
-	sb2.jumped, sb2.stale = true, nil
+	sb2.trust, sb2.stale = true, nil
 	goTo(pb, "hunt")
 	run(1.1)
 	table.clear(sent)
@@ -91662,7 +94193,7 @@ do
 				if n.id == id then
 					goTo(pq, key)
 					eq(sq.scene, key, "주민이 있는 곳으로 간다 " .. id)
-					sq.jumped, sq.stale = true, nil
+					sq.trust, sq.stale = true, nil
 					hq.x, hq.y = n.x + 8, n.y
 					return
 				end
@@ -91728,7 +94259,7 @@ do
 			end
 		end
 		if target then
-			sq.jumped, sq.stale = true, nil
+			sq.trust, sq.stale = true, nil
 			handlers.Move(pq, math.clamp(target.x - 12, 8, 1500), target.y, 1)
 			castSlam(pq, hq.x, hq.y, 1)
 			run(1.2)
@@ -91836,7 +94367,7 @@ do
 		handlers.Quest(pq, "accept", defU.id)
 		eq(Quests.state(hq.quests, hq.level, defU.id), "active", "노인에게 받는다")
 		expect(goTo(pq, defU.scene) ~= nil, "무너진 다리로")
-		sq.jumped, sq.stale = true, nil
+		sq.trust, sq.stale = true, nil
 		hq.x, hq.y = stepU.x + 120, stepU.y
 		table.clear(sent)
 		handlers.Quest(pq, "use", defU.id)
@@ -92166,6 +94697,7 @@ do
 	-- 맵의 시작 자리에서 먼 곳으로 걸어가 둔다(시작 자리로 온 보고는 늘 받는다 — 떨어졌다 돌아온 것)
 	local far = SCENES.scenes.hunt.spawn.x + 150 -- (2026-10-14: 사냥터가 38칸 = 608점이 되어 400점 + 200점은 맵 밖이다)
 	while math.abs(hc.x - far) > 1 do
+		World.session(pc).trust = true -- (시간을 흘리지 않고 걷는다 — 이동 몫을 셈하지 않게)
 		handlers.Move(pc, hc.x + math.clamp(far - hc.x, -60, 60), hc.y, 1)
 	end
 	table.clear(sent)
@@ -92175,18 +94707,51 @@ do
 	expect(#got("Warp", pc) == 1 and got("Warp", pc)[1].args[1] == x0, "화면을 서버가 아는 자리로 되돌린다")
 	handlers.Move(pc, x0 + 200, hc.y, 1)
 	eq(#got("Warp", pc), 1, "되돌리라는 말은 잠깐에 한 번만 보낸다")
+	run(1)
 	handlers.Move(pc, x0 + 30, hc.y, 1)
 	eq(hc.x, x0 + 30, "가까운 자리는 받는다")
+	-- 맵 아래로 떨어졌다(바닥이 뚫린 칸 위에서): 화면이 시작 자리로 돌려놓은 보고는 멀어도 받는다
+	do
+		local hunt = SCENES.scenes.hunt
+		local G0 = req("ReplicatedStorage/shared/lune/config/game")
+		local hole = string.find(hunt.rows[hunt.h], "[^#]")
+		expect(hole ~= nil, "달그림자 사냥터의 바닥에는 뚫린 곳이 있다")
+		if hole then
+			local keepX, keepY = hc.x, hc.y
+			hc.x, hc.y = (hole - 1) * G0.TILE + 8, hunt.h * G0.TILE + 20
+			run(0.5)
+			handlers.Move(pc, hunt.spawn.x, hunt.spawn.y, 1)
+			eq(hc.x, hunt.spawn.x, "뚫린 곳에서 떨어져 시작 자리로 돌아온 것은 받는다")
+			hc.x, hc.y = keepX, keepY
+		end
+	end
+	-- 몸을 옮기지 않는 스킬로는 멀리 간 자리를 받지 않는다(2026-10-18 검토: 전에는 아무 스킬이나 쓰면 1.5초 동안 보고마다 받아 끝없이 갔다)
 	place()
+	run(2)
 	handlers.Skill(pc, "ax_execute", 1, hc.x, hc.y, 1)
 	local x1 = hc.x
 	handlers.Move(pc, x1 + 200, hc.y, 1)
-	eq(hc.x, x1 + 200, "스킬을 쓴 직후에는 멀리 간 자리도 받는다")
-	handlers.Move(pc, x1 + 800, hc.y, 1)
-	eq(hc.x, x1 + 200, "그래도 너무 멀면 받지 않는다")
+	eq(hc.x, x1, "몸을 옮기지 않는 스킬(달빛 처형) 뒤에는 멀리 간 자리를 받지 않는다")
+	-- 몸을 옮기는 스킬(도약 — 서버가 그 스킬을 돌리며 g.move를 부른다 · 처음 쓸 때 빈 방에서 재 보며 알아 둔다): 바로 뒤의 먼 보고 하나는 받는다
+	run(2)
+	hc.x = 100 -- (사냥터의 왼쪽 — 오른쪽으로 400점까지 맵 안)
+	x1 = hc.x
+	hc.skills.ax_leap = math.max(hc.skills.ax_leap or 0, 1)
+	hc.cds.ax_leap = nil
+	handlers.Skill(pc, "ax_leap", 1, hc.x, hc.y, 1)
+	handlers.Move(pc, x1 + 200, hc.y, 1)
+	eq(hc.x, x1 + 200, "몸을 옮기는 스킬을 쓴 직후에는 멀리 간 자리도 받는다")
+	handlers.Move(pc, x1 + 400, hc.y, 1)
+	eq(hc.x, x1 + 200, "한 번 쓰면 한 번만(이어서 또 멀리 간 자리는 받지 않는다)")
+	run(2)
+	hc.x = x1
+	hc.cds.ax_leap = nil
+	handlers.Skill(pc, "ax_leap", 1, hc.x, hc.y, 1)
+	handlers.Move(pc, x1 + 300, hc.y, 1)
+	eq(hc.x, x1, "그래도 너무 멀면 받지 않는다")
 	run(2)
 	handlers.Move(pc, hc.x + 200, hc.y, 1)
-	eq(hc.x, x1 + 200, "조금 지나면 다시 받지 않는다")
+	eq(hc.x, x1, "조금 지나면 다시 받지 않는다")
 	World.removePlayer(pc)
 	World.removePlayer(pw)
 end
@@ -92394,7 +94959,7 @@ do
 		local n, key = keeper()
 		goTo(px, key)
 		eq(s.scene, key, "창고지기가 있는 곳으로 간다")
-		s.jumped, s.stale = true, nil
+		s.trust, s.stale = true, nil
 		s.hero.x, s.hero.y = n.x + 10, n.y
 		return s.hero
 	end
@@ -92731,7 +95296,7 @@ do
 			master = n
 		end
 	end
-	sj.jumped, sj.stale = true, nil
+	sj.trust, sj.stale = true, nil
 	hj.x, hj.y = master.x + 10, master.y
 	eq(hj.quests.r1m1, nil, "새 캐릭터는 「첫 기술」을 아직 받지 않았다")
 	handlers.Quest(pj, "accept", "r1m1")
@@ -92740,7 +95305,7 @@ do
 	eq(handlers.Chars(pj, "enter", made.id).scene, "in_shrine", "받기만 하고 끝내지 않은 캐릭터는 다시 들어와도 사당 안이다")
 	sj = World.session(pj)
 	hj = sj.hero
-	sj.jumped, sj.stale = true, nil
+	sj.trust, sj.stale = true, nil
 	hj.x, hj.y = master.x + 10, master.y
 	handlers.Quest(pj, "complete", "r1m1")
 	expect(hj.quests.r1m1.done == true, "한 번 더 말을 걸어 「첫 기술」을 끝낸다")
@@ -92771,7 +95336,7 @@ do
 	-- 조각이 모자라면 돌려주지 못한다
 	local n2, key2 = master, "in_shrine"
 	goTo(pj, key2)
-	sj.jumped, sj.stale = true, nil
+	sj.trust, sj.stale = true, nil
 	hj.x, hj.y = n2.x + 10, n2.y
 	-- 사제에게 말을 걸어 받는다
 	table.clear(sent)
@@ -92868,7 +95433,7 @@ do
 		end
 	end
 	goTo(pc, skey)
-	sc.jumped, sc.stale = true, nil
+	sc.trust, sc.stale = true, nil
 	hc.x, hc.y = smith.x + 10, smith.y
 	local gearWas = Bag.used(hc, "gear")
 	table.clear(sent)
@@ -92951,7 +95516,7 @@ do
 		eq(sd.scene, board.scene, "게시판이 있는 마을로")
 		for _, n in SCENES.scenes[board.scene].npcs do
 			if n.id == board.npc then
-				sd.jumped, sd.stale = true, nil
+				sd.trust, sd.stale = true, nil
 				hd.x, hd.y = n.x + dx, n.y
 			end
 		end
@@ -92998,7 +95563,7 @@ do
 		end
 		if target then
 			target.hp = 1
-			sd.jumped, sd.stale = true, nil
+			sd.trust, sd.stale = true, nil
 			handlers.Move(pd, math.clamp(target.x - 12, 8, 3000), target.y, 1)
 			castSlam(pd, hd.x, hd.y, 1)
 			run(1.2)
@@ -93090,7 +95655,7 @@ do
 	hc.invuln = 9999
 	local function standAt(key, x, y)
 		expect(goTo(pc, key) ~= nil or sc.scene == key, "간다 " .. key)
-		sc.jumped, sc.stale = true, nil
+		sc.trust, sc.stale = true, nil
 		hc.x, hc.y = x, y
 	end
 	-- 퀘스트를 받기 전: 사당 안의 문은 닫혀 있다
@@ -93138,7 +95703,7 @@ do
 		end
 		if target then
 			target.hp = 1
-			sc.jumped, sc.stale = true, nil
+			sc.trust, sc.stale = true, nil
 			handlers.Move(pc, math.clamp(target.x - 12, 8, 376), target.y, 1)
 			castSlam(pc, hc.x, hc.y, 1)
 			run(1.2)
@@ -93195,7 +95760,7 @@ do
 	HeroC.maxSkills(hj2)
 	hj2.invuln = 9999
 	expect(goTo(pj2, "in_shrine") ~= nil or sj2.scene == "in_shrine", "사당 안으로")
-	sj2.jumped, sj2.stale = true, nil
+	sj2.trust, sj2.stale = true, nil
 	hj2.x, hj2.y = down.x, down.y
 	expect(handlers.Travel(pj2, "in_cellar") == nil, "전직 퀘스트를 받기 전에는 내려가지 못한다")
 	hj2.quests.job2 = { done = false, c = {} }
@@ -93214,7 +95779,7 @@ do
 			local d = e.args[1]
 			if d and d.kind == "quest" and not d.taken then
 				d.taken = true
-				sj2.jumped, sj2.stale = true, nil
+				sj2.trust, sj2.stale = true, nil
 				handlers.Move(pj2, d.x, d.y, 1)
 				handlers.Pickup(pj2, d.id)
 				got2 += 1
@@ -93229,7 +95794,7 @@ do
 		end
 		if target and not Quests.isReady(hj2.quests, "job2") then
 			target.hp = 1
-			sj2.jumped, sj2.stale = true, nil
+			sj2.trust, sj2.stale = true, nil
 			handlers.Move(pj2, math.clamp(target.x - 12, 8, 376), target.y, 1)
 			castSlam(pj2, hj2.x, hj2.y, 1)
 			run(1.2)
@@ -93243,6 +95808,109 @@ do
 	World.removePlayer(pc)
 	World.removePlayer(pv)
 	World.removePlayer(pj2)
+end
+
+-- ---- 서버 검토 5차(2026-10-18 — 요청마다 화면이 보내는 값 · 전투 계산) ----
+do
+	local Hero5 = req("ReplicatedStorage/shared/lune/sim/hero")
+	local G5 = req("ReplicatedStorage/shared/lune/config/game")
+	local pg = person({ UserId = 951, Name = "검토오차" })
+	handlers.Ready(pg)
+	handlers.Choose(pg, "axion", "검토오차")
+	local sg = World.session(pg)
+	local hg = sg.hero
+	expect(goTo(pg, "hunt") ~= nil, "사냥터로")
+	run(2)
+	handlers.Move(pg, hg.x, hg.y, 1) -- (화면이 열렸다)
+	run(2)
+	Hero5.setLevel(hg, 40, 2)
+	hg.skills.ax_breath = math.max(hg.skills.ax_breath or 0, 1)
+	hg.invuln = 999
+	-- ㄱ) 받아 주지 않을 기술 요청으로는 자리를 옮기지 못한다(2~4차 · 버프 모두 이동 몫 안)
+	local x0 = hg.x
+	hg.skills.ax_execute = math.max(hg.skills.ax_execute or 0, 1)
+	for _ = 1, 10 do
+		handlers.Skill(pg, "ax_execute", 2, hg.x + 40, hg.y, 1) -- 구간 2부터(받지 않는다)
+	end
+	eq(hg.x, x0, "받지 않는 2~4차 스킬 요청은 자리를 옮기지 않는다")
+	for _ = 1, 10 do
+		handlers.Skill(pg, "ax_breath", 1, hg.x + 40, hg.y, 1) -- 다시 쓰기 없는 버프(곧바로 걸린다)
+	end
+	expect(hg.x - x0 <= 180, ("버프를 거듭 써도 이동 몫(180점)보다 멀리 가지 않는다(%d)"):format(hg.x - x0))
+	-- ㄴ) 위로 가는 몫: 시간을 흘리지 않고 거듭 위로 보고하면 몫(160점)에서 멈춘다
+	run(2)
+	local y0 = hg.y
+	for _ = 1, 6 do
+		handlers.Move(pg, hg.x, hg.y - 90, 1)
+	end
+	expect(y0 - hg.y <= 160, ("위로는 몫만큼만(%d)"):format(y0 - hg.y))
+	hg.y = y0
+	-- ㄷ) 방마다 다른 시계: 맵을 옮기면 캐릭터에 적힌 방 시각을 새 방의 시계로 옮긴다
+	run(1)
+	local fromRoom = World.room("hunt")
+	hg.kit.at = fromRoom.time - 0.5 -- 반 초 전에 쐈다
+	expect(goTo(pg, "town") ~= nil, "마을로")
+	eq(math.floor((World.room("town").time - hg.kit.at) * 100 + 0.5), 50, "새 방에서도 「반 초 전」 그대로(도깨비불 · 수정 조각이 멈추지 않는다)")
+	-- ㄹ) 캐릭터 고르기를 오가도 체력 · 다시 쓰기가 이어진다
+	run(1)
+	hg.hp = 37
+	hg.cds.ax_breath = World.now + 100
+	local cid = sg.cid
+	handlers.Chars(pg, "leave")
+	expect(sg.hero == nil, "캐릭터 고르기로 나왔다")
+	handlers.Chars(pg, "enter", cid)
+	local h2 = sg.hero
+	expect(h2 ~= nil and h2 ~= hg, "다시 들어왔다")
+	eq(h2.hp, 37, "체력이 이어진다(가득 차지 않는다)")
+	expect((h2.cds.ax_breath or 0) > World.now + 90, "다시 쓰기가 이어진다")
+	-- ㅁ) 1차 기술을 쓴 뒤에도 끝나면 공짜 스킬 초기화가 된다
+	Hero5.setLevel(h2, 40, 2)
+	h2.resets = 1
+	handlers.Skill(pg, "ax_slam", 1, h2.x, h2.y, 1)
+	run(3)
+	handlers.SkillReset(pg)
+	eq(h2.resets, 0, "1차 기술이 끝난 뒤에는 초기화가 된다")
+	-- ㅅ) 1차 연속기: 다음 구간은 앞 구간이 끝나기 0.15초 전부터 받는다(앞당겨 보내 빨라지지 않게)
+	run(3)
+	h2.buffs = {}
+	handlers.Skill(pg, "ax_combo", 1, h2.x, h2.y, 1)
+	run(0.15)
+	handlers.Skill(pg, "ax_combo", 2, h2.x, h2.y, 1)
+	eq(sg.skill.seg, 1, "앞 구간(0.4초)의 0.15초에 온 다음 구간은 받지 않는다")
+	run(0.15)
+	handlers.Skill(pg, "ax_combo", 2, h2.x, h2.y, 1)
+	eq(sg.skill.seg, 2, "끝날 즈음(0.3초)에 온 것은 받는다")
+	run(3)
+	-- ㅇ) 맵에 들어와 화면이 열리면 먼저 와 있던 사람의 버프 모습을 받는다(버프는 바뀔 때만 보내 새로 온 사람에게는 보이지 않았다)
+	do
+		local Buffs5 = req("ReplicatedStorage/shared/lune/sim/buffs")
+		Buffs5.give(h2, "ax_breath", 1, h2.x, h2.y)
+		local pz = person({ UserId = 952, Name = "검토육" })
+		handlers.Ready(pz)
+		handlers.Choose(pz, "riven", "검토육")
+		local sz = World.session(pz)
+		if sz.scene ~= sg.scene then
+			goTo(pz, sg.scene)
+		end
+		run(0.5)
+		table.clear(sent)
+		sz.loading = World.now -- (막 들어온 때처럼 — 화면이 아직 열리지 않았다)
+		handlers.Move(pz, sz.hero.x, sz.hero.y, 1)
+		local seen = false
+		for _, e in got("Buffs", pz) do
+			if e.args[1] == h2.id and #e.args[2] > 0 then
+				seen = true
+			end
+		end
+		expect(sz.scene == sg.scene and seen, "새로 온 사람이 먼저 와 있던 사람의 버프 모습을 받는다")
+		World.removePlayer(pz)
+		h2.buffs = {}
+	end
+	-- ㅂ) 쓰러지면 2~4차 스킬의 늦은 타가 더 치지 않고, 쓰러진 채 레벨이 올라도 체력이 차지 않는다
+	h2.alive, h2.hp = false, 0
+	Hero5.gainXp(h2, N.xpNeed(h2.level) + 1)
+	eq(h2.hp, 0, "쓰러진 채 레벨이 올라도 체력이 그대로")
+	World.removePlayer(pg)
 end
 
 end)
@@ -93648,7 +96316,7 @@ for i, row in E.table do
 end
 for _, s in D.STOCK do
 	expect(D.NPCDO[s.npc] ~= nil, "상점 물건을 파는 주민 " .. s.id)
-	expect(typeof(s.price) == "number" and s.price > 0, "값이 있다 " .. s.id)
+	expect(Items.stockPrice(s, s.from) > 0, "값이 있다 " .. s.id) -- 레벨에 따라 오르는 것(perLv — 달빛 부적 · 능력치 초기화)은 그 물건을 살 수 있는 첫 레벨의 값
 	expect(s.goods == false or (Items.goods(s.goods) ~= nil and Items.goods(s.goods).tab == "use"), "상점의 소비 아이템은 아이템 목록에 있다 " .. s.id)
 end
 -- 가장 긴 장비 이름: 아이템 상세 판의 이름 칸(본문 글씨 두 줄 — 그림 칸의 오른쪽)에 별까지 붙여 들어간다
@@ -94354,11 +97022,11 @@ do
 		local kinds = 0
 		for kind, pair in WD.ask do
 			kinds += 1
-			local ask = if kind == "sell" or kind == "sellGear" then pair[1] .. "  " .. F.fill(WD.gain, { n = "9999.9만" }) else pair[1]
+			local ask = if kind == "sell" or kind == "sellGear" then pair[1] .. "  " .. F.fill(WD.gain, { n = "9999.9만" }) elseif kind == "dismantle" then pair[1] .. "  " .. F.fill(WD.gainDust, { n = "9999" }) else pair[1]
 			expect(width(ask) <= L.detailInner(), ("묻는 글 %s(폭 %d)이 판의 속(%d)에 들어간다"):format(ask, width(ask), L.detailInner()))
 			expect(widthBody(pair[2]) <= two - 6, "하는 단추의 글 " .. pair[2])
 		end
-		eq(kinds, 6, "수를 고르는 일: 버리기 · 맡기기 · 찾기 · 팔기 · 나누기 · 장비 팔기")
+		eq(kinds, 7, "수를 고르는 일: 버리기 · 맡기기 · 찾기 · 팔기 · 나누기 · 장비 팔기 · 분해(2026-10-18 — 분해도 한 번 묻는다)")
 		expect(widthBody(WD.askNo) <= two - 6, "그만두는 단추의 글")
 		expect(widthBody(WD.sort) <= L.STORE.sortW - 6, "창고의 정렬 단추의 글")
 		expect(width(WD.shopHint) <= SHOP.w - SHOP.hintX, "상점의 안내 글(끌어다 놓으면 판다)이 달돈 · 달가루의 오른쪽에 들어간다")
@@ -94463,7 +97131,7 @@ do
 			count[st.npc] = (count[st.npc] or 0) + 1
 		end
 		for npc, n in count do
-			expect(n <= SHOP.rows, ("상점 %s의 물건 %d가지가 창의 줄 수(%d) 안"):format(npc, n, SHOP.rows))
+			expect(n >= 1, ("상점 %s의 물건 %d가지(창의 줄 수 %d를 넘으면 목록이 스크롤한다 — 2026-10-18)"):format(npc, n, SHOP.rows))
 		end
 	end
 	expect(widthBody("사기") <= SHOP.buyW - 6 and widthBody("10") <= (SHOP.buyW - 6) / 2 - 6, "사는 단추의 글")
@@ -94653,7 +97321,8 @@ do
 	broken.bag.use = { { "no_such", 3 }, { "etc_cloth", 3 }, { P1, 201 }, { P1, 0 }, { P1, 2.5 }, "x", { P1, 9 } }
 	broken.bag.etc = { { P1, 1 } }
 	local fixed = Hero.unpack(34, broken)
-	expect(fixed ~= nil and Bag.used(fixed, "use") == 1 and fixed.use[7].item == P1 and fixed.use[7].n == 9, "꼴이 맞는 묶음만 남는다(그 칸에)")
+	-- 겹치는 수를 넘는 묶음(201)은 버리지 않고 겹치는 수(200)로 맞추고 넘친 1개는 첫 빈 칸에(2026-10-18 검토: 설계의 겹치는 수가 줄면 묶음째 사라졌다)
+	expect(fixed ~= nil and Bag.used(fixed, "use") == 3 and fixed.use[7].item == P1 and fixed.use[7].n == 9 and fixed.use[3].n == 200 and fixed.use[1].item == P1 and fixed.use[1].n == 1, "꼴이 맞는 묶음만 남는다(그 칸에) · 넘친 묶음은 맞춰 나눈다")
 	eq(Bag.used(fixed, "etc"), 0, "다른 탭의 아이템은 버린다")
 	-- 예전 저장(소비 · 기타 칸이 생기기 전): 숫자로만 갖고 있던 물약과 퀘스트의 물건이 가방의 아이템이 된다 — 잃는 것이 없다
 	local Q15 = req("ReplicatedStorage/shared/lune/sim/quests")
@@ -94783,9 +97452,9 @@ do
 	-- 찾기: 몇 개만 · 가방의 고른 칸에 · 전부(가방의 같은 묶음에 겹친다)
 	expect(Bag.storeOut(w, "use", 1, 10, 5) and w.use[5].item == P1 and w.use[5].n == 10 and w.store.use[1].n == n0 + 32, "열 개를 가방의 고른 칸(5)에")
 	expect(Bag.storeOut(w, "use", 7) and w.store.use[7] == false and w.use[5].n == 18, "한 묶음 전부를 찾는다 — 가방의 같은 묶음에 겹친다")
-	-- 기타 아이템도 맡긴다 · 탭끼리는 섞이지 않는다
-	Bag.give(w, "etc_plate", 6)
-	expect(Bag.storeIn(w, "etc", 1, 4) and w.store.etc[1].item == "etc_plate" and w.store.etc[1].n == 4 and w.etc[1].n == 2, "기타 아이템도 맡긴다")
+	-- 기타 아이템도 맡긴다(재료 — 퀘스트 물건은 맡길 수 없다: 2026-10-18) · 탭끼리는 섞이지 않는다
+	Bag.give(w, "mat_ore1", 6)
+	expect(Bag.storeIn(w, "etc", 1, 4) and w.store.etc[1].item == "mat_ore1" and w.store.etc[1].n == 4 and w.etc[1].n == 2, "기타 아이템도 맡긴다")
 	expect(Bag.stored(w, "gear") == 0 and Bag.stored(w, "use") == 2 and Bag.stored(w, "etc") == 1, "탭마다 칸이 따로다")
 	-- 창고 안에서 옮기기 · 정렬
 	expect(Bag.move(w, "use", 1, 10, true) and w.store.use[1] == false and w.store.use[10].item == P1, "창고 안에서 빈 칸으로 옮긴다")
@@ -94849,7 +97518,13 @@ do
 	local badS = Hero.pack(mv)
 	badS.bag.store = { gear = { { "wing", 1, 3, 0, "", 0, 0 }, { "hat", 1, 3, 0, "", 0, 0 } }, use = { { "etc_plate", 3 }, { P1, 5 }, { P1, 999 } }, etc = "x" }
 	local fixedS = Hero.unpack(44, badS)
-	expect(fixedS ~= nil and fixedS.store.gear[1] == false and fixedS.store.gear[2].slot == "hat" and Bag.stored(fixedS, "use") == 1 and fixedS.store.use[2].n == 5 and Bag.stored(fixedS, "etc") == 0, "꼴이 맞는 것만 남는다")
+	local storedUse = 0
+	for _, e in fixedS.store.use do
+		if e and e.item == P1 then
+			storedUse += e.n
+		end
+	end
+	expect(fixedS ~= nil and fixedS.store.gear[1] == false and fixedS.store.gear[2].slot == "hat" and fixedS.store.use[2].n == 5 and storedUse == 5 + 999 and Bag.stored(fixedS, "etc") == 0, "꼴이 맞는 것만 남는다 · 넘친 묶음(999)은 맞춰 나눠 잃지 않는다 — " .. storedUse)
 
 	-- 묶음 나누기
 	local sp = Hero.new(42, "axion")
@@ -94908,9 +97583,9 @@ do
 	end
 	for _, st in D.STOCK do
 		if st.goods then
-			expect(Items.goodsSell(st.goods) < st.price, "사서 되팔면 손해다 " .. st.id)
+			expect(Items.goodsSell(st.goods) < Items.stockPrice(st, st.from), "사서 되팔면 손해다 " .. st.id)
 		elseif st.item then
-			expect(Items.sellPrice({ slot = st.item.slot, stage = st.item.stage }) < st.price, "사서 되팔면 손해다 " .. st.id)
+			expect(Items.sellPrice({ slot = st.item.slot, stage = st.item.stage }) < Items.stockPrice(st, st.from), "사서 되팔면 손해다 " .. st.id)
 		end
 	end
 	for _, g in D.GOODS do
@@ -94938,6 +97613,7 @@ do
 		M = L.M,
 		cellSize = function() return 50 end,
 		group = function(_, _, _, _, _, name) return frame(name) end,
+		scroll = function(_, _, _, _, h, contentH) local f = frame("Scroll"); f.h, f.contentH = h, contentH; return f end, -- 상점의 목록(2026-10-18 — 물건이 줄보다 많으면 스크롤한다)
 		line = function() return frame("Line") end,
 		tab = function(_, text, _, _, onClick)
 			tabClicks[text] = onClick
@@ -95056,7 +97732,7 @@ do
 	eq(#ShopWindow.stockOf("smith"), 0, "대장장이는 아무것도 팔지 않는다(2026-10-15)")
 	for _, npc in { "merchant" } do
 		local stock = ShopWindow.stockOf(npc)
-		expect(#stock >= 1 and #stock <= L.SHOP.rows, "상점의 줄 수 " .. npc)
+		expect(#stock >= 1, "상점의 줄 수 " .. npc .. "(창의 줄보다 많으면 목록이 스크롤한다)")
 		for _, class in CLASSES do
 			for _, level in { 1, 10, 30 } do
 				table.clear(made)
@@ -95069,11 +97745,11 @@ do
 					local y0 = (i - 1) * (L.M.button + 4)
 					local row, slotN, itemIcon, coin = {}, 0, nil, nil
 					for _, e in made do
-						if e.y >= y0 and e.y < y0 + L.M.button + 4 then
+						if e.y >= y0 and e.y < y0 + L.M.button + 4 and e.parent ~= body then -- 줄의 것만(아래 줄의 달돈 · 안내는 창의 몸에 바로 — 줄들은 스크롤 틀 안이라 그 아래로 가려진다 · 2026-10-18)
 							if e.kind == "slot" then
 								slotN += 1
 								table.insert(row, e)
-							elseif e.kind == "icon" and e.parent ~= body then
+							elseif e.kind == "icon" and e.parent ~= body and not (e.parent and e.parent.Name == "Scroll") then -- (줄들은 상점 목록의 스크롤 틀 안 — 2026-10-18)
 								itemIcon = e -- 칸 안의 그림
 							elseif e.kind == "icon" then
 								coin = e
@@ -95095,7 +97771,7 @@ do
 				-- 칸 안의 그림: 줄의 수만큼 있고 모두 보인다(살 수 없는 것도 그림은 보인다)
 				local inCell, shown = 0, 0
 				for _, e in made do
-					if e.kind == "icon" and e.parent ~= body then
+					if e.kind == "icon" and e.parent ~= body and not (e.parent and (e.parent.Name == "Scroll" or e.parent.Name == "BackIcon")) then -- (되사기 줄의 칸은 따로 — 2026-10-18)
 						inCell += 1
 						shown += if e.Visible and ICONS[e.name] ~= nil then 1 else 0
 						expect(e.x == 3 and e.y == 3 and e.x + e.w <= L.SHOP.iconS - 3, "그림이 칸의 가운데에 든다")
@@ -95146,6 +97822,7 @@ do
 		cellSize = function() return 50 end,
 		measure = function(text: string, font: string?) return (pixelText.Measure(text, font or "small")) end,
 		group = function(_, _, _, _, _, name) return frame(name) end,
+		scroll = function(_, _, _, _, h, contentH) local f = frame("Scroll"); f.h, f.contentH = h, contentH; return f end, -- 상점의 목록(2026-10-18 — 물건이 줄보다 많으면 스크롤한다)
 		box = function() return frame("Box") end,
 		line = function() return frame("Line") end,
 		hit = function() return { Activated = { Connect = function() end } } end,
@@ -95512,6 +98189,21 @@ eq(F.safeName(nil, "user1"), "user1", "이름이 없으면 아이디")
 eq(F.safeName("가나다라마바사아자차카타파하", "user1"), "가나다라마바사아자차카타", "길면 열두 자에서 자른다")
 eq(F.safeName("\255\254", "user1"), "user1", "깨진 글이면 아이디")
 local _ = RULES
+
+-- ---- 나간 사람의 초대 · 파티장이 아닌 사람의 초대(2026-10-18 검토) ----
+do
+	local b2 = Party.newBook()
+	expect(Party.invite(b2, 701, 702, 0) == true, "701이 702를 초대")
+	Party.leave(b2, 701) -- 701이 접속을 끊었다(파티가 없어도 leave가 불린다)
+	expect(Party.accept(b2, 702, 1) == nil and Party.of(b2, 702) == nil, "나간 사람의 초대는 받을 수 없다(파티장이 없는 파티가 생기지 않는다)")
+	-- 701이 703을 초대한 뒤 704의 파티에 들어갔다
+	expect(Party.invite(b2, 701, 703, 2) == true, "701이 703을 초대")
+	expect(Party.invite(b2, 704, 701, 2) ~= nil or true, "(704가 701을 초대)")
+	b2.asks[701] = { from = 704, at = 2 }
+	expect(Party.accept(b2, 701, 3) ~= nil, "701은 704의 파티에 들어간다")
+	local p, why = Party.accept(b2, 703, 4)
+	expect(p == nil and why ~= nil and Party.of(b2, 703) == nil, "파티장이 아닌 사람의 초대는 받지 않는다 — " .. tostring(why))
+end
 
 end)
 runTest('17_lune_quests', function()
@@ -96411,7 +99103,8 @@ do
 	expect(revived ~= nil and revived.slots[1] == "potion1" and COMBAT.skills[revived.slots[2]] ~= nil, "칸이 없던 저장도 처음 차림으로 되살아난다")
 	old.slots = { "potion1", "no_such_skill" }
 	revived = Hero.unpack(1, old)
-	expect(revived ~= nil and revived.slots[1] == "potion1" and COMBAT.skills[revived.slots[2]] ~= nil, "깨진 칸들도 처음 차림으로 되살아난다")
+	-- 깨진 칸은 그 칸만 비운다(2026-10-18 검토 — 전에는 칸 하나 때문에 배치 전체가 처음 차림으로 돌아갔다)
+	expect(revived ~= nil and revived.slots[1] == "potion1" and revived.slots[2] == false, "깨진 칸만 비우고 나머지는 지킨다")
 	-- 예전 저장의 물약 칸("potion" — 물약이 한 가지였을 때): 놓아 둔 자리 그대로, 그때 마시던 물약(내 레벨의 것)의 칸이 된다. PC · 스마트폰 배치 모두
 	do
 		local was = Hero.new(1, "axion")
@@ -98835,6 +101528,27 @@ do
 	expect(long >= 15 and long <= 17, "난도질: 2초 누르면 1초에 8타쯤 " .. long)
 end
 
+-- 「때까지」 구간이 있는 스킬(도약)은 다시 시작하는 데 빈 방에서 잰 한 번의 시간의 60%는 걸린다(2026-10-18 검토 — 구간을 잇달아 보내 하늘에 있는 시간을 건너뛰면 보스에게 두세 배였다)
+do
+	local h = hero("axion", { ax_leap = 1 })
+	local room = Caster.makeDry(X + 14, Y)
+	local c = Caster.new(room) -- 재 보는 방이 아니다(서버처럼)
+	local need = Caster.profile("ax_leap", 0).time * 0.6
+	expect(need > 0.2, ("도약을 한 번 쓰는 시간을 쟀다(%.2f초의 60%%)"):format(need / 0.6))
+	expect(c:begin(h, "ax_leap", 1, nil) == true, "도약을 쓴다")
+	expect(c:begin(h, "ax_leap", 2, nil) == true, "떨어지는 구간을 바로 보낸다(서버는 하늘에 있는 동안을 모른다)")
+	expect(c:begin(h, "ax_leap", 3, nil) == true, "내려찍는 구간도")
+	room.time += need * 0.5
+	c:sub(SUB)
+	expect(c:begin(h, "ax_leap", 1, nil) ~= true, "잰 시간의 60%가 지나기 전에는 다시 쓰지 못한다")
+	room.time += need
+	for _ = 1, 120 do
+		room.time += SUB
+		c:sub(SUB)
+	end
+	expect(c:begin(h, "ax_leap", 1, nil) == true, "지나면 다시 쓴다")
+end
+
 end)
 runTest('22_lune_passives', function()
 -- 「달의 계승자」 — 2~4차의 패시브 37개(shared/lune/sim/passives.luau). 공방 js/lune/design/combat.js의 PASSIVE.
@@ -100917,6 +103631,28 @@ do
 	end
 end
 
+-- 정예의 겉모습은 「#rrggbb」 글로 적혀 있다(토벌 · 사냥터 정예 — city.js RIFT.elite.look): 윤곽 · 불티가 그 색이다(2026-10-18 검토: 배열로만 읽어 검게 나왔다)
+do
+	local CITY = req("ReplicatedStorage/shared/lune/data/city.generated")
+	local look = CITY.rift.elite.look
+	expect(typeof(look.aura) == "string", "토벌 정예의 겉모습은 글(#rrggbb)로 적혀 있다")
+	local someKind
+	for kind, def in COMBAT.mobs do
+		if def.sprite and not def.boss then
+			someKind = kind
+			break
+		end
+	end
+	local def = table.clone(COMBAT.mobs[someKind])
+	def.look = look
+	local glow = MobsView.glowOf(Instance.new("Frame"), def)
+	local c = glow and glow[1].label.ImageColor3
+	expect(c ~= nil and math.abs(c.R - 0xff / 255) < 0.01 and math.abs(c.G - 0x3e / 255) < 0.01 and math.abs(c.B - 0x9f / 255) < 0.01, "윤곽의 빛이 분홍(#ff3e9f)")
+	local embers = MobsView.embersOf(Instance.new("Frame"), def)
+	local e = embers and embers[1].BackgroundColor3
+	expect(e ~= nil and math.abs(e.R - 0xff / 255) < 0.01 and math.abs(e.G - 0x7e / 255) < 0.01, "불티가 분홍(#ff7ea2)")
+end
+
 end)
 runTest('25_lune_reach', function()
 -- 「달의 계승자」 — 문에 닿을 수 있는가.
@@ -101296,7 +104032,7 @@ local function goTo(player, target)
 		local hop = routeNext(ss.scene, target)
 		for _, portal in SCENES.scenes[ss.scene].portals do
 			if portal.to == hop then
-				ss.jumped, ss.stale = true, nil
+				ss.trust, ss.stale = true, nil
 				handlers.Move(player, portal.x, portal.y, 1)
 			end
 		end
@@ -101355,7 +104091,7 @@ local function hunt(p, sceneKey: string, kind: string, n: number)
 			local t0, casts = World.now, 0
 			local lost = 0
 			while mob.hp > 0 and casts < 60 do
-				s.jumped, s.stale = true, nil
+				s.trust, s.stale = true, nil
 				h.x, h.y = mob.x - stand, mob.y
 				handlers.Move(p, h.x, h.y, 1)
 				local before = h.hp
@@ -101447,7 +104183,7 @@ end
 
 -- 직업 사이의 차이: 같은 자리에서 가장 빠른 직업과 가장 느린 직업
 for _, spot in SPOTS do
-	local fast, slow, safe, risky = math.huge, 0, math.huge, 0
+	local fast, slow, safe, risky = math.huge, 0, math.huge, -1 -- (risky는 -1부터: 모든 직업이 체력을 잃지 않은 곳(퍼프)에서도 누군가가 적힌다)
 	local who = {}
 	for _, class in CLASSES.order do
 		local r = table_[class][spot.lv]
@@ -101610,7 +104346,9 @@ do
 	expect(job ~= nil and job.lv == 30 and job.endNpc == "master", "2차 전직 퀘스트는 Lv.30 · 사제에게")
 	local job3 = Quests.jobQuest(3) -- 3차 전직(2026-10-16 — 2편의 끝): Lv.60 · 사제에게 · 종탑의 종지기
 	expect(job3 ~= nil and job3.lv == 60 and job3.endNpc == "master" and job3.scene == "r2c3" and job3.reward.job == 3, "3차 전직 퀘스트는 Lv.60 · 사제에게 · 수정 성당 종탑")
-	eq(Quests.jobQuest(4), nil, "4차 전직 퀘스트는 아직 없다(레벨만 되면 오른다)")
+	local job4 = Quests.jobQuest(4) -- 4차 전직(2026-10-18 — 전에는 Lv.100이 되면 저절로 올랐다): Lv.100 · 사제에게 · 외성 밖 들판의 정예 창병 · 넷
+	expect(job4 ~= nil and job4.lv == 100 and job4.endNpc == "master" and job4.scene == "r4a1" and job4.reward.job == 4, "4차 전직 퀘스트는 Lv.100 · 사제에게 · 외성 밖 들판")
+	expect(job4 ~= nil and job4.steps[1].n == 4, "2 · 3차처럼 넷을 모은다")
 	local main, why = Quests.nextMain(book, 30)
 	expect(main ~= nil and main.id == "cq01" and why == "open", "Lv.30이면 은달 항구로 가는 메인(「큰 항구로」 — 2026-10-16)을 받을 수 있다")
 	-- 부탁: 1지역의 열을 모두 할 수 있다(2026-10-13 — 사용자: "부탁퀘스트 필요합니다." 남아 있던 하나 「묵은 도토리」는 굴의 주인을 불러내는 퀘스트였는데, 고갯마루 노인의 사냥 부탁(굴 두더지 스물)으로 고쳤다)
@@ -102499,8 +105237,12 @@ do
 	local texts = {} -- 만들어진 글들(이름 → 값)
 	local hits = {} -- 누를 수 있는 것들: [틀의 이름] = 눌렀을 때 부르는 것
 	local made = 0
+	local partyDots = 0 -- 파티원의 금빛 점(2026-10-18)
 	local function frame(name: string?, parent)
 		made += 1
+		if name == "Party" then
+			partyDots += 1
+		end
 		local f = { Name = name or "Frame", ZIndex = 1, parent = parent, Size = { X = { Offset = 7 }, Y = { Offset = 9 } } }
 		function f:Destroy()
 			self.destroyed = true
@@ -102583,6 +105325,20 @@ do
 	hits["HitName_r1bh"]()
 	eq(sideName(), "옛 은신처", "이름표를 눌러도 고른다")
 	view.destroy()
+	-- 파티원(2026-10-18): 이 지역에 있는 파티원마다 그 장소 곁에 금빛 점 — 다른 지역 · 장소가 없는 맵의 사람은 그리지 않는다
+	local party = { { id = 1, name = "나", scene = "town" }, { id = 2, name = "둘", scene = "town" }, { id = 3, name = "셋", scene = "town" }, { id = 4, name = "넷", scene = "ct" } }
+	ctx.party = function() return { members = party } end -- 서버의 PartyInfo 꼴(나도 들어 있다)
+	ctx.myId = function() return 1 end
+	state.scene, state.level, state.quests = "town", 10, {}
+	local view2 = MapWindow.build(frame("Body"), ctx, w, h)
+	partyDots = 0
+	view2.draw()
+	eq(partyDots, 2, "1지역을 보는 동안: 초승달 마을의 파티원 둘만(은달 항구의 사람은 그 지역에서)")
+	party[2].scene = "hunt"
+	partyDots = 0
+	view2.refresh()
+	eq(partyDots, 2, "파티원이 맵을 옮기면 다시 그린다")
+	view2.destroy()
 end
 
 end)
@@ -102819,8 +105575,10 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 			if not h.alive then
 				return false
 			end
-			s.jumped, s.stale = true, nil
-			handlers.Move(p, h.x, y, h.dir or 1)
+			-- 층을 바꾸는 것은 검사의 지름길이다(사다리 · 발판을 타는 길을 셈하지 않는다): 서버의 자리를 바로 옮긴다
+			--  (2026-10-18: 이동 판정이 「막 옮긴 직후」에도 아무 데나 받지 않게 되어 Move로는 먼 층으로 가지 못한다)
+			h.y = y
+			s.jumped, s.stale, s.moveAt = false, nil, nil
 		end
 		local guard = 0
 		while math.abs(h.x - x) > 1 do
@@ -103803,6 +106561,7 @@ do
 			local guard = 0
 			while (math.abs(h.x - portal.x) > 1 or math.abs(h.y - portal.y) > 1) and guard < 400 do
 				guard += 1
+				sAdmin.trust = true -- (시간을 흘리지 않고 걷는다 — 이동 몫을 셈하지 않게)
 				handlers.Move(pAdmin, h.x + math.clamp(portal.x - h.x, -60, 60), h.y + math.clamp(portal.y - h.y, -120, 120), 1)
 			end
 			expect(math.abs(h.x - portal.x) <= 1 and math.abs(h.y - portal.y) <= 1, ("%s: 문 %s 앞까지 걸어간다(%d, %d)"):format(key, portal.to, h.x, h.y))
@@ -104842,8 +107601,31 @@ do
 	eq(#out.kills[1].gains, 2, "둘 다 잡은 것으로 친다")
 	Quests.onKill(b.quests, "towerlieutenant", KEY)
 	eq(#Quests.onKill(a.quests, "towerlieutenant", KEY), 0, "그 퀘스트가 없는 사람은 오르는 것이 없다")
+	run(r2, both, 0.2)
+	expect(c2.away, "쓰러지는 부관 위에 대장이 서지 않는다(쓰러지는 동작이 끝날 때까지 — 2026-10-18 검토)")
 	run(r2, both, (l2.def.story.fall or 0.9) + 0.6) -- 쓰러지는 동작이 다 보인 뒤에 사라진다(story.fall초 — 없으면 0.9초)
 	expect(l2.away and not c2.away, "부관이 사라진 뒤에 대장이 선다")
+end
+
+-- 싸우는 중인 보스는 앞 퀘스트의 사람이 들어와도 그대로 선다(2026-10-18 검토: 이야기의 차례로 늘 다시 골라, 대장을 20%까지 깎았는데 부관 퀘스트의 사람이 들어오면 대장이 사라지고 부관이 섰다)
+do
+	local r3 = Room.new(KEY, scene, Random.new(6))
+	local a = hero(21, 28, "r1m8")
+	a.invuln = 99
+	run(r3, { [21] = a }, 0.5)
+	local l3, c3 = bossOf(r3, "towerlieutenant"), bossOf(r3, "scoutcaptain")
+	expect(not c3.away and l3.away, "대장 퀘스트의 사람만 있으면 대장이 선다")
+	c3.hp = math.floor(c3.maxHp * 0.2)
+	local hpWas = c3.hp
+	local b = hero(22, 25, "r1m7")
+	b.invuln = 99
+	run(r3, { [21] = a, [22] = b }, 0.5)
+	expect(not c3.away and c3.hp <= hpWas and l3.away, "부관 퀘스트의 사람이 들어와도 싸우던 대장이 그대로 선다")
+	-- 대장을 쓰러뜨리면(대장 퀘스트의 사람만 있는 것이 아니다) 그 뒤에 부관이 선다
+	local out = { hits = {}, kills = {} }
+	r3:strike(a, c3, c3.hp, a.x, nil, out)
+	run(r3, { [21] = a, [22] = b }, (c3.def.story.fall or 0.9) + 0.6)
+	expect(c3.away and not l3.away, "대장이 쓰러진 뒤에 부관 퀘스트의 사람을 위해 부관이 선다")
 end
 
 -- ---- 3) 서버: 퀘스트를 하는 사람이 방에 들어오면 보스가 서고, 쓰러뜨리면 퀘스트만 찬다(경험치 알림 없음) · 방을 비우면 새로 선다 ----
@@ -105063,9 +107845,15 @@ SERVICE("Players", { PlayerAdded = signal(), PlayerRemoving = signal(), GetPlaye
 SERVICE("RunService", { Heartbeat = signal() })
 SERVICE("TextService", { FilterStringAsync = function(_, text) return { GetNonChatStringForBroadcastAsync = function() return text end } end })
 local disk, names = {}, {}
+local failRead = {} -- [사람] = true — 그 사람의 계정을 읽지 못한다(2026-10-18)
 local slow, order = 0, {} -- slow = 저장소가 쓰는 데 걸리는 시간(초 — 진짜 저장소는 기다리게 한다) · order = 저장소에 쓴 차례
 MOCK("ServerScriptService/server/lune/modules/store", {
-	loadAccount = function(id) return json(disk[id]) end,
+	loadAccount = function(id)
+		if failRead[id] then
+			return nil, true -- 저장소가 답하지 않았다(라이브)
+		end
+		return json(disk[id]), false
+	end,
 	saveAccount = function(id, data)
 		local copy = json(data) -- 부른 순간의 값
 		if slow > 0 then
@@ -105255,46 +108043,57 @@ end
 --  사용자 2026-10-13: "소리조절 있어야합니다." 서버의 길 그대로(Sound → 저장 → 나갔다 들어옴 → Ready가 돌려주는 select.sound)를 따라간다
 do
 	local SOUND = UI.layout.sound
+	-- 저장된 소리 설정에는 화면 설정(fx · nums — 2026-10-18)이 늘 실린다(보내지 않았으면 켜짐)
+	local function full(t)
+		local c = table.clone(t)
+		if c.fx == nil then
+			c.fx = true
+		end
+		if c.nums == nil then
+			c.nums = true
+		end
+		return c
+	end
 	local start = { music = SOUND.start, sfx = SOUND.start, on = true }
 	local p = { UserId = 5300, Name = "소리", attrs = {}, SetAttribute = function(self, k, v) self.attrs[k] = v end }
 	local first = handlers.Ready(p)
-	expect(first ~= nil and first.select ~= nil and same(first.select.sound, start), "처음 온 계정은 처음 크기(모두 켬 · 열 칸)")
+	expect(first ~= nil and first.select ~= nil and same(first.select.sound, full(start)), "처음 온 계정은 처음 크기(모두 켬 · 열 칸)")
 	-- 캐릭터 고르기 화면에서(캐릭터로 들어가기 전에) 바꿔도 받는다
 	handlers.Sound(p, { music = 7, sfx = 3, on = true })
-	expect(same(World.session(p).acct.sound, { music = 7, sfx = 3, on = true }), "캐릭터 고르기 화면에서 바꾼 것도 받아 둔다")
+	expect(same(World.session(p).acct.sound, full({ music = 7, sfx = 3, on = true })), "캐릭터 고르기 화면에서 바꾼 것도 받아 둔다")
 	local made = handlers.Chars(p, "create", "소리시험", "mooni")
-	expect(made and made.ok and same(made.select.sound, { music = 7, sfx = 3, on = true }), "캐릭터를 만들어도 그대로다")
+	expect(made and made.ok and same(made.select.sound, full({ music = 7, sfx = 3, on = true })), "캐릭터를 만들어도 그대로다")
 	handlers.Chars(p, "enter", made.id)
 	local want = { music = 4, sfx = 0, on = false }
 	handlers.Sound(p, want)
-	expect(same(World.session(p).acct.sound, want), "게임 안에서 바꾼 것을 받아 둔다")
+	expect(same(World.session(p).acct.sound, full(want)), "게임 안에서 바꾼 것을 받아 둔다")
 	-- 말이 안 되는 것은 받지 않는다(그 앞의 것이 남는다)
 	for i, bad in { { music = 11, sfx = 3, on = true }, { music = -1, sfx = 3, on = true }, { music = 1.5, sfx = 3, on = true }, { music = "7", sfx = 3, on = true },
 		{ music = 3, sfx = 3 }, { music = 3, sfx = 3, on = 1 }, {}, { sfx = 5, on = true }, { music = 0 / 0, sfx = 1, on = true } } do
 		handlers.Sound(p, bad)
-		expect(same(World.session(p).acct.sound, want), ("말이 안 되는 소리 설정 %d은 받지 않는다"):format(i))
+		expect(same(World.session(p).acct.sound, full(want)), ("말이 안 되는 소리 설정 %d은 받지 않는다"):format(i))
 	end
 	-- ① 캐릭터 고르기로 나가면 그 화면이 받는 것에 들어 있다
 	local left = handlers.Chars(p, "leave")
-	expect(left ~= nil and left.select ~= nil and same(left.select.sound, want), "캐릭터 고르기로 나가도 그대로다")
+	expect(left ~= nil and left.select ~= nil and same(left.select.sound, full(want)), "캐릭터 고르기로 나가도 그대로다")
 	handlers.Chars(p, "enter", made.id)
 	-- ② 게임에서 나갔다가 다시 접속한다(저장소를 거친다)
 	World.removePlayer(p)
-	expect(disk[p.UserId] ~= nil and same(disk[p.UserId].sound, want), "나갈 때 계정에 저장된다 — " .. show(disk[p.UserId] and disk[p.UserId].sound or {}))
+	expect(disk[p.UserId] ~= nil and same(disk[p.UserId].sound, full(want)), "나갈 때 계정에 저장된다 — " .. show(disk[p.UserId] and disk[p.UserId].sound or {}))
 	first = handlers.Ready(p)
-	expect(first ~= nil and first.select ~= nil and same(first.select.sound, want), "다시 접속해도 소리 설정이 남는다 — " .. show(first and first.select and first.select.sound or {}))
+	expect(first ~= nil and first.select ~= nil and same(first.select.sound, full(want)), "다시 접속해도 소리 설정이 남는다 — " .. show(first and first.select and first.select.sound or {}))
 	-- ③ 바꾸면 몇 초 안에 저장한다 · 바꾸자마자 나가도 남는다
 	handlers.Chars(p, "enter", made.id)
 	local want2 = { music = 9, sfx = 6, on = true }
 	handlers.Sound(p, want2)
 	advance(6)
 	World.saveDue()
-	expect(same(disk[p.UserId].sound, want2), "소리 설정을 바꾸면 몇 초 안에 저장된다")
+	expect(same(disk[p.UserId].sound, full(want2)), "소리 설정을 바꾸면 몇 초 안에 저장된다")
 	local want3 = { music = 0, sfx = 10, on = true }
 	handlers.Sound(p, want3)
 	World.removePlayer(p)
 	first = handlers.Ready(p)
-	expect(first ~= nil and same(first.select.sound, want3), "바꾸자마자 나가도 남는다")
+	expect(first ~= nil and same(first.select.sound, full(want3)), "바꾸자마자 나가도 남는다")
 	World.removePlayer(p)
 	-- ④ 소리 설정이 생기기 전에 저장된 계정(sound가 없다): 처음 크기로 읽고, 캐릭터는 그대로다
 	local old = { UserId = 5301, Name = "옛소리", attrs = {}, SetAttribute = function(self, k, v) self.attrs[k] = v end }
@@ -105302,9 +108101,22 @@ do
 	copy.sound = nil
 	disk[old.UserId] = copy
 	first = handlers.Ready(old)
-	expect(first ~= nil and first.select ~= nil and same(first.select.sound, start), "소리 설정이 없던 저장은 처음 크기로 읽는다")
+	expect(first ~= nil and first.select ~= nil and same(first.select.sound, full(start)), "소리 설정이 없던 저장은 처음 크기로 읽는다")
 	eq(#first.select.chars, 1, "그 계정의 캐릭터는 그대로다")
 	World.removePlayer(old)
+end
+
+-- ---- 계정을 읽지 못했다(라이브의 저장소가 답하지 않는다 — 2026-10-18 검토): 빈 계정으로 들여보내지 않고 내보낸다 · 나갈 때 저장하지 않는다(저장된 것을 덮어쓰지 않게) ----
+do
+	local kicked = nil
+	local p = { UserId = 5400, Name = "못읽음", attrs = {}, SetAttribute = function(self, k, v) self.attrs[k] = v end, Kick = function(_, why) kicked = why end }
+	disk[5400] = { v = 1, keep = "진짜 계정" }
+	failRead[5400] = true
+	local first = handlers.Ready(p)
+	expect(first == nil and kicked ~= nil, "읽지 못하면 들여보내지 않는다(내보낸다) — " .. tostring(kicked))
+	World.removePlayer(p)
+	expect(disk[5400] ~= nil and disk[5400].keep == "진짜 계정", "나가며 저장된 것을 덮어쓰지 않는다")
+	failRead[5400] = nil
 end
 
 end)
@@ -105353,20 +108165,22 @@ expect(S.btn >= 22 and S.seg + S.gap >= 12, "손가락으로도 누를 만한 �
 
 -- ---- 2) 계정의 소리 설정 ----
 local acct = Account.new()
-expect(same(acct.sound, { music = S.start, sfx = S.start, on = true }), "새 계정은 처음 크기 · 모두 켬")
-expect(Account.setSound(acct, { music = 3, sfx = 0, on = false }) == true and same(acct.sound, { music = 3, sfx = 0, on = false }), "설정을 받는다")
+expect(same(acct.sound, { music = S.start, sfx = S.start, on = true, fx = true, nums = true }), "새 계정은 처음 크기 · 모두 켬 · 화면도 모두 켜짐")
+-- 화면(2026-10-18 — fx · nums): 받으면 언제나 실린다(없으면 켜짐)
+expect(Account.setSound(acct, { music = 3, sfx = 0, on = false }) == true and same(acct.sound, { music = 3, sfx = 0, on = false, fx = true, nums = true }), "설정을 받는다(화면은 없으면 켜짐)")
+expect(Account.setSound(acct, { music = 3, sfx = 0, on = false, fx = false, nums = true }) == true and acct.sound.fx == false and acct.sound.nums == true, "화면 설정도 받는다")
 local given = { music = 5, sfx = 5, on = true, extra = "x" }
 expect(Account.setSound(acct, given) and acct.sound ~= given and acct.sound.extra == nil, "받은 표를 그대로 쥐지 않는다(다른 것이 딸려 오지 않는다)")
-for _, bad in { "x", 3, { music = 5 }, { music = 5, sfx = 5, on = "true" }, { music = S.steps + 1, sfx = 0, on = true }, { music = 0, sfx = -1, on = true }, { music = 2.5, sfx = 1, on = true } } do
-	expect(Account.setSound(acct, bad) == false and same(acct.sound, { music = 5, sfx = 5, on = true }), "말이 안 되는 설정은 받지 않는다")
+for _, bad in { "x", 3, { music = 5 }, { music = 5, sfx = 5, on = "true" }, { music = S.steps + 1, sfx = 0, on = true }, { music = 0, sfx = -1, on = true }, { music = 2.5, sfx = 1, on = true }, { music = 5, sfx = 5, on = true, fx = "no" }, { music = 5, sfx = 5, on = true, nums = 0 } } do
+	expect(Account.setSound(acct, bad) == false and same(acct.sound, { music = 5, sfx = 5, on = true, fx = true, nums = true }), "말이 안 되는 설정은 받지 않는다")
 end
 local back = Account.unpack(Account.pack(acct))
 expect(back ~= nil and same(back.sound, acct.sound), "싸고 풀어도 그대로다")
 local raw = Account.pack(acct)
 raw.sound = nil
-expect(same(Account.unpack(raw).sound, { music = S.start, sfx = S.start, on = true }), "설정이 없던 저장은 처음 크기")
+expect(same(Account.unpack(raw).sound, { music = S.start, sfx = S.start, on = true, fx = true, nums = true }), "설정이 없던 저장은 처음 크기")
 raw.sound = { music = 99, sfx = 1, on = true }
-expect(same(Account.unpack(raw).sound, { music = S.start, sfx = S.start, on = true }), "망가진 설정도 처음 크기")
+expect(same(Account.unpack(raw).sound, { music = S.start, sfx = S.start, on = true, fx = true, nums = true }), "망가진 설정도 처음 크기")
 expect(same(Account.view(acct).sound, acct.sound), "캐릭터 고르기 화면이 받는 것에 소리 설정이 있다")
 
 -- ---- 3) 크기의 셈(client/lune/music.luau) ----
@@ -105578,6 +108392,21 @@ do
 	mute[1].click()
 	expect(Music.on == true and mute[1].value == S.mute[1] and pctOf(2) == "100%" and segs[2][1].BackgroundColor3 == any.accent, "다시 켜면 그대로 돌아온다")
 	view.refresh()
+	-- 화면(2026-10-18): 다른 사람의 스킬 효과 · 피해 숫자 — 켜짐 / 꺼짐 단추가 둘, 누르면 바뀌고 저장한다
+	local ViewOpts = req("Client/lune/viewOpts")
+	local V = S.view
+	local toggles = of("button", V.on)
+	eq(#toggles, 2, "화면의 단추 둘(처음은 켜짐)")
+	local saved0 = saved
+	toggles[1].click()
+	expect(ViewOpts.fx == false and saved == saved0 + 1 and toggles[1].value == V.off and toggles[1].main == false, "누르면 꺼짐 · 저장한다")
+	local packed = ViewOpts.into(Music.export())
+	expect(packed.fx == false and packed.nums == true and Account.setSound(Account.new(), packed), "저장하는 표에 화면 설정이 실리고 서버가 받는다")
+	toggles[1].click()
+	expect(ViewOpts.fx == true and toggles[1].value == V.on, "다시 누르면 켜짐")
+	ViewOpts.import({ music = 1, sfx = 1, on = true, nums = false })
+	expect(ViewOpts.fx == true and ViewOpts.nums == false, "저장된 것을 얹는다(없는 값은 켜짐)")
+	ViewOpts.import({ music = 1, sfx = 1, on = true })
 end
 
 end)
@@ -106318,6 +109147,9 @@ for _, def in Quests.list do
 		while prev do
 			book[prev] = { done = true, c = {} }
 			prev = Quests.def(prev).after
+		end
+		if def.kind == "job" and def.reward.job then
+			Quests.jobsDone(book, def.reward.job - 1) -- (앞 차수의 전직 퀘스트도 끝냈다 — 전직은 차례대로: 2026-10-18)
 		end
 		local level = math.max(def.lv, 1)
 		local start = if def.region == "r1" or def.kind == "job" then "town" else def.scene
@@ -108320,12 +111152,33 @@ do
 			error("API 접근이 꺼져 있다")
 		end,
 	})
+	SERVICE("RunService", { IsStudio = function() return true end, Heartbeat = { Connect = function() end } }) -- Studio다(메모리 모드는 Studio에서만 — 2026-10-18)
 	local Off = req("ServerScriptService/server/lune/modules/store")
 	local w2, a2, _, after2 = Off.marketUpdate("e", function(old)
 		return { v = 2, list = { { id = "m" } } }, old == nil
 	end)
 	local ok2, doc2 = Off.marketRead("e")
 	expect(w2 == true and a2 == true and after2.list[1].id == "m" and ok2 == true and doc2.list[1].id == "m" and Off.isOffline() == true, "저장소가 없으면 그 서버의 메모리에서 올리고 읽는다")
+	-- 라이브 서버(Studio가 아니다): 저장소를 못 열거나 못 읽어도 메모리 모드로 넘어가지 않는다 — 계정은 「읽지 못했다」로 알리고(빈 계정으로 다루지 않게) · 장부 · 이름 장부는 실패로 답한다(2026-10-18 검토)
+	RESET()
+	SERVICE("DataStoreService", {
+		GetDataStore = function()
+			error("잠깐 답하지 않는다")
+		end,
+		GetOrderedDataStore = function()
+			error("잠깐 답하지 않는다")
+		end,
+	})
+	SERVICE("RunService", { IsStudio = function() return false end, Heartbeat = { Connect = function() end } })
+	local Live = req("ServerScriptService/server/lune/modules/store")
+	local acct, failed = Live.loadAccount(55)
+	expect(acct == nil and failed == true, "라이브: 계정을 읽지 못하면 「읽지 못했다」(빈 계정이 아니다)")
+	local _, oldFailed = Live.loadOld(55)
+	expect(oldFailed == true, "라이브: 예전 저장도 「읽지 못했다」")
+	expect(Live.saveAccount(55, { v = 1 }) == false, "라이브: 저장하지 못했다고 답한다")
+	expect(Live.marketUpdate("e", function() return { v = 1 } end) == false and (Live.marketRead("e")) == false, "라이브: 장부는 이 서버만의 메모리로 가지 않는다")
+	expect(Live.nameOwner("달지기") == false and Live.claimName("달지기", 55) == nil, "라이브: 이름 장부를 못 쓰면 이름을 지을 수 없다")
+	expect(Live.isOffline() == false, "라이브: 서버 전체가 메모리 모드로 넘어가지 않는다")
 end
 
 -- ================= 3) 서버의 흐름 =================
@@ -108401,12 +111254,16 @@ local function server()
 	RESET()
 	clock.now = keep
 	local handlers = {}
+	local fired, published = {}, {} -- 보낸 것 · 다른 서버에 알린 것(「팔림」 — 2026-10-18)
 	MOCK("ReplicatedStorage/shared/lune/net/net", {
-		FireClient = function() end,
+		FireClient = function(name, player, ...)
+			table.insert(fired, { name = name, player = player, args = { ... } })
+		end,
 		OnServer = function(name, fn)
 			handlers[name] = fn
 		end,
 	})
+	SERVICE("MessagingService", { PublishAsync = function(_, topic, data) table.insert(published, { topic = topic, data = data }) end, SubscribeAsync = function() end })
 	local function signal()
 		return { Connect = function() end }
 	end
@@ -108417,6 +111274,8 @@ local function server()
 	local sv = {
 		World = req("ServerScriptService/server/lune/modules/world"),
 		h = handlers,
+		fired = fired,
+		published = published,
 		Market = req("ReplicatedStorage/shared/lune/sim/market"),
 		Bag = req("ReplicatedStorage/shared/lune/sim/bag"),
 		Items = req("ReplicatedStorage/shared/lune/sim/items"),
@@ -108593,8 +111452,18 @@ do
 	expect(sv.h.Market(pa, "buy", "u", potId, 1, 50).why == WHY.mine, "내가 올린 것은 못 산다")
 	expect(sv.h.Market(pb, "buy", "u", "없는줄", 1, 50).why == WHY.gone and sv.h.Market(pb, "buy", "nowhere", potId, 1, 50).why == WHY.gone and sv.h.Market(pb, "buy", "u", potId, 0, 50).why == WHY.gone and sv.h.Market(pb, "buy", "u", potId, 1.5, 50).why == WHY.gone and sv.h.Market(pb, "buy", "u", potId, 1, "쉰").why == WHY.gone, "없는 줄 · 없는 장부 · 0개 · 소수 · 값이 아닌 것")
 	table.clear(log)
+	table.clear(sv.fired)
 	r = sv.h.Market(pb, "buy", "u", potId, 3, 50)
 	expect(r.ok == true and hb.money == 4850 and boards.u.list[1].l == 7 and r.rows[1].l == 7 and r.rows[1].it.n == 7, "셋을 샀다: 150을 치르고 장부에는 일곱이 남았다")
+	-- 「팔림」(2026-10-18): 판 사람이 같은 서버에 있으면 그 사람에게 바로 — 다른 서버에는 알리지 않는다
+	local soldMsg = nil
+	for _, f in sv.fired do
+		if f.name == "Sold" then
+			soldMsg = f
+		end
+	end
+	expect(soldMsg ~= nil and soldMsg.player == pa and soldMsg.args[1].n == 3 and type(soldMsg.args[1].name) == "string", "판 사람에게 「팔림」(셋)")
+	expect(#sv.published == 0, "같은 서버면 다른 서버에 알리지 않는다")
 	expect(Bag.count(hb, potion.id) == 0 and Market.holds(sb.acct.market) == 1 and Market.count(sb.acct.market) == 0, "산 것은 가방이 아니라 「완료」에 들어온다(판매한 수로는 세지 않는다)")
 	local won = mineOf(r, function(m) return m.state == "hold" end)
 	expect(won ~= nil and won.it.g == potion.id and won.it.n == 3 and won.p == 150, "「완료」의 「낙찰」: 물약 셋 · 치른 값 150")
@@ -108876,6 +111745,8 @@ do
 	expect(r.ok == true and #r.rows == 1 and r.rows[1].id == shoesId, "다른 서버에서도 올린 것이 보인다")
 	r = sv2.h.Market(pb2, "buy", "a_shoes", shoesId, 1, 250)
 	expect(r.ok == true and hb2.money == moneyB - 250, "다른 서버에서 산다")
+	local pub = sv2.published[#sv2.published]
+	expect(pub ~= nil and pub.topic == "LuneSold" and pub.data.n == 1 and type(pub.data.u) == "number" and pub.data.u ~= pb2.UserId, "판 사람이 이 서버에 없으면 다른 서버들에 「팔림」을 알린다(MessagingService)")
 	local holdShoes = mineOf(r, function(m) return m.state == "hold" and m.it[1] == "shoes" end)
 	expect(holdShoes ~= nil, "「완료」에 신발이 있다")
 	sv2.World.removePlayer(pb2)
@@ -109956,7 +112827,7 @@ for _ = 1, 3 do
 		while target.hp > 0 and guard < 400 do
 			guard += 1
 			h.x, h.y = target.x - 20, target.y
-			s.jumped, s.stale = true, nil
+			s.trust, s.stale = true, nil
 			handlers.Skill(p, skillId, 1, h.x, h.y, 1)
 			for _ = 1, 6 do
 				World.tick(1 / 20)
@@ -111164,6 +114035,41 @@ eq(grid.ScrollingEnabled, false, "끄는 동안은 스크롤이 선다")
 p.extra.onEnd()
 eq(grid.ScrollingEnabled, true, "끌기가 끝나면 스크롤이 다시 켜진다")
 view.destroy()
+
+-- ---- 창고도 늘린 만큼 칸이 있고 스크롤한다(2026-10-18 검토 — 창고 칸을 늘려도(Bag.growStore) 처음 24칸만 지어 25칸부터 보이지도 꺼내지도 못했다) ----
+do
+	local UiMock = req("Client/lune/ui/ui")
+	UiMock.M = { small = 10, body = 12, button = 24, pic = 18 }
+	local ShopWindow = req("Client/lune/ui/shopWindow")
+	table.clear(cells)
+	table.clear(scrolls)
+	local storeBag = { size = 24, gear = {}, use = {}, etc = {}, equip = {}, store = { gear = {}, use = {}, etc = {} }, storeSize = 32, growCost = false, dust = 0, essence = 0 }
+	storeBag.store.gear[30] = { id = 9, slot = "hat", stage = 1, q = 2, star = 0 }
+	local sctx = { ui = {}, bag = function() return storeBag end, me = function() return me end, send = function() end, quick = ctx.quick }
+	local sw, sh = ShopWindow.size("store")
+	local sview = ShopWindow.build(frame("Body"), sctx, sw, sh, "store")
+	sview.refresh()
+	eq(#scrolls, 1, "창고의 칸들은 스크롤 틀 하나 안에 있다")
+	expect(#cells >= 30 and cells[30].item ~= nil and cells[30].item.id == 9, "늘린 창고(32칸)의 30째 칸이 지어지고 그 물건이 보인다")
+	expect(scrolls[1].ScrollingEnabled == true and scrolls[1].ScrollBarThickness > 0, "네 줄을 넘으면 스크롤이 켜진다")
+	eq(scrolls[1].CanvasSize.Y.Offset, 6 * 40, "스크롤의 속 = 여섯 줄(32칸)")
+	storeBag.storeSize = 24
+	storeBag.store.gear[30] = nil
+	sview.refresh()
+	expect(scrolls[1].ScrollingEnabled == false, "24칸이면 스크롤이 없다")
+	-- 끌기: 스마트폰에서 잠깐 누르고 있어야 시작하고, 끄는 동안 스크롤이 선다(가방과 같다)
+	storeBag.storeSize = 32
+	storeBag.store.gear[2] = { id = 11, slot = "hat", stage = 1, q = 2, star = 0 }
+	sview.refresh()
+	table.clear(presses)
+	cells[2].item = storeBag.store.gear[2]
+	cells[2].began({ UserInputType = Enum.UserInputType.Touch, Position = Vector2.new(5, 5) })
+	local sp = presses[#presses]
+	expect(sp ~= nil and sp.extra.hold and sp.extra.hold > 0 and typeof(sp.extra.onStart) == "function", "창고의 끌기도 잠깐 누르고 있어야 시작한다")
+	sp.extra.onStart()
+	eq(scrolls[1].ScrollingEnabled, false, "끄는 동안 창고의 스크롤이 선다")
+	sview.destroy()
+end
 
 end)
 runTest('50_lune_analytics', function()
@@ -112754,7 +115660,7 @@ end
 if shc then
 	table.clear(sent)
 	World.jump(p, "ct")
-	s.stale, s.jumped = nil, true -- (옮긴 직후의 늦은 보고 거르기를 끈다 — 화면이 연 뒤처럼)
+	s.stale, s.trust = nil, true -- (옮긴 직후의 늦은 보고 거르기를 끈다 — 화면이 연 뒤처럼)
 	hh.x, hh.y = shc.x - 30, shc.y
 	handlers.Move(p, shc.x, shc.y, 1)
 	local found = false
@@ -113174,6 +116080,16 @@ eq(res.left, 2, "오늘 두 번")
 handlers.Party(p, "invite", p2.UserId)
 handlers.Party(p2, "accept", p.UserId)
 local together = World.sameParty(p.UserId, p2.UserId)
+-- 인사를 나누지 않은 파티원은 끌려가지 않는다(2026-10-18 검토) — 먼저 그것을 보고, 인사를 나눈 뒤에 함께 들어간다
+s2.hero.bond.met[D.npc] = nil
+res = handlers.Rift(p, "enter", "rf1")
+if together then
+	eq(s2.scene, "ct_office", "토벌대장과 인사를 나누지 않은 파티원은 따라 들어가지 않는다")
+end
+World.jump(p, "ct_office")
+s.hero.x, s.hero.y = warden.x + 10, warden.y
+s.stale, s.trust = nil, true
+s2.hero.bond.met[D.npc] = true
 res = handlers.Rift(p, "enter", "rf1")
 expect(res and res.ok, "토벌대장 앞에서 들어간다")
 expect(string.match(s.scene, "^rf1#%d+$") ~= nil, "따로 된 방: " .. tostring(s.scene))
@@ -113460,6 +116376,7 @@ for i, def in list do
 	-- 전직 퀘스트는 앞의 전직을 마친 캐릭터(3차 = 2차를 마침)
 	if def.kind == "job" then
 		h.job = (def.job or 3) - 1
+		Quests.jobsDone(h.quests, h.job) -- (앞 차수의 전직 퀘스트도 끝냈다 — 전직은 차례대로: 2026-10-18)
 	end
 	expect(def.rapport == nil, def.id .. ": 호감도의 자물쇠가 없다")
 	eq(Quests.state(h.quests, h.level, def.id), "open", def.id .. " 「" .. def.name .. "」: 받을 수 있다")
@@ -113513,6 +116430,947 @@ for i, def in list do
 	end
 end
 eq(n, #list, "2편의 퀘스트를 모두 끝까지 했다")
+
+end)
+runTest('57_lune_structure', function()
+-- 「달의 계승자」 — 상용 MMORPG에 견준 구조의 빈 곳 메우기(2026-10-18 — 사용자가 8시간 자리를 비운 동안: "계획세우고 반영하고 … 자율적으로 작업해봐").
+--  ① 쓰러진 벌칙(약해짐)이 보인다 · ② 맵에 들어서면 맵 이름 · (이어서 붙는 것들은 아래에 차례로)
+local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
+local Layout = req("ReplicatedStorage/shared/lune/ui/layout")
+local pixelText = req("Client/ui/pixelText")
+local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
+pixelText.Register("small", KIT.font.small, {})
+pixelText.Register("body", KIT.font.body, {})
+
+-- 화면 없이 돌리는 틀(그림 · 글은 적어만 둔다)
+local function frame(name: string?, parent, x, y, w, h)
+	local f = { Name = name or "Frame", Visible = true, Parent = parent, x = x, y = y, w = w, h = h, kids = {} }
+	function f:Destroy() end
+	function f:GetDescendants()
+		return {}
+	end
+	function f:GetChildren()
+		return {}
+	end
+	return f
+end
+local texts = {}
+MOCK("Client/lune/ui/ui", {
+	COLOR = setmetatable({}, { __index = function(_, k) return k end }),
+	M = { small = 10, body = 12 },
+	text = function(parent, text, x, y, width, opts)
+		local item = { text = text, x = x, y = y, w = width, font = opts and opts.font or "small", color = opts and opts.color, parent = parent }
+		function item.set(_, v)
+			item.text = v
+		end
+		table.insert(texts, item)
+		return item
+	end,
+	panel = function(parent, x, y, w, h) return frame("Panel", parent, x, y, w, h) end,
+	button = function(parent, label) return { frame = frame("Button", parent) } end,
+})
+MOCK("Client/lune/stage", { REF_W = 960, place = function(root, name, at, x, y, w, h) return frame(name, root, x, y, w, h) end })
+
+-- ---- ① 쓰러진 벌칙(약해짐) ----
+do
+	local D = Layout.DEATH
+	expect(typeof(D.weak) == "string" and string.find(D.weak, "{m}", 1, true) ~= nil, "쓰러졌을 때의 상자에 약해짐의 줄이 있다(남은 분을 채우는 자리)")
+	expect(D.textY < D.weakY and D.weakY < D.hintY and D.hintY < D.buttonY, "줄의 차례: 묻는 글 → 약해짐 → 안내 → 단추")
+	local filled = string.gsub(D.weak, "{m}", "30")
+	expect(pixelText.Measure(filled, "small") <= D.w - D.pad * 2, "가장 긴 약해짐의 줄(30분)이 상자 안에 한 줄로 든다: " .. filled)
+	local DeathBox = req("Client/lune/ui/deathBox")
+	table.clear(texts)
+	DeathBox.show(frame("Root"), function() end, 12)
+	local shown = false
+	for _, t in texts do
+		shown = shown or (string.find(t.text, "약해짐 12분", 1, true) ~= nil and t.color == "red")
+	end
+	expect(shown, "Lv.10 위에서 쓰러지면 상자에 「약해짐 12분」이 붉게 뜬다")
+	table.clear(texts)
+	DeathBox.show(frame("Root"), function() end, 0)
+	for _, t in texts do
+		expect(string.find(t.text, "약해짐", 1, true) == nil, "벌칙이 없으면(Lv.10 아래) 그 줄을 띄우지 않는다")
+	end
+	DeathBox.hide()
+	-- 벌칙의 값은 서버의 영웅 자료가 그대로 화면에 간다(selfView의 weak — 초)
+	local N = req("ReplicatedStorage/shared/lune/config/numbers")
+	expect(N.deathMinutes(30) > 0 and N.deathMinutes(150) <= 30, "약해짐의 분: Lv.30 > 0 · 가장 길어도 30분")
+end
+
+-- ---- ② 맵 이름 ----
+do
+	local L = Layout.MAPNAME
+	expect(L ~= nil and L.w > 0 and L.nameY > 0 and L.hold >= 1.5, "맵 이름의 칸과 시간(공방 UILAYOUT.mapName)")
+	local MapName = req("Client/lune/mapName")
+	local r, n = MapName.titleOf("r2a1")
+	eq(r, "수정 숲", "성문 밖 숲길의 지역")
+	eq(n, "성문 밖 숲길", "성문 밖 숲길의 이름")
+	r, n = MapName.titleOf("ct")
+	eq(r, "", "은달 항구: 지역 이름이 맵 이름과 같으면 지역 줄은 비운다")
+	eq(n, "은달 항구", "은달 항구")
+	r, n = MapName.titleOf("town")
+	expect(n == SCENES.scenes.town.name and r ~= "" and r ~= n, "초승달 마을의 지역 줄 = 1지역 " .. r)
+	r, n = MapName.titleOf("rf1#3")
+	eq(n, SCENES.scenes.rf1.name, "토벌의 방(rf1#번호)은 그 장면의 이름")
+	-- 모든 장면: 이름이 칸에 들어간다
+	for key, sc in SCENES.scenes do
+		local _, name = MapName.titleOf(key)
+		expect(pixelText.Measure(name, "body") <= L.w, ("맵 이름이 칸에 들어간다 %s — %s"):format(key, name))
+	end
+	-- 보이는 시간: 밝아짐 → 머묾 → 흐려짐 · 보스 체력이 뜨면 바로 사라진다
+	MapName.init(frame("Root"))
+	MapName.show("r2a1")
+	eq(MapName.alpha(), 0, "막 뜬 때는 보이지 않는다(밝아지는 중)")
+	MapName.step(L.fadeIn)
+	eq(MapName.alpha(), 1, "밝아진 뒤에는 다 보인다")
+	MapName.step(L.hold + L.fadeOut + 0.1)
+	eq(MapName.alpha(), 0, "머문 뒤 흐려져 사라진다")
+	MapName.show("r2a1")
+	MapName.step(0.5, true)
+	eq(MapName.alpha(), 0, "보스 체력 · 퀘스트 연출이 그 자리를 쓰면 바로 사라진다")
+end
+
+-- ---- ③ 획득 알림: 같은 갈래가 이어 오면 한 줄로 합치고, 줄 수를 넘지 않고, 시간이 지나면 사라진다 ----
+do
+	local L = Layout.GAINLOG
+	local GainLog = req("Client/lune/gainLog")
+	GainLog.clear()
+	GainLog.xp(100)
+	GainLog.xp(250)
+	eq(#GainLog.lines, 1, "경험치가 이어 오면 한 줄로 합친다")
+	expect(string.find(GainLog.lines[1].text, "350", 1, true) ~= nil, "합친 줄의 수 = 더한 값: " .. GainLog.lines[1].text)
+	GainLog.money(30)
+	GainLog.item("빼어난 Lv.30 큰 도끼")
+	GainLog.level(31)
+	GainLog.quest("성문 밖의 저녁")
+	eq(#GainLog.lines, 5, "갈래가 다르면 새 줄")
+	GainLog.step(L.merge + 0.1)
+	GainLog.xp(5)
+	eq(GainLog.lines[#GainLog.lines].text, "경험치 +5", "합치는 시간이 지나면 새 줄")
+	for i = 1, 10 do
+		GainLog.item("물건 " .. i)
+	end
+	eq(#GainLog.lines, L.lines, "줄 수를 넘지 않는다(오래된 줄부터 빠진다)")
+	GainLog.step(L.life + L.fade + 0.1)
+	eq(#GainLog.lines, 0, "머문 뒤 흐려져 사라진다")
+	for _, w in { "경험치 +1,234,567", "획득: 빼어난 Lv.150 달빛 대검", "퀘스트 완료: 오천 년을 바래지 않은 깃발" } do
+		expect(pixelText.Measure(w, "small") <= 220, "획득 알림의 긴 줄도 칸(220)에 든다: " .. w)
+	end
+end
+
+-- ---- ④ 주민의 고르는 말: 할 일이 둘 넘으면 줄마다 하나(돌려줄 것 → 받을 것 → 하는 중 → 대화하기) ----
+do
+	local Quests = req("ReplicatedStorage/shared/lune/sim/quests")
+	eq(Quests.talkMenu({ ready = {}, offer = { "r2m1" }, wait = {} }, 3), nil, "하나뿐이면 고르는 말 없이 바로(전과 같다)")
+	local m = Quests.talkMenu({ ready = { "r2m2" }, offer = { "r2s1" }, wait = { "r2s2" } }, 3)
+	expect(m ~= nil and #m == 3, "대화창의 줄 수(3)까지")
+	eq(m[1].kind, "ready", "돌려줄 것이 먼저")
+	eq(m[2].kind, "offer", "받을 것이 다음")
+	eq(m[3].kind, "chat", "마지막 줄은 늘 「대화하기」(넘는 퀘스트는 줄이 빌 때)")
+	m = Quests.talkMenu({ ready = {}, offer = { "r2m1" }, wait = { "r2s2" } }, 3)
+	expect(m ~= nil and m[1].kind == "offer" and m[2].kind == "wait" and m[3].kind == "chat", "받을 것 · 하는 중인 것 · 대화하기")
+	for _, row in m do
+		expect(pixelText.Measure(row.text, "body") <= 428, "고르는 줄이 대화창의 폭에 든다: " .. row.text)
+	end
+	-- 4차 전직 퀘스트(2026-10-18): 퀘스트가 생겨 Lv.100이 되어도 저절로 오르지 않는다
+	local job4 = Quests.jobQuest(4)
+	expect(job4 ~= nil and job4.giver == "master", "4차 전직은 사제의 퀘스트")
+end
+
+-- ---- ⑤ 비선공(첫 사냥터의 수습 검병 — 2026-10-18): 맞기 전에는 곁에 서 있어도 알아채지 않고, 맞으면 쫓는다 ----
+do
+	local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
+	local Room = req("ReplicatedStorage/shared/lune/sim/room")
+	local def = COMBAT.mobs.trainee
+	expect(def ~= nil and def.passive == true, "수습 검병은 비선공")
+	for id, m in COMBAT.mobs do
+		expect(not m.passive or id == "trainee", "비선공은 첫 사냥터의 수습 검병뿐(제 판단) — " .. id)
+	end
+	local h = { id = 1, alive = true, x = 100, y = 100, buffs = {}, buffAt = {} }
+	local mob = { def = def, x = 110, y = 100, aggro = 0, target = nil }
+	eq(Room.findTarget(nil, mob, { [1] = h }), nil, "곁(10점)에 서 있어도 맞기 전에는 알아채지 않는다")
+	mob.aggro, mob.target = 5, 1
+	eq(Room.findTarget(nil, mob, { [1] = h }), 1, "맞은 뒤(aggro)에는 알아채고 쫓는다")
+	local other = { def = COMBAT.mobs.puff, x = 110, y = 100, aggro = 0 }
+	if other.def and other.def.see and other.def.see >= 10 then
+		eq(Room.findTarget(nil, other, { [1] = h }), 1, "다른 몬스터는 그대로 선공")
+	end
+end
+
+-- ---- ⑥ 창고 칸(설계 「창고 칸 +4」 — 지역마다 부탁 하나 · 2026-10-18): 계정에 한 번씩 붙고, 창고의 탭마다 칸이 는다 ----
+do
+	local Quests = req("ReplicatedStorage/shared/lune/sim/quests")
+	local Account = req("ReplicatedStorage/shared/lune/sim/account")
+	local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
+	local ids = {}
+	for _, def in Quests.list do
+		if (def.reward.store or 0) > 0 then
+			table.insert(ids, def.id)
+			eq(def.reward.store, 4, "창고 칸 보상은 4칸 — " .. def.name)
+		end
+	end
+	eq(#ids, 4, "창고를 늘리는 부탁은 지역마다 하나(넷)")
+	local acct = Account.new()
+	eq(Account.storeExtra(acct), 0, "처음 계정은 늘린 칸이 없다")
+	acct.storeGot[ids[1]] = true
+	acct.storeGot[ids[2]] = true
+	eq(Account.storeExtra(acct), 8, "부탁 둘 = 8칸")
+	local back = Account.unpack(Account.pack(acct))
+	eq(Account.storeExtra(back), 8, "저장하고 다시 읽어도 그대로")
+	local h = { store = { gear = {}, use = {}, etc = {} } }
+	for i = 1, 24 do
+		h.store.gear[i], h.store.use[i], h.store.etc[i] = false, false, false
+	end
+	eq(Bag.storeSize(h), 24, "기본 24칸")
+	Bag.growStore(h, 8)
+	eq(Bag.storeSize(h), 32, "늘린 뒤 32칸")
+	eq(#h.store.use, 32, "탭마다 빈 칸이 붙는다")
+	local QW = req("Client/lune/ui/questWindow")
+	local parts = QW.rewardParts(Quests.def(ids[1]).reward, 30, "axion")
+	local shown = false
+	for _, p in parts do
+		shown = shown or p.text == "창고 칸 +4"
+	end
+	expect(shown, "퀘스트 창의 보상에 「창고 칸 +4」")
+end
+
+-- ---- ⑦ 되사기(2026-10-18 — 메이플의 재구매): 판 값 그대로 되산다 · 이번 접속에 판 것 가장 최근 10개 · 저장하지 않는다 ----
+do
+	local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
+	local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+	local Items = req("ReplicatedStorage/shared/lune/sim/items")
+	local h = Hero.new(901, "axion")
+	h.money = 100000
+	local start = Bag.count(h, "potion1") -- 새 캐릭터는 물약 열을 가지고 시작한다
+	Bag.give(h, "potion1", 5)
+	local slot
+	for i, s in h.use do
+		if s and s.item == "potion1" then
+			slot = i
+			break
+		end
+	end
+	local got = Bag.sell(h, "use", slot, 3)
+	expect(got ~= nil and got > 0, "판다")
+	eq(#h.buyback, 1, "판 것을 기억한다")
+	local money = h.money
+	expect(Bag.buyBack(h, 1) == true, "되산다")
+	eq(h.money, money - got, "판 값 그대로")
+	eq(Bag.count(h, "potion1"), start + 5, "판 셋이 돌아왔다")
+	eq(#h.buyback, 0, "되산 것은 목록에서 빠진다")
+	-- 장비
+	local it = Items.make("hat", 10, Items.NORMAL)
+	Bag.add(h, it)
+	local gslot
+	for i, g in h.gear do
+		if g == it then
+			gslot = i
+		end
+	end
+	local price = Bag.sell(h, "gear", gslot)
+	expect(price ~= nil and Bag.view(h).buyback[1].gear ~= nil and Bag.view(h).buyback[1].price == price, "되사기 목록(장비 · 값)이 화면에 간다")
+	expect(Bag.buyBack(h, 1) == true, "장비도 되산다")
+	local back = false
+	for _, g in h.gear do
+		back = back or (g and g.slot == "hat" and g.stage == 10)
+	end
+	expect(back, "되산 장비가 가방에")
+	-- 가장 최근 10개
+	for _ = 1, 12 do
+		Bag.give(h, "potion1", 1)
+		for i, s in h.use do
+			if s and s.item == "potion1" then
+				Bag.sell(h, "use", i, 1)
+				break
+			end
+		end
+	end
+	eq(#h.buyback, Bag.BUYBACK, "가장 최근 10개까지")
+	h.money = 0
+	expect(Bag.buyBack(h, 1) == nil, "달돈이 모자라면 되사지 못한다")
+	eq(Bag.buyBack(h, 99), nil, "없는 차례")
+	local packed = Hero.pack(h)
+	eq(packed.buyback, nil, "저장하지 않는다(나갔다 들어오면 비어 있다)")
+	expect(pixelText.Measure("되사기 — 이번 접속에 판 것(판 값 그대로)", "small") <= 300, "되사기 머리 줄(shopWindow.BACK_HEAD)이 상점 창의 폭에 든다")
+end
+
+-- ---- ⑨ 사냥터 정예(2026-10-18 — 메이플의 엘리트 몬스터 · 공방 combat.js FIELD_ELITE): 2지역부터의 사냥터에서 every마리를 잡으면 하나가 나온다 ----
+do
+	local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
+	local Room = req("ReplicatedStorage/shared/lune/sim/room")
+	local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+	local FE = COMBAT.fieldElite
+	expect(FE ~= nil and FE.every > 0 and FE.hp > 1 and FE.xp > 1, "정예의 규칙이 게임에")
+	local n = 0
+	for key, sc in SCENES.scenes do
+		if sc.elite then
+			n += 1
+			expect(sc.region ~= "r1" and not sc.story and not sc.rift and #sc.mobs > 0, "정예는 2지역부터의 사냥터에만 — " .. key)
+		elseif sc.region == "r2" or sc.region == "r3" or sc.region == "r4" then
+			expect(#sc.mobs == 0 or sc.story or sc.rift, "몬스터가 있는 2~4지역 사냥터에는 정예가 나온다 — " .. key)
+		end
+	end
+	expect(n >= 40, "정예가 나오는 맵이 2 · 3 · 4지역 · 바다의 사냥터(" .. n .. ")")
+	expect(not SCENES.scenes["rf1#1"].elite, "토벌에는 없다")
+	-- 방의 셈
+	local sc = SCENES.scenes.r2a1
+	expect(sc.elite == true, "성문 밖 숲길에는 나온다")
+	local room = Room.new("r2a1", sc, Random.new(3))
+	eq(#room.mobs, #sc.mobs + 1, "몬스터 목록 끝에 정예의 자리 하나(번호가 바뀌지 않게)")
+	local slot = room.mobs[#room.mobs]
+	expect(slot.fieldElite and slot.elite and slot.away and slot.state == "gone", "처음에는 없다")
+	local plain = room.mobs[1]
+	eq(slot.kind, plain.kind, "그 맵의 몬스터")
+	eq(slot.maxHp, plain.maxHp * FE.hp, "체력 hp배")
+	expect(room:describe().mobs[slot.id].elite == true, "화면에 「정예」로 간다(분홍 빛 · 이름표)")
+	local h = Hero.new(5801, "riven")
+	h.level = 32
+	h.x, h.y = sc.spawn.x, sc.spawn.y
+	local function kill(mob)
+		mob.state, mob.hp = "idle", mob.maxHp
+		local out = { hits = {}, kills = {} }
+		room:strike(h, mob, mob.hp + 1, mob.x, nil, out)
+		return out
+	end
+	for _ = 1, FE.every - 1 do
+		kill(plain)
+	end
+	expect(slot.away, "every - 1마리까지는 없다")
+	kill(plain)
+	expect(not slot.away and slot.state == "spawn" and slot.hp == slot.maxHp, "every마리째에 나온다")
+	local spotOk = false
+	for _, m in room.mobs do
+		spotOk = spotOk or (not m.fieldElite and m.homeX == slot.homeX and m.y == slot.y)
+	end
+	expect(spotOk, "맵의 몬스터 자리 가운데 하나에서")
+	local saw = false
+	for _, e in room:step({}, 0.05) do
+		saw = saw or (e.type == "elite" and e.mob == slot.id and e.y == slot.y)
+	end
+	expect(saw, "방 사람들에게 알린다(나온 자리의 높이와 함께)")
+	for _ = 1, FE.every + 3 do
+		kill(plain)
+	end
+	expect(not slot.away and room.eliteKills == 0, "정예가 있는 동안은 세지 않는다(하나뿐)")
+	slot.state = "idle"
+	local want = math.max(1, math.floor(Hero.killXp(h, slot.lv, slot.def.hp) * FE.xp + 0.5))
+	local out = { hits = {}, kills = {} }
+	room:strike(h, slot, slot.hp + 1, slot.x, nil, out)
+	local k = out.kills[1]
+	expect(k ~= nil and k.xp == want, "경험치 xp배")
+	expect(k.drop ~= nil and k.drop.kind == "money", "달돈은 반드시 떨어진다")
+	for _ = 1, 40 do
+		room:step({}, 0.05)
+	end
+	expect(slot.away and slot.state == "gone", "쓰러지면 다시 나오지 않는다 — 다시 every마리")
+	for _ = 1, FE.every do
+		kill(plain)
+	end
+	expect(not slot.away, "다시 every마리를 잡으면 또 나온다")
+end
+
+-- ---- ⑩ 버프 그림의 설명(2026-10-18 — 공방 ui.js BUFFTIP): 글이 판에 든다 · 단추와 ↑ 안내에 「~다」가 없다 ----
+do
+	local UIDATA = req("ReplicatedStorage/shared/lune/data/ui.generated")
+	local BT = UIDATA.buffTip
+	expect(BT ~= nil and BT.weak ~= nil and BT.left ~= nil, "버프 설명의 글이 게임에")
+	local TIP = Layout.STAT.tip
+	local inner = TIP.w - TIP.pad * 2
+	for _, line in { BT.weak.text, BT.weak.hint, BT.onLine, (BT.left:gsub("{t}", "59분")) } do
+		expect(pixelText.Measure(line, "small") <= inner * TIP.lines, "설명 판에 든다 — " .. line)
+	end
+	expect(pixelText.Measure(BT.weak.title, "body") <= inner, "제목이 판에 든다")
+	local W = UIDATA.words
+	for k, v in W.ask do
+		expect(not v[2]:match("다$"), "수 고르기의 단추에 「~다」가 없다 — " .. k .. " " .. v[2])
+	end
+	expect(not W.askNo:match("다$"), "취소 단추에 「~다」가 없다")
+	expect(not UIDATA.layout.death.yes:match("다$"), "쓰러진 상자의 단추에 「~다」가 없다")
+	local QD = req("ReplicatedStorage/shared/lune/data/quests.generated")
+	local acts = 0
+	for _, q in QD.list do
+		for _, st in q.steps or {} do
+			if type(st.act) == "string" then
+				acts += 1
+				expect(not st.act:match("다$"), "↑ 자리의 안내에 「~다」가 없다 — " .. q.id .. " " .. st.act)
+			end
+		end
+	end
+	expect(acts >= 5, "↑ 자리의 안내를 봤다(" .. acts .. ")")
+	local CITY = req("ReplicatedStorage/shared/lune/data/city.generated")
+	local stories = 0
+	for _, st in CITY.stories or {} do
+		stories += 1
+		expect(not st.act:match("다$"), "숨은 이야기의 안내에 「~다」가 없다 — " .. st.act)
+	end
+	expect(stories >= 8, "숨은 이야기의 안내를 봤다(" .. stories .. ")")
+end
+
+-- ---- ⑪ 경험치 줄의 설명(2026-10-18 — 공방 ui.js XPTIP): 가장 긴 수(Lv.200 근처)도 설명 판에 든다 ----
+do
+	local UIDATA = req("ReplicatedStorage/shared/lune/data/ui.generated")
+	local Format = req("ReplicatedStorage/shared/lune/ui/format")
+	local XT = UIDATA.xpTip
+	expect(XT ~= nil and XT.now ~= nil and XT.left ~= nil, "경험치 설명의 글이 게임에")
+	local TIP = Layout.STAT.tip
+	local inner = TIP.w - TIP.pad * 2
+	local big = 1234567890
+	local now = Format.fill(XT.now, { xp = Format.comma(big), need = Format.comma(big), pct = "100.00" })
+	expect(pixelText.Measure(now, "small") <= inner, "경험치 줄이 한 줄에 든다 — " .. now)
+	expect(pixelText.Measure(Format.fill(XT.left, { n = Format.comma(big) }), "small") <= inner, "다음 레벨까지 줄이 든다")
+end
+
+-- ---- ⑫ 가방이 가득 찼다(2026-10-18): 가득 찬 탭을 가려낸다(가방 단추에 점 · 획득 알림) ----
+do
+	local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
+	local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+	local UIDATA = req("ReplicatedStorage/shared/lune/data/ui.generated")
+	local h = Hero.new(5901, "axion")
+	eq(#Bag.fullTabs(Bag.view(h)), 0, "새 캐릭터의 가방은 가득 차지 않았다")
+	local Items = req("ReplicatedStorage/shared/lune/sim/items")
+	for i = 1, Bag.size(h) do
+		if not h.gear[i] then
+			h.gear[i] = Items.make("hat", 10, 2, "axion")
+		end
+	end
+	local full = Bag.fullTabs(Bag.view(h))
+	expect(#full == 1 and full[1] == "gear", "장비 탭이 가득 찼다")
+	local line = UIDATA.words.bagFull:gsub("{tab}", "장비")
+	expect(pixelText.Measure(line, "small") <= UIDATA.hud.gainLog.w, "알림 줄이 획득 알림 칸에 든다 — " .. line)
+end
+
+-- ---- ⑬ 경매장 「팔림」(2026-10-18): 획득 알림 한 줄이 칸에 든다(긴 이름 · 큰 수) ----
+do
+	local Market = req("ReplicatedStorage/shared/lune/sim/market")
+	local Format = req("ReplicatedStorage/shared/lune/ui/format")
+	local UIDATA = req("ReplicatedStorage/shared/lune/data/ui.generated")
+	expect(Market.WORDS.soldNote ~= nil and Market.WORDS.sold == "판매 완료", "「팔림」의 글이 게임에 · 「완료」 탭의 「판매 완료」는 그대로(이름이 겹쳐 덮었던 것 — 2026-10-18 검토)")
+	local line = Format.fill(Market.WORDS.soldNote, { name = "빼어난 Lv.100 큰 도끼", n = 9999 })
+	expect(pixelText.Measure(line, "small") <= UIDATA.hud.gainLog.w, "「팔림」 줄이 획득 알림 칸에 든다 — " .. line)
+end
+
+-- ---- ⑭ 창고는 줄지 않는다(2026-10-18 검토): 저장된 물건이 지금 칸 수보다 뒤에 있으면 칸을 늘려 두고 · 칸 늘리기는 줄이지 않는다 ----
+do
+	local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
+	local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+	local Items = req("ReplicatedStorage/shared/lune/sim/items")
+	local h = Hero.new(5911, "axion")
+	h.storeExtra = 8
+	Bag.loadStore(h, nil)
+	eq(Bag.storeSize(h), 32, "창고 32칸")
+	h.store.gear[30] = Items.make("hat", 10, 2, "axion")
+	local packed = Bag.pack(h)
+	local h2 = Hero.new(5912, "riven")
+	h2.storeExtra = 0 -- 퀘스트의 「창고 칸」 보상 자료가 줄었다고 치자
+	Bag.loadStore(h2, packed.store)
+	expect(Bag.storeSize(h2) >= 30 and h2.store.gear[30] ~= nil and h2.store.gear[30] ~= false, "뒤 칸의 물건을 잃지 않는다(칸을 그만큼 늘려 둔다)")
+	local before = Bag.storeSize(h2)
+	Bag.growStore(h2, 0)
+	eq(Bag.storeSize(h2), before, "칸 늘리기는 줄이지 않는다")
+end
+
+-- ---- ⑮ 전직은 차례대로(2026-10-18 검토): 2차를 건너뛴 Lv.60은 3차 전직 퀘스트를 받지 못하고 · 돌려주는 것도 바로 다음 차수일 때만 ----
+do
+	local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+	local Quests = req("ReplicatedStorage/shared/lune/sim/quests")
+	local h = Hero.new(5921, "reaper")
+	Hero.setLevel(h, 60, 1) -- 1차인 채로 Lv.60(2차 전직 퀘스트를 하지 않았다)
+	eq(h.job, 1, "1차인 채로")
+	eq(Quests.state(h.quests, h.level, "job3"), "locked", "2차를 하지 않았으면 3차 전직 퀘스트는 잠겨 있다")
+	expect(Quests.state(h.quests, h.level, "job2") == "open", "2차 전직 퀘스트는 받을 수 있다")
+	local open = {}
+	for _, def in Quests.openJobs(h.quests, h.level) do
+		open[def.id] = true
+	end
+	expect(open.job2 and not open.job3, "사제가 내미는 전직 퀘스트도 2차뿐")
+	-- 예전에 받아 둔 3차(이 잠금 전) — 다 해도 돌려주지 못한다(끝났는데 전직이 안 되는 일이 없게)
+	h.quests.job3 = { done = false, c = {} }
+	for i, step in Quests.def("job3").steps do
+		h.quests.job3.c[i] = step.n
+	end
+	local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
+	for _, t in Quests.takes("job3") do
+		Bag.give(h, t.item, t.n)
+	end
+	local got, why = Hero.questDone(h, "job3")
+	expect(got == nil and why ~= nil and h.job == 1 and not h.quests.job3.done, "2차 전에는 3차 전직 퀘스트를 돌려주지 못한다 — " .. tostring(why))
+	Hero.setLevel(h, 60, 2)
+	eq(h.job, 2, "2차가 되면")
+	expect(Quests.state(h.quests, h.level, "job3") ~= "locked", "3차 전직 퀘스트가 풀린다")
+end
+
+-- ---- ⑯ 퀘스트 물건은 창고에 맡길 수 없다(2026-10-18 검토 — 창고는 계정이 같이 써서 다른 캐릭터가 꺼내 퀘스트를 바로 끝냈다) ----
+do
+	local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+	local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
+	local h = Hero.new(5931, "axion")
+	Bag.loadStore(h, nil)
+	Bag.give(h, "etc_plate", 3)
+	local at
+	for i = 1, Bag.size(h) do
+		if h.etc[i] and h.etc[i].item == "etc_plate" then
+			at = i
+		end
+	end
+	local ok, why = Bag.storeIn(h, "etc", at, nil, nil)
+	expect(ok == nil and why == Bag.NO_STORE and Bag.count(h, "etc_plate") == 3 and Bag.stored(h, "etc") == 0, "퀘스트 물건(갑옷 조각)은 맡기지 못한다")
+	Bag.give(h, "mat_ore1", 2) -- 퀘스트가 아닌 기타 물건은 그대로 맡긴다
+	local dust
+	for i = 1, Bag.size(h) do
+		if h.etc[i] and h.etc[i].item == "mat_ore1" then
+			dust = i
+		end
+	end
+	expect(dust ~= nil and Bag.storeIn(h, "etc", dust, nil, nil) == true and Bag.stored(h, "etc") == 1, "다른 기타 물건(재료)은 맡긴다")
+end
+
+-- ---- ⑰ 조작이 돌아올 때 읽지 않은 「누른 순간」을 버린다(2026-10-18 검토: 문을 지나며 화면이 까만 동안 ↑를 한 번 더 누르면 막이 걷히자마자 들어온 문으로 되돌아갔다) ----
+do
+	local Input = req("Client/lune/input")
+	Input.press("up")
+	Input.release("up")
+	Input.press("jump")
+	Input.flush()
+	expect(not Input.take("up") and not Input.take("jump"), "버린 뒤에는 누른 순간이 남지 않는다")
+	expect(Input.held("jump"), "누르고 있는 것은 그대로")
+	Input.release("jump")
+	Input.press("jump")
+	expect(Input.take("jump"), "그 뒤에 새로 누른 것은 읽힌다")
+	Input.release("jump")
+end
+
+-- ---- ⑱ 첫 강화(달가루 없이 반드시 붙는다)는 서버와 대장간 창이 같은 셈(Items.firstFree — 2026-10-18 검토: 창은 「제 레벨 + 10」을 보지 않아 높은 장비에도 「첫 강화」를 보였다) ----
+do
+	local Items = req("ReplicatedStorage/shared/lune/sim/items")
+	expect(Items.firstFree(false, 10, { star = 0, stage = 20 }) == true, "제 레벨 + 10까지의 별 없는 장비는 첫 강화")
+	expect(Items.firstFree(false, 10, { star = 0, stage = 21 }) == false, "그보다 높은 장비는 아니다")
+	expect(Items.firstFree(true, 10, { star = 0, stage = 10 }) == false, "강화를 해 본 캐릭터는 아니다")
+	expect(Items.firstFree(false, 10, { star = 1, stage = 10 }) == false, "별이 있는 장비는 아니다")
+end
+
+-- ---- ⑲ 방을 떠난 사람의 늦게 드는 타는 버린다(Room:forget — 2026-10-18 검토: 떠난 리퍼의 붙는 불이 보스를 쓰러뜨려 아무도 몫을 받지 못했다) ----
+do
+	local Room = req("ReplicatedStorage/shared/lune/sim/room")
+	local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+	local room = Room.new("hunt", SCENES.scenes.hunt, Random.new(3))
+	local a, b = Hero.new(5941, "reaper"), Hero.new(5942, "riven")
+	room.laters = { { at = 1, hero = a, fn = function() end }, { at = 1, hero = b, fn = function() end }, { at = 2, hero = a, fn = function() end } }
+	room:forget(a)
+	expect(#room.laters == 1 and room.laters[1].hero == b, "떠난 사람의 것만 지운다")
+end
+
+-- ---- ⑳ 초대한 사람이 나가면 받은 사람의 초대 상자를 닫는다(Party.leave의 셋째 값 — 2026-10-18 검토) ----
+do
+	local Party = req("ReplicatedStorage/shared/lune/sim/party")
+	local book = Party.newBook()
+	local ok = Party.invite(book, 1, 2, 0)
+	expect(ok ~= nil, "초대했다")
+	local left, gone, cleared = Party.leave(book, 1)
+	expect(#left == 0 and gone == false and cleared ~= nil and cleared[1] == 2, "나간 사람이 보낸 초대를 받은 사람(2)을 알려 준다")
+	expect(book.asks[2] == nil, "그 초대는 지워졌다")
+end
+
+end)
+runTest('58_lune_hud', function()
+-- 「달의 계승자」 — 늘 보이는 화면(client/lune/hud.luau)을 화면 없이 실제로 돌려 본다(2026-10-18).
+--  까닭: 같은 날 넣은 설명 판(버프 · 경험치 줄 · 퀵슬롯 칸)에서 아래쪽에 선언한 지역 변수(TIP)를 위쪽 함수가 써서, 마우스를 올릴 때마다 오류가 나고 판이 쌓이는 버그가 있었다
+--  (컴파일 · 다른 검사는 지나갔다 — 화면 모듈은 GUI가 있어야 해서 돌려 보지 않았다). 몬스터 그리기 검사(24)처럼 가짜 화면 틀 · UI 부품을 끼워 hud.luau는 진짜로 돌린다.
+--  보는 것: 처음 짓기 · 내 상태 · 버프 줄과 그 설명(마우스 · 손가락) · 경험치 줄의 설명 · 퀵슬롯 칸 · 칸의 설명 · 다시 쓰기의 덮개와 끝난 순간의 반짝임 · 다 쓴 물약의 붉은 0 · 메뉴 단추의 점
+local Layout = req("ReplicatedStorage/shared/lune/ui/layout")
+local pixelText = req("Client/ui/pixelText")
+local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
+pixelText.Register("small", KIT.font.small, {})
+pixelText.Register("body", KIT.font.body, {})
+
+-- ---- 가짜 화면 틀 ----
+local frames = {} -- 만든 틀들(이름으로 찾는다)
+local function frame(name: string?, parent)
+	local f = { Name = name or "Frame", Visible = true, Parent = parent, ZIndex = 1, BackgroundTransparency = 0, ImageTransparency = 0,
+		Position = UDim2.fromOffset(0, 0), Size = UDim2.fromOffset(10, 10), AbsolutePosition = Vector2.new(0, 0), AbsoluteSize = Vector2.new(10, 10) }
+	function f:Destroy()
+		self.destroyed = true
+	end
+	function f:FindFirstChild(n)
+		return frame(n, self)
+	end
+	table.insert(frames, f)
+	return f
+end
+local function alive(name: string): number
+	local n = 0
+	for _, f in frames do
+		if f.Name == name and not f.destroyed then
+			n += 1
+		end
+	end
+	return n
+end
+local COLOR = setmetatable({}, { __index = function(_, k) return k end }) -- 색은 이름 그대로(붉은 0을 「red」로 본다)
+local M = { small = 10, body = 12, pic = 18, button = 24, key = 12 }
+local function textItem(parent, text, x, y, w, opts)
+	local item = { value = text, x = x, y = y, w = w, shown = true, tint = opts and opts.color, frame = frame("Text", parent) }
+	item.label = { SetMaxWidth = function() end, Frame = frame("Label", parent) }
+	function item.set(_, v) item.value = v end
+	function item.color(_, c) item.tint = c end
+	function item.move(_, nx, ny) item.x, item.y = nx, ny end
+	function item.show(_, on) item.shown = on end
+	function item.size() return pixelText.Measure(item.value, (opts and opts.font) or "small"), 10 end
+	return item
+end
+MOCK("Client/lune/stage", {
+	ui = frame("StageUi"),
+	uiW = 960,
+	uiScale = 1,
+	group = function(parent, name) return frame(name, parent) end,
+	placeRect = function(parent, name) return frame(name, parent) end,
+	atPosition = function(_, x, y) return UDim2.fromOffset(x, y) end,
+	onResize = function() end,
+})
+MOCK("Client/lune/ui/ui", {
+	COLOR = COLOR,
+	M = M,
+	text = textItem,
+	box = function(parent, x, y, w, h, color, alpha) local f = frame("Box", parent) f.BackgroundColor3 = color f.BackgroundTransparency = alpha or 0 return f end,
+	pic = function(parent, name) local f = frame("Pic", parent) f.pic = name return f end,
+	setPic = function(f, name) f.pic = name end,
+	measure = function(text) return (pixelText.Measure(text, "small")) end,
+	group = function(parent, x, y, w, h, name) local f = frame(name, parent) f.Position = UDim2.fromOffset(x, y) return f end,
+	part = function(parent, name) return frame(name, parent) end,
+	slot = function(parent) local s = { frame = frame("Slot", parent), on = false } function s.setOn(_, on) s.on = on end return s end,
+	bar = function(parent) local b = { frame = frame("Bar", parent), fill = frame("Fill", parent), ratio = 0 } function b.set(_, r) b.ratio = r end return b end,
+	keycap = function(parent) local k = { value = "" } function k.set(_, v) k.value = v end function k.color() end return k end,
+	hit = function(f) return { Activated = { Connect = function(_, fn) f.click = fn end } } end,
+})
+local lastInput: any = Enum.UserInputType.MouseMovement
+SERVICE("UserInputService", { GetLastInputType = function() return lastInput end, GetMouseLocation = function() return Vector2.new(5, 5) end })
+SERVICE("GuiService", { GetGuiInset = function() return Vector2.new(0, 0) end })
+SERVICE("RunService", { Heartbeat = { Connect = function() return { Disconnect = function() end } end } })
+
+local Hud = req("Client/lune/hud")
+Hud.init()
+local function button(name: string, nth: number?): any
+	local k = 0
+	for _, inst in CREATED do
+		if inst.ClassName == "TextButton" and inst.Name == name and not inst.destroyed and not (inst.Parent and inst.Parent.destroyed) then
+			k += 1
+			if k == (nth or 1) then
+				return inst
+			end
+		end
+	end
+	return nil
+end
+
+-- ---- 내 상태 · 경험치 줄의 설명 ----
+Hud.setSelf({ level = 12, hp = 100, maxHp = 200, xp = 483, need = 1120, ap = 0, sp = 0 })
+local xpOver = button("XpOver")
+expect(xpOver ~= nil, "경험치 줄 위에 누르는 자리")
+xpOver.MouseEnter:Fire()
+expect(Hud.xpTip ~= nil and alive("XpTip") == 1, "마우스를 올리면 경험치 설명")
+local t = Hud.xpTipText(483, 1120, 12)
+expect(t.lines[1] == "483 / 1,120 (43.12%)" and t.lines[2] == "다음 레벨까지 637", "경험치 설명의 글 — " .. t.lines[1] .. " / " .. t.lines[2])
+Hud.setSelf({ level = 12, hp = 100, maxHp = 200, xp = 500, need = 1120, ap = 0, sp = 0 })
+expect(alive("XpTip") == 1, "떠 있는 동안 경험치가 오르면 새 판 하나로(쌓이지 않는다)")
+xpOver.MouseLeave:Fire()
+expect(Hud.xpTip == nil and alive("XpTip") == 0, "벗어나면 닫힌다")
+
+-- ---- 버프 줄과 그 설명 ----
+local tipOf = function(title) return { kind = "sub", title = title, tag = "", lines = { "효과 한 줄", "남은 시간 12초" } } end
+Hud.setBuffs({ { pic = "skill_ax_breath", text = "12", tip = tipOf("전투 호흡") }, { pic = "buff_death", text = "12분", tip = { kind = "none", title = "약해짐", tag = "", lines = { "쓰러진 벌칙", "남은 시간 12분", "달빛 부적" } } } })
+local over1 = button("Over", 1)
+expect(over1 ~= nil and button("Over", 2) ~= nil, "버프 그림마다 누르는 자리")
+over1.MouseEnter:Fire()
+expect(Hud.tipAt == 1 and alive("BuffTip") == 1, "마우스를 올리면 그 버프의 설명")
+over1.MouseEnter:Fire()
+expect(alive("BuffTip") == 1, "다시 올려도 판은 하나")
+over1.MouseLeave:Fire()
+expect(Hud.tipAt == nil and alive("BuffTip") == 0, "벗어나면 닫힌다")
+-- 손가락: 누를 때 MouseEnter도 오지만 그것으로 열지 않는다 — 톡 = 열기 · 한 번 더 = 닫기
+lastInput = Enum.UserInputType.Touch
+local over2 = button("Over", 2)
+over2.MouseEnter:Fire()
+expect(Hud.tipAt == nil, "손가락의 MouseEnter로는 열지 않는다")
+over2.Activated:Fire({ UserInputType = Enum.UserInputType.Touch })
+expect(Hud.tipAt == 2 and alive("BuffTip") == 1, "톡 하면 연다")
+-- 1초마다 칸을 다시 지어도(남은 시간이 바뀜) 손가락으로 연 설명은 이어서 뜬다
+Hud.setBuffs({ { pic = "skill_ax_breath", text = "11", tip = tipOf("전투 호흡") }, { pic = "buff_death", text = "11분", tip = { kind = "none", title = "약해짐", tag = "", lines = { "쓰러진 벌칙", "남은 시간 11분" } } } })
+expect(Hud.tipAt == 2 and alive("BuffTip") == 1, "칸을 다시 지어도 설명이 이어진다(하나)")
+button("Over", 2).Activated:Fire({ UserInputType = Enum.UserInputType.Touch })
+expect(Hud.tipAt == nil and alive("BuffTip") == 0, "한 번 더 톡 하면 닫는다")
+lastInput = Enum.UserInputType.MouseMovement
+
+-- ---- 퀵슬롯: 칸 · 칸의 설명 · 다시 쓰기 ----
+Hud.countOf = function(id) return if id == "potion1" then 0 else 5 end
+Hud.setSlots({ { what = "potion1", key = "LeftControl" }, { what = "ax_slam", key = "Q" } })
+local potion = Hud.slots[1]
+expect(potion.count.value == "0" and potion.count.tint == "red", "다 쓴 물약은 붉은 0")
+Hud.countOf = function() return 7 end
+Hud.setCounts()
+expect(potion.count.value == "7" and potion.count.tint == "text", "다시 생기면 흰 숫자")
+Hud.slotTipOf = function(what) return { kind = "sub", title = what, tag = "사냥기 · Lv.3", lines = { "설명", "효과" } } end
+local hit2 = button("Hit", 2)
+expect(hit2 ~= nil, "칸마다 누르는 자리")
+for _ = 1, 3 do
+	hit2.MouseEnter:Fire()
+end
+expect(Hud.slotTipAt == 2 and alive("SlotTip") == 1, "칸에 마우스를 올리면 설명 하나(여러 번 올려도 쌓이지 않는다)")
+hit2.MouseLeave:Fire()
+expect(Hud.slotTipAt == nil and alive("SlotTip") == 0, "벗어나면 닫힌다")
+Hud.showSlotTip(3)
+expect(alive("SlotTip") == 0, "빈 칸에는 설명이 없다")
+Hud.setCooldown("ax_slam", 3, 5)
+local skill = Hud.slots[2]
+expect(skill.veil.Visible == true and skill.wait.value == "3", "다시 쓰기의 덮개와 남은 초")
+Hud.setCooldown("ax_slam", 0, 5)
+expect(skill.veil.Visible == false and skill.readyT > 0, "다시 쓰기가 끝나면 반짝임이 시작된다")
+Hud.step(0.1)
+expect(skill.ready.Visible == true and skill.ready.BackgroundTransparency < 1, "반짝이는 동안 하얀 덮개가 보인다")
+Hud.step(1)
+expect(skill.ready.Visible == false, "곧 사라진다")
+
+-- ---- 메뉴 단추의 점: 단추를 다시 지어도 남는다 ----
+local menu = { { id = "bag", name = "가방" }, { id = "auction", name = "경매장" }, { id = "more", name = "메뉴" } }
+Hud.setMenu(menu, function() end)
+Hud.markMenu("bag", true)
+Hud.setMenu(menu, function() end)
+expect(Hud.menu.bag.dot.Visible == true and Hud.menu.auction.dot.Visible ~= true, "가방의 점이 단추를 다시 지은 뒤에도 남는다")
+Hud.markMenu("bag", false)
+Hud.setMenu(menu, function() end)
+expect(Hud.menu.bag.dot.Visible ~= true, "끈 점은 다시 지어도 꺼져 있다")
+
+end)
+runTest('59_lune_talk', function()
+-- 「달의 계승자」 — 대화창(client/lune/ui/talk.luau)을 화면 없이 실제로 돌려 본다(2026-10-18).
+--  까닭: 같은 날 넣은 「고르는 말」(한 주민에게 할 일이 둘 넘으면 줄마다 하나 — ↓ 옮기기 · ↑ 고르기)에서 코드 검토가 버그 둘을 찾았다
+--  (고르는 말이 떠 있는데 장면의 말이 오면 말이 비고 다음 ↑가 옛 고르기를 했다 · 앞서 눌러 둔 ↓로 둘째 줄에서 열렸다 — 뒤의 것은 boot가 막는다).
+--  보는 것: 처음 짓기 · 말이 차례로 넘어가고 끝나면 닫힘 · 고르는 말(옮기기 · 끝에서 처음으로 · 고르기 · 줄 누르기) · 고르는 말 위로 다른 말이 오면 걷힘 · 닫기
+NumberSequence = { new = function(a, b) return { a, b } end }
+SERVICE("UserInputService", { InputBegan = { Connect = function() end }, TouchEnabled = false })
+
+local function frame(name)
+	local f = { Name = name, Visible = true, ZIndex = 1, BackgroundTransparency = 0, ImageTransparency = 0, Image = "", Size = UDim2.fromOffset(1, 1), Position = UDim2.fromOffset(0, 0), children = {} }
+	function f:Destroy()
+		self.destroyed = true
+	end
+	function f:FindFirstChild(n)
+		for _, c in self.children do
+			if c.Name == n then
+				return c
+			end
+		end
+		return nil
+	end
+	function f:GetDescendants()
+		return {}
+	end
+	function f:IsA()
+		return false
+	end
+	function f:SetAttribute() end
+	return f
+end
+local function textItem()
+	local f = frame("Text")
+	local it = { label = { Frame = f, Width = 40, SetMaxWidth = function() end }, text = "", frame = f }
+	function it.set(_, v)
+		it.text = v
+		it.label.Width = #v * 4
+	end
+	function it.move() end
+	function it.show(_, on)
+		f.Visible = on
+	end
+	function it.color() end
+	function it.size()
+		return it.label.Width, 12
+	end
+	return it
+end
+local hits = {} -- [틀의 이름] = 누르면 부르는 것
+local any = setmetatable({}, { __index = function() return Color3.fromRGB(1, 2, 3) end })
+MOCK("Client/lune/stage", { uiW = 960, uiH = 540, ratio = 2.5, group = function(_, name) return frame(name) end })
+MOCK("Client/lune/overlay", { root = frame("Overlay"), x = function(v) return v end, y = function(v) return v end })
+MOCK("Client/lune/ui/ui", {
+	COLOR = any,
+	M = { body = 12, small = 9, bodyLine = 16, smallLine = 13, button = 26 },
+	group = function(_, x, y, w, h, name) return frame(name or "Group") end,
+	panel = function() local p = frame("Panel") table.insert(p.children, frame("Back")) return p end, -- 판(속의 바탕 「Back」을 layout이 찾는다)
+	box = function() return frame("Box") end,
+	part = function(_, name) return frame(name) end,
+	text = function() return textItem() end,
+	keycap = function() local k = { frame = frame("Key") } function k.move() end function k.set() end function k.show() end return k end,
+	button = function(_, text, x, y, w, onClick)
+		local b = { frame = frame("Button"), click = onClick, text = text }
+		function b.setText(_, v) b.text = v end
+		function b.setMain() end
+		function b.setEnabled() end
+		function b.move() end
+		return b
+	end,
+	hit = function(parent)
+		local h = { Name = "Hit" }
+		h.Activated = { Connect = function(_, fn) hits[parent.Name] = fn end }
+		return h
+	end,
+	measure = function(t) return #t * 4 end,
+})
+MOCK("Client/modules/ui/pixelText", { Fit = function(t) return t end, Measure = function(t) return #t * 4 end })
+
+local Talk = req("Client/lune/ui/talk")
+Talk.init()
+expect(Talk.npc == nil, "처음에는 말하는 중이 아니다")
+
+-- ---- 말이 차례로 넘어가고, 끝나면 닫힌다 ----
+local npc = { id = "squire", name = "하늬", x = 0, y = 0, lines = { "평소의 말" } }
+local finished = 0
+Talk.start(npc, { "첫 말", "둘째 말" }, "수정 숲으로", function() finished += 1 end, "수락")
+expect(Talk.npc == npc and Talk.index == 1, "말을 시작했다")
+Talk.next(npc) -- 나오는 중이면 다 보이게
+Talk.next(npc)
+expect(Talk.index == 2, "다음 말로")
+Talk.next(npc)
+Talk.next(npc)
+expect(Talk.npc == nil and finished == 1, "마지막 말 뒤에는 그 일을 하고 닫힌다")
+
+-- ---- 고르는 말 ----
+local picked = nil
+local items = { { text = "완료 가능 「수정 숲으로」" }, { text = "새 퀘스트 「새는 나룻배」" }, { text = "대화하기" } }
+Talk.menu(npc, items, function(i) picked = i end)
+expect(Talk.inMenu() and Talk.menuSelected() == 1, "고르는 말은 첫 줄에서 열린다")
+Talk.menuMove(1)
+eq(Talk.menuSelected(), 2, "↓ = 다음 줄")
+Talk.menuMove(1)
+Talk.menuMove(1)
+eq(Talk.menuSelected(), 1, "끝에서 ↓ = 처음으로")
+Talk.menuMove(-1)
+eq(Talk.menuSelected(), 3, "처음에서 ↑ 옮기기 = 끝으로")
+Talk.next(npc)
+expect(picked == 3 and not Talk.inMenu() and Talk.npc == nil, "↑ · 스페이스 = 고른 줄의 일(그리고 닫힌다)")
+-- 줄을 누르면 그것
+picked = nil
+Talk.menu(npc, items, function(i) picked = i end)
+expect(hits["MenuRow2"] ~= nil, "줄마다 누르는 자리")
+hits["MenuRow2"]()
+expect(picked == 2 and not Talk.inMenu(), "줄을 누르면 그 줄을 고른다")
+-- 고르는 말이 떠 있는데 다른 말(장면 · 이야기)이 오면 고르는 말을 걷는다(2026-10-18 검토)
+picked = nil
+Talk.menu(npc, items, function(i) picked = i end)
+Talk.cine("샛별", "장면의 한 말")
+expect(not Talk.inMenu() and Talk.npc == Talk.CINE, "장면의 말이 오면 고르는 말이 걷힌다")
+Talk.cine(nil, nil)
+expect(Talk.npc == nil and picked == nil, "장면이 닫혀도 옛 고르기를 하지 않는다")
+Talk.menu(npc, items, function(i) picked = i end)
+Talk.start(npc, { "다른 말" })
+expect(not Talk.inMenu(), "다른 말을 시작하면 고르는 말이 걷힌다")
+Talk.next(npc)
+Talk.next(npc)
+expect(picked == nil, "그 말을 넘겨도 옛 고르기를 하지 않는다")
+-- 닫기(X · Esc · 거절)
+Talk.menu(npc, items, function(i) picked = i end)
+Talk.close()
+expect(not Talk.inMenu() and Talk.npc == nil and picked == nil, "닫으면 아무것도 고르지 않는다")
+-- 줄은 D.lines개까지(넘는 것은 버린다)
+local many = {}
+for i = 1, 12 do
+	many[i] = { text = "줄 " .. i }
+end
+Talk.menu(npc, many, function() end)
+Talk.menuMove(-1)
+expect(Talk.menuSelected() <= 12 and Talk.menuSelected() >= 1, "많아도 줄 안에서 옮긴다")
+Talk.close()
+
+end)
+runTest('60_lune_mapname', function()
+-- 「달의 계승자」 — 맵 이름(client/lune/mapName.luau)의 흐려짐을 화면 없이 돌려 본다(2026-10-18).
+--  까닭: 코드 검토가 찾은 버그 — 글자 그림(pixelText)은 같은 글이면 다시 짓지 않아 흐려진 투명도가 남는데, show가 「처음 투명도(baseT)」를 지워
+--  그 흐려진 값을 처음 값으로 읽었다 → 같은 지역의 둘째 맵부터 지역 줄이, 같은 이름의 맵에 다시 들면 맵 이름이 보이지 않았다.
+--  가짜 글: 글이 바뀔 때만 글자를 새로 짓는다(진짜 pixelText와 같다). 글자의 처음 투명도는 0 · 그림자 글자는 0.6.
+local Layout = req("ReplicatedStorage/shared/lune/ui/layout")
+local L = Layout.MAPNAME
+
+local glyphs = {} -- 지금 살아 있는 글자들
+local box
+local function glyph(base: number)
+	local g = { ImageTransparency = base, attrs = {}, base0 = base }
+	function g:IsA(class) return class == "ImageLabel" end
+	function g:GetAttribute(k) return self.attrs[k] end
+	function g:SetAttribute(k, v) self.attrs[k] = v end
+	table.insert(glyphs, g)
+	return g
+end
+local function textItem()
+	local it = { value = nil, mine = {} }
+	function it.set(_, v)
+		if v == it.value then
+			return -- 같은 글이면 글자를 다시 짓지 않는다(진짜 pixelText처럼)
+		end
+		it.value = v
+		for _, g in it.mine do
+			table.remove(glyphs, table.find(glyphs, g))
+		end
+		it.mine = {}
+		for _ = 1, #v // 3 do
+			table.insert(it.mine, glyph(0))
+			table.insert(it.mine, glyph(0.6)) -- 그림자 글자
+		end
+	end
+	return it
+end
+MOCK("Client/lune/stage", {
+	REF_W = 960,
+	place = function()
+		box = { Visible = false }
+		function box:GetDescendants() return glyphs end
+		return box
+	end,
+})
+MOCK("Client/lune/ui/ui", { COLOR = setmetatable({}, { __index = function(_, k) return k end }), text = function() return textItem() end })
+
+local MapName = req("Client/lune/mapName")
+MapName.init({})
+local function fullyShown(): boolean
+	for _, g in glyphs do
+		if math.abs(g.ImageTransparency - g.base0) > 1e-6 then
+			return false
+		end
+	end
+	return #glyphs > 0
+end
+local function run()
+	-- 들어와서 다 보일 때까지
+	MapName.step(L.fadeIn + 0.05)
+end
+local function fadeAway()
+	-- 장마다 조금씩(실제처럼) — 거의 다 흐려졌을 때(글자가 0.95쯤 투명)에 멈춘다. 한 번에 넘기면 흐려지는 중간을 건너뛰어 버그가 드러나지 않는다
+	for _ = 1, 400 do
+		if MapName.alpha() < 0.05 then
+			break
+		end
+		MapName.step(1 / 60)
+	end
+	expect(MapName.alpha() > 0 and box.Visible, "(흐려지는 중)")
+end
+
+-- 같은 지역의 두 맵: 지역 줄은 그대로(글자를 다시 짓지 않는다) · 맵 이름만 바뀐다
+MapName.show("r2a1")
+run()
+expect(box.Visible and fullyShown(), "첫 맵: 지역 · 맵 이름이 다 보인다")
+fadeAway()
+MapName.show("r2a2")
+run()
+expect(box.Visible and fullyShown(), "같은 지역의 둘째 맵: 지역 줄도 다 보인다(흐려진 값을 처음 값으로 읽지 않는다)")
+fadeAway()
+-- 같은 이름의 맵에 다시(집 → 마을 · 되살아남): 지역 · 이름 모두 같은 글
+MapName.show("r2a2")
+run()
+expect(box.Visible and fullyShown(), "같은 맵에 다시 들어도 다 보인다")
+-- 흐려지면 사라진다
+MapName.step(L.hold + L.fadeOut + 0.1)
+expect(not box.Visible, "다 흐려지면 사라진다")
+-- 그 자리를 다른 것이 쓰면(보스 체력 · 장면 · 창) 바로 사라진다
+MapName.show("r2a1")
+MapName.step(0.1, true)
+expect(not box.Visible, "막히면 바로 사라진다")
 
 end)
 finish()

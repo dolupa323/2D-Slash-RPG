@@ -32,6 +32,7 @@ for i, def in list do
 	-- 전직 퀘스트는 앞의 전직을 마친 캐릭터(3차 = 2차를 마침)
 	if def.kind == "job" then
 		h.job = (def.job or 3) - 1
+		Quests.jobsDone(h.quests, h.job) -- (앞 차수의 전직 퀘스트도 끝냈다 — 전직은 차례대로: 2026-10-18)
 	end
 	expect(def.rapport == nil, def.id .. ": 호감도의 자물쇠가 없다")
 	eq(Quests.state(h.quests, h.level, def.id), "open", def.id .. " 「" .. def.name .. "」: 받을 수 있다")

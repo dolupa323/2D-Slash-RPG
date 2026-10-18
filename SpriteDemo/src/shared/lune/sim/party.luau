@@ -74,6 +74,9 @@ function Party.accept(book, to: any, now: number)
 		return nil, "이미 파티가 있다"
 	end
 	local party = Party.of(book, ask.from)
+	if party and party.leader ~= ask.from then
+		return nil, "초대한 사람이 이제 파티장이 아니다" -- 초대한 뒤 남의 파티에 들어갔다(2026-10-18 검토)
+	end
 	if not party then
 		party = { id = book.nextId, leader = ask.from, members = { ask.from } }
 		book.nextId += 1
@@ -96,11 +99,20 @@ function Party.decline(book, to: any): any
 end
 
 -- 나간다(접속을 끊었을 때도). 돌려주는 것: 남은 사람들(흩어졌으면 그 마지막 한 사람까지), 흩어졌는가
-function Party.leave(book, who: any): ({ any }, boolean)
+-- 돌려주는 것: 남은 파티원들 · 파티가 흩어졌는가 · 초대가 지워진 사람들(그 사람들의 초대 상자를 닫게 — 2026-10-18 검토)
+function Party.leave(book, who: any): ({ any }, boolean, { any })
 	book.asks[who] = nil
+	-- 나간 사람이 보낸 초대도 지운다(2026-10-18 검토: 접속을 끊은 사람의 초대를 받으면 파티장이 없는 파티가 생겼다)
+	local cleared = {}
+	for to, ask in book.asks do
+		if ask.from == who then
+			book.asks[to] = nil
+			table.insert(cleared, to)
+		end
+	end
 	local party = Party.of(book, who)
 	if not party then
-		return {}, false
+		return {}, false, cleared
 	end
 	local index = table.find(party.members, who)
 	table.remove(party.members, index)
@@ -111,12 +123,12 @@ function Party.leave(book, who: any): ({ any }, boolean)
 			book.of[m] = nil
 		end
 		book.parties[party.id] = nil
-		return left, true
+		return left, true, cleared
 	end
 	if party.leader == who then
 		party.leader = party.members[1]
 	end
-	return left, false
+	return left, false, cleared
 end
 
 -- 함께 잡은 사람 수에 따른 보너스 %

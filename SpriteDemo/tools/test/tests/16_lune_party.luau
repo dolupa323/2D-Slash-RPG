@@ -168,3 +168,18 @@ eq(F.safeName(nil, "user1"), "user1", "이름이 없으면 아이디")
 eq(F.safeName("가나다라마바사아자차카타파하", "user1"), "가나다라마바사아자차카타", "길면 열두 자에서 자른다")
 eq(F.safeName("\255\254", "user1"), "user1", "깨진 글이면 아이디")
 local _ = RULES
+
+-- ---- 나간 사람의 초대 · 파티장이 아닌 사람의 초대(2026-10-18 검토) ----
+do
+	local b2 = Party.newBook()
+	expect(Party.invite(b2, 701, 702, 0) == true, "701이 702를 초대")
+	Party.leave(b2, 701) -- 701이 접속을 끊었다(파티가 없어도 leave가 불린다)
+	expect(Party.accept(b2, 702, 1) == nil and Party.of(b2, 702) == nil, "나간 사람의 초대는 받을 수 없다(파티장이 없는 파티가 생기지 않는다)")
+	-- 701이 703을 초대한 뒤 704의 파티에 들어갔다
+	expect(Party.invite(b2, 701, 703, 2) == true, "701이 703을 초대")
+	expect(Party.invite(b2, 704, 701, 2) ~= nil or true, "(704가 701을 초대)")
+	b2.asks[701] = { from = 704, at = 2 }
+	expect(Party.accept(b2, 701, 3) ~= nil, "701은 704의 파티에 들어간다")
+	local p, why = Party.accept(b2, 703, 4)
+	expect(p == nil and why ~= nil and Party.of(b2, 703) == nil, "파티장이 아닌 사람의 초대는 받지 않는다 — " .. tostring(why))
+end

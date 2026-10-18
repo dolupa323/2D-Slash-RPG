@@ -52,9 +52,25 @@ function Bag.size(h): number
 	return BAG.base + BAG.step * h.bagGrow
 end
 
--- 창고의 탭 하나의 칸 수(세 탭이 같다)
-function Bag.storeSize(_h): number
-	return BAG.storeBase
+-- 창고의 탭 하나의 칸 수(세 탭이 같다) — 24칸 + 계정이 받은 「창고 칸」 보상(h.storeExtra — 서버가 계정의 storeGot으로 맞춘다 · 2026-10-18)
+function Bag.storeSize(h): number
+	return BAG.storeBase + (if h and typeof(h.storeExtra) == "number" then h.storeExtra else 0)
+end
+
+-- 창고의 칸이 늘었다: 탭마다 빈 칸을 뒤에 붙인다(놓인 것은 그대로)
+function Bag.growStore(h, extra: number)
+	h.storeExtra = math.max(if typeof(h.storeExtra) == "number" then h.storeExtra else 0, extra) -- 줄이지는 않는다(2026-10-18 검토 — 줄면 뒤 칸의 것을 저장에서 잃는다)
+	local size = Bag.storeSize(h)
+	for _, tab in { "gear", "use", "etc" } do
+		local list = h.store and h.store[tab]
+		if list then
+			for i = 1, size do
+				if list[i] == nil then
+					list[i] = false
+				end
+			end
+		end
+	end
 end
 
 -- ---------- 칸들에서의 셈(가방의 탭과 창고의 탭이 같이 쓴다) ----------  list = 칸들 · size = 그 길이
@@ -375,6 +391,43 @@ function Bag.split(h, tab: any, slot: any, n: any, to: any): (boolean?, string?)
 end
 
 -- 상점에 판다(어느 상점 앞인지는 서버가 본다). 받은 달돈을 돌려준다. n = 묶음에서 팔 수(안 주면 전부 — 장비는 늘 하나). 퀘스트의 물건은 팔 수 없다
+-- ---------- 되사기(2026-10-18 — 메이플스토리의 재구매처럼) ----------
+--  상점에 판 것을 이번 접속 동안 가장 최근 BUYBACK개까지 기억한다(저장하지 않는다 — 나갔다 들어오면 비어 있다). 판 값 그대로 되산다
+Bag.BUYBACK = 10
+local function remember(h, tab: string, thing, price: number)
+	h.buyback = h.buyback or {}
+	table.insert(h.buyback, 1, { tab = tab, thing = thing, price = price })
+	while #h.buyback > Bag.BUYBACK do
+		table.remove(h.buyback)
+	end
+end
+
+-- 되산다: i = 되사기 목록의 차례(1 = 가장 최근에 판 것)
+function Bag.buyBack(h, i: any): (boolean?, string?)
+	local list = h.buyback or {}
+	if not whole(i, 1, #list) then
+		return nil, "없는 것이다"
+	end
+	local b = list[i]
+	if h.money < b.price then
+		return nil, "달돈이 모자란다"
+	end
+	if b.tab == "gear" then
+		if Bag.free(h) <= 0 then
+			return nil, FULL
+		end
+		Bag.add(h, b.thing)
+	else
+		local ok, why = Bag.give(h, b.thing.item, b.thing.n)
+		if not ok then
+			return nil, why
+		end
+	end
+	h.money -= b.price
+	table.remove(list, i)
+	return true
+end
+
 function Bag.sell(h, tab: any, slot: any, n: any): (number?, string?)
 	if not isTab(tab) or not whole(slot, 1, Bag.size(h)) or not h[tab][slot] then
 		return nil, "빈 칸이다"
@@ -384,6 +437,7 @@ function Bag.sell(h, tab: any, slot: any, n: any): (number?, string?)
 		local price = Items.sellPrice(e)
 		h.gear[slot] = false
 		h.money += price
+		remember(h, "gear", e, price)
 		return price
 	end
 	local one = Items.goodsSell(e.item)
@@ -399,6 +453,7 @@ function Bag.sell(h, tab: any, slot: any, n: any): (number?, string?)
 		h[tab][slot] = false
 	end
 	h.money += one * count
+	remember(h, tab, { item = e.item, n = count }, one * count)
 	return one * count
 end
 
@@ -565,7 +620,7 @@ function Bag.enhance(h, id: any, rng, guard: boolean?): (string?, string?)
 		return nil, "가진 장비가 아니다"
 	end
 	-- 그 캐릭터의 첫 강화: 달가루 없이 반드시 붙는다(한 번뿐). 별이 없는 장비에 첫 별을 붙일 때만이다 — 이 규칙이 생기기 전의 캐릭터가 높은 별에서 공짜로 넘어가지 못하게
-	local first = h.forged ~= true and it.star == 0
+	local first = Items.firstFree(h.forged, h.level, it) -- 제 레벨 + 10까지의 장비(사냥터에서 주운 조금 높은 것은 되게 · 2026-10-18 검토: 계정 창고의 훨씬 높은 장비에 공짜 첫 별을 붙이고 분해로 달가루를 받을 수 있었다)
 	local info = Items.enhanceInfo(it, guard, first)
 	if not info.can then
 		return nil, if info.why == "상한" then "더 붙일 수 없다" else "부서진 장비다"
@@ -645,9 +700,15 @@ local function carry(tab: any, src, srcSize: number, dst, dstSize: number, slot:
 end
 
 -- 가방의 칸의 것을 창고에 맡긴다(같은 탭의 창고로 — 장비 · 소비 · 기타 모두). n = 묶음에서 맡길 수(안 주면 전부) · to = 놓을 창고 칸(끌어다 놓은 칸 — 안 주면 알아서)
+Bag.NO_STORE = "퀘스트 물건은 맡길 수 없다"
 function Bag.storeIn(h, tab: any, slot: any, n: any, to: any): (boolean?, string?)
 	if not isTab(tab) then
 		return nil, "없는 탭이다"
+	end
+	-- 퀘스트 물건은 맡기지 않는다(메이플처럼 — 2026-10-18 검토): 창고는 계정의 캐릭터가 같이 써서, 한 캐릭터가 모은 것을 다른 캐릭터가 꺼내 그 퀘스트를 바로 끝냈다
+	local e = if tab ~= "gear" and whole(slot, 1, Bag.size(h)) then h[tab][slot] else nil
+	if e and Items.goods(e.item) and Items.goods(e.item).kind == "quest" then
+		return nil, Bag.NO_STORE
 	end
 	return carry(tab, h[tab], Bag.size(h), h.store[tab], Bag.storeSize(h), slot, n, to, "창고가 가득 찼다")
 end
@@ -681,6 +742,10 @@ local function unpackItem(row: any)
 		return nil
 	end
 	local it = { slot = row[1], stage = row[2], q = row[3], star = row[4], who = if row[5] ~= "" then row[5] else nil, fails = row[6], broken = row[7] == 1 }
+	-- 별이 그 단계의 상한을 넘으면(설계의 상한이 줄었다) 장비를 버리지 않고 상한으로 맞춘다(2026-10-18 검토)
+	if typeof(it.stage) == "number" and it.stage >= 1 and it.stage <= 200 and typeof(it.star) == "number" and it.star > Items.starCap(it.stage) then
+		it.star = Items.starCap(it.stage)
+	end
 	if not Items.valid(it) or typeof(it.fails) ~= "number" or it.fails < 0 or it.fails > 9 then
 		return nil
 	end
@@ -734,11 +799,28 @@ local function unpackStacks(list, size: number, tab: string, rows: any)
 	if typeof(rows) ~= "table" then
 		return
 	end
+	-- 겹치는 수를 넘는 묶음(설계의 겹치는 수가 줄었다)은 버리지 않고 그 수로 맞춘 뒤 넘친 것을 빈 칸에 나눠 놓는다(2026-10-18 검토 — 전에는 묶음째 버렸다)
+	local over = {}
 	for i = 1, size do
 		local row = rows[i]
 		local def = if typeof(row) == "table" then Items.goods(row[1]) else nil
-		if def and def.tab == tab and whole(row[2], 1, def.stack) then
-			list[i] = { item = def.id, n = row[2] }
+		if def and def.tab == tab and whole(row[2], 1, 1e6) then
+			list[i] = { item = def.id, n = math.min(row[2], def.stack) }
+			if row[2] > def.stack then
+				table.insert(over, { def = def, n = row[2] - def.stack })
+			end
+		end
+	end
+	for _, o in over do
+		for i = 1, size do
+			if o.n <= 0 then
+				break
+			end
+			if not list[i] then
+				local n = math.min(o.n, o.def.stack)
+				list[i] = { item = o.def.id, n = n }
+				o.n -= n
+			end
 		end
 	end
 end
@@ -748,6 +830,24 @@ end
 --  탭마다 칸들. 예전 저장(창고가 장비만 맡던 때 — 장비를 차례로 늘어놓은 것)은 장비 탭의 앞 칸부터 그대로 놓는다
 function Bag.loadStore(h, store: any)
 	local storeSize = Bag.storeSize(h)
+	-- 저장된 것이 지금의 칸 수보다 뒤에 있으면(퀘스트의 「창고 칸」 보상 자료가 줄었다 등) 그만큼 칸을 늘려 둔다 — 물건을 잃지 않게(2026-10-18 검토). 망가진 저장에 대비해 200칸까지
+	if typeof(store) == "table" then
+		local far = 0
+		for _, rows in { if typeof(store.gear) == "table" then store.gear else store, store.use, store.etc } do
+			if typeof(rows) == "table" then
+				for i, row in rows do
+					if typeof(i) == "number" and i == math.floor(i) and typeof(row) == "table" and i > far then
+						far = i
+					end
+				end
+			end
+		end
+		far = math.min(far, 200)
+		if far > storeSize then
+			h.storeExtra = far - BAG.storeBase
+			storeSize = far
+		end
+	end
 	h.store = { gear = blank(storeSize), use = blank(storeSize), etc = blank(storeSize) }
 	if typeof(store) ~= "table" then
 		return
@@ -773,6 +873,22 @@ function Bag.unpack(h, data: any): boolean
 	h.bagGrow = if whole(data.grow, 0, BAG.times) then data.grow else 0
 	h.dust = if whole(data.dust, 0, 9e15) then data.dust else 0
 	h.essence = if whole(data.essence, 0, 9e9) then data.essence else 0
+	-- 저장된 것이 지금의 가방 칸 수보다 뒤에 있으면(설계의 가방 칸이 줄었다) 넓히기를 그만큼 더 쳐 둔다 — 물건을 잃지 않게(창고의 loadStore와 같다 · 2026-10-18 검토)
+	do
+		local far = 0
+		for _, key in { "gear", "use", "etc" } do
+			if typeof(data[key]) == "table" then
+				for i, v in data[key] do
+					if typeof(i) == "number" and v and i > far then
+						far = i
+					end
+				end
+			end
+		end
+		while Bag.size(h) < far and h.bagGrow < BAG.times do
+			h.bagGrow += 1
+		end
+	end
 	local size, storeSize = Bag.size(h), Bag.storeSize(h)
 	h.gear, h.use, h.etc = blank(size), blank(size), blank(size)
 	for _, row in data.equip do
@@ -829,6 +945,33 @@ function Bag.view(h)
 	out.store = viewSlots(h.store, out.storeSize)
 	for slot, it in h.equip do
 		out.equip[slot] = viewItem(it)
+	end
+	-- 되사기 목록(가장 최근에 판 것부터): 장비 = gear(그 장비) · 소비 · 기타 = item · n · 값
+	out.buyback = {}
+	for i, b in h.buyback or {} do
+		out.buyback[i] = if b.tab == "gear" then { gear = viewItem(b.thing), price = b.price } else { item = b.thing.item, n = b.thing.n, price = b.price }
+	end
+	return out
+end
+
+-- 가득 찬 탭들(2026-10-18 — 보낸 것(Bag.view)에서): "gear" · "use" · "etc" 가운데 빈 칸이 없는 것. 화면이 가방 단추에 점을 찍고 획득 알림에 알린다
+Bag.TABS = { "gear", "use", "etc" }
+function Bag.fullTabs(view): { string }
+	local out = {}
+	for _, tab in Bag.TABS do
+		local list = view and view[tab]
+		if list then
+			local free = false
+			for i = 1, view.size or #list do
+				if not list[i] then
+					free = true
+					break
+				end
+			end
+			if not free then
+				table.insert(out, tab)
+			end
+		end
 	end
 	return out
 end

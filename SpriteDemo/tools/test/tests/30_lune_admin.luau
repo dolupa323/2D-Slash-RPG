@@ -422,6 +422,7 @@ do
 			local guard = 0
 			while (math.abs(h.x - portal.x) > 1 or math.abs(h.y - portal.y) > 1) and guard < 400 do
 				guard += 1
+				sAdmin.trust = true -- (시간을 흘리지 않고 걷는다 — 이동 몫을 셈하지 않게)
 				handlers.Move(pAdmin, h.x + math.clamp(portal.x - h.x, -60, 60), h.y + math.clamp(portal.y - h.y, -120, 120), 1)
 			end
 			expect(math.abs(h.x - portal.x) <= 1 and math.abs(h.y - portal.y) <= 1, ("%s: 문 %s 앞까지 걸어간다(%d, %d)"):format(key, portal.to, h.x, h.y))

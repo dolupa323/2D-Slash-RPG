@@ -145,6 +145,9 @@ for _, def in Quests.list do
 			book[prev] = { done = true, c = {} }
 			prev = Quests.def(prev).after
 		end
+		if def.kind == "job" and def.reward.job then
+			Quests.jobsDone(book, def.reward.job - 1) -- (앞 차수의 전직 퀘스트도 끝냈다 — 전직은 차례대로: 2026-10-18)
+		end
 		local level = math.max(def.lv, 1)
 		local start = if def.region == "r1" or def.kind == "job" then "town" else def.scene
 		-- ㄱ) 받기 전: 주는 주민이 선 맵

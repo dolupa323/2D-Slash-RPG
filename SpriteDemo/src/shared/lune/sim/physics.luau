@@ -94,11 +94,16 @@ end
 --  가시("^")는 닿아도 시작 자리로 돌려보내지 않는다 — 사용자 2026-10-07: "가시맞고 돌아가는거 없애세요 가시맞고 돌아간다음에 몬스터랑 전투도안되고 고장나네요"
 --   (2026-10-08부터는 닿으면 약한 피해를 입는다 — 위의 onSpike. 움직임은 그대로다)
 --   (고장난 까닭: 화면에서만 시작 자리로 옮겨지고 서버는 그 순간이동을 믿지 않아, 그 뒤로 서버가 아는 자리와 어긋났다. 맵 아래로 떨어진 때를 위해 서버는 시작 자리로 온 보고는 받는다 — world.luau의 onMove)
+P.GRAB_LOCK = 0.3 -- 사다리에서 뛰어 놓은 뒤 다시 잡지 않는 시간(초)
 function P.step(scene, body, input, dt: number): string?
 	local mx = input.mx or 0
 	local sea = if scene.sea then SEA else nil
 	-- 사다리: 잡기(↑ — 꼭대기 아래에서 · ↓ — 꼭대기의 발판 위에서, 뛰기 없이)
-	if not body.climb and not input.float and input.vx == nil and (input.up or (input.down and not input.jump and body.ground)) then
+	--  뛰어 놓은 뒤 GRAB_LOCK초 동안은 다시 잡지 않는다 — ↑를 누른 채(폰은 막대를 비스듬히) 뛰면 바로 다시 잡혀 뛰어내릴 수 없었다(2026-10-18 검토)
+	if (body.grabLock or 0) > 0 then
+		body.grabLock = math.max(0, body.grabLock - dt)
+	end
+	if not body.climb and (body.grabLock or 0) <= 0 and not input.float and input.vx == nil and (input.up or (input.down and not input.jump and body.ground)) then
 		local i, l = P.ladderAt(scene, body.x, body.y)
 		if l and input.up and body.y > l.top + 0.5 then
 			body.climb = i
@@ -112,6 +117,7 @@ function P.step(scene, body, input, dt: number): string?
 			body.climb = nil -- 사다리가 없는 장면으로 옮겼다 · 기술(대쉬)로 떨어져 나갔다
 		elseif input.jump then
 			body.climb = nil -- 뛰기: 놓는다(옆으로 누르고 있으면 그쪽으로 조금 뛰어내린다)
+			body.grabLock = P.GRAB_LOCK
 			body.vy = if mx ~= 0 then -G.JUMP * 0.5 else 0
 			body.ground = false
 			input = table.clone(input)

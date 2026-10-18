@@ -42,6 +42,7 @@ function Sprite:set(clip: string, frame: number, x: number, y: number, dir: numb
 	local label = self.label
 	if not f then
 		label.Visible = false -- 빈 장
+		self.lastF = nil
 		return
 	end
 	if self.page ~= f[1] then
@@ -66,6 +67,16 @@ function Sprite:set(clip: string, frame: number, x: number, y: number, dir: numb
 		self.fine = fine
 		label.ResampleMode = if fine then Enum.ResamplerMode.Default else Enum.ResamplerMode.Pixelated
 	end
+	-- 지난번과 같은 장 · 같은 자리 · 같은 쪽 · 같은 크기면 다시 쓰지 않는다(폰에서 매 장면 몬스터 · 사람마다 다섯 값을 새로 쓰던 것 — 2026-10-18 검토).
+	--  보이기만은 늘 맞춘다(부르는 쪽이 잠깐 숨겼다가 다시 그릴 때)
+	local flip = dir >= 0
+	if self.lastF == f and self.lastX == px and self.lastY == py and self.lastFlip == flip and self.lastS == s and self.lastOx == ox and self.lastOy == oy then
+		if not label.Visible then
+			label.Visible = true
+		end
+		return
+	end
+	self.lastF, self.lastX, self.lastY, self.lastFlip, self.lastS, self.lastOx, self.lastOy = f, px, py, flip, s, ox, oy
 	local function R(v: number): number
 		return if fine then v else math.floor(v + 0.5)
 	end

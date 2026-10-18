@@ -172,7 +172,7 @@ for _ = 1, 3 do
 		while target.hp > 0 and guard < 400 do
 			guard += 1
 			h.x, h.y = target.x - 20, target.y
-			s.jumped, s.stale = true, nil
+			s.trust, s.stale = true, nil
 			handlers.Skill(p, skillId, 1, h.x, h.y, 1)
 			for _ = 1, 6 do
 				World.tick(1 / 20)

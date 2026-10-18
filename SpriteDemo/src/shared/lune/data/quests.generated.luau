@@ -22,7 +22,7 @@ return {
 			offer = { "또 달빛 꿈을 꾸었구나.", "…그 꿈 이야기는 누구에게도 하지 마라.", "오늘부터 기술을 가르쳐 주마. 배우겠느냐?" },
 			wait = { "먼저 몸부터 풀고 오너라." },
 			done = { "좋다. 몸이 먼저 기억하는구나.", "…처음 배우는 아이치고는 말이다.", "귀환 주문서도 챙겨라.", "문 밖의 샛별이 아까부터 너를 찾더구나." },
-			reward = { xp = 156, money = 73, potions = 0, scrolls = 5, open = false, job = false, gear = false },
+			reward = { xp = 156, money = 73, potions = 0, scrolls = 5, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1m2",
@@ -45,7 +45,7 @@ return {
 			offer = { "마침 잘 오셨어요. 큰일 났어요.", "어젯밤 마을 어귀에 낯선 병사들이 왔어요.", "밤새 불도 없이 서 있기만 했대요.", "말을 걸어도 대답이 없대요.", "다섯만 쫓아 보고 촌장님께 알려 주세요." },
 			wait = { "어귀의 수습 검병부터 쫓아 주세요.", "…가까이 가면 정말 숨소리가 안 들려요?" },
 			done = { "베니까 재가 되고 갑옷만 남았다고?", "허, 산짐승한테 홀린 게지.", "@hero 정말이에요. 속이 텅 비어 있었어요.", "…그렇게까지 말한다면 증거를 가져와 보게." },
-			reward = { xp = 291, money = 230, potions = 10, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 291, money = 230, potions = 10, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1m3",
@@ -68,7 +68,7 @@ return {
 			offer = { "갑옷 조각을 여덟 개만 가져오게.", "내 눈으로 보기 전엔 못 믿겠네." },
 			wait = { "어귀 너머 사냥터의 검병에게서 나온다네." },
 			done = { "…조각마다 재가 묻어 있구먼.", "속이 빈 갑옷이 걸어 다닌다니.", "이건 사람이 아니야. 내가 잘못 생각했네.", "창고를 열어 줄 테니 채비를 하게." },
-			reward = { xp = 492, money = 310, potions = 0, scrolls = 0, open = "store", job = false, gear = false },
+			reward = { xp = 492, money = 310, potions = 0, scrolls = 0, open = "store", job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s3",
@@ -91,7 +91,7 @@ return {
 			offer = { "샛별이 병사들의 발자국을 찾았다네.", "사냥터 깊은 곳으로 이어진다는군.", "헌데 포자가 길을 덮었어. 열둘만 터뜨려 주게." },
 			wait = { "달그림자 사냥터 너머 깊은 곳일세." },
 			done = { "길이 트였구먼. 발자국은 어디로 가던가?", "@hero 산 쪽이요. 불 꺼진 야영지가 있었어요.", "야영지라… 놈들이 진을 쳤던 게야." },
-			reward = { xp = 404, money = 320, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 404, money = 320, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 4 },
 		},
 		{
 			id = "r1m4",
@@ -114,7 +114,7 @@ return {
 			offer = { "그 야영지에 가 보게.", "놈들이 무엇을 하러 왔는지 알아야겠어." },
 			wait = { "야영지의 재까마귀가 종이를 물고 다닌다네.", "그 종이 여섯 장을 찾아오게." },
 			done = { "찢어진 명령서로구먼. 어디, 맞춰 보세." },
-			reward = { xp = 4242, money = 570, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 4242, money = 570, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1m5",
@@ -137,7 +137,7 @@ return {
 			offer = { "명령서대로 놈들이 고갯길을 막았네.", "장꾼도 아이들도 고개를 못 넘는다는군.", "고갯마루 주막의 노인을 찾아가 보게.", "이 고개에서 평생을 산 사람이야." },
 			wait = { "세 갈래 길 너머 고갯길 초입의 궁병일세." },
 			done = { "궁병을 뚫고 왔다고? 장하구먼.", "보름 영감이 보냈다고? 허허, 그 친구.", "저 위 망루에 다시 불이 켜진 걸 봤나?", "수비대가 쫓겨난 뒤로 꺼져 있던 망루라네." },
-			reward = { xp = 2161, money = 1100, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2161, money = 1100, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s6",
@@ -160,7 +160,7 @@ return {
 			offer = { "장꾼들이 굽잇길에서 짐을 털렸다네.", "헌데 이상한 말을 하더군.", "병사들이 아이들 얼굴만 들여다보더래.", "폭탄병 열둘만 혼내 주겠나?" },
 			wait = { "굽잇길의 폭탄병일세. 조심하게." },
 			done = { "덕분에 장삿길이 다시 열렸구먼.", "아이들 얼굴이라… 무얼 찾는 걸까." },
-			reward = { xp = 6033, money = 850, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 6033, money = 850, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s7",
@@ -179,12 +179,12 @@ return {
 			city = false,
 			steps = {
 				{ ["type"] = "kill", mob = "crab", only = false, name = "바위 게", n = 8, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
-				{ ["type"] = "use", mob = false, only = false, name = "샘에서 물 뜨기", n = 1, pct = 100, icon = false, item = false, spot = "spring", place = "돌무더기 밑의 샘", act = "물을 뜬다", x = 440, y = 128, up = 26, at = "r1b3", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "샘에서 물 뜨기", n = 1, pct = 100, icon = false, item = false, spot = "spring", place = "돌무더기 밑의 샘", act = "물 뜨기", x = 440, y = 128, up = 26, at = "r1b3", npc = false },
 			},
 			offer = { "목이 말라 이야기가 안 나오는구먼.", "다리 너머 샘에서 물 좀 떠다 주게.", "그럼 저 망루의 옛이야기를 해 주지." },
 			wait = { "무너진 다리 너머 돌무더기 밑일세.", "샘가의 바위 게부터 쫓게." },
 			done = { "시원하구먼. 자, 옛이야기 하나 하지." },
-			reward = { xp = 4602, money = 1200, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 4602, money = 1200, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1m6",
@@ -203,12 +203,12 @@ return {
 			city = false,
 			steps = {
 				{ ["type"] = "kill", mob = "ewarrior", only = false, name = "정예 검병", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
-				{ ["type"] = "use", mob = false, only = false, name = "깃발 찾기", n = 1, pct = 100, icon = false, item = false, spot = "flag", place = "상자 틈의 깃발", act = "깃발을 꺼낸다", x = 236, y = 400, up = 34, at = "r1c1", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "깃발 찾기", n = 1, pct = 100, icon = false, item = false, spot = "flag", place = "상자 틈의 깃발", act = "깃발 꺼내기", x = 236, y = 400, up = 34, at = "r1c1", npc = false },
 			},
 			offer = { "노인이 보냈다고? 마침 잘 왔어.", "망루는 원래 우리 수비대 초소였어.", "한 달 전 갑옷들이 밤새 몰려와 빼앗았지.", "1층의 정예병을 줄여 주고…", "상자 틈에 숨겨 둔 우리 깃발도 찾아 줘." },
 			wait = { "1층의 정예 검병이야. 조심해.", "깃발은 1층 상자 틈에 있어." },
 			done = { "혼자서 1층을 쓸었다고? 깃발까지!", "우리 아버지가 평생 지키던 깃발이야.", "놈들, 위층에서 무언가를 지키고 있어.", "그게 뭔지 알아내야 해." },
-			reward = { xp = 13227, money = 2000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 13227, money = 2000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s10",
@@ -231,7 +231,7 @@ return {
 			offer = { "3층엔 주인 없는 투구만 굴러다녀.", "꼭대기로 가는 길이야. 열둘만 부숴 줘." },
 			wait = { "망루 3층의 빈 투구야.", "투구가 쏘는 빛을 조심해." },
 			done = { "투구 속에도 재뿐이라고?", "꼭대기에서 쿵, 쿵 소리가 났다고?", "무언가 큰 놈이 꼭대기를 막고 있어." },
-			reward = { xp = 4324, money = 1700, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 4324, money = 1700, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1m7",
@@ -254,7 +254,7 @@ return {
 			offer = { "쿵 소리의 정체는 거인이야.", "성벽을 짊어지고 꼭대기 방을 막고 섰어.", "3층 맨 위의 문이야. 놈을 쓰러뜨려 줘." },
 			wait = { "3층 맨 위의 문으로 꼭대기에 올라가.", "망치를 치켜들면 물러나. 맞으면 아파." },
 			done = { "그 거인을 쓰러뜨렸다고? 정말 해냈군.", "벽에 그림이 있었다고? 무기를 든 다섯?", "노인의 옛이야기 그대로잖아.", "…그중 하나가 너를 닮았다고?" },
-			reward = { xp = 6355, money = 2600, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 6355, money = 2600, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s11",
@@ -277,7 +277,7 @@ return {
 			offer = { "아무래도 불안해. 놈들은 아이를 찾고 있어.", "마을 문부터 단단히 고쳐 둬야겠어.", "2층 정예 궁병의 쇠 경첩 열두 개면 돼." },
 			wait = { "망루 2층의 정예 궁병에게서 나와." },
 			done = { "열두 개면 문 두 짝을 다 달겠어.", "그런데 꼭대기에서 쇠사슬 소리가 나." },
-			reward = { xp = 9849, money = 1800, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 9849, money = 1800, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1m8",
@@ -300,7 +300,7 @@ return {
 			offer = { "거인이 쓰러지자 옥의 간수가 올라왔어.", "망루를 부리는 우두머리야.", "놈을 끝내면 망루를 되찾을 수 있어." },
 			wait = { "간수는 망루 꼭대기에 있어.", "등롱을 치켜들면 검병이 몰려와. 조심해." },
 			done = { "간수의 품에서 명령서가 나왔다고?", "영주님의 도장… 영주님이 왜?", "보름 밤까지라니, 오늘이잖아!", "저길 봐. 마을 하늘이 붉어!" },
-			reward = { xp = 8675, money = 3100, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 8675, money = 3100, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1m9",
@@ -323,7 +323,7 @@ return {
 			offer = { "병사들이 마을로 몰려갔어!", "사당 쪽이야. 놈들이 사당을 뒤지고 있어!", "어서 가! 나도 뒤따라갈게." },
 			wait = { "사당 안에서 지하로 내려가. 서둘러!" },
 			done = { "무사했구먼. 정말 다행이야.", "놈들이 찾던 건 닮은 아이였네.", "명령서 속 그 얼굴… 자네였어.", "알면서도 말하지 못했네. 미안하네.", "이 마을에 있으면 자네가 위험해.", "대장간 너머 나루에 은달 항구로 가는 배가 있네." },
-			reward = { xp = 8675, money = 3100, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 8675, money = 3100, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s1",
@@ -344,7 +344,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 49, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 49, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s2",
@@ -365,7 +365,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 131, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 131, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s4",
@@ -386,7 +386,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 276, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 276, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s5",
@@ -407,7 +407,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 374, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 374, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s8",
@@ -428,7 +428,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 780, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 780, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r1s9",
@@ -449,7 +449,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 1111, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1111, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq01",
@@ -459,7 +459,7 @@ return {
 			name = "큰 항구로",
 			lv = 30,
 			scene = "ct",
-			text = "촌장이 은달 항구에 가 보라고 한다. 마을 뒤 작은 포구의 선장에게 말을 걸어 배를 타면, 바다를 건너 항구의 부두에 닿는다.",
+			text = "촌장이 은달 항구에 가 보라고 한다. 마을 뒤 작은 나루의 선장에게 말을 걸어 배를 타면, 바다를 건너 항구의 부두에 닿는다.",
 			after = "r1m9",
 			giver = "elder",
 			endNpc = "baram",
@@ -467,10 +467,10 @@ return {
 			playable = true,
 			city = true,
 			steps = {  },
-			offer = { "마을을 지켜 줘서 고맙네.", "이제 자네는 이 산골에 머물 사람이 아니야.", "포구의 선장 배를 타고 은달 항구로 가게.", "부두의 안내인이 길을 알려 줄 걸세." },
-			wait = { "포구는 대장간 너머 바닷가에 있네.", "선장에게 말을 걸면 배에 태워 줄 걸세." },
+			offer = { "마을을 지켜 줘서 고맙네.", "이제 자네는 이 산골에 머물 사람이 아니야.", "나루의 선장 배를 타고 은달 항구로 가게.", "부두의 안내인에게 이 편지를 주게." },
+			wait = { "나루는 대장간 너머 바닷가에 있네.", "선장에게 말을 걸면 배에 태워 줄 걸세." },
 			done = { "이게 촌장님 편지군요. 어디 보자…", "「산골에서 크게 될 아이」래요. 헤헤.", "저는 바람, 새로 온 사람을 안내해요." },
-			reward = { xp = 521, money = 2200, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 521, money = 2200, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq02",
@@ -497,7 +497,7 @@ return {
 			offer = { "이 도시는 사람을 알아야 살기 편해요.", "장터 거리의 대장간과 창고부터 가 보세요.", "광장엔 경매장과 항구 의뢰소가 있어요.", "의뢰소엔 토벌대장님도 계세요.", "다 만나고 부두로 오세요!" },
 			wait = { "장터 거리 · 달맞이 광장의 건물 안이에요.", "문 앞에서 ↑를 누르면 들어가요." },
 			done = { "다 만나셨네요! 이제 이 도시 사람이에요.", "제작 · 강화는 담금 아저씨, 짐은 한아름 할아버지.", "토벌은 무진 대장님이 매일 열어요.", "이 「모험의 서」에 도시에서 한 일이 쌓여요." },
-			reward = { xp = 521, money = 2200, potions = 0, scrolls = 0, open = "tome", job = false, gear = false },
+			reward = { xp = 521, money = 2200, potions = 0, scrolls = 0, open = "tome", job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq03",
@@ -517,8 +517,8 @@ return {
 			steps = {  },
 			offer = { "성문 밖에 나가 보셨어요?", "성문을 나서면 바로 수정 숲이에요.", "성문 앞의 견습 기사님이 일손을 찾아요." },
 			wait = { "1층 동쪽 끝의 큰 성문 앞이에요.", "성문지기 마루 아저씨 옆이요." },
-			done = { "바람이 보냈어요? 마침 손이 필요했어요.", "하늬예요. 수정 기사단의 견습 기사요." },
-			reward = { xp = 606, money = 2300, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			done = { "바람이 보냈어요? 마침 손이 필요했어요.", "견습 기사는 늘 일손이 모자라거든요." },
+			reward = { xp = 606, money = 2300, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq04",
@@ -539,7 +539,7 @@ return {
 			offer = { "어이, 거기! 손 좀 빌려주게.", "향신료 가게의 다홍한테 이 짐 좀.", "성문 옆, 향 냄새 나는 집일세." },
 			wait = { "성문 옆의 향신료 가게야." },
 			done = { "어머, 내 짐! 돌쇠가 보냈군요.", "다홍이에요. 고마워요, 나그네님." },
-			reward = { xp = 521, money = 2200, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 521, money = 2200, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq05",
@@ -562,7 +562,7 @@ return {
 			offer = { "요즘 나룻배 짐이 이상해.", "상자마다 검은 수정이 들러붙어 와.", "끊긴 순찰로의 봉오리 탓이래.", "스물만 걷어 내 주게." },
 			wait = { "수정 숲 깊이, 끊긴 순찰로라네." },
 			done = { "오늘 짐은 깨끗하구먼!", "자네 덕에 허리가 다 펴졌네." },
-			reward = { xp = 3252, money = 3800, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 3252, money = 3800, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq06",
@@ -585,7 +585,7 @@ return {
 			offer = { "요즘 미끼 벌레가 씨가 말랐어.", "연못의 두꺼비들이 다 먹어 치운다더군.", "빛나는 연못의 두꺼비 스물만." },
 			wait = { "수정 숲의 빛나는 연못이라네." },
 			done = { "허허, 벌레가 다시 꼬이겠구먼.", "오늘 저녁은 내가 사지." },
-			reward = { xp = 1590, money = 3100, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1590, money = 3100, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq07",
@@ -608,7 +608,7 @@ return {
 			offer = { "내 은 낚싯바늘을 여우가 물어 갔어.", "쉰 해를 쓴 바늘이라네.", "물든 숲의 여우 놈일 거야." },
 			wait = { "등불꼬리 여우가 반짝이는 걸 좋아하지." },
 			done = { "이 바늘이야, 이 바늘!", "자네는 내 은인일세." },
-			reward = { xp = 2581, money = 3600, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2581, money = 3600, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq08",
@@ -631,7 +631,7 @@ return {
 			offer = { "수정 달팽이 껍질을 아세요?", "두드리면 종처럼 울려요.", "여덟 개만 있으면 악기를 만들어요." },
 			wait = { "수정 오솔길의 달팽이예요." },
 			done = { "들어 봐요, 이 소리!", "…이 소리로 옛 노래를 불러 볼게요." },
-			reward = { xp = 943, money = 2700, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 943, money = 2700, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq09",
@@ -649,12 +649,12 @@ return {
 			playable = true,
 			city = true,
 			steps = {
-				{ ["type"] = "use", mob = false, only = false, name = "노랫말 옮겨 적기", n = 1, pct = 100, icon = false, item = false, spot = "songwall", place = "빈집 벽의 노랫말", act = "노랫말을 적는다", x = 330, y = 160, up = 30, at = "r2ah", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "노랫말 옮겨 적기", n = 1, pct = 100, icon = false, item = false, spot = "songwall", place = "빈집 벽의 노랫말", act = "노랫말 적기", x = 330, y = 160, up = 30, at = "r2ah", npc = false },
 			},
 			offer = { "노래의 둘째 마디를 못 찾았어요.", "수정에 덮인 빈집 벽에 있대요.", "옮겨 적어 와 줄래요?" },
 			wait = { "빛나는 연못의 수정 틈 너머 빈집이에요." },
 			done = { "「다섯이 저마다 … 를 들고」…", "또 낱말이 빠져 있어요.", "누가 일부러 지운 것 같아요." },
-			reward = { xp = 1235, money = 2900, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1235, money = 2900, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq10",
@@ -675,7 +675,7 @@ return {
 			offer = { "노래의 빈칸이 다섯이에요.", "언덕의 서기님은 옛 기록을 다 봤대요.", "이 악보를 보여 줄래요?" },
 			wait = { "맨 위층, 서기의 방이에요." },
 			done = { "…빈칸이 다섯이라고 했소?", "금서고의 책에도 긁힌 이름이 다섯이오.", "우연이라기엔… 아니, 아무것도 아니오." },
-			reward = { xp = 5398, money = 4600, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 5398, money = 4600, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq11",
@@ -693,12 +693,12 @@ return {
 			playable = true,
 			city = true,
 			steps = {
-				{ ["type"] = "use", mob = false, only = false, name = "별꽃 꺾기", n = 1, pct = 100, icon = false, item = false, spot = "starflower", place = "물가의 별꽃", act = "별꽃을 꺾는다", x = 405, y = 176, up = 22, at = "r2a3", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "별꽃 꺾기", n = 1, pct = 100, icon = false, item = false, spot = "starflower", place = "물가의 별꽃", act = "별꽃 꺾기", x = 405, y = 176, up = 22, at = "r2a3", npc = false },
 			},
 			offer = { "별꽃이 다 팔렸어요…", "연못 물가에만 피거든요.", "딱 한 송이만 꺾어다 줄래요?" },
 			wait = { "빛나는 연못의 물가예요!" },
 			done = { "와, 진짜 별꽃이다!", "이건 안 팔고 제가 가질래요." },
-			reward = { xp = 1394, money = 3000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1394, money = 3000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq12",
@@ -721,7 +721,7 @@ return {
 			offer = { "엄마 리본이 바람에 날아갔어요.", "숲 쪽으로 날아갔대요.", "거미줄에 걸렸을까요…?" },
 			wait = { "쓰러진 거목의 수정 거미예요." },
 			done = { "엄마 리본이다!", "엄마가 엄청 좋아할 거예요!" },
-			reward = { xp = 2041, money = 3300, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2041, money = 3300, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq13",
@@ -744,7 +744,7 @@ return {
 			offer = { "새 국을 끓여 볼 참이야.", "수정싹 그루터기의 연한 싹이 필요해.", "성문 밖 숲길에서 열 개만." },
 			wait = { "큰 성문을 나서면 바로 숲길이야." },
 			done = { "오, 싱싱하구먼!", "첫 그릇은 자네 몫이야." },
-			reward = { xp = 606, money = 2300, potions = 10, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 606, money = 2300, potions = 10, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq14",
@@ -767,7 +767,7 @@ return {
 			offer = { "고깃짐이 또 털렸어!", "물든 숲의 여우 놈들이야.", "스물만 혼내 주게." },
 			wait = { "수정 숲 안쪽, 물든 숲이야." },
 			done = { "이제 고깃짐이 무사히 오겠구먼.", "오늘 고기는 자네 몫까지 떠 놨어." },
-			reward = { xp = 2581, money = 3600, potions = 10, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2581, money = 3600, potions = 10, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq15",
@@ -777,7 +777,7 @@ return {
 			name = "먼 데서 온 편지",
 			lv = 55,
 			scene = "ct",
-			text = "다홍이 바다 건너 장에서 받아 온 편지를 부두의 늙은 어부 갈매에게 전해 달라고 한다.",
+			text = "다홍이 바다 건너 장에서 받아 온 편지를 장터 거리의 늙은 어부 갈매에게 전해 달라고 한다.",
 			after = false,
 			giver = "dahong",
 			endNpc = "galmae",
@@ -788,7 +788,7 @@ return {
 			offer = { "바다 건너 장에서 편지를 받았어요.", "갈매 할아버지 앞으로요.", "…이름이 아주 오래된 글씨예요." },
 			wait = { "장터 거리, 갈매 할아버지 집이에요." },
 			done = { "편지라고? 이 늙은이한테?", "…섬에 두고 온 동생의 글씨구먼.", "고맙네. 정말 고맙네." },
-			reward = { xp = 7914, money = 5300, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 7914, money = 5300, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq16",
@@ -811,7 +811,7 @@ return {
 			offer = { "꼴에 달팽이 알이 묻어 왔어.", "말들이 꼴을 안 먹어!", "오솔길 달팽이 스물만 부탁해." },
 			wait = { "수정 숲의 수정 오솔길이야." },
 			done = { "말들이 다시 꼴을 먹어!", "고마워. 너 진짜 기사 같아." },
-			reward = { xp = 943, money = 2700, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 943, money = 2700, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq17",
@@ -834,7 +834,7 @@ return {
 			offer = { "기사단 초소에 박차가 남아 있대.", "고슴도치 가시에 걸려 있대.", "다섯 개만 구해 줄래? 꼭 갖고 싶어." },
 			wait = { "수정 숲의 기사단 초소야." },
 			done = { "진짜 기사의 박차다…!", "근데 기사들은 다 어디 갔을까?" },
-			reward = { xp = 4281, money = 4200, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 4281, money = 4200, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq18",
@@ -857,7 +857,7 @@ return {
 			offer = { "돛줄이 또 끊어졌어!", "수정 거미 실이 쇠줄보다 질기대.", "실타래 열 개만 구해 줘." },
 			wait = { "쓰러진 거목의 수정 거미야." },
 			done = { "이걸로 돛줄을 꼬면 안 끊어질 거야.", "고마워. 비행선이 더 높이 날 거야!" },
-			reward = { xp = 1805, money = 3200, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1805, money = 3200, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq19",
@@ -880,7 +880,7 @@ return {
 			offer = { "골렘 심장석은 공중에 떠!", "엔진에 넣으면 더 멀리 날아.", "성당 앞뜰의 골렘 새끼 거야." },
 			wait = { "수정 성당의 앞뜰이야." },
 			done = { "떠, 떠! 진짜 뜨네!", "이걸로 동쪽 대륙까지 단숨이야." },
-			reward = { xp = 6294, money = 4900, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 6294, money = 4900, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq20",
@@ -903,7 +903,7 @@ return {
 			offer = { "시험 비행 날이 잡혔어!", "근데 성당 쪽 연기가 뱃길을 가려.", "회랑의 향로 스물만 꺼 줘." },
 			wait = { "수정 성당의 회랑이야." },
 			done = { "하늘이 맑아졌어!", "첫 비행 땐 꼭 너를 태울게. 약속!" },
-			reward = { xp = 7914, money = 5300, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 7914, money = 5300, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq21",
@@ -926,7 +926,7 @@ return {
 			offer = { "성의 등불 기름이 떨어졌어요.", "여우의 꼬리 불이 가장 오래 타요.", "여덟 개만 구해 주실래요?" },
 			wait = { "수정 숲의 물든 숲이에요." },
 			done = { "오늘 밤도 등불을 켤 수 있겠어요.", "…등불이 꺼지면 영주님이 화를 내세요." },
-			reward = { xp = 2300, money = 3500, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2300, money = 3500, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq22",
@@ -944,12 +944,12 @@ return {
 			playable = true,
 			city = true,
 			steps = {
-				{ ["type"] = "use", mob = false, only = false, name = "담장 밑 살피기", n = 1, pct = 100, icon = false, item = false, spot = "manorwall", place = "성 담장 밑", act = "담장을 살핀다", x = 1626, y = 224, up = 30, at = "ct", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "담장 밑 살피기", n = 1, pct = 100, icon = false, item = false, spot = "manorwall", place = "성 담장 밑", act = "담장 살피기", x = 1626, y = 224, up = 30, at = "ct", npc = false },
 			},
 			offer = { "…밤마다 담장 밑에서 소리가 나요.", "무언가 무거운 게 끌리는 소리요.", "낮에 한 번만 살펴봐 주실래요?" },
 			wait = { "맨 위층, 성 담장의 오른쪽 끝이에요." },
 			done = { "이게… 비늘이요? 이렇게 큰?", "누가 큰 짐승을 들여왔나 봐요.", "…아무한테도 말하지 말아 주세요." },
-			reward = { xp = 6830, money = 5000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 6830, money = 5000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq23",
@@ -967,12 +967,12 @@ return {
 			playable = true,
 			city = true,
 			steps = {
-				{ ["type"] = "use", mob = false, only = false, name = "책등 살피기", n = 1, pct = 100, icon = false, item = false, spot = "scratchedbook", place = "긁힌 책등", act = "책등을 살핀다", x = 288, y = 176, up = 30, at = "r2bh", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "책등 살피기", n = 1, pct = 100, icon = false, item = false, spot = "scratchedbook", place = "긁힌 책등", act = "책등 살피기", x = 288, y = 176, up = 30, at = "r2bh", npc = false },
 			},
 			offer = { "기사단의 금서고를 아시오?", "이름을 긁어낸 책이 있다고 적혀 있소.", "그 책등을 한 번 봐 주시오." },
-			wait = { "수정 숲의 기사단 본당 근처라오." },
+			wait = { "수정 숲의 기사단 초소, 잠긴 문 너머라오." },
 			done = { "다섯 자리가 다 긁혀 있었다고?", "…기록을 지운 자가 있다는 뜻이오.", "이 일은 우리 둘만 알고 있읍시다." },
-			reward = { xp = 3959, money = 4100, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 3959, money = 4100, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq24",
@@ -995,7 +995,7 @@ return {
 			offer = { "해가 지면 그루터기가 성문까지 기어 와.", "장작 하러 나가는 사람들이 무서워해.", "성문 밖 숲길의 그루터기 스물만." },
 			wait = { "1층 동쪽 끝의 큰 성문 밖이 숲길일세." },
 			done = { "오늘 밤은 다들 편히 자겠구먼.", "고맙네, 젊은이." },
-			reward = { xp = 808, money = 2600, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 808, money = 2600, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq25",
@@ -1018,7 +1018,7 @@ return {
 			offer = { "거미 독도 묽히면 약이에요.", "진통제를 만들 참이에요.", "독주머니 여덟 개만요. 조심해요!" },
 			wait = { "쓰러진 거목의 수정 거미예요." },
 			done = { "조심히 가져왔네요, 잘했어요.", "이 약은 당신 몫도 있어요." },
-			reward = { xp = 2041, money = 3300, potions = 20, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2041, money = 3300, potions = 20, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m1",
@@ -1028,7 +1028,7 @@ return {
 			name = "수정 숲으로",
 			lv = 30,
 			scene = "ct",
-			text = "기사단에 옛 책을 보여 달라고 하지만 문전에서 돌려보내진다. 견습 기사 하늬가 따라나선다.",
+			text = "성문의 견습 기사 하늬에게 기사단의 옛 책을 보여 달라고 하지만 돌려보내진다. 숲 일을 도우면 말해 보겠다고 한다.",
 			after = false,
 			giver = "squire",
 			endNpc = "squire",
@@ -1039,7 +1039,7 @@ return {
 			offer = { "기사단의 옛 책을 보러 오셨다고요?", "옛 책은 아무에게나 안 보여 줘요." },
 			wait = { "…그래도 방법이 없진 않아요." },
 			done = { "…그래도 방법이 없진 않아요.", "숲 일을 도와주시면 말씀드려 볼게요." },
-			reward = { xp = 5947, money = 3400, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 5947, money = 3400, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m2",
@@ -1062,7 +1062,7 @@ return {
 			offer = { "성문 밖 숲길에 마물이 퍼졌어요.", "수정싹 그루터기 열둘만 부탁해요." },
 			wait = { "이 성문을 나서면 바로 숲길이에요." },
 			done = { "혼자서 다 처리했어요? 대단해요.", "요즘 숲의 수정이 이상해요." },
-			reward = { xp = 6920, money = 3500, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 6920, money = 3500, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m3",
@@ -1085,7 +1085,7 @@ return {
 			offer = { "순찰대가 돌아오지 않고 있어요.", "연못에서 흔적을 찾아 주세요." },
 			wait = { "두꺼비가 반짝이는 걸 물어 가요." },
 			done = { "순찰대 표식이 맞아요. 그런데…", "이 화살은 우리 것이 아니에요." },
-			reward = { xp = 14100, money = 4300, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 14100, money = 4300, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m4",
@@ -1107,8 +1107,8 @@ return {
 			},
 			offer = { "순찰로의 수정이 검게 물들었어요.", "수정 봉오리 열다섯을 걷어 주세요." },
 			wait = { "물든 숲을 지나면 끊긴 순찰로예요." },
-			done = { "순찰대의 깃발이 여기 있었군요.", "초소까지 가 봐야겠어요." },
-			reward = { xp = 33308, money = 5600, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			done = { "순찰대의 발자국이 여기서 끊겼네요.", "초소까지 가 봐야겠어요." },
+			reward = { xp = 33308, money = 5600, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m5",
@@ -1130,8 +1130,8 @@ return {
 			},
 			offer = { "초소가 고슴도치 떼에 덮였어요.", "몰아내고 안을 살펴봐 주세요." },
 			wait = { "초소는 끊긴 순찰로 끝에 있어요." },
-			done = { "초소 안에 이 명령서가 있었다고요?", "\"금서고의 기록을 모두 태울 것.\"" },
-			reward = { xp = 45178, money = 6100, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			done = { "초소 안에 이 명령서가 있었다고요?", "\"금서고의 옛 기록을 남김없이 태울 것.\"" },
+			reward = { xp = 45178, money = 6100, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m6",
@@ -1152,7 +1152,7 @@ return {
 			offer = { "명령서를 들고 본당으로 가요.", "보여 드릴 벽화가 있어요." },
 			wait = { "본당의 벽화를 봐 주세요." },
 			done = { "다섯 사람의 얼굴이 긁혀 있죠?", "원래 그래요. 다들 그렇게 배워요." },
-			reward = { xp = 52743, money = 6500, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 52743, money = 6500, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m7",
@@ -1171,12 +1171,12 @@ return {
 			city = false,
 			steps = {
 				{ ["type"] = "kill", mob = "dshard", only = false, name = "검은 결정", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
-				{ ["type"] = "use", mob = false, only = false, name = "명령서 통 열기", n = 1, pct = 100, icon = false, item = false, spot = "ridgearch", place = "무너진 아치 밑", act = "통을 연다", x = 554, y = 112, up = 34, at = "r2b4", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "명령서 통 열기", n = 1, pct = 100, icon = false, item = false, spot = "ridgearch", place = "무너진 아치 밑", act = "통 열기", x = 554, y = 112, up = 34, at = "r2b4", npc = false },
 			},
 			offer = { "명령서를 나르던 사수가 능선으로 달아났대요.", "능선의 검은 결정이 길을 막아요.", "끝의 무너진 아치까지 가 주세요." },
 			wait = { "본당 옆문이 그림자 능선이에요.", "아치 밑에 무언가 있을 거예요." },
 			done = { "사수는 놓쳤지만 명령서 통이 남았네요.", "「기록은 모두 수정 성당으로」…", "부단장님이 거기 계세요." },
-			reward = { xp = 61605, money = 6900, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 61605, money = 6900, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m8",
@@ -1199,7 +1199,7 @@ return {
 			offer = { "부단장님이 기록을 싣고 성당에 들어갔어요.", "회랑에 향로가 떠다니며 연기를 뿜어요.", "향로를 걷어 내고 길을 터 주세요." },
 			wait = { "성당 앞뜰 너머 수정 회랑이에요." },
 			done = { "회랑의 연기가 걷혔어요.", "종탑 위에서 불빛이… 무언가를 태워요!" },
-			reward = { xp = 77950, money = 7600, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 77950, money = 7600, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2m9",
@@ -1217,12 +1217,12 @@ return {
 			playable = true,
 			city = false,
 			steps = {
-				{ ["type"] = "use", mob = false, only = false, name = "기록 건지기", n = 1, pct = 100, icon = false, item = false, spot = "pyre", place = "타는 제단", act = "기록을 건진다", x = 582, y = 160, up = 40, at = "r2c4", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "기록 건지기", n = 1, pct = 100, icon = false, item = false, spot = "pyre", place = "타는 제단", act = "기록 건지기", x = 582, y = 160, up = 40, at = "r2c4", npc = false },
 			},
 			offer = { "부단장님이 제단에서 기록을 태워요!", "…부단장님 눈이 검게 물들었어요.", "한 장이라도 건져 주세요!" },
 			wait = { "종탑 꼭대기 문이 제단 앞이에요." },
 			done = { "다섯 사람의 무기가 적혀 있어요.", "도끼 · 창 · 낫 · 대검 · 불…", "…이건 당신이 든 무기잖아요?", "부단장님은 불길 너머로 사라졌어요." },
-			reward = { xp = 112732, money = 8700, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 112732, money = 8700, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s1",
@@ -1245,7 +1245,7 @@ return {
 			offer = { "내 나룻배 바닥이 또 새는구먼.", "그루터기의 끈끈한 진이면 때울 수 있지." },
 			wait = { "성문 밖 숲길의 그루터기에서 나온다네." },
 			done = { "이거면 감쪽같이 때우겠구먼.", "고맙네. 짐 나를 일 있으면 말하게." },
-			reward = { xp = 3221, money = 2300, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 3221, money = 2300, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 4 },
 		},
 		{
 			id = "r2s2",
@@ -1263,12 +1263,12 @@ return {
 			playable = true,
 			city = false,
 			steps = {
-				{ ["type"] = "use", mob = false, only = false, name = "옛집의 장부 보기", n = 1, pct = 100, icon = false, item = false, spot = "oldledger", place = "옛집의 장부", act = "장부를 본다", x = 150, y = 176, up = 26, at = "r2ah", npc = false },
+				{ ["type"] = "use", mob = false, only = false, name = "옛집의 장부 보기", n = 1, pct = 100, icon = false, item = false, spot = "oldledger", place = "옛집의 장부", act = "장부 보기", x = 150, y = 176, up = 26, at = "r2ah", npc = false },
 			},
 			offer = { "반달이네 옛집에 가 봤나?", "빛나는 연못 뒤 수정 틈 너머일세.", "그 집 장부가 아직 있을 거야." },
 			wait = { "빛나는 연못의 수정 틈으로 들어가게." },
 			done = { "장부에 반달 아버지 글씨가 있다고?", "…마지막 장이 뜯겨 나갔구먼.", "그 집안은 무언가를 숨겨 왔네." },
-			reward = { xp = 5009, money = 2700, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 5009, money = 2700, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s3",
@@ -1291,7 +1291,7 @@ return {
 			offer = { "의무실의 약이 다 떨어졌어요.", "두꺼비 등의 빛 이끼가 약이 돼요." },
 			wait = { "빛나는 연못의 이끼 두꺼비예요." },
 			done = { "이만큼이면 한 달은 쓰겠어요.", "…고마워요. 정말로요." },
-			reward = { xp = 7409, money = 0, potions = 10, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 7409, money = 0, potions = 10, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s4",
@@ -1312,7 +1312,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 15506, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 15506, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s5",
@@ -1333,7 +1333,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 17278, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 17278, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s6",
@@ -1356,7 +1356,7 @@ return {
 			offer = { "초소에 있던 동기들의 이름표예요.", "고슴도치 가시에 걸려 있을 거예요." },
 			wait = { "기사단 초소의 고슴도치예요." },
 			done = { "하나, 둘… 다 아는 이름이에요.", "닦아서 본당 벽에 걸어 둘게요." },
-			reward = { xp = 22744, money = 4200, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 22744, money = 4200, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s7",
@@ -1379,7 +1379,7 @@ return {
 			offer = { "능선에 검은 결정이 떠다녀요.", "장꾼들이 못 넘어와요. 서른만 부탁해요." },
 			wait = { "본당 옆문이 그림자 능선이에요." },
 			done = { "능선이 조용해졌다면서요?", "장삿길이 다시 열렸어요. 고마워요!" },
-			reward = { xp = 26689, money = 4500, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 26689, money = 4500, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s8",
@@ -1402,7 +1402,7 @@ return {
 			offer = { "기사단의 옛 장부가 흩어졌어요.", "골렘 새끼들이 낱장을 삼켰대요." },
 			wait = { "성당 앞뜰의 결정 골렘 새끼예요." },
 			done = { "차례대로 맞춰 볼게요. 어…?", "삼백 년 내내 같은 글씨예요." },
-			reward = { xp = 33441, money = 4900, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 33441, money = 4900, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s9",
@@ -1423,7 +1423,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 38944, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 38944, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r2s10",
@@ -1443,10 +1443,10 @@ return {
 			steps = {
 				{ ["type"] = "gather", mob = "bell", only = false, name = "종 조각", n = 8, pct = 50, icon = "etc_bellpiece", item = "etc_bellpiece", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
-			offer = { "수정 성당의 종이 멈췄다 하오.", "종지기들이 종을 깨뜨려 놓았다더군.", "조각 여덟을 모아 오시오." },
-			wait = { "수정 성당의 종탑이오." },
-			done = { "종 조각의 무늬를 보시오.", "…이것도 다섯 칸이 비었소." },
-			reward = { xp = 45263, money = 5500, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			offer = { "수정 성당의 종이 멈췄대요.", "종지기들이 종을 깨뜨려 놓았대요.", "조각 여덟을 모아 와 주세요." },
+			wait = { "수정 성당의 종탑이에요." },
+			done = { "종 조각의 무늬 좀 보세요.", "…여기도 다섯 칸이 비어 있어요." },
+			reward = { xp = 45263, money = 5500, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m1",
@@ -1469,7 +1469,7 @@ return {
 			offer = { "기록의 끝줄이 이 굴을 가리켜요.", "입구의 굴쥐부터 쫓아 주실래요?" },
 			wait = { "포구의 큰 굴로 들어가면 굴 입구예요." },
 			done = { "굴쥐가 줄었어요. 내려갈 만해요.", "아래 야영지에 상인들이 있대요." },
-			reward = { xp = 110701, money = 9100, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 110701, money = 9100, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m2",
@@ -1490,7 +1490,7 @@ return {
 			offer = { "화롯골이 문을 닫아걸었대요.", "야영지의 소금 장수가 잘 알아요." },
 			wait = { "젖은 굴을 지나면 상인들의 야영지예요." },
 			done = { "지상 사람이 불씨를 훔쳤다는 거야.", "서른 해 소금을 댔는데 쫓겨났네." },
-			reward = { xp = 147891, money = 10000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 147891, money = 10000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m3",
@@ -1513,7 +1513,7 @@ return {
 			offer = { "불씨는 수레에 실려 나갔을 걸세.", "식은 광산에서 자국을 찾아 주게." },
 			wait = { "코볼트가 수레의 못을 주워 가더군." },
 			done = { "그을린 못이라… 불씨 수레가 맞네.", "바퀴 자국이 지상 광산 쪽이라고?" },
-			reward = { xp = 169931, money = 11000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 169931, money = 11000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m4",
@@ -1536,7 +1536,7 @@ return {
 			offer = { "자국을 따라가면 용암 굴이라네.", "불씨 길의 지렁이를 조심하게." },
 			wait = { "뜨거운 굴 다음이 불씨 길이라네." },
 			done = { "쉿. 저 위 굴에 도둑들이 살아.", "어른들은 내 말을 안 믿어 줘." },
-			reward = { xp = 275117, money = 12000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 275117, money = 12000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m5",
@@ -1559,7 +1559,7 @@ return {
 			offer = { "불씨 길 발판 위에 굴 입구가 있어.", "도둑을 혼내 주면 다들 믿을 거야." },
 			wait = { "불씨 길의 높은 발판 위 굴 입구야." },
 			done = { "진짜 도둑은 따로 있었구먼.", "미안하네. 화롯골의 문을 열겠네." },
-			reward = { xp = 336652, money = 13000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 336652, money = 13000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m6",
@@ -1582,7 +1582,7 @@ return {
 			offer = { "불씨가 줄어 화로에 재가 날리네.", "둘레길의 재 회오리를 걷어 주게." },
 			wait = { "문 앞을 지나 오른쪽이 둘레길이네." },
 			done = { "화로가 숨을 쉬는구먼. 고맙네.", "보여 줄 것이 있네. 따라오게." },
-			reward = { xp = 469433, money = 15000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 469433, money = 15000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m7",
@@ -1603,7 +1603,7 @@ return {
 			offer = { "화로 가장 안쪽에 옛 벽화가 있네.", "우리는 그것을 지우지 않았지." },
 			wait = { "식어 가는 불길 너머 벽화의 방이네." },
 			done = { "검은 용 앞에 선 다섯 용사일세.", "용사들은 용과 함께 봉인되었지." },
-			reward = { xp = 739589, money = 17000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 739589, money = 17000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m8",
@@ -1626,7 +1626,7 @@ return {
 			offer = { "누가 산을 터뜨렸네! 벽화를 묻으려고.", "기슭의 폭탄병부터 막아 주게." },
 			wait = { "벽화의 방 굴 문 밖이 화산 기슭이네." },
 			done = { "길이 열렸구먼. 그런데 저 소리는…", "분화구에서 무언가 일어나고 있네." },
-			reward = { xp = 896866, money = 18000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 896866, money = 18000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3m9",
@@ -1647,7 +1647,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 1393601, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1393601, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s1",
@@ -1670,7 +1670,7 @@ return {
 			offer = { "굴 안이 너무 어두워요.", "굴쥐 수염이 횃불 심지로 딱이에요." },
 			wait = { "굴 입구의 굴쥐에게서 나와요." },
 			done = { "기름을 먹이면 오래 타요.", "이제 야영지가 밤에도 밝겠어요." },
-			reward = { xp = 105230, money = 6200, potions = 10, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 105230, money = 6200, potions = 10, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s2",
@@ -1691,7 +1691,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 172090, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 172090, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s3",
@@ -1714,7 +1714,7 @@ return {
 			offer = { "할아버지가 일하던 갱이에요.", "코볼트가 등잔 조각을 주워 갔어요." },
 			wait = { "식은 광산의 곡괭이 코볼트예요." },
 			done = { "다 맞추니 옛 등잔이 됐어요.", "갱 맨 밑의 제단에 올리는 거래요." },
-			reward = { xp = 184629, money = 7500, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 184629, money = 7500, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s4",
@@ -1737,7 +1737,7 @@ return {
 			offer = { "우리 수레가 광차 길에 끌려갔네.", "폭주 광차 스물만 세워 주게." },
 			wait = { "식은 광산 다음이 광차 길일세." },
 			done = { "수레가 돌아왔구먼! 살았네.", "짐이 생기면 우리가 맡아 주지." },
-			reward = { xp = 197575, money = 7700, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 197575, money = 7700, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 4 },
 		},
 		{
 			id = "r3s5",
@@ -1760,7 +1760,7 @@ return {
 			offer = { "도둑들이 빈 단지를 버리고 갔어.", "지렁이가 삼켰어. 찾아다 줄래?" },
 			wait = { "불씨 길의 굴 지렁이야." },
 			done = { "이걸 보여 주면 어른들도 믿겠지?", "고마워. 이건 내 보물이야." },
-			reward = { xp = 260040, money = 8400, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 260040, money = 8400, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s6",
@@ -1783,7 +1783,7 @@ return {
 			offer = { "소굴에 우리 불씨가 쌓여 있어.", "도둑들한테서 되찾아다 줘." },
 			wait = { "소굴의 불씨 도둑이 갖고 있어." },
 			done = { "아직 따뜻해! 살아 있는 불씨야.", "이걸로 큰 화로를 다시 지필 거야." },
-			reward = { xp = 318089, money = 9000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 318089, money = 9000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s7",
@@ -1806,7 +1806,7 @@ return {
 			offer = { "창고에 화약통이 잔뜩 쌓였다지.", "열 통만 가져오게. 쇠테는 녹여 쓰겠네." },
 			wait = { "소굴 너머 화약 창고의 폭탄병일세." },
 			done = { "화약은 버리고 쇠테만 쓰는 걸세.", "불은 터뜨리라고 있는 게 아닐세." },
-			reward = { xp = 362612, money = 9300, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 362612, money = 9300, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s8",
@@ -1827,7 +1827,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 441977, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 441977, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s9",
@@ -1850,7 +1850,7 @@ return {
 			offer = { "도깨비가 알껍데기를 주워 갔어.", "조각 여덟 개만 찾아다 줘." },
 			wait = { "식어 가는 불길의 굴뚝 도깨비야." },
 			done = { "붙이니까 알 하나가 됐어!", "못가에 놓으면 어미가 올라온대." },
-			reward = { xp = 503748, money = 10000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 503748, money = 10000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r3s10",
@@ -1871,7 +1871,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 896675, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 896675, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m1",
@@ -1892,7 +1892,7 @@ return {
 			offer = { "다들 외성 밖에 모였어요!", "할멈께 먼저 인사드리세요." },
 			wait = { "야영지 천막 앞에 계세요." },
 			done = { "왔구먼. 벽화의 끝 그림이 여기일세.", "먼저 아랫마을부터 되찾아야 하네." },
-			reward = { xp = 1089948, money = 21000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1089948, money = 21000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m2",
@@ -1915,7 +1915,7 @@ return {
 			offer = { "외성이 무너진 틈으로 들어가요.", "틈을 지키는 검병부터 치워 주세요." },
 			wait = { "들판 오른쪽 끝이 무너진 성벽이에요." },
 			done = { "길이 열렸어요. 저 너머가 불탄 거리…", "아랫마을 사람들이 숨어 있대요." },
-			reward = { xp = 1395734, money = 22000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1395734, money = 22000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m3",
@@ -1938,7 +1938,7 @@ return {
 			offer = { "광장을 점령군이 차지했어요.", "기사상부터 쓰러뜨려 주세요." },
 			wait = { "불탄 거리 다음이 아랫마을 광장이에요." },
 			done = { "광장이 조용해졌어요!", "이제 사람들이 돌아올 수 있어요." },
-			reward = { xp = 1781544, money = 23000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1781544, money = 23000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m4",
@@ -1961,7 +1961,7 @@ return {
 			offer = { "이제 성벽을 넘어야 해요.", "성벽 위의 폭탄병을 뚫어 주세요." },
 			wait = { "성벽 아래를 지나 성벽 위로 가요." },
 			done = { "성벽을 넘었어요! 저 아래가 내성…", "왕도의 깃발이 걸려 있어요." },
-			reward = { xp = 2411739, money = 25000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2411739, money = 25000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m5",
@@ -1984,7 +1984,7 @@ return {
 			offer = { "내성에는 왕도의 근위병이 있어요.", "뜰의 창병부터 줄여 주세요." },
 			wait = { "성벽 속 통로를 지나면 내성 뜰이에요." },
 			done = { "대신들의 깃발이 걸려 있다고요?", "봉인을 살피러 온 거예요. 서둘러요." },
-			reward = { xp = 4127455, money = 29000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 4127455, money = 29000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m6",
@@ -2007,7 +2007,7 @@ return {
 			offer = { "봉인으로 내려가는 계단이에요.", "감시하는 눈이 온통 깔려 있어요." },
 			wait = { "숙소의 계단 문 아래가 그 계단이에요." },
 			done = { "봉인의 회랑까지 길이 났어요.", "오늘 밤은 쉬어요. 내일이 고비예요." },
-			reward = { xp = 8333581, money = 34000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 8333581, money = 34000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m7",
@@ -2028,7 +2028,7 @@ return {
 			offer = { "촌장님이 숙소에 와 계세요.", "하실 말씀이 있으시대요." },
 			wait = { "왔는가." },
 			done = { "초승달 마을은 용사의 가문이었네.", "사당에서 배운 것이 그 가르침일세." },
-			reward = { xp = 15683335, money = 38000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 15683335, money = 38000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m8",
@@ -2049,7 +2049,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 16605351, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 16605351, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4m9",
@@ -2070,7 +2070,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 18604718, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 18604718, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s1",
@@ -2093,7 +2093,7 @@ return {
 			offer = { "야영지에 울타리가 없어 불안해요.", "창병의 부러진 창대를 엮을게요." },
 			wait = { "들판의 정예 창병에게서 나와요." },
 			done = { "이만하면 튼튼하게 두르겠어요.", "오늘 밤은 다들 푹 자겠네요." },
-			reward = { xp = 1899578, money = 14000, potions = 10, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 1899578, money = 14000, potions = 10, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s2",
@@ -2114,7 +2114,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 2584265, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 2584265, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s3",
@@ -2137,7 +2137,7 @@ return {
 			offer = { "광장에 점령군의 보급이 쌓였어요.", "상자 여덟 개만 되찾아 주실래요?" },
 			wait = { "아랫마을 광장의 기사상 밑이에요." },
 			done = { "이걸로 마을 곳간을 다시 열어요.", "다들 한시름 놓겠어요!" },
-			reward = { xp = 3102502, money = 16000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 3102502, money = 16000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 4 },
 		},
 		{
 			id = "r4s4",
@@ -2160,7 +2160,7 @@ return {
 			offer = { "수로의 문은 우리 집안이 지었소.", "궁병들이 열쇠를 넷으로 나눠 가졌소." },
 			wait = { "성벽 아래의 정예 궁병이오." },
 			done = { "넷을 맞추니 수문 열쇠가 됐소.", "옛 수로의 문에 꽂으면 되오." },
-			reward = { xp = 3295187, money = 16000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 3295187, money = 16000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s5",
@@ -2181,7 +2181,7 @@ return {
 			offer = {  },
 			wait = {  },
 			done = {  },
-			reward = { xp = 4456525, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 4456525, money = 0, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s6",
@@ -2204,7 +2204,7 @@ return {
 			offer = { "저항군의 무기가 다 무뎌졌어요.", "창병의 쇠 덧판을 벗겨다 주세요." },
 			wait = { "성문 앞의 정예 창병이에요." },
 			done = { "좋은 쇠네요. 대장간에 넘길게요.", "스무 자루는 고치겠대요." },
-			reward = { xp = 5660397, money = 18000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 5660397, money = 18000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s7",
@@ -2227,7 +2227,7 @@ return {
 			offer = { "종탑의 시계는 아버지가 돌봤어요.", "책 사이에 톱니가 끼어 있대요." },
 			wait = { "기사의 회랑의 떠도는 책이에요." },
 			done = { "아버지의 연장으로 맞춰 볼게요.", "됐어요! 멈춘 태엽이에요." },
-			reward = { xp = 7609620, money = 20000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 7609620, money = 20000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s8",
@@ -2250,7 +2250,7 @@ return {
 			offer = { "회랑에 옛 기사들의 방패가 있었어요.", "검병들이 떼어 갔어요. 되찾아 줘요." },
 			wait = { "기사의 회랑의 정예 검병이에요." },
 			done = { "하나씩 이름을 읽어 드릴게요.", "이제 회랑이 다시 회랑 같아요." },
-			reward = { xp = 9625217, money = 21000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 9625217, money = 21000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s9",
@@ -2273,7 +2273,7 @@ return {
 			offer = { "무기고에 용 비늘이 들어 있다네.", "검병에게서 여섯 장만 되찾아 주게." },
 			wait = { "무기고의 정예 검병일세." },
 			done = { "깎으면 피리가 되지. 용 비늘 피리.", "둥지 쪽으로는 함부로 가지 말게." },
-			reward = { xp = 13652591, money = 22000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 13652591, money = 22000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "r4s10",
@@ -2296,7 +2296,7 @@ return {
 			offer = { "깨진 쐐기를 거두어야 하네.", "빛 먹는 것들이 물고 다닌다네." },
 			wait = { "회랑 너머 깨진 쐐기의 방일세." },
 			done = { "오천 년을 버틴 쐐기일세.", "수고했네. 제단에 올려 두겠네." },
-			reward = { xp = 21649194, money = 25000, potions = 0, scrolls = 0, open = false, job = false, gear = false },
+			reward = { xp = 21649194, money = 25000, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "job2",
@@ -2327,6 +2327,7 @@ return {
 				open = false,
 				job = 2,
 				gear = { slot = "weapon", stage = 30 },
+				store = 0,
 			},
 		},
 		{
@@ -2347,7 +2348,7 @@ return {
 			steps = {
 				{ ["type"] = "gather", mob = "bell", only = false, name = "달빛 서린 종 조각", n = 4, pct = 100, icon = "fragment", item = "fragment", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
-			offer = { "기록을 건졌다고? …그래, 때가 됐구나.", "수정 성당의 종탑에 달빛이 서린 종이 있다.", "그 조각 넷을 가져오너라." },
+			offer = { "때가 됐구나. 달빛이 너를 다시 부른다.", "수정 성당의 종탑에 달빛이 서린 종이 있다.", "그 조각 넷을 가져오너라." },
 			wait = { "수정 성당 종탑의 종지기다.", "네 개를 모으거든 다시 오너라." },
 			done = { "종이 너를 알아보았구나.", "이제 한 단계 더 깊은 힘이다. 받아라." },
 			reward = {
@@ -2358,6 +2359,39 @@ return {
 				open = false,
 				job = 3,
 				gear = { slot = "weapon", stage = 60 },
+				store = 0,
+			},
+		},
+		{
+			id = "job4",
+			kind = "job",
+			line = false,
+			region = "r4",
+			name = "4차 전직",
+			lv = 100,
+			scene = "r4a1",
+			text = "외성 밖 들판의 정예 창병에게서 바래지 않은 깃발 조각 네 개를 모아 사제에게 가져간다.",
+			after = false,
+			giver = "master",
+			endNpc = "master",
+			auto = false,
+			playable = true,
+			city = false,
+			steps = {
+				{ ["type"] = "gather", mob = "espearman", only = false, name = "바래지 않은 깃발 조각", n = 4, pct = 100, icon = "etc_cloth", item = "etc_cloth", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
+			},
+			offer = { "때가 됐구나. 마지막 달빛이 너를 부른다.", "외성 밖 들판의 정예 창병들이 옛 깃발을 지녔다.", "바래지 않은 조각 넷을 가져오너라." },
+			wait = { "외성 밖 들판의 정예 창병이다.", "네 개를 모으거든 다시 오너라." },
+			done = { "오천 년을 바래지 않은 깃발이구나.", "이제 마지막 힘이다. 받아라." },
+			reward = {
+				xp = 0,
+				money = 0,
+				potions = 0,
+				scrolls = 0,
+				open = false,
+				job = 4,
+				gear = { slot = "weapon", stage = 100 },
+				store = 0,
 			},
 		},
 	},

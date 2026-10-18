@@ -276,6 +276,16 @@ eq(res.left, 2, "오늘 두 번")
 handlers.Party(p, "invite", p2.UserId)
 handlers.Party(p2, "accept", p.UserId)
 local together = World.sameParty(p.UserId, p2.UserId)
+-- 인사를 나누지 않은 파티원은 끌려가지 않는다(2026-10-18 검토) — 먼저 그것을 보고, 인사를 나눈 뒤에 함께 들어간다
+s2.hero.bond.met[D.npc] = nil
+res = handlers.Rift(p, "enter", "rf1")
+if together then
+	eq(s2.scene, "ct_office", "토벌대장과 인사를 나누지 않은 파티원은 따라 들어가지 않는다")
+end
+World.jump(p, "ct_office")
+s.hero.x, s.hero.y = warden.x + 10, warden.y
+s.stale, s.trust = nil, true
+s2.hero.bond.met[D.npc] = true
 res = handlers.Rift(p, "enter", "rf1")
 expect(res and res.ok, "토벌대장 앞에서 들어간다")
 expect(string.match(s.scene, "^rf1#%d+$") ~= nil, "따로 된 방: " .. tostring(s.scene))

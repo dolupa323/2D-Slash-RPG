@@ -70,6 +70,19 @@ local function plate(parent: Instance, text: string, rect, color: Color3, name: 
 	return holder
 end
 
+-- 파티원(나를 뺀 것): ctx.party가 주는 파티(PartyInfo — members = { { id, name, scene } … })에서. 파티가 없으면 빈 표(2026-10-18)
+function MapWindow.partyOf(ctx): { any }
+	local info = if ctx.party then ctx.party() else nil
+	local me = if ctx.myId then ctx.myId() else nil
+	local out = {}
+	for _, m in (if typeof(info) == "table" then info.members else nil) or {} do
+		if m.id ~= me and typeof(m.scene) == "string" then
+			table.insert(out, m)
+		end
+	end
+	return out
+end
+
 function MapWindow.build(body: Frame, ctx, w: number, _h: number)
 	local view = {}
 	local regions = WM.arted()
@@ -291,6 +304,16 @@ function MapWindow.build(body: Frame, ctx, w: number, _h: number)
 				end)
 			end
 		end
+		-- 파티원(2026-10-18 — 메이플처럼): 이 지역에 있는 파티원마다 그 장소의 표시 왼쪽 아래에 작은 금빛 점(나란히 — 파티는 넷까지)
+		local count = {}
+		for _, m in MapWindow.partyOf(ctx) do
+			local pr, pn = WM.nodeOf(m.scene)
+			local at = if pr == rid and pn then A.at[pn] else nil
+			if at then
+				count[pn] = (count[pn] or 0) + 1
+				dot(group, at[1] - 7 - (count[pn] - 1) * 5, at[2] + 7, 2, C.gold, "Party")
+			end
+		end
 		-- 오른쪽 글 칸: 고른 곳(없으면 내가 있는 곳 — 다른 지역을 보는 중이면 그 지역의 첫 장소)
 		showSide(picked or mine or region.nodes[1].id)
 		best:set(bestText)
@@ -312,6 +335,9 @@ function MapWindow.build(body: Frame, ctx, w: number, _h: number)
 		end
 		local card = WM.goalCard(ctx.quests() or {}, level, ctx.scene(), if ctx.navi then ctx.navi() else nil, if ctx.daily then ctx.daily() else nil)
 		table.insert(parts, if card then card.title .. card.text else "")
+		for _, m in MapWindow.partyOf(ctx) do
+			table.insert(parts, tostring(m.scene)) -- 파티원이 옮기면 다시 그린다
+		end
 		local sig = table.concat(parts, "|")
 		if sig ~= last then
 			last = sig

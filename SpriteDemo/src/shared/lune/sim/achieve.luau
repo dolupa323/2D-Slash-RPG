@@ -94,8 +94,8 @@ function Achieve.unpack(v: any)
 			return
 		end
 		for i, k in list do
-			if i > 2000 then
-				break
+			if typeof(i) ~= "number" or i > 2000 then
+				break -- (목록이 아닌 꼴로 저장된 것 — 숫자가 아닌 열쇠와 견주면 오류가 났다 · 2026-10-18 검토)
 			end
 			if typeof(k) == "string" and #k <= 40 and known(k) then
 				into[k] = true
@@ -285,17 +285,18 @@ end
 
 -- 받을 것을 모두(목록의 차례로) — 받은 수와(가방이 차서 멈췄으면) 까닭
 function Achieve.claimAll(a, h): (number, string?)
-	local n = 0
+	local n, last = 0, nil
 	for _, def in D.list do
 		if a.done[def.id] and not a.got[def.id] then
 			local ok, why = Achieve.claim(a, h, def.id)
-			if not ok then
-				return n, why
+			if ok then
+				n += 1
+			else
+				last = why -- 가방에 들지 않는 것은 건너뛰고 나머지(달돈 · 달가루만 주는 것 등)는 받는다(2026-10-18 검토 — 전에는 거기서 멈췄다)
 			end
-			n += 1
 		end
 	end
-	return n, nil
+	return n, last
 end
 
 -- 화면에 보내는 것: 점수 · 업적마다 { have, need, st } (st: 0 = 아직 안 보임(앞 단계) · 1 = 하는 중 · 2 = 해냄(받을 것) · 3 = 받음)

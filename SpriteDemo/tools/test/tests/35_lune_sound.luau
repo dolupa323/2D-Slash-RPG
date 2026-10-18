@@ -42,20 +42,22 @@ expect(S.btn >= 22 and S.seg + S.gap >= 12, "손가락으로도 누를 만한 �
 
 -- ---- 2) 계정의 소리 설정 ----
 local acct = Account.new()
-expect(same(acct.sound, { music = S.start, sfx = S.start, on = true }), "새 계정은 처음 크기 · 모두 켬")
-expect(Account.setSound(acct, { music = 3, sfx = 0, on = false }) == true and same(acct.sound, { music = 3, sfx = 0, on = false }), "설정을 받는다")
+expect(same(acct.sound, { music = S.start, sfx = S.start, on = true, fx = true, nums = true }), "새 계정은 처음 크기 · 모두 켬 · 화면도 모두 켜짐")
+-- 화면(2026-10-18 — fx · nums): 받으면 언제나 실린다(없으면 켜짐)
+expect(Account.setSound(acct, { music = 3, sfx = 0, on = false }) == true and same(acct.sound, { music = 3, sfx = 0, on = false, fx = true, nums = true }), "설정을 받는다(화면은 없으면 켜짐)")
+expect(Account.setSound(acct, { music = 3, sfx = 0, on = false, fx = false, nums = true }) == true and acct.sound.fx == false and acct.sound.nums == true, "화면 설정도 받는다")
 local given = { music = 5, sfx = 5, on = true, extra = "x" }
 expect(Account.setSound(acct, given) and acct.sound ~= given and acct.sound.extra == nil, "받은 표를 그대로 쥐지 않는다(다른 것이 딸려 오지 않는다)")
-for _, bad in { "x", 3, { music = 5 }, { music = 5, sfx = 5, on = "true" }, { music = S.steps + 1, sfx = 0, on = true }, { music = 0, sfx = -1, on = true }, { music = 2.5, sfx = 1, on = true } } do
-	expect(Account.setSound(acct, bad) == false and same(acct.sound, { music = 5, sfx = 5, on = true }), "말이 안 되는 설정은 받지 않는다")
+for _, bad in { "x", 3, { music = 5 }, { music = 5, sfx = 5, on = "true" }, { music = S.steps + 1, sfx = 0, on = true }, { music = 0, sfx = -1, on = true }, { music = 2.5, sfx = 1, on = true }, { music = 5, sfx = 5, on = true, fx = "no" }, { music = 5, sfx = 5, on = true, nums = 0 } } do
+	expect(Account.setSound(acct, bad) == false and same(acct.sound, { music = 5, sfx = 5, on = true, fx = true, nums = true }), "말이 안 되는 설정은 받지 않는다")
 end
 local back = Account.unpack(Account.pack(acct))
 expect(back ~= nil and same(back.sound, acct.sound), "싸고 풀어도 그대로다")
 local raw = Account.pack(acct)
 raw.sound = nil
-expect(same(Account.unpack(raw).sound, { music = S.start, sfx = S.start, on = true }), "설정이 없던 저장은 처음 크기")
+expect(same(Account.unpack(raw).sound, { music = S.start, sfx = S.start, on = true, fx = true, nums = true }), "설정이 없던 저장은 처음 크기")
 raw.sound = { music = 99, sfx = 1, on = true }
-expect(same(Account.unpack(raw).sound, { music = S.start, sfx = S.start, on = true }), "망가진 설정도 처음 크기")
+expect(same(Account.unpack(raw).sound, { music = S.start, sfx = S.start, on = true, fx = true, nums = true }), "망가진 설정도 처음 크기")
 expect(same(Account.view(acct).sound, acct.sound), "캐릭터 고르기 화면이 받는 것에 소리 설정이 있다")
 
 -- ---- 3) 크기의 셈(client/lune/music.luau) ----
@@ -267,4 +269,19 @@ do
 	mute[1].click()
 	expect(Music.on == true and mute[1].value == S.mute[1] and pctOf(2) == "100%" and segs[2][1].BackgroundColor3 == any.accent, "다시 켜면 그대로 돌아온다")
 	view.refresh()
+	-- 화면(2026-10-18): 다른 사람의 스킬 효과 · 피해 숫자 — 켜짐 / 꺼짐 단추가 둘, 누르면 바뀌고 저장한다
+	local ViewOpts = req("Client/lune/viewOpts")
+	local V = S.view
+	local toggles = of("button", V.on)
+	eq(#toggles, 2, "화면의 단추 둘(처음은 켜짐)")
+	local saved0 = saved
+	toggles[1].click()
+	expect(ViewOpts.fx == false and saved == saved0 + 1 and toggles[1].value == V.off and toggles[1].main == false, "누르면 꺼짐 · 저장한다")
+	local packed = ViewOpts.into(Music.export())
+	expect(packed.fx == false and packed.nums == true and Account.setSound(Account.new(), packed), "저장하는 표에 화면 설정이 실리고 서버가 받는다")
+	toggles[1].click()
+	expect(ViewOpts.fx == true and toggles[1].value == V.on, "다시 누르면 켜짐")
+	ViewOpts.import({ music = 1, sfx = 1, on = true, nums = false })
+	expect(ViewOpts.fx == true and ViewOpts.nums == false, "저장된 것을 얹는다(없는 값은 켜짐)")
+	ViewOpts.import({ music = 1, sfx = 1, on = true })
 end

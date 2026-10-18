@@ -51,7 +51,7 @@ function ItemDetail.ask(kind: string, n: number?, lo: number, hi: number, o)
 	local words = WORDS.ask[kind]
 	local text = words[1]
 	if o.gain then
-		text = text .. "  " .. Format.fill(WORDS.gain, { n = Format.short(o.gain(n or 1)) })
+		text = text .. "  " .. Format.fill(WORDS[o.gainWord or "gain"], { n = Format.short(o.gain(n or 1)) }) -- gainWord = 받을 것의 글(분해 = 「달가루 +n」 — 2026-10-18)
 	end
 	local steps = nil
 	if n then

@@ -223,6 +223,9 @@ end
 
 -- 칸 크기가 바뀌었을 때(같은 글씨를 다른 폭에 맞춰 다시 그린다)
 function Label:SetMaxWidth(maxWidth: number?, maxLines: number?)
+	if self._maxWidth == maxWidth and self._maxLines == maxLines then
+		return -- 같은 폭이면 다시 그리지 않는다(내 상태가 올 때마다 이름을 다시 그렸다 — 2026-10-18 검토)
+	end
 	self._maxWidth, self._maxLines = maxWidth, maxLines
 	self:_render()
 end

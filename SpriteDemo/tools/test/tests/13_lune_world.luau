@@ -196,7 +196,7 @@ local function goTo(player, target)
 		local hop = routeNext(ss.scene, target)
 		for _, portal in SCENES.scenes[ss.scene].portals do
 			if portal.to == hop then
-				ss.jumped, ss.stale = true, nil
+				ss.trust, ss.stale = true, nil
 				handlers.Move(player, portal.x, portal.y, 1)
 			end
 		end
@@ -307,9 +307,14 @@ do
 	handlers.Move(p1, spawn.x + 300, spawn.y, 1)
 	eq(s1.hero.x, spawn.x + 10, "먼 곳으로의 순간이동은 여전히 믿지 않는다")
 	local far = World.session(p1)
+	local town = SCENES.scenes.town
 	far.hero.x = spawn.x + 300 -- 서버가 아는 자리가 먼 곳일 때
+	run(1)
 	handlers.Move(p1, spawn.x, spawn.y, 1)
-	eq(s1.hero.x, spawn.x, "시작 자리로 돌아온 것은 받는다")
+	eq(s1.hero.x, spawn.x + 300, "바닥이 뚫린 곳이 없는 맵(마을)에서는 먼 곳에서 시작 자리로 온 것을 받지 않는다(2026-10-18 검토 — 보스의 패턴을 그렇게 피했다)")
+	far.hero.x = spawn.x -- (떨어져 돌아오는 것은 바닥이 뚫린 사냥터에서 본다 — 아래 「멀리 간 자리」)
+	handlers.Move(p1, spawn.x, spawn.y, 1)
+	eq(s1.hero.x, spawn.x, "시작 자리 곁의 보고는 받는다")
 	handlers.Move(p1, spawn.x + 10, spawn.y, 1)
 	eq(s1.hero.x, spawn.x + 10, "그 뒤의 자리 보고도 받는다(어긋나지 않는다)")
 end
@@ -321,7 +326,8 @@ eq(handlers.Travel(p1, "nowhere"), nil, "없는 장면으로는 못 간다")
 -- 문 앞으로 걸어가서 간다
 local gate = SCENES.scenes.town.portals[1]
 while math.abs(s1.hero.x - gate.x) > 10 do
-	handlers.Move(p1, s1.hero.x + (if gate.x > s1.hero.x then 1 else -1) * 60, gate.y, 1)
+	s1.trust = true -- (시간을 흘리지 않고 걷는다 — 이동 몫을 셈하지 않게)
+	handlers.Move(p1, s1.hero.x + math.clamp(gate.x - s1.hero.x, -60, 60), gate.y, 1)
 end
 local trip = handlers.Travel(p1, gate.to)
 expect(trip ~= nil and trip.scene == gate.to, "문으로 다음 맵(마을 어귀)에 간다")
@@ -345,7 +351,7 @@ do
 		if inside.indoor then
 			doors += 1
 			eq(handlers.Travel(p1, door.to), nil, "문 앞이 아니면 못 들어간다 " .. door.to)
-			s1.jumped, s1.stale = true, nil
+			s1.trust, s1.stale = true, nil
 			handlers.Move(p1, door.x, door.y, 1)
 			local into = handlers.Travel(p1, door.to)
 			expect(into ~= nil and into.scene == door.to, "문 앞에서 들어간다 " .. door.to)
@@ -384,7 +390,7 @@ run(1) -- 나타나는 동작이 끝날 때까지
 -- 졸개 옆으로 간다(순간이동은 안 되므로 걸어서)
 local function walkTo(x, y)
 	local s = World.session(p1)
-	s.jumped, s.stale = true, nil
+	s.trust, s.stale = true, nil
 	handlers.Move(p1, x, y, 1)
 end
 walkTo(foe.x - 20, foe.y)
@@ -655,7 +661,7 @@ do
 		local n, key = npc(id)
 		goTo(p3, key)
 		eq(s3.scene, key, "주민이 있는 곳으로 간다 " .. id)
-		s3.jumped, s3.stale = true, nil
+		s3.trust, s3.stale = true, nil
 		h3.x, h3.y = n.x + 10, n.y
 	end
 	local it = Items.make("hat", 1, 5)
@@ -683,7 +689,7 @@ do
 		goTo(p3, mkey)
 		eq(s3.scene, mkey, "잡화점 문으로 들어간다")
 		eq(h3.x, SCENES.scenes[mkey].portals[1].x, "들어가면 나가는 문 앞에 선다")
-		s3.jumped, s3.stale = true, nil
+		s3.trust, s3.stale = true, nil
 		h3.x, h3.y = m.x + 150, m.y -- 같은 방 안이지만 멀다
 	end
 	table.clear(sent)
@@ -908,7 +914,7 @@ do
 	handlers.Choose(pc, "mooni")
 	local sc = World.session(pc)
 	Hero2.gainXp(sc.hero, 20000)
-	sc.jumped, sc.stale = true, nil
+	sc.trust, sc.stale = true, nil
 	local gateC
 	for _, portal in SCENES.scenes[SCENES.start].portals do
 		gateC = portal
@@ -931,6 +937,49 @@ do
 	expect(info ~= nil and info[1].leader == 201 and #info[1].members == 2, "파티가 생겼다")
 	expect(last("PartyInfo", pb) ~= nil, "파티원도 받는다")
 	expect(World.sameParty(201, 202) and not World.sameParty(201, 203), "같은 파티인지 안다")
+	-- 파티 버프(2026-10-18 검토: 세션을 Party.mates에 넘겨 level이 없어 오류 — 파티원에게 버프가 가지 않았다): 가까운 파티원에게도 걸린다
+	do
+		local sa2, sb2 = World.session(pa), World.session(pb)
+		sa2.hero.skills.ax_roar = 1
+		sb2.hero.x, sb2.hero.y = sa2.hero.x + 10, sa2.hero.y
+		local ok = pcall(handlers.Skill, pa, "ax_roar", 1, sa2.hero.x, sa2.hero.y, 1)
+		expect(ok, "파티 버프를 써도 오류가 없다")
+		expect(sa2.hero.buffs.ax_roar ~= nil, "쓴 사람에게 걸린다")
+		expect(sb2.hero.buffs.ax_roar ~= nil, "가까운 파티원에게도 걸린다")
+		sa2.hero.skills.ax_roar = nil
+		sa2.hero.buffs.ax_roar, sb2.hero.buffs.ax_roar = nil, nil
+	end
+	-- 장면 동안 맞지 않는 것(Cine "on")은 아직 안 본 장면 하나에 한 번만 · 기술을 쓰면 풀린다(2026-10-18 검토: 「on」만 되풀이해 보내면 영원히 맞지 않았다)
+	do
+		local sa3 = World.session(pa)
+		handlers.Cine(pa, "on", nil)
+		expect(not sa3.hero.inCine, "어느 장면인지 없으면 받지 않는다")
+		handlers.Cine(pa, "on", "없는장면")
+		expect(not sa3.hero.inCine, "없는 장면은 받지 않는다")
+		sa3.hero.cine["r1_wake"] = true
+		handlers.Cine(pa, "on", "r1_wake")
+		expect(not sa3.hero.inCine, "이미 본 장면은 받지 않는다")
+		sa3.hero.cine["r1_wake"] = nil
+		handlers.Cine(pa, "on", "r1_wake")
+		expect(not sa3.hero.inCine, "그 장면이 나오는 맵(사당)이 아니면 받지 않는다(2026-10-18 검토)")
+		local keepScene, keepQ = sa3.scene, sa3.hero.quests.r1m1
+		sa3.scene, sa3.hero.quests.r1m1 = "in_shrine", { done = false, c = {} }
+		handlers.Cine(pa, "on", "r1_wake")
+		expect(not sa3.hero.inCine, "받기 전의 장면은 그 퀘스트를 받은 뒤에는 받지 않는다")
+		sa3.hero.quests.r1m1 = nil
+		handlers.Cine(pa, "on", "r1_wake")
+		expect(sa3.hero.inCine == true, "안 본 장면이 나올 때면 그동안 맞지 않는다")
+		expect(sa3.hero.cine["r1_wake"] == true, "틀면 본 것으로 적는다(나갔다 들어와 다시 틀지 못한다)")
+		sa3.scene, sa3.hero.quests.r1m1 = keepScene, keepQ
+		handlers.Skill(pa, "ax_slam", 1, sa3.hero.x, sa3.hero.y, 1)
+		expect(not sa3.hero.inCine, "기술을 쓰면 풀린다")
+		handlers.Cine(pa, "off", nil)
+		sa3.hero.cine["r1_wake"] = nil
+		sa3.scene, sa3.hero.quests.r1m1 = "in_shrine", nil
+		handlers.Cine(pa, "on", "r1_wake")
+		expect(not sa3.hero.inCine, "같은 장면은 한 접속에 한 번만")
+		sa3.scene, sa3.hero.quests.r1m1 = keepScene, keepQ
+	end
 	eq(World.sceneOf(203), "hunt", "어느 맵에 있는지 안다")
 	-- 파티원의 체력은 1초에 한 번 다시 온다
 	table.clear(sent)
@@ -950,7 +999,7 @@ do
 	end
 	expect(target ~= nil, "잡을 졸개가 있다")
 	sa.hero.invuln, sb.hero.invuln = 999, 999
-	sa.jumped, sb.jumped = true, true -- 다음 자리 보고는 거리와 상관없이 받는다(둘 다)
+	sa.trust, sb.trust = true, true -- 다음 자리 보고는 거리와 상관없이 받는다(둘 다)
 	sa.stale, sb.stale = nil, nil
 	handlers.Move(pa, target.x - 12, target.y, 1)
 	handlers.Move(pb, target.x - 30, target.y, 1)
@@ -958,7 +1007,7 @@ do
 	table.clear(sent)
 	local killed = false
 	for _ = 1, 60 do
-		sa.jumped, sa.stale = true, nil
+		sa.trust, sa.stale = true, nil
 		handlers.Move(pa, math.clamp(target.x - 12, 8, 1500), target.y, 1)
 		castSlam(pa, sa.hero.x, sa.hero.y, 1)
 		run(1.2)
@@ -992,7 +1041,7 @@ do
 	-- 거절
 	handlers.Ready(pb)
 	local sb2 = World.session(pb)
-	sb2.jumped, sb2.stale = true, nil
+	sb2.trust, sb2.stale = true, nil
 	goTo(pb, "hunt")
 	run(1.1)
 	table.clear(sent)
@@ -1024,7 +1073,7 @@ do
 				if n.id == id then
 					goTo(pq, key)
 					eq(sq.scene, key, "주민이 있는 곳으로 간다 " .. id)
-					sq.jumped, sq.stale = true, nil
+					sq.trust, sq.stale = true, nil
 					hq.x, hq.y = n.x + 8, n.y
 					return
 				end
@@ -1090,7 +1139,7 @@ do
 			end
 		end
 		if target then
-			sq.jumped, sq.stale = true, nil
+			sq.trust, sq.stale = true, nil
 			handlers.Move(pq, math.clamp(target.x - 12, 8, 1500), target.y, 1)
 			castSlam(pq, hq.x, hq.y, 1)
 			run(1.2)
@@ -1198,7 +1247,7 @@ do
 		handlers.Quest(pq, "accept", defU.id)
 		eq(Quests.state(hq.quests, hq.level, defU.id), "active", "노인에게 받는다")
 		expect(goTo(pq, defU.scene) ~= nil, "무너진 다리로")
-		sq.jumped, sq.stale = true, nil
+		sq.trust, sq.stale = true, nil
 		hq.x, hq.y = stepU.x + 120, stepU.y
 		table.clear(sent)
 		handlers.Quest(pq, "use", defU.id)
@@ -1528,6 +1577,7 @@ do
 	-- 맵의 시작 자리에서 먼 곳으로 걸어가 둔다(시작 자리로 온 보고는 늘 받는다 — 떨어졌다 돌아온 것)
 	local far = SCENES.scenes.hunt.spawn.x + 150 -- (2026-10-14: 사냥터가 38칸 = 608점이 되어 400점 + 200점은 맵 밖이다)
 	while math.abs(hc.x - far) > 1 do
+		World.session(pc).trust = true -- (시간을 흘리지 않고 걷는다 — 이동 몫을 셈하지 않게)
 		handlers.Move(pc, hc.x + math.clamp(far - hc.x, -60, 60), hc.y, 1)
 	end
 	table.clear(sent)
@@ -1537,18 +1587,51 @@ do
 	expect(#got("Warp", pc) == 1 and got("Warp", pc)[1].args[1] == x0, "화면을 서버가 아는 자리로 되돌린다")
 	handlers.Move(pc, x0 + 200, hc.y, 1)
 	eq(#got("Warp", pc), 1, "되돌리라는 말은 잠깐에 한 번만 보낸다")
+	run(1)
 	handlers.Move(pc, x0 + 30, hc.y, 1)
 	eq(hc.x, x0 + 30, "가까운 자리는 받는다")
+	-- 맵 아래로 떨어졌다(바닥이 뚫린 칸 위에서): 화면이 시작 자리로 돌려놓은 보고는 멀어도 받는다
+	do
+		local hunt = SCENES.scenes.hunt
+		local G0 = req("ReplicatedStorage/shared/lune/config/game")
+		local hole = string.find(hunt.rows[hunt.h], "[^#]")
+		expect(hole ~= nil, "달그림자 사냥터의 바닥에는 뚫린 곳이 있다")
+		if hole then
+			local keepX, keepY = hc.x, hc.y
+			hc.x, hc.y = (hole - 1) * G0.TILE + 8, hunt.h * G0.TILE + 20
+			run(0.5)
+			handlers.Move(pc, hunt.spawn.x, hunt.spawn.y, 1)
+			eq(hc.x, hunt.spawn.x, "뚫린 곳에서 떨어져 시작 자리로 돌아온 것은 받는다")
+			hc.x, hc.y = keepX, keepY
+		end
+	end
+	-- 몸을 옮기지 않는 스킬로는 멀리 간 자리를 받지 않는다(2026-10-18 검토: 전에는 아무 스킬이나 쓰면 1.5초 동안 보고마다 받아 끝없이 갔다)
 	place()
+	run(2)
 	handlers.Skill(pc, "ax_execute", 1, hc.x, hc.y, 1)
 	local x1 = hc.x
 	handlers.Move(pc, x1 + 200, hc.y, 1)
-	eq(hc.x, x1 + 200, "스킬을 쓴 직후에는 멀리 간 자리도 받는다")
-	handlers.Move(pc, x1 + 800, hc.y, 1)
-	eq(hc.x, x1 + 200, "그래도 너무 멀면 받지 않는다")
+	eq(hc.x, x1, "몸을 옮기지 않는 스킬(달빛 처형) 뒤에는 멀리 간 자리를 받지 않는다")
+	-- 몸을 옮기는 스킬(도약 — 서버가 그 스킬을 돌리며 g.move를 부른다 · 처음 쓸 때 빈 방에서 재 보며 알아 둔다): 바로 뒤의 먼 보고 하나는 받는다
+	run(2)
+	hc.x = 100 -- (사냥터의 왼쪽 — 오른쪽으로 400점까지 맵 안)
+	x1 = hc.x
+	hc.skills.ax_leap = math.max(hc.skills.ax_leap or 0, 1)
+	hc.cds.ax_leap = nil
+	handlers.Skill(pc, "ax_leap", 1, hc.x, hc.y, 1)
+	handlers.Move(pc, x1 + 200, hc.y, 1)
+	eq(hc.x, x1 + 200, "몸을 옮기는 스킬을 쓴 직후에는 멀리 간 자리도 받는다")
+	handlers.Move(pc, x1 + 400, hc.y, 1)
+	eq(hc.x, x1 + 200, "한 번 쓰면 한 번만(이어서 또 멀리 간 자리는 받지 않는다)")
+	run(2)
+	hc.x = x1
+	hc.cds.ax_leap = nil
+	handlers.Skill(pc, "ax_leap", 1, hc.x, hc.y, 1)
+	handlers.Move(pc, x1 + 300, hc.y, 1)
+	eq(hc.x, x1, "그래도 너무 멀면 받지 않는다")
 	run(2)
 	handlers.Move(pc, hc.x + 200, hc.y, 1)
-	eq(hc.x, x1 + 200, "조금 지나면 다시 받지 않는다")
+	eq(hc.x, x1, "조금 지나면 다시 받지 않는다")
 	World.removePlayer(pc)
 	World.removePlayer(pw)
 end
@@ -1756,7 +1839,7 @@ do
 		local n, key = keeper()
 		goTo(px, key)
 		eq(s.scene, key, "창고지기가 있는 곳으로 간다")
-		s.jumped, s.stale = true, nil
+		s.trust, s.stale = true, nil
 		s.hero.x, s.hero.y = n.x + 10, n.y
 		return s.hero
 	end
@@ -2093,7 +2176,7 @@ do
 			master = n
 		end
 	end
-	sj.jumped, sj.stale = true, nil
+	sj.trust, sj.stale = true, nil
 	hj.x, hj.y = master.x + 10, master.y
 	eq(hj.quests.r1m1, nil, "새 캐릭터는 「첫 기술」을 아직 받지 않았다")
 	handlers.Quest(pj, "accept", "r1m1")
@@ -2102,7 +2185,7 @@ do
 	eq(handlers.Chars(pj, "enter", made.id).scene, "in_shrine", "받기만 하고 끝내지 않은 캐릭터는 다시 들어와도 사당 안이다")
 	sj = World.session(pj)
 	hj = sj.hero
-	sj.jumped, sj.stale = true, nil
+	sj.trust, sj.stale = true, nil
 	hj.x, hj.y = master.x + 10, master.y
 	handlers.Quest(pj, "complete", "r1m1")
 	expect(hj.quests.r1m1.done == true, "한 번 더 말을 걸어 「첫 기술」을 끝낸다")
@@ -2133,7 +2216,7 @@ do
 	-- 조각이 모자라면 돌려주지 못한다
 	local n2, key2 = master, "in_shrine"
 	goTo(pj, key2)
-	sj.jumped, sj.stale = true, nil
+	sj.trust, sj.stale = true, nil
 	hj.x, hj.y = n2.x + 10, n2.y
 	-- 사제에게 말을 걸어 받는다
 	table.clear(sent)
@@ -2230,7 +2313,7 @@ do
 		end
 	end
 	goTo(pc, skey)
-	sc.jumped, sc.stale = true, nil
+	sc.trust, sc.stale = true, nil
 	hc.x, hc.y = smith.x + 10, smith.y
 	local gearWas = Bag.used(hc, "gear")
 	table.clear(sent)
@@ -2313,7 +2396,7 @@ do
 		eq(sd.scene, board.scene, "게시판이 있는 마을로")
 		for _, n in SCENES.scenes[board.scene].npcs do
 			if n.id == board.npc then
-				sd.jumped, sd.stale = true, nil
+				sd.trust, sd.stale = true, nil
 				hd.x, hd.y = n.x + dx, n.y
 			end
 		end
@@ -2360,7 +2443,7 @@ do
 		end
 		if target then
 			target.hp = 1
-			sd.jumped, sd.stale = true, nil
+			sd.trust, sd.stale = true, nil
 			handlers.Move(pd, math.clamp(target.x - 12, 8, 3000), target.y, 1)
 			castSlam(pd, hd.x, hd.y, 1)
 			run(1.2)
@@ -2452,7 +2535,7 @@ do
 	hc.invuln = 9999
 	local function standAt(key, x, y)
 		expect(goTo(pc, key) ~= nil or sc.scene == key, "간다 " .. key)
-		sc.jumped, sc.stale = true, nil
+		sc.trust, sc.stale = true, nil
 		hc.x, hc.y = x, y
 	end
 	-- 퀘스트를 받기 전: 사당 안의 문은 닫혀 있다
@@ -2500,7 +2583,7 @@ do
 		end
 		if target then
 			target.hp = 1
-			sc.jumped, sc.stale = true, nil
+			sc.trust, sc.stale = true, nil
 			handlers.Move(pc, math.clamp(target.x - 12, 8, 376), target.y, 1)
 			castSlam(pc, hc.x, hc.y, 1)
 			run(1.2)
@@ -2557,7 +2640,7 @@ do
 	HeroC.maxSkills(hj2)
 	hj2.invuln = 9999
 	expect(goTo(pj2, "in_shrine") ~= nil or sj2.scene == "in_shrine", "사당 안으로")
-	sj2.jumped, sj2.stale = true, nil
+	sj2.trust, sj2.stale = true, nil
 	hj2.x, hj2.y = down.x, down.y
 	expect(handlers.Travel(pj2, "in_cellar") == nil, "전직 퀘스트를 받기 전에는 내려가지 못한다")
 	hj2.quests.job2 = { done = false, c = {} }
@@ -2576,7 +2659,7 @@ do
 			local d = e.args[1]
 			if d and d.kind == "quest" and not d.taken then
 				d.taken = true
-				sj2.jumped, sj2.stale = true, nil
+				sj2.trust, sj2.stale = true, nil
 				handlers.Move(pj2, d.x, d.y, 1)
 				handlers.Pickup(pj2, d.id)
 				got2 += 1
@@ -2591,7 +2674,7 @@ do
 		end
 		if target and not Quests.isReady(hj2.quests, "job2") then
 			target.hp = 1
-			sj2.jumped, sj2.stale = true, nil
+			sj2.trust, sj2.stale = true, nil
 			handlers.Move(pj2, math.clamp(target.x - 12, 8, 376), target.y, 1)
 			castSlam(pj2, hj2.x, hj2.y, 1)
 			run(1.2)
@@ -2605,4 +2688,107 @@ do
 	World.removePlayer(pc)
 	World.removePlayer(pv)
 	World.removePlayer(pj2)
+end
+
+-- ---- 서버 검토 5차(2026-10-18 — 요청마다 화면이 보내는 값 · 전투 계산) ----
+do
+	local Hero5 = req("ReplicatedStorage/shared/lune/sim/hero")
+	local G5 = req("ReplicatedStorage/shared/lune/config/game")
+	local pg = person({ UserId = 951, Name = "검토오차" })
+	handlers.Ready(pg)
+	handlers.Choose(pg, "axion", "검토오차")
+	local sg = World.session(pg)
+	local hg = sg.hero
+	expect(goTo(pg, "hunt") ~= nil, "사냥터로")
+	run(2)
+	handlers.Move(pg, hg.x, hg.y, 1) -- (화면이 열렸다)
+	run(2)
+	Hero5.setLevel(hg, 40, 2)
+	hg.skills.ax_breath = math.max(hg.skills.ax_breath or 0, 1)
+	hg.invuln = 999
+	-- ㄱ) 받아 주지 않을 기술 요청으로는 자리를 옮기지 못한다(2~4차 · 버프 모두 이동 몫 안)
+	local x0 = hg.x
+	hg.skills.ax_execute = math.max(hg.skills.ax_execute or 0, 1)
+	for _ = 1, 10 do
+		handlers.Skill(pg, "ax_execute", 2, hg.x + 40, hg.y, 1) -- 구간 2부터(받지 않는다)
+	end
+	eq(hg.x, x0, "받지 않는 2~4차 스킬 요청은 자리를 옮기지 않는다")
+	for _ = 1, 10 do
+		handlers.Skill(pg, "ax_breath", 1, hg.x + 40, hg.y, 1) -- 다시 쓰기 없는 버프(곧바로 걸린다)
+	end
+	expect(hg.x - x0 <= 180, ("버프를 거듭 써도 이동 몫(180점)보다 멀리 가지 않는다(%d)"):format(hg.x - x0))
+	-- ㄴ) 위로 가는 몫: 시간을 흘리지 않고 거듭 위로 보고하면 몫(160점)에서 멈춘다
+	run(2)
+	local y0 = hg.y
+	for _ = 1, 6 do
+		handlers.Move(pg, hg.x, hg.y - 90, 1)
+	end
+	expect(y0 - hg.y <= 160, ("위로는 몫만큼만(%d)"):format(y0 - hg.y))
+	hg.y = y0
+	-- ㄷ) 방마다 다른 시계: 맵을 옮기면 캐릭터에 적힌 방 시각을 새 방의 시계로 옮긴다
+	run(1)
+	local fromRoom = World.room("hunt")
+	hg.kit.at = fromRoom.time - 0.5 -- 반 초 전에 쐈다
+	expect(goTo(pg, "town") ~= nil, "마을로")
+	eq(math.floor((World.room("town").time - hg.kit.at) * 100 + 0.5), 50, "새 방에서도 「반 초 전」 그대로(도깨비불 · 수정 조각이 멈추지 않는다)")
+	-- ㄹ) 캐릭터 고르기를 오가도 체력 · 다시 쓰기가 이어진다
+	run(1)
+	hg.hp = 37
+	hg.cds.ax_breath = World.now + 100
+	local cid = sg.cid
+	handlers.Chars(pg, "leave")
+	expect(sg.hero == nil, "캐릭터 고르기로 나왔다")
+	handlers.Chars(pg, "enter", cid)
+	local h2 = sg.hero
+	expect(h2 ~= nil and h2 ~= hg, "다시 들어왔다")
+	eq(h2.hp, 37, "체력이 이어진다(가득 차지 않는다)")
+	expect((h2.cds.ax_breath or 0) > World.now + 90, "다시 쓰기가 이어진다")
+	-- ㅁ) 1차 기술을 쓴 뒤에도 끝나면 공짜 스킬 초기화가 된다
+	Hero5.setLevel(h2, 40, 2)
+	h2.resets = 1
+	handlers.Skill(pg, "ax_slam", 1, h2.x, h2.y, 1)
+	run(3)
+	handlers.SkillReset(pg)
+	eq(h2.resets, 0, "1차 기술이 끝난 뒤에는 초기화가 된다")
+	-- ㅅ) 1차 연속기: 다음 구간은 앞 구간이 끝나기 0.15초 전부터 받는다(앞당겨 보내 빨라지지 않게)
+	run(3)
+	h2.buffs = {}
+	handlers.Skill(pg, "ax_combo", 1, h2.x, h2.y, 1)
+	run(0.15)
+	handlers.Skill(pg, "ax_combo", 2, h2.x, h2.y, 1)
+	eq(sg.skill.seg, 1, "앞 구간(0.4초)의 0.15초에 온 다음 구간은 받지 않는다")
+	run(0.15)
+	handlers.Skill(pg, "ax_combo", 2, h2.x, h2.y, 1)
+	eq(sg.skill.seg, 2, "끝날 즈음(0.3초)에 온 것은 받는다")
+	run(3)
+	-- ㅇ) 맵에 들어와 화면이 열리면 먼저 와 있던 사람의 버프 모습을 받는다(버프는 바뀔 때만 보내 새로 온 사람에게는 보이지 않았다)
+	do
+		local Buffs5 = req("ReplicatedStorage/shared/lune/sim/buffs")
+		Buffs5.give(h2, "ax_breath", 1, h2.x, h2.y)
+		local pz = person({ UserId = 952, Name = "검토육" })
+		handlers.Ready(pz)
+		handlers.Choose(pz, "riven", "검토육")
+		local sz = World.session(pz)
+		if sz.scene ~= sg.scene then
+			goTo(pz, sg.scene)
+		end
+		run(0.5)
+		table.clear(sent)
+		sz.loading = World.now -- (막 들어온 때처럼 — 화면이 아직 열리지 않았다)
+		handlers.Move(pz, sz.hero.x, sz.hero.y, 1)
+		local seen = false
+		for _, e in got("Buffs", pz) do
+			if e.args[1] == h2.id and #e.args[2] > 0 then
+				seen = true
+			end
+		end
+		expect(sz.scene == sg.scene and seen, "새로 온 사람이 먼저 와 있던 사람의 버프 모습을 받는다")
+		World.removePlayer(pz)
+		h2.buffs = {}
+	end
+	-- ㅂ) 쓰러지면 2~4차 스킬의 늦은 타가 더 치지 않고, 쓰러진 채 레벨이 올라도 체력이 차지 않는다
+	h2.alive, h2.hp = false, 0
+	Hero5.gainXp(h2, N.xpNeed(h2.level) + 1)
+	eq(h2.hp, 0, "쓰러진 채 레벨이 올라도 체력이 그대로")
+	World.removePlayer(pg)
 end

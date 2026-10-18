@@ -124,6 +124,12 @@ function AuctionWindow.build(body: Frame, ctx, w: number, h: number)
 				after(res)
 			end
 			paint()
+			-- 답을 기다리는 사이에 탭을 바꿨다(그때의 부탁은 busy라 버려졌다): 그 탭의 것을 이어서 받아 온다(2026-10-18 검토 — 판매 · 완료가 빈 목록으로 남았다)
+			if (tab == "sell" or tab == "done") and action ~= "mine" and not (res and res.mine) then
+				call("mine", false)
+			elseif (tab == "buy" or tab == "log") and action == "mine" then
+				call("browse", board(), false)
+			end
 		end)
 	end
 

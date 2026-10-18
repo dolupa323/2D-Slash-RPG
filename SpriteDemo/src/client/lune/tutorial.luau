@@ -122,6 +122,11 @@ local function place()
 	skipBtn.frame.Position = UDim2.fromOffset(P.w + 6, 4)
 end
 
+-- 다른 캐릭터로 들어왔다: 앞 캐릭터의 꿈에서 쌓인 것(내려옴 · 말을 끝냄 · 보낸 「끝냈다」)을 지운다(2026-10-18 검토 — 둘 다 꿈에 있으면 새 캐릭터의 미션이 바로 끝났다)
+function View.reset()
+	View.startX, View.talked, View.dropped, View.cast, pending, shownStep = nil, nil, false, false, false, -1
+end
+
 -- 매 화면. c = { tut(서버가 보낸 진행), skip(건너뛸 수 있나), scene(장면 이름표), zones(장면의 tut), body, touch, key(하는 일 → 키 이름), skill(첫 사냥기 「키 · 이름」), potion(물약 칸의 키), windows({ [id] = true }), dt, find(이름) → 반짝일 단추 }
 function View.update(c)
 	local t = c.tut

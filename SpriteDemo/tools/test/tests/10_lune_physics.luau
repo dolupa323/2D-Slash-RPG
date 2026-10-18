@@ -485,4 +485,12 @@ do
 	local dash = { x = l.x, y = l.bottom - 20, vx = 0, vy = 0, ground = false, climb = 1 }
 	P.step(ct, dash, { mx = 0, vx = 120, float = true }, DT)
 	expect(dash.climb == nil, "기술(대쉬)로 움직이면 사다리를 놓는다")
+	-- ↑를 누른 채(폰은 막대를 비스듬히) 옆으로 뛰어도 뛰어내린다 — 바로 다시 잡지 않는다(2026-10-18 검토)
+	local hold = { x = l.x, y = l.bottom - 30, vx = 0, vy = 0, ground = false, climb = 1 }
+	P.step(ct, hold, { mx = 1, up = true, jump = true }, DT)
+	expect(hold.climb == nil and hold.vy < 0, "↑ + 옆 + 뛰기 = 놓고 뛰어내린다")
+	for _ = 1, 5 do
+		P.step(ct, hold, { mx = 1, up = true }, DT)
+	end
+	expect(hold.climb == nil and hold.x > l.x, "↑를 누르고 있어도 곧바로 다시 잡지 않는다(옆으로 떨어져 나간다)")
 end

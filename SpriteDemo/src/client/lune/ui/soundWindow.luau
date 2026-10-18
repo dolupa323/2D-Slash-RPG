@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Layout = require(ReplicatedStorage.shared.lune.ui.layout)
 local Ui = require(script.Parent.ui)
 local Music = require(script.Parent.Parent.music)
+local ViewOpts = require(script.Parent.Parent.viewOpts) -- 화면(다른 사람의 스킬 효과 · 피해 숫자 — 2026-10-18)
 
 local C = Ui.COLOR
 local S = Layout.SOUND
@@ -14,7 +15,8 @@ local S = Layout.SOUND
 local SoundWindow = {}
 
 function SoundWindow.size(): (number, number)
-	return S.w, #S.rows * S.row + S.muteY + Ui.M.button
+	local V = S.view
+	return S.w, #S.rows * S.row + S.muteY + Ui.M.button + V.gap + V.headH + #V.rows * S.row + Ui.M.small
 end
 
 -- 줄 안에서의 자리: 첫 칸의 x · 「+」의 x
@@ -71,6 +73,24 @@ function SoundWindow.build(body: Frame, ctx, w: number, _h: number)
 		view.refresh()
 	end)
 	Ui.text(body, S.note, S.muteW + 8, my + math.floor((Ui.M.button - Ui.M.small) / 2), w - S.muteW - 8, { align = "right", color = C.dim })
+	-- 화면(2026-10-18 — 공방 시험 탭의 paintSound와 같은 모양): 가로줄 · 「화면」 · 줄마다 이름과 오른쪽 끝의 켜짐 / 꺼짐 단추 · 맨 아래 안내
+	local V = S.view
+	local vy = my + Ui.M.button + V.gap
+	Ui.box(body, 0, vy, w, 1, C.line)
+	Ui.text(body, V.head, 0, vy + 6, w, { color = C.dim })
+	local toggles = {}
+	for j, def in V.rows do
+		local key, name = def[1], def[2]
+		local y = vy + V.headH + (j - 1) * S.row
+		Ui.text(body, name, 0, y + math.floor((S.btn - Ui.M.body) / 2), w - V.btnW - 8, { font = "body" })
+		toggles[key] = Ui.button(body, V.on, w - V.btnW, y, V.btnW, function()
+			if ViewOpts.toggle(key) then
+				ctx.saveSound()
+				view.refresh()
+			end
+		end, { h = S.btn })
+	end
+	Ui.text(body, V.note, 0, vy + V.headH + #V.rows * S.row, w, { color = C.dim })
 
 	function view.refresh()
 		for _, row in rows do
@@ -87,6 +107,10 @@ function SoundWindow.build(body: Frame, ctx, w: number, _h: number)
 		end
 		mute:setText(S.mute[if Music.on then 1 else 2])
 		mute:setMain(not Music.on)
+		for key, b in toggles do
+			b:setText(if ViewOpts[key] then V.on else V.off)
+			b:setMain(ViewOpts[key] == true)
+		end
 	end
 	view.refresh()
 	return view

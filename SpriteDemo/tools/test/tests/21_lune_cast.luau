@@ -676,3 +676,24 @@ do
 	expect(short >= 2 and short <= 3, "난도질: 톡 누르면 두세 타 " .. short)
 	expect(long >= 15 and long <= 17, "난도질: 2초 누르면 1초에 8타쯤 " .. long)
 end
+
+-- 「때까지」 구간이 있는 스킬(도약)은 다시 시작하는 데 빈 방에서 잰 한 번의 시간의 60%는 걸린다(2026-10-18 검토 — 구간을 잇달아 보내 하늘에 있는 시간을 건너뛰면 보스에게 두세 배였다)
+do
+	local h = hero("axion", { ax_leap = 1 })
+	local room = Caster.makeDry(X + 14, Y)
+	local c = Caster.new(room) -- 재 보는 방이 아니다(서버처럼)
+	local need = Caster.profile("ax_leap", 0).time * 0.6
+	expect(need > 0.2, ("도약을 한 번 쓰는 시간을 쟀다(%.2f초의 60%%)"):format(need / 0.6))
+	expect(c:begin(h, "ax_leap", 1, nil) == true, "도약을 쓴다")
+	expect(c:begin(h, "ax_leap", 2, nil) == true, "떨어지는 구간을 바로 보낸다(서버는 하늘에 있는 동안을 모른다)")
+	expect(c:begin(h, "ax_leap", 3, nil) == true, "내려찍는 구간도")
+	room.time += need * 0.5
+	c:sub(SUB)
+	expect(c:begin(h, "ax_leap", 1, nil) ~= true, "잰 시간의 60%가 지나기 전에는 다시 쓰지 못한다")
+	room.time += need
+	for _ = 1, 120 do
+		room.time += SUB
+		c:sub(SUB)
+	end
+	expect(c:begin(h, "ax_leap", 1, nil) == true, "지나면 다시 쓴다")
+end

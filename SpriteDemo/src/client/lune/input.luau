@@ -97,6 +97,12 @@ function Input.held(action: string): boolean
 	return held[action] == true
 end
 
+-- 읽지 않은 「누른 순간」을 모두 버린다(누르고 있는 것은 그대로) — 막이 걷히거나 · 일어나거나 · 장면이 끝나 조작이 돌아올 때(2026-10-18 검토:
+--  문을 지나며 화면이 까만 동안 ↑를 한 번 더 누르면, 막이 걷히자마자 그 ↑로 들어온 문을 다시 지나 되돌아갔다 — 기술 · 뛰기 · 창 열기도 같았다)
+function Input.flush()
+	table.clear(pressed)
+end
+
 -- 누른 순간이었는가(읽으면 지운다)
 function Input.take(action: string): boolean
 	local was = pressed[action] == true

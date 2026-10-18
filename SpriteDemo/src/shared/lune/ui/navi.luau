@@ -178,7 +178,7 @@ function Navi.aim(sceneKey: string, x: number, y: number, target, book, mobs: an
 			if d < bd then
 				best, bd = m, d
 			end
-			if m == stick.mob then
+			if m == stick.mob or (m.id ~= nil and m.id == stick.mobId) then -- 화면은 장마다 새 표를 넘긴다 — 번호로도 같은 몬스터인지 본다(2026-10-18 검토)
 				kept, kd = m, d
 			end
 		end
@@ -186,7 +186,7 @@ function Navi.aim(sceneKey: string, x: number, y: number, target, book, mobs: an
 	if kept and kd <= bd + Navi.KEEP then
 		best = kept
 	end
-	stick.mob = best
+	stick.mob, stick.mobId = best, if best then best.id else nil
 	if best then
 		return best.x, best.y, "mob", nil
 	end

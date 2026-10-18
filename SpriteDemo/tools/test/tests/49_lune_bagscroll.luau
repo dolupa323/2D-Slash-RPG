@@ -137,3 +137,38 @@ eq(grid.ScrollingEnabled, false, "끄는 동안은 스크롤이 선다")
 p.extra.onEnd()
 eq(grid.ScrollingEnabled, true, "끌기가 끝나면 스크롤이 다시 켜진다")
 view.destroy()
+
+-- ---- 창고도 늘린 만큼 칸이 있고 스크롤한다(2026-10-18 검토 — 창고 칸을 늘려도(Bag.growStore) 처음 24칸만 지어 25칸부터 보이지도 꺼내지도 못했다) ----
+do
+	local UiMock = req("Client/lune/ui/ui")
+	UiMock.M = { small = 10, body = 12, button = 24, pic = 18 }
+	local ShopWindow = req("Client/lune/ui/shopWindow")
+	table.clear(cells)
+	table.clear(scrolls)
+	local storeBag = { size = 24, gear = {}, use = {}, etc = {}, equip = {}, store = { gear = {}, use = {}, etc = {} }, storeSize = 32, growCost = false, dust = 0, essence = 0 }
+	storeBag.store.gear[30] = { id = 9, slot = "hat", stage = 1, q = 2, star = 0 }
+	local sctx = { ui = {}, bag = function() return storeBag end, me = function() return me end, send = function() end, quick = ctx.quick }
+	local sw, sh = ShopWindow.size("store")
+	local sview = ShopWindow.build(frame("Body"), sctx, sw, sh, "store")
+	sview.refresh()
+	eq(#scrolls, 1, "창고의 칸들은 스크롤 틀 하나 안에 있다")
+	expect(#cells >= 30 and cells[30].item ~= nil and cells[30].item.id == 9, "늘린 창고(32칸)의 30째 칸이 지어지고 그 물건이 보인다")
+	expect(scrolls[1].ScrollingEnabled == true and scrolls[1].ScrollBarThickness > 0, "네 줄을 넘으면 스크롤이 켜진다")
+	eq(scrolls[1].CanvasSize.Y.Offset, 6 * 40, "스크롤의 속 = 여섯 줄(32칸)")
+	storeBag.storeSize = 24
+	storeBag.store.gear[30] = nil
+	sview.refresh()
+	expect(scrolls[1].ScrollingEnabled == false, "24칸이면 스크롤이 없다")
+	-- 끌기: 스마트폰에서 잠깐 누르고 있어야 시작하고, 끄는 동안 스크롤이 선다(가방과 같다)
+	storeBag.storeSize = 32
+	storeBag.store.gear[2] = { id = 11, slot = "hat", stage = 1, q = 2, star = 0 }
+	sview.refresh()
+	table.clear(presses)
+	cells[2].item = storeBag.store.gear[2]
+	cells[2].began({ UserInputType = Enum.UserInputType.Touch, Position = Vector2.new(5, 5) })
+	local sp = presses[#presses]
+	expect(sp ~= nil and sp.extra.hold and sp.extra.hold > 0 and typeof(sp.extra.onStart) == "function", "창고의 끌기도 잠깐 누르고 있어야 시작한다")
+	sp.extra.onStart()
+	eq(scrolls[1].ScrollingEnabled, false, "끄는 동안 창고의 스크롤이 선다")
+	sview.destroy()
+end

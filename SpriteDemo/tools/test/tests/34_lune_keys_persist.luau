@@ -42,9 +42,15 @@ SERVICE("Players", { PlayerAdded = signal(), PlayerRemoving = signal(), GetPlaye
 SERVICE("RunService", { Heartbeat = signal() })
 SERVICE("TextService", { FilterStringAsync = function(_, text) return { GetNonChatStringForBroadcastAsync = function() return text end } end })
 local disk, names = {}, {}
+local failRead = {} -- [사람] = true — 그 사람의 계정을 읽지 못한다(2026-10-18)
 local slow, order = 0, {} -- slow = 저장소가 쓰는 데 걸리는 시간(초 — 진짜 저장소는 기다리게 한다) · order = 저장소에 쓴 차례
 MOCK("ServerScriptService/server/lune/modules/store", {
-	loadAccount = function(id) return json(disk[id]) end,
+	loadAccount = function(id)
+		if failRead[id] then
+			return nil, true -- 저장소가 답하지 않았다(라이브)
+		end
+		return json(disk[id]), false
+	end,
 	saveAccount = function(id, data)
 		local copy = json(data) -- 부른 순간의 값
 		if slow > 0 then
@@ -234,46 +240,57 @@ end
 --  사용자 2026-10-13: "소리조절 있어야합니다." 서버의 길 그대로(Sound → 저장 → 나갔다 들어옴 → Ready가 돌려주는 select.sound)를 따라간다
 do
 	local SOUND = UI.layout.sound
+	-- 저장된 소리 설정에는 화면 설정(fx · nums — 2026-10-18)이 늘 실린다(보내지 않았으면 켜짐)
+	local function full(t)
+		local c = table.clone(t)
+		if c.fx == nil then
+			c.fx = true
+		end
+		if c.nums == nil then
+			c.nums = true
+		end
+		return c
+	end
 	local start = { music = SOUND.start, sfx = SOUND.start, on = true }
 	local p = { UserId = 5300, Name = "소리", attrs = {}, SetAttribute = function(self, k, v) self.attrs[k] = v end }
 	local first = handlers.Ready(p)
-	expect(first ~= nil and first.select ~= nil and same(first.select.sound, start), "처음 온 계정은 처음 크기(모두 켬 · 열 칸)")
+	expect(first ~= nil and first.select ~= nil and same(first.select.sound, full(start)), "처음 온 계정은 처음 크기(모두 켬 · 열 칸)")
 	-- 캐릭터 고르기 화면에서(캐릭터로 들어가기 전에) 바꿔도 받는다
 	handlers.Sound(p, { music = 7, sfx = 3, on = true })
-	expect(same(World.session(p).acct.sound, { music = 7, sfx = 3, on = true }), "캐릭터 고르기 화면에서 바꾼 것도 받아 둔다")
+	expect(same(World.session(p).acct.sound, full({ music = 7, sfx = 3, on = true })), "캐릭터 고르기 화면에서 바꾼 것도 받아 둔다")
 	local made = handlers.Chars(p, "create", "소리시험", "mooni")
-	expect(made and made.ok and same(made.select.sound, { music = 7, sfx = 3, on = true }), "캐릭터를 만들어도 그대로다")
+	expect(made and made.ok and same(made.select.sound, full({ music = 7, sfx = 3, on = true })), "캐릭터를 만들어도 그대로다")
 	handlers.Chars(p, "enter", made.id)
 	local want = { music = 4, sfx = 0, on = false }
 	handlers.Sound(p, want)
-	expect(same(World.session(p).acct.sound, want), "게임 안에서 바꾼 것을 받아 둔다")
+	expect(same(World.session(p).acct.sound, full(want)), "게임 안에서 바꾼 것을 받아 둔다")
 	-- 말이 안 되는 것은 받지 않는다(그 앞의 것이 남는다)
 	for i, bad in { { music = 11, sfx = 3, on = true }, { music = -1, sfx = 3, on = true }, { music = 1.5, sfx = 3, on = true }, { music = "7", sfx = 3, on = true },
 		{ music = 3, sfx = 3 }, { music = 3, sfx = 3, on = 1 }, {}, { sfx = 5, on = true }, { music = 0 / 0, sfx = 1, on = true } } do
 		handlers.Sound(p, bad)
-		expect(same(World.session(p).acct.sound, want), ("말이 안 되는 소리 설정 %d은 받지 않는다"):format(i))
+		expect(same(World.session(p).acct.sound, full(want)), ("말이 안 되는 소리 설정 %d은 받지 않는다"):format(i))
 	end
 	-- ① 캐릭터 고르기로 나가면 그 화면이 받는 것에 들어 있다
 	local left = handlers.Chars(p, "leave")
-	expect(left ~= nil and left.select ~= nil and same(left.select.sound, want), "캐릭터 고르기로 나가도 그대로다")
+	expect(left ~= nil and left.select ~= nil and same(left.select.sound, full(want)), "캐릭터 고르기로 나가도 그대로다")
 	handlers.Chars(p, "enter", made.id)
 	-- ② 게임에서 나갔다가 다시 접속한다(저장소를 거친다)
 	World.removePlayer(p)
-	expect(disk[p.UserId] ~= nil and same(disk[p.UserId].sound, want), "나갈 때 계정에 저장된다 — " .. show(disk[p.UserId] and disk[p.UserId].sound or {}))
+	expect(disk[p.UserId] ~= nil and same(disk[p.UserId].sound, full(want)), "나갈 때 계정에 저장된다 — " .. show(disk[p.UserId] and disk[p.UserId].sound or {}))
 	first = handlers.Ready(p)
-	expect(first ~= nil and first.select ~= nil and same(first.select.sound, want), "다시 접속해도 소리 설정이 남는다 — " .. show(first and first.select and first.select.sound or {}))
+	expect(first ~= nil and first.select ~= nil and same(first.select.sound, full(want)), "다시 접속해도 소리 설정이 남는다 — " .. show(first and first.select and first.select.sound or {}))
 	-- ③ 바꾸면 몇 초 안에 저장한다 · 바꾸자마자 나가도 남는다
 	handlers.Chars(p, "enter", made.id)
 	local want2 = { music = 9, sfx = 6, on = true }
 	handlers.Sound(p, want2)
 	advance(6)
 	World.saveDue()
-	expect(same(disk[p.UserId].sound, want2), "소리 설정을 바꾸면 몇 초 안에 저장된다")
+	expect(same(disk[p.UserId].sound, full(want2)), "소리 설정을 바꾸면 몇 초 안에 저장된다")
 	local want3 = { music = 0, sfx = 10, on = true }
 	handlers.Sound(p, want3)
 	World.removePlayer(p)
 	first = handlers.Ready(p)
-	expect(first ~= nil and same(first.select.sound, want3), "바꾸자마자 나가도 남는다")
+	expect(first ~= nil and same(first.select.sound, full(want3)), "바꾸자마자 나가도 남는다")
 	World.removePlayer(p)
 	-- ④ 소리 설정이 생기기 전에 저장된 계정(sound가 없다): 처음 크기로 읽고, 캐릭터는 그대로다
 	local old = { UserId = 5301, Name = "옛소리", attrs = {}, SetAttribute = function(self, k, v) self.attrs[k] = v end }
@@ -281,7 +298,20 @@ do
 	copy.sound = nil
 	disk[old.UserId] = copy
 	first = handlers.Ready(old)
-	expect(first ~= nil and first.select ~= nil and same(first.select.sound, start), "소리 설정이 없던 저장은 처음 크기로 읽는다")
+	expect(first ~= nil and first.select ~= nil and same(first.select.sound, full(start)), "소리 설정이 없던 저장은 처음 크기로 읽는다")
 	eq(#first.select.chars, 1, "그 계정의 캐릭터는 그대로다")
 	World.removePlayer(old)
+end
+
+-- ---- 계정을 읽지 못했다(라이브의 저장소가 답하지 않는다 — 2026-10-18 검토): 빈 계정으로 들여보내지 않고 내보낸다 · 나갈 때 저장하지 않는다(저장된 것을 덮어쓰지 않게) ----
+do
+	local kicked = nil
+	local p = { UserId = 5400, Name = "못읽음", attrs = {}, SetAttribute = function(self, k, v) self.attrs[k] = v end, Kick = function(_, why) kicked = why end }
+	disk[5400] = { v = 1, keep = "진짜 계정" }
+	failRead[5400] = true
+	local first = handlers.Ready(p)
+	expect(first == nil and kicked ~= nil, "읽지 못하면 들여보내지 않는다(내보낸다) — " .. tostring(kicked))
+	World.removePlayer(p)
+	expect(disk[5400] ~= nil and disk[5400].keep == "진짜 계정", "나가며 저장된 것을 덮어쓰지 않는다")
+	failRead[5400] = nil
 end

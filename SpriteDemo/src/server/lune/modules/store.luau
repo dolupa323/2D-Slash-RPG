@@ -6,6 +6,14 @@
 --  DataStore 호출은 몇 번 다시 해 본다. Studio에서 API 접근이 꺼져 있으면 메모리에만 담아 둔다(Play를 끄면 사라진다 — 그때는 경고를 한 번 낸다).
 --  아직 하지 않은 것: 같은 계정이 두 서버에 동시에 들어왔을 때의 잠금(여럿이 하는 단계에서 넣는다).
 local DataStoreService = game:GetService("DataStoreService")
+-- 메모리 모드(offline)는 Studio에서만(2026-10-18 검토): 라이브 서버에서 한 번 읽기에 실패했다고 서버 전체가 메모리에만 저장하면 모두의 진행을 잃고 ·
+--  새로 들어온 사람은 빈 계정을 보고 · 이름 장부가 서버마다 따로 놀았다. 라이브에서는 그때그때 실패를 알리고(부른 쪽이 들여보내지 않는다) 다음에 다시 해 본다
+local function studio(): boolean
+	local ok, yes = pcall(function()
+		return game:GetService("RunService"):IsStudio()
+	end)
+	return ok and yes == true
+end
 
 local NAME = { account = "LuneAccount_v1", names = "LuneNames_v1", old = "LuneHero_v1", rankInfo = "LuneRankInfo_v1", market = "LuneMarket_v2" }
 local RANK = { level = "LuneRankLevel_v1", power = "LuneRankPower_v1", robux = "LuneRankRobux_v1" } -- 순위판(OrderedDataStore): 열쇠 → 점수
@@ -27,9 +35,11 @@ local function getStore(which: string)
 	end)
 	if ok then
 		stores[which] = result
-	else
+	elseif studio() then
 		offline = true
 		warn("[lune] 저장소를 열지 못해 메모리에만 저장한다: " .. tostring(result))
+	else
+		warn("[lune] 저장소를 열지 못했다(다음에 다시 해 본다): " .. tostring(result))
 	end
 	return stores[which]
 end
@@ -49,46 +59,66 @@ local function try(fn)
 	return false, last
 end
 
--- 읽는다. 돌려주는 것: 읽었는가, 읽은 값(없으면 nil). 읽지 못했으면(Studio에서 API 접근이 꺼져 있을 때) 그 뒤로는 메모리만 쓴다
-local function read(which: string, key: string): (boolean, any)
+-- 읽는다. 돌려주는 것: 읽었는가, 읽은 값(없으면 nil), 읽기에 실패했는가(라이브 — 부른 쪽이 「없음」으로 다루면 안 된다).
+--  Studio에서 읽지 못했으면(API 접근이 꺼져 있을 때) 그 뒤로는 메모리만 쓴다(실패가 아니라 메모리 모드)
+local function read(which: string, key: string): (boolean, any, boolean)
 	local ds = getStore(which)
 	if ds and not offline then
 		local ok, result = try(function()
 			return ds:GetAsync(key)
 		end)
 		if ok then
-			return true, result
+			return true, result, false
 		end
-		offline = true
-		warn("[lune] 저장소를 읽지 못해 메모리에만 저장한다: " .. tostring(result))
+		if studio() then
+			offline = true
+			warn("[lune] 저장소를 읽지 못해 메모리에만 저장한다: " .. tostring(result))
+			return false, nil, false
+		end
+		warn(("[lune] 저장소에서 %s를 읽지 못했다: %s"):format(key, tostring(result)))
+		return false, nil, true
 	end
-	return false, nil
+	return false, nil, not offline -- 저장소를 열지 못했다(라이브면 실패 · Studio의 메모리 모드면 실패가 아니다)
 end
 
 -- ---------- 계정 ----------
 -- 저장된 계정을 읽는다. 없으면 nil.
-function Store.loadAccount(userId: number)
-	local ok, result = read("account", "acct_" .. userId)
+-- 저장된 계정을 읽는다 → 계정(없으면 nil), 읽기에 실패했는가(true면 nil을 「새 계정」으로 다루면 안 된다 — 저장된 것을 빈 계정으로 덮어쓴다)
+function Store.loadAccount(userId: number): (any, boolean)
+	local ok, result, failed = read("account", "acct_" .. userId)
 	if ok then
-		return result
+		return result, false
 	end
-	return memory.account[userId]
+	if failed then
+		return nil, true
+	end
+	return memory.account[userId], false
 end
 
 -- 계정을 저장한다. 됐으면 true.
+-- 저장의 차례(계정마다): 다시 해 보는 사이에 더 새로운 저장이 나왔으면 옛 것은 그만 쓴다 — 늦게 다시 쓴 옛 것이 새 것을 덮지 않게(2026-10-18 검토)
+local saveSeq: { [number]: number } = {}
 function Store.saveAccount(userId: number, data): boolean
 	memory.account[userId] = data
 	local ds = getStore("account")
 	if not ds or offline then
 		return false
 	end
+	saveSeq[userId] = (saveSeq[userId] or 0) + 1
+	local mine = saveSeq[userId]
+	local stale = false
 	local ok, err = try(function()
+		if saveSeq[userId] ~= mine then
+			stale = true -- 더 새로운 저장이 이미 나갔다: 이것은 쓰지 않는다
+			return
+		end
 		ds:SetAsync("acct_" .. userId, data)
 	end)
 	if not ok then
 		warn(("[lune] %d의 저장에 실패했다: %s"):format(userId, tostring(err)))
 	end
-	return ok
+	-- 그만 쓴 옛 저장은 「저장했다」가 아니다(더 새로운 저장도 실패할 수 있다) — 경매장은 저장을 확인하고서야 장부를 바꾼다(2026-10-18 검토)
+	return ok and not stale
 end
 
 -- ---------- 계정의 잠금 ----------
@@ -112,8 +142,11 @@ end
 -- 이 서버가 그 계정을 잡는다(이미 잡고 있으면 시간을 새로 고친다). 다른 서버가 잡고 있으면 false
 function Store.lock(userId: number): boolean
 	local ds = getStore("account")
-	if not ds or offline then
+	if offline then
 		return true
+	end
+	if not ds then
+		return false -- 저장소를 열지 못했다(라이브): 잡지 못한 것으로(들여보내지 않는다)
 	end
 	local mine, job = true, jobId()
 	local ok, err = try(function()
@@ -152,19 +185,22 @@ function Store.unlock(userId: number)
 end
 
 -- 계정이 생기기 전의 저장(캐릭터 하나)을 읽는다. 없으면 nil. 쓰지도 지우지도 않는다.
-function Store.loadOld(userId: number)
-	local ok, result = read("old", "hero_" .. userId)
+function Store.loadOld(userId: number): (any, boolean)
+	local ok, result, failed = read("old", "hero_" .. userId)
 	if ok then
-		return result
+		return result, false
 	end
-	return nil
+	return nil, failed
 end
 
 -- ---------- 이름 장부 ----------
 -- 그 이름을 가진 사람의 번호. 아무도 없으면 nil. 읽지 못했으면 false(그때는 이름을 지을 수 없다고 답한다)
 function Store.nameOwner(key: string): any
-	if offline or not getStore("names") then
+	if offline then
 		return memory.names[key]
+	end
+	if not getStore("names") then
+		return false -- 장부를 열지 못했다(라이브): 이름을 지을 수 없다고 답한다
 	end
 	local ok, result = read("names", key)
 	if ok then
@@ -176,12 +212,15 @@ end
 -- 그 이름을 내 것으로 적는다. 비어 있거나 이미 내 것이면 true, 남의 것이면 false. 적지 못했으면 nil.
 function Store.claimName(key: string, userId: number, at: number?): boolean?
 	local ds = getStore("names")
-	if not ds or offline then
+	if offline then
 		if memory.names[key] ~= nil and memory.names[key] ~= userId then
 			return false
 		end
 		memory.names[key] = userId
 		return true
+	end
+	if not ds then
+		return nil -- 장부를 열지 못했다(라이브): 적지 못했다
 	end
 	local mine = false
 	local ok, err = try(function()
@@ -204,10 +243,13 @@ end
 -- 내 이름을 장부에서 지운다(캐릭터를 지웠을 때 — 그 이름을 다른 사람이 쓸 수 있게 된다). 남의 것은 건드리지 않는다.
 function Store.freeName(key: string, userId: number)
 	local ds = getStore("names")
-	if not ds or offline then
+	if offline then
 		if memory.names[key] == userId then
 			memory.names[key] = nil
 		end
+		return
+	end
+	if not ds then
 		return
 	end
 	try(function()
@@ -236,9 +278,11 @@ local function getRank(board: string)
 	end)
 	if ok then
 		ranks[board] = result
-	else
+	elseif studio() then
 		offline = true
 		warn("[lune] 순위판을 열지 못해 메모리에만 둔다: " .. tostring(result))
+	else
+		warn("[lune] 순위판을 열지 못했다(다음에 다시 해 본다): " .. tostring(result)) -- 라이브: 순위판 하나 때문에 서버 전체를 메모리 모드로 돌리지 않는다(2026-10-18 검토)
 	end
 	return ranks[board]
 end
@@ -347,8 +391,11 @@ end
 -- 장부를 읽는다 → 읽었는가, 문서(없으면 nil)
 function Store.marketRead(key: string): (boolean, any)
 	local ds = getStore("market")
-	if not ds or offline then
+	if offline then
 		return true, memory.market[key]
+	end
+	if not ds then
+		return false, nil -- (라이브) 이 서버만의 장부를 만들지 않는다
 	end
 	local ok, result = try(function()
 		return ds:GetAsync("b_" .. key)
@@ -365,7 +412,10 @@ end
 --  false가 돌아오면 적혔는지 알 수 없다(부른 쪽이 그렇게 다룬다)
 function Store.marketUpdate(key: string, fn: (any) -> (any, any, any)): (boolean, any, any, any)
 	local ds = getStore("market")
-	if not ds or offline then
+	if not ds and not offline then
+		return false, nil, nil, nil -- (라이브) 저장소를 열지 못했다
+	end
+	if offline then
 		local new, a, b = fn(memory.market[key])
 		if new ~= nil then
 			memory.market[key] = new

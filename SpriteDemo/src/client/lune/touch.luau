@@ -25,7 +25,7 @@ local C = Ui.COLOR
 local PIC = 24 -- 그림 한 장(화면 틀의 점)
 local HOLD_FIRST, HOLD_NEXT = 0.3, 0.12 -- 공격 스킬을 누르고 있을 때: 처음 다시 누르기까지 · 그 뒤의 간격(초)
 local DRAG = Quick.DATA.drag -- 이만큼 움직이면 끌기로 본다(화면 틀의 점)
-local ACT_WORDS = { pickup = "줍기", portal = "들어가기", npc = "말 걸기", spot = "살펴보기" } -- spot = 맵에 놓인 것 앞(퀘스트의 자리)
+local ACT_WORDS = { pickup = "줍기", portal = "들어가기", npc = "말 걸기", spot = "살펴보기", vista = "둘러보기" } -- spot = 맵에 놓인 것 앞(퀘스트의 자리) · vista = 경관의 자리(성의 테라스 — 2026-10-18)
 
 local Touch = {}
 Touch.on = false
@@ -110,7 +110,9 @@ local function paintSlot(b)
 	Ui.setPic(b.pic, if what then Quick.pic(what) else nil)
 	b.plus:show(not what)
 	if what and Quick.item(what) then
-		b.count:set(tostring(if Hud.countOf then Hud.countOf(what) else 0)) -- 소비 아이템: 가방에 든 수
+		local n = if Hud.countOf then Hud.countOf(what) else 0
+		b.count:set(tostring(n)) -- 소비 아이템: 가방에 든 수
+		b.count:color(if n == 0 then Ui.COLOR.red else Ui.COLOR.text) -- 다 쓰면 붉은 0(2026-10-18)
 		b.count:show(true)
 	else
 		b.count:show(false)
@@ -600,6 +602,16 @@ function Touch.init(options)
 	Touch.root = root
 	build()
 	Stage.onResize(function()
+		-- 단추를 새로 짓기 전에 누르고 있던 것을 놓는다(2026-10-18 검토: 화면을 돌리면 막대 · 뛰기 · 상호작용이 눌린 채 남아 캐릭터가 계속 걸었다)
+		if pad and pad.stop then
+			pad.stop()
+		end
+		Input.release("jump")
+		opts.onAct(false)
+		for i in held do
+			Input.release("tslot:" .. i)
+		end
+		table.clear(held)
 		Touch.arrange(false)
 		build()
 	end)

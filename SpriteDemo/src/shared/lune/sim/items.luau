@@ -358,6 +358,12 @@ end
 
 -- 다음 시도의 내용. guard = 파괴 막기를 켰는가 · first = 그 캐릭터의 첫 강화인가(달가루 없이 반드시 붙는다 — 공방 basics.js의 FORGE.first).
 --  { can(시도할 수 있는가), why, ok · fail · boom(%), dust, essence, drops(실패하면 떨어지는가), sure(반드시 성공인가), guard(파괴 막기를 쓸 수 있는 별인가), first(첫 강화인가) }
+-- 그 캐릭터의 첫 강화로 치는가(달가루 없이 반드시 붙는다): 강화를 해 본 적이 없고 · 별이 없는 장비이고 · 제 레벨 + 10까지의 장비.
+--  서버(Bag.enhance)와 화면(대장간 창)이 같은 셈을 쓴다(2026-10-18 검토: 화면은 「+10」을 보지 않아 높은 장비에도 「첫 강화」를 보이고, 서버는 보통 강화로 달가루를 받았다)
+function Items.firstFree(forged: any, level: number?, it): boolean
+	return forged ~= true and it.star == 0 and it.stage <= (level or 1) + 10
+end
+
 function Items.enhanceInfo(it, guard: boolean?, first: boolean?)
 	local s = it.star
 	if it.broken then
@@ -367,7 +373,8 @@ function Items.enhanceInfo(it, guard: boolean?, first: boolean?)
 		return { can = false, why = "상한" }
 	end
 	local row = E.table[s + 1]
-	local canGuard = table.find(E.guard.stars, s + 1) ~= nil
+	local sure = (it.fails or 0) >= E.chance -- 찬스 타임: 반드시 붙는다 — 파괴 방지가 필요 없다(2026-10-18 검토: 켜 두면 값만 세 배로 받았다)
+	local canGuard = table.find(E.guard.stars, s + 1) ~= nil and not sure and not first
 	local useGuard = guard == true and canGuard
 	local info = {
 		can = true,
@@ -377,7 +384,7 @@ function Items.enhanceInfo(it, guard: boolean?, first: boolean?)
 		dust = Items.enhanceDust(it.stage, s) * (if useGuard then E.guard.cost else 1),
 		essence = E.essence[s + 1],
 		drops = s + 1 >= E.dropFrom and table.find(E.floors, s) == nil,
-		sure = (it.fails or 0) >= E.chance,
+		sure = sure,
 		guard = canGuard,
 	}
 	if useGuard then
@@ -437,7 +444,11 @@ end
 
 -- ---------- 상점 ----------
 -- 그 물건의 값(물약도 단마다 따로 판다 — 값이 레벨을 따라 달라지지 않는다)
-function Items.stockPrice(stock, _level: number?): number
+-- 상점의 값: 레벨에 따라 오르는 것(달빛 부적 · 능력치 초기화 — perLv)은 내 레벨 x perLv(2026-10-18 — 설계 economy.js의 PRICE)
+function Items.stockPrice(stock, level: number?): number
+	if stock.perLv then
+		return stock.perLv * math.max(1, level or 1)
+	end
 	return stock.price
 end
 

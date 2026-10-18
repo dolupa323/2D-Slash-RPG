@@ -67,7 +67,8 @@ function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 		frame.Size = UDim2.fromOffset(TIP.w, h)
 		back.Size = UDim2.fromOffset(TIP.w, h)
 		local left = -Ui.WIN.pad - TIP.gap - TIP.w
-		if body.AbsolutePosition.X / Stage.uiScale + left < 4 then
+		-- 기준 격자 안의 자리로 잰다(화면이 넓으면 기준 격자 양옆에 검은 띠가 있다 — 2026-10-18 검토: 띠의 폭까지 더해 설명이 띠 속으로 나가 안 보였다)
+		if (body.AbsolutePosition.X - Stage.ui.AbsolutePosition.X) / Stage.uiScale + left < 4 then
 			left = w + Ui.WIN.pad + TIP.gap -- 왼쪽에 자리가 없다(창이 화면 왼쪽에 있다)
 		end
 		frame.Position = UDim2.fromOffset(left, rows[id].y - 2)
