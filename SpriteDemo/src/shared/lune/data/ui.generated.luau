@@ -61,6 +61,7 @@ return {
 		{ id = "hall", name = "명예의 전당", key = false, from = 1, menu = false, need = false },
 		{ id = "attend", name = "출석", key = false, from = 1, menu = true, need = false },
 		{ id = "achieve", name = "업적", key = false, from = 1, menu = true, need = false },
+		{ id = "cash", name = "달빛 상점", key = "Backquote", from = 1, menu = false, need = false },
 		{ id = "rift", name = "토벌", key = false, from = 1, menu = false, need = false },
 		{ id = "tome", name = "모험의 서", key = false, from = 1, menu = true, need = "tome" },
 	},
@@ -109,8 +110,8 @@ return {
 			labelGap = 4,
 			labelW = 38,
 			labelY = 33,
-			row = { "bag", "equip", "stat", "skill", "quest", "auction", "map" },
-			labels = { stat = "능력치", more = "메뉴", auction = "경매" },
+			row = { "bag", "equip", "stat", "skill", "quest", "auction", "cash" },
+			labels = { stat = "능력치", more = "메뉴", auction = "경매", cash = "상점" },
 		},
 		party = {
 			row = 26,
@@ -170,6 +171,7 @@ return {
 		riftEnd = { w = 236, row = 20, pad = 12 },
 		tome = { w = 340, headY = 22, barY = 40, barH = 6, partY = 52, partRow = 20, partBarX = 92, partBarW = 150, rewardY = 160, rewardH = 58, mobY = 232, mobRow = 14 },
 		achieve = { w = 340, barY = 16, barH = 6, tabY = 40, listY = 68, row = 46, rows = 5, sideW = 96, btnW = 64, barW = 150, footY = 8, allW = 96, scrollW = 3 },
+		cash = { w = 340, tabY = 20, listY = 48, row = 46, rows = 5, iconS = 28, textX = 36, sideW = 72, btnW = 64, priceY = 4, btnY = 18, countY = 32, footY = 8, allW = 96, scrollW = 3, passY = 4, passRow = 18, passInfoY = 34, passBarY = 50, passGridY = 62, passCols = 10, passGap = 2, passCellH = 40, renameY = 36, renameH = 84 },
 		sound = {
 			w = 300,
 			row = 34,
@@ -416,6 +418,7 @@ return {
 		onLine = "키를 다시 누르면 꺼진다",
 		heat = "지금 열기 {n}",
 		weak = { title = "약해짐", text = "쓰러진 벌칙 — 경험치 · 물건을 80% 덜 얻는다", hint = "잡화 상인의 달빛 부적을 쓰면 바로 풀린다" },
+		exp = { title = "경험치 쿠폰", text = "사냥 경험치 1.5배", hint = "게임 안에 있는 동안만 줄어든다" },
 	},
 	xpTip = { title = "경험치", now = "{xp} / {need} ({pct}%)", left = "다음 레벨까지 {n}" },
 	statTip = {

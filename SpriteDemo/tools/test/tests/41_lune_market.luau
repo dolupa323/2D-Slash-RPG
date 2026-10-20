@@ -504,7 +504,9 @@ local function enter(sv, id: number, name: string, class: string)
 		cid = made.id
 	end
 	expect(sv.h.Chars(p, "enter", cid) ~= nil, "캐릭터로 들어간다 " .. name)
-	return p, sv.World.session(p)
+	local s = sv.World.session(p)
+	s.scene = "town" -- 경매장은 마을에서만(2026-10-21) — 새 캐릭터는 꿈(튜토리얼)에서 시작하므로 초승달 마을에 세운다
+	return p, s
 end
 -- 가방을 비우고 달돈을 정한다
 local function reset(sv, h, money: number)
@@ -586,10 +588,21 @@ do
 		end
 	end
 
-	-- ---- (가) 어디서나 쓴다 · 막는 것들 ----
+	-- ---- (가) 마을이면 어디서나 쓴다 · 막는 것들 ----
+	--  2026-10-21 사용자 "경매장도 마을에서만 갈수있어야하구요": 새 캐릭터가 처음 서는 꿈(dream)은 마을이 아니다 → 셋 다 초승달 마을에 세운다
+	sa.scene = "r1a1"
+	expect(sv.h.Market(pa, "mine").why == WHY.town, "마을 밖(사냥터)에서는 쓰지 못한다")
+	sa.scene = "dream"
+	expect(sv.h.Market(pa, "mine").why == WHY.town, "꿈(튜토리얼)에서도 쓰지 못한다")
+	for _, s in { sa, sb, sc } do
+		s.scene = "town"
+	end
+	sa.shop = 1
+	expect(sv.h.Market(pa, "mine").why == WHY.town, "달빛 상점 안에서는 쓰지 못한다")
+	sa.shop = nil
 	expect(sa.scene ~= M.scene, "(경매사가 없는 맵에 서 있다)")
 	local r = sv.h.Market(pa, "mine")
-	expect(r.ok == true and #r.mine == 0 and r.used == 0 and r.max == M.slots, "주민 앞이 아니어도 쓴다(메뉴에서 여는 창 — 메이플 옥션 방식)")
+	expect(r.ok == true and #r.mine == 0 and r.used == 0 and r.max == M.slots, "경매사 앞이 아니어도 마을이면 쓴다(메뉴에서 여는 창 — 메이플 옥션 방식)")
 	sa.guest = true
 	expect(sv.h.Market(pa, "mine").why == WHY.guest, "확인용 캐릭터는 쓰지 못한다")
 	sa.guest = nil

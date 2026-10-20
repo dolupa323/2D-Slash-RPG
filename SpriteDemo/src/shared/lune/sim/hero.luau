@@ -10,6 +10,7 @@ local Daily = require(script.Parent.daily)
 local Bond = require(script.Parent.bond)
 local Rift = require(script.Parent.rift)
 local Tutorial = require(script.Parent.tutorial)
+local Cash = require(script.Parent.cash) -- 유료 상품(경험치 쿠폰의 배율 · 2026-10-20)
 local Kit = require(script.Parent.kit) -- 1차의 온오프 사출기 · 핵심 장치 · 패시브
 local Buffs = require(script.Parent.buffs) -- 2~4차의 버프
 local Passives = require(script.Parent.passives) -- 2~4차의 패시브
@@ -246,6 +247,7 @@ function Hero.new(id: any, class: string)
 		dir = 1,
 		invuln = 0, -- 맞은 뒤 무적이 남은 시간(초)
 		weak = 0, -- 쓰러진 뒤 벌칙이 남은 시간(초)
+		expLeft = 0, -- 경험치 쿠폰(유료)이 남은 시간(초) — 게임 안에 있는 동안만 준다(Hero.tick)
 		potionWait = 0,
 		revive = 0, -- 쓰러진 뒤 일어나기까지 남은 시간(초)
 	}
@@ -557,6 +559,7 @@ function Hero.killXp(h, mobLevel: number, mobHpMul: number): number
 	if h.weak > 0 then
 		xp *= 1 - N.data.BODY.death.cut / 100
 	end
+	xp *= Cash.expMul(h) -- 경험치 쿠폰(사냥 경험치만 — 2026-10-20 사용자 「경험치 쿠폰 판매해도 됩니다」)
 	return math.max(1, math.floor(xp + 0.5))
 end
 
@@ -625,6 +628,7 @@ end
 function Hero.tick(h, dt: number): boolean
 	h.invuln = math.max(0, h.invuln - dt)
 	h.weak = math.max(0, h.weak - dt)
+	h.expLeft = math.max(0, (h.expLeft or 0) - dt)
 	h.potionWait = math.max(0, h.potionWait - dt)
 	-- 쓰러져 있는 동안: 저절로 일어나지 않는다 — 그 자리에 비석이 서고, 마을로 돌아갈지는 그 사람이 정한다(사용자 2026-10-08:
 	--  "죽으면 비석 세우고, 모달띄워서 마을로 갈거냐고 물어보는 딜레이를 넣읍시다"). 그 사이에 파티원이 소생으로 일으켜 줄 수 있다
@@ -859,6 +863,7 @@ function Hero.pack(h)
 		last = (if h.alive == false then h.home else h.last) or false, -- 쓰러진 채 나가면 다시 들어올 때 마을에서(그 자리에서 가득 찬 채로 살아나지 않게 — 2026-10-18 검토)
 		resets = h.resets or 0,
 		weak = math.floor(h.weak),
+		expLeft = math.floor(h.expLeft or 0),
 		bag = Bag.pack(h),
 		quests = Quests.pack(h.quests),
 		daily = Daily.pack(h.daily),
@@ -897,6 +902,7 @@ function Hero.unpack(id: any, data: any)
 	h.xp = if typeof(data.xp) == "number" and data.xp >= 0 and data.xp < N.xpNeed(h.level) then math.floor(data.xp) else 0
 	h.money = if whole(data.money, 0, 9e15) then data.money else 0
 	h.weak = if whole(data.weak, 0, 3600) then data.weak else 0
+	h.expLeft = if whole(data.expLeft, 0, Cash.RULES.exp.cap) then data.expLeft else 0 -- 경험치 쿠폰 — 생기기 전의 저장 = 0
 	-- 공짜 초기화: 이것이 생기기 전에 전직한 캐릭터(2026-10-11 이전 — 저장에 없다)는 한 번 받는다
 	h.resets = if whole(data.resets, 0, 1) then data.resets elseif data.resets == nil and h.job >= 2 then 1 else 0
 	h.last = if typeof(data.last) == "string" and #data.last <= 40 then data.last else nil -- 없는 장면이면 서버가 마지막 마을 · 시작 마을로(world.luau의 resumeScene)
@@ -1096,6 +1102,7 @@ function Hero.view(h)
 		jump = select(2, Kit.move(h)), -- 뛰는 힘의 배수
 		alive = h.alive,
 		weak = math.ceil(h.weak),
+		expLeft = math.ceil(h.expLeft or 0), -- 경험치 쿠폰의 남은 시간(오른쪽 위 버프 줄)
 	}
 end
 

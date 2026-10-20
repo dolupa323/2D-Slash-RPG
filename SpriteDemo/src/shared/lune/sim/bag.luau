@@ -38,6 +38,7 @@ end
 -- 새 캐릭터: 처음 받는 차림을 입고 있다. 가방은 비어 있다
 function Bag.init(h)
 	h.bagGrow = 0
+	h.bagPaid = 0 -- 가방 확장권(유료)으로 늘린 번
 	h.gear, h.use, h.etc = blank(BAG.base), blank(BAG.base), blank(BAG.base)
 	h.equip = {}
 	h.store = { gear = blank(BAG.storeBase), use = blank(BAG.storeBase), etc = blank(BAG.storeBase) }
@@ -49,7 +50,7 @@ end
 
 -- 탭 하나의 칸 수(세 탭이 같다)
 function Bag.size(h): number
-	return BAG.base + BAG.step * h.bagGrow
+	return BAG.base + BAG.step * (h.bagGrow + (h.bagPaid or 0)) -- bagPaid = 가방 확장권으로 늘린 번(유료 — 2026-10-20 · sim/cash.luau)
 end
 
 -- 창고의 탭 하나의 칸 수(세 탭이 같다) — 24칸 + 계정이 받은 「창고 칸」 보상(h.storeExtra — 서버가 계정의 storeGot으로 맞춘다 · 2026-10-18)
@@ -553,6 +554,16 @@ function Bag.grow(h): (boolean?, string?)
 	return true
 end
 
+-- 가방 확장권(유료 — 2026-10-20): 달돈으로 늘리는 것과 같이 세 탭이 함께 step칸 는다. 몇 번까지인가는 부른 쪽(sim/cash.luau)이 본다
+function Bag.growPaid(h)
+	h.bagPaid = (h.bagPaid or 0) + 1
+	for _, tab in Bag.TABS do
+		for i = #h[tab] + 1, Bag.size(h) do
+			h[tab][i] = false
+		end
+	end
+end
+
 -- 상점에서 산다. n = 몇 개(장비는 하나씩)
 function Bag.buy(h, stockId: any, n: any): (boolean?, string?)
 	local stock = if typeof(stockId) == "string" then Items.stock(stockId) else nil
@@ -776,7 +787,7 @@ end
 
 function Bag.pack(h)
 	local size, storeSize = Bag.size(h), Bag.storeSize(h)
-	local out = { equip = {}, dust = h.dust, essence = h.essence, grow = h.bagGrow }
+	local out = { equip = {}, dust = h.dust, essence = h.essence, grow = h.bagGrow, paid = h.bagPaid or 0 }
 	out.gear = packSlots(h.gear, size, packItem)
 	out.use = packSlots(h.use, size, packStack)
 	out.etc = packSlots(h.etc, size, packStack)
@@ -871,6 +882,7 @@ function Bag.unpack(h, data: any): boolean
 	end
 	h.equip, h.nextItem = {}, 1
 	h.bagGrow = if whole(data.grow, 0, BAG.times) then data.grow else 0
+	h.bagPaid = if whole(data.paid, 0, 16) then data.paid else 0 -- 가방 확장권(유료)으로 늘린 번 — 생기기 전의 저장 = 0
 	h.dust = if whole(data.dust, 0, 9e15) then data.dust else 0
 	h.essence = if whole(data.essence, 0, 9e9) then data.essence else 0
 	-- 저장된 것이 지금의 가방 칸 수보다 뒤에 있으면(설계의 가방 칸이 줄었다) 넓히기를 그만큼 더 쳐 둔다 — 물건을 잃지 않게(창고의 loadStore와 같다 · 2026-10-18 검토)

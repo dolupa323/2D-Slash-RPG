@@ -212,16 +212,17 @@
   "cine_mural_riven.png",
   "cine_mural_reaper.png",
   "cine_mural_mooni.png",
-  "cine_mural_salamander.png"
+  "cine_mural_salamander.png",
+  "shop_bg.png"
  ],
  "need": [],
  "hashes": {
   "chars_1.png": "f2399408653fceb9cd16f4998b5b4641",
-  "chars_2.png": "c6cf60fed89214cbc60740304c5df646",
-  "chars_3.png": "2f9fe7257b7bcb5ea693aa232f596c4a",
+  "chars_2.png": "29ad5b422d1c4382f53736fc9c1a7245",
+  "chars_3.png": "0c8159681771467a5867e1e2841fcc64",
   "chars_mask_1.png": "423495f9ce9727531ea67eed70abe3e2",
-  "chars_mask_2.png": "731981d3c798b872f7ea01056aa83119",
-  "chars_mask_3.png": "9ea83200a37f6b1a26b95a2283c083a5",
+  "chars_mask_2.png": "917bc1bdb2f3f58fb0f37d5c17963eb1",
+  "chars_mask_3.png": "7d0bacfa874c2111141b01ee8dfdd78e",
   "sky.png": "f1233efc3940a4d589e0228040f7e3b9",
   "far.png": "ac7617c702b29f03c3218f81f38b19ab",
   "near_hunt.png": "a8868c61c60153487309d0511e0d3193",
@@ -411,7 +412,7 @@
   "worldmap_sea.png": "8f00544d6ed5b63685397b656bf5b2ac",
   "worldmap_r3.png": "ed34bb6cb664512f3614c03db188a6c4",
   "worldmap_r4.png": "c5368b9a91cb0f7f1fd90011cf1d7149",
-  "ui_kit.png": "0f22903c6f4a545187c4f9eeef0179ce",
+  "ui_kit.png": "2db92c0a70ecd747e56b671ecf0f3849",
   "font_small_1.png": "ac4dece3c0c59b86da3700b3bd09d6c8",
   "font_small_2.png": "a39c57d23acf7233f3419f3f15021ff7",
   "font_small_o_1.png": "a3aad0eb25430ae93af08a33f4f058a5",
@@ -428,6 +429,7 @@
   "cine_mural_riven.png": "e7bf45cb02a11912a255d853f7f3c521",
   "cine_mural_reaper.png": "5c4752c4569da49f9439ba437c8cad15",
   "cine_mural_mooni.png": "d751c3384bca93ec68888ddbc1767b7b",
-  "cine_mural_salamander.png": "6d12afc9a1b6354774c6dbade743581d"
+  "cine_mural_salamander.png": "6d12afc9a1b6354774c6dbade743581d",
+  "shop_bg.png": "967296300d765673a6bb7efb12280f73"
  }
 }

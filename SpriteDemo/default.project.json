@@ -1,5 +1,7 @@
 {
   "name": "SpriteDemo",
+  "servePort": 34872,
+  "servePlaceIds": [96192775933291],
   "tree": {
     "$className": "DataModel",
     "ReplicatedFirst": {

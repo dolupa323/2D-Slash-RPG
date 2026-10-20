@@ -34,6 +34,17 @@ function Sprite.frameAt(char, clip: string, t: number, once: boolean?): number
 	return (if once then math.min(n - 1, i) else i % n) + 1
 end
 
+-- 줄여 그리는 캐릭터(char.size — 펫)의 크기를 지금 화면에서 한 점이 정수 화소가 되게 맞춘다(2026-10-21 사용자 "펫이 해상도가 딱 맞는 크기가 있을거야").
+--  화면 화소 / 게임 도트 = Stage.scale(1080p 5 · 1440p 6 · 720p 3). 한 점 = Stage.scale x size 화소 — 소수면 점마다 2 · 3화소가 섞여 눈 · 무늬가 찌그러진다.
+--  그래서 Stage.scale x size를 반올림한 화소로(0.6이면 1080p 3화소 = 0.6 · 1440p 4화소 = 0.67 · 720p 2화소 = 0.67). 화면에 꽉 차게 키우는 폰(소수 배율)은 그대로
+function Sprite.sizeOn(size: number): number
+	local k = Stage.scale
+	if size == 1 or k < 2 or k ~= math.floor(k) then
+		return size
+	end
+	return math.max(1, math.floor(k * size + 0.5)) / k
+end
+
 -- scale = 몸의 크기(거신의 두 배 — 발밑 가운데를 그대로 두고 커진다. 없으면 1)
 function Sprite:set(clip: string, frame: number, x: number, y: number, dir: number, scale: number?)
 	local char = self.char
@@ -62,7 +73,9 @@ function Sprite:set(clip: string, frame: number, x: number, y: number, dir: numb
 	-- 고운 그림(c.k — 스토리 보스: 사용자가 만든 동작 그림을 받은 화소 그대로 싣고 작게 그린다. k = 그림 한 화소가 세계의 몇 점인가):
 	--  부드럽게 줄여 그리고(도트 그림은 점이 또렷하게 — Pixelated) 자리와 크기를 점의 소수 자리까지 둔다. 사용자 2026-10-11: "게임에서 표현되어지는 크기를 줄이라는거에요 스프라이트를 건드리라는게아니라"
 	local fine = c.k ~= nil
-	local s = (scale or 1) * (if fine then c.k * Sprite.preview else 1)
+	-- char.size = 그 캐릭터를 그리는 크기(펫 0.5 — 2026-10-20 사용자 "펫은 유저보다 작아야합니다" · 승인된 그림의 점은 그대로 두고 작게 그린다. 점은 또렷하게(Pixelated))
+	local s = (scale or 1) * (if fine then c.k * Sprite.preview else 1) * Sprite.sizeOn(char.size or 1)
+	local exact = fine or (char.size ~= nil and char.size ~= 1) -- 줄여 그리는 것은 자리 · 크기를 점의 소수 자리까지(반 점을 버리면 점의 크기가 고르지 않다)
 	if self.fine ~= fine then
 		self.fine = fine
 		label.ResampleMode = if fine then Enum.ResamplerMode.Default else Enum.ResamplerMode.Pixelated
@@ -78,7 +91,7 @@ function Sprite:set(clip: string, frame: number, x: number, y: number, dir: numb
 	end
 	self.lastF, self.lastX, self.lastY, self.lastFlip, self.lastS, self.lastOx, self.lastOy = f, px, py, flip, s, ox, oy
 	local function R(v: number): number
-		return if fine then v else math.floor(v + 0.5)
+		return if exact then v else math.floor(v + 0.5)
 	end
 	label.Size = UDim2.fromOffset(R(w * s), R(h * s))
 	if dir >= 0 then

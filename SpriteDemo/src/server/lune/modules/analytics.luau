@@ -97,7 +97,7 @@ local function moneyKind(name: string, action: any, gain: boolean): (string, str
 		return "TimedReward", "Attendance" -- 출석 보상(로블록스의 꼴 TimedReward)
 	elseif name == "Achieve" then
 		return "Gameplay", "Achievement"
-	elseif name == "Pickup" or name == "Skill" or name == "tick" then
+	elseif name == "Pickup" or name == "PetPick" or name == "Skill" or name == "tick" then -- PetPick = 펫이 주운 것(2026-10-20)
 		return "Gameplay", if gain then "MonsterDrop" else "Other"
 	end
 	return "Gameplay", "Other"

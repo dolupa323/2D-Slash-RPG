@@ -55,6 +55,11 @@ local function other(side: string): string
 	return if side == "right" then "left" else "right"
 end
 
+-- 창들이 쓰는 ctx(boot가 준 것 — 달빛 상점의 공간이 같은 것을 쓴다: cashShop.luau · 2026-10-21)
+function Windows.context()
+	return ctx
+end
+
 function Windows.init(context)
 	ctx = context
 	root = Stage.group(Stage.ui, "Windows", 150)

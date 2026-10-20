@@ -35,6 +35,10 @@ local Quick = require(lune.ui.quick) -- 스마트폰의 단추 배치(단추가 
 local Passives = require(lune.sim.passives) -- 2~4차의 패시브(충격파 · 넘치는 힘 · 꺼지지 않는 불은 여기서 때를 본다)
 local CLASSES = require(lune.data["classes.generated"])
 local Store = require(script.Parent.store)
+local Cash = require(lune.sim.cash) -- 유료 상품의 셈(구매 보관함 · 결제 번호 · 주간 수 — 2026-10-20)
+local Town = require(lune.sim.town) -- 마을인가(달빛 상점 · 경매장은 마을에서만 — 2026-10-21)
+local SHOPSPACE = require(lune.data["bm.generated"]).shop.space -- 달빛 상점의 공간(글 · 키)
+local CashServer = require(script.Parent.cash) -- 로블록스 결제(ProcessReceipt · 구매 창 · 게임 패스)
 local Admin = require(script.Parent.admin) -- 누가 관리자인가(서버에만 있다)
 local Analytics = require(script.Parent.analytics) -- 플레이어 데이터 기록(로블록스 분석 — 2026-10-15)
 local Attend = require(lune.sim.attend) -- 출석(계정에 하루 한 칸 — 2026-10-15)
@@ -151,10 +155,12 @@ local function roomOf(key: string)
 	return room
 end
 
+-- 그 방에 있는 사람들. 달빛 상점에 들어가 있는 사람(s.shop)은 빠진다(2026-10-21 사용자 "메이플스토리 캐시샵처럼 아예 무적공간으로 들어가버리는 형태"):
+--  다른 사람의 이름표에서 사라지고 · 방이 돌 때 몬스터가 노리거나 때리지 못하고(room:step에 들지 않는다) · 방의 소식을 받지 않는다. 나오면 moveTo로 같은 자리에 다시 들어온다
 local function inRoom(key: string)
 	local list = {}
 	for _, s in sessions do
-		if s.hero and s.scene == key then
+		if s.hero and s.scene == key and not s.shop then
 			table.insert(list, s)
 		end
 	end
@@ -171,7 +177,9 @@ end
 local function roster(key: string)
 	local list = {}
 	for _, s in inRoom(key) do
-		table.insert(list, { id = s.hero.id, name = s.name, class = s.hero.class, level = s.hero.level })
+		-- pet = 꺼내 둔 펫 · ride = 탄 탈것(2026-10-20 — 다른 사람의 화면도 같이 그린다)
+		local bm = s.acct and s.acct.bm
+		table.insert(list, { id = s.hero.id, name = s.name, class = s.hero.class, level = s.hero.level, pet = bm and bm.petOut or false, ride = if s.riding and bm then bm.mount else false })
 	end
 	return list
 end
@@ -526,6 +534,15 @@ function World.addPlayer(player)
 	end
 	local s = { player = player, hero = nil, acct = nil, cid = nil, scene = SCENES.start, skill = nil, jumped = true, loaded = false, dirty = false, name = "" }
 	sessions[player] = s
+	-- 로블록스의 정책(나라 · 나이에 따라 다르다 — 유료 아이템 거래 등). 읽지 못하면 nil(막지 않는다)
+	task.spawn(function()
+		local ok, info = pcall(function()
+			return game:GetService("PolicyService"):GetPolicyInfoForPlayerAsync(player)
+		end)
+		if ok and typeof(info) == "table" then
+			s.policy = info
+		end
+	end)
 	byUser[player.UserId] = s
 	local guest, guestLevel, guestMode = World.guest()
 	if guest == "new" or guest == "select" then
@@ -873,7 +890,7 @@ local function onCharsInner(player, action: string, a: any, b: any)
 		return { ok = ok, why = why }
 	elseif action == "create" then
 		if Account.full(acct) then
-			return { ok = false, why = ("캐릭터는 %d명까지 만들 수 있습니다"):format(Account.MAX) }
+			return { ok = false, why = ("캐릭터는 %d명까지 만들 수 있습니다"):format(Account.maxChars(acct)) }
 		elseif typeof(b) ~= "string" or not CLASSES.classes[b] then
 			return { ok = false, why = "없는 직업입니다" }
 		end
@@ -1009,6 +1026,7 @@ local function onCharsInner(player, action: string, a: any, b: any)
 		-- 출석: 오늘 처음이면 칸이 찬다(어느 캐릭터든 계정에 하루 한 칸) — 화면이 판을 물을 때 「오늘 처음」(fresh)이라 알려 창을 한 번 띄운다
 		if Attend.checkIn(acct.att, os.time()) then
 			Achieve.add(acct.ach, "attend")
+			Cash.passAdd(acct, "attend", os.time()) -- 달빛 패스: 출석 = 달빛 2(2026-10-20)
 			s.attFresh = true
 		end
 		s.achAlive = hero.alive
@@ -1410,6 +1428,7 @@ local function applyResult(cur, key: string, result)
 			if gs then
 				if gs.acct then
 					Achieve.killed(gs.acct.ach, kill.kind, key, #kill.gains > 1) -- 업적: 처치 · 파티로 처치(함께 잡은 사람이 있다) · 그 지역의 몬스터 종류
+					Cash.passAdd(gs.acct, "kill", os.time(), 1) -- 달빛 패스: 몬스터 100마리마다 달빛 2
 				end
 				Bond.onKill(gs.hero.bond, kill.kind) -- 모험의 서: 그곳의 몬스터 종류마다 100마리
 				if kill.elite then
@@ -1507,6 +1526,10 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 	local s = sessions[player]
 	if s and s.hero then
 		arrived(s) -- 기술을 쓴다 = 화면이 열렸다(옮긴 뒤의 긴 보호를 끝낸다)
+		if s.riding then
+			s.riding = false -- 기술을 쓰면 탈것에서 내린다(design/ride.js — 화면은 먼저 내린다)
+			sendWho(s.scene)
+		end
 		s.hero.inCine = false -- 기술을 쓴다 = 장면을 보는 중이 아니다(장면 동안 맞지 않는 것을 싸움에 쓰지 못하게 — 2026-10-18 검토)
 	end
 	-- 온오프 사출기: 누르면 켜고 끈다(쓰는 동작이 없다 — 켜 두면 주력기가 맞을 때 저절로 나간다. sim/kit.luau)
@@ -1806,12 +1829,10 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 	end
 end
 
-local function onPickup(player, dropId: number)
-	local s = sessions[player]
-	if not s or not s.hero then
-		return
-	end
-	local drop, why = roomOf(s.scene):pickup(s.hero, dropId)
+-- 하나를 줍는다(Z 키 · 펫이 같이 쓴다 — reach = 펫이 줍는 거리) → 주운 것 / nil · 까닭
+local function pickupDrop(s, dropId: number, reach: number?)
+	local player = s.player
+	local drop, why = roomOf(s.scene):pickup(s.hero, dropId, reach)
 	if drop then
 		toRoom(s.scene, "DropGone", drop.id, player.UserId, drop.amount)
 		tutEvent(s, "pickup") -- 튜토리얼(꿈): 주웠다
@@ -1820,9 +1841,32 @@ local function onPickup(player, dropId: number)
 		else
 			sendBag(s) -- 장비 · 달가루 · 퀘스트의 물건(가방의 기타 탭에 들어갔다 — 퀘스트의 숫자는 sendBag이 맞춘다)
 		end
-	elseif why == Bag.FULL then
+	elseif why == Bag.FULL and not reach then
 		fire("ItemDone", player, { action = "pickup", ok = false, why = why })
 	end
+	return drop, why
+end
+local function onPickup(player, dropId: number)
+	local s = sessions[player]
+	if not s or not s.hero then
+		return
+	end
+	pickupDrop(s, dropId)
+end
+-- 펫이 줍는다(2026-10-20 — 사용자 10-06 「자동으로 줍는 펫은 유료」 · 10-20 「줍기는 펫의 기능」 · 「좀멀리서 쫓아오는 느낌이야 아이템주우면서」):
+--  화면의 펫이 떨어진 것까지 달려가 닿으면 PetPick(번호)이 온다(client/lune/rideView.luau). 받는 것: 펫을 꺼내 두었고 · 살아 있고 · 펫이 하나 주운 지 every초가 지났고 ·
+--  그것이 영웅에게서 reach + slack점 안(펫이 달려가는 동안 영웅이 움직인 만큼) — 주인 · 가방은 Z 키로 줍는 것과 같다(Room:pickup)
+local PETRULE = Cash.RIDE.pet
+local function onPetPick(player, dropId: number)
+	local s = sessions[player]
+	if not (s and s.hero and s.hero.alive and s.acct and s.acct.bm.petOut) or s.guest then
+		return
+	end
+	if (s.petT or 0) > World.now then
+		return
+	end
+	s.petT = World.now + PETRULE.every * 0.8 -- 화면이 every초마다 보낸다(조금 일찍 와도 받는다 — 프레임의 어긋남)
+	pickupDrop(s, dropId, PETRULE.reach + PETRULE.slack)
 end
 
 -- 그 주민 앞에 서 있는가(상점 · 강화 · 창고는 주민 앞에서만)
@@ -1960,6 +2004,36 @@ local function onPotion(player, id: any)
 	--  사용자 2026-10-16: "마을귀환 주문서라는게 가장가까운 마을로 이동하는 귀환주문서지 초승달마을로 고정 귀환하는 주문서가 아닙니다" (전에는 늘 초승달 마을이었다)
 	--  쓰러져 있을 때 · 이미 마을일 때 · 배 위 · 꿈에서는 쓰이지 않는다(주문서도 줄지 않는다)
 	local goods = Items.goods(id)
+	-- 유료 상품으로 받은 아이템(2026-10-20 — sim/cash.luau): 달돈 주머니 · 달가루 상자 · 가방 · 창고 확장권 · 경험치 쿠폰. 이름 바꾸기 주문서는 이름을 받아야 해서 onCash의 rename으로
+	if goods and goods.paid then
+		local h = s.hero
+		if not h.alive then
+			return
+		end
+		local ok, msg = nil, nil
+		if goods.kind == "bmRename" then
+			msg = "가방에서 쓰면 새 이름을 적는 칸이 열린다" -- 이름은 Cash "rename"이 바꾼다(그때 주문서를 쓴다)
+		elseif Bag.count(h, goods.id) <= 0 then
+			msg = "가진 것이 없다"
+		else
+			ok, msg = Cash.use(h, s.acct, goods)
+		end
+		if not ok then
+			fire("ItemDone", player, { action = "use", ok = false, why = msg })
+			return
+		end
+		Bag.take(h, goods.id, 1)
+		if goods.kind == "bmStore" then
+			h.storeExtra = Account.storeExtra(s.acct)
+			Bag.growStore(h, h.storeExtra)
+		end
+		s.dirty = true
+		saveSoon(s)
+		sendBag(s)
+		sendSelf(s)
+		fire("ItemDone", player, { action = "use", ok = true, why = msg })
+		return
+	end
 	if goods and goods.kind == "scroll" then
 		local h = s.hero
 		local here = SCENES.scenes[s.scene]
@@ -2220,6 +2294,7 @@ local function onDaily(player, action: string, region: any, i: any)
 	Analytics.custom(s, "DailyDone", 1, region)
 	if s.acct then
 		Achieve.add(s.acct.ach, "daily") -- 업적: 일일 의뢰를 n개
+		Cash.passAdd(s.acct, "daily", os.time()) -- 달빛 패스: 일일 의뢰 하나 = 달빛 3
 	end
 	fire("Gain", player, { xp = reward.xp, ups = ups, level = h.level, money = reward.money, dust = reward.dust }) -- 달돈 · 달가루도 획득 알림에(2026-10-18 검토)
 	if ups > 0 then
@@ -2431,6 +2506,7 @@ local function riftPay(key: string, room)
 		s.dirty = true
 		if s.acct then
 			Achieve.add(s.acct.ach, "rift") -- 업적: 토벌을 n번
+			Cash.passAdd(s.acct, "rift", now) -- 달빛 패스: 토벌 한 번 = 달빛 3
 		end
 		Analytics.custom(s, "RiftClear", 1, t.id)
 		if not Rift.use(h.rift, now) then
@@ -2535,6 +2611,7 @@ local function achTick(s, dt: number)
 	s.achAlive = alive
 	if Attend.checkIn(s.acct.att, os.time()) then
 		Achieve.add(s.acct.ach, "attend")
+		Cash.passAdd(s.acct, "attend", os.time()) -- 달빛 패스
 		s.dirty = true
 		fire("AttendNew", s.player)
 		sendSelf(s)
@@ -2856,6 +2933,17 @@ local function listenSold()
 	end)
 end
 
+-- 유료 상품으로 받은 아이템(GOODS의 paid)을 거래하지 못하게 해야 하는 이용자인가 — 로블록스 정책의 값(IsPaidItemTradingAllowed)이 false일 때만(읽지 못했으면 막지 않는다)
+--  공식 문서는 이 규칙을 확률형 결과물에 대해 적었다. 우리 유료 아이템은 확률이 없지만, 막힌 이용자에게는 같은 대로 막아 둔다(2026-10-20 — design/bm.js)
+local PAID_LOCKED = "이 계정은 유료 상품으로 받은 아이템을 거래할 수 없다(로블록스 정책)"
+local function paidLocked(s, row: any): boolean
+	if typeof(row) ~= "table" or typeof(row.g) ~= "string" then
+		return false
+	end
+	local def = Items.goods(row.g)
+	return def ~= nil and def.paid == true and typeof(s.policy) == "table" and s.policy.IsPaidItemTradingAllowed == false
+end
+
 local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 	local s = sessions[player]
 	if not s or not s.hero or not s.acct then
@@ -2865,11 +2953,13 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 	local function reply(ok: boolean?, why: string?, extra: any)
 		local out = extra or {}
 		out.ok, out.why, out.now = ok == true, why, now
-		out.used, out.max = Market.count(book), MARKET.slots
+		out.used, out.max = Market.count(book), MARKET.slots + Cash.marketPlus(s.acct, now) -- 달빛 패스가 있는 시즌이면 칸이 더(2026-10-20)
 		return out
 	end
 	if s.guest then
 		return reply(nil, MWHY.guest)
+	elseif s.shop or not Town.is(s.scene) then
+		return reply(nil, MWHY.town) -- 경매장은 마을에서만(2026-10-21 사용자 "경매장도 마을에서만 갈수있어야하구요") · 달빛 상점 안에서도 아니다
 	elseif not h.alive then
 		return reply(nil, MWHY.dead)
 	elseif s.marketBusy then
@@ -2903,7 +2993,7 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 				return reply(nil, MWHY.item)
 			elseif not Market.priceOk(price) or not Market.hoursOk(hours) then
 				return reply(nil, MWHY.price)
-			elseif Market.count(book) >= MARKET.slots then
+			elseif Market.count(book) >= MARKET.slots + Cash.marketPlus(s.acct, now) then
 				return reply(nil, MWHY.slots)
 			end
 			local row
@@ -2917,6 +3007,9 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 			end
 			local can, whyNot = Market.sellable(Market.unpack(row))
 			local board = Market.boardOf(row)
+			if can and paidLocked(s, row) then
+				return reply(nil, PAID_LOCKED)
+			end
 			if not can or not board then
 				return reply(nil, whyNot or MWHY.item)
 			elseif h.money < MARKET.deposit then
@@ -2981,6 +3074,8 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 				return reply(nil, MWHY.mine)
 			elseif c > seen.l then
 				return reply(nil, MWHY.count, listing(a, doc))
+			elseif paidLocked(s, seen.it) then
+				return reply(nil, PAID_LOCKED)
 			end
 			local cost = d * c
 			if h.money < cost then
@@ -3514,7 +3609,13 @@ local function onDebug(player, what: string, n: number)
 		return
 	end
 	local hero = s.hero
-	if what == "xp" then
+	if what == "cash" then
+		-- Studio에서만: n번째 상품을 산 것처럼(로블록스 결제 없이 ProcessReceipt와 같은 길) — 결제 번호는 매번 새로
+		local p = Cash.PRODUCTS[math.floor(n)]
+		if p then
+			CashServer.processReceipt({ PlayerId = player.UserId, ProductId = 0, PurchaseId = ("debug-%d-%d"):format(os.time(), math.random(1, 1e9)), CurrencySpent = 0 }, p.id)
+		end
+	elseif what == "xp" then
 		local ups = Hero.gainXp(hero, math.max(0, n))
 		fire("Gain", player, { xp = n, ups = ups, level = hero.level })
 		if ups > 0 then
@@ -3852,6 +3953,150 @@ function World.tick(dt: number)
 	end
 end
 
+-- 유료 상품의 창(2026-10-20 — 공방 js/lune/design/bm.js): a = 하는 일 · b = 그 값
+--  "view" → 상품 표 · 보관함 · "buy" b = 상품 → 서버가 한도를 본 뒤 구매 창(주는 것은 ProcessReceipt) · "take" b = 보관함의 줄(없으면 모두) → 가방으로
+--  "rename" b = 새 이름 → 이름 바꾸기 주문서 하나를 쓰고 이 캐릭터의 이름을 바꾼다(처음 지을 때와 같은 검사)
+local function onCash(player, a: any, b: any)
+	local s = sessions[player]
+	if not s or not s.acct then
+		return { ok = false, why = "아직 들어오지 않았다" }
+	end
+	local now = os.time()
+	if a == "view" then
+		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices())
+		view.ok = true
+		view.riding = s.riding == true
+		return view
+	elseif a == "enter" then
+		-- 달빛 상점에 들어간다(2026-10-21): 마을에서만 · 살아 있을 때. 들어가 있는 동안 맵에서 빠진다(inRoom) — 다른 사람에게 사라졌다고 알린다
+		if not s.hero then
+			return { ok = false, why = "캐릭터로 들어간 뒤에 들어간다" }
+		elseif not s.shop then
+			if not Town.is(s.scene) then
+				return { ok = false, why = SHOPSPACE.words.townOnly }
+			elseif not s.hero.alive then
+				return { ok = false, why = "쓰러져 있을 때는 들어갈 수 없다" }
+			end
+			s.shop = World.now
+			local room = rooms[s.scene]
+			if room then
+				room:forget(s.hero) -- 남은 늦은 타를 버린다
+			end
+			sendWho(s.scene)
+		end
+		local view = Cash.view(s.acct, now, s.passes, s.hero.level, CashServer.prices())
+		view.ok = true
+		view.riding = s.riding == true
+		return view
+	elseif a == "leave" then
+		-- 나온다: 들어간 자리로 다시(맵의 그림 · 몬스터 · 사람을 처음부터 받는다 — moveTo가 Revive로 그 장면을 보낸다)
+		if s.shop and s.hero then
+			s.shop = nil
+			moveTo(s, s.scene, s.hero.x, s.hero.y)
+		end
+		s.shop = nil
+		return { ok = true }
+	elseif a == "buy" then
+		if not s.shop then
+			return { ok = false, why = "달빛 상점 안에서 산다" }
+		end
+		local ok, why = CashServer.prompt(s, b)
+		return { ok = ok, why = why }
+	elseif a == "take" then
+		if not s.hero then
+			return { ok = false, why = "캐릭터로 들어간 뒤에 받는다" }
+		end
+		local moved, left = Cash.take(s.hero, s.acct.bm, b)
+		if moved > 0 then
+			s.dirty = true
+			sendBag(s)
+			saveSoon(s)
+		end
+		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices())
+		view.ok = moved > 0
+		view.why = if moved > 0 then nil elseif left > 0 then "가방에 자리가 없다" else "받을 것이 없다"
+		return view
+	elseif a == "pet" then
+		-- 펫을 꺼낸다(이름표) · 넣는다(false) — 계정의 모든 캐릭터가 같이(2026-10-20)
+		local ok, why = Cash.setPet(s.acct, b)
+		if ok then
+			s.dirty = true
+			saveSoon(s)
+			if s.scene then
+				sendWho(s.scene)
+			end
+		end
+		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices())
+		view.ok, view.why = ok == true, why
+		return view
+	elseif a == "ride" then
+		-- 탄다(탈것의 이름표 — 고른 것도 바뀐다) · 내린다(false). 사다리 위에서 감추는 것은 화면이 한다
+		local ok, why = true, nil
+		if b == false then
+			s.riding = false
+		else
+			ok, why = Cash.setMount(s.acct, b)
+			if ok then
+				s.riding = true
+				s.dirty = true
+				saveSoon(s)
+			end
+		end
+		if s.scene then
+			sendWho(s.scene)
+		end
+		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices())
+		view.ok, view.why, view.riding = ok == true, why, s.riding == true
+		return view
+	elseif a == "pass" then
+		-- 달빛 패스: 받을 수 있는 보상을 모두 보관함에(물약은 이 캐릭터의 레벨의 것)
+		if not s.hero then
+			return { ok = false, why = "캐릭터로 들어간 뒤에 받는다" }
+		end
+		local got = Cash.passClaim(s.acct, now, s.hero.level, s.hero.level)
+		if got > 0 then
+			s.dirty = true
+			saveSoon(s)
+		end
+		local view = Cash.view(s.acct, now, s.passes, s.hero.level, CashServer.prices())
+		view.ok = got > 0
+		view.got = got
+		view.why = if got > 0 then nil else "받을 보상이 없다"
+		return view
+	elseif a == "rename" then
+		local h = s.hero
+		local c = s.cid and Account.find(s.acct, s.cid)
+		if not h or not c then
+			return { ok = false, why = "캐릭터로 들어간 뒤에 쓴다" }
+		elseif Bag.count(h, "bm_rename") <= 0 then
+			return { ok = false, why = "이름 바꾸기 주문서가 없다" }
+		elseif typeof(b) ~= "string" or b == c.name then
+			return { ok = false, why = "새 이름을 적어 주세요" }
+		end
+		local ok, why = nameFree(s, b, c.id)
+		if ok then
+			ok, why = claim(s, b)
+		end
+		if not ok then
+			return { ok = false, why = why }
+		end
+		local old = c.name
+		Bag.take(h, "bm_rename", 1)
+		c.name, s.name = b, b
+		if old ~= "" then
+			pcall(Store.freeName, Account.nameKey(old), player.UserId)
+		end
+		markName(s)
+		s.rankSent = nil
+		pushRank(s)
+		sendBag(s)
+		sendSelf(s)
+		saveNow(s)
+		return { ok = true, name = b }
+	end
+	return { ok = false, why = "모르는 요청" }
+end
+
 function World.start()
 	-- 플레이어 데이터 기록(server/lune/modules/analytics.luau): 관리자 · 확인용 캐릭터 · 봇은 적지 않는다. 달돈 · 진행을 바꾸는 요청은 Analytics.wrap으로 감싼다(무엇이 달돈을 바꿨는가)
 	Analytics.init({
@@ -3860,6 +4105,20 @@ function World.start()
 		end,
 	})
 	listenSold() -- 다른 서버에서 내 서버의 사람의 물건이 팔렸다는 알림(2026-10-18)
+	-- 달빛 상점 안(s.shop)에서는 받지 않는 일 — 움직임 · 기술 · 줍기 · 물약 · 문 · 경매장 · 퀘스트 · 아이템 …(맵에서 빠져 있다 — 2026-10-21)
+	local function outside(fn)
+		return function(player, ...)
+			local s = sessions[player]
+			if s and s.shop then
+				return nil
+			end
+			return fn(player, ...)
+		end
+	end
+	World.outside = outside
+	onMove, onTravel, onTut, onCine, onHop, onSkill, onReturn = outside(onMove), outside(onTravel), outside(onTut), outside(onCine), outside(onHop), outside(onSkill), outside(onReturn)
+	onPickup, onPetPick, onPotion, onDaily, onBond, onRift, onSail = outside(onPickup), outside(onPetPick), outside(onPotion), outside(onDaily), outside(onBond), outside(onRift), outside(onSail)
+	onItem, onQuest = outside(onItem), outside(onQuest)
 	Net.OnServer("Ready", onReady)
 	Net.OnServer("Move", onMove)
 	Net.OnServer("Travel", Analytics.wrap("Travel", onTravel, World.session))
@@ -3869,6 +4128,7 @@ function World.start()
 	Net.OnServer("Skill", Analytics.wrap("Skill", onSkill, World.session))
 	Net.OnServer("Return", Analytics.wrap("Return", onReturn, World.session))
 	Net.OnServer("Pickup", Analytics.wrap("Pickup", onPickup, World.session))
+	Net.OnServer("PetPick", Analytics.wrap("PetPick", onPetPick, World.session))
 	Net.OnServer("Potion", Analytics.wrap("Potion", onPotion, World.session))
 	Net.OnServer("Chars", onChars)
 	Net.OnServer("Rank", onRank)
@@ -3883,6 +4143,32 @@ function World.start()
 	Net.OnServer("Rift", Analytics.wrap("Rift", onRift, World.session))
 	Net.OnServer("Sail", Analytics.wrap("Sail", onSail, World.session))
 	Net.OnServer("Market", Analytics.wrap("Market", onMarket, World.session))
+	Net.OnServer("Cash", Analytics.wrap("Cash", onCash, World.session))
+	-- 로블록스 결제: 산 것은 이 셈으로만 준다(server/lune/modules/cash.luau)
+	CashServer.start({
+		sessionOf = function(userId)
+			return byUser[userId]
+		end,
+		saveNow = saveNow,
+		afterSpent = function(s)
+			if Admin.is(s.player) or s.guest then
+				return -- 관리자 계정은 후원 판에 올리지 않는다(2026-10-15)
+			end
+			local key = Rank.userKey(s.player.UserId)
+			if s.name ~= "" then
+				pcall(Store.rankInfoSet, key, { name = s.name, class = if s.hero then s.hero.class else false }, false)
+			end
+			pcall(Store.rankSet, "robux", key, s.acct.spent, false)
+			rankCache = nil
+		end,
+		notify = function(s, key)
+			fire("CashGot", s.player, key)
+			if (Cash.PET[key] or Cash.MOUNT[key]) and s.scene then
+				sendWho(s.scene) -- 산 펫을 바로 꺼냈다(꺼내 둔 것이 없었으면) — 다른 사람의 화면에도
+			end
+		end,
+		now = os.time,
+	})
 	Net.OnServer("Item", Analytics.wrap("Item", onItem, World.session))
 	Net.OnServer("Party", onParty)
 	Net.OnServer("Quest", Analytics.wrap("Quest", onQuest, World.session))

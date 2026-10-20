@@ -119,6 +119,11 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		unselect()
 	end
 	local function use(entry)
+		local g = Items.goods(entry.item)
+		if g and g.kind == "bmRename" and ctx.openRename then
+			ctx.openRename() -- 이름 바꾸기 주문서: 새 이름을 적는 칸(상점 창 — 이름이 바뀔 때 서버가 주문서를 쓴다)
+			return
+		end
 		ctx.send("Potion", entry.item)
 	end
 	-- 팔 때 묻는 것: 장비는 팔지 말지만, 묶음은 몇 개를(처음에는 전부). 팔 수 없는 것(퀘스트의 물건)은 nil

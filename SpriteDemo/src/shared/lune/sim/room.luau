@@ -1921,7 +1921,7 @@ function Room.dropView(d)
 end
 
 -- 줍는다. 주웠으면 그 물건을, 아니면 nil과 까닭을 돌려준다.
-function Room:pickup(hero, dropId: number)
+function Room:pickup(hero, dropId: number, reach: number?)
 	local d = self.drops[dropId]
 	if not d then
 		return nil, "없음"
@@ -1929,7 +1929,8 @@ function Room:pickup(hero, dropId: number)
 	if not hero.alive then
 		return nil, "쓰러짐"
 	end
-	if math.abs(d.x - hero.x) > RULES.pickup or math.abs(d.y - hero.y) > RULES.pickup + 12 then
+	local r = reach or RULES.pickup -- reach = 펫이 줍는 거리(영웅에게서 — design/ride.js의 pet.reach · 2026-10-20)
+	if math.abs(d.x - hero.x) > r or math.abs(d.y - hero.y) > r + 12 then
 		return nil, "멀다"
 	end
 	if d.owner ~= hero.id and not (d.friends and d.friends[hero.id]) and self.time - d.born < RULES.dropOwn then

@@ -93,6 +93,7 @@ L.RIFT_HUD = D.riftHud -- 토벌 중 화면 위 가운데의 판(w x h · y)
 L.RIFT_END = D.riftEnd -- 토벌이 끝났을 때 가운데의 판(w · 줄 row · pad)
 L.TOME = D.tome -- 모험의 서(2026-10-16): 이름과 %(headY) · 띠(barY · barH) · 칸 다섯(partY · partRow · partBarX · partBarW) · 보상 다섯(rewardY · rewardH) · 몬스터(mobY · mobRow)
 L.ACHIEVE = D.achieve -- 업적(2026-10-15): 점수 · 등급의 띠(barY · barH) · 탭(tabY) · 줄의 스크롤(listY · row x rows · 오른쪽 sideW · 「받기」 btnW · 진행 띠 barW · 막대 scrollW) · 「모두 받기」(footY · allW)
+L.CASH = D.cash -- 달빛 상점(2026-10-20): 안내 · 탭(tabY) · 줄의 스크롤(listY · row x rows) — 줄 = [그림 칸 iconS] 이름 · 꼬리표 / 설명(textX부터 sideW 앞까지) / 횟수(countY) · 오른쪽 값(priceY) · 단추(btnY · btnW) · 패스 탭(passY · passRow) · 「모두 받기」(footY · allW) · 이름 바꾸기(renameY · renameH)
 L.SOUND = D.sound -- 소리 설정: 줄마다 이름(labelW) · 「−」(btn) · 칸 steps개(seg x barH · 사이 gap) · 「+」 · %(pctW). 아래 muteY에 「모두 끄기 / 켜기」(muteW)
 L.CRAFT = D.craft -- 제작(대장장이): 탭(tabH) 아래에 장비마다 한 줄(row) — 윗줄 = [아이콘 칸] 이름 · [달돈] 삯(feeW) · 「제작」(makeW x makeH), 아랫줄 = 재료 둘([그림] 이름 가진 수/드는 수 — 하나에 matW)
 L.STAT = D.stat -- 능력치 창: 속의 폭 · 줄(top부터 row씩) · 주/부의 자리 · 값의 오른쪽 끝 · + 단추의 폭 · tip = 능력치에 마우스를 올렸을 때 창 옆에 뜨는 설명 판

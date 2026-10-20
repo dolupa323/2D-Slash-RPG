@@ -38,6 +38,10 @@ local ViewOpts = require(script.Parent.viewOpts) -- 화면 설정: 다른 사람
 local DailyWindow = require(script.Parent.ui.dailyWindow) -- 일일 의뢰(마을의 의뢰 게시판 앞에서 ↑)
 local AttendWindow = require(script.Parent.ui.attendWindow) -- 출석(메뉴 → 「출석」 · 그날 처음 들어오면 한 번 — 2026-10-15)
 local AchieveWindow = require(script.Parent.ui.achieveWindow) -- 업적(메뉴 → 「업적」 — 2026-10-15)
+local CashWindow = require(script.Parent.ui.cashWindow) -- 달빛 상점(메뉴 → 「달빛 상점」 — 로벅스 상점 2026-10-20)
+local CashShop = require(script.Parent.cashShop) -- 달빛 상점의 공간(2026-10-21 — 메이플 캐시샵처럼 들어가는 곳 · 마을에서만)
+local Town = require(lune.sim.town) -- 마을인가(달빛 상점 · 경매장은 마을에서만 — 2026-10-21)
+local RideView = require(script.Parent.rideView) -- 펫 · 탈것(2026-10-20)
 local VoyageView = require(script.Parent.voyageView) -- 배의 갑판에서 「○○까지 n초」(2026-10-16)
 local VistaView = require(script.Parent.vistaView) -- 성의 테라스에 들어서면 화면 가득 잠깐 보이는 경관(2026-10-16 밤)
 local TomeWindow = require(script.Parent.ui.tomeWindow) -- 모험의 서(메뉴 → 「모험의 서」 — 2026-10-16)
@@ -260,6 +264,11 @@ local function crystalGone(id: number)
 	end
 end
 
+-- 내 펫이 떨어진 것에 닿았다(2026-10-20 — rideView.luau): 서버가 펫을 꺼내 두었는지 · 영웅에게서 가까운지 · 주인을 확인하고 줍는다(world.luau의 onPetPick)
+local function petPick(id: number)
+	Net.FireServer("PetPick", id)
+end
+
 -- 막이 걷힌 뒤(2026-10-18): 경관이 있는 곳이면 경관(제 이름을 띄운다 — 맵 이름은 겹치므로 띄우지 않는다), 아니면 맵 이름
 local function afterLift()
 	local v = state.vistaPending
@@ -278,6 +287,9 @@ local function enterScene(key: string, x: number, y: number, room)
 		CineView.stop()
 	end
 	state.cineQueue = {}
+	if Windows.isOpen("auction") and not Town.is(key) then
+		Windows.close("auction") -- 경매장은 마을에서만(2026-10-21) — 마을 밖으로 나가면 닫는다
+	end
 	Talk.hush() -- 주민의 혼잣말 말풍선(화면 틀의 층에 있어 맵을 지워도 남는다)
 	HallStones.leave()
 	-- 이전 장면의 것을 치운다. 하나를 치우다 오류가 나도 나머지를 마저 치우고 새 장면을 그린다 — 치우기는 이 함수의 맨 앞이라, 여기서 멈추면 새 장면이 통째로 안 그려진다
@@ -291,6 +303,7 @@ local function enterScene(key: string, x: number, y: number, room)
 		end
 	end
 	clear("내 캐릭터", state.sprite, "destroy")
+	clear("펫 · 탈것", state.ride, "destroy")
 	clear("몬스터", state.mobs, "destroy")
 	clear("보스", state.boss, "destroy")
 	clear("이펙트", state.fx, "destroy")
@@ -313,6 +326,16 @@ local function enterScene(key: string, x: number, y: number, room)
 		state.body.run, state.body.jump = state.me.run or 1, state.me.jump or 1 -- 걸음 · 뛰는 힘의 배수(패시브)는 장면이 바뀌어도 그대로
 	end
 	state.sprite = Sprite.new(state.view.heroLayer, state.who)
+	-- 내 펫 · 탈것: 들어선 방의 이름표(room.who)에서 읽는다(2026-10-21 사용자 "펫은 게임 종료할때 소환되어있는게 게임 종료하고 재접속하면 그대로 소환 되어야하고" —
+	--  서버는 꺼내 둔 펫을 저장하고 이름표에 실어 보냈지만, 화면은 따로 오는 Who에서만 읽어 접속한 뒤 누가 드나들기 전까지 펫이 없었다)
+	for _, w in (room and room.who) or {} do
+		if state.myId ~= nil and w.id == state.myId then
+			state.myPet, state.myRide = w.pet or nil, w.ride or nil
+		end
+	end
+	state.ride = RideView.new(state.view.heroLayer, 1, scene) -- 내 펫 · 탈것(영웅의 ZIndex 1 — 탈것 · 펫은 그 뒤, 탈것의 등은 그 앞 · 펫은 이 맵의 땅 위를 걷는다)
+	state.ride:setPet(state.myPet)
+	state.ride:setRide(state.myRide)
 	state.mobs = MobsView.new(state.view.mobLayer, room, state.over)
 	RiftView.enter(room.rift) -- 토벌의 방이면 위 가운데의 판(아니면 숨긴다)
 	if not Voyage.onShip(key) then
@@ -329,7 +352,7 @@ local function enterScene(key: string, x: number, y: number, room)
 	if state.drawQuests then
 		state.drawQuests()
 	end
-	state.others = Others.new(state.view.heroLayer, state.over, state.myId, scene.ladders) -- 사다리 위의 다른 사람은 오르기 동작으로(2026-10-16 밤)
+	state.others = Others.new(state.view.heroLayer, state.over, state.myId, scene.ladders, scene) -- 사다리 위의 다른 사람은 오르기 동작으로(2026-10-16 밤) · 그 사람의 펫도 이 맵의 땅 위를 걷는다
 	state.others.graveLayer = state.view.graveLayer
 	state.others:setWho(room.who or {})
 	state.grave = Grave.new(state.view.graveLayer) -- 내 비석(쓰러졌을 때만 보인다)
@@ -999,7 +1022,10 @@ local function step()
 		for _, from in { { "slot:", state.slots }, { "tslot:", state.touchSlots } } do
 			if Input.take(from[1] .. i) then
 				local what = from[2][i]
-				if what and Quick.item(what) then
+				local goods = what and Quick.item(what) and Items.goods(what)
+				if goods and goods.kind == "bmRename" then
+					Windows.open("cash", "rename", true) -- 이름 바꾸기 주문서: 새 이름을 적는 칸(이름이 바뀔 때 서버가 주문서를 쓴다)
+				elseif what and Quick.item(what) then
 					Net.FireServer("Potion", what) -- 소비 아이템: 그 칸에 놓인 바로 그 아이템을 쓴다
 				elseif what then
 					trySkill(what, from[1] .. i) -- 그 칸의 키(힘을 모을 때 누르고 있는지 본다)
@@ -1010,10 +1036,32 @@ local function step()
 	if Input.take("potion") then
 		Net.FireServer("Potion")
 	end
+	-- 탈것 타기 · 내리기(N — 제가 정한 키 · 2026-10-20): 고른 탈것으로(없으면 알린다 — 상점에서 산다)
+	if Input.take("ride") and not state.dead then
+		task.spawn(function()
+			local want = if state.myRide then false else (state.cash and state.cash.mount) or nil
+			if want == nil then
+				local ok, res = pcall(Net.Invoke, "Cash", "view")
+				if ok and res and res.list then
+					state.cash = res
+					want = res.mount or nil
+				end
+			end
+			if want == nil and state.fx and state.body then
+				state.fx:float(CashWindow.WORDS.noMount, state.body.x, state.body.y - 46, Effects.MINT, 1.6)
+				return
+			end
+			local ok, res = pcall(Net.Invoke, "Cash", "ride", want)
+			if ok and res and res.list then
+				state.cash = res
+				Windows.refresh(state.me)
+			end
+		end)
+	end
 	-- 창을 여는 키(아직 열리지 않은 창은 Windows가 열어 주지 않는다 — 누른 키는 여기서 받아 버린다)
 	for _, w in Windows.all() do
 		if Input.take("win:" .. w.id) then
-			Windows.toggle(w.id)
+			state.openWin(w.id)
 		end
 	end
 	-- 줍기: 누르고 있으면 가까운 것부터 차례로
@@ -1263,7 +1311,20 @@ local function draw(dt: number)
 	-- 이펙트를 돌리는 쪽에 내 모습을 알린다(자리 · 보는 쪽 · 지금의 동작과 장 · 배운 스킬 · 켜 둔 사출기)
 	local cast, me = state.cast, state.actor
 	-- 몸을 그린다 — 버프가 입히는 모습까지(거신의 두 배 · 비치는 몸 · 실루엣 · 윤곽을 따라 도는 빛 · 얹는 색): cast.luau의 look
-	cast:look(me, state.sprite, poseClip, poseFrame, body.x, body.y, state.dir, alpha)
+	-- 탈것: 탄 동안 영웅은 서기 모습으로 앉는 자리에(사다리 위 · 기술 중 · 쓰러짐 · 맞음에는 탈것을 감추고 제 동작 그대로 — rideView.luau)
+	local hx, hy = body.x, body.y
+	if state.ride then
+		local hide = body.climb ~= nil or sk ~= nil or state.dead or state.hurtT > 0
+		-- 내 펫은 떨어진 것에 닿으면 서버에 알린다(PetPick — 서버가 거리 · 주인을 확인하고 줍는다)
+		local rx, ry = state.ride:update(state.now, dt, body.x, body.y, state.dir, math.abs(body.vx or 0) > 1, not body.ground, hide, state.fx and state.fx.drops, petPick)
+		if rx then
+			hx, hy = rx, ry
+			if not held then
+				poseClip, poseFrame = "idle", Sprite.frameAt(char, "idle", state.now, false)
+			end
+		end
+	end
+	cast:look(me, state.sprite, poseClip, poseFrame, hx, hy, state.dir, alpha)
 	-- 쓰러지는 동작이 끝나면 몸 대신 비석이 선다
 	local downFor = if state.dead then state.deadT - #char.clips.death.frames / char.clips.death.fps else -1
 	if downFor >= 0 then
@@ -1565,6 +1626,11 @@ paintBuffs = function()
 	if weak > 0 and not state.dead then
 		table.insert(list, { pic = "buff_death", text = if weak >= 60 then ("%d분"):format(math.ceil(weak / 60)) else tostring(math.ceil(weak)), tip = { kind = "none", title = BUFFTIP.weak.title, tag = "", lines = { BUFFTIP.weak.text, leftText(weak), BUFFTIP.weak.hint } } })
 	end
+	-- 경험치 쿠폰(유료 — 2026-10-20): 쿠폰 그림 · 남은 시간(게임 안에 있는 동안만 준다 — 서버의 Hero.tick)
+	local expLeft = (state.expLeft or 0) - (state.now - (state.expAt or state.now))
+	if expLeft > 0 and BUFFTIP.exp then
+		table.insert(list, { pic = "buff_exp", text = if expLeft >= 60 then ("%d분"):format(math.ceil(expLeft / 60)) else tostring(math.ceil(expLeft)), tip = { kind = "none", title = BUFFTIP.exp.title, tag = "", lines = { BUFFTIP.exp.text, leftText(expLeft), BUFFTIP.exp.hint } } })
+	end
 	Hud.setBuffs(list)
 	QuestHud.setBuffs(#list > 0) -- 퀘스트 알리미는 버프가 없을 때만 그 자리로 올라붙는다
 end
@@ -1576,6 +1642,7 @@ local function listen()
 		local jobWas = state.me and state.me.job
 		state.me = me
 		state.weakLeft, state.weakAt = me.weak or 0, state.now -- 쓰러진 벌칙(약해짐)의 남은 초 — 받은 때부터 화면이 센다(paintBuffs)
+		state.expLeft, state.expAt = me.expLeft or 0, state.now -- 경험치 쿠폰(유료)의 남은 초
 		if jobWas and me.job and me.job > jobWas and state.onJob then
 			state.onJob(me) -- 전직했다: 윗차수의 사냥기 · 보스기가 놓인 칸을 서버의 것으로 맞춘다
 		elseif state.onJob and me.slots and me.skills then
@@ -1814,6 +1881,16 @@ local function listen()
 	end)
 	-- 같은 맵의 다른 사람들: 이름표 · 자리 · 기술
 	Net.OnClient("Who", function(key, roster)
+		-- 내 펫 · 탈것(서버가 정한 것 — 펫을 꺼냈다 · 탔다 · 기술을 써서 내렸다)
+		for _, w in roster do
+			if w.id == state.myId then
+				state.myPet, state.myRide = w.pet or nil, w.ride or nil
+				if state.ride then
+					state.ride:setPet(state.myPet)
+					state.ride:setRide(state.myRide)
+				end
+			end
+		end
 		if key == state.sceneKey and state.others then
 			local before = {}
 			for id in state.others.list do
@@ -2086,7 +2163,7 @@ function Boot.start()
 
 	-- 처음 화면에 쓰는 그림(제목 · 캐릭터 · 화면 부품 · 글자판)만 먼저 불러온다 — 나머지는 로딩 화면이 뜬 채로 불러온다
 	Hud.root.Visible = false
-	preload({ "title_", "chars_", "ui_kit", "font_" }, nil)
+	preload({ "title_", "chars_", "ui_kit", "font_", "shop_" }, nil) -- shop_ = 달빛 상점의 배경(2026-10-21 — 처음에 받아 두어 상점에 들어갈 때 기다림이 거의 없게)
 	local first = Net.Invoke("Ready")
 	for _ = 1, 30 do -- 서버가 아직 계정을 읽는 중이었다(답이 비었다): 조금 뒤 다시 묻는다(2026-10-18 검토 — 전에는 검은 화면에 멈췄다 · 서버는 잠긴 계정을 40초까지 기다린다)
 		if first then
@@ -2144,6 +2221,7 @@ function Boot.start()
 		table.clear(state.cineQueue)
 		state.cineScene = nil
 		state.weakLeft, state.weakAt = got.self.weak or 0, state.now
+		state.expLeft, state.expAt = got.self.expLeft or 0, state.now
 		TutView.reset()
 		do
 			local me = got.self
@@ -2249,7 +2327,7 @@ function Boot.start()
 			toggleMore()
 		else
 			closeMore()
-			Windows.toggle(id)
+			state.openWin(id)
 		end
 	end
 	-- 키가 적힌 자리(스킬 칸 · 메뉴 단추 · 물약 칸)를 지금의 키로 다시 적는다
@@ -2539,6 +2617,7 @@ function Boot.start()
 				{ action = "down", name = "아래 발판" },
 				{ action = "jump", name = "뛰기" },
 				{ action = "pickup", name = "줍기" },
+				{ action = "ride", name = "탈것 타기 · 내리기" },
 			}
 			for _, w in Windows.list() do
 				table.insert(out, { action = "win:" .. w.id, name = w.name })
@@ -2648,6 +2727,34 @@ function Boot.start()
 			state.ach = res.view
 			return res
 		end,
+		-- 달빛 상점(2026-10-20): 서버의 상점 상태(Cash.view — 상품마다 살 수 있나 · 산 수 · 보관함) · 구매(서버가 한도를 보고 로블록스의 구매 창을 띄운다) · 받기 · 이름 바꾸기
+		cash = function()
+			return state.cash
+		end,
+		cashFetch = function()
+			task.spawn(function()
+				local ok, res = pcall(Net.Invoke, "Cash", "view")
+				if ok and res and res.list then
+					state.cash = res
+					if state.me then
+						Windows.refresh(state.me)
+					end
+				end
+			end)
+		end,
+		cashDo = function(action: string, a: any)
+			local ok, res = pcall(Net.Invoke, "Cash", action, a)
+			if not ok or not res then
+				return nil
+			end
+			if res.list then
+				state.cash = res -- 받기는 새 상태를 같이 준다
+			end
+			return res
+		end,
+		openRename = function()
+			Windows.open("cash", "rename", true) -- 가방에서 이름 바꾸기 주문서를 썼다 → 이름을 적는 칸
+		end,
 		-- 일일 의뢰: 서버가 준 상태 · 받기와 내기(서버가 정한다 — 게시판 앞이어야 한다)
 		daily = function()
 			return state.daily
@@ -2754,6 +2861,82 @@ function Boot.start()
 	Windows.register("daily", DailyWindow) -- 일일 의뢰(마을의 의뢰 게시판 앞에서 ↑)
 	Windows.register("attend", AttendWindow) -- 출석(메뉴 → 「출석」 · 그날 처음 들어오면 한 번)
 	Windows.register("achieve", AchieveWindow) -- 업적(메뉴 → 「업적」)
+	Windows.register("cash", CashWindow) -- 달빛 상점의 판(창으로는 이름 바꾸기 칸만 — 가방에서 이름 바꾸기 주문서를 쓰면. 상점은 들어가는 공간: cashShop.luau)
+	-- 달빛 상점의 공간(2026-10-21 사용자 "메이플스토리 캐시샵처럼 아예 무적공간으로 들어가버리는 형태 … 캐시샵은 마을에서만"): 창 ctx에 더한 것
+	local function notice(text: string?)
+		if text and state.fx then
+			state.fx:float(text, state.body.x, state.body.y - 46, Effects.MINT, 1.6)
+		end
+	end
+	local touchWas = true
+	state.shopCtx = setmetatable({
+		who = function()
+			return state.who
+		end,
+		myPet = function()
+			return state.myPet
+		end,
+		myRide = function()
+			return state.myRide
+		end,
+		invoke = function(action: string)
+			local ok, res = pcall(Net.Invoke, "Cash", action)
+			return if ok then res else nil
+		end,
+		notice = notice,
+		townOk = function()
+			return Town.is(state.sceneKey) and not state.dead and not state.busy and not CineView.active()
+		end,
+		setCash = function(res)
+			state.cash = res
+		end,
+		onOpen = function()
+			-- 들어간다: 열린 창 · 메뉴를 닫고 · 움직이지 않게 · 게임 화면과 HUD를 숨긴다(공간이 화면을 다 덮는다 — 그 뒤의 것을 그리지 않게)
+			if state.closeMore then
+				state.closeMore()
+			end
+			for _, w in Windows.all() do
+				if Windows.isOpen(w.id) then
+					Windows.close(w.id)
+				end
+			end
+			state.busy = true
+			Hud.root.Visible = false
+			local touch = Stage.ui:FindFirstChild("Touch")
+			if touch then
+				touchWas = touch.Visible
+				touch.Visible = false
+			end
+			Stage.view.Visible = false
+		end,
+		onClose = function()
+			Hud.root.Visible = true
+			local touch = Stage.ui:FindFirstChild("Touch")
+			if touch then
+				touch.Visible = touchWas
+			end
+			Stage.view.Visible = true
+			state.busy = false
+		end,
+		afterLeave = function()
+			-- 서버가 들어간 자리로 다시 보낸다(Revive → goScene). 끝내 오지 않으면 3초 뒤에 막을 걷는다
+			task.delay(3, function()
+				if Curtain.covered() and not sceneRunning then
+					Curtain.lift()
+				end
+			end)
+		end,
+	}, { __index = Windows.context() })
+	-- 창 · 공간을 연다(단추 줄 · 메뉴 · 키): 달빛 상점 = 들어가는 공간 · 경매장 = 마을에서만(2026-10-21 사용자 "경매장도 마을에서만 갈수있어야하구요")
+	state.openWin = function(id: string)
+		if id == "cash" then
+			CashShop.enter(state.shopCtx)
+		elseif id == "auction" and not Windows.isOpen("auction") and not Town.is(state.sceneKey) then
+			notice(Market.WHY.town)
+		else
+			Windows.toggle(id)
+		end
+	end
 	Windows.register("tome", TomeWindow) -- 모험의 서(메뉴 → 「모험의 서」 — 2026-10-16)
 	Windows.register("rift", RiftWindow) -- 수정 틈 토벌(토벌대장 앞에서 ↑ — 2026-10-16)
 	Windows.register("auction", AuctionWindow) -- 경매장(메뉴 · Y — 메이플 옥션 방식. 은달 항구의 경매사 앞에서 ↑로도)
@@ -3027,6 +3210,29 @@ function Boot.start()
 	end)
 	Net.OnClient("BondView", function(view, note)
 		state.setBond(view, note)
+	end)
+	-- 로벅스로 산 것이 보관함에 들어왔다(서버의 ProcessReceipt가 저장까지 마친 뒤 — 2026-10-20): 가운데 위 알림 · 상점 창을 고쳐 그린다
+	Net.OnClient("CashGot", function(key)
+		local p = nil
+		for _, q in CashWindow.PRODUCTS do
+			if q.id == key then
+				p = q
+			end
+		end
+		if p then
+			local W = CashWindow.WORDS
+			Guide.banner(CashWindow.TITLE, if key == "charx" then W.gotSlot elseif key == "pass" then W.gotPass elseif string.sub(key, 1, 4) == "pet_" or string.sub(key, 1, 6) == "mount_" then Format.fill(W.gotOwn, { name = p.name }) else Format.fill(W.got, { name = p.name }), 3)
+		end
+		task.spawn(function()
+			local ok, res = pcall(Net.Invoke, "Cash", "view")
+			if ok and res and res.list then
+				state.cash = res
+				CashShop.refresh(state.me) -- 달빛 상점 안이면 그 판도
+				if state.me and Windows.isOpen("cash") then
+					Windows.refresh(state.me)
+				end
+			end
+		end)
 	end)
 	Net.OnClient("AchDone", function(ids)
 		if typeof(ids) ~= "table" then
@@ -3319,6 +3525,12 @@ function Boot.start()
 			step()
 		end
 		draw(dt)
+		if CashShop.isOpen() then
+			CashShop.step(state.now, dt) -- 달빛 상점의 미리보기(내 캐릭터 · 펫 · 탈것)
+			if Input.take("win:cash") then
+				CashShop.leave(state.shopCtx) -- ` 키를 한 번 더: 나온다
+			end
+		end
 		Hud.step(dt) -- 체력 바의 효과
 		QuestHud.step(state.now) -- 켠 길찾기 단추의 빛
 		-- 길찾기의 화살표: 켜 둔 퀘스트의 지금 진행에 맞는 쪽을 머리 위에(쓰러졌거나 장면을 바꾸는 중에는 숨긴다)

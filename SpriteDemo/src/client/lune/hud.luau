@@ -31,7 +31,7 @@ local function touching(): boolean
 	return UIS:GetLastInputType() == Enum.UserInputType.Touch
 end
 -- 메뉴 단추의 그림(창의 이름표 → 그림)
-local MENU_PIC = { bag = "menu_bag", equip = "menu_equip", stat = "menu_stat", skill = "menu_skill", quest = "menu_quest", map = "menu_map", auction = "menu_auction", party = "menu_party", more = "menu_gear" }
+local MENU_PIC = { bag = "menu_bag", equip = "menu_equip", stat = "menu_stat", skill = "menu_skill", quest = "menu_quest", map = "menu_map", auction = "menu_auction", party = "menu_party", cash = "menu_shop", more = "menu_gear" } -- cash = 달빛 상점(2026-10-21 — 단추 줄에)
 
 local Hud = {}
 Hud.COLS, Hud.ROWS = COLS, ROWS

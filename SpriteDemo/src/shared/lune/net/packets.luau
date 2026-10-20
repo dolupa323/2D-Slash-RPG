@@ -67,6 +67,8 @@ local packets = {
 	--  "buy" 사기(장부, 줄, 수, 본 값) · "settle" 내 것 하나(번호, "take" 수령 · "collect" 대금 수령 · "back" 취소 / 반환 · "relist" 재등록) · "all" 모두 받기
 	--  돌려주는 값 { ok, why, msg, rows(목록) · trades(시세) · board, mine(내 것), used · max(판매 수), now } — server/lune/modules/world.luau의 onMarket · 셈은 sim/market.luau
 	Market = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any, t.any }, RateLimit = { PerSecond = 3, Burst = 6 } },
+	-- 유료 상품의 창(2026-10-20): "view" · "buy"(상품) · "take"(보관함의 줄) · "rename"(새 이름) — 산 것은 로블록스의 ProcessReceipt가 준다(server/lune/modules/cash.luau)
+	Cash = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 3, Burst = 6 } },
 	-- 소리 설정을 저장한다 { music = 0~10, sfx = 0~10, on = 켰는가 } — 꼴은 서버가 다시 본다(계정에 저장 — sim/account.luau의 setSound)
 	Sound = { Kind = "Event", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 12 } },
 	-- 퀵슬롯을 바꿨다: 칸들 전체 { "potion" · 스킬의 이름표 · false … } — 꼴과 놓아도 되는 스킬인지는 서버가 다시 본다. 돌려주는 값 = 서버가 가진 칸들(받아들였으면 보낸 것, 아니면 예전 것)
@@ -87,6 +89,8 @@ local packets = {
 	Skill = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number, t.number, t.number, t.dir }, RateLimit = { PerSecond = 8, Burst = 10 } },
 	-- 떨어진 것을 줍는다(물건 번호)
 	Pickup = { Kind = "Event", Direction = "ClientToServer", Args = { t.number }, RateLimit = { PerSecond = 10, Burst = 15 } },
+	-- 내 펫이 떨어진 것에 닿았다(물건 번호 — 2026-10-20). 서버가 펫을 꺼내 두었는지 · 영웅에게서 가까운지 · 주인을 확인하고 줍는다(펫은 0.3초에 하나)
+	PetPick = { Kind = "Event", Direction = "ClientToServer", Args = { t.number }, RateLimit = { PerSecond = 6, Burst = 8 } },
 	-- 확인용(Studio에서만 듣는다): "xp" 경험치를 준다 · "money" 달돈을 준다 · "hp" 체력을 정한다 · "reset" 캐릭터를 지운다(직업 고르기부터 다시)
 	Debug = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number }, RateLimit = { PerSecond = 5, Burst = 5 } },
 	-- 관리자의 시험용 명령(하는 일, 값 셋). 서버가 보낸 사람의 계정 번호로 관리자인지 올 때마다 다시 가린다 — 관리자가 아니면 아무 일도 하지 않고 nil(server/lune/modules/admin.luau)
@@ -96,6 +100,7 @@ local packets = {
 
 	-- ===== 서버 → 클라이언트 =====
 	Self = { Kind = "Event", Direction = "ServerToClient", Doc = "내 상태(sim/hero.luau의 view)" },
+	CashGot = { Kind = "Event", Direction = "ServerToClient", Doc = "유료 상품을 받았다(구매 보관함이 바뀌었다) — 상품 이름표(2026-10-20)" },
 	Snap = { Kind = "Event", Direction = "ServerToClient", Doc = "장면 이름, 졸개 목록 { id, x, dir, 상태, 상태가 된 뒤 흐른 시간, 체력 }" },
 	Hits = { Kind = "Event", Direction = "ServerToClient", Doc = "누가(userId), 맞은 졸개 목록 { mob, dmg, hp, dead, big, crit, proc(사출기 · 장치의 타), sx, sy(그것이 날아오는 자리), mark(표식의 남은 초) }" },
 	Hurt = { Kind = "Event", Direction = "ServerToClient", Doc = "내가 맞았다 { dmg, hp, from, dead }" },

@@ -13,6 +13,7 @@ Input.BIND = {
 	down = Enum.KeyCode.Down,
 	jump = Enum.KeyCode.Space,
 	pickup = Enum.KeyCode.Z, -- 떨어진 것 줍기(누르고 있으면 차례로 줍는다)
+	ride = Enum.KeyCode.N, -- 탈것 타기 · 내리기(2026-10-20 — 제가 정한 키: 다른 일이 쓰지 않는 글쇠)
 }
 -- 물약과 기술의 키는 여기에 없다 — 키는 퀵슬롯의 칸에 붙는다("slot:<칸>" — boot.luau가 묶는다). 스마트폰 단추는 "potion" · "skill:<기술 id>"를 그대로 누른다(키 없이 Input.press로)
 

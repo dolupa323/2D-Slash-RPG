@@ -10,6 +10,7 @@ local Sprite = require(script.Parent.sprite)
 local Grave = require(script.Parent.grave)
 local Ui = require(script.Parent.ui.ui)
 local Overlay = require(script.Parent.overlay)
+local RideView = require(script.Parent.rideView) -- 펫 · 탈것(2026-10-20)
 
 local WHITE = Ui.COLOR.text
 local MINT = Ui.COLOR.accent
@@ -25,9 +26,10 @@ function Others.tagText(_level: number, name: string): string
 	return name
 end
 
-function Others.new(heroLayer: Frame, tagLayer: Frame, myId: any, ladders: any)
+function Others.new(heroLayer: Frame, tagLayer: Frame, myId: any, ladders: any, scene: any)
 	local self = setmetatable({}, Others)
 	self.ladders = ladders or {} -- 이 장면의 사다리(사다리 위에 있으면 오르기 동작 — 2026-10-16 밤)
+	self.scene = scene -- 이 장면의 칸(그 사람의 펫이 걷는 땅 — rideView)
 	self.heroLayer, self.tagLayer, self.myId = heroLayer, tagLayer, myId
 	self.list = {} -- [번호] = 한 사람
 	self.fx = nil :: any -- 효과(effects.luau) — boot가 넣어 준다. 대쉬의 잔상 · 속도선을 여기에 그린다
@@ -38,6 +40,7 @@ end
 
 local function drop(o)
 	o.sprite:destroy()
+	o.rv:destroy()
 	o.tag:Destroy()
 	if o.grave then
 		o.grave:Destroy()
@@ -74,11 +77,14 @@ function Others:setWho(roster)
 					moveT = -9,
 					airT = -9,
 					act = nil :: any,
+					rv = RideView.new(self.heroLayer, 4, self.scene), -- 그 사람의 펫 · 탈것(영웅의 ZIndex 4 · 펫은 이 맵의 땅 위를 걷는다)
 				}
 				o.sprite.label.Visible = false
 				o.tag.Frame.Visible = false
 				self.list[w.id] = o
 			end
+			o.rv:setPet(w.pet)
+			o.rv:setRide(w.ride)
 			if o.name ~= w.name or o.level ~= w.level then
 				o.name, o.level = w.name, w.level
 				o.tag:SetText(Others.tagText(w.level, w.name))
@@ -220,7 +226,18 @@ function Others:update(now: number, party)
 				clip, frame = "run", Sprite.frameAt(char, "run", now, false)
 			end
 		end
-		o.sprite:set(clip, frame, o.x, o.y, o.dir)
+		-- 탈것: 탄 동안 서기 모습으로 앉는 자리에(사다리 위 · 기술 중 · 쓰러짐에는 감춘다)
+		local hx, hy = o.x, o.y
+		local onRung = false
+		for _, l in self.ladders do
+			onRung = onRung or (math.abs(o.x - l.x) <= 1 and o.y > l.top + 0.5 and o.y < l.bottom - 0.5)
+		end
+		local rx, ry = o.rv:update(now, dt, o.x, o.y, o.dir, now - o.moveT < 0.25, now - o.airT < 0.25, onRung or act ~= nil or not o.alive)
+		if rx then
+			hx, hy = rx, ry
+			clip, frame = "idle", Sprite.frameAt(char, "idle", now + (id % 7) * 0.3, false)
+		end
+		o.sprite:set(clip, frame, hx, hy, o.dir)
 		o.clip, o.frame = clip, frame -- 지금의 동작과 장(boot가 버프의 모습을 그 위에 입힌다 — cast.luau의 look)
 		-- 쓰러진 사람: 쓰러지는 동작이 끝나면 몸 대신 비석이 선다(마을로 돌아가거나 소생을 받을 때까지)
 		local downFor = if o.alive then -1 else now - (o.deadAt or now) - #char.clips.death.frames / char.clips.death.fps

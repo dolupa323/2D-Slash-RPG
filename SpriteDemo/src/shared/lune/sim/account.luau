@@ -10,6 +10,7 @@ local CLASSES = require(lune.data["classes.generated"])
 local Market = require(lune.sim.market) -- 경매장에 맡긴 것의 꼴
 local Attend = require(lune.sim.attend) -- 출석(계정의 것 — 2026-10-15)
 local Achieve = require(lune.sim.achieve) -- 업적(계정의 것 — 2026-10-15)
+local Cash = require(lune.sim.cash) -- 유료 상품(구매 보관함 · 처리한 결제 · 주간 수 · 사서 늘린 칸 — 2026-10-20)
 local NAMES = require(lune.data["names.generated"]) -- 이름의 규칙(공방의 js/lune/design/names.js)
 local SOUND = require(lune.data["ui.generated"]).layout.sound -- 소리 설정의 칸 수(steps) · 처음 크기(start)
 
@@ -53,7 +54,7 @@ end
 function Account.new()
 	-- spent = 이 계정이 게임에 쓴 로벅스(명예의 전당의 후원 판) · sound = 소리 설정
 	-- market = 경매장에 맡긴 것(올린 물건 · 아직 찾지 않은 것 — sim/market.luau). 창고처럼 계정의 캐릭터들이 같이 본다
-	return { next = 1, last = false, chars = {}, store = false, storeGot = {}, broken = {}, spent = 0, sound = Account.soundDefault(), market = Market.newBook(), tutDone = false, att = Attend.new(), ach = Achieve.new() } -- att = 출석(sim/attend.luau) · ach = 업적(sim/achieve.luau) — 계정의 것(2026-10-15) -- tutDone = 이 계정의 캐릭터가 튜토리얼 「달빛 꿈」을 한 번 끝냈다(그 뒤의 새 캐릭터는 건너뛸 수 있다)
+	return { next = 1, last = false, chars = {}, store = false, storeGot = {}, broken = {}, spent = 0, sound = Account.soundDefault(), market = Market.newBook(), tutDone = false, att = Attend.new(), ach = Achieve.new(), bm = Cash.new() } -- att = 출석(sim/attend.luau) · ach = 업적(sim/achieve.luau) — 계정의 것(2026-10-15) -- tutDone = 이 계정의 캐릭터가 튜토리얼 「달빛 꿈」을 한 번 끝냈다(그 뒤의 새 캐릭터는 건너뛸 수 있다)
 end
 
 -- 이름을 견줄 때의 꼴(영문은 소문자로 — Moon과 moon은 같은 이름이다)
@@ -352,8 +353,13 @@ function Account.hasName(acct, name: string, skip: any?): boolean
 	return false
 end
 
+-- 이 계정의 캐릭터 칸: 처음 MAX + 「캐릭터 칸 +1」로 산 것(유료 — 2026-10-20)
+function Account.maxChars(acct): number
+	return Account.MAX + (if acct.bm then acct.bm.slots else 0)
+end
+
 function Account.full(acct): boolean
-	return #acct.chars >= Account.MAX
+	return #acct.chars >= Account.maxChars(acct)
 end
 
 -- 캐릭터를 하나 넣는다(hero = 저장할 꼴의 캐릭터). 꽉 찼으면 nil
@@ -403,7 +409,7 @@ function Account.pack(acct)
 	for _, raw in acct.broken do
 		table.insert(chars, raw)
 	end
-	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, storeGot = acct.storeGot, spent = acct.spent, sound = acct.sound, market = Market.packBook(acct.market), tutDone = acct.tutDone == true, att = Attend.pack(acct.att), ach = Achieve.pack(acct.ach) }
+	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, storeGot = acct.storeGot, spent = acct.spent, sound = acct.sound, market = Market.packBook(acct.market), tutDone = acct.tutDone == true, att = Attend.pack(acct.att), ach = Achieve.pack(acct.ach), bm = Cash.pack(acct.bm) }
 end
 
 function Account.unpack(data: any)
@@ -411,10 +417,12 @@ function Account.unpack(data: any)
 		return nil
 	end
 	local acct = Account.new()
+	-- 유료 상품의 것을 캐릭터보다 먼저 읽는다: 사서 늘린 캐릭터 칸이 있어야 일곱 번째 캐릭터부터가 「읽지 못한 것」으로 빠지지 않는다
+	acct.bm = Cash.unpack(data.bm, Account.MAX)
 	local top = 0
 	for _, raw in data.chars do
 		local fine = typeof(raw) == "table" and whole(raw.id, 1, 9e9) and typeof(raw.name) == "string" and CLASSES.classes[raw.class] ~= nil and typeof(raw.hero) == "table" and not Account.find(acct, raw.id)
-		if fine and #acct.chars < Account.MAX then
+		if fine and #acct.chars < Account.maxChars(acct) then
 			table.insert(acct.chars, { id = raw.id, name = raw.name, class = raw.class, made = if typeof(raw.made) == "number" then raw.made else 0, hero = raw.hero })
 		else
 			table.insert(acct.broken, raw)
@@ -458,7 +466,7 @@ function Account.view(acct)
 		local level = if typeof(c.hero.level) == "number" then c.hero.level else 1
 		table.insert(chars, { id = c.id, name = c.name, class = c.class, level = level })
 	end
-	return { chars = chars, max = Account.MAX, last = acct.last, sound = acct.sound } -- sound = 소리 설정(처음 화면부터 그 크기로 튼다)
+	return { chars = chars, max = Account.maxChars(acct), last = acct.last, sound = acct.sound } -- sound = 소리 설정(처음 화면부터 그 크기로 튼다)
 end
 
 -- 계정이 받은 창고 칸(탭마다 — 2026-10-18): 「창고 칸」 보상을 준 부탁마다 그 보상의 칸 수(quests의 정의를 본다)
@@ -470,6 +478,10 @@ function Account.storeExtra(acct): number
 		if def and (def.reward.store or 0) > 0 then
 			n += def.reward.store
 		end
+	end
+	-- 창고 확장권(유료 — 2026-10-20): 쓴 번 x 한 장의 칸
+	if acct.bm then
+		n += acct.bm.store * Cash.RULES.storeStep
 	end
 	return n
 end
