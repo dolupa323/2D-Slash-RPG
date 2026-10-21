@@ -371,7 +371,7 @@ local function rgb(c: number): Color3
 	return Color3.fromRGB(bit32.rshift(c, 16), bit32.band(bit32.rshift(c, 8), 255), bit32.band(c, 255))
 end
 function Cast:look(a, body, clip: string, frame: number, x: number, y: number, dir: number, fade: number?)
-	local sc = a.scale or 1
+	local sc = (a.scale or 1) * (a.rideSize or 1) -- rideSize = 탄 동안 줄여 그리는 배(boot — rideView가 돌려준 것)
 	local alpha = max(fade or 0, 1 - (a.alpha or 1))
 	body:set(clip, frame, x, y, dir, sc)
 	body.label.ImageTransparency = alpha

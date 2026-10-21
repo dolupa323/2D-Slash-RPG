@@ -16,6 +16,7 @@ local SCENES = require(lune.data["scenes.generated"])
 local ASSETS = require(lune.data["assets.generated"])
 local COMBAT = require(lune.data["combat.generated"])
 local CHARS = require(lune.data["chars.generated"]) -- 캐릭터와 졸개의 동작(관리 창의 「보스 크기」가 고운 그림이 있는지 본다)
+local RIDE_DATA = require(lune.data["ride.generated"]) -- 탈것 · 펫(탄 동안의 빠르기 mountSpeed)
 local CLASSES = require(lune.data["classes.generated"])
 local Stage = require(script.Parent.stage)
 local SceneView = require(script.Parent.sceneView)
@@ -39,6 +40,7 @@ local DailyWindow = require(script.Parent.ui.dailyWindow) -- 일일 의뢰(마�
 local AttendWindow = require(script.Parent.ui.attendWindow) -- 출석(메뉴 → 「출석」 · 그날 처음 들어오면 한 번 — 2026-10-15)
 local AchieveWindow = require(script.Parent.ui.achieveWindow) -- 업적(메뉴 → 「업적」 — 2026-10-15)
 local CashWindow = require(script.Parent.ui.cashWindow) -- 달빛 상점(메뉴 → 「달빛 상점」 — 로벅스 상점 2026-10-20)
+local CouponWindow = require(script.Parent.ui.couponWindow) -- 쿠폰(메뉴 → 「쿠폰」 — 쿠폰 번호를 적으면 그 펫을 준다 · 2026-10-21)
 local CashShop = require(script.Parent.cashShop) -- 달빛 상점의 공간(2026-10-21 — 메이플 캐시샵처럼 들어가는 곳 · 마을에서만)
 local Town = require(lune.sim.town) -- 마을인가(달빛 상점 · 경매장은 마을에서만 — 2026-10-21)
 local RideView = require(script.Parent.rideView) -- 펫 · 탈것(2026-10-20)
@@ -265,8 +267,84 @@ local function crystalGone(id: number)
 end
 
 -- 내 펫이 떨어진 것에 닿았다(2026-10-20 — rideView.luau): 서버가 펫을 꺼내 두었는지 · 영웅에게서 가까운지 · 주인을 확인하고 줍는다(world.luau의 onPetPick)
-local function petPick(id: number)
+local function petPick(id: number, x: number?, y: number?)
+	if x and y and state.fx then
+		state.fx:pull(id, x, y) -- 펫 쪽으로 빨려 든다(자석 — 2026-10-21)
+	end
 	Net.FireServer("PetPick", id)
+end
+
+-- 펫 꺼내기 · 넣기와 탈것 타기 · 내리기(2026-10-21 사용자: "펫을 넣고 빼는거, 라이딩을 타는거 이런게 달빛상점에 들어가서 하는게 아닙니다" —
+--  가방의 캐시 탭 · 퀵슬롯 · N 키가 같이 쓴다). 서버가 정하고 이름표(Who)로 알린다 — 화면의 펫 · 탈것은 그것을 따른다
+local function cashInvoke(action: string, a: any)
+	local ok, res = pcall(Net.Invoke, "Cash", action, a)
+	if ok and res and res.list then
+		state.cash = res
+		Windows.refresh(state.me)
+	end
+	if ok and res and res.why and state.fx and state.body then
+		state.fx:float(res.why, state.body.x, state.body.y - 46, Effects.MINT, 1.6)
+	end
+	return if ok then res else nil
+end
+-- 앞의 꺼내기 · 타기 요청이 끝나기 전에 누른 것은 보내지 않는다(2026-10-21 — 연달아 누르면 서버가 Cash 요청의 빈도 제한(초당 3 · 한꺼번에 6)을 넘긴 것을 버리고
+--  「'Cash' 요청이 빈도 제한을 넘어 버려졌다」를 남겼다 · 버려진 누름은 아무 일도 하지 않았다)
+local toggling = false
+local function once(fn)
+	if toggling then
+		return
+	end
+	toggling = true
+	task.spawn(function()
+		pcall(fn)
+		toggling = false
+	end)
+end
+-- 가진 펫 · 탈것을 서버에 묻는다(폰의 단추 배치 목록이 쓴다 — 받으면 그 목록을 다시 그린다 · 묻는 중에는 다시 묻지 않는다)
+local cashFetching = false
+state.cashFetchNow = function()
+	if cashFetching then
+		return
+	end
+	cashFetching = true
+	task.spawn(function()
+		local ok, res = pcall(Net.Invoke, "Cash", "view")
+		cashFetching = false
+		if ok and res and res.list then
+			state.cash = res
+			Touch.rechoose()
+		end
+	end)
+end
+-- id = 그 펫(꺼내 둔 것이면 넣는다)
+state.togglePet = function(id: string)
+	once(function()
+		cashInvoke("pet", if state.myPet == id then false else id)
+	end)
+end
+-- id = 그 탈것(타고 있는 것이면 내린다) · nil = 고른 탈것으로 타거나 내린다(N 키)
+state.toggleRide = function(id: string?)
+	once(function()
+		if state.myRide and (id == nil or state.myRide == id) then
+			cashInvoke("ride", false)
+			return
+		end
+		local want = id or (state.cash and state.cash.mount) or nil
+		if want == nil then
+			local ok, res = pcall(Net.Invoke, "Cash", "view")
+			if ok and res and res.list then
+				state.cash = res
+				want = res.mount or nil
+			end
+		end
+		if want == nil then
+			if state.fx and state.body then
+				state.fx:float(CashWindow.WORDS.noMount, state.body.x, state.body.y - 46, Effects.MINT, 1.6)
+			end
+			return
+		end
+		cashInvoke("ride", want)
+	end)
 end
 
 -- 막이 걷힌 뒤(2026-10-18): 경관이 있는 곳이면 경관(제 이름을 띄운다 — 맵 이름은 겹치므로 띄우지 않는다), 아니면 맵 이름
@@ -356,7 +434,7 @@ local function enterScene(key: string, x: number, y: number, room)
 	state.others.graveLayer = state.view.graveLayer
 	state.others:setWho(room.who or {})
 	state.grave = Grave.new(state.view.graveLayer) -- 내 비석(쓰러졌을 때만 보인다)
-	state.tag = Ui.tag(state.over, Others.tagText(if state.me then state.me.level else 1, state.myName), Ui.COLOR.text, 220, true)
+	state.tag = Ui.tag(state.over, Others.tagText(if state.me then state.me.level else 1, state.myName), Ui.COLOR.text, 220, true, Others.levelText(if state.me then state.me.level else 1)) -- 판 바깥 왼쪽에 레벨(2026-10-21)
 	state.tagLevel = if state.me then state.me.level else 1
 	PartyHud.set(state.party, state.myId, key)
 	state.fx = Effects.new(state.view.topLayer, state.over, state.view.heroLayer)
@@ -649,7 +727,7 @@ end
 
 -- 새 캐릭터는 첫 퀘스트 「첫 기술」을 끝내야(사제에게 말을 걸어야) 기술을 쓴다 — 그때 스킬 칸이 생긴다
 local function skillsLocked(): boolean
-	if state.sceneKey == Tutorial.SCENE then
+	if Tutorial.isDream(state.sceneKey) then
 		return false -- 꿈(튜토리얼)에서는 첫 사냥기를 써 본다(사제에게 배우기 전이어도)
 	end
 	return state.me ~= nil and Quests.isNew(state.quests or {}, state.me.level)
@@ -1027,6 +1105,10 @@ local function step()
 					Windows.open("cash", "rename", true) -- 이름 바꾸기 주문서: 새 이름을 적는 칸(이름이 바뀔 때 서버가 주문서를 쓴다)
 				elseif what and Quick.item(what) then
 					Net.FireServer("Potion", what) -- 소비 아이템: 그 칸에 놓인 바로 그 아이템을 쓴다
+				elseif what and Quick.ride(what) == "pet" then
+					state.togglePet(what) -- 펫: 꺼낸다 · 넣는다(2026-10-21 — 가방의 캐시 탭에서 퀵슬롯에)
+				elseif what and Quick.ride(what) == "mount" then
+					state.toggleRide(what) -- 탈것: 탄다 · 내린다
 				elseif what then
 					trySkill(what, from[1] .. i) -- 그 칸의 키(힘을 모을 때 누르고 있는지 본다)
 				end
@@ -1038,25 +1120,7 @@ local function step()
 	end
 	-- 탈것 타기 · 내리기(N — 제가 정한 키 · 2026-10-20): 고른 탈것으로(없으면 알린다 — 상점에서 산다)
 	if Input.take("ride") and not state.dead then
-		task.spawn(function()
-			local want = if state.myRide then false else (state.cash and state.cash.mount) or nil
-			if want == nil then
-				local ok, res = pcall(Net.Invoke, "Cash", "view")
-				if ok and res and res.list then
-					state.cash = res
-					want = res.mount or nil
-				end
-			end
-			if want == nil and state.fx and state.body then
-				state.fx:float(CashWindow.WORDS.noMount, state.body.x, state.body.y - 46, Effects.MINT, 1.6)
-				return
-			end
-			local ok, res = pcall(Net.Invoke, "Cash", "ride", want)
-			if ok and res and res.list then
-				state.cash = res
-				Windows.refresh(state.me)
-			end
-		end)
+		state.toggleRide(nil)
 	end
 	-- 창을 여는 키(아직 열리지 않은 창은 Windows가 열어 주지 않는다 — 누른 키는 여기서 받아 버린다)
 	for _, w in Windows.all() do
@@ -1125,6 +1189,10 @@ local function step()
 			state.dir = mx
 		end
 		input = { mx = mx, jump = Input.take("jump"), down = Input.held("down"), up = Input.held("up") or Input.held("climb") } -- up = 사다리를 오른다(2026-10-16 밤 · climb = 폰의 조이스틱을 위로 — 2026-10-17)
+		-- 탄 동안은 더 빨리(2026-10-21 사용자 "속도도 더 빨라야함" — ride.generated의 mountSpeed · 사다리 위에서는 탈것을 감추고 제 빠르기)
+		if state.ride and state.ride:riding() and body.climb == nil then
+			input.speed = RIDE_DATA.mountSpeed or 1
+		end
 		if input.jump and input.down and body.ground and P.onPlatform(scene, body) then
 			TutView.dropped = true -- 튜토리얼: 얇은 발판을 내려왔다(↓ + 뛰기)
 		end
@@ -1316,7 +1384,8 @@ local function draw(dt: number)
 	if state.ride then
 		local hide = body.climb ~= nil or sk ~= nil or state.dead or state.hurtT > 0
 		-- 내 펫은 떨어진 것에 닿으면 서버에 알린다(PetPick — 서버가 거리 · 주인을 확인하고 줍는다)
-		local rx, ry = state.ride:update(state.now, dt, body.x, body.y, state.dir, math.abs(body.vx or 0) > 1, not body.ground, hide, state.fx and state.fx.drops, petPick)
+		local rx, ry, rs = state.ride:update(state.now, dt, body.x, body.y, state.dir, math.abs(body.vx or 0) > 1, not body.ground, hide, state.fx and state.fx.drops, petPick)
+		state.actor.rideSize = rs -- 탄 동안 영웅을 작게(cast.luau의 look이 곱한다 · 내리면 nil)
 		if rx then
 			hx, hy = rx, ry
 			if not held then
@@ -1405,7 +1474,8 @@ local function draw(dt: number)
 			-- 그 사람의 몸에도 버프가 입히는 모습을 그린다(분신 · 윤곽은 그 사람의 지금 동작을 따라 그린다). 비석이 선 사람은 몸을 그리지 않는다
 			if o.clip and not o.fallen then
 				a.pose = { clip = o.clip, f = o.frame - 1 }
-				cast:look(a, o.sprite, o.clip, o.frame, o.x, o.y, o.dir, 0)
+				a.rideSize = o.rideSize -- 탄 사람은 안장 위에 작게(othersView가 그린 자리 · 크기 그대로 — 전에는 o.x · o.y로 다시 그려 탄 사람이 땅으로 내려갔다)
+				cast:look(a, o.sprite, o.clip, o.frame, o.hx or o.x, o.hy or o.y, o.dir, 0)
 			end
 		end
 	end
@@ -1587,6 +1657,12 @@ Hud.slotTipOf = function(what: string)
 	if goods then
 		return { kind = "main", title = goods.name, tag = ("x%d"):format(Bag.countIn(state.bag, what)), lines = { goods.text or "" } }
 	end
+	if Quick.ride(what) then
+		local prod = CashWindow.product(what)
+		local on = if Quick.ride(what) == "pet" then state.myPet == what else state.myRide == what
+		local W = CashWindow.WORDS
+		return { kind = "main", title = if prod then prod.name else what, tag = if on then (if Quick.ride(what) == "pet" then W.petOutTag else W.rideTag) else "", lines = { if prod then prod.line or "" else "" } }
+	end
 	local sk = skillInfo[what]
 	if not sk then
 		return nil
@@ -1648,7 +1724,7 @@ local function listen()
 		elseif state.onJob and me.slots and me.skills then
 			-- 스킬을 되돌렸다(초기화): 서버가 칸에서 배우지 않은 스킬을 뺐다 — 화면의 칸도 서버의 것으로(2026-10-18 검토: 사라진 스킬이 칸에 남아 다음 고치기가 한 번 튕겼다)
 			for _, what in state.slots or {} do
-				if what and not Quick.item(what) and (me.skills[what] or 0) <= 0 then
+				if what and not Quick.item(what) and not Quick.ride(what) and (me.skills[what] or 0) <= 0 then -- (펫 · 탈것은 스킬이 아니다 — 2026-10-21)
 					state.onJob(me)
 					break
 				end
@@ -1665,6 +1741,7 @@ local function listen()
 		if state.tag and state.tagLevel ~= me.level then
 			state.tagLevel = me.level
 			state.tag:SetText(Others.tagText(me.level, state.myName))
+			Ui.tagLead(state.tag, Others.levelText(me.level))
 			if state.drawQuests then
 				state.drawQuests() -- 레벨이 올라 새로 받을 수 있는 퀘스트의 표시
 			end
@@ -1884,10 +1961,14 @@ local function listen()
 		-- 내 펫 · 탈것(서버가 정한 것 — 펫을 꺼냈다 · 탔다 · 기술을 써서 내렸다)
 		for _, w in roster do
 			if w.id == state.myId then
+				local changed = state.myPet ~= (w.pet or nil) or state.myRide ~= (w.ride or nil)
 				state.myPet, state.myRide = w.pet or nil, w.ride or nil
 				if state.ride then
 					state.ride:setPet(state.myPet)
 					state.ride:setRide(state.myRide)
+				end
+				if changed and state.me then
+					Windows.refresh(state.me) -- 가방의 캐시 탭(꺼내 둔 펫 · 타는 탈것의 점)
 				end
 			end
 		end
@@ -2369,7 +2450,7 @@ function Boot.start()
 	-- 그 주민과 퀘스트의 말을 시작한다: 돌려줄 것이 있으면 그것부터, 없으면 받을 것 하나(한 번에 하나만 — 퀘스트는 한 줄이다). 시작했으면 true
 	--  돌려주면 state.chain에 적어 둔다 — 서버가 끝냈다고 알려 오면 그 주민이 줄 다음 것으로 말이 이어진다(그리는 고리가 잇는다)
 	state.questTalk = function(npc): boolean
-		if state.sceneKey == Tutorial.SCENE then
+		if Tutorial.isDream(state.sceneKey) then
 			return false -- 꿈(튜토리얼)의 샛별은 퀘스트를 주지 않는다
 		end
 		local level = if state.me then state.me.level else 1
@@ -2861,7 +2942,32 @@ function Boot.start()
 	Windows.register("daily", DailyWindow) -- 일일 의뢰(마을의 의뢰 게시판 앞에서 ↑)
 	Windows.register("attend", AttendWindow) -- 출석(메뉴 → 「출석」 · 그날 처음 들어오면 한 번)
 	Windows.register("achieve", AchieveWindow) -- 업적(메뉴 → 「업적」)
+	Windows.register("coupon", CouponWindow) -- 쿠폰(메뉴 → 「쿠폰」 — 2026-10-21)
 	Windows.register("cash", CashWindow) -- 달빛 상점의 판(창으로는 이름 바꾸기 칸만 — 가방에서 이름 바꾸기 주문서를 쓰면. 상점은 들어가는 공간: cashShop.luau)
+	-- 가방의 캐시 탭(2026-10-21): 펫 꺼내기 · 넣기 · 탈것 타기 · 내리기 · 지금 꺼낸 것 · 상품의 이름(창 ctx에 더한다)
+	do
+		local wctx = Windows.context()
+		wctx.togglePet = state.togglePet
+		wctx.toggleRide = state.toggleRide
+		wctx.myPet = function()
+			return state.myPet
+		end
+		wctx.myRide = function()
+			return state.myRide
+		end
+		wctx.cashProduct = CashWindow.product
+		-- 쿠폰(2026-10-21): 서버에 번호를 보낸다 → (보냈는가, { ok, why?, pet? }) · 받으면 가진 펫 · 탈것을 다시 읽는다
+		wctx.coupon = function(text: string)
+			return pcall(Net.Invoke, "Coupon", text)
+		end
+		wctx.couponGot = function()
+			state.cash = nil
+			if state.cashFetchNow then
+				state.cashFetchNow()
+			end
+			Windows.refresh(state.me)
+		end
+	end
 	-- 달빛 상점의 공간(2026-10-21 사용자 "메이플스토리 캐시샵처럼 아예 무적공간으로 들어가버리는 형태 … 캐시샵은 마을에서만"): 창 ctx에 더한 것
 	local function notice(text: string?)
 		if text and state.fx then
@@ -2981,7 +3087,7 @@ function Boot.start()
 	end
 	TutView.init(Stage.ui)
 	Talk.onFinish = function(npc)
-		if state.sceneKey == Tutorial.SCENE then
+		if Tutorial.isDream(state.sceneKey) then
 			TutView.talked = npc.id -- 튜토리얼: 그 주민과 말을 끝냈다
 		end
 	end
@@ -3074,7 +3180,7 @@ function Boot.start()
 	end
 	state.guide = function()
 		local me = state.me
-		if not me or state.dead or not state.view or not state.body or state.sceneKey == Tutorial.SCENE then
+		if not me or state.dead or not state.view or not state.body or Tutorial.isDream(state.sceneKey) then
 			return nil -- 꿈(튜토리얼)에서는 미션 판이 가르친다
 		end
 		local npc = state.view:npcNear(state.body.x, state.body.y)
@@ -3133,7 +3239,7 @@ function Boot.start()
 				return
 			end
 			state.attend = res.view
-			if res.fresh and state.sceneKey ~= Tutorial.SCENE and not CineView.active() and not Windows.isOpen("attend") then
+			if res.fresh and not Tutorial.isDream(state.sceneKey) and not CineView.active() and not Windows.isOpen("attend") then
 				Windows.open("attend")
 			elseif state.me then
 				Windows.refresh(state.me)
@@ -3268,7 +3374,7 @@ function Boot.start()
 		local level = if state.me then state.me.level else 1
 		if state.view then
 			state.view:setMarks(function(npcId: string)
-				if state.sceneKey == Tutorial.SCENE then
+				if Tutorial.isDream(state.sceneKey) then
 					return nil -- 꿈(튜토리얼)에는 퀘스트 표시가 없다
 				end
 				-- 의뢰 게시판: 낼 의뢰가 있으면 「?」 · 안 받은 의뢰가 있으면 「!」
@@ -3326,6 +3432,23 @@ function Boot.start()
 					if not COMBAT.skills[sk.id] and ((Buffs.is(sk.id) and Buffs.learned(kitHero(), sk.id)) or ((placedDef ~= nil or COMBAT.cast[sk.id] ~= nil) and (state.me.skills[sk.id] or 0) > 0)) then
 						table.insert(list, { what = sk.id, name = sk.name })
 					end
+				end
+			end
+			-- 가진 펫 · 탈것(2026-10-21 점검 — PC는 가방의 캐시 탭에서 퀵슬롯으로 끌어 놓는다 · 폰은 여기서 단추에 놓는다. 누르면 꺼내기 · 넣기 / 타기 · 내리기)
+			local cash = state.cash
+			if not cash and state.cashFetchNow then
+				state.cashFetchNow() -- 아직 모르면 묻는다(받으면 목록이 다시 그려진다)
+			end
+			for _, kind in { "pets", "mounts" } do
+				for _, id in (cash and cash[kind]) or {} do
+					local prod = CashWindow.product(id)
+					table.insert(list, { what = id, name = if prod then prod.name else id })
+				end
+			end
+			for _, id in state.touchSlots do
+				if id and Quick.ride(id) and not (cash and (table.find(cash.pets or {}, id) or table.find(cash.mounts or {}, id))) then
+					local prod = CashWindow.product(id)
+					table.insert(list, { what = id, name = if prod then prod.name else id }) -- 놓아 둔 것은 목록에 남긴다
 				end
 			end
 			-- 배운 온오프 사출기
@@ -3417,7 +3540,9 @@ function Boot.start()
 					elseif win.id == "@chars" then
 						state.toSelect()
 					else
-						Windows.toggle(win.id)
+						-- PC의 단추 줄 · 키와 같은 길(2026-10-21 점검): 「달빛 상점」 = 들어가는 공간(마을에서만) · 경매장 = 마을에서만.
+						--  전에는 여기서 창을 바로 열어(Windows.toggle) 폰에서는 상점이 예전처럼 창으로 열리고 마을 밖에서도 열렸다
+						state.openWin(win.id)
 					end
 				end, { h = K.btnH, font = "body", main = win.id == "@arrange" })
 				state.touchMenuItems[win.id] = itemBtn.frame -- 튜토리얼(꿈)이 그 줄을 반짝이게 한다
@@ -3565,7 +3690,7 @@ function Boot.start()
 				TutView.cast = true -- 튜토리얼: 기술을 썼다
 			end
 			-- 꿈(튜토리얼)에서는 Lv.1이어도 가방이 열린다(「가방 열기」 미션) — 꿈을 나서면 거둔다. 바뀌면 화면 아래의 단추 줄을 다시 그린다
-			local dreaming = state.sceneKey == Tutorial.SCENE
+			local dreaming = Tutorial.isDream(state.sceneKey)
 			if (Windows.extra.bag == true) ~= dreaming then
 				Windows.extra.bag = if dreaming then true else nil
 				if not dreaming then

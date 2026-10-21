@@ -116,10 +116,30 @@ function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 		y += S.row
 	end
 	y += 4
-	local auto = Ui.button(body, "자동으로 찍기", 0, y, w, function()
+	-- 「자동으로 찍기」 옆에 「초기화」(공짜 · 몇 번이든 — 2026-10-21 사용자: "스텟, 스킬 초기화 완전무료로 풀겠습니다"). 잘못 누르지 않게 두 번 눌러야 한다(「정말 초기화?」 — 3초 안에 · 스킬 창과 같다)
+	local resetW = S.resetW
+	local auto = Ui.button(body, "자동으로 찍기", 0, y, w - resetW - 6, function()
 		ctx.send("StatAuto")
 	end, { main = true })
 	StatWindow.autoFrame = auto.frame -- 튜토리얼(꿈)의 「능력치 찍기」 미션에서 반짝인다(2026-10-14)
+	local resetArmed = 0
+	local reset
+	reset = Ui.button(body, "초기화", w - resetW, y, resetW, function()
+		if os.clock() - resetArmed < 3 then
+			resetArmed = 0
+			reset:setText("초기화")
+			ctx.send("StatReset")
+		else
+			resetArmed = os.clock()
+			reset:setText("정말 초기화?")
+			task.delay(3.1, function()
+				if os.clock() - resetArmed >= 3 then
+					reset:setText("초기화")
+				end
+			end)
+		end
+	end)
+	reset.frame.Name = "Do_statReset"
 	y += Ui.M.button + 10
 	Ui.line(body, 0, y, w)
 	-- 전투력(왼쪽)과 체력(오른쪽)을 한 줄에
@@ -141,6 +161,11 @@ function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 			row.plus:setEnabled(me.ap > 0)
 		end
 		auto:setEnabled(me.ap > 0)
+		local spent = false
+		for _, n in me.stats do
+			spent = spent or n > 0
+		end
+		reset:setEnabled(spent) -- 찍은 능력치가 있을 때만
 		power:set(("전투력 %s"):format(Format.short(me.power)))
 		hp:set(("최대 체력 %s"):format(Format.short(me.maxHp))) -- 「체력」은 능력치의 이름이라 「최대 체력」(2026-10-15)
 		-- 떠 있는 설명은 새 값으로(레벨이 오르면 1점의 값이 달라진다)

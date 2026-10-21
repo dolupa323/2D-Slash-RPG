@@ -131,7 +131,7 @@ function Hud.init()
 		ready.Visible = false
 		local slot = { frame = cell.frame, cell = cell, back = cell.frame:FindFirstChild("uSlot") :: ImageLabel, pic = pic, veil = veil, ready = ready, readyT = 0, pad = pad, what = false :: any, id = nil :: string?, shown = nil :: string?, keyName = "" }
 		-- 퀵슬롯은 자리가 늘 같다(여섯 x 두 줄 — 칸마다 키 하나)
-		local px, py = Layout.slotPlace(i, COLS * ROWS)
+		local px, py = Layout.slotPlace(i, COLS * ROWS, Stage.uiW)
 		cell.frame.Position = UDim2.fromOffset(px, py)
 		-- 누르는 자리: 칸과 그 위의 키 딱지까지. 스킬 창이 열려 있을 때 칸을 누르거나 끌어 고친다(ui/quickEdit.luau가 받는다)
 		local hit = Instance.new("TextButton")
@@ -173,6 +173,13 @@ function Hud.init()
 	Hud.pickHint = Ui.text(Hud.skillRoot, Quick.DATA.words.pick, 0, -16, s.w, { align = "center", color = C.accent, outline = true })
 	Hud.pickHint:show(false)
 
+	-- 화면 틀의 격자가 바뀌면 퀵슬롯의 간격도 바뀐다(좁은 격자에서는 칸 사이가 4점 — 2026-10-21 일곱 x 두 줄)
+	Stage.onResize(function()
+		for i, slot in Hud.slots do
+			local px, py = Layout.slotPlace(i, COLS * ROWS, Stage.uiW)
+			slot.frame.Position = UDim2.fromOffset(px, py)
+		end
+	end)
 	Hud.menuRoot = Stage.placeRect(root, "Menu", UI.hud.menu)
 	-- 화면 틀의 격자가 바뀌면 단추의 간격도 바뀐다(가장 작은 격자에서는 스킬 칸에 닿지 않게 촘촘하다)
 	Stage.onResize(Hud.placeMenu)
@@ -245,8 +252,8 @@ function Hud.setSlots(list)
 		if slot.id then
 			Hud.byId[slot.id] = slot
 		end
-		if i > COLS and what then
-			Hud.top = true
+		if what and Layout.slotCell(i) == 2 then
+			Hud.top = true -- 윗줄에 놓인 것이 있다
 		end
 	end
 	Hud.paintSlots()
@@ -274,7 +281,7 @@ function Hud.showSlotTip(i: number)
 		return
 	end
 	local frame, h = Hud.tipPanel(Hud.skillRoot, t, "SlotTip")
-	local px = Layout.slotPlace(i, COLS * ROWS)
+	local px = Layout.slotPlace(i, COLS * ROWS, Stage.uiW)
 	local w = UI.hud.skills.w
 	frame.Position = UDim2.fromOffset(math.clamp(px + math.floor(SLOT / 2) - math.floor(TIP.w / 2), math.min(0, w - TIP.w), math.max(0, w - TIP.w)), -h - 4) -- 퀵슬롯 덩어리 위에(위 칸을 가리지 않게)
 	slotTip = frame

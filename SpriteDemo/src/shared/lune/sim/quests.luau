@@ -219,10 +219,16 @@ end
 -- 졸개를 잡았다. 바뀐 퀘스트들의 id를 돌려준다(없으면 빈 표). 잡는 일만 센다 — 모으는 물건은 땅에 떨어지고(Q.drops) 주우면 가방에 들어가며, 가방에 든 수가 곧 숫자다(Q.sync)
 --  **어느 맵에서 잡든 그 몬스터면 센다**(사용자 2026-10-13: "똑같은 몬스터인데 … 달그림자 사냥터  검병한테는 드랍이 안되고 사냥터 깊은곳 검병한테는 드랍이되고  이런식이면 안됩니다.
 --   하드코딩 박는식으로 개발을하면안되요" — 전에는 그 퀘스트의 맵에서 잡은 것만 세고 떨어뜨렸다). 이야기의 자리에서만 세는 일(only — 사당 지하를 지키는 「불타는 마을」)만 그 맵을 본다.
+-- 방의 이름 → 장면의 이름(r1c4#5 → r1c4): 파티마다 따로 들어가는 장면(스토리 보스 · 사당 지하 · 꿈 — scenes의 inst)의 방에서도 설계의 scene과 견준다(2026-10-21)
+local function baseOf(scene: any): any
+	return if type(scene) == "string" then (string.match(scene, "^(.-)#%d+$") or scene) else scene
+end
+Q.baseOf = baseOf
 local function counts(def, step, scene: string): boolean
 	return not step.only or def.scene == scene
 end
 function Q.onKill(book, mobKind: string, scene: string): { string }
+	scene = baseOf(scene)
 	local changed = {}
 	for id, st in book do
 		local def = byId[id]
@@ -241,6 +247,7 @@ end
 
 -- 그 맵에 들어갔다: 하는 중인 퀘스트의 「들르기」가 된다(2026-10-16 — 「항구의 첫날」처럼 도시를 둘러보는 퀘스트). 바뀐 퀘스트들
 function Q.onVisit(book, scene: string): { string }
+	scene = baseOf(scene)
 	local changed = {}
 	for id, st in book do
 		local def = byId[id]
@@ -362,6 +369,7 @@ end
 
 -- 그 장면의 그 졸개가 필요한가: 하는 중인 퀘스트에 그 졸개를 잡는 일 · 그 졸개에게서 모으는 일이 남아 있다 — 이야기의 방(사당 지하)의 졸개가 이것으로 나온다
 function Q.wantsMob(book, mobKind: string, scene: string): boolean
+	scene = baseOf(scene)
 	if not book then
 		return false
 	end
@@ -379,6 +387,7 @@ function Q.wantsMob(book, mobKind: string, scene: string): boolean
 end
 
 function Q.wantsKill(book, mobKind: string, scene: string): boolean
+	scene = baseOf(scene)
 	if not book then
 		return false
 	end
@@ -400,6 +409,7 @@ Q.USE_REACH = { x = 30, y = 24 } -- 그 자리에서 이만큼 안에 서야 한
 
 -- 그 장면에서 지금 ↑를 누를 수 있는 자리들: 하는 중인 퀘스트의 아직 못 한 일. { { quest, step, x, y, up(「!」의 높이), place, act } … }(자료의 차례)
 function Q.spotsIn(book, scene: string)
+	scene = baseOf(scene)
 	local out = {}
 	for _, def in D.list do
 		local st = book[def.id]
@@ -416,6 +426,7 @@ end
 
 -- 그 자리 앞에서 ↑를 눌렀다: 그 퀘스트의 아직 못 한 일 가운데 가까이에 있는 것의 숫자가 하나 오른다. 됐으면 true(아니면 nil과 까닭)
 function Q.use(book, id: any, scene: string, x: number, y: number): (boolean?, string?)
+	scene = baseOf(scene)
 	local def = Q.def(id)
 	local st = def and book[id]
 	if not def or not st or st.done then
@@ -438,6 +449,7 @@ end
 -- 졸개를 잡았을 때 떨어지는 퀘스트의 물건들: 아직 모으는 중인 물건마다 그 확률(pct)로 하나. { { quest, step, name, icon } … }
 --  사용자 2026-10-07: "퀘스트 아이템이나 , 기타아이템들은 왜 드롭도되지않고 그림도없고 그냥 텍스트로만 오르나요?" — 잡으면 숫자만 오르던 것을, 그림이 있는 물건이 땅에 떨어지고 주워야 오르게 고쳤다
 function Q.drops(book, mobKind: string, scene: string, rng)
+	scene = baseOf(scene)
 	local out = {}
 	for id, st in book do
 		local def = byId[id]

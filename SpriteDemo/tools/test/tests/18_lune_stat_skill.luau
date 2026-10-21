@@ -855,28 +855,27 @@ do
 	end
 end
 
--- ---- 전직하면 스킬 포인트 초기화 한 번이 공짜(2026-10-11 — 설계 basics.js의 SPRULE) ----
+-- ---- 스킬 · 능력치 초기화는 공짜 · 몇 번이든(2026-10-21 사용자: "스텟, 스킬 초기화 완전무료로 풀겠습니다" — 전에는 전직할 때마다 한 번 · 능력치는 상인의 주문서) ----
 do
 	local Hero2 = req("ReplicatedStorage/shared/lune/sim/hero")
 	local N2 = req("ReplicatedStorage/shared/lune/config/numbers")
 	local CL = req("ReplicatedStorage/shared/lune/data/classes.generated")
 	local h = Hero2.new(950, "axion")
 	h.auto = false
-	eq(h.resets, 0, "new character: no free reset")
-	eq(Hero2.freeReset(h), false, "nothing to use at job 1")
+	eq(Hero2.freeReset(h), false, "찍은 스킬이 없으면 되돌릴 것이 없다")
 	while h.level < 30 do
 		Hero2.gainXp(h, N2.xpNeed(h.level) - h.xp)
 		Hero2.autoSkill(h)
 	end
 	eq(Hero2.spLeft(h, 1), 0, "tier 1 mastered before the job change")
+	expect(Hero2.freeReset(h), "1차에서도 공짜로 되돌린다(전직하지 않아도)")
+	eq(Hero2.spLeft(h, 1), Hero2.spNeed("axion", 1), "1차의 점수가 모두 돌아온다")
+	Hero2.autoSkill(h)
 	expect(Hero2.advance(h, 2), "advance to job 2")
-	eq(h.resets, 1, "job change grants one free reset")
-	eq(Hero2.view(h).resets, 1, "the client sees it")
 	Hero2.autoSkill(h)
 	local slamMax = h.skills.ax_slam
 	expect(slamMax ~= nil and slamMax > 1, "skills were raised")
-	expect(Hero2.freeReset(h), "use the free reset")
-	eq(h.resets, 0, "used up")
+	expect(Hero2.freeReset(h), "다시 되돌린다(몇 번이든)")
 	eq(Hero2.spLeft(h, 1), Hero2.spNeed("axion", 1), "tier 1 points all back")
 	eq(Hero2.spLeft(h, 2), Hero2.spEarnedIn(h.level, 2, "axion"), "tier 2 points all back")
 	eq(h.sp, Hero2.spEarned(h.level, "axion"), "total points all back")
@@ -888,13 +887,22 @@ do
 			end
 		end
 	end
-	eq(Hero2.freeReset(h), false, "cannot reset twice")
-	-- save / load
+	eq(Hero2.freeReset(h), false, "되돌린 바로 뒤에는 되돌릴 것이 없다")
+	Hero2.autoSkill(h)
+	expect(Hero2.freeReset(h), "다시 찍으면 또 되돌린다")
+	-- 능력치
+	local h3 = Hero2.new(952, "riven")
+	eq(Hero2.statsSpent(h3), false, "찍은 능력치가 없다")
+	Hero2.setLevel(h3, 20)
+	local ap0 = h3.ap
+	Hero2.autoStat(h3)
+	expect(Hero2.statsSpent(h3) and h3.ap < ap0, "자동으로 찍었다")
+	Hero2.resetStats(h3)
+	expect(not Hero2.statsSpent(h3) and h3.ap == ap0, "되돌리면 점수가 모두 돌아온다")
+	-- 저장의 꼴(resets — 쓰지 않지만 예전 저장을 그대로 읽는다)
 	h.resets = 1
 	eq(Hero2.unpack(950, Hero2.pack(h)).resets, 1, "saved")
 	local old = Hero2.pack(h)
-	old.resets = nil
-	eq(Hero2.unpack(950, old).resets, 1, "a character that changed job before this existed gets one")
 	old.resets = 7
 	eq(Hero2.unpack(950, old).resets, 0, "bad value is dropped")
 	local fresh = Hero2.pack(Hero2.new(951, "riven"))

@@ -59,11 +59,12 @@ local made = handlers.Chars(p, "create", "길손4101", "riven")
 local first = handlers.Chars(p, "enter", made.id)
 local s = World.session(p)
 local h = s.hero
-eq(first.scene, "dream", "새 캐릭터는 꿈(튜토리얼)에서 시작한다")
--- 꿈에서 쓰러지면 꿈의 처음으로(마을로 나가지 않는다)
+eq(SCENES.base(first.scene), "dream", "새 캐릭터는 꿈(튜토리얼)에서 시작한다") -- (꿈은 사람마다 따로 된 방 — dream#번호 · 2026-10-21)
+-- 꿈에서 쓰러지면 꿈의 처음으로(마을로 나가지 않는다 · 그 꿈의 방 그대로)
+local dreamRoom = s.scene
 h.alive, h.hp, h.revive = false, 0, 0
 handlers.Return(p)
-expect(h.alive and s.scene == "dream", "꿈에서 쓰러지면 꿈으로 — " .. tostring(s.scene))
+expect(h.alive and s.scene == dreamRoom, "꿈에서 쓰러지면 그 꿈으로 — " .. tostring(s.scene))
 World.wake(p)
 eq(s.scene, "in_shrine", "꿈에서 깨면 사당 안이다")
 eq(h.home, nil, "사당 안은 마을이 아니다 — 돌아갈 마을이 아직 없다")

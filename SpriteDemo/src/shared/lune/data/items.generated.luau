@@ -278,7 +278,6 @@ return {
 		},
 		{ id = "dust", npc = "merchant", name = "달가루", from = 8, price = 20, perLv = false, max = 9999, item = false, goods = false },
 		{ id = "charm", npc = "merchant", name = "달빛 부적", from = 10, price = false, perLv = 300, max = 10, item = false, goods = "charm" },
-		{ id = "statreset", npc = "merchant", name = "능력치 초기화 주문서", from = 10, price = false, perLv = 2000, max = 1, item = false, goods = "statreset" },
 	},
 	OPEN = { bag = 2, store = 1, forge = 8 },
 	NPCDO = { merchant = "shop", smith = "smith", keeper = "store", board = "daily", auctioneer = "auction", clerk = "daily", warden = "rift", citysmith = "smith", citykeeper = "store" },
@@ -1439,10 +1438,6 @@ return {
 			{
 				"charm",
 				{ 300, 8700, 9000, 18000, 30000 },
-			},
-			{
-				"statreset",
-				{ 2000, 58000, 60000, 120000, 200000 },
 			},
 		},
 		info = {

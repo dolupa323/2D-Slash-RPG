@@ -329,4 +329,4 @@ end
 expect(newDay, "자정이 지나면 출석 창을 띄우라고 알린다")
 eq(s.acct.att.n, 2, "두 칸")
 -- 들른 맵
-expect(s.acct.ach.seen[s.scene] ~= nil or s.scene == "dream", "들어선 맵을 적는다")
+expect(s.acct.ach.seen[s.scene] ~= nil or string.match(s.scene, "^dream#%d+$") ~= nil, "들어선 맵을 적는다") -- (꿈은 사람마다 따로 된 방 — dream#번호)

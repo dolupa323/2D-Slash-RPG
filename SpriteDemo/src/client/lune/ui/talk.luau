@@ -307,15 +307,18 @@ function Talk.place()
 			paintFoot()
 		end
 	end
-	if chat and chat.Visible then
-		if os.clock() > chatTill or not chatNpc or chatNpc == Talk.npc then
+	if chat and chatNpc then
+		if os.clock() > chatTill or chatNpc == Talk.npc then
 			chat.Visible, chatNpc = false, nil
 		else
+			-- 말풍선은 그 주민의 머리 위 그대로(2026-10-21 사용자 "npc 가 보이지않는 영역까지 가면 말풍선만 끌려서 와버립니다. 말풍선은 npc 위치에 있어야하는데" —
+			--  전에는 화면 안쪽으로 붙잡아(clamp) 주민이 화면 밖으로 나가도 말풍선이 화면 가장자리에 남아 캐릭터를 따라왔다). 주민이 화면 밖이면 숨기고, 다시 보이면 남은 시간만큼 다시 뜬다
 			local cx = Overlay.x(chatNpc.x)
 			local bottom = Overlay.y(chatNpc.y - (chatNpc.h or 24) - B.up)
-			local left = math.clamp(cx - math.floor(chatSize.w / 2), 8, math.max(8, Stage.uiW - chatSize.w - 8))
+			local left = cx - math.floor(chatSize.w / 2)
 			chat.Position = UDim2.fromOffset(left, bottom - chatSize.h - B.tail)
-			chatTail.Position = UDim2.fromOffset(math.clamp(cx - left - 4, 6, chatSize.w - 15), chatSize.h - 1)
+			chatTail.Position = UDim2.fromOffset(math.floor(chatSize.w / 2) - 4, chatSize.h - 1)
+			chat.Visible = cx >= 0 and cx <= Stage.uiW -- 주민(말풍선의 꼬리)이 화면 안에 있을 때만
 		end
 	end
 end
@@ -502,7 +505,7 @@ end
 
 -- 지금 혼잣말을 하는 주민(없으면 nil)
 function Talk.saying(): any
-	return if chat and chat.Visible then chatNpc else nil
+	return if chat and chatNpc and os.clock() <= chatTill then chatNpc else nil
 end
 
 -- 대화창의 자리(화면 틀의 점 — 자동 검사 · 터치가 쓴다)

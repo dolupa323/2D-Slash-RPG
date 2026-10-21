@@ -254,7 +254,7 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 	-- 맵에서 맵으로(문을 따라)
 	local function travel(target: string): boolean
 		for _ = 1, 40 do
-			if s.scene == target then
+			if SCENES.base(s.scene) == target then -- (파티마다 따로 들어가는 장면의 방 — r1c4#5 · 2026-10-21)
 				return true
 			end
 			local hop = routeNext(s.scene, target)
@@ -275,7 +275,7 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 				return false
 			end
 		end
-		return s.scene == target
+		return SCENES.base(s.scene) == target
 	end
 	local function npcAt(key: string, npcId: string)
 		for _, n in SCENES.scenes[key].npcs or {} do
@@ -366,7 +366,7 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 		if not travel(sceneKey) then
 			return
 		end
-		local room = World.room(sceneKey)
+		local room = World.room(s.scene) -- (파티마다 따로 들어가는 장면이면 그 방 — r1c4#5)
 		local tEnd = World.now + seconds
 		while World.now < tEnd and h.alive and not done() do
 			local best, bd = nil, math.huge
@@ -600,7 +600,7 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 	--  잡기 · 줍기 · 물약 · 빛나는 문은 실제로 한다(서버가 센다). 다 하면 사당에서 깨어난다
 	local function dream()
 		local Tut = req("ReplicatedStorage/shared/lune/sim/tutorial")
-		if s.scene ~= Tut.SCENE then
+		if not Tut.isDream(s.scene) then -- (꿈은 사람마다 따로 된 방 — dream#번호)
 			return
 		end
 		local sc = SCENES.scenes[Tut.SCENE]

@@ -140,6 +140,7 @@ end
 
 -- 그 맵에 들렀다
 function Achieve.visited(a, scene: string)
+	scene = SCENES.base(scene) -- 파티마다 따로 들어가는 장면의 방(r1c4#5)도 그 맵으로(2026-10-21)
 	local sc = SCENES.scenes[scene]
 	local r = sc and sc.region and Achieve.REGION[sc.region]
 	if r and r.mapSet[scene] then

@@ -124,11 +124,11 @@ local made = handlers.Chars(p, "create", "꿈꾼다", "riven")
 local first = handlers.Chars(p, "enter", made.id)
 local s = World.session(p)
 local h = s.hero
-eq(first.scene, Tut.SCENE, "새 캐릭터는 꿈에서 시작한다")
+expect(Tut.isDream(first.scene) and first.scene ~= Tut.SCENE, "새 캐릭터는 꿈에서 시작한다(사람마다 따로 된 꿈의 방 — dream#번호 · 2026-10-21) — " .. tostring(first.scene))
 eq(first.self.tut.step, 1, "첫 미션부터")
 expect(first.self.tutSkip ~= true, "처음 하는 계정은 건너뛸 수 없다")
 eq(handlers.Tut(p, "skip", nil), nil, "건너뛰기를 보내도 듣지 않는다")
-eq(s.scene, Tut.SCENE, "꿈에 그대로 있다")
+eq(s.scene, first.scene, "꿈에 그대로 있다")
 -- 문은 아직 열리지 않는다
 local gate = sc.portals[1]
 h.x, h.y = gate.x, gate.y
@@ -140,7 +140,7 @@ for n = 1, 6 do
 end
 eq(handlers.Tut(p, "done", 7).tut.step, 7, "잡기는 화면이 넘길 수 없다")
 -- 잡기: 수련 인형 셋(Lv.1) — 사냥기로 잡는다. 잡을 때마다 내 앞에 물약 하나가 떨어진다
-local room = World.room(Tut.SCENE)
+local room = World.room(s.scene)
 for _, mob in room.mobs do
 	eq(mob.lv, Tut.DATA.dummyLv, "꿈의 수련 인형은 가장 약하다")
 end
@@ -226,7 +226,7 @@ expect(h.tut.done, "튜토리얼이 끝났다")
 -- 다시 들어와도 사당(꿈에는 다시 들어가지 않는다) · 이 계정의 둘째 캐릭터는 건너뛸 수 있다
 World.removePlayer(p)
 local again = handlers.Ready(p)
-expect(again.scene ~= Tut.SCENE, "꿈에서 깬 캐릭터는 꿈으로 돌아가지 않는다")
+expect(not Tut.isDream(again.scene), "꿈에서 깬 캐릭터는 꿈으로 돌아가지 않는다")
 World.removePlayer(p)
 local p2 = p
 handlers.Ready(p2)
@@ -234,7 +234,7 @@ local leave = handlers.Chars(p2, "leave", nil, nil)
 local made2 = handlers.Chars(p2, "create", "또꿈꾼다", "axion")
 expect(made2 and made2.ok, "둘째 캐릭터를 만든다")
 local second = handlers.Chars(p2, "enter", made2.id)
-eq(second and second.scene, Tut.SCENE, "둘째 캐릭터도 꿈에서 시작한다")
+expect(second ~= nil and Tut.isDream(second.scene), "둘째 캐릭터도 꿈에서 시작한다")
 expect(second and second.self.tutSkip == true, "한 번 끝낸 계정은 「건너뛰기」가 보인다")
 local skipped = handlers.Tut(p2, "skip", nil)
 expect(skipped ~= nil and skipped.scene == Tut.DATA.exit and World.session(p2).hero.tut.done, "건너뛰면 사당에서 깨어난다")

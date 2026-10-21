@@ -127,6 +127,7 @@ end
 -- 지금 겨눌 자리: x, y, 무엇("portal" | "npc" | "spot" | "mob" | "here"), 그 문(다른 맵으로 갈 때) — 길이 없으면 nil
 --  mobs = 지금 맵에 서 있는 몬스터들 { { kind, x, y } … }(화면이 준다 — 살아 있는 것만) · x · y = 내 자리
 function Navi.aim(sceneKey: string, x: number, y: number, target, book, mobs: any)
+	sceneKey = SCENES.base(sceneKey) :: string -- 파티마다 따로 들어가는 장면의 방(r1c4#5)은 그 장면(2026-10-21)
 	-- 사냥하러 가는 길인데 지금 맵에도 그 몬스터가 산다: 여기서 잡는다(어느 맵에서 잡든 그 몬스터면 센다 — sim/quests.luau)
 	local here = target.scene == sceneKey
 	if not here and target.kind == "hunt" and not target.only then

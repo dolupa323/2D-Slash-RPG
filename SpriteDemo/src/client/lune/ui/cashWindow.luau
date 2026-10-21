@@ -28,6 +28,17 @@ local BY = {}
 for _, p in BM.products do
 	BY[p.id] = p
 end
+-- 상점에서 팔지 않는 펫(쿠폰으로 받는 기본펫 「까망 동글이」 — ride.generated의 pets[].free · 2026-10-21): 이름 · 한 줄 설명 · 그림만 상품처럼
+local RIDE_DATA = require(lune.data["ride.generated"])
+for _, q in RIDE_DATA.pets do
+	if q.free and not BY[q.id] then
+		BY[q.id] = { id = q.id, name = q.name, line = q.line or "", icon = "ride_" .. q.id, free = q.free }
+	end
+end
+-- 그 상품(이름 · 한 줄 설명 · 그림 — 퀵슬롯의 설명 · 가방의 캐시 탭이 쓴다). 쿠폰 펫도 든다(위)
+function CashWindow.product(id: string)
+	return BY[id]
+end
 -- 줄을 만들어 둘 수: 가장 긴 탭(편의)과 보관함에 들 수 있는 아이템의 가짓수(주머니 · 상자의 레벨대 x 2 + 확장권 · 주문서 · 쿠폰 넷) 가운데 큰 것
 local MOST = #BM.bands * 2 + 4
 for _, ids in SHOP.rows do
@@ -112,10 +123,11 @@ function CashWindow.rows(view, tab: number)
 				text = Format.fill(if id == "money" then W.nowMoney else W.nowDust, { n = Format.comma(g.amount), band = band })
 			end
 		end
-		-- 가진 펫 · 탈것(2026-10-20): 값 대신 「꺼내기 · 넣기」 · 「타기 · 내리기」(펫은 하나만 꺼내 둔다 · 탈것은 고른 것을 탄다)
+		-- 가진 펫 · 탈것: 「보유」만(2026-10-21 사용자 "펫을 넣고 빼는거, 라이딩을 타는거 이런게 달빛상점에 들어가서 하는게 아닙니다. 달빛상점은 구매를 하는곳이에요" —
+		--  꺼내기 · 넣기 · 타기 · 내리기는 가방의 캐시 탭 · 퀵슬롯 · N 키에서)
 		local isPet, isMount = string.sub(id, 1, 4) == "pet_", string.sub(id, 1, 6) == "mount_"
 		local on = if isPet then (view and view.petOut == id) elseif isMount then (view ~= nil and view.riding == true and view.mount == id) else false
-		local state = if v.own and isPet then "pet" elseif v.own and isMount then "mount" elseif v.own then "own" elseif not v.ready then "soon" elseif full then "full" else "buy"
+		local state = if v.own then "own" elseif not v.ready then "soon" elseif full then "full" else "buy"
 		table.insert(out, {
 			id = id,
 			icon = p.icon,
@@ -126,8 +138,7 @@ function CashWindow.rows(view, tab: number)
 			price = Format.fill(W.price, { n = v.robux or p.robux }), -- 서버가 읽은 로블록스의 실제 값(없으면 설계의 값)
 			state = state,
 			on = on == true,
-			use = if isPet then (if on then W.petOff else W.petOn) elseif isMount then (if on then W.rideOff else W.rideOn) else nil,
-			count = if lim and state ~= "pet" and state ~= "mount" then Format.fill(if lim.per == "week" then W.week else W.once, { n = bought, max = lim.n }) else nil,
+			count = if lim and not ((isPet or isMount) and v.own) then Format.fill(if lim.per == "week" then W.week else W.once, { n = bought, max = lim.n }) else nil,
 			full = full,
 		})
 	end

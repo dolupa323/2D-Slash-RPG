@@ -33,14 +33,9 @@ function CashShop.isOpen(): boolean
 	return root ~= nil
 end
 
--- 공간의 치수(화면 틀의 점): 위 줄 · 미리보기와 상점 판을 가운데에 나란히
-function CashShop.layout(uiW: number, uiH: number)
-	local _, panelH0 = CashWindow.size(nil)
-	local panelW, panelH = S.w + SP.panelPad * 2, panelH0 + SP.panelPad * 2
-	local total = SP.previewW + SP.gap + panelW
-	local x0 = math.floor((uiW - total) / 2)
-	local y0 = SP.topH + math.max(0, math.floor((uiH - SP.topH - panelH) / 2))
-	return { panelW = panelW, panelH = panelH, x0 = x0, y0 = y0, previewX = x0, panelX = x0 + SP.previewW + SP.gap, leaveX = uiW - SP.pad - SP.leaveW }
+-- 공간의 치수(화면 틀의 점): 미리보기와 상점 판을 한 묶음으로 가운데에 · 화면에 맞춰 k배(셈은 shared/lune/ui/layout.luau의 Layout.shopSpace — 2026-10-21 사용자 "ui가 너무 작아 모바일에서도 반응형")
+function CashShop.layout(uiW: number, uiH: number, us: number?)
+	return Layout.shopSpace(uiW, uiH, us)
 end
 
 -- 미리보기에 보일 펫 · 탈것: id = 상품의 이름표(pet_ · mount_) · nil = 지금 꺼내 둔 것 · 탄 것
@@ -82,9 +77,9 @@ function CashShop.step(now: number, dt: number)
 	local p = parts
 	local cx, floor = p.cx + 8, p.floor -- 영웅 · 탈것은 가운데에서 8점 오른쪽(펫이 왼쪽에 설 자리 — 공방 탭과 같다)
 	-- 탈것이면 영웅을 앉는 자리에 · 펫은 영웅의 뒤(왼쪽 30점)에
-	local hx, hy = p.ride:update(now, dt, cx, floor, 1, false, false, false, nil, nil)
+	local hx, hy, hs = p.ride:update(now, dt, cx, floor, 1, false, false, false, nil, nil)
 	local char = p.hero.char
-	p.hero:set("idle", Sprite.frameAt(char, "idle", now, false), hx or cx, hy or floor, 1)
+	p.hero:set("idle", Sprite.frameAt(char, "idle", now, false), hx or cx, hy or floor, 1, hs) -- 탄 동안 작게(게임과 같다)
 	if p.pet then
 		local pc = p.pet.sprite.char
 		p.pet.sprite:set("idle", Sprite.frameAt(pc, "idle", now, false), cx - 30, floor, 1)
@@ -105,7 +100,7 @@ end
 -- 공간을 짓는다(보이지 않게 — 그림을 불러온 뒤 sayLoading(nil)로 연다). ctx = boot의 창 ctx(cash · cashDo · bag · me) + who(영웅의 그림 이름) · myPet · myRide · onLeave
 local function build(ctx)
 	local uiW, uiH = Stage.uiW, Stage.uiH
-	local L = CashShop.layout(uiW, uiH)
+	local L = CashShop.layout(uiW, uiH, Stage.uiScale)
 	local r = Stage.group(Stage.ui, "CashShop", 500) -- HUD(100) · 창(150) · 막이 아닌 모든 것 위
 	root = r
 	local base = Ui.box(r, 0, 0, uiW, uiH, C.ink) -- 그림이 오기 전에도 게임 화면이 비치지 않게
@@ -129,13 +124,19 @@ local function build(ctx)
 	Ui.button(content, W.leave, L.leaveX, 5, SP.leaveW, function()
 		CashShop.leave(ctx)
 	end).frame.Name = "Leave"
-	-- 미리보기: 판 · 제목 · 바닥 · 내 캐릭터(게임과 같은 점 크기 — 판 안에 게임 세계의 배율을 건다) · 고른 것의 이름 · 안내
-	local pv = Ui.panel(content, L.previewX, L.y0, SP.previewW, L.panelH)
+	-- 미리보기와 상점 판의 묶음(k배 — CashShop.layout)
+	local group = Ui.group(content, L.x0, L.y0, L.total, L.panelH, "Panels")
+	local grow = Instance.new("UIScale")
+	grow.Scale = L.k
+	grow.Parent = group
+	-- 미리보기: 판 · 제목 · 바닥 · 내 캐릭터(게임 도트 — 판 안에 배율을 건다) · 고른 것의 이름 · 안내
+	local pv = Ui.panel(group, L.previewX, 0, SP.previewW, L.panelH)
 	pv.Name = "Preview"
 	Ui.text(pv, W.preview, 10, 8, SP.previewW - 20, { font = "body" })
 	local nameText = Ui.text(pv, "", 10, L.panelH - 46, SP.previewW - 20, { align = "center", color = C.gold })
 	Ui.text(pv, W.hint, 10, L.panelH - 28, SP.previewW - 20, { align = "center", color = C.dim, lines = 2 })
-	local ratio = Stage.ratio
+	-- 판 안의 게임 도트: 묶음이 k배라 도트 하나 = ratio x k점 — 화면의 정수 화소가 되게 맞춘다(게임 화면의 도트보다 조금 크다)
+	local ratio = math.max(1, math.floor(Stage.scale * L.k + 0.5)) / (Stage.uiScale * L.k)
 	local world = Instance.new("Frame")
 	world.Name = "World"
 	world.BackgroundTransparency = 1
@@ -155,7 +156,7 @@ local function build(ctx)
 	parts = { root = r, content = content, loading = loading, world = world, hero = hero, ride = ride, pet = nil, petId = ctx.myPet(), rideId = ctx.myRide(), name = nameText, cx = cx, floor = floor }
 	setPreview(nil)
 	-- 상점 판: 상점 창의 것을 그대로(같은 탭 · 줄 · 단추). 펫 · 탈것 줄을 누르면 미리보기에
-	local panel = Ui.panel(content, L.panelX, L.y0, L.panelW, L.panelH)
+	local panel = Ui.panel(group, L.panelX, 0, L.panelW, L.panelH)
 	panel.Name = "Shop"
 	local body = Ui.group(panel, SP.panelPad, SP.panelPad, S.w, L.panelH - SP.panelPad * 2, "Body")
 	local wctx = setmetatable({

@@ -1156,9 +1156,14 @@ function Room:mobsInBox(x0: number, x1: number, y0: number, y1: number, cx: numb
 end
 
 -- 졸개가 맞는다. 쓰러졌으면 true.
+--  hitBy = 이번 삶에서 한 대라도 친 사람들(쓰러지면 Room:strike가 거둔다 — 퀘스트 · 일일 의뢰의 숫자를 그 사람들에게도 준다)
 function Room:damageMob(mob, dmg: number, fromX: number, byId: any): boolean
 	mob.hp = math.max(0, mob.hp - dmg)
 	mob.target, mob.aggro = byId, 5
+	if byId ~= nil and dmg > 0 then
+		mob.hitBy = mob.hitBy or {}
+		mob.hitBy[byId] = true
+	end
 	if mob.hp <= 0 then
 		mob.state, mob.t, mob.target = "dead", 0, nil
 		mob.bind, mob.stun, mob.rend, mob.cracks = 0, 0, 0, 0
@@ -1241,6 +1246,8 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 	table.insert(out.hits, entry)
 	if dead then
 		mob.marks = nil
+		local hitBy = mob.hitBy or {}
+		mob.hitBy = nil -- 다시 나오면 새로 센다
 		-- 리퍼의 영혼: 쓰러뜨리면 하나
 		if Kit.gainSoul(hero) then
 			out.kit = true
@@ -1267,13 +1274,14 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 		end
 		-- 스토리 보스와 그가 부른 졸개: 경험치도 물건도 주지 않는다(보상은 그 메인 퀘스트의 것뿐). 보스는 방에 있는 모두에게 잡은 것으로 친다 — 서버가 gains의 사람마다 퀘스트를 센다
 		if mob.boss or mob.add then
-			local gains = {}
+			local gains, credit = {}, {}
 			if mob.boss then
 				for _, h in self.heroes or { hero } do
 					table.insert(gains, { hero = h.id, xp = 0, ups = 0, level = h.level })
+					table.insert(credit, h.id)
 				end
 			end
-			table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = 0, ups = 0, gains = gains, loot = {} })
+			table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = 0, ups = 0, gains = gains, credit = credit, loot = {} })
 			return dead, dmg
 		end
 		-- 사냥터 정예: 보통의 것을 잡으면 센다(정예 자신 · 토벌의 물결은 세지 않는다)
@@ -1293,6 +1301,19 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 				myXp, myUps = xp, ups
 			end
 		end
+		-- 퀘스트 · 일일 의뢰의 숫자를 받는 사람(credit): 경험치를 받는 사람(잡은 사람 · 같은 맵의 파티원) + 이 몬스터를 한 대라도 친, 지금 이 방에 살아 있는 사람
+		--  사용자 2026-10-21: "몇마리 잡아라 … 내가 한대만 치면 다른사람이 잡아도 잡은걸로 판정이 들어가야해요" — 경험치 · 떨어지는 것은 그대로(잡은 사람 · 그 파티)
+		local credit, counted = {}, {}
+		for _, mate in list do
+			table.insert(credit, mate.id)
+			counted[mate.id] = true
+		end
+		for _, h in self.heroes or {} do
+			if hitBy[h.id] and not counted[h.id] and h.alive then
+				table.insert(credit, h.id)
+				counted[h.id] = true
+			end
+		end
 		local drop, loot = self:dropFor(hero, mob), self:lootFor(hero, mob)
 		if #list > 1 then
 			local friends = {}
@@ -1306,7 +1327,7 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 				d.friends = friends
 			end
 		end
-		table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = myXp, ups = myUps, gains = gains, drop = drop, loot = loot, elite = mob.fieldElite or nil }) -- elite = 사냥터 정예(분석이 센다)
+		table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = myXp, ups = myUps, gains = gains, credit = credit, drop = drop, loot = loot, elite = mob.fieldElite or nil }) -- elite = 사냥터 정예(분석이 센다)
 	end
 	return dead, dmg
 end
@@ -1484,7 +1505,7 @@ end
 
 -- 기술의 한 타. hero가 (x, y)에서 dir 쪽을 보고 쓴 기술의 hit(판정 하나)를 푼다. scale = 스킬 레벨에 따른 세기(없으면 1).
 --  mates = 경험치를 함께 나눌 사람들(hero도 든다 — 같은 맵의 파티원. 없으면 혼자). 떨어진 것은 그 사람들도 바로 주울 수 있다.
---  돌려주는 것: { hits = { { mob, dmg, hp, dead, big, crit, proc, sx, sy, mark } … }, kills = { { mob, xp, ups, gains = { { hero, xp, ups, level } … }, drop, loot } … },
+--  돌려주는 것: { hits = { { mob, dmg, hp, dead, big, crit, proc, sx, sy, mark } … }, kills = { { mob, xp, ups, gains = { { hero, xp, ups, level } … }, credit = { 퀘스트 · 일일 의뢰를 세는 사람 … }, drop, loot } … },
 --				 kit(장치의 모습이 바뀌었다) · heal(되찾은 체력) · crystals · crystalGone(생긴 · 사라진 수정) }
 --  kind = 그 기술의 갈래: 사냥기("mob")는 일반 몬스터에게, 보스기("boss")는 보스에게 피해가 targetBonus% 더 뜬다 — 맞지 않는 상대에게는 그 보정이 없다(체력은 보정만큼 크다)
 --   (사용자 2026-10-07: "보스기는 보스 공격시 추가데미지, 사냥기는 일반 몹 공격시 추가 데미지 … 지금 그냥 보스기로 사냥하는게 더빠른현상이 생깁니다")

@@ -382,8 +382,14 @@ function Cine.cardAlpha(c, life: number): number
 	return math.max(0, math.min(1, c.t / 0.5, (life - c.t) / 0.5))
 end
 
+-- 방의 이름 → 맵의 이름(r1c4#5 → r1c4): 파티마다 따로 들어가는 장면(스토리 보스의 방 · 사당 지하 · 꿈)의 방에서도 장면의 맵과 견준다(2026-10-21)
+local function baseOf(map: any): any
+	return if type(map) == "string" then (string.match(map, "^(.-)#%d+$") or map) else map
+end
+
 -- 틀 장면: 그 퀘스트의 그 때(on)이고 맵이 맞고 아직 보지 않은 것. seen = { [id] = true }
 function Cine.find(on: string, quest: string, map: string?, seen): any
+	map = baseOf(map)
 	for _, c in DATA.list do
 		local w = c.when
 		if w.on == on and w.quest == quest and (w.map == nil or w.map == map) and not seen[c.id] then
@@ -395,6 +401,7 @@ end
 
 -- 틀 장면들(차례대로 — 장의 이름 카드가 먼저): 그 퀘스트의 그 때(on)이고 맵이 맞고 아직 보지 않은 것 모두
 function Cine.findAll(on: string, quest: string, map: string?, seen): { any }
+	map = baseOf(map)
 	local cards, rest = {}, {}
 	for _, c in DATA.list do
 		local w = c.when
@@ -410,6 +417,7 @@ end
 
 -- 받기 전의 장면(on = "before"): 그 맵에 들어섰는데 그 퀘스트를 아직 받지 않았다(새 캐릭터가 꿈에서 깨어 사당에 들어설 때)
 function Cine.before(map: string, book, seen): { any }
+	map = baseOf(map)
 	local out = {}
 	for _, c in DATA.list do
 		local w = c.when
@@ -422,6 +430,7 @@ end
 
 -- 그 맵에서 지금 덮을 색(퀘스트 동안의 맵 모습 — 불타는 마을의 붉은 하늘). quests = 하는 중인 퀘스트 { [id] = 상태 }
 function Cine.lookAt(map: string, active: { [string]: boolean }): (string?, number)
+	map = baseOf(map)
 	for _, lk in DATA.look do
 		if active[lk.quest] and table.find(lk.maps, map) then
 			return lk.tint, lk.a
@@ -433,6 +442,7 @@ end
 -- 그 장면이 지금 나올 때인가(서버가 「장면을 튼다」를 받을 때 — 2026-10-18 검토: 안 본 장면을 아무 데서나 하나씩 틀어 장면마다 90초씩 맞지 않았다).
 --  맵이 정해진 장면은 그 맵에서만 · 받기 전(before)의 장면은 그 퀘스트를 받기 전에만 · 나머지(enter · goal · complete)는 그 퀘스트를 받은 뒤에만
 function Cine.fits(id: any, map: string?, book): boolean
+	map = baseOf(map)
 	for _, c in DATA.list do
 		if c.id == id then
 			local w = c.when

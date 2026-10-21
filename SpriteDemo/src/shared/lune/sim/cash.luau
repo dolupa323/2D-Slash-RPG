@@ -43,7 +43,7 @@ local function whole(v: any, lo: number, hi: number): boolean
 end
 
 function Cash.new()
-	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petOut = false, mount = false }
+	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petOut = false, mount = false, coupons = {} } -- coupons = 이 계정이 쓴 쿠폰 { [번호] = 쓴 때 }(2026-10-21)
 end
 
 function Cash.product(key: any)
@@ -327,7 +327,7 @@ function Cash.pack(c)
 	end
 	table.sort(pets)
 	table.sort(mounts)
-	return { box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petOut = c.petOut, mount = c.mount }
+	return { box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petOut = c.petOut, mount = c.mount, coupons = table.clone(c.coupons) }
 end
 
 -- 꼴이 이상한 것은 버린다(없는 아이템 · 이상한 수). 생기기 전의 저장 = 빈 것
@@ -374,7 +374,51 @@ function Cash.unpack(data: any, baseChars: number?)
 	end
 	c.petOut = if typeof(data.petOut) == "string" and c.pets[data.petOut] then data.petOut else false
 	c.mount = if typeof(data.mount) == "string" and c.mounts[data.mount] then data.mount else false
+	if typeof(data.coupons) == "table" then
+		local n = 0
+		for code, at in data.coupons do
+			if typeof(code) == "string" and #code <= Cash.COUPON_MAX and whole(at, 0, 1e10) and n < 200 then
+				c.coupons[code] = at
+				n += 1
+			end
+		end
+	end
 	return c
+end
+
+-- ---------- 쿠폰(2026-10-21 사용자: "쿠폰 코드 입력창있어야하고 그 쿠폰 입력하면 그 기본펫 지급하는 방식으로 합니다") ----------
+--  쿠폰의 목록은 서버에만 있다(server/lune/modules/coupons.luau — 화면에 보내지 않는다). 여기는 적은 글을 고르는 셈과 주는 셈만.
+Cash.COUPON_MAX = 24 -- 쿠폰 번호의 가장 긴 글자 수
+-- 적은 글 → 쿠폰 번호의 꼴(앞뒤 빈칸 · 가운데 빈칸 · 줄표를 빼고 대문자로). 쓸 수 없는 글이면 nil
+function Cash.couponCode(text: any): string?
+	if typeof(text) ~= "string" or #text > 64 then
+		return nil
+	end
+	local code = string.upper((string.gsub(text, "[%s%-]", "")))
+	if code == "" or #code > Cash.COUPON_MAX or string.find(code, "[^%w]") then
+		return nil
+	end
+	return code
+end
+-- 쿠폰을 쓴다: def = 서버의 쿠폰 { code, pet?, from?, till? } · 됐으면 true와 받은 것({ pet = 이름표 }), 아니면 false와 까닭
+function Cash.redeem(acct, def, now: number): (boolean, any)
+	local c = acct.bm
+	if def.from and now < def.from then
+		return false, "아직 쓸 수 없는 쿠폰이다"
+	elseif def.till and now > def.till then
+		return false, "기간이 지난 쿠폰이다"
+	elseif c.coupons[def.code] then
+		return false, "이미 쓴 쿠폰이다"
+	end
+	if def.pet then
+		if not PET[def.pet] then
+			return false, "없는 펫이다"
+		end
+		c.pets[def.pet] = true -- 펫: 계정에 바로(꺼내 둔 것이 없으면 바로 꺼낸다 — 산 펫과 같다)
+		c.petOut = c.petOut or def.pet
+	end
+	c.coupons[def.code] = now
+	return true, { pet = def.pet }
 end
 
 -- 살 수 있게 된 상품인가: 로블록스 상품 번호가 있고(대시보드에서 만든 뒤) 게임에 만들어 둔 것(built — 펫 · 순간이동 · 꾸밈 · 패스는 아직)

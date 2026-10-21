@@ -4,6 +4,7 @@ local pixelText = req("Client/ui/pixelText")
 local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
 local F = req("ReplicatedStorage/shared/lune/ui/format")
 local L = req("ReplicatedStorage/shared/lune/ui/layout")
+local Quick = req("ReplicatedStorage/shared/lune/ui/quick") -- 퀵슬롯의 칸 수 · 키(2026-10-21)
 local N = req("ReplicatedStorage/shared/lune/config/numbers")
 local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
 
@@ -111,24 +112,61 @@ do
 	expect(measure(pixelText.Fit(longName, nameW, 1, "small")) <= nameW, "가장 긴 이름도 레벨 글 뒤에 줄여서 들어간다")
 end
 
--- ---------- 스킬 칸(두 줄 x 여섯)과 메뉴 단추(여섯) ----------
+-- ---------- 스킬 칸(두 줄 x 일곱 — 2026-10-21 열넷)과 메뉴 단추 ----------
+--  칸마다 놓이는 줄 = UI.quick.rows(번호와 키는 그대로 · 새 칸 13 · 14는 줄 끝) · 좁은 격자(폭 820 미만)는 칸 사이가 4점(L.rect의 narrow)
 local s, K = UI.hud.skills, L.SKILLS
 local pitch = K.slot + K.gap
-expect(K.cols * pitch - K.gap <= s.w, "스킬 칸 여섯이 칸의 폭 안")
+expect(K.cols * pitch - K.gap <= s.w, "스킬 칸 일곱이 칸의 폭 안")
 expect(K.rows * (K.slot + K.keyUp) + (K.rows - 1) * K.rowGap <= s.h, "스킬 칸 두 줄이(줄마다 위에 키 딱지) 칸의 높이 안")
 expect(K.slot >= M.pic + 4, "칸이 그림(24)보다 사방으로 두 점은 크다")
-for n = 1, K.cols * K.rows do
+eq(#UI.quick.rows, K.rows, "줄의 표가 두 줄")
+do
+	local all = {}
+	for _, row in UI.quick.rows do
+		eq(#row, K.cols, "한 줄에 일곱")
+		for _, i in row do
+			expect(not all[i], "칸 " .. i .. "이 한 번만")
+			all[i] = true
+		end
+	end
+	for i = 1, Quick.N do
+		expect(all[i], "칸 " .. i .. "이 줄의 표에 있다")
+	end
+	for i = 1, 12 do
+		local r = L.slotCell(i)
+		eq(r, if i <= 6 then 1 else 2, "예전 칸 " .. i .. "은 예전 줄 그대로(아랫줄 1~6 · 윗줄 7~12)")
+	end
+end
+for _, g in { { name = "가장 작은 격자", w = G.min.w, h = G.min.h }, { name = "1080p", w = UI.grid.w, h = UI.grid.h }, { name = "가장 큰 격자", w = G.max.w, h = G.max.h }, { name = "좁은 격자 경계 819", w = 819, h = 460 }, { name = "820", w = 820, h = 461 } } do
 	local seen = {}
-	for i = 1, n do
-		local x, y = L.slotPlace(i, n)
-		expect(x >= 0 and x + K.slot <= s.w and y - K.keyUp >= 0 and y + K.slot <= s.h, ("쓰는 칸 %d개일 때 %d째 칸(과 그 위의 키 딱지)이 칸 안"):format(n, i))
+	local box = L.rect(s, g.w, g.h)
+	local base = L.rect({ at = s.at, x = s.x, y = s.y, w = s.w, h = s.h }, g.w, g.h) -- 넓은 틀(칸은 그 안에 놓인다)
+	local minX, maxX = math.huge, -math.huge
+	for i = 1, Quick.N do
+		local x, y = L.slotPlace(i, Quick.N, g.w)
+		expect(x >= 0 and x + K.slot <= s.w and y - K.keyUp >= 0 and y + K.slot <= s.h, ("%d째 칸(과 그 위의 키 딱지)이 칸 안(%s)"):format(i, g.name))
 		expect(not seen[x .. ":" .. y], "칸이 겹치지 않는다")
 		seen[x .. ":" .. y] = true
+		minX, maxX = math.min(minX, base.x + x), math.max(maxX, base.x + x + K.slot)
 	end
+	expect(minX >= box.x and maxX <= box.x + box.w, ("칸들이 그 격자의 스킬 칸(%d~%d) 안에 든다 — %d~%d(%s)"):format(box.x, box.x + box.w, minX, maxX, g.name))
 	-- 아랫줄은 가운데에 모인다
-	local first = L.slotPlace(1, n)
-	local lastX = L.slotPlace(math.min(n, K.cols), n)
-	expect(math.abs(first - (s.w - lastX - K.slot)) <= 1, ("쓰는 칸 %d개일 때 아랫줄이 가운데"):format(n))
+	local row1 = UI.quick.rows[1]
+	local first = L.slotPlace(row1[1], Quick.N, g.w)
+	local lastX = L.slotPlace(row1[#row1], Quick.N, g.w)
+	expect(math.abs(first - (s.w - lastX - K.slot)) <= 1, ("아랫줄이 가운데(%s)"):format(g.name))
+	-- 좁은 격자에서도 체력 덩어리 · 메뉴 단추와 닿지 않는다
+	local vit, menu = L.rect(UI.hud.vitals, g.w, g.h), L.rect(UI.hud.menu, g.w, g.h)
+	expect(minX >= vit.x + vit.w + 4, ("퀵슬롯이 체력 덩어리 오른쪽 끝(%d)에서 4점 넘게 떨어진다 — %d(%s)"):format(vit.x + vit.w, minX, g.name))
+	expect(maxX + 4 <= menu.x, ("퀵슬롯(%d)이 메뉴 단추(%d)와 4점 넘게 떨어진다(%s)"):format(maxX, menu.x, g.name))
+	-- 키 딱지: 이웃한 칸의 기본 키끼리 닿지 않는다(좁은 격자는 칸 사이가 좁다)
+	local gap = math.min(K.gap, math.floor((box.w - K.cols * K.slot) / (K.cols - 1)))
+	for _, row in UI.quick.rows do
+		for k = 1, #row - 1 do
+			local a, b = F.keyShort(Quick.DATA.keys[row[k]]), F.keyShort(Quick.DATA.keys[row[k + 1]])
+			expect((measure(a) + 8) / 2 + (measure(b) + 8) / 2 <= K.slot + gap - 1, ("키 딱지 「%s」 · 「%s」가 닿지 않는다(%s)"):format(a, b, g.name))
+		end
+	end
 end
 for _, name in { "Q", "A", "LeftShift", "Space", "LeftControl", "Return", "Backspace", "F12", "KeypadEnter", "KeypadFive", "PageDown", "Left", "Right", "Up", "Down", "Semicolon", "Zero", "Tab", "BackSlash", "CapsLock", "Insert" } do
 	local text = F.keyShort(name)

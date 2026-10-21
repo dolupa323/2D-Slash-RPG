@@ -197,6 +197,11 @@ view.box = { { id = "bm_exp", n = 2 }, { id = "bm_money_30", n = 1 } }
 local body = frame("Body")
 local cv = CashWindow.build(body, ctx, cw, ch)
 eq(#tabs, #BM.shop.tabs, "탭 다섯")
+-- 탭의 차례(이름표 → 번호 — 2026-10-21: 「펫」 탭을 더하고 「패스」 탭을 껐다)
+local T = {}
+for i, t in BM.shop.tabs do
+	T[t[1]] = i
+end
 expect(tabs[1].on, "처음은 편의 탭")
 expect(textOf(W.head) ~= nil, "안내 한 줄")
 expect(textOf("3") ~= nil, "보관함 옆에 받을 것의 수(경험치 쿠폰 2 + 주머니 1)")
@@ -227,11 +232,11 @@ acct.bm.wc = { dust = 3 }
 local box = view.box
 view = Cash.view(acct, NOW, nil)
 view.box = box
-tabs[2].click()
-expect(tabs[2].on and not tabs[1].on, "재화 탭")
+tabs[T.money].click()
+expect(tabs[T.money].on and not tabs[1].on, "재화 탭")
 local money = Items.goods("bm_money_30")
 expect(textOf(("지금 사면 달돈 %s(Lv.30)"):format(req("ReplicatedStorage/shared/lune/ui/format").comma(money.amount))) ~= nil, "지금 사면 드는 달돈(Lv.30)")
-local cr = CashWindow.rows(view, 2)
+local cr = CashWindow.rows(view, T.money)
 eq(cr[2].id, "dust", "둘째 줄 = 달가루 상자")
 eq(cr[2].state, "full", "이번 주에 셋을 샀으면 더 못 산다")
 local full = textOf("이번 주 3/3")
@@ -244,7 +249,7 @@ for _, b in buttonsNamed(W.buy) do
 end
 eq(offBuy, 1, "다 산 상품의 「구매」는 꺼진다")
 -- 보관함: 받기 · 모두 받기
-tabs[5].click()
+tabs[T.box].click()
 local takes = buttonsNamed(W.take)
 eq(#takes, 2, "보관함의 줄마다 「받기」")
 expect(textOf("x2") ~= nil, "경험치 쿠폰 x2")
@@ -259,81 +264,77 @@ all.click()
 eq(calls[#calls][2], nil, "모두 받기 = 줄 없이")
 expect(not all.enabled, "다 받으면 꺼진다")
 expect(textOf(W.boxEmpty) ~= nil, "빈 보관함")
--- 패스 탭(달빛 패스 — 개발자 상품 · 산 때부터 30일 · 칸 30): 남은 날 · 달빛 · 칸 · 「보상 받기」
-view.pass = { active = false, ended = false, left = 0, pts = 0, today = 0, reached = 0, p = {}, ready = 0 }
-tabs[4].click()
-eq(scrolls[1].Visible, false, "패스 탭에는 상품 목록이 없다")
-expect(textOf(BM.pass.words.off) ~= nil, "산 적이 없으면 「사면 30일 동안 달빛이 쌓인다」")
-local buyPass, claim
-for _, b in buttons do
-	if b.frame.Name == "PassBuy" then
-		buyPass = b
-	elseif b.frame.Name == "PassClaim" then
-		claim = b
+-- 패스 탭: 2026-10-21 사용자 "달빛패스 일딴 비활성화해" — 탭이 없다(다시 켜면 아래가 돈다)
+if not T.pass then
+	expect(#tabs == #BM.shop.tabs and tabs[#tabs].label ~= "패스", "「패스」 탭이 없다")
+else
+	-- 패스 탭(달빛 패스 — 개발자 상품 · 산 때부터 30일 · 칸 30): 남은 날 · 달빛 · 칸 · 「보상 받기」
+	view.pass = { active = false, ended = false, left = 0, pts = 0, today = 0, reached = 0, p = {}, ready = 0 }
+	tabs[T.pass].click()
+	eq(scrolls[1].Visible, false, "패스 탭에는 상품 목록이 없다")
+	expect(textOf(BM.pass.words.off) ~= nil, "산 적이 없으면 「사면 30일 동안 달빛이 쌓인다」")
+	local buyPass, claim
+	for _, b in buttons do
+		if b.frame.Name == "PassBuy" then
+			buyPass = b
+		elseif b.frame.Name == "PassClaim" then
+			claim = b
+		end
 	end
+	expect(buyPass and buyPass.enabled and buyPass.label == W.buy, "번호가 있으면 「구매」")
+	expect(claim and not claim.enabled, "받을 칸이 없으면 「보상 받기」 꺼짐")
+	view.pass = { active = true, ended = false, left = 18, pts = 125, today = 8, reached = 12, p = { 1, 2, 3 }, ready = 9 }
+	cv.refresh()
+	expect(textOf("패스 18일 남음") ~= nil, "남은 날")
+	expect(textOf("달빛 125 · 오늘 8/12") ~= nil, "달빛 · 오늘")
+	expect(textOf("12/30칸") ~= nil, "연 칸")
+	expect(textOf(W.own) ~= nil and not buyPass.frame.Visible, "패스가 있는 동안 = 「보유」 · 「구매」 없음")
+	local cells = CashWindow.passCells(view.pass)
+	eq(#cells, 30, "칸 서른")
+	expect(cells[4].ready and not cells[3].ready and not cells[13].ready, "연 칸(4~12)만 · 받은 칸(1~3)은 아니다 · 13칸은 아직")
+	expect(claim.enabled, "받을 칸이 있으면 「보상 받기」")
+	claim.click()
+	eq(calls[#calls][1], "pass", "서버에 패스 보상을 묻는다")
+	eq(CashWindow.passCellText(cells[10]), "10칸 — 달돈 주머니 1", "칸의 보상 글")
+	view.pass = { active = false, ended = true, left = 0, pts = 300, today = 0, reached = 30, p = {}, ready = 30 }
+	cv.refresh()
+	expect(textOf(BM.pass.words.ended) ~= nil, "끝난 뒤 = 「패스가 끝났다 — 다시 사면 새 30일」")
+	expect(buyPass.frame.Visible and buyPass.enabled, "끝난 뒤에는 다시 「구매」")
 end
-expect(buyPass and buyPass.enabled and buyPass.label == W.buy, "번호가 있으면 「구매」")
-expect(claim and not claim.enabled, "받을 칸이 없으면 「보상 받기」 꺼짐")
-view.pass = { active = true, ended = false, left = 18, pts = 125, today = 8, reached = 12, p = { 1, 2, 3 }, ready = 9 }
-cv.refresh()
-expect(textOf("패스 18일 남음") ~= nil, "남은 날")
-expect(textOf("달빛 125 · 오늘 8/12") ~= nil, "달빛 · 오늘")
-expect(textOf("12/30칸") ~= nil, "연 칸")
-expect(textOf(W.own) ~= nil and not buyPass.frame.Visible, "패스가 있는 동안 = 「보유」 · 「구매」 없음")
-local cells = CashWindow.passCells(view.pass)
-eq(#cells, 30, "칸 서른")
-expect(cells[4].ready and not cells[3].ready and not cells[13].ready, "연 칸(4~12)만 · 받은 칸(1~3)은 아니다 · 13칸은 아직")
-expect(claim.enabled, "받을 칸이 있으면 「보상 받기」")
-claim.click()
-eq(calls[#calls][1], "pass", "서버에 패스 보상을 묻는다")
-eq(CashWindow.passCellText(cells[10]), "10칸 — 달돈 주머니 1", "칸의 보상 글")
-view.pass = { active = false, ended = true, left = 0, pts = 300, today = 0, reached = 30, p = {}, ready = 30 }
-cv.refresh()
-expect(textOf(BM.pass.words.ended) ~= nil, "끝난 뒤 = 「패스가 끝났다 — 다시 사면 새 30일」")
-expect(buyPass.frame.Visible and buyPass.enabled, "끝난 뒤에는 다시 「구매」")
 for i, p in BM.products do
 	p.rid = saved[i]
 end
 
--- 가진 펫 · 탈것(2026-10-20): 값 자리에 「보유」 · 「꺼내기 · 넣기」 · 「타기 · 내리기」
+-- 가진 펫 · 탈것(2026-10-21 사용자 "펫을 넣고 빼는거, 라이딩을 타는거 이런게 달빛상점에 들어가서 하는게 아닙니다. 달빛상점은 구매를 하는곳이에요"):
+--  줄에는 「보유」만 — 「꺼내기 · 넣기 · 타기 · 내리기」 단추는 상점에 없다(가방의 캐시 탭 · 퀵슬롯 · N 키)
 view.list = Cash.view(acct, NOW, nil).list
 for _, v in view.list do
 	if v.id == "pet_scarf" or v.id == "mount_boar" then
 		v.own = true
 	end
 end
-view.petOut, view.mount, view.riding = "pet_scarf", "mount_boar", false
-local conv = CashWindow.rows(view, 1)
+view.petOut, view.mount, view.riding = "pet_scarf", "mount_boar", true
+local conv = CashWindow.rows(view, T.pet) -- 펫은 「펫」 탭(2026-10-21)
 local scarf
 for _, r in conv do
 	if r.id == "pet_scarf" then
 		scarf = r
 	end
 end
-eq(scarf.state, "pet", "가진 펫의 줄")
-eq(scarf.use, W.petOff, "꺼내 둔 펫 = 「넣기」")
-local look = CashWindow.rows(view, 3)
+eq(scarf.state, "own", "가진 펫의 줄 = 「보유」")
+eq(scarf.use, nil, "가진 펫의 줄에 꺼내기 · 넣기가 없다")
+eq(scarf.count, nil, "가진 펫의 줄에 「산 수 1/1」을 적지 않는다")
 local boar
-for _, r in look do
+for _, r in CashWindow.rows(view, T.look) do
 	if r.id == "mount_boar" then
 		boar = r
 	end
 end
-eq(boar.state, "mount", "가진 탈것의 줄")
-eq(boar.use, W.rideOn, "타지 않았으면 「타기」")
-view.riding = true
-eq(CashWindow.rows(view, 3)[3].use, W.rideOff, "탄 동안 = 「내리기」")
-tabs[3].click()
-local rideBtn
-for _, b in buttons do
-	if b.label == W.rideOff and b.frame.Visible then
-		rideBtn = b
-	end
+eq(boar.state, "own", "가진 탈것의 줄 = 「보유」")
+tabs[T.look].click()
+for _, word in { W.petOn, W.petOff, W.rideOn, W.rideOff } do
+	eq(#buttonsNamed(word), 0, "상점에 「" .. word .. "」 단추가 없다")
 end
-expect(rideBtn ~= nil, "꾸밈 탭에 「내리기」 단추")
-rideBtn.click()
-eq(calls[#calls][1], "ride", "서버에 내리기를 묻는다")
-eq(calls[#calls][2], false, "내리기 = false")
 
 -- 달빛 상점의 공간(2026-10-21): 펫 · 탈것의 줄을 누르면(PC는 올려 두면) 미리보기에 — 그 밖의 줄은 아무것도 하지 않는다
 local seen = {}
@@ -343,12 +344,23 @@ end
 expect(#previews >= 1, "줄마다 미리보기 자리가 있다")
 previews[1].click() -- 꾸밈 탭의 첫 줄(탈것)
 previews[1].hover()
-eq(seen[1], CashWindow.rows(view, 3)[1].id, "꾸밈 탭 첫 줄을 누르면 그 탈것을 미리보기에")
+eq(seen[1], CashWindow.rows(view, T.look)[1].id, "꾸밈 탭 첫 줄을 누르면 그 탈것을 미리보기에")
 eq(#seen, 2, "올려 두어도 미리보기에(PC)")
-tabs[2].click() -- 재화 탭: 펫 · 탈것이 아니다
+tabs[T.money].click() -- 재화 탭: 펫 · 탈것이 아니다
 previews[1].click()
 eq(#seen, 2, "재화 줄은 미리보기에 보내지 않는다")
-tabs[3].click()
+tabs[T.pet].click() -- 펫 탭(2026-10-21 — 펫은 편의가 아니라 제 탭에)
+previews[1].click()
+eq(seen[#seen], BM.shop.rows.pet[1], "펫 탭의 첫 줄을 누르면 그 펫을 미리보기에")
+tabs[T.look].click()
+eq(CashWindow.product("pet_silver").name, BM.products[(function()
+	for i, p in BM.products do
+		if p.id == "pet_silver" then
+			return i
+		end
+	end
+	return 1
+end)()].name, "상품을 이름표로 찾는다(퀵슬롯의 설명 · 가방의 캐시 탭)")
 
 -- 이름 바꾸기(가방에서 주문서를 쓴 때)
 table.clear(texts)

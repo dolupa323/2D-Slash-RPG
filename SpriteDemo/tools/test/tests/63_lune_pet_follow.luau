@@ -3,7 +3,7 @@
 --  10-21 사용자: "펫도 지형에 걸려야해요 지금 펫 지형 다뚫고 다니는데 지형에 걸려서 플레이어에게 가지 못하는 거리가 되어버리면 그때는 텔레포트 해서 붙는방식으로
 --   메이플스토리에서 일반펫이 어떻게 작동하는지를 파악하고 , 그에맞춰 작업하면 됩니다."
 --  시험 맵(칸 16점): 평지(땅의 윗면 176) · 얇은 발판(=, 윗면 128 — 땅보다 48 위) · 낮은 대지(윗면 160 — 턱 16) · 높은 벽(128) · 구덩이(폭 48)
---  보는 것: ① 서 있으면 뒤 44점 · 땅 위 ② 달리면 뒤로 처져 따라온다 ③ 멈추면 다가온다 ④ 서서 돌아서도 제 쪽에 ⑤ 떨어진 것에 달려가 줍는다(제 높이의 것만)
+--  보는 것: ① 서 있으면 뒤 44점 · 땅 위 ② 달리면 뒤로 처져 따라온다 ③ 멈추면 다가온다 ④ 서서 돌아서도 제 쪽에 ⑤ 떨어진 것에 달려가 줍는다(펫에서 원 안 — 자석)
 --   ⑥ 턱은 웅크렸다 뛰어 오른다 ⑦ 영웅이 위 발판이면 따라 오르지 않고 아래에서 기다린다(메이플의 일반 펫) ⑧ 영웅이 아래면 얇은 발판에서 하단 점프로 내려온다
 --   ⑨ 높은 벽에 걸려 못 가면 영웅에게 순간 이동 ⑩ 같은 높이의 구덩이는 뛰어 건넌다 ⑪ 멀어지면 영웅의 발밑 땅으로 ⑫ 영웅이 사다리 · 공중이면 기다렸다가 땅에 서면
 --   ⑬ 남의 펫(onPick 없음)은 줍지 않는다 ⑭ 펫이 땅을 뚫고 지나가지 않는다(언제나 막힌 칸 밖)
@@ -83,22 +83,39 @@ local function fresh(x, y, dir, id)
 	return rv
 end
 
--- ① 서 있으면 뒤 44점 · 땅 위
+-- ① 서 있으면 뒤 behind점(64 — 2026-10-21 사용자 "펫이 거리를 더 벌려야합니다") · 땅 위
 local rv = fresh(200, GROUND, 1)
 run(rv, 2, 200, GROUND, 1, false, false)
 expect(math.abs(last.x - (200 - P.behind)) <= 2, ("① 서 있는 영웅의 뒤 %d점(실제 %d)"):format(P.behind, 200 - last.x))
 eq(last.y, GROUND, "① 땅 위에 선다")
 eq(last.clip, "idle", "① 멈춰 있다")
 
--- ② 오른쪽으로 3초 달린다(92점/초 · 평지)
+-- ② 오른쪽으로 3초 달린다(92점/초 · 평지) — 순간 이동 없이(2026-10-21 사용자 "마을을 일자로 달리면 계속 팅기듯이": 전에는 1.2초마다 「걸렸다」며 순간 이동했다)
 local t0 = now
+local wRun = rv.warps
+local gaps = {}
 run(rv, 3, function(t)
-	return 200 + 92 * (t - t0)
+	local x = 200 + 92 * (t - t0)
+	return x
 end, GROUND, 1, true, false)
-local hx = 200 + 92 * 3
+-- 같은 빠르기로 따라오는 1초 동안: 영웅이 그려지는 점과 펫이 그려지는 점의 간격이 흔들리지 않는다(전에는 펫의 자리를 따로 반올림해 장마다 한 점씩 떨렸다)
+local flips, prevGap = 0, nil
+for _ = 1, 60 do
+	now += DT
+	local x = 200 + 92 * (now - t0)
+	rv:update(now, DT, x, GROUND, 1, true, false, false)
+	local gap = math.floor(x + 0.5) - last.x
+	if prevGap and gap ~= prevGap then
+		flips += 1
+	end
+	prevGap = gap
+end
+expect(flips <= 2, ("② 따라오는 동안 영웅과의 간격이 흔들리지 않는다(1초에 바뀐 횟수 %d)"):format(flips))
+local hx = 200 + 92 * (now - t0)
 local lag = hx - last.x
-expect(lag >= 55 and lag <= 85, ("② 달리는 영웅의 뒤로 처져 따라온다(55~85점 — 실제 %d)"):format(lag))
-eq(last.clip, "run", "② 뛰며 따라온다")
+eq(rv.warps, wRun, "② 곧게 달리는 4초 동안 순간 이동하지 않는다")
+expect(lag >= P.behind + 10 and lag <= P.behind + 40, ("② 달리는 영웅의 뒤로 처져 따라온다(%d~%d점 — 실제 %d)"):format(P.behind + 10, P.behind + 40, lag))
+eq(last.clip, "idle", "② 달려도 그림은 서기 하나(사용자 10-21 — 펫은 자리만 옮긴다)")
 eq(last.y, GROUND, "② 땅 위로")
 
 -- ③ 멈추면 다가와 44점에 ④ 서서 돌아서도 제 쪽에
@@ -127,7 +144,17 @@ local highPicked = 0
 run(rv, 2, hx, GROUND, -1, false, false, high, function()
 	highPicked += 1
 end)
-eq(highPicked, 0, "⑤ 제 높이(위 18 · 아래 4점)가 아닌 것은 줍지 않는다(메이플: 펫의 위 50 · 아래 10px)")
+eq(highPicked, 0, "⑤ 펫에서 원 magnet점(24)보다 먼 높이(40점 위)의 것은 줍지 않는다")
+-- ⑤-자석(2026-10-21 사용자 "펫의 줍기판정이 살짝 자석처럼 … 원형판정으로 지형이 좀 안좋거나 , 펫이 잘 올라가지 못하더라도 주워지게"):
+--  펫이 오를 수 없는 곳(땅보다 18점 위 — 공중의 턱)에 놓인 것도 원 안이면 줍는다 · 그 자리에 서지 않아도 지나가며
+local ledge = { [11] = { x = hx - 30, y = GROUND - 18 } }
+local got = {}
+run(rv, 2, hx, GROUND, -1, false, false, ledge, function(id, px, py)
+	table.insert(got, { id = id, x = px, y = py })
+	ledge[id] = nil
+end)
+eq(#got, 1, "⑤ 오르지 못하는 턱 위(18점 위)의 것도 원 안이면 줍는다")
+expect(got[1] and typeof(got[1].x) == "number" and typeof(got[1].y) == "number", "⑤ 주울 때 펫의 자리를 알린다(그것이 펫 쪽으로 빨려 드는 그림)")
 
 -- ⑥ 턱(16점): 영웅이 낮은 대지 위 x 700에 선다 — 펫이 웅크렸다 뛰어 올라 뒤 44점에
 run(rv, 4, 700, MESA, 1, false, false)
@@ -149,11 +176,12 @@ run(rv, 3, 120, GROUND, 1, false, false)
 eq(last.y, GROUND, "⑧ 영웅을 따라 아래 땅으로 내려왔다")
 eq(rv.warps, w0, "⑧ 순간 이동이 아니라 걸어서(하단 점프)")
 
--- ⑨ 높은 벽(x 896~911): 영웅이 벽 너머 x 950에 · 펫은 벽 앞에서 걸려 → 순간 이동
+-- ⑨ 높은 벽(x 896~911): 영웅이 벽 너머 x 980에 · 펫은 벽 앞에서 걸려 → 순간 이동
+--  (영웅이 behind점 안이면 기다린다 — 2026-10-21 behind 44 → 64로 벌리며 영웅을 950 → 980으로: 벽 앞의 펫과 89점)
 rv = fresh(860, GROUND, 1)
 w0 = rv.warps
 last.inWall = nil
-run(rv, 4, 950, GROUND, 1, false, false)
+run(rv, 4, 980, GROUND, 1, false, false)
 expect(rv.warps > w0, "⑨ 벽에 걸려 못 가면 순간 이동")
 expect(last.x > 911, ("⑨ 벽 너머 영웅 곁으로(펫 x %d)"):format(last.x))
 eq(last.y, GROUND, "⑨ 영웅의 발밑 땅")

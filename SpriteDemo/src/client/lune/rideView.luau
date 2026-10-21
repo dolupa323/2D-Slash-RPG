@@ -8,7 +8,7 @@
 --    막힌 칸 · 발판 위에 서고 벽에 막힌다 · 벽 · 턱에 막히면 windup초 웅크렸다 뛴다 · 영웅이 위 발판에 있어도 따라 오르지 않는다(메이플의 일반 펫) · 영웅이 아래에 있으면
 --    낭떠러지를 걸어 떨어지고 얇은 발판은 하단 점프로 내려간다 · 같은 높이의 건너편이면 뛰어 건넌다 · 사다리는 타지 않는다
 --    순간 이동(영웅의 발밑 땅으로): 영웅이 땅에 서 있을 때 가로 warpX · 세로 warpY보다 멀면 · 가려는데 stuck초 동안 못 가고 영웅이 behind점보다 멀면 · 맵 아래로 떨어지면
---   줍기: 내 펫만(drops · onPick을 받은 것) — 영웅에게서 reach점 안 · 펫이 선 높이에서 위 lookUp · 아래 lookDown점 안의 떨어진 것에 달려가(chase) 닿으면 onPick(번호)
+--   줍기: 내 펫만(drops · onPick을 받은 것) — 영웅에게서 reach점 안 · 펫의 높이에서 위아래 magnet점 안의 떨어진 것에 달려가(chase) 펫에서 원 magnet점 안이면 onPick(번호, x, y)(자석 — 10-21)
 --    → 서버(world.luau의 onPetPick)가 확인하고 줍는다. 한 번 해 본 것 · 가다가 막힌 것은 3초 동안 다시 보지 않는다
 --  탈것: 탄 동안 영웅의 발밑에 탈것을 그리고, 영웅은 서기 모습으로 앉는 자리(seat)에 · 탈것의 등(<동작>_front)을 영웅 앞에 다시 그린다(다리가 몸에 묻혀 앉은 것으로 보인다).
 --   사다리 위 · 기술을 쓰는 동안은 탈것을 감춘다(사용자 10-20 「탈것은 사다리에서 감추기 좋습니다」) — 영웅은 제 동작 그대로.
@@ -34,7 +34,7 @@ local HALF = G.BOX_W / 2
 function RideView.new(layer: Instance, z: number, scene: any)
 	return setmetatable({
 		layer = layer, z = z, scene = scene, petId = nil, pet = nil, rideId = nil, mount = nil, front = nil,
-		body = nil, acc = 0, pdir = 1, pmoveT = -9, goal = nil, tried = {}, nextPick = 0, windT = nil, prog = nil, warps = 0,
+		body = nil, acc = 0, pdir = 1, goal = nil, tried = {}, nextPick = 0, windT = nil, prog = nil, warps = 0,
 	}, RideView)
 end
 
@@ -132,23 +132,23 @@ function RideView:warp(x: number, y: number, dir: number)
 end
 
 -- 펫의 한 걸음(1/60초). hero = { x, y, dir, moving, air }
-function RideView:petStep(now: number, hero, drops: any?, onPick: ((number) -> ())?)
+function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, number, number) -> ())?)
 	local scene, b = self.scene, self.body
 	-- 순간 이동: 영웅이 땅에 서 있을 때 멀면(사다리 · 공중에서는 기다린다 — 영웅의 발밑 땅이 아직 정해지지 않았다)
 	if not hero.air and (math.abs(hero.x - b.x) > P.warpX or math.abs(hero.y - b.y) > P.warpY) then
 		self:warp(hero.x, hero.y, hero.dir)
 		return
 	end
-	-- 주우러 갈 것: 영웅에게서 reach점 안 · 펫이 선 높이의 것(메이플: 펫의 위 50 · 아래 10px) · 펫에게서 가장 가까운 것
+	-- 주우러 갈 것: 영웅에게서 reach점 안 · 펫의 높이에서 위아래 magnet점 안(턱 · 발판 위에 놓여 펫이 오르지 못해도 원 안이면 줍는다) · 펫에게서 가장 가까운 것
 	local goal = if self.goal and drops then drops[self.goal] else nil
-	if goal and (math.abs(goal.x - hero.x) > P.reach + P.slack or goal.y < b.y - P.lookUp or goal.y > b.y + P.lookDown) then
+	if goal and (math.abs(goal.x - hero.x) > P.reach + P.slack or math.abs(goal.y - b.y) > P.magnet) then
 		goal = nil -- 영웅이 멀어졌다 · 펫이 다른 높이로 갔다
 	end
 	self.goal = if goal then self.goal else nil
 	if not goal and drops and onPick and b.ground and now >= self.nextPick then
 		local bd = math.huge
 		for id, d in drops do
-			if math.abs(d.x - hero.x) <= P.reach and d.y >= b.y - P.lookUp and d.y <= b.y + P.lookDown and (self.tried[id] or 0) <= now then
+			if math.abs(d.x - hero.x) <= P.reach and math.abs(d.y - b.y) <= P.magnet and (self.tried[id] or 0) <= now then
 				local dd = math.abs(d.x - b.x)
 				if dd < bd then
 					self.goal, goal, bd = id, d, dd
@@ -162,7 +162,8 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number) -> (
 		tx, speed = goal.x, P.chase
 	else
 		local side = if hero.moving then -hero.dir elseif b.x < hero.x then -1 else 1
-		tx = if hero.air then hero.x + side * P.behind else spotFor(scene, hero.x, hero.y, side)
+		-- 영웅이 달리는 동안은 늘 영웅의 뒤(2026-10-21 — 뒤에 설 땅이 없으면 영웅의 앞으로 갈 곳이 바뀌어 곧게 달리는데도 펫이 앞뒤로 튀었다) · 서 있으면 설 수 있는 곳
+		tx = if hero.air or hero.moving then hero.x + side * P.behind else spotFor(scene, hero.x, hero.y, side)
 		speed = math.min(P.max, P.base + P.per * math.abs(tx - b.x))
 	end
 	local d = tx - b.x
@@ -204,13 +205,14 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number) -> (
 		self:warp(hero.x, hero.y, hero.dir) -- 맵 아래로 떨어졌다
 		return
 	end
-	-- 걸림: 가려는데(mx ~= 0) stuck초 동안 갈 곳 쪽으로 4점도 다가가지 못했다 — 벽 앞에서 뛰기를 되풀이하는 것 · 낭떠러지 앞에서 선 것 모두
+	-- 걸림: 가려는데(mx ~= 0) stuck초 동안 가려는 쪽으로 4점도 움직이지 못했다 — 벽 앞에서 뛰기를 되풀이하는 것 · 낭떠러지 앞에서 선 것 모두
 	--  (한 걸음씩 세면 웅크림 · 뛰기 사이에 끊겨 키보다 높은 벽에서 영영 세지 못한다)
-	local far = math.abs(tx - b.x)
+	--  2026-10-21 사용자 "마을을 일자로 달리면 계속 팅기듯이 프레임드랍 일어나는것처럼 보여요": 전에는 「갈 곳까지의 거리가 4점 줄었나」로 쟀다 —
+	--   영웅이 달리면 펫은 갈 곳에서 같은 거리를 두고 따라가므로 거리가 줄지 않아 1.2초마다 「걸렸다」며 영웅 뒤로 순간 이동했다 → 펫이 실제로 움직인 만큼으로 잰다
 	if mx == 0 then
 		self.prog = nil
-	elseif not self.prog or far < self.prog.d - 4 then
-		self.prog = { d = far, t = now }
+	elseif not self.prog or (b.x - self.prog.x) * mx >= 4 then
+		self.prog = { x = b.x, t = now }
 	elseif now - self.prog.t >= P.stuck then
 		self.prog = nil
 		if self.goal then
@@ -223,25 +225,37 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number) -> (
 	end
 	if math.abs(b.x - x0) > 0.01 then
 		self.pdir = if b.x > x0 then 1 else -1
-		self.pmoveT = now
 	elseif math.abs(hero.x - b.x) > 1 then
 		self.pdir = if hero.x > b.x then 1 else -1 -- 멈추면 영웅 쪽을 본다
 	end
-	-- 닿았다: 줍는다
-	if goal and math.abs(goal.x - b.x) <= 3 and math.abs(goal.y - b.y) <= 8 then
-		local id = self.goal :: number
-		self.tried[id] = now + 3
-		self.goal, self.nextPick = nil, now + P.every
-		if onPick then
-			onPick(id)
+	-- 닿았다: 펫(몸의 가운데)에서 원 magnet점 안이면 줍는다 — 자석처럼(2026-10-21 사용자 "펫의 줍기판정이 살짝 자석처럼 되어야합니다. 원형판정으로 지형이 좀 안좋거나 ,
+	--  펫이 잘 올라가지 못하더라도 주워지게") · 원 안의 것은 갈 곳이 아니어도 지나가며 줍는다(가장 가까운 것 하나 — every초마다)
+	if drops and onPick and now >= self.nextPick then
+		local cy = b.y - 6 -- 펫 몸의 가운데쯤(발밑에서 6점 위)
+		local pick, pd = nil, math.huge
+		for id, d in drops do
+			local ddx, ddy = d.x - b.x, d.y - 4 - cy
+			local dist = math.sqrt(ddx * ddx + ddy * ddy)
+			if dist <= P.magnet and dist < pd and (self.tried[id] or 0) <= now and math.abs(d.x - hero.x) <= P.reach + P.slack then
+				pick, pd = id, dist
+			end
+		end
+		if pick then
+			self.tried[pick] = now + 3
+			if self.goal == pick then
+				self.goal = nil
+			end
+			self.nextPick = now + P.every
+			onPick(pick, b.x, cy)
 		end
 	end
 end
 
 -- 한 장 그린다. (x, y) = 영웅의 발밑 · dir = 보는 쪽 · moving · air = 옆으로 움직이는 중 · 공중(사다리 위도) · hide = 사다리 위 · 기술 중 · 쓰러짐(탈것을 감춘다)
 --  drops = 땅에 떨어진 것들({ [번호] = { x, y } } — effects.luau의 drops) · onPick(번호) = 펫이 닿았다(내 펫만 — 남의 펫은 nil: 따라다니기만)
---  돌려주는 것: 탄 동안 영웅을 그릴 자리(x, y) — 그 밖에는 nil(영웅은 제자리에 제 동작으로)
-function RideView:update(now: number, dt: number, x: number, y: number, dir: number, moving: boolean, air: boolean, hide: boolean, drops: any?, onPick: ((number) -> ())?): (number?, number?)
+--  돌려주는 것: 탄 동안 영웅을 그릴 자리(x, y) · 크기(서기 그림을 줄여 그리는 배 — ride.generated의 riderSize를 화면 화소에 맞춘 것) — 그 밖에는 nil(영웅은 제자리에 제 동작으로)
+--   2026-10-21 사용자 "캐릭터가 탑승한모습이 자연스럽지않아요" · "탑승할때 플레이어도 idle 재생하면될듯 그 위치에서" → 탄 동안 영웅은 서기 그림 그대로 작게 · 안장 자리의 등 위에(장마다 잰 높이)
+function RideView:update(now: number, dt: number, x: number, y: number, dir: number, moving: boolean, air: boolean, hide: boolean, drops: any?, onPick: ((number, number, number) -> ())?): (number?, number?, number?)
 	if self.pet and self.scene then
 		if not self.body then
 			self:warp(x, y, dir) -- 처음 · 펫을 꺼낸 때: 영웅의 뒤
@@ -255,8 +269,10 @@ function RideView:update(now: number, dt: number, x: number, y: number, dir: num
 		end
 		local b = self.body
 		local char = self.pet.char
-		local clip = if not b.ground then "jump" elseif now - self.pmoveT < 0.15 then "run" else "idle"
-		self.pet:set(clip, Sprite.frameAt(char, clip, now, clip == "jump"), math.floor(b.x + 0.5), math.floor(b.y + 0.5), self.pdir)
+		-- 펫의 그림 = 서기 하나(사용자 10-21 "펫은 idle 제외하고 그냥 움직이기만하면되지") — 걸어도 · 뛰어도 그 그림이 자리만 옮긴다
+		--  자리 = 영웅이 그려지는 점(반올림) + 영웅과의 간격(반올림): 펫의 자리를 따로 반올림하면 같은 빠르기로 따라와도 영웅(과 화면)에 대해 장마다 한 점씩 떨렸다(2026-10-21)
+		local hx, hy = math.floor(x + 0.5), math.floor(y + 0.5)
+		self.pet:set("idle", Sprite.frameAt(char, "idle", now, false), hx + math.floor(b.x - x + 0.5), hy + math.floor(b.y - y + 0.5), self.pdir)
 	end
 	if not self.mount then
 		return nil, nil
@@ -273,7 +289,10 @@ function RideView:update(now: number, dt: number, x: number, y: number, dir: num
 	self.mount:set(clip, f, x, y, dir)
 	self.front:set(clip .. "_front", f, x, y, dir)
 	local bob = (m.bob[clip] and m.bob[clip][f]) or 0
-	return x + m.seat.dx * dir, y + m.seat.dy + bob
+	local bobx = (m.bobx and m.bobx[clip] and m.bobx[clip][f]) or 0 -- 어깨를 따라 앞뒤로(질주에서 어깨가 서 있는 그림보다 뒤 — 2026-10-21 사용자 "늑대 탑승위치가 갑자기 앞쪽으로가서")
+	-- 탈것은 char.size배로 그린다(사용자 "탈것들의 크기가 좀더 커야하고" — 화면 화소에 맞춘 배) → 탈것 그림의 점으로 적힌 영웅의 자리도 그 배
+	local ms = Sprite.sizeOn(self.mount.char.size or 1)
+	return x + (m.seat.dx + bobx) * ms * dir, y + (m.seat.dy + bob) * ms, Sprite.sizeOn(RIDE.riderSize or 1)
 end
 
 function RideView:destroy()

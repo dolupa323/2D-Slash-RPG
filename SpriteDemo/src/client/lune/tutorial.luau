@@ -130,7 +130,7 @@ end
 -- 매 화면. c = { tut(서버가 보낸 진행), skip(건너뛸 수 있나), scene(장면 이름표), zones(장면의 tut), body, touch, key(하는 일 → 키 이름), skill(첫 사냥기 「키 · 이름」), potion(물약 칸의 키), windows({ [id] = true }), dt, find(이름) → 반짝일 단추 }
 function View.update(c)
 	local t = c.tut
-	local on = c.scene == Tutorial.SCENE and t ~= nil and not t.done
+	local on = Tutorial.isDream(c.scene) and t ~= nil and not t.done
 	root.Visible = on
 	if not on then
 		View.startX, View.talked, View.dropped, View.cast, pending, shownStep = nil, nil, false, false, false, -1

@@ -21,6 +21,12 @@ function L.rect(r, gw: number?, gh: number?)
 	local out = { x = r.x + math.floor((w - UI.grid.w) * fx + 0.5), y = r.y + math.floor((h - UI.grid.h) * fy + 0.5), w = r.w, h = r.h }
 	-- 좁은 격자에서 왼쪽 이웃(tight.beside)에 닿는 칸은 줄어든 폭(tight.w)으로 — 오른쪽 끝은 그대로 둔다.
 	--  메뉴 단추: 여덟이 넓은 간격으로는 가장 작은 격자(768)의 스킬 칸에 닿는다
+	-- 좁은 격자(폭 narrow.below 미만)에서 가운데는 그대로 두고 폭만 줄이는 칸(스킬 칸 — 칸 사이가 좁아진다 · 2026-10-21)
+	if r.narrow and w < r.narrow.below then
+		local c = out.x + out.w / 2
+		out.w = r.narrow.w
+		out.x = math.floor(c - out.w / 2 + 0.5)
+	end
 	if r.tight then
 		local o = L.rect(UI.hud[r.tight.beside], w, h)
 		if out.x < o.x + o.w + r.tight.gap then
@@ -50,14 +56,27 @@ L.GAINLOG = D.gainLog -- 획득 알림(2026-10-18): 줄 수 · 줄 높이 · 머
 L.MAPNAME = D.mapName -- 맵 이름(2026-10-18): 위 가운데(보스 체력 칸의 자리) — 지역(작은 글) · 맵 이름(nameY · 본문 글) · 밝아짐 fadeIn · 머묾 hold · 흐려짐 fadeOut(초)
 L.BOSS = D.boss -- 스토리 보스의 체력: 화면 위 가운데 — 이름(y) 아래(barY)에 넓은 바(안에 숫자 · pad = 좌우 여백), 그 아래(patY)에 패턴의 이름
 
--- 쓰는 칸이 n개일 때 i째 칸의 자리(스킬 칸 틀 안): 여섯까지는 아랫줄에 가운데로 모으고, 일곱째부터는 윗줄에 같은 식으로
-function L.slotPlace(i: number, n: number): (number, number)
+-- 퀵슬롯 i가 놓이는 줄(1 = 아랫줄 · 2 = 윗줄)과 그 줄의 몇째인가 — 공방 QUICK.rows(2026-10-21: 칸의 번호 · 키는 그대로 두고 새 칸 13 · 14를 줄 끝에)
+function L.slotCell(i: number): (number, number)
+	for r, list in UI.quick.rows do
+		local k = table.find(list, i)
+		if k then
+			return r, k
+		end
+	end
+	return 1, i
+end
+
+-- i째 칸의 자리(스킬 칸 틀 안 — 틀은 넓은 격자의 폭 그대로). gw = 화면 틀의 격자 폭: 좁은 격자(스킬 칸의 narrow)에서는 칸 사이가 좁다(10 → 4점).
+--  n은 예전의 「쓰는 칸의 수」(지금은 늘 모든 칸 — 받기만 한다)
+function L.slotPlace(i: number, _n: number?, gw: number?): (number, number)
 	local s, K = UI.hud.skills, L.SKILLS
-	local pitch = K.slot + K.gap
-	local row = if i <= K.cols then 1 else 2
-	local inRow = if row == 1 then math.min(n, K.cols) else n - K.cols
-	local k = if row == 1 then i else i - K.cols
-	local left = math.floor((s.w - (inRow * pitch - K.gap)) / 2)
+	local r = L.rect(s, gw)
+	local gap = math.min(K.gap, math.floor((r.w - K.cols * K.slot) / (K.cols - 1)))
+	local pitch = K.slot + gap
+	local row, k = L.slotCell(i)
+	local inRow = #UI.quick.rows[row]
+	local left = math.floor((s.w - (inRow * pitch - gap)) / 2)
 	return left + (k - 1) * pitch, s.h - K.slot - (row - 1) * (K.slot + K.keyUp + K.rowGap)
 end
 
@@ -102,6 +121,43 @@ L.SKILL = D.skill -- 스킬 창: 차수 탭 · 안내 줄 · 스킬들(cols줄 x
 -- 능력치 창의 속(폭 · 높이). n = 능력치의 수
 function L.statBody(n: number): (number, number)
 	return L.STAT.w, L.STAT.top + n * L.STAT.row + 8 + M.button + 14 + 20
+end
+
+-- 달빛 상점의 공간(client/lune/cashShop.luau): 미리보기와 상점 판을 한 묶음으로 가운데에 나란히 — 묶음을 화면에 맞춰 키운다(k배).
+--  2026-10-21 사용자: "지금 달빛상점 들어가면 ui가 너무 작아 모바일에서도 반응형 되어야하고" — 전에는 화면 틀의 점 그대로(1080p에서 574 x 332점 = 화면의 60% x 61%)였다.
+--  k = 위 줄 아래 · 아래 여백 위에 들어가는 가장 큰 배(가장 크게 SP.maxScale — 공방 bm.js의 BM_SHOP.space). 한 점이 정수 화소인 배가 가까이(90% 넘게) 있으면 그것(PC 1080p = 1.5배 · 한 점 3화소).
+--   폰(화면 틀 768 x 432)은 들어가는 만큼(1.17배쯤). uiW · uiH = 화면 틀 · us = 화면 틀의 한 점이 몇 화소인가(Stage.uiScale)
+function L.shopSpace(uiW: number, uiH: number, us: number?)
+	local BM = require(script.Parent.Parent.data["bm.generated"])
+	local SP, S = BM.shop.space, D.cash
+	local panelW, panelH = S.w + SP.panelPad * 2, S.listY + S.rows * S.row + S.footY + M.button + SP.panelPad * 2
+	local total = SP.previewW + SP.gap + panelW
+	local k = math.min(SP.maxScale, (uiW - SP.pad * 2) / total, (uiH - SP.topH - SP.bottom) / panelH)
+	local px = us or 1
+	local crisp = math.floor(k * px + 1e-6) / px -- 한 점이 정수 화소인 배(그 아래에서 가장 큰 것)
+	if crisp >= 1 and crisp >= k * 0.9 then
+		k = crisp
+	end
+	k = math.max(0.5, math.floor(k * 100) / 100)
+	local w, h = total * k, panelH * k
+	local x0 = math.floor((uiW - w) / 2)
+	local y0 = SP.topH + math.max(0, math.floor((uiH - SP.topH - SP.bottom - h) / 2))
+	return { k = k, panelW = panelW, panelH = panelH, total = total, x0 = x0, y0 = y0, previewX = 0, panelX = SP.previewW + SP.gap, leaveX = uiW - SP.pad - SP.leaveW }
+end
+
+-- 스마트폰의 「단추 배치」 목록(공방 ui.js의 UILAYOUT.touchChooser — 2026-10-21 점검). 놓을 것이 n개 · 화면 틀의 높이 uiH(왼쪽 위의 Roblox 단추가 가리는 높이는 뺀 것)일 때:
+--  판은 왼쪽 위에 서고 화면에 들어가는 만큼만 길어진다 — 넘치는 줄은 그 안에서 위아래로 민다.
+--  돌려주는 것: w · h = 판의 크기 / viewH = 칸들이 보이는 높이 / contentH = 칸들의 높이 / rowH = 한 줄(칸 + 이름 두 줄) / scroll = 밀어야 다 보이는가
+L.TOUCHCHOOSER = D.touchChooser
+function L.touchChooser(n: number, uiH: number)
+	local K = L.TOUCHCHOOSER
+	local rowH = K.cell + K.nameH
+	local contentH = math.max(1, math.ceil(n / K.cols)) * rowH
+	local room = math.max(rowH, math.floor(uiH - K.top - K.bottom - K.titleH - K.footH))
+	local viewH = math.min(contentH, room)
+	local scroll = contentH > viewH
+	local listW = K.cols * K.cell + (K.cols - 1) * K.gap
+	return { w = K.pad * 2 + listW + (if scroll then K.bar + K.gap else 0), h = K.titleH + viewH + K.footH, viewH = viewH, contentH = contentH, rowH = rowH, scroll = scroll }
 end
 
 -- 스마트폰의 메뉴(「메뉴」 단추를 누르면 뜨는 창 이름의 단추들). 사용자 2026-10-13(폰에서 해 보고): "메뉴탭 열었을때 스크롤이 되어야해 모든메뉴를 접근할수가 없다"

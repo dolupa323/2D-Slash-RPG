@@ -23,11 +23,27 @@ function Q.item(what: any)
 	return if typeof(what) == "string" then GOODS[what] else nil
 end
 
+-- 칸에 놓인 것이 펫 · 탈것이면 "pet" · "mount"(2026-10-21 사용자: 가방의 캐시 탭에서 꺼내기 · 타기 — 퀵슬롯에 놓으면 그 키로 꺼내고 넣고 타고 내린다)
+function Q.ride(what: any): string?
+	if typeof(what) ~= "string" then
+		return nil
+	end
+	if string.sub(what, 1, 4) == "pet_" then
+		return "pet"
+	elseif string.sub(what, 1, 6) == "mount_" then
+		return "mount"
+	end
+	return nil
+end
+
 -- 칸에 놓인 것의 그림 이름(화면의 그림 24x24 — 공방의 아이콘 이름)
 function Q.pic(what: string): string
 	local g = GOODS[what]
 	if g then
 		return g.icon
+	end
+	if Q.ride(what) then
+		return "ride_" .. what -- 펫 · 탈것의 그림(달빛 상점의 것과 같다)
 	end
 	return "skill_" .. what
 end
@@ -169,7 +185,7 @@ end
 
 -- 윗줄(둘째 줄)에 놓인 것이 있는가 — 있으면 윗줄도 늘 보인다
 function Q.usesTop(slots): boolean
-	for i = Q.COLS + 1, Q.N do
+	for _, i in UI.quick.rows[2] do -- 윗줄의 칸(2026-10-21 — 번호가 아니라 줄의 표로: 새 칸 14는 윗줄 끝)
 		if slots[i] then
 			return true
 		end

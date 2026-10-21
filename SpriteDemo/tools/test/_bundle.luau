@@ -5623,8 +5623,14 @@ function Cine.cardAlpha(c, life: number): number
 	return math.max(0, math.min(1, c.t / 0.5, (life - c.t) / 0.5))
 end
 
+-- 방의 이름 → 맵의 이름(r1c4#5 → r1c4): 파티마다 따로 들어가는 장면(스토리 보스의 방 · 사당 지하 · 꿈)의 방에서도 장면의 맵과 견준다(2026-10-21)
+local function baseOf(map: any): any
+	return if type(map) == "string" then (string.match(map, "^(.-)#%d+$") or map) else map
+end
+
 -- 틀 장면: 그 퀘스트의 그 때(on)이고 맵이 맞고 아직 보지 않은 것. seen = { [id] = true }
 function Cine.find(on: string, quest: string, map: string?, seen): any
+	map = baseOf(map)
 	for _, c in DATA.list do
 		local w = c.when
 		if w.on == on and w.quest == quest and (w.map == nil or w.map == map) and not seen[c.id] then
@@ -5636,6 +5642,7 @@ end
 
 -- 틀 장면들(차례대로 — 장의 이름 카드가 먼저): 그 퀘스트의 그 때(on)이고 맵이 맞고 아직 보지 않은 것 모두
 function Cine.findAll(on: string, quest: string, map: string?, seen): { any }
+	map = baseOf(map)
 	local cards, rest = {}, {}
 	for _, c in DATA.list do
 		local w = c.when
@@ -5651,6 +5658,7 @@ end
 
 -- 받기 전의 장면(on = "before"): 그 맵에 들어섰는데 그 퀘스트를 아직 받지 않았다(새 캐릭터가 꿈에서 깨어 사당에 들어설 때)
 function Cine.before(map: string, book, seen): { any }
+	map = baseOf(map)
 	local out = {}
 	for _, c in DATA.list do
 		local w = c.when
@@ -5663,6 +5671,7 @@ end
 
 -- 그 맵에서 지금 덮을 색(퀘스트 동안의 맵 모습 — 불타는 마을의 붉은 하늘). quests = 하는 중인 퀘스트 { [id] = 상태 }
 function Cine.lookAt(map: string, active: { [string]: boolean }): (string?, number)
+	map = baseOf(map)
 	for _, lk in DATA.look do
 		if active[lk.quest] and table.find(lk.maps, map) then
 			return lk.tint, lk.a
@@ -5674,6 +5683,7 @@ end
 -- 그 장면이 지금 나올 때인가(서버가 「장면을 튼다」를 받을 때 — 2026-10-18 검토: 안 본 장면을 아무 데서나 하나씩 틀어 장면마다 90초씩 맞지 않았다).
 --  맵이 정해진 장면은 그 맵에서만 · 받기 전(before)의 장면은 그 퀘스트를 받기 전에만 · 나머지(enter · goal · complete)는 그 퀘스트를 받은 뒤에만
 function Cine.fits(id: any, map: string?, book): boolean
+	map = baseOf(map)
 	for _, c in DATA.list do
 		if c.id == id then
 			local w = c.when
@@ -6291,7 +6301,7 @@ end
 MODULES['ReplicatedStorage/shared/lune/data/assets.generated'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/export_lune_game.mjs).
 -- 그림 파일 이름 → 로블록스 에셋 id. 비어 있으면 아직 올리지 않았거나 그림이 바뀐 것이다(tools/write_lune_ids.mjs).
-return { ["chars_1.png"] = "rbxassetid://139441060788562", ["chars_2.png"] = "rbxassetid://80555779123391", ["chars_3.png"] = "rbxassetid://80173528858137", ["chars_mask_1.png"] = "rbxassetid://126243488570499", ["chars_mask_2.png"] = "rbxassetid://79679881357767", ["chars_mask_3.png"] = "rbxassetid://79391535789921", ["sky.png"] = "rbxassetid://132220205436830", ["far.png"] = "rbxassetid://70389067240845", ["near_hunt.png"] = "rbxassetid://72094974796206", ["ground_hunt_1.png"] = "rbxassetid://124122137516265", ["props_hunt.png"] = "rbxassetid://126214212380510", ["near_town.png"] = "rbxassetid://135098639271756", ["ground_town_1.png"] = "rbxassetid://125524698830662", ["props_town.png"] = "rbxassetid://136592239384770", ["villagers.png"] = "rbxassetid://96495918767937", ["back_in_storage.png"] = "rbxassetid://136086571022108", ["back_in_store.png"] = "rbxassetid://104786944273081", ["back_in_elder.png"] = "rbxassetid://108350436672963", ["back_in_forge.png"] = "rbxassetid://74669737693063", ["back_in_hall.png"] = "rbxassetid://87816764644425", ["back_in_shrine.png"] = "rbxassetid://113277212188271", ["back_in_cellar.png"] = "rbxassetid://128001628966145", ["ground_r1a1_1.png"] = "rbxassetid://83422870736818", ["props_r1a1.png"] = "rbxassetid://92002234447597", ["ground_dream_1.png"] = "rbxassetid://86568380381663", ["ground_r1af_1.png"] = "rbxassetid://103216651480847", ["ground_r1a3_1.png"] = "rbxassetid://124425202970650", ["ground_r1a4_1.png"] = "rbxassetid://119900898562100", ["far_r1b1.png"] = "rbxassetid://135605898532339", ["near_r1b1.png"] = "rbxassetid://100112472273007", ["ground_r1b1_1.png"] = "rbxassetid://131538873933480", ["ground_r1b2_1.png"] = "rbxassetid://125436913697859", ["props_r1b2.png"] = "rbxassetid://83042854732492", ["ground_r1bv_1.png"] = "rbxassetid://136234171407413", ["far_r1b3.png"] = "rbxassetid://118137839897783", ["near_r1b3.png"] = "rbxassetid://78384160036601", ["ground_r1b3_1.png"] = "rbxassetid://128714839542604", ["far_r1cc.png"] = "rbxassetid://126898606308718", ["near_r1cc.png"] = "rbxassetid://111427056380401", ["ground_r1cc_1.png"] = "rbxassetid://140563003927168", ["wall_r1c1.png"] = "rbxassetid://97274081468167", ["ground_r1c1_1.png"] = "rbxassetid://135881037967181", ["ground_r1c2_1.png"] = "rbxassetid://105408422281804", ["ground_r1c3_1.png"] = "rbxassetid://135881037967181", ["far_r2a1.png"] = "rbxassetid://71001089643339", ["near_r2a1.png"] = "rbxassetid://108372695232877", ["ground_r2a1_1.png"] = "rbxassetid://97783772162382", ["props_r2a1.png"] = "rbxassetid://71716194623912", ["ground_r2a2_1.png"] = "rbxassetid://127167083533193", ["ground_r2af_1.png"] = "rbxassetid://119700029947186", ["ground_r2a3_1.png"] = "rbxassetid://96467128886126", ["ground_r2a4_1.png"] = "rbxassetid://91945530040703", ["far_r2b1.png"] = "rbxassetid://105088993635856", ["near_r2b1.png"] = "rbxassetid://129053830092616", ["ground_r2b1_1.png"] = "rbxassetid://85390131222251", ["ground_r2b2_1.png"] = "rbxassetid://76022564274420", ["ground_r2b3_1.png"] = "rbxassetid://129600416411291", ["ground_r2bs_1.png"] = "rbxassetid://74893044822636", ["ground_r2b4_1.png"] = "rbxassetid://132464048359953", ["ground_r2c1_1.png"] = "rbxassetid://128991620683760", ["props_r2c1.png"] = "rbxassetid://81470874675773", ["wall_r2c2.png"] = "rbxassetid://103202435470997", ["ground_r2c2_1.png"] = "rbxassetid://73281231351055", ["ground_r2c3_1.png"] = "rbxassetid://132180829815320", ["far_ct.png"] = "rbxassetid://97327830237568", ["near_ct.png"] = "rbxassetid://123959722179055", ["ground_ct_1.png"] = "rbxassetid://76598854780556", ["ground_ct_2.png"] = "rbxassetid://75898659253993", ["ground_ct_3.png"] = "rbxassetid://122444051043555", ["props_ct.png"] = "rbxassetid://97653285658066", ["ladder.png"] = "rbxassetid://97882390366255", ["far_port.png"] = "rbxassetid://123435927909095", ["near_port.png"] = "rbxassetid://109231585638799", ["ground_port_1.png"] = "rbxassetid://96286569225918", ["ground_port_2.png"] = "rbxassetid://93446056838006", ["props_port.png"] = "rbxassetid://118209609634733", ["wall_r3a1.png"] = "rbxassetid://129110072342137", ["ground_r3a1_1.png"] = "rbxassetid://87088338783793", ["ground_r3a2_1.png"] = "rbxassetid://110586607494872", ["ground_r3ah_1.png"] = "rbxassetid://104190957152391", ["ground_r3a3_1.png"] = "rbxassetid://121121631436780", ["ground_r3a4_1.png"] = "rbxassetid://78659249870034", ["ground_r3b1_1.png"] = "rbxassetid://128556194381664", ["ground_r3b2_1.png"] = "rbxassetid://72136610127139", ["wall_r3t.png"] = "rbxassetid://83371466762190", ["ground_r3t_1.png"] = "rbxassetid://109803440895253", ["ground_r3c1_1.png"] = "rbxassetid://107949167237091", ["ground_r3c2_1.png"] = "rbxassetid://90516991888429", ["ground_r3cs_1.png"] = "rbxassetid://71960457769945", ["ground_r3c3_1.png"] = "rbxassetid://135669932767298", ["far_r3d1.png"] = "rbxassetid://114699110116551", ["near_r3d1.png"] = "rbxassetid://137859042761236", ["ground_r3d1_1.png"] = "rbxassetid://131514299450626", ["props_r3d1.png"] = "rbxassetid://101664768791520", ["ground_r3d2_1.png"] = "rbxassetid://94076994673843", ["ground_r3d3_1.png"] = "rbxassetid://89817150928070", ["far_r4a1.png"] = "rbxassetid://98546761697916", ["near_r4a1.png"] = "rbxassetid://86561589617474", ["ground_r4a1_1.png"] = "rbxassetid://108280608888790", ["props_r4a1.png"] = "rbxassetid://100270543281385", ["ground_r4a2_1.png"] = "rbxassetid://85486681117642", ["ground_r4a3_1.png"] = "rbxassetid://96575068202180", ["ground_r4a4_1.png"] = "rbxassetid://136066894609962", ["wall_r4b1.png"] = "rbxassetid://98532234413640", ["ground_r4b1_1.png"] = "rbxassetid://88887931673327", ["ground_r4b2_1.png"] = "rbxassetid://79877230107216", ["wall_r4b3.png"] = "rbxassetid://107012347372334", ["ground_r4b3_1.png"] = "rbxassetid://83501151151882", ["ground_r4bh_1.png"] = "rbxassetid://102429194534326", ["ground_r4b4_1.png"] = "rbxassetid://106845009391566", ["wall_r4c1.png"] = "rbxassetid://71375264584180", ["ground_r4c1_1.png"] = "rbxassetid://91599845869889", ["wall_r4c2.png"] = "rbxassetid://88127748464340", ["ground_r4c2_1.png"] = "rbxassetid://129647369434522", ["props_r4c2.png"] = "rbxassetid://93139914776457", ["ground_r4ch_1.png"] = "rbxassetid://124784973350172", ["ground_r4c3_1.png"] = "rbxassetid://123743019321609", ["wall_r4d1.png"] = "rbxassetid://123616397829506", ["ground_r4d1_1.png"] = "rbxassetid://72127690724163", ["ground_r4d2_1.png"] = "rbxassetid://131406388678943", ["far_seat.png"] = "rbxassetid://120679010601692", ["near_seat.png"] = "rbxassetid://100563375056858", ["ground_seat_1.png"] = "rbxassetid://95415409535077", ["props_seat.png"] = "rbxassetid://126707896892610", ["ground_sea1_1.png"] = "rbxassetid://116609311030052", ["ground_sea2_1.png"] = "rbxassetid://93028389629730", ["ground_r3b3_1.png"] = "rbxassetid://103749580294335", ["ground_r3b4_1.png"] = "rbxassetid://122662700242947", ["ground_r4d3_1.png"] = "rbxassetid://80335588821204", ["ground_r4e1_1.png"] = "rbxassetid://71537759534162", ["wall_sea5.png"] = "rbxassetid://121989276042041", ["ground_sea5_1.png"] = "rbxassetid://120770918735711", ["ground_sea6_1.png"] = "rbxassetid://82216607848324", ["ground_r1c4_1.png"] = "rbxassetid://98020574553503", ["ground_r2c4_1.png"] = "rbxassetid://115753437369109", ["ground_r3d4_1.png"] = "rbxassetid://118468232445975", ["ground_r4d4_1.png"] = "rbxassetid://117778839393938", ["ground_sea8_1.png"] = "rbxassetid://100524578086246", ["ground_r4es_1.png"] = "rbxassetid://125574607301148", ["ground_r1bl_1.png"] = "rbxassetid://102105250491349", ["ground_r2bl_1.png"] = "rbxassetid://94977117622940", ["ground_r2cl_1.png"] = "rbxassetid://120682725194519", ["ground_r3al_1.png"] = "rbxassetid://84627906941424", ["ground_r3cl_1.png"] = "rbxassetid://81455567612452", ["ground_r4bl_1.png"] = "rbxassetid://103887471752415", ["ground_r4cl_1.png"] = "rbxassetid://133911299211715", ["ground_r4dl_1.png"] = "rbxassetid://78653230925094", ["ground_r1bh_1.png"] = "rbxassetid://115812173236187", ["ground_r2ah_1.png"] = "rbxassetid://118410034190596", ["ground_r2bh_1.png"] = "rbxassetid://132009986769568", ["ground_r3bh_1.png"] = "rbxassetid://88949438100971", ["ground_r4ah_1.png"] = "rbxassetid://92032601099726", ["ground_r4dh_1.png"] = "rbxassetid://139731007351262", ["ground_sea3_1.png"] = "rbxassetid://73022952797720", ["ground_seaf_1.png"] = "rbxassetid://136179698367792", ["ground_sea4_1.png"] = "rbxassetid://133488858131653", ["ground_sea7_1.png"] = "rbxassetid://124740971075210", ["back_ct_store.png"] = "rbxassetid://126366947246540", ["back_ct_smith.png"] = "rbxassetid://136337303330969", ["back_ct_storage.png"] = "rbxassetid://134573437628573", ["back_ct_auction.png"] = "rbxassetid://111002919148565", ["back_ct_office.png"] = "rbxassetid://130229467844565", ["back_ct_harbor.png"] = "rbxassetid://96974337406579", ["back_ct_inn.png"] = "rbxassetid://110896398622871", ["back_ct_fisher.png"] = "rbxassetid://128557373754841", ["back_ct_stable.png"] = "rbxassetid://110252516764726", ["back_ct_spice.png"] = "rbxassetid://117260792010676", ["back_ct_guardpost.png"] = "rbxassetid://77243987648482", ["back_ct_musician.png"] = "rbxassetid://117717247885748", ["back_ct_flower.png"] = "rbxassetid://111657630555738", ["back_ct_oldhouse.png"] = "rbxassetid://98177958007897", ["back_ct_scribe.png"] = "rbxassetid://91218960586498", ["back_ct_maid.png"] = "rbxassetid://129403102377941", ["back_ct_castle.png"] = "rbxassetid://122227497315667", ["back_ct_terrace.png"] = "rbxassetid://82185564261733", ["vista_ct_terrace.png"] = "rbxassetid://72001134778535", ["back_ct_tower.png"] = "rbxassetid://111423026181041", ["sea_ship_out.png"] = "rbxassetid://80754181448263", ["ship_ship_out.png"] = "rbxassetid://92462106500365", ["sea_ship_home.png"] = "rbxassetid://126176094324469", ["ship_ship_home.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_out.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_out.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_home.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_home.png"] = "rbxassetid://102557987604449", ["sea_air_out.png"] = "rbxassetid://112775081132374", ["ship_air_out.png"] = "rbxassetid://108949678734397", ["sea_air_home.png"] = "rbxassetid://112775081132374", ["ship_air_home.png"] = "rbxassetid://108949678734397", ["worldmap_r1.png"] = "rbxassetid://102843140318075", ["worldmap_city.png"] = "rbxassetid://122109754685398", ["worldmap_r2.png"] = "rbxassetid://100140236436154", ["worldmap_sea.png"] = "rbxassetid://92576107471427", ["worldmap_r3.png"] = "rbxassetid://139284205415304", ["worldmap_r4.png"] = "rbxassetid://140105596121121", ["ui_kit.png"] = "rbxassetid://75845634952070", ["font_small_1.png"] = "rbxassetid://105450659975716", ["font_small_2.png"] = "rbxassetid://107436252829336", ["font_small_o_1.png"] = "rbxassetid://97414893618224", ["font_small_o_2.png"] = "rbxassetid://103679168006398", ["font_body_o_1.png"] = "rbxassetid://111645782980424", ["font_body_o_2.png"] = "rbxassetid://83949705319808", ["font_body_o_3.png"] = "rbxassetid://122937040402111", ["portal.png"] = "rbxassetid://73946472428073", ["title_sky.png"] = "rbxassetid://127573656029589", ["title_clouds.png"] = "rbxassetid://89882326454014", ["title_ridge.png"] = "rbxassetid://129071355183212", ["title_logo.png"] = "rbxassetid://114259324331432", ["cine_mural_axion.png"] = "rbxassetid://75681092154576", ["cine_mural_riven.png"] = "rbxassetid://99331828874405", ["cine_mural_reaper.png"] = "rbxassetid://76473369861673", ["cine_mural_mooni.png"] = "rbxassetid://112784522891949", ["cine_mural_salamander.png"] = "rbxassetid://106361966737710", ["shop_bg.png"] = "rbxassetid://108894476720705" }
+return { ["chars_1.png"] = "rbxassetid://139441060788562", ["chars_2.png"] = "rbxassetid://130889718297355", ["chars_3.png"] = "rbxassetid://118737909005746", ["chars_mask_1.png"] = "rbxassetid://126243488570499", ["chars_mask_2.png"] = "rbxassetid://83581507329375", ["chars_mask_3.png"] = "rbxassetid://118174691333755", ["sky.png"] = "rbxassetid://132220205436830", ["far.png"] = "rbxassetid://70389067240845", ["near_hunt.png"] = "rbxassetid://72094974796206", ["ground_hunt_1.png"] = "rbxassetid://124122137516265", ["props_hunt.png"] = "rbxassetid://126214212380510", ["near_town.png"] = "rbxassetid://135098639271756", ["ground_town_1.png"] = "rbxassetid://125524698830662", ["props_town.png"] = "rbxassetid://136592239384770", ["villagers.png"] = "rbxassetid://96495918767937", ["back_in_storage.png"] = "rbxassetid://136086571022108", ["back_in_store.png"] = "rbxassetid://104786944273081", ["back_in_elder.png"] = "rbxassetid://108350436672963", ["back_in_forge.png"] = "rbxassetid://74669737693063", ["back_in_hall.png"] = "rbxassetid://112774948694614", ["back_in_shrine.png"] = "rbxassetid://113277212188271", ["back_in_cellar.png"] = "rbxassetid://128001628966145", ["ground_r1a1_1.png"] = "rbxassetid://83422870736818", ["props_r1a1.png"] = "rbxassetid://92002234447597", ["ground_dream_1.png"] = "rbxassetid://86568380381663", ["ground_r1af_1.png"] = "rbxassetid://103216651480847", ["ground_r1a3_1.png"] = "rbxassetid://124425202970650", ["ground_r1a4_1.png"] = "rbxassetid://119900898562100", ["far_r1b1.png"] = "rbxassetid://135605898532339", ["near_r1b1.png"] = "rbxassetid://100112472273007", ["ground_r1b1_1.png"] = "rbxassetid://131538873933480", ["ground_r1b2_1.png"] = "rbxassetid://125436913697859", ["props_r1b2.png"] = "rbxassetid://83042854732492", ["ground_r1bv_1.png"] = "rbxassetid://136234171407413", ["far_r1b3.png"] = "rbxassetid://118137839897783", ["near_r1b3.png"] = "rbxassetid://78384160036601", ["ground_r1b3_1.png"] = "rbxassetid://128714839542604", ["far_r1cc.png"] = "rbxassetid://126898606308718", ["near_r1cc.png"] = "rbxassetid://111427056380401", ["ground_r1cc_1.png"] = "rbxassetid://140563003927168", ["wall_r1c1.png"] = "rbxassetid://97274081468167", ["ground_r1c1_1.png"] = "rbxassetid://135881037967181", ["ground_r1c2_1.png"] = "rbxassetid://105408422281804", ["ground_r1c3_1.png"] = "rbxassetid://135881037967181", ["far_r2a1.png"] = "rbxassetid://71001089643339", ["near_r2a1.png"] = "rbxassetid://108372695232877", ["ground_r2a1_1.png"] = "rbxassetid://97783772162382", ["props_r2a1.png"] = "rbxassetid://71716194623912", ["ground_r2a2_1.png"] = "rbxassetid://127167083533193", ["ground_r2af_1.png"] = "rbxassetid://119700029947186", ["ground_r2a3_1.png"] = "rbxassetid://96467128886126", ["ground_r2a4_1.png"] = "rbxassetid://91945530040703", ["far_r2b1.png"] = "rbxassetid://105088993635856", ["near_r2b1.png"] = "rbxassetid://129053830092616", ["ground_r2b1_1.png"] = "rbxassetid://85390131222251", ["ground_r2b2_1.png"] = "rbxassetid://76022564274420", ["ground_r2b3_1.png"] = "rbxassetid://129600416411291", ["ground_r2bs_1.png"] = "rbxassetid://74893044822636", ["ground_r2b4_1.png"] = "rbxassetid://132464048359953", ["ground_r2c1_1.png"] = "rbxassetid://128991620683760", ["props_r2c1.png"] = "rbxassetid://81470874675773", ["wall_r2c2.png"] = "rbxassetid://103202435470997", ["ground_r2c2_1.png"] = "rbxassetid://73281231351055", ["ground_r2c3_1.png"] = "rbxassetid://132180829815320", ["far_ct.png"] = "rbxassetid://97327830237568", ["near_ct.png"] = "rbxassetid://123959722179055", ["ground_ct_1.png"] = "rbxassetid://76598854780556", ["ground_ct_2.png"] = "rbxassetid://75898659253993", ["ground_ct_3.png"] = "rbxassetid://122444051043555", ["props_ct.png"] = "rbxassetid://97653285658066", ["ladder.png"] = "rbxassetid://97882390366255", ["far_port.png"] = "rbxassetid://123435927909095", ["near_port.png"] = "rbxassetid://109231585638799", ["ground_port_1.png"] = "rbxassetid://96286569225918", ["ground_port_2.png"] = "rbxassetid://93446056838006", ["props_port.png"] = "rbxassetid://118209609634733", ["wall_r3a1.png"] = "rbxassetid://129110072342137", ["ground_r3a1_1.png"] = "rbxassetid://87088338783793", ["ground_r3a2_1.png"] = "rbxassetid://110586607494872", ["ground_r3ah_1.png"] = "rbxassetid://104190957152391", ["ground_r3a3_1.png"] = "rbxassetid://121121631436780", ["ground_r3a4_1.png"] = "rbxassetid://78659249870034", ["ground_r3b1_1.png"] = "rbxassetid://128556194381664", ["ground_r3b2_1.png"] = "rbxassetid://72136610127139", ["wall_r3t.png"] = "rbxassetid://83371466762190", ["ground_r3t_1.png"] = "rbxassetid://109803440895253", ["ground_r3c1_1.png"] = "rbxassetid://107949167237091", ["ground_r3c2_1.png"] = "rbxassetid://90516991888429", ["ground_r3cs_1.png"] = "rbxassetid://71960457769945", ["ground_r3c3_1.png"] = "rbxassetid://135669932767298", ["far_r3d1.png"] = "rbxassetid://114699110116551", ["near_r3d1.png"] = "rbxassetid://137859042761236", ["ground_r3d1_1.png"] = "rbxassetid://131514299450626", ["props_r3d1.png"] = "rbxassetid://101664768791520", ["ground_r3d2_1.png"] = "rbxassetid://94076994673843", ["ground_r3d3_1.png"] = "rbxassetid://89817150928070", ["far_r4a1.png"] = "rbxassetid://98546761697916", ["near_r4a1.png"] = "rbxassetid://86561589617474", ["ground_r4a1_1.png"] = "rbxassetid://108280608888790", ["props_r4a1.png"] = "rbxassetid://100270543281385", ["ground_r4a2_1.png"] = "rbxassetid://85486681117642", ["ground_r4a3_1.png"] = "rbxassetid://96575068202180", ["ground_r4a4_1.png"] = "rbxassetid://136066894609962", ["wall_r4b1.png"] = "rbxassetid://98532234413640", ["ground_r4b1_1.png"] = "rbxassetid://88887931673327", ["ground_r4b2_1.png"] = "rbxassetid://79877230107216", ["wall_r4b3.png"] = "rbxassetid://107012347372334", ["ground_r4b3_1.png"] = "rbxassetid://83501151151882", ["ground_r4bh_1.png"] = "rbxassetid://102429194534326", ["ground_r4b4_1.png"] = "rbxassetid://106845009391566", ["wall_r4c1.png"] = "rbxassetid://71375264584180", ["ground_r4c1_1.png"] = "rbxassetid://91599845869889", ["wall_r4c2.png"] = "rbxassetid://88127748464340", ["ground_r4c2_1.png"] = "rbxassetid://129647369434522", ["props_r4c2.png"] = "rbxassetid://93139914776457", ["ground_r4ch_1.png"] = "rbxassetid://124784973350172", ["ground_r4c3_1.png"] = "rbxassetid://123743019321609", ["wall_r4d1.png"] = "rbxassetid://123616397829506", ["ground_r4d1_1.png"] = "rbxassetid://72127690724163", ["ground_r4d2_1.png"] = "rbxassetid://131406388678943", ["far_seat.png"] = "rbxassetid://120679010601692", ["near_seat.png"] = "rbxassetid://100563375056858", ["ground_seat_1.png"] = "rbxassetid://95415409535077", ["props_seat.png"] = "rbxassetid://126707896892610", ["ground_sea1_1.png"] = "rbxassetid://116609311030052", ["ground_sea2_1.png"] = "rbxassetid://93028389629730", ["ground_r3b3_1.png"] = "rbxassetid://103749580294335", ["ground_r3b4_1.png"] = "rbxassetid://122662700242947", ["ground_r4d3_1.png"] = "rbxassetid://80335588821204", ["ground_r4e1_1.png"] = "rbxassetid://71537759534162", ["wall_sea5.png"] = "rbxassetid://121989276042041", ["ground_sea5_1.png"] = "rbxassetid://120770918735711", ["ground_sea6_1.png"] = "rbxassetid://82216607848324", ["ground_r1c4_1.png"] = "rbxassetid://98020574553503", ["ground_r2c4_1.png"] = "rbxassetid://115753437369109", ["ground_r3d4_1.png"] = "rbxassetid://118468232445975", ["ground_r4d4_1.png"] = "rbxassetid://117778839393938", ["ground_sea8_1.png"] = "rbxassetid://100524578086246", ["ground_r4es_1.png"] = "rbxassetid://125574607301148", ["ground_r1bl_1.png"] = "rbxassetid://102105250491349", ["ground_r2bl_1.png"] = "rbxassetid://94977117622940", ["ground_r2cl_1.png"] = "rbxassetid://120682725194519", ["ground_r3al_1.png"] = "rbxassetid://84627906941424", ["ground_r3cl_1.png"] = "rbxassetid://81455567612452", ["ground_r4bl_1.png"] = "rbxassetid://103887471752415", ["ground_r4cl_1.png"] = "rbxassetid://133911299211715", ["ground_r4dl_1.png"] = "rbxassetid://78653230925094", ["ground_r1bh_1.png"] = "rbxassetid://115812173236187", ["ground_r2ah_1.png"] = "rbxassetid://118410034190596", ["ground_r2bh_1.png"] = "rbxassetid://132009986769568", ["ground_r3bh_1.png"] = "rbxassetid://88949438100971", ["ground_r4ah_1.png"] = "rbxassetid://92032601099726", ["ground_r4dh_1.png"] = "rbxassetid://139731007351262", ["ground_sea3_1.png"] = "rbxassetid://73022952797720", ["ground_seaf_1.png"] = "rbxassetid://136179698367792", ["ground_sea4_1.png"] = "rbxassetid://133488858131653", ["ground_sea7_1.png"] = "rbxassetid://124740971075210", ["back_ct_store.png"] = "rbxassetid://126366947246540", ["back_ct_smith.png"] = "rbxassetid://136337303330969", ["back_ct_storage.png"] = "rbxassetid://134573437628573", ["back_ct_auction.png"] = "rbxassetid://111002919148565", ["back_ct_office.png"] = "rbxassetid://130229467844565", ["back_ct_harbor.png"] = "rbxassetid://96974337406579", ["back_ct_inn.png"] = "rbxassetid://110896398622871", ["back_ct_fisher.png"] = "rbxassetid://128557373754841", ["back_ct_stable.png"] = "rbxassetid://110252516764726", ["back_ct_spice.png"] = "rbxassetid://117260792010676", ["back_ct_guardpost.png"] = "rbxassetid://77243987648482", ["back_ct_musician.png"] = "rbxassetid://117717247885748", ["back_ct_flower.png"] = "rbxassetid://111657630555738", ["back_ct_oldhouse.png"] = "rbxassetid://98177958007897", ["back_ct_scribe.png"] = "rbxassetid://91218960586498", ["back_ct_maid.png"] = "rbxassetid://129403102377941", ["back_ct_castle.png"] = "rbxassetid://83503122707807", ["back_ct_terrace.png"] = "rbxassetid://82185564261733", ["vista_ct_terrace.png"] = "rbxassetid://72001134778535", ["back_ct_tower.png"] = "rbxassetid://111423026181041", ["sea_ship_out.png"] = "rbxassetid://80754181448263", ["ship_ship_out.png"] = "rbxassetid://92462106500365", ["sea_ship_home.png"] = "rbxassetid://126176094324469", ["ship_ship_home.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_out.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_out.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_home.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_home.png"] = "rbxassetid://102557987604449", ["sea_air_out.png"] = "rbxassetid://112775081132374", ["ship_air_out.png"] = "rbxassetid://108949678734397", ["sea_air_home.png"] = "rbxassetid://112775081132374", ["ship_air_home.png"] = "rbxassetid://108949678734397", ["worldmap_r1.png"] = "rbxassetid://102843140318075", ["worldmap_city.png"] = "rbxassetid://122109754685398", ["worldmap_r2.png"] = "rbxassetid://100140236436154", ["worldmap_sea.png"] = "rbxassetid://92576107471427", ["worldmap_r3.png"] = "rbxassetid://139284205415304", ["worldmap_r4.png"] = "rbxassetid://140105596121121", ["ui_kit.png"] = "rbxassetid://130784972332188", ["font_small_1.png"] = "rbxassetid://105450659975716", ["font_small_2.png"] = "rbxassetid://107436252829336", ["font_small_o_1.png"] = "rbxassetid://97414893618224", ["font_small_o_2.png"] = "rbxassetid://103679168006398", ["font_body_o_1.png"] = "rbxassetid://111645782980424", ["font_body_o_2.png"] = "rbxassetid://83949705319808", ["font_body_o_3.png"] = "rbxassetid://122937040402111", ["portal.png"] = "rbxassetid://73946472428073", ["title_sky.png"] = "rbxassetid://127573656029589", ["title_clouds.png"] = "rbxassetid://89882326454014", ["title_ridge.png"] = "rbxassetid://129071355183212", ["title_logo.png"] = "rbxassetid://114259324331432", ["cine_mural_axion.png"] = "rbxassetid://75681092154576", ["cine_mural_riven.png"] = "rbxassetid://99331828874405", ["cine_mural_reaper.png"] = "rbxassetid://76473369861673", ["cine_mural_mooni.png"] = "rbxassetid://112784522891949", ["cine_mural_salamander.png"] = "rbxassetid://106361966737710", ["shop_bg.png"] = "rbxassetid://108894476720705" }
 
 end
 MODULES['ReplicatedStorage/shared/lune/data/attend.generated'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
@@ -6436,7 +6446,7 @@ return {
 			rid = 3720335800,
 			built = true,
 			icon = "ride_mount_wolf",
-			line = "타는 모습만 바뀐다(빠르지 않다)",
+			line = "타는 동안 달리기 30% 빠르게",
 		},
 		{
 			id = "mount_deer",
@@ -6449,7 +6459,7 @@ return {
 			rid = 3720335849,
 			built = true,
 			icon = "ride_mount_deer",
-			line = "타는 모습만 바뀐다(빠르지 않다)",
+			line = "타는 동안 달리기 30% 빠르게",
 		},
 		{
 			id = "mount_boar",
@@ -6462,7 +6472,7 @@ return {
 			rid = 3720335894,
 			built = true,
 			icon = "ride_mount_boar",
-			line = "타는 모습만 바뀐다(빠르지 않다)",
+			line = "타는 동안 달리기 30% 빠르게",
 		},
 		{ id = "exp", name = "경험치 쿠폰", kind = "product", robux = 49, trade = true, touch = "time", limit = false, rid = 3720311180, built = true, icon = "bm_exp", line = "30분 동안 사냥 경험치 1.5배" },
 		{
@@ -6487,7 +6497,7 @@ return {
 			touch = "currency",
 			limit = { per = "active", n = 1 },
 			rid = 3720321110,
-			built = true,
+			built = false,
 			icon = "bm_pass",
 			line = "30일 동안 칸 30개의 보상 · 경매장 칸 +5",
 		},
@@ -6596,24 +6606,26 @@ return {
 		title = "달빛 상점",
 		tabs = {
 			{ "conv", "편의" },
+			{ "pet", "펫" },
 			{ "money", "재화" },
 			{ "look", "꾸밈" },
-			{ "pass", "패스" },
 			{ "box", "보관함" },
 		},
 		rows = {
-			conv = { "starter", "bagx", "storex", "charx", "rename", "exp", "pet_silver", "pet_lantern", "pet_scarf", "tele" },
+			conv = { "starter", "bagx", "storex", "charx", "rename", "exp", "tele" },
+			pet = { "pet_silver", "pet_lantern", "pet_scarf" },
 			money = { "money", "dust" },
 			look = { "mount_wolf", "mount_deer", "mount_boar", "dmgskin", "tagskin" },
-			pass = { "pass" },
 		},
-		words = { head = "로벅스로 산 것은 「보관함」에 들어온다", price = "{n} 로벅스", passPrice = "{n} 로벅스 · {days}일", buy = "구매", soon = "준비 중", own = "보유", subscribe = "구독", week = "이번 주 {n}/{max}", once = "산 수 {n}/{max}", trade = "거래 가능", account = "계정", nowMoney = "지금 사면 달돈 {n}(Lv.{band})", nowDust = "지금 사면 달가루 {n}(Lv.{band})", boxMoney = "쓰면 달돈 {n}", boxDust = "쓰면 달가루 {n}", take = "받기", takeAll = "모두 받기", boxEmpty = "보관함이 비었다", boxHint = "받으면 가방의 「소비」 탭으로 간다", asked = "구매 창을 띄웠다 — 결제가 끝나면 보관함에", got = "「{name}」 — 보관함에 들어왔다", gotSlot = "캐릭터 칸이 하나 늘었다", gotPass = "달빛 패스 — 오늘부터 30일", gotOwn = "「{name}」 — 계정에 들어왔다", petOn = "꺼내기", petOff = "넣기", rideOn = "타기", rideOff = "내리기", noMount = "가진 탈것이 없다 — 달빛 상점에서", taken = "{n}개를 가방에 넣었다", full = "가방에 자리가 없다", renameTitle = "이름 바꾸기", renameText = "새 이름을 적는다 — 규칙은 처음 만들 때와 같다", renameHave = "가진 주문서 {n}장", renamePh = "새 이름", renameGo = "변경", renameDone = "이름이 「{name}」이 되었다" },
+		words = { head = "로벅스로 산 것은 「보관함」에 들어온다", price = "{n} 로벅스", passPrice = "{n} 로벅스 · {days}일", buy = "구매", soon = "준비 중", own = "보유", subscribe = "구독", week = "이번 주 {n}/{max}", once = "산 수 {n}/{max}", trade = "거래 가능", account = "계정", nowMoney = "지금 사면 달돈 {n}(Lv.{band})", nowDust = "지금 사면 달가루 {n}(Lv.{band})", boxMoney = "쓰면 달돈 {n}", boxDust = "쓰면 달가루 {n}", take = "받기", takeAll = "모두 받기", boxEmpty = "보관함이 비었다", boxHint = "받으면 가방의 「소비」 탭으로 간다", asked = "구매 창을 띄웠다 — 결제가 끝나면 보관함에", got = "「{name}」 — 보관함에 들어왔다", gotSlot = "캐릭터 칸이 하나 늘었다", gotPass = "달빛 패스 — 오늘부터 30일", gotOwn = "「{name}」 — 계정에 들어왔다", petOn = "꺼내기", petOff = "넣기", rideOn = "타기", rideOff = "내리기", noMount = "가진 탈것이 없다 — 달빛 상점에서", bagTab = "캐시", bagEmpty = "가진 펫 · 탈것이 없다", petKind = "펫", mountKind = "탈것", petOutTag = "꺼내 둠", rideTag = "타는 중", bagHint = "퀵슬롯에 놓으면 그 키로 꺼내고 넣는다", rideHint = "퀵슬롯에 놓으면 그 키로 타고 내린다(N 키도)", taken = "{n}개를 가방에 넣었다", full = "가방에 자리가 없다", renameTitle = "이름 바꾸기", renameText = "새 이름을 적는다 — 규칙은 처음 만들 때와 같다", renameHave = "가진 주문서 {n}장", renamePh = "새 이름", renameGo = "변경", renameDone = "이름이 「{name}」이 되었다" },
 		boxOf = { bmBag = "bagx", bmStore = "storex", bmRename = "rename", bmExp = "exp" },
 		space = {
 			bg = "shop_bg.png",
 			veil = 0.45,
 			topH = 34,
 			pad = 16,
+			bottom = 8,
+			maxScale = 1.5,
 			leaveW = 76,
 			previewW = 200,
 			gap = 14,
@@ -6645,164 +6657,164 @@ return {
 				idle = {
 					fps = 10,
 					frames = {
-						{ 3, 951, 596, 24, 20, 56, 60 },
-						{ 3, 582, 529, 24, 21, 56, 59 },
-						{ 3, 608, 529, 24, 21, 56, 59 },
-						{ 3, 977, 596, 24, 20, 56, 60 },
-						{ 3, 2, 618, 24, 20, 56, 60 },
-						{ 3, 28, 618, 24, 20, 56, 61 },
-						{ 3, 54, 618, 24, 20, 56, 60 },
+						{ 3, 555, 595, 24, 20, 56, 60 },
+						{ 3, 164, 528, 24, 21, 56, 59 },
+						{ 3, 190, 528, 24, 21, 56, 59 },
+						{ 3, 581, 595, 24, 20, 56, 60 },
+						{ 3, 607, 595, 24, 20, 56, 60 },
+						{ 3, 633, 595, 24, 20, 56, 61 },
+						{ 3, 659, 595, 24, 20, 56, 60 },
 					},
 				},
 				run = {
 					fps = 10,
 					frames = {
-						{ 3, 923, 864, 27, 16, 55, 64 },
-						{ 3, 310, 683, 27, 19, 55, 61 },
-						{ 3, 339, 683, 27, 19, 55, 60 },
-						{ 3, 368, 683, 27, 19, 55, 61 },
-						{ 3, 981, 864, 26, 16, 56, 64 },
-						{ 3, 716, 683, 26, 19, 56, 61 },
-						{ 3, 744, 683, 26, 19, 56, 60 },
-						{ 3, 342, 596, 26, 20, 56, 60 },
+						{ 3, 533, 860, 27, 16, 55, 64 },
+						{ 3, 2, 681, 27, 19, 55, 61 },
+						{ 3, 31, 681, 27, 19, 55, 60 },
+						{ 3, 60, 681, 27, 19, 55, 61 },
+						{ 3, 591, 860, 26, 16, 56, 64 },
+						{ 3, 408, 681, 26, 19, 56, 61 },
+						{ 3, 436, 681, 26, 19, 56, 60 },
+						{ 3, 980, 573, 26, 20, 56, 60 },
 					},
 				},
 				jump = {
 					fps = 10,
 					frames = {
-						{ 3, 420, 529, 25, 21, 56, 59 },
-						{ 3, 447, 529, 25, 21, 56, 59 },
-						{ 3, 474, 529, 25, 21, 56, 59 },
-						{ 3, 501, 529, 25, 21, 56, 59 },
+						{ 3, 2, 528, 25, 21, 56, 59 },
+						{ 3, 29, 528, 25, 21, 56, 59 },
+						{ 3, 56, 528, 25, 21, 56, 59 },
+						{ 3, 83, 528, 25, 21, 56, 59 },
 					},
 				},
 				fall = {
 					fps = 10,
 					frames = {
-						{ 3, 772, 683, 26, 19, 55, 60 },
-						{ 3, 800, 683, 26, 19, 55, 60 },
-						{ 3, 828, 683, 26, 19, 55, 60 },
-						{ 3, 856, 683, 26, 19, 55, 60 },
+						{ 3, 464, 681, 26, 19, 55, 60 },
+						{ 3, 492, 681, 26, 19, 55, 60 },
+						{ 3, 520, 681, 26, 19, 55, 60 },
+						{ 3, 548, 681, 26, 19, 55, 60 },
 					},
 				},
 				hurt = {
 					fps = 10,
 					frames = {
-						{ 3, 80, 618, 24, 20, 56, 60 },
-						{ 3, 390, 704, 24, 19, 56, 61 },
-						{ 3, 106, 618, 24, 20, 56, 60 },
+						{ 3, 685, 595, 24, 20, 56, 60 },
+						{ 3, 83, 702, 24, 19, 56, 61 },
+						{ 3, 711, 595, 24, 20, 56, 60 },
 					},
 				},
 				death = {
 					fps = 12,
 					frames = {
-						{ 3, 634, 529, 24, 21, 56, 59 },
-						{ 3, 660, 529, 24, 21, 56, 59 },
-						{ 3, 132, 618, 24, 20, 56, 60 },
-						{ 3, 416, 704, 24, 19, 56, 61 },
-						{ 3, 442, 704, 24, 19, 56, 61 },
-						{ 3, 468, 704, 24, 19, 56, 61 },
-						{ 3, 494, 704, 24, 19, 56, 61 },
-						{ 3, 494, 704, 24, 19, 56, 61 },
-						{ 3, 520, 704, 24, 19, 56, 61 },
-						{ 3, 546, 704, 24, 19, 56, 61 },
-						{ 3, 345, 436, 29, 22, 54, 58 },
-						{ 3, 906, 338, 31, 23, 53, 57 },
-						{ 3, 838, 338, 32, 23, 52, 57 },
-						{ 3, 972, 261, 33, 24, 52, 56 },
-						{ 3, 864, 261, 34, 24, 51, 56 },
-						{ 3, 250, 574, 35, 20, 51, 60 },
-						{ 3, 432, 972, 1, 1, 55, 79 },
+						{ 3, 216, 528, 24, 21, 56, 59 },
+						{ 3, 242, 528, 24, 21, 56, 59 },
+						{ 3, 737, 595, 24, 20, 56, 60 },
+						{ 3, 109, 702, 24, 19, 56, 61 },
+						{ 3, 135, 702, 24, 19, 56, 61 },
+						{ 3, 161, 702, 24, 19, 56, 61 },
+						{ 3, 187, 702, 24, 19, 56, 61 },
+						{ 3, 187, 702, 24, 19, 56, 61 },
+						{ 3, 213, 702, 24, 19, 56, 61 },
+						{ 3, 239, 702, 24, 19, 56, 61 },
+						{ 3, 953, 411, 29, 22, 54, 58 },
+						{ 3, 580, 337, 31, 23, 53, 57 },
+						{ 3, 512, 337, 32, 23, 52, 57 },
+						{ 3, 635, 260, 33, 24, 52, 56 },
+						{ 3, 527, 260, 34, 24, 51, 56 },
+						{ 3, 914, 551, 35, 20, 51, 60 },
+						{ 3, 845, 953, 1, 1, 55, 79 },
 						false,
 					},
 				},
 				atk1 = {
 					fps = 10,
 					frames = {
-						{ 3, 282, 704, 25, 19, 55, 61 },
-						{ 3, 640, 766, 26, 18, 54, 62 },
-						{ 3, 250, 766, 28, 18, 53, 62 },
-						{ 3, 158, 640, 68, 19, 44, 61 },
-						{ 3, 212, 806, 58, 17, 47, 63 },
-						{ 3, 598, 725, 54, 18, 47, 62 },
-						{ 3, 545, 640, 52, 19, 46, 61 },
-						{ 3, 806, 640, 48, 19, 48, 61 },
-						{ 3, 975, 552, 40, 20, 55, 60 },
-						{ 3, 106, 618, 24, 20, 56, 60 },
+						{ 3, 996, 681, 25, 19, 55, 61 },
+						{ 3, 242, 763, 26, 18, 54, 62 },
+						{ 3, 870, 743, 28, 18, 53, 62 },
+						{ 3, 829, 617, 68, 19, 44, 61 },
+						{ 3, 824, 783, 58, 17, 47, 63 },
+						{ 3, 225, 723, 54, 18, 47, 62 },
+						{ 3, 249, 639, 52, 19, 46, 61 },
+						{ 3, 510, 639, 48, 19, 48, 61 },
+						{ 3, 585, 551, 40, 20, 55, 60 },
+						{ 3, 711, 595, 24, 20, 56, 60 },
 					},
 				},
 				atk3 = {
 					fps = 10,
 					frames = {
-						{ 3, 282, 704, 25, 19, 55, 61 },
-						{ 3, 640, 766, 26, 18, 54, 62 },
-						{ 3, 250, 766, 28, 18, 53, 62 },
-						{ 3, 228, 640, 68, 19, 44, 61 },
-						{ 3, 272, 806, 58, 17, 47, 63 },
-						{ 3, 598, 725, 54, 18, 47, 62 },
-						{ 3, 545, 640, 52, 19, 46, 61 },
-						{ 3, 806, 640, 48, 19, 48, 61 },
-						{ 3, 834, 552, 49, 20, 46, 60 },
-						{ 3, 879, 287, 63, 23, 52, 57 },
-						{ 3, 681, 287, 64, 23, 50, 57 },
-						{ 3, 747, 287, 64, 23, 49, 57 },
-						{ 3, 944, 287, 63, 23, 49, 57 },
-						{ 3, 813, 287, 64, 23, 48, 57 },
-						{ 3, 762, 363, 59, 22, 46, 58 },
+						{ 3, 996, 681, 25, 19, 55, 61 },
+						{ 3, 242, 763, 26, 18, 54, 62 },
+						{ 3, 870, 743, 28, 18, 53, 62 },
+						{ 3, 899, 617, 68, 19, 44, 61 },
+						{ 3, 884, 783, 58, 17, 47, 63 },
+						{ 3, 225, 723, 54, 18, 47, 62 },
+						{ 3, 249, 639, 52, 19, 46, 61 },
+						{ 3, 510, 639, 48, 19, 48, 61 },
+						{ 3, 396, 551, 49, 20, 46, 60 },
+						{ 3, 504, 286, 63, 23, 52, 57 },
+						{ 3, 306, 286, 64, 23, 50, 57 },
+						{ 3, 372, 286, 64, 23, 49, 57 },
+						{ 3, 569, 286, 63, 23, 49, 57 },
+						{ 3, 438, 286, 64, 23, 48, 57 },
+						{ 3, 416, 362, 59, 22, 46, 58 },
 						{ 2, 58, 532, 61, 38, 50, 42 },
 						{ 2, 180, 532, 49, 38, 60, 42 },
-						{ 2, 871, 532, 49, 37, 60, 43 },
-						{ 2, 850, 650, 49, 34, 61, 46 },
-						{ 2, 132, 724, 52, 33, 58, 47 },
-						{ 3, 906, 640, 43, 19, 57, 61 },
-						{ 3, 309, 704, 25, 19, 55, 61 },
-						{ 3, 106, 618, 24, 20, 56, 60 },
+						{ 2, 841, 532, 49, 37, 60, 43 },
+						{ 2, 686, 650, 49, 34, 61, 46 },
+						{ 2, 2, 724, 52, 33, 58, 47 },
+						{ 3, 610, 639, 43, 19, 57, 61 },
+						{ 3, 2, 702, 25, 19, 55, 61 },
+						{ 3, 711, 595, 24, 20, 56, 60 },
 					},
 				},
 				smash = {
 					fps = 10,
 					frames = {
-						{ 3, 572, 704, 24, 19, 55, 61 },
-						{ 3, 440, 746, 34, 18, 47, 62 },
-						{ 3, 558, 826, 34, 17, 49, 63 },
-						{ 3, 765, 864, 33, 16, 49, 64 },
-						{ 3, 338, 662, 36, 19, 45, 61 },
-						{ 3, 931, 552, 42, 20, 38, 60 },
-						{ 3, 211, 483, 44, 21, 36, 59 },
+						{ 3, 265, 702, 24, 19, 55, 61 },
+						{ 3, 44, 743, 34, 18, 47, 62 },
+						{ 3, 150, 822, 34, 17, 49, 63 },
+						{ 3, 375, 860, 33, 16, 49, 64 },
+						{ 3, 42, 660, 36, 19, 45, 61 },
+						{ 3, 541, 551, 42, 20, 38, 60 },
+						{ 3, 790, 459, 44, 21, 36, 59 },
 						{ 2, 804, 436, 73, 43, 50, 37 },
 						{ 2, 81, 488, 58, 42, 60, 38 },
 						{ 2, 276, 488, 58, 40, 60, 40 },
 						{ 2, 121, 532, 57, 38, 61, 42 },
-						{ 2, 808, 532, 61, 37, 57, 43 },
-						{ 2, 811, 573, 64, 36, 54, 44 },
-						{ 3, 436, 460, 62, 21, 55, 59 },
-						{ 3, 106, 618, 24, 20, 56, 60 },
+						{ 2, 778, 532, 61, 37, 57, 43 },
+						{ 2, 646, 573, 64, 36, 54, 44 },
+						{ 3, 934, 435, 62, 21, 55, 59 },
+						{ 3, 711, 595, 24, 20, 56, 60 },
 					},
 				},
 				dash = {
 					fps = 10,
 					frames = {
-						{ 3, 397, 683, 27, 19, 55, 61 },
-						{ 3, 426, 683, 27, 19, 55, 61 },
-						{ 3, 455, 683, 27, 19, 55, 61 },
-						{ 3, 250, 683, 28, 19, 54, 61 },
-						{ 3, 484, 683, 27, 19, 55, 61 },
-						{ 3, 513, 683, 27, 19, 55, 61 },
-						{ 3, 542, 683, 27, 19, 55, 61 },
-						{ 3, 571, 683, 27, 19, 55, 61 },
-						{ 3, 600, 683, 27, 19, 55, 61 },
-						{ 3, 629, 683, 27, 19, 55, 61 },
-						{ 3, 658, 683, 27, 19, 55, 61 },
-						{ 3, 687, 683, 27, 19, 55, 61 },
+						{ 3, 89, 681, 27, 19, 55, 61 },
+						{ 3, 118, 681, 27, 19, 55, 61 },
+						{ 3, 147, 681, 27, 19, 55, 61 },
+						{ 3, 953, 660, 28, 19, 54, 61 },
+						{ 3, 176, 681, 27, 19, 55, 61 },
+						{ 3, 205, 681, 27, 19, 55, 61 },
+						{ 3, 234, 681, 27, 19, 55, 61 },
+						{ 3, 263, 681, 27, 19, 55, 61 },
+						{ 3, 292, 681, 27, 19, 55, 61 },
+						{ 3, 321, 681, 27, 19, 55, 61 },
+						{ 3, 350, 681, 27, 19, 55, 61 },
+						{ 3, 379, 681, 27, 19, 55, 61 },
 					},
 				},
 				climb = {
 					fps = 8,
 					frames = {
-						{ 3, 987, 618, 16, 20, 66, 60 },
-						{ 3, 987, 618, 16, 20, 66, 60 },
-						{ 3, 873, 618, 17, 20, 65, 60 },
-						{ 3, 873, 618, 17, 20, 65, 60 },
+						{ 3, 637, 617, 16, 20, 66, 60 },
+						{ 3, 637, 617, 16, 20, 66, 60 },
+						{ 3, 523, 617, 17, 20, 65, 60 },
+						{ 3, 523, 617, 17, 20, 65, 60 },
 					},
 				},
 			},
@@ -6817,213 +6829,213 @@ return {
 				idle = {
 					fps = 10,
 					frames = {
-						{ 3, 939, 662, 29, 19, 56, 61 },
-						{ 3, 842, 574, 29, 20, 56, 60 },
-						{ 3, 873, 574, 29, 20, 56, 60 },
-						{ 3, 970, 662, 29, 19, 56, 61 },
-						{ 3, 832, 826, 29, 17, 56, 63 },
-						{ 3, 708, 746, 29, 18, 56, 62 },
-						{ 3, 939, 662, 29, 19, 56, 61 },
+						{ 3, 643, 660, 29, 19, 56, 61 },
+						{ 3, 485, 573, 29, 20, 56, 60 },
+						{ 3, 516, 573, 29, 20, 56, 60 },
+						{ 3, 674, 660, 29, 19, 56, 61 },
+						{ 3, 424, 822, 29, 17, 56, 63 },
+						{ 3, 312, 743, 29, 18, 56, 62 },
+						{ 3, 643, 660, 29, 19, 56, 61 },
 					},
 				},
 				run = {
 					fps = 10,
 					frames = {
-						{ 3, 438, 900, 29, 14, 53, 66 },
-						{ 3, 612, 746, 30, 18, 53, 62 },
-						{ 3, 644, 746, 30, 18, 53, 61 },
-						{ 3, 676, 746, 30, 18, 53, 62 },
-						{ 3, 469, 900, 29, 14, 54, 66 },
-						{ 3, 739, 746, 29, 18, 54, 62 },
-						{ 3, 770, 746, 29, 18, 54, 61 },
-						{ 3, 801, 746, 29, 18, 54, 62 },
+						{ 3, 917, 878, 29, 14, 53, 66 },
+						{ 3, 216, 743, 30, 18, 53, 62 },
+						{ 3, 248, 743, 30, 18, 53, 61 },
+						{ 3, 280, 743, 30, 18, 53, 62 },
+						{ 3, 948, 878, 29, 14, 54, 66 },
+						{ 3, 343, 743, 29, 18, 54, 62 },
+						{ 3, 374, 743, 29, 18, 54, 61 },
+						{ 3, 405, 743, 29, 18, 54, 62 },
 					},
 				},
 				jump = {
 					fps = 10,
 					frames = {
-						{ 3, 2, 529, 29, 21, 55, 59 },
-						{ 3, 904, 574, 29, 20, 55, 59 },
-						{ 3, 935, 574, 29, 20, 55, 59 },
-						{ 3, 33, 529, 29, 21, 55, 59 },
+						{ 3, 610, 505, 29, 21, 55, 59 },
+						{ 3, 547, 573, 29, 20, 55, 59 },
+						{ 3, 578, 573, 29, 20, 55, 59 },
+						{ 3, 641, 505, 29, 21, 55, 59 },
 					},
 				},
 				fall = {
 					fps = 10,
 					frames = {
-						{ 3, 832, 746, 29, 18, 55, 62 },
-						{ 3, 863, 746, 29, 18, 55, 62 },
-						{ 3, 894, 746, 29, 18, 55, 62 },
-						{ 3, 925, 746, 29, 18, 55, 62 },
+						{ 3, 436, 743, 29, 18, 55, 62 },
+						{ 3, 467, 743, 29, 18, 55, 62 },
+						{ 3, 498, 743, 29, 18, 55, 62 },
+						{ 3, 529, 743, 29, 18, 55, 62 },
 					},
 				},
 				hurt = {
 					fps = 10,
 					frames = {
-						{ 3, 863, 826, 29, 17, 55, 63 },
-						{ 3, 939, 662, 29, 19, 56, 61 },
+						{ 3, 455, 822, 29, 17, 55, 63 },
+						{ 3, 643, 660, 29, 19, 56, 61 },
 					},
 				},
 				death = {
 					fps = 12,
 					frames = {
-						{ 3, 939, 662, 29, 19, 56, 61 },
-						{ 3, 966, 574, 29, 20, 56, 60 },
-						{ 3, 2, 596, 29, 20, 56, 59 },
-						{ 3, 33, 596, 29, 20, 57, 58 },
-						{ 3, 64, 596, 29, 20, 57, 58 },
-						{ 3, 95, 596, 29, 20, 57, 57 },
-						{ 3, 126, 596, 29, 20, 57, 57 },
-						{ 3, 157, 596, 29, 20, 57, 56 },
-						{ 3, 2, 683, 29, 19, 57, 56 },
-						{ 3, 894, 826, 28, 17, 58, 55 },
-						{ 3, 62, 845, 27, 17, 59, 54 },
-						{ 3, 91, 845, 27, 17, 59, 53 },
-						{ 3, 120, 845, 27, 17, 59, 52 },
-						{ 3, 199, 882, 19, 16, 58, 52 },
-						{ 3, 283, 882, 18, 16, 59, 51 },
-						{ 3, 23, 900, 18, 15, 59, 50 },
-						{ 3, 432, 972, 1, 1, 59, 63 },
+						{ 3, 643, 660, 29, 19, 56, 61 },
+						{ 3, 609, 573, 29, 20, 56, 60 },
+						{ 3, 640, 573, 29, 20, 56, 59 },
+						{ 3, 671, 573, 29, 20, 57, 58 },
+						{ 3, 702, 573, 29, 20, 57, 58 },
+						{ 3, 733, 573, 29, 20, 57, 57 },
+						{ 3, 764, 573, 29, 20, 57, 57 },
+						{ 3, 795, 573, 29, 20, 57, 56 },
+						{ 3, 705, 660, 29, 19, 57, 56 },
+						{ 3, 486, 822, 28, 17, 58, 55 },
+						{ 3, 666, 822, 27, 17, 59, 54 },
+						{ 3, 695, 822, 27, 17, 59, 53 },
+						{ 3, 724, 822, 27, 17, 59, 52 },
+						{ 3, 816, 860, 19, 16, 58, 52 },
+						{ 3, 900, 860, 18, 16, 59, 51 },
+						{ 3, 522, 878, 18, 15, 59, 50 },
+						{ 3, 845, 953, 1, 1, 59, 63 },
 					},
 				},
 				slash = {
 					fps = 10,
 					frames = {
-						{ 3, 956, 746, 29, 18, 55, 62 },
-						{ 3, 800, 864, 29, 16, 54, 64 },
-						{ 3, 609, 882, 32, 15, 52, 65 },
-						{ 3, 338, 900, 32, 14, 51, 66 },
-						{ 3, 372, 900, 31, 14, 52, 66 },
-						{ 3, 67, 313, 61, 23, 51, 57 },
-						{ 3, 449, 806, 52, 17, 53, 63 },
-						{ 3, 811, 806, 47, 17, 54, 63 },
-						{ 3, 952, 725, 43, 18, 55, 62 },
-						{ 3, 398, 746, 40, 18, 56, 62 },
-						{ 3, 175, 662, 39, 19, 56, 61 },
+						{ 3, 560, 743, 29, 18, 55, 62 },
+						{ 3, 410, 860, 29, 16, 54, 64 },
+						{ 3, 98, 878, 32, 15, 52, 65 },
+						{ 3, 817, 878, 32, 14, 51, 66 },
+						{ 3, 851, 878, 31, 14, 52, 66 },
+						{ 3, 699, 286, 61, 23, 51, 57 },
+						{ 3, 59, 803, 52, 17, 53, 63 },
+						{ 3, 421, 803, 47, 17, 54, 63 },
+						{ 3, 579, 723, 43, 18, 55, 62 },
+						{ 3, 2, 743, 40, 18, 56, 62 },
+						{ 3, 873, 639, 39, 19, 56, 61 },
 					},
 				},
 				dslash = {
 					fps = 10,
 					frames = {
-						{ 3, 956, 746, 29, 18, 55, 62 },
-						{ 3, 831, 864, 29, 16, 54, 64 },
-						{ 3, 677, 882, 30, 15, 53, 65 },
-						{ 3, 405, 900, 31, 14, 52, 66 },
-						{ 3, 2, 313, 63, 23, 52, 57 },
-						{ 3, 310, 313, 53, 23, 61, 57 },
-						{ 3, 365, 313, 52, 23, 61, 57 },
-						{ 3, 193, 313, 58, 23, 54, 57 },
-						{ 3, 253, 313, 55, 23, 56, 57 },
-						{ 3, 349, 234, 56, 24, 54, 56 },
-						{ 3, 130, 313, 61, 23, 51, 57 },
-						{ 3, 654, 725, 54, 18, 53, 62 },
-						{ 3, 557, 806, 49, 17, 54, 63 },
-						{ 3, 765, 725, 45, 18, 55, 62 },
-						{ 3, 2, 746, 42, 18, 56, 62 },
-						{ 3, 90, 662, 41, 19, 56, 61 },
+						{ 3, 560, 743, 29, 18, 55, 62 },
+						{ 3, 441, 860, 29, 16, 54, 64 },
+						{ 3, 166, 878, 30, 15, 53, 65 },
+						{ 3, 884, 878, 31, 14, 52, 66 },
+						{ 3, 634, 286, 63, 23, 52, 57 },
+						{ 3, 942, 286, 53, 23, 61, 57 },
+						{ 3, 2, 312, 52, 23, 61, 57 },
+						{ 3, 825, 286, 58, 23, 54, 57 },
+						{ 3, 885, 286, 55, 23, 56, 57 },
+						{ 3, 134, 234, 56, 24, 54, 56 },
+						{ 3, 762, 286, 61, 23, 51, 57 },
+						{ 3, 281, 723, 54, 18, 53, 62 },
+						{ 3, 167, 803, 49, 17, 54, 63 },
+						{ 3, 392, 723, 45, 18, 55, 62 },
+						{ 3, 624, 723, 42, 18, 56, 62 },
+						{ 3, 788, 639, 41, 19, 56, 61 },
 					},
 				},
 				dash = {
 					fps = 10,
 					frames = {
-						{ 3, 987, 746, 29, 18, 55, 62 },
-						{ 3, 2, 766, 29, 18, 55, 62 },
-						{ 3, 33, 766, 29, 18, 55, 62 },
-						{ 3, 64, 766, 29, 18, 55, 62 },
-						{ 3, 95, 766, 29, 18, 55, 62 },
+						{ 3, 591, 743, 29, 18, 55, 62 },
+						{ 3, 622, 743, 29, 18, 55, 62 },
+						{ 3, 653, 743, 29, 18, 55, 62 },
+						{ 3, 684, 743, 29, 18, 55, 62 },
+						{ 3, 715, 743, 29, 18, 55, 62 },
 					},
 				},
 				smokeout = {
 					fps = 10,
 					frames = {
-						{ 3, 939, 662, 29, 19, 56, 61 },
-						{ 3, 188, 596, 29, 20, 56, 60 },
-						{ 3, 219, 596, 29, 20, 56, 60 },
-						{ 3, 178, 845, 26, 17, 59, 63 },
-						{ 3, 812, 725, 45, 18, 50, 62 },
-						{ 3, 653, 640, 49, 19, 50, 61 },
-						{ 3, 564, 552, 52, 20, 48, 60 },
-						{ 3, 854, 460, 54, 21, 47, 59 },
-						{ 3, 680, 460, 56, 21, 46, 59 },
-						{ 3, 500, 460, 58, 21, 45, 59 },
-						{ 3, 576, 363, 60, 22, 44, 58 },
-						{ 3, 100, 388, 45, 22, 52, 58 },
-						{ 3, 212, 338, 38, 23, 51, 57 },
+						{ 3, 643, 660, 29, 19, 56, 61 },
+						{ 3, 826, 573, 29, 20, 56, 60 },
+						{ 3, 857, 573, 29, 20, 56, 60 },
+						{ 3, 782, 822, 26, 17, 59, 63 },
+						{ 3, 439, 723, 45, 18, 50, 62 },
+						{ 3, 357, 639, 49, 19, 50, 61 },
+						{ 3, 126, 551, 52, 20, 48, 60 },
+						{ 3, 413, 459, 54, 21, 47, 59 },
+						{ 3, 182, 459, 56, 21, 46, 59 },
+						{ 3, 2, 459, 58, 21, 45, 59 },
+						{ 3, 230, 362, 60, 22, 44, 58 },
+						{ 3, 731, 362, 45, 22, 52, 58 },
+						{ 3, 2, 337, 38, 23, 51, 57 },
 					},
 				},
 				smokein = {
 					fps = 10,
 					frames = {
-						{ 3, 812, 725, 45, 18, 50, 62 },
-						{ 3, 704, 640, 49, 19, 50, 61 },
-						{ 3, 618, 552, 52, 20, 48, 60 },
-						{ 3, 910, 460, 54, 21, 47, 59 },
-						{ 3, 738, 460, 56, 21, 46, 59 },
-						{ 3, 560, 460, 58, 21, 45, 59 },
-						{ 3, 638, 363, 60, 22, 44, 58 },
-						{ 3, 147, 388, 45, 22, 52, 58 },
-						{ 3, 252, 338, 38, 23, 51, 57 },
+						{ 3, 439, 723, 45, 18, 50, 62 },
+						{ 3, 408, 639, 49, 19, 50, 61 },
+						{ 3, 180, 551, 52, 20, 48, 60 },
+						{ 3, 469, 459, 54, 21, 47, 59 },
+						{ 3, 240, 459, 56, 21, 46, 59 },
+						{ 3, 62, 459, 58, 21, 45, 59 },
+						{ 3, 292, 362, 60, 22, 44, 58 },
+						{ 3, 778, 362, 45, 22, 52, 58 },
+						{ 3, 42, 337, 38, 23, 51, 57 },
 					},
 				},
 				special = {
 					fps = 10,
 					frames = {
-						{ 3, 939, 662, 29, 19, 56, 61 },
-						{ 3, 188, 596, 29, 20, 56, 60 },
-						{ 3, 219, 596, 29, 20, 56, 60 },
-						{ 3, 178, 845, 26, 17, 59, 63 },
-						{ 3, 859, 725, 45, 18, 49, 62 },
-						{ 3, 755, 640, 49, 19, 45, 61 },
-						{ 3, 672, 552, 52, 20, 44, 60 },
-						{ 3, 966, 460, 54, 21, 43, 59 },
-						{ 3, 796, 460, 56, 21, 42, 59 },
-						{ 3, 620, 460, 58, 21, 41, 59 },
-						{ 3, 700, 363, 60, 22, 40, 58 },
-						{ 3, 194, 388, 45, 22, 47, 58 },
-						{ 3, 292, 338, 38, 23, 55, 57 },
+						{ 3, 643, 660, 29, 19, 56, 61 },
+						{ 3, 826, 573, 29, 20, 56, 60 },
+						{ 3, 857, 573, 29, 20, 56, 60 },
+						{ 3, 782, 822, 26, 17, 59, 63 },
+						{ 3, 486, 723, 45, 18, 49, 62 },
+						{ 3, 459, 639, 49, 19, 45, 61 },
+						{ 3, 234, 551, 52, 20, 44, 60 },
+						{ 3, 525, 459, 54, 21, 43, 59 },
+						{ 3, 298, 459, 56, 21, 42, 59 },
+						{ 3, 122, 459, 58, 21, 41, 59 },
+						{ 3, 354, 362, 60, 22, 40, 58 },
+						{ 3, 825, 362, 45, 22, 47, 58 },
+						{ 3, 82, 337, 38, 23, 55, 57 },
 						false,
-						{ 3, 419, 313, 47, 23, 73, 57 },
-						{ 3, 641, 122, 21, 27, 94, 53 },
-						{ 3, 733, 122, 18, 27, 95, 53 },
-						{ 3, 427, 63, 17, 28, 96, 52 },
-						{ 2, 606, 960, 90, 29, 22, 51 },
-						{ 2, 698, 960, 90, 29, 20, 51 },
-						{ 2, 908, 895, 85, 30, 24, 50 },
-						{ 3, 202, 552, 80, 20, 26, 60 },
-						{ 3, 276, 179, 109, 25, 28, 55 },
-						{ 3, 260, 460, 109, 21, 29, 59 },
-						{ 3, 375, 725, 104, 18, 30, 62 },
-						{ 3, 862, 864, 29, 16, 103, 64 },
-						{ 3, 535, 2, 125, 28, 5, 52 },
-						{ 3, 462, 63, 121, 27, 8, 53 },
-						{ 3, 662, 2, 118, 28, 10, 52 },
-						{ 3, 516, 2, 17, 29, 10, 51 },
-						{ 2, 709, 895, 101, 30, 11, 50 },
-						{ 2, 812, 895, 94, 30, 13, 50 },
-						{ 2, 668, 828, 89, 31, 14, 49 },
-						{ 3, 117, 552, 83, 20, 17, 60 },
-						{ 3, 2, 746, 42, 18, 56, 62 },
-						{ 3, 2, 662, 42, 19, 55, 61 },
+						{ 3, 56, 312, 47, 23, 73, 57 },
+						{ 3, 513, 122, 21, 27, 94, 53 },
+						{ 3, 605, 122, 18, 27, 95, 53 },
+						{ 3, 317, 63, 17, 28, 96, 52 },
+						{ 2, 579, 960, 90, 29, 22, 51 },
+						{ 2, 671, 960, 90, 29, 20, 51 },
+						{ 2, 817, 895, 85, 30, 24, 50 },
+						{ 3, 741, 528, 80, 20, 26, 60 },
+						{ 3, 148, 179, 109, 25, 28, 55 },
+						{ 3, 758, 435, 109, 21, 29, 59 },
+						{ 3, 2, 723, 104, 18, 30, 62 },
+						{ 3, 472, 860, 29, 16, 103, 64 },
+						{ 3, 504, 2, 125, 28, 5, 52 },
+						{ 3, 352, 63, 121, 27, 8, 53 },
+						{ 3, 631, 2, 118, 28, 10, 52 },
+						{ 3, 485, 2, 17, 29, 10, 51 },
+						{ 2, 618, 895, 101, 30, 11, 50 },
+						{ 2, 721, 895, 94, 30, 13, 50 },
+						{ 2, 538, 828, 89, 31, 14, 49 },
+						{ 3, 656, 528, 83, 20, 17, 60 },
+						{ 3, 624, 723, 42, 18, 56, 62 },
+						{ 3, 700, 639, 42, 19, 55, 61 },
 					},
 				},
 				cast = {
 					fps = 10,
 					frames = {
-						{ 3, 33, 683, 29, 19, 54, 61 },
-						{ 3, 287, 574, 34, 20, 51, 60 },
-						{ 3, 323, 574, 34, 20, 50, 60 },
-						{ 3, 55, 179, 23, 26, 57, 54 },
-						{ 3, 491, 207, 29, 25, 56, 55 },
-						{ 3, 708, 746, 29, 18, 56, 62 },
+						{ 3, 736, 660, 29, 19, 54, 61 },
+						{ 3, 951, 551, 34, 20, 51, 60 },
+						{ 3, 987, 551, 34, 20, 50, 60 },
+						{ 3, 951, 151, 23, 26, 57, 54 },
+						{ 3, 244, 207, 29, 25, 56, 55 },
+						{ 3, 312, 743, 29, 18, 56, 62 },
 					},
 				},
 				climb = {
 					fps = 8,
 					frames = {
-						{ 3, 326, 725, 15, 19, 66, 61 },
-						{ 3, 326, 725, 15, 19, 66, 61 },
-						{ 3, 343, 725, 15, 19, 64, 61 },
-						{ 3, 343, 725, 15, 19, 64, 61 },
+						{ 3, 967, 702, 15, 19, 66, 61 },
+						{ 3, 967, 702, 15, 19, 66, 61 },
+						{ 3, 984, 702, 15, 19, 64, 61 },
+						{ 3, 984, 702, 15, 19, 64, 61 },
 					},
 				},
 			},
@@ -7038,166 +7050,166 @@ return {
 				idle = {
 					fps = 10,
 					frames = {
-						{ 3, 650, 704, 22, 19, 56, 61 },
-						{ 3, 437, 618, 22, 20, 56, 60 },
-						{ 3, 461, 618, 22, 20, 56, 60 },
-						{ 3, 674, 704, 22, 19, 56, 61 },
-						{ 3, 505, 786, 22, 18, 56, 62 },
-						{ 3, 529, 786, 22, 18, 56, 62 },
-						{ 3, 553, 786, 22, 18, 56, 62 },
-						{ 3, 577, 786, 22, 18, 56, 62 },
-						{ 3, 698, 704, 22, 19, 56, 61 },
+						{ 3, 343, 702, 22, 19, 56, 61 },
+						{ 3, 27, 617, 22, 20, 56, 60 },
+						{ 3, 51, 617, 22, 20, 56, 60 },
+						{ 3, 367, 702, 22, 19, 56, 61 },
+						{ 3, 102, 783, 22, 18, 56, 62 },
+						{ 3, 126, 783, 22, 18, 56, 62 },
+						{ 3, 150, 783, 22, 18, 56, 62 },
+						{ 3, 174, 783, 22, 18, 56, 62 },
+						{ 3, 391, 702, 22, 19, 56, 61 },
 					},
 				},
 				run = {
 					fps = 10,
 					frames = {
-						{ 3, 601, 786, 22, 18, 57, 62 },
-						{ 3, 722, 704, 22, 19, 57, 61 },
-						{ 3, 746, 704, 22, 19, 57, 60 },
-						{ 3, 770, 704, 22, 19, 57, 61 },
-						{ 3, 625, 786, 22, 18, 56, 62 },
-						{ 3, 794, 704, 22, 19, 56, 61 },
-						{ 3, 818, 704, 22, 19, 56, 60 },
-						{ 3, 842, 704, 22, 19, 56, 61 },
+						{ 3, 198, 783, 22, 18, 57, 62 },
+						{ 3, 415, 702, 22, 19, 57, 61 },
+						{ 3, 439, 702, 22, 19, 57, 60 },
+						{ 3, 463, 702, 22, 19, 57, 61 },
+						{ 3, 222, 783, 22, 18, 56, 62 },
+						{ 3, 487, 702, 22, 19, 56, 61 },
+						{ 3, 511, 702, 22, 19, 56, 60 },
+						{ 3, 535, 702, 22, 19, 56, 61 },
 					},
 				},
 				jump = {
 					fps = 10,
 					frames = {
-						{ 3, 485, 618, 22, 20, 58, 60 },
-						{ 3, 509, 618, 22, 20, 58, 60 },
-						{ 3, 533, 618, 22, 20, 58, 60 },
-						{ 3, 557, 618, 22, 20, 58, 60 },
+						{ 3, 75, 617, 22, 20, 58, 60 },
+						{ 3, 99, 617, 22, 20, 58, 60 },
+						{ 3, 123, 617, 22, 20, 58, 60 },
+						{ 3, 147, 617, 22, 20, 58, 60 },
 					},
 				},
 				fall = {
 					fps = 10,
 					frames = {
-						{ 3, 262, 618, 23, 20, 56, 60 },
-						{ 3, 287, 618, 23, 20, 56, 60 },
-						{ 3, 312, 618, 23, 20, 56, 60 },
-						{ 3, 337, 618, 23, 20, 56, 60 },
+						{ 3, 867, 595, 23, 20, 56, 60 },
+						{ 3, 892, 595, 23, 20, 56, 60 },
+						{ 3, 917, 595, 23, 20, 56, 60 },
+						{ 3, 942, 595, 23, 20, 56, 60 },
 					},
 				},
 				hurt = {
 					fps = 10,
 					frames = {
-						{ 3, 650, 704, 22, 19, 56, 61 },
-						{ 3, 649, 786, 22, 18, 56, 62 },
-						{ 3, 673, 786, 22, 18, 56, 62 },
+						{ 3, 343, 702, 22, 19, 56, 61 },
+						{ 3, 246, 783, 22, 18, 56, 62 },
+						{ 3, 270, 783, 22, 18, 56, 62 },
 					},
 				},
 				death = {
 					fps = 12,
 					frames = {
-						{ 3, 697, 786, 22, 18, 59, 62 },
-						{ 3, 110, 882, 21, 16, 58, 64 },
-						{ 3, 923, 882, 21, 15, 58, 65 },
-						{ 3, 923, 882, 21, 15, 58, 65 },
-						{ 3, 149, 845, 27, 17, 55, 63 },
-						{ 3, 709, 882, 29, 15, 54, 62 },
-						{ 3, 733, 826, 31, 17, 53, 60 },
-						{ 3, 766, 826, 31, 17, 53, 59 },
-						{ 3, 594, 826, 33, 17, 52, 58 },
-						{ 3, 699, 826, 32, 17, 52, 57 },
-						{ 3, 629, 826, 33, 17, 51, 56 },
-						{ 3, 664, 826, 33, 17, 51, 55 },
-						{ 3, 240, 932, 32, 12, 51, 54 },
-						{ 3, 274, 932, 32, 12, 51, 53 },
-						{ 3, 19, 946, 6, 12, 58, 52 },
-						{ 3, 435, 972, 1, 1, 63, 51 },
+						{ 3, 294, 783, 22, 18, 59, 62 },
+						{ 3, 727, 860, 21, 16, 58, 64 },
+						{ 3, 412, 878, 21, 15, 58, 65 },
+						{ 3, 412, 878, 21, 15, 58, 65 },
+						{ 3, 753, 822, 27, 17, 55, 63 },
+						{ 3, 198, 878, 29, 15, 54, 62 },
+						{ 3, 325, 822, 31, 17, 53, 60 },
+						{ 3, 358, 822, 31, 17, 53, 59 },
+						{ 3, 186, 822, 33, 17, 52, 58 },
+						{ 3, 291, 822, 32, 17, 52, 57 },
+						{ 3, 221, 822, 33, 17, 51, 56 },
+						{ 3, 256, 822, 33, 17, 51, 55 },
+						{ 3, 664, 911, 32, 12, 51, 54 },
+						{ 3, 698, 911, 32, 12, 51, 53 },
+						{ 3, 443, 926, 6, 12, 58, 52 },
+						{ 3, 848, 953, 1, 1, 63, 51 },
 						false,
 					},
 				},
 				slash = {
 					fps = 10,
 					frames = {
-						{ 3, 380, 786, 23, 18, 55, 62 },
-						{ 3, 206, 845, 26, 17, 53, 63 },
-						{ 3, 740, 882, 27, 15, 52, 65 },
-						{ 3, 500, 900, 28, 14, 51, 66 },
-						{ 3, 279, 917, 29, 13, 50, 67 },
-						{ 3, 782, 2, 52, 28, 53, 52 },
-						{ 2, 846, 960, 45, 29, 61, 51 },
-						{ 2, 110, 928, 49, 30, 58, 50 },
-						{ 2, 2, 928, 52, 30, 55, 50 },
-						{ 2, 634, 928, 36, 30, 55, 50 },
+						{ 3, 984, 763, 23, 18, 55, 62 },
+						{ 3, 810, 822, 26, 17, 53, 63 },
+						{ 3, 229, 878, 27, 15, 52, 65 },
+						{ 3, 979, 878, 28, 14, 51, 66 },
+						{ 3, 722, 895, 29, 13, 50, 67 },
+						{ 3, 751, 2, 52, 28, 53, 52 },
+						{ 2, 819, 960, 45, 29, 61, 51 },
+						{ 2, 2, 928, 49, 30, 58, 50 },
+						{ 2, 904, 895, 52, 30, 55, 50 },
+						{ 2, 606, 928, 36, 30, 55, 50 },
 					},
 				},
 				dslash = {
 					fps = 10,
 					frames = {
-						{ 3, 405, 786, 23, 18, 55, 62 },
-						{ 3, 234, 845, 26, 17, 53, 63 },
-						{ 3, 769, 882, 27, 15, 52, 65 },
-						{ 3, 241, 864, 54, 16, 51, 64 },
-						{ 3, 125, 864, 57, 16, 49, 64 },
-						{ 3, 184, 864, 55, 16, 48, 64 },
-						{ 3, 503, 806, 52, 17, 49, 63 },
-						{ 3, 608, 806, 49, 17, 50, 63 },
-						{ 3, 860, 806, 47, 17, 49, 63 },
-						{ 3, 836, 2, 52, 28, 53, 52 },
-						{ 2, 893, 960, 45, 29, 61, 51 },
-						{ 2, 161, 928, 49, 30, 58, 50 },
-						{ 2, 56, 928, 52, 30, 55, 50 },
+						{ 3, 2, 783, 23, 18, 55, 62 },
+						{ 3, 838, 822, 26, 17, 53, 63 },
+						{ 3, 258, 878, 27, 15, 52, 65 },
+						{ 3, 850, 841, 54, 16, 51, 64 },
+						{ 3, 734, 841, 57, 16, 49, 64 },
+						{ 3, 793, 841, 55, 16, 48, 64 },
+						{ 3, 113, 803, 52, 17, 49, 63 },
+						{ 3, 218, 803, 49, 17, 50, 63 },
+						{ 3, 470, 803, 47, 17, 49, 63 },
+						{ 3, 805, 2, 52, 28, 53, 52 },
+						{ 2, 866, 960, 45, 29, 61, 51 },
+						{ 2, 53, 928, 49, 30, 58, 50 },
+						{ 2, 958, 895, 52, 30, 55, 50 },
 					},
 				},
 				dash = {
 					fps = 10,
 					frames = {
-						{ 3, 250, 786, 24, 18, 56, 62 },
-						{ 3, 721, 786, 22, 18, 56, 62 },
-						{ 3, 668, 766, 26, 18, 55, 62 },
-						{ 3, 142, 786, 25, 18, 54, 62 },
-						{ 3, 745, 786, 22, 18, 56, 62 },
-						{ 3, 769, 786, 22, 18, 56, 62 },
-						{ 3, 169, 786, 25, 18, 56, 62 },
-						{ 3, 276, 786, 24, 18, 56, 62 },
-						{ 3, 793, 786, 22, 18, 56, 62 },
-						{ 3, 817, 786, 22, 18, 56, 62 },
-						{ 3, 841, 786, 22, 18, 56, 62 },
-						{ 3, 865, 786, 22, 18, 56, 62 },
+						{ 3, 854, 763, 24, 18, 56, 62 },
+						{ 3, 318, 783, 22, 18, 56, 62 },
+						{ 3, 270, 763, 26, 18, 55, 62 },
+						{ 3, 746, 763, 25, 18, 54, 62 },
+						{ 3, 342, 783, 22, 18, 56, 62 },
+						{ 3, 366, 783, 22, 18, 56, 62 },
+						{ 3, 773, 763, 25, 18, 56, 62 },
+						{ 3, 880, 763, 24, 18, 56, 62 },
+						{ 3, 390, 783, 22, 18, 56, 62 },
+						{ 3, 414, 783, 22, 18, 56, 62 },
+						{ 3, 438, 783, 22, 18, 56, 62 },
+						{ 3, 462, 783, 22, 18, 56, 62 },
 					},
 				},
 				sink = {
 					fps = 10,
 					frames = {
-						{ 3, 581, 618, 22, 20, 56, 60 },
-						{ 3, 686, 529, 22, 21, 56, 60 },
-						{ 3, 762, 596, 25, 20, 56, 61 },
-						{ 3, 196, 786, 25, 18, 56, 62 },
-						{ 3, 430, 786, 23, 18, 56, 63 },
-						{ 3, 85, 882, 23, 16, 56, 64 },
-						{ 3, 798, 882, 23, 15, 56, 65 },
-						{ 3, 823, 882, 23, 15, 56, 65 },
-						{ 3, 848, 882, 23, 15, 56, 65 },
-						{ 3, 873, 882, 23, 15, 56, 65 },
-						{ 3, 873, 882, 23, 15, 56, 65 },
-						{ 2, 93, 895, 14, 31, 66, 48 },
-						{ 2, 604, 828, 17, 32, 63, 45 },
+						{ 3, 171, 617, 22, 20, 56, 60 },
+						{ 3, 268, 528, 22, 21, 56, 60 },
+						{ 3, 366, 595, 25, 20, 56, 61 },
+						{ 3, 800, 763, 25, 18, 56, 62 },
+						{ 3, 27, 783, 23, 18, 56, 63 },
+						{ 3, 702, 860, 23, 16, 56, 64 },
+						{ 3, 287, 878, 23, 15, 56, 65 },
+						{ 3, 312, 878, 23, 15, 56, 65 },
+						{ 3, 337, 878, 23, 15, 56, 65 },
+						{ 3, 362, 878, 23, 15, 56, 65 },
+						{ 3, 362, 878, 23, 15, 56, 65 },
+						{ 2, 2, 895, 14, 31, 66, 48 },
+						{ 2, 474, 828, 17, 32, 63, 45 },
 						{ 2, 197, 436, 16, 50, 64, 27 },
 						{ 2, 215, 436, 16, 50, 64, 26 },
 						{ 2, 233, 436, 15, 50, 65, 25 },
 						{ 2, 250, 436, 13, 50, 65, 24 },
 						{ 2, 265, 436, 13, 49, 65, 23 },
 						{ 2, 787, 488, 13, 40, 65, 31 },
-						{ 3, 769, 122, 8, 27, 70, 31 },
+						{ 3, 641, 122, 8, 27, 70, 31 },
 					},
 				},
 				drop = {
 					fps = 10,
 					frames = {
-						{ 3, 398, 972, 3, 3, 71, 48 },
+						{ 3, 811, 953, 3, 3, 71, 48 },
 						false,
-						{ 3, 228, 972, 11, 6, 67, 48 },
+						{ 3, 641, 953, 11, 6, 67, 48 },
 						false,
-						{ 3, 228, 972, 11, 6, 67, 48 },
-						{ 3, 398, 972, 3, 3, 71, 48 },
-						{ 3, 398, 972, 3, 3, 71, 48 },
-						{ 3, 422, 972, 3, 2, 71, 48 },
-						{ 3, 427, 972, 3, 1, 71, 48 },
-						{ 3, 438, 972, 1, 1, 72, 48 },
+						{ 3, 641, 953, 11, 6, 67, 48 },
+						{ 3, 811, 953, 3, 3, 71, 48 },
+						{ 3, 811, 953, 3, 3, 71, 48 },
+						{ 3, 835, 953, 3, 2, 71, 48 },
+						{ 3, 840, 953, 3, 1, 71, 48 },
+						{ 3, 851, 953, 1, 1, 72, 48 },
 						false,
 						false,
 						{ 2, 513, 436, 32, 46, 64, 14 },
@@ -7209,20 +7221,20 @@ return {
 						{ 2, 624, 251, 33, 59, 52, 21 },
 						{ 2, 930, 251, 32, 58, 53, 22 },
 						{ 2, 562, 436, 32, 45, 53, 35 },
-						{ 2, 2, 650, 22, 36, 56, 44 },
-						{ 3, 650, 704, 22, 19, 56, 61 },
+						{ 2, 846, 612, 22, 36, 56, 44 },
+						{ 3, 343, 702, 22, 19, 56, 61 },
 					},
 				},
 				skill = {
 					fps = 10,
 					frames = {
-						{ 3, 650, 704, 22, 19, 56, 61 },
-						{ 3, 455, 786, 23, 18, 55, 62 },
-						{ 3, 362, 618, 23, 20, 56, 60 },
-						{ 3, 662, 436, 23, 22, 56, 58 },
-						{ 3, 697, 151, 29, 26, 52, 54 },
-						{ 2, 376, 862, 34, 31, 47, 49 },
-						{ 2, 966, 532, 41, 37, 41, 43 },
+						{ 3, 343, 702, 22, 19, 56, 61 },
+						{ 3, 52, 783, 23, 18, 55, 62 },
+						{ 3, 967, 595, 23, 20, 56, 60 },
+						{ 3, 257, 435, 23, 22, 56, 58 },
+						{ 3, 583, 151, 29, 26, 52, 54 },
+						{ 2, 289, 862, 34, 31, 47, 49 },
+						{ 2, 936, 532, 41, 37, 41, 43 },
 						{ 2, 802, 488, 53, 39, 30, 41 },
 						{ 2, 816, 381, 64, 51, 19, 29 },
 						{ 2, 2, 436, 63, 50, 20, 30 },
@@ -7244,16 +7256,16 @@ return {
 						{ 2, 522, 322, 65, 56, 49, 24 },
 						{ 2, 454, 322, 66, 56, 49, 24 },
 						{ 2, 82, 322, 67, 57, 49, 23 },
-						{ 2, 293, 794, 42, 32, 49, 48 },
+						{ 2, 177, 794, 42, 32, 49, 48 },
 					},
 				},
 				climb = {
 					fps = 8,
 					frames = {
-						{ 3, 67, 725, 18, 19, 62, 61 },
-						{ 3, 67, 725, 18, 19, 62, 61 },
-						{ 3, 307, 725, 17, 19, 62, 61 },
-						{ 3, 307, 725, 17, 19, 62, 61 },
+						{ 3, 768, 702, 18, 19, 62, 61 },
+						{ 3, 768, 702, 18, 19, 62, 61 },
+						{ 3, 948, 702, 17, 19, 62, 61 },
+						{ 3, 948, 702, 17, 19, 62, 61 },
 					},
 				},
 			},
@@ -7268,142 +7280,142 @@ return {
 				idle = {
 					fps = 10,
 					frames = {
-						{ 3, 370, 596, 26, 20, 59, 61 },
-						{ 3, 308, 529, 26, 21, 59, 60 },
-						{ 3, 336, 529, 26, 21, 59, 60 },
-						{ 3, 398, 596, 26, 20, 59, 61 },
-						{ 3, 884, 683, 26, 19, 59, 62 },
-						{ 3, 696, 766, 26, 18, 59, 63 },
-						{ 3, 912, 683, 26, 19, 59, 62 },
-						{ 3, 370, 596, 26, 20, 59, 61 },
+						{ 3, 2, 595, 26, 20, 59, 61 },
+						{ 3, 916, 505, 26, 21, 59, 60 },
+						{ 3, 944, 505, 26, 21, 59, 60 },
+						{ 3, 30, 595, 26, 20, 59, 61 },
+						{ 3, 576, 681, 26, 19, 59, 62 },
+						{ 3, 298, 763, 26, 18, 59, 63 },
+						{ 3, 604, 681, 26, 19, 59, 62 },
+						{ 3, 2, 595, 26, 20, 59, 61 },
 					},
 				},
 				run = {
 					fps = 10,
 					frames = {
-						{ 3, 262, 845, 26, 17, 59, 64 },
-						{ 3, 426, 596, 26, 20, 59, 61 },
-						{ 3, 454, 596, 26, 20, 59, 60 },
-						{ 3, 482, 596, 26, 20, 59, 61 },
-						{ 3, 724, 766, 26, 18, 58, 63 },
-						{ 3, 510, 596, 26, 20, 58, 61 },
-						{ 3, 538, 596, 26, 20, 58, 60 },
-						{ 3, 566, 596, 26, 20, 58, 61 },
+						{ 3, 866, 822, 26, 17, 59, 64 },
+						{ 3, 58, 595, 26, 20, 59, 61 },
+						{ 3, 86, 595, 26, 20, 59, 60 },
+						{ 3, 114, 595, 26, 20, 59, 61 },
+						{ 3, 326, 763, 26, 18, 58, 63 },
+						{ 3, 142, 595, 26, 20, 58, 61 },
+						{ 3, 170, 595, 26, 20, 58, 60 },
+						{ 3, 198, 595, 26, 20, 58, 61 },
 					},
 				},
 				jump = {
 					fps = 10,
 					frames = {
-						{ 3, 789, 596, 25, 20, 58, 61 },
-						{ 3, 816, 596, 25, 20, 58, 61 },
-						{ 3, 843, 596, 25, 20, 58, 61 },
-						{ 3, 870, 596, 25, 20, 58, 61 },
-						{ 3, 897, 596, 25, 20, 58, 61 },
-						{ 3, 924, 596, 25, 20, 58, 61 },
+						{ 3, 393, 595, 25, 20, 58, 61 },
+						{ 3, 420, 595, 25, 20, 58, 61 },
+						{ 3, 447, 595, 25, 20, 58, 61 },
+						{ 3, 474, 595, 25, 20, 58, 61 },
+						{ 3, 501, 595, 25, 20, 58, 61 },
+						{ 3, 528, 595, 25, 20, 58, 61 },
 					},
 				},
 				fall = {
 					fps = 10,
 					frames = {
-						{ 3, 940, 683, 26, 19, 58, 62 },
-						{ 3, 968, 683, 26, 19, 58, 62 },
-						{ 3, 996, 683, 26, 19, 58, 62 },
-						{ 3, 2, 704, 26, 19, 58, 62 },
-						{ 3, 30, 704, 26, 19, 58, 62 },
-						{ 3, 58, 704, 26, 19, 58, 62 },
+						{ 3, 632, 681, 26, 19, 58, 62 },
+						{ 3, 660, 681, 26, 19, 58, 62 },
+						{ 3, 688, 681, 26, 19, 58, 62 },
+						{ 3, 716, 681, 26, 19, 58, 62 },
+						{ 3, 744, 681, 26, 19, 58, 62 },
+						{ 3, 772, 681, 26, 19, 58, 62 },
 					},
 				},
 				hurt = {
 					fps = 10,
 					frames = {
-						{ 3, 370, 596, 26, 20, 59, 61 },
-						{ 3, 86, 704, 26, 19, 59, 62 },
-						{ 3, 114, 704, 26, 19, 59, 62 },
+						{ 3, 2, 595, 26, 20, 59, 61 },
+						{ 3, 800, 681, 26, 19, 59, 62 },
+						{ 3, 828, 681, 26, 19, 59, 62 },
 					},
 				},
 				death = {
 					fps = 12,
 					frames = {
-						{ 3, 594, 596, 26, 20, 58, 61 },
-						{ 3, 142, 704, 26, 19, 60, 62 },
-						{ 3, 480, 786, 23, 18, 61, 63 },
-						{ 3, 540, 287, 19, 24, 61, 57 },
-						{ 2, 391, 992, 31, 29, 55, 52 },
-						{ 2, 2, 960, 25, 30, 58, 51 },
-						{ 2, 772, 688, 33, 34, 55, 47 },
-						{ 2, 608, 650, 30, 35, 57, 46 },
-						{ 2, 851, 612, 27, 36, 58, 45 },
-						{ 2, 200, 573, 27, 37, 58, 44 },
-						{ 2, 229, 573, 25, 37, 57, 43 },
-						{ 2, 841, 688, 28, 34, 56, 47 },
-						{ 2, 2, 759, 29, 33, 55, 48 },
-						{ 3, 349, 506, 30, 21, 55, 60 },
-						{ 3, 281, 436, 30, 22, 54, 59 },
-						{ 3, 66, 363, 29, 23, 55, 58 },
-						{ 3, 2, 287, 29, 24, 55, 57 },
-						{ 3, 522, 207, 29, 25, 55, 56 },
-						{ 3, 779, 529, 18, 21, 66, 60 },
-						{ 3, 760, 845, 10, 17, 66, 64 },
-						{ 3, 772, 845, 10, 17, 66, 64 },
-						{ 3, 784, 845, 10, 17, 66, 64 },
-						{ 3, 796, 845, 10, 17, 66, 64 },
-						{ 3, 796, 845, 10, 17, 66, 64 },
-						{ 3, 796, 845, 10, 17, 66, 64 },
-						{ 3, 796, 845, 10, 17, 66, 64 },
-						{ 3, 796, 845, 10, 17, 66, 64 },
-						{ 3, 796, 845, 10, 17, 66, 64 },
-						{ 3, 796, 845, 10, 17, 66, 64 },
+						{ 3, 226, 595, 26, 20, 58, 61 },
+						{ 3, 856, 681, 26, 19, 60, 62 },
+						{ 3, 77, 783, 23, 18, 61, 63 },
+						{ 3, 165, 286, 19, 24, 61, 57 },
+						{ 2, 345, 992, 31, 29, 55, 52 },
+						{ 2, 982, 928, 25, 30, 58, 51 },
+						{ 2, 608, 688, 33, 34, 55, 47 },
+						{ 2, 444, 650, 30, 35, 57, 46 },
+						{ 2, 688, 612, 27, 36, 58, 45 },
+						{ 2, 35, 573, 27, 37, 58, 44 },
+						{ 2, 64, 573, 25, 37, 57, 43 },
+						{ 2, 710, 688, 28, 34, 56, 47 },
+						{ 2, 889, 724, 29, 33, 55, 48 },
+						{ 3, 951, 482, 30, 21, 55, 60 },
+						{ 3, 889, 411, 30, 22, 54, 59 },
+						{ 3, 742, 337, 29, 23, 55, 58 },
+						{ 3, 670, 260, 29, 24, 55, 57 },
+						{ 3, 275, 207, 29, 25, 55, 56 },
+						{ 3, 361, 528, 18, 21, 66, 60 },
+						{ 3, 381, 841, 10, 17, 66, 64 },
+						{ 3, 393, 841, 10, 17, 66, 64 },
+						{ 3, 405, 841, 10, 17, 66, 64 },
+						{ 3, 417, 841, 10, 17, 66, 64 },
+						{ 3, 417, 841, 10, 17, 66, 64 },
+						{ 3, 417, 841, 10, 17, 66, 64 },
+						{ 3, 417, 841, 10, 17, 66, 64 },
+						{ 3, 417, 841, 10, 17, 66, 64 },
+						{ 3, 417, 841, 10, 17, 66, 64 },
+						{ 3, 417, 841, 10, 17, 66, 64 },
 					},
 				},
 				thrust = {
 					fps = 10,
 					frames = {
-						{ 3, 170, 704, 26, 19, 58, 62 },
-						{ 3, 752, 766, 26, 18, 57, 63 },
-						{ 3, 780, 766, 26, 18, 56, 63 },
-						{ 3, 808, 766, 26, 18, 55, 63 },
-						{ 3, 836, 766, 26, 18, 54, 63 },
-						{ 3, 864, 766, 26, 18, 54, 63 },
-						{ 3, 151, 806, 59, 17, 61, 64 },
-						{ 3, 64, 864, 59, 16, 62, 65 },
-						{ 3, 2, 864, 60, 16, 62, 65 },
-						{ 3, 87, 806, 62, 17, 62, 65 },
-						{ 3, 427, 640, 59, 19, 63, 64 },
-						{ 3, 332, 806, 58, 17, 64, 64 },
-						{ 3, 22, 806, 63, 17, 60, 64 },
-						{ 3, 892, 766, 26, 18, 59, 63 },
+						{ 3, 884, 681, 26, 19, 58, 62 },
+						{ 3, 354, 763, 26, 18, 57, 63 },
+						{ 3, 382, 763, 26, 18, 56, 63 },
+						{ 3, 410, 763, 26, 18, 55, 63 },
+						{ 3, 438, 763, 26, 18, 54, 63 },
+						{ 3, 466, 763, 26, 18, 54, 63 },
+						{ 3, 763, 783, 59, 17, 61, 64 },
+						{ 3, 673, 841, 59, 16, 62, 65 },
+						{ 3, 611, 841, 60, 16, 62, 65 },
+						{ 3, 699, 783, 62, 17, 62, 65 },
+						{ 3, 131, 639, 59, 19, 63, 64 },
+						{ 3, 944, 783, 58, 17, 64, 64 },
+						{ 3, 634, 783, 63, 17, 60, 64 },
+						{ 3, 494, 763, 26, 18, 59, 63 },
 					},
 				},
 				spin = {
 					fps = 10,
 					frames = {
-						{ 3, 170, 704, 26, 19, 58, 62 },
-						{ 3, 752, 766, 26, 18, 57, 63 },
-						{ 3, 780, 766, 26, 18, 56, 63 },
-						{ 3, 808, 766, 26, 18, 55, 63 },
-						{ 3, 836, 766, 26, 18, 54, 63 },
-						{ 3, 864, 766, 26, 18, 54, 63 },
-						{ 3, 167, 917, 69, 13, 40, 68 },
-						{ 3, 135, 900, 69, 14, 40, 67 },
-						{ 3, 442, 882, 69, 15, 40, 66 },
-						{ 3, 298, 640, 64, 19, 41, 63 },
-						{ 3, 364, 640, 61, 19, 43, 63 },
-						{ 3, 488, 640, 55, 19, 45, 62 },
-						{ 3, 509, 552, 53, 20, 46, 61 },
+						{ 3, 884, 681, 26, 19, 58, 62 },
+						{ 3, 354, 763, 26, 18, 57, 63 },
+						{ 3, 382, 763, 26, 18, 56, 63 },
+						{ 3, 410, 763, 26, 18, 55, 63 },
+						{ 3, 438, 763, 26, 18, 54, 63 },
+						{ 3, 466, 763, 26, 18, 54, 63 },
+						{ 3, 610, 895, 69, 13, 40, 68 },
+						{ 3, 614, 878, 69, 14, 40, 67 },
+						{ 3, 939, 860, 69, 15, 40, 66 },
+						{ 3, 2, 639, 64, 19, 41, 63 },
+						{ 3, 68, 639, 61, 19, 43, 63 },
+						{ 3, 192, 639, 55, 19, 45, 62 },
+						{ 3, 71, 551, 53, 20, 46, 61 },
 					},
 				},
 				smash = {
 					fps = 10,
 					frames = {
-						{ 3, 170, 704, 26, 19, 58, 62 },
-						{ 3, 920, 766, 26, 18, 57, 63 },
-						{ 3, 948, 766, 26, 18, 56, 63 },
-						{ 3, 976, 766, 26, 18, 55, 63 },
-						{ 3, 2, 786, 26, 18, 54, 63 },
-						{ 3, 290, 845, 26, 17, 54, 64 },
-						{ 3, 2, 882, 26, 16, 54, 65 },
-						{ 3, 30, 786, 26, 18, 54, 63 },
-						{ 3, 198, 704, 26, 19, 54, 62 },
+						{ 3, 884, 681, 26, 19, 58, 62 },
+						{ 3, 522, 763, 26, 18, 57, 63 },
+						{ 3, 550, 763, 26, 18, 56, 63 },
+						{ 3, 578, 763, 26, 18, 55, 63 },
+						{ 3, 606, 763, 26, 18, 54, 63 },
+						{ 3, 894, 822, 26, 17, 54, 64 },
+						{ 3, 619, 860, 26, 16, 54, 65 },
+						{ 3, 634, 763, 26, 18, 54, 63 },
+						{ 3, 912, 681, 26, 19, 54, 62 },
 						{ 2, 990, 488, 27, 39, 51, 42 },
 						{ 2, 378, 488, 27, 40, 51, 41 },
 						{ 2, 458, 436, 53, 46, 53, 35 },
@@ -7411,62 +7423,62 @@ return {
 						{ 2, 199, 488, 53, 41, 53, 40 },
 						{ 2, 905, 488, 41, 39, 63, 42 },
 						{ 2, 231, 532, 43, 38, 61, 43 },
-						{ 3, 52, 388, 46, 22, 59, 59 },
+						{ 3, 683, 362, 46, 22, 59, 59 },
 					},
 				},
 				special = {
 					fps = 10,
 					frames = {
-						{ 3, 370, 596, 26, 20, 59, 61 },
-						{ 3, 598, 704, 24, 19, 61, 62 },
-						{ 3, 935, 786, 20, 18, 65, 63 },
-						{ 3, 753, 122, 14, 27, 65, 54 },
-						{ 3, 446, 63, 14, 28, 65, 53 },
+						{ 3, 2, 595, 26, 20, 59, 61 },
+						{ 3, 291, 702, 24, 19, 61, 62 },
+						{ 3, 532, 783, 20, 18, 65, 63 },
+						{ 3, 625, 122, 14, 27, 65, 54 },
+						{ 3, 336, 63, 14, 28, 65, 53 },
 						{ 2, 2, 488, 77, 42, 31, 45 },
-						{ 2, 738, 650, 110, 34, 15, 52 },
-						{ 2, 2, 794, 114, 32, 14, 54 },
-						{ 2, 124, 895, 115, 30, 14, 56 },
-						{ 2, 241, 895, 115, 30, 14, 56 },
-						{ 2, 358, 895, 115, 30, 14, 56 },
-						{ 2, 475, 895, 115, 30, 14, 56 },
-						{ 2, 592, 895, 115, 30, 14, 56 },
-						{ 3, 2, 552, 113, 20, 15, 61 },
-						{ 3, 284, 552, 76, 20, 32, 61 },
-						{ 3, 394, 574, 30, 20, 59, 61 },
-						{ 3, 370, 596, 26, 20, 59, 61 },
-						{ 3, 370, 596, 26, 20, 59, 61 },
+						{ 2, 574, 650, 110, 34, 15, 52 },
+						{ 2, 862, 759, 114, 32, 14, 54 },
+						{ 2, 33, 895, 115, 30, 14, 56 },
+						{ 2, 150, 895, 115, 30, 14, 56 },
+						{ 2, 267, 895, 115, 30, 14, 56 },
+						{ 2, 384, 895, 115, 30, 14, 56 },
+						{ 2, 501, 895, 115, 30, 14, 56 },
+						{ 3, 541, 528, 113, 20, 15, 61 },
+						{ 3, 823, 528, 76, 20, 32, 61 },
+						{ 3, 37, 573, 30, 20, 59, 61 },
+						{ 3, 2, 595, 26, 20, 59, 61 },
+						{ 3, 2, 595, 26, 20, 59, 61 },
 					},
 				},
 				heal = {
 					fps = 10,
 					frames = {
-						{ 3, 370, 596, 26, 20, 59, 61 },
-						{ 3, 308, 529, 26, 21, 59, 60 },
-						{ 3, 336, 529, 26, 21, 59, 60 },
-						{ 3, 364, 529, 26, 21, 59, 61 },
-						{ 3, 622, 596, 26, 20, 59, 62 },
-						{ 3, 58, 786, 26, 18, 59, 63 },
-						{ 3, 86, 786, 26, 18, 59, 64 },
-						{ 3, 114, 786, 26, 18, 59, 64 },
-						{ 3, 318, 845, 26, 17, 59, 64 },
-						{ 3, 346, 845, 26, 17, 59, 64 },
-						{ 3, 155, 287, 27, 24, 58, 57 },
-						{ 3, 393, 207, 31, 25, 58, 56 },
-						{ 3, 567, 151, 31, 26, 58, 55 },
-						{ 3, 664, 93, 31, 27, 58, 54 },
-						{ 3, 938, 33, 31, 28, 58, 53 },
-						{ 2, 424, 992, 31, 29, 58, 52 },
-						{ 2, 916, 928, 31, 30, 58, 51 },
-						{ 2, 554, 862, 31, 31, 58, 50 },
+						{ 3, 2, 595, 26, 20, 59, 61 },
+						{ 3, 916, 505, 26, 21, 59, 60 },
+						{ 3, 944, 505, 26, 21, 59, 60 },
+						{ 3, 972, 505, 26, 21, 59, 61 },
+						{ 3, 254, 595, 26, 20, 59, 62 },
+						{ 3, 662, 763, 26, 18, 59, 63 },
+						{ 3, 690, 763, 26, 18, 59, 64 },
+						{ 3, 718, 763, 26, 18, 59, 64 },
+						{ 3, 922, 822, 26, 17, 59, 64 },
+						{ 3, 950, 822, 26, 17, 59, 64 },
+						{ 3, 823, 260, 27, 24, 58, 57 },
+						{ 3, 146, 207, 31, 25, 58, 56 },
+						{ 3, 453, 151, 31, 26, 58, 55 },
+						{ 3, 556, 93, 31, 27, 58, 54 },
+						{ 3, 892, 33, 31, 28, 58, 53 },
+						{ 2, 378, 992, 31, 29, 58, 52 },
+						{ 2, 888, 928, 31, 30, 58, 51 },
+						{ 2, 467, 862, 31, 31, 58, 50 },
 					},
 				},
 				climb = {
 					fps = 8,
 					frames = {
-						{ 3, 793, 618, 18, 20, 62, 61 },
-						{ 3, 793, 618, 18, 20, 62, 61 },
-						{ 3, 892, 618, 17, 20, 62, 61 },
-						{ 3, 892, 618, 17, 20, 62, 61 },
+						{ 3, 383, 617, 18, 20, 62, 61 },
+						{ 3, 383, 617, 18, 20, 62, 61 },
+						{ 3, 542, 617, 17, 20, 62, 61 },
+						{ 3, 542, 617, 17, 20, 62, 61 },
 					},
 				},
 			},
@@ -7481,159 +7493,159 @@ return {
 				idle = {
 					fps = 10,
 					frames = {
-						{ 3, 799, 529, 16, 21, 65, 59 },
-						{ 3, 687, 436, 16, 22, 65, 58 },
-						{ 3, 705, 436, 16, 22, 65, 58 },
-						{ 3, 817, 529, 16, 21, 65, 59 },
-						{ 3, 835, 529, 16, 21, 65, 59 },
-						{ 3, 1005, 618, 16, 20, 65, 60 },
-						{ 3, 2, 640, 16, 20, 65, 60 },
-						{ 3, 799, 529, 16, 21, 65, 59 },
+						{ 3, 381, 528, 16, 21, 65, 59 },
+						{ 3, 282, 435, 16, 22, 65, 58 },
+						{ 3, 300, 435, 16, 22, 65, 58 },
+						{ 3, 399, 528, 16, 21, 65, 59 },
+						{ 3, 417, 528, 16, 21, 65, 59 },
+						{ 3, 655, 617, 16, 20, 65, 60 },
+						{ 3, 673, 617, 16, 20, 65, 60 },
+						{ 3, 381, 528, 16, 21, 65, 59 },
 					},
 				},
 				run = {
 					fps = 10,
 					frames = {
-						{ 3, 620, 900, 19, 14, 62, 66 },
-						{ 3, 220, 882, 19, 16, 62, 64 },
-						{ 3, 241, 882, 19, 16, 62, 63 },
-						{ 3, 262, 882, 19, 16, 62, 64 },
-						{ 3, 576, 900, 20, 14, 62, 66 },
-						{ 3, 133, 882, 20, 16, 62, 64 },
-						{ 3, 155, 882, 20, 16, 62, 63 },
-						{ 3, 177, 882, 20, 16, 62, 64 },
+						{ 3, 92, 895, 19, 14, 62, 66 },
+						{ 3, 837, 860, 19, 16, 62, 64 },
+						{ 3, 858, 860, 19, 16, 62, 63 },
+						{ 3, 879, 860, 19, 16, 62, 64 },
+						{ 3, 48, 895, 20, 14, 62, 66 },
+						{ 3, 750, 860, 20, 16, 62, 64 },
+						{ 3, 772, 860, 20, 16, 62, 63 },
+						{ 3, 794, 860, 20, 16, 62, 64 },
 					},
 				},
 				jump = {
 					fps = 10,
 					frames = {
-						{ 3, 911, 618, 17, 20, 64, 60 },
-						{ 3, 930, 618, 17, 20, 64, 60 },
-						{ 3, 949, 618, 17, 20, 64, 60 },
-						{ 3, 968, 618, 17, 20, 64, 60 },
+						{ 3, 561, 617, 17, 20, 64, 60 },
+						{ 3, 580, 617, 17, 20, 64, 60 },
+						{ 3, 599, 617, 17, 20, 64, 60 },
+						{ 3, 618, 617, 17, 20, 64, 60 },
 					},
 				},
 				fall = {
 					fps = 10,
 					frames = {
-						{ 3, 526, 845, 19, 17, 63, 63 },
-						{ 3, 547, 845, 19, 17, 63, 63 },
-						{ 3, 568, 845, 19, 17, 63, 63 },
-						{ 3, 589, 845, 19, 17, 63, 63 },
+						{ 3, 127, 841, 19, 17, 63, 63 },
+						{ 3, 148, 841, 19, 17, 63, 63 },
+						{ 3, 169, 841, 19, 17, 63, 63 },
+						{ 3, 190, 841, 19, 17, 63, 63 },
 					},
 				},
 				hurt = {
 					fps = 10,
 					frames = {
-						{ 3, 853, 529, 16, 21, 65, 59 },
-						{ 3, 871, 529, 16, 21, 65, 59 },
-						{ 3, 799, 529, 16, 21, 65, 59 },
+						{ 3, 435, 528, 16, 21, 65, 59 },
+						{ 3, 453, 528, 16, 21, 65, 59 },
+						{ 3, 381, 528, 16, 21, 65, 59 },
 					},
 				},
 				death = {
 					fps = 12,
 					frames = {
-						{ 3, 799, 529, 16, 21, 65, 59 },
-						{ 3, 20, 640, 16, 20, 65, 60 },
-						{ 3, 38, 640, 16, 20, 65, 60 },
-						{ 3, 813, 618, 18, 20, 64, 60 },
-						{ 3, 813, 618, 18, 20, 64, 60 },
-						{ 3, 87, 725, 18, 19, 64, 61 },
-						{ 3, 465, 917, 20, 13, 64, 67 },
-						{ 3, 26, 960, 21, 10, 64, 70 },
-						{ 3, 621, 960, 21, 9, 64, 71 },
-						{ 3, 26, 960, 21, 10, 64, 70 },
-						{ 3, 26, 960, 21, 10, 64, 70 },
-						{ 3, 26, 960, 21, 10, 64, 70 },
-						{ 3, 26, 960, 21, 10, 64, 70 },
-						{ 3, 26, 960, 21, 10, 64, 70 },
-						{ 3, 49, 960, 21, 10, 64, 70 },
-						{ 3, 377, 946, 23, 11, 63, 69 },
-						{ 2, 388, 928, 39, 30, 54, 50 },
-						{ 2, 47, 862, 40, 31, 54, 49 },
-						{ 2, 427, 724, 42, 33, 53, 47 },
-						{ 3, 48, 33, 43, 28, 52, 45 },
-						{ 3, 93, 33, 43, 28, 52, 44 },
-						{ 3, 936, 63, 34, 27, 58, 44 },
-						{ 3, 441, 972, 1, 1, 76, 46 },
+						{ 3, 381, 528, 16, 21, 65, 59 },
+						{ 3, 691, 617, 16, 20, 65, 60 },
+						{ 3, 709, 617, 16, 20, 65, 60 },
+						{ 3, 403, 617, 18, 20, 64, 60 },
+						{ 3, 403, 617, 18, 20, 64, 60 },
+						{ 3, 788, 702, 18, 19, 64, 61 },
+						{ 3, 908, 895, 20, 13, 64, 67 },
+						{ 3, 443, 940, 21, 10, 64, 70 },
+						{ 3, 26, 953, 21, 9, 64, 71 },
+						{ 3, 443, 940, 21, 10, 64, 70 },
+						{ 3, 443, 940, 21, 10, 64, 70 },
+						{ 3, 443, 940, 21, 10, 64, 70 },
+						{ 3, 443, 940, 21, 10, 64, 70 },
+						{ 3, 443, 940, 21, 10, 64, 70 },
+						{ 3, 466, 940, 21, 10, 64, 70 },
+						{ 3, 801, 926, 23, 11, 63, 69 },
+						{ 2, 280, 928, 39, 30, 54, 50 },
+						{ 2, 964, 828, 40, 31, 54, 49 },
+						{ 2, 297, 724, 42, 33, 53, 47 },
+						{ 3, 2, 33, 43, 28, 52, 45 },
+						{ 3, 47, 33, 43, 28, 52, 44 },
+						{ 3, 826, 63, 34, 27, 58, 44 },
+						{ 3, 854, 953, 1, 1, 76, 46 },
 					},
 				},
 				punch = {
 					fps = 10,
 					frames = {
-						{ 3, 723, 436, 16, 22, 65, 58 },
-						{ 3, 889, 529, 16, 21, 65, 59 },
-						{ 3, 652, 845, 18, 17, 63, 63 },
-						{ 3, 529, 917, 18, 13, 63, 67 },
-						{ 3, 621, 932, 18, 12, 63, 68 },
-						{ 3, 549, 917, 18, 13, 63, 67 },
-						{ 3, 138, 33, 43, 28, 59, 52 },
-						{ 2, 2, 992, 44, 29, 59, 51 },
-						{ 2, 212, 928, 45, 30, 59, 50 },
-						{ 2, 940, 960, 45, 29, 59, 51 },
-						{ 3, 942, 2, 44, 28, 59, 52 },
-						{ 3, 861, 63, 36, 27, 60, 53 },
-						{ 3, 951, 640, 43, 19, 62, 61 },
-						{ 3, 906, 725, 44, 18, 61, 62 },
-						{ 3, 164, 483, 45, 21, 60, 59 },
-						{ 3, 241, 388, 44, 22, 61, 58 },
-						{ 3, 522, 412, 37, 22, 62, 58 },
+						{ 3, 318, 435, 16, 22, 65, 58 },
+						{ 3, 471, 528, 16, 21, 65, 59 },
+						{ 3, 253, 841, 18, 17, 63, 63 },
+						{ 3, 972, 895, 18, 13, 63, 67 },
+						{ 3, 23, 926, 18, 12, 63, 68 },
+						{ 3, 992, 895, 18, 13, 63, 67 },
+						{ 3, 92, 33, 43, 28, 59, 52 },
+						{ 2, 960, 960, 44, 29, 59, 51 },
+						{ 2, 104, 928, 45, 30, 59, 50 },
+						{ 2, 913, 960, 45, 29, 59, 51 },
+						{ 3, 911, 2, 44, 28, 59, 52 },
+						{ 3, 751, 63, 36, 27, 60, 53 },
+						{ 3, 655, 639, 43, 19, 62, 61 },
+						{ 3, 533, 723, 44, 18, 61, 62 },
+						{ 3, 743, 459, 45, 21, 60, 59 },
+						{ 3, 872, 362, 44, 22, 61, 58 },
+						{ 3, 162, 411, 37, 22, 62, 58 },
 					},
 				},
 				slam = {
 					fps = 10,
 					frames = {
-						{ 3, 723, 436, 16, 22, 65, 58 },
-						{ 3, 175, 234, 19, 25, 62, 55 },
-						{ 3, 561, 287, 19, 24, 62, 56 },
-						{ 2, 583, 828, 19, 32, 62, 48 },
-						{ 2, 71, 895, 20, 31, 61, 49 },
-						{ 2, 197, 960, 21, 30, 60, 50 },
-						{ 2, 447, 960, 19, 30, 62, 50 },
-						{ 3, 473, 2, 20, 29, 61, 51 },
-						{ 3, 495, 2, 19, 29, 62, 51 },
-						{ 2, 381, 960, 20, 30, 61, 50 },
-						{ 2, 381, 960, 20, 30, 61, 50 },
+						{ 3, 318, 435, 16, 22, 65, 58 },
+						{ 3, 922, 207, 19, 25, 62, 55 },
+						{ 3, 186, 286, 19, 24, 62, 56 },
+						{ 2, 453, 828, 19, 32, 62, 48 },
+						{ 2, 990, 862, 20, 31, 61, 49 },
+						{ 2, 170, 960, 21, 30, 60, 50 },
+						{ 2, 420, 960, 19, 30, 62, 50 },
+						{ 3, 442, 2, 20, 29, 61, 51 },
+						{ 3, 464, 2, 19, 29, 62, 51 },
+						{ 2, 354, 960, 20, 30, 61, 50 },
+						{ 2, 354, 960, 20, 30, 61, 50 },
 						{ 2, 343, 436, 113, 46, 17, 34 },
 						{ 2, 596, 436, 124, 44, 11, 36 },
-						{ 2, 2, 724, 128, 33, 7, 47 },
-						{ 3, 217, 234, 130, 24, 6, 56 },
-						{ 3, 772, 436, 131, 21, 5, 59 },
-						{ 3, 2, 460, 131, 21, 5, 59 },
-						{ 3, 362, 552, 76, 20, 5, 60 },
-						{ 3, 723, 436, 16, 22, 65, 58 },
+						{ 2, 854, 688, 128, 33, 7, 47 },
+						{ 3, 2, 234, 130, 24, 6, 56 },
+						{ 3, 367, 435, 131, 21, 5, 59 },
+						{ 3, 500, 435, 131, 21, 5, 59 },
+						{ 3, 901, 528, 76, 20, 5, 60 },
+						{ 3, 318, 435, 16, 22, 65, 58 },
 					},
 				},
 				wave = {
 					fps = 10,
 					frames = {
-						{ 3, 741, 436, 16, 22, 65, 58 },
-						{ 3, 907, 529, 16, 21, 65, 59 },
-						{ 3, 711, 845, 16, 17, 65, 63 },
-						{ 3, 689, 917, 17, 13, 64, 67 },
-						{ 3, 881, 932, 17, 12, 64, 68 },
-						{ 3, 569, 917, 18, 13, 63, 67 },
-						{ 3, 569, 917, 18, 13, 63, 67 },
-						{ 2, 484, 862, 33, 31, 59, 58 },
-						{ 2, 535, 650, 35, 35, 59, 56 },
-						{ 2, 503, 612, 36, 36, 59, 55 },
-						{ 2, 541, 612, 36, 36, 59, 55 },
-						{ 3, 182, 506, 32, 21, 59, 62 },
-						{ 3, 898, 882, 23, 15, 60, 65 },
-						{ 3, 530, 900, 21, 14, 62, 66 },
-						{ 3, 487, 917, 19, 13, 64, 67 },
-						{ 3, 729, 845, 16, 17, 65, 63 },
-						{ 3, 889, 529, 16, 21, 65, 59 },
-						{ 3, 723, 436, 16, 22, 65, 58 },
+						{ 3, 336, 435, 16, 22, 65, 58 },
+						{ 3, 489, 528, 16, 21, 65, 59 },
+						{ 3, 332, 841, 16, 17, 65, 63 },
+						{ 3, 162, 911, 17, 13, 64, 67 },
+						{ 3, 283, 926, 17, 12, 64, 68 },
+						{ 3, 2, 911, 18, 13, 63, 67 },
+						{ 3, 2, 911, 18, 13, 63, 67 },
+						{ 2, 397, 862, 33, 31, 59, 58 },
+						{ 2, 371, 650, 35, 35, 59, 56 },
+						{ 2, 375, 612, 36, 36, 59, 55 },
+						{ 2, 413, 612, 36, 36, 59, 55 },
+						{ 3, 784, 482, 32, 21, 59, 62 },
+						{ 3, 387, 878, 23, 15, 60, 65 },
+						{ 3, 2, 895, 21, 14, 62, 66 },
+						{ 3, 930, 895, 19, 13, 64, 67 },
+						{ 3, 350, 841, 16, 17, 65, 63 },
+						{ 3, 471, 528, 16, 21, 65, 59 },
+						{ 3, 318, 435, 16, 22, 65, 58 },
 					},
 				},
 				dash = {
 					fps = 10,
 					frames = {
-						{ 3, 30, 882, 26, 16, 56, 64 },
-						{ 3, 952, 864, 27, 16, 59, 64 },
-						{ 3, 893, 864, 28, 16, 57, 64 },
-						{ 3, 58, 882, 25, 16, 56, 64 },
+						{ 3, 647, 860, 26, 16, 56, 64 },
+						{ 3, 562, 860, 27, 16, 59, 64 },
+						{ 3, 503, 860, 28, 16, 57, 64 },
+						{ 3, 675, 860, 25, 16, 56, 64 },
 					},
 				},
 				waveproj = {
@@ -7641,21 +7653,21 @@ return {
 					fw = 182,
 					fh = 16,
 					frames = {
-						{ 3, 808, 845, 180, 16, 0, 0 },
-						{ 3, 27, 946, 172, 11, 8, 4 },
-						{ 3, 778, 917, 173, 12, 9, 3 },
-						{ 3, 2, 917, 163, 13, 19, 2 },
-						{ 3, 2, 932, 162, 12, 20, 2 },
-						{ 3, 444, 972, 1, 1, 166, 2 },
+						{ 3, 429, 841, 180, 16, 0, 0 },
+						{ 3, 451, 926, 172, 11, 8, 4 },
+						{ 3, 251, 911, 173, 12, 9, 3 },
+						{ 3, 445, 895, 163, 13, 19, 2 },
+						{ 3, 426, 911, 162, 12, 20, 2 },
+						{ 3, 857, 953, 1, 1, 166, 2 },
 					},
 				},
 				climb = {
 					fps = 8,
 					frames = {
-						{ 3, 925, 529, 15, 21, 66, 60 },
-						{ 3, 925, 529, 15, 21, 66, 60 },
-						{ 3, 942, 529, 15, 21, 64, 60 },
-						{ 3, 942, 529, 15, 21, 64, 60 },
+						{ 3, 507, 528, 15, 21, 66, 60 },
+						{ 3, 507, 528, 15, 21, 66, 60 },
+						{ 3, 524, 528, 15, 21, 64, 60 },
+						{ 3, 524, 528, 15, 21, 64, 60 },
 					},
 				},
 			},
@@ -7670,86 +7682,86 @@ return {
 				idle = {
 					fps = 10,
 					frames = {
-						{ 3, 641, 932, 18, 12, 32, 36 },
-						{ 3, 589, 917, 18, 13, 32, 35 },
-						{ 3, 661, 932, 18, 12, 32, 36 },
-						{ 3, 641, 932, 18, 12, 32, 36 },
-						{ 3, 711, 946, 18, 11, 32, 37 },
-						{ 3, 669, 946, 19, 11, 32, 37 },
-						{ 3, 711, 946, 18, 11, 32, 37 },
-						{ 3, 641, 932, 18, 12, 32, 36 },
+						{ 3, 43, 926, 18, 12, 32, 36 },
+						{ 3, 22, 911, 18, 13, 32, 35 },
+						{ 3, 63, 926, 18, 12, 32, 36 },
+						{ 3, 43, 926, 18, 12, 32, 36 },
+						{ 3, 116, 940, 18, 11, 32, 37 },
+						{ 3, 74, 940, 19, 11, 32, 37 },
+						{ 3, 116, 940, 18, 11, 32, 37 },
+						{ 3, 43, 926, 18, 12, 32, 36 },
 					},
 				},
 				run = {
 					fps = 10,
 					frames = {
-						{ 3, 118, 960, 18, 10, 32, 38 },
-						{ 3, 681, 932, 18, 12, 31, 36 },
-						{ 3, 701, 932, 18, 12, 32, 35 },
-						{ 3, 721, 932, 18, 12, 32, 36 },
-						{ 3, 138, 960, 18, 10, 31, 38 },
-						{ 3, 741, 932, 18, 12, 31, 36 },
-						{ 3, 761, 932, 18, 12, 31, 35 },
-						{ 3, 781, 932, 18, 12, 31, 36 },
+						{ 3, 535, 940, 18, 10, 32, 38 },
+						{ 3, 83, 926, 18, 12, 31, 36 },
+						{ 3, 103, 926, 18, 12, 32, 35 },
+						{ 3, 123, 926, 18, 12, 32, 36 },
+						{ 3, 555, 940, 18, 10, 31, 38 },
+						{ 3, 143, 926, 18, 12, 31, 36 },
+						{ 3, 163, 926, 18, 12, 31, 35 },
+						{ 3, 183, 926, 18, 12, 31, 36 },
 					},
 				},
 				hit = {
 					fps = 10,
 					frames = {
-						{ 3, 801, 932, 18, 12, 32, 36 },
-						{ 3, 609, 917, 18, 13, 33, 35 },
-						{ 3, 641, 932, 18, 12, 32, 36 },
+						{ 3, 203, 926, 18, 12, 32, 36 },
+						{ 3, 42, 911, 18, 13, 33, 35 },
+						{ 3, 43, 926, 18, 12, 32, 36 },
 					},
 				},
 				spawn = {
 					fps = 10,
 					frames = {
-						{ 2, 572, 650, 34, 35, 25, 13 },
-						{ 3, 2, 151, 36, 26, 24, 22 },
-						{ 3, 515, 261, 38, 24, 23, 24 },
-						{ 3, 2, 574, 40, 20, 22, 28 },
-						{ 3, 46, 746, 42, 18, 21, 30 },
-						{ 3, 90, 746, 42, 18, 21, 30 },
-						{ 3, 40, 826, 35, 17, 20, 31 },
-						{ 3, 610, 845, 19, 17, 32, 31 },
+						{ 2, 408, 650, 34, 35, 25, 13 },
+						{ 3, 881, 122, 36, 26, 24, 22 },
+						{ 3, 256, 260, 38, 24, 23, 24 },
+						{ 3, 627, 551, 40, 20, 22, 28 },
+						{ 3, 668, 723, 42, 18, 21, 30 },
+						{ 3, 712, 723, 42, 18, 21, 30 },
+						{ 3, 636, 803, 35, 17, 20, 31 },
+						{ 3, 211, 841, 19, 17, 32, 31 },
 					},
 				},
 				death = {
 					fps = 12,
 					frames = {
-						{ 3, 821, 932, 18, 12, 33, 36 },
-						{ 3, 629, 917, 18, 13, 33, 35 },
-						{ 3, 731, 946, 18, 11, 33, 37 },
-						{ 3, 731, 946, 18, 11, 33, 37 },
-						{ 3, 158, 960, 18, 10, 33, 38 },
-						{ 3, 690, 946, 19, 11, 32, 37 },
-						{ 3, 844, 960, 19, 8, 33, 40 },
-						{ 3, 2, 972, 19, 7, 33, 41 },
-						{ 3, 865, 960, 19, 8, 33, 40 },
-						{ 3, 23, 972, 19, 7, 33, 41 },
-						{ 3, 44, 972, 19, 7, 33, 41 },
-						{ 3, 44, 972, 19, 7, 33, 41 },
-						{ 3, 667, 960, 19, 9, 33, 39 },
-						{ 3, 72, 960, 21, 10, 32, 38 },
-						{ 3, 402, 946, 23, 11, 31, 37 },
-						{ 3, 325, 946, 24, 11, 30, 37 },
-						{ 3, 477, 946, 22, 11, 30, 37 },
+						{ 3, 223, 926, 18, 12, 33, 36 },
+						{ 3, 62, 911, 18, 13, 33, 35 },
+						{ 3, 136, 940, 18, 11, 33, 37 },
+						{ 3, 136, 940, 18, 11, 33, 37 },
+						{ 3, 575, 940, 18, 10, 33, 38 },
+						{ 3, 95, 940, 19, 11, 32, 37 },
+						{ 3, 249, 953, 19, 8, 33, 40 },
+						{ 3, 415, 953, 19, 7, 33, 41 },
+						{ 3, 270, 953, 19, 8, 33, 40 },
+						{ 3, 436, 953, 19, 7, 33, 41 },
+						{ 3, 457, 953, 19, 7, 33, 41 },
+						{ 3, 457, 953, 19, 7, 33, 41 },
+						{ 3, 72, 953, 19, 9, 33, 39 },
+						{ 3, 489, 940, 21, 10, 32, 38 },
+						{ 3, 826, 926, 23, 11, 31, 37 },
+						{ 3, 749, 926, 24, 11, 30, 37 },
+						{ 3, 901, 926, 22, 11, 30, 37 },
 						false,
 					},
 				},
 				atk = {
 					fps = 10,
 					frames = {
-						{ 3, 751, 946, 18, 11, 31, 37 },
-						{ 3, 178, 960, 18, 10, 30, 38 },
-						{ 3, 178, 960, 18, 10, 30, 38 },
-						{ 3, 242, 960, 47, 9, 26, 39 },
-						{ 3, 519, 960, 38, 9, 35, 39 },
-						{ 3, 478, 960, 39, 9, 35, 39 },
-						{ 3, 339, 960, 45, 9, 30, 39 },
-						{ 3, 291, 960, 46, 9, 29, 39 },
-						{ 3, 95, 960, 21, 10, 30, 38 },
-						{ 3, 751, 946, 18, 11, 31, 37 },
+						{ 3, 156, 940, 18, 11, 31, 37 },
+						{ 3, 595, 940, 18, 10, 30, 38 },
+						{ 3, 595, 940, 18, 10, 30, 38 },
+						{ 3, 659, 940, 47, 9, 26, 39 },
+						{ 3, 936, 940, 38, 9, 35, 39 },
+						{ 3, 895, 940, 39, 9, 35, 39 },
+						{ 3, 756, 940, 45, 9, 30, 39 },
+						{ 3, 708, 940, 46, 9, 29, 39 },
+						{ 3, 512, 940, 21, 10, 30, 38 },
+						{ 3, 156, 940, 18, 11, 31, 37 },
 					},
 				},
 			},
@@ -7764,87 +7776,87 @@ return {
 				idle = {
 					fps = 10,
 					frames = {
-						{ 3, 900, 932, 16, 12, 32, 36 },
-						{ 3, 708, 917, 16, 13, 32, 35 },
-						{ 3, 726, 917, 16, 13, 32, 35 },
-						{ 3, 918, 932, 16, 12, 32, 36 },
-						{ 3, 900, 932, 16, 12, 32, 36 },
-						{ 3, 771, 946, 16, 11, 32, 37 },
-						{ 3, 789, 946, 16, 11, 32, 37 },
-						{ 3, 900, 932, 16, 12, 32, 36 },
+						{ 3, 302, 926, 16, 12, 32, 36 },
+						{ 3, 181, 911, 16, 13, 32, 35 },
+						{ 3, 199, 911, 16, 13, 32, 35 },
+						{ 3, 320, 926, 16, 12, 32, 36 },
+						{ 3, 302, 926, 16, 12, 32, 36 },
+						{ 3, 176, 940, 16, 11, 32, 37 },
+						{ 3, 194, 940, 16, 11, 32, 37 },
+						{ 3, 302, 926, 16, 12, 32, 36 },
 					},
 				},
 				run = {
 					fps = 10,
 					frames = {
-						{ 3, 768, 960, 15, 9, 32, 39 },
-						{ 3, 990, 932, 15, 12, 32, 36 },
-						{ 3, 1007, 932, 15, 12, 32, 35 },
-						{ 3, 861, 946, 15, 11, 32, 37 },
-						{ 3, 750, 960, 16, 9, 32, 39 },
-						{ 3, 936, 932, 16, 12, 32, 36 },
-						{ 3, 954, 932, 16, 12, 32, 35 },
-						{ 3, 807, 946, 16, 11, 32, 37 },
+						{ 3, 173, 953, 15, 9, 32, 39 },
+						{ 3, 392, 926, 15, 12, 32, 36 },
+						{ 3, 409, 926, 15, 12, 32, 35 },
+						{ 3, 266, 940, 15, 11, 32, 37 },
+						{ 3, 155, 953, 16, 9, 32, 39 },
+						{ 3, 338, 926, 16, 12, 32, 36 },
+						{ 3, 356, 926, 16, 12, 32, 35 },
+						{ 3, 212, 940, 16, 11, 32, 37 },
 					},
 				},
 				hit = {
 					fps = 10,
 					frames = {
-						{ 3, 972, 932, 16, 12, 32, 36 },
-						{ 3, 744, 917, 15, 13, 33, 35 },
-						{ 3, 900, 932, 16, 12, 32, 36 },
+						{ 3, 374, 926, 16, 12, 32, 36 },
+						{ 3, 217, 911, 15, 13, 33, 35 },
+						{ 3, 302, 926, 16, 12, 32, 36 },
 					},
 				},
 				spawn = {
 					fps = 10,
 					frames = {
-						{ 2, 572, 650, 34, 35, 25, 13 },
-						{ 3, 713, 261, 36, 24, 24, 24 },
-						{ 3, 555, 261, 38, 24, 23, 24 },
-						{ 3, 44, 574, 40, 20, 22, 28 },
-						{ 3, 134, 746, 42, 18, 21, 30 },
-						{ 3, 178, 746, 42, 18, 21, 30 },
-						{ 3, 77, 826, 35, 17, 20, 31 },
-						{ 3, 631, 845, 19, 17, 32, 31 },
+						{ 2, 408, 650, 34, 35, 25, 13 },
+						{ 3, 376, 260, 36, 24, 24, 24 },
+						{ 3, 296, 260, 38, 24, 23, 24 },
+						{ 3, 669, 551, 40, 20, 22, 28 },
+						{ 3, 756, 723, 42, 18, 21, 30 },
+						{ 3, 800, 723, 42, 18, 21, 30 },
+						{ 3, 673, 803, 35, 17, 20, 31 },
+						{ 3, 232, 841, 19, 17, 32, 31 },
 					},
 				},
 				death = {
 					fps = 12,
 					frames = {
-						{ 3, 761, 917, 15, 13, 32, 35 },
-						{ 3, 2, 946, 15, 12, 32, 36 },
-						{ 3, 878, 946, 15, 11, 32, 37 },
-						{ 3, 198, 960, 18, 10, 32, 38 },
-						{ 3, 907, 960, 18, 8, 32, 40 },
-						{ 3, 173, 972, 18, 6, 32, 42 },
-						{ 3, 65, 972, 18, 7, 32, 41 },
-						{ 3, 173, 972, 18, 6, 32, 42 },
-						{ 3, 193, 972, 18, 6, 32, 42 },
-						{ 3, 394, 917, 22, 13, 29, 36 },
-						{ 3, 368, 917, 24, 13, 28, 35 },
-						{ 3, 337, 932, 24, 12, 29, 34 },
-						{ 3, 351, 946, 24, 11, 30, 33 },
-						{ 3, 427, 946, 23, 11, 30, 32 },
-						{ 3, 237, 960, 3, 10, 49, 32 },
+						{ 3, 234, 911, 15, 13, 32, 35 },
+						{ 3, 426, 926, 15, 12, 32, 36 },
+						{ 3, 283, 940, 15, 11, 32, 37 },
+						{ 3, 615, 940, 18, 10, 32, 38 },
+						{ 3, 312, 953, 18, 8, 32, 40 },
+						{ 3, 586, 953, 18, 6, 32, 42 },
+						{ 3, 478, 953, 18, 7, 32, 41 },
+						{ 3, 586, 953, 18, 6, 32, 42 },
+						{ 3, 606, 953, 18, 6, 32, 42 },
+						{ 3, 837, 895, 22, 13, 29, 36 },
+						{ 3, 811, 895, 24, 13, 28, 35 },
+						{ 3, 761, 911, 24, 12, 29, 34 },
+						{ 3, 775, 926, 24, 11, 30, 33 },
+						{ 3, 851, 926, 23, 11, 30, 32 },
+						{ 3, 654, 940, 3, 10, 49, 32 },
 						false,
 					},
 				},
 				atk = {
 					fps = 10,
 					frames = {
-						{ 3, 726, 917, 16, 13, 32, 35 },
-						{ 3, 918, 932, 16, 12, 32, 36 },
-						{ 3, 900, 932, 16, 12, 32, 36 },
-						{ 3, 825, 946, 16, 11, 32, 37 },
-						{ 3, 843, 946, 16, 11, 32, 37 },
-						{ 3, 841, 932, 18, 12, 31, 36 },
+						{ 3, 199, 911, 16, 13, 32, 35 },
+						{ 3, 320, 926, 16, 12, 32, 36 },
+						{ 3, 302, 926, 16, 12, 32, 36 },
+						{ 3, 230, 940, 16, 11, 32, 37 },
+						{ 3, 248, 940, 16, 11, 32, 37 },
+						{ 3, 243, 926, 18, 12, 31, 36 },
 						{ 2, 336, 488, 40, 40, 20, 21 },
-						{ 2, 237, 724, 48, 33, 14, 18 },
-						{ 2, 759, 828, 47, 31, 16, 17 },
-						{ 2, 243, 794, 48, 32, 16, 16 },
-						{ 2, 186, 724, 49, 33, 16, 15 },
-						{ 2, 471, 724, 40, 33, 25, 15 },
-						{ 3, 241, 972, 3, 6, 51, 34 },
+						{ 2, 107, 724, 48, 33, 14, 18 },
+						{ 2, 680, 828, 47, 31, 16, 17 },
+						{ 2, 127, 794, 48, 32, 16, 16 },
+						{ 2, 56, 724, 49, 33, 16, 15 },
+						{ 2, 341, 724, 40, 33, 25, 15 },
+						{ 3, 654, 953, 3, 6, 51, 34 },
 						false,
 					},
 				},
@@ -7860,81 +7872,81 @@ return {
 				idle = {
 					fps = 10,
 					frames = {
-						{ 3, 641, 900, 19, 14, 29, 34 },
-						{ 3, 991, 882, 19, 15, 29, 33 },
-						{ 3, 2, 900, 19, 15, 29, 33 },
-						{ 3, 662, 900, 19, 14, 29, 34 },
-						{ 3, 641, 900, 19, 14, 29, 34 },
-						{ 3, 508, 917, 19, 13, 29, 35 },
-						{ 3, 641, 900, 19, 14, 29, 34 },
+						{ 3, 113, 895, 19, 14, 29, 34 },
+						{ 3, 480, 878, 19, 15, 29, 33 },
+						{ 3, 501, 878, 19, 15, 29, 33 },
+						{ 3, 134, 895, 19, 14, 29, 34 },
+						{ 3, 113, 895, 19, 14, 29, 34 },
+						{ 3, 951, 895, 19, 13, 29, 35 },
+						{ 3, 113, 895, 19, 14, 29, 34 },
 					},
 				},
 				run = {
 					fps = 10,
 					frames = {
-						{ 3, 579, 932, 19, 12, 30, 36 },
-						{ 3, 725, 900, 18, 14, 31, 34 },
-						{ 3, 745, 900, 18, 14, 31, 33 },
-						{ 3, 765, 900, 18, 14, 31, 34 },
-						{ 3, 600, 932, 19, 12, 30, 36 },
-						{ 3, 785, 900, 18, 14, 31, 34 },
-						{ 3, 805, 900, 18, 14, 31, 33 },
-						{ 3, 825, 900, 18, 14, 31, 34 },
+						{ 3, 1003, 911, 19, 12, 30, 36 },
+						{ 3, 197, 895, 18, 14, 31, 34 },
+						{ 3, 217, 895, 18, 14, 31, 33 },
+						{ 3, 237, 895, 18, 14, 31, 34 },
+						{ 3, 2, 926, 19, 12, 30, 36 },
+						{ 3, 257, 895, 18, 14, 31, 34 },
+						{ 3, 277, 895, 18, 14, 31, 33 },
+						{ 3, 297, 895, 18, 14, 31, 34 },
 					},
 				},
 				hit = {
 					fps = 10,
 					frames = {
-						{ 3, 683, 900, 19, 14, 29, 34 },
-						{ 3, 102, 900, 16, 15, 30, 33 },
-						{ 3, 641, 900, 19, 14, 29, 34 },
+						{ 3, 155, 895, 19, 14, 29, 34 },
+						{ 3, 581, 878, 16, 15, 30, 33 },
+						{ 3, 113, 895, 19, 14, 29, 34 },
 					},
 				},
 				spawn = {
 					fps = 10,
 					frames = {
-						{ 2, 572, 650, 34, 35, 24, 13 },
-						{ 3, 211, 207, 36, 25, 23, 23 },
-						{ 3, 86, 574, 40, 20, 21, 28 },
-						{ 3, 222, 746, 42, 18, 20, 30 },
-						{ 3, 266, 746, 42, 18, 20, 30 },
-						{ 3, 114, 826, 35, 17, 19, 31 },
-						{ 3, 503, 845, 21, 17, 29, 31 },
-						{ 3, 641, 900, 19, 14, 29, 34 },
+						{ 2, 408, 650, 34, 35, 24, 13 },
+						{ 3, 983, 179, 36, 25, 23, 23 },
+						{ 3, 711, 551, 40, 20, 21, 28 },
+						{ 3, 844, 723, 42, 18, 20, 30 },
+						{ 3, 888, 723, 42, 18, 20, 30 },
+						{ 3, 710, 803, 35, 17, 19, 31 },
+						{ 3, 104, 841, 21, 17, 29, 31 },
+						{ 3, 113, 895, 19, 14, 29, 34 },
 					},
 				},
 				death = {
 					fps = 12,
 					frames = {
-						{ 3, 83, 900, 17, 15, 30, 33 },
-						{ 3, 845, 900, 17, 14, 30, 34 },
-						{ 3, 864, 900, 17, 14, 30, 34 },
-						{ 3, 598, 900, 20, 14, 29, 34 },
-						{ 3, 688, 960, 19, 9, 30, 39 },
-						{ 3, 886, 960, 19, 8, 30, 40 },
-						{ 3, 688, 960, 19, 9, 30, 39 },
-						{ 3, 709, 960, 19, 9, 30, 39 },
-						{ 3, 310, 917, 27, 13, 27, 36 },
-						{ 3, 339, 917, 27, 13, 27, 35 },
-						{ 3, 308, 932, 27, 12, 27, 34 },
-						{ 3, 295, 946, 28, 11, 26, 33 },
-						{ 3, 940, 946, 24, 10, 26, 33 },
-						{ 3, 246, 972, 3, 6, 26, 36 },
+						{ 3, 562, 878, 17, 15, 30, 33 },
+						{ 3, 357, 895, 17, 14, 30, 34 },
+						{ 3, 376, 895, 17, 14, 30, 34 },
+						{ 3, 70, 895, 20, 14, 29, 34 },
+						{ 3, 93, 953, 19, 9, 30, 39 },
+						{ 3, 291, 953, 19, 8, 30, 40 },
+						{ 3, 93, 953, 19, 9, 30, 39 },
+						{ 3, 114, 953, 19, 9, 30, 39 },
+						{ 3, 753, 895, 27, 13, 27, 36 },
+						{ 3, 782, 895, 27, 13, 27, 35 },
+						{ 3, 732, 911, 27, 12, 27, 34 },
+						{ 3, 719, 926, 28, 11, 26, 33 },
+						{ 3, 345, 940, 24, 10, 26, 33 },
+						{ 3, 659, 953, 3, 6, 26, 36 },
 						false,
 					},
 				},
 				atk = {
 					fps = 10,
 					frames = {
-						{ 3, 883, 900, 16, 14, 31, 34 },
-						{ 3, 901, 900, 16, 14, 34, 34 },
-						{ 3, 649, 917, 18, 13, 33, 35 },
-						{ 3, 669, 917, 18, 13, 33, 35 },
-						{ 3, 669, 917, 18, 13, 33, 35 },
-						{ 3, 970, 388, 38, 22, 26, 29 },
-						{ 3, 433, 261, 39, 24, 26, 28 },
-						{ 3, 474, 261, 39, 24, 26, 28 },
-						{ 3, 280, 766, 28, 18, 29, 32 },
+						{ 3, 395, 895, 16, 14, 31, 34 },
+						{ 3, 413, 895, 16, 14, 34, 34 },
+						{ 3, 82, 911, 18, 13, 33, 35 },
+						{ 3, 102, 911, 18, 13, 33, 35 },
+						{ 3, 102, 911, 18, 13, 33, 35 },
+						{ 3, 596, 387, 38, 22, 26, 29 },
+						{ 3, 174, 260, 39, 24, 26, 28 },
+						{ 3, 215, 260, 39, 24, 26, 28 },
+						{ 3, 900, 743, 28, 18, 29, 32 },
 					},
 				},
 			},
@@ -7949,83 +7961,83 @@ return {
 				idle = {
 					fps = 10,
 					frames = {
-						{ 3, 501, 946, 22, 11, 32, 37 },
-						{ 3, 363, 932, 22, 12, 32, 36 },
-						{ 3, 387, 932, 22, 12, 32, 36 },
-						{ 3, 525, 946, 22, 11, 32, 37 },
-						{ 3, 501, 946, 22, 11, 32, 37 },
-						{ 3, 966, 946, 22, 10, 32, 38 },
-						{ 3, 990, 946, 22, 10, 32, 38 },
-						{ 3, 501, 946, 22, 11, 32, 37 },
+						{ 3, 925, 926, 22, 11, 32, 37 },
+						{ 3, 787, 911, 22, 12, 32, 36 },
+						{ 3, 811, 911, 22, 12, 32, 36 },
+						{ 3, 949, 926, 22, 11, 32, 37 },
+						{ 3, 925, 926, 22, 11, 32, 37 },
+						{ 3, 371, 940, 22, 10, 32, 38 },
+						{ 3, 395, 940, 22, 10, 32, 38 },
+						{ 3, 925, 926, 22, 11, 32, 37 },
 					},
 				},
 				run = {
 					fps = 10,
 					frames = {
-						{ 3, 938, 960, 22, 7, 33, 41 },
-						{ 3, 411, 932, 22, 12, 33, 36 },
-						{ 3, 435, 932, 22, 12, 33, 35 },
-						{ 3, 459, 932, 22, 12, 33, 36 },
-						{ 3, 962, 960, 22, 7, 32, 41 },
-						{ 3, 483, 932, 22, 12, 32, 36 },
-						{ 3, 507, 932, 22, 12, 32, 35 },
-						{ 3, 531, 932, 22, 12, 32, 36 },
+						{ 3, 343, 953, 22, 7, 33, 41 },
+						{ 3, 835, 911, 22, 12, 33, 36 },
+						{ 3, 859, 911, 22, 12, 33, 35 },
+						{ 3, 883, 911, 22, 12, 33, 36 },
+						{ 3, 367, 953, 22, 7, 32, 41 },
+						{ 3, 907, 911, 22, 12, 32, 36 },
+						{ 3, 931, 911, 22, 12, 32, 35 },
+						{ 3, 955, 911, 22, 12, 32, 36 },
 					},
 				},
 				hit = {
 					fps = 10,
 					frames = {
-						{ 3, 549, 946, 22, 11, 32, 37 },
-						{ 3, 573, 946, 22, 11, 32, 37 },
-						{ 3, 501, 946, 22, 11, 32, 37 },
+						{ 3, 973, 926, 22, 11, 32, 37 },
+						{ 3, 997, 926, 22, 11, 32, 37 },
+						{ 3, 925, 926, 22, 11, 32, 37 },
 					},
 				},
 				spawn = {
 					fps = 10,
 					frames = {
-						{ 2, 572, 650, 34, 35, 25, 13 },
-						{ 3, 751, 261, 36, 24, 24, 24 },
-						{ 3, 595, 261, 38, 24, 23, 24 },
-						{ 3, 128, 574, 40, 20, 22, 28 },
-						{ 3, 310, 746, 42, 18, 21, 30 },
-						{ 3, 354, 746, 42, 18, 21, 30 },
-						{ 3, 151, 826, 35, 17, 20, 31 },
-						{ 3, 479, 845, 22, 17, 32, 31 },
+						{ 2, 408, 650, 34, 35, 25, 13 },
+						{ 3, 414, 260, 36, 24, 24, 24 },
+						{ 3, 336, 260, 38, 24, 23, 24 },
+						{ 3, 753, 551, 40, 20, 22, 28 },
+						{ 3, 932, 723, 42, 18, 21, 30 },
+						{ 3, 976, 723, 42, 18, 21, 30 },
+						{ 3, 747, 803, 35, 17, 20, 31 },
+						{ 3, 80, 841, 22, 17, 32, 31 },
 					},
 				},
 				death = {
 					fps = 12,
 					frames = {
-						{ 3, 555, 932, 22, 12, 33, 36 },
-						{ 3, 597, 946, 22, 11, 33, 37 },
-						{ 3, 621, 946, 22, 11, 33, 37 },
-						{ 3, 645, 946, 22, 11, 34, 37 },
-						{ 3, 2, 960, 22, 10, 34, 38 },
-						{ 3, 123, 972, 23, 6, 34, 42 },
-						{ 3, 251, 972, 24, 5, 34, 43 },
-						{ 3, 123, 972, 23, 6, 34, 42 },
-						{ 3, 148, 972, 23, 6, 34, 42 },
-						{ 3, 946, 882, 21, 15, 30, 33 },
-						{ 3, 553, 900, 21, 14, 30, 33 },
-						{ 3, 418, 917, 22, 13, 29, 32 },
-						{ 3, 452, 946, 23, 11, 28, 32 },
-						{ 3, 986, 960, 22, 7, 29, 35 },
-						{ 3, 432, 972, 1, 1, 30, 40 },
+						{ 3, 979, 911, 22, 12, 33, 36 },
+						{ 3, 2, 940, 22, 11, 33, 37 },
+						{ 3, 26, 940, 22, 11, 33, 37 },
+						{ 3, 50, 940, 22, 11, 34, 37 },
+						{ 3, 419, 940, 22, 10, 34, 38 },
+						{ 3, 536, 953, 23, 6, 34, 42 },
+						{ 3, 664, 953, 24, 5, 34, 43 },
+						{ 3, 536, 953, 23, 6, 34, 42 },
+						{ 3, 561, 953, 23, 6, 34, 42 },
+						{ 3, 435, 878, 21, 15, 30, 33 },
+						{ 3, 25, 895, 21, 14, 30, 33 },
+						{ 3, 861, 895, 22, 13, 29, 32 },
+						{ 3, 876, 926, 23, 11, 28, 32 },
+						{ 3, 391, 953, 22, 7, 29, 35 },
+						{ 3, 845, 953, 1, 1, 30, 40 },
 						false,
 					},
 				},
 				atk = {
 					fps = 10,
 					frames = {
-						{ 3, 597, 960, 22, 9, 31, 39 },
-						{ 3, 796, 960, 22, 8, 26, 40 },
-						{ 3, 820, 960, 22, 8, 25, 40 },
-						{ 2, 242, 650, 42, 35, 34, 27 },
-						{ 2, 382, 724, 43, 33, 34, 28 },
-						{ 2, 336, 724, 44, 33, 33, 28 },
-						{ 3, 468, 313, 45, 23, 32, 33 },
-						{ 3, 792, 412, 35, 22, 32, 33 },
-						{ 3, 501, 946, 22, 11, 32, 37 },
+						{ 3, 2, 953, 22, 9, 31, 39 },
+						{ 3, 201, 953, 22, 8, 26, 40 },
+						{ 3, 225, 953, 22, 8, 25, 40 },
+						{ 2, 78, 650, 42, 35, 34, 27 },
+						{ 2, 252, 724, 43, 33, 34, 28 },
+						{ 2, 206, 724, 44, 33, 33, 28 },
+						{ 3, 105, 312, 45, 23, 32, 33 },
+						{ 3, 393, 411, 35, 22, 32, 33 },
+						{ 3, 925, 926, 22, 11, 32, 37 },
 					},
 				},
 			},
@@ -8040,42 +8052,42 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 188, 826, 35, 17, 3, 4 },
-						{ 3, 188, 826, 35, 17, 3, 4 },
-						{ 3, 469, 864, 35, 16, 3, 5 },
-						{ 3, 506, 864, 35, 16, 3, 5 },
-						{ 3, 225, 826, 35, 17, 3, 4 },
-						{ 3, 262, 826, 35, 17, 3, 4 },
-						{ 3, 543, 864, 35, 16, 3, 5 },
-						{ 3, 469, 864, 35, 16, 3, 5 },
+						{ 3, 784, 803, 35, 17, 3, 4 },
+						{ 3, 784, 803, 35, 17, 3, 4 },
+						{ 3, 79, 860, 35, 16, 3, 5 },
+						{ 3, 116, 860, 35, 16, 3, 5 },
+						{ 3, 821, 803, 35, 17, 3, 4 },
+						{ 3, 858, 803, 35, 17, 3, 4 },
+						{ 3, 153, 860, 35, 16, 3, 5 },
+						{ 3, 79, 860, 35, 16, 3, 5 },
 					},
 				},
 				run = {
 					fps = 14,
 					frames = {
-						{ 3, 299, 826, 35, 17, 3, 4 },
-						{ 3, 580, 864, 35, 16, 3, 5 },
-						{ 3, 336, 826, 35, 17, 3, 4 },
-						{ 3, 373, 826, 35, 17, 3, 4 },
-						{ 3, 617, 864, 35, 16, 3, 5 },
-						{ 3, 410, 826, 35, 17, 3, 4 },
+						{ 3, 895, 803, 35, 17, 3, 4 },
+						{ 3, 190, 860, 35, 16, 3, 5 },
+						{ 3, 932, 803, 35, 17, 3, 4 },
+						{ 3, 969, 803, 35, 17, 3, 4 },
+						{ 3, 227, 860, 35, 16, 3, 5 },
+						{ 3, 2, 822, 35, 17, 3, 4 },
 					},
 				},
 				atk = {
 					fps = 14,
 					frames = {
-						{ 3, 188, 826, 35, 17, 3, 4 },
-						{ 3, 447, 826, 35, 17, 2, 4 },
-						{ 3, 654, 864, 35, 16, 1, 5 },
-						{ 3, 691, 864, 35, 16, 1, 5 },
-						{ 3, 484, 826, 35, 17, 3, 4 },
-						{ 3, 949, 806, 37, 17, 7, 4 },
-						{ 3, 352, 864, 38, 16, 10, 3 },
-						{ 3, 909, 806, 38, 17, 11, 4 },
-						{ 3, 431, 864, 36, 16, 10, 5 },
-						{ 3, 521, 826, 35, 17, 8, 4 },
-						{ 3, 728, 864, 35, 16, 6, 5 },
-						{ 3, 188, 826, 35, 17, 4, 4 },
+						{ 3, 784, 803, 35, 17, 3, 4 },
+						{ 3, 39, 822, 35, 17, 2, 4 },
+						{ 3, 264, 860, 35, 16, 1, 5 },
+						{ 3, 301, 860, 35, 16, 1, 5 },
+						{ 3, 76, 822, 35, 17, 3, 4 },
+						{ 3, 559, 803, 37, 17, 7, 4 },
+						{ 3, 961, 841, 38, 16, 10, 3 },
+						{ 3, 519, 803, 38, 17, 11, 4 },
+						{ 3, 41, 860, 36, 16, 10, 5 },
+						{ 3, 113, 822, 35, 17, 8, 4 },
+						{ 3, 338, 860, 35, 16, 6, 5 },
+						{ 3, 784, 803, 35, 17, 4, 4 },
 					},
 				},
 			},
@@ -8090,93 +8102,93 @@ return {
 				idle = {
 					fps = 12,
 					frames = {
-						{ 3, 420, 388, 41, 22, 3, 5 },
-						{ 3, 481, 483, 41, 21, 3, 6 },
-						{ 3, 524, 483, 41, 21, 3, 6 },
-						{ 3, 567, 483, 41, 21, 3, 6 },
-						{ 3, 463, 388, 41, 22, 3, 5 },
-						{ 3, 835, 313, 42, 23, 2, 4 },
-						{ 3, 643, 234, 43, 24, 1, 3 },
-						{ 3, 597, 234, 44, 24, 1, 3 },
-						{ 3, 486, 179, 45, 25, 0, 2 },
-						{ 3, 533, 179, 45, 25, 0, 2 },
-						{ 3, 958, 234, 42, 24, 3, 3 },
-						{ 3, 610, 483, 41, 21, 4, 6 },
-						{ 3, 506, 388, 41, 22, 4, 5 },
-						{ 3, 806, 388, 39, 22, 4, 5 },
-						{ 3, 561, 412, 37, 22, 4, 4 },
-						{ 3, 737, 483, 38, 21, 4, 5 },
-						{ 3, 2, 412, 38, 22, 4, 4 },
-						{ 3, 332, 338, 38, 23, 4, 3 },
-						{ 3, 42, 412, 38, 22, 4, 4 },
-						{ 3, 372, 338, 38, 23, 4, 4 },
-						{ 3, 847, 388, 39, 22, 4, 5 },
-						{ 3, 549, 388, 41, 22, 3, 5 },
-						{ 3, 349, 483, 42, 21, 2, 6 },
-						{ 3, 393, 483, 42, 21, 2, 6 },
-						{ 3, 437, 483, 42, 21, 2, 6 },
-						{ 3, 592, 388, 41, 22, 3, 5 },
-						{ 3, 635, 388, 41, 22, 3, 5 },
-						{ 3, 678, 388, 41, 22, 3, 5 },
+						{ 3, 46, 387, 41, 22, 3, 5 },
+						{ 3, 46, 482, 41, 21, 3, 6 },
+						{ 3, 89, 482, 41, 21, 3, 6 },
+						{ 3, 132, 482, 41, 21, 3, 6 },
+						{ 3, 89, 387, 41, 22, 3, 5 },
+						{ 3, 564, 312, 42, 23, 2, 4 },
+						{ 3, 428, 234, 43, 24, 1, 3 },
+						{ 3, 382, 234, 44, 24, 1, 3 },
+						{ 3, 358, 179, 45, 25, 0, 2 },
+						{ 3, 405, 179, 45, 25, 0, 2 },
+						{ 3, 743, 234, 42, 24, 3, 3 },
+						{ 3, 175, 482, 41, 21, 4, 6 },
+						{ 3, 132, 387, 41, 22, 4, 5 },
+						{ 3, 432, 387, 39, 22, 4, 5 },
+						{ 3, 201, 411, 37, 22, 4, 4 },
+						{ 3, 302, 482, 38, 21, 4, 5 },
+						{ 3, 636, 387, 38, 22, 4, 4 },
+						{ 3, 122, 337, 38, 23, 4, 3 },
+						{ 3, 676, 387, 38, 22, 4, 4 },
+						{ 3, 162, 337, 38, 23, 4, 4 },
+						{ 3, 473, 387, 39, 22, 4, 5 },
+						{ 3, 175, 387, 41, 22, 3, 5 },
+						{ 3, 928, 459, 42, 21, 2, 6 },
+						{ 3, 972, 459, 42, 21, 2, 6 },
+						{ 3, 2, 482, 42, 21, 2, 6 },
+						{ 3, 218, 387, 41, 22, 3, 5 },
+						{ 3, 261, 387, 41, 22, 3, 5 },
+						{ 3, 304, 387, 41, 22, 3, 5 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 3, 45, 338, 40, 23, 4, 6 },
-						{ 3, 764, 388, 40, 22, 4, 6 },
-						{ 3, 879, 313, 41, 23, 3, 5 },
-						{ 3, 46, 261, 41, 24, 3, 4 },
-						{ 3, 89, 261, 41, 24, 3, 4 },
-						{ 3, 721, 388, 41, 22, 3, 5 },
-						{ 3, 132, 261, 41, 24, 3, 5 },
-						{ 3, 688, 234, 43, 24, 2, 5 },
-						{ 3, 733, 234, 43, 24, 2, 4 },
-						{ 3, 778, 234, 43, 24, 2, 3 },
-						{ 3, 515, 313, 45, 23, 1, 4 },
-						{ 3, 655, 313, 43, 23, 2, 5 },
-						{ 3, 700, 313, 43, 23, 2, 5 },
-						{ 3, 2, 261, 42, 24, 3, 4 },
-						{ 3, 810, 179, 41, 25, 3, 3 },
-						{ 3, 175, 261, 41, 24, 3, 4 },
-						{ 3, 922, 313, 41, 23, 3, 5 },
-						{ 3, 965, 313, 41, 23, 3, 6 },
-						{ 3, 218, 261, 41, 24, 3, 4 },
-						{ 3, 261, 261, 41, 24, 3, 3 },
-						{ 3, 823, 234, 43, 24, 2, 3 },
-						{ 3, 868, 234, 43, 24, 2, 4 },
-						{ 3, 745, 313, 43, 23, 2, 5 },
-						{ 3, 2, 338, 41, 23, 3, 5 },
+						{ 3, 823, 312, 40, 23, 4, 6 },
+						{ 3, 390, 387, 40, 22, 4, 6 },
+						{ 3, 608, 312, 41, 23, 3, 5 },
+						{ 3, 831, 234, 41, 24, 3, 4 },
+						{ 3, 874, 234, 41, 24, 3, 4 },
+						{ 3, 347, 387, 41, 22, 3, 5 },
+						{ 3, 917, 234, 41, 24, 3, 5 },
+						{ 3, 473, 234, 43, 24, 2, 5 },
+						{ 3, 518, 234, 43, 24, 2, 4 },
+						{ 3, 563, 234, 43, 24, 2, 3 },
+						{ 3, 152, 312, 45, 23, 1, 4 },
+						{ 3, 339, 312, 43, 23, 2, 5 },
+						{ 3, 384, 312, 43, 23, 2, 5 },
+						{ 3, 787, 234, 42, 24, 3, 4 },
+						{ 3, 774, 179, 41, 25, 3, 3 },
+						{ 3, 960, 234, 41, 24, 3, 4 },
+						{ 3, 651, 312, 41, 23, 3, 5 },
+						{ 3, 694, 312, 41, 23, 3, 6 },
+						{ 3, 2, 260, 41, 24, 3, 4 },
+						{ 3, 45, 260, 41, 24, 3, 3 },
+						{ 3, 608, 234, 43, 24, 2, 3 },
+						{ 3, 653, 234, 43, 24, 2, 4 },
+						{ 3, 429, 312, 43, 23, 2, 5 },
+						{ 3, 737, 312, 41, 23, 3, 5 },
 					},
 				},
 				atk = {
 					fps = 16,
 					frames = {
-						{ 3, 653, 483, 41, 21, 3, 5 },
-						{ 3, 332, 388, 42, 22, 3, 4 },
-						{ 3, 790, 313, 43, 23, 2, 3 },
-						{ 3, 913, 234, 43, 24, 2, 2 },
-						{ 3, 503, 234, 45, 24, 1, 2 },
-						{ 3, 580, 179, 45, 25, 1, 1 },
-						{ 3, 627, 179, 45, 25, 1, 1 },
-						{ 3, 779, 122, 45, 26, 1, 0 },
-						{ 3, 826, 122, 42, 26, 3, 0 },
-						{ 3, 789, 261, 36, 24, 6, 2 },
-						{ 3, 829, 412, 34, 22, 6, 4 },
-						{ 3, 677, 662, 32, 19, 6, 7 },
-						{ 3, 476, 746, 32, 18, 6, 8 },
-						{ 3, 510, 746, 32, 18, 6, 8 },
-						{ 3, 544, 746, 32, 18, 6, 8 },
-						{ 3, 711, 662, 32, 19, 6, 7 },
-						{ 3, 745, 662, 32, 19, 6, 7 },
-						{ 3, 359, 574, 33, 20, 6, 6 },
-						{ 3, 892, 483, 34, 21, 6, 5 },
-						{ 3, 855, 483, 35, 21, 6, 5 },
-						{ 3, 82, 412, 38, 22, 5, 4 },
-						{ 3, 87, 338, 40, 23, 4, 3 },
-						{ 3, 609, 313, 44, 23, 2, 3 },
-						{ 3, 287, 388, 43, 22, 2, 4 },
-						{ 3, 376, 388, 42, 22, 3, 4 },
+						{ 3, 218, 482, 41, 21, 3, 5 },
+						{ 3, 963, 362, 42, 22, 3, 4 },
+						{ 3, 474, 312, 43, 23, 2, 3 },
+						{ 3, 698, 234, 43, 24, 2, 2 },
+						{ 3, 288, 234, 45, 24, 1, 2 },
+						{ 3, 452, 179, 45, 25, 1, 1 },
+						{ 3, 499, 179, 45, 25, 1, 1 },
+						{ 3, 701, 122, 45, 26, 1, 0 },
+						{ 3, 795, 122, 42, 26, 3, 0 },
+						{ 3, 452, 260, 36, 24, 6, 2 },
+						{ 3, 430, 411, 34, 22, 6, 4 },
+						{ 3, 381, 660, 32, 19, 6, 7 },
+						{ 3, 80, 743, 32, 18, 6, 8 },
+						{ 3, 114, 743, 32, 18, 6, 8 },
+						{ 3, 148, 743, 32, 18, 6, 8 },
+						{ 3, 415, 660, 32, 19, 6, 7 },
+						{ 3, 449, 660, 32, 19, 6, 7 },
+						{ 3, 2, 573, 33, 20, 6, 6 },
+						{ 3, 496, 482, 34, 21, 6, 5 },
+						{ 3, 459, 482, 35, 21, 6, 5 },
+						{ 3, 716, 387, 38, 22, 5, 4 },
+						{ 3, 865, 312, 40, 23, 4, 3 },
+						{ 3, 293, 312, 44, 23, 2, 3 },
+						{ 3, 918, 362, 43, 22, 2, 4 },
+						{ 3, 2, 387, 42, 22, 3, 4 },
 					},
 				},
 			},
@@ -8191,121 +8203,121 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 659, 806, 49, 17, 4, 7 },
-						{ 3, 599, 640, 52, 19, 3, 6 },
-						{ 3, 58, 483, 51, 21, 3, 6 },
-						{ 2, 672, 928, 33, 30, 12, 5 },
-						{ 2, 707, 928, 33, 30, 12, 5 },
-						{ 3, 378, 33, 36, 28, 11, 5 },
-						{ 3, 257, 483, 44, 21, 7, 6 },
-						{ 3, 761, 806, 48, 17, 5, 6 },
-						{ 3, 726, 552, 52, 20, 3, 4 },
-						{ 3, 928, 363, 49, 22, 4, 2 },
-						{ 3, 674, 179, 44, 25, 7, 0 },
-						{ 3, 720, 179, 43, 25, 7, 0 },
-						{ 3, 111, 483, 51, 21, 3, 4 },
-						{ 3, 297, 864, 53, 16, 2, 8 },
-						{ 3, 481, 725, 57, 18, 0, 7 },
-						{ 3, 823, 363, 51, 22, 3, 6 },
-						{ 2, 172, 992, 35, 29, 11, 5 },
-						{ 2, 742, 928, 33, 30, 12, 5 },
-						{ 3, 820, 63, 39, 27, 9, 5 },
-						{ 3, 885, 552, 44, 20, 7, 6 },
-						{ 3, 710, 806, 49, 17, 4, 7 },
-						{ 3, 780, 552, 52, 20, 3, 4 },
-						{ 3, 2, 388, 48, 22, 5, 2 },
-						{ 3, 407, 234, 46, 24, 6, 1 },
-						{ 3, 765, 179, 43, 25, 7, 0 },
-						{ 3, 455, 234, 46, 24, 6, 1 },
-						{ 3, 710, 725, 53, 18, 2, 6 },
-						{ 3, 392, 806, 55, 17, 1, 7 },
-						{ 3, 540, 725, 56, 18, 1, 7 },
-						{ 3, 876, 363, 50, 22, 4, 6 },
-						{ 2, 283, 992, 34, 29, 12, 5 },
-						{ 2, 777, 928, 33, 30, 12, 5 },
-						{ 2, 209, 992, 35, 29, 11, 5 },
-						{ 3, 956, 122, 40, 26, 9, 6 },
-						{ 3, 303, 483, 44, 21, 7, 6 },
+						{ 3, 269, 803, 49, 17, 4, 7 },
+						{ 3, 303, 639, 52, 19, 3, 6 },
+						{ 3, 637, 459, 51, 21, 3, 6 },
+						{ 2, 644, 928, 33, 30, 12, 5 },
+						{ 2, 679, 928, 33, 30, 12, 5 },
+						{ 3, 332, 33, 36, 28, 11, 5 },
+						{ 3, 836, 459, 44, 21, 7, 6 },
+						{ 3, 371, 803, 48, 17, 5, 6 },
+						{ 3, 288, 551, 52, 20, 3, 4 },
+						{ 3, 582, 362, 49, 22, 4, 2 },
+						{ 3, 593, 179, 44, 25, 7, 0 },
+						{ 3, 639, 179, 43, 25, 7, 0 },
+						{ 3, 690, 459, 51, 21, 3, 4 },
+						{ 3, 906, 841, 53, 16, 2, 8 },
+						{ 3, 108, 723, 57, 18, 0, 7 },
+						{ 3, 477, 362, 51, 22, 3, 6 },
+						{ 2, 126, 992, 35, 29, 11, 5 },
+						{ 2, 714, 928, 33, 30, 12, 5 },
+						{ 3, 710, 63, 39, 27, 9, 5 },
+						{ 3, 495, 551, 44, 20, 7, 6 },
+						{ 3, 320, 803, 49, 17, 4, 7 },
+						{ 3, 342, 551, 52, 20, 3, 4 },
+						{ 3, 633, 362, 48, 22, 5, 2 },
+						{ 3, 192, 234, 46, 24, 6, 1 },
+						{ 3, 684, 179, 43, 25, 7, 0 },
+						{ 3, 240, 234, 46, 24, 6, 1 },
+						{ 3, 337, 723, 53, 18, 2, 6 },
+						{ 3, 2, 803, 55, 17, 1, 7 },
+						{ 3, 167, 723, 56, 18, 1, 7 },
+						{ 3, 530, 362, 50, 22, 4, 6 },
+						{ 2, 237, 992, 34, 29, 12, 5 },
+						{ 2, 749, 928, 33, 30, 12, 5 },
+						{ 2, 163, 992, 35, 29, 11, 5 },
+						{ 3, 839, 122, 40, 26, 9, 6 },
+						{ 3, 882, 459, 44, 21, 7, 6 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 3, 659, 806, 49, 17, 4, 7 },
-						{ 3, 599, 640, 52, 19, 3, 6 },
-						{ 3, 58, 483, 51, 21, 3, 6 },
-						{ 2, 672, 928, 33, 30, 12, 5 },
-						{ 2, 707, 928, 33, 30, 12, 5 },
-						{ 3, 378, 33, 36, 28, 11, 5 },
-						{ 3, 257, 483, 44, 21, 7, 6 },
-						{ 3, 761, 806, 48, 17, 5, 6 },
-						{ 3, 726, 552, 52, 20, 3, 4 },
-						{ 3, 928, 363, 49, 22, 4, 2 },
-						{ 3, 674, 179, 44, 25, 7, 0 },
-						{ 3, 720, 179, 43, 25, 7, 0 },
-						{ 3, 111, 483, 51, 21, 3, 4 },
-						{ 3, 297, 864, 53, 16, 2, 8 },
-						{ 3, 481, 725, 57, 18, 0, 7 },
-						{ 3, 823, 363, 51, 22, 3, 6 },
-						{ 2, 172, 992, 35, 29, 11, 5 },
-						{ 2, 742, 928, 33, 30, 12, 5 },
-						{ 3, 820, 63, 39, 27, 9, 5 },
-						{ 3, 885, 552, 44, 20, 7, 6 },
-						{ 3, 710, 806, 49, 17, 4, 7 },
-						{ 3, 780, 552, 52, 20, 3, 4 },
-						{ 3, 2, 388, 48, 22, 5, 2 },
-						{ 3, 407, 234, 46, 24, 6, 1 },
-						{ 3, 765, 179, 43, 25, 7, 0 },
-						{ 3, 455, 234, 46, 24, 6, 1 },
-						{ 3, 710, 725, 53, 18, 2, 6 },
-						{ 3, 392, 806, 55, 17, 1, 7 },
-						{ 3, 540, 725, 56, 18, 1, 7 },
-						{ 3, 876, 363, 50, 22, 4, 6 },
-						{ 2, 283, 992, 34, 29, 12, 5 },
-						{ 2, 777, 928, 33, 30, 12, 5 },
-						{ 2, 209, 992, 35, 29, 11, 5 },
-						{ 3, 956, 122, 40, 26, 9, 6 },
-						{ 3, 303, 483, 44, 21, 7, 6 },
+						{ 3, 269, 803, 49, 17, 4, 7 },
+						{ 3, 303, 639, 52, 19, 3, 6 },
+						{ 3, 637, 459, 51, 21, 3, 6 },
+						{ 2, 644, 928, 33, 30, 12, 5 },
+						{ 2, 679, 928, 33, 30, 12, 5 },
+						{ 3, 332, 33, 36, 28, 11, 5 },
+						{ 3, 836, 459, 44, 21, 7, 6 },
+						{ 3, 371, 803, 48, 17, 5, 6 },
+						{ 3, 288, 551, 52, 20, 3, 4 },
+						{ 3, 582, 362, 49, 22, 4, 2 },
+						{ 3, 593, 179, 44, 25, 7, 0 },
+						{ 3, 639, 179, 43, 25, 7, 0 },
+						{ 3, 690, 459, 51, 21, 3, 4 },
+						{ 3, 906, 841, 53, 16, 2, 8 },
+						{ 3, 108, 723, 57, 18, 0, 7 },
+						{ 3, 477, 362, 51, 22, 3, 6 },
+						{ 2, 126, 992, 35, 29, 11, 5 },
+						{ 2, 714, 928, 33, 30, 12, 5 },
+						{ 3, 710, 63, 39, 27, 9, 5 },
+						{ 3, 495, 551, 44, 20, 7, 6 },
+						{ 3, 320, 803, 49, 17, 4, 7 },
+						{ 3, 342, 551, 52, 20, 3, 4 },
+						{ 3, 633, 362, 48, 22, 5, 2 },
+						{ 3, 192, 234, 46, 24, 6, 1 },
+						{ 3, 684, 179, 43, 25, 7, 0 },
+						{ 3, 240, 234, 46, 24, 6, 1 },
+						{ 3, 337, 723, 53, 18, 2, 6 },
+						{ 3, 2, 803, 55, 17, 1, 7 },
+						{ 3, 167, 723, 56, 18, 1, 7 },
+						{ 3, 530, 362, 50, 22, 4, 6 },
+						{ 2, 237, 992, 34, 29, 12, 5 },
+						{ 2, 749, 928, 33, 30, 12, 5 },
+						{ 2, 163, 992, 35, 29, 11, 5 },
+						{ 3, 839, 122, 40, 26, 9, 6 },
+						{ 3, 882, 459, 44, 21, 7, 6 },
 					},
 				},
 				atk = {
 					fps = 24,
 					frames = {
-						{ 3, 659, 806, 49, 17, 4, 7 },
-						{ 3, 599, 640, 52, 19, 3, 6 },
-						{ 3, 58, 483, 51, 21, 3, 6 },
-						{ 2, 672, 928, 33, 30, 12, 5 },
-						{ 2, 707, 928, 33, 30, 12, 5 },
-						{ 3, 378, 33, 36, 28, 11, 5 },
-						{ 3, 257, 483, 44, 21, 7, 6 },
-						{ 3, 761, 806, 48, 17, 5, 6 },
-						{ 3, 726, 552, 52, 20, 3, 4 },
-						{ 3, 928, 363, 49, 22, 4, 2 },
-						{ 3, 674, 179, 44, 25, 7, 0 },
-						{ 3, 720, 179, 43, 25, 7, 0 },
-						{ 3, 111, 483, 51, 21, 3, 4 },
-						{ 3, 297, 864, 53, 16, 2, 8 },
-						{ 3, 481, 725, 57, 18, 0, 7 },
-						{ 3, 823, 363, 51, 22, 3, 6 },
-						{ 2, 172, 992, 35, 29, 11, 5 },
-						{ 2, 742, 928, 33, 30, 12, 5 },
-						{ 3, 820, 63, 39, 27, 9, 5 },
-						{ 3, 885, 552, 44, 20, 7, 6 },
-						{ 3, 710, 806, 49, 17, 4, 7 },
-						{ 3, 780, 552, 52, 20, 3, 4 },
-						{ 3, 2, 388, 48, 22, 5, 2 },
-						{ 3, 407, 234, 46, 24, 6, 1 },
-						{ 3, 765, 179, 43, 25, 7, 0 },
-						{ 3, 455, 234, 46, 24, 6, 1 },
-						{ 3, 710, 725, 53, 18, 2, 6 },
-						{ 3, 392, 806, 55, 17, 1, 7 },
-						{ 3, 540, 725, 56, 18, 1, 7 },
-						{ 3, 876, 363, 50, 22, 4, 6 },
-						{ 2, 283, 992, 34, 29, 12, 5 },
-						{ 2, 777, 928, 33, 30, 12, 5 },
-						{ 2, 209, 992, 35, 29, 11, 5 },
-						{ 3, 956, 122, 40, 26, 9, 6 },
-						{ 3, 303, 483, 44, 21, 7, 6 },
+						{ 3, 269, 803, 49, 17, 4, 7 },
+						{ 3, 303, 639, 52, 19, 3, 6 },
+						{ 3, 637, 459, 51, 21, 3, 6 },
+						{ 2, 644, 928, 33, 30, 12, 5 },
+						{ 2, 679, 928, 33, 30, 12, 5 },
+						{ 3, 332, 33, 36, 28, 11, 5 },
+						{ 3, 836, 459, 44, 21, 7, 6 },
+						{ 3, 371, 803, 48, 17, 5, 6 },
+						{ 3, 288, 551, 52, 20, 3, 4 },
+						{ 3, 582, 362, 49, 22, 4, 2 },
+						{ 3, 593, 179, 44, 25, 7, 0 },
+						{ 3, 639, 179, 43, 25, 7, 0 },
+						{ 3, 690, 459, 51, 21, 3, 4 },
+						{ 3, 906, 841, 53, 16, 2, 8 },
+						{ 3, 108, 723, 57, 18, 0, 7 },
+						{ 3, 477, 362, 51, 22, 3, 6 },
+						{ 2, 126, 992, 35, 29, 11, 5 },
+						{ 2, 714, 928, 33, 30, 12, 5 },
+						{ 3, 710, 63, 39, 27, 9, 5 },
+						{ 3, 495, 551, 44, 20, 7, 6 },
+						{ 3, 320, 803, 49, 17, 4, 7 },
+						{ 3, 342, 551, 52, 20, 3, 4 },
+						{ 3, 633, 362, 48, 22, 5, 2 },
+						{ 3, 192, 234, 46, 24, 6, 1 },
+						{ 3, 684, 179, 43, 25, 7, 0 },
+						{ 3, 240, 234, 46, 24, 6, 1 },
+						{ 3, 337, 723, 53, 18, 2, 6 },
+						{ 3, 2, 803, 55, 17, 1, 7 },
+						{ 3, 167, 723, 56, 18, 1, 7 },
+						{ 3, 530, 362, 50, 22, 4, 6 },
+						{ 2, 237, 992, 34, 29, 12, 5 },
+						{ 2, 749, 928, 33, 30, 12, 5 },
+						{ 2, 163, 992, 35, 29, 11, 5 },
+						{ 3, 839, 122, 40, 26, 9, 6 },
+						{ 3, 882, 459, 44, 21, 7, 6 },
 					},
 				},
 			},
@@ -8320,101 +8332,101 @@ return {
 				idle = {
 					fps = 12,
 					frames = {
-						{ 2, 220, 960, 21, 30, 7, 4 },
-						{ 2, 307, 828, 21, 32, 7, 4 },
-						{ 2, 330, 828, 21, 32, 7, 3 },
-						{ 2, 817, 759, 21, 33, 7, 2 },
-						{ 2, 353, 828, 21, 32, 7, 2 },
-						{ 2, 840, 759, 21, 33, 7, 1 },
-						{ 2, 863, 759, 21, 33, 7, 0 },
-						{ 2, 376, 828, 21, 32, 7, 0 },
-						{ 2, 399, 828, 21, 32, 7, 0 },
-						{ 2, 870, 862, 21, 31, 7, 0 },
-						{ 2, 243, 960, 21, 30, 7, 1 },
-						{ 2, 893, 862, 21, 31, 7, 1 },
-						{ 2, 266, 960, 21, 30, 7, 2 },
-						{ 3, 358, 2, 21, 29, 7, 3 },
-						{ 3, 266, 63, 21, 28, 7, 4 },
-						{ 3, 381, 2, 21, 29, 7, 5 },
-						{ 2, 289, 960, 21, 30, 7, 5 },
-						{ 2, 916, 862, 21, 31, 7, 4 },
-						{ 2, 312, 960, 21, 30, 7, 4 },
-						{ 2, 422, 828, 21, 32, 7, 3 },
-						{ 2, 445, 828, 21, 32, 7, 2 },
-						{ 2, 468, 828, 21, 32, 7, 1 },
-						{ 2, 491, 828, 21, 32, 7, 1 },
-						{ 2, 939, 862, 21, 31, 7, 1 },
-						{ 2, 962, 862, 21, 31, 7, 1 },
-						{ 2, 985, 862, 21, 31, 7, 1 },
-						{ 2, 2, 895, 21, 31, 7, 2 },
-						{ 2, 335, 960, 21, 30, 7, 3 },
-						{ 3, 289, 63, 21, 28, 7, 3 },
-						{ 3, 404, 2, 21, 29, 7, 4 },
-						{ 3, 427, 2, 21, 29, 7, 4 },
+						{ 2, 193, 960, 21, 30, 7, 4 },
+						{ 2, 177, 828, 21, 32, 7, 4 },
+						{ 2, 200, 828, 21, 32, 7, 3 },
+						{ 2, 701, 759, 21, 33, 7, 2 },
+						{ 2, 223, 828, 21, 32, 7, 2 },
+						{ 2, 724, 759, 21, 33, 7, 1 },
+						{ 2, 747, 759, 21, 33, 7, 0 },
+						{ 2, 246, 828, 21, 32, 7, 0 },
+						{ 2, 269, 828, 21, 32, 7, 0 },
+						{ 2, 783, 862, 21, 31, 7, 0 },
+						{ 2, 216, 960, 21, 30, 7, 1 },
+						{ 2, 806, 862, 21, 31, 7, 1 },
+						{ 2, 239, 960, 21, 30, 7, 2 },
+						{ 3, 327, 2, 21, 29, 7, 3 },
+						{ 3, 202, 63, 21, 28, 7, 4 },
+						{ 3, 350, 2, 21, 29, 7, 5 },
+						{ 2, 262, 960, 21, 30, 7, 5 },
+						{ 2, 829, 862, 21, 31, 7, 4 },
+						{ 2, 285, 960, 21, 30, 7, 4 },
+						{ 2, 292, 828, 21, 32, 7, 3 },
+						{ 2, 315, 828, 21, 32, 7, 2 },
+						{ 2, 338, 828, 21, 32, 7, 1 },
+						{ 2, 361, 828, 21, 32, 7, 1 },
+						{ 2, 852, 862, 21, 31, 7, 1 },
+						{ 2, 875, 862, 21, 31, 7, 1 },
+						{ 2, 898, 862, 21, 31, 7, 1 },
+						{ 2, 921, 862, 21, 31, 7, 2 },
+						{ 2, 308, 960, 21, 30, 7, 3 },
+						{ 3, 225, 63, 21, 28, 7, 3 },
+						{ 3, 373, 2, 21, 29, 7, 4 },
+						{ 3, 396, 2, 21, 29, 7, 4 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 2, 220, 960, 21, 30, 7, 4 },
-						{ 2, 307, 828, 21, 32, 7, 4 },
-						{ 2, 330, 828, 21, 32, 7, 3 },
-						{ 2, 817, 759, 21, 33, 7, 2 },
-						{ 2, 353, 828, 21, 32, 7, 2 },
-						{ 2, 840, 759, 21, 33, 7, 1 },
-						{ 2, 863, 759, 21, 33, 7, 0 },
-						{ 2, 376, 828, 21, 32, 7, 0 },
-						{ 2, 399, 828, 21, 32, 7, 0 },
-						{ 2, 870, 862, 21, 31, 7, 0 },
-						{ 2, 243, 960, 21, 30, 7, 1 },
-						{ 2, 893, 862, 21, 31, 7, 1 },
-						{ 2, 266, 960, 21, 30, 7, 2 },
-						{ 3, 358, 2, 21, 29, 7, 3 },
-						{ 3, 266, 63, 21, 28, 7, 4 },
-						{ 3, 381, 2, 21, 29, 7, 5 },
-						{ 2, 289, 960, 21, 30, 7, 5 },
-						{ 2, 916, 862, 21, 31, 7, 4 },
-						{ 2, 312, 960, 21, 30, 7, 4 },
-						{ 2, 422, 828, 21, 32, 7, 3 },
-						{ 2, 445, 828, 21, 32, 7, 2 },
-						{ 2, 468, 828, 21, 32, 7, 1 },
-						{ 2, 491, 828, 21, 32, 7, 1 },
-						{ 2, 939, 862, 21, 31, 7, 1 },
-						{ 2, 962, 862, 21, 31, 7, 1 },
-						{ 2, 985, 862, 21, 31, 7, 1 },
-						{ 2, 2, 895, 21, 31, 7, 2 },
-						{ 2, 335, 960, 21, 30, 7, 3 },
-						{ 3, 289, 63, 21, 28, 7, 3 },
-						{ 3, 404, 2, 21, 29, 7, 4 },
-						{ 3, 427, 2, 21, 29, 7, 4 },
+						{ 2, 193, 960, 21, 30, 7, 4 },
+						{ 2, 177, 828, 21, 32, 7, 4 },
+						{ 2, 200, 828, 21, 32, 7, 3 },
+						{ 2, 701, 759, 21, 33, 7, 2 },
+						{ 2, 223, 828, 21, 32, 7, 2 },
+						{ 2, 724, 759, 21, 33, 7, 1 },
+						{ 2, 747, 759, 21, 33, 7, 0 },
+						{ 2, 246, 828, 21, 32, 7, 0 },
+						{ 2, 269, 828, 21, 32, 7, 0 },
+						{ 2, 783, 862, 21, 31, 7, 0 },
+						{ 2, 216, 960, 21, 30, 7, 1 },
+						{ 2, 806, 862, 21, 31, 7, 1 },
+						{ 2, 239, 960, 21, 30, 7, 2 },
+						{ 3, 327, 2, 21, 29, 7, 3 },
+						{ 3, 202, 63, 21, 28, 7, 4 },
+						{ 3, 350, 2, 21, 29, 7, 5 },
+						{ 2, 262, 960, 21, 30, 7, 5 },
+						{ 2, 829, 862, 21, 31, 7, 4 },
+						{ 2, 285, 960, 21, 30, 7, 4 },
+						{ 2, 292, 828, 21, 32, 7, 3 },
+						{ 2, 315, 828, 21, 32, 7, 2 },
+						{ 2, 338, 828, 21, 32, 7, 1 },
+						{ 2, 361, 828, 21, 32, 7, 1 },
+						{ 2, 852, 862, 21, 31, 7, 1 },
+						{ 2, 875, 862, 21, 31, 7, 1 },
+						{ 2, 898, 862, 21, 31, 7, 1 },
+						{ 2, 921, 862, 21, 31, 7, 2 },
+						{ 2, 308, 960, 21, 30, 7, 3 },
+						{ 3, 225, 63, 21, 28, 7, 3 },
+						{ 3, 373, 2, 21, 29, 7, 4 },
+						{ 3, 396, 2, 21, 29, 7, 4 },
 					},
 				},
 				atk = {
 					fps = 16,
 					frames = {
-						{ 2, 358, 960, 21, 30, 7, 4 },
-						{ 2, 514, 828, 21, 32, 7, 3 },
-						{ 2, 25, 895, 21, 31, 7, 3 },
-						{ 2, 537, 828, 21, 32, 7, 3 },
-						{ 2, 846, 862, 22, 31, 9, 3 },
-						{ 2, 711, 862, 26, 31, 7, 4 },
-						{ 2, 812, 928, 33, 30, 3, 4 },
-						{ 2, 246, 992, 35, 29, 2, 5 },
-						{ 2, 48, 992, 40, 29, 1, 5 },
-						{ 3, 2, 33, 44, 28, 1, 5 },
-						{ 3, 890, 2, 50, 28, 0, 5 },
-						{ 3, 183, 33, 37, 28, 0, 5 },
-						{ 3, 972, 63, 34, 27, 3, 5 },
-						{ 3, 899, 63, 35, 27, 2, 5 },
-						{ 3, 130, 63, 29, 28, 7, 5 },
-						{ 3, 161, 63, 28, 28, 8, 5 },
-						{ 3, 455, 122, 25, 27, 9, 5 },
-						{ 3, 218, 63, 22, 28, 10, 5 },
-						{ 3, 312, 63, 21, 28, 10, 5 },
-						{ 3, 335, 63, 21, 28, 9, 5 },
-						{ 3, 242, 63, 22, 28, 8, 5 },
-						{ 3, 450, 2, 21, 29, 8, 5 },
-						{ 3, 334, 2, 22, 29, 7, 5 },
+						{ 2, 331, 960, 21, 30, 7, 4 },
+						{ 2, 384, 828, 21, 32, 7, 3 },
+						{ 2, 944, 862, 21, 31, 7, 3 },
+						{ 2, 407, 828, 21, 32, 7, 3 },
+						{ 2, 759, 862, 22, 31, 9, 3 },
+						{ 2, 624, 862, 26, 31, 7, 4 },
+						{ 2, 784, 928, 33, 30, 3, 4 },
+						{ 2, 200, 992, 35, 29, 2, 5 },
+						{ 2, 2, 992, 40, 29, 1, 5 },
+						{ 3, 957, 2, 44, 28, 1, 5 },
+						{ 3, 859, 2, 50, 28, 0, 5 },
+						{ 3, 137, 33, 37, 28, 0, 5 },
+						{ 3, 862, 63, 34, 27, 3, 5 },
+						{ 3, 789, 63, 35, 27, 2, 5 },
+						{ 3, 66, 63, 29, 28, 7, 5 },
+						{ 3, 97, 63, 28, 28, 8, 5 },
+						{ 3, 327, 122, 25, 27, 9, 5 },
+						{ 3, 154, 63, 22, 28, 10, 5 },
+						{ 3, 248, 63, 21, 28, 10, 5 },
+						{ 3, 271, 63, 21, 28, 9, 5 },
+						{ 3, 178, 63, 22, 28, 8, 5 },
+						{ 3, 419, 2, 21, 29, 8, 5 },
+						{ 3, 303, 2, 22, 29, 7, 5 },
 					},
 				},
 				shot = {
@@ -8424,7 +8436,7 @@ return {
 					ox = 6,
 					oy = 7,
 					frames = {
-						{ 3, 919, 900, 12, 14, 0, 0 },
+						{ 3, 431, 895, 12, 14, 0, 0 },
 					},
 				},
 			},
@@ -8439,40 +8451,40 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 2, 516, 960, 13, 30, 8, 12 },
-						{ 2, 109, 895, 13, 31, 8, 10 },
-						{ 2, 531, 960, 13, 30, 8, 11 },
-						{ 2, 623, 828, 13, 32, 8, 8 },
-						{ 2, 546, 960, 13, 30, 8, 10 },
-						{ 2, 561, 960, 13, 30, 8, 11 },
-						{ 2, 576, 960, 13, 30, 8, 11 },
-						{ 2, 109, 895, 13, 31, 8, 11 },
+						{ 2, 489, 960, 13, 30, 8, 12 },
+						{ 2, 18, 895, 13, 31, 8, 10 },
+						{ 2, 504, 960, 13, 30, 8, 11 },
+						{ 2, 493, 828, 13, 32, 8, 8 },
+						{ 2, 519, 960, 13, 30, 8, 10 },
+						{ 2, 534, 960, 13, 30, 8, 11 },
+						{ 2, 549, 960, 13, 30, 8, 11 },
+						{ 2, 18, 895, 13, 31, 8, 11 },
 					},
 				},
 				run = {
 					fps = 10,
 					frames = {
-						{ 2, 576, 960, 13, 30, 8, 12 },
-						{ 2, 468, 960, 14, 30, 7, 11 },
-						{ 2, 484, 960, 14, 30, 7, 10 },
-						{ 2, 500, 960, 14, 30, 7, 10 },
-						{ 2, 484, 960, 14, 30, 7, 11 },
-						{ 2, 576, 960, 13, 30, 8, 12 },
+						{ 2, 549, 960, 13, 30, 8, 12 },
+						{ 2, 441, 960, 14, 30, 7, 11 },
+						{ 2, 457, 960, 14, 30, 7, 10 },
+						{ 2, 473, 960, 14, 30, 7, 10 },
+						{ 2, 457, 960, 14, 30, 7, 11 },
+						{ 2, 549, 960, 13, 30, 8, 12 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 2, 591, 960, 13, 30, 8, 12 },
-						{ 2, 638, 828, 13, 32, 8, 10 },
-						{ 2, 966, 688, 17, 34, 6, 8 },
-						{ 2, 189, 650, 19, 36, 5, 5 },
-						{ 2, 571, 532, 21, 38, 4, 3 },
+						{ 2, 564, 960, 13, 30, 8, 12 },
+						{ 2, 508, 828, 13, 32, 8, 10 },
+						{ 2, 835, 688, 17, 34, 6, 8 },
+						{ 2, 25, 650, 19, 36, 5, 5 },
+						{ 2, 541, 532, 21, 38, 4, 3 },
 						{ 2, 407, 488, 23, 40, 3, 0 },
-						{ 2, 210, 650, 15, 36, 7, 5 },
-						{ 2, 653, 828, 13, 32, 8, 10 },
-						{ 2, 576, 960, 13, 30, 8, 12 },
-						{ 2, 591, 960, 13, 30, 8, 12 },
+						{ 2, 46, 650, 15, 36, 7, 5 },
+						{ 2, 523, 828, 13, 32, 8, 10 },
+						{ 2, 549, 960, 13, 30, 8, 12 },
+						{ 2, 564, 960, 13, 30, 8, 12 },
 					},
 				},
 				cast = {
@@ -8482,15 +8494,15 @@ return {
 					ox = 13,
 					oy = 40,
 					frames = {
-						{ 3, 213, 972, 13, 6, 7, 34 },
-						{ 3, 218, 960, 17, 10, 5, 30 },
-						{ 3, 704, 900, 19, 14, 4, 26 },
-						{ 3, 442, 917, 21, 13, 3, 27 },
-						{ 2, 984, 612, 23, 36, 2, 4 },
-						{ 2, 594, 532, 21, 38, 3, 2 },
-						{ 2, 590, 573, 17, 37, 5, 3 },
-						{ 2, 227, 650, 13, 36, 7, 4 },
-						{ 3, 759, 436, 11, 22, 8, 4 },
+						{ 3, 626, 953, 13, 6, 7, 34 },
+						{ 3, 635, 940, 17, 10, 5, 30 },
+						{ 3, 176, 895, 19, 14, 4, 26 },
+						{ 3, 885, 895, 21, 13, 3, 27 },
+						{ 2, 821, 612, 23, 36, 2, 4 },
+						{ 2, 564, 532, 21, 38, 3, 2 },
+						{ 2, 425, 573, 17, 37, 5, 3 },
+						{ 2, 63, 650, 13, 36, 7, 4 },
+						{ 3, 354, 435, 11, 22, 8, 4 },
 					},
 				},
 			},
@@ -8505,40 +8517,40 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 605, 618, 22, 20, 5, 3 },
-						{ 3, 605, 618, 22, 20, 5, 3 },
-						{ 3, 866, 704, 22, 19, 5, 4 },
-						{ 3, 866, 704, 22, 19, 5, 4 },
-						{ 3, 605, 618, 22, 20, 5, 3 },
-						{ 3, 629, 618, 22, 20, 5, 3 },
-						{ 3, 866, 704, 22, 19, 5, 4 },
-						{ 3, 866, 704, 22, 19, 5, 4 },
+						{ 3, 195, 617, 22, 20, 5, 3 },
+						{ 3, 195, 617, 22, 20, 5, 3 },
+						{ 3, 559, 702, 22, 19, 5, 4 },
+						{ 3, 559, 702, 22, 19, 5, 4 },
+						{ 3, 195, 617, 22, 20, 5, 3 },
+						{ 3, 219, 617, 22, 20, 5, 3 },
+						{ 3, 559, 702, 22, 19, 5, 4 },
+						{ 3, 559, 702, 22, 19, 5, 4 },
 					},
 				},
 				run = {
 					fps = 9,
 					frames = {
-						{ 3, 653, 618, 22, 20, 5, 3 },
-						{ 3, 890, 704, 22, 19, 5, 4 },
-						{ 3, 605, 618, 22, 20, 5, 3 },
-						{ 3, 677, 618, 22, 20, 5, 3 },
-						{ 3, 914, 704, 22, 19, 5, 4 },
-						{ 3, 605, 618, 22, 20, 5, 3 },
+						{ 3, 243, 617, 22, 20, 5, 3 },
+						{ 3, 583, 702, 22, 19, 5, 4 },
+						{ 3, 195, 617, 22, 20, 5, 3 },
+						{ 3, 267, 617, 22, 20, 5, 3 },
+						{ 3, 607, 702, 22, 19, 5, 4 },
+						{ 3, 195, 617, 22, 20, 5, 3 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 3, 605, 618, 22, 20, 5, 3 },
-						{ 3, 701, 618, 22, 20, 5, 3 },
-						{ 3, 938, 704, 22, 19, 4, 4 },
-						{ 3, 962, 704, 22, 19, 4, 4 },
-						{ 3, 725, 618, 22, 20, 6, 3 },
-						{ 3, 158, 618, 24, 20, 9, 3 },
-						{ 3, 312, 596, 28, 20, 9, 3 },
-						{ 3, 250, 596, 29, 20, 8, 3 },
-						{ 3, 866, 704, 22, 19, 6, 4 },
-						{ 3, 605, 618, 22, 20, 5, 3 },
+						{ 3, 195, 617, 22, 20, 5, 3 },
+						{ 3, 291, 617, 22, 20, 5, 3 },
+						{ 3, 631, 702, 22, 19, 4, 4 },
+						{ 3, 655, 702, 22, 19, 4, 4 },
+						{ 3, 315, 617, 22, 20, 6, 3 },
+						{ 3, 763, 595, 24, 20, 9, 3 },
+						{ 3, 950, 573, 28, 20, 9, 3 },
+						{ 3, 888, 573, 29, 20, 8, 3 },
+						{ 3, 559, 702, 22, 19, 6, 4 },
+						{ 3, 195, 617, 22, 20, 5, 3 },
 					},
 				},
 			},
@@ -8553,41 +8565,41 @@ return {
 				idle = {
 					fps = 5,
 					frames = {
-						{ 2, 173, 862, 39, 31, 7, 3 },
-						{ 2, 214, 862, 39, 31, 7, 3 },
-						{ 2, 429, 928, 39, 30, 7, 4 },
-						{ 2, 470, 928, 39, 30, 7, 4 },
-						{ 2, 173, 862, 39, 31, 7, 3 },
-						{ 2, 255, 862, 39, 31, 7, 3 },
-						{ 2, 511, 928, 39, 30, 7, 4 },
-						{ 2, 429, 928, 39, 30, 7, 4 },
+						{ 2, 86, 862, 39, 31, 7, 3 },
+						{ 2, 127, 862, 39, 31, 7, 3 },
+						{ 2, 321, 928, 39, 30, 7, 4 },
+						{ 2, 362, 928, 39, 30, 7, 4 },
+						{ 2, 86, 862, 39, 31, 7, 3 },
+						{ 2, 168, 862, 39, 31, 7, 3 },
+						{ 2, 403, 928, 39, 30, 7, 4 },
+						{ 2, 321, 928, 39, 30, 7, 4 },
 					},
 				},
 				run = {
 					fps = 8,
 					frames = {
-						{ 2, 296, 862, 38, 31, 8, 3 },
-						{ 2, 552, 928, 39, 30, 7, 4 },
-						{ 2, 173, 862, 39, 31, 7, 3 },
-						{ 2, 89, 862, 40, 31, 6, 3 },
-						{ 2, 593, 928, 39, 30, 7, 4 },
-						{ 2, 173, 862, 39, 31, 7, 3 },
+						{ 2, 209, 862, 38, 31, 8, 3 },
+						{ 2, 444, 928, 39, 30, 7, 4 },
+						{ 2, 86, 862, 39, 31, 7, 3 },
+						{ 2, 2, 862, 40, 31, 6, 3 },
+						{ 2, 485, 928, 39, 30, 7, 4 },
+						{ 2, 86, 862, 39, 31, 7, 3 },
 					},
 				},
 				atk = {
 					fps = 11,
 					frames = {
-						{ 2, 173, 862, 39, 31, 7, 3 },
-						{ 2, 131, 862, 40, 31, 6, 3 },
-						{ 2, 346, 928, 40, 30, 5, 4 },
-						{ 2, 303, 928, 41, 30, 3, 4 },
-						{ 2, 259, 928, 42, 30, 2, 4 },
-						{ 2, 336, 862, 38, 31, 10, 3 },
-						{ 2, 953, 828, 43, 31, 15, 3 },
-						{ 2, 808, 828, 47, 31, 15, 3 },
-						{ 2, 857, 828, 47, 31, 12, 3 },
-						{ 2, 429, 928, 39, 30, 9, 4 },
-						{ 2, 173, 862, 39, 31, 7, 3 },
+						{ 2, 86, 862, 39, 31, 7, 3 },
+						{ 2, 44, 862, 40, 31, 6, 3 },
+						{ 2, 238, 928, 40, 30, 5, 4 },
+						{ 2, 195, 928, 41, 30, 3, 4 },
+						{ 2, 151, 928, 42, 30, 2, 4 },
+						{ 2, 249, 862, 38, 31, 10, 3 },
+						{ 2, 874, 828, 43, 31, 15, 3 },
+						{ 2, 729, 828, 47, 31, 15, 3 },
+						{ 2, 778, 828, 47, 31, 12, 3 },
+						{ 2, 321, 928, 39, 30, 9, 4 },
+						{ 2, 86, 862, 39, 31, 7, 3 },
 					},
 				},
 			},
@@ -8602,41 +8614,41 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 184, 618, 24, 20, 8, 9 },
-						{ 3, 210, 618, 24, 20, 8, 9 },
-						{ 3, 624, 704, 24, 19, 8, 10 },
-						{ 3, 624, 704, 24, 19, 8, 10 },
-						{ 3, 184, 618, 24, 20, 8, 9 },
-						{ 3, 236, 618, 24, 20, 8, 9 },
-						{ 3, 624, 704, 24, 19, 8, 10 },
-						{ 3, 624, 704, 24, 19, 8, 10 },
+						{ 3, 789, 595, 24, 20, 8, 9 },
+						{ 3, 815, 595, 24, 20, 8, 9 },
+						{ 3, 317, 702, 24, 19, 8, 10 },
+						{ 3, 317, 702, 24, 19, 8, 10 },
+						{ 3, 789, 595, 24, 20, 8, 9 },
+						{ 3, 841, 595, 24, 20, 8, 9 },
+						{ 3, 317, 702, 24, 19, 8, 10 },
+						{ 3, 317, 702, 24, 19, 8, 10 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 3, 624, 704, 24, 19, 8, 10 },
-						{ 3, 184, 618, 24, 20, 8, 8 },
-						{ 3, 210, 618, 24, 20, 8, 6 },
-						{ 3, 210, 618, 24, 20, 8, 6 },
-						{ 3, 184, 618, 24, 20, 8, 8 },
-						{ 3, 624, 704, 24, 19, 8, 10 },
+						{ 3, 317, 702, 24, 19, 8, 10 },
+						{ 3, 789, 595, 24, 20, 8, 8 },
+						{ 3, 815, 595, 24, 20, 8, 6 },
+						{ 3, 815, 595, 24, 20, 8, 6 },
+						{ 3, 789, 595, 24, 20, 8, 8 },
+						{ 3, 317, 702, 24, 19, 8, 10 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 3, 184, 618, 24, 20, 8, 9 },
-						{ 3, 210, 618, 24, 20, 7, 9 },
-						{ 3, 498, 436, 26, 22, 8, 7 },
-						{ 3, 526, 436, 26, 22, 6, 7 },
-						{ 3, 95, 287, 28, 24, 7, 5 },
-						{ 3, 125, 287, 28, 24, 5, 5 },
-						{ 3, 633, 151, 30, 26, 6, 3 },
-						{ 3, 2, 725, 21, 19, 9, 9 },
-						{ 3, 553, 207, 27, 25, 6, 6 },
-						{ 3, 600, 151, 31, 26, 4, 4 },
-						{ 3, 697, 93, 31, 27, 4, 5 },
+						{ 3, 789, 595, 24, 20, 8, 9 },
+						{ 3, 815, 595, 24, 20, 7, 9 },
+						{ 3, 93, 435, 26, 22, 8, 7 },
+						{ 3, 121, 435, 26, 22, 6, 7 },
+						{ 3, 763, 260, 28, 24, 7, 5 },
+						{ 3, 793, 260, 28, 24, 5, 5 },
+						{ 3, 519, 151, 30, 26, 6, 3 },
+						{ 3, 703, 702, 21, 19, 9, 9 },
+						{ 3, 306, 207, 27, 25, 6, 6 },
+						{ 3, 486, 151, 31, 26, 4, 4 },
+						{ 3, 589, 93, 31, 27, 4, 5 },
 						false,
 					},
 				},
@@ -8652,39 +8664,39 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 310, 766, 28, 18, 5, 6 },
-						{ 3, 340, 766, 28, 18, 5, 6 },
-						{ 3, 370, 766, 28, 18, 5, 6 },
-						{ 3, 400, 766, 28, 18, 5, 6 },
-						{ 3, 310, 766, 28, 18, 5, 6 },
-						{ 3, 430, 766, 28, 18, 5, 6 },
-						{ 3, 460, 766, 28, 18, 5, 6 },
-						{ 3, 490, 766, 28, 18, 5, 6 },
+						{ 3, 930, 743, 28, 18, 5, 6 },
+						{ 3, 960, 743, 28, 18, 5, 6 },
+						{ 3, 990, 743, 28, 18, 5, 6 },
+						{ 3, 2, 763, 28, 18, 5, 6 },
+						{ 3, 930, 743, 28, 18, 5, 6 },
+						{ 3, 32, 763, 28, 18, 5, 6 },
+						{ 3, 62, 763, 28, 18, 5, 6 },
+						{ 3, 92, 763, 28, 18, 5, 6 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 3, 924, 826, 28, 17, 5, 7 },
-						{ 3, 520, 766, 28, 18, 5, 5 },
-						{ 3, 954, 826, 28, 17, 5, 3 },
-						{ 3, 984, 826, 28, 17, 5, 3 },
-						{ 3, 370, 766, 28, 18, 5, 5 },
-						{ 3, 2, 845, 28, 17, 5, 7 },
+						{ 3, 516, 822, 28, 17, 5, 7 },
+						{ 3, 122, 763, 28, 18, 5, 5 },
+						{ 3, 546, 822, 28, 17, 5, 3 },
+						{ 3, 576, 822, 28, 17, 5, 3 },
+						{ 3, 990, 743, 28, 18, 5, 5 },
+						{ 3, 606, 822, 28, 17, 5, 7 },
 					},
 				},
 				atk = {
 					fps = 14,
 					frames = {
-						{ 3, 310, 766, 28, 18, 5, 6 },
-						{ 3, 550, 766, 28, 18, 5, 6 },
-						{ 3, 580, 766, 28, 18, 3, 6 },
-						{ 3, 280, 683, 28, 19, 3, 5 },
-						{ 3, 799, 826, 31, 17, 9, 7 },
-						{ 3, 610, 766, 28, 18, 9, 6 },
-						{ 3, 370, 766, 28, 18, 7, 6 },
-						{ 3, 310, 766, 28, 18, 6, 6 },
-						{ 3, 310, 766, 28, 18, 5, 6 },
+						{ 3, 930, 743, 28, 18, 5, 6 },
+						{ 3, 152, 763, 28, 18, 5, 6 },
+						{ 3, 182, 763, 28, 18, 3, 6 },
+						{ 3, 983, 660, 28, 19, 3, 5 },
+						{ 3, 391, 822, 31, 17, 9, 7 },
+						{ 3, 212, 763, 28, 18, 9, 6 },
+						{ 3, 990, 743, 28, 18, 7, 6 },
+						{ 3, 930, 743, 28, 18, 6, 6 },
+						{ 3, 930, 743, 28, 18, 5, 6 },
 					},
 				},
 			},
@@ -8699,40 +8711,40 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 865, 412, 34, 22, 6, 5 },
-						{ 3, 901, 412, 34, 22, 6, 5 },
-						{ 3, 928, 483, 34, 21, 6, 6 },
-						{ 3, 964, 483, 34, 21, 6, 6 },
-						{ 3, 865, 412, 34, 22, 6, 5 },
-						{ 3, 937, 412, 34, 22, 6, 5 },
-						{ 3, 973, 412, 34, 22, 6, 5 },
-						{ 3, 2, 436, 34, 22, 6, 5 },
+						{ 3, 466, 411, 34, 22, 6, 5 },
+						{ 3, 502, 411, 34, 22, 6, 5 },
+						{ 3, 532, 482, 34, 21, 6, 6 },
+						{ 3, 568, 482, 34, 21, 6, 6 },
+						{ 3, 466, 411, 34, 22, 6, 5 },
+						{ 3, 538, 411, 34, 22, 6, 5 },
+						{ 3, 574, 411, 34, 22, 6, 5 },
+						{ 3, 610, 411, 34, 22, 6, 5 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 3, 110, 436, 33, 22, 7, 5 },
-						{ 3, 2, 506, 34, 21, 6, 6 },
-						{ 3, 678, 412, 36, 22, 4, 5 },
-						{ 3, 716, 412, 36, 22, 4, 5 },
-						{ 3, 38, 506, 34, 21, 6, 6 },
-						{ 3, 145, 436, 33, 22, 7, 5 },
+						{ 3, 718, 411, 33, 22, 7, 5 },
+						{ 3, 604, 482, 34, 21, 6, 6 },
+						{ 3, 279, 411, 36, 22, 4, 5 },
+						{ 3, 317, 411, 36, 22, 4, 5 },
+						{ 3, 640, 482, 34, 21, 6, 6 },
+						{ 3, 753, 411, 33, 22, 7, 5 },
 					},
 				},
 				atk = {
 					fps = 14,
 					frames = {
-						{ 3, 865, 412, 34, 22, 6, 5 },
-						{ 3, 38, 436, 34, 22, 5, 5 },
-						{ 3, 74, 506, 34, 21, 4, 6 },
-						{ 3, 110, 506, 34, 21, 4, 6 },
-						{ 3, 754, 412, 36, 22, 6, 5 },
-						{ 3, 129, 338, 40, 23, 11, 4 },
-						{ 3, 171, 338, 39, 23, 13, 4 },
-						{ 3, 146, 506, 34, 21, 12, 6 },
-						{ 3, 180, 436, 33, 22, 10, 5 },
-						{ 3, 865, 412, 34, 22, 7, 5 },
+						{ 3, 466, 411, 34, 22, 6, 5 },
+						{ 3, 646, 411, 34, 22, 5, 5 },
+						{ 3, 676, 482, 34, 21, 4, 6 },
+						{ 3, 712, 482, 34, 21, 4, 6 },
+						{ 3, 355, 411, 36, 22, 6, 5 },
+						{ 3, 907, 312, 40, 23, 11, 4 },
+						{ 3, 949, 312, 39, 23, 13, 4 },
+						{ 3, 748, 482, 34, 21, 12, 6 },
+						{ 3, 788, 411, 33, 22, 10, 5 },
+						{ 3, 466, 411, 34, 22, 7, 5 },
 					},
 				},
 			},
@@ -8747,40 +8759,40 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 2, 599, 794, 28, 32, 8, 10 },
-						{ 2, 444, 794, 29, 32, 8, 10 },
-						{ 2, 475, 794, 29, 32, 8, 10 },
-						{ 2, 629, 794, 28, 32, 8, 10 },
-						{ 2, 659, 794, 28, 32, 8, 10 },
-						{ 2, 779, 794, 27, 32, 8, 10 },
-						{ 2, 808, 794, 27, 32, 8, 10 },
-						{ 2, 689, 794, 28, 32, 8, 10 },
+						{ 2, 483, 794, 28, 32, 8, 10 },
+						{ 2, 328, 794, 29, 32, 8, 10 },
+						{ 2, 359, 794, 29, 32, 8, 10 },
+						{ 2, 513, 794, 28, 32, 8, 10 },
+						{ 2, 543, 794, 28, 32, 8, 10 },
+						{ 2, 663, 794, 27, 32, 8, 10 },
+						{ 2, 692, 794, 27, 32, 8, 10 },
+						{ 2, 573, 794, 28, 32, 8, 10 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 2, 651, 862, 28, 31, 8, 11 },
-						{ 2, 719, 794, 28, 32, 8, 8 },
-						{ 2, 506, 794, 29, 32, 8, 6 },
-						{ 2, 506, 794, 29, 32, 8, 6 },
-						{ 2, 719, 794, 28, 32, 8, 8 },
-						{ 2, 681, 862, 28, 31, 8, 11 },
+						{ 2, 564, 862, 28, 31, 8, 11 },
+						{ 2, 603, 794, 28, 32, 8, 8 },
+						{ 2, 390, 794, 29, 32, 8, 6 },
+						{ 2, 390, 794, 29, 32, 8, 6 },
+						{ 2, 603, 794, 28, 32, 8, 8 },
+						{ 2, 594, 862, 28, 31, 8, 11 },
 					},
 				},
 				atk = {
 					fps = 14,
 					frames = {
-						{ 2, 599, 794, 28, 32, 8, 10 },
-						{ 2, 651, 862, 28, 31, 8, 11 },
-						{ 2, 980, 928, 28, 30, 8, 12 },
-						{ 2, 749, 794, 28, 32, 9, 6 },
-						{ 2, 537, 794, 29, 32, 10, 3 },
-						{ 2, 568, 794, 29, 32, 12, 6 },
-						{ 2, 949, 928, 29, 30, 12, 12 },
-						{ 2, 681, 862, 28, 31, 12, 11 },
-						{ 2, 719, 794, 28, 32, 10, 8 },
-						{ 2, 651, 862, 28, 31, 9, 11 },
+						{ 2, 483, 794, 28, 32, 8, 10 },
+						{ 2, 564, 862, 28, 31, 8, 11 },
+						{ 2, 952, 928, 28, 30, 8, 12 },
+						{ 2, 633, 794, 28, 32, 9, 6 },
+						{ 2, 421, 794, 29, 32, 10, 3 },
+						{ 2, 452, 794, 29, 32, 12, 6 },
+						{ 2, 921, 928, 29, 30, 12, 12 },
+						{ 2, 594, 862, 28, 31, 12, 11 },
+						{ 2, 603, 794, 28, 32, 10, 8 },
+						{ 2, 564, 862, 28, 31, 9, 11 },
 					},
 				},
 			},
@@ -8795,44 +8807,44 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 376, 662, 36, 19, 5, 9 },
-						{ 3, 414, 662, 36, 19, 5, 9 },
-						{ 3, 452, 662, 36, 19, 5, 9 },
-						{ 3, 490, 662, 36, 19, 5, 9 },
-						{ 3, 528, 662, 36, 19, 5, 9 },
-						{ 3, 566, 662, 36, 19, 5, 9 },
-						{ 3, 414, 662, 36, 19, 5, 9 },
-						{ 3, 376, 662, 36, 19, 5, 9 },
+						{ 3, 80, 660, 36, 19, 5, 9 },
+						{ 3, 118, 660, 36, 19, 5, 9 },
+						{ 3, 156, 660, 36, 19, 5, 9 },
+						{ 3, 194, 660, 36, 19, 5, 9 },
+						{ 3, 232, 660, 36, 19, 5, 9 },
+						{ 3, 270, 660, 36, 19, 5, 9 },
+						{ 3, 118, 660, 36, 19, 5, 9 },
+						{ 3, 80, 660, 36, 19, 5, 9 },
 					},
 				},
 				run = {
 					fps = 6,
 					frames = {
-						{ 3, 376, 662, 36, 19, 5, 9 },
-						{ 3, 414, 662, 36, 19, 5, 9 },
-						{ 3, 452, 662, 36, 19, 5, 9 },
-						{ 3, 490, 662, 36, 19, 5, 9 },
-						{ 3, 528, 662, 36, 19, 5, 9 },
-						{ 3, 566, 662, 36, 19, 5, 9 },
-						{ 3, 414, 662, 36, 19, 5, 9 },
-						{ 3, 376, 662, 36, 19, 5, 9 },
+						{ 3, 80, 660, 36, 19, 5, 9 },
+						{ 3, 118, 660, 36, 19, 5, 9 },
+						{ 3, 156, 660, 36, 19, 5, 9 },
+						{ 3, 194, 660, 36, 19, 5, 9 },
+						{ 3, 232, 660, 36, 19, 5, 9 },
+						{ 3, 270, 660, 36, 19, 5, 9 },
+						{ 3, 118, 660, 36, 19, 5, 9 },
+						{ 3, 80, 660, 36, 19, 5, 9 },
 					},
 				},
 				atk = {
 					fps = 14,
 					frames = {
-						{ 3, 376, 662, 36, 19, 5, 9 },
-						{ 3, 2, 826, 36, 17, 5, 11 },
-						{ 3, 264, 900, 36, 14, 5, 14 },
-						{ 3, 902, 946, 36, 10, 5, 18 },
-						{ 3, 559, 960, 36, 9, 5, 19 },
-						{ 3, 257, 946, 36, 11, 6, 17 },
-						{ 3, 85, 972, 36, 6, 4, 22 },
-						{ 3, 764, 338, 36, 23, 6, 5 },
-						{ 3, 696, 483, 39, 21, 7, 7 },
-						{ 3, 133, 662, 40, 19, 7, 9 },
-						{ 3, 604, 662, 36, 19, 6, 9 },
-						{ 3, 376, 662, 36, 19, 5, 9 },
+						{ 3, 80, 660, 36, 19, 5, 9 },
+						{ 3, 598, 803, 36, 17, 5, 11 },
+						{ 3, 743, 878, 36, 14, 5, 14 },
+						{ 3, 307, 940, 36, 10, 5, 18 },
+						{ 3, 976, 940, 36, 9, 5, 19 },
+						{ 3, 681, 926, 36, 11, 6, 17 },
+						{ 3, 498, 953, 36, 6, 4, 22 },
+						{ 3, 438, 337, 36, 23, 6, 5 },
+						{ 3, 261, 482, 39, 21, 7, 7 },
+						{ 3, 831, 639, 40, 19, 7, 9 },
+						{ 3, 308, 660, 36, 19, 6, 9 },
+						{ 3, 80, 660, 36, 19, 5, 9 },
 					},
 				},
 			},
@@ -8847,40 +8859,40 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 482, 122, 25, 27, 6, 9 },
-						{ 3, 563, 122, 24, 27, 7, 9 },
-						{ 3, 589, 122, 24, 27, 7, 9 },
-						{ 3, 509, 122, 25, 27, 6, 9 },
-						{ 3, 536, 122, 25, 27, 6, 9 },
-						{ 3, 399, 122, 26, 27, 5, 9 },
-						{ 3, 427, 122, 26, 27, 5, 9 },
-						{ 3, 482, 122, 25, 27, 6, 9 },
+						{ 3, 354, 122, 25, 27, 6, 9 },
+						{ 3, 435, 122, 24, 27, 7, 9 },
+						{ 3, 461, 122, 24, 27, 7, 9 },
+						{ 3, 381, 122, 25, 27, 6, 9 },
+						{ 3, 408, 122, 25, 27, 6, 9 },
+						{ 3, 271, 122, 26, 27, 5, 9 },
+						{ 3, 299, 122, 26, 27, 5, 9 },
+						{ 3, 354, 122, 25, 27, 6, 9 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 3, 958, 151, 25, 26, 6, 10 },
-						{ 3, 563, 122, 24, 27, 7, 7 },
-						{ 3, 80, 179, 23, 26, 7, 5 },
-						{ 3, 105, 179, 23, 26, 7, 5 },
-						{ 3, 482, 122, 25, 27, 6, 7 },
-						{ 3, 788, 151, 27, 26, 6, 10 },
+						{ 3, 844, 151, 25, 26, 6, 10 },
+						{ 3, 435, 122, 24, 27, 7, 7 },
+						{ 3, 976, 151, 23, 26, 7, 5 },
+						{ 3, 2, 179, 23, 26, 7, 5 },
+						{ 3, 354, 122, 25, 27, 6, 7 },
+						{ 3, 674, 151, 27, 26, 6, 10 },
 					},
 				},
 				atk = {
 					fps = 14,
 					frames = {
-						{ 3, 482, 122, 25, 27, 6, 9 },
-						{ 3, 958, 151, 25, 26, 6, 10 },
-						{ 3, 985, 151, 25, 26, 5, 10 },
-						{ 3, 29, 179, 24, 26, 7, 5 },
-						{ 3, 130, 179, 23, 26, 10, 2 },
-						{ 3, 615, 122, 24, 27, 11, 5 },
-						{ 2, 882, 928, 32, 30, 9, 6 },
-						{ 3, 788, 151, 27, 26, 11, 10 },
-						{ 3, 482, 122, 25, 27, 9, 7 },
-						{ 3, 958, 151, 25, 26, 7, 10 },
+						{ 3, 354, 122, 25, 27, 6, 9 },
+						{ 3, 844, 151, 25, 26, 6, 10 },
+						{ 3, 871, 151, 25, 26, 5, 10 },
+						{ 3, 925, 151, 24, 26, 7, 5 },
+						{ 3, 27, 179, 23, 26, 10, 2 },
+						{ 3, 487, 122, 24, 27, 11, 5 },
+						{ 2, 854, 928, 32, 30, 9, 6 },
+						{ 3, 674, 151, 27, 26, 11, 10 },
+						{ 3, 354, 122, 25, 27, 9, 7 },
+						{ 3, 844, 151, 25, 26, 7, 10 },
 					},
 				},
 			},
@@ -8895,39 +8907,39 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 381, 506, 30, 21, 8, 13 },
-						{ 3, 413, 506, 30, 21, 8, 13 },
-						{ 3, 445, 506, 30, 21, 8, 13 },
-						{ 3, 477, 506, 30, 21, 8, 13 },
-						{ 3, 509, 506, 30, 21, 8, 13 },
-						{ 3, 541, 506, 30, 21, 8, 13 },
-						{ 3, 250, 506, 31, 21, 8, 13 },
-						{ 3, 381, 506, 30, 21, 8, 13 },
+						{ 3, 983, 482, 30, 21, 8, 13 },
+						{ 3, 2, 505, 30, 21, 8, 13 },
+						{ 3, 34, 505, 30, 21, 8, 13 },
+						{ 3, 66, 505, 30, 21, 8, 13 },
+						{ 3, 98, 505, 30, 21, 8, 13 },
+						{ 3, 130, 505, 30, 21, 8, 13 },
+						{ 3, 852, 482, 31, 21, 8, 13 },
+						{ 3, 983, 482, 30, 21, 8, 13 },
 					},
 				},
 				run = {
 					fps = 8,
 					frames = {
-						{ 3, 283, 506, 31, 21, 8, 13 },
-						{ 3, 215, 436, 31, 22, 8, 12 },
-						{ 3, 248, 436, 31, 22, 8, 12 },
-						{ 3, 316, 506, 31, 21, 8, 13 },
-						{ 3, 573, 506, 30, 21, 8, 13 },
-						{ 3, 381, 506, 30, 21, 8, 13 },
+						{ 3, 885, 482, 31, 21, 8, 13 },
+						{ 3, 823, 411, 31, 22, 8, 12 },
+						{ 3, 856, 411, 31, 22, 8, 12 },
+						{ 3, 918, 482, 31, 21, 8, 13 },
+						{ 3, 162, 505, 30, 21, 8, 13 },
+						{ 3, 983, 482, 30, 21, 8, 13 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 3, 381, 506, 30, 21, 8, 13 },
-						{ 3, 605, 506, 30, 21, 8, 13 },
-						{ 3, 972, 338, 30, 23, 7, 11 },
-						{ 3, 460, 93, 32, 27, 5, 7 },
-						{ 2, 337, 794, 35, 32, 2, 2 },
-						{ 2, 412, 862, 34, 31, 3, 3 },
-						{ 3, 494, 93, 32, 27, 5, 7 },
-						{ 3, 939, 338, 31, 23, 7, 11 },
-						{ 3, 381, 506, 30, 21, 8, 13 },
+						{ 3, 983, 482, 30, 21, 8, 13 },
+						{ 3, 194, 505, 30, 21, 8, 13 },
+						{ 3, 646, 337, 30, 23, 7, 11 },
+						{ 3, 352, 93, 32, 27, 5, 7 },
+						{ 2, 221, 794, 35, 32, 2, 2 },
+						{ 2, 325, 862, 34, 31, 3, 3 },
+						{ 3, 386, 93, 32, 27, 5, 7 },
+						{ 3, 613, 337, 31, 23, 7, 11 },
+						{ 3, 983, 482, 30, 21, 8, 13 },
 					},
 				},
 			},
@@ -8942,38 +8954,38 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 302, 786, 24, 18, 3, 7 },
-						{ 3, 328, 786, 24, 18, 3, 7 },
-						{ 3, 401, 845, 24, 17, 3, 8 },
-						{ 3, 427, 845, 24, 17, 3, 8 },
-						{ 3, 302, 786, 24, 18, 3, 7 },
-						{ 3, 354, 786, 24, 18, 3, 7 },
-						{ 3, 453, 845, 24, 17, 3, 8 },
-						{ 3, 453, 845, 24, 17, 3, 8 },
+						{ 3, 906, 763, 24, 18, 3, 7 },
+						{ 3, 932, 763, 24, 18, 3, 7 },
+						{ 3, 2, 841, 24, 17, 3, 8 },
+						{ 3, 28, 841, 24, 17, 3, 8 },
+						{ 3, 906, 763, 24, 18, 3, 7 },
+						{ 3, 958, 763, 24, 18, 3, 7 },
+						{ 3, 54, 841, 24, 17, 3, 8 },
+						{ 3, 54, 841, 24, 17, 3, 8 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 3, 453, 845, 24, 17, 3, 8 },
-						{ 3, 223, 786, 25, 18, 2, 5 },
-						{ 3, 336, 704, 25, 19, 2, 2 },
-						{ 3, 363, 704, 25, 19, 2, 2 },
-						{ 3, 223, 786, 25, 18, 2, 5 },
-						{ 3, 32, 845, 28, 17, 1, 8 },
+						{ 3, 54, 841, 24, 17, 3, 8 },
+						{ 3, 827, 763, 25, 18, 2, 5 },
+						{ 3, 29, 702, 25, 19, 2, 2 },
+						{ 3, 56, 702, 25, 19, 2, 2 },
+						{ 3, 827, 763, 25, 18, 2, 5 },
+						{ 3, 636, 822, 28, 17, 1, 8 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 3, 302, 786, 24, 18, 3, 7 },
-						{ 3, 401, 845, 24, 17, 3, 8 },
-						{ 3, 650, 596, 26, 20, 2, 5 },
-						{ 3, 678, 596, 26, 20, 2, 5 },
-						{ 3, 374, 845, 25, 17, 4, 8 },
-						{ 3, 374, 845, 25, 17, 4, 8 },
-						{ 3, 302, 786, 24, 18, 3, 7 },
-						{ 3, 302, 786, 24, 18, 3, 7 },
+						{ 3, 906, 763, 24, 18, 3, 7 },
+						{ 3, 2, 841, 24, 17, 3, 8 },
+						{ 3, 282, 595, 26, 20, 2, 5 },
+						{ 3, 310, 595, 26, 20, 2, 5 },
+						{ 3, 978, 822, 25, 17, 4, 8 },
+						{ 3, 978, 822, 25, 17, 4, 8 },
+						{ 3, 906, 763, 24, 18, 3, 7 },
+						{ 3, 906, 763, 24, 18, 3, 7 },
 					},
 				},
 				shot = {
@@ -8983,8 +8995,8 @@ return {
 					ox = 5,
 					oy = 3,
 					frames = {
-						{ 3, 389, 972, 7, 3, 3, 2 },
-						{ 3, 378, 972, 9, 3, 2, 2 },
+						{ 3, 802, 953, 7, 3, 3, 2 },
+						{ 3, 791, 953, 9, 3, 2, 2 },
 					},
 				},
 			},
@@ -8999,39 +9011,39 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 426, 574, 30, 20, 3, 6 },
-						{ 3, 458, 574, 30, 20, 3, 6 },
-						{ 3, 779, 662, 30, 19, 3, 7 },
-						{ 3, 811, 662, 30, 19, 3, 7 },
-						{ 3, 426, 574, 30, 20, 3, 6 },
-						{ 3, 490, 574, 30, 20, 3, 6 },
-						{ 3, 811, 662, 30, 19, 3, 7 },
-						{ 3, 811, 662, 30, 19, 3, 7 },
+						{ 3, 69, 573, 30, 20, 3, 6 },
+						{ 3, 101, 573, 30, 20, 3, 6 },
+						{ 3, 483, 660, 30, 19, 3, 7 },
+						{ 3, 515, 660, 30, 19, 3, 7 },
+						{ 3, 69, 573, 30, 20, 3, 6 },
+						{ 3, 133, 573, 30, 20, 3, 6 },
+						{ 3, 515, 660, 30, 19, 3, 7 },
+						{ 3, 515, 660, 30, 19, 3, 7 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 3, 522, 574, 30, 20, 4, 6 },
-						{ 3, 843, 662, 30, 19, 4, 7 },
-						{ 3, 458, 574, 30, 20, 3, 6 },
-						{ 3, 554, 574, 30, 20, 2, 6 },
-						{ 3, 875, 662, 30, 19, 3, 7 },
-						{ 3, 586, 574, 30, 20, 3, 6 },
+						{ 3, 165, 573, 30, 20, 4, 6 },
+						{ 3, 547, 660, 30, 19, 4, 7 },
+						{ 3, 101, 573, 30, 20, 3, 6 },
+						{ 3, 197, 573, 30, 20, 2, 6 },
+						{ 3, 579, 660, 30, 19, 3, 7 },
+						{ 3, 229, 573, 30, 20, 3, 6 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 3, 426, 574, 30, 20, 3, 6 },
-						{ 3, 907, 662, 30, 19, 2, 7 },
-						{ 3, 618, 574, 30, 20, 1, 6 },
-						{ 3, 650, 574, 30, 20, 1, 6 },
-						{ 3, 682, 574, 30, 20, 6, 6 },
-						{ 3, 216, 662, 39, 19, 9, 7 },
-						{ 3, 257, 662, 39, 19, 9, 7 },
-						{ 3, 426, 574, 30, 20, 6, 6 },
-						{ 3, 426, 574, 30, 20, 3, 6 },
+						{ 3, 69, 573, 30, 20, 3, 6 },
+						{ 3, 611, 660, 30, 19, 2, 7 },
+						{ 3, 261, 573, 30, 20, 1, 6 },
+						{ 3, 293, 573, 30, 20, 1, 6 },
+						{ 3, 325, 573, 30, 20, 6, 6 },
+						{ 3, 914, 639, 39, 19, 9, 7 },
+						{ 3, 955, 639, 39, 19, 9, 7 },
+						{ 3, 69, 573, 30, 20, 6, 6 },
+						{ 3, 69, 573, 30, 20, 3, 6 },
 					},
 				},
 			},
@@ -9046,39 +9058,39 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 2, 649, 992, 29, 29, 6, 6 },
-						{ 2, 680, 992, 29, 29, 6, 6 },
-						{ 2, 711, 992, 29, 29, 6, 6 },
-						{ 2, 742, 992, 29, 29, 6, 6 },
-						{ 2, 773, 992, 29, 29, 6, 6 },
-						{ 2, 457, 992, 30, 29, 5, 6 },
-						{ 2, 489, 992, 30, 29, 5, 6 },
-						{ 2, 649, 992, 29, 29, 6, 6 },
+						{ 2, 603, 992, 29, 29, 6, 6 },
+						{ 2, 634, 992, 29, 29, 6, 6 },
+						{ 2, 665, 992, 29, 29, 6, 6 },
+						{ 2, 696, 992, 29, 29, 6, 6 },
+						{ 2, 727, 992, 29, 29, 6, 6 },
+						{ 2, 411, 992, 30, 29, 5, 6 },
+						{ 2, 443, 992, 30, 29, 5, 6 },
+						{ 2, 603, 992, 29, 29, 6, 6 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 2, 521, 992, 30, 29, 5, 6 },
-						{ 3, 971, 33, 30, 28, 5, 7 },
-						{ 2, 553, 992, 30, 29, 5, 6 },
-						{ 2, 585, 992, 30, 29, 5, 6 },
-						{ 3, 2, 63, 30, 28, 5, 7 },
-						{ 2, 617, 992, 30, 29, 5, 6 },
+						{ 2, 475, 992, 30, 29, 5, 6 },
+						{ 3, 925, 33, 30, 28, 5, 7 },
+						{ 2, 507, 992, 30, 29, 5, 6 },
+						{ 2, 539, 992, 30, 29, 5, 6 },
+						{ 3, 957, 33, 30, 28, 5, 7 },
+						{ 2, 571, 992, 30, 29, 5, 6 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 2, 649, 992, 29, 29, 6, 6 },
-						{ 2, 804, 992, 29, 29, 6, 6 },
-						{ 2, 587, 862, 30, 31, 5, 4 },
-						{ 2, 619, 862, 30, 31, 5, 4 },
-						{ 2, 986, 724, 31, 33, 4, 2 },
-						{ 2, 619, 862, 30, 31, 5, 4 },
-						{ 2, 835, 992, 29, 29, 6, 6 },
-						{ 2, 649, 992, 29, 29, 6, 6 },
-						{ 2, 649, 992, 29, 29, 6, 6 },
+						{ 2, 603, 992, 29, 29, 6, 6 },
+						{ 2, 758, 992, 29, 29, 6, 6 },
+						{ 2, 500, 862, 30, 31, 5, 4 },
+						{ 2, 532, 862, 30, 31, 5, 4 },
+						{ 2, 856, 724, 31, 33, 4, 2 },
+						{ 2, 532, 862, 30, 31, 5, 4 },
+						{ 2, 789, 992, 29, 29, 6, 6 },
+						{ 2, 603, 992, 29, 29, 6, 6 },
+						{ 2, 603, 992, 29, 29, 6, 6 },
 					},
 				},
 				cast = {
@@ -9088,15 +9100,15 @@ return {
 					ox = 13,
 					oy = 20,
 					frames = {
-						{ 3, 387, 618, 23, 20, 2, 8 },
-						{ 3, 107, 725, 18, 19, 6, 11 },
-						{ 3, 120, 900, 13, 15, 6, 13 },
-						{ 3, 927, 960, 9, 8, 9, 16 },
-						{ 3, 196, 234, 19, 25, 4, 5 },
-						{ 3, 582, 287, 17, 24, 5, 5 },
-						{ 3, 360, 725, 13, 19, 7, 6 },
-						{ 3, 747, 845, 11, 17, 8, 2 },
-						{ 3, 895, 946, 5, 11, 11, 1 },
+						{ 3, 992, 595, 23, 20, 2, 8 },
+						{ 3, 808, 702, 18, 19, 6, 11 },
+						{ 3, 599, 878, 13, 15, 6, 13 },
+						{ 3, 332, 953, 9, 8, 9, 16 },
+						{ 3, 943, 207, 19, 25, 4, 5 },
+						{ 3, 207, 286, 17, 24, 5, 5 },
+						{ 3, 1001, 702, 13, 19, 7, 6 },
+						{ 3, 368, 841, 11, 17, 8, 2 },
+						{ 3, 300, 940, 5, 11, 11, 1 },
 					},
 				},
 			},
@@ -9111,42 +9123,42 @@ return {
 				idle = {
 					fps = 5,
 					frames = {
-						{ 2, 673, 759, 22, 33, 5, 4 },
-						{ 2, 198, 759, 23, 33, 5, 4 },
-						{ 2, 223, 759, 23, 33, 5, 4 },
-						{ 2, 697, 759, 22, 33, 5, 4 },
-						{ 2, 721, 759, 22, 33, 5, 4 },
-						{ 2, 886, 759, 21, 33, 5, 4 },
-						{ 2, 909, 759, 21, 33, 5, 4 },
-						{ 2, 745, 759, 22, 33, 5, 4 },
+						{ 2, 557, 759, 22, 33, 5, 4 },
+						{ 2, 82, 759, 23, 33, 5, 4 },
+						{ 2, 107, 759, 23, 33, 5, 4 },
+						{ 2, 581, 759, 22, 33, 5, 4 },
+						{ 2, 605, 759, 22, 33, 5, 4 },
+						{ 2, 770, 759, 21, 33, 5, 4 },
+						{ 2, 793, 759, 21, 33, 5, 4 },
+						{ 2, 629, 759, 22, 33, 5, 4 },
 					},
 				},
 				run = {
 					fps = 6,
 					frames = {
-						{ 2, 673, 759, 22, 33, 5, 4 },
-						{ 2, 198, 759, 23, 33, 5, 4 },
-						{ 2, 223, 759, 23, 33, 5, 4 },
-						{ 2, 697, 759, 22, 33, 5, 4 },
-						{ 2, 721, 759, 22, 33, 5, 4 },
-						{ 2, 886, 759, 21, 33, 5, 4 },
-						{ 2, 909, 759, 21, 33, 5, 4 },
-						{ 2, 745, 759, 22, 33, 5, 4 },
+						{ 2, 557, 759, 22, 33, 5, 4 },
+						{ 2, 82, 759, 23, 33, 5, 4 },
+						{ 2, 107, 759, 23, 33, 5, 4 },
+						{ 2, 581, 759, 22, 33, 5, 4 },
+						{ 2, 605, 759, 22, 33, 5, 4 },
+						{ 2, 770, 759, 21, 33, 5, 4 },
+						{ 2, 793, 759, 21, 33, 5, 4 },
+						{ 2, 629, 759, 22, 33, 5, 4 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 2, 673, 759, 22, 33, 5, 4 },
-						{ 2, 248, 759, 23, 33, 5, 4 },
-						{ 2, 273, 759, 23, 33, 5, 4 },
-						{ 2, 769, 759, 22, 33, 5, 4 },
-						{ 2, 932, 759, 21, 33, 5, 4 },
-						{ 2, 955, 759, 21, 33, 5, 4 },
-						{ 2, 793, 759, 22, 33, 5, 4 },
-						{ 2, 248, 759, 23, 33, 5, 4 },
-						{ 2, 198, 759, 23, 33, 5, 4 },
-						{ 2, 673, 759, 22, 33, 5, 4 },
+						{ 2, 557, 759, 22, 33, 5, 4 },
+						{ 2, 132, 759, 23, 33, 5, 4 },
+						{ 2, 157, 759, 23, 33, 5, 4 },
+						{ 2, 653, 759, 22, 33, 5, 4 },
+						{ 2, 816, 759, 21, 33, 5, 4 },
+						{ 2, 839, 759, 21, 33, 5, 4 },
+						{ 2, 677, 759, 22, 33, 5, 4 },
+						{ 2, 132, 759, 23, 33, 5, 4 },
+						{ 2, 82, 759, 23, 33, 5, 4 },
+						{ 2, 557, 759, 22, 33, 5, 4 },
 					},
 				},
 				cast = {
@@ -9156,15 +9168,15 @@ return {
 					ox = 13,
 					oy = 30,
 					frames = {
-						{ 3, 403, 972, 17, 2, 4, 28 },
-						{ 3, 324, 972, 18, 4, 4, 26 },
-						{ 3, 730, 960, 18, 9, 4, 21 },
-						{ 3, 969, 882, 20, 15, 2, 15 },
-						{ 3, 29, 234, 23, 25, 2, 5 },
-						{ 3, 230, 179, 22, 26, 2, 4 },
-						{ 3, 986, 704, 22, 19, 2, 11 },
-						{ 3, 861, 932, 18, 12, 4, 18 },
-						{ 3, 277, 972, 17, 5, 4, 25 },
+						{ 3, 816, 953, 17, 2, 4, 28 },
+						{ 3, 737, 953, 18, 4, 4, 26 },
+						{ 3, 135, 953, 18, 9, 4, 21 },
+						{ 3, 458, 878, 20, 15, 2, 15 },
+						{ 3, 801, 207, 23, 25, 2, 5 },
+						{ 3, 102, 179, 22, 26, 2, 4 },
+						{ 3, 679, 702, 22, 19, 2, 11 },
+						{ 3, 263, 926, 18, 12, 4, 18 },
+						{ 3, 690, 953, 17, 5, 4, 25 },
 					},
 				},
 			},
@@ -9179,39 +9191,39 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 637, 506, 30, 21, 8, 12 },
-						{ 3, 669, 506, 30, 21, 8, 12 },
-						{ 3, 714, 574, 30, 20, 8, 13 },
-						{ 3, 746, 574, 30, 20, 8, 13 },
-						{ 3, 637, 506, 30, 21, 8, 12 },
-						{ 3, 701, 506, 30, 21, 8, 12 },
-						{ 3, 714, 574, 30, 20, 8, 13 },
-						{ 3, 714, 574, 30, 20, 8, 13 },
+						{ 3, 226, 505, 30, 21, 8, 12 },
+						{ 3, 258, 505, 30, 21, 8, 12 },
+						{ 3, 357, 573, 30, 20, 8, 13 },
+						{ 3, 389, 573, 30, 20, 8, 13 },
+						{ 3, 226, 505, 30, 21, 8, 12 },
+						{ 3, 290, 505, 30, 21, 8, 12 },
+						{ 3, 357, 573, 30, 20, 8, 13 },
+						{ 3, 357, 573, 30, 20, 8, 13 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 3, 733, 506, 30, 21, 8, 12 },
-						{ 3, 778, 574, 30, 20, 8, 13 },
-						{ 3, 765, 506, 30, 21, 8, 12 },
-						{ 3, 797, 506, 30, 21, 8, 12 },
-						{ 3, 810, 574, 30, 20, 8, 13 },
-						{ 3, 829, 506, 30, 21, 8, 12 },
+						{ 3, 322, 505, 30, 21, 8, 12 },
+						{ 3, 421, 573, 30, 20, 8, 13 },
+						{ 3, 354, 505, 30, 21, 8, 12 },
+						{ 3, 386, 505, 30, 21, 8, 12 },
+						{ 3, 453, 573, 30, 20, 8, 13 },
+						{ 3, 418, 505, 30, 21, 8, 12 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 3, 637, 506, 30, 21, 8, 12 },
-						{ 3, 714, 574, 30, 20, 8, 13 },
-						{ 3, 216, 506, 32, 21, 7, 12 },
-						{ 3, 249, 207, 34, 25, 6, 8 },
-						{ 2, 132, 992, 38, 29, 4, 4 },
-						{ 2, 90, 992, 40, 29, 2, 4 },
-						{ 3, 285, 207, 34, 25, 6, 8 },
-						{ 3, 872, 338, 32, 23, 7, 10 },
-						{ 3, 637, 506, 30, 21, 8, 12 },
+						{ 3, 226, 505, 30, 21, 8, 12 },
+						{ 3, 357, 573, 30, 20, 8, 13 },
+						{ 3, 818, 482, 32, 21, 7, 12 },
+						{ 3, 2, 207, 34, 25, 6, 8 },
+						{ 2, 86, 992, 38, 29, 4, 4 },
+						{ 2, 44, 992, 40, 29, 2, 4 },
+						{ 3, 38, 207, 34, 25, 6, 8 },
+						{ 3, 546, 337, 32, 23, 7, 10 },
+						{ 3, 226, 505, 30, 21, 8, 12 },
 					},
 				},
 			},
@@ -9226,41 +9238,41 @@ return {
 				idle = {
 					fps = 5,
 					frames = {
-						{ 2, 29, 960, 22, 30, 5, 5 },
-						{ 2, 53, 960, 22, 30, 5, 5 },
-						{ 2, 77, 960, 22, 30, 5, 4 },
-						{ 2, 101, 960, 22, 30, 5, 4 },
-						{ 2, 125, 960, 22, 30, 5, 4 },
-						{ 2, 149, 960, 22, 30, 5, 4 },
-						{ 2, 149, 960, 22, 30, 5, 5 },
-						{ 2, 29, 960, 22, 30, 5, 5 },
+						{ 2, 2, 960, 22, 30, 5, 5 },
+						{ 2, 26, 960, 22, 30, 5, 5 },
+						{ 2, 50, 960, 22, 30, 5, 4 },
+						{ 2, 74, 960, 22, 30, 5, 4 },
+						{ 2, 98, 960, 22, 30, 5, 4 },
+						{ 2, 122, 960, 22, 30, 5, 4 },
+						{ 2, 122, 960, 22, 30, 5, 5 },
+						{ 2, 2, 960, 22, 30, 5, 5 },
 					},
 				},
 				run = {
 					fps = 5,
 					frames = {
-						{ 2, 29, 960, 22, 30, 5, 5 },
-						{ 2, 53, 960, 22, 30, 5, 5 },
-						{ 2, 77, 960, 22, 30, 5, 4 },
-						{ 2, 101, 960, 22, 30, 5, 4 },
-						{ 2, 125, 960, 22, 30, 5, 4 },
-						{ 2, 149, 960, 22, 30, 5, 4 },
-						{ 2, 149, 960, 22, 30, 5, 5 },
-						{ 2, 29, 960, 22, 30, 5, 5 },
+						{ 2, 2, 960, 22, 30, 5, 5 },
+						{ 2, 26, 960, 22, 30, 5, 5 },
+						{ 2, 50, 960, 22, 30, 5, 4 },
+						{ 2, 74, 960, 22, 30, 5, 4 },
+						{ 2, 98, 960, 22, 30, 5, 4 },
+						{ 2, 122, 960, 22, 30, 5, 4 },
+						{ 2, 122, 960, 22, 30, 5, 5 },
+						{ 2, 2, 960, 22, 30, 5, 5 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 2, 29, 960, 22, 30, 5, 5 },
-						{ 2, 125, 960, 22, 30, 5, 5 },
-						{ 2, 403, 960, 20, 30, 6, 5 },
-						{ 2, 425, 960, 20, 30, 6, 5 },
-						{ 2, 425, 960, 20, 30, 6, 5 },
-						{ 2, 173, 960, 22, 30, 5, 5 },
-						{ 2, 125, 960, 22, 30, 5, 5 },
-						{ 2, 125, 960, 22, 30, 5, 5 },
-						{ 2, 29, 960, 22, 30, 5, 5 },
+						{ 2, 2, 960, 22, 30, 5, 5 },
+						{ 2, 98, 960, 22, 30, 5, 5 },
+						{ 2, 376, 960, 20, 30, 6, 5 },
+						{ 2, 398, 960, 20, 30, 6, 5 },
+						{ 2, 398, 960, 20, 30, 6, 5 },
+						{ 2, 146, 960, 22, 30, 5, 5 },
+						{ 2, 98, 960, 22, 30, 5, 5 },
+						{ 2, 98, 960, 22, 30, 5, 5 },
+						{ 2, 2, 960, 22, 30, 5, 5 },
 					},
 				},
 				cast = {
@@ -9270,14 +9282,14 @@ return {
 					ox = 15,
 					oy = 15,
 					frames = {
-						{ 3, 778, 207, 25, 25, 3, 3 },
-						{ 3, 805, 207, 25, 25, 3, 3 },
-						{ 3, 25, 725, 19, 19, 6, 6 },
-						{ 3, 785, 960, 9, 9, 11, 11 },
-						{ 3, 254, 122, 27, 27, 2, 2 },
-						{ 2, 866, 992, 29, 29, 1, 1 },
-						{ 2, 897, 992, 29, 29, 1, 1 },
-						{ 2, 928, 992, 29, 29, 1, 1 },
+						{ 3, 531, 207, 25, 25, 3, 3 },
+						{ 3, 558, 207, 25, 25, 3, 3 },
+						{ 3, 726, 702, 19, 19, 6, 6 },
+						{ 3, 190, 953, 9, 9, 11, 11 },
+						{ 3, 126, 122, 27, 27, 2, 2 },
+						{ 2, 820, 992, 29, 29, 1, 1 },
+						{ 2, 851, 992, 29, 29, 1, 1 },
+						{ 2, 882, 992, 29, 29, 1, 1 },
 					},
 				},
 			},
@@ -9292,39 +9304,39 @@ return {
 				idle = {
 					fps = 5,
 					frames = {
-						{ 3, 110, 93, 33, 27, 7, 3 },
-						{ 3, 145, 93, 33, 27, 7, 3 },
-						{ 3, 525, 33, 33, 28, 7, 2 },
-						{ 3, 560, 33, 33, 28, 7, 2 },
-						{ 3, 110, 93, 33, 27, 7, 3 },
-						{ 3, 180, 93, 33, 27, 7, 3 },
-						{ 3, 110, 93, 33, 27, 7, 3 },
-						{ 3, 110, 93, 33, 27, 7, 3 },
+						{ 3, 2, 93, 33, 27, 7, 3 },
+						{ 3, 37, 93, 33, 27, 7, 3 },
+						{ 3, 479, 33, 33, 28, 7, 2 },
+						{ 3, 514, 33, 33, 28, 7, 2 },
+						{ 3, 2, 93, 33, 27, 7, 3 },
+						{ 3, 72, 93, 33, 27, 7, 3 },
+						{ 3, 2, 93, 33, 27, 7, 3 },
+						{ 3, 2, 93, 33, 27, 7, 3 },
 					},
 				},
 				run = {
 					fps = 8,
 					frames = {
-						{ 3, 215, 93, 33, 27, 7, 3 },
-						{ 3, 215, 93, 33, 27, 7, 3 },
-						{ 3, 250, 93, 33, 27, 7, 3 },
-						{ 3, 285, 93, 33, 27, 7, 3 },
-						{ 3, 285, 93, 33, 27, 7, 3 },
-						{ 3, 320, 93, 33, 27, 7, 3 },
+						{ 3, 107, 93, 33, 27, 7, 3 },
+						{ 3, 107, 93, 33, 27, 7, 3 },
+						{ 3, 142, 93, 33, 27, 7, 3 },
+						{ 3, 177, 93, 33, 27, 7, 3 },
+						{ 3, 177, 93, 33, 27, 7, 3 },
+						{ 3, 212, 93, 33, 27, 7, 3 },
 					},
 				},
 				atk = {
 					fps = 10,
 					frames = {
-						{ 3, 110, 93, 33, 27, 7, 3 },
-						{ 3, 355, 93, 33, 27, 7, 3 },
-						{ 3, 390, 93, 33, 27, 7, 3 },
-						{ 3, 595, 33, 33, 28, 7, 2 },
-						{ 3, 630, 33, 33, 28, 7, 2 },
-						{ 3, 733, 63, 43, 27, 2, 3 },
-						{ 3, 686, 63, 45, 27, 1, 3 },
-						{ 3, 355, 93, 33, 27, 7, 3 },
-						{ 3, 110, 93, 33, 27, 7, 3 },
+						{ 3, 2, 93, 33, 27, 7, 3 },
+						{ 3, 247, 93, 33, 27, 7, 3 },
+						{ 3, 282, 93, 33, 27, 7, 3 },
+						{ 3, 549, 33, 33, 28, 7, 2 },
+						{ 3, 584, 33, 33, 28, 7, 2 },
+						{ 3, 623, 63, 43, 27, 2, 3 },
+						{ 3, 576, 63, 45, 27, 1, 3 },
+						{ 3, 247, 93, 33, 27, 7, 3 },
+						{ 3, 2, 93, 33, 27, 7, 3 },
 					},
 				},
 			},
@@ -9339,41 +9351,41 @@ return {
 				idle = {
 					fps = 5,
 					frames = {
-						{ 2, 640, 532, 19, 38, 4, 4 },
-						{ 2, 661, 532, 19, 38, 4, 4 },
-						{ 2, 661, 532, 19, 38, 4, 3 },
-						{ 2, 682, 532, 19, 38, 4, 3 },
-						{ 2, 703, 532, 19, 38, 4, 3 },
-						{ 2, 724, 532, 19, 38, 4, 3 },
-						{ 2, 724, 532, 19, 38, 4, 4 },
-						{ 2, 640, 532, 19, 38, 4, 4 },
+						{ 2, 610, 532, 19, 38, 4, 4 },
+						{ 2, 631, 532, 19, 38, 4, 4 },
+						{ 2, 631, 532, 19, 38, 4, 3 },
+						{ 2, 652, 532, 19, 38, 4, 3 },
+						{ 2, 673, 532, 19, 38, 4, 3 },
+						{ 2, 694, 532, 19, 38, 4, 3 },
+						{ 2, 694, 532, 19, 38, 4, 4 },
+						{ 2, 610, 532, 19, 38, 4, 4 },
 					},
 				},
 				run = {
 					fps = 5,
 					frames = {
-						{ 2, 640, 532, 19, 38, 4, 4 },
-						{ 2, 661, 532, 19, 38, 4, 4 },
-						{ 2, 661, 532, 19, 38, 4, 3 },
-						{ 2, 682, 532, 19, 38, 4, 3 },
-						{ 2, 703, 532, 19, 38, 4, 3 },
-						{ 2, 724, 532, 19, 38, 4, 3 },
-						{ 2, 724, 532, 19, 38, 4, 4 },
-						{ 2, 640, 532, 19, 38, 4, 4 },
+						{ 2, 610, 532, 19, 38, 4, 4 },
+						{ 2, 631, 532, 19, 38, 4, 4 },
+						{ 2, 631, 532, 19, 38, 4, 3 },
+						{ 2, 652, 532, 19, 38, 4, 3 },
+						{ 2, 673, 532, 19, 38, 4, 3 },
+						{ 2, 694, 532, 19, 38, 4, 3 },
+						{ 2, 694, 532, 19, 38, 4, 4 },
+						{ 2, 610, 532, 19, 38, 4, 4 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 2, 640, 532, 19, 38, 4, 4 },
-						{ 2, 682, 532, 19, 38, 4, 4 },
-						{ 2, 745, 532, 19, 38, 4, 4 },
-						{ 2, 766, 532, 19, 38, 4, 4 },
-						{ 2, 766, 532, 19, 38, 4, 4 },
-						{ 2, 787, 532, 19, 38, 4, 4 },
-						{ 2, 745, 532, 19, 38, 4, 4 },
-						{ 2, 682, 532, 19, 38, 4, 4 },
-						{ 2, 640, 532, 19, 38, 4, 4 },
+						{ 2, 610, 532, 19, 38, 4, 4 },
+						{ 2, 652, 532, 19, 38, 4, 4 },
+						{ 2, 715, 532, 19, 38, 4, 4 },
+						{ 2, 736, 532, 19, 38, 4, 4 },
+						{ 2, 736, 532, 19, 38, 4, 4 },
+						{ 2, 757, 532, 19, 38, 4, 4 },
+						{ 2, 715, 532, 19, 38, 4, 4 },
+						{ 2, 652, 532, 19, 38, 4, 4 },
+						{ 2, 610, 532, 19, 38, 4, 4 },
 					},
 				},
 				cast = {
@@ -9383,14 +9395,14 @@ return {
 					ox = 15,
 					oy = 15,
 					frames = {
-						{ 3, 283, 122, 27, 27, 2, 2 },
-						{ 3, 312, 122, 27, 27, 2, 2 },
-						{ 3, 323, 363, 23, 23, 4, 4 },
-						{ 3, 692, 845, 17, 17, 7, 7 },
-						{ 3, 710, 529, 21, 21, 5, 5 },
-						{ 3, 348, 363, 23, 23, 4, 4 },
-						{ 3, 817, 151, 27, 26, 2, 3 },
-						{ 3, 33, 2, 28, 29, 1, 1 },
+						{ 3, 155, 122, 27, 27, 2, 2 },
+						{ 3, 184, 122, 27, 27, 2, 2 },
+						{ 3, 999, 337, 23, 23, 4, 4 },
+						{ 3, 313, 841, 17, 17, 7, 7 },
+						{ 3, 292, 528, 21, 21, 5, 5 },
+						{ 3, 2, 362, 23, 23, 4, 4 },
+						{ 3, 703, 151, 27, 26, 2, 3 },
+						{ 3, 2, 2, 28, 29, 1, 1 },
 					},
 				},
 			},
@@ -9405,39 +9417,39 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 2, 298, 759, 23, 33, 4, 2 },
-						{ 2, 323, 759, 23, 33, 5, 2 },
-						{ 2, 348, 759, 23, 33, 5, 2 },
-						{ 2, 298, 759, 23, 33, 4, 2 },
-						{ 2, 373, 759, 23, 33, 4, 2 },
-						{ 2, 398, 759, 23, 33, 3, 2 },
-						{ 2, 423, 759, 23, 33, 3, 2 },
-						{ 2, 298, 759, 23, 33, 4, 2 },
+						{ 2, 182, 759, 23, 33, 4, 2 },
+						{ 2, 207, 759, 23, 33, 5, 2 },
+						{ 2, 232, 759, 23, 33, 5, 2 },
+						{ 2, 182, 759, 23, 33, 4, 2 },
+						{ 2, 257, 759, 23, 33, 4, 2 },
+						{ 2, 282, 759, 23, 33, 3, 2 },
+						{ 2, 307, 759, 23, 33, 3, 2 },
+						{ 2, 182, 759, 23, 33, 4, 2 },
 					},
 				},
 				run = {
 					fps = 10,
 					frames = {
-						{ 2, 448, 759, 23, 33, 5, 2 },
-						{ 2, 473, 759, 23, 33, 5, 2 },
-						{ 2, 298, 759, 23, 33, 4, 2 },
-						{ 2, 498, 759, 23, 33, 3, 2 },
-						{ 2, 523, 759, 23, 33, 3, 2 },
-						{ 2, 298, 759, 23, 33, 4, 2 },
+						{ 2, 332, 759, 23, 33, 5, 2 },
+						{ 2, 357, 759, 23, 33, 5, 2 },
+						{ 2, 182, 759, 23, 33, 4, 2 },
+						{ 2, 382, 759, 23, 33, 3, 2 },
+						{ 2, 407, 759, 23, 33, 3, 2 },
+						{ 2, 182, 759, 23, 33, 4, 2 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 2, 298, 759, 23, 33, 4, 2 },
-						{ 2, 398, 759, 23, 33, 3, 2 },
-						{ 2, 548, 759, 23, 33, 2, 2 },
-						{ 2, 172, 759, 24, 33, 6, 2 },
-						{ 2, 33, 759, 27, 33, 7, 2 },
-						{ 2, 554, 724, 35, 33, 3, 2 },
-						{ 2, 628, 724, 34, 33, 5, 2 },
-						{ 2, 423, 759, 23, 33, 3, 2 },
-						{ 2, 298, 759, 23, 33, 4, 2 },
+						{ 2, 182, 759, 23, 33, 4, 2 },
+						{ 2, 282, 759, 23, 33, 3, 2 },
+						{ 2, 432, 759, 23, 33, 2, 2 },
+						{ 2, 56, 759, 24, 33, 6, 2 },
+						{ 2, 920, 724, 27, 33, 7, 2 },
+						{ 2, 424, 724, 35, 33, 3, 2 },
+						{ 2, 498, 724, 34, 33, 5, 2 },
+						{ 2, 307, 759, 23, 33, 3, 2 },
+						{ 2, 182, 759, 23, 33, 4, 2 },
 					},
 				},
 			},
@@ -9452,39 +9464,39 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 64, 683, 29, 19, 3, 4 },
-						{ 3, 95, 683, 29, 19, 3, 4 },
-						{ 3, 126, 766, 29, 18, 3, 5 },
-						{ 3, 157, 766, 29, 18, 3, 5 },
-						{ 3, 126, 683, 29, 19, 3, 4 },
-						{ 3, 157, 683, 29, 19, 3, 4 },
-						{ 3, 126, 766, 29, 18, 3, 5 },
-						{ 3, 126, 766, 29, 18, 3, 5 },
+						{ 3, 767, 660, 29, 19, 3, 4 },
+						{ 3, 798, 660, 29, 19, 3, 4 },
+						{ 3, 746, 743, 29, 18, 3, 5 },
+						{ 3, 777, 743, 29, 18, 3, 5 },
+						{ 3, 829, 660, 29, 19, 3, 4 },
+						{ 3, 860, 660, 29, 19, 3, 4 },
+						{ 3, 746, 743, 29, 18, 3, 5 },
+						{ 3, 746, 743, 29, 18, 3, 5 },
 					},
 				},
 				run = {
 					fps = 14,
 					frames = {
-						{ 3, 188, 683, 29, 19, 3, 4 },
-						{ 3, 188, 766, 29, 18, 3, 5 },
-						{ 3, 64, 683, 29, 19, 3, 4 },
-						{ 3, 219, 683, 29, 19, 3, 4 },
-						{ 3, 219, 766, 29, 18, 3, 5 },
-						{ 3, 64, 683, 29, 19, 3, 4 },
+						{ 3, 891, 660, 29, 19, 3, 4 },
+						{ 3, 808, 743, 29, 18, 3, 5 },
+						{ 3, 767, 660, 29, 19, 3, 4 },
+						{ 3, 922, 660, 29, 19, 3, 4 },
+						{ 3, 839, 743, 29, 18, 3, 5 },
+						{ 3, 767, 660, 29, 19, 3, 4 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 3, 64, 683, 29, 19, 3, 4 },
-						{ 3, 126, 766, 29, 18, 2, 5 },
-						{ 3, 157, 766, 29, 18, 1, 5 },
-						{ 3, 219, 683, 29, 19, 5, 2 },
-						{ 3, 642, 662, 33, 19, 9, 2 },
-						{ 3, 578, 746, 32, 18, 9, 5 },
-						{ 3, 64, 683, 29, 19, 7, 4 },
-						{ 3, 64, 683, 29, 19, 5, 4 },
-						{ 3, 64, 683, 29, 19, 3, 4 },
+						{ 3, 767, 660, 29, 19, 3, 4 },
+						{ 3, 746, 743, 29, 18, 2, 5 },
+						{ 3, 777, 743, 29, 18, 1, 5 },
+						{ 3, 922, 660, 29, 19, 5, 2 },
+						{ 3, 346, 660, 33, 19, 9, 2 },
+						{ 3, 182, 743, 32, 18, 9, 5 },
+						{ 3, 767, 660, 29, 19, 7, 4 },
+						{ 3, 767, 660, 29, 19, 5, 4 },
+						{ 3, 767, 660, 29, 19, 3, 4 },
 					},
 				},
 			},
@@ -9499,41 +9511,41 @@ return {
 				idle = {
 					fps = 5,
 					frames = {
-						{ 2, 573, 759, 23, 33, 7, 10 },
-						{ 2, 573, 759, 23, 33, 7, 10 },
-						{ 2, 598, 759, 23, 33, 7, 10 },
-						{ 2, 623, 759, 23, 33, 7, 10 },
-						{ 2, 573, 759, 23, 33, 7, 10 },
-						{ 2, 648, 759, 23, 33, 7, 10 },
-						{ 2, 132, 828, 23, 32, 7, 11 },
-						{ 2, 132, 828, 23, 32, 7, 11 },
+						{ 2, 457, 759, 23, 33, 7, 10 },
+						{ 2, 457, 759, 23, 33, 7, 10 },
+						{ 2, 482, 759, 23, 33, 7, 10 },
+						{ 2, 507, 759, 23, 33, 7, 10 },
+						{ 2, 457, 759, 23, 33, 7, 10 },
+						{ 2, 532, 759, 23, 33, 7, 10 },
+						{ 2, 2, 828, 23, 32, 7, 11 },
+						{ 2, 2, 828, 23, 32, 7, 11 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 2, 132, 828, 23, 32, 7, 11 },
-						{ 2, 573, 759, 23, 33, 7, 8 },
-						{ 2, 598, 759, 23, 33, 7, 6 },
-						{ 2, 573, 759, 23, 33, 7, 6 },
-						{ 2, 573, 759, 23, 33, 7, 8 },
-						{ 2, 411, 794, 31, 32, 3, 11 },
+						{ 2, 2, 828, 23, 32, 7, 11 },
+						{ 2, 457, 759, 23, 33, 7, 8 },
+						{ 2, 482, 759, 23, 33, 7, 6 },
+						{ 2, 457, 759, 23, 33, 7, 6 },
+						{ 2, 457, 759, 23, 33, 7, 8 },
+						{ 2, 295, 794, 31, 32, 3, 11 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 2, 573, 759, 23, 33, 7, 10 },
-						{ 2, 132, 828, 23, 32, 7, 11 },
-						{ 2, 821, 862, 23, 31, 7, 12 },
-						{ 2, 573, 759, 23, 33, 7, 6 },
-						{ 2, 598, 759, 23, 33, 7, 2 },
-						{ 2, 573, 759, 23, 33, 7, 1 },
-						{ 2, 573, 759, 23, 33, 7, 6 },
-						{ 2, 519, 862, 33, 31, 2, 12 },
-						{ 2, 374, 794, 35, 32, 1, 11 },
-						{ 2, 573, 759, 23, 33, 7, 9 },
-						{ 2, 573, 759, 23, 33, 7, 10 },
+						{ 2, 457, 759, 23, 33, 7, 10 },
+						{ 2, 2, 828, 23, 32, 7, 11 },
+						{ 2, 734, 862, 23, 31, 7, 12 },
+						{ 2, 457, 759, 23, 33, 7, 6 },
+						{ 2, 482, 759, 23, 33, 7, 2 },
+						{ 2, 457, 759, 23, 33, 7, 1 },
+						{ 2, 457, 759, 23, 33, 7, 6 },
+						{ 2, 432, 862, 33, 31, 2, 12 },
+						{ 2, 258, 794, 35, 32, 1, 11 },
+						{ 2, 457, 759, 23, 33, 7, 9 },
+						{ 2, 457, 759, 23, 33, 7, 10 },
 					},
 				},
 			},
@@ -9548,39 +9560,39 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 832, 207, 25, 25, 3, 4 },
-						{ 3, 859, 207, 25, 25, 3, 4 },
-						{ 3, 380, 287, 25, 24, 3, 5 },
-						{ 3, 407, 287, 25, 24, 3, 5 },
-						{ 3, 886, 207, 25, 25, 3, 4 },
-						{ 3, 913, 207, 25, 25, 3, 4 },
-						{ 3, 380, 287, 25, 24, 3, 5 },
-						{ 3, 380, 287, 25, 24, 3, 5 },
+						{ 3, 585, 207, 25, 25, 3, 4 },
+						{ 3, 612, 207, 25, 25, 3, 4 },
+						{ 3, 30, 286, 25, 24, 3, 5 },
+						{ 3, 57, 286, 25, 24, 3, 5 },
+						{ 3, 639, 207, 25, 25, 3, 4 },
+						{ 3, 666, 207, 25, 25, 3, 4 },
+						{ 3, 30, 286, 25, 24, 3, 5 },
+						{ 3, 30, 286, 25, 24, 3, 5 },
 					},
 				},
 				run = {
 					fps = 10,
 					frames = {
-						{ 3, 940, 207, 25, 25, 3, 4 },
-						{ 3, 434, 287, 25, 24, 3, 5 },
-						{ 3, 859, 207, 25, 25, 3, 4 },
-						{ 3, 967, 207, 25, 25, 3, 4 },
-						{ 3, 461, 287, 25, 24, 3, 5 },
-						{ 3, 832, 207, 25, 25, 3, 4 },
+						{ 3, 693, 207, 25, 25, 3, 4 },
+						{ 3, 84, 286, 25, 24, 3, 5 },
+						{ 3, 612, 207, 25, 25, 3, 4 },
+						{ 3, 720, 207, 25, 25, 3, 4 },
+						{ 3, 111, 286, 25, 24, 3, 5 },
+						{ 3, 585, 207, 25, 25, 3, 4 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 3, 832, 207, 25, 25, 3, 4 },
-						{ 3, 184, 287, 26, 24, 2, 5 },
-						{ 3, 129, 234, 21, 25, 7, 4 },
-						{ 3, 254, 179, 20, 26, 7, 3 },
-						{ 3, 2, 179, 25, 26, 8, 3 },
-						{ 3, 33, 287, 29, 24, 8, 5 },
-						{ 3, 994, 207, 25, 25, 8, 4 },
-						{ 3, 152, 234, 21, 25, 7, 4 },
-						{ 3, 832, 207, 25, 25, 3, 4 },
+						{ 3, 585, 207, 25, 25, 3, 4 },
+						{ 3, 852, 260, 26, 24, 2, 5 },
+						{ 3, 876, 207, 21, 25, 7, 4 },
+						{ 3, 126, 179, 20, 26, 7, 3 },
+						{ 3, 898, 151, 25, 26, 8, 3 },
+						{ 3, 701, 260, 29, 24, 8, 5 },
+						{ 3, 747, 207, 25, 25, 8, 4 },
+						{ 3, 899, 207, 21, 25, 7, 4 },
+						{ 3, 585, 207, 25, 25, 3, 4 },
 					},
 				},
 			},
@@ -9595,38 +9607,38 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 961, 93, 30, 27, 5, 4 },
-						{ 3, 130, 122, 29, 27, 6, 4 },
-						{ 3, 161, 122, 29, 27, 6, 4 },
-						{ 3, 2, 122, 30, 27, 5, 4 },
-						{ 3, 730, 93, 31, 27, 4, 4 },
-						{ 3, 763, 93, 31, 27, 4, 4 },
-						{ 3, 34, 122, 30, 27, 5, 4 },
-						{ 3, 961, 93, 30, 27, 5, 4 },
+						{ 3, 853, 93, 30, 27, 5, 4 },
+						{ 3, 2, 122, 29, 27, 6, 4 },
+						{ 3, 33, 122, 29, 27, 6, 4 },
+						{ 3, 885, 93, 30, 27, 5, 4 },
+						{ 3, 622, 93, 31, 27, 4, 4 },
+						{ 3, 655, 93, 31, 27, 4, 4 },
+						{ 3, 917, 93, 30, 27, 5, 4 },
+						{ 3, 853, 93, 30, 27, 5, 4 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 3, 796, 93, 31, 27, 4, 4 },
-						{ 3, 829, 93, 31, 27, 4, 3 },
-						{ 3, 862, 93, 31, 27, 4, 4 },
-						{ 3, 895, 93, 31, 27, 4, 4 },
+						{ 3, 688, 93, 31, 27, 4, 4 },
+						{ 3, 721, 93, 31, 27, 4, 3 },
+						{ 3, 754, 93, 31, 27, 4, 4 },
+						{ 3, 787, 93, 31, 27, 4, 4 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 3, 961, 93, 30, 27, 5, 4 },
-						{ 3, 192, 122, 29, 27, 5, 4 },
-						{ 3, 223, 122, 29, 27, 3, 4 },
-						{ 3, 528, 93, 32, 27, 0, 4 },
-						{ 3, 928, 93, 31, 27, 7, 4 },
-						{ 3, 425, 93, 33, 27, 14, 4 },
-						{ 3, 562, 93, 32, 27, 14, 4 },
-						{ 3, 66, 122, 30, 27, 10, 4 },
-						{ 3, 98, 122, 30, 27, 7, 4 },
-						{ 3, 961, 93, 30, 27, 5, 4 },
+						{ 3, 853, 93, 30, 27, 5, 4 },
+						{ 3, 64, 122, 29, 27, 5, 4 },
+						{ 3, 95, 122, 29, 27, 3, 4 },
+						{ 3, 420, 93, 32, 27, 0, 4 },
+						{ 3, 820, 93, 31, 27, 7, 4 },
+						{ 3, 317, 93, 33, 27, 14, 4 },
+						{ 3, 454, 93, 32, 27, 14, 4 },
+						{ 3, 949, 93, 30, 27, 10, 4 },
+						{ 3, 981, 93, 30, 27, 7, 4 },
+						{ 3, 853, 93, 30, 27, 5, 4 },
 					},
 				},
 			},
@@ -9641,41 +9653,41 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 582, 207, 26, 25, 7, 10 },
-						{ 3, 610, 207, 26, 25, 7, 10 },
-						{ 3, 212, 287, 26, 24, 7, 11 },
-						{ 3, 240, 287, 26, 24, 7, 11 },
-						{ 3, 582, 207, 26, 25, 7, 10 },
-						{ 3, 846, 151, 26, 26, 7, 9 },
-						{ 3, 874, 151, 26, 26, 7, 9 },
-						{ 3, 582, 207, 26, 25, 7, 10 },
+						{ 3, 335, 207, 26, 25, 7, 10 },
+						{ 3, 363, 207, 26, 25, 7, 10 },
+						{ 3, 880, 260, 26, 24, 7, 11 },
+						{ 3, 908, 260, 26, 24, 7, 11 },
+						{ 3, 335, 207, 26, 25, 7, 10 },
+						{ 3, 732, 151, 26, 26, 7, 9 },
+						{ 3, 760, 151, 26, 26, 7, 9 },
+						{ 3, 335, 207, 26, 25, 7, 10 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 3, 240, 287, 26, 24, 7, 11 },
-						{ 3, 638, 207, 26, 25, 7, 8 },
-						{ 3, 268, 287, 26, 24, 7, 7 },
-						{ 3, 582, 207, 26, 25, 7, 6 },
-						{ 3, 846, 151, 26, 26, 7, 7 },
-						{ 3, 665, 151, 30, 26, 5, 9 },
+						{ 3, 908, 260, 26, 24, 7, 11 },
+						{ 3, 391, 207, 26, 25, 7, 8 },
+						{ 3, 936, 260, 26, 24, 7, 7 },
+						{ 3, 335, 207, 26, 25, 7, 6 },
+						{ 3, 732, 151, 26, 26, 7, 7 },
+						{ 3, 551, 151, 30, 26, 5, 9 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 3, 582, 207, 26, 25, 7, 10 },
-						{ 3, 240, 287, 26, 24, 7, 11 },
-						{ 3, 159, 363, 26, 23, 7, 12 },
-						{ 3, 666, 207, 26, 25, 7, 6 },
-						{ 3, 296, 287, 26, 24, 7, 3 },
-						{ 3, 694, 207, 26, 25, 7, 1 },
-						{ 3, 902, 151, 26, 26, 7, 5 },
-						{ 3, 2, 93, 34, 27, 3, 8 },
-						{ 3, 131, 207, 38, 25, 1, 10 },
-						{ 3, 582, 207, 26, 25, 7, 9 },
-						{ 3, 582, 207, 26, 25, 7, 10 },
+						{ 3, 335, 207, 26, 25, 7, 10 },
+						{ 3, 908, 260, 26, 24, 7, 11 },
+						{ 3, 835, 337, 26, 23, 7, 12 },
+						{ 3, 419, 207, 26, 25, 7, 6 },
+						{ 3, 964, 260, 26, 24, 7, 3 },
+						{ 3, 447, 207, 26, 25, 7, 1 },
+						{ 3, 788, 151, 26, 26, 7, 5 },
+						{ 3, 898, 63, 34, 27, 3, 8 },
+						{ 3, 903, 179, 38, 25, 1, 10 },
+						{ 3, 335, 207, 26, 25, 7, 9 },
+						{ 3, 335, 207, 26, 25, 7, 10 },
 					},
 				},
 			},
@@ -9690,42 +9702,42 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 204, 2, 24, 29, 4, 3 },
-						{ 3, 123, 2, 25, 29, 4, 3 },
-						{ 3, 150, 2, 25, 29, 4, 3 },
-						{ 3, 230, 2, 24, 29, 4, 3 },
-						{ 3, 204, 2, 24, 29, 4, 3 },
-						{ 3, 256, 2, 24, 29, 3, 3 },
-						{ 3, 282, 2, 24, 29, 3, 3 },
-						{ 3, 204, 2, 24, 29, 4, 3 },
+						{ 3, 173, 2, 24, 29, 4, 3 },
+						{ 3, 92, 2, 25, 29, 4, 3 },
+						{ 3, 119, 2, 25, 29, 4, 3 },
+						{ 3, 199, 2, 24, 29, 4, 3 },
+						{ 3, 173, 2, 24, 29, 4, 3 },
+						{ 3, 225, 2, 24, 29, 3, 3 },
+						{ 3, 251, 2, 24, 29, 3, 3 },
+						{ 3, 173, 2, 24, 29, 4, 3 },
 					},
 				},
 				run = {
 					fps = 6,
 					frames = {
-						{ 3, 204, 2, 24, 29, 4, 3 },
-						{ 3, 123, 2, 25, 29, 4, 3 },
-						{ 3, 150, 2, 25, 29, 4, 3 },
-						{ 3, 230, 2, 24, 29, 4, 3 },
-						{ 3, 204, 2, 24, 29, 4, 3 },
-						{ 3, 256, 2, 24, 29, 3, 3 },
-						{ 3, 282, 2, 24, 29, 3, 3 },
-						{ 3, 204, 2, 24, 29, 4, 3 },
+						{ 3, 173, 2, 24, 29, 4, 3 },
+						{ 3, 92, 2, 25, 29, 4, 3 },
+						{ 3, 119, 2, 25, 29, 4, 3 },
+						{ 3, 199, 2, 24, 29, 4, 3 },
+						{ 3, 173, 2, 24, 29, 4, 3 },
+						{ 3, 225, 2, 24, 29, 3, 3 },
+						{ 3, 251, 2, 24, 29, 3, 3 },
+						{ 3, 173, 2, 24, 29, 4, 3 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 3, 204, 2, 24, 29, 4, 3 },
-						{ 3, 256, 2, 24, 29, 3, 3 },
-						{ 3, 308, 2, 24, 29, 2, 3 },
-						{ 3, 177, 2, 25, 29, 1, 3 },
-						{ 3, 63, 2, 28, 29, 4, 3 },
-						{ 3, 222, 33, 37, 28, 4, 4 },
-						{ 3, 261, 33, 37, 28, 4, 4 },
-						{ 3, 93, 2, 28, 29, 4, 3 },
-						{ 3, 123, 2, 25, 29, 4, 3 },
-						{ 3, 204, 2, 24, 29, 4, 3 },
+						{ 3, 173, 2, 24, 29, 4, 3 },
+						{ 3, 225, 2, 24, 29, 3, 3 },
+						{ 3, 277, 2, 24, 29, 2, 3 },
+						{ 3, 146, 2, 25, 29, 1, 3 },
+						{ 3, 32, 2, 28, 29, 4, 3 },
+						{ 3, 176, 33, 37, 28, 4, 4 },
+						{ 3, 215, 33, 37, 28, 4, 4 },
+						{ 3, 62, 2, 28, 29, 4, 3 },
+						{ 3, 92, 2, 25, 29, 4, 3 },
+						{ 3, 173, 2, 24, 29, 4, 3 },
 					},
 				},
 			},
@@ -9740,38 +9752,38 @@ return {
 				idle = {
 					fps = 8,
 					frames = {
-						{ 2, 157, 828, 23, 32, 11, 8 },
-						{ 2, 182, 828, 23, 32, 11, 8 },
-						{ 2, 207, 828, 23, 32, 11, 7 },
-						{ 2, 157, 828, 23, 32, 11, 7 },
-						{ 2, 232, 828, 23, 32, 11, 7 },
-						{ 2, 257, 828, 23, 32, 11, 8 },
-						{ 2, 282, 828, 23, 32, 11, 8 },
-						{ 2, 157, 828, 23, 32, 11, 8 },
+						{ 2, 27, 828, 23, 32, 11, 8 },
+						{ 2, 52, 828, 23, 32, 11, 8 },
+						{ 2, 77, 828, 23, 32, 11, 7 },
+						{ 2, 27, 828, 23, 32, 11, 7 },
+						{ 2, 102, 828, 23, 32, 11, 7 },
+						{ 2, 127, 828, 23, 32, 11, 8 },
+						{ 2, 152, 828, 23, 32, 11, 8 },
+						{ 2, 27, 828, 23, 32, 11, 8 },
 					},
 				},
 				run = {
 					fps = 10,
 					frames = {
-						{ 2, 2, 828, 24, 32, 12, 8 },
-						{ 2, 28, 828, 24, 32, 12, 8 },
-						{ 2, 54, 828, 24, 32, 12, 7 },
-						{ 2, 2, 828, 24, 32, 12, 7 },
-						{ 2, 80, 828, 24, 32, 12, 8 },
-						{ 2, 106, 828, 24, 32, 12, 8 },
+						{ 2, 887, 794, 24, 32, 12, 8 },
+						{ 2, 913, 794, 24, 32, 12, 8 },
+						{ 2, 939, 794, 24, 32, 12, 7 },
+						{ 2, 887, 794, 24, 32, 12, 7 },
+						{ 2, 965, 794, 24, 32, 12, 8 },
+						{ 2, 991, 794, 24, 32, 12, 8 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 2, 157, 828, 23, 32, 11, 8 },
-						{ 2, 207, 828, 23, 32, 11, 8 },
-						{ 2, 871, 688, 25, 34, 10, 6 },
-						{ 2, 686, 612, 31, 36, 7, 4 },
-						{ 2, 719, 612, 31, 36, 7, 4 },
-						{ 2, 372, 650, 39, 35, 3, 5 },
+						{ 2, 27, 828, 23, 32, 11, 8 },
+						{ 2, 77, 828, 23, 32, 11, 8 },
+						{ 2, 740, 688, 25, 34, 10, 6 },
+						{ 2, 523, 612, 31, 36, 7, 4 },
+						{ 2, 556, 612, 31, 36, 7, 4 },
+						{ 2, 208, 650, 39, 35, 3, 5 },
 						{ 2, 879, 436, 39, 43, 3, 1 },
-						{ 2, 157, 828, 23, 32, 11, 8 },
+						{ 2, 27, 828, 23, 32, 11, 8 },
 					},
 				},
 			},
@@ -9786,39 +9798,39 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 2, 74, 650, 21, 36, 3, 7 },
-						{ 2, 97, 650, 21, 36, 3, 7 },
-						{ 2, 429, 573, 21, 37, 3, 6 },
-						{ 2, 452, 573, 21, 37, 3, 6 },
-						{ 2, 74, 650, 21, 36, 3, 7 },
-						{ 2, 120, 650, 21, 36, 3, 7 },
-						{ 2, 669, 650, 21, 35, 3, 8 },
-						{ 2, 74, 650, 21, 36, 3, 7 },
+						{ 2, 918, 612, 21, 36, 3, 7 },
+						{ 2, 941, 612, 21, 36, 3, 7 },
+						{ 2, 264, 573, 21, 37, 3, 6 },
+						{ 2, 287, 573, 21, 37, 3, 6 },
+						{ 2, 918, 612, 21, 36, 3, 7 },
+						{ 2, 964, 612, 21, 36, 3, 7 },
+						{ 2, 505, 650, 21, 35, 3, 8 },
+						{ 2, 918, 612, 21, 36, 3, 7 },
 					},
 				},
 				run = {
 					fps = 8,
 					frames = {
-						{ 2, 26, 650, 22, 36, 3, 7 },
-						{ 2, 50, 650, 22, 36, 3, 7 },
-						{ 2, 97, 650, 21, 36, 3, 7 },
-						{ 2, 143, 650, 21, 36, 3, 7 },
-						{ 2, 166, 650, 21, 36, 3, 7 },
-						{ 2, 74, 650, 21, 36, 3, 7 },
+						{ 2, 870, 612, 22, 36, 3, 7 },
+						{ 2, 894, 612, 22, 36, 3, 7 },
+						{ 2, 941, 612, 21, 36, 3, 7 },
+						{ 2, 987, 612, 21, 36, 3, 7 },
+						{ 2, 2, 650, 21, 36, 3, 7 },
+						{ 2, 918, 612, 21, 36, 3, 7 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 2, 74, 650, 21, 36, 3, 7 },
-						{ 2, 692, 650, 21, 35, 3, 8 },
-						{ 2, 715, 650, 21, 35, 3, 8 },
-						{ 2, 617, 532, 21, 38, 3, 5 },
-						{ 2, 475, 573, 21, 37, 3, 6 },
-						{ 3, 664, 122, 21, 27, 3, 16 },
-						{ 2, 560, 828, 21, 32, 3, 11 },
-						{ 2, 48, 895, 21, 31, 3, 12 },
-						{ 2, 74, 650, 21, 36, 3, 7 },
+						{ 2, 918, 612, 21, 36, 3, 7 },
+						{ 2, 528, 650, 21, 35, 3, 8 },
+						{ 2, 551, 650, 21, 35, 3, 8 },
+						{ 2, 587, 532, 21, 38, 3, 5 },
+						{ 2, 310, 573, 21, 37, 3, 6 },
+						{ 3, 536, 122, 21, 27, 3, 16 },
+						{ 2, 430, 828, 21, 32, 3, 11 },
+						{ 2, 967, 862, 21, 31, 3, 12 },
+						{ 2, 918, 612, 21, 36, 3, 7 },
 					},
 				},
 				shot = {
@@ -9828,8 +9840,8 @@ return {
 					ox = 7,
 					oy = 4,
 					frames = {
-						{ 3, 296, 972, 12, 5, 1, 2 },
-						{ 3, 310, 972, 12, 5, 1, 2 },
+						{ 3, 709, 953, 12, 5, 1, 2 },
+						{ 3, 723, 953, 12, 5, 1, 2 },
 					},
 				},
 			},
@@ -9844,40 +9856,40 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
+						{ 3, 919, 122, 36, 26, 6, 10 },
+						{ 3, 957, 122, 36, 26, 6, 10 },
+						{ 3, 2, 151, 36, 26, 6, 10 },
 						{ 3, 40, 151, 36, 26, 6, 10 },
 						{ 3, 78, 151, 36, 26, 6, 10 },
 						{ 3, 116, 151, 36, 26, 6, 10 },
 						{ 3, 154, 151, 36, 26, 6, 10 },
-						{ 3, 192, 151, 36, 26, 6, 10 },
-						{ 3, 230, 151, 36, 26, 6, 10 },
-						{ 3, 268, 151, 36, 26, 6, 10 },
-						{ 3, 116, 151, 36, 26, 6, 10 },
+						{ 3, 2, 151, 36, 26, 6, 10 },
 					},
 				},
 				run = {
 					fps = 8,
 					frames = {
-						{ 3, 306, 151, 36, 26, 6, 10 },
-						{ 3, 344, 151, 36, 26, 6, 10 },
-						{ 3, 78, 151, 36, 26, 6, 10 },
-						{ 3, 382, 151, 36, 26, 6, 10 },
-						{ 3, 420, 151, 36, 26, 6, 10 },
 						{ 3, 192, 151, 36, 26, 6, 10 },
+						{ 3, 230, 151, 36, 26, 6, 10 },
+						{ 3, 957, 122, 36, 26, 6, 10 },
+						{ 3, 268, 151, 36, 26, 6, 10 },
+						{ 3, 306, 151, 36, 26, 6, 10 },
+						{ 3, 78, 151, 36, 26, 6, 10 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 3, 40, 151, 36, 26, 6, 10 },
-						{ 3, 268, 151, 36, 26, 6, 10 },
-						{ 3, 116, 151, 36, 26, 5, 10 },
-						{ 3, 817, 483, 36, 21, 7, 11 },
-						{ 3, 817, 483, 36, 21, 9, 7 },
-						{ 3, 817, 483, 36, 21, 10, 7 },
-						{ 3, 171, 207, 38, 25, 9, 11 },
-						{ 3, 778, 63, 40, 27, 7, 9 },
-						{ 3, 78, 151, 36, 26, 9, 9 },
-						{ 3, 40, 151, 36, 26, 7, 10 },
+						{ 3, 919, 122, 36, 26, 6, 10 },
+						{ 3, 154, 151, 36, 26, 6, 10 },
+						{ 3, 2, 151, 36, 26, 5, 10 },
+						{ 3, 421, 482, 36, 21, 7, 11 },
+						{ 3, 421, 482, 36, 21, 9, 7 },
+						{ 3, 421, 482, 36, 21, 10, 7 },
+						{ 3, 943, 179, 38, 25, 9, 11 },
+						{ 3, 668, 63, 40, 27, 7, 9 },
+						{ 3, 957, 122, 36, 26, 9, 9 },
+						{ 3, 919, 122, 36, 26, 7, 10 },
 					},
 				},
 			},
@@ -9940,40 +9952,40 @@ return {
 				idle = {
 					fps = 5,
 					frames = {
-						{ 2, 46, 612, 40, 36, 3, 3 },
-						{ 2, 46, 612, 40, 36, 3, 3 },
-						{ 2, 88, 612, 40, 36, 3, 3 },
-						{ 2, 46, 612, 40, 36, 3, 3 },
-						{ 2, 130, 612, 40, 36, 3, 3 },
-						{ 2, 172, 612, 40, 36, 3, 3 },
-						{ 2, 214, 612, 40, 36, 3, 3 },
-						{ 2, 256, 612, 40, 36, 3, 3 },
+						{ 2, 932, 573, 40, 36, 3, 3 },
+						{ 2, 932, 573, 40, 36, 3, 3 },
+						{ 2, 974, 573, 40, 36, 3, 3 },
+						{ 2, 932, 573, 40, 36, 3, 3 },
+						{ 2, 2, 612, 40, 36, 3, 3 },
+						{ 2, 44, 612, 40, 36, 3, 3 },
+						{ 2, 86, 612, 40, 36, 3, 3 },
+						{ 2, 128, 612, 40, 36, 3, 3 },
 					},
 				},
 				run = {
 					fps = 8,
 					frames = {
-						{ 2, 46, 612, 40, 36, 3, 3 },
-						{ 2, 298, 612, 40, 36, 3, 3 },
-						{ 2, 877, 573, 42, 36, 3, 3 },
-						{ 2, 921, 573, 42, 36, 3, 3 },
-						{ 2, 286, 650, 41, 35, 3, 4 },
-						{ 2, 413, 650, 39, 35, 4, 4 },
-						{ 2, 382, 612, 39, 36, 4, 3 },
-						{ 2, 46, 612, 40, 36, 3, 3 },
+						{ 2, 932, 573, 40, 36, 3, 3 },
+						{ 2, 170, 612, 40, 36, 3, 3 },
+						{ 2, 712, 573, 42, 36, 3, 3 },
+						{ 2, 756, 573, 42, 36, 3, 3 },
+						{ 2, 122, 650, 41, 35, 3, 4 },
+						{ 2, 249, 650, 39, 35, 4, 4 },
+						{ 2, 254, 612, 39, 36, 4, 3 },
+						{ 2, 932, 573, 40, 36, 3, 3 },
 					},
 				},
 				atk = {
 					fps = 8,
 					frames = {
-						{ 2, 130, 612, 40, 36, 3, 3 },
-						{ 2, 340, 612, 40, 36, 3, 3 },
-						{ 2, 965, 573, 42, 36, 3, 3 },
-						{ 2, 2, 612, 42, 36, 3, 3 },
-						{ 2, 329, 650, 41, 35, 3, 4 },
-						{ 2, 454, 650, 39, 35, 4, 4 },
-						{ 2, 382, 612, 39, 36, 4, 3 },
-						{ 2, 46, 612, 40, 36, 3, 3 },
+						{ 2, 2, 612, 40, 36, 3, 3 },
+						{ 2, 212, 612, 40, 36, 3, 3 },
+						{ 2, 800, 573, 42, 36, 3, 3 },
+						{ 2, 844, 573, 42, 36, 3, 3 },
+						{ 2, 165, 650, 41, 35, 3, 4 },
+						{ 2, 290, 650, 39, 35, 4, 4 },
+						{ 2, 254, 612, 39, 36, 4, 3 },
+						{ 2, 932, 573, 40, 36, 3, 3 },
 					},
 				},
 				cast = {
@@ -9987,10 +9999,10 @@ return {
 						{ 2, 330, 436, 11, 47, 6, 1 },
 						{ 2, 315, 436, 13, 47, 5, 1 },
 						{ 2, 547, 436, 13, 46, 5, 2 },
-						{ 2, 925, 688, 19, 34, 2, 14 },
-						{ 3, 772, 618, 19, 20, 2, 28 },
-						{ 3, 412, 618, 23, 20, 0, 28 },
-						{ 3, 46, 725, 19, 19, 2, 29 },
+						{ 2, 794, 688, 19, 34, 2, 14 },
+						{ 3, 362, 617, 19, 20, 2, 28 },
+						{ 3, 2, 617, 23, 20, 0, 28 },
+						{ 3, 747, 702, 19, 19, 2, 29 },
 					},
 				},
 			},
@@ -10005,41 +10017,41 @@ return {
 				idle = {
 					fps = 5,
 					frames = {
-						{ 3, 376, 436, 29, 22, 8, 11 },
-						{ 3, 407, 436, 29, 22, 8, 11 },
-						{ 3, 97, 363, 29, 23, 8, 10 },
-						{ 3, 128, 363, 29, 23, 8, 10 },
-						{ 3, 376, 436, 29, 22, 8, 11 },
-						{ 3, 438, 436, 29, 22, 8, 11 },
-						{ 3, 64, 529, 29, 21, 8, 12 },
-						{ 3, 376, 436, 29, 22, 8, 11 },
+						{ 3, 984, 411, 29, 22, 8, 11 },
+						{ 3, 2, 435, 29, 22, 8, 11 },
+						{ 3, 773, 337, 29, 23, 8, 10 },
+						{ 3, 804, 337, 29, 23, 8, 10 },
+						{ 3, 984, 411, 29, 22, 8, 11 },
+						{ 3, 33, 435, 29, 22, 8, 11 },
+						{ 3, 672, 505, 29, 21, 8, 12 },
+						{ 3, 984, 411, 29, 22, 8, 11 },
 					},
 				},
 				run = {
 					fps = 6,
 					frames = {
-						{ 3, 376, 436, 29, 22, 8, 11 },
-						{ 3, 407, 436, 29, 22, 8, 11 },
-						{ 3, 97, 363, 29, 23, 8, 10 },
-						{ 3, 128, 363, 29, 23, 8, 10 },
-						{ 3, 376, 436, 29, 22, 8, 11 },
-						{ 3, 438, 436, 29, 22, 8, 11 },
-						{ 3, 64, 529, 29, 21, 8, 12 },
-						{ 3, 376, 436, 29, 22, 8, 11 },
+						{ 3, 984, 411, 29, 22, 8, 11 },
+						{ 3, 2, 435, 29, 22, 8, 11 },
+						{ 3, 773, 337, 29, 23, 8, 10 },
+						{ 3, 804, 337, 29, 23, 8, 10 },
+						{ 3, 984, 411, 29, 22, 8, 11 },
+						{ 3, 33, 435, 29, 22, 8, 11 },
+						{ 3, 672, 505, 29, 21, 8, 12 },
+						{ 3, 984, 411, 29, 22, 8, 11 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 3, 376, 436, 29, 22, 8, 11 },
-						{ 3, 64, 529, 29, 21, 8, 12 },
-						{ 3, 281, 596, 29, 20, 8, 13 },
-						{ 3, 64, 287, 29, 24, 8, 9 },
-						{ 3, 300, 33, 37, 28, 5, 5 },
-						{ 2, 2, 862, 43, 31, 2, 2 },
-						{ 2, 906, 828, 45, 31, 1, 2 },
-						{ 3, 64, 529, 29, 21, 8, 12 },
-						{ 3, 376, 436, 29, 22, 8, 11 },
+						{ 3, 984, 411, 29, 22, 8, 11 },
+						{ 3, 672, 505, 29, 21, 8, 12 },
+						{ 3, 919, 573, 29, 20, 8, 13 },
+						{ 3, 732, 260, 29, 24, 8, 9 },
+						{ 3, 254, 33, 37, 28, 5, 5 },
+						{ 2, 919, 828, 43, 31, 2, 2 },
+						{ 2, 827, 828, 45, 31, 1, 2 },
+						{ 3, 672, 505, 29, 21, 8, 12 },
+						{ 3, 984, 411, 29, 22, 8, 11 },
 					},
 				},
 			},
@@ -10054,40 +10066,40 @@ return {
 				idle = {
 					fps = 5,
 					frames = {
-						{ 3, 554, 436, 25, 22, 2, 9 },
-						{ 3, 215, 363, 25, 23, 2, 8 },
-						{ 3, 242, 363, 25, 23, 2, 8 },
-						{ 3, 581, 436, 25, 22, 2, 9 },
-						{ 3, 608, 436, 25, 22, 2, 9 },
-						{ 3, 269, 363, 25, 23, 2, 8 },
-						{ 3, 296, 363, 25, 23, 2, 8 },
-						{ 3, 635, 436, 25, 22, 2, 9 },
+						{ 3, 149, 435, 25, 22, 2, 9 },
+						{ 3, 891, 337, 25, 23, 2, 8 },
+						{ 3, 918, 337, 25, 23, 2, 8 },
+						{ 3, 176, 435, 25, 22, 2, 9 },
+						{ 3, 203, 435, 25, 22, 2, 9 },
+						{ 3, 945, 337, 25, 23, 2, 8 },
+						{ 3, 972, 337, 25, 23, 2, 8 },
+						{ 3, 230, 435, 25, 22, 2, 9 },
 					},
 				},
 				run = {
 					fps = 6,
 					frames = {
-						{ 3, 554, 436, 25, 22, 2, 9 },
-						{ 3, 215, 363, 25, 23, 2, 8 },
-						{ 3, 242, 363, 25, 23, 2, 8 },
-						{ 3, 581, 436, 25, 22, 2, 9 },
-						{ 3, 608, 436, 25, 22, 2, 9 },
-						{ 3, 269, 363, 25, 23, 2, 8 },
-						{ 3, 296, 363, 25, 23, 2, 8 },
-						{ 3, 635, 436, 25, 22, 2, 9 },
+						{ 3, 149, 435, 25, 22, 2, 9 },
+						{ 3, 891, 337, 25, 23, 2, 8 },
+						{ 3, 918, 337, 25, 23, 2, 8 },
+						{ 3, 176, 435, 25, 22, 2, 9 },
+						{ 3, 203, 435, 25, 22, 2, 9 },
+						{ 3, 945, 337, 25, 23, 2, 8 },
+						{ 3, 972, 337, 25, 23, 2, 8 },
+						{ 3, 230, 435, 25, 22, 2, 9 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 3, 554, 436, 25, 22, 2, 9 },
-						{ 3, 528, 529, 25, 21, 2, 10 },
-						{ 3, 555, 529, 25, 21, 2, 10 },
-						{ 3, 191, 63, 25, 28, 2, 3 },
-						{ 3, 488, 287, 25, 24, 2, 7 },
-						{ 3, 215, 363, 25, 23, 2, 8 },
-						{ 3, 554, 436, 25, 22, 2, 9 },
-						{ 3, 554, 436, 25, 22, 2, 9 },
+						{ 3, 149, 435, 25, 22, 2, 9 },
+						{ 3, 110, 528, 25, 21, 2, 10 },
+						{ 3, 137, 528, 25, 21, 2, 10 },
+						{ 3, 127, 63, 25, 28, 2, 3 },
+						{ 3, 138, 286, 25, 24, 2, 7 },
+						{ 3, 891, 337, 25, 23, 2, 8 },
+						{ 3, 149, 435, 25, 22, 2, 9 },
+						{ 3, 149, 435, 25, 22, 2, 9 },
 					},
 				},
 				shot = {
@@ -10097,8 +10109,8 @@ return {
 					ox = 6,
 					oy = 3,
 					frames = {
-						{ 3, 350, 972, 12, 3, 0, 2 },
-						{ 3, 364, 972, 12, 3, 0, 2 },
+						{ 3, 763, 953, 12, 3, 0, 2 },
+						{ 3, 777, 953, 12, 3, 0, 2 },
 					},
 				},
 			},
@@ -10113,40 +10125,40 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
+						{ 2, 828, 650, 39, 34, 4, 3 },
+						{ 2, 869, 650, 39, 34, 4, 3 },
+						{ 2, 910, 650, 39, 34, 4, 3 },
+						{ 2, 951, 650, 39, 34, 4, 3 },
 						{ 2, 2, 688, 39, 34, 4, 3 },
 						{ 2, 43, 688, 39, 34, 4, 3 },
 						{ 2, 84, 688, 39, 34, 4, 3 },
-						{ 2, 125, 688, 39, 34, 4, 3 },
-						{ 2, 166, 688, 39, 34, 4, 3 },
-						{ 2, 207, 688, 39, 34, 4, 3 },
-						{ 2, 248, 688, 39, 34, 4, 3 },
-						{ 2, 2, 688, 39, 34, 4, 3 },
+						{ 2, 828, 650, 39, 34, 4, 3 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 2, 289, 688, 39, 34, 4, 3 },
-						{ 2, 330, 688, 39, 34, 4, 3 },
-						{ 2, 2, 688, 39, 34, 4, 3 },
-						{ 2, 950, 650, 40, 34, 3, 3 },
-						{ 2, 371, 688, 39, 34, 4, 3 },
-						{ 2, 2, 688, 39, 34, 4, 3 },
+						{ 2, 125, 688, 39, 34, 4, 3 },
+						{ 2, 166, 688, 39, 34, 4, 3 },
+						{ 2, 828, 650, 39, 34, 4, 3 },
+						{ 2, 786, 650, 40, 34, 3, 3 },
+						{ 2, 207, 688, 39, 34, 4, 3 },
+						{ 2, 828, 650, 39, 34, 4, 3 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 2, 2, 688, 39, 34, 4, 3 },
+						{ 2, 828, 650, 39, 34, 4, 3 },
+						{ 2, 248, 688, 39, 34, 4, 3 },
+						{ 2, 289, 688, 39, 34, 4, 3 },
+						{ 2, 330, 688, 39, 34, 4, 3 },
+						{ 2, 371, 688, 39, 34, 4, 3 },
 						{ 2, 412, 688, 39, 34, 4, 3 },
 						{ 2, 453, 688, 39, 34, 4, 3 },
 						{ 2, 494, 688, 39, 34, 4, 3 },
-						{ 2, 535, 688, 39, 34, 4, 3 },
-						{ 2, 576, 688, 39, 34, 4, 3 },
-						{ 2, 617, 688, 39, 34, 4, 3 },
-						{ 2, 658, 688, 39, 34, 4, 3 },
-						{ 2, 43, 688, 39, 34, 4, 3 },
-						{ 2, 2, 688, 39, 34, 4, 3 },
+						{ 2, 869, 650, 39, 34, 4, 3 },
+						{ 2, 828, 650, 39, 34, 4, 3 },
 					},
 				},
 			},
@@ -10161,34 +10173,34 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 2, 319, 992, 34, 29, 4, 5 },
-						{ 3, 453, 33, 34, 28, 4, 5 },
-						{ 3, 495, 151, 34, 26, 4, 6 },
-						{ 3, 495, 151, 34, 26, 4, 6 },
-						{ 3, 38, 93, 34, 27, 4, 6 },
-						{ 3, 489, 33, 34, 28, 4, 6 },
+						{ 2, 273, 992, 34, 29, 4, 5 },
+						{ 3, 407, 33, 34, 28, 4, 5 },
+						{ 3, 381, 151, 34, 26, 4, 6 },
+						{ 3, 381, 151, 34, 26, 4, 6 },
+						{ 3, 934, 63, 34, 27, 4, 6 },
+						{ 3, 443, 33, 34, 28, 4, 6 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 2, 319, 992, 34, 29, 4, 5 },
-						{ 3, 453, 33, 34, 28, 4, 5 },
-						{ 3, 495, 151, 34, 26, 4, 6 },
-						{ 3, 495, 151, 34, 26, 4, 6 },
-						{ 3, 38, 93, 34, 27, 4, 6 },
-						{ 3, 489, 33, 34, 28, 4, 6 },
+						{ 2, 273, 992, 34, 29, 4, 5 },
+						{ 3, 407, 33, 34, 28, 4, 5 },
+						{ 3, 381, 151, 34, 26, 4, 6 },
+						{ 3, 381, 151, 34, 26, 4, 6 },
+						{ 3, 934, 63, 34, 27, 4, 6 },
+						{ 3, 443, 33, 34, 28, 4, 6 },
 					},
 				},
 				atk = {
 					fps = 20,
 					frames = {
-						{ 2, 319, 992, 34, 29, 4, 5 },
-						{ 3, 453, 33, 34, 28, 4, 5 },
-						{ 3, 495, 151, 34, 26, 4, 6 },
-						{ 3, 495, 151, 34, 26, 4, 6 },
-						{ 3, 38, 93, 34, 27, 4, 6 },
-						{ 3, 489, 33, 34, 28, 4, 6 },
+						{ 2, 273, 992, 34, 29, 4, 5 },
+						{ 3, 407, 33, 34, 28, 4, 5 },
+						{ 3, 381, 151, 34, 26, 4, 6 },
+						{ 3, 381, 151, 34, 26, 4, 6 },
+						{ 3, 934, 63, 34, 27, 4, 6 },
+						{ 3, 443, 33, 34, 28, 4, 6 },
 					},
 				},
 			},
@@ -10203,34 +10215,34 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 930, 151, 26, 26, 2, 4 },
-						{ 3, 722, 207, 26, 25, 2, 5 },
-						{ 3, 324, 287, 26, 24, 2, 5 },
-						{ 3, 187, 363, 26, 23, 2, 5 },
-						{ 3, 352, 287, 26, 24, 2, 5 },
-						{ 3, 750, 207, 26, 25, 2, 5 },
+						{ 3, 816, 151, 26, 26, 2, 4 },
+						{ 3, 475, 207, 26, 25, 2, 5 },
+						{ 3, 992, 260, 26, 24, 2, 5 },
+						{ 3, 863, 337, 26, 23, 2, 5 },
+						{ 3, 2, 286, 26, 24, 2, 5 },
+						{ 3, 503, 207, 26, 25, 2, 5 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 3, 930, 151, 26, 26, 2, 4 },
-						{ 3, 722, 207, 26, 25, 2, 5 },
-						{ 3, 324, 287, 26, 24, 2, 5 },
-						{ 3, 187, 363, 26, 23, 2, 5 },
-						{ 3, 352, 287, 26, 24, 2, 5 },
-						{ 3, 750, 207, 26, 25, 2, 5 },
+						{ 3, 816, 151, 26, 26, 2, 4 },
+						{ 3, 475, 207, 26, 25, 2, 5 },
+						{ 3, 992, 260, 26, 24, 2, 5 },
+						{ 3, 863, 337, 26, 23, 2, 5 },
+						{ 3, 2, 286, 26, 24, 2, 5 },
+						{ 3, 503, 207, 26, 25, 2, 5 },
 					},
 				},
 				atk = {
 					fps = 20,
 					frames = {
-						{ 3, 930, 151, 26, 26, 2, 4 },
-						{ 3, 722, 207, 26, 25, 2, 5 },
-						{ 3, 324, 287, 26, 24, 2, 5 },
-						{ 3, 187, 363, 26, 23, 2, 5 },
-						{ 3, 352, 287, 26, 24, 2, 5 },
-						{ 3, 750, 207, 26, 25, 2, 5 },
+						{ 3, 816, 151, 26, 26, 2, 4 },
+						{ 3, 475, 207, 26, 25, 2, 5 },
+						{ 3, 992, 260, 26, 24, 2, 5 },
+						{ 3, 863, 337, 26, 23, 2, 5 },
+						{ 3, 2, 286, 26, 24, 2, 5 },
+						{ 3, 503, 207, 26, 25, 2, 5 },
 					},
 				},
 			},
@@ -10245,41 +10257,41 @@ return {
 				idle = {
 					fps = 5,
 					frames = {
-						{ 2, 396, 532, 23, 38, 3, 4 },
-						{ 2, 421, 532, 23, 38, 3, 4 },
-						{ 2, 421, 532, 23, 38, 3, 3 },
-						{ 2, 446, 532, 23, 38, 3, 3 },
-						{ 2, 471, 532, 23, 38, 3, 3 },
-						{ 2, 496, 532, 23, 38, 3, 3 },
-						{ 2, 521, 532, 23, 38, 3, 4 },
-						{ 2, 396, 532, 23, 38, 3, 4 },
+						{ 2, 366, 532, 23, 38, 3, 4 },
+						{ 2, 391, 532, 23, 38, 3, 4 },
+						{ 2, 391, 532, 23, 38, 3, 3 },
+						{ 2, 416, 532, 23, 38, 3, 3 },
+						{ 2, 441, 532, 23, 38, 3, 3 },
+						{ 2, 466, 532, 23, 38, 3, 3 },
+						{ 2, 491, 532, 23, 38, 3, 4 },
+						{ 2, 366, 532, 23, 38, 3, 4 },
 					},
 				},
 				run = {
 					fps = 5,
 					frames = {
-						{ 2, 396, 532, 23, 38, 3, 4 },
-						{ 2, 421, 532, 23, 38, 3, 4 },
-						{ 2, 421, 532, 23, 38, 3, 3 },
-						{ 2, 446, 532, 23, 38, 3, 3 },
-						{ 2, 471, 532, 23, 38, 3, 3 },
-						{ 2, 496, 532, 23, 38, 3, 3 },
-						{ 2, 521, 532, 23, 38, 3, 4 },
-						{ 2, 396, 532, 23, 38, 3, 4 },
+						{ 2, 366, 532, 23, 38, 3, 4 },
+						{ 2, 391, 532, 23, 38, 3, 4 },
+						{ 2, 391, 532, 23, 38, 3, 3 },
+						{ 2, 416, 532, 23, 38, 3, 3 },
+						{ 2, 441, 532, 23, 38, 3, 3 },
+						{ 2, 466, 532, 23, 38, 3, 3 },
+						{ 2, 491, 532, 23, 38, 3, 4 },
+						{ 2, 366, 532, 23, 38, 3, 4 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 2, 396, 532, 23, 38, 3, 4 },
-						{ 2, 546, 532, 23, 38, 3, 4 },
-						{ 2, 342, 532, 25, 38, 3, 3 },
+						{ 2, 366, 532, 23, 38, 3, 4 },
+						{ 2, 516, 532, 23, 38, 3, 4 },
+						{ 2, 312, 532, 25, 38, 3, 3 },
 						{ 2, 2, 532, 26, 39, 3, 2 },
 						{ 2, 2, 532, 26, 39, 3, 2 },
 						{ 2, 30, 532, 26, 39, 3, 2 },
-						{ 2, 369, 532, 25, 38, 3, 3 },
-						{ 2, 471, 532, 23, 38, 3, 4 },
-						{ 2, 396, 532, 23, 38, 3, 4 },
+						{ 2, 339, 532, 25, 38, 3, 3 },
+						{ 2, 441, 532, 23, 38, 3, 4 },
+						{ 2, 366, 532, 23, 38, 3, 4 },
 					},
 				},
 				cast = {
@@ -10289,14 +10301,14 @@ return {
 					ox = 15,
 					oy = 15,
 					frames = {
-						{ 2, 959, 992, 29, 29, 1, 1 },
-						{ 3, 341, 122, 27, 27, 2, 2 },
-						{ 3, 2, 234, 25, 25, 3, 3 },
-						{ 3, 733, 529, 21, 21, 5, 5 },
-						{ 2, 990, 992, 29, 29, 1, 1 },
-						{ 3, 370, 122, 27, 27, 2, 2 },
-						{ 3, 2, 2, 29, 29, 1, 1 },
-						{ 3, 373, 363, 23, 23, 4, 4 },
+						{ 2, 913, 992, 29, 29, 1, 1 },
+						{ 3, 213, 122, 27, 27, 2, 2 },
+						{ 3, 774, 207, 25, 25, 3, 3 },
+						{ 3, 315, 528, 21, 21, 5, 5 },
+						{ 2, 944, 992, 29, 29, 1, 1 },
+						{ 3, 242, 122, 27, 27, 2, 2 },
+						{ 2, 975, 992, 29, 29, 1, 1 },
+						{ 3, 27, 362, 23, 23, 4, 4 },
 					},
 				},
 			},
@@ -10311,39 +10323,39 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 2, 949, 794, 25, 32, 4, 5 },
-						{ 2, 837, 794, 26, 32, 4, 5 },
-						{ 2, 62, 759, 26, 33, 4, 3 },
-						{ 2, 118, 759, 25, 33, 4, 3 },
-						{ 2, 865, 794, 26, 32, 3, 4 },
-						{ 2, 739, 862, 26, 31, 3, 6 },
-						{ 2, 767, 862, 25, 31, 4, 6 },
-						{ 2, 949, 794, 25, 32, 4, 5 },
+						{ 2, 833, 794, 25, 32, 4, 5 },
+						{ 2, 721, 794, 26, 32, 4, 5 },
+						{ 2, 949, 724, 26, 33, 4, 3 },
+						{ 2, 2, 759, 25, 33, 4, 3 },
+						{ 2, 749, 794, 26, 32, 3, 4 },
+						{ 2, 652, 862, 26, 31, 3, 6 },
+						{ 2, 680, 862, 25, 31, 4, 6 },
+						{ 2, 833, 794, 25, 32, 4, 5 },
 					},
 				},
 				run = {
 					fps = 8,
 					frames = {
-						{ 2, 739, 862, 26, 31, 3, 6 },
-						{ 2, 794, 862, 25, 31, 3, 6 },
-						{ 2, 145, 759, 25, 33, 3, 2 },
-						{ 2, 90, 759, 26, 33, 3, 2 },
-						{ 2, 837, 794, 26, 32, 4, 4 },
-						{ 2, 949, 794, 25, 32, 4, 5 },
+						{ 2, 652, 862, 26, 31, 3, 6 },
+						{ 2, 707, 862, 25, 31, 3, 6 },
+						{ 2, 29, 759, 25, 33, 3, 2 },
+						{ 2, 977, 724, 26, 33, 3, 2 },
+						{ 2, 721, 794, 26, 32, 4, 4 },
+						{ 2, 833, 794, 25, 32, 4, 5 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 2, 949, 794, 25, 32, 4, 5 },
-						{ 2, 898, 688, 25, 34, 4, 3 },
-						{ 2, 640, 650, 27, 35, 3, 2 },
-						{ 2, 893, 794, 26, 32, 3, 5 },
-						{ 2, 921, 794, 26, 32, 4, 5 },
-						{ 2, 893, 794, 26, 32, 3, 5 },
-						{ 2, 976, 794, 25, 32, 4, 5 },
-						{ 2, 976, 794, 25, 32, 4, 5 },
-						{ 2, 949, 794, 25, 32, 4, 5 },
+						{ 2, 833, 794, 25, 32, 4, 5 },
+						{ 2, 767, 688, 25, 34, 4, 3 },
+						{ 2, 476, 650, 27, 35, 3, 2 },
+						{ 2, 777, 794, 26, 32, 3, 5 },
+						{ 2, 805, 794, 26, 32, 4, 5 },
+						{ 2, 777, 794, 26, 32, 3, 5 },
+						{ 2, 860, 794, 25, 32, 4, 5 },
+						{ 2, 860, 794, 25, 32, 4, 5 },
+						{ 2, 833, 794, 25, 32, 4, 5 },
 					},
 				},
 				cast = {
@@ -10353,12 +10365,12 @@ return {
 					ox = 0,
 					oy = 8,
 					frames = {
-						{ 3, 344, 972, 4, 4, 0, 7 },
-						{ 3, 644, 960, 21, 9, 0, 4 },
-						{ 3, 513, 882, 46, 15, 0, 1 },
-						{ 3, 561, 882, 46, 15, 0, 1 },
-						{ 3, 386, 960, 45, 9, 0, 4 },
-						{ 3, 433, 960, 43, 9, 0, 4 },
+						{ 3, 757, 953, 4, 4, 0, 7 },
+						{ 3, 49, 953, 21, 9, 0, 4 },
+						{ 3, 2, 878, 46, 15, 0, 1 },
+						{ 3, 50, 878, 46, 15, 0, 1 },
+						{ 3, 803, 940, 45, 9, 0, 4 },
+						{ 3, 850, 940, 43, 9, 0, 4 },
 					},
 				},
 			},
@@ -10373,42 +10385,42 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 2, 664, 724, 34, 33, 3, 5 },
-						{ 2, 591, 724, 35, 33, 3, 5 },
-						{ 2, 699, 688, 35, 34, 3, 4 },
-						{ 2, 736, 688, 34, 34, 3, 4 },
-						{ 2, 664, 724, 34, 33, 3, 5 },
-						{ 2, 916, 724, 33, 33, 3, 5 },
-						{ 2, 951, 724, 33, 33, 3, 5 },
-						{ 2, 664, 724, 34, 33, 3, 5 },
+						{ 2, 534, 724, 34, 33, 3, 5 },
+						{ 2, 461, 724, 35, 33, 3, 5 },
+						{ 2, 535, 688, 35, 34, 3, 4 },
+						{ 2, 572, 688, 34, 34, 3, 4 },
+						{ 2, 534, 724, 34, 33, 3, 5 },
+						{ 2, 786, 724, 33, 33, 3, 5 },
+						{ 2, 821, 724, 33, 33, 3, 5 },
+						{ 2, 534, 724, 34, 33, 3, 5 },
 					},
 				},
 				run = {
 					fps = 6,
 					frames = {
-						{ 2, 664, 724, 34, 33, 3, 5 },
-						{ 2, 591, 724, 35, 33, 3, 5 },
-						{ 2, 699, 688, 35, 34, 3, 4 },
-						{ 2, 736, 688, 34, 34, 3, 4 },
-						{ 2, 664, 724, 34, 33, 3, 5 },
-						{ 2, 916, 724, 33, 33, 3, 5 },
-						{ 2, 951, 724, 33, 33, 3, 5 },
-						{ 2, 664, 724, 34, 33, 3, 5 },
+						{ 2, 534, 724, 34, 33, 3, 5 },
+						{ 2, 461, 724, 35, 33, 3, 5 },
+						{ 2, 535, 688, 35, 34, 3, 4 },
+						{ 2, 572, 688, 34, 34, 3, 4 },
+						{ 2, 534, 724, 34, 33, 3, 5 },
+						{ 2, 786, 724, 33, 33, 3, 5 },
+						{ 2, 821, 724, 33, 33, 3, 5 },
+						{ 2, 534, 724, 34, 33, 3, 5 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 2, 664, 724, 34, 33, 3, 5 },
-						{ 2, 916, 724, 33, 33, 3, 5 },
-						{ 2, 807, 688, 32, 34, 3, 4 },
-						{ 2, 752, 612, 31, 36, 3, 2 },
-						{ 2, 423, 612, 38, 36, 3, 2 },
-						{ 2, 901, 650, 47, 34, 3, 4 },
-						{ 2, 287, 724, 47, 33, 3, 5 },
-						{ 2, 513, 724, 39, 33, 3, 5 },
-						{ 2, 591, 724, 35, 33, 3, 5 },
-						{ 2, 664, 724, 34, 33, 3, 5 },
+						{ 2, 534, 724, 34, 33, 3, 5 },
+						{ 2, 786, 724, 33, 33, 3, 5 },
+						{ 2, 643, 688, 32, 34, 3, 4 },
+						{ 2, 589, 612, 31, 36, 3, 2 },
+						{ 2, 295, 612, 38, 36, 3, 2 },
+						{ 2, 737, 650, 47, 34, 3, 4 },
+						{ 2, 157, 724, 47, 33, 3, 5 },
+						{ 2, 383, 724, 39, 33, 3, 5 },
+						{ 2, 461, 724, 35, 33, 3, 5 },
+						{ 2, 534, 724, 34, 33, 3, 5 },
 					},
 				},
 			},
@@ -10423,43 +10435,43 @@ return {
 				idle = {
 					fps = 5,
 					frames = {
-						{ 2, 880, 612, 24, 36, 6, 10 },
-						{ 2, 906, 612, 24, 36, 6, 10 },
-						{ 2, 906, 612, 24, 36, 6, 9 },
-						{ 2, 880, 612, 24, 36, 6, 9 },
-						{ 2, 932, 612, 24, 36, 6, 9 },
-						{ 2, 958, 612, 24, 36, 6, 9 },
-						{ 2, 932, 612, 24, 36, 6, 10 },
-						{ 2, 880, 612, 24, 36, 6, 10 },
+						{ 2, 717, 612, 24, 36, 6, 10 },
+						{ 2, 743, 612, 24, 36, 6, 10 },
+						{ 2, 743, 612, 24, 36, 6, 9 },
+						{ 2, 717, 612, 24, 36, 6, 9 },
+						{ 2, 769, 612, 24, 36, 6, 9 },
+						{ 2, 795, 612, 24, 36, 6, 9 },
+						{ 2, 769, 612, 24, 36, 6, 10 },
+						{ 2, 717, 612, 24, 36, 6, 10 },
 					},
 				},
 				run = {
 					fps = 5,
 					frames = {
-						{ 2, 880, 612, 24, 36, 6, 10 },
-						{ 2, 906, 612, 24, 36, 6, 10 },
-						{ 2, 906, 612, 24, 36, 6, 9 },
-						{ 2, 880, 612, 24, 36, 6, 9 },
-						{ 2, 932, 612, 24, 36, 6, 9 },
-						{ 2, 958, 612, 24, 36, 6, 9 },
-						{ 2, 932, 612, 24, 36, 6, 10 },
-						{ 2, 880, 612, 24, 36, 6, 10 },
+						{ 2, 717, 612, 24, 36, 6, 10 },
+						{ 2, 743, 612, 24, 36, 6, 10 },
+						{ 2, 743, 612, 24, 36, 6, 9 },
+						{ 2, 717, 612, 24, 36, 6, 9 },
+						{ 2, 769, 612, 24, 36, 6, 9 },
+						{ 2, 795, 612, 24, 36, 6, 9 },
+						{ 2, 769, 612, 24, 36, 6, 10 },
+						{ 2, 717, 612, 24, 36, 6, 10 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 2, 880, 612, 24, 36, 6, 10 },
-						{ 2, 880, 612, 24, 36, 6, 11 },
-						{ 2, 932, 612, 24, 36, 6, 7 },
-						{ 2, 932, 612, 24, 36, 6, 3 },
-						{ 2, 880, 612, 24, 36, 6, 1 },
-						{ 2, 906, 612, 24, 36, 6, 6 },
-						{ 2, 652, 612, 32, 36, 2, 15 },
-						{ 2, 579, 612, 36, 36, 0, 15 },
-						{ 2, 880, 612, 24, 36, 6, 12 },
-						{ 2, 932, 612, 24, 36, 6, 9 },
-						{ 2, 880, 612, 24, 36, 6, 10 },
+						{ 2, 717, 612, 24, 36, 6, 10 },
+						{ 2, 717, 612, 24, 36, 6, 11 },
+						{ 2, 769, 612, 24, 36, 6, 7 },
+						{ 2, 769, 612, 24, 36, 6, 3 },
+						{ 2, 717, 612, 24, 36, 6, 1 },
+						{ 2, 743, 612, 24, 36, 6, 6 },
+						{ 2, 489, 612, 32, 36, 2, 15 },
+						{ 2, 451, 612, 36, 36, 0, 15 },
+						{ 2, 717, 612, 24, 36, 6, 12 },
+						{ 2, 769, 612, 24, 36, 6, 9 },
+						{ 2, 717, 612, 24, 36, 6, 10 },
 					},
 				},
 			},
@@ -10474,39 +10486,39 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 700, 33, 32, 28, 4, 2 },
-						{ 3, 734, 33, 32, 28, 4, 2 },
-						{ 3, 596, 93, 32, 27, 4, 3 },
-						{ 3, 630, 93, 32, 27, 4, 3 },
-						{ 3, 700, 33, 32, 28, 4, 2 },
-						{ 3, 768, 33, 32, 28, 4, 2 },
-						{ 3, 630, 93, 32, 27, 4, 3 },
-						{ 3, 596, 93, 32, 27, 4, 3 },
+						{ 3, 654, 33, 32, 28, 4, 2 },
+						{ 3, 688, 33, 32, 28, 4, 2 },
+						{ 3, 488, 93, 32, 27, 4, 3 },
+						{ 3, 522, 93, 32, 27, 4, 3 },
+						{ 3, 654, 33, 32, 28, 4, 2 },
+						{ 3, 722, 33, 32, 28, 4, 2 },
+						{ 3, 522, 93, 32, 27, 4, 3 },
+						{ 3, 488, 93, 32, 27, 4, 3 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 3, 802, 33, 32, 28, 4, 2 },
-						{ 3, 836, 33, 32, 28, 4, 2 },
-						{ 3, 734, 33, 32, 28, 4, 2 },
-						{ 3, 870, 33, 32, 28, 4, 2 },
-						{ 3, 904, 33, 32, 28, 4, 2 },
-						{ 3, 734, 33, 32, 28, 4, 2 },
+						{ 3, 756, 33, 32, 28, 4, 2 },
+						{ 3, 790, 33, 32, 28, 4, 2 },
+						{ 3, 688, 33, 32, 28, 4, 2 },
+						{ 3, 824, 33, 32, 28, 4, 2 },
+						{ 3, 858, 33, 32, 28, 4, 2 },
+						{ 3, 688, 33, 32, 28, 4, 2 },
 					},
 				},
 				atk = {
 					fps = 14,
 					frames = {
-						{ 3, 700, 33, 32, 28, 4, 2 },
-						{ 3, 34, 63, 30, 28, 4, 2 },
-						{ 3, 66, 63, 30, 28, 3, 2 },
-						{ 3, 98, 63, 30, 28, 3, 2 },
-						{ 3, 339, 33, 37, 28, 7, 2 },
-						{ 3, 416, 33, 35, 28, 7, 2 },
-						{ 3, 665, 33, 33, 28, 6, 2 },
-						{ 3, 700, 33, 32, 28, 5, 2 },
-						{ 3, 700, 33, 32, 28, 4, 2 },
+						{ 3, 654, 33, 32, 28, 4, 2 },
+						{ 3, 989, 33, 30, 28, 4, 2 },
+						{ 3, 2, 63, 30, 28, 3, 2 },
+						{ 3, 34, 63, 30, 28, 3, 2 },
+						{ 3, 293, 33, 37, 28, 7, 2 },
+						{ 3, 370, 33, 35, 28, 7, 2 },
+						{ 3, 619, 33, 33, 28, 6, 2 },
+						{ 3, 654, 33, 32, 28, 5, 2 },
+						{ 3, 654, 33, 32, 28, 4, 2 },
 					},
 				},
 			},
@@ -10521,39 +10533,39 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 861, 506, 30, 21, 5, 5 },
-						{ 3, 95, 529, 29, 21, 5, 5 },
-						{ 3, 219, 529, 28, 21, 5, 4 },
-						{ 3, 279, 529, 27, 21, 5, 4 },
-						{ 3, 249, 529, 28, 21, 5, 4 },
-						{ 3, 126, 529, 29, 21, 5, 5 },
-						{ 3, 893, 506, 30, 21, 5, 6 },
-						{ 3, 861, 506, 30, 21, 5, 6 },
+						{ 3, 450, 505, 30, 21, 5, 5 },
+						{ 3, 703, 505, 29, 21, 5, 5 },
+						{ 3, 827, 505, 28, 21, 5, 4 },
+						{ 3, 887, 505, 27, 21, 5, 4 },
+						{ 3, 857, 505, 28, 21, 5, 4 },
+						{ 3, 734, 505, 29, 21, 5, 5 },
+						{ 3, 482, 505, 30, 21, 5, 6 },
+						{ 3, 450, 505, 30, 21, 5, 6 },
 					},
 				},
 				run = {
 					fps = 10,
 					frames = {
-						{ 3, 925, 506, 30, 21, 5, 5 },
-						{ 3, 957, 506, 30, 21, 5, 4 },
-						{ 3, 157, 529, 29, 21, 5, 4 },
-						{ 3, 188, 529, 29, 21, 5, 5 },
-						{ 3, 989, 506, 30, 21, 5, 6 },
-						{ 3, 925, 506, 30, 21, 5, 6 },
+						{ 3, 514, 505, 30, 21, 5, 5 },
+						{ 3, 546, 505, 30, 21, 5, 4 },
+						{ 3, 765, 505, 29, 21, 5, 4 },
+						{ 3, 796, 505, 29, 21, 5, 5 },
+						{ 3, 578, 505, 30, 21, 5, 6 },
+						{ 3, 514, 505, 30, 21, 5, 6 },
 					},
 				},
 				atk = {
 					fps = 14,
 					frames = {
-						{ 3, 861, 506, 30, 21, 5, 5 },
-						{ 3, 313, 436, 30, 22, 4, 4 },
-						{ 3, 2, 363, 30, 23, 3, 3 },
-						{ 3, 459, 207, 30, 25, 3, 1 },
-						{ 3, 889, 786, 21, 18, 9, 7 },
-						{ 3, 912, 786, 21, 18, 9, 7 },
-						{ 3, 749, 618, 21, 20, 7, 6 },
-						{ 3, 756, 529, 21, 21, 6, 5 },
-						{ 3, 861, 506, 30, 21, 5, 5 },
+						{ 3, 450, 505, 30, 21, 5, 5 },
+						{ 3, 921, 411, 30, 22, 4, 4 },
+						{ 3, 678, 337, 30, 23, 3, 3 },
+						{ 3, 212, 207, 30, 25, 3, 1 },
+						{ 3, 486, 783, 21, 18, 9, 7 },
+						{ 3, 509, 783, 21, 18, 9, 7 },
+						{ 3, 339, 617, 21, 20, 7, 6 },
+						{ 3, 338, 528, 21, 21, 6, 5 },
+						{ 3, 450, 505, 30, 21, 5, 5 },
 					},
 				},
 			},
@@ -10568,39 +10580,39 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 3, 122, 412, 38, 22, 2, 3 },
-						{ 3, 162, 412, 38, 22, 2, 3 },
-						{ 3, 202, 412, 38, 22, 2, 3 },
-						{ 3, 242, 412, 38, 22, 2, 3 },
-						{ 3, 122, 412, 38, 22, 2, 3 },
-						{ 3, 282, 412, 38, 22, 2, 3 },
-						{ 3, 322, 412, 38, 22, 2, 3 },
-						{ 3, 242, 412, 38, 22, 2, 3 },
+						{ 3, 756, 387, 38, 22, 2, 3 },
+						{ 3, 796, 387, 38, 22, 2, 3 },
+						{ 3, 836, 387, 38, 22, 2, 3 },
+						{ 3, 876, 387, 38, 22, 2, 3 },
+						{ 3, 756, 387, 38, 22, 2, 3 },
+						{ 3, 916, 387, 38, 22, 2, 3 },
+						{ 3, 956, 387, 38, 22, 2, 3 },
+						{ 3, 876, 387, 38, 22, 2, 3 },
 					},
 				},
 				run = {
 					fps = 8,
 					frames = {
-						{ 3, 362, 412, 38, 22, 2, 3 },
-						{ 3, 888, 388, 39, 22, 2, 3 },
-						{ 3, 402, 412, 38, 22, 4, 3 },
-						{ 3, 929, 388, 39, 22, 3, 3 },
-						{ 3, 442, 412, 38, 22, 2, 3 },
-						{ 3, 600, 412, 37, 22, 2, 3 },
+						{ 3, 2, 411, 38, 22, 2, 3 },
+						{ 3, 514, 387, 39, 22, 2, 3 },
+						{ 3, 42, 411, 38, 22, 4, 3 },
+						{ 3, 555, 387, 39, 22, 3, 3 },
+						{ 3, 82, 411, 38, 22, 2, 3 },
+						{ 3, 240, 411, 37, 22, 2, 3 },
 					},
 				},
 				atk = {
 					fps = 14,
 					frames = {
-						{ 3, 122, 412, 38, 22, 2, 3 },
-						{ 3, 777, 483, 38, 21, 2, 4 },
-						{ 3, 170, 574, 38, 20, 2, 5 },
-						{ 3, 298, 662, 38, 19, 2, 6 },
-						{ 3, 412, 338, 38, 23, 5, 2 },
-						{ 3, 482, 412, 38, 22, 5, 3 },
-						{ 3, 210, 574, 38, 20, 4, 5 },
-						{ 3, 777, 483, 38, 21, 3, 4 },
-						{ 3, 122, 412, 38, 22, 2, 3 },
+						{ 3, 756, 387, 38, 22, 2, 3 },
+						{ 3, 342, 482, 38, 21, 2, 4 },
+						{ 3, 795, 551, 38, 20, 2, 5 },
+						{ 3, 2, 660, 38, 19, 2, 6 },
+						{ 3, 202, 337, 38, 23, 5, 2 },
+						{ 3, 122, 411, 38, 22, 5, 3 },
+						{ 3, 835, 551, 38, 20, 4, 5 },
+						{ 3, 342, 482, 38, 21, 3, 4 },
+						{ 3, 756, 387, 38, 22, 2, 3 },
 					},
 				},
 			},
@@ -10615,41 +10627,41 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 2, 498, 573, 21, 37, 7, 1 },
-						{ 2, 521, 573, 21, 37, 7, 1 },
-						{ 2, 333, 573, 22, 37, 7, 1 },
-						{ 2, 521, 573, 21, 37, 7, 1 },
-						{ 2, 498, 573, 21, 37, 7, 1 },
-						{ 2, 544, 573, 21, 37, 7, 1 },
-						{ 2, 357, 573, 22, 37, 6, 1 },
-						{ 2, 567, 573, 21, 37, 7, 1 },
+						{ 2, 333, 573, 21, 37, 7, 1 },
+						{ 2, 356, 573, 21, 37, 7, 1 },
+						{ 2, 168, 573, 22, 37, 7, 1 },
+						{ 2, 356, 573, 21, 37, 7, 1 },
+						{ 2, 333, 573, 21, 37, 7, 1 },
+						{ 2, 379, 573, 21, 37, 7, 1 },
+						{ 2, 192, 573, 22, 37, 6, 1 },
+						{ 2, 402, 573, 21, 37, 7, 1 },
 					},
 				},
 				run = {
 					fps = 6,
 					frames = {
-						{ 2, 498, 573, 21, 37, 7, 1 },
-						{ 2, 521, 573, 21, 37, 7, 1 },
-						{ 2, 333, 573, 22, 37, 7, 1 },
-						{ 2, 521, 573, 21, 37, 7, 1 },
-						{ 2, 498, 573, 21, 37, 7, 1 },
-						{ 2, 544, 573, 21, 37, 7, 1 },
-						{ 2, 357, 573, 22, 37, 6, 1 },
-						{ 2, 567, 573, 21, 37, 7, 1 },
+						{ 2, 333, 573, 21, 37, 7, 1 },
+						{ 2, 356, 573, 21, 37, 7, 1 },
+						{ 2, 168, 573, 22, 37, 7, 1 },
+						{ 2, 356, 573, 21, 37, 7, 1 },
+						{ 2, 333, 573, 21, 37, 7, 1 },
+						{ 2, 379, 573, 21, 37, 7, 1 },
+						{ 2, 192, 573, 22, 37, 6, 1 },
+						{ 2, 402, 573, 21, 37, 7, 1 },
 					},
 				},
 				atk = {
 					fps = 14,
 					frames = {
-						{ 2, 498, 573, 21, 37, 7, 1 },
-						{ 2, 357, 573, 22, 37, 6, 1 },
-						{ 2, 381, 573, 22, 37, 6, 1 },
-						{ 2, 308, 573, 23, 37, 5, 1 },
-						{ 2, 256, 573, 24, 37, 7, 1 },
-						{ 2, 282, 573, 24, 37, 7, 1 },
-						{ 2, 405, 573, 22, 37, 7, 1 },
-						{ 2, 521, 573, 21, 37, 7, 1 },
-						{ 2, 498, 573, 21, 37, 7, 1 },
+						{ 2, 333, 573, 21, 37, 7, 1 },
+						{ 2, 192, 573, 22, 37, 6, 1 },
+						{ 2, 216, 573, 22, 37, 6, 1 },
+						{ 2, 143, 573, 23, 37, 5, 1 },
+						{ 2, 91, 573, 24, 37, 7, 1 },
+						{ 2, 117, 573, 24, 37, 7, 1 },
+						{ 2, 240, 573, 22, 37, 7, 1 },
+						{ 2, 356, 573, 21, 37, 7, 1 },
+						{ 2, 333, 573, 21, 37, 7, 1 },
 					},
 				},
 			},
@@ -10664,39 +10676,39 @@ return {
 				idle = {
 					fps = 6,
 					frames = {
-						{ 2, 700, 724, 34, 33, 7, 7 },
-						{ 2, 700, 724, 34, 33, 7, 7 },
-						{ 2, 700, 724, 34, 33, 7, 6 },
-						{ 2, 700, 724, 34, 33, 7, 6 },
-						{ 2, 700, 724, 34, 33, 7, 7 },
-						{ 2, 736, 724, 34, 33, 7, 7 },
-						{ 2, 700, 724, 34, 33, 7, 6 },
-						{ 2, 700, 724, 34, 33, 7, 6 },
+						{ 2, 570, 724, 34, 33, 7, 7 },
+						{ 2, 570, 724, 34, 33, 7, 7 },
+						{ 2, 570, 724, 34, 33, 7, 6 },
+						{ 2, 570, 724, 34, 33, 7, 6 },
+						{ 2, 570, 724, 34, 33, 7, 7 },
+						{ 2, 606, 724, 34, 33, 7, 7 },
+						{ 2, 570, 724, 34, 33, 7, 6 },
+						{ 2, 570, 724, 34, 33, 7, 6 },
 					},
 				},
 				run = {
 					fps = 10,
 					frames = {
-						{ 2, 700, 724, 34, 33, 7, 7 },
-						{ 2, 772, 724, 34, 33, 7, 6 },
-						{ 2, 772, 724, 34, 33, 7, 5 },
-						{ 2, 700, 724, 34, 33, 7, 5 },
-						{ 2, 808, 724, 34, 33, 7, 6 },
-						{ 2, 700, 724, 34, 33, 7, 7 },
+						{ 2, 570, 724, 34, 33, 7, 7 },
+						{ 2, 642, 724, 34, 33, 7, 6 },
+						{ 2, 642, 724, 34, 33, 7, 5 },
+						{ 2, 570, 724, 34, 33, 7, 5 },
+						{ 2, 678, 724, 34, 33, 7, 6 },
+						{ 2, 570, 724, 34, 33, 7, 7 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 2, 700, 724, 34, 33, 7, 7 },
-						{ 2, 844, 724, 34, 33, 7, 7 },
-						{ 2, 736, 724, 34, 33, 7, 7 },
-						{ 2, 880, 724, 34, 33, 7, 7 },
+						{ 2, 570, 724, 34, 33, 7, 7 },
+						{ 2, 714, 724, 34, 33, 7, 7 },
+						{ 2, 606, 724, 34, 33, 7, 7 },
+						{ 2, 750, 724, 34, 33, 7, 7 },
 						{ 2, 857, 488, 46, 39, 1, 1 },
 						{ 2, 857, 488, 46, 39, 1, 1 },
-						{ 2, 922, 532, 42, 37, 3, 3 },
-						{ 2, 495, 650, 38, 35, 5, 5 },
-						{ 2, 700, 724, 34, 33, 7, 7 },
+						{ 2, 892, 532, 42, 37, 3, 3 },
+						{ 2, 331, 650, 38, 35, 5, 5 },
+						{ 2, 570, 724, 34, 33, 7, 7 },
 					},
 				},
 			},
@@ -10711,41 +10723,41 @@ return {
 				idle = {
 					fps = 5,
 					frames = {
-						{ 3, 321, 207, 34, 25, 3, 8 },
-						{ 3, 531, 151, 34, 26, 3, 7 },
-						{ 3, 531, 151, 34, 26, 3, 7 },
-						{ 3, 321, 207, 34, 25, 3, 8 },
-						{ 3, 357, 207, 34, 25, 3, 8 },
-						{ 3, 321, 207, 34, 25, 3, 8 },
-						{ 3, 900, 261, 34, 24, 3, 9 },
-						{ 3, 321, 207, 34, 25, 3, 8 },
+						{ 3, 74, 207, 34, 25, 3, 8 },
+						{ 3, 417, 151, 34, 26, 3, 7 },
+						{ 3, 417, 151, 34, 26, 3, 7 },
+						{ 3, 74, 207, 34, 25, 3, 8 },
+						{ 3, 110, 207, 34, 25, 3, 8 },
+						{ 3, 74, 207, 34, 25, 3, 8 },
+						{ 3, 563, 260, 34, 24, 3, 9 },
+						{ 3, 74, 207, 34, 25, 3, 8 },
 					},
 				},
 				run = {
 					fps = 6,
 					frames = {
-						{ 3, 321, 207, 34, 25, 3, 8 },
-						{ 3, 531, 151, 34, 26, 3, 7 },
-						{ 3, 531, 151, 34, 26, 3, 7 },
-						{ 3, 321, 207, 34, 25, 3, 8 },
-						{ 3, 357, 207, 34, 25, 3, 8 },
-						{ 3, 321, 207, 34, 25, 3, 8 },
-						{ 3, 900, 261, 34, 24, 3, 9 },
-						{ 3, 321, 207, 34, 25, 3, 8 },
+						{ 3, 74, 207, 34, 25, 3, 8 },
+						{ 3, 417, 151, 34, 26, 3, 7 },
+						{ 3, 417, 151, 34, 26, 3, 7 },
+						{ 3, 74, 207, 34, 25, 3, 8 },
+						{ 3, 110, 207, 34, 25, 3, 8 },
+						{ 3, 74, 207, 34, 25, 3, 8 },
+						{ 3, 563, 260, 34, 24, 3, 9 },
+						{ 3, 74, 207, 34, 25, 3, 8 },
 					},
 				},
 				atk = {
 					fps = 12,
 					frames = {
-						{ 3, 321, 207, 34, 25, 3, 8 },
-						{ 3, 74, 93, 34, 27, 3, 6 },
-						{ 2, 355, 992, 34, 29, 2, 4 },
-						{ 2, 448, 862, 34, 31, 2, 2 },
-						{ 3, 74, 436, 34, 22, 6, 11 },
-						{ 3, 74, 436, 34, 22, 6, 11 },
-						{ 3, 936, 261, 34, 24, 5, 9 },
-						{ 3, 531, 151, 34, 26, 4, 7 },
-						{ 3, 321, 207, 34, 25, 3, 8 },
+						{ 3, 74, 207, 34, 25, 3, 8 },
+						{ 3, 970, 63, 34, 27, 3, 6 },
+						{ 2, 309, 992, 34, 29, 2, 4 },
+						{ 2, 361, 862, 34, 31, 2, 2 },
+						{ 3, 682, 411, 34, 22, 6, 11 },
+						{ 3, 682, 411, 34, 22, 6, 11 },
+						{ 3, 599, 260, 34, 24, 5, 9 },
+						{ 3, 417, 151, 34, 26, 4, 7 },
+						{ 3, 74, 207, 34, 25, 3, 8 },
 					},
 				},
 			},
@@ -10761,27 +10773,10 @@ return {
 				idle = {
 					fps = 3,
 					frames = {
-						{ 3, 358, 63, 21, 28, 3, 6 },
-						{ 3, 687, 122, 21, 27, 3, 7 },
-						{ 3, 710, 122, 21, 27, 3, 7 },
-						{ 3, 687, 122, 21, 27, 3, 7 },
-					},
-				},
-				run = {
-					fps = 12,
-					frames = {
-						{ 3, 687, 122, 21, 27, 3, 7 },
-						{ 3, 381, 63, 21, 28, 3, 4 },
-						{ 3, 381, 63, 21, 28, 3, 2 },
-						{ 3, 358, 63, 21, 28, 3, 2 },
-						{ 3, 404, 63, 21, 28, 3, 4 },
-						{ 3, 687, 122, 21, 27, 3, 7 },
-					},
-				},
-				jump = {
-					fps = 8,
-					frames = {
-						{ 3, 381, 63, 21, 28, 3, 3 },
+						{ 3, 294, 63, 21, 28, 3, 6 },
+						{ 3, 559, 122, 21, 27, 3, 7 },
+						{ 3, 582, 122, 21, 27, 3, 7 },
+						{ 3, 559, 122, 21, 27, 3, 7 },
 					},
 				},
 			},
@@ -10797,27 +10792,10 @@ return {
 				idle = {
 					fps = 3,
 					frames = {
-						{ 3, 706, 596, 26, 20, 3, 6 },
-						{ 3, 226, 704, 26, 19, 3, 7 },
-						{ 3, 254, 704, 26, 19, 3, 7 },
-						{ 3, 226, 704, 26, 19, 3, 7 },
-					},
-				},
-				run = {
-					fps = 12,
-					frames = {
-						{ 3, 226, 704, 26, 19, 3, 7 },
-						{ 3, 392, 529, 26, 21, 3, 4 },
-						{ 3, 392, 529, 26, 21, 3, 2 },
-						{ 3, 706, 596, 26, 20, 3, 2 },
-						{ 3, 734, 596, 26, 20, 3, 4 },
-						{ 3, 226, 704, 26, 19, 3, 7 },
-					},
-				},
-				jump = {
-					fps = 8,
-					frames = {
-						{ 3, 392, 529, 26, 21, 3, 3 },
+						{ 3, 338, 595, 26, 20, 3, 6 },
+						{ 3, 940, 681, 26, 19, 3, 7 },
+						{ 3, 968, 681, 26, 19, 3, 7 },
+						{ 3, 940, 681, 26, 19, 3, 7 },
 					},
 				},
 			},
@@ -10833,210 +10811,219 @@ return {
 				idle = {
 					fps = 3,
 					frames = {
-						{ 3, 54, 234, 23, 25, 3, 6 },
-						{ 3, 155, 179, 23, 26, 3, 5 },
-						{ 3, 180, 179, 23, 26, 3, 5 },
-						{ 3, 79, 234, 23, 25, 3, 6 },
-					},
-				},
-				run = {
-					fps = 12,
-					frames = {
-						{ 3, 79, 234, 23, 25, 3, 6 },
-						{ 3, 515, 287, 23, 24, 3, 5 },
-						{ 3, 515, 287, 23, 24, 3, 3 },
-						{ 3, 104, 234, 23, 25, 3, 2 },
-						{ 3, 205, 179, 23, 26, 3, 3 },
-						{ 3, 79, 234, 23, 25, 3, 6 },
-					},
-				},
-				jump = {
-					fps = 8,
-					frames = {
-						{ 3, 515, 287, 23, 24, 3, 4 },
+						{ 3, 826, 207, 23, 25, 3, 6 },
+						{ 3, 52, 179, 23, 26, 3, 5 },
+						{ 3, 77, 179, 23, 26, 3, 5 },
+						{ 3, 851, 207, 23, 25, 3, 6 },
 					},
 				},
 			},
 		},
 		mount_wolf = {
 			name = "달빛 늑대",
-			fw = 48,
+			fw = 59,
 			fh = 29,
-			ox = 23,
+			ox = 34,
 			oy = 28,
+			size = 1.2,
 			clips = {
 				idle = {
 					fps = 4,
 					frames = {
-						{ 3, 853, 179, 41, 25, 3, 3 },
-						{ 3, 304, 261, 41, 24, 3, 4 },
-						{ 3, 347, 261, 41, 24, 3, 4 },
-						{ 3, 896, 179, 41, 25, 3, 3 },
+						{ 3, 817, 179, 41, 25, 14, 3 },
+						{ 3, 88, 260, 41, 24, 14, 4 },
+						{ 3, 131, 260, 41, 24, 14, 4 },
+						{ 3, 860, 179, 41, 25, 14, 3 },
 					},
 				},
 				idle_front = {
 					fps = 4,
 					frames = {
-						{ 3, 127, 725, 18, 19, 14, 9 },
-						{ 3, 127, 725, 18, 19, 14, 9 },
-						{ 3, 127, 725, 18, 19, 14, 9 },
-						{ 3, 127, 725, 18, 19, 14, 9 },
+						{ 3, 423, 617, 18, 20, 25, 8 },
+						{ 3, 423, 617, 18, 20, 25, 8 },
+						{ 3, 423, 617, 18, 20, 25, 8 },
+						{ 3, 423, 617, 18, 20, 25, 8 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 3, 939, 179, 41, 25, 3, 3 },
-						{ 3, 870, 122, 41, 26, 3, 2 },
-						{ 3, 2, 207, 41, 25, 3, 3 },
-						{ 3, 45, 207, 41, 25, 3, 3 },
-						{ 3, 913, 122, 41, 26, 3, 2 },
-						{ 3, 88, 207, 41, 25, 3, 3 },
+						{ 3, 356, 459, 55, 21, 0, 5 },
+						{ 3, 729, 179, 43, 25, 7, 3 },
+						{ 3, 748, 122, 45, 26, 5, 2 },
+						{ 3, 199, 312, 45, 23, 7, 3 },
+						{ 3, 546, 179, 45, 25, 7, 3 },
+						{ 3, 651, 122, 48, 26, 4, 2 },
 					},
 				},
 				run_front = {
 					fps = 12,
 					frames = {
-						{ 3, 147, 725, 18, 19, 14, 9 },
-						{ 3, 167, 725, 18, 19, 14, 8 },
-						{ 3, 957, 786, 18, 18, 14, 9 },
-						{ 3, 187, 725, 18, 19, 14, 9 },
-						{ 3, 833, 618, 18, 20, 14, 8 },
-						{ 3, 207, 725, 18, 19, 14, 9 },
+						{ 3, 317, 895, 18, 14, 21, 8 },
+						{ 3, 443, 617, 18, 20, 21, 8 },
+						{ 3, 463, 617, 18, 20, 21, 8 },
+						{ 3, 554, 783, 18, 18, 21, 8 },
+						{ 3, 483, 617, 18, 20, 21, 8 },
+						{ 3, 122, 911, 18, 13, 21, 8 },
 					},
 				},
 				jump = {
 					fps = 8,
 					frames = {
-						{ 3, 390, 261, 41, 24, 3, 2 },
+						{ 3, 356, 459, 55, 21, 0, 5 },
 					},
 				},
 				jump_front = {
 					fps = 8,
 					frames = {
-						{ 3, 977, 786, 18, 18, 14, 8 },
+						{ 3, 317, 895, 18, 14, 21, 8 },
 					},
 				},
 			},
 		},
 		mount_deer = {
 			name = "수정 사슴",
-			fw = 38,
+			fw = 53,
 			fh = 40,
-			ox = 18,
+			ox = 29,
 			oy = 39,
+			size = 1.2,
 			clips = {
 				idle = {
 					fps = 4,
 					frames = {
-						{ 2, 71, 573, 31, 37, 3, 2 },
-						{ 2, 785, 612, 31, 36, 3, 3 },
-						{ 2, 818, 612, 31, 36, 3, 3 },
-						{ 2, 104, 573, 31, 37, 3, 2 },
+						{ 2, 979, 532, 31, 37, 14, 2 },
+						{ 2, 622, 612, 31, 36, 14, 3 },
+						{ 2, 655, 612, 31, 36, 14, 3 },
+						{ 2, 2, 573, 31, 37, 14, 2 },
 					},
 				},
 				idle_front = {
 					fps = 4,
 					frames = {
-						{ 3, 303, 882, 18, 16, 7, 23 },
-						{ 3, 303, 882, 18, 16, 7, 23 },
-						{ 3, 323, 882, 18, 16, 7, 23 },
-						{ 3, 323, 882, 18, 16, 7, 23 },
+						{ 3, 574, 783, 18, 18, 18, 21 },
+						{ 3, 574, 783, 18, 18, 18, 21 },
+						{ 3, 594, 783, 18, 18, 18, 21 },
+						{ 3, 594, 783, 18, 18, 18, 21 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 2, 169, 573, 29, 37, 5, 2 },
-						{ 2, 310, 532, 30, 38, 4, 1 },
-						{ 2, 37, 573, 32, 37, 2, 2 },
-						{ 2, 2, 573, 33, 37, 1, 2 },
-						{ 2, 276, 532, 32, 38, 2, 1 },
-						{ 2, 137, 573, 30, 37, 4, 2 },
+						{ 2, 629, 828, 49, 31, 0, 6 },
+						{ 2, 526, 928, 39, 30, 14, 9 },
+						{ 2, 567, 928, 37, 30, 13, 9 },
+						{ 2, 677, 688, 31, 34, 13, 3 },
+						{ 2, 276, 532, 34, 38, 12, 1 },
+						{ 2, 888, 573, 42, 36, 5, 3 },
 					},
 				},
 				run_front = {
 					fps = 12,
 					frames = {
-						{ 3, 343, 882, 18, 16, 7, 23 },
-						{ 3, 363, 882, 18, 16, 7, 22 },
-						{ 3, 43, 900, 18, 15, 7, 23 },
-						{ 3, 383, 882, 18, 16, 7, 23 },
-						{ 3, 672, 845, 18, 17, 7, 22 },
-						{ 3, 403, 882, 18, 16, 7, 23 },
+						{ 3, 142, 911, 18, 13, 18, 20 },
+						{ 3, 828, 702, 18, 19, 18, 20 },
+						{ 3, 614, 783, 18, 18, 18, 20 },
+						{ 3, 273, 841, 18, 17, 18, 20 },
+						{ 3, 848, 702, 18, 19, 18, 20 },
+						{ 3, 868, 702, 18, 19, 18, 20 },
 					},
 				},
 				jump = {
 					fps = 8,
 					frames = {
-						{ 2, 617, 612, 33, 36, 1, 1 },
+						{ 2, 629, 828, 49, 31, 0, 6 },
 					},
 				},
 				jump_front = {
 					fps = 8,
 					frames = {
-						{ 3, 63, 900, 18, 15, 7, 22 },
+						{ 3, 142, 911, 18, 13, 18, 20 },
 					},
 				},
 			},
 		},
 		mount_boar = {
 			name = "쇠 멧돼지",
-			fw = 44,
+			fw = 52,
 			fh = 26,
-			ox = 21,
+			ox = 29,
 			oy = 25,
+			size = 1.2,
 			clips = {
 				idle = {
 					fps = 4,
 					frames = {
-						{ 3, 452, 338, 37, 23, 3, 2 },
-						{ 3, 491, 338, 37, 23, 3, 2 },
-						{ 3, 530, 338, 37, 23, 3, 2 },
-						{ 3, 569, 338, 37, 23, 3, 2 },
+						{ 3, 282, 337, 37, 23, 11, 2 },
+						{ 3, 321, 337, 37, 23, 11, 2 },
+						{ 3, 360, 337, 37, 23, 11, 2 },
+						{ 3, 399, 337, 37, 23, 11, 2 },
 					},
 				},
 				idle_front = {
 					fps = 4,
 					frames = {
-						{ 3, 227, 725, 18, 19, 10, 6 },
-						{ 3, 227, 725, 18, 19, 10, 6 },
-						{ 3, 227, 725, 18, 19, 10, 6 },
-						{ 3, 227, 725, 18, 19, 10, 6 },
+						{ 3, 503, 617, 18, 20, 18, 5 },
+						{ 3, 503, 617, 18, 20, 18, 5 },
+						{ 3, 503, 617, 18, 20, 18, 5 },
+						{ 3, 503, 617, 18, 20, 18, 5 },
 					},
 				},
 				run = {
 					fps = 12,
 					frames = {
-						{ 3, 608, 338, 37, 23, 3, 2 },
-						{ 3, 635, 261, 37, 24, 3, 1 },
-						{ 3, 647, 338, 37, 23, 3, 2 },
-						{ 3, 686, 338, 37, 23, 3, 2 },
-						{ 3, 674, 261, 37, 24, 3, 1 },
-						{ 3, 725, 338, 37, 23, 3, 2 },
+						{ 3, 447, 551, 46, 20, 0, 3 },
+						{ 3, 875, 551, 37, 20, 9, 5 },
+						{ 3, 382, 482, 37, 21, 9, 4 },
+						{ 3, 242, 337, 38, 23, 7, 0 },
+						{ 3, 780, 312, 41, 23, 4, 2 },
+						{ 3, 519, 312, 43, 23, 2, 2 },
 					},
 				},
 				run_front = {
 					fps = 12,
 					frames = {
-						{ 3, 247, 725, 18, 19, 10, 6 },
-						{ 3, 267, 725, 18, 19, 10, 5 },
-						{ 3, 997, 786, 18, 18, 10, 6 },
-						{ 3, 287, 725, 18, 19, 10, 6 },
-						{ 3, 853, 618, 18, 20, 10, 5 },
-						{ 3, 227, 725, 18, 19, 10, 6 },
+						{ 3, 337, 895, 18, 14, 12, 6 },
+						{ 3, 293, 841, 18, 17, 12, 6 },
+						{ 3, 888, 702, 18, 19, 12, 6 },
+						{ 3, 908, 702, 18, 19, 12, 4 },
+						{ 3, 928, 702, 18, 19, 12, 6 },
+						{ 3, 542, 878, 18, 15, 12, 6 },
 					},
 				},
 				jump = {
 					fps = 8,
 					frames = {
-						{ 3, 639, 412, 37, 22, 3, 1 },
+						{ 3, 447, 551, 46, 20, 0, 3 },
 					},
 				},
 				jump_front = {
 					fps = 8,
 					frames = {
-						{ 3, 2, 806, 18, 18, 10, 5 },
+						{ 3, 337, 895, 18, 14, 12, 6 },
+					},
+				},
+			},
+		},
+		pet_crow = {
+			name = "아기 재까마귀",
+			fw = 43,
+			fh = 25,
+			ox = 19,
+			oy = 24,
+			size = 0.6,
+			clips = {
+				idle = {
+					fps = 6,
+					frames = {
+						{ 3, 930, 743, 28, 18, 5, 6 },
+						{ 3, 960, 743, 28, 18, 5, 6 },
+						{ 3, 990, 743, 28, 18, 5, 6 },
+						{ 3, 2, 763, 28, 18, 5, 6 },
+						{ 3, 930, 743, 28, 18, 5, 6 },
+						{ 3, 32, 763, 28, 18, 5, 6 },
+						{ 3, 62, 763, 28, 18, 5, 6 },
+						{ 3, 92, 763, 28, 18, 5, 6 },
 					},
 				},
 			},
@@ -11321,12 +11308,12 @@ return {
 					ox = 47,
 					oy = 75,
 					frames = {
-						{ 3, 493, 363, 81, 22, 7, 56 },
+						{ 3, 147, 362, 81, 22, 7, 56 },
 						{ 2, 216, 322, 81, 56, 6, 22 },
 						{ 2, 121, 171, 94, 78, 0, 0 },
 						{ 2, 116, 251, 91, 67, 2, 9 },
 						{ 2, 468, 251, 80, 59, 7, 17 },
-						{ 2, 790, 960, 54, 29, 19, 46 },
+						{ 2, 763, 960, 54, 29, 19, 46 },
 					},
 				},
 				fx_sweep = {
@@ -11336,12 +11323,12 @@ return {
 					ox = 64,
 					oy = 36,
 					frames = {
-						{ 3, 856, 640, 48, 19, 34, 17 },
-						{ 3, 56, 640, 100, 19, 15, 17 },
-						{ 2, 609, 573, 132, 36, 1, 0 },
-						{ 3, 135, 460, 123, 21, 0, 15 },
-						{ 3, 387, 179, 97, 25, 14, 11 },
-						{ 3, 166, 932, 72, 12, 27, 24 },
+						{ 3, 560, 639, 48, 19, 34, 17 },
+						{ 3, 727, 617, 100, 19, 15, 17 },
+						{ 2, 444, 573, 132, 36, 1, 0 },
+						{ 3, 633, 435, 123, 21, 0, 15 },
+						{ 3, 259, 179, 97, 25, 14, 11 },
+						{ 3, 590, 911, 72, 12, 27, 24 },
 					},
 				},
 				fx_pillar = {
@@ -11357,7 +11344,7 @@ return {
 						{ 1, 921, 141, 32, 107, 0, 0 },
 						{ 1, 468, 258, 31, 99, 1, 8 },
 						{ 2, 464, 171, 27, 73, 3, 34 },
-						{ 2, 946, 688, 18, 34, 7, 73 },
+						{ 2, 815, 688, 18, 34, 7, 73 },
 					},
 				},
 				fx_ember = {
@@ -11367,11 +11354,11 @@ return {
 					ox = 21,
 					oy = 51,
 					frames = {
-						{ 3, 46, 662, 42, 19, 0, 32 },
-						{ 2, 463, 612, 38, 36, 2, 15 },
+						{ 3, 744, 639, 42, 19, 0, 32 },
+						{ 2, 335, 612, 38, 36, 2, 15 },
 						{ 2, 948, 381, 42, 51, 0, 0 },
-						{ 3, 426, 207, 31, 25, 6, 26 },
-						{ 3, 34, 363, 30, 23, 6, 28 },
+						{ 3, 179, 207, 31, 25, 6, 26 },
+						{ 3, 710, 337, 30, 23, 6, 28 },
 					},
 				},
 				fx_flare = {
@@ -11381,10 +11368,10 @@ return {
 					ox = 21,
 					oy = 51,
 					frames = {
-						{ 2, 463, 612, 38, 36, 2, 15 },
+						{ 2, 335, 612, 38, 36, 2, 15 },
 						{ 2, 948, 381, 42, 51, 0, 0 },
-						{ 3, 426, 207, 31, 25, 6, 26 },
-						{ 3, 34, 363, 30, 23, 6, 28 },
+						{ 3, 179, 207, 31, 25, 6, 26 },
+						{ 3, 710, 337, 30, 23, 6, 28 },
 					},
 				},
 				fx_wave = {
@@ -11394,10 +11381,10 @@ return {
 					ox = 15,
 					oy = 26,
 					frames = {
-						{ 3, 728, 151, 28, 26, 2, 0 },
-						{ 3, 469, 436, 27, 22, 2, 4 },
-						{ 3, 643, 882, 32, 15, 0, 11 },
-						{ 3, 758, 151, 28, 26, 2, 0 },
+						{ 3, 614, 151, 28, 26, 2, 0 },
+						{ 3, 64, 435, 27, 22, 2, 4 },
+						{ 3, 132, 878, 32, 15, 0, 11 },
+						{ 3, 644, 151, 28, 26, 2, 0 },
 					},
 				},
 				fx_jump = {
@@ -11407,10 +11394,10 @@ return {
 					ox = 33,
 					oy = 32,
 					frames = {
-						{ 3, 371, 460, 63, 21, 1, 11 },
-						{ 2, 118, 794, 64, 32, 1, 0 },
-						{ 3, 440, 552, 67, 20, 0, 12 },
-						{ 3, 206, 900, 56, 14, 5, 18 },
+						{ 3, 869, 435, 63, 21, 1, 11 },
+						{ 2, 2, 794, 64, 32, 1, 0 },
+						{ 3, 2, 551, 67, 20, 0, 12 },
+						{ 3, 685, 878, 56, 14, 5, 18 },
 					},
 				},
 				fx_roar = {
@@ -11420,7 +11407,7 @@ return {
 					ox = 61,
 					oy = 114,
 					frames = {
-						{ 3, 398, 363, 93, 22, 14, 92 },
+						{ 3, 52, 362, 93, 22, 14, 92 },
 						{ 2, 139, 88, 103, 81, 10, 33 },
 						{ 1, 424, 141, 121, 114, 0, 0 },
 						{ 1, 547, 141, 119, 110, 1, 4 },
@@ -11608,12 +11595,12 @@ return {
 					ox = 45,
 					oy = 68,
 					frames = {
-						{ 3, 601, 287, 78, 23, 7, 49 },
+						{ 3, 226, 286, 78, 23, 7, 49 },
 						{ 2, 664, 381, 79, 51, 6, 21 },
 						{ 2, 614, 171, 90, 72, 0, 0 },
 						{ 2, 2, 251, 89, 69, 0, 0 },
 						{ 2, 306, 251, 78, 62, 6, 7 },
-						{ 2, 184, 794, 57, 32, 16, 37 },
+						{ 2, 68, 794, 57, 32, 16, 37 },
 					},
 				},
 				fx_shock = {
@@ -11623,10 +11610,10 @@ return {
 					ox = 18,
 					oy = 24,
 					frames = {
-						{ 3, 458, 151, 35, 26, 1, 0 },
-						{ 3, 827, 261, 35, 24, 0, 2 },
-						{ 3, 302, 900, 34, 14, 2, 12 },
-						{ 3, 802, 338, 34, 23, 1, 3 },
+						{ 3, 344, 151, 35, 26, 1, 0 },
+						{ 3, 490, 260, 35, 24, 0, 2 },
+						{ 3, 781, 878, 34, 14, 2, 12 },
+						{ 3, 476, 337, 34, 23, 1, 3 },
 					},
 				},
 				fx_dust = {
@@ -11636,10 +11623,10 @@ return {
 					ox = 23,
 					oy = 24,
 					frames = {
-						{ 3, 238, 917, 39, 13, 3, 11 },
-						{ 3, 550, 234, 45, 24, 0, 0 },
-						{ 3, 562, 313, 45, 23, 0, 1 },
-						{ 3, 392, 864, 37, 16, 5, 8 },
+						{ 3, 681, 895, 39, 13, 3, 11 },
+						{ 3, 335, 234, 45, 24, 0, 0 },
+						{ 3, 246, 312, 45, 23, 0, 1 },
+						{ 3, 2, 860, 37, 16, 5, 8 },
 					},
 				},
 				fx_lantern = {
@@ -11649,12 +11636,12 @@ return {
 					ox = 33,
 					oy = 58,
 					frames = {
-						{ 3, 423, 882, 17, 16, 25, 26 },
+						{ 3, 920, 860, 17, 16, 25, 26 },
 						{ 2, 948, 488, 40, 39, 13, 14 },
 						{ 2, 151, 322, 63, 57, 2, 1 },
 						{ 2, 919, 322, 65, 54, 0, 0 },
 						{ 2, 252, 381, 59, 53, 4, 1 },
-						{ 2, 847, 928, 33, 30, 18, 11 },
+						{ 2, 819, 928, 33, 30, 18, 11 },
 					},
 				},
 				fx_rally = {
@@ -11680,12 +11667,12 @@ return {
 					ox = 36,
 					oy = 53,
 					frames = {
-						{ 3, 2, 483, 54, 21, 10, 35 },
+						{ 3, 581, 459, 54, 21, 10, 35 },
 						{ 2, 380, 322, 72, 56, 0, 0 },
 						{ 2, 722, 436, 69, 44, 1, 12 },
 						{ 2, 745, 381, 69, 51, 1, 0 },
-						{ 2, 743, 573, 66, 36, 3, 15 },
-						{ 3, 201, 946, 54, 11, 9, 40 },
+						{ 2, 578, 573, 66, 36, 3, 15 },
+						{ 3, 625, 926, 54, 11, 9, 40 },
 					},
 				},
 				fx_roar = {
@@ -11695,7 +11682,7 @@ return {
 					ox = 55,
 					oy = 94,
 					frames = {
-						{ 3, 585, 63, 99, 27, 6, 71 },
+						{ 3, 475, 63, 99, 27, 6, 71 },
 						{ 2, 512, 171, 100, 72, 5, 26 },
 						{ 1, 646, 258, 109, 98, 1, 0 },
 						{ 1, 443, 749, 110, 87, 0, 7 },
@@ -12396,7 +12383,7 @@ return {
 			id = "st_manor",
 			area = "city",
 			scene = "ct_castle",
-			x = 112,
+			x = 272,
 			y = 176,
 			name = "성의 문장",
 			act = "문장 살피기",
@@ -16035,7 +16022,6 @@ return {
 		},
 		{ id = "dust", npc = "merchant", name = "달가루", from = 8, price = 20, perLv = false, max = 9999, item = false, goods = false },
 		{ id = "charm", npc = "merchant", name = "달빛 부적", from = 10, price = false, perLv = 300, max = 10, item = false, goods = "charm" },
-		{ id = "statreset", npc = "merchant", name = "능력치 초기화 주문서", from = 10, price = false, perLv = 2000, max = 1, item = false, goods = "statreset" },
 	},
 	OPEN = { bag = 2, store = 1, forge = 8 },
 	NPCDO = { merchant = "shop", smith = "smith", keeper = "store", board = "daily", auctioneer = "auction", clerk = "daily", warden = "rift", citysmith = "smith", citykeeper = "store" },
@@ -17196,10 +17182,6 @@ return {
 			{
 				"charm",
 				{ 300, 8700, 9000, 18000, 30000 },
-			},
-			{
-				"statreset",
-				{ 2000, 58000, 60000, 120000, 200000 },
 			},
 		},
 		info = {
@@ -19403,6 +19385,7 @@ return {
 				ride_mount_wolf = { 72, 270 },
 				ride_mount_deer = { 90, 270 },
 				ride_mount_boar = { 108, 270 },
+				ride_pet_crow = { 126, 270 },
 			},
 			size = 18,
 		},
@@ -19688,6 +19671,7 @@ return {
 				ride_mount_wolf = { 216, 600 },
 				ride_mount_deer = { 0, 624 },
 				ride_mount_boar = { 24, 624 },
+				ride_pet_crow = { 48, 624 },
 			},
 			size = 24,
 		},
@@ -22372,45 +22356,65 @@ MODULES['ReplicatedStorage/shared/lune/data/ride.generated'] = function(script, 
 -- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/export_lune_game.mjs).
 -- 펫 · 탈것(dino-workshop/js/lune/design/ride.js): pets · mounts = 이름(그림은 chars.generated의 같은 이름 — 탈것은 <동작>_front가 영웅 앞에 다시 그리는 점) ·
 --  seat = 탈것의 기준점(발밑 가운데)에서 영웅의 발까지(dx는 오른쪽을 볼 때) · bob = 동작의 장마다 영웅을 더 내리는 점(위 = 음수) · pet = 따라오는 자리(behind) · 줍는 거리(reach) · 한 번에 하나씩(every초)
+--  riderSize = 탄 동안 영웅을 그리는 크기(서기 그림 그대로 줄여서 — 화면 화소에 맞춰 Sprite.sizeOn) · bobx = 동작의 장마다 영웅을 옮기는 가로 점(어깨를 따라 — 오른쪽을 볼 때 · 안장은 <동작>_front에 그려져 있다)
+--  seat · bob · bobx는 탈것 그림의 점 — 탈것은 chars.generated의 size배로 그리므로 영웅의 자리도 그 배(rideView) · mountSpeed = 탄 동안 달리기 배수
 return {
 	pets = {
 		{ id = "pet_silver", name = "은빛 달토끼" },
 		{ id = "pet_lantern", name = "초롱 달토끼" },
 		{ id = "pet_scarf", name = "목도리 달토끼" },
+		{ id = "pet_crow", name = "아기 재까마귀", free = "coupon", line = "쿠폰으로 받은 펫 — 떨어진 것을 대신 줍는다" },
 	},
 	mounts = {
 		{
 			id = "mount_wolf",
 			name = "달빛 늑대",
-			seat = { dx = -1, dy = -15 },
+			seat = { dx = -1, dy = -16 },
 			bob = {
 				idle = { 0, 0, 0, 0 },
-				run = { 0, -1, 0, 0, -1, 0 },
-				jump = { -1 },
+				run = { 0, 0, 0, 0, 0, 0 },
+				jump = { 0 },
+			},
+			bobx = {
+				idle = { 0, 0, 0, 0 },
+				run = { -4, -4, -4, -4, -4, -4 },
+				jump = { -4 },
 			},
 		},
 		{
 			id = "mount_deer",
 			name = "수정 사슴",
-			seat = { dx = -3, dy = -12 },
+			seat = { dx = -3, dy = -14 },
 			bob = {
 				idle = { 0, 0, 0, 0 },
-				run = { 0, -1, 0, 0, -1, 0 },
+				run = { -1, -1, -1, -1, -1, -1 },
 				jump = { -1 },
+			},
+			bobx = {
+				idle = { 0, 0, 0, 0 },
+				run = { 0, 0, 0, 0, 0, 0 },
+				jump = { 0 },
 			},
 		},
 		{
 			id = "mount_boar",
 			name = "쇠 멧돼지",
-			seat = { dx = -3, dy = -15 },
+			seat = { dx = -3, dy = -16 },
 			bob = {
 				idle = { 0, 0, 0, 0 },
-				run = { 0, -1, 0, 0, -1, 0 },
-				jump = { -1 },
+				run = { 1, 1, 1, 1, 1, 1 },
+				jump = { 1 },
+			},
+			bobx = {
+				idle = { 0, 0, 0, 0 },
+				run = { -6, -6, -6, -6, -6, -6 },
+				jump = { -6 },
 			},
 		},
 	},
-	pet = { behind = 44, base = 40, per = 2, max = 160, chase = 150, reach = 96, slack = 32, every = 0.3, windup = 0.2, warpX = 384, warpY = 72, stuck = 1.2, lookUp = 18, lookDown = 4 },
+	pet = { behind = 64, base = 40, per = 2, max = 160, chase = 150, reach = 96, slack = 32, every = 0.3, windup = 0.2, warpX = 384, warpY = 72, stuck = 1.2, magnet = 24 },
+	riderSize = 1,
+	mountSpeed = 1.3,
 }
 
 end
@@ -23012,23 +23016,23 @@ local M = {
 					x = 108,
 					y = 176,
 					dir = 1,
-					h = 78,
+					h = 88,
 					lines = { "이 세계를 가장 크게 도운 이들의 이름이 새겨져 있다." },
 					stone = true,
-					face = { 91, 83, 126, 137 },
+					face = { 68, 76, 148, 135 },
 				},
 				{
 					id = "hall_power",
 					cell = 0,
 					name = "전투력의 비석",
 					role = "명예의 전당",
-					x = 197,
+					x = 201,
 					y = 176,
 					dir = 1,
-					h = 78,
+					h = 88,
 					lines = { "가장 강한 이들의 이름이 새겨져 있다." },
 					stone = true,
-					face = { 180, 84, 215, 137 },
+					face = { 161, 76, 242, 135 },
 				},
 				{
 					id = "hall_level",
@@ -23038,10 +23042,10 @@ local M = {
 					x = 294,
 					y = 176,
 					dir = 1,
-					h = 78,
+					h = 88,
 					lines = { "가장 멀리 나아간 이들의 이름이 새겨져 있다." },
 					stone = true,
-					face = { 277, 85, 312, 137 },
+					face = { 254, 75, 335, 135 },
 				},
 			},
 			ret = "town",
@@ -23213,6 +23217,7 @@ local M = {
 					face = false,
 				},
 			},
+			inst = "party",
 			ret = "town",
 		},
 		r1a1 = {
@@ -23529,6 +23534,7 @@ local M = {
 				{ id = "ledge", a = 128, b = 208, y = 144 },
 				{ id = "high", a = 208, b = 272, y = 64 },
 			},
+			inst = "party",
 			ret = false,
 		},
 		r1af = {
@@ -35542,6 +35548,7 @@ local M = {
 					range = { 76, 692 },
 				},
 			},
+			inst = "party",
 			ret = "r1bv",
 		},
 		r2c4 = {
@@ -38981,6 +38988,51 @@ local M = {
 					stone = false,
 					face = false,
 				},
+				{
+					id = "castle_robux",
+					cell = 0,
+					name = "후원의 판",
+					role = "대영주의 성",
+					x = 140,
+					y = 176,
+					dir = 1,
+					h = 102,
+					lines = { "이 세계를 가장 크게 도운 이들의 이름이 걸려 있다." },
+					stone = true,
+					face = { 95, 48, 185, 70 },
+					board = "robux",
+					pad = 1,
+				},
+				{
+					id = "castle_power",
+					cell = 0,
+					name = "전투력의 판",
+					role = "대영주의 성",
+					x = 140,
+					y = 176,
+					dir = 1,
+					h = 70,
+					lines = { "가장 강한 이들의 이름이 걸려 있다." },
+					stone = true,
+					face = { 95, 80, 185, 102 },
+					board = "power",
+					pad = 1,
+				},
+				{
+					id = "castle_level",
+					cell = 0,
+					name = "레벨의 판",
+					role = "대영주의 성",
+					x = 140,
+					y = 176,
+					dir = 1,
+					h = 39,
+					lines = { "가장 멀리 나아간 이들의 이름이 걸려 있다." },
+					stone = true,
+					face = { 95, 111, 185, 133 },
+					board = "level",
+					pad = 1,
+				},
 			},
 			ret = "ct",
 		},
@@ -40589,6 +40641,10 @@ setmetatable(M.scenes, { __index = function(t, k)
 	local base = if type(k) == "string" then string.match(k, "^(.-)#%d+$") else nil
 	return if base then rawget(t, base) else nil
 end })
+-- 방의 이름 → 장면의 이름(rf1#3 → rf1 · r1c4#5 → r1c4 · 따로 된 방이 아니면 그대로). 퀘스트 · 튜토리얼 · NPC처럼 설계의 장면 이름과 견줄 때 쓴다(2026-10-21 — 파티마다 따로 들어가는 장면 inst)
+function M.base(key: string?): string?
+	return if type(key) == "string" then (string.match(key, "^(.-)#%d+$") or key) else key
+end
 return M
 
 end
@@ -40642,7 +40698,15 @@ return {
 		buffs = { at = "tr", x = 770, y = 14, w = 174, h = 40, name = "버프" },
 		quest = { at = "tr", x = 724, y = 60, w = 220, h = 204, name = "퀘스트 알리미" },
 		vitals = { at = "bl", x = 16, y = 480, w = 248, h = 44, name = "체력과 직업 게이지" },
-		skills = { at = "bc", x = 371, y = 430, w = 218, h = 94, name = "스킬 칸" },
+		skills = {
+			at = "bc",
+			x = 352,
+			y = 430,
+			w = 256,
+			h = 94,
+			name = "스킬 칸",
+			narrow = { below = 820, w = 220 },
+		},
 		menu = {
 			at = "br",
 			x = 648,
@@ -40683,6 +40747,7 @@ return {
 		{ id = "cash", name = "달빛 상점", key = "Backquote", from = 1, menu = false, need = false },
 		{ id = "rift", name = "토벌", key = false, from = 1, menu = false, need = false },
 		{ id = "tome", name = "모험의 서", key = false, from = 1, menu = true, need = "tome" },
+		{ id = "coupon", name = "쿠폰", key = false, from = 1, menu = true, need = false },
 	},
 	touch = {
 		{ no = 1, name = "이동 패드", kind = "pad", slot = false, act = false, x = 10, y = 138, w = 64, h = 64 },
@@ -40720,7 +40785,7 @@ return {
 			xpText = "100.00%",
 			fx = { hold = 0.35, drain = 0.9, fill = 0.9, flash = 0.22, flashA = 0.75, delta = 0.9, deltaUp = 10, merge = 0.6, lagColor = "#f7d9dc", gainColor = "#8fd68a" },
 		},
-		skills = { cols = 6, rows = 2, slot = 28, gap = 10, keyUp = 17, rowGap = 4, keyMax = 5 },
+		skills = { cols = 7, rows = 2, slot = 28, gap = 10, keyUp = 17, rowGap = 4, keyMax = 5 },
 		menu = {
 			max = 8,
 			slot = 30,
@@ -40836,11 +40901,23 @@ return {
 			tagX = 84,
 			valueRight = 40,
 			plusW = 30,
+			resetW = 92,
 			tip = { w = 236, pad = 10, gap = 8, title = 20, line = 14, lines = 3 },
 		},
 		skill = { tabW = 30, tabGap = 4, infoY = 24, autoW = 110, top = 54, cols = 2, rows = 6, row = 36, slot = 30, colW = 162, colGap = 12, plusW = 26, gap = 24, detailW = 240, textLine = 16, textLines = 9, effGap = 6 },
 		auction = { w = 600, h = 320, top = 28, purseW = 104, slotsW = 110, catW = 52, catGap = 4, catH = 22, classW = 104, refreshW = 76, searchY = 56, searchW = 200, sortW = 104, listTop = 84, row = 28, icon = 24, priceW = 84, btnW = 60, btnH = 22, sellerW = 96, leftW = 76, sellW = 88, backW = 52, listW = 300, formX = 320, field = 22, labelW = 72, formRow = 30, qtyField = 52, qtyLabelW = 30, ofW = 60, priceField = 110, hourW = 68, registerW = 120, allW = 88, footH = 30, askW = 60, bar = 4 },
 		touchMenu = { w = 240, row = 40, btnH = 36, pad = 6, top = 40, bottom = 8, bar = 4 },
+		touchChooser = { cols = 5, cell = 44, gap = 6, nameH = 28, pad = 12, titleH = 34, footH = 44, x = 12, top = 8, bottom = 8, bar = 4 },
+		coupon = {
+			w = 300,
+			guideH = 34,
+			fieldY = 40,
+			fieldH = 26,
+			btnW = 64,
+			noteY = 76,
+			noteH = 30,
+			words = { guide = "받은 쿠폰 번호를 적고 「사용」을 누르세요.\n한 계정에 한 번씩 쓸 수 있습니다.", placeholder = "쿠폰 번호", use = "사용", busy = "확인 중…", empty = "쿠폰 번호를 적어 주세요.", got = "「{name}」을(를) 받았습니다 — 가방의 「캐시」 탭", fail = "쓸 수 없는 쿠폰입니다." },
+		},
 	},
 	bubble = { textW = 260, lines = 3, padX = 12, padY = 8, tail = 8, up = 2 },
 	dialog = {
@@ -41082,123 +41159,127 @@ return {
 		keep = 114,
 	},
 	quick = {
-		n = 12,
-		cols = 6,
-		keys = { "LeftControl", "Q", "A", "LeftShift", "W", "S", "E", "D", "R", "F", "One", "Two" },
+		n = 14,
+		cols = 7,
+		keys = { "LeftControl", "Q", "A", "LeftShift", "W", "S", "E", "D", "R", "F", "One", "Two", "X", "Three" },
+		rows = {
+			{ 1, 2, 3, 4, 5, 6, 13 },
+			{ 7, 8, 9, 10, 11, 12, 14 },
+		},
 		start = { "potion", "mob", "boss", "move" },
 		potion = "potion1",
 		blink = 1.6,
 		drag = 5,
 		emptyAlpha = 0.5,
 		words = { pick = "놓을 칸을 고르세요", hint = "스킬을 누르거나 끌어서 퀵슬롯에 놓는다", armed = "반짝이는 칸을 누르면 그 칸에 놓인다", at = "퀵슬롯 {key}", none = "퀵슬롯에 없음", passive = "늘 켜져 있다(퀵슬롯에 놓지 않는다)", unlearned = "배우면 퀵슬롯에 놓을 수 있다", later = "아직 쓸 수 없는 스킬이다", slot = "퀵슬롯 {n}" },
-		labels = { "Ctrl", "Q", "A", "Shift", "W", "S", "E", "D", "R", "F", "1", "2" },
+		labels = { "Ctrl", "Q", "A", "Shift", "W", "S", "E", "D", "R", "F", "1", "2", "X", "3" },
 		touch = { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 },
 		touchCheck = {
 			{
-				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
-				{ false, "m", "b", "d", "potion", false, false, false, false, false, false, false },
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
+				{ false, "m", "b", "d", "potion", false, false, false, false, false, false, false, false, false },
 			},
 			{
-				{ "potion", "m", "b", "d", "x", false, false, false, false, false, false, false },
-				{ false, "m", "b", "d", "x", "potion", false, false, false, false, false, false },
+				{ "potion", "m", "b", "d", "x", false, false, false, false, false, false, false, false, false },
+				{ false, "m", "b", "d", "x", "potion", false, false, false, false, false, false, false, false },
 			},
 			{
-				{ "potion", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k" },
-				{ false, "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k" },
+				{ "potion", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", false, false },
+				{ false, "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", false, false },
 			},
 			{
-				{ false, "m", false, false, false, false, false, false, false, false, false, false },
-				{ false, "m", false, false, false, false, false, false, false, false, false, false },
+				{ false, "m", false, false, false, false, false, false, false, false, false, false, false, false },
+				{ false, "m", false, false, false, false, false, false, false, false, false, false, false, false },
 			},
 			{
-				{ "potion", "m", "b", "d", "e", false, "g", "h", "i", "j", "k", "l" },
-				{ false, "m", "b", "d", "e", "potion", "g", "h", "i", "j", "k", "l" },
+				{ "potion", "m", "b", "d", "e", false, "g", "h", "i", "j", "k", "l", false, false },
+				{ false, "m", "b", "d", "e", "potion", "g", "h", "i", "j", "k", "l", false, false },
 			},
 		},
 		check = {
 			{
-				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
 				"place",
 				"x",
 				5,
-				{ "potion", "m", "b", "d", "x", false, false, false, false, false, false, false },
+				{ "potion", "m", "b", "d", "x", false, false, false, false, false, false, false, false, false },
 			},
 			{
-				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
 				"place",
 				"m",
 				6,
-				{ "potion", false, "b", "d", false, "m", false, false, false, false, false, false },
+				{ "potion", false, "b", "d", false, "m", false, false, false, false, false, false, false, false },
 			},
 			{
-				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
 				"place",
 				"b",
 				2,
-				{ "potion", "b", "m", "d", false, false, false, false, false, false, false, false },
+				{ "potion", "b", "m", "d", false, false, false, false, false, false, false, false, false, false },
 			},
 			{
-				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
 				"place",
 				"x",
 				1,
-				{ "x", "m", "b", "d", false, false, false, false, false, false, false, false },
+				{ "x", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
 			},
 			{
-				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
 				"place",
 				"x",
 				2,
-				{ "potion", "x", "b", "d", false, false, false, false, false, false, false, false },
+				{ "potion", "x", "b", "d", false, false, false, false, false, false, false, false, false, false },
 			},
 			{
-				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
 				"place",
 				"potion",
 				3,
-				{ "b", "m", "potion", "d", false, false, false, false, false, false, false, false },
+				{ "b", "m", "potion", "d", false, false, false, false, false, false, false, false, false, false },
 			},
 			{
-				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
 				"place",
 				"m",
 				2,
-				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
 			},
 			{
-				{ "potion", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k" },
+				{ "potion", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", false, false },
 				"place",
 				"x",
 				1,
-				{ "x", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k" },
+				{ "x", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", false, false },
 			},
 			{
-				{ "potion", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k" },
+				{ "potion", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", false, false },
 				"place",
 				"x",
 				4,
-				{ "potion", "a", "b", "x", "d", "e", "f", "g", "h", "i", "j", "k" },
+				{ "potion", "a", "b", "x", "d", "e", "f", "g", "h", "i", "j", "k", false, false },
 			},
 			{
-				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
 				"clear",
 				"",
 				2,
-				{ "potion", false, "b", "d", false, false, false, false, false, false, false, false },
+				{ "potion", false, "b", "d", false, false, false, false, false, false, false, false, false, false },
 			},
 			{
-				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
 				"clear",
 				"",
 				1,
-				{ false, "m", "b", "d", false, false, false, false, false, false, false, false },
+				{ false, "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
 			},
 			{
-				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
 				"clear",
 				"",
 				9,
-				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false },
+				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
 			},
 		},
 	},
@@ -46393,6 +46474,8 @@ local packets = {
 	SkillAuto = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 2, Burst = 3 } },
 	-- 전직하며 받은 공짜 초기화를 쓴다(스킬 창의 「초기화」 — 찍은 스킬을 모두 되돌린다)
 	SkillReset = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 2 } },
+	StatReset = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 2 } }, -- 찍은 능력치를 모두 되돌린다(공짜 — 2026-10-21)
+	Coupon = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 1, Burst = 2 } }, -- 쿠폰 번호를 적었다 → { ok, why?, pet? }(2026-10-21 · 서버 modules/cash.luau의 CashServer.coupon)
 	-- 물건을 다룬다: 하는 일(equip · unequip · dismantle · buy · enhance · transfer · restore · grow · storeIn · storeOut)과 그 대상 둘(번호 · 부위 · 수 등)
 	Item = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any, t.any }, RateLimit = { PerSecond = 8, Burst = 12 } },
 	-- 파티: 하는 일(invite · accept · decline · leave)과 대상(초대할 사람의 번호)
@@ -47128,6 +47211,7 @@ end
 
 -- 그 맵에 들렀다
 function Achieve.visited(a, scene: string)
+	scene = SCENES.base(scene) -- 파티마다 따로 들어가는 장면의 방(r1c4#5)도 그 맵으로(2026-10-21)
 	local sc = SCENES.scenes[scene]
 	local r = sc and sc.region and Achieve.REGION[sc.region]
 	if r and r.mapSet[scene] then
@@ -49014,7 +49098,7 @@ local function whole(v: any, lo: number, hi: number): boolean
 end
 
 function Cash.new()
-	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petOut = false, mount = false }
+	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petOut = false, mount = false, coupons = {} } -- coupons = 이 계정이 쓴 쿠폰 { [번호] = 쓴 때 }(2026-10-21)
 end
 
 function Cash.product(key: any)
@@ -49298,7 +49382,7 @@ function Cash.pack(c)
 	end
 	table.sort(pets)
 	table.sort(mounts)
-	return { box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petOut = c.petOut, mount = c.mount }
+	return { box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petOut = c.petOut, mount = c.mount, coupons = table.clone(c.coupons) }
 end
 
 -- 꼴이 이상한 것은 버린다(없는 아이템 · 이상한 수). 생기기 전의 저장 = 빈 것
@@ -49345,7 +49429,51 @@ function Cash.unpack(data: any, baseChars: number?)
 	end
 	c.petOut = if typeof(data.petOut) == "string" and c.pets[data.petOut] then data.petOut else false
 	c.mount = if typeof(data.mount) == "string" and c.mounts[data.mount] then data.mount else false
+	if typeof(data.coupons) == "table" then
+		local n = 0
+		for code, at in data.coupons do
+			if typeof(code) == "string" and #code <= Cash.COUPON_MAX and whole(at, 0, 1e10) and n < 200 then
+				c.coupons[code] = at
+				n += 1
+			end
+		end
+	end
 	return c
+end
+
+-- ---------- 쿠폰(2026-10-21 사용자: "쿠폰 코드 입력창있어야하고 그 쿠폰 입력하면 그 기본펫 지급하는 방식으로 합니다") ----------
+--  쿠폰의 목록은 서버에만 있다(server/lune/modules/coupons.luau — 화면에 보내지 않는다). 여기는 적은 글을 고르는 셈과 주는 셈만.
+Cash.COUPON_MAX = 24 -- 쿠폰 번호의 가장 긴 글자 수
+-- 적은 글 → 쿠폰 번호의 꼴(앞뒤 빈칸 · 가운데 빈칸 · 줄표를 빼고 대문자로). 쓸 수 없는 글이면 nil
+function Cash.couponCode(text: any): string?
+	if typeof(text) ~= "string" or #text > 64 then
+		return nil
+	end
+	local code = string.upper((string.gsub(text, "[%s%-]", "")))
+	if code == "" or #code > Cash.COUPON_MAX or string.find(code, "[^%w]") then
+		return nil
+	end
+	return code
+end
+-- 쿠폰을 쓴다: def = 서버의 쿠폰 { code, pet?, from?, till? } · 됐으면 true와 받은 것({ pet = 이름표 }), 아니면 false와 까닭
+function Cash.redeem(acct, def, now: number): (boolean, any)
+	local c = acct.bm
+	if def.from and now < def.from then
+		return false, "아직 쓸 수 없는 쿠폰이다"
+	elseif def.till and now > def.till then
+		return false, "기간이 지난 쿠폰이다"
+	elseif c.coupons[def.code] then
+		return false, "이미 쓴 쿠폰이다"
+	end
+	if def.pet then
+		if not PET[def.pet] then
+			return false, "없는 펫이다"
+		end
+		c.pets[def.pet] = true -- 펫: 계정에 바로(꺼내 둔 것이 없으면 바로 꺼낸다 — 산 펫과 같다)
+		c.petOut = c.petOut or def.pet
+	end
+	c.coupons[def.code] = now
+	return true, { pet = def.pet }
 end
 
 -- 살 수 있게 된 상품인가: 로블록스 상품 번호가 있고(대시보드에서 만든 뒤) 게임에 만들어 둔 것(built — 펫 · 순간이동 · 꾸밈 · 패스는 아직)
@@ -50851,6 +50979,16 @@ local Kit = require(script.Parent.kit) -- 1차의 온오프 사출기 · 핵심 
 local Buffs = require(script.Parent.buffs) -- 2~4차의 버프
 local Passives = require(script.Parent.passives) -- 2~4차의 패시브
 local Quick = require(script.Parent.Parent.ui.quick)
+local RIDEIDS = {} -- 펫 · 탈것의 이름표(퀵슬롯에 놓을 수 있다 — 2026-10-21)
+do
+	local RIDE = require(script.Parent.Parent.data["ride.generated"])
+	for _, p in RIDE.pets do
+		RIDEIDS[p.id] = true
+	end
+	for _, m in RIDE.mounts do
+		RIDEIDS[m.id] = true
+	end
+end
 local RULES = COMBAT.rules
 local STATS = N.data.STATS
 local STAT_IDS = { "str", "dex", "int", "luk", "hp" }
@@ -51320,14 +51458,31 @@ function Hero.maxSkills(h)
 	end
 	h.maxHp = maxHpOf(h)
 end
--- 전직하며 받은 공짜 초기화를 쓴다: 찍은 스킬을 모두 되돌려(처음부터 주는 레벨 1만 남는다) 포인트를 다시 쓴다. 됐으면 true
+-- 스킬 초기화(공짜 · 몇 번이든 — 2026-10-21 사용자: "스텟, 스킬 초기화 완전무료로 풀겠습니다"): 찍은 스킬을 모두 되돌려(처음부터 주는 레벨 1만 남는다) 포인트를 다시 쓴다.
+--  찍은 것이 없으면(처음부터 주는 것뿐) false. 전에는 전직할 때마다 한 번(h.resets) — 그 수는 저장의 꼴을 지키려고 남겨 두었고 쓰지 않는다
 function Hero.freeReset(h): boolean
-	if (h.resets or 0) < 1 then
+	local base = grants(h.class, h.job)
+	local spent = false
+	for id, lv in h.skills do
+		if lv ~= (base[id] or 0) then
+			spent = true
+		end
+	end
+	if not spent then
 		return false
 	end
-	h.resets -= 1
 	Hero.resetSkills(h)
 	return true
+end
+
+-- 찍은 능력치가 있는가(능력치 초기화 — 공짜 · 몇 번이든, 2026-10-21)
+function Hero.statsSpent(h): boolean
+	for _, n in h.stats do
+		if n > 0 then
+			return true
+		end
+	end
+	return false
 end
 
 function Hero.resetSkills(h)
@@ -51628,6 +51783,9 @@ end
 
 -- 퀵슬롯에 놓아도 되는 스킬인가: 이 직업이 키로 쓰는 기술(싸움 수치가 있는 것)이고 배운 것
 function Hero.canSlot(h, id: string): boolean
+	if RIDEIDS[id] then
+		return true -- 펫 · 탈것(2026-10-21 — 칸의 키로 꺼내고 타기. 가진 것인지는 쓸 때 서버가 본다: Cash.setPet · setMount)
+	end
 	local goods = Items.goods(id)
 	if goods then
 		return goods.tab == "use" -- 소비 아이템은 가진 것이 없어도 놓아 둘 수 있다(다 써도 칸에 남는다 — 숫자가 0)
@@ -54353,10 +54511,16 @@ end
 -- 졸개를 잡았다. 바뀐 퀘스트들의 id를 돌려준다(없으면 빈 표). 잡는 일만 센다 — 모으는 물건은 땅에 떨어지고(Q.drops) 주우면 가방에 들어가며, 가방에 든 수가 곧 숫자다(Q.sync)
 --  **어느 맵에서 잡든 그 몬스터면 센다**(사용자 2026-10-13: "똑같은 몬스터인데 … 달그림자 사냥터  검병한테는 드랍이 안되고 사냥터 깊은곳 검병한테는 드랍이되고  이런식이면 안됩니다.
 --   하드코딩 박는식으로 개발을하면안되요" — 전에는 그 퀘스트의 맵에서 잡은 것만 세고 떨어뜨렸다). 이야기의 자리에서만 세는 일(only — 사당 지하를 지키는 「불타는 마을」)만 그 맵을 본다.
+-- 방의 이름 → 장면의 이름(r1c4#5 → r1c4): 파티마다 따로 들어가는 장면(스토리 보스 · 사당 지하 · 꿈 — scenes의 inst)의 방에서도 설계의 scene과 견준다(2026-10-21)
+local function baseOf(scene: any): any
+	return if type(scene) == "string" then (string.match(scene, "^(.-)#%d+$") or scene) else scene
+end
+Q.baseOf = baseOf
 local function counts(def, step, scene: string): boolean
 	return not step.only or def.scene == scene
 end
 function Q.onKill(book, mobKind: string, scene: string): { string }
+	scene = baseOf(scene)
 	local changed = {}
 	for id, st in book do
 		local def = byId[id]
@@ -54375,6 +54539,7 @@ end
 
 -- 그 맵에 들어갔다: 하는 중인 퀘스트의 「들르기」가 된다(2026-10-16 — 「항구의 첫날」처럼 도시를 둘러보는 퀘스트). 바뀐 퀘스트들
 function Q.onVisit(book, scene: string): { string }
+	scene = baseOf(scene)
 	local changed = {}
 	for id, st in book do
 		local def = byId[id]
@@ -54496,6 +54661,7 @@ end
 
 -- 그 장면의 그 졸개가 필요한가: 하는 중인 퀘스트에 그 졸개를 잡는 일 · 그 졸개에게서 모으는 일이 남아 있다 — 이야기의 방(사당 지하)의 졸개가 이것으로 나온다
 function Q.wantsMob(book, mobKind: string, scene: string): boolean
+	scene = baseOf(scene)
 	if not book then
 		return false
 	end
@@ -54513,6 +54679,7 @@ function Q.wantsMob(book, mobKind: string, scene: string): boolean
 end
 
 function Q.wantsKill(book, mobKind: string, scene: string): boolean
+	scene = baseOf(scene)
 	if not book then
 		return false
 	end
@@ -54534,6 +54701,7 @@ Q.USE_REACH = { x = 30, y = 24 } -- 그 자리에서 이만큼 안에 서야 한
 
 -- 그 장면에서 지금 ↑를 누를 수 있는 자리들: 하는 중인 퀘스트의 아직 못 한 일. { { quest, step, x, y, up(「!」의 높이), place, act } … }(자료의 차례)
 function Q.spotsIn(book, scene: string)
+	scene = baseOf(scene)
 	local out = {}
 	for _, def in D.list do
 		local st = book[def.id]
@@ -54550,6 +54718,7 @@ end
 
 -- 그 자리 앞에서 ↑를 눌렀다: 그 퀘스트의 아직 못 한 일 가운데 가까이에 있는 것의 숫자가 하나 오른다. 됐으면 true(아니면 nil과 까닭)
 function Q.use(book, id: any, scene: string, x: number, y: number): (boolean?, string?)
+	scene = baseOf(scene)
 	local def = Q.def(id)
 	local st = def and book[id]
 	if not def or not st or st.done then
@@ -54572,6 +54741,7 @@ end
 -- 졸개를 잡았을 때 떨어지는 퀘스트의 물건들: 아직 모으는 중인 물건마다 그 확률(pct)로 하나. { { quest, step, name, icon } … }
 --  사용자 2026-10-07: "퀘스트 아이템이나 , 기타아이템들은 왜 드롭도되지않고 그림도없고 그냥 텍스트로만 오르나요?" — 잡으면 숫자만 오르던 것을, 그림이 있는 물건이 땅에 떨어지고 주워야 오르게 고쳤다
 function Q.drops(book, mobKind: string, scene: string, rng)
+	scene = baseOf(scene)
 	local out = {}
 	for id, st in book do
 		local def = byId[id]
@@ -56455,9 +56625,14 @@ function Room:mobsInBox(x0: number, x1: number, y0: number, y1: number, cx: numb
 end
 
 -- 졸개가 맞는다. 쓰러졌으면 true.
+--  hitBy = 이번 삶에서 한 대라도 친 사람들(쓰러지면 Room:strike가 거둔다 — 퀘스트 · 일일 의뢰의 숫자를 그 사람들에게도 준다)
 function Room:damageMob(mob, dmg: number, fromX: number, byId: any): boolean
 	mob.hp = math.max(0, mob.hp - dmg)
 	mob.target, mob.aggro = byId, 5
+	if byId ~= nil and dmg > 0 then
+		mob.hitBy = mob.hitBy or {}
+		mob.hitBy[byId] = true
+	end
 	if mob.hp <= 0 then
 		mob.state, mob.t, mob.target = "dead", 0, nil
 		mob.bind, mob.stun, mob.rend, mob.cracks = 0, 0, 0, 0
@@ -56540,6 +56715,8 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 	table.insert(out.hits, entry)
 	if dead then
 		mob.marks = nil
+		local hitBy = mob.hitBy or {}
+		mob.hitBy = nil -- 다시 나오면 새로 센다
 		-- 리퍼의 영혼: 쓰러뜨리면 하나
 		if Kit.gainSoul(hero) then
 			out.kit = true
@@ -56566,13 +56743,14 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 		end
 		-- 스토리 보스와 그가 부른 졸개: 경험치도 물건도 주지 않는다(보상은 그 메인 퀘스트의 것뿐). 보스는 방에 있는 모두에게 잡은 것으로 친다 — 서버가 gains의 사람마다 퀘스트를 센다
 		if mob.boss or mob.add then
-			local gains = {}
+			local gains, credit = {}, {}
 			if mob.boss then
 				for _, h in self.heroes or { hero } do
 					table.insert(gains, { hero = h.id, xp = 0, ups = 0, level = h.level })
+					table.insert(credit, h.id)
 				end
 			end
-			table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = 0, ups = 0, gains = gains, loot = {} })
+			table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = 0, ups = 0, gains = gains, credit = credit, loot = {} })
 			return dead, dmg
 		end
 		-- 사냥터 정예: 보통의 것을 잡으면 센다(정예 자신 · 토벌의 물결은 세지 않는다)
@@ -56592,6 +56770,19 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 				myXp, myUps = xp, ups
 			end
 		end
+		-- 퀘스트 · 일일 의뢰의 숫자를 받는 사람(credit): 경험치를 받는 사람(잡은 사람 · 같은 맵의 파티원) + 이 몬스터를 한 대라도 친, 지금 이 방에 살아 있는 사람
+		--  사용자 2026-10-21: "몇마리 잡아라 … 내가 한대만 치면 다른사람이 잡아도 잡은걸로 판정이 들어가야해요" — 경험치 · 떨어지는 것은 그대로(잡은 사람 · 그 파티)
+		local credit, counted = {}, {}
+		for _, mate in list do
+			table.insert(credit, mate.id)
+			counted[mate.id] = true
+		end
+		for _, h in self.heroes or {} do
+			if hitBy[h.id] and not counted[h.id] and h.alive then
+				table.insert(credit, h.id)
+				counted[h.id] = true
+			end
+		end
 		local drop, loot = self:dropFor(hero, mob), self:lootFor(hero, mob)
 		if #list > 1 then
 			local friends = {}
@@ -56605,7 +56796,7 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 				d.friends = friends
 			end
 		end
-		table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = myXp, ups = myUps, gains = gains, drop = drop, loot = loot, elite = mob.fieldElite or nil }) -- elite = 사냥터 정예(분석이 센다)
+		table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = myXp, ups = myUps, gains = gains, credit = credit, drop = drop, loot = loot, elite = mob.fieldElite or nil }) -- elite = 사냥터 정예(분석이 센다)
 	end
 	return dead, dmg
 end
@@ -56783,7 +56974,7 @@ end
 
 -- 기술의 한 타. hero가 (x, y)에서 dir 쪽을 보고 쓴 기술의 hit(판정 하나)를 푼다. scale = 스킬 레벨에 따른 세기(없으면 1).
 --  mates = 경험치를 함께 나눌 사람들(hero도 든다 — 같은 맵의 파티원. 없으면 혼자). 떨어진 것은 그 사람들도 바로 주울 수 있다.
---  돌려주는 것: { hits = { { mob, dmg, hp, dead, big, crit, proc, sx, sy, mark } … }, kills = { { mob, xp, ups, gains = { { hero, xp, ups, level } … }, drop, loot } … },
+--  돌려주는 것: { hits = { { mob, dmg, hp, dead, big, crit, proc, sx, sy, mark } … }, kills = { { mob, xp, ups, gains = { { hero, xp, ups, level } … }, credit = { 퀘스트 · 일일 의뢰를 세는 사람 … }, drop, loot } … },
 --				 kit(장치의 모습이 바뀌었다) · heal(되찾은 체력) · crystals · crystalGone(생긴 · 사라진 수정) }
 --  kind = 그 기술의 갈래: 사냥기("mob")는 일반 몬스터에게, 보스기("boss")는 보스에게 피해가 targetBonus% 더 뜬다 — 맞지 않는 상대에게는 그 보정이 없다(체력은 보정만큼 크다)
 --   (사용자 2026-10-07: "보스기는 보스 공격시 추가데미지, 사냥기는 일반 몹 공격시 추가 데미지 … 지금 그냥 보스기로 사냥하는게 더빠른현상이 생깁니다")
@@ -57335,6 +57526,10 @@ local UIG = require(script.Parent.Parent.data["ui.generated"])
 local T = {}
 T.DATA = UIG.tutorial
 T.SCENE = T.DATA.scene
+-- 그 장면(방)이 꿈인가: 꿈은 들어갈 때마다 따로 된 방(dream#번호 — 파티마다 따로 들어가는 장면 · 2026-10-21)이라 이름 뒤의 #번호를 떼고 본다
+function T.isDream(key: any): boolean
+	return type(key) == "string" and (string.match(key, "^(.-)#%d+$") or key) == T.SCENE
+end
 T.STEPS = T.DATA.steps
 T.TOTAL = #T.DATA.steps
 T.SERVER = { kill = true, pickup = true, potion = true, stat = true, sp = true } -- 서버가 세는 일(능력치 · 스킬 찍기는 2026-10-14 둘째 판)
@@ -58495,6 +58690,12 @@ function L.rect(r, gw: number?, gh: number?)
 	local out = { x = r.x + math.floor((w - UI.grid.w) * fx + 0.5), y = r.y + math.floor((h - UI.grid.h) * fy + 0.5), w = r.w, h = r.h }
 	-- 좁은 격자에서 왼쪽 이웃(tight.beside)에 닿는 칸은 줄어든 폭(tight.w)으로 — 오른쪽 끝은 그대로 둔다.
 	--  메뉴 단추: 여덟이 넓은 간격으로는 가장 작은 격자(768)의 스킬 칸에 닿는다
+	-- 좁은 격자(폭 narrow.below 미만)에서 가운데는 그대로 두고 폭만 줄이는 칸(스킬 칸 — 칸 사이가 좁아진다 · 2026-10-21)
+	if r.narrow and w < r.narrow.below then
+		local c = out.x + out.w / 2
+		out.w = r.narrow.w
+		out.x = math.floor(c - out.w / 2 + 0.5)
+	end
 	if r.tight then
 		local o = L.rect(UI.hud[r.tight.beside], w, h)
 		if out.x < o.x + o.w + r.tight.gap then
@@ -58524,14 +58725,27 @@ L.GAINLOG = D.gainLog -- 획득 알림(2026-10-18): 줄 수 · 줄 높이 · 머
 L.MAPNAME = D.mapName -- 맵 이름(2026-10-18): 위 가운데(보스 체력 칸의 자리) — 지역(작은 글) · 맵 이름(nameY · 본문 글) · 밝아짐 fadeIn · 머묾 hold · 흐려짐 fadeOut(초)
 L.BOSS = D.boss -- 스토리 보스의 체력: 화면 위 가운데 — 이름(y) 아래(barY)에 넓은 바(안에 숫자 · pad = 좌우 여백), 그 아래(patY)에 패턴의 이름
 
--- 쓰는 칸이 n개일 때 i째 칸의 자리(스킬 칸 틀 안): 여섯까지는 아랫줄에 가운데로 모으고, 일곱째부터는 윗줄에 같은 식으로
-function L.slotPlace(i: number, n: number): (number, number)
+-- 퀵슬롯 i가 놓이는 줄(1 = 아랫줄 · 2 = 윗줄)과 그 줄의 몇째인가 — 공방 QUICK.rows(2026-10-21: 칸의 번호 · 키는 그대로 두고 새 칸 13 · 14를 줄 끝에)
+function L.slotCell(i: number): (number, number)
+	for r, list in UI.quick.rows do
+		local k = table.find(list, i)
+		if k then
+			return r, k
+		end
+	end
+	return 1, i
+end
+
+-- i째 칸의 자리(스킬 칸 틀 안 — 틀은 넓은 격자의 폭 그대로). gw = 화면 틀의 격자 폭: 좁은 격자(스킬 칸의 narrow)에서는 칸 사이가 좁다(10 → 4점).
+--  n은 예전의 「쓰는 칸의 수」(지금은 늘 모든 칸 — 받기만 한다)
+function L.slotPlace(i: number, _n: number?, gw: number?): (number, number)
 	local s, K = UI.hud.skills, L.SKILLS
-	local pitch = K.slot + K.gap
-	local row = if i <= K.cols then 1 else 2
-	local inRow = if row == 1 then math.min(n, K.cols) else n - K.cols
-	local k = if row == 1 then i else i - K.cols
-	local left = math.floor((s.w - (inRow * pitch - K.gap)) / 2)
+	local r = L.rect(s, gw)
+	local gap = math.min(K.gap, math.floor((r.w - K.cols * K.slot) / (K.cols - 1)))
+	local pitch = K.slot + gap
+	local row, k = L.slotCell(i)
+	local inRow = #UI.quick.rows[row]
+	local left = math.floor((s.w - (inRow * pitch - gap)) / 2)
 	return left + (k - 1) * pitch, s.h - K.slot - (row - 1) * (K.slot + K.keyUp + K.rowGap)
 end
 
@@ -58576,6 +58790,43 @@ L.SKILL = D.skill -- 스킬 창: 차수 탭 · 안내 줄 · 스킬들(cols줄 x
 -- 능력치 창의 속(폭 · 높이). n = 능력치의 수
 function L.statBody(n: number): (number, number)
 	return L.STAT.w, L.STAT.top + n * L.STAT.row + 8 + M.button + 14 + 20
+end
+
+-- 달빛 상점의 공간(client/lune/cashShop.luau): 미리보기와 상점 판을 한 묶음으로 가운데에 나란히 — 묶음을 화면에 맞춰 키운다(k배).
+--  2026-10-21 사용자: "지금 달빛상점 들어가면 ui가 너무 작아 모바일에서도 반응형 되어야하고" — 전에는 화면 틀의 점 그대로(1080p에서 574 x 332점 = 화면의 60% x 61%)였다.
+--  k = 위 줄 아래 · 아래 여백 위에 들어가는 가장 큰 배(가장 크게 SP.maxScale — 공방 bm.js의 BM_SHOP.space). 한 점이 정수 화소인 배가 가까이(90% 넘게) 있으면 그것(PC 1080p = 1.5배 · 한 점 3화소).
+--   폰(화면 틀 768 x 432)은 들어가는 만큼(1.17배쯤). uiW · uiH = 화면 틀 · us = 화면 틀의 한 점이 몇 화소인가(Stage.uiScale)
+function L.shopSpace(uiW: number, uiH: number, us: number?)
+	local BM = require(script.Parent.Parent.data["bm.generated"])
+	local SP, S = BM.shop.space, D.cash
+	local panelW, panelH = S.w + SP.panelPad * 2, S.listY + S.rows * S.row + S.footY + M.button + SP.panelPad * 2
+	local total = SP.previewW + SP.gap + panelW
+	local k = math.min(SP.maxScale, (uiW - SP.pad * 2) / total, (uiH - SP.topH - SP.bottom) / panelH)
+	local px = us or 1
+	local crisp = math.floor(k * px + 1e-6) / px -- 한 점이 정수 화소인 배(그 아래에서 가장 큰 것)
+	if crisp >= 1 and crisp >= k * 0.9 then
+		k = crisp
+	end
+	k = math.max(0.5, math.floor(k * 100) / 100)
+	local w, h = total * k, panelH * k
+	local x0 = math.floor((uiW - w) / 2)
+	local y0 = SP.topH + math.max(0, math.floor((uiH - SP.topH - SP.bottom - h) / 2))
+	return { k = k, panelW = panelW, panelH = panelH, total = total, x0 = x0, y0 = y0, previewX = 0, panelX = SP.previewW + SP.gap, leaveX = uiW - SP.pad - SP.leaveW }
+end
+
+-- 스마트폰의 「단추 배치」 목록(공방 ui.js의 UILAYOUT.touchChooser — 2026-10-21 점검). 놓을 것이 n개 · 화면 틀의 높이 uiH(왼쪽 위의 Roblox 단추가 가리는 높이는 뺀 것)일 때:
+--  판은 왼쪽 위에 서고 화면에 들어가는 만큼만 길어진다 — 넘치는 줄은 그 안에서 위아래로 민다.
+--  돌려주는 것: w · h = 판의 크기 / viewH = 칸들이 보이는 높이 / contentH = 칸들의 높이 / rowH = 한 줄(칸 + 이름 두 줄) / scroll = 밀어야 다 보이는가
+L.TOUCHCHOOSER = D.touchChooser
+function L.touchChooser(n: number, uiH: number)
+	local K = L.TOUCHCHOOSER
+	local rowH = K.cell + K.nameH
+	local contentH = math.max(1, math.ceil(n / K.cols)) * rowH
+	local room = math.max(rowH, math.floor(uiH - K.top - K.bottom - K.titleH - K.footH))
+	local viewH = math.min(contentH, room)
+	local scroll = contentH > viewH
+	local listW = K.cols * K.cell + (K.cols - 1) * K.gap
+	return { w = K.pad * 2 + listW + (if scroll then K.bar + K.gap else 0), h = K.titleH + viewH + K.footH, viewH = viewH, contentH = contentH, rowH = rowH, scroll = scroll }
 end
 
 -- 스마트폰의 메뉴(「메뉴」 단추를 누르면 뜨는 창 이름의 단추들). 사용자 2026-10-13(폰에서 해 보고): "메뉴탭 열었을때 스크롤이 되어야해 모든메뉴를 접근할수가 없다"
@@ -58796,6 +59047,7 @@ end
 -- 지금 겨눌 자리: x, y, 무엇("portal" | "npc" | "spot" | "mob" | "here"), 그 문(다른 맵으로 갈 때) — 길이 없으면 nil
 --  mobs = 지금 맵에 서 있는 몬스터들 { { kind, x, y } … }(화면이 준다 — 살아 있는 것만) · x · y = 내 자리
 function Navi.aim(sceneKey: string, x: number, y: number, target, book, mobs: any)
+	sceneKey = SCENES.base(sceneKey) :: string -- 파티마다 따로 들어가는 장면의 방(r1c4#5)은 그 장면(2026-10-21)
 	-- 사냥하러 가는 길인데 지금 맵에도 그 몬스터가 산다: 여기서 잡는다(어느 맵에서 잡든 그 몬스터면 센다 — sim/quests.luau)
 	local here = target.scene == sceneKey
 	if not here and target.kind == "hunt" and not target.only then
@@ -59526,11 +59778,27 @@ function Q.item(what: any)
 	return if typeof(what) == "string" then GOODS[what] else nil
 end
 
+-- 칸에 놓인 것이 펫 · 탈것이면 "pet" · "mount"(2026-10-21 사용자: 가방의 캐시 탭에서 꺼내기 · 타기 — 퀵슬롯에 놓으면 그 키로 꺼내고 넣고 타고 내린다)
+function Q.ride(what: any): string?
+	if typeof(what) ~= "string" then
+		return nil
+	end
+	if string.sub(what, 1, 4) == "pet_" then
+		return "pet"
+	elseif string.sub(what, 1, 6) == "mount_" then
+		return "mount"
+	end
+	return nil
+end
+
 -- 칸에 놓인 것의 그림 이름(화면의 그림 24x24 — 공방의 아이콘 이름)
 function Q.pic(what: string): string
 	local g = GOODS[what]
 	if g then
 		return g.icon
+	end
+	if Q.ride(what) then
+		return "ride_" .. what -- 펫 · 탈것의 그림(달빛 상점의 것과 같다)
 	end
 	return "skill_" .. what
 end
@@ -59672,7 +59940,7 @@ end
 
 -- 윗줄(둘째 줄)에 놓인 것이 있는가 — 있으면 윗줄도 늘 보인다
 function Q.usesTop(slots): boolean
-	for i = Q.COLS + 1, Q.N do
+	for _, i in UI.quick.rows[2] do -- 윗줄의 칸(2026-10-21 — 번호가 아니라 줄의 표로: 새 칸 14는 윗줄 끝)
 		if slots[i] then
 			return true
 		end
@@ -60290,6 +60558,7 @@ function WM.path(from: any, to: any): { string }?
 	if typeof(from) ~= "string" or typeof(to) ~= "string" or not SCENES.scenes[from] or not SCENES.scenes[to] then
 		return nil
 	end
+	from, to = SCENES.base(from), SCENES.base(to) -- 따로 된 방(rf1#3 · r1c4#5)은 그 장면에서(2026-10-21 — 방 이름을 다른 장면으로 보면 제자리로 가는 길을 문 밖으로 돌아 그렸다)
 	local prev = { [from] = from }
 	local queue, at = { from }, 1
 	while queue[at] and not prev[to] do
@@ -61599,7 +61868,7 @@ function Analytics.watch(s)
 	end
 	-- 쓰러짐(어느 맵에서)
 	if was.alive and not h.alive then
-		emit("custom", s.player, { "Death", 1 }, fieldsFor(s, s.scene))
+		emit("custom", s.player, { "Death", 1 }, fieldsFor(s, string.match(s.scene or "", "^(.-)#%d+$") or s.scene)) -- 따로 된 방(r1c4#57)은 그 장면의 이름으로(방마다 값이 늘지 않게 — 2026-10-21)
 	end
 	-- 요청 밖에서 바뀐 달돈(바닥에 떨어진 돈을 저절로 주웠다 등)
 	if not s.anBusy and h.money ~= was.money then
@@ -61678,6 +61947,8 @@ local lune = game:GetService("ReplicatedStorage").shared.lune
 local Cash = require(lune.sim.cash)
 local Account = require(lune.sim.account)
 
+local Coupons = require(script.Parent.coupons)
+
 local CashServer = {}
 local W -- World가 넘겨주는 것: sessionOf(userId) · saveNow(s) · afterSpent(s) · notify(s, key) · now()
 local pending = {} -- [userId] = { [상품] = 띄워 둔 구매 창 수 }
@@ -61727,6 +61998,60 @@ function CashServer.processReceipt(info, key: string?)
 	acct.bm = Cash.unpack(before, Account.MAX)
 	acct.spent = spentBefore
 	return Decision.NotProcessedYet
+end
+
+-- 쿠폰을 쓴다(2026-10-21 — 메뉴의 「쿠폰」 창): text = 적은 글 → { ok, why?, pet? }
+--  틀린 번호는 1분에 다섯 번까지(번호를 마구 넣어 맞히지 못하게) · 준 것과 쓴 쿠폰을 한 번의 저장으로 함께 적는다(저장에 실패하면 되돌린다 — 결제와 같다)
+Coupons.TRIES, Coupons.WINDOW = 5, 60
+function CashServer.coupon(s, text: any)
+	if not s or not s.acct or not s.loaded or s.guest then
+		return { ok = false, why = "지금은 쓸 수 없다" }
+	end
+	local now = W.now()
+	local tries = {}
+	for _, t in s.couponTries or {} do
+		if now - t < Coupons.WINDOW then
+			table.insert(tries, t)
+		end
+	end
+	s.couponTries = tries
+	if #tries >= Coupons.TRIES then
+		return { ok = false, why = "잠시 뒤에 다시 적어 주세요" }
+	end
+	local code = Cash.couponCode(text)
+	local def = Coupons.find(code)
+	if not def then
+		table.insert(tries, now)
+		return { ok = false, why = "없는 쿠폰 번호다" }
+	end
+	local before = Cash.pack(s.acct.bm)
+	local ok, got = Cash.redeem(s.acct, def, now)
+	if not ok then
+		return { ok = false, why = got }
+	end
+	if not W.saveNow(s) then
+		s.acct.bm = Cash.unpack(before, Account.MAX)
+		return { ok = false, why = "저장하지 못했다 — 잠시 뒤에 다시 적어 주세요" }
+	end
+	if got.pet then
+		W.notify(s, got.pet) -- 화면이 가진 것을 다시 읽고 · 꺼낸 펫을 같은 맵의 사람들에게도
+	end
+	return { ok = true, pet = got.pet }
+end
+
+-- 쓴 쿠폰의 보상을 지금의 목록에 맞춘다(계정을 읽었을 때 — 2026-10-21 사용자: "지금 내 테스트 계정에서 다시 쿠폰을 입력할수없어서 동글이는 사라지고, 재까마귀를 테스트할수도없어").
+--  쿠폰 펫을 까망 동글이 → 아기 재까마귀로 바꾸며, 이미 쓴 계정에는 쓴 기록만 남고 펫이 없었다 → 쓴 쿠폰이 지금 주는 펫이 없으면 넣어 준다(꺼내 둔 펫이 없으면 꺼낸다). 바뀌었으면 true
+function CashServer.syncCoupons(acct): boolean
+	local c, changed = acct.bm, false
+	for code in c.coupons do
+		local def = Coupons.find(code)
+		if def and def.pet and Cash.PET[def.pet] and not c.pets[def.pet] then
+			c.pets[def.pet] = true
+			c.petOut = c.petOut or def.pet
+			changed = true
+		end
+	end
+	return changed
 end
 
 -- 구매 창을 띄운다(서버가 한도를 본 뒤에만). → true / false · 까닭
@@ -61899,6 +62224,31 @@ function Chat.start(World)
 end
 
 return Chat
+
+end
+MODULES['ServerScriptService/server/lune/modules/coupons'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
+-- 쿠폰(2026-10-21 사용자: "쿠폰 코드 입력창있어야하고 그 쿠폰 입력하면 그 기본펫 지급하는 방식으로 합니다" · "제가 무료 쿠폰으로 푸는 용도로 사용할 펫입니다").
+--  서버에만 있는 목록이다 — ServerScriptService 아래라 화면(사람의 컴퓨터)에는 보내지지 않는다. 번호를 바꾸거나 더하려면 아래 LIST를 고친다.
+--  code = 적는 번호(대문자 · 숫자만 — 화면에서 적은 글의 빈칸 · 줄표는 빼고 대문자로 맞춘 뒤 견준다. 가장 길게 24자) · pet = 주는 펫(design/ride.js의 이름표)
+--  from · till = 쓸 수 있는 때(os.time — 없으면 늘). 한 계정이 한 쿠폰을 한 번만 쓴다(계정 저장의 bm.coupons). 셈은 shared/lune/sim/cash.luau의 Cash.redeem
+local Coupons = {}
+
+Coupons.LIST = {
+	-- 기본펫 「아기 재까마귀」(쿠폰으로만 받는 펫 — 2026-10-21: 처음의 「까망 동글이」를 사용자가 재까마귀로 바꿨다). 번호는 제가 정한 것 — 나눠 줄 번호로 바꾸시면 된다
+	{ code = "DONGGEULI", pet = "pet_crow" },
+}
+
+local BY = {}
+for _, def in Coupons.LIST do
+	BY[def.code] = def
+end
+
+-- 그 번호의 쿠폰(없으면 nil). code = Cash.couponCode로 맞춘 꼴
+function Coupons.find(code: string?)
+	return if code then BY[code] else nil
+end
+
+return Coupons
 
 end
 MODULES['ServerScriptService/server/lune/modules/store'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
@@ -62622,13 +62972,37 @@ local function resumeScene(h): (string, number?, number?)
 		local x, y = voyageLanding(ride)
 		return ride.to, x, y
 	end
-	if base ~= key or sc.rift or (sc.bosses and #sc.bosses > 0) or base == Tutorial.SCENE then
+	if base ~= key or sc.rift or sc.inst or (sc.bosses and #sc.bosses > 0) or Tutorial.isDream(base) then
 		return if sc.ret and rawget(SCENES.scenes, sc.ret) then sc.ret else home, nil, nil
 	end
 	return base, nil, nil
 end
 
+-- 파티마다 따로 들어가는 장면(scene.inst — 공방 export: 스토리 보스의 방 · 이야기의 방 · 꿈)에 들어갈 때의 방 이름.
+--  사용자 2026-10-21: "파티마다 따로 되어야합니다 … 한서버에 100명 있으면 차례를 엄청나게 기다려야하는겁니다. 설계부터가 잘못됬어요 솔로게임처럼되어있습니다"
+--  이미 그 장면의 방에 있으면 그 방 그대로 · 같은 파티의 누가 그 장면의 방에 있으면 그 방 · 아니면 새 방(<장면>#번호 — 수정 틈 토벌의 방과 같은 꼴). 사람이 없어진 방은 닫는다(World 고리)
+local instSerial = 0
+local function roomKeyFor(s, key: string): string
+	local sc = rawget(SCENES.scenes, key)
+	if not sc or not sc.inst then
+		return key -- 여느 장면 · 이미 방의 이름(#번호)
+	end
+	if s.scene and s.scene ~= key and SCENES.base(s.scene) == key then
+		return s.scene
+	end
+	for _, uid in Party.members(book, s.player.UserId) do
+		local ms = byUser[uid]
+		if ms and ms ~= s and ms.hero and ms.scene and ms.scene ~= key and SCENES.base(ms.scene) == key then
+			return ms.scene
+		end
+	end
+	instSerial += 1
+	return key .. "#" .. instSerial
+end
+
+-- 그 사람을 그 장면(방)의 (x, y)에 둔다. 파티마다 따로 들어가는 장면이면 그 파티의 방으로 — 부른 쪽은 옮긴 뒤 s.scene을 쓴다(넘긴 key와 다를 수 있다)
 local function place(s, key: string, x: number, y: number, pushed: boolean?)
+	key = roomKeyFor(s, key)
 	if not Voyage.onShip(key) then
 		s.voyage = nil -- 배에서 내렸다(닿았거나 · 귀환 주문서 · 쓰러져 돌아감)
 	end
@@ -63010,7 +63384,10 @@ function World.addPlayer(player)
 	end
 	s.acct = acct
 	s.loaded = true
-	if adopted then
+	-- 쓴 쿠폰의 보상을 지금의 목록에 맞춘다(쿠폰 펫을 바꿨을 때 — CashServer.syncCoupons · 2026-10-21)
+	if CashServer.syncCoupons(acct) and not s.guest then
+		saveAccount(s)
+	elseif adopted then
 		saveAccount(s)
 	end
 	Analytics.joined(s)
@@ -63347,7 +63724,7 @@ local function onCharsInner(player, action: string, a: any, b: any)
 		local scene = SCENES.scenes[startKey]
 		place(s, startKey, startX or scene.spawn.x, startY or scene.spawn.y)
 		-- 꿈의 물약 미션에서 다시 들어왔다: 체력은 저장하지 않아 가득 찬 채라 물약을 마실 수 없다 — 그 미션이면 다시 조금 다친 채로(tutChanged와 같은 셈 · 2026-10-18 검토)
-		if startKey == Tutorial.SCENE then
+		if Tutorial.isDream(s.scene) then
 			local def = Tutorial.current(hero.tut)
 			if def and Tutorial.kind(def) == "potion" and hero.hp > hero.maxHp * 0.6 then
 				hero.hp = math.floor(hero.maxHp * 0.6)
@@ -63584,7 +63961,7 @@ local function tutAdvanced(s, before: number)
 end
 -- 서버가 아는 일(잡기 · 줍기 · 물약 · 능력치 · 스킬)이 꿈에서 일어났다
 local function tutEvent(s, kind: string)
-	if s.scene ~= Tutorial.SCENE or s.hero.tut.done then
+	if not Tutorial.isDream(s.scene) or s.hero.tut.done then
 		return
 	end
 	local before = s.hero.tut.step
@@ -63597,7 +63974,7 @@ end
 -- 튜토리얼(꿈): "done" n = 화면만 아는 n째 미션(걷기 · 뛰기 · 내려가기 · 말 걸기 · 기술 · 창)을 끝냈다 · "skip" = 꿈을 건너뛰고 사당에서 깨어난다(이 계정이 한 번 끝낸 뒤에만)
 local function onTut(player, action: string, n: any)
 	local s = sessions[player]
-	if not s or not s.hero or s.scene ~= Tutorial.SCENE or s.hero.tut.done then
+	if not s or not s.hero or not Tutorial.isDream(s.scene) or s.hero.tut.done then
 		return nil
 	end
 	if action == "done" then
@@ -63692,14 +64069,14 @@ local function onTravel(player, to: string)
 			if not Quests.portalOpen(s.hero.quests, p) then
 				return nil -- 그 퀘스트를 받아야 · 끝내야 열리는 문(달의 사당 안의 「사당 지하」 · 마을의 나루): 화면에도 보이지 않는다
 			end
-			local waking = s.scene == Tutorial.SCENE
+			local waking = Tutorial.isDream(s.scene)
 			if waking and not Tutorial.canExit(s.hero.tut) then
 				return nil -- 꿈의 빛나는 문: 미션을 다 하기 전에는 열리지 않는다
 			end
 			local dest = SCENES.scenes[to]
 			local x, y = dest.spawn.x, dest.spawn.y
 			for _, back in dest.portals do
-				if back.to == s.scene then
+				if back.to == SCENES.base(s.scene) then -- (따로 된 방에서 나왔으면 그 장면의 문으로)
 					x, y = back.x, back.y
 				end
 			end
@@ -63708,6 +64085,7 @@ local function onTravel(player, to: string)
 			end
 			local from = s.scene
 			place(s, to, x, y)
+			to = s.scene -- 파티마다 따로 들어가는 장면이면 그 파티의 방(r1c4#5)
 			if waking then -- 꿈에서 깨어났다: 튜토리얼을 마친다 · 이 계정의 다음 캐릭터는 건너뛸 수 있다
 				Tutorial.finish(s.hero.tut)
 				if s.acct then
@@ -63737,7 +64115,7 @@ local function onReturn(player)
 	Hero.revive(s.hero)
 	local homeKey = if s.hero.home and SCENES.homes[s.hero.home] and SCENES.scenes[s.hero.home] then s.hero.home else SCENES.start
 	if not s.hero.tut.done and SCENES.scenes[Tutorial.SCENE] then
-		homeKey = Tutorial.SCENE -- 꿈(튜토리얼)에서 쓰러지면 꿈의 처음으로(마을로 나가지 않는다)
+		homeKey = if Tutorial.isDream(s.scene) then s.scene else Tutorial.SCENE -- 꿈(튜토리얼)에서 쓰러지면 꿈의 처음으로(마을로 나가지 않는다 · 그 꿈의 방 그대로)
 	end
 	local scene = SCENES.scenes[homeKey]
 	local from = s.scene
@@ -63745,7 +64123,7 @@ local function onReturn(player)
 	local room = roomOf(s.scene):describe(s.hero.id)
 	room.who = roster(s.scene)
 	fire("Revive", s.player, { scene = s.scene, x = s.hero.x, y = s.hero.y, room = room })
-	if homeKey == Tutorial.SCENE then
+	if Tutorial.isDream(homeKey) then
 		tutChanged(s) -- 꿈에서 되살아났다: 물약 미션이면 다시 조금 다친 채로(체력이 가득하면 물약을 마실 수 없어 미션이 막혔다 — 2026-10-18 검토)
 	end
 	sendSelf(s)
@@ -63786,23 +64164,8 @@ local function applyResult(cur, key: string, result)
 				if kill.elite then
 					Analytics.custom(gs, "FieldElite", 1, key) -- 사냥터 정예를 잡았다(2026-10-18 — 맵마다 얼마나 자주 잡히는지로 30마리 · 10배를 맞춘다)
 				end
-				-- 퀘스트: 함께 잡은 사람 모두에게 잡은 것으로 쳐 준다
-				if #Quests.onKill(gs.hero.quests, kill.kind, key) > 0 then
-					gs.dirty = true
-					fire("Quests", gs.player, Quests.view(gs.hero.quests))
-				end
-				-- 일일 의뢰: 받아 둔 의뢰의 그 맵 · 그 몬스터면 센다(함께 잡은 사람 모두)
-				if Daily.onKill(gs.hero, kill.kind, key, os.time()) then
-					gs.dirty = true
-					fire("DailyView", gs.player, (Daily.view(gs.hero, os.time())))
-				end
-				-- 모으는 물건은 사람마다 따로 굴려 그 사람의 것으로 땅에 떨어진다(그 사람에게만 보인다) — 주워야 숫자가 오른다
-				for n, q in Quests.drops(gs.hero.quests, kill.kind, key, questRng) do
-					local d = roomOf(key):addDrop({ kind = "quest", amount = 1, quest = q.quest, step = q.step, name = q.name, icon = q.icon, goods = q.goods }, kill.x - n * 9, kill.y, gs.hero.id)
-					fire("DropAdd", gs.player, Room.dropView(d))
-				end
 				-- 튜토리얼(꿈): 수련 인형을 센다 · 잡은 사람 앞에 물약 하나를 반드시 떨어뜨린다(줍기 미션 — design/tutorial.js의 dropItem)
-				if key == Tutorial.SCENE and not gs.hero.tut.done then
+				if Tutorial.isDream(key) and not gs.hero.tut.done then
 					tutEvent(gs, "kill")
 					local pid = Items.potionFor(1).id
 					local g = Items.goods(pid)
@@ -63821,6 +64184,27 @@ local function applyResult(cur, key: string, result)
 					sendSelf(gs)
 				end
 				grew = grew or gain.ups > 0
+			end
+		end
+		-- 퀘스트 · 일일 의뢰 · 모으는 물건: 잡은 사람 · 같은 맵의 파티원 + 그 몬스터를 한 대라도 친 사람(kill.credit — Room:strike)
+		--  사용자 2026-10-21: "몇마리 잡아라 … 내가 한대만 치면 다른사람이 잡아도 잡은걸로 판정이 들어가야해요"
+		for _, id in kill.credit or {} do
+			local gs = byUser[id]
+			if gs then
+				if #Quests.onKill(gs.hero.quests, kill.kind, key) > 0 then
+					gs.dirty = true
+					fire("Quests", gs.player, Quests.view(gs.hero.quests))
+				end
+				-- 일일 의뢰: 받아 둔 의뢰의 그 맵 · 그 몬스터면 센다
+				if Daily.onKill(gs.hero, kill.kind, key, os.time()) then
+					gs.dirty = true
+					fire("DailyView", gs.player, (Daily.view(gs.hero, os.time())))
+				end
+				-- 모으는 물건은 사람마다 따로 굴려 그 사람의 것으로 땅에 떨어진다(그 사람에게만 보인다) — 주워야 숫자가 오른다
+				for n, q in Quests.drops(gs.hero.quests, kill.kind, key, questRng) do
+					local d = roomOf(key):addDrop({ kind = "quest", amount = 1, quest = q.quest, step = q.step, name = q.name, icon = q.icon, goods = q.goods }, kill.x - n * 9, kill.y, gs.hero.id)
+					fire("DropAdd", gs.player, Room.dropView(d))
+				end
 			end
 		end
 		if kill.drop then
@@ -64794,6 +65178,7 @@ local function moveTo(s, key: string, x: number, y: number)
 		Hero.revive(s.hero) -- 화면은 「Revive」를 받으면 살아난 것으로 본다 — 서버도 맞춘다(2026-10-18 검토: 쓰러진 채 옮겨지면 쓰러진 상자 없이 멈췄다)
 	end
 	place(s, key, x, y, true)
+	key = s.scene -- (파티마다 따로 들어가는 장면이면 그 파티의 방)
 	local room = roomOf(key):describe(s.hero.id)
 	room.who = roster(key)
 	fire("Revive", s.player, { scene = key, x = x, y = y, room = room })
@@ -65707,7 +66092,7 @@ function World.wake(player): boolean
 		s.acct.tutDone = true
 	end
 	s.dirty = true
-	if s.scene == Tutorial.SCENE then
+	if Tutorial.isDream(s.scene) then
 		return World.jump(player, Tutorial.DATA.exit)
 	end
 	sendSelf(s)
@@ -66297,8 +66682,8 @@ function World.tick(dt: number)
 				end
 				toRoom(key, "Heroes", key, list)
 			end
-		elseif Rift.tierOfKey(key) then
-			rooms[key] = nil -- 아무도 없는 토벌의 방은 닫는다(다시 들어가면 새 방)
+		elseif Rift.tierOfKey(key) or SCENES.base(key) ~= key then
+			rooms[key] = nil -- 아무도 없는 따로 된 방(토벌 · 파티마다 따로 들어가는 장면 — r1c4#5)은 닫는다(다시 들어가면 새 방 — 스토리 보스도 체력이 가득한 채 새로 선다)
 		elseif room.bosses then
 			room:idle() -- 아무도 없는 방: 서 있던 스토리 보스를 치운다(다시 들어오면 체력이 가득한 채 새로 선다)
 		end
@@ -66532,6 +66917,19 @@ function World.start()
 	Net.OnServer("SkillUp", onSkillUp)
 	Net.OnServer("SkillAuto", onSkillAuto)
 	Net.OnServer("SkillReset", onSkillReset)
+	-- 능력치 초기화: 찍은 능력치(힘 · 민첩 · 지능 · 운 · 체력)를 모두 되돌려 받는다 — 공짜 · 몇 번이든(2026-10-21 사용자: "스텟, 스킬 초기화 완전무료로 풀겠습니다")
+	--  (이 파일의 지역 이름이 Luau의 한도(200)에 닿아 여기에 바로 적는다)
+	Net.OnServer("Coupon", function(player, text) -- 쿠폰(2026-10-21 — 셈은 CashServer.coupon)
+		return CashServer.coupon(sessions[player], text)
+	end)
+	Net.OnServer("StatReset", function(player)
+		local s = sessions[player]
+		if s and s.hero and s.hero.alive and Hero.statsSpent(s.hero) then
+			Hero.resetStats(s.hero)
+			s.dirty = true
+			sendSelf(s)
+		end
+	end)
 	Players.PlayerAdded:Connect(function(player)
 		task.spawn(World.addPlayer, player)
 	end)
@@ -71224,6 +71622,7 @@ local SCENES = require(lune.data["scenes.generated"])
 local ASSETS = require(lune.data["assets.generated"])
 local COMBAT = require(lune.data["combat.generated"])
 local CHARS = require(lune.data["chars.generated"]) -- 캐릭터와 졸개의 동작(관리 창의 「보스 크기」가 고운 그림이 있는지 본다)
+local RIDE_DATA = require(lune.data["ride.generated"]) -- 탈것 · 펫(탄 동안의 빠르기 mountSpeed)
 local CLASSES = require(lune.data["classes.generated"])
 local Stage = require(script.Parent.stage)
 local SceneView = require(script.Parent.sceneView)
@@ -71247,6 +71646,7 @@ local DailyWindow = require(script.Parent.ui.dailyWindow) -- 일일 의뢰(마�
 local AttendWindow = require(script.Parent.ui.attendWindow) -- 출석(메뉴 → 「출석」 · 그날 처음 들어오면 한 번 — 2026-10-15)
 local AchieveWindow = require(script.Parent.ui.achieveWindow) -- 업적(메뉴 → 「업적」 — 2026-10-15)
 local CashWindow = require(script.Parent.ui.cashWindow) -- 달빛 상점(메뉴 → 「달빛 상점」 — 로벅스 상점 2026-10-20)
+local CouponWindow = require(script.Parent.ui.couponWindow) -- 쿠폰(메뉴 → 「쿠폰」 — 쿠폰 번호를 적으면 그 펫을 준다 · 2026-10-21)
 local CashShop = require(script.Parent.cashShop) -- 달빛 상점의 공간(2026-10-21 — 메이플 캐시샵처럼 들어가는 곳 · 마을에서만)
 local Town = require(lune.sim.town) -- 마을인가(달빛 상점 · 경매장은 마을에서만 — 2026-10-21)
 local RideView = require(script.Parent.rideView) -- 펫 · 탈것(2026-10-20)
@@ -71473,8 +71873,84 @@ local function crystalGone(id: number)
 end
 
 -- 내 펫이 떨어진 것에 닿았다(2026-10-20 — rideView.luau): 서버가 펫을 꺼내 두었는지 · 영웅에게서 가까운지 · 주인을 확인하고 줍는다(world.luau의 onPetPick)
-local function petPick(id: number)
+local function petPick(id: number, x: number?, y: number?)
+	if x and y and state.fx then
+		state.fx:pull(id, x, y) -- 펫 쪽으로 빨려 든다(자석 — 2026-10-21)
+	end
 	Net.FireServer("PetPick", id)
+end
+
+-- 펫 꺼내기 · 넣기와 탈것 타기 · 내리기(2026-10-21 사용자: "펫을 넣고 빼는거, 라이딩을 타는거 이런게 달빛상점에 들어가서 하는게 아닙니다" —
+--  가방의 캐시 탭 · 퀵슬롯 · N 키가 같이 쓴다). 서버가 정하고 이름표(Who)로 알린다 — 화면의 펫 · 탈것은 그것을 따른다
+local function cashInvoke(action: string, a: any)
+	local ok, res = pcall(Net.Invoke, "Cash", action, a)
+	if ok and res and res.list then
+		state.cash = res
+		Windows.refresh(state.me)
+	end
+	if ok and res and res.why and state.fx and state.body then
+		state.fx:float(res.why, state.body.x, state.body.y - 46, Effects.MINT, 1.6)
+	end
+	return if ok then res else nil
+end
+-- 앞의 꺼내기 · 타기 요청이 끝나기 전에 누른 것은 보내지 않는다(2026-10-21 — 연달아 누르면 서버가 Cash 요청의 빈도 제한(초당 3 · 한꺼번에 6)을 넘긴 것을 버리고
+--  「'Cash' 요청이 빈도 제한을 넘어 버려졌다」를 남겼다 · 버려진 누름은 아무 일도 하지 않았다)
+local toggling = false
+local function once(fn)
+	if toggling then
+		return
+	end
+	toggling = true
+	task.spawn(function()
+		pcall(fn)
+		toggling = false
+	end)
+end
+-- 가진 펫 · 탈것을 서버에 묻는다(폰의 단추 배치 목록이 쓴다 — 받으면 그 목록을 다시 그린다 · 묻는 중에는 다시 묻지 않는다)
+local cashFetching = false
+state.cashFetchNow = function()
+	if cashFetching then
+		return
+	end
+	cashFetching = true
+	task.spawn(function()
+		local ok, res = pcall(Net.Invoke, "Cash", "view")
+		cashFetching = false
+		if ok and res and res.list then
+			state.cash = res
+			Touch.rechoose()
+		end
+	end)
+end
+-- id = 그 펫(꺼내 둔 것이면 넣는다)
+state.togglePet = function(id: string)
+	once(function()
+		cashInvoke("pet", if state.myPet == id then false else id)
+	end)
+end
+-- id = 그 탈것(타고 있는 것이면 내린다) · nil = 고른 탈것으로 타거나 내린다(N 키)
+state.toggleRide = function(id: string?)
+	once(function()
+		if state.myRide and (id == nil or state.myRide == id) then
+			cashInvoke("ride", false)
+			return
+		end
+		local want = id or (state.cash and state.cash.mount) or nil
+		if want == nil then
+			local ok, res = pcall(Net.Invoke, "Cash", "view")
+			if ok and res and res.list then
+				state.cash = res
+				want = res.mount or nil
+			end
+		end
+		if want == nil then
+			if state.fx and state.body then
+				state.fx:float(CashWindow.WORDS.noMount, state.body.x, state.body.y - 46, Effects.MINT, 1.6)
+			end
+			return
+		end
+		cashInvoke("ride", want)
+	end)
 end
 
 -- 막이 걷힌 뒤(2026-10-18): 경관이 있는 곳이면 경관(제 이름을 띄운다 — 맵 이름은 겹치므로 띄우지 않는다), 아니면 맵 이름
@@ -71564,7 +72040,7 @@ local function enterScene(key: string, x: number, y: number, room)
 	state.others.graveLayer = state.view.graveLayer
 	state.others:setWho(room.who or {})
 	state.grave = Grave.new(state.view.graveLayer) -- 내 비석(쓰러졌을 때만 보인다)
-	state.tag = Ui.tag(state.over, Others.tagText(if state.me then state.me.level else 1, state.myName), Ui.COLOR.text, 220, true)
+	state.tag = Ui.tag(state.over, Others.tagText(if state.me then state.me.level else 1, state.myName), Ui.COLOR.text, 220, true, Others.levelText(if state.me then state.me.level else 1)) -- 판 바깥 왼쪽에 레벨(2026-10-21)
 	state.tagLevel = if state.me then state.me.level else 1
 	PartyHud.set(state.party, state.myId, key)
 	state.fx = Effects.new(state.view.topLayer, state.over, state.view.heroLayer)
@@ -71857,7 +72333,7 @@ end
 
 -- 새 캐릭터는 첫 퀘스트 「첫 기술」을 끝내야(사제에게 말을 걸어야) 기술을 쓴다 — 그때 스킬 칸이 생긴다
 local function skillsLocked(): boolean
-	if state.sceneKey == Tutorial.SCENE then
+	if Tutorial.isDream(state.sceneKey) then
 		return false -- 꿈(튜토리얼)에서는 첫 사냥기를 써 본다(사제에게 배우기 전이어도)
 	end
 	return state.me ~= nil and Quests.isNew(state.quests or {}, state.me.level)
@@ -72235,6 +72711,10 @@ local function step()
 					Windows.open("cash", "rename", true) -- 이름 바꾸기 주문서: 새 이름을 적는 칸(이름이 바뀔 때 서버가 주문서를 쓴다)
 				elseif what and Quick.item(what) then
 					Net.FireServer("Potion", what) -- 소비 아이템: 그 칸에 놓인 바로 그 아이템을 쓴다
+				elseif what and Quick.ride(what) == "pet" then
+					state.togglePet(what) -- 펫: 꺼낸다 · 넣는다(2026-10-21 — 가방의 캐시 탭에서 퀵슬롯에)
+				elseif what and Quick.ride(what) == "mount" then
+					state.toggleRide(what) -- 탈것: 탄다 · 내린다
 				elseif what then
 					trySkill(what, from[1] .. i) -- 그 칸의 키(힘을 모을 때 누르고 있는지 본다)
 				end
@@ -72246,25 +72726,7 @@ local function step()
 	end
 	-- 탈것 타기 · 내리기(N — 제가 정한 키 · 2026-10-20): 고른 탈것으로(없으면 알린다 — 상점에서 산다)
 	if Input.take("ride") and not state.dead then
-		task.spawn(function()
-			local want = if state.myRide then false else (state.cash and state.cash.mount) or nil
-			if want == nil then
-				local ok, res = pcall(Net.Invoke, "Cash", "view")
-				if ok and res and res.list then
-					state.cash = res
-					want = res.mount or nil
-				end
-			end
-			if want == nil and state.fx and state.body then
-				state.fx:float(CashWindow.WORDS.noMount, state.body.x, state.body.y - 46, Effects.MINT, 1.6)
-				return
-			end
-			local ok, res = pcall(Net.Invoke, "Cash", "ride", want)
-			if ok and res and res.list then
-				state.cash = res
-				Windows.refresh(state.me)
-			end
-		end)
+		state.toggleRide(nil)
 	end
 	-- 창을 여는 키(아직 열리지 않은 창은 Windows가 열어 주지 않는다 — 누른 키는 여기서 받아 버린다)
 	for _, w in Windows.all() do
@@ -72333,6 +72795,10 @@ local function step()
 			state.dir = mx
 		end
 		input = { mx = mx, jump = Input.take("jump"), down = Input.held("down"), up = Input.held("up") or Input.held("climb") } -- up = 사다리를 오른다(2026-10-16 밤 · climb = 폰의 조이스틱을 위로 — 2026-10-17)
+		-- 탄 동안은 더 빨리(2026-10-21 사용자 "속도도 더 빨라야함" — ride.generated의 mountSpeed · 사다리 위에서는 탈것을 감추고 제 빠르기)
+		if state.ride and state.ride:riding() and body.climb == nil then
+			input.speed = RIDE_DATA.mountSpeed or 1
+		end
 		if input.jump and input.down and body.ground and P.onPlatform(scene, body) then
 			TutView.dropped = true -- 튜토리얼: 얇은 발판을 내려왔다(↓ + 뛰기)
 		end
@@ -72524,7 +72990,8 @@ local function draw(dt: number)
 	if state.ride then
 		local hide = body.climb ~= nil or sk ~= nil or state.dead or state.hurtT > 0
 		-- 내 펫은 떨어진 것에 닿으면 서버에 알린다(PetPick — 서버가 거리 · 주인을 확인하고 줍는다)
-		local rx, ry = state.ride:update(state.now, dt, body.x, body.y, state.dir, math.abs(body.vx or 0) > 1, not body.ground, hide, state.fx and state.fx.drops, petPick)
+		local rx, ry, rs = state.ride:update(state.now, dt, body.x, body.y, state.dir, math.abs(body.vx or 0) > 1, not body.ground, hide, state.fx and state.fx.drops, petPick)
+		state.actor.rideSize = rs -- 탄 동안 영웅을 작게(cast.luau의 look이 곱한다 · 내리면 nil)
 		if rx then
 			hx, hy = rx, ry
 			if not held then
@@ -72613,7 +73080,8 @@ local function draw(dt: number)
 			-- 그 사람의 몸에도 버프가 입히는 모습을 그린다(분신 · 윤곽은 그 사람의 지금 동작을 따라 그린다). 비석이 선 사람은 몸을 그리지 않는다
 			if o.clip and not o.fallen then
 				a.pose = { clip = o.clip, f = o.frame - 1 }
-				cast:look(a, o.sprite, o.clip, o.frame, o.x, o.y, o.dir, 0)
+				a.rideSize = o.rideSize -- 탄 사람은 안장 위에 작게(othersView가 그린 자리 · 크기 그대로 — 전에는 o.x · o.y로 다시 그려 탄 사람이 땅으로 내려갔다)
+				cast:look(a, o.sprite, o.clip, o.frame, o.hx or o.x, o.hy or o.y, o.dir, 0)
 			end
 		end
 	end
@@ -72795,6 +73263,12 @@ Hud.slotTipOf = function(what: string)
 	if goods then
 		return { kind = "main", title = goods.name, tag = ("x%d"):format(Bag.countIn(state.bag, what)), lines = { goods.text or "" } }
 	end
+	if Quick.ride(what) then
+		local prod = CashWindow.product(what)
+		local on = if Quick.ride(what) == "pet" then state.myPet == what else state.myRide == what
+		local W = CashWindow.WORDS
+		return { kind = "main", title = if prod then prod.name else what, tag = if on then (if Quick.ride(what) == "pet" then W.petOutTag else W.rideTag) else "", lines = { if prod then prod.line or "" else "" } }
+	end
 	local sk = skillInfo[what]
 	if not sk then
 		return nil
@@ -72856,7 +73330,7 @@ local function listen()
 		elseif state.onJob and me.slots and me.skills then
 			-- 스킬을 되돌렸다(초기화): 서버가 칸에서 배우지 않은 스킬을 뺐다 — 화면의 칸도 서버의 것으로(2026-10-18 검토: 사라진 스킬이 칸에 남아 다음 고치기가 한 번 튕겼다)
 			for _, what in state.slots or {} do
-				if what and not Quick.item(what) and (me.skills[what] or 0) <= 0 then
+				if what and not Quick.item(what) and not Quick.ride(what) and (me.skills[what] or 0) <= 0 then -- (펫 · 탈것은 스킬이 아니다 — 2026-10-21)
 					state.onJob(me)
 					break
 				end
@@ -72873,6 +73347,7 @@ local function listen()
 		if state.tag and state.tagLevel ~= me.level then
 			state.tagLevel = me.level
 			state.tag:SetText(Others.tagText(me.level, state.myName))
+			Ui.tagLead(state.tag, Others.levelText(me.level))
 			if state.drawQuests then
 				state.drawQuests() -- 레벨이 올라 새로 받을 수 있는 퀘스트의 표시
 			end
@@ -73092,10 +73567,14 @@ local function listen()
 		-- 내 펫 · 탈것(서버가 정한 것 — 펫을 꺼냈다 · 탔다 · 기술을 써서 내렸다)
 		for _, w in roster do
 			if w.id == state.myId then
+				local changed = state.myPet ~= (w.pet or nil) or state.myRide ~= (w.ride or nil)
 				state.myPet, state.myRide = w.pet or nil, w.ride or nil
 				if state.ride then
 					state.ride:setPet(state.myPet)
 					state.ride:setRide(state.myRide)
+				end
+				if changed and state.me then
+					Windows.refresh(state.me) -- 가방의 캐시 탭(꺼내 둔 펫 · 타는 탈것의 점)
 				end
 			end
 		end
@@ -73577,7 +74056,7 @@ function Boot.start()
 	-- 그 주민과 퀘스트의 말을 시작한다: 돌려줄 것이 있으면 그것부터, 없으면 받을 것 하나(한 번에 하나만 — 퀘스트는 한 줄이다). 시작했으면 true
 	--  돌려주면 state.chain에 적어 둔다 — 서버가 끝냈다고 알려 오면 그 주민이 줄 다음 것으로 말이 이어진다(그리는 고리가 잇는다)
 	state.questTalk = function(npc): boolean
-		if state.sceneKey == Tutorial.SCENE then
+		if Tutorial.isDream(state.sceneKey) then
 			return false -- 꿈(튜토리얼)의 샛별은 퀘스트를 주지 않는다
 		end
 		local level = if state.me then state.me.level else 1
@@ -74069,7 +74548,32 @@ function Boot.start()
 	Windows.register("daily", DailyWindow) -- 일일 의뢰(마을의 의뢰 게시판 앞에서 ↑)
 	Windows.register("attend", AttendWindow) -- 출석(메뉴 → 「출석」 · 그날 처음 들어오면 한 번)
 	Windows.register("achieve", AchieveWindow) -- 업적(메뉴 → 「업적」)
+	Windows.register("coupon", CouponWindow) -- 쿠폰(메뉴 → 「쿠폰」 — 2026-10-21)
 	Windows.register("cash", CashWindow) -- 달빛 상점의 판(창으로는 이름 바꾸기 칸만 — 가방에서 이름 바꾸기 주문서를 쓰면. 상점은 들어가는 공간: cashShop.luau)
+	-- 가방의 캐시 탭(2026-10-21): 펫 꺼내기 · 넣기 · 탈것 타기 · 내리기 · 지금 꺼낸 것 · 상품의 이름(창 ctx에 더한다)
+	do
+		local wctx = Windows.context()
+		wctx.togglePet = state.togglePet
+		wctx.toggleRide = state.toggleRide
+		wctx.myPet = function()
+			return state.myPet
+		end
+		wctx.myRide = function()
+			return state.myRide
+		end
+		wctx.cashProduct = CashWindow.product
+		-- 쿠폰(2026-10-21): 서버에 번호를 보낸다 → (보냈는가, { ok, why?, pet? }) · 받으면 가진 펫 · 탈것을 다시 읽는다
+		wctx.coupon = function(text: string)
+			return pcall(Net.Invoke, "Coupon", text)
+		end
+		wctx.couponGot = function()
+			state.cash = nil
+			if state.cashFetchNow then
+				state.cashFetchNow()
+			end
+			Windows.refresh(state.me)
+		end
+	end
 	-- 달빛 상점의 공간(2026-10-21 사용자 "메이플스토리 캐시샵처럼 아예 무적공간으로 들어가버리는 형태 … 캐시샵은 마을에서만"): 창 ctx에 더한 것
 	local function notice(text: string?)
 		if text and state.fx then
@@ -74189,7 +74693,7 @@ function Boot.start()
 	end
 	TutView.init(Stage.ui)
 	Talk.onFinish = function(npc)
-		if state.sceneKey == Tutorial.SCENE then
+		if Tutorial.isDream(state.sceneKey) then
 			TutView.talked = npc.id -- 튜토리얼: 그 주민과 말을 끝냈다
 		end
 	end
@@ -74282,7 +74786,7 @@ function Boot.start()
 	end
 	state.guide = function()
 		local me = state.me
-		if not me or state.dead or not state.view or not state.body or state.sceneKey == Tutorial.SCENE then
+		if not me or state.dead or not state.view or not state.body or Tutorial.isDream(state.sceneKey) then
 			return nil -- 꿈(튜토리얼)에서는 미션 판이 가르친다
 		end
 		local npc = state.view:npcNear(state.body.x, state.body.y)
@@ -74341,7 +74845,7 @@ function Boot.start()
 				return
 			end
 			state.attend = res.view
-			if res.fresh and state.sceneKey ~= Tutorial.SCENE and not CineView.active() and not Windows.isOpen("attend") then
+			if res.fresh and not Tutorial.isDream(state.sceneKey) and not CineView.active() and not Windows.isOpen("attend") then
 				Windows.open("attend")
 			elseif state.me then
 				Windows.refresh(state.me)
@@ -74476,7 +74980,7 @@ function Boot.start()
 		local level = if state.me then state.me.level else 1
 		if state.view then
 			state.view:setMarks(function(npcId: string)
-				if state.sceneKey == Tutorial.SCENE then
+				if Tutorial.isDream(state.sceneKey) then
 					return nil -- 꿈(튜토리얼)에는 퀘스트 표시가 없다
 				end
 				-- 의뢰 게시판: 낼 의뢰가 있으면 「?」 · 안 받은 의뢰가 있으면 「!」
@@ -74534,6 +75038,23 @@ function Boot.start()
 					if not COMBAT.skills[sk.id] and ((Buffs.is(sk.id) and Buffs.learned(kitHero(), sk.id)) or ((placedDef ~= nil or COMBAT.cast[sk.id] ~= nil) and (state.me.skills[sk.id] or 0) > 0)) then
 						table.insert(list, { what = sk.id, name = sk.name })
 					end
+				end
+			end
+			-- 가진 펫 · 탈것(2026-10-21 점검 — PC는 가방의 캐시 탭에서 퀵슬롯으로 끌어 놓는다 · 폰은 여기서 단추에 놓는다. 누르면 꺼내기 · 넣기 / 타기 · 내리기)
+			local cash = state.cash
+			if not cash and state.cashFetchNow then
+				state.cashFetchNow() -- 아직 모르면 묻는다(받으면 목록이 다시 그려진다)
+			end
+			for _, kind in { "pets", "mounts" } do
+				for _, id in (cash and cash[kind]) or {} do
+					local prod = CashWindow.product(id)
+					table.insert(list, { what = id, name = if prod then prod.name else id })
+				end
+			end
+			for _, id in state.touchSlots do
+				if id and Quick.ride(id) and not (cash and (table.find(cash.pets or {}, id) or table.find(cash.mounts or {}, id))) then
+					local prod = CashWindow.product(id)
+					table.insert(list, { what = id, name = if prod then prod.name else id }) -- 놓아 둔 것은 목록에 남긴다
 				end
 			end
 			-- 배운 온오프 사출기
@@ -74625,7 +75146,9 @@ function Boot.start()
 					elseif win.id == "@chars" then
 						state.toSelect()
 					else
-						Windows.toggle(win.id)
+						-- PC의 단추 줄 · 키와 같은 길(2026-10-21 점검): 「달빛 상점」 = 들어가는 공간(마을에서만) · 경매장 = 마을에서만.
+						--  전에는 여기서 창을 바로 열어(Windows.toggle) 폰에서는 상점이 예전처럼 창으로 열리고 마을 밖에서도 열렸다
+						state.openWin(win.id)
 					end
 				end, { h = K.btnH, font = "body", main = win.id == "@arrange" })
 				state.touchMenuItems[win.id] = itemBtn.frame -- 튜토리얼(꿈)이 그 줄을 반짝이게 한다
@@ -74773,7 +75296,7 @@ function Boot.start()
 				TutView.cast = true -- 튜토리얼: 기술을 썼다
 			end
 			-- 꿈(튜토리얼)에서는 Lv.1이어도 가방이 열린다(「가방 열기」 미션) — 꿈을 나서면 거둔다. 바뀌면 화면 아래의 단추 줄을 다시 그린다
-			local dreaming = state.sceneKey == Tutorial.SCENE
+			local dreaming = Tutorial.isDream(state.sceneKey)
 			if (Windows.extra.bag == true) ~= dreaming then
 				Windows.extra.bag = if dreaming then true else nil
 				if not dreaming then
@@ -75315,14 +75838,9 @@ function CashShop.isOpen(): boolean
 	return root ~= nil
 end
 
--- 공간의 치수(화면 틀의 점): 위 줄 · 미리보기와 상점 판을 가운데에 나란히
-function CashShop.layout(uiW: number, uiH: number)
-	local _, panelH0 = CashWindow.size(nil)
-	local panelW, panelH = S.w + SP.panelPad * 2, panelH0 + SP.panelPad * 2
-	local total = SP.previewW + SP.gap + panelW
-	local x0 = math.floor((uiW - total) / 2)
-	local y0 = SP.topH + math.max(0, math.floor((uiH - SP.topH - panelH) / 2))
-	return { panelW = panelW, panelH = panelH, x0 = x0, y0 = y0, previewX = x0, panelX = x0 + SP.previewW + SP.gap, leaveX = uiW - SP.pad - SP.leaveW }
+-- 공간의 치수(화면 틀의 점): 미리보기와 상점 판을 한 묶음으로 가운데에 · 화면에 맞춰 k배(셈은 shared/lune/ui/layout.luau의 Layout.shopSpace — 2026-10-21 사용자 "ui가 너무 작아 모바일에서도 반응형")
+function CashShop.layout(uiW: number, uiH: number, us: number?)
+	return Layout.shopSpace(uiW, uiH, us)
 end
 
 -- 미리보기에 보일 펫 · 탈것: id = 상품의 이름표(pet_ · mount_) · nil = 지금 꺼내 둔 것 · 탄 것
@@ -75364,9 +75882,9 @@ function CashShop.step(now: number, dt: number)
 	local p = parts
 	local cx, floor = p.cx + 8, p.floor -- 영웅 · 탈것은 가운데에서 8점 오른쪽(펫이 왼쪽에 설 자리 — 공방 탭과 같다)
 	-- 탈것이면 영웅을 앉는 자리에 · 펫은 영웅의 뒤(왼쪽 30점)에
-	local hx, hy = p.ride:update(now, dt, cx, floor, 1, false, false, false, nil, nil)
+	local hx, hy, hs = p.ride:update(now, dt, cx, floor, 1, false, false, false, nil, nil)
 	local char = p.hero.char
-	p.hero:set("idle", Sprite.frameAt(char, "idle", now, false), hx or cx, hy or floor, 1)
+	p.hero:set("idle", Sprite.frameAt(char, "idle", now, false), hx or cx, hy or floor, 1, hs) -- 탄 동안 작게(게임과 같다)
 	if p.pet then
 		local pc = p.pet.sprite.char
 		p.pet.sprite:set("idle", Sprite.frameAt(pc, "idle", now, false), cx - 30, floor, 1)
@@ -75387,7 +75905,7 @@ end
 -- 공간을 짓는다(보이지 않게 — 그림을 불러온 뒤 sayLoading(nil)로 연다). ctx = boot의 창 ctx(cash · cashDo · bag · me) + who(영웅의 그림 이름) · myPet · myRide · onLeave
 local function build(ctx)
 	local uiW, uiH = Stage.uiW, Stage.uiH
-	local L = CashShop.layout(uiW, uiH)
+	local L = CashShop.layout(uiW, uiH, Stage.uiScale)
 	local r = Stage.group(Stage.ui, "CashShop", 500) -- HUD(100) · 창(150) · 막이 아닌 모든 것 위
 	root = r
 	local base = Ui.box(r, 0, 0, uiW, uiH, C.ink) -- 그림이 오기 전에도 게임 화면이 비치지 않게
@@ -75411,13 +75929,19 @@ local function build(ctx)
 	Ui.button(content, W.leave, L.leaveX, 5, SP.leaveW, function()
 		CashShop.leave(ctx)
 	end).frame.Name = "Leave"
-	-- 미리보기: 판 · 제목 · 바닥 · 내 캐릭터(게임과 같은 점 크기 — 판 안에 게임 세계의 배율을 건다) · 고른 것의 이름 · 안내
-	local pv = Ui.panel(content, L.previewX, L.y0, SP.previewW, L.panelH)
+	-- 미리보기와 상점 판의 묶음(k배 — CashShop.layout)
+	local group = Ui.group(content, L.x0, L.y0, L.total, L.panelH, "Panels")
+	local grow = Instance.new("UIScale")
+	grow.Scale = L.k
+	grow.Parent = group
+	-- 미리보기: 판 · 제목 · 바닥 · 내 캐릭터(게임 도트 — 판 안에 배율을 건다) · 고른 것의 이름 · 안내
+	local pv = Ui.panel(group, L.previewX, 0, SP.previewW, L.panelH)
 	pv.Name = "Preview"
 	Ui.text(pv, W.preview, 10, 8, SP.previewW - 20, { font = "body" })
 	local nameText = Ui.text(pv, "", 10, L.panelH - 46, SP.previewW - 20, { align = "center", color = C.gold })
 	Ui.text(pv, W.hint, 10, L.panelH - 28, SP.previewW - 20, { align = "center", color = C.dim, lines = 2 })
-	local ratio = Stage.ratio
+	-- 판 안의 게임 도트: 묶음이 k배라 도트 하나 = ratio x k점 — 화면의 정수 화소가 되게 맞춘다(게임 화면의 도트보다 조금 크다)
+	local ratio = math.max(1, math.floor(Stage.scale * L.k + 0.5)) / (Stage.uiScale * L.k)
 	local world = Instance.new("Frame")
 	world.Name = "World"
 	world.BackgroundTransparency = 1
@@ -75437,7 +75961,7 @@ local function build(ctx)
 	parts = { root = r, content = content, loading = loading, world = world, hero = hero, ride = ride, pet = nil, petId = ctx.myPet(), rideId = ctx.myRide(), name = nameText, cx = cx, floor = floor }
 	setPreview(nil)
 	-- 상점 판: 상점 창의 것을 그대로(같은 탭 · 줄 · 단추). 펫 · 탈것 줄을 누르면 미리보기에
-	local panel = Ui.panel(content, L.panelX, L.y0, L.panelW, L.panelH)
+	local panel = Ui.panel(group, L.panelX, 0, L.panelW, L.panelH)
 	panel.Name = "Shop"
 	local body = Ui.group(panel, SP.panelPad, SP.panelPad, S.w, L.panelH - SP.panelPad * 2, "Body")
 	local wctx = setmetatable({
@@ -75899,7 +76423,7 @@ local function rgb(c: number): Color3
 	return Color3.fromRGB(bit32.rshift(c, 16), bit32.band(bit32.rshift(c, 8), 255), bit32.band(c, 255))
 end
 function Cast:look(a, body, clip: string, frame: number, x: number, y: number, dir: number, fade: number?)
-	local sc = a.scale or 1
+	local sc = (a.scale or 1) * (a.rideSize or 1) -- rideSize = 탄 동안 줄여 그리는 배(boot — rideView가 돌려준 것)
 	local alpha = max(fade or 0, 1 - (a.alpha or 1))
 	body:set(clip, frame, x, y, dir, sc)
 	body.label.ImageTransparency = alpha
@@ -77620,6 +78144,15 @@ function Effects:addDrop(d)
 	self.drops[d.id] = { frame = frame, x = d.x, y = d.y, w = w, h = h, amount = d.amount, kind = d.kind, item = d.item, name = d.name, phase = d.id * 0.7, spin = d.kind ~= "dust" and d.kind ~= "gear" and d.kind ~= "quest" and d.kind ~= "goods" }
 end
 
+-- 펫이 주웠다: 그것이 (x, y)로 빨려 든다(2026-10-21 사용자 "펫의 줍기판정이 살짝 자석처럼 되어야합니다" — 그림만. 줍는 것은 서버)
+Effects.PULL = 0.15
+function Effects:pull(id: number, x: number, y: number)
+	local d = self.drops[id]
+	if d then
+		d.pull = { x = x, y = y, t = 0 }
+	end
+end
+
 function Effects:removeDrop(id: number)
 	local d = self.drops[id]
 	if d then
@@ -77744,10 +78277,20 @@ function Effects:update(now: number, dt: number)
 			end
 		end
 	end
-	-- 떨어진 것은 땅 바로 위에서 천천히 오르내린다
+	-- 떨어진 것은 땅 바로 위에서 천천히 오르내린다 · 펫이 주우면(pull) 펫 쪽으로 PULL초 동안 빨려 든다(서버가 DropGone을 보내면 사라진다 — 오지 않으면 제자리로)
 	for _, d in self.drops do
 		local bob = math.floor(math.sin(now * 4 + d.phase) * 1.5 + 0.5)
-		d.frame.Position = UDim2.fromOffset(math.floor(d.x - d.w / 2 + 0.5), math.floor(d.y - d.h - 2 + bob + 0.5))
+		local dx, dy = d.x, d.y
+		if d.pull then
+			d.pull.t += dt
+			if d.pull.t > 1 then
+				d.pull = nil -- 서버가 주지 않았다(남의 것 · 가방이 가득): 제자리로
+			else
+				local k = math.min(1, d.pull.t / Effects.PULL)
+				dx, dy, bob = d.x + (d.pull.x - d.x) * k, d.y + (d.pull.y - d.y) * k, 0
+			end
+		end
+		d.frame.Position = UDim2.fromOffset(math.floor(dx - d.w / 2 + 0.5), math.floor(dy - d.h - 2 + bob + 0.5))
 		if d.spin then
 			local f = math.floor(now * Effects.COIN.fps + d.phase) % Effects.COIN.frames + 1
 			if f ~= d.spinAt then
@@ -78143,6 +78686,7 @@ MODULES['Client/lune/hallStones'] = function(script, game, require, task, os, ty
 --  → 비석 앞에서 ↑로 창을 여는 것을 없애고(공방 items.js의 NPCDO에서 뺐다), 비석 면(scenes.generated의 npcs[].face — 방 그림에서 잰 도트)에
 --    순위 · 이름 · 값을 돌에 판 글처럼 그린다: 어두운 글 + 한 점 아래의 밝은 테두리(새긴 홈에 빛이 걸린 모양). 들어설 때 서버에서 받고(Net "Rank") 30초마다 다시 받는다.
 --  줄 수 = 비석 면의 높이에 들어가는 만큼(가장 많이 Rank.TOP). 이름은 폭을 넘으면 …로 줄인다.
+--  2026-10-21: 명예의 전당의 비석을 넓혔고(면 81~82 x 60점 — 사용자 "닉네임 한글자부터 ... 처리 되버립니다"), 대영주의 성의 왼쪽 벽에 같은 순위 판 셋을 걸었다(scene의 npcs[].board · pad).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local Net = require(lune.net.net)
@@ -78192,7 +78736,8 @@ function HallStones.enter(scene, parent: Instance)
 	gen += 1
 	layer = Stage.group(parent, "HallStones", 5)
 	for _, n in list do
-		local st = { board = string.match(n.id, "^hall_(%a+)$") or "level", face = n.face, rows = {} }
+		-- board = 새길 순위판(대영주의 성의 판처럼 이름표가 hall_가 아니면 board로 — 2026-10-21) · pad = 면 안쪽 여백(얇은 판은 1)
+		local st = { board = n.board or string.match(n.id, "^hall_(%a+)$") or "level", face = n.face, pad = n.pad or PAD, rows = {} }
 		for i = 1, Rank.TOP do
 			st.rows[i] = { no = engraved(layer, "right", 14), name = engraved(layer, "left", 120), value = engraved(layer, "right", 60) }
 		end
@@ -78236,8 +78781,9 @@ function HallStones.update()
 	for _, st in stones do
 		-- face = 방 그림의 자리(실내의 방 그림은 화면에 붙은 층이다 — 카메라를 따라가지 않는다): 화면의 점 = 그림의 점. 세계의 자리로 바꾸려면 카메라를 더한다
 		local cx, cy = Overlay.camX, Overlay.camY
-		local x0, y0 = Overlay.x(st.face[1] + cx) + PAD, Overlay.y(st.face[2] + cy) + PAD + 1
-		local x1, y1 = Overlay.x(st.face[3] + 1 + cx) - PAD, Overlay.y(st.face[4] + 1 + cy) - PAD
+		local pad = st.pad
+		local x0, y0 = Overlay.x(st.face[1] + cx) + pad, Overlay.y(st.face[2] + cy) + pad + 1
+		local x1, y1 = Overlay.x(st.face[3] + 1 + cx) - pad, Overlay.y(st.face[4] + 1 + cy) - pad
 		local w = x1 - x0
 		local fit = math.clamp(math.floor((y1 - y0) / M.smallLine), 0, Rank.TOP) -- 면에 들어가는 줄
 		local list = boards and boards[st.board] or {}
@@ -78409,7 +78955,7 @@ function Hud.init()
 		ready.Visible = false
 		local slot = { frame = cell.frame, cell = cell, back = cell.frame:FindFirstChild("uSlot") :: ImageLabel, pic = pic, veil = veil, ready = ready, readyT = 0, pad = pad, what = false :: any, id = nil :: string?, shown = nil :: string?, keyName = "" }
 		-- 퀵슬롯은 자리가 늘 같다(여섯 x 두 줄 — 칸마다 키 하나)
-		local px, py = Layout.slotPlace(i, COLS * ROWS)
+		local px, py = Layout.slotPlace(i, COLS * ROWS, Stage.uiW)
 		cell.frame.Position = UDim2.fromOffset(px, py)
 		-- 누르는 자리: 칸과 그 위의 키 딱지까지. 스킬 창이 열려 있을 때 칸을 누르거나 끌어 고친다(ui/quickEdit.luau가 받는다)
 		local hit = Instance.new("TextButton")
@@ -78451,6 +78997,13 @@ function Hud.init()
 	Hud.pickHint = Ui.text(Hud.skillRoot, Quick.DATA.words.pick, 0, -16, s.w, { align = "center", color = C.accent, outline = true })
 	Hud.pickHint:show(false)
 
+	-- 화면 틀의 격자가 바뀌면 퀵슬롯의 간격도 바뀐다(좁은 격자에서는 칸 사이가 4점 — 2026-10-21 일곱 x 두 줄)
+	Stage.onResize(function()
+		for i, slot in Hud.slots do
+			local px, py = Layout.slotPlace(i, COLS * ROWS, Stage.uiW)
+			slot.frame.Position = UDim2.fromOffset(px, py)
+		end
+	end)
 	Hud.menuRoot = Stage.placeRect(root, "Menu", UI.hud.menu)
 	-- 화면 틀의 격자가 바뀌면 단추의 간격도 바뀐다(가장 작은 격자에서는 스킬 칸에 닿지 않게 촘촘하다)
 	Stage.onResize(Hud.placeMenu)
@@ -78523,8 +79076,8 @@ function Hud.setSlots(list)
 		if slot.id then
 			Hud.byId[slot.id] = slot
 		end
-		if i > COLS and what then
-			Hud.top = true
+		if what and Layout.slotCell(i) == 2 then
+			Hud.top = true -- 윗줄에 놓인 것이 있다
 		end
 	end
 	Hud.paintSlots()
@@ -78552,7 +79105,7 @@ function Hud.showSlotTip(i: number)
 		return
 	end
 	local frame, h = Hud.tipPanel(Hud.skillRoot, t, "SlotTip")
-	local px = Layout.slotPlace(i, COLS * ROWS)
+	local px = Layout.slotPlace(i, COLS * ROWS, Stage.uiW)
 	local w = UI.hud.skills.w
 	frame.Position = UDim2.fromOffset(math.clamp(px + math.floor(SLOT / 2) - math.floor(TIP.w / 2), math.min(0, w - TIP.w), math.max(0, w - TIP.w)), -h - 4) -- 퀵슬롯 덩어리 위에(위 칸을 가리지 않게)
 	slotTip = frame
@@ -80045,9 +80598,13 @@ local Others = {}
 Others.__index = Others
 Others.TAG_DOWN = TAG_DOWN
 
--- 이름표에 적는 글: 이름만(레벨은 파티원 칸 · 파티 창에서 본다)
+-- 이름표: 판 안에는 이름만, 레벨은 판 바깥 왼쪽에 따로(「Lv.12」 — 나 · 다른 사람 모두 · Ui.tag의 lead).
+--  2026-10-21 사용자: "닉네임 이름표 왼쪽에 레벨 나오게 하겠습니다. 다른사람에게 레벨 보이게 합니다" → 이어서 "이름테두리 바깥에 레벨표기입니다. 이 박스 안으로 들어오는게 아니라"
 function Others.tagText(_level: number, name: string): string
 	return name
+end
+function Others.levelText(level: number): string
+	return ("Lv.%d"):format(level)
 end
 
 function Others.new(heroLayer: Frame, tagLayer: Frame, myId: any, ladders: any, scene: any)
@@ -80087,7 +80644,7 @@ function Others:setWho(roster)
 					id = w.id,
 					class = w.class,
 					sprite = Sprite.new(self.heroLayer, w.class, 4),
-					tag = Ui.tag(self.tagLayer, "", WHITE, 220, true), -- 플레이어의 이름표: 민트 테두리를 두른 판
+					tag = Ui.tag(self.tagLayer, "", WHITE, 220, true, ""), -- 플레이어의 이름표: 민트 테두리를 두른 판 · 판 바깥 왼쪽에 레벨
 					x = 0,
 					y = 0,
 					fromX = 0,
@@ -80112,6 +80669,7 @@ function Others:setWho(roster)
 			if o.name ~= w.name or o.level ~= w.level then
 				o.name, o.level = w.name, w.level
 				o.tag:SetText(Others.tagText(w.level, w.name))
+				Ui.tagLead(o.tag, Others.levelText(w.level))
 			end
 		end
 	end
@@ -80256,12 +80814,14 @@ function Others:update(now: number, party)
 		for _, l in self.ladders do
 			onRung = onRung or (math.abs(o.x - l.x) <= 1 and o.y > l.top + 0.5 and o.y < l.bottom - 0.5)
 		end
-		local rx, ry = o.rv:update(now, dt, o.x, o.y, o.dir, now - o.moveT < 0.25, now - o.airT < 0.25, onRung or act ~= nil or not o.alive)
+		local rx, ry, rs = o.rv:update(now, dt, o.x, o.y, o.dir, now - o.moveT < 0.25, now - o.airT < 0.25, onRung or act ~= nil or not o.alive)
 		if rx then
 			hx, hy = rx, ry
 			clip, frame = "idle", Sprite.frameAt(char, "idle", now + (id % 7) * 0.3, false)
 		end
-		o.sprite:set(clip, frame, hx, hy, o.dir)
+		o.rideSize = rs -- 탄 동안 작게(boot가 버프의 모습을 입힐 때도 — cast.luau의 look)
+		o.hx, o.hy = hx, hy -- 몸을 그린 자리(탄 동안은 안장 위 — boot가 버프의 모습을 이 자리에 입힌다)
+		o.sprite:set(clip, frame, hx, hy, o.dir, rs)
 		o.clip, o.frame = clip, frame -- 지금의 동작과 장(boot가 버프의 모습을 그 위에 입힌다 — cast.luau의 look)
 		-- 쓰러진 사람: 쓰러지는 동작이 끝나면 몸 대신 비석이 선다(마을로 돌아가거나 소생을 받을 때까지)
 		local downFor = if o.alive then -1 else now - (o.deadAt or now) - #char.clips.death.frames / char.clips.death.fps
@@ -80737,7 +81297,7 @@ MODULES['Client/lune/rideView'] = function(script, game, require, task, os, type
 --    막힌 칸 · 발판 위에 서고 벽에 막힌다 · 벽 · 턱에 막히면 windup초 웅크렸다 뛴다 · 영웅이 위 발판에 있어도 따라 오르지 않는다(메이플의 일반 펫) · 영웅이 아래에 있으면
 --    낭떠러지를 걸어 떨어지고 얇은 발판은 하단 점프로 내려간다 · 같은 높이의 건너편이면 뛰어 건넌다 · 사다리는 타지 않는다
 --    순간 이동(영웅의 발밑 땅으로): 영웅이 땅에 서 있을 때 가로 warpX · 세로 warpY보다 멀면 · 가려는데 stuck초 동안 못 가고 영웅이 behind점보다 멀면 · 맵 아래로 떨어지면
---   줍기: 내 펫만(drops · onPick을 받은 것) — 영웅에게서 reach점 안 · 펫이 선 높이에서 위 lookUp · 아래 lookDown점 안의 떨어진 것에 달려가(chase) 닿으면 onPick(번호)
+--   줍기: 내 펫만(drops · onPick을 받은 것) — 영웅에게서 reach점 안 · 펫의 높이에서 위아래 magnet점 안의 떨어진 것에 달려가(chase) 펫에서 원 magnet점 안이면 onPick(번호, x, y)(자석 — 10-21)
 --    → 서버(world.luau의 onPetPick)가 확인하고 줍는다. 한 번 해 본 것 · 가다가 막힌 것은 3초 동안 다시 보지 않는다
 --  탈것: 탄 동안 영웅의 발밑에 탈것을 그리고, 영웅은 서기 모습으로 앉는 자리(seat)에 · 탈것의 등(<동작>_front)을 영웅 앞에 다시 그린다(다리가 몸에 묻혀 앉은 것으로 보인다).
 --   사다리 위 · 기술을 쓰는 동안은 탈것을 감춘다(사용자 10-20 「탈것은 사다리에서 감추기 좋습니다」) — 영웅은 제 동작 그대로.
@@ -80763,7 +81323,7 @@ local HALF = G.BOX_W / 2
 function RideView.new(layer: Instance, z: number, scene: any)
 	return setmetatable({
 		layer = layer, z = z, scene = scene, petId = nil, pet = nil, rideId = nil, mount = nil, front = nil,
-		body = nil, acc = 0, pdir = 1, pmoveT = -9, goal = nil, tried = {}, nextPick = 0, windT = nil, prog = nil, warps = 0,
+		body = nil, acc = 0, pdir = 1, goal = nil, tried = {}, nextPick = 0, windT = nil, prog = nil, warps = 0,
 	}, RideView)
 end
 
@@ -80861,23 +81421,23 @@ function RideView:warp(x: number, y: number, dir: number)
 end
 
 -- 펫의 한 걸음(1/60초). hero = { x, y, dir, moving, air }
-function RideView:petStep(now: number, hero, drops: any?, onPick: ((number) -> ())?)
+function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, number, number) -> ())?)
 	local scene, b = self.scene, self.body
 	-- 순간 이동: 영웅이 땅에 서 있을 때 멀면(사다리 · 공중에서는 기다린다 — 영웅의 발밑 땅이 아직 정해지지 않았다)
 	if not hero.air and (math.abs(hero.x - b.x) > P.warpX or math.abs(hero.y - b.y) > P.warpY) then
 		self:warp(hero.x, hero.y, hero.dir)
 		return
 	end
-	-- 주우러 갈 것: 영웅에게서 reach점 안 · 펫이 선 높이의 것(메이플: 펫의 위 50 · 아래 10px) · 펫에게서 가장 가까운 것
+	-- 주우러 갈 것: 영웅에게서 reach점 안 · 펫의 높이에서 위아래 magnet점 안(턱 · 발판 위에 놓여 펫이 오르지 못해도 원 안이면 줍는다) · 펫에게서 가장 가까운 것
 	local goal = if self.goal and drops then drops[self.goal] else nil
-	if goal and (math.abs(goal.x - hero.x) > P.reach + P.slack or goal.y < b.y - P.lookUp or goal.y > b.y + P.lookDown) then
+	if goal and (math.abs(goal.x - hero.x) > P.reach + P.slack or math.abs(goal.y - b.y) > P.magnet) then
 		goal = nil -- 영웅이 멀어졌다 · 펫이 다른 높이로 갔다
 	end
 	self.goal = if goal then self.goal else nil
 	if not goal and drops and onPick and b.ground and now >= self.nextPick then
 		local bd = math.huge
 		for id, d in drops do
-			if math.abs(d.x - hero.x) <= P.reach and d.y >= b.y - P.lookUp and d.y <= b.y + P.lookDown and (self.tried[id] or 0) <= now then
+			if math.abs(d.x - hero.x) <= P.reach and math.abs(d.y - b.y) <= P.magnet and (self.tried[id] or 0) <= now then
 				local dd = math.abs(d.x - b.x)
 				if dd < bd then
 					self.goal, goal, bd = id, d, dd
@@ -80891,7 +81451,8 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number) -> (
 		tx, speed = goal.x, P.chase
 	else
 		local side = if hero.moving then -hero.dir elseif b.x < hero.x then -1 else 1
-		tx = if hero.air then hero.x + side * P.behind else spotFor(scene, hero.x, hero.y, side)
+		-- 영웅이 달리는 동안은 늘 영웅의 뒤(2026-10-21 — 뒤에 설 땅이 없으면 영웅의 앞으로 갈 곳이 바뀌어 곧게 달리는데도 펫이 앞뒤로 튀었다) · 서 있으면 설 수 있는 곳
+		tx = if hero.air or hero.moving then hero.x + side * P.behind else spotFor(scene, hero.x, hero.y, side)
 		speed = math.min(P.max, P.base + P.per * math.abs(tx - b.x))
 	end
 	local d = tx - b.x
@@ -80933,13 +81494,14 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number) -> (
 		self:warp(hero.x, hero.y, hero.dir) -- 맵 아래로 떨어졌다
 		return
 	end
-	-- 걸림: 가려는데(mx ~= 0) stuck초 동안 갈 곳 쪽으로 4점도 다가가지 못했다 — 벽 앞에서 뛰기를 되풀이하는 것 · 낭떠러지 앞에서 선 것 모두
+	-- 걸림: 가려는데(mx ~= 0) stuck초 동안 가려는 쪽으로 4점도 움직이지 못했다 — 벽 앞에서 뛰기를 되풀이하는 것 · 낭떠러지 앞에서 선 것 모두
 	--  (한 걸음씩 세면 웅크림 · 뛰기 사이에 끊겨 키보다 높은 벽에서 영영 세지 못한다)
-	local far = math.abs(tx - b.x)
+	--  2026-10-21 사용자 "마을을 일자로 달리면 계속 팅기듯이 프레임드랍 일어나는것처럼 보여요": 전에는 「갈 곳까지의 거리가 4점 줄었나」로 쟀다 —
+	--   영웅이 달리면 펫은 갈 곳에서 같은 거리를 두고 따라가므로 거리가 줄지 않아 1.2초마다 「걸렸다」며 영웅 뒤로 순간 이동했다 → 펫이 실제로 움직인 만큼으로 잰다
 	if mx == 0 then
 		self.prog = nil
-	elseif not self.prog or far < self.prog.d - 4 then
-		self.prog = { d = far, t = now }
+	elseif not self.prog or (b.x - self.prog.x) * mx >= 4 then
+		self.prog = { x = b.x, t = now }
 	elseif now - self.prog.t >= P.stuck then
 		self.prog = nil
 		if self.goal then
@@ -80952,25 +81514,37 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number) -> (
 	end
 	if math.abs(b.x - x0) > 0.01 then
 		self.pdir = if b.x > x0 then 1 else -1
-		self.pmoveT = now
 	elseif math.abs(hero.x - b.x) > 1 then
 		self.pdir = if hero.x > b.x then 1 else -1 -- 멈추면 영웅 쪽을 본다
 	end
-	-- 닿았다: 줍는다
-	if goal and math.abs(goal.x - b.x) <= 3 and math.abs(goal.y - b.y) <= 8 then
-		local id = self.goal :: number
-		self.tried[id] = now + 3
-		self.goal, self.nextPick = nil, now + P.every
-		if onPick then
-			onPick(id)
+	-- 닿았다: 펫(몸의 가운데)에서 원 magnet점 안이면 줍는다 — 자석처럼(2026-10-21 사용자 "펫의 줍기판정이 살짝 자석처럼 되어야합니다. 원형판정으로 지형이 좀 안좋거나 ,
+	--  펫이 잘 올라가지 못하더라도 주워지게") · 원 안의 것은 갈 곳이 아니어도 지나가며 줍는다(가장 가까운 것 하나 — every초마다)
+	if drops and onPick and now >= self.nextPick then
+		local cy = b.y - 6 -- 펫 몸의 가운데쯤(발밑에서 6점 위)
+		local pick, pd = nil, math.huge
+		for id, d in drops do
+			local ddx, ddy = d.x - b.x, d.y - 4 - cy
+			local dist = math.sqrt(ddx * ddx + ddy * ddy)
+			if dist <= P.magnet and dist < pd and (self.tried[id] or 0) <= now and math.abs(d.x - hero.x) <= P.reach + P.slack then
+				pick, pd = id, dist
+			end
+		end
+		if pick then
+			self.tried[pick] = now + 3
+			if self.goal == pick then
+				self.goal = nil
+			end
+			self.nextPick = now + P.every
+			onPick(pick, b.x, cy)
 		end
 	end
 end
 
 -- 한 장 그린다. (x, y) = 영웅의 발밑 · dir = 보는 쪽 · moving · air = 옆으로 움직이는 중 · 공중(사다리 위도) · hide = 사다리 위 · 기술 중 · 쓰러짐(탈것을 감춘다)
 --  drops = 땅에 떨어진 것들({ [번호] = { x, y } } — effects.luau의 drops) · onPick(번호) = 펫이 닿았다(내 펫만 — 남의 펫은 nil: 따라다니기만)
---  돌려주는 것: 탄 동안 영웅을 그릴 자리(x, y) — 그 밖에는 nil(영웅은 제자리에 제 동작으로)
-function RideView:update(now: number, dt: number, x: number, y: number, dir: number, moving: boolean, air: boolean, hide: boolean, drops: any?, onPick: ((number) -> ())?): (number?, number?)
+--  돌려주는 것: 탄 동안 영웅을 그릴 자리(x, y) · 크기(서기 그림을 줄여 그리는 배 — ride.generated의 riderSize를 화면 화소에 맞춘 것) — 그 밖에는 nil(영웅은 제자리에 제 동작으로)
+--   2026-10-21 사용자 "캐릭터가 탑승한모습이 자연스럽지않아요" · "탑승할때 플레이어도 idle 재생하면될듯 그 위치에서" → 탄 동안 영웅은 서기 그림 그대로 작게 · 안장 자리의 등 위에(장마다 잰 높이)
+function RideView:update(now: number, dt: number, x: number, y: number, dir: number, moving: boolean, air: boolean, hide: boolean, drops: any?, onPick: ((number, number, number) -> ())?): (number?, number?, number?)
 	if self.pet and self.scene then
 		if not self.body then
 			self:warp(x, y, dir) -- 처음 · 펫을 꺼낸 때: 영웅의 뒤
@@ -80984,8 +81558,10 @@ function RideView:update(now: number, dt: number, x: number, y: number, dir: num
 		end
 		local b = self.body
 		local char = self.pet.char
-		local clip = if not b.ground then "jump" elseif now - self.pmoveT < 0.15 then "run" else "idle"
-		self.pet:set(clip, Sprite.frameAt(char, clip, now, clip == "jump"), math.floor(b.x + 0.5), math.floor(b.y + 0.5), self.pdir)
+		-- 펫의 그림 = 서기 하나(사용자 10-21 "펫은 idle 제외하고 그냥 움직이기만하면되지") — 걸어도 · 뛰어도 그 그림이 자리만 옮긴다
+		--  자리 = 영웅이 그려지는 점(반올림) + 영웅과의 간격(반올림): 펫의 자리를 따로 반올림하면 같은 빠르기로 따라와도 영웅(과 화면)에 대해 장마다 한 점씩 떨렸다(2026-10-21)
+		local hx, hy = math.floor(x + 0.5), math.floor(y + 0.5)
+		self.pet:set("idle", Sprite.frameAt(char, "idle", now, false), hx + math.floor(b.x - x + 0.5), hy + math.floor(b.y - y + 0.5), self.pdir)
 	end
 	if not self.mount then
 		return nil, nil
@@ -81002,7 +81578,10 @@ function RideView:update(now: number, dt: number, x: number, y: number, dir: num
 	self.mount:set(clip, f, x, y, dir)
 	self.front:set(clip .. "_front", f, x, y, dir)
 	local bob = (m.bob[clip] and m.bob[clip][f]) or 0
-	return x + m.seat.dx * dir, y + m.seat.dy + bob
+	local bobx = (m.bobx and m.bobx[clip] and m.bobx[clip][f]) or 0 -- 어깨를 따라 앞뒤로(질주에서 어깨가 서 있는 그림보다 뒤 — 2026-10-21 사용자 "늑대 탑승위치가 갑자기 앞쪽으로가서")
+	-- 탈것은 char.size배로 그린다(사용자 "탈것들의 크기가 좀더 커야하고" — 화면 화소에 맞춘 배) → 탈것 그림의 점으로 적힌 영웅의 자리도 그 배
+	local ms = Sprite.sizeOn(self.mount.char.size or 1)
+	return x + (m.seat.dx + bobx) * ms * dir, y + (m.seat.dy + bob) * ms, Sprite.sizeOn(RIDE.riderSize or 1)
 end
 
 function RideView:destroy()
@@ -81655,7 +82234,7 @@ function Sprite:set(clip: string, frame: number, x: number, y: number, dir: numb
 	local fine = c.k ~= nil
 	-- char.size = 그 캐릭터를 그리는 크기(펫 0.5 — 2026-10-20 사용자 "펫은 유저보다 작아야합니다" · 승인된 그림의 점은 그대로 두고 작게 그린다. 점은 또렷하게(Pixelated))
 	local s = (scale or 1) * (if fine then c.k * Sprite.preview else 1) * Sprite.sizeOn(char.size or 1)
-	local exact = fine or (char.size ~= nil and char.size ~= 1) -- 줄여 그리는 것은 자리 · 크기를 점의 소수 자리까지(반 점을 버리면 점의 크기가 고르지 않다)
+	local exact = fine or (char.size ~= nil and char.size ~= 1) or (scale ~= nil and scale % 1 ~= 0) -- 줄여 그리는 것(펫 · 탄 영웅)은 자리 · 크기를 점의 소수 자리까지(반 점을 버리면 점의 크기가 고르지 않다)
 	if self.fine ~= fine then
 		self.fine = fine
 		label.ResampleMode = if fine then Enum.ResamplerMode.Default else Enum.ResamplerMode.Pixelated
@@ -82762,6 +83341,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UI = require(ReplicatedStorage.shared.lune.data["ui.generated"])
 local Quick = require(ReplicatedStorage.shared.lune.ui.quick)
+local Layout = require(ReplicatedStorage.shared.lune.ui.layout)
 local Stage = require(script.Parent.stage)
 local Input = require(script.Parent.input)
 local Hud = require(script.Parent.hud)
@@ -82910,12 +83490,13 @@ local function openChooser()
 	if not Touch.arranging then
 		return
 	end
-	local list = opts.choices() -- { { what, name } … } — 물약과 배운(쓸 수 있는) 스킬
-	local cols, cell, gap, pad0 = 5, 44, 6, 12
-	local rows = math.max(1, math.ceil(#list / cols))
-	local w = pad0 * 2 + cols * cell + (cols - 1) * gap
-	local h = 34 + rows * (cell + 16) + 44
-	local holder = Stage.place(Stage.ui, "TouchChooser", "tc", 480 - w / 2, 54, w, h)
+	local list = opts.choices() -- { { what, name } … } — 물약 · 배운(쓸 수 있는) 스킬 · 가진 펫 · 탈것
+	-- 판은 왼쪽 위(칸 단추는 모두 오른쪽 아래 — 덮지 않는다) · 화면에 들어가는 만큼만 길어지고 넘치는 줄은 밀어서 본다(2026-10-21 점검 — Layout.touchChooser)
+	local K = Layout.TOUCHCHOOSER
+	local m = Layout.touchChooser(#list, Stage.uiH - Stage.insetTop)
+	local cols, cell, gap, pad0 = K.cols, K.cell, K.gap, K.pad
+	local w, h = m.w, m.h
+	local holder = Stage.place(Stage.ui, "TouchChooser", "tl", K.x, K.top, w, h)
 	holder.ZIndex = 170
 	local panel = Ui.panel(holder, 0, 0, w, h)
 	local hold = Instance.new("TextButton") -- 판을 눌러도 뒤의 것이 눌리지 않게
@@ -82926,17 +83507,20 @@ local function openChooser()
 	hold.Parent = panel
 	local title = if selected then "밝게 뜬 단추에 놓을 것을 고르세요" else "바꿀 단추를 누르세요 · 끌면 자리를 바꿉니다"
 	Ui.text(panel, title, pad0, 10, w - pad0 * 2, { font = "body", color = if selected then C.accent else C.text })
+	local scroll = Ui.scroll(panel, 0, K.titleH, w, m.viewH, m.contentH, K.bar)
+	scroll.Name = "List"
+	scroll.ZIndex = 2
 	for i, item in list do
 		local col, row = (i - 1) % cols, math.floor((i - 1) / cols)
-		local x, y = pad0 + col * (cell + gap), 34 + row * (cell + 16)
-		local slot = Ui.slot(panel, x, y, cell)
+		local x, y = pad0 + col * (cell + gap), row * m.rowH
+		local slot = Ui.slot(scroll, x, y, cell)
 		slot.frame.ZIndex = 2
 		local now = selected and state.slots[selected] == item.what
 		slot:setOn(now == true)
 		local pic = Ui.pic(slot.frame, Quick.pic(item.what), math.floor((cell - PIC) / 2), math.floor((cell - PIC) / 2))
 		pic.ZIndex = 2
 		local placed = Quick.find(state.slots, item.what) ~= nil
-		Ui.text(panel, item.name, x - 3, y + cell + 2, cell + 6, { align = "center", color = if placed then C.accent else C.text, outline = true }) -- 이미 어느 단추에 놓여 있는 것은 민트
+		Ui.text(scroll, item.name, x - 3, y + cell + 2, cell + 6, { align = "center", color = if placed then C.accent else C.text, outline = true, lines = 2 }) -- 이미 어느 단추에 놓여 있는 것은 민트 · 긴 이름(「목도리 달토끼」)은 두 줄
 		local hit = Ui.hit(slot.frame)
 		hit.Activated:Connect(function()
 			if selected then
@@ -83316,6 +83900,13 @@ function Touch.refresh()
 	paintAll()
 end
 
+-- 놓을 것의 목록이 바뀌었다(가진 펫 · 탈것을 서버에서 받았다 — 2026-10-21): 배치 중이면 고른 칸 그대로 목록만 다시
+function Touch.rechoose()
+	if Touch.arranging then
+		openChooser()
+	end
+end
+
 -- 가방이 바뀌었다: 소비 아이템이 놓인 단추의 숫자를 다시 적는다
 function Touch.setCounts()
 	for i, b in slotButtons do
@@ -83608,7 +84199,7 @@ end
 -- 매 화면. c = { tut(서버가 보낸 진행), skip(건너뛸 수 있나), scene(장면 이름표), zones(장면의 tut), body, touch, key(하는 일 → 키 이름), skill(첫 사냥기 「키 · 이름」), potion(물약 칸의 키), windows({ [id] = true }), dt, find(이름) → 반짝일 단추 }
 function View.update(c)
 	local t = c.tut
-	local on = c.scene == Tutorial.SCENE and t ~= nil and not t.done
+	local on = Tutorial.isDream(c.scene) and t ~= nil and not t.done
 	root.Visible = on
 	if not on then
 		View.startX, View.talked, View.dropped, View.cast, pending, shownStep = nil, nil, false, false, false, -1
@@ -85160,13 +85751,20 @@ local Ui = require(script.Parent.ui)
 local ItemCell = require(script.Parent.itemCell)
 local ItemDetail = require(script.Parent.itemDetail)
 local Windows = require(script.Parent.windows)
+local BMW = require(lune.data["bm.generated"]).shop.words -- 캐시 탭의 글(2026-10-21)
 
 local C = Ui.COLOR
 local D = Items.data
 local BAG = Layout.BAG
 local COLS, ROWS = BAG.cols, BAG.rows
 local GRID_Y = BAG.gridY -- 칸들의 윗줄
-local KEYS = D.BAG.keys -- 탭의 이름표("gear" · "use" · "etc")
+local KEYS = table.clone(D.BAG.keys) -- 탭의 이름표("gear" · "use" · "etc") + 넷째 "cash"(아래)
+-- 캐시 탭(2026-10-21 사용자 "인벤토리 가방에 캐시 탭을 넣던지 방법을 고안해서 펫을꺼내거나 넣는것, 라이딩을 타거나 내리는것 다 가능해야하고"):
+--  계정이 가진 펫 · 탈것이 칸에 놓인다(가방의 칸을 차지하지 않는다 — 서버의 상점 상태 Cash.view의 pets · mounts). 꺼내 둔 펫 · 타는 탈것은 칸의 오른쪽 아래에 민트 점.
+--  누르면 상세 판에 「꺼내기 · 넣기」 / 「타기 · 내리기」 · 「퀵슬롯」 · 두 번 누르면 바로 · 끌어서 퀵슬롯에 놓으면 그 키로(boot의 state.togglePet · toggleRide)
+table.insert(KEYS, "cash")
+local TABNAMES = table.clone(D.BAG.tabs)
+table.insert(TABNAMES, BMW.bagTab)
 local DOUBLE = 0.4 -- 이 안에 같은 칸을 다시 누르면 두 번 누른 것(초)
 local HOLD = 0.3 -- 스마트폰: 칸을 이만큼(초) 누르고 있다가 밀어야 아이템을 끈다(그 전에 밀면 스크롤)
 local BAR = 3 -- 스크롤 막대의 두께(화면 틀의 점 — 칸의 오른쪽 끝에 겹친다)
@@ -85221,24 +85819,43 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 	local function unselect()
 		sel, ask = nil, nil
 	end
+	-- 캐시 탭의 칸들: 가진 펫(산 차례) → 가진 탈것 · on = 꺼내 둔 펫 / 타는 탈것(서버의 상점 상태 — 없으면 빈 탭)
+	local function cashList()
+		local v = ctx.cash and ctx.cash()
+		local out = {}
+		if not v then
+			return out
+		end
+		local myPet, myRide = ctx.myPet and ctx.myPet(), ctx.myRide and ctx.myRide()
+		for _, id in v.pets or {} do
+			table.insert(out, { ride = id, kind = "pet", on = (myPet or v.petOut) == id })
+		end
+		for _, id in v.mounts or {} do
+			table.insert(out, { ride = id, kind = "mount", on = myRide == id })
+		end
+		return out
+	end
 	-- 모든 창을 다시 그린다(상세 판은 하나뿐이라, 여기서 고르면 다른 창이 고른 것은 풀린다)
 	local function redraw()
 		Windows.refresh(ctx.me())
 	end
 	local function choose(tabKey: string, slot: number, it)
-		sel = { tab = tabKey, slot = slot, id = if it.item then it.item else it.id }
+		sel = { tab = tabKey, slot = slot, id = if it.ride then it.ride elseif it.item then it.item else it.id }
 		ask = nil
 		ui.detail = "bag"
 	end
 
 	local tabs = {}
 	local tx = 0
-	for i, name in D.BAG.tabs do
+	for i, name in TABNAMES do
 		tabs[i] = Ui.tab(body, name, tx, 0, function()
 			if tab ~= i then
 				tab = i
 				unselect()
 				gridRoot.CanvasPosition = Vector2.zero -- 다른 탭은 맨 위부터
+				if KEYS[i] == "cash" and not (ctx.cash and ctx.cash()) and ctx.cashFetch then
+					ctx.cashFetch() -- 가진 펫 · 탈것을 서버에 묻는다(받으면 다시 그린다)
+				end
 				redraw()
 			end
 		end)
@@ -85295,6 +85912,13 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			lastClick = { slot = if twice then 0 else n, t = now }
 			if not it then
 				unselect()
+			elseif twice and it.ride then
+				-- 캐시 탭: 두 번 누르기 = 꺼내기 · 넣기 / 타기 · 내리기
+				if it.kind == "pet" and ctx.togglePet then
+					ctx.togglePet(it.ride)
+				elseif it.kind == "mount" and ctx.toggleRide then
+					ctx.toggleRide(it.ride)
+				end
 			elseif twice then
 				-- 두 번 누르기: 장비는 장착, 소비 아이템은 사용
 				local me = ctx.me()
@@ -85318,7 +85942,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			end
 			local from, tabKey = i, key()
 			local moved = false
-			ctx.quick.press(if tabKey == "use" then it.item else nil, nil, input, {
+			ctx.quick.press(if tabKey == "use" then it.item elseif tabKey == "cash" then it.ride else nil, nil, input, {
 				icon = ItemCell.icon(it),
 				size = S,
 				hold = HOLD, -- 스마트폰: 잠깐 누르고 있다가 밀어야 끈다(그 전에 밀면 스크롤)
@@ -85338,6 +85962,9 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 				end,
 				onDrop = function(at: Vector2): boolean
 					local to = slotAt(at)
+					if tabKey == "cash" then
+						return to ~= nil -- 캐시 탭의 칸끼리는 옮기지 않는다(차례는 가진 차례) · 퀵슬롯에 놓는 것은 quickEdit이 한다
+					end
 					if to and to ~= from then
 						ctx.send("Item", "move", tabKey, from, to)
 						-- 화면은 바로 옮긴다(서버가 가진 가방이 곧 다시 온다 — 그때 그것으로 맞춘다). 같은 묶음끼리 합치는 것은 서버의 셈을 기다린다
@@ -85456,6 +86083,53 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 	local function detail(bag, me)
 		if ui.detail ~= "bag" then
 			unselect() -- 다른 창에서 골랐다
+		end
+		if sel and sel.tab == "cash" then
+			-- 캐시 탭의 펫 · 탈것(가진 것의 차례가 바뀌어도 이름표로 따라간다)
+			local entry = nil
+			for _, e in cashList() do
+				if e.ride == sel.id then
+					entry = e
+				end
+			end
+			if not entry then
+				unselect()
+				ItemDetail.hide("bag")
+				return
+			end
+			local prod = ctx.cashProduct and ctx.cashProduct(entry.ride)
+			local isPet = entry.kind == "pet"
+			local spec = { item = entry, buttons = {}, onClose = function()
+				unselect()
+				redraw()
+			end }
+			spec.info = {
+				name = if prod then prod.name else entry.ride,
+				tone = "text",
+				sub = (if isPet then BMW.petKind else BMW.mountKind) .. (if entry.on then " · " .. (if isPet then BMW.petOutTag else BMW.rideTag) else ""),
+				rows = {},
+				notes = { { if prod then prod.line or "" else "", "text" }, { if isPet then BMW.bagHint else BMW.rideHint, "dim" } },
+			}
+			table.insert(spec.buttons, {
+				text = if isPet then (if entry.on then BMW.petOff else BMW.petOn) else (if entry.on then BMW.rideOff else BMW.rideOn),
+				main = not entry.on,
+				onClick = function()
+					if isPet and ctx.togglePet then
+						ctx.togglePet(entry.ride)
+					elseif not isPet and ctx.toggleRide then
+						ctx.toggleRide(entry.ride)
+					end
+				end,
+			})
+			table.insert(spec.buttons, {
+				text = WORDS.quick,
+				onClick = function()
+					ctx.quick.pick(entry.ride) -- 퀵슬롯이 반짝인다 — 놓을 칸을 누른다
+				end,
+			})
+			spec.key = table.concat({ "cash", entry.ride, tostring(entry.on) }, "|")
+			ItemDetail.show("bag", spec)
+			return
 		end
 		local entry = if sel then bag[sel.tab][sel.slot] else nil
 		if sel and sel.tab == "gear" and (not entry or entry.id ~= sel.id) then
@@ -85639,6 +86313,26 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		for i, button in tabs do
 			button:setOn(i == tab)
 		end
+		if key() == "cash" then
+			-- 캐시 탭: 가진 펫 · 탈것만(정렬 · 늘리기 없음). 비었으면 안내
+			local own = cashList()
+			gridRoot.CanvasSize = UDim2.fromOffset(0, ROWS * S)
+			gridRoot.ScrollingEnabled = false
+			gridRoot.ScrollBarThickness = 0
+			count:set(if #own == 0 then BMW.bagEmpty else "")
+			detail(bag, me)
+			for i, cell in cells do
+				cell.frame.Visible = i <= COLS * ROWS
+				cell:set(own[i], { selected = sel ~= nil and sel.tab == "cash" and own[i] ~= nil and own[i].ride == sel.id })
+			end
+			grow.frame.Visible = false
+			sort.frame.Visible = false
+			money:set(Format.short(me.money))
+			dust:set(Format.short(bag.dust))
+			essence:set(Format.short(bag.essence))
+			return
+		end
+		sort.frame.Visible = true
 		local list = bag[key()]
 		-- 스크롤: 늘린 가방은 네 줄을 넘는다 — 넘는 만큼 칸을 만들고 스크롤 틀의 속을 늘린다
 		local rows = math.ceil(bag.size / COLS)
@@ -85717,6 +86411,17 @@ CashWindow.TITLE = SHOP.title
 local BY = {}
 for _, p in BM.products do
 	BY[p.id] = p
+end
+-- 상점에서 팔지 않는 펫(쿠폰으로 받는 기본펫 「까망 동글이」 — ride.generated의 pets[].free · 2026-10-21): 이름 · 한 줄 설명 · 그림만 상품처럼
+local RIDE_DATA = require(lune.data["ride.generated"])
+for _, q in RIDE_DATA.pets do
+	if q.free and not BY[q.id] then
+		BY[q.id] = { id = q.id, name = q.name, line = q.line or "", icon = "ride_" .. q.id, free = q.free }
+	end
+end
+-- 그 상품(이름 · 한 줄 설명 · 그림 — 퀵슬롯의 설명 · 가방의 캐시 탭이 쓴다). 쿠폰 펫도 든다(위)
+function CashWindow.product(id: string)
+	return BY[id]
 end
 -- 줄을 만들어 둘 수: 가장 긴 탭(편의)과 보관함에 들 수 있는 아이템의 가짓수(주머니 · 상자의 레벨대 x 2 + 확장권 · 주문서 · 쿠폰 넷) 가운데 큰 것
 local MOST = #BM.bands * 2 + 4
@@ -85802,10 +86507,11 @@ function CashWindow.rows(view, tab: number)
 				text = Format.fill(if id == "money" then W.nowMoney else W.nowDust, { n = Format.comma(g.amount), band = band })
 			end
 		end
-		-- 가진 펫 · 탈것(2026-10-20): 값 대신 「꺼내기 · 넣기」 · 「타기 · 내리기」(펫은 하나만 꺼내 둔다 · 탈것은 고른 것을 탄다)
+		-- 가진 펫 · 탈것: 「보유」만(2026-10-21 사용자 "펫을 넣고 빼는거, 라이딩을 타는거 이런게 달빛상점에 들어가서 하는게 아닙니다. 달빛상점은 구매를 하는곳이에요" —
+		--  꺼내기 · 넣기 · 타기 · 내리기는 가방의 캐시 탭 · 퀵슬롯 · N 키에서)
 		local isPet, isMount = string.sub(id, 1, 4) == "pet_", string.sub(id, 1, 6) == "mount_"
 		local on = if isPet then (view and view.petOut == id) elseif isMount then (view ~= nil and view.riding == true and view.mount == id) else false
-		local state = if v.own and isPet then "pet" elseif v.own and isMount then "mount" elseif v.own then "own" elseif not v.ready then "soon" elseif full then "full" else "buy"
+		local state = if v.own then "own" elseif not v.ready then "soon" elseif full then "full" else "buy"
 		table.insert(out, {
 			id = id,
 			icon = p.icon,
@@ -85816,8 +86522,7 @@ function CashWindow.rows(view, tab: number)
 			price = Format.fill(W.price, { n = v.robux or p.robux }), -- 서버가 읽은 로블록스의 실제 값(없으면 설계의 값)
 			state = state,
 			on = on == true,
-			use = if isPet then (if on then W.petOff else W.petOn) elseif isMount then (if on then W.rideOff else W.rideOn) else nil,
-			count = if lim and state ~= "pet" and state ~= "mount" then Format.fill(if lim.per == "week" then W.week else W.once, { n = bought, max = lim.n }) else nil,
+			count = if lim and not ((isPet or isMount) and v.own) then Format.fill(if lim.per == "week" then W.week else W.once, { n = bought, max = lim.n }) else nil,
 			full = full,
 		})
 	end
@@ -86173,6 +86878,104 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 end
 
 return CashWindow
+
+end
+MODULES['Client/lune/ui/couponWindow'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
+-- 쿠폰 창 — 메뉴 → 「쿠폰」(2026-10-21 사용자: "쿠폰 코드 입력창있어야하고 그 쿠폰 입력하면 그 기본펫 지급하는 방식으로 합니다").
+--  위에 안내 두 줄 · 쿠폰 번호를 적는 칸과 「사용」 · 아래에 결과 두 줄(받았다 · 까닭). 번호는 서버가 본다(server/lune/modules/cash.luau의 CashServer.coupon —
+--  쿠폰의 목록은 서버에만 있다). 받은 펫은 가방의 「캐시」 탭에 들어온다(꺼내 둔 펫이 없으면 바로 꺼낸다 — 산 펫과 같다).
+--  치수 · 글은 공방 js/lune/design/ui.js의 UILAYOUT.coupon. 화면 오른쪽의 옆 판(ui/windows.luau).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local lune = ReplicatedStorage.shared.lune
+local Layout = require(lune.ui.layout)
+local Format = require(lune.ui.format)
+local UI = require(lune.data["ui.generated"])
+local RIDE = require(lune.data["ride.generated"])
+local Ui = require(script.Parent.ui)
+
+local C = Ui.COLOR
+local S = UI.layout.coupon
+local W = S.words
+
+local CouponWindow = {}
+CouponWindow.LAYOUT = S
+
+function CouponWindow.size(): (number, number)
+	return S.w, S.noteY + S.noteH
+end
+
+-- 펫의 이름(ride.generated의 pets — 상점에서 팔지 않는 펫도 든다)
+local function petName(id: string?): string
+	for _, q in RIDE.pets do
+		if q.id == id then
+			return q.name
+		end
+	end
+	return id or ""
+end
+CouponWindow.petName = petName
+
+function CouponWindow.build(body: Frame, ctx, w: number, _h: number)
+	local _ = Layout
+	Ui.text(body, W.guide, 0, 0, w, { lines = 2, color = C.dim })
+	local field = Ui.field(body, 0, S.fieldY, w - S.btnW - 6, S.fieldH, W.placeholder)
+	field.Name = "CouponInput"
+	local note = Ui.text(body, "", 0, S.noteY, w, { lines = 2 })
+	local busy = false
+	local use
+	local function say(text: string, color: Color3)
+		note:set(text)
+		note:color(color)
+	end
+	local function send()
+		if busy then
+			return
+		end
+		local text = field.Text
+		if string.gsub(text, "%s", "") == "" then
+			say(W.empty, C.dim)
+			return
+		end
+		busy = true
+		use:setEnabled(false)
+		say(W.busy, C.dim)
+		task.spawn(function()
+			local ok, res = false, nil
+			if ctx.coupon then
+				ok, res = ctx.coupon(text)
+			end
+			busy = false
+			use:setEnabled(true)
+			if ok and typeof(res) == "table" and res.ok then
+				field.Text = ""
+				say(Format.fill(W.got, { name = petName(res.pet) }), C.accent)
+				if ctx.couponGot then
+					ctx.couponGot(res) -- 가진 펫 · 탈것을 다시 읽는다(가방의 캐시 탭 · 폰의 단추 배치 목록)
+				end
+			else
+				say(if typeof(res) == "table" and typeof(res.why) == "string" then res.why else W.fail, C.red)
+			end
+		end)
+	end
+	use = Ui.button(body, W.use, w - S.btnW, S.fieldY, S.btnW, send, { main = true, h = S.fieldH })
+	use.frame.Name = "Do_coupon"
+	field.FocusLost:Connect(function(enter: boolean)
+		if enter then
+			send()
+		end
+	end)
+	local view = {}
+	function view.refresh(_me) end
+	-- (시험용) 적고 누른 것처럼
+	function view.try(text: string)
+		field.Text = text
+		send()
+	end
+	view.note = note
+	return view
+end
+
+return CouponWindow
 
 end
 MODULES['Client/lune/ui/dailyWindow'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
@@ -87416,6 +88219,9 @@ end
 
 -- 그 아이템의 아이콘 이름
 function ItemCell.icon(it): string
+	if it.ride then
+		return "ride_" .. it.ride -- 펫 · 탈것(가방의 캐시 탭 — 2026-10-21)
+	end
 	if it.item then
 		local g = Items.goods(it.item)
 		return if g then g.icon else ""
@@ -87499,10 +88305,15 @@ function ItemCell.new(parent: Instance, x: number, y: number, onClick: (any) -> 
 		opts = opts or {}
 		cell.item = it
 		Ui.setWorldIcon(icon, if it then ItemCell.icon(it) else nil)
-		if it and it.item then
+		if it and it.ride then
+			star:set(if it.on then "●" else "") -- 펫 · 탈것: 꺼내 둔 펫 · 타는 탈것에 민트 점(2026-10-21)
+			star:color(C.accent)
+		elseif it and it.item then
 			star:set(tostring(it.n)) -- 묶음: 수
+			star:color(C.text)
 		else
 			star:set(if it then ItemCell.starMark(it.star) else "") -- 장비: 「★5」(2026-10-15 — 「+5」에서)
+			star:color(C.text)
 		end
 		local broken = it ~= nil and it.broken == true
 		icon.ImageColor3 = if broken then Color3.fromRGB(90, 90, 100) else Color3.new(1, 1, 1)
@@ -88733,7 +89544,7 @@ end
 
 -- 스킬을 고른다: 칸들이 반짝인다. 같은 것을 한 번 더 고르면 그만둔다. nil = 그만둔다
 function QuickEdit.pick(id: string?)
-	if id ~= nil and (not open or (not Quick.item(id) and hooks.state(id) ~= "ok") or picked == id) then
+	if id ~= nil and (not open or (not Quick.item(id) and not Quick.ride(id) and hooks.state(id) ~= "ok") or picked == id) then -- (펫 · 탈것도 — 2026-10-21)
 		id = nil
 	end
 	if picked ~= id then
@@ -88797,7 +89608,7 @@ function QuickEdit.press(what: string?, from: number?, input: InputObject, extra
 	if not isPress(input) or (what == nil and extra == nil) then
 		return
 	end
-	if what ~= nil and from == nil and not Quick.item(what) and hooks.state(what) ~= "ok" then
+	if what ~= nil and from == nil and not Quick.item(what) and not Quick.ride(what) and hooks.state(what) ~= "ok" then
 		return
 	end
 	finish(nil)
@@ -89611,15 +90422,15 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 		ctx.send("SkillAuto")
 	end, { main = true, h = 22, font = "small" })
 	SkillWindow.autoFrame = auto.frame -- 튜토리얼(꿈)의 「스킬 찍기」 미션에서 반짝인다(2026-10-14)
-	-- 전직하며 받은 공짜 초기화(설계: "전직하면 SP 초기화 한 번이 공짜"): 남아 있을 때만 탭의 오른쪽에 단추가 보인다. 잘못 누르지 않게 두 번 눌러야 한다(「정말 초기화?」 — 3초 안에)
+	-- 스킬 초기화: 공짜 · 몇 번이든(2026-10-21 사용자: "스텟, 스킬 초기화 완전무료로 풀겠습니다" — 전에는 전직할 때마다 한 번이라 남아 있을 때만 보였다) — 탭의 오른쪽에 늘 보인다.
+	--  잘못 누르지 않게 두 번 눌러야 한다(「정말 초기화?」 — 3초 안에)
 	local RESET_X, RESET_W = (S.tabW + S.tabGap) * 4 + 8, 96
 	local resetHolder = Ui.group(body, RESET_X, -2, RESET_W, 20, "Reset")
 	local resetBtn: Instance? = nil
 	local resetArmed, resetShown = 0, nil :: string?
 	local function drawReset(me)
-		local left = (me and me.resets) or 0
 		local armed = os.clock() - resetArmed < 3
-		local label = if left < 1 then "" elseif armed then "정말 초기화?" else "초기화(무료 1회)"
+		local label = if me == nil then "" elseif armed then "정말 초기화?" else "초기화"
 		if label == resetShown then
 			return
 		end
@@ -90071,10 +90882,30 @@ function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 		y += S.row
 	end
 	y += 4
-	local auto = Ui.button(body, "자동으로 찍기", 0, y, w, function()
+	-- 「자동으로 찍기」 옆에 「초기화」(공짜 · 몇 번이든 — 2026-10-21 사용자: "스텟, 스킬 초기화 완전무료로 풀겠습니다"). 잘못 누르지 않게 두 번 눌러야 한다(「정말 초기화?」 — 3초 안에 · 스킬 창과 같다)
+	local resetW = S.resetW
+	local auto = Ui.button(body, "자동으로 찍기", 0, y, w - resetW - 6, function()
 		ctx.send("StatAuto")
 	end, { main = true })
 	StatWindow.autoFrame = auto.frame -- 튜토리얼(꿈)의 「능력치 찍기」 미션에서 반짝인다(2026-10-14)
+	local resetArmed = 0
+	local reset
+	reset = Ui.button(body, "초기화", w - resetW, y, resetW, function()
+		if os.clock() - resetArmed < 3 then
+			resetArmed = 0
+			reset:setText("초기화")
+			ctx.send("StatReset")
+		else
+			resetArmed = os.clock()
+			reset:setText("정말 초기화?")
+			task.delay(3.1, function()
+				if os.clock() - resetArmed >= 3 then
+					reset:setText("초기화")
+				end
+			end)
+		end
+	end)
+	reset.frame.Name = "Do_statReset"
 	y += Ui.M.button + 10
 	Ui.line(body, 0, y, w)
 	-- 전투력(왼쪽)과 체력(오른쪽)을 한 줄에
@@ -90096,6 +90927,11 @@ function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 			row.plus:setEnabled(me.ap > 0)
 		end
 		auto:setEnabled(me.ap > 0)
+		local spent = false
+		for _, n in me.stats do
+			spent = spent or n > 0
+		end
+		reset:setEnabled(spent) -- 찍은 능력치가 있을 때만
 		power:set(("전투력 %s"):format(Format.short(me.power)))
 		hp:set(("최대 체력 %s"):format(Format.short(me.maxHp))) -- 「체력」은 능력치의 이름이라 「최대 체력」(2026-10-15)
 		-- 떠 있는 설명은 새 값으로(레벨이 오르면 1점의 값이 달라진다)
@@ -90423,15 +91259,18 @@ function Talk.place()
 			paintFoot()
 		end
 	end
-	if chat and chat.Visible then
-		if os.clock() > chatTill or not chatNpc or chatNpc == Talk.npc then
+	if chat and chatNpc then
+		if os.clock() > chatTill or chatNpc == Talk.npc then
 			chat.Visible, chatNpc = false, nil
 		else
+			-- 말풍선은 그 주민의 머리 위 그대로(2026-10-21 사용자 "npc 가 보이지않는 영역까지 가면 말풍선만 끌려서 와버립니다. 말풍선은 npc 위치에 있어야하는데" —
+			--  전에는 화면 안쪽으로 붙잡아(clamp) 주민이 화면 밖으로 나가도 말풍선이 화면 가장자리에 남아 캐릭터를 따라왔다). 주민이 화면 밖이면 숨기고, 다시 보이면 남은 시간만큼 다시 뜬다
 			local cx = Overlay.x(chatNpc.x)
 			local bottom = Overlay.y(chatNpc.y - (chatNpc.h or 24) - B.up)
-			local left = math.clamp(cx - math.floor(chatSize.w / 2), 8, math.max(8, Stage.uiW - chatSize.w - 8))
+			local left = cx - math.floor(chatSize.w / 2)
 			chat.Position = UDim2.fromOffset(left, bottom - chatSize.h - B.tail)
-			chatTail.Position = UDim2.fromOffset(math.clamp(cx - left - 4, 6, chatSize.w - 15), chatSize.h - 1)
+			chatTail.Position = UDim2.fromOffset(math.floor(chatSize.w / 2) - 4, chatSize.h - 1)
+			chat.Visible = cx >= 0 and cx <= Stage.uiW -- 주민(말풍선의 꼬리)이 화면 안에 있을 때만
 		end
 	end
 end
@@ -90618,7 +91457,7 @@ end
 
 -- 지금 혼잣말을 하는 주민(없으면 nil)
 function Talk.saying(): any
-	return if chat and chat.Visible then chatNpc else nil
+	return if chat and chatNpc and os.clock() <= chatTill then chatNpc else nil
 end
 
 -- 대화창의 자리(화면 틀의 점 — 자동 검사 · 터치가 쓴다)
@@ -91072,7 +91911,8 @@ Ui.TAG_H = M.small + 3 -- 이름표 한 줄이 차지하는 높이(쌓을 때 �
 --  plate = true: 플레이어(나 · 다른 사람)의 이름표 — 어두운 판에 민트의 가는 테두리를 두른다(data/ui.generated.luau의 layout.tag.plate).
 --   사용자 2026-10-08: "닉네임 표시되는게 그냥 닉네임하얀글씨로 표시되는게 아니라 얇은 우리게임 민트색 테두리같은게 있으면 좋을거같네요". 주민(노랑 글) · 졸개의 이름표는 판이 없다.
 --   같은 날 글자 둘레에 민트를 두르는 방식("이름 글씨만 있는데 글자 그자체 테두리에 민트 테두리")으로 바꿔 봤다가 되돌렸다 — "생각보다 별로네요 이전방식으로 롤백".
-function Ui.tag(parent: Instance, text: string, color: Color3?, maxWidth: number?, plate: boolean?)
+--  lead = 판 바깥 왼쪽에 따로 적는 글(플레이어의 레벨 「Lv.12」 — 2026-10-21 사용자: "이름테두리 바깥에 레벨표기입니다. 이 박스 안으로 들어오는게 아니라"). 바꾸려면 Ui.tagLead
+function Ui.tag(parent: Instance, text: string, color: Color3?, maxWidth: number?, plate: boolean?, lead: string?)
 	local label = pixelText.new(parent, { Text = text, Font = "small_o", Color = color or C.text, MaxWidth = maxWidth or 220, MaxLines = 1 })
 	label.Frame.Name = "Tag"
 	if plate then
@@ -91099,7 +91939,24 @@ function Ui.tag(parent: Instance, text: string, color: Color3?, maxWidth: number
 		label.Frame:GetPropertyChangedSignal("Size"):Connect(fit)
 		fit()
 	end
+	if lead ~= nil then
+		Ui.tagLead(label, lead)
+	end
 	return label
+end
+
+-- 이름표의 판 바깥 왼쪽 글(레벨)을 적는다 · 바꾼다. 이름의 왼쪽 끝(판의 왼쪽 테두리 밖)에서 TAG_LEAD_GAP점 띄워 오른쪽을 맞춘다 — 이름이 바뀌어도 자리는 그대로(이름은 늘 0에서 시작)
+Ui.TAG_LEAD_GAP = 3
+function Ui.tagLead(label, text: string)
+	local P = Layout.TAG.plate
+	if not label.lead then
+		label.lead = pixelText.new(label.Frame, { Text = text, Font = "small_o", Color = C.text, MaxWidth = 80, MaxLines = 1 })
+		label.lead.Frame.Name = "Lead"
+	else
+		label.lead:SetText(text)
+	end
+	label.lead.Frame.Position = UDim2.fromOffset(-P.padX - Ui.TAG_LEAD_GAP - label.lead.Width, 0)
+	label.lead.Frame.Visible = text ~= ""
 end
 
 -- ---------- 누르는 것 ----------
@@ -96481,7 +97338,7 @@ eq(handlers.Chars(p2, "check", "moonaxe").ok, true, "그 이름을 다른 사람
 local first = handlers.Chars(p1, "enter", 1)
 expect(first ~= nil and first.self.class == "axion", "캐릭터를 골라 들어간다")
 -- 새 캐릭터는 꿈(튜토리얼 「달빛 꿈」 — 2026-10-14)에서 시작하고, 꿈에서 깨면 사당 안(첫 퀘스트를 주는 사제의 방)의 문 앞이다 — 뒤의 검사는 마을의 시작 자리에서 본다
-eq(first.scene, "dream", "새 캐릭터는 꿈(튜토리얼)에서 시작한다")
+eq(SCENES.base(first.scene), "dream", "새 캐릭터는 꿈(튜토리얼)에서 시작한다") -- (꿈은 사람마다 따로 된 방 — dream#번호 · 2026-10-21)
 expect(first.self.tut and first.self.tut.step == 1 and not first.self.tut.done, "튜토리얼의 첫 미션부터")
 expect(first.self.tutSkip ~= true, "처음 하는 계정은 꿈을 건너뛸 수 없다")
 World.wake(p1)
@@ -98386,7 +99243,7 @@ do
 		local list = got(name, pj)
 		return list[#list] and list[#list].args
 	end
-	eq(start.scene, "dream", "새 캐릭터는 꿈(튜토리얼)에서 시작한다")
+	eq(SCENES.base(start.scene), "dream", "새 캐릭터는 꿈(튜토리얼)에서 시작한다")
 	World.wake(pj)
 	start = handlers.Ready(pj)
 	eq(start.scene, "in_shrine", "꿈에서 깨면 사당 안이다")
@@ -98580,7 +99437,7 @@ do
 		local n0 = Bag.count(hc, "scroll_return")
 		table.clear(sent)
 		handlers.Potion(pc, "scroll_return")
-		expect(sc.scene == c[1] and Bag.count(hc, "scroll_return") == n0 and last("ItemDone")[1].why == c[2], c[1] .. ": " .. c[2])
+		expect(SCENES.base(sc.scene) == c[1] and Bag.count(hc, "scroll_return") == n0 and last("ItemDone")[1].why == c[2], c[1] .. ": " .. c[2]) -- (꿈은 따로 된 방 — dream#번호)
 	end
 	-- 모든 장면: 마을이 아니면 가장 가까운 마을이 있고(배 · 꿈 말고), 그 마을은 돌아가는 곳(homes)이다
 	for key, scn in SCENES.scenes do
@@ -98771,9 +99628,10 @@ do
 	end
 	hc.quests.r1m9 = { done = false, c = {} }
 	local trip = handlers.Travel(pc, "in_cellar")
-	expect(trip ~= nil and trip.scene == "in_cellar" and sc.scene == "in_cellar", "받은 뒤에는 내려간다")
+	expect(trip ~= nil and SCENES.base(trip.scene) == "in_cellar" and sc.scene == trip.scene, "받은 뒤에는 내려간다")
+	expect(sc.scene ~= "in_cellar", "사당 지하는 파티마다 따로 된 방이다(in_cellar#번호 — 2026-10-21) — " .. sc.scene)
 	expect(math.abs(hc.x - cellar.portals[1].x) <= 1, "올라가는 문 앞에 선다")
-	local room = World.room("in_cellar")
+	local room = World.room(sc.scene)
 	local function standing(kind: string?): number
 		local n = 0
 		for _, m in room.mobs do
@@ -98828,6 +99686,9 @@ do
 	handlers.Ready(pv)
 	expect(handlers.Choose(pv, "riven", "구경꾼") ~= nil, "퀘스트가 없는 사람")
 	expect(World.jump(pv, "in_cellar") == true, "(확인용으로 옮긴다)")
+	local sv = World.session(pv)
+	expect(sv.scene ~= sc.scene and SCENES.base(sv.scene) == "in_cellar", "파티가 아닌 사람은 제 방으로 들어간다")
+	room = World.room(sv.scene)
 	run(3)
 	eq(standing(), 0, "그 퀘스트를 하지 않는 사람에게는 병사가 나오지 않는다")
 	-- 촌장에게 돌려준다: 경험치와 달돈 · 끝
@@ -98849,6 +99710,7 @@ do
 	-- 끝낸 뒤에도 지하에 내려갈 수 있다(조용한 방 — 비석을 읽는다)
 	standAt("in_shrine", down.x, down.y)
 	expect(handlers.Travel(pc, "in_cellar") ~= nil, "끝낸 뒤에도 내려갈 수 있다")
+	room = World.room(sc.scene)
 	run(3)
 	eq(standing(), 0, "끝낸 뒤의 지하에는 병사가 없다")
 	-- 2차 전직(job2): 「불타는 마을」을 하지 않았어도 전직 퀘스트를 받으면 내려갈 수 있고, 수련 인형만 나온다 — 잡으면 조각이 떨어지고 주우면 센다
@@ -98866,7 +99728,8 @@ do
 	hj2.x, hj2.y = down.x, down.y
 	expect(handlers.Travel(pj2, "in_cellar") == nil, "전직 퀘스트를 받기 전에는 내려가지 못한다")
 	hj2.quests.job2 = { done = false, c = {} }
-	expect(handlers.Travel(pj2, "in_cellar") ~= nil and sj2.scene == "in_cellar", "전직 퀘스트를 받으면 내려간다(「불타는 마을」을 하지 않았어도)")
+	expect(handlers.Travel(pj2, "in_cellar") ~= nil and SCENES.base(sj2.scene) == "in_cellar", "전직 퀘스트를 받으면 내려간다(「불타는 마을」을 하지 않았어도)")
+	room = World.room(sj2.scene)
 	run(4)
 	eq(standing(jobStep.mob), dummies, "수련 인형이 나온다")
 	eq(standing(), 0, "병사는 나오지 않는다(「불타는 마을」을 하는 사람이 없다)")
@@ -98965,13 +99828,22 @@ do
 	expect(h2 ~= nil and h2 ~= hg, "다시 들어왔다")
 	eq(h2.hp, 37, "체력이 이어진다(가득 차지 않는다)")
 	expect((h2.cds.ax_breath or 0) > World.now + 90, "다시 쓰기가 이어진다")
-	-- ㅁ) 1차 기술을 쓴 뒤에도 끝나면 공짜 스킬 초기화가 된다
+	-- ㅁ) 1차 기술을 쓴 뒤에도 끝나면 공짜 스킬 초기화가 된다(공짜 · 몇 번이든 — 2026-10-21)
 	Hero5.setLevel(h2, 40, 2)
-	h2.resets = 1
+	h2.skills.ax_slam = 3
 	handlers.Skill(pg, "ax_slam", 1, h2.x, h2.y, 1)
 	run(3)
 	handlers.SkillReset(pg)
-	eq(h2.resets, 0, "1차 기술이 끝난 뒤에는 초기화가 된다")
+	eq(h2.skills.ax_slam, 1, "1차 기술이 끝난 뒤에는 초기화가 된다(찍은 것이 처음의 레벨 1로)")
+	h2.skills.ax_slam = 2
+	handlers.SkillReset(pg)
+	eq(h2.skills.ax_slam, 1, "또 되돌린다(공짜 · 몇 번이든)")
+	-- 능력치 초기화(공짜 — StatReset)
+	Hero5.autoStat(h2)
+	local apAfter = h2.ap
+	expect(Hero5.statsSpent(h2), "능력치를 찍었다")
+	handlers.StatReset(pg)
+	expect(not Hero5.statsSpent(h2) and h2.ap > apAfter, "능력치를 공짜로 모두 되돌린다")
 	-- ㅅ) 1차 연속기: 다음 구간은 앞 구간이 끝나기 0.15초 전부터 받는다(앞당겨 보내 빨라지지 않게)
 	run(3)
 	h2.buffs = {}
@@ -99023,6 +99895,7 @@ local pixelText = req("Client/ui/pixelText")
 local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
 local F = req("ReplicatedStorage/shared/lune/ui/format")
 local L = req("ReplicatedStorage/shared/lune/ui/layout")
+local Quick = req("ReplicatedStorage/shared/lune/ui/quick") -- 퀵슬롯의 칸 수 · 키(2026-10-21)
 local N = req("ReplicatedStorage/shared/lune/config/numbers")
 local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
 
@@ -99130,24 +100003,61 @@ do
 	expect(measure(pixelText.Fit(longName, nameW, 1, "small")) <= nameW, "가장 긴 이름도 레벨 글 뒤에 줄여서 들어간다")
 end
 
--- ---------- 스킬 칸(두 줄 x 여섯)과 메뉴 단추(여섯) ----------
+-- ---------- 스킬 칸(두 줄 x 일곱 — 2026-10-21 열넷)과 메뉴 단추 ----------
+--  칸마다 놓이는 줄 = UI.quick.rows(번호와 키는 그대로 · 새 칸 13 · 14는 줄 끝) · 좁은 격자(폭 820 미만)는 칸 사이가 4점(L.rect의 narrow)
 local s, K = UI.hud.skills, L.SKILLS
 local pitch = K.slot + K.gap
-expect(K.cols * pitch - K.gap <= s.w, "스킬 칸 여섯이 칸의 폭 안")
+expect(K.cols * pitch - K.gap <= s.w, "스킬 칸 일곱이 칸의 폭 안")
 expect(K.rows * (K.slot + K.keyUp) + (K.rows - 1) * K.rowGap <= s.h, "스킬 칸 두 줄이(줄마다 위에 키 딱지) 칸의 높이 안")
 expect(K.slot >= M.pic + 4, "칸이 그림(24)보다 사방으로 두 점은 크다")
-for n = 1, K.cols * K.rows do
+eq(#UI.quick.rows, K.rows, "줄의 표가 두 줄")
+do
+	local all = {}
+	for _, row in UI.quick.rows do
+		eq(#row, K.cols, "한 줄에 일곱")
+		for _, i in row do
+			expect(not all[i], "칸 " .. i .. "이 한 번만")
+			all[i] = true
+		end
+	end
+	for i = 1, Quick.N do
+		expect(all[i], "칸 " .. i .. "이 줄의 표에 있다")
+	end
+	for i = 1, 12 do
+		local r = L.slotCell(i)
+		eq(r, if i <= 6 then 1 else 2, "예전 칸 " .. i .. "은 예전 줄 그대로(아랫줄 1~6 · 윗줄 7~12)")
+	end
+end
+for _, g in { { name = "가장 작은 격자", w = G.min.w, h = G.min.h }, { name = "1080p", w = UI.grid.w, h = UI.grid.h }, { name = "가장 큰 격자", w = G.max.w, h = G.max.h }, { name = "좁은 격자 경계 819", w = 819, h = 460 }, { name = "820", w = 820, h = 461 } } do
 	local seen = {}
-	for i = 1, n do
-		local x, y = L.slotPlace(i, n)
-		expect(x >= 0 and x + K.slot <= s.w and y - K.keyUp >= 0 and y + K.slot <= s.h, ("쓰는 칸 %d개일 때 %d째 칸(과 그 위의 키 딱지)이 칸 안"):format(n, i))
+	local box = L.rect(s, g.w, g.h)
+	local base = L.rect({ at = s.at, x = s.x, y = s.y, w = s.w, h = s.h }, g.w, g.h) -- 넓은 틀(칸은 그 안에 놓인다)
+	local minX, maxX = math.huge, -math.huge
+	for i = 1, Quick.N do
+		local x, y = L.slotPlace(i, Quick.N, g.w)
+		expect(x >= 0 and x + K.slot <= s.w and y - K.keyUp >= 0 and y + K.slot <= s.h, ("%d째 칸(과 그 위의 키 딱지)이 칸 안(%s)"):format(i, g.name))
 		expect(not seen[x .. ":" .. y], "칸이 겹치지 않는다")
 		seen[x .. ":" .. y] = true
+		minX, maxX = math.min(minX, base.x + x), math.max(maxX, base.x + x + K.slot)
 	end
+	expect(minX >= box.x and maxX <= box.x + box.w, ("칸들이 그 격자의 스킬 칸(%d~%d) 안에 든다 — %d~%d(%s)"):format(box.x, box.x + box.w, minX, maxX, g.name))
 	-- 아랫줄은 가운데에 모인다
-	local first = L.slotPlace(1, n)
-	local lastX = L.slotPlace(math.min(n, K.cols), n)
-	expect(math.abs(first - (s.w - lastX - K.slot)) <= 1, ("쓰는 칸 %d개일 때 아랫줄이 가운데"):format(n))
+	local row1 = UI.quick.rows[1]
+	local first = L.slotPlace(row1[1], Quick.N, g.w)
+	local lastX = L.slotPlace(row1[#row1], Quick.N, g.w)
+	expect(math.abs(first - (s.w - lastX - K.slot)) <= 1, ("아랫줄이 가운데(%s)"):format(g.name))
+	-- 좁은 격자에서도 체력 덩어리 · 메뉴 단추와 닿지 않는다
+	local vit, menu = L.rect(UI.hud.vitals, g.w, g.h), L.rect(UI.hud.menu, g.w, g.h)
+	expect(minX >= vit.x + vit.w + 4, ("퀵슬롯이 체력 덩어리 오른쪽 끝(%d)에서 4점 넘게 떨어진다 — %d(%s)"):format(vit.x + vit.w, minX, g.name))
+	expect(maxX + 4 <= menu.x, ("퀵슬롯(%d)이 메뉴 단추(%d)와 4점 넘게 떨어진다(%s)"):format(maxX, menu.x, g.name))
+	-- 키 딱지: 이웃한 칸의 기본 키끼리 닿지 않는다(좁은 격자는 칸 사이가 좁다)
+	local gap = math.min(K.gap, math.floor((box.w - K.cols * K.slot) / (K.cols - 1)))
+	for _, row in UI.quick.rows do
+		for k = 1, #row - 1 do
+			local a, b = F.keyShort(Quick.DATA.keys[row[k]]), F.keyShort(Quick.DATA.keys[row[k + 1]])
+			expect((measure(a) + 8) / 2 + (measure(b) + 8) / 2 <= K.slot + gap - 1, ("키 딱지 「%s」 · 「%s」가 닿지 않는다(%s)"):format(a, b, g.name))
+		end
+	end
 end
 for _, name in { "Q", "A", "LeftShift", "Space", "LeftControl", "Return", "Backspace", "F12", "KeypadEnter", "KeypadFive", "PageDown", "Left", "Right", "Up", "Down", "Semicolon", "Zero", "Tab", "BackSlash", "CapsLock", "Insert" } do
 	local text = F.keyShort(name)
@@ -102720,28 +103630,27 @@ do
 	end
 end
 
--- ---- 전직하면 스킬 포인트 초기화 한 번이 공짜(2026-10-11 — 설계 basics.js의 SPRULE) ----
+-- ---- 스킬 · 능력치 초기화는 공짜 · 몇 번이든(2026-10-21 사용자: "스텟, 스킬 초기화 완전무료로 풀겠습니다" — 전에는 전직할 때마다 한 번 · 능력치는 상인의 주문서) ----
 do
 	local Hero2 = req("ReplicatedStorage/shared/lune/sim/hero")
 	local N2 = req("ReplicatedStorage/shared/lune/config/numbers")
 	local CL = req("ReplicatedStorage/shared/lune/data/classes.generated")
 	local h = Hero2.new(950, "axion")
 	h.auto = false
-	eq(h.resets, 0, "new character: no free reset")
-	eq(Hero2.freeReset(h), false, "nothing to use at job 1")
+	eq(Hero2.freeReset(h), false, "찍은 스킬이 없으면 되돌릴 것이 없다")
 	while h.level < 30 do
 		Hero2.gainXp(h, N2.xpNeed(h.level) - h.xp)
 		Hero2.autoSkill(h)
 	end
 	eq(Hero2.spLeft(h, 1), 0, "tier 1 mastered before the job change")
+	expect(Hero2.freeReset(h), "1차에서도 공짜로 되돌린다(전직하지 않아도)")
+	eq(Hero2.spLeft(h, 1), Hero2.spNeed("axion", 1), "1차의 점수가 모두 돌아온다")
+	Hero2.autoSkill(h)
 	expect(Hero2.advance(h, 2), "advance to job 2")
-	eq(h.resets, 1, "job change grants one free reset")
-	eq(Hero2.view(h).resets, 1, "the client sees it")
 	Hero2.autoSkill(h)
 	local slamMax = h.skills.ax_slam
 	expect(slamMax ~= nil and slamMax > 1, "skills were raised")
-	expect(Hero2.freeReset(h), "use the free reset")
-	eq(h.resets, 0, "used up")
+	expect(Hero2.freeReset(h), "다시 되돌린다(몇 번이든)")
 	eq(Hero2.spLeft(h, 1), Hero2.spNeed("axion", 1), "tier 1 points all back")
 	eq(Hero2.spLeft(h, 2), Hero2.spEarnedIn(h.level, 2, "axion"), "tier 2 points all back")
 	eq(h.sp, Hero2.spEarned(h.level, "axion"), "total points all back")
@@ -102753,13 +103662,22 @@ do
 			end
 		end
 	end
-	eq(Hero2.freeReset(h), false, "cannot reset twice")
-	-- save / load
+	eq(Hero2.freeReset(h), false, "되돌린 바로 뒤에는 되돌릴 것이 없다")
+	Hero2.autoSkill(h)
+	expect(Hero2.freeReset(h), "다시 찍으면 또 되돌린다")
+	-- 능력치
+	local h3 = Hero2.new(952, "riven")
+	eq(Hero2.statsSpent(h3), false, "찍은 능력치가 없다")
+	Hero2.setLevel(h3, 20)
+	local ap0 = h3.ap
+	Hero2.autoStat(h3)
+	expect(Hero2.statsSpent(h3) and h3.ap < ap0, "자동으로 찍었다")
+	Hero2.resetStats(h3)
+	expect(not Hero2.statsSpent(h3) and h3.ap == ap0, "되돌리면 점수가 모두 돌아온다")
+	-- 저장의 꼴(resets — 쓰지 않지만 예전 저장을 그대로 읽는다)
 	h.resets = 1
 	eq(Hero2.unpack(950, Hero2.pack(h)).resets, 1, "saved")
 	local old = Hero2.pack(h)
-	old.resets = nil
-	eq(Hero2.unpack(950, old).resets, 1, "a character that changed job before this existed gets one")
 	old.resets = 7
 	eq(Hero2.unpack(950, old).resets, 0, "bad value is dropped")
 	local fresh = Hero2.pack(Hero2.new(951, "riven"))
@@ -107128,7 +108046,7 @@ end
 local function goTo(player, target)
 	for _ = 1, 32 do
 		local ss = World.session(player)
-		if ss.scene == target then
+		if SCENES.base(ss.scene) == target then -- (파티마다 따로 들어가는 장면의 방 — r1c4#5 · 2026-10-21)
 			return true
 		end
 		local hop = routeNext(ss.scene, target)
@@ -107170,7 +108088,7 @@ local function hunt(p, sceneKey: string, kind: string, n: number)
 	if not goTo(p, sceneKey) then
 		return nil
 	end
-	local room = World.room(sceneKey)
+	local room = World.room(s.scene) -- (파티마다 따로 들어가는 장면이면 그 방)
 	local id, sk = mobSkill(h.class)
 	-- 사냥기가 닿는 자리: 몬스터의 왼쪽에 서서 오른쪽을 본다(상자의 앞쪽 끝에서 조금 안쪽)
 	local reach = 0
@@ -108701,7 +109619,7 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 	-- 맵에서 맵으로(문을 따라)
 	local function travel(target: string): boolean
 		for _ = 1, 40 do
-			if s.scene == target then
+			if SCENES.base(s.scene) == target then -- (파티마다 따로 들어가는 장면의 방 — r1c4#5 · 2026-10-21)
 				return true
 			end
 			local hop = routeNext(s.scene, target)
@@ -108722,7 +109640,7 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 				return false
 			end
 		end
-		return s.scene == target
+		return SCENES.base(s.scene) == target
 	end
 	local function npcAt(key: string, npcId: string)
 		for _, n in SCENES.scenes[key].npcs or {} do
@@ -108813,7 +109731,7 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 		if not travel(sceneKey) then
 			return
 		end
-		local room = World.room(sceneKey)
+		local room = World.room(s.scene) -- (파티마다 따로 들어가는 장면이면 그 방 — r1c4#5)
 		local tEnd = World.now + seconds
 		while World.now < tEnd and h.alive and not done() do
 			local best, bd = nil, math.huge
@@ -109047,7 +109965,7 @@ local function play(class: string, goal, cap: number, gear: boolean?)
 	--  잡기 · 줍기 · 물약 · 빛나는 문은 실제로 한다(서버가 센다). 다 하면 사당에서 깨어난다
 	local function dream()
 		local Tut = req("ReplicatedStorage/shared/lune/sim/tutorial")
-		if s.scene ~= Tut.SCENE then
+		if not Tut.isDream(s.scene) then -- (꿈은 사람마다 따로 된 방 — dream#번호)
 			return
 		end
 		local sc = SCENES.scenes[Tut.SCENE]
@@ -109658,7 +110576,8 @@ do
 	for key, sc in SCENES.scenes do
 		for _, portal in sc.portals do
 			local r = ask("goto", key)
-			expect(r ~= nil and r.ok and sAdmin.scene == key, "옮긴다 " .. key)
+			expect(r ~= nil and r.ok and SCENES.base(sAdmin.scene) == key, "옮긴다 " .. key) -- (파티마다 따로 들어가는 장면이면 그 방 — r1c4#번호 · 2026-10-21)
+			local here = sAdmin.scene
 			handlers.Move(pAdmin, sc.spawn.x, sc.spawn.y, 1) -- 화면이 열렸다(도착 보고)
 			local guard = 0
 			while (math.abs(h.x - portal.x) > 1 or math.abs(h.y - portal.y) > 1) and guard < 400 do
@@ -109676,7 +110595,7 @@ do
 					kept[id] = h.quests[id]
 					h.quests[id] = nil
 				end
-				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == key, ("%s: 퀘스트 %s를 받기 전에는 문 %s을 지나가지 못한다"):format(key, table.concat(needs, " · "), portal.to))
+				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == here, ("%s: 퀘스트 %s를 받기 전에는 문 %s을 지나가지 못한다"):format(key, table.concat(needs, " · "), portal.to))
 				for _, id in needs do
 					h.quests[id] = kept[id]
 				end
@@ -109685,20 +110604,20 @@ do
 			if portal.done then
 				-- done = 그 퀘스트를 끝내야 열리는 문(초승달 마을의 작은 나루 — 「불타는 마을」): 받기만 해서는 안 열리고, 끝내면 열린다
 				h.quests[portal.done] = nil
-				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == key, ("%s: 퀘스트 %s가 없으면 문 %s을 지나가지 못한다"):format(key, portal.done, portal.to))
+				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == here, ("%s: 퀘스트 %s가 없으면 문 %s을 지나가지 못한다"):format(key, portal.done, portal.to))
 				h.quests[portal.done] = { done = false, c = {} }
-				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == key, ("%s: 퀘스트 %s를 받기만 해서는 문 %s이 열리지 않는다"):format(key, portal.done, portal.to))
+				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == here, ("%s: 퀘스트 %s를 받기만 해서는 문 %s이 열리지 않는다"):format(key, portal.done, portal.to))
 				h.quests[portal.done] = { done = true, c = {} }
 			end
 			local Tut = req("ReplicatedStorage/shared/lune/sim/tutorial")
 			if key == Tut.SCENE then
 				-- 꿈(튜토리얼 — 2026-10-14)의 빛나는 문: 미션을 다 하기 전에는 열리지 않고, 마지막 미션(나가기)의 차례에 지나가면 꿈을 마친다
 				h.tut = Tut.new()
-				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == key, "꿈의 문은 첫 미션 때는 열리지 않는다")
+				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == here, "꿈의 문은 첫 미션 때는 열리지 않는다")
 				h.tut.step = Tut.TOTAL
 			end
 			local trip = handlers.Travel(pAdmin, portal.to)
-			expect(trip ~= nil and trip.scene == portal.to and sAdmin.scene == portal.to, ("%s: 관리로 옮긴 뒤 문 %s을 지난다"):format(key, portal.to))
+			expect(trip ~= nil and SCENES.base(trip.scene) == portal.to and sAdmin.scene == trip.scene, ("%s: 관리로 옮긴 뒤 문 %s을 지난다"):format(key, portal.to))
 			if key == Tut.SCENE then
 				expect(h.tut.done, "꿈의 문을 지나면 튜토리얼이 끝난다")
 			end
@@ -109783,11 +110702,12 @@ local made = handlers.Chars(p, "create", "길손4101", "riven")
 local first = handlers.Chars(p, "enter", made.id)
 local s = World.session(p)
 local h = s.hero
-eq(first.scene, "dream", "새 캐릭터는 꿈(튜토리얼)에서 시작한다")
--- 꿈에서 쓰러지면 꿈의 처음으로(마을로 나가지 않는다)
+eq(SCENES.base(first.scene), "dream", "새 캐릭터는 꿈(튜토리얼)에서 시작한다") -- (꿈은 사람마다 따로 된 방 — dream#번호 · 2026-10-21)
+-- 꿈에서 쓰러지면 꿈의 처음으로(마을로 나가지 않는다 · 그 꿈의 방 그대로)
+local dreamRoom = s.scene
 h.alive, h.hp, h.revive = false, 0, 0
 handlers.Return(p)
-expect(h.alive and s.scene == "dream", "꿈에서 쓰러지면 꿈으로 — " .. tostring(s.scene))
+expect(h.alive and s.scene == dreamRoom, "꿈에서 쓰러지면 그 꿈으로 — " .. tostring(s.scene))
 World.wake(p)
 eq(s.scene, "in_shrine", "꿈에서 깨면 사당 안이다")
 eq(h.home, nil, "사당 안은 마을이 아니다 — 돌아갈 마을이 아직 없다")
@@ -110785,11 +111705,13 @@ do
 		end
 		return n
 	end
-	-- 퀘스트 없이 올라가면 빈 방이다
+	-- 퀘스트 없이 올라가면 빈 방이다. 망루 꼭대기는 파티마다 따로 들어가는 방(r1c4#번호 — 2026-10-21 사용자 "파티마다 따로 되어야합니다")
 	expect(World.jump(p, KEY), "망루 꼭대기로")
+	expect(s.scene ~= KEY and SCENES.base(s.scene) == KEY, "따로 된 방에 들어간다 — " .. s.scene)
+	expect(not World.hasRoom(KEY), "모두가 같이 쓰는 방은 열리지 않는다")
 	handlers.Move(p, wh.x, wh.y, 1)
 	tick(1)
-	local wroom = World.room(KEY)
+	local wroom = World.room(s.scene)
 	local wlt, wcap = wroom.bosses[1], wroom.bosses[2]
 	expect(wlt.away and wcap.away, "퀘스트가 없으면 보스가 없다")
 	-- 「망루의 부관」을 받고 올라오면 선다
@@ -110800,18 +111722,24 @@ do
 	World.jump(p, KEY)
 	handlers.Move(p, wh.x, wh.y, 1)
 	tick(1.2)
+	wroom = World.room(s.scene) -- (방을 비웠다가 다시 왔다 — 새 방)
+	wlt, wcap = wroom.bosses[1], wroom.bosses[2]
 	expect(not wlt.away and wlt.state ~= "gone" and wlt.hp == wlt.maxHp, "퀘스트를 하는 중이면 부관이 서 있다")
 	local desc = wroom:describe(wh.id)
 	expect(desc.mobs[wlt.id].boss == true and desc.snap[wlt.id][4] ~= "gone", "방의 모습에 보스가 실린다")
-	-- 싸우다 나가면(쓰러져 마을로 · 문으로) 방이 비어 보스가 사라지고, 다시 오면 체력이 가득하다
+	-- 싸우다 나가면(쓰러져 마을로 · 문으로) 방이 비어 닫히고(보스도 함께), 다시 오면 새 방에 체력이 가득한 보스
 	wlt.hp = math.floor(wlt.maxHp / 2)
+	local was = s.scene
 	World.jump(p, "r1c3")
 	handlers.Move(p, wh.x, wh.y, 1)
 	tick(0.3)
-	expect(wlt.away and wlt.state == "gone", "방을 비우면 보스가 사라진다")
+	expect(not World.hasRoom(was), "방을 비우면 그 방이 닫힌다")
 	World.jump(p, KEY)
 	handlers.Move(p, wh.x, wh.y, 1)
 	tick(1.2)
+	expect(s.scene ~= was, "다시 올라오면 새 방")
+	wroom = World.room(s.scene)
+	wlt, wcap = wroom.bosses[1], wroom.bosses[2]
 	expect(not wlt.away and wlt.hp == wlt.maxHp, "다시 올라오면 체력이 가득한 채 서 있다")
 	-- 기술로 쓰러뜨린다(서버의 길 그대로): 퀘스트의 숫자가 오르고, 경험치 알림(Gain)은 없고, 바닥에 떨어지는 것도 없다
 	wh.invuln = 9999
@@ -113716,10 +114644,12 @@ do
 		end
 	end
 	expect(slots[1] == nil, "칸 1의 단추는 없다(상호작용 단추 아래에 있던 것)")
-	for i = 2, Quick.N do
+	for i = 2, 12 do
 		expect(slots[i] ~= nil, "칸 " .. i .. "의 단추가 있다")
 	end
-	eq(#Quick.TOUCH, Quick.N - 1, "단추가 있는 칸은 열하나")
+	-- 2026-10-21에 늘린 칸 13 · 14는 PC의 퀵슬롯에만(스마트폰은 사용자가 정한 단추 열하나 그대로 — 펫 · 탈것은 가방의 캐시 탭에서)
+	expect(slots[13] == nil and slots[14] == nil, "칸 13 · 14의 단추는 없다")
+	eq(#Quick.TOUCH, 11, "단추가 있는 칸은 열하나")
 	for _, t in UI.touch do
 		if t ~= act and t.kind ~= "hud" then
 			local under = t.y >= act.y + act.h and t.y < act.y + act.h + 40 and t.x < act.x + act.w and t.x + t.w > act.x
@@ -115894,11 +116824,11 @@ local made = handlers.Chars(p, "create", "꿈꾼다", "riven")
 local first = handlers.Chars(p, "enter", made.id)
 local s = World.session(p)
 local h = s.hero
-eq(first.scene, Tut.SCENE, "새 캐릭터는 꿈에서 시작한다")
+expect(Tut.isDream(first.scene) and first.scene ~= Tut.SCENE, "새 캐릭터는 꿈에서 시작한다(사람마다 따로 된 꿈의 방 — dream#번호 · 2026-10-21) — " .. tostring(first.scene))
 eq(first.self.tut.step, 1, "첫 미션부터")
 expect(first.self.tutSkip ~= true, "처음 하는 계정은 건너뛸 수 없다")
 eq(handlers.Tut(p, "skip", nil), nil, "건너뛰기를 보내도 듣지 않는다")
-eq(s.scene, Tut.SCENE, "꿈에 그대로 있다")
+eq(s.scene, first.scene, "꿈에 그대로 있다")
 -- 문은 아직 열리지 않는다
 local gate = sc.portals[1]
 h.x, h.y = gate.x, gate.y
@@ -115910,7 +116840,7 @@ for n = 1, 6 do
 end
 eq(handlers.Tut(p, "done", 7).tut.step, 7, "잡기는 화면이 넘길 수 없다")
 -- 잡기: 수련 인형 셋(Lv.1) — 사냥기로 잡는다. 잡을 때마다 내 앞에 물약 하나가 떨어진다
-local room = World.room(Tut.SCENE)
+local room = World.room(s.scene)
 for _, mob in room.mobs do
 	eq(mob.lv, Tut.DATA.dummyLv, "꿈의 수련 인형은 가장 약하다")
 end
@@ -115996,7 +116926,7 @@ expect(h.tut.done, "튜토리얼이 끝났다")
 -- 다시 들어와도 사당(꿈에는 다시 들어가지 않는다) · 이 계정의 둘째 캐릭터는 건너뛸 수 있다
 World.removePlayer(p)
 local again = handlers.Ready(p)
-expect(again.scene ~= Tut.SCENE, "꿈에서 깬 캐릭터는 꿈으로 돌아가지 않는다")
+expect(not Tut.isDream(again.scene), "꿈에서 깬 캐릭터는 꿈으로 돌아가지 않는다")
 World.removePlayer(p)
 local p2 = p
 handlers.Ready(p2)
@@ -116004,7 +116934,7 @@ local leave = handlers.Chars(p2, "leave", nil, nil)
 local made2 = handlers.Chars(p2, "create", "또꿈꾼다", "axion")
 expect(made2 and made2.ok, "둘째 캐릭터를 만든다")
 local second = handlers.Chars(p2, "enter", made2.id)
-eq(second and second.scene, Tut.SCENE, "둘째 캐릭터도 꿈에서 시작한다")
+expect(second ~= nil and Tut.isDream(second.scene), "둘째 캐릭터도 꿈에서 시작한다")
 expect(second and second.self.tutSkip == true, "한 번 끝낸 계정은 「건너뛰기」가 보인다")
 local skipped = handlers.Tut(p2, "skip", nil)
 expect(skipped ~= nil and skipped.scene == Tut.DATA.exit and World.session(p2).hero.tut.done, "건너뛰면 사당에서 깨어난다")
@@ -116877,7 +117807,9 @@ for _, t in texts do
 		long = t
 	end
 end
-expect(long ~= nil and long.label.maxW < 120, "긴 이름은 면의 폭에 맞춰 줄인다")
+-- 2026-10-21: 비석을 넓혔다(면 81~82점 — 사용자 "명예의 전당 좀더 넓찍하게 … 닉네임 한글자부터 ... 처리 되버립니다") — 이름 자리는 면의 폭 안에서 넓다
+expect(long ~= nil and long.label.maxW < (x1 - x0) - 15, "긴 이름은 면의 폭에 맞춰 줄인다")
+expect(long ~= nil and long.label.maxW >= 140, ("1080p에서 이름 자리 %d점 — 140점 넘게(전에는 한 글자 남짓)"):format(long and long.label.maxW or -1))
 -- 후원의 비석: 한 사람뿐이면 한 줄만
 local robuxShown = 0
 f = faceOf("hall_robux")
@@ -117018,7 +117950,7 @@ runTest('49_lune_bagscroll', function()
 local Layout = req("ReplicatedStorage/shared/lune/ui/layout")
 local BAG = Layout.BAG
 
-local buttons, scrolls, cells, presses = {}, {}, {}, {}
+local buttons, scrolls, cells, presses, madeTabs, shown = {}, {}, {}, {}, {}, {}
 local function frame(name)
 	local f = { Name = name, Visible = true, children = {}, AbsolutePosition = Vector2.new(0, 0), AbsoluteSize = Vector2.new(100, 100) }
 	function f:Destroy() end
@@ -117037,8 +117969,9 @@ MOCK("Client/lune/stage", { ratio = 2.5, uiScale = 2 })
 MOCK("Client/lune/ui/ui", {
 	COLOR = any,
 	tab = function(parent, name, x, y, fn)
-		local t = { width = 40, click = fn }
+		local t = { width = 40, click = fn, name = name }
 		function t.setOn() end
+		table.insert(madeTabs, t)
 		return t
 	end,
 	text = function()
@@ -117079,7 +118012,7 @@ MOCK("Client/lune/ui/itemCell", {
 		return c
 	end,
 })
-MOCK("Client/lune/ui/itemDetail", { show = function() end, hide = function() end })
+MOCK("Client/lune/ui/itemDetail", { show = function(_, spec) shown.spec = spec end, hide = function() shown.spec = nil end })
 MOCK("Client/lune/ui/windows", { refresh = function() end })
 
 local BagWindow = req("Client/lune/ui/bagWindow")
@@ -117184,6 +118117,70 @@ do
 	sp.extra.onStart()
 	eq(scrolls[1].ScrollingEnabled, false, "끄는 동안 창고의 스크롤이 선다")
 	sview.destroy()
+end
+
+-- ---- 가방의 캐시 탭(2026-10-21 사용자 "인벤토리 가방에 캐시 탭을 넣던지 방법을 고안해서 펫을꺼내거나 넣는것, 라이딩을 타거나 내리는것 다 가능해야하고") ----
+--  가진 펫 · 탈것이 칸에(꺼내 둔 것은 on) · 누르면 상세 판의 「꺼내기 · 넣기」 / 「타기 · 내리기」 · 「퀵슬롯」 · 두 번 누르면 바로 · 끌면 퀵슬롯에 그 이름표 · 정렬 · 늘리기는 없다
+do
+	local BMW = req("ReplicatedStorage/shared/lune/data/bm.generated").shop.words
+	table.clear(cells)
+	table.clear(buttons)
+	table.clear(madeTabs)
+	table.clear(presses)
+	local calls = {}
+	local cashView = nil
+	local fetched = 0
+	local cctx = setmetatable({
+		cash = function() return cashView end,
+		cashFetch = function() fetched += 1 end,
+		myPet = function() return "pet_silver" end,
+		myRide = function() return nil end,
+		togglePet = function(id) table.insert(calls, { "pet", id }) end,
+		toggleRide = function(id) table.insert(calls, { "ride", id }) end,
+		cashProduct = function(id) return { name = "이름 " .. id, line = "설명" } end,
+	}, { __index = ctx })
+	bag.size = 24
+	local bview = BagWindow.build(frame("Body"), cctx, w, h)
+	bview.refresh()
+	eq(#madeTabs, 4, "가방의 탭은 넷(장비 · 소비 · 기타 · 캐시)")
+	eq(madeTabs[4].name, BMW.bagTab, "넷째 탭 = 「캐시」")
+	madeTabs[4].click()
+	eq(fetched, 1, "캐시 탭을 처음 열면 가진 펫 · 탈것을 서버에 묻는다")
+	cashView = { pets = { "pet_silver", "pet_scarf" }, mounts = { "mount_wolf" }, petOut = "pet_silver", mount = "mount_wolf" }
+	bview.refresh()
+	expect(cells[1].item and cells[1].item.ride == "pet_silver" and cells[1].item.on == true, "첫 칸 = 꺼내 둔 은빛 달토끼(점)")
+	expect(cells[2].item and cells[2].item.ride == "pet_scarf" and not cells[2].item.on, "둘째 칸 = 목도리 달토끼")
+	expect(cells[3].item and cells[3].item.ride == "mount_wolf" and cells[3].item.kind == "mount", "셋째 칸 = 달빛 늑대")
+	eq(cells[4].item, nil, "그 뒤는 빈 칸")
+	local sortB, growB
+	for _, b in buttons do
+		if b.label == "" then
+			growB = b
+		else
+			sortB = sortB or b
+		end
+	end
+	expect(sortB and sortB.frame.Visible == false, "캐시 탭에는 「정렬」이 없다")
+	-- 누르면 상세 판: 「넣기」(꺼내 둔 펫) · 「퀵슬롯」
+	cells[1].onClick(cells[1].item)
+	bview.refresh()
+	expect(shown.spec and shown.spec.buttons[1].text == BMW.petOff and shown.spec.buttons[2] ~= nil, "꺼내 둔 펫의 상세 = 「넣기」 · 「퀵슬롯」")
+	shown.spec.buttons[1].onClick()
+	expect(calls[#calls][1] == "pet" and calls[#calls][2] == "pet_silver", "「넣기」 → 그 펫을 넣는다")
+	cells[3].onClick(cells[3].item)
+	bview.refresh()
+	eq(shown.spec and shown.spec.buttons[1].text, BMW.rideOn, "타지 않은 탈것 = 「타기」")
+	shown.spec.buttons[1].onClick()
+	expect(calls[#calls][1] == "ride" and calls[#calls][2] == "mount_wolf", "「타기」 → 그 탈것을 탄다")
+	-- 두 번 누르기 = 바로
+	local before = #calls
+	cells[2].onClick(cells[2].item)
+	cells[2].onClick(cells[2].item)
+	expect(#calls == before + 1 and calls[#calls][2] == "pet_scarf", "두 번 누르면 그 펫을 꺼낸다")
+	-- 끌기: 퀵슬롯에 놓을 이름표
+	cells[3].began({ UserInputType = Enum.UserInputType.MouseButton1, Position = Vector2.new(5, 5) })
+	eq(presses[#presses] and presses[#presses].what, "mount_wolf", "끌면 퀵슬롯에 그 탈것의 이름표")
+	bview.destroy()
 end
 
 end)
@@ -117307,7 +118304,7 @@ end
 expect(onboardStep(1) ~= nil, "온보딩 1 = 접속")
 expect(onboardStep(2) ~= nil, "온보딩 2 = 캐릭터 만듦")
 expect(onboardStep(3) ~= nil, "온보딩 3 = 달빛 꿈(새 캐릭터는 꿈에서 시작)")
-eq(s.scene, "dream", "새 캐릭터는 꿈에 있다")
+eq(string.match(s.scene, "^(.-)#%d+$"), "dream", "새 캐릭터는 꿈에 있다(사람마다 따로 된 꿈의 방 — 2026-10-21)")
 
 -- 꿈의 첫 미션(걷기 — 화면이 알리는 일)을 마치면 온보딩 4
 handlers.Tut(p, "done", 1)
@@ -117364,7 +118361,7 @@ expect(steps2[2] and steps2[3], "「큰 항구로」 · 「항구의 첫날」�
 h.alive = false
 World.tick(1.1)
 local death = find("custom", "Death")
-expect(death ~= nil and death.fields[3] == s.scene, "쓰러지면 Death — 필드 3 = 그 맵")
+expect(death ~= nil and death.fields[3] == (string.match(s.scene, "^(.-)#%d+$") or s.scene), "쓰러지면 Death — 필드 3 = 그 맵(따로 된 방이면 그 장면의 이름 — 방 번호는 빼서 값이 늘지 않게)")
 h.alive = true
 World.tick(1.1)
 
@@ -117775,7 +118772,7 @@ end
 expect(newDay, "자정이 지나면 출석 창을 띄우라고 알린다")
 eq(s.acct.att.n, 2, "두 칸")
 -- 들른 맵
-expect(s.acct.ach.seen[s.scene] ~= nil or s.scene == "dream", "들어선 맵을 적는다")
+expect(s.acct.ach.seen[s.scene] ~= nil or string.match(s.scene, "^dream#%d+$") ~= nil, "들어선 맵을 적는다") -- (꿈은 사람마다 따로 된 방 — dream#번호)
 
 end)
 runTest('52_lune_attend_achieve_ui', function()
@@ -118548,7 +119545,8 @@ for _, st in D.stories do
 		expect(math.abs(p.x - st.x) > 60 or math.abs(p.y - st.y) > 48, ("숨은 이야기가 문과 겹치지 않는다 %s · %s"):format(st.id, p.label))
 	end
 	for _, n in sc.npcs or {} do
-		expect(math.abs(n.x - st.x) > 60 or math.abs(n.y - st.y) > 48, ("숨은 이야기가 주민과 겹치지 않는다 %s · %s"):format(st.id, n.id))
+		-- (비석 · 순위 판 — stone — 은 ↑로 말을 걸지 않는다: 대영주의 성의 판 셋 · 2026-10-21)
+		expect(n.stone or math.abs(n.x - st.x) > 60 or math.abs(n.y - st.y) > 48, ("숨은 이야기가 주민과 겹치지 않는다 %s · %s"):format(st.id, n.id))
 	end
 end
 
@@ -121042,6 +122040,11 @@ view.box = { { id = "bm_exp", n = 2 }, { id = "bm_money_30", n = 1 } }
 local body = frame("Body")
 local cv = CashWindow.build(body, ctx, cw, ch)
 eq(#tabs, #BM.shop.tabs, "탭 다섯")
+-- 탭의 차례(이름표 → 번호 — 2026-10-21: 「펫」 탭을 더하고 「패스」 탭을 껐다)
+local T = {}
+for i, t in BM.shop.tabs do
+	T[t[1]] = i
+end
 expect(tabs[1].on, "처음은 편의 탭")
 expect(textOf(W.head) ~= nil, "안내 한 줄")
 expect(textOf("3") ~= nil, "보관함 옆에 받을 것의 수(경험치 쿠폰 2 + 주머니 1)")
@@ -121072,11 +122075,11 @@ acct.bm.wc = { dust = 3 }
 local box = view.box
 view = Cash.view(acct, NOW, nil)
 view.box = box
-tabs[2].click()
-expect(tabs[2].on and not tabs[1].on, "재화 탭")
+tabs[T.money].click()
+expect(tabs[T.money].on and not tabs[1].on, "재화 탭")
 local money = Items.goods("bm_money_30")
 expect(textOf(("지금 사면 달돈 %s(Lv.30)"):format(req("ReplicatedStorage/shared/lune/ui/format").comma(money.amount))) ~= nil, "지금 사면 드는 달돈(Lv.30)")
-local cr = CashWindow.rows(view, 2)
+local cr = CashWindow.rows(view, T.money)
 eq(cr[2].id, "dust", "둘째 줄 = 달가루 상자")
 eq(cr[2].state, "full", "이번 주에 셋을 샀으면 더 못 산다")
 local full = textOf("이번 주 3/3")
@@ -121089,7 +122092,7 @@ for _, b in buttonsNamed(W.buy) do
 end
 eq(offBuy, 1, "다 산 상품의 「구매」는 꺼진다")
 -- 보관함: 받기 · 모두 받기
-tabs[5].click()
+tabs[T.box].click()
 local takes = buttonsNamed(W.take)
 eq(#takes, 2, "보관함의 줄마다 「받기」")
 expect(textOf("x2") ~= nil, "경험치 쿠폰 x2")
@@ -121104,81 +122107,77 @@ all.click()
 eq(calls[#calls][2], nil, "모두 받기 = 줄 없이")
 expect(not all.enabled, "다 받으면 꺼진다")
 expect(textOf(W.boxEmpty) ~= nil, "빈 보관함")
--- 패스 탭(달빛 패스 — 개발자 상품 · 산 때부터 30일 · 칸 30): 남은 날 · 달빛 · 칸 · 「보상 받기」
-view.pass = { active = false, ended = false, left = 0, pts = 0, today = 0, reached = 0, p = {}, ready = 0 }
-tabs[4].click()
-eq(scrolls[1].Visible, false, "패스 탭에는 상품 목록이 없다")
-expect(textOf(BM.pass.words.off) ~= nil, "산 적이 없으면 「사면 30일 동안 달빛이 쌓인다」")
-local buyPass, claim
-for _, b in buttons do
-	if b.frame.Name == "PassBuy" then
-		buyPass = b
-	elseif b.frame.Name == "PassClaim" then
-		claim = b
+-- 패스 탭: 2026-10-21 사용자 "달빛패스 일딴 비활성화해" — 탭이 없다(다시 켜면 아래가 돈다)
+if not T.pass then
+	expect(#tabs == #BM.shop.tabs and tabs[#tabs].label ~= "패스", "「패스」 탭이 없다")
+else
+	-- 패스 탭(달빛 패스 — 개발자 상품 · 산 때부터 30일 · 칸 30): 남은 날 · 달빛 · 칸 · 「보상 받기」
+	view.pass = { active = false, ended = false, left = 0, pts = 0, today = 0, reached = 0, p = {}, ready = 0 }
+	tabs[T.pass].click()
+	eq(scrolls[1].Visible, false, "패스 탭에는 상품 목록이 없다")
+	expect(textOf(BM.pass.words.off) ~= nil, "산 적이 없으면 「사면 30일 동안 달빛이 쌓인다」")
+	local buyPass, claim
+	for _, b in buttons do
+		if b.frame.Name == "PassBuy" then
+			buyPass = b
+		elseif b.frame.Name == "PassClaim" then
+			claim = b
+		end
 	end
+	expect(buyPass and buyPass.enabled and buyPass.label == W.buy, "번호가 있으면 「구매」")
+	expect(claim and not claim.enabled, "받을 칸이 없으면 「보상 받기」 꺼짐")
+	view.pass = { active = true, ended = false, left = 18, pts = 125, today = 8, reached = 12, p = { 1, 2, 3 }, ready = 9 }
+	cv.refresh()
+	expect(textOf("패스 18일 남음") ~= nil, "남은 날")
+	expect(textOf("달빛 125 · 오늘 8/12") ~= nil, "달빛 · 오늘")
+	expect(textOf("12/30칸") ~= nil, "연 칸")
+	expect(textOf(W.own) ~= nil and not buyPass.frame.Visible, "패스가 있는 동안 = 「보유」 · 「구매」 없음")
+	local cells = CashWindow.passCells(view.pass)
+	eq(#cells, 30, "칸 서른")
+	expect(cells[4].ready and not cells[3].ready and not cells[13].ready, "연 칸(4~12)만 · 받은 칸(1~3)은 아니다 · 13칸은 아직")
+	expect(claim.enabled, "받을 칸이 있으면 「보상 받기」")
+	claim.click()
+	eq(calls[#calls][1], "pass", "서버에 패스 보상을 묻는다")
+	eq(CashWindow.passCellText(cells[10]), "10칸 — 달돈 주머니 1", "칸의 보상 글")
+	view.pass = { active = false, ended = true, left = 0, pts = 300, today = 0, reached = 30, p = {}, ready = 30 }
+	cv.refresh()
+	expect(textOf(BM.pass.words.ended) ~= nil, "끝난 뒤 = 「패스가 끝났다 — 다시 사면 새 30일」")
+	expect(buyPass.frame.Visible and buyPass.enabled, "끝난 뒤에는 다시 「구매」")
 end
-expect(buyPass and buyPass.enabled and buyPass.label == W.buy, "번호가 있으면 「구매」")
-expect(claim and not claim.enabled, "받을 칸이 없으면 「보상 받기」 꺼짐")
-view.pass = { active = true, ended = false, left = 18, pts = 125, today = 8, reached = 12, p = { 1, 2, 3 }, ready = 9 }
-cv.refresh()
-expect(textOf("패스 18일 남음") ~= nil, "남은 날")
-expect(textOf("달빛 125 · 오늘 8/12") ~= nil, "달빛 · 오늘")
-expect(textOf("12/30칸") ~= nil, "연 칸")
-expect(textOf(W.own) ~= nil and not buyPass.frame.Visible, "패스가 있는 동안 = 「보유」 · 「구매」 없음")
-local cells = CashWindow.passCells(view.pass)
-eq(#cells, 30, "칸 서른")
-expect(cells[4].ready and not cells[3].ready and not cells[13].ready, "연 칸(4~12)만 · 받은 칸(1~3)은 아니다 · 13칸은 아직")
-expect(claim.enabled, "받을 칸이 있으면 「보상 받기」")
-claim.click()
-eq(calls[#calls][1], "pass", "서버에 패스 보상을 묻는다")
-eq(CashWindow.passCellText(cells[10]), "10칸 — 달돈 주머니 1", "칸의 보상 글")
-view.pass = { active = false, ended = true, left = 0, pts = 300, today = 0, reached = 30, p = {}, ready = 30 }
-cv.refresh()
-expect(textOf(BM.pass.words.ended) ~= nil, "끝난 뒤 = 「패스가 끝났다 — 다시 사면 새 30일」")
-expect(buyPass.frame.Visible and buyPass.enabled, "끝난 뒤에는 다시 「구매」")
 for i, p in BM.products do
 	p.rid = saved[i]
 end
 
--- 가진 펫 · 탈것(2026-10-20): 값 자리에 「보유」 · 「꺼내기 · 넣기」 · 「타기 · 내리기」
+-- 가진 펫 · 탈것(2026-10-21 사용자 "펫을 넣고 빼는거, 라이딩을 타는거 이런게 달빛상점에 들어가서 하는게 아닙니다. 달빛상점은 구매를 하는곳이에요"):
+--  줄에는 「보유」만 — 「꺼내기 · 넣기 · 타기 · 내리기」 단추는 상점에 없다(가방의 캐시 탭 · 퀵슬롯 · N 키)
 view.list = Cash.view(acct, NOW, nil).list
 for _, v in view.list do
 	if v.id == "pet_scarf" or v.id == "mount_boar" then
 		v.own = true
 	end
 end
-view.petOut, view.mount, view.riding = "pet_scarf", "mount_boar", false
-local conv = CashWindow.rows(view, 1)
+view.petOut, view.mount, view.riding = "pet_scarf", "mount_boar", true
+local conv = CashWindow.rows(view, T.pet) -- 펫은 「펫」 탭(2026-10-21)
 local scarf
 for _, r in conv do
 	if r.id == "pet_scarf" then
 		scarf = r
 	end
 end
-eq(scarf.state, "pet", "가진 펫의 줄")
-eq(scarf.use, W.petOff, "꺼내 둔 펫 = 「넣기」")
-local look = CashWindow.rows(view, 3)
+eq(scarf.state, "own", "가진 펫의 줄 = 「보유」")
+eq(scarf.use, nil, "가진 펫의 줄에 꺼내기 · 넣기가 없다")
+eq(scarf.count, nil, "가진 펫의 줄에 「산 수 1/1」을 적지 않는다")
 local boar
-for _, r in look do
+for _, r in CashWindow.rows(view, T.look) do
 	if r.id == "mount_boar" then
 		boar = r
 	end
 end
-eq(boar.state, "mount", "가진 탈것의 줄")
-eq(boar.use, W.rideOn, "타지 않았으면 「타기」")
-view.riding = true
-eq(CashWindow.rows(view, 3)[3].use, W.rideOff, "탄 동안 = 「내리기」")
-tabs[3].click()
-local rideBtn
-for _, b in buttons do
-	if b.label == W.rideOff and b.frame.Visible then
-		rideBtn = b
-	end
+eq(boar.state, "own", "가진 탈것의 줄 = 「보유」")
+tabs[T.look].click()
+for _, word in { W.petOn, W.petOff, W.rideOn, W.rideOff } do
+	eq(#buttonsNamed(word), 0, "상점에 「" .. word .. "」 단추가 없다")
 end
-expect(rideBtn ~= nil, "꾸밈 탭에 「내리기」 단추")
-rideBtn.click()
-eq(calls[#calls][1], "ride", "서버에 내리기를 묻는다")
-eq(calls[#calls][2], false, "내리기 = false")
 
 -- 달빛 상점의 공간(2026-10-21): 펫 · 탈것의 줄을 누르면(PC는 올려 두면) 미리보기에 — 그 밖의 줄은 아무것도 하지 않는다
 local seen = {}
@@ -121188,12 +122187,23 @@ end
 expect(#previews >= 1, "줄마다 미리보기 자리가 있다")
 previews[1].click() -- 꾸밈 탭의 첫 줄(탈것)
 previews[1].hover()
-eq(seen[1], CashWindow.rows(view, 3)[1].id, "꾸밈 탭 첫 줄을 누르면 그 탈것을 미리보기에")
+eq(seen[1], CashWindow.rows(view, T.look)[1].id, "꾸밈 탭 첫 줄을 누르면 그 탈것을 미리보기에")
 eq(#seen, 2, "올려 두어도 미리보기에(PC)")
-tabs[2].click() -- 재화 탭: 펫 · 탈것이 아니다
+tabs[T.money].click() -- 재화 탭: 펫 · 탈것이 아니다
 previews[1].click()
 eq(#seen, 2, "재화 줄은 미리보기에 보내지 않는다")
-tabs[3].click()
+tabs[T.pet].click() -- 펫 탭(2026-10-21 — 펫은 편의가 아니라 제 탭에)
+previews[1].click()
+eq(seen[#seen], BM.shop.rows.pet[1], "펫 탭의 첫 줄을 누르면 그 펫을 미리보기에")
+tabs[T.look].click()
+eq(CashWindow.product("pet_silver").name, BM.products[(function()
+	for i, p in BM.products do
+		if p.id == "pet_silver" then
+			return i
+		end
+	end
+	return 1
+end)()].name, "상품을 이름표로 찾는다(퀵슬롯의 설명 · 가방의 캐시 탭)")
 
 -- 이름 바꾸기(가방에서 주문서를 쓴 때)
 table.clear(texts)
@@ -121219,7 +122229,7 @@ runTest('63_lune_pet_follow', function()
 --  10-21 사용자: "펫도 지형에 걸려야해요 지금 펫 지형 다뚫고 다니는데 지형에 걸려서 플레이어에게 가지 못하는 거리가 되어버리면 그때는 텔레포트 해서 붙는방식으로
 --   메이플스토리에서 일반펫이 어떻게 작동하는지를 파악하고 , 그에맞춰 작업하면 됩니다."
 --  시험 맵(칸 16점): 평지(땅의 윗면 176) · 얇은 발판(=, 윗면 128 — 땅보다 48 위) · 낮은 대지(윗면 160 — 턱 16) · 높은 벽(128) · 구덩이(폭 48)
---  보는 것: ① 서 있으면 뒤 44점 · 땅 위 ② 달리면 뒤로 처져 따라온다 ③ 멈추면 다가온다 ④ 서서 돌아서도 제 쪽에 ⑤ 떨어진 것에 달려가 줍는다(제 높이의 것만)
+--  보는 것: ① 서 있으면 뒤 44점 · 땅 위 ② 달리면 뒤로 처져 따라온다 ③ 멈추면 다가온다 ④ 서서 돌아서도 제 쪽에 ⑤ 떨어진 것에 달려가 줍는다(펫에서 원 안 — 자석)
 --   ⑥ 턱은 웅크렸다 뛰어 오른다 ⑦ 영웅이 위 발판이면 따라 오르지 않고 아래에서 기다린다(메이플의 일반 펫) ⑧ 영웅이 아래면 얇은 발판에서 하단 점프로 내려온다
 --   ⑨ 높은 벽에 걸려 못 가면 영웅에게 순간 이동 ⑩ 같은 높이의 구덩이는 뛰어 건넌다 ⑪ 멀어지면 영웅의 발밑 땅으로 ⑫ 영웅이 사다리 · 공중이면 기다렸다가 땅에 서면
 --   ⑬ 남의 펫(onPick 없음)은 줍지 않는다 ⑭ 펫이 땅을 뚫고 지나가지 않는다(언제나 막힌 칸 밖)
@@ -121299,22 +122309,39 @@ local function fresh(x, y, dir, id)
 	return rv
 end
 
--- ① 서 있으면 뒤 44점 · 땅 위
+-- ① 서 있으면 뒤 behind점(64 — 2026-10-21 사용자 "펫이 거리를 더 벌려야합니다") · 땅 위
 local rv = fresh(200, GROUND, 1)
 run(rv, 2, 200, GROUND, 1, false, false)
 expect(math.abs(last.x - (200 - P.behind)) <= 2, ("① 서 있는 영웅의 뒤 %d점(실제 %d)"):format(P.behind, 200 - last.x))
 eq(last.y, GROUND, "① 땅 위에 선다")
 eq(last.clip, "idle", "① 멈춰 있다")
 
--- ② 오른쪽으로 3초 달린다(92점/초 · 평지)
+-- ② 오른쪽으로 3초 달린다(92점/초 · 평지) — 순간 이동 없이(2026-10-21 사용자 "마을을 일자로 달리면 계속 팅기듯이": 전에는 1.2초마다 「걸렸다」며 순간 이동했다)
 local t0 = now
+local wRun = rv.warps
+local gaps = {}
 run(rv, 3, function(t)
-	return 200 + 92 * (t - t0)
+	local x = 200 + 92 * (t - t0)
+	return x
 end, GROUND, 1, true, false)
-local hx = 200 + 92 * 3
+-- 같은 빠르기로 따라오는 1초 동안: 영웅이 그려지는 점과 펫이 그려지는 점의 간격이 흔들리지 않는다(전에는 펫의 자리를 따로 반올림해 장마다 한 점씩 떨렸다)
+local flips, prevGap = 0, nil
+for _ = 1, 60 do
+	now += DT
+	local x = 200 + 92 * (now - t0)
+	rv:update(now, DT, x, GROUND, 1, true, false, false)
+	local gap = math.floor(x + 0.5) - last.x
+	if prevGap and gap ~= prevGap then
+		flips += 1
+	end
+	prevGap = gap
+end
+expect(flips <= 2, ("② 따라오는 동안 영웅과의 간격이 흔들리지 않는다(1초에 바뀐 횟수 %d)"):format(flips))
+local hx = 200 + 92 * (now - t0)
 local lag = hx - last.x
-expect(lag >= 55 and lag <= 85, ("② 달리는 영웅의 뒤로 처져 따라온다(55~85점 — 실제 %d)"):format(lag))
-eq(last.clip, "run", "② 뛰며 따라온다")
+eq(rv.warps, wRun, "② 곧게 달리는 4초 동안 순간 이동하지 않는다")
+expect(lag >= P.behind + 10 and lag <= P.behind + 40, ("② 달리는 영웅의 뒤로 처져 따라온다(%d~%d점 — 실제 %d)"):format(P.behind + 10, P.behind + 40, lag))
+eq(last.clip, "idle", "② 달려도 그림은 서기 하나(사용자 10-21 — 펫은 자리만 옮긴다)")
 eq(last.y, GROUND, "② 땅 위로")
 
 -- ③ 멈추면 다가와 44점에 ④ 서서 돌아서도 제 쪽에
@@ -121343,7 +122370,17 @@ local highPicked = 0
 run(rv, 2, hx, GROUND, -1, false, false, high, function()
 	highPicked += 1
 end)
-eq(highPicked, 0, "⑤ 제 높이(위 18 · 아래 4점)가 아닌 것은 줍지 않는다(메이플: 펫의 위 50 · 아래 10px)")
+eq(highPicked, 0, "⑤ 펫에서 원 magnet점(24)보다 먼 높이(40점 위)의 것은 줍지 않는다")
+-- ⑤-자석(2026-10-21 사용자 "펫의 줍기판정이 살짝 자석처럼 … 원형판정으로 지형이 좀 안좋거나 , 펫이 잘 올라가지 못하더라도 주워지게"):
+--  펫이 오를 수 없는 곳(땅보다 18점 위 — 공중의 턱)에 놓인 것도 원 안이면 줍는다 · 그 자리에 서지 않아도 지나가며
+local ledge = { [11] = { x = hx - 30, y = GROUND - 18 } }
+local got = {}
+run(rv, 2, hx, GROUND, -1, false, false, ledge, function(id, px, py)
+	table.insert(got, { id = id, x = px, y = py })
+	ledge[id] = nil
+end)
+eq(#got, 1, "⑤ 오르지 못하는 턱 위(18점 위)의 것도 원 안이면 줍는다")
+expect(got[1] and typeof(got[1].x) == "number" and typeof(got[1].y) == "number", "⑤ 주울 때 펫의 자리를 알린다(그것이 펫 쪽으로 빨려 드는 그림)")
 
 -- ⑥ 턱(16점): 영웅이 낮은 대지 위 x 700에 선다 — 펫이 웅크렸다 뛰어 올라 뒤 44점에
 run(rv, 4, 700, MESA, 1, false, false)
@@ -121365,11 +122402,12 @@ run(rv, 3, 120, GROUND, 1, false, false)
 eq(last.y, GROUND, "⑧ 영웅을 따라 아래 땅으로 내려왔다")
 eq(rv.warps, w0, "⑧ 순간 이동이 아니라 걸어서(하단 점프)")
 
--- ⑨ 높은 벽(x 896~911): 영웅이 벽 너머 x 950에 · 펫은 벽 앞에서 걸려 → 순간 이동
+-- ⑨ 높은 벽(x 896~911): 영웅이 벽 너머 x 980에 · 펫은 벽 앞에서 걸려 → 순간 이동
+--  (영웅이 behind점 안이면 기다린다 — 2026-10-21 behind 44 → 64로 벌리며 영웅을 950 → 980으로: 벽 앞의 펫과 89점)
 rv = fresh(860, GROUND, 1)
 w0 = rv.warps
 last.inWall = nil
-run(rv, 4, 950, GROUND, 1, false, false)
+run(rv, 4, 980, GROUND, 1, false, false)
 expect(rv.warps > w0, "⑨ 벽에 걸려 못 가면 순간 이동")
 expect(last.x > 911, ("⑨ 벽 너머 영웅 곁으로(펫 x %d)"):format(last.x))
 eq(last.y, GROUND, "⑨ 영웅의 발밑 땅")
@@ -121620,6 +122658,793 @@ end
 expect(revive ~= nil and revive.scene == "town" and revive.x == x0 and revive.y == 176, "들어간 자리(초승달 마을 · 같은 x · y)로 다시")
 expect(hasMe(whoOf("town")), "다른 사람 화면에 다시 보인다")
 expect(handlers.Cash(pa, "leave").ok == true and sa.shop == nil, "밖에서 나오기는 아무 일도 아니다")
+
+end)
+runTest('66_lune_quick14', function()
+-- 「달의 계승자」 — 퀵슬롯 14칸 · 펫 · 탈것을 퀵슬롯에(2026-10-21 사용자: "중앙에 퀵슬롯도 몇개 늘어나야합니다" · 가방의 캐시 탭에서 펫 · 탈것).
+--  보는 것: 칸 14 · 예전 칸 1~12의 키는 그대로(Ctrl Q A Shift W S / E D R F 1 2) · 새 칸 13 = X(아랫줄 끝) · 14 = 3(윗줄 끝) ·
+--   예전에 저장된 12칸 배치가 그대로 읽힌다 · 펫 · 탈것의 이름표를 칸에 놓을 수 있다(서버의 Hero.setSlots) · 그림 = 달빛 상점의 그림(ride_<이름표>) · 윗줄이 쓰이는지는 줄의 표로
+local Quick = req("ReplicatedStorage/shared/lune/ui/quick")
+local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+local RIDE = req("ReplicatedStorage/shared/lune/data/ride.generated")
+
+eq(Quick.N, 14, "퀵슬롯 14칸")
+local old = { "LeftControl", "Q", "A", "LeftShift", "W", "S", "E", "D", "R", "F", "One", "Two" }
+for i, k in old do
+	eq(Quick.DATA.keys[i], k, "예전 칸 " .. i .. "의 키는 그대로")
+end
+eq(Quick.DATA.keys[13], "X", "칸 13 = X")
+eq(Quick.DATA.keys[14], "Three", "칸 14 = 3")
+expect(table.find(Quick.DATA.rows[1], 13) == 7 and table.find(Quick.DATA.rows[2], 14) == 7, "새 칸은 아랫줄 · 윗줄의 끝")
+
+-- 펫 · 탈것
+eq(Quick.ride("pet_silver"), "pet", "펫의 이름표")
+eq(Quick.ride("mount_wolf"), "mount", "탈것의 이름표")
+eq(Quick.ride("ax_slam"), nil, "스킬은 아니다")
+eq(Quick.pic("pet_scarf"), "ride_pet_scarf", "칸의 그림 = 달빛 상점의 펫 그림")
+eq(Quick.item("pet_scarf"), nil, "펫은 소비 아이템이 아니다(수를 적지 않는다)")
+
+local h = Hero.new(1, "axion")
+local saved = table.clone(h.slots)
+local list = table.clone(h.slots)
+list[13], list[14] = RIDE.pets[1].id, RIDE.mounts[1].id
+expect(Hero.setSlots(h, list), "펫 · 탈것을 칸 13 · 14에 놓는다(서버가 받는다)")
+eq(h.slots[13], RIDE.pets[1].id, "칸 13 = 펫")
+eq(h.slots[14], RIDE.mounts[1].id, "칸 14 = 탈것")
+expect(Quick.usesTop(h.slots), "칸 14(윗줄)에 놓이면 윗줄이 쓰인다")
+local bad = table.clone(list)
+bad[13] = "pet_nobody"
+expect(not Hero.setSlots(h, bad), "없는 펫의 이름표는 받지 않는다")
+-- 예전 저장(12칸)
+local twelve = {}
+for i = 1, 12 do
+	twelve[i] = saved[i] or false
+end
+expect(Hero.setSlots(h, twelve), "예전 12칸 배치가 그대로 들어온다")
+eq(h.slots[13], false, "늘어난 칸은 비어 있다")
+eq(#h.slots, 14, "칸 수 = 14")
+
+-- 스마트폰(2026-10-21 점검 — 사용자 "지금 추가한 모든 작업들 달빛상점이나 다른요소들 모바일에서도 정상동작하게"):
+--  ① 폰의 칸 단추(tslots)에도 펫 · 탈것을 놓는다(서버의 TouchSlots = Hero.setSlots(…, true))
+--  ② 단추 배치의 목록(touch.luau openChooser · Layout.touchChooser)에 가진 펫 · 탈것이 더해져도: 이름은 칸 아래 글자리(44+6 = 50점 · 두 줄)에 잘리지 않고,
+--   판은 폰의 화면 틀(높이 432 — 왼쪽 위의 Roblox 단추가 가리는 만큼 뺀 것) 안에 서며(넘치는 줄은 민다) · 오른쪽 아래의 칸 단추를 덮지 않는다
+local tl = table.clone(h.tslots)
+tl[2], tl[3] = RIDE.pets[1].id, RIDE.mounts[1].id
+expect(Hero.setSlots(h, tl, true), "폰의 단추에도 펫 · 탈것을 놓는다")
+eq(h.tslots[2], RIDE.pets[1].id, "단추 2 = 펫")
+eq(h.tslots[3], RIDE.mounts[1].id, "단추 3 = 탈것")
+local pixelText = req("Client/ui/pixelText")
+local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
+pixelText.Register("small_o", KIT.font.small_o, {}) -- 게임에서는 client/lune/ui/ui.luau가 등록한다
+local BM = req("ReplicatedStorage/shared/lune/data/bm.generated")
+local names = {}
+for _, p in BM.products or BM.items or BM do
+	if typeof(p) == "table" and p.id and Quick.ride(p.id) then
+		names[p.id] = p.name
+	end
+end
+for _, list in { RIDE.pets, RIDE.mounts } do
+	for _, r in list do
+		local name = names[r.id] or (r.free and r.name) -- 쿠폰으로만 받는 펫(까망 동글이 — 상품이 아니다 · 2026-10-21)은 펫 표의 이름
+		expect(name ~= nil, r.id .. ": 상품의 이름이 있다(쿠폰 펫은 펫 표의 이름)")
+		if name then
+			local fit = pixelText.Fit(name, 50, 2)
+			expect((string.gsub(fit, "\n", " ")) == name,("%s 「%s」: 폰 단추 목록의 이름이 두 줄(50점)에 잘리지 않는다 — 「%s」"):format(r.id, name, fit))
+		end
+	end
+end
+local CLASSES = req("ReplicatedStorage/shared/lune/data/classes.generated")
+local Items = req("ReplicatedStorage/shared/lune/sim/items")
+local Layout = req("ReplicatedStorage/shared/lune/ui/layout")
+local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
+local K = Layout.TOUCHCHOOSER
+local leftmost = math.huge -- 칸 단추 가운데 가장 왼쪽(화면 틀의 점 — 게임 도트 x 2)
+for _, t in UI.touch do
+	if t.slot then
+		leftmost = math.min(leftmost, t.x * 2)
+	end
+end
+local few = Layout.touchChooser(7, 432)
+expect(not few.scroll and few.viewH == 2 * few.rowH, "놓을 것이 일곱이면 두 줄 · 밀지 않는다")
+local uses = 0
+for _, g in Items.data.GOODS do
+	if g.tab == "use" then
+		uses += 1
+	end
+end
+for who, c in CLASSES.classes do
+	local ids = {}
+	for _, t in c.tiers do
+		for _, sk in t.skills do
+			ids[sk.id] = true
+		end
+	end
+	for _, sk in c.skills or {} do
+		ids[sk.id] = true
+	end
+	local n = uses + #RIDE.pets + #RIDE.mounts
+	for _ in ids do
+		n += 1
+	end
+	for _, inset in { 0, 40 } do
+		local m = Layout.touchChooser(n, 432 - inset)
+		expect(K.top + m.h <= 432 - inset - K.bottom, ("%s: 놓을 것 %d개 — 판의 아래 끝 %d(화면 틀 %d 안)"):format(who, n, inset + K.top + m.h, 432))
+		expect(m.scroll and m.viewH < m.contentH, who .. ": 다 보이지 않는 줄은 밀어서 본다")
+		expect(K.x + m.w < leftmost, ("%s: 판의 오른쪽 끝 %d — 칸 단추(왼쪽 끝 %d)를 덮지 않는다"):format(who, K.x + m.w, leftmost))
+	end
+end
+
+end)
+runTest('67_lune_rider', function()
+-- 「달의 계승자」 — 탈것을 탄 영웅(client/lune/rideView.luau · 2026-10-21).
+--  사용자: "캐릭터가 탑승한모습이 자연스럽지않아요" — 골라 주신 것: 앉은 자리가 어긋남 · 영웅이 너무 큼 · 상반신만 꽂혀 보임 · 영웅이 굳어 있음 ·
+--   "탑승할때 플레이어도 idle 재생하면될듯 그 위치에서"
+--  보는 것: ① 탄 동안 영웅의 크기 = 원래 크기(riderSize 1 — 사용자 "캐릭터가 탈것 탔을때 너무작다 크기는 원래대로해야겠네") ② update가 자리와 그 배를 돌려준다(내리면 nil)
+--   ③ 영웅의 발 = 기준점 + seat + 그 장의 bob — 동작마다 한 자리(사용자 "플레이어 흔들림 없애고") ④ 달리기는 질주 여섯 장 · 장마다 _front(등 아래만 영웅 앞에)
+local RIDE = req("ReplicatedStorage/shared/lune/data/ride.generated")
+local CHARS = req("ReplicatedStorage/shared/lune/data/chars.generated")
+local stage = { scale = 5 }
+MOCK("Client/lune/stage", stage)
+local Real = req("Client/lune/sprite")
+
+local last = {}
+MOCK("Client/lune/sprite", {
+	new = function(_, id)
+		local s = { char = CHARS.chars[id] or { id = id }, label = { Visible = true } }
+		function s.set(_, clip, f, x, y, dir)
+			last[id] = { clip = clip, f = f, x = x, y = y, dir = dir }
+		end
+		function s.destroy() end
+		return s
+	end,
+	frameAt = function(_, _, t)
+		return 1 + math.floor(t * 12) % 6
+	end,
+	sizeOn = Real.sizeOn,
+})
+local RideView = req("Client/lune/rideView")
+
+-- ① 크기
+eq(RIDE.riderSize, 1, "탄 영웅은 원래 크기")
+for _, k in { 3, 4, 5, 6 } do
+	stage.scale = k
+	local px = k * Real.sizeOn(RIDE.riderSize)
+	expect(math.abs(px - math.floor(px + 0.5)) < 1e-9, ("배율 %d에서 탄 영웅의 한 점 %.2f화소 — 정수여야"):format(k, px))
+end
+stage.scale = 5
+eq(Real.sizeOn(RIDE.riderSize), 1, "1080p: 원래 크기(한 점 5화소)")
+
+-- ② · ③ 자리와 크기
+for _, m in RIDE.mounts do
+	local rv = RideView.new({}, 4, nil)
+	rv:setRide(m.id)
+	local seen = {}
+	for i = 0, 5 do
+		local now = i / 12 + 0.001
+		local x, y, s = rv:update(now, 1 / 60, 300, 200, 1, true, false, false)
+		expect(x ~= nil and s ~= nil, m.id .. ": 탄 동안 영웅의 자리 · 크기를 돌려준다")
+		local f = 1 + math.floor(now * 12) % 6
+		local ms = Real.sizeOn(CHARS.chars[m.id].size or 1) -- 탈것은 size배로 그린다(영웅의 자리도 그 배)
+		eq(y, 200 + (m.seat.dy + (m.bob.run[f] or 0)) * ms, m.id .. (": 달리기 %d장 — 발 = 기준점 + (seat + bob) x 탈것의 배"):format(f))
+		eq(x, 300 + (m.seat.dx + ((m.bobx and m.bobx.run and m.bobx.run[f]) or 0)) * ms, m.id .. ": 안장의 열(x 탈것의 배)")
+		eq(s, Real.sizeOn(RIDE.riderSize), m.id .. ": 줄여 그리는 배")
+		seen[y] = true
+		expect(m.seat.dy + (m.bob.run[f] or 0) < -8, m.id .. ": 영웅의 발은 탈것의 등 위(땅보다 8점 넘게 위)")
+	end
+	local kinds = 0
+	for _ in seen do
+		kinds += 1
+	end
+	-- 2026-10-21 사용자 "플레이어 흔들림 없애고" → 달리는 동안 영웅은 한 자리(높이 한 가지)
+	eq(kinds, 1, m.id .. ": 달리는 동안 영웅이 흔들리지 않는다(높이 한 가지)")
+	local x, y, s = rv:update(1, 1 / 60, 300, 200, 1, true, false, true)
+	expect(x == nil and y == nil and s == nil, m.id .. ": 사다리 · 기술 중(감춤)에는 nil — 영웅은 제 크기 · 제 동작")
+	-- ④ 질주 여섯 장 · 장마다 영웅 앞에 다시 그리는 등
+	local c = CHARS.chars[m.id]
+	eq(#c.clips.run.frames, 6, m.id .. ": 달리기 = 질주 여섯 장")
+	eq(#c.clips.run_front.frames, 6, m.id .. ": 장마다 등(_front)")
+	eq(#m.bob.run, 6, m.id .. ": 장마다 영웅의 높이")
+	rv:destroy()
+end
+
+-- ⑤ 질주에서 어깨가 서 있는 그림보다 뒤인 늑대 · 멧돼지는 영웅도 뒤로(2026-10-21 사용자 "늑대 탑승위치가 갑자기 앞쪽으로가서 엄청나게 이상함 · 돼지도 같은문제")
+for _, m in RIDE.mounts do
+	local sum = 0
+	for _, v in m.bobx.run do
+		sum += v
+	end
+	local mean = sum / #m.bobx.run
+	if m.id == "mount_wolf" or m.id == "mount_boar" then
+		expect(mean <= -2, ("%s: 달리는 동안 영웅이 어깨를 따라 뒤로(평균 %.1f점)"):format(m.id, mean))
+	else
+		expect(math.abs(mean) <= 1, ("%s: 사슴은 그대로(평균 %.1f점)"):format(m.id, mean))
+	end
+	eq(m.bobx.idle[1], 0, m.id .. ": 서 있을 때는 서 있는 그림의 자리")
+end
+
+-- ⑥ 탈것의 크기 · 빠르기(2026-10-21 사용자 "탈것들의 크기가 좀더 커야하고, 속도도 더 빨라야함")
+local G = req("ReplicatedStorage/shared/lune/config/game")
+for _, m in RIDE.mounts do
+	local size = CHARS.chars[m.id].size
+	expect(size ~= nil and size > 1, m.id .. ": 탈것은 원래보다 크게 그린다")
+	for _, k in { 3, 4, 5, 6 } do
+		stage.scale = k
+		local px = k * Real.sizeOn(size)
+		expect(math.abs(px - math.floor(px + 0.5)) < 1e-9, ("%s: 배율 %d에서 한 점 %.2f화소 — 정수여야"):format(m.id, k, px))
+	end
+	stage.scale = 5
+end
+expect(RIDE.mountSpeed > 1, ("탄 동안 더 빠르다(%.2f배)"):format(RIDE.mountSpeed))
+expect(G.RUN * RIDE.mountSpeed < 300, ("탄 동안의 빠르기 %.0f점/초 — 서버의 이동 몫(300점/초) 안"):format(G.RUN * RIDE.mountSpeed))
+
+end)
+runTest('68_lune_kill_credit', function()
+-- 「달의 계승자」 — 퀘스트 · 일일 의뢰의 「몇 마리 잡기」를 누구에게 세 주는가(shared/lune/sim/room.luau Room:strike의 credit · 서버 world.luau applyResult).
+--  사용자 2026-10-21: "퀘스트 깰때 몇마리 잡아라 이런거 있잖아요 내가 한대만 치면 다른사람이 잡아도 잡은걸로 판정이 들어가야해요"
+--  보는 것: ① 파티가 아닌 사람이 한 대 치고 다른 사람이 잡으면 둘 다 센다(경험치는 잡은 사람만 — 그대로) ② 친 뒤 쓰러졌거나 맵을 떠난 사람은 세지 않는다
+--   ③ 다시 나온 몬스터는 새로 센다(전에 친 것은 넘어가지 않는다) ④ 잡은 사람의 파티원(같은 맵)은 치지 않아도 센다(예전 그대로)
+local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
+COMBAT.rules.critChance = 0
+local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
+local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+local Room = req("ReplicatedStorage/shared/lune/sim/room")
+
+local function solo(seed)
+	local scene = table.clone(SCENES.scenes.hunt)
+	scene.mobs = { scene.mobs[1] }
+	return Room.new("hunt", scene, Random.new(seed))
+end
+local function hit(mul)
+	return { box = { -400, 400, 200, 200 }, mul = mul, seg = 1, at = 0 }
+end
+local function ready(room, heroes)
+	local mob = room.mobs[1]
+	for _ = 1, 200 do
+		room:step(heroes, 1 / 20)
+		if mob.state ~= "spawn" and mob.state ~= "gone" and mob.state ~= "dead" then
+			break
+		end
+	end
+	return mob
+end
+local function has(list, id)
+	return table.find(list, id) ~= nil
+end
+
+-- ① · ④
+do
+	local room = solo(1)
+	local a, b, c = Hero.new(1, "axion"), Hero.new(2, "riven"), Hero.new(3, "mooni")
+	local mob = room.mobs[1]
+	for _, h in { a, b, c } do
+		h.x, h.y, h.invuln = mob.x, mob.y, 99
+	end
+	local all = { [1] = a, [2] = b, [3] = c }
+	ready(room, all)
+	local tap = room:skillHit(a, hit(0.01), a.x, a.y, 1, 1)
+	eq(#tap.kills, 0, "한 대(약하게)로는 쓰러지지 않는다")
+	expect(mob.hp > 0 and mob.hp < mob.maxHp, "깎였다")
+	local xa = a.xp
+	local out = room:skillHit(b, hit(9999), b.x, b.y, 1, 1, { b, c }) -- b · c는 파티 · a는 남
+	eq(#out.kills, 1, "b가 잡았다")
+	local kill = out.kills[1]
+	expect(kill.credit ~= nil, "잡은 기록에 credit이 있다")
+	expect(has(kill.credit, 1), "한 대 친 a도 센다(파티가 아니어도)")
+	expect(has(kill.credit, 2), "잡은 b는 센다")
+	expect(has(kill.credit, 3), "b의 파티원 c(치지 않음 · 같은 맵)도 센다 — 예전 그대로")
+	eq(#kill.credit, 3, "한 사람을 두 번 넣지 않는다")
+	local gainIds = {}
+	for _, g in kill.gains do
+		table.insert(gainIds, g.hero)
+	end
+	expect(not has(gainIds, 1), "경험치는 a에게 가지 않는다(잡은 사람 · 그 파티만 — 그대로)")
+	eq(a.xp, xa, "a의 경험치는 그대로")
+	eq(mob.hitBy, nil, "쓰러지면 친 사람의 기록을 거둔다")
+end
+
+-- ② 친 뒤 쓰러졌다 · 맵을 떠났다
+do
+	local room = solo(2)
+	local a, b = Hero.new(1, "axion"), Hero.new(2, "riven")
+	local mob = room.mobs[1]
+	for _, h in { a, b } do
+		h.x, h.y, h.invuln = mob.x, mob.y, 99
+	end
+	ready(room, { [1] = a, [2] = b })
+	room:skillHit(a, hit(0.01), a.x, a.y, 1, 1)
+	a.alive = false
+	local out = room:skillHit(b, hit(9999), b.x, b.y, 1, 1)
+	expect(not has(out.kills[1].credit, 1), "친 뒤 쓰러진 사람은 세지 않는다")
+	expect(has(out.kills[1].credit, 2), "잡은 사람은 센다")
+end
+do
+	local room = solo(3)
+	local a, b = Hero.new(1, "axion"), Hero.new(2, "riven")
+	local mob = room.mobs[1]
+	for _, h in { a, b } do
+		h.x, h.y, h.invuln = mob.x, mob.y, 99
+	end
+	ready(room, { [1] = a, [2] = b })
+	room:skillHit(a, hit(0.01), a.x, a.y, 1, 1)
+	room:step({ [2] = b }, 1 / 20) -- a가 맵을 떠났다
+	local out = room:skillHit(b, hit(9999), b.x, b.y, 1, 1)
+	expect(out.kills[1] and not has(out.kills[1].credit, 1), "친 뒤 맵을 떠난 사람은 세지 않는다")
+end
+
+-- ③ 다시 나온 몬스터는 새로 센다
+do
+	local room = solo(4)
+	local a, b = Hero.new(1, "axion"), Hero.new(2, "riven")
+	local mob = room.mobs[1]
+	for _, h in { a, b } do
+		h.x, h.y, h.invuln = mob.x, mob.y, 99
+	end
+	local both = { [1] = a, [2] = b }
+	ready(room, both)
+	room:skillHit(a, hit(0.01), a.x, a.y, 1, 1)
+	room:skillHit(b, hit(9999), b.x, b.y, 1, 1)
+	expect(mob.state == "dead", "잡았다")
+	ready(room, both)
+	expect(mob.state ~= "dead" and mob.state ~= "gone" and mob.hp == mob.maxHp, "다시 나왔다")
+	local out = room:skillHit(b, hit(9999), b.x, b.y, 1, 1)
+	eq(#out.kills, 1, "b가 혼자 잡았다")
+	expect(not has(out.kills[1].credit, 1), "전의 삶에서 친 a는 이번에는 세지 않는다")
+	eq(#out.kills[1].credit, 1, "b 하나")
+end
+
+end)
+runTest('69_lune_party_rooms', function()
+-- 「달의 계승자」 — 파티마다 따로 들어가는 장면(scenes의 inst — 스토리 보스의 방 · 이야기의 방 · 꿈 · 서버 world.luau roomKeyFor).
+--  사용자 2026-10-21: "파티마다 따로 되어야합니다. 지금 왜냐면 지금 어떤사람은 성벽거인 퀘스트고 어떤사람은 망루 꼭대기 퀘스트인데 공간을 같이써버리면
+--   만약에 한서버에 100명 있으면 차례를 엄청나게 기다려야하는겁니다. 설계부터가 잘못됬어요 솔로게임처럼되어있습니다."
+--  보는 것: ① 자료 — 망루 꼭대기 · 사당 지하 · 꿈에 inst ② 파티가 아닌 사람은 저마다 다른 방 · 같은 파티는 같은 방 ③ 여럿이 같은 보스 퀘스트를 해도 방마다 보스가 서 있다(기다리지 않는다)
+--   ④ 문으로 들어가고 나오기(나오면 그 장면의 문 앞) ⑤ 빈 방은 닫힌다 ⑥ 방 이름으로도 퀘스트 · 길 · 장면을 그 장면으로 본다 ⑦ 새 캐릭터의 꿈도 사람마다 따로
+local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
+local Quests = req("ReplicatedStorage/shared/lune/sim/quests")
+local Tutorial = req("ReplicatedStorage/shared/lune/sim/tutorial")
+local WM = req("ReplicatedStorage/shared/lune/ui/worldmap")
+local Cine = req("ReplicatedStorage/shared/lune/cine")
+
+-- ① 자료
+for _, key in { "r1c4", "in_cellar", Tutorial.SCENE } do
+	eq(SCENES.scenes[key].inst, "party", key .. ": 파티마다 따로 들어가는 장면")
+end
+for _, key in { "town", "hunt", "r1c3", "in_shrine" } do
+	eq(SCENES.scenes[key].inst, nil, key .. ": 여느 장면(모두가 같이 쓴다)")
+end
+eq(SCENES.base("r1c4#12"), "r1c4", "방 이름 → 장면")
+eq(SCENES.base("r1c4"), "r1c4", "장면은 그대로")
+expect(Tutorial.isDream(Tutorial.SCENE .. "#3") and Tutorial.isDream(Tutorial.SCENE) and not Tutorial.isDream("town"), "꿈의 방도 꿈이다")
+
+-- ⑥ 방 이름으로도 그 장면으로 본다
+do
+	local book = { r1m7 = { done = false, c = {} } }
+	expect(Quests.wantsKill(book, "towerlieutenant", "r1c4#7"), "방에서도 그 퀘스트의 보스가 필요하다")
+	eq(#Quests.onKill(book, "towerlieutenant", "r1c4#7"), 1, "방에서 잡아도 센다")
+	local path = WM.path("r1c4#7", "r1c4")
+	expect(path ~= nil and #path == 1, "방에서 그 장면으로 가는 길 = 제자리")
+	local _ = Cine
+end
+
+-- ②~⑤ 서버
+local handlers, sent = {}, {}
+MOCK("ReplicatedStorage/shared/lune/net/net", {
+	FireClient = function(name, player, ...)
+		table.insert(sent, { name = name, player = player, args = { ... } })
+	end,
+	OnServer = function(name, fn)
+		handlers[name] = fn
+	end,
+})
+local function signal()
+	return { Connect = function() end }
+end
+SERVICE("Players", { PlayerAdded = signal(), PlayerRemoving = signal(), GetPlayers = function() return {} end })
+SERVICE("RunService", { Heartbeat = signal() })
+SERVICE("TextService", { FilterStringAsync = function(_, text) return { GetNonChatStringForBroadcastAsync = function() return text end } end })
+local disk, names = {}, {}
+MOCK("ServerScriptService/server/lune/modules/store", {
+	loadAccount = function(id) return disk[id] end,
+	saveAccount = function(id, data) disk[id] = data; return true end,
+	loadOld = function() return nil end,
+	nameOwner = function(key) return names[key] end,
+	claimName = function(key, id) names[key] = id; return true end,
+	freeName = function(key) names[key] = nil end,
+	rankSet = function() end,
+	rankRemove = function() end,
+	rankTop = function() return {} end,
+	rankInfoSet = function() end,
+	rankInfoGet = function() return nil end,
+	rankInfoRemove = function() end,
+	isOffline = function() return false end,
+})
+local World = req("ServerScriptService/server/lune/modules/world")
+local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+World.start()
+local DT = 1 / 20
+local function tick(seconds: number)
+	for _ = 1, math.floor(seconds / DT + 0.5) do
+		World.tick(DT)
+	end
+end
+local people = {}
+local function person(id: number)
+	local p = { UserId = id, Name = "방" .. id, attrs = {}, SetAttribute = function(self, k, v) self.attrs[k] = v end }
+	handlers.Ready(p)
+	local c = handlers.Chars(p, "create", "방" .. id, "riven")
+	handlers.Chars(p, "enter", c.id)
+	table.insert(people, p)
+	return p, World.session(p)
+end
+
+-- ⑦ 새 캐릭터의 꿈: 사람마다 따로
+local pa, sa = person(6901)
+local pb, sb = person(6902)
+local pc, sc = person(6903)
+expect(Tutorial.isDream(sa.scene) and Tutorial.isDream(sb.scene), "새 캐릭터는 꿈에서 시작한다")
+expect(sa.scene ~= sb.scene and sa.scene ~= Tutorial.SCENE, "꿈은 사람마다 따로 된 방 — " .. sa.scene .. " · " .. sb.scene)
+for _, p in { pa, pb, pc } do
+	World.wake(p)
+end
+tick(0.2)
+eq(World.room(sa.scene) and true, true, "(깨어난 곳의 방)")
+
+-- ② 같은 파티는 같은 방 · 남은 다른 방
+handlers.Party(pa, "invite", 6902)
+handlers.Party(pb, "accept")
+expect(World.sameParty(6901, 6902), "a · b는 파티")
+expect(not World.sameParty(6901, 6903), "c는 남")
+World.jump(pc, "r1c4")
+World.jump(pa, "r1c4")
+World.jump(pb, "r1c4")
+expect(SCENES.base(sa.scene) == "r1c4" and sa.scene ~= "r1c4", "a는 따로 된 방에 — " .. sa.scene)
+eq(sb.scene, sa.scene, "파티원 b는 a의 방으로")
+expect(sc.scene ~= sa.scene and SCENES.base(sc.scene) == "r1c4", "남인 c는 제 방으로 — " .. sc.scene)
+expect(not World.hasRoom("r1c4"), "모두가 같이 쓰는 방은 없다")
+
+-- ③ 여럿이 같은 보스 퀘스트: 방마다 보스가 서 있다(차례를 기다리지 않는다)
+local solos = {}
+for i = 1, 6 do
+	local p, s = person(6910 + i)
+	World.wake(p)
+	Hero.setLevel(s.hero, 25)
+	Quests.finishBefore(s.hero.quests, "r1m7")
+	expect(Quests.accept(s.hero.quests, s.hero.level, "r1m7"), "「성벽 거인」을 받는다")
+	World.jump(p, "r1c4")
+	table.insert(solos, s)
+end
+tick(1.5)
+local seen = {}
+for i, s in solos do
+	expect(not seen[s.scene], ("%d째 사람의 방이 남과 겹치지 않는다"):format(i))
+	seen[s.scene] = true
+	local room = World.room(s.scene)
+	local boss = room and room.bosses and room.bosses[1]
+	expect(boss ~= nil and not boss.away and boss.state ~= "gone", ("%d째 사람의 방에도 성벽 거인이 바로 서 있다"):format(i))
+end
+
+-- ④ 문으로 오르내리기
+do
+	local p, s = person(6930)
+	World.wake(p)
+	World.jump(p, "r1c3")
+	local door
+	for _, pt in SCENES.scenes.r1c3.portals do
+		if pt.to == "r1c4" then
+			door = pt
+		end
+	end
+	s.trust, s.stale = true, nil
+	s.hero.x, s.hero.y = door.x, door.y
+	local trip = handlers.Travel(p, "r1c4")
+	expect(trip ~= nil and trip.scene == s.scene and SCENES.base(trip.scene) == "r1c4" and trip.scene ~= "r1c4", "망루 3층의 문으로 올라가면 제 방 — " .. tostring(trip and trip.scene))
+	expect(trip.room ~= nil and trip.room.key == s.scene, "그 방의 모습이 온다")
+	local back = SCENES.scenes.r1c4.portals[1]
+	s.trust, s.stale = true, nil
+	s.hero.x, s.hero.y = back.x, back.y
+	local room = s.scene
+	local down = handlers.Travel(p, back.to)
+	expect(down ~= nil and s.scene == "r1c3", "내려가면 망루 3층")
+	expect(math.abs(s.hero.x - door.x) <= 1 and math.abs(s.hero.y - door.y) <= 1, "올라갔던 문 앞에 선다")
+	tick(0.2)
+	expect(not World.hasRoom(room), "⑤ 아무도 없는 방은 닫힌다")
+end
+
+-- ⑤ 파티원이 남아 있으면 방은 그대로
+do
+	local room = sa.scene
+	World.jump(pa, "r1c3")
+	tick(0.2)
+	expect(World.hasRoom(room), "b가 남아 있으면 방은 그대로")
+	World.jump(pa, "r1c4")
+	eq(sa.scene, room, "a가 다시 올라오면 b가 있는 그 방")
+	World.jump(pa, "r1c3")
+	World.jump(pb, "r1c3")
+	tick(0.2)
+	expect(not World.hasRoom(room), "둘 다 나가면 닫힌다")
+end
+for _, p in people do
+	World.removePlayer(p)
+end
+
+end)
+runTest('70_lune_coupon_hall', function()
+-- 「달의 계승자」 — 2026-10-21 사용자 요청 묶음:
+--  "스텟, 스킬 초기화 완전무료로 풀겠습니다" · "닉네임 이름표 왼쪽에 레벨 나오게 … 다른사람에게 레벨 보이게" · "명예의 전당 좀더 넓찍하게 … 지금 닉네임 한글자부터 ... 처리 되버립니다"
+--  "대영주의 성에도 명예의 전당처럼 순위 표시 있어야합니다" · "검정색 동그랗게 생긴 … 기본펫 하나 … 무료 쿠폰으로 푸는 용도" · "쿠폰 코드 입력창 … 그 기본펫 지급"
+--  보는 것: ① 쿠폰의 셈(번호의 꼴 · 한 번만 · 기간 · 펫 · 저장) ② 서버(맞는 번호 → 펫 · 두 번째는 안 됨 · 틀린 번호는 1분에 다섯 번 · 계정에 저장) ③ 기본펫은 상품이 아니다 · 그림 · 아이콘
+--   ④ 글이 칸에 들어간다(능력치 「정말 초기화?」 · 쿠폰 창 · 이름표 「Lv.200 열두 자」) ⑤ 명예의 전당 · 대영주의 성의 비석 면에 이름 · 순위가 들어간다(폰 2배 · 1080p 2.5배)
+local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
+local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
+local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
+local BM = req("ReplicatedStorage/shared/lune/data/bm.generated")
+local RIDE = req("ReplicatedStorage/shared/lune/data/ride.generated")
+local CHARS = req("ReplicatedStorage/shared/lune/data/chars.generated")
+local Cash = req("ReplicatedStorage/shared/lune/sim/cash")
+local Account = req("ReplicatedStorage/shared/lune/sim/account")
+local Rank = req("ReplicatedStorage/shared/lune/sim/rank")
+local pixelText = req("Client/ui/pixelText")
+pixelText.Register("small", KIT.font.small, {})
+pixelText.Register("small_o", KIT.font.small_o, {})
+pixelText.Register("body_o", KIT.font.body_o, {})
+local function W(text: string, font: string?): number
+	return (pixelText.Measure(text, font or "small"))
+end
+
+-- ① 쿠폰의 셈
+eq(Cash.couponCode(" dong-geuli "), "DONGGEULI", "빈칸 · 줄표를 빼고 대문자로")
+eq(Cash.couponCode("abc 123"), "ABC123", "가운데 빈칸도 뺀다")
+eq(Cash.couponCode(""), nil, "빈 글은 아니다")
+eq(Cash.couponCode("쿠폰"), nil, "한글은 번호가 아니다")
+eq(Cash.couponCode(string.rep("A", 25)), nil, "25자는 너무 길다")
+eq(Cash.couponCode(42), nil, "글이 아니면 아니다")
+local acct = Account.new()
+local def = { code = "TESTPET", pet = "pet_crow" }
+local ok, got = Cash.redeem(acct, def, 1000)
+expect(ok and got.pet == "pet_crow", "쓰면 펫을 받는다")
+expect(acct.bm.pets.pet_crow == true and acct.bm.petOut == "pet_crow", "꺼내 둔 펫이 없으면 바로 꺼낸다")
+local ok2, why2 = Cash.redeem(acct, def, 1001)
+expect(not ok2 and why2 == "이미 쓴 쿠폰이다", "한 계정에 한 번")
+local acct2 = Account.new()
+acct2.bm.pets.pet_silver, acct2.bm.petOut = true, "pet_silver"
+expect(Cash.redeem(acct2, def, 1000), "다른 계정은 또 쓴다")
+eq(acct2.bm.petOut, "pet_silver", "꺼내 둔 펫은 그대로")
+expect(not Cash.redeem(Account.new(), { code = "LATE", pet = "pet_crow", till = 500 }, 1000), "기간이 지났다")
+expect(not Cash.redeem(Account.new(), { code = "SOON", pet = "pet_crow", from = 2000 }, 1000), "아직 아니다")
+local back = Cash.unpack(Cash.pack(acct.bm), Account.MAX)
+eq(back.coupons.TESTPET, 1000, "쓴 쿠폰이 저장된다")
+expect(back.pets.pet_crow == true, "받은 펫이 저장된다")
+local oldSave = Cash.pack(Cash.new())
+oldSave.coupons = nil
+expect(next(Cash.unpack(oldSave, Account.MAX).coupons) == nil, "예전 저장(쿠폰이 없던 때)도 읽는다")
+
+-- ③ 기본펫: 상품이 아니다 · 펫 표에 있다 · 그림 · 아이콘
+local listed = false
+for _, p in BM.products do
+	listed = listed or p.id == "pet_crow"
+end
+expect(not listed, "쿠폰 펫은 달빛 상점의 상품이 아니다(쿠폰으로만)")
+local inRide = nil
+for _, q in RIDE.pets do
+	if q.id == "pet_crow" then
+		inRide = q
+	end
+end
+expect(inRide ~= nil and inRide.free == "coupon" and inRide.name == "아기 재까마귀", "펫 표에 쿠폰 펫으로")
+expect(Cash.PET.pet_crow ~= nil, "서버의 펫 표에도(꺼내기 · 넣기)")
+expect(CHARS.chars.pet_crow ~= nil and CHARS.chars.pet_crow.clips.idle ~= nil, "그림(서기)")
+-- 이어서 사용자 "그냥 펫 검정동글이말고 재까마귀 몬스터 모델 그대로 가져다가써서 몬스터보다는 크기가 작게해서 펫크기 맞춰가지고 펫으로 쓰자 쿠폰펫"(2026-10-21):
+--  쿠폰 펫 = 아기 재까마귀(pet_crow) — 몬스터 재까마귀(crow)의 서기 그림을 그대로 · 다른 펫과 같은 배율로(몬스터는 1배)
+do
+	local mon, pet = CHARS.chars.crow, CHARS.chars.pet_crow
+	eq(#pet.clips.idle.frames, #mon.clips.idle.frames, "몬스터의 서기 장 수 그대로")
+	for i, f in pet.clips.idle.frames do
+		eq(table.concat(f, ","), table.concat(mon.clips.idle.frames[i], ","), ("서기 %d장 = 몬스터의 그 장(그림판의 같은 칸)"):format(i))
+	end
+	expect(mon.size == nil or mon.size == 1, "몬스터는 1배")
+	eq(pet.size, CHARS.chars.pet_silver.size, "펫은 다른 펫과 같은 배율(점의 굵기가 같다)")
+	expect(pet.size < 1, "몬스터보다 작다")
+end
+expect(KIT.parts.icons.icons.ride_pet_crow ~= nil and KIT.parts.pics.icons.ride_pet_crow ~= nil, "아이콘 18점 · 24점")
+
+-- ④ 글이 칸에 들어간다
+local ST = UI.layout.stat
+expect(W("정말 초기화?", "body_o") <= ST.resetW - 6, ("능력치 창의 「정말 초기화?」 %d점 — 단추 %d점 안"):format(W("정말 초기화?", "body_o"), ST.resetW - 6))
+local CP = UI.layout.coupon
+local CW = CP.words
+eq(#string.split(pixelText.Wrap(CW.guide, CP.w), "\n"), 2, "쿠폰 창의 안내는 두 줄")
+expect(W(CW.use, "body_o") <= CP.btnW - 6, "「사용」이 단추에 들어간다")
+expect(not string.find(CW.use, "다$"), "단추에 「~다」를 쓰지 않는다")
+local gotText = string.gsub(CW.got, "{name}", "아기 재까마귀")
+expect(#string.split(pixelText.Wrap(gotText, CP.w), "\n") <= 2, "받았다는 글은 두 줄 안 — " .. gotText)
+for _, why in { "없는 쿠폰 번호다", "이미 쓴 쿠폰이다", "잠시 뒤에 다시 적어 주세요", "저장하지 못했다 — 잠시 뒤에 다시 적어 주세요" } do
+	expect(#string.split(pixelText.Wrap(why, CP.w), "\n") <= 2, "까닭이 두 줄 안 — " .. why)
+end
+local longName = "은빛달토끼를좋아하는용사"
+-- 이름표: 판 안에는 이름만 · 레벨은 판 바깥 왼쪽(이어서 사용자 "이름테두리 바깥에 레벨표기입니다. 이 박스 안으로 들어오는게 아니라")
+expect(W(longName, "small_o") <= 220, ("이름표 판 안의 이름 「%s」 %d점 — 220점 안"):format(longName, W(longName, "small_o")))
+expect(W("Lv.200", "small_o") <= 80, "판 바깥의 레벨 「Lv.200」이 80점 안")
+
+-- ⑤ 비석 면: 순위 번호(15점) · 이름 · 값(가장 넓은 값) — hallStones.luau와 같은 셈
+local function stones(key: string)
+	local out = {}
+	for _, n in SCENES.scenes[key].npcs or {} do
+		if n.stone and typeof(n.face) == "table" then
+			table.insert(out, n)
+		end
+	end
+	return out
+end
+local hall, castle = stones("in_hall"), stones("ct_castle")
+eq(#hall, 3, "명예의 전당의 비석 셋")
+eq(#castle, 3, "대영주의 성의 판 셋")
+local boards = {}
+for _, n in castle do
+	boards[n.board] = true
+end
+expect(boards.robux and boards.power and boards.level, "성의 판 = 후원 · 전투력 · 레벨")
+local VALUES = { "999,999", "99,999", "Lv.200" } -- 후원(로벅스) · 전투력 · 레벨의 넓은 값(후원 1,000만 이상이면 폰에서 이름이 여덟 자)
+for _, n in hall do
+	expect(n.face[3] - n.face[1] + 1 >= 80, n.id .. ": 비석 면의 폭 80점 이상(전에는 36)")
+end
+for _, ratio in { 2, 2.5 } do
+	for _, set in { { hall, "명예의 전당", 8, 10 }, { castle, "대영주의 성", 3, 3 } } do
+		for _, n in set[1] do
+			local pad = n.pad or 3
+			local w = (n.face[3] + 1 - n.face[1]) * ratio - pad * 2
+			local h = (n.face[4] + 1 - n.face[2]) * ratio - pad * 2 - 1
+			local rows = math.min(Rank.TOP, math.floor(h / 14))
+			local want = if ratio == 2 then set[3] else set[4]
+			expect(rows >= want, ("%s %s(배율 %.1f): 순위 %d줄 — %d줄 이상"):format(set[2], n.id, ratio, rows, want))
+			local valueW = W(VALUES[if (n.board or n.id):find("robux") then 1 elseif (n.board or n.id):find("power") then 2 else 3])
+			local nameW = w - 15 - valueW - 4
+			local chars = 0
+			for k = 1, 12 do
+				if W(string.sub(longName, 1, k * 3)) <= nameW then
+					chars = k
+				end
+			end
+			local need = if ratio == 2.5 then 12 else 9
+			expect(chars >= need, ("%s %s(배율 %.1f): 이름 자리 %d점 — 한글 %d자(%d자 이상)"):format(set[2], n.id, ratio, nameW, chars, need))
+		end
+	end
+end
+
+-- ⑥ 달빛 상점(2026-10-21 사용자: "달빛패스 일딴 비활성화해 그리고 달빛상점에서 펫은 펫 탭으로 따로 빼고 편의 가 아니라 그리고 지금 달빛상점 들어가면 ui가 너무 작아 모바일에서도 반응형")
+do
+	local SHOP = BM.shop
+	local keys = {}
+	for _, t in SHOP.tabs do
+		keys[t[1]] = t[2]
+	end
+	eq(keys.pet, "펫", "「펫」 탭이 있다")
+	eq(keys.pass, nil, "「패스」 탭은 없다(꺼 둠)")
+	for _, q in RIDE.pets do
+		if not q.free then
+			expect(table.find(SHOP.rows.pet, q.id) ~= nil and table.find(SHOP.rows.conv, q.id) == nil, q.id .. ": 펫 탭에 있고 편의 탭에는 없다")
+		end
+	end
+	local pass
+	for _, p in BM.products do
+		if p.id == "pass" then
+			pass = p
+		end
+	end
+	expect(pass ~= nil and not Cash.ready(pass), "달빛 패스는 살 수 없다(준비 중)")
+	local Layout = req("ReplicatedStorage/shared/lune/ui/layout")
+	local SP = SHOP.space
+	for _, c in { { 960, 540, 2, "PC 1080p" }, { 1152, 648, 1, "PC 1366x768" }, { 960, 540, 4, "PC 4K" }, { 768, 432, 0.9, "폰" }, { 768, 432, 1.6, "큰 폰 · 태블릿" } } do
+		local L = Layout.shopSpace(c[1], c[2], c[3])
+		local w, h = L.total * L.k, L.panelH * L.k
+		expect(L.k >= 1.1, ("%s: 상점 묶음을 키운다(%.2f배)"):format(c[4], L.k))
+		expect(L.x0 >= 0 and L.x0 + w <= c[1], ("%s: 가로가 화면 안(%d ~ %d / %d)"):format(c[4], L.x0, math.floor(L.x0 + w), c[1]))
+		expect(L.y0 >= SP.topH and L.y0 + h <= c[2] - SP.bottom + 0.5, ("%s: 세로가 위 줄 아래 · 화면 안(%d ~ %d / %d)"):format(c[4], L.y0, math.floor(L.y0 + h), c[2]))
+	end
+	eq(Layout.shopSpace(960, 540, 2).k, 1.5, "1080p = 1.5배(한 점 3화소)")
+end
+
+-- ② 서버
+local function json(v)
+	if typeof(v) ~= "table" then
+		return v
+	end
+	local out = {}
+	for k, x in v do
+		out[k] = json(x)
+	end
+	return out
+end
+local disk = {}
+local handlers, fired = {}, {}
+MOCK("ReplicatedStorage/shared/lune/net/net", {
+	FireClient = function(name, player, ...)
+		table.insert(fired, { name = name, player = player, args = { ... } })
+	end,
+	OnServer = function(name, fn)
+		handlers[name] = fn
+	end,
+})
+local function signal()
+	return { Connect = function() end }
+end
+SERVICE("MessagingService", { PublishAsync = function() end, SubscribeAsync = function() end })
+SERVICE("Players", { PlayerAdded = signal(), PlayerRemoving = signal(), GetPlayers = function() return {} end })
+SERVICE("RunService", { Heartbeat = signal() })
+SERVICE("TextService", { FilterStringAsync = function(_, text) return { GetNonChatStringForBroadcastAsync = function() return text end } end })
+local names = {}
+MOCK("ServerScriptService/server/lune/modules/store", {
+	lock = function() return true end,
+	unlock = function() end,
+	loadAccount = function(id) return json(disk[id]) end,
+	saveAccount = function(id, value)
+		disk[id] = json(value)
+		return true
+	end,
+	loadOld = function() return nil end,
+	nameOwner = function(key) return names[key] end,
+	claimName = function(key, id)
+		if names[key] ~= nil and names[key] ~= id then
+			return false
+		end
+		names[key] = id
+		return true
+	end,
+	freeName = function(key) names[key] = nil end,
+	rankSet = function() end,
+	rankRemove = function() end,
+	rankTop = function() return {} end,
+	rankInfoSet = function() end,
+	rankInfoGet = function() return nil end,
+	rankInfoRemove = function() end,
+	isOffline = function() return false end,
+	marketRead = function() return true, nil end,
+	marketUpdate = function(_, fn) return true, nil, nil, json(fn(nil)) end,
+})
+local World = req("ServerScriptService/server/lune/modules/world")
+local Coupons = req("ServerScriptService/server/lune/modules/coupons")
+World.start()
+local p = { UserId = 7001, Name = "user7001", DisplayName = "user7001", attrs = {} }
+p.SetAttribute = function(self, k, v) self.attrs[k] = v end
+p.Kick = function() end
+handlers.Ready(p)
+local made = handlers.Chars(p, "create", "쿠폰손님", "riven")
+handlers.Chars(p, "enter", made.id)
+local s = World.session(p)
+local code = Coupons.LIST[1].code
+eq(Coupons.LIST[1].pet, "pet_crow", "처음의 쿠폰 = 기본펫")
+local r = handlers.Coupon(p, string.lower(code))
+expect(r and r.ok and r.pet == "pet_crow", "맞는 번호(작은 글자로 적어도)면 펫을 받는다")
+expect(s.acct.bm.pets.pet_crow and s.acct.bm.petOut == "pet_crow", "계정에 들어오고 바로 꺼낸다")
+expect(disk[p.UserId] and disk[p.UserId].bm and disk[p.UserId].bm.coupons and disk[p.UserId].bm.coupons[code] ~= nil, "바로 저장한다(쓴 쿠폰과 펫을 한 번에)")
+local cashGot = false
+for _, f in fired do
+	cashGot = cashGot or (f.name == "CashGot" and f.args[1] == "pet_crow")
+end
+expect(cashGot, "화면에 알린다(가진 것을 다시 읽는다)")
+local r2 = handlers.Coupon(p, code)
+expect(r2 and not r2.ok and r2.why == "이미 쓴 쿠폰이다", "두 번째는 안 된다")
+for i = 1, 5 do
+	local bad = handlers.Coupon(p, "WRONG" .. i)
+	expect(bad and not bad.ok and bad.why == "없는 쿠폰 번호다", "틀린 번호 " .. i)
+end
+local sixth = handlers.Coupon(p, "WRONG6")
+expect(sixth and not sixth.ok and sixth.why == "잠시 뒤에 다시 적어 주세요", "틀린 번호는 1분에 다섯 번까지")
+World.removePlayer(p)
+
+-- 쓴 쿠폰의 보상을 지금의 목록에 맞춘다(쿠폰 펫을 바꿨다 — 사용자 "지금 내 테스트 계정에서 다시 쿠폰을 입력할수없어서 동글이는 사라지고, 재까마귀를 테스트할수도없어")
+do
+	local old = Account.new()
+	old.bm.coupons[code] = 1000 -- 예전에 쓴 쿠폰(그때의 펫은 지금 없다)
+	disk[7002] = json(Account.pack(old))
+	local q = { UserId = 7002, Name = "user7002", DisplayName = "user7002", attrs = {} }
+	q.SetAttribute = function(self, k, v) self.attrs[k] = v end
+	q.Kick = function() end
+	handlers.Ready(q)
+	local sq = World.session(q)
+	expect(sq.acct.bm.pets.pet_crow == true and sq.acct.bm.petOut == "pet_crow", "이미 쓴 쿠폰의 계정이 들어오면 지금의 쿠폰 펫(아기 재까마귀)을 받는다")
+	expect(disk[7002].bm.pets and table.find(disk[7002].bm.pets, "pet_crow") ~= nil, "바로 저장한다")
+	World.removePlayer(q)
+end
 
 end)
 finish()

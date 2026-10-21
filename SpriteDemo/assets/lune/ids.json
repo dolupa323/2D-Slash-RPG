@@ -56,8 +56,8 @@
   "id": "rbxassetid://105450659975716"
  },
  "ui_kit.png": {
-  "hash": "2db92c0a70ecd747e56b671ecf0f3849",
-  "id": "rbxassetid://75845634952070"
+  "hash": "5740664cfa1f80e0167e5789a9d8a6c4",
+  "id": "rbxassetid://130784972332188"
  },
  "font_small_2.png": {
   "hash": "a39c57d23acf7233f3419f3f15021ff7",
@@ -296,16 +296,16 @@
   "id": "rbxassetid://105088993635856"
  },
  "chars_2.png": {
-  "hash": "29ad5b422d1c4382f53736fc9c1a7245",
-  "id": "rbxassetid://80555779123391"
+  "hash": "5e4cfeb7fe4b04f8e6475c088217c8d3",
+  "id": "rbxassetid://130889718297355"
  },
  "ground_r2b3_2.png": {
   "hash": "5ab61b982be63132f8be7920125c1cdb",
   "id": "rbxassetid://88569035446839"
  },
  "chars_mask_2.png": {
-  "hash": "917bc1bdb2f3f58fb0f37d5c17963eb1",
-  "id": "rbxassetid://79679881357767"
+  "hash": "c0be88b0e546e1e497536153a5b1c778",
+  "id": "rbxassetid://83581507329375"
  },
  "ground_r2b1_2.png": {
   "hash": "c6791ddd14da3aa7b4f513a6fecef26f",
@@ -872,16 +872,16 @@
   "id": "rbxassetid://73946472428073"
  },
  "back_in_hall.png": {
-  "hash": "07fcebab8f446533a83f51c18ba7d493",
-  "id": "rbxassetid://87816764644425"
+  "hash": "80e198a9d78dc86c2dc01843ce14c7e0",
+  "id": "rbxassetid://112774948694614"
  },
  "worldmap_r1.png": {
   "hash": "c8a57a5947f9cb154bff03eccbc78631",
   "id": "rbxassetid://102843140318075"
  },
  "chars_3.png": {
-  "hash": "0c8159681771467a5867e1e2841fcc64",
-  "id": "rbxassetid://80173528858137"
+  "hash": "c2984aa8b776257822a0497f2f97152b",
+  "id": "rbxassetid://118737909005746"
  },
  "chars_4.png": {
   "hash": "a5307478dd644876cb3d15b1f1e86434",
@@ -892,8 +892,8 @@
   "id": "rbxassetid://108149976755839"
  },
  "chars_mask_3.png": {
-  "hash": "7d0bacfa874c2111141b01ee8dfdd78e",
-  "id": "rbxassetid://79391535789921"
+  "hash": "a86b440673e10582f9bdee8e8f226a62",
+  "id": "rbxassetid://118174691333755"
  },
  "chars_mask_4.png": {
   "hash": "8d933227add7ce55d1ac30f995a00629",
@@ -1136,8 +1136,8 @@
   "id": "rbxassetid://112775081132374"
  },
  "back_ct_castle.png": {
-  "hash": "3cc5fa1407029876dc8da7cb30d90ede",
-  "id": "rbxassetid://122227497315667"
+  "hash": "f935b7cfe2a0493fcdafb3bca9afb4ee",
+  "id": "rbxassetid://83503122707807"
  },
  "worldmap_city.png": {
   "hash": "841791a21fd274dc699b747089c8569b",

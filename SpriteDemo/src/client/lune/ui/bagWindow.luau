@@ -27,13 +27,20 @@ local Ui = require(script.Parent.ui)
 local ItemCell = require(script.Parent.itemCell)
 local ItemDetail = require(script.Parent.itemDetail)
 local Windows = require(script.Parent.windows)
+local BMW = require(lune.data["bm.generated"]).shop.words -- 캐시 탭의 글(2026-10-21)
 
 local C = Ui.COLOR
 local D = Items.data
 local BAG = Layout.BAG
 local COLS, ROWS = BAG.cols, BAG.rows
 local GRID_Y = BAG.gridY -- 칸들의 윗줄
-local KEYS = D.BAG.keys -- 탭의 이름표("gear" · "use" · "etc")
+local KEYS = table.clone(D.BAG.keys) -- 탭의 이름표("gear" · "use" · "etc") + 넷째 "cash"(아래)
+-- 캐시 탭(2026-10-21 사용자 "인벤토리 가방에 캐시 탭을 넣던지 방법을 고안해서 펫을꺼내거나 넣는것, 라이딩을 타거나 내리는것 다 가능해야하고"):
+--  계정이 가진 펫 · 탈것이 칸에 놓인다(가방의 칸을 차지하지 않는다 — 서버의 상점 상태 Cash.view의 pets · mounts). 꺼내 둔 펫 · 타는 탈것은 칸의 오른쪽 아래에 민트 점.
+--  누르면 상세 판에 「꺼내기 · 넣기」 / 「타기 · 내리기」 · 「퀵슬롯」 · 두 번 누르면 바로 · 끌어서 퀵슬롯에 놓으면 그 키로(boot의 state.togglePet · toggleRide)
+table.insert(KEYS, "cash")
+local TABNAMES = table.clone(D.BAG.tabs)
+table.insert(TABNAMES, BMW.bagTab)
 local DOUBLE = 0.4 -- 이 안에 같은 칸을 다시 누르면 두 번 누른 것(초)
 local HOLD = 0.3 -- 스마트폰: 칸을 이만큼(초) 누르고 있다가 밀어야 아이템을 끈다(그 전에 밀면 스크롤)
 local BAR = 3 -- 스크롤 막대의 두께(화면 틀의 점 — 칸의 오른쪽 끝에 겹친다)
@@ -88,24 +95,43 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 	local function unselect()
 		sel, ask = nil, nil
 	end
+	-- 캐시 탭의 칸들: 가진 펫(산 차례) → 가진 탈것 · on = 꺼내 둔 펫 / 타는 탈것(서버의 상점 상태 — 없으면 빈 탭)
+	local function cashList()
+		local v = ctx.cash and ctx.cash()
+		local out = {}
+		if not v then
+			return out
+		end
+		local myPet, myRide = ctx.myPet and ctx.myPet(), ctx.myRide and ctx.myRide()
+		for _, id in v.pets or {} do
+			table.insert(out, { ride = id, kind = "pet", on = (myPet or v.petOut) == id })
+		end
+		for _, id in v.mounts or {} do
+			table.insert(out, { ride = id, kind = "mount", on = myRide == id })
+		end
+		return out
+	end
 	-- 모든 창을 다시 그린다(상세 판은 하나뿐이라, 여기서 고르면 다른 창이 고른 것은 풀린다)
 	local function redraw()
 		Windows.refresh(ctx.me())
 	end
 	local function choose(tabKey: string, slot: number, it)
-		sel = { tab = tabKey, slot = slot, id = if it.item then it.item else it.id }
+		sel = { tab = tabKey, slot = slot, id = if it.ride then it.ride elseif it.item then it.item else it.id }
 		ask = nil
 		ui.detail = "bag"
 	end
 
 	local tabs = {}
 	local tx = 0
-	for i, name in D.BAG.tabs do
+	for i, name in TABNAMES do
 		tabs[i] = Ui.tab(body, name, tx, 0, function()
 			if tab ~= i then
 				tab = i
 				unselect()
 				gridRoot.CanvasPosition = Vector2.zero -- 다른 탭은 맨 위부터
+				if KEYS[i] == "cash" and not (ctx.cash and ctx.cash()) and ctx.cashFetch then
+					ctx.cashFetch() -- 가진 펫 · 탈것을 서버에 묻는다(받으면 다시 그린다)
+				end
 				redraw()
 			end
 		end)
@@ -162,6 +188,13 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			lastClick = { slot = if twice then 0 else n, t = now }
 			if not it then
 				unselect()
+			elseif twice and it.ride then
+				-- 캐시 탭: 두 번 누르기 = 꺼내기 · 넣기 / 타기 · 내리기
+				if it.kind == "pet" and ctx.togglePet then
+					ctx.togglePet(it.ride)
+				elseif it.kind == "mount" and ctx.toggleRide then
+					ctx.toggleRide(it.ride)
+				end
 			elseif twice then
 				-- 두 번 누르기: 장비는 장착, 소비 아이템은 사용
 				local me = ctx.me()
@@ -185,7 +218,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			end
 			local from, tabKey = i, key()
 			local moved = false
-			ctx.quick.press(if tabKey == "use" then it.item else nil, nil, input, {
+			ctx.quick.press(if tabKey == "use" then it.item elseif tabKey == "cash" then it.ride else nil, nil, input, {
 				icon = ItemCell.icon(it),
 				size = S,
 				hold = HOLD, -- 스마트폰: 잠깐 누르고 있다가 밀어야 끈다(그 전에 밀면 스크롤)
@@ -205,6 +238,9 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 				end,
 				onDrop = function(at: Vector2): boolean
 					local to = slotAt(at)
+					if tabKey == "cash" then
+						return to ~= nil -- 캐시 탭의 칸끼리는 옮기지 않는다(차례는 가진 차례) · 퀵슬롯에 놓는 것은 quickEdit이 한다
+					end
 					if to and to ~= from then
 						ctx.send("Item", "move", tabKey, from, to)
 						-- 화면은 바로 옮긴다(서버가 가진 가방이 곧 다시 온다 — 그때 그것으로 맞춘다). 같은 묶음끼리 합치는 것은 서버의 셈을 기다린다
@@ -323,6 +359,53 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 	local function detail(bag, me)
 		if ui.detail ~= "bag" then
 			unselect() -- 다른 창에서 골랐다
+		end
+		if sel and sel.tab == "cash" then
+			-- 캐시 탭의 펫 · 탈것(가진 것의 차례가 바뀌어도 이름표로 따라간다)
+			local entry = nil
+			for _, e in cashList() do
+				if e.ride == sel.id then
+					entry = e
+				end
+			end
+			if not entry then
+				unselect()
+				ItemDetail.hide("bag")
+				return
+			end
+			local prod = ctx.cashProduct and ctx.cashProduct(entry.ride)
+			local isPet = entry.kind == "pet"
+			local spec = { item = entry, buttons = {}, onClose = function()
+				unselect()
+				redraw()
+			end }
+			spec.info = {
+				name = if prod then prod.name else entry.ride,
+				tone = "text",
+				sub = (if isPet then BMW.petKind else BMW.mountKind) .. (if entry.on then " · " .. (if isPet then BMW.petOutTag else BMW.rideTag) else ""),
+				rows = {},
+				notes = { { if prod then prod.line or "" else "", "text" }, { if isPet then BMW.bagHint else BMW.rideHint, "dim" } },
+			}
+			table.insert(spec.buttons, {
+				text = if isPet then (if entry.on then BMW.petOff else BMW.petOn) else (if entry.on then BMW.rideOff else BMW.rideOn),
+				main = not entry.on,
+				onClick = function()
+					if isPet and ctx.togglePet then
+						ctx.togglePet(entry.ride)
+					elseif not isPet and ctx.toggleRide then
+						ctx.toggleRide(entry.ride)
+					end
+				end,
+			})
+			table.insert(spec.buttons, {
+				text = WORDS.quick,
+				onClick = function()
+					ctx.quick.pick(entry.ride) -- 퀵슬롯이 반짝인다 — 놓을 칸을 누른다
+				end,
+			})
+			spec.key = table.concat({ "cash", entry.ride, tostring(entry.on) }, "|")
+			ItemDetail.show("bag", spec)
+			return
 		end
 		local entry = if sel then bag[sel.tab][sel.slot] else nil
 		if sel and sel.tab == "gear" and (not entry or entry.id ~= sel.id) then
@@ -506,6 +589,26 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		for i, button in tabs do
 			button:setOn(i == tab)
 		end
+		if key() == "cash" then
+			-- 캐시 탭: 가진 펫 · 탈것만(정렬 · 늘리기 없음). 비었으면 안내
+			local own = cashList()
+			gridRoot.CanvasSize = UDim2.fromOffset(0, ROWS * S)
+			gridRoot.ScrollingEnabled = false
+			gridRoot.ScrollBarThickness = 0
+			count:set(if #own == 0 then BMW.bagEmpty else "")
+			detail(bag, me)
+			for i, cell in cells do
+				cell.frame.Visible = i <= COLS * ROWS
+				cell:set(own[i], { selected = sel ~= nil and sel.tab == "cash" and own[i] ~= nil and own[i].ride == sel.id })
+			end
+			grow.frame.Visible = false
+			sort.frame.Visible = false
+			money:set(Format.short(me.money))
+			dust:set(Format.short(bag.dust))
+			essence:set(Format.short(bag.essence))
+			return
+		end
+		sort.frame.Visible = true
 		local list = bag[key()]
 		-- 스크롤: 늘린 가방은 네 줄을 넘는다 — 넘는 만큼 칸을 만들고 스크롤 틀의 속을 늘린다
 		local rows = math.ceil(bag.size / COLS)

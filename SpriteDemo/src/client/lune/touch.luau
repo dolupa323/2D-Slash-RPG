@@ -16,6 +16,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UI = require(ReplicatedStorage.shared.lune.data["ui.generated"])
 local Quick = require(ReplicatedStorage.shared.lune.ui.quick)
+local Layout = require(ReplicatedStorage.shared.lune.ui.layout)
 local Stage = require(script.Parent.stage)
 local Input = require(script.Parent.input)
 local Hud = require(script.Parent.hud)
@@ -164,12 +165,13 @@ local function openChooser()
 	if not Touch.arranging then
 		return
 	end
-	local list = opts.choices() -- { { what, name } … } — 물약과 배운(쓸 수 있는) 스킬
-	local cols, cell, gap, pad0 = 5, 44, 6, 12
-	local rows = math.max(1, math.ceil(#list / cols))
-	local w = pad0 * 2 + cols * cell + (cols - 1) * gap
-	local h = 34 + rows * (cell + 16) + 44
-	local holder = Stage.place(Stage.ui, "TouchChooser", "tc", 480 - w / 2, 54, w, h)
+	local list = opts.choices() -- { { what, name } … } — 물약 · 배운(쓸 수 있는) 스킬 · 가진 펫 · 탈것
+	-- 판은 왼쪽 위(칸 단추는 모두 오른쪽 아래 — 덮지 않는다) · 화면에 들어가는 만큼만 길어지고 넘치는 줄은 밀어서 본다(2026-10-21 점검 — Layout.touchChooser)
+	local K = Layout.TOUCHCHOOSER
+	local m = Layout.touchChooser(#list, Stage.uiH - Stage.insetTop)
+	local cols, cell, gap, pad0 = K.cols, K.cell, K.gap, K.pad
+	local w, h = m.w, m.h
+	local holder = Stage.place(Stage.ui, "TouchChooser", "tl", K.x, K.top, w, h)
 	holder.ZIndex = 170
 	local panel = Ui.panel(holder, 0, 0, w, h)
 	local hold = Instance.new("TextButton") -- 판을 눌러도 뒤의 것이 눌리지 않게
@@ -180,17 +182,20 @@ local function openChooser()
 	hold.Parent = panel
 	local title = if selected then "밝게 뜬 단추에 놓을 것을 고르세요" else "바꿀 단추를 누르세요 · 끌면 자리를 바꿉니다"
 	Ui.text(panel, title, pad0, 10, w - pad0 * 2, { font = "body", color = if selected then C.accent else C.text })
+	local scroll = Ui.scroll(panel, 0, K.titleH, w, m.viewH, m.contentH, K.bar)
+	scroll.Name = "List"
+	scroll.ZIndex = 2
 	for i, item in list do
 		local col, row = (i - 1) % cols, math.floor((i - 1) / cols)
-		local x, y = pad0 + col * (cell + gap), 34 + row * (cell + 16)
-		local slot = Ui.slot(panel, x, y, cell)
+		local x, y = pad0 + col * (cell + gap), row * m.rowH
+		local slot = Ui.slot(scroll, x, y, cell)
 		slot.frame.ZIndex = 2
 		local now = selected and state.slots[selected] == item.what
 		slot:setOn(now == true)
 		local pic = Ui.pic(slot.frame, Quick.pic(item.what), math.floor((cell - PIC) / 2), math.floor((cell - PIC) / 2))
 		pic.ZIndex = 2
 		local placed = Quick.find(state.slots, item.what) ~= nil
-		Ui.text(panel, item.name, x - 3, y + cell + 2, cell + 6, { align = "center", color = if placed then C.accent else C.text, outline = true }) -- 이미 어느 단추에 놓여 있는 것은 민트
+		Ui.text(scroll, item.name, x - 3, y + cell + 2, cell + 6, { align = "center", color = if placed then C.accent else C.text, outline = true, lines = 2 }) -- 이미 어느 단추에 놓여 있는 것은 민트 · 긴 이름(「목도리 달토끼」)은 두 줄
 		local hit = Ui.hit(slot.frame)
 		hit.Activated:Connect(function()
 			if selected then
@@ -568,6 +573,13 @@ end
 -- 단추들의 모습을 다시 그린다(켜 둔 사출기가 바뀌었을 때 — Hud.active)
 function Touch.refresh()
 	paintAll()
+end
+
+-- 놓을 것의 목록이 바뀌었다(가진 펫 · 탈것을 서버에서 받았다 — 2026-10-21): 배치 중이면 고른 칸 그대로 목록만 다시
+function Touch.rechoose()
+	if Touch.arranging then
+		openChooser()
+	end
 end
 
 -- 가방이 바뀌었다: 소비 아이템이 놓인 단추의 숫자를 다시 적는다

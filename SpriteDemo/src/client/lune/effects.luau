@@ -260,6 +260,15 @@ function Effects:addDrop(d)
 	self.drops[d.id] = { frame = frame, x = d.x, y = d.y, w = w, h = h, amount = d.amount, kind = d.kind, item = d.item, name = d.name, phase = d.id * 0.7, spin = d.kind ~= "dust" and d.kind ~= "gear" and d.kind ~= "quest" and d.kind ~= "goods" }
 end
 
+-- 펫이 주웠다: 그것이 (x, y)로 빨려 든다(2026-10-21 사용자 "펫의 줍기판정이 살짝 자석처럼 되어야합니다" — 그림만. 줍는 것은 서버)
+Effects.PULL = 0.15
+function Effects:pull(id: number, x: number, y: number)
+	local d = self.drops[id]
+	if d then
+		d.pull = { x = x, y = y, t = 0 }
+	end
+end
+
 function Effects:removeDrop(id: number)
 	local d = self.drops[id]
 	if d then
@@ -384,10 +393,20 @@ function Effects:update(now: number, dt: number)
 			end
 		end
 	end
-	-- 떨어진 것은 땅 바로 위에서 천천히 오르내린다
+	-- 떨어진 것은 땅 바로 위에서 천천히 오르내린다 · 펫이 주우면(pull) 펫 쪽으로 PULL초 동안 빨려 든다(서버가 DropGone을 보내면 사라진다 — 오지 않으면 제자리로)
 	for _, d in self.drops do
 		local bob = math.floor(math.sin(now * 4 + d.phase) * 1.5 + 0.5)
-		d.frame.Position = UDim2.fromOffset(math.floor(d.x - d.w / 2 + 0.5), math.floor(d.y - d.h - 2 + bob + 0.5))
+		local dx, dy = d.x, d.y
+		if d.pull then
+			d.pull.t += dt
+			if d.pull.t > 1 then
+				d.pull = nil -- 서버가 주지 않았다(남의 것 · 가방이 가득): 제자리로
+			else
+				local k = math.min(1, d.pull.t / Effects.PULL)
+				dx, dy, bob = d.x + (d.pull.x - d.x) * k, d.y + (d.pull.y - d.y) * k, 0
+			end
+		end
+		d.frame.Position = UDim2.fromOffset(math.floor(dx - d.w / 2 + 0.5), math.floor(dy - d.h - 2 + bob + 0.5))
 		if d.spin then
 			local f = math.floor(now * Effects.COIN.fps + d.phase) % Effects.COIN.frames + 1
 			if f ~= d.spinAt then

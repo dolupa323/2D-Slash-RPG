@@ -3,6 +3,7 @@
 --  → 비석 앞에서 ↑로 창을 여는 것을 없애고(공방 items.js의 NPCDO에서 뺐다), 비석 면(scenes.generated의 npcs[].face — 방 그림에서 잰 도트)에
 --    순위 · 이름 · 값을 돌에 판 글처럼 그린다: 어두운 글 + 한 점 아래의 밝은 테두리(새긴 홈에 빛이 걸린 모양). 들어설 때 서버에서 받고(Net "Rank") 30초마다 다시 받는다.
 --  줄 수 = 비석 면의 높이에 들어가는 만큼(가장 많이 Rank.TOP). 이름은 폭을 넘으면 …로 줄인다.
+--  2026-10-21: 명예의 전당의 비석을 넓혔고(면 81~82 x 60점 — 사용자 "닉네임 한글자부터 ... 처리 되버립니다"), 대영주의 성의 왼쪽 벽에 같은 순위 판 셋을 걸었다(scene의 npcs[].board · pad).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local Net = require(lune.net.net)
@@ -52,7 +53,8 @@ function HallStones.enter(scene, parent: Instance)
 	gen += 1
 	layer = Stage.group(parent, "HallStones", 5)
 	for _, n in list do
-		local st = { board = string.match(n.id, "^hall_(%a+)$") or "level", face = n.face, rows = {} }
+		-- board = 새길 순위판(대영주의 성의 판처럼 이름표가 hall_가 아니면 board로 — 2026-10-21) · pad = 면 안쪽 여백(얇은 판은 1)
+		local st = { board = n.board or string.match(n.id, "^hall_(%a+)$") or "level", face = n.face, pad = n.pad or PAD, rows = {} }
 		for i = 1, Rank.TOP do
 			st.rows[i] = { no = engraved(layer, "right", 14), name = engraved(layer, "left", 120), value = engraved(layer, "right", 60) }
 		end
@@ -96,8 +98,9 @@ function HallStones.update()
 	for _, st in stones do
 		-- face = 방 그림의 자리(실내의 방 그림은 화면에 붙은 층이다 — 카메라를 따라가지 않는다): 화면의 점 = 그림의 점. 세계의 자리로 바꾸려면 카메라를 더한다
 		local cx, cy = Overlay.camX, Overlay.camY
-		local x0, y0 = Overlay.x(st.face[1] + cx) + PAD, Overlay.y(st.face[2] + cy) + PAD + 1
-		local x1, y1 = Overlay.x(st.face[3] + 1 + cx) - PAD, Overlay.y(st.face[4] + 1 + cy) - PAD
+		local pad = st.pad
+		local x0, y0 = Overlay.x(st.face[1] + cx) + pad, Overlay.y(st.face[2] + cy) + pad + 1
+		local x1, y1 = Overlay.x(st.face[3] + 1 + cx) - pad, Overlay.y(st.face[4] + 1 + cy) - pad
 		local w = x1 - x0
 		local fit = math.clamp(math.floor((y1 - y0) / M.smallLine), 0, Rank.TOP) -- 면에 들어가는 줄
 		local list = boards and boards[st.board] or {}

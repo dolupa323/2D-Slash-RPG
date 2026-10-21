@@ -110,7 +110,9 @@ for _, t in texts do
 		long = t
 	end
 end
-expect(long ~= nil and long.label.maxW < 120, "긴 이름은 면의 폭에 맞춰 줄인다")
+-- 2026-10-21: 비석을 넓혔다(면 81~82점 — 사용자 "명예의 전당 좀더 넓찍하게 … 닉네임 한글자부터 ... 처리 되버립니다") — 이름 자리는 면의 폭 안에서 넓다
+expect(long ~= nil and long.label.maxW < (x1 - x0) - 15, "긴 이름은 면의 폭에 맞춰 줄인다")
+expect(long ~= nil and long.label.maxW >= 140, ("1080p에서 이름 자리 %d점 — 140점 넘게(전에는 한 글자 남짓)"):format(long and long.label.maxW or -1))
 -- 후원의 비석: 한 사람뿐이면 한 줄만
 local robuxShown = 0
 f = faceOf("hall_robux")

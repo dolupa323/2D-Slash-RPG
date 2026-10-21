@@ -364,7 +364,7 @@ function Analytics.watch(s)
 	end
 	-- 쓰러짐(어느 맵에서)
 	if was.alive and not h.alive then
-		emit("custom", s.player, { "Death", 1 }, fieldsFor(s, s.scene))
+		emit("custom", s.player, { "Death", 1 }, fieldsFor(s, string.match(s.scene or "", "^(.-)#%d+$") or s.scene)) -- 따로 된 방(r1c4#57)은 그 장면의 이름으로(방마다 값이 늘지 않게 — 2026-10-21)
 	end
 	-- 요청 밖에서 바뀐 달돈(바닥에 떨어진 돈을 저절로 주웠다 등)
 	if not s.anBusy and h.money ~= was.money then

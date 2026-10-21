@@ -85,7 +85,7 @@ end
 local function goTo(player, target)
 	for _ = 1, 32 do
 		local ss = World.session(player)
-		if ss.scene == target then
+		if SCENES.base(ss.scene) == target then -- (파티마다 따로 들어가는 장면의 방 — r1c4#5 · 2026-10-21)
 			return true
 		end
 		local hop = routeNext(ss.scene, target)
@@ -127,7 +127,7 @@ local function hunt(p, sceneKey: string, kind: string, n: number)
 	if not goTo(p, sceneKey) then
 		return nil
 	end
-	local room = World.room(sceneKey)
+	local room = World.room(s.scene) -- (파티마다 따로 들어가는 장면이면 그 방)
 	local id, sk = mobSkill(h.class)
 	-- 사냥기가 닿는 자리: 몬스터의 왼쪽에 서서 오른쪽을 본다(상자의 앞쪽 끝에서 조금 안쪽)
 	local reach = 0

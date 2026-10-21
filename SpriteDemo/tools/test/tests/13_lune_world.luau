@@ -259,7 +259,7 @@ eq(handlers.Chars(p2, "check", "moonaxe").ok, true, "그 이름을 다른 사람
 local first = handlers.Chars(p1, "enter", 1)
 expect(first ~= nil and first.self.class == "axion", "캐릭터를 골라 들어간다")
 -- 새 캐릭터는 꿈(튜토리얼 「달빛 꿈」 — 2026-10-14)에서 시작하고, 꿈에서 깨면 사당 안(첫 퀘스트를 주는 사제의 방)의 문 앞이다 — 뒤의 검사는 마을의 시작 자리에서 본다
-eq(first.scene, "dream", "새 캐릭터는 꿈(튜토리얼)에서 시작한다")
+eq(SCENES.base(first.scene), "dream", "새 캐릭터는 꿈(튜토리얼)에서 시작한다") -- (꿈은 사람마다 따로 된 방 — dream#번호 · 2026-10-21)
 expect(first.self.tut and first.self.tut.step == 1 and not first.self.tut.done, "튜토리얼의 첫 미션부터")
 expect(first.self.tutSkip ~= true, "처음 하는 계정은 꿈을 건너뛸 수 없다")
 World.wake(p1)
@@ -2164,7 +2164,7 @@ do
 		local list = got(name, pj)
 		return list[#list] and list[#list].args
 	end
-	eq(start.scene, "dream", "새 캐릭터는 꿈(튜토리얼)에서 시작한다")
+	eq(SCENES.base(start.scene), "dream", "새 캐릭터는 꿈(튜토리얼)에서 시작한다")
 	World.wake(pj)
 	start = handlers.Ready(pj)
 	eq(start.scene, "in_shrine", "꿈에서 깨면 사당 안이다")
@@ -2358,7 +2358,7 @@ do
 		local n0 = Bag.count(hc, "scroll_return")
 		table.clear(sent)
 		handlers.Potion(pc, "scroll_return")
-		expect(sc.scene == c[1] and Bag.count(hc, "scroll_return") == n0 and last("ItemDone")[1].why == c[2], c[1] .. ": " .. c[2])
+		expect(SCENES.base(sc.scene) == c[1] and Bag.count(hc, "scroll_return") == n0 and last("ItemDone")[1].why == c[2], c[1] .. ": " .. c[2]) -- (꿈은 따로 된 방 — dream#번호)
 	end
 	-- 모든 장면: 마을이 아니면 가장 가까운 마을이 있고(배 · 꿈 말고), 그 마을은 돌아가는 곳(homes)이다
 	for key, scn in SCENES.scenes do
@@ -2549,9 +2549,10 @@ do
 	end
 	hc.quests.r1m9 = { done = false, c = {} }
 	local trip = handlers.Travel(pc, "in_cellar")
-	expect(trip ~= nil and trip.scene == "in_cellar" and sc.scene == "in_cellar", "받은 뒤에는 내려간다")
+	expect(trip ~= nil and SCENES.base(trip.scene) == "in_cellar" and sc.scene == trip.scene, "받은 뒤에는 내려간다")
+	expect(sc.scene ~= "in_cellar", "사당 지하는 파티마다 따로 된 방이다(in_cellar#번호 — 2026-10-21) — " .. sc.scene)
 	expect(math.abs(hc.x - cellar.portals[1].x) <= 1, "올라가는 문 앞에 선다")
-	local room = World.room("in_cellar")
+	local room = World.room(sc.scene)
 	local function standing(kind: string?): number
 		local n = 0
 		for _, m in room.mobs do
@@ -2606,6 +2607,9 @@ do
 	handlers.Ready(pv)
 	expect(handlers.Choose(pv, "riven", "구경꾼") ~= nil, "퀘스트가 없는 사람")
 	expect(World.jump(pv, "in_cellar") == true, "(확인용으로 옮긴다)")
+	local sv = World.session(pv)
+	expect(sv.scene ~= sc.scene and SCENES.base(sv.scene) == "in_cellar", "파티가 아닌 사람은 제 방으로 들어간다")
+	room = World.room(sv.scene)
 	run(3)
 	eq(standing(), 0, "그 퀘스트를 하지 않는 사람에게는 병사가 나오지 않는다")
 	-- 촌장에게 돌려준다: 경험치와 달돈 · 끝
@@ -2627,6 +2631,7 @@ do
 	-- 끝낸 뒤에도 지하에 내려갈 수 있다(조용한 방 — 비석을 읽는다)
 	standAt("in_shrine", down.x, down.y)
 	expect(handlers.Travel(pc, "in_cellar") ~= nil, "끝낸 뒤에도 내려갈 수 있다")
+	room = World.room(sc.scene)
 	run(3)
 	eq(standing(), 0, "끝낸 뒤의 지하에는 병사가 없다")
 	-- 2차 전직(job2): 「불타는 마을」을 하지 않았어도 전직 퀘스트를 받으면 내려갈 수 있고, 수련 인형만 나온다 — 잡으면 조각이 떨어지고 주우면 센다
@@ -2644,7 +2649,8 @@ do
 	hj2.x, hj2.y = down.x, down.y
 	expect(handlers.Travel(pj2, "in_cellar") == nil, "전직 퀘스트를 받기 전에는 내려가지 못한다")
 	hj2.quests.job2 = { done = false, c = {} }
-	expect(handlers.Travel(pj2, "in_cellar") ~= nil and sj2.scene == "in_cellar", "전직 퀘스트를 받으면 내려간다(「불타는 마을」을 하지 않았어도)")
+	expect(handlers.Travel(pj2, "in_cellar") ~= nil and SCENES.base(sj2.scene) == "in_cellar", "전직 퀘스트를 받으면 내려간다(「불타는 마을」을 하지 않았어도)")
+	room = World.room(sj2.scene)
 	run(4)
 	eq(standing(jobStep.mob), dummies, "수련 인형이 나온다")
 	eq(standing(), 0, "병사는 나오지 않는다(「불타는 마을」을 하는 사람이 없다)")
@@ -2743,13 +2749,22 @@ do
 	expect(h2 ~= nil and h2 ~= hg, "다시 들어왔다")
 	eq(h2.hp, 37, "체력이 이어진다(가득 차지 않는다)")
 	expect((h2.cds.ax_breath or 0) > World.now + 90, "다시 쓰기가 이어진다")
-	-- ㅁ) 1차 기술을 쓴 뒤에도 끝나면 공짜 스킬 초기화가 된다
+	-- ㅁ) 1차 기술을 쓴 뒤에도 끝나면 공짜 스킬 초기화가 된다(공짜 · 몇 번이든 — 2026-10-21)
 	Hero5.setLevel(h2, 40, 2)
-	h2.resets = 1
+	h2.skills.ax_slam = 3
 	handlers.Skill(pg, "ax_slam", 1, h2.x, h2.y, 1)
 	run(3)
 	handlers.SkillReset(pg)
-	eq(h2.resets, 0, "1차 기술이 끝난 뒤에는 초기화가 된다")
+	eq(h2.skills.ax_slam, 1, "1차 기술이 끝난 뒤에는 초기화가 된다(찍은 것이 처음의 레벨 1로)")
+	h2.skills.ax_slam = 2
+	handlers.SkillReset(pg)
+	eq(h2.skills.ax_slam, 1, "또 되돌린다(공짜 · 몇 번이든)")
+	-- 능력치 초기화(공짜 — StatReset)
+	Hero5.autoStat(h2)
+	local apAfter = h2.ap
+	expect(Hero5.statsSpent(h2), "능력치를 찍었다")
+	handlers.StatReset(pg)
+	expect(not Hero5.statsSpent(h2) and h2.ap > apAfter, "능력치를 공짜로 모두 되돌린다")
 	-- ㅅ) 1차 연속기: 다음 구간은 앞 구간이 끝나기 0.15초 전부터 받는다(앞당겨 보내 빨라지지 않게)
 	run(3)
 	h2.buffs = {}

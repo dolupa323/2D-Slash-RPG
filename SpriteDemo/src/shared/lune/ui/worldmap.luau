@@ -297,6 +297,7 @@ function WM.path(from: any, to: any): { string }?
 	if typeof(from) ~= "string" or typeof(to) ~= "string" or not SCENES.scenes[from] or not SCENES.scenes[to] then
 		return nil
 	end
+	from, to = SCENES.base(from), SCENES.base(to) -- 따로 된 방(rf1#3 · r1c4#5)은 그 장면에서(2026-10-21 — 방 이름을 다른 장면으로 보면 제자리로 가는 길을 문 밖으로 돌아 그렸다)
 	local prev = { [from] = from }
 	local queue, at = { from }, 1
 	while queue[at] and not prev[to] do

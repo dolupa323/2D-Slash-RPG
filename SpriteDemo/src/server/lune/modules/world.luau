@@ -270,13 +270,37 @@ local function resumeScene(h): (string, number?, number?)
 		local x, y = voyageLanding(ride)
 		return ride.to, x, y
 	end
-	if base ~= key or sc.rift or (sc.bosses and #sc.bosses > 0) or base == Tutorial.SCENE then
+	if base ~= key or sc.rift or sc.inst or (sc.bosses and #sc.bosses > 0) or Tutorial.isDream(base) then
 		return if sc.ret and rawget(SCENES.scenes, sc.ret) then sc.ret else home, nil, nil
 	end
 	return base, nil, nil
 end
 
+-- 파티마다 따로 들어가는 장면(scene.inst — 공방 export: 스토리 보스의 방 · 이야기의 방 · 꿈)에 들어갈 때의 방 이름.
+--  사용자 2026-10-21: "파티마다 따로 되어야합니다 … 한서버에 100명 있으면 차례를 엄청나게 기다려야하는겁니다. 설계부터가 잘못됬어요 솔로게임처럼되어있습니다"
+--  이미 그 장면의 방에 있으면 그 방 그대로 · 같은 파티의 누가 그 장면의 방에 있으면 그 방 · 아니면 새 방(<장면>#번호 — 수정 틈 토벌의 방과 같은 꼴). 사람이 없어진 방은 닫는다(World 고리)
+local instSerial = 0
+local function roomKeyFor(s, key: string): string
+	local sc = rawget(SCENES.scenes, key)
+	if not sc or not sc.inst then
+		return key -- 여느 장면 · 이미 방의 이름(#번호)
+	end
+	if s.scene and s.scene ~= key and SCENES.base(s.scene) == key then
+		return s.scene
+	end
+	for _, uid in Party.members(book, s.player.UserId) do
+		local ms = byUser[uid]
+		if ms and ms ~= s and ms.hero and ms.scene and ms.scene ~= key and SCENES.base(ms.scene) == key then
+			return ms.scene
+		end
+	end
+	instSerial += 1
+	return key .. "#" .. instSerial
+end
+
+-- 그 사람을 그 장면(방)의 (x, y)에 둔다. 파티마다 따로 들어가는 장면이면 그 파티의 방으로 — 부른 쪽은 옮긴 뒤 s.scene을 쓴다(넘긴 key와 다를 수 있다)
 local function place(s, key: string, x: number, y: number, pushed: boolean?)
+	key = roomKeyFor(s, key)
 	if not Voyage.onShip(key) then
 		s.voyage = nil -- 배에서 내렸다(닿았거나 · 귀환 주문서 · 쓰러져 돌아감)
 	end
@@ -658,7 +682,10 @@ function World.addPlayer(player)
 	end
 	s.acct = acct
 	s.loaded = true
-	if adopted then
+	-- 쓴 쿠폰의 보상을 지금의 목록에 맞춘다(쿠폰 펫을 바꿨을 때 — CashServer.syncCoupons · 2026-10-21)
+	if CashServer.syncCoupons(acct) and not s.guest then
+		saveAccount(s)
+	elseif adopted then
 		saveAccount(s)
 	end
 	Analytics.joined(s)
@@ -995,7 +1022,7 @@ local function onCharsInner(player, action: string, a: any, b: any)
 		local scene = SCENES.scenes[startKey]
 		place(s, startKey, startX or scene.spawn.x, startY or scene.spawn.y)
 		-- 꿈의 물약 미션에서 다시 들어왔다: 체력은 저장하지 않아 가득 찬 채라 물약을 마실 수 없다 — 그 미션이면 다시 조금 다친 채로(tutChanged와 같은 셈 · 2026-10-18 검토)
-		if startKey == Tutorial.SCENE then
+		if Tutorial.isDream(s.scene) then
 			local def = Tutorial.current(hero.tut)
 			if def and Tutorial.kind(def) == "potion" and hero.hp > hero.maxHp * 0.6 then
 				hero.hp = math.floor(hero.maxHp * 0.6)
@@ -1232,7 +1259,7 @@ local function tutAdvanced(s, before: number)
 end
 -- 서버가 아는 일(잡기 · 줍기 · 물약 · 능력치 · 스킬)이 꿈에서 일어났다
 local function tutEvent(s, kind: string)
-	if s.scene ~= Tutorial.SCENE or s.hero.tut.done then
+	if not Tutorial.isDream(s.scene) or s.hero.tut.done then
 		return
 	end
 	local before = s.hero.tut.step
@@ -1245,7 +1272,7 @@ end
 -- 튜토리얼(꿈): "done" n = 화면만 아는 n째 미션(걷기 · 뛰기 · 내려가기 · 말 걸기 · 기술 · 창)을 끝냈다 · "skip" = 꿈을 건너뛰고 사당에서 깨어난다(이 계정이 한 번 끝낸 뒤에만)
 local function onTut(player, action: string, n: any)
 	local s = sessions[player]
-	if not s or not s.hero or s.scene ~= Tutorial.SCENE or s.hero.tut.done then
+	if not s or not s.hero or not Tutorial.isDream(s.scene) or s.hero.tut.done then
 		return nil
 	end
 	if action == "done" then
@@ -1340,14 +1367,14 @@ local function onTravel(player, to: string)
 			if not Quests.portalOpen(s.hero.quests, p) then
 				return nil -- 그 퀘스트를 받아야 · 끝내야 열리는 문(달의 사당 안의 「사당 지하」 · 마을의 나루): 화면에도 보이지 않는다
 			end
-			local waking = s.scene == Tutorial.SCENE
+			local waking = Tutorial.isDream(s.scene)
 			if waking and not Tutorial.canExit(s.hero.tut) then
 				return nil -- 꿈의 빛나는 문: 미션을 다 하기 전에는 열리지 않는다
 			end
 			local dest = SCENES.scenes[to]
 			local x, y = dest.spawn.x, dest.spawn.y
 			for _, back in dest.portals do
-				if back.to == s.scene then
+				if back.to == SCENES.base(s.scene) then -- (따로 된 방에서 나왔으면 그 장면의 문으로)
 					x, y = back.x, back.y
 				end
 			end
@@ -1356,6 +1383,7 @@ local function onTravel(player, to: string)
 			end
 			local from = s.scene
 			place(s, to, x, y)
+			to = s.scene -- 파티마다 따로 들어가는 장면이면 그 파티의 방(r1c4#5)
 			if waking then -- 꿈에서 깨어났다: 튜토리얼을 마친다 · 이 계정의 다음 캐릭터는 건너뛸 수 있다
 				Tutorial.finish(s.hero.tut)
 				if s.acct then
@@ -1385,7 +1413,7 @@ local function onReturn(player)
 	Hero.revive(s.hero)
 	local homeKey = if s.hero.home and SCENES.homes[s.hero.home] and SCENES.scenes[s.hero.home] then s.hero.home else SCENES.start
 	if not s.hero.tut.done and SCENES.scenes[Tutorial.SCENE] then
-		homeKey = Tutorial.SCENE -- 꿈(튜토리얼)에서 쓰러지면 꿈의 처음으로(마을로 나가지 않는다)
+		homeKey = if Tutorial.isDream(s.scene) then s.scene else Tutorial.SCENE -- 꿈(튜토리얼)에서 쓰러지면 꿈의 처음으로(마을로 나가지 않는다 · 그 꿈의 방 그대로)
 	end
 	local scene = SCENES.scenes[homeKey]
 	local from = s.scene
@@ -1393,7 +1421,7 @@ local function onReturn(player)
 	local room = roomOf(s.scene):describe(s.hero.id)
 	room.who = roster(s.scene)
 	fire("Revive", s.player, { scene = s.scene, x = s.hero.x, y = s.hero.y, room = room })
-	if homeKey == Tutorial.SCENE then
+	if Tutorial.isDream(homeKey) then
 		tutChanged(s) -- 꿈에서 되살아났다: 물약 미션이면 다시 조금 다친 채로(체력이 가득하면 물약을 마실 수 없어 미션이 막혔다 — 2026-10-18 검토)
 	end
 	sendSelf(s)
@@ -1434,23 +1462,8 @@ local function applyResult(cur, key: string, result)
 				if kill.elite then
 					Analytics.custom(gs, "FieldElite", 1, key) -- 사냥터 정예를 잡았다(2026-10-18 — 맵마다 얼마나 자주 잡히는지로 30마리 · 10배를 맞춘다)
 				end
-				-- 퀘스트: 함께 잡은 사람 모두에게 잡은 것으로 쳐 준다
-				if #Quests.onKill(gs.hero.quests, kill.kind, key) > 0 then
-					gs.dirty = true
-					fire("Quests", gs.player, Quests.view(gs.hero.quests))
-				end
-				-- 일일 의뢰: 받아 둔 의뢰의 그 맵 · 그 몬스터면 센다(함께 잡은 사람 모두)
-				if Daily.onKill(gs.hero, kill.kind, key, os.time()) then
-					gs.dirty = true
-					fire("DailyView", gs.player, (Daily.view(gs.hero, os.time())))
-				end
-				-- 모으는 물건은 사람마다 따로 굴려 그 사람의 것으로 땅에 떨어진다(그 사람에게만 보인다) — 주워야 숫자가 오른다
-				for n, q in Quests.drops(gs.hero.quests, kill.kind, key, questRng) do
-					local d = roomOf(key):addDrop({ kind = "quest", amount = 1, quest = q.quest, step = q.step, name = q.name, icon = q.icon, goods = q.goods }, kill.x - n * 9, kill.y, gs.hero.id)
-					fire("DropAdd", gs.player, Room.dropView(d))
-				end
 				-- 튜토리얼(꿈): 수련 인형을 센다 · 잡은 사람 앞에 물약 하나를 반드시 떨어뜨린다(줍기 미션 — design/tutorial.js의 dropItem)
-				if key == Tutorial.SCENE and not gs.hero.tut.done then
+				if Tutorial.isDream(key) and not gs.hero.tut.done then
 					tutEvent(gs, "kill")
 					local pid = Items.potionFor(1).id
 					local g = Items.goods(pid)
@@ -1469,6 +1482,27 @@ local function applyResult(cur, key: string, result)
 					sendSelf(gs)
 				end
 				grew = grew or gain.ups > 0
+			end
+		end
+		-- 퀘스트 · 일일 의뢰 · 모으는 물건: 잡은 사람 · 같은 맵의 파티원 + 그 몬스터를 한 대라도 친 사람(kill.credit — Room:strike)
+		--  사용자 2026-10-21: "몇마리 잡아라 … 내가 한대만 치면 다른사람이 잡아도 잡은걸로 판정이 들어가야해요"
+		for _, id in kill.credit or {} do
+			local gs = byUser[id]
+			if gs then
+				if #Quests.onKill(gs.hero.quests, kill.kind, key) > 0 then
+					gs.dirty = true
+					fire("Quests", gs.player, Quests.view(gs.hero.quests))
+				end
+				-- 일일 의뢰: 받아 둔 의뢰의 그 맵 · 그 몬스터면 센다
+				if Daily.onKill(gs.hero, kill.kind, key, os.time()) then
+					gs.dirty = true
+					fire("DailyView", gs.player, (Daily.view(gs.hero, os.time())))
+				end
+				-- 모으는 물건은 사람마다 따로 굴려 그 사람의 것으로 땅에 떨어진다(그 사람에게만 보인다) — 주워야 숫자가 오른다
+				for n, q in Quests.drops(gs.hero.quests, kill.kind, key, questRng) do
+					local d = roomOf(key):addDrop({ kind = "quest", amount = 1, quest = q.quest, step = q.step, name = q.name, icon = q.icon, goods = q.goods }, kill.x - n * 9, kill.y, gs.hero.id)
+					fire("DropAdd", gs.player, Room.dropView(d))
+				end
 			end
 		end
 		if kill.drop then
@@ -2442,6 +2476,7 @@ local function moveTo(s, key: string, x: number, y: number)
 		Hero.revive(s.hero) -- 화면은 「Revive」를 받으면 살아난 것으로 본다 — 서버도 맞춘다(2026-10-18 검토: 쓰러진 채 옮겨지면 쓰러진 상자 없이 멈췄다)
 	end
 	place(s, key, x, y, true)
+	key = s.scene -- (파티마다 따로 들어가는 장면이면 그 파티의 방)
 	local room = roomOf(key):describe(s.hero.id)
 	room.who = roster(key)
 	fire("Revive", s.player, { scene = key, x = x, y = y, room = room })
@@ -3355,7 +3390,7 @@ function World.wake(player): boolean
 		s.acct.tutDone = true
 	end
 	s.dirty = true
-	if s.scene == Tutorial.SCENE then
+	if Tutorial.isDream(s.scene) then
 		return World.jump(player, Tutorial.DATA.exit)
 	end
 	sendSelf(s)
@@ -3945,8 +3980,8 @@ function World.tick(dt: number)
 				end
 				toRoom(key, "Heroes", key, list)
 			end
-		elseif Rift.tierOfKey(key) then
-			rooms[key] = nil -- 아무도 없는 토벌의 방은 닫는다(다시 들어가면 새 방)
+		elseif Rift.tierOfKey(key) or SCENES.base(key) ~= key then
+			rooms[key] = nil -- 아무도 없는 따로 된 방(토벌 · 파티마다 따로 들어가는 장면 — r1c4#5)은 닫는다(다시 들어가면 새 방 — 스토리 보스도 체력이 가득한 채 새로 선다)
 		elseif room.bosses then
 			room:idle() -- 아무도 없는 방: 서 있던 스토리 보스를 치운다(다시 들어오면 체력이 가득한 채 새로 선다)
 		end
@@ -4180,6 +4215,19 @@ function World.start()
 	Net.OnServer("SkillUp", onSkillUp)
 	Net.OnServer("SkillAuto", onSkillAuto)
 	Net.OnServer("SkillReset", onSkillReset)
+	-- 능력치 초기화: 찍은 능력치(힘 · 민첩 · 지능 · 운 · 체력)를 모두 되돌려 받는다 — 공짜 · 몇 번이든(2026-10-21 사용자: "스텟, 스킬 초기화 완전무료로 풀겠습니다")
+	--  (이 파일의 지역 이름이 Luau의 한도(200)에 닿아 여기에 바로 적는다)
+	Net.OnServer("Coupon", function(player, text) -- 쿠폰(2026-10-21 — 셈은 CashServer.coupon)
+		return CashServer.coupon(sessions[player], text)
+	end)
+	Net.OnServer("StatReset", function(player)
+		local s = sessions[player]
+		if s and s.hero and s.hero.alive and Hero.statsSpent(s.hero) then
+			Hero.resetStats(s.hero)
+			s.dirty = true
+			sendSelf(s)
+		end
+	end)
 	Players.PlayerAdded:Connect(function(player)
 		task.spawn(World.addPlayer, player)
 	end)

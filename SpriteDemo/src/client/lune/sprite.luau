@@ -75,7 +75,7 @@ function Sprite:set(clip: string, frame: number, x: number, y: number, dir: numb
 	local fine = c.k ~= nil
 	-- char.size = 그 캐릭터를 그리는 크기(펫 0.5 — 2026-10-20 사용자 "펫은 유저보다 작아야합니다" · 승인된 그림의 점은 그대로 두고 작게 그린다. 점은 또렷하게(Pixelated))
 	local s = (scale or 1) * (if fine then c.k * Sprite.preview else 1) * Sprite.sizeOn(char.size or 1)
-	local exact = fine or (char.size ~= nil and char.size ~= 1) -- 줄여 그리는 것은 자리 · 크기를 점의 소수 자리까지(반 점을 버리면 점의 크기가 고르지 않다)
+	local exact = fine or (char.size ~= nil and char.size ~= 1) or (scale ~= nil and scale % 1 ~= 0) -- 줄여 그리는 것(펫 · 탄 영웅)은 자리 · 크기를 점의 소수 자리까지(반 점을 버리면 점의 크기가 고르지 않다)
 	if self.fine ~= fine then
 		self.fine = fine
 		label.ResampleMode = if fine then Enum.ResamplerMode.Default else Enum.ResamplerMode.Pixelated

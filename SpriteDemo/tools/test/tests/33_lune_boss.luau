@@ -717,11 +717,13 @@ do
 		end
 		return n
 	end
-	-- 퀘스트 없이 올라가면 빈 방이다
+	-- 퀘스트 없이 올라가면 빈 방이다. 망루 꼭대기는 파티마다 따로 들어가는 방(r1c4#번호 — 2026-10-21 사용자 "파티마다 따로 되어야합니다")
 	expect(World.jump(p, KEY), "망루 꼭대기로")
+	expect(s.scene ~= KEY and SCENES.base(s.scene) == KEY, "따로 된 방에 들어간다 — " .. s.scene)
+	expect(not World.hasRoom(KEY), "모두가 같이 쓰는 방은 열리지 않는다")
 	handlers.Move(p, wh.x, wh.y, 1)
 	tick(1)
-	local wroom = World.room(KEY)
+	local wroom = World.room(s.scene)
 	local wlt, wcap = wroom.bosses[1], wroom.bosses[2]
 	expect(wlt.away and wcap.away, "퀘스트가 없으면 보스가 없다")
 	-- 「망루의 부관」을 받고 올라오면 선다
@@ -732,18 +734,24 @@ do
 	World.jump(p, KEY)
 	handlers.Move(p, wh.x, wh.y, 1)
 	tick(1.2)
+	wroom = World.room(s.scene) -- (방을 비웠다가 다시 왔다 — 새 방)
+	wlt, wcap = wroom.bosses[1], wroom.bosses[2]
 	expect(not wlt.away and wlt.state ~= "gone" and wlt.hp == wlt.maxHp, "퀘스트를 하는 중이면 부관이 서 있다")
 	local desc = wroom:describe(wh.id)
 	expect(desc.mobs[wlt.id].boss == true and desc.snap[wlt.id][4] ~= "gone", "방의 모습에 보스가 실린다")
-	-- 싸우다 나가면(쓰러져 마을로 · 문으로) 방이 비어 보스가 사라지고, 다시 오면 체력이 가득하다
+	-- 싸우다 나가면(쓰러져 마을로 · 문으로) 방이 비어 닫히고(보스도 함께), 다시 오면 새 방에 체력이 가득한 보스
 	wlt.hp = math.floor(wlt.maxHp / 2)
+	local was = s.scene
 	World.jump(p, "r1c3")
 	handlers.Move(p, wh.x, wh.y, 1)
 	tick(0.3)
-	expect(wlt.away and wlt.state == "gone", "방을 비우면 보스가 사라진다")
+	expect(not World.hasRoom(was), "방을 비우면 그 방이 닫힌다")
 	World.jump(p, KEY)
 	handlers.Move(p, wh.x, wh.y, 1)
 	tick(1.2)
+	expect(s.scene ~= was, "다시 올라오면 새 방")
+	wroom = World.room(s.scene)
+	wlt, wcap = wroom.bosses[1], wroom.bosses[2]
 	expect(not wlt.away and wlt.hp == wlt.maxHp, "다시 올라오면 체력이 가득한 채 서 있다")
 	-- 기술로 쓰러뜨린다(서버의 길 그대로): 퀘스트의 숫자가 오르고, 경험치 알림(Gain)은 없고, 바닥에 떨어지는 것도 없다
 	wh.invuln = 9999

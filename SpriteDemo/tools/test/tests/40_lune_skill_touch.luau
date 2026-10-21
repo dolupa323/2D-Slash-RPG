@@ -246,10 +246,12 @@ do
 		end
 	end
 	expect(slots[1] == nil, "칸 1의 단추는 없다(상호작용 단추 아래에 있던 것)")
-	for i = 2, Quick.N do
+	for i = 2, 12 do
 		expect(slots[i] ~= nil, "칸 " .. i .. "의 단추가 있다")
 	end
-	eq(#Quick.TOUCH, Quick.N - 1, "단추가 있는 칸은 열하나")
+	-- 2026-10-21에 늘린 칸 13 · 14는 PC의 퀵슬롯에만(스마트폰은 사용자가 정한 단추 열하나 그대로 — 펫 · 탈것은 가방의 캐시 탭에서)
+	expect(slots[13] == nil and slots[14] == nil, "칸 13 · 14의 단추는 없다")
+	eq(#Quick.TOUCH, 11, "단추가 있는 칸은 열하나")
 	for _, t in UI.touch do
 		if t ~= act and t.kind ~= "hud" then
 			local under = t.y >= act.y + act.h and t.y < act.y + act.h + 40 and t.x < act.x + act.w and t.x + t.w > act.x

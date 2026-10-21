@@ -21,9 +21,13 @@ local Others = {}
 Others.__index = Others
 Others.TAG_DOWN = TAG_DOWN
 
--- 이름표에 적는 글: 이름만(레벨은 파티원 칸 · 파티 창에서 본다)
+-- 이름표: 판 안에는 이름만, 레벨은 판 바깥 왼쪽에 따로(「Lv.12」 — 나 · 다른 사람 모두 · Ui.tag의 lead).
+--  2026-10-21 사용자: "닉네임 이름표 왼쪽에 레벨 나오게 하겠습니다. 다른사람에게 레벨 보이게 합니다" → 이어서 "이름테두리 바깥에 레벨표기입니다. 이 박스 안으로 들어오는게 아니라"
 function Others.tagText(_level: number, name: string): string
 	return name
+end
+function Others.levelText(level: number): string
+	return ("Lv.%d"):format(level)
 end
 
 function Others.new(heroLayer: Frame, tagLayer: Frame, myId: any, ladders: any, scene: any)
@@ -63,7 +67,7 @@ function Others:setWho(roster)
 					id = w.id,
 					class = w.class,
 					sprite = Sprite.new(self.heroLayer, w.class, 4),
-					tag = Ui.tag(self.tagLayer, "", WHITE, 220, true), -- 플레이어의 이름표: 민트 테두리를 두른 판
+					tag = Ui.tag(self.tagLayer, "", WHITE, 220, true, ""), -- 플레이어의 이름표: 민트 테두리를 두른 판 · 판 바깥 왼쪽에 레벨
 					x = 0,
 					y = 0,
 					fromX = 0,
@@ -88,6 +92,7 @@ function Others:setWho(roster)
 			if o.name ~= w.name or o.level ~= w.level then
 				o.name, o.level = w.name, w.level
 				o.tag:SetText(Others.tagText(w.level, w.name))
+				Ui.tagLead(o.tag, Others.levelText(w.level))
 			end
 		end
 	end
@@ -232,12 +237,14 @@ function Others:update(now: number, party)
 		for _, l in self.ladders do
 			onRung = onRung or (math.abs(o.x - l.x) <= 1 and o.y > l.top + 0.5 and o.y < l.bottom - 0.5)
 		end
-		local rx, ry = o.rv:update(now, dt, o.x, o.y, o.dir, now - o.moveT < 0.25, now - o.airT < 0.25, onRung or act ~= nil or not o.alive)
+		local rx, ry, rs = o.rv:update(now, dt, o.x, o.y, o.dir, now - o.moveT < 0.25, now - o.airT < 0.25, onRung or act ~= nil or not o.alive)
 		if rx then
 			hx, hy = rx, ry
 			clip, frame = "idle", Sprite.frameAt(char, "idle", now + (id % 7) * 0.3, false)
 		end
-		o.sprite:set(clip, frame, hx, hy, o.dir)
+		o.rideSize = rs -- 탄 동안 작게(boot가 버프의 모습을 입힐 때도 — cast.luau의 look)
+		o.hx, o.hy = hx, hy -- 몸을 그린 자리(탄 동안은 안장 위 — boot가 버프의 모습을 이 자리에 입힌다)
+		o.sprite:set(clip, frame, hx, hy, o.dir, rs)
 		o.clip, o.frame = clip, frame -- 지금의 동작과 장(boot가 버프의 모습을 그 위에 입힌다 — cast.luau의 look)
 		-- 쓰러진 사람: 쓰러지는 동작이 끝나면 몸 대신 비석이 선다(마을로 돌아가거나 소생을 받을 때까지)
 		local downFor = if o.alive then -1 else now - (o.deadAt or now) - #char.clips.death.frames / char.clips.death.fps

@@ -15,6 +15,16 @@ local Kit = require(script.Parent.kit) -- 1차의 온오프 사출기 · 핵심 
 local Buffs = require(script.Parent.buffs) -- 2~4차의 버프
 local Passives = require(script.Parent.passives) -- 2~4차의 패시브
 local Quick = require(script.Parent.Parent.ui.quick)
+local RIDEIDS = {} -- 펫 · 탈것의 이름표(퀵슬롯에 놓을 수 있다 — 2026-10-21)
+do
+	local RIDE = require(script.Parent.Parent.data["ride.generated"])
+	for _, p in RIDE.pets do
+		RIDEIDS[p.id] = true
+	end
+	for _, m in RIDE.mounts do
+		RIDEIDS[m.id] = true
+	end
+end
 local RULES = COMBAT.rules
 local STATS = N.data.STATS
 local STAT_IDS = { "str", "dex", "int", "luk", "hp" }
@@ -484,14 +494,31 @@ function Hero.maxSkills(h)
 	end
 	h.maxHp = maxHpOf(h)
 end
--- 전직하며 받은 공짜 초기화를 쓴다: 찍은 스킬을 모두 되돌려(처음부터 주는 레벨 1만 남는다) 포인트를 다시 쓴다. 됐으면 true
+-- 스킬 초기화(공짜 · 몇 번이든 — 2026-10-21 사용자: "스텟, 스킬 초기화 완전무료로 풀겠습니다"): 찍은 스킬을 모두 되돌려(처음부터 주는 레벨 1만 남는다) 포인트를 다시 쓴다.
+--  찍은 것이 없으면(처음부터 주는 것뿐) false. 전에는 전직할 때마다 한 번(h.resets) — 그 수는 저장의 꼴을 지키려고 남겨 두었고 쓰지 않는다
 function Hero.freeReset(h): boolean
-	if (h.resets or 0) < 1 then
+	local base = grants(h.class, h.job)
+	local spent = false
+	for id, lv in h.skills do
+		if lv ~= (base[id] or 0) then
+			spent = true
+		end
+	end
+	if not spent then
 		return false
 	end
-	h.resets -= 1
 	Hero.resetSkills(h)
 	return true
+end
+
+-- 찍은 능력치가 있는가(능력치 초기화 — 공짜 · 몇 번이든, 2026-10-21)
+function Hero.statsSpent(h): boolean
+	for _, n in h.stats do
+		if n > 0 then
+			return true
+		end
+	end
+	return false
 end
 
 function Hero.resetSkills(h)
@@ -792,6 +819,9 @@ end
 
 -- 퀵슬롯에 놓아도 되는 스킬인가: 이 직업이 키로 쓰는 기술(싸움 수치가 있는 것)이고 배운 것
 function Hero.canSlot(h, id: string): boolean
+	if RIDEIDS[id] then
+		return true -- 펫 · 탈것(2026-10-21 — 칸의 키로 꺼내고 타기. 가진 것인지는 쓸 때 서버가 본다: Cash.setPet · setMount)
+	end
 	local goods = Items.goods(id)
 	if goods then
 		return goods.tab == "use" -- 소비 아이템은 가진 것이 없어도 놓아 둘 수 있다(다 써도 칸에 남는다 — 숫자가 0)

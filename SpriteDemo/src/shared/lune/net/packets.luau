@@ -42,6 +42,8 @@ local packets = {
 	SkillAuto = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 2, Burst = 3 } },
 	-- 전직하며 받은 공짜 초기화를 쓴다(스킬 창의 「초기화」 — 찍은 스킬을 모두 되돌린다)
 	SkillReset = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 2 } },
+	StatReset = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 2 } }, -- 찍은 능력치를 모두 되돌린다(공짜 — 2026-10-21)
+	Coupon = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 1, Burst = 2 } }, -- 쿠폰 번호를 적었다 → { ok, why?, pet? }(2026-10-21 · 서버 modules/cash.luau의 CashServer.coupon)
 	-- 물건을 다룬다: 하는 일(equip · unequip · dismantle · buy · enhance · transfer · restore · grow · storeIn · storeOut)과 그 대상 둘(번호 · 부위 · 수 등)
 	Item = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any, t.any }, RateLimit = { PerSecond = 8, Burst = 12 } },
 	-- 파티: 하는 일(invite · accept · decline · leave)과 대상(초대할 사람의 번호)

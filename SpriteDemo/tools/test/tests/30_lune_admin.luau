@@ -417,7 +417,8 @@ do
 	for key, sc in SCENES.scenes do
 		for _, portal in sc.portals do
 			local r = ask("goto", key)
-			expect(r ~= nil and r.ok and sAdmin.scene == key, "옮긴다 " .. key)
+			expect(r ~= nil and r.ok and SCENES.base(sAdmin.scene) == key, "옮긴다 " .. key) -- (파티마다 따로 들어가는 장면이면 그 방 — r1c4#번호 · 2026-10-21)
+			local here = sAdmin.scene
 			handlers.Move(pAdmin, sc.spawn.x, sc.spawn.y, 1) -- 화면이 열렸다(도착 보고)
 			local guard = 0
 			while (math.abs(h.x - portal.x) > 1 or math.abs(h.y - portal.y) > 1) and guard < 400 do
@@ -435,7 +436,7 @@ do
 					kept[id] = h.quests[id]
 					h.quests[id] = nil
 				end
-				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == key, ("%s: 퀘스트 %s를 받기 전에는 문 %s을 지나가지 못한다"):format(key, table.concat(needs, " · "), portal.to))
+				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == here, ("%s: 퀘스트 %s를 받기 전에는 문 %s을 지나가지 못한다"):format(key, table.concat(needs, " · "), portal.to))
 				for _, id in needs do
 					h.quests[id] = kept[id]
 				end
@@ -444,20 +445,20 @@ do
 			if portal.done then
 				-- done = 그 퀘스트를 끝내야 열리는 문(초승달 마을의 작은 나루 — 「불타는 마을」): 받기만 해서는 안 열리고, 끝내면 열린다
 				h.quests[portal.done] = nil
-				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == key, ("%s: 퀘스트 %s가 없으면 문 %s을 지나가지 못한다"):format(key, portal.done, portal.to))
+				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == here, ("%s: 퀘스트 %s가 없으면 문 %s을 지나가지 못한다"):format(key, portal.done, portal.to))
 				h.quests[portal.done] = { done = false, c = {} }
-				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == key, ("%s: 퀘스트 %s를 받기만 해서는 문 %s이 열리지 않는다"):format(key, portal.done, portal.to))
+				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == here, ("%s: 퀘스트 %s를 받기만 해서는 문 %s이 열리지 않는다"):format(key, portal.done, portal.to))
 				h.quests[portal.done] = { done = true, c = {} }
 			end
 			local Tut = req("ReplicatedStorage/shared/lune/sim/tutorial")
 			if key == Tut.SCENE then
 				-- 꿈(튜토리얼 — 2026-10-14)의 빛나는 문: 미션을 다 하기 전에는 열리지 않고, 마지막 미션(나가기)의 차례에 지나가면 꿈을 마친다
 				h.tut = Tut.new()
-				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == key, "꿈의 문은 첫 미션 때는 열리지 않는다")
+				expect(handlers.Travel(pAdmin, portal.to) == nil and sAdmin.scene == here, "꿈의 문은 첫 미션 때는 열리지 않는다")
 				h.tut.step = Tut.TOTAL
 			end
 			local trip = handlers.Travel(pAdmin, portal.to)
-			expect(trip ~= nil and trip.scene == portal.to and sAdmin.scene == portal.to, ("%s: 관리로 옮긴 뒤 문 %s을 지난다"):format(key, portal.to))
+			expect(trip ~= nil and SCENES.base(trip.scene) == portal.to and sAdmin.scene == trip.scene, ("%s: 관리로 옮긴 뒤 문 %s을 지난다"):format(key, portal.to))
 			if key == Tut.SCENE then
 				expect(h.tut.done, "꿈의 문을 지나면 튜토리얼이 끝난다")
 			end

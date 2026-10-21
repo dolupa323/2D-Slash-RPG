@@ -145,7 +145,8 @@ for _, st in D.stories do
 		expect(math.abs(p.x - st.x) > 60 or math.abs(p.y - st.y) > 48, ("숨은 이야기가 문과 겹치지 않는다 %s · %s"):format(st.id, p.label))
 	end
 	for _, n in sc.npcs or {} do
-		expect(math.abs(n.x - st.x) > 60 or math.abs(n.y - st.y) > 48, ("숨은 이야기가 주민과 겹치지 않는다 %s · %s"):format(st.id, n.id))
+		-- (비석 · 순위 판 — stone — 은 ↑로 말을 걸지 않는다: 대영주의 성의 판 셋 · 2026-10-21)
+		expect(n.stone or math.abs(n.x - st.x) > 60 or math.abs(n.y - st.y) > 48, ("숨은 이야기가 주민과 겹치지 않는다 %s · %s"):format(st.id, n.id))
 	end
 end
 

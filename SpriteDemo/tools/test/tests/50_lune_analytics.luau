@@ -117,7 +117,7 @@ end
 expect(onboardStep(1) ~= nil, "온보딩 1 = 접속")
 expect(onboardStep(2) ~= nil, "온보딩 2 = 캐릭터 만듦")
 expect(onboardStep(3) ~= nil, "온보딩 3 = 달빛 꿈(새 캐릭터는 꿈에서 시작)")
-eq(s.scene, "dream", "새 캐릭터는 꿈에 있다")
+eq(string.match(s.scene, "^(.-)#%d+$"), "dream", "새 캐릭터는 꿈에 있다(사람마다 따로 된 꿈의 방 — 2026-10-21)")
 
 -- 꿈의 첫 미션(걷기 — 화면이 알리는 일)을 마치면 온보딩 4
 handlers.Tut(p, "done", 1)
@@ -174,7 +174,7 @@ expect(steps2[2] and steps2[3], "「큰 항구로」 · 「항구의 첫날」�
 h.alive = false
 World.tick(1.1)
 local death = find("custom", "Death")
-expect(death ~= nil and death.fields[3] == s.scene, "쓰러지면 Death — 필드 3 = 그 맵")
+expect(death ~= nil and death.fields[3] == (string.match(s.scene, "^(.-)#%d+$") or s.scene), "쓰러지면 Death — 필드 3 = 그 맵(따로 된 방이면 그 장면의 이름 — 방 번호는 빼서 값이 늘지 않게)")
 h.alive = true
 World.tick(1.1)
 

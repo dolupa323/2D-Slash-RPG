@@ -277,7 +277,8 @@ Ui.TAG_H = M.small + 3 -- 이름표 한 줄이 차지하는 높이(쌓을 때 �
 --  plate = true: 플레이어(나 · 다른 사람)의 이름표 — 어두운 판에 민트의 가는 테두리를 두른다(data/ui.generated.luau의 layout.tag.plate).
 --   사용자 2026-10-08: "닉네임 표시되는게 그냥 닉네임하얀글씨로 표시되는게 아니라 얇은 우리게임 민트색 테두리같은게 있으면 좋을거같네요". 주민(노랑 글) · 졸개의 이름표는 판이 없다.
 --   같은 날 글자 둘레에 민트를 두르는 방식("이름 글씨만 있는데 글자 그자체 테두리에 민트 테두리")으로 바꿔 봤다가 되돌렸다 — "생각보다 별로네요 이전방식으로 롤백".
-function Ui.tag(parent: Instance, text: string, color: Color3?, maxWidth: number?, plate: boolean?)
+--  lead = 판 바깥 왼쪽에 따로 적는 글(플레이어의 레벨 「Lv.12」 — 2026-10-21 사용자: "이름테두리 바깥에 레벨표기입니다. 이 박스 안으로 들어오는게 아니라"). 바꾸려면 Ui.tagLead
+function Ui.tag(parent: Instance, text: string, color: Color3?, maxWidth: number?, plate: boolean?, lead: string?)
 	local label = pixelText.new(parent, { Text = text, Font = "small_o", Color = color or C.text, MaxWidth = maxWidth or 220, MaxLines = 1 })
 	label.Frame.Name = "Tag"
 	if plate then
@@ -304,7 +305,24 @@ function Ui.tag(parent: Instance, text: string, color: Color3?, maxWidth: number
 		label.Frame:GetPropertyChangedSignal("Size"):Connect(fit)
 		fit()
 	end
+	if lead ~= nil then
+		Ui.tagLead(label, lead)
+	end
 	return label
+end
+
+-- 이름표의 판 바깥 왼쪽 글(레벨)을 적는다 · 바꾼다. 이름의 왼쪽 끝(판의 왼쪽 테두리 밖)에서 TAG_LEAD_GAP점 띄워 오른쪽을 맞춘다 — 이름이 바뀌어도 자리는 그대로(이름은 늘 0에서 시작)
+Ui.TAG_LEAD_GAP = 3
+function Ui.tagLead(label, text: string)
+	local P = Layout.TAG.plate
+	if not label.lead then
+		label.lead = pixelText.new(label.Frame, { Text = text, Font = "small_o", Color = C.text, MaxWidth = 80, MaxLines = 1 })
+		label.lead.Frame.Name = "Lead"
+	else
+		label.lead:SetText(text)
+	end
+	label.lead.Frame.Position = UDim2.fromOffset(-P.padX - Ui.TAG_LEAD_GAP - label.lead.Width, 0)
+	label.lead.Frame.Visible = text ~= ""
 end
 
 -- ---------- 누르는 것 ----------

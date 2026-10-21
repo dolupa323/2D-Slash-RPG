@@ -46,6 +46,9 @@ end
 
 -- 그 아이템의 아이콘 이름
 function ItemCell.icon(it): string
+	if it.ride then
+		return "ride_" .. it.ride -- 펫 · 탈것(가방의 캐시 탭 — 2026-10-21)
+	end
 	if it.item then
 		local g = Items.goods(it.item)
 		return if g then g.icon else ""
@@ -129,10 +132,15 @@ function ItemCell.new(parent: Instance, x: number, y: number, onClick: (any) -> 
 		opts = opts or {}
 		cell.item = it
 		Ui.setWorldIcon(icon, if it then ItemCell.icon(it) else nil)
-		if it and it.item then
+		if it and it.ride then
+			star:set(if it.on then "●" else "") -- 펫 · 탈것: 꺼내 둔 펫 · 타는 탈것에 민트 점(2026-10-21)
+			star:color(C.accent)
+		elseif it and it.item then
 			star:set(tostring(it.n)) -- 묶음: 수
+			star:color(C.text)
 		else
 			star:set(if it then ItemCell.starMark(it.star) else "") -- 장비: 「★5」(2026-10-15 — 「+5」에서)
+			star:color(C.text)
 		end
 		local broken = it ~= nil and it.broken == true
 		icon.ImageColor3 = if broken then Color3.fromRGB(90, 90, 100) else Color3.new(1, 1, 1)

@@ -49,7 +49,7 @@ end
 
 -- 스킬을 고른다: 칸들이 반짝인다. 같은 것을 한 번 더 고르면 그만둔다. nil = 그만둔다
 function QuickEdit.pick(id: string?)
-	if id ~= nil and (not open or (not Quick.item(id) and hooks.state(id) ~= "ok") or picked == id) then
+	if id ~= nil and (not open or (not Quick.item(id) and not Quick.ride(id) and hooks.state(id) ~= "ok") or picked == id) then -- (펫 · 탈것도 — 2026-10-21)
 		id = nil
 	end
 	if picked ~= id then
@@ -113,7 +113,7 @@ function QuickEdit.press(what: string?, from: number?, input: InputObject, extra
 	if not isPress(input) or (what == nil and extra == nil) then
 		return
 	end
-	if what ~= nil and from == nil and not Quick.item(what) and hooks.state(what) ~= "ok" then
+	if what ~= nil and from == nil and not Quick.item(what) and not Quick.ride(what) and hooks.state(what) ~= "ok" then
 		return
 	end
 	finish(nil)

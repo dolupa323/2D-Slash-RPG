@@ -255,7 +255,7 @@ return {
 			id = "st_manor",
 			area = "city",
 			scene = "ct_castle",
-			x = 112,
+			x = 272,
 			y = 176,
 			name = "성의 문장",
 			act = "문장 살피기",

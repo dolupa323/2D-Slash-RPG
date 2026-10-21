@@ -12,6 +12,8 @@ local lune = game:GetService("ReplicatedStorage").shared.lune
 local Cash = require(lune.sim.cash)
 local Account = require(lune.sim.account)
 
+local Coupons = require(script.Parent.coupons)
+
 local CashServer = {}
 local W -- World가 넘겨주는 것: sessionOf(userId) · saveNow(s) · afterSpent(s) · notify(s, key) · now()
 local pending = {} -- [userId] = { [상품] = 띄워 둔 구매 창 수 }
@@ -61,6 +63,60 @@ function CashServer.processReceipt(info, key: string?)
 	acct.bm = Cash.unpack(before, Account.MAX)
 	acct.spent = spentBefore
 	return Decision.NotProcessedYet
+end
+
+-- 쿠폰을 쓴다(2026-10-21 — 메뉴의 「쿠폰」 창): text = 적은 글 → { ok, why?, pet? }
+--  틀린 번호는 1분에 다섯 번까지(번호를 마구 넣어 맞히지 못하게) · 준 것과 쓴 쿠폰을 한 번의 저장으로 함께 적는다(저장에 실패하면 되돌린다 — 결제와 같다)
+Coupons.TRIES, Coupons.WINDOW = 5, 60
+function CashServer.coupon(s, text: any)
+	if not s or not s.acct or not s.loaded or s.guest then
+		return { ok = false, why = "지금은 쓸 수 없다" }
+	end
+	local now = W.now()
+	local tries = {}
+	for _, t in s.couponTries or {} do
+		if now - t < Coupons.WINDOW then
+			table.insert(tries, t)
+		end
+	end
+	s.couponTries = tries
+	if #tries >= Coupons.TRIES then
+		return { ok = false, why = "잠시 뒤에 다시 적어 주세요" }
+	end
+	local code = Cash.couponCode(text)
+	local def = Coupons.find(code)
+	if not def then
+		table.insert(tries, now)
+		return { ok = false, why = "없는 쿠폰 번호다" }
+	end
+	local before = Cash.pack(s.acct.bm)
+	local ok, got = Cash.redeem(s.acct, def, now)
+	if not ok then
+		return { ok = false, why = got }
+	end
+	if not W.saveNow(s) then
+		s.acct.bm = Cash.unpack(before, Account.MAX)
+		return { ok = false, why = "저장하지 못했다 — 잠시 뒤에 다시 적어 주세요" }
+	end
+	if got.pet then
+		W.notify(s, got.pet) -- 화면이 가진 것을 다시 읽고 · 꺼낸 펫을 같은 맵의 사람들에게도
+	end
+	return { ok = true, pet = got.pet }
+end
+
+-- 쓴 쿠폰의 보상을 지금의 목록에 맞춘다(계정을 읽었을 때 — 2026-10-21 사용자: "지금 내 테스트 계정에서 다시 쿠폰을 입력할수없어서 동글이는 사라지고, 재까마귀를 테스트할수도없어").
+--  쿠폰 펫을 까망 동글이 → 아기 재까마귀로 바꾸며, 이미 쓴 계정에는 쓴 기록만 남고 펫이 없었다 → 쓴 쿠폰이 지금 주는 펫이 없으면 넣어 준다(꺼내 둔 펫이 없으면 꺼낸다). 바뀌었으면 true
+function CashServer.syncCoupons(acct): boolean
+	local c, changed = acct.bm, false
+	for code in c.coupons do
+		local def = Coupons.find(code)
+		if def and def.pet and Cash.PET[def.pet] and not c.pets[def.pet] then
+			c.pets[def.pet] = true
+			c.petOut = c.petOut or def.pet
+			changed = true
+		end
+	end
+	return changed
 end
 
 -- 구매 창을 띄운다(서버가 한도를 본 뒤에만). → true / false · 까닭

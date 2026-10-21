@@ -75,15 +75,15 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 		ctx.send("SkillAuto")
 	end, { main = true, h = 22, font = "small" })
 	SkillWindow.autoFrame = auto.frame -- 튜토리얼(꿈)의 「스킬 찍기」 미션에서 반짝인다(2026-10-14)
-	-- 전직하며 받은 공짜 초기화(설계: "전직하면 SP 초기화 한 번이 공짜"): 남아 있을 때만 탭의 오른쪽에 단추가 보인다. 잘못 누르지 않게 두 번 눌러야 한다(「정말 초기화?」 — 3초 안에)
+	-- 스킬 초기화: 공짜 · 몇 번이든(2026-10-21 사용자: "스텟, 스킬 초기화 완전무료로 풀겠습니다" — 전에는 전직할 때마다 한 번이라 남아 있을 때만 보였다) — 탭의 오른쪽에 늘 보인다.
+	--  잘못 누르지 않게 두 번 눌러야 한다(「정말 초기화?」 — 3초 안에)
 	local RESET_X, RESET_W = (S.tabW + S.tabGap) * 4 + 8, 96
 	local resetHolder = Ui.group(body, RESET_X, -2, RESET_W, 20, "Reset")
 	local resetBtn: Instance? = nil
 	local resetArmed, resetShown = 0, nil :: string?
 	local function drawReset(me)
-		local left = (me and me.resets) or 0
 		local armed = os.clock() - resetArmed < 3
-		local label = if left < 1 then "" elseif armed then "정말 초기화?" else "초기화(무료 1회)"
+		local label = if me == nil then "" elseif armed then "정말 초기화?" else "초기화"
 		if label == resetShown then
 			return
 		end

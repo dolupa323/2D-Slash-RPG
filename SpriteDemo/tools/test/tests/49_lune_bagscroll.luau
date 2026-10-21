@@ -5,7 +5,7 @@
 local Layout = req("ReplicatedStorage/shared/lune/ui/layout")
 local BAG = Layout.BAG
 
-local buttons, scrolls, cells, presses = {}, {}, {}, {}
+local buttons, scrolls, cells, presses, madeTabs, shown = {}, {}, {}, {}, {}, {}
 local function frame(name)
 	local f = { Name = name, Visible = true, children = {}, AbsolutePosition = Vector2.new(0, 0), AbsoluteSize = Vector2.new(100, 100) }
 	function f:Destroy() end
@@ -24,8 +24,9 @@ MOCK("Client/lune/stage", { ratio = 2.5, uiScale = 2 })
 MOCK("Client/lune/ui/ui", {
 	COLOR = any,
 	tab = function(parent, name, x, y, fn)
-		local t = { width = 40, click = fn }
+		local t = { width = 40, click = fn, name = name }
 		function t.setOn() end
+		table.insert(madeTabs, t)
 		return t
 	end,
 	text = function()
@@ -66,7 +67,7 @@ MOCK("Client/lune/ui/itemCell", {
 		return c
 	end,
 })
-MOCK("Client/lune/ui/itemDetail", { show = function() end, hide = function() end })
+MOCK("Client/lune/ui/itemDetail", { show = function(_, spec) shown.spec = spec end, hide = function() shown.spec = nil end })
 MOCK("Client/lune/ui/windows", { refresh = function() end })
 
 local BagWindow = req("Client/lune/ui/bagWindow")
@@ -171,4 +172,68 @@ do
 	sp.extra.onStart()
 	eq(scrolls[1].ScrollingEnabled, false, "끄는 동안 창고의 스크롤이 선다")
 	sview.destroy()
+end
+
+-- ---- 가방의 캐시 탭(2026-10-21 사용자 "인벤토리 가방에 캐시 탭을 넣던지 방법을 고안해서 펫을꺼내거나 넣는것, 라이딩을 타거나 내리는것 다 가능해야하고") ----
+--  가진 펫 · 탈것이 칸에(꺼내 둔 것은 on) · 누르면 상세 판의 「꺼내기 · 넣기」 / 「타기 · 내리기」 · 「퀵슬롯」 · 두 번 누르면 바로 · 끌면 퀵슬롯에 그 이름표 · 정렬 · 늘리기는 없다
+do
+	local BMW = req("ReplicatedStorage/shared/lune/data/bm.generated").shop.words
+	table.clear(cells)
+	table.clear(buttons)
+	table.clear(madeTabs)
+	table.clear(presses)
+	local calls = {}
+	local cashView = nil
+	local fetched = 0
+	local cctx = setmetatable({
+		cash = function() return cashView end,
+		cashFetch = function() fetched += 1 end,
+		myPet = function() return "pet_silver" end,
+		myRide = function() return nil end,
+		togglePet = function(id) table.insert(calls, { "pet", id }) end,
+		toggleRide = function(id) table.insert(calls, { "ride", id }) end,
+		cashProduct = function(id) return { name = "이름 " .. id, line = "설명" } end,
+	}, { __index = ctx })
+	bag.size = 24
+	local bview = BagWindow.build(frame("Body"), cctx, w, h)
+	bview.refresh()
+	eq(#madeTabs, 4, "가방의 탭은 넷(장비 · 소비 · 기타 · 캐시)")
+	eq(madeTabs[4].name, BMW.bagTab, "넷째 탭 = 「캐시」")
+	madeTabs[4].click()
+	eq(fetched, 1, "캐시 탭을 처음 열면 가진 펫 · 탈것을 서버에 묻는다")
+	cashView = { pets = { "pet_silver", "pet_scarf" }, mounts = { "mount_wolf" }, petOut = "pet_silver", mount = "mount_wolf" }
+	bview.refresh()
+	expect(cells[1].item and cells[1].item.ride == "pet_silver" and cells[1].item.on == true, "첫 칸 = 꺼내 둔 은빛 달토끼(점)")
+	expect(cells[2].item and cells[2].item.ride == "pet_scarf" and not cells[2].item.on, "둘째 칸 = 목도리 달토끼")
+	expect(cells[3].item and cells[3].item.ride == "mount_wolf" and cells[3].item.kind == "mount", "셋째 칸 = 달빛 늑대")
+	eq(cells[4].item, nil, "그 뒤는 빈 칸")
+	local sortB, growB
+	for _, b in buttons do
+		if b.label == "" then
+			growB = b
+		else
+			sortB = sortB or b
+		end
+	end
+	expect(sortB and sortB.frame.Visible == false, "캐시 탭에는 「정렬」이 없다")
+	-- 누르면 상세 판: 「넣기」(꺼내 둔 펫) · 「퀵슬롯」
+	cells[1].onClick(cells[1].item)
+	bview.refresh()
+	expect(shown.spec and shown.spec.buttons[1].text == BMW.petOff and shown.spec.buttons[2] ~= nil, "꺼내 둔 펫의 상세 = 「넣기」 · 「퀵슬롯」")
+	shown.spec.buttons[1].onClick()
+	expect(calls[#calls][1] == "pet" and calls[#calls][2] == "pet_silver", "「넣기」 → 그 펫을 넣는다")
+	cells[3].onClick(cells[3].item)
+	bview.refresh()
+	eq(shown.spec and shown.spec.buttons[1].text, BMW.rideOn, "타지 않은 탈것 = 「타기」")
+	shown.spec.buttons[1].onClick()
+	expect(calls[#calls][1] == "ride" and calls[#calls][2] == "mount_wolf", "「타기」 → 그 탈것을 탄다")
+	-- 두 번 누르기 = 바로
+	local before = #calls
+	cells[2].onClick(cells[2].item)
+	cells[2].onClick(cells[2].item)
+	expect(#calls == before + 1 and calls[#calls][2] == "pet_scarf", "두 번 누르면 그 펫을 꺼낸다")
+	-- 끌기: 퀵슬롯에 놓을 이름표
+	cells[3].began({ UserInputType = Enum.UserInputType.MouseButton1, Position = Vector2.new(5, 5) })
+	eq(presses[#presses] and presses[#presses].what, "mount_wolf", "끌면 퀵슬롯에 그 탈것의 이름표")
+	bview.destroy()
 end
