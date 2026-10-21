@@ -294,6 +294,12 @@ do
 			end
 			return item
 		end,
+		field = function() -- 글을 적는 칸(확성기 — 2026-10-21)
+			local f = frame("Field")
+			f.Text = ""
+			f.FocusLost = { Connect = function() end }
+			return f
+		end,
 		button = function(_, text, x, y, w, onClick, opts)
 			local font = if opts and opts.font then opts.font elseif opts and opts.h and opts.h < 26 then "small" else "body"
 			table.insert(buttons, { text = text, x = x, w = w, font = font, click = onClick })
@@ -362,7 +368,7 @@ do
 			for _, b in buttons do
 				table.insert(names, b.text)
 			end
-			expect(#names >= 3, "탭에 단추가 있다 " .. t.name)
+			expect(#names >= (if t.id == "acct" then 1 else 3), "탭에 단추가 있다 " .. t.name) -- (계정 탭은 쿠폰 기록 지우기 하나 — 2026-10-21)
 			for _, name in names do
 				for _, b in buttons do
 					if b.text == name then
@@ -458,6 +464,11 @@ do
 				h.tut.step = Tut.TOTAL
 			end
 			local trip = handlers.Travel(pAdmin, portal.to)
+			if portal.dungeon then
+				-- 던전의 문(2026-10-21 — 수정 거울숲): 맵을 옮기지 않는다(앞에서 ↑ = 던전 창 · 들어가기는 Rift "enter")
+				expect(trip == nil and sAdmin.scene == here, ("%s: 던전의 문 %s으로는 걸어 들어가지 못한다"):format(key, portal.to))
+				continue
+			end
 			expect(trip ~= nil and SCENES.base(trip.scene) == portal.to and sAdmin.scene == trip.scene, ("%s: 관리로 옮긴 뒤 문 %s을 지난다"):format(key, portal.to))
 			if key == Tut.SCENE then
 				expect(h.tut.done, "꿈의 문을 지나면 튜토리얼이 끝난다")

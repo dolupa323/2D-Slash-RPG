@@ -133,7 +133,7 @@ end
 
 -- 이름으로 찾기: 그 글이 이름에 들어 있는 줄만(빈 글이면 모두). 영문은 대소문자를 가리지 않는다. 목록 · 시세 모두(줄에 it가 있다)
 function V.filter(rows, query: string?)
-	local q = string.lower((string.gsub(query or "", "^%s*(.-)%s*$", "%1")))
+	local q = string.lower((string.gsub(query or "", "^[ \t\r\n]*(.-)[ \t\r\n]*$", "%1"))) -- (%s 대신 — 한글의 가운데 바이트를 지우지 않게 · 2026-10-21)
 	if q == "" then
 		return rows
 	end

@@ -26,9 +26,9 @@ function Guide.init(root: Frame)
 	hintBox = Stage.place(root, "GuideHint", "tc", (Stage.REF_W - Guide.HINT_W) / 2, Guide.HINT_Y, Guide.HINT_W, 40)
 	hint = Ui.text(hintBox, "", 0, 0, Guide.HINT_W, { align = "center", outline = true, color = C.accent, lines = Guide.HINT_LINES, line = Ui.M.small + 4 })
 	hintBox.Visible = false
-	bannerBox = Stage.place(root, "GuideBanner", "tc", (Stage.REF_W - Guide.BANNER_W) / 2, Guide.BANNER_Y, Guide.BANNER_W, 44)
+	bannerBox = Stage.place(root, "GuideBanner", "tc", (Stage.REF_W - Guide.BANNER_W) / 2, Guide.BANNER_Y, Guide.BANNER_W, Ui.M.body + 8 + Ui.M.smallLine * 2)
 	title = Ui.text(bannerBox, "", 0, 0, Guide.BANNER_W, { font = "body", align = "center", outline = true, color = C.gold })
-	sub = Ui.text(bannerBox, "", 0, Ui.M.body + 8, Guide.BANNER_W, { align = "center", outline = true, color = C.text })
+	sub = Ui.text(bannerBox, "", 0, Ui.M.body + 8, Guide.BANNER_W, { align = "center", outline = true, color = C.text, lines = 2 }) -- 두 줄까지(관리자의 확성기 — 2026-10-21)
 	bannerBox.Visible = false
 end
 

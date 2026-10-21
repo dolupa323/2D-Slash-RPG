@@ -394,13 +394,13 @@ function Cash.couponCode(text: any): string?
 	if typeof(text) ~= "string" or #text > 64 then
 		return nil
 	end
-	local code = string.upper((string.gsub(text, "[%s%-]", "")))
+	local code = string.upper((string.gsub(text, "[ \t\r\n%-]", "")))
 	if code == "" or #code > Cash.COUPON_MAX or string.find(code, "[^%w]") then
 		return nil
 	end
 	return code
 end
--- 쿠폰을 쓴다: def = 서버의 쿠폰 { code, pet?, from?, till? } · 됐으면 true와 받은 것({ pet = 이름표 }), 아니면 false와 까닭
+-- 쿠폰을 쓴다: def = 서버의 쿠폰 { code, pet?, mount?, from?, till? } · 됐으면 true와 받은 것({ pet = 이름표, mount = 이름표 }), 아니면 false와 까닭
 function Cash.redeem(acct, def, now: number): (boolean, any)
 	local c = acct.bm
 	if def.from and now < def.from then
@@ -410,15 +410,21 @@ function Cash.redeem(acct, def, now: number): (boolean, any)
 	elseif c.coupons[def.code] then
 		return false, "이미 쓴 쿠폰이다"
 	end
+	if def.pet and not PET[def.pet] then
+		return false, "없는 펫이다"
+	elseif def.mount and not MOUNT[def.mount] then
+		return false, "없는 탈것이다"
+	end
 	if def.pet then
-		if not PET[def.pet] then
-			return false, "없는 펫이다"
-		end
 		c.pets[def.pet] = true -- 펫: 계정에 바로(꺼내 둔 것이 없으면 바로 꺼낸다 — 산 펫과 같다)
 		c.petOut = c.petOut or def.pet
 	end
+	if def.mount then
+		c.mounts[def.mount] = true -- 탈것(2026-10-21 쿠폰 탈것 「떠도는 책」): 계정에 바로(고른 것이 없으면 그것을 고른다 — 산 탈것과 같다)
+		c.mount = c.mount or def.mount
+	end
 	c.coupons[def.code] = now
-	return true, { pet = def.pet }
+	return true, { pet = def.pet, mount = def.mount }
 end
 
 -- 살 수 있게 된 상품인가: 로블록스 상품 번호가 있고(대시보드에서 만든 뒤) 게임에 만들어 둔 것(built — 펫 · 순간이동 · 꾸밈 · 패스는 아직)

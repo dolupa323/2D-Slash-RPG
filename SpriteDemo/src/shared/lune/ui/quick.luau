@@ -36,8 +36,20 @@ function Q.ride(what: any): string?
 	return nil
 end
 
--- 칸에 놓인 것의 그림 이름(화면의 그림 24x24 — 공방의 아이콘 이름)
-function Q.pic(what: string): string
+-- 폰의 단추 배치에만 놓이는 「하는 일」: 점프 · 상호작용(2026-10-21 사용자: "모바일에서 상호작용, 점프키 같은거 위치 다 바꿀수있어야해요 드래그앤 드랍으로 다른 버튼들처럼").
+--  { [이름표] = { home = 처음 놓이는 칸, name = 단추의 글 } } — 공방 ui.js의 QUICK.acts. 늘 하나씩 있다(빼지도 · 밖에서 온 것으로 덮지도 못한다 — 끌어서 자리만 바꾼다)
+Q.ACTS = UI.quick.acts or {}
+local ACT_KIND = { act_jump = "jump", act_interact = "interact" }
+-- 칸에 놓인 것이 점프 · 상호작용이면 "jump" · "interact"
+function Q.act(what: any): string?
+	return if typeof(what) == "string" and Q.ACTS[what] then ACT_KIND[what] else nil
+end
+
+-- 칸에 놓인 것의 그림 이름(화면의 그림 24x24 — 공방의 아이콘 이름). 점프 · 상호작용은 그림이 없다(단추에 글로 적는다 — touch.luau)
+function Q.pic(what: string): string?
+	if Q.ACTS[what] then
+		return nil
+	end
 	local g = GOODS[what]
 	if g then
 		return g.icon
@@ -91,6 +103,9 @@ function Q.place(slots, what: string, j: number)
 	if i == j then
 		return out
 	end
+	if not i and Q.ACTS[out[j]] then
+		return nil -- 점프 · 상호작용(폰)은 밖에서 온 것으로 덮지 않는다 — 끌어서 자리만 바꾼다(2026-10-21)
+	end
 	local old = out[j]
 	out[j] = what
 	if i then
@@ -101,8 +116,8 @@ end
 
 -- 칸에서 뺀다(소비 아이템도 빠진다 — 가방의 소비 탭에서 다시 끌어다 놓는다)
 function Q.clear(slots, i: number)
-	if i < 1 or i > Q.N then
-		return nil
+	if i < 1 or i > Q.N or Q.ACTS[slots[i]] then
+		return nil -- (점프 · 상호작용은 빼지 못한다 — 2026-10-21)
 	end
 	local out = copy(slots)
 	out[i] = false
@@ -136,17 +151,47 @@ local hasTouch = {}
 for _, i in Q.TOUCH do
 	hasTouch[i] = true
 end
+--  2026-10-21: 점프 · 상호작용(Q.ACTS)은 늘 하나씩 — 없으면 처음 칸(home)에 넣는다(거기 있던 것은 단추가 있는 첫 빈 칸으로 · 빈 칸이 없으면 빠진다). 둘 이상이면 첫 것만 남긴다
+local ACT_ORDER = { "act_jump", "act_interact" } -- (공방의 Object.entries(QUICK.acts)와 같은 차례)
+local function firstFree(out): number?
+	for _, j in Q.TOUCH do
+		if not out[j] then
+			return j
+		end
+	end
+	return nil
+end
 function Q.touchFix(slots)
 	local out = copy(slots)
 	for k = 1, Q.N do
 		if not hasTouch[k] and out[k] then
-			for _, j in Q.TOUCH do
-				if not out[j] then
-					out[j] = out[k]
-					break
-				end
+			local j = firstFree(out)
+			if j then
+				out[j] = out[k]
 			end
 			out[k] = false
+		end
+	end
+	for _, id in ACT_ORDER do
+		local a = Q.ACTS[id]
+		if a then
+			local at = find(out, id)
+			if at then
+				for k = at + 1, Q.N do
+					if out[k] == id then
+						out[k] = false
+					end
+				end
+			else
+				local old = out[a.home]
+				out[a.home] = id
+				if old then
+					local j = firstFree(out)
+					if j then
+						out[j] = old
+					end
+				end
+			end
 		end
 	end
 	return out

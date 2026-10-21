@@ -283,7 +283,7 @@ return {
 			gap = 14,
 			panelPad = 10,
 			floor = 70,
-			minLoad = 0.5,
+			minLoad = 0.3,
 			key = "Backquote",
 			words = { title = "달빛 상점", leave = "나가기", loading = "달빛 상점으로 가는 중", back = "돌아가는 중", townOnly = "달빛 상점은 마을에서만 들어갈 수 있다", preview = "미리보기", hint = "펫 · 탈것을 누르면 여기에서 본다", mine = "보유" },
 		},

@@ -59,7 +59,7 @@ local function nameField(parent: Instance, x: number, y: number, w: number, h: n
 	box.Parent = field
 	-- 띄어쓰기는 적히지 않는다(이름에 쓸 수 없다 — 끝에 딸려 들어온 빈칸 때문에 중복 확인이 안 되는 일이 없게). 너무 길게도 적히지 않는다(자세한 규칙은 중복 확인이 알려 준다)
 	box:GetPropertyChangedSignal("Text"):Connect(function()
-		local bare = string.gsub(box.Text, "%s", "")
+		local bare = string.gsub(box.Text, "[ \t\r\n]", "") -- (%s는 한글의 가운데 바이트를 빈칸으로 볼 수 있다 — 반쪽 글자가 생겼다 · 2026-10-21 오류 보고)
 		if bare ~= box.Text then
 			box.Text = bare
 			return

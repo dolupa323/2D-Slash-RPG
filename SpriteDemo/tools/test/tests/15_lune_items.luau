@@ -792,7 +792,7 @@ do
 			expect(width(ask) <= L.detailInner(), ("묻는 글 %s(폭 %d)이 판의 속(%d)에 들어간다"):format(ask, width(ask), L.detailInner()))
 			expect(widthBody(pair[2]) <= two - 6, "하는 단추의 글 " .. pair[2])
 		end
-		eq(kinds, 7, "수를 고르는 일: 버리기 · 맡기기 · 찾기 · 팔기 · 나누기 · 장비 팔기 · 분해(2026-10-18 — 분해도 한 번 묻는다)")
+		eq(kinds, 8, "수를 고르는 일: 사기(2026-10-21 수량 창) · 버리기 · 맡기기 · 찾기 · 팔기 · 나누기 · 장비 팔기 · 분해(2026-10-18 — 분해도 한 번 묻는다)")
 		expect(widthBody(WD.askNo) <= two - 6, "그만두는 단추의 글")
 		expect(widthBody(WD.sort) <= L.STORE.sortW - 6, "창고의 정렬 단추의 글")
 		expect(width(WD.shopHint) <= SHOP.w - SHOP.hintX, "상점의 안내 글(끌어다 놓으면 판다)이 달돈 · 달가루의 오른쪽에 들어간다")

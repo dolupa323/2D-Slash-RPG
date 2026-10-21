@@ -18,6 +18,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = { "또 달빛 꿈을 꾸었구나.", "…그 꿈 이야기는 누구에게도 하지 마라.", "오늘부터 기술을 가르쳐 주마. 배우겠느냐?" },
 			wait = { "먼저 몸부터 풀고 오너라." },
@@ -39,6 +40,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "trainee", only = false, name = "수습 검병", n = 5, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -62,6 +64,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "warrior", only = false, name = "갑옷 조각", n = 8, pct = 100, icon = "etc_plate", item = "etc_plate", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -85,6 +88,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "puff", only = false, name = "포자 주머니", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -108,6 +112,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "crow", only = false, name = "찢어진 명령서", n = 6, pct = 100, icon = "etc_order", item = "etc_order", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -131,6 +136,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "archer", only = false, name = "궁병", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -154,6 +160,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "bomber", only = false, name = "폭탄병", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -177,6 +184,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "crab", only = false, name = "바위 게", n = 8, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 				{ ["type"] = "use", mob = false, only = false, name = "샘에서 물 뜨기", n = 1, pct = 100, icon = false, item = false, spot = "spring", place = "돌무더기 밑의 샘", act = "물 뜨기", x = 440, y = 128, up = 26, at = "r1b3", npc = false },
@@ -201,6 +209,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "ewarrior", only = false, name = "정예 검병", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 				{ ["type"] = "use", mob = false, only = false, name = "깃발 찾기", n = 1, pct = 100, icon = false, item = false, spot = "flag", place = "상자 틈의 깃발", act = "깃발 꺼내기", x = 236, y = 400, up = 34, at = "r1c1", npc = false },
@@ -225,6 +234,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "helm", only = false, name = "빈 투구", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -248,6 +258,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "towerlieutenant", only = false, name = "성벽 거인", n = 1, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -271,6 +282,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "earcher", only = false, name = "쇠 경첩", n = 12, pct = 100, icon = "etc_hinge", item = "etc_hinge", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -294,6 +306,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "scoutcaptain", only = false, name = "쇠사슬 간수", n = 1, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -317,6 +330,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "espearman", only = true, name = "정예 창병", n = 4, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -340,6 +354,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -361,6 +376,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -382,6 +398,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -403,6 +420,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -424,6 +442,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -445,6 +464,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -466,6 +486,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {  },
 			offer = { "마을을 지켜 줘서 고맙네.", "이제 자네는 이 산골에 머물 사람이 아니야.", "나루의 선장 배를 타고 은달 항구로 가게.", "부두의 안내인에게 이 편지를 주게." },
 			wait = { "나루는 대장간 너머 바닷가에 있네.", "선장에게 말을 걸면 배에 태워 줄 걸세." },
@@ -487,6 +508,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "meet", mob = false, only = false, name = "대장장이 담금", n = 1, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = "citysmith" },
 				{ ["type"] = "meet", mob = false, only = false, name = "창고지기 한아름", n = 1, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = "citykeeper" },
@@ -514,6 +536,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {  },
 			offer = { "성문 밖에 나가 보셨어요?", "성문을 나서면 바로 수정 숲이에요.", "성문 앞의 견습 기사님이 일손을 찾아요." },
 			wait = { "1층 동쪽 끝의 큰 성문 앞이에요.", "성문지기 마루 아저씨 옆이요." },
@@ -535,6 +558,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {  },
 			offer = { "어이, 거기! 손 좀 빌려주게.", "향신료 가게의 다홍한테 이 짐 좀.", "성문 옆, 향 냄새 나는 집일세." },
 			wait = { "성문 옆의 향신료 가게야." },
@@ -556,6 +580,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "bud", only = false, name = "수정 봉오리", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -579,6 +604,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "frog", only = false, name = "이끼 두꺼비", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -602,6 +628,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "fox", only = false, name = "은 낚싯바늘", n = 1, pct = 20, icon = "etc_hook", item = "etc_hook", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -625,6 +652,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "snail", only = false, name = "울림 껍질", n = 8, pct = 60, icon = "etc_ringshell", item = "etc_ringshell", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -632,6 +660,30 @@ return {
 			wait = { "수정 오솔길의 달팽이예요." },
 			done = { "들어 봐요, 이 소리!", "…이 소리로 옛 노래를 불러 볼게요." },
 			reward = { xp = 943, money = 2700, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
+		},
+		{
+			id = "dq01",
+			kind = "side",
+			line = false,
+			region = false,
+			name = "수정 틈의 문",
+			lv = 30,
+			scene = "r2ah",
+			text = "성문 앞의 나무꾼 곰솔이 빛나는 연못의 수정 틈 안쪽에 커다란 수정 문이 생겼다고 한다. 문 너머로 수정이 빚은 짐승들이 끝없이 몰려나온다는데 — 가서 그 문에 손을 대 보자.",
+			after = false,
+			giver = "woodcutter",
+			endNpc = false,
+			auto = false,
+			playable = true,
+			city = true,
+			big = true,
+			steps = {
+				{ ["type"] = "use", mob = false, only = false, name = "문에 손 대기", n = 1, pct = 100, icon = false, item = false, spot = "riftgate", place = "수정 거울숲의 문", act = "문에 손 대기", x = 442, y = 160, up = 60, at = "r2ah", npc = false },
+			},
+			offer = { "자네, 빛나는 연못에 가 봤나?", "연못 둑의 수정 틈 안쪽에 큰 수정 문이 하나 생겼어.", "그 너머로 수정 짐승들이 끝없이 몰려나온다더군.", "몸 단련엔 그만한 데가 없지.", "가서 그 문에 손을 대 보게." },
+			wait = { "빛나는 연못의 「수정 틈으로」 안쪽이야.", "반달네 옛집 옆의 큰 수정 문일세." },
+			done = { "문에 손을 대자 안에서 빛이 일렁인다.", "하루 한 번 「수정 거울숲」에 들 수 있다." },
+			reward = { xp = 521, money = 2200, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq09",
@@ -648,6 +700,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "use", mob = false, only = false, name = "노랫말 옮겨 적기", n = 1, pct = 100, icon = false, item = false, spot = "songwall", place = "빈집 벽의 노랫말", act = "노랫말 적기", x = 330, y = 160, up = 30, at = "r2ah", npc = false },
 			},
@@ -671,6 +724,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {  },
 			offer = { "노래의 빈칸이 다섯이에요.", "언덕의 서기님은 옛 기록을 다 봤대요.", "이 악보를 보여 줄래요?" },
 			wait = { "맨 위층, 서기의 방이에요." },
@@ -692,6 +746,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "use", mob = false, only = false, name = "별꽃 꺾기", n = 1, pct = 100, icon = false, item = false, spot = "starflower", place = "물가의 별꽃", act = "별꽃 꺾기", x = 405, y = 176, up = 22, at = "r2a3", npc = false },
 			},
@@ -715,6 +770,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "spider", only = false, name = "분홍 리본", n = 1, pct = 20, icon = "etc_ribbon", item = "etc_ribbon", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -738,6 +794,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "stump", only = false, name = "수정싹", n = 10, pct = 60, icon = "etc_sprout", item = "etc_sprout", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -761,6 +818,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "fox", only = false, name = "등불꼬리 여우", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -784,6 +842,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {  },
 			offer = { "바다 건너 장에서 편지를 받았어요.", "갈매 할아버지 앞으로요.", "…이름이 아주 오래된 글씨예요." },
 			wait = { "장터 거리, 갈매 할아버지 집이에요." },
@@ -805,6 +864,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "snail", only = false, name = "수정 달팽이", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -828,6 +888,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "quill", only = false, name = "기사의 박차", n = 5, pct = 40, icon = "etc_spur", item = "etc_spur", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -851,6 +912,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "spider", only = false, name = "거미줄 실타래", n = 10, pct = 60, icon = "etc_silk", item = "etc_silk", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -874,6 +936,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "golem", only = false, name = "골렘 심장석", n = 6, pct = 40, icon = "etc_heartstone", item = "etc_heartstone", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -897,6 +960,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "censer", only = false, name = "떠도는 향로", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -920,6 +984,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "fox", only = false, name = "여우 등불", n = 8, pct = 60, icon = "etc_foxfire", item = "etc_foxfire", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -943,6 +1008,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "use", mob = false, only = false, name = "담장 밑 살피기", n = 1, pct = 100, icon = false, item = false, spot = "manorwall", place = "성 담장 밑", act = "담장 살피기", x = 1626, y = 224, up = 30, at = "ct", npc = false },
 			},
@@ -966,6 +1032,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "use", mob = false, only = false, name = "책등 살피기", n = 1, pct = 100, icon = false, item = false, spot = "scratchedbook", place = "긁힌 책등", act = "책등 살피기", x = 288, y = 176, up = 30, at = "r2bh", npc = false },
 			},
@@ -989,6 +1056,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "stump", only = false, name = "수정싹 그루터기", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1012,6 +1080,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "spider", only = false, name = "거미 독주머니", n = 8, pct = 60, icon = "etc_venom", item = "etc_venom", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1035,6 +1104,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = { "기사단의 옛 책을 보러 오셨다고요?", "옛 책은 아무에게나 안 보여 줘요." },
 			wait = { "…그래도 방법이 없진 않아요." },
@@ -1056,6 +1126,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "stump", only = false, name = "수정싹 그루터기", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1079,6 +1150,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "frog", only = false, name = "순찰대 표식", n = 8, pct = 50, icon = "etc_badge", item = "etc_badge", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1102,6 +1174,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "bud", only = false, name = "수정 봉오리", n = 15, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1125,6 +1198,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "quill", only = false, name = "수정 고슴도치", n = 15, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1148,6 +1222,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = { "명령서를 들고 본당으로 가요.", "보여 드릴 벽화가 있어요." },
 			wait = { "본당의 벽화를 봐 주세요." },
@@ -1169,6 +1244,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "dshard", only = false, name = "검은 결정", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 				{ ["type"] = "use", mob = false, only = false, name = "명령서 통 열기", n = 1, pct = 100, icon = false, item = false, spot = "ridgearch", place = "무너진 아치 밑", act = "통 열기", x = 554, y = 112, up = 34, at = "r2b4", npc = false },
@@ -1193,6 +1269,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "censer", only = false, name = "떠도는 향로", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1216,6 +1293,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "use", mob = false, only = false, name = "기록 건지기", n = 1, pct = 100, icon = false, item = false, spot = "pyre", place = "타는 제단", act = "기록 건지기", x = 582, y = 160, up = 40, at = "r2c4", npc = false },
 			},
@@ -1239,6 +1317,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "stump", only = false, name = "끈끈한 수정 진", n = 8, pct = 50, icon = "etc_resin", item = "etc_resin", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1262,6 +1341,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "use", mob = false, only = false, name = "옛집의 장부 보기", n = 1, pct = 100, icon = false, item = false, spot = "oldledger", place = "옛집의 장부", act = "장부 보기", x = 150, y = 176, up = 26, at = "r2ah", npc = false },
 			},
@@ -1285,6 +1365,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "frog", only = false, name = "빛 이끼", n = 10, pct = 50, icon = "etc_moss", item = "etc_moss", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1308,6 +1389,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -1329,6 +1411,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -1350,6 +1433,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "quill", only = false, name = "기사의 이름표", n = 10, pct = 50, icon = "etc_tag", item = "etc_tag", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1373,6 +1457,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "dshard", only = false, name = "검은 결정", n = 30, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1396,6 +1481,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "golem", only = false, name = "장부의 낱장", n = 8, pct = 40, icon = "etc_page", item = "etc_page", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1419,6 +1505,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -1440,6 +1527,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "bell", only = false, name = "종 조각", n = 8, pct = 50, icon = "etc_bellpiece", item = "etc_bellpiece", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1463,6 +1551,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "rat", only = false, name = "굴쥐", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1486,6 +1575,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = { "화롯골이 문을 닫아걸었대요.", "야영지의 소금 장수가 잘 알아요." },
 			wait = { "젖은 굴을 지나면 상인들의 야영지예요." },
@@ -1507,6 +1597,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "kobold", only = false, name = "그을린 수레 못", n = 8, pct = 50, icon = "etc_nail", item = "etc_nail", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1530,6 +1621,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "worm", only = false, name = "굴 지렁이", n = 15, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1553,6 +1645,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "thief", only = false, name = "불씨 도둑", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1576,6 +1669,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "cinder", only = false, name = "재 회오리", n = 18, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1599,6 +1693,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = { "화로 가장 안쪽에 옛 벽화가 있네.", "우리는 그것을 지우지 않았지." },
 			wait = { "식어 가는 불길 너머 벽화의 방이네." },
@@ -1620,6 +1715,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "bomber", only = false, name = "폭탄병", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1643,6 +1739,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -1664,6 +1761,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "rat", only = false, name = "굴쥐 수염", n = 10, pct = 50, icon = "etc_whisker", item = "etc_whisker", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1687,6 +1785,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -1708,6 +1807,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "kobold", only = false, name = "등잔 조각", n = 10, pct = 50, icon = "etc_lamp", item = "etc_lamp", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1731,6 +1831,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "cart", only = false, name = "폭주 광차", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1754,6 +1855,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "worm", only = false, name = "빈 불씨 단지", n = 8, pct = 40, icon = "etc_jar", item = "etc_jar", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1777,6 +1879,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "thief", only = false, name = "불씨 단지", n = 6, pct = 30, icon = "etc_ember", item = "etc_ember", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1800,6 +1903,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "bomber", only = false, name = "화약통", n = 10, pct = 50, icon = "etc_keg", item = "etc_keg", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1823,6 +1927,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -1844,6 +1949,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "chimney", only = false, name = "알껍데기 조각", n = 8, pct = 40, icon = "etc_shell", item = "etc_shell", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1867,6 +1973,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -1888,6 +1995,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = { "다들 외성 밖에 모였어요!", "할멈께 먼저 인사드리세요." },
 			wait = { "야영지 천막 앞에 계세요." },
@@ -1909,6 +2017,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "ewarrior", only = false, name = "정예 검병", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1932,6 +2041,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "statue", only = false, name = "부서진 기사상", n = 10, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1955,6 +2065,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "bomber", only = false, name = "폭탄병", n = 15, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -1978,6 +2089,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "espearman", only = false, name = "정예 창병", n = 15, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -2001,6 +2113,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "eye", only = false, name = "감시하는 눈", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -2024,6 +2137,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = { "촌장님이 숙소에 와 계세요.", "하실 말씀이 있으시대요." },
 			wait = { "왔는가." },
@@ -2045,6 +2159,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -2066,6 +2181,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -2087,6 +2203,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "espearman", only = false, name = "부러진 창대", n = 12, pct = 60, icon = "etc_shaft", item = "etc_shaft", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -2110,6 +2227,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -2131,6 +2249,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "statue", only = false, name = "보급 상자", n = 8, pct = 50, icon = "etc_crate", item = "etc_crate", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -2154,6 +2273,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "earcher", only = false, name = "열쇠 조각", n = 4, pct = 20, icon = "etc_keypiece", item = "etc_keypiece", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -2177,6 +2297,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -2198,6 +2319,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "espearman", only = false, name = "쇠 덧판", n = 15, pct = 60, icon = "etc_ironplate", item = "etc_ironplate", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -2221,6 +2343,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "book", only = false, name = "톱니", n = 10, pct = 50, icon = "etc_gear", item = "etc_gear", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -2244,6 +2367,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "ewarrior", only = false, name = "기사의 방패", n = 8, pct = 40, icon = "etc_shield", item = "etc_shield", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -2267,6 +2391,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "ewarrior", only = false, name = "용 비늘", n = 6, pct = 30, icon = "etc_scale", item = "etc_scale", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -2290,6 +2415,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "gloom", only = false, name = "쐐기 조각", n = 5, pct = 25, icon = "etc_wedge", item = "etc_wedge", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -2313,6 +2439,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "dummy", only = false, name = "달빛 서린 조각", n = 4, pct = 100, icon = "etc_moonshard", item = "etc_moonshard", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -2345,6 +2472,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "bell", only = false, name = "달빛 서린 종 조각", n = 4, pct = 100, icon = "fragment", item = "fragment", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -2377,6 +2505,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "espearman", only = false, name = "바래지 않은 깃발 조각", n = 4, pct = 100, icon = "etc_cloth", item = "etc_cloth", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},

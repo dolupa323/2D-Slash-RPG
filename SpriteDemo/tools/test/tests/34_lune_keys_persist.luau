@@ -133,6 +133,7 @@ for ci, class in { "riven", "axion", "mooni" } do
 	local tslots = table.clone(slots0)
 	tslots[9], tslots[1] = tslots[1], false
 	tslots[6], tslots[3] = tslots[3], false
+	tslots[13], tslots[14] = "act_jump", "act_interact" -- 폰의 칸 13 · 14 = 점프 · 상호작용(2026-10-21 — 늘 하나씩 있다)
 	local tback = handlers.TouchSlots(p, tslots)
 	expect(same(tback, tslots), class .. ": 스마트폰의 배치도 받아 둔다")
 

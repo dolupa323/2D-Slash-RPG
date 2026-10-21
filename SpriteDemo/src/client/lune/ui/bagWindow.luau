@@ -27,6 +27,8 @@ local Ui = require(script.Parent.ui)
 local ItemCell = require(script.Parent.itemCell)
 local ItemDetail = require(script.Parent.itemDetail)
 local Windows = require(script.Parent.windows)
+local CountBox = require(script.Parent.countBox) -- 수량 창(2026-10-21)
+local CountPick = require(lune.ui.countPick)
 local BMW = require(lune.data["bm.generated"]).shop.words -- 캐시 탭의 글(2026-10-21)
 
 local C = Ui.COLOR
@@ -153,11 +155,45 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		ctx.send("Potion", entry.item)
 	end
 	-- 팔 때 묻는 것: 장비는 팔지 말지만, 묶음은 몇 개를(처음에는 전부). 팔 수 없는 것(퀘스트의 물건)은 nil
+	-- 수를 정하는 일(버리기 · 나누기 · 맡기기 · 팔기)은 화면 가운데의 수량 창으로(2026-10-21 사용자: "… 수량 입력하는 모달 받아서 처리해야지 … 모든 곳에서 수량받아서 처리해" —
+	--  전에는 상세 판의 「-10 -1 +1 +10」). 처음 수 = 나누기 절반 · 나머지 그 칸의 전부 · 맡기기는 창고에 들어가는 만큼까지
+	local function askCount(kind: string, tabKey: string, slot: number, entry)
+		local bag = ctx.bag()
+		local def = Items.goods(entry.item)
+		if not bag or not def then
+			return
+		end
+		local hi = CountPick.hi(kind, entry.n)
+		if kind == "store" then
+			hi = math.min(hi, Bag.storeRoomInView(bag, entry.item))
+		end
+		if hi < 1 then
+			if kind == "store" then
+				ctx.send("Item", "storeIn", tabKey, slot, 1) -- 창고가 가득 찼다(서버가 까닭을 알린다)
+			end
+			return
+		end
+		CountBox.open({
+			owner = "bag",
+			kind = kind,
+			icon = def.icon,
+			name = def.name,
+			hi = hi,
+			gainEach = if kind == "sell" then def.sell else nil,
+			onYes = function(n: number)
+				local action = if kind == "store" then "storeIn" else kind -- "discard" · "sell" · "split"
+				ctx.send("Item", action, tabKey, slot, n)
+				if kind == "store" and ui.storeShow then
+					ui.storeShow(tabKey)
+				end
+				unselect()
+				redraw()
+			end,
+		})
+	end
 	local function sellAsk(tabKey: string, entry)
 		if tabKey == "gear" then
 			return { kind = "sellGear" }
-		elseif Items.goodsSell(entry.item) > 0 then
-			return { kind = "sell", n = entry.n }
 		end
 		return nil
 	end
@@ -280,6 +316,9 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					if ui.shopDrop and ui.shopDrop(at) then
 						choose(tabKey, from, it)
 						ask = sellAsk(tabKey, it)
+						if tabKey ~= "gear" and Items.goodsSell(it.item) > 0 then
+							askCount("sell", tabKey, from, it) -- 묶음은 수량 창(처음 = 전부)
+						end
 						redraw()
 						return true
 					end
@@ -504,38 +543,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			local def = Items.goods(entry.item)
 			local have = Bag.countIn(bag, entry.item)
 			spec.info = ItemInfo.goods(entry.item, me, have)
-			if ask and ask.n then
-				-- 수를 고른다: 버리기 · 맡기기 · 팔기는 1 ~ 그 칸의 수, 나누기는 1 ~ 하나를 남긴 수
-				local kind = ask.kind
-				local hi = if kind == "split" then entry.n - 1 else entry.n
-				if hi < 1 then
-					ask = nil
-				else
-					local n = math.clamp(ask.n, 1, hi)
-					ask.n = n
-					spec.ask = ItemDetail.ask(kind, n, 1, hi, {
-						gain = if kind == "sell" then function(count: number)
-							return def.sell * count
-						end else nil,
-						set = function(v: number)
-							ask = { kind = kind, n = v }
-							view.refresh()
-						end,
-						yes = function(count: number)
-							local action = if kind == "store" then "storeIn" else kind -- "discard" · "sell" · "split"
-							ctx.send("Item", action, tabKey, slot, count)
-							if kind == "store" and ui.storeShow then
-								ui.storeShow(tabKey)
-							end
-							ask = nil
-							redraw()
-						end,
-						no = stopAsk,
-					})
-				end
-			else
-				ask = nil
-			end
+			ask = nil -- (묶음의 수는 수량 창이 정한다 — 위의 askCount)
 			if not ask then
 				if tabKey == "use" then
 					button(WORDS.use, function()
@@ -546,13 +554,11 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					end)
 				end
 				button(WORDS.discard, function()
-					ask = { kind = "discard", n = entry.n } -- 처음에는 그 칸의 묶음 전부
-					view.refresh()
+					askCount("discard", tabKey, slot, entry) -- 처음에는 그 칸의 묶음 전부
 				end)
 				if entry.n > 1 then
 					button(WORDS.split, function()
-						ask = { kind = "split", n = math.floor(entry.n / 2) } -- 처음에는 절반
-						view.refresh()
+						askCount("split", tabKey, slot, entry) -- 처음에는 절반
 					end)
 				end
 				if service == "store" and def.kind ~= "quest" then -- 퀘스트 물건은 맡길 수 없다(sim/bag.luau의 storeIn)
@@ -565,18 +571,16 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 							unselect()
 							redraw()
 						else
-							ask = { kind = "store", n = entry.n }
-							view.refresh()
+							askCount("store", tabKey, slot, entry) -- 처음에는 그 칸의 묶음 전부
 						end
 					end)
 				elseif service == "shop" and def.sell > 0 then
 					button(WORDS.sell, function()
-						ask = { kind = "sell", n = entry.n }
-						view.refresh()
+						askCount("sell", tabKey, slot, entry)
 					end)
 				end
 			end
-			spec.key = table.concat({ tabKey, slot, entry.item, entry.n, have, me.level, service or "-", if ask then ask.kind .. (ask.n or "") else "-" }, "|")
+			spec.key = table.concat({ tabKey, slot, entry.item, entry.n, have, me.level, service or "-" }, "|")
 		end
 		ItemDetail.show("bag", spec)
 	end
@@ -645,6 +649,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 	end
 
 	function view.destroy()
+		CountBox.hide("bag")
 		ItemDetail.hide("bag")
 		if ui.detail == "bag" then
 			ui.detail = nil

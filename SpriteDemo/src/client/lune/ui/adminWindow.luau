@@ -17,7 +17,7 @@ local C = Ui.COLOR
 
 local AdminWindow = {}
 AdminWindow.W, AdminWindow.H = 356, 300
-AdminWindow.TABS = { { id = "grow", name = "성장" }, { id = "item", name = "아이템" }, { id = "move", name = "이동" }, { id = "fight", name = "전투" } }
+AdminWindow.TABS = { { id = "grow", name = "성장" }, { id = "item", name = "아이템" }, { id = "move", name = "이동" }, { id = "fight", name = "전투" }, { id = "acct", name = "계정" } } -- 계정 = 쿠폰 기록 지우기(2026-10-21)
 AdminWindow.XP = { 1, 2, 5, 10, 50, 100 } -- 경험치 배율(서버가 같은 표로 다시 본다)
 AdminWindow.DMG = { 1, 5, 20, 100 } -- 피해 배율
 AdminWindow.BOSS_SHOW = { 100, 75, 60, 50, 40 } -- 보스의 그림 크기 미리보기(서 있는 그림의 몇 %)
@@ -96,7 +96,7 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 	local status = Ui.text(body, "관리자에게만 보이는 창이다", 0, h - 15, w, { color = C.dim })
 
 	-- 서버에 부탁한다(대답이 오면 아래 줄에 적는다)
-	local function ask(what: string, a: any, b: any, c: any)
+	local function ask(what: string, a: any, b: any, c: any, after: ((any) -> ())?) -- after = 대답을 받은 뒤(확성기: 보냈으면 칸을 비운다)
 		status:set("…")
 		status:color(C.dim)
 		task.spawn(function()
@@ -110,6 +110,9 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 			else
 				status:set(tostring(got.msg or ""))
 				status:color(if got.ok then C.green else C.red)
+			end
+			if after then
+				after(got)
 			end
 		end)
 	end
@@ -264,6 +267,32 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 					view.draw()
 				end, { h = 22, font = "small" }).frame.Name = "Do_placeNext"
 			end
+		elseif tab == "acct" then
+			-- 쿠폰 기록 지우기(2026-10-21 사용자: "쿠폰 기록을 초기화해줘 쿠폰등록하는것부터 영상을찍어야해") — 내 계정의 쓴 쿠폰 · 쿠폰 펫 · 쿠폰 탈것을 지운다(서버의 CashServer.resetCoupons)
+			y = row(p, y, "쿠폰", { { text = "쓴 기록 지우기", id = "couponReset", w = 110, on = function() ask("coupons") end } })
+			Ui.text(p, "쓴 쿠폰 기록과 쿠폰으로 받은 펫을 지운다.", 0, y + 4, w, { color = C.off })
+			Ui.text(p, "쿠폰을 처음 넣는 것부터 다시 해 볼 때 — 메뉴 → 「쿠폰」.", 0, y + 18, w, { color = C.off })
+			y += 44
+			-- 확성기(2026-10-21 사용자: "모든 서버에 확성기로 말할수있나? 어드민기능으로 확성기같은게 필요한데"): 적고 「보내기」(또는 Enter) → 모든 서버의 모두에게
+			--  화면 위 큰 알림 「공지」 + 채팅 알림 글(서버가 글을 거른 뒤 — server/lune/modules/megaphone.luau · 80자까지 · 5초에 한 번)
+			Ui.text(p, "확성기", 0, y + 6, 78, { color = C.dim })
+			local SENDW = 64
+			local field = Ui.field(p, 82, y, w - 82 - SENDW - 4, 22, "모든 서버에 보낼 글(80자까지)")
+			field.Name = "MegaphoneInput"
+			local function send()
+				ask("megaphone", field.Text, nil, nil, function(got)
+					if typeof(got) == "table" and got.ok then
+						field.Text = "" -- 보냈으면 비운다(못 보냈으면 적은 글을 그대로 둔다)
+					end
+				end)
+			end
+			Ui.button(p, "보내기", w - SENDW, y, SENDW, send, { h = 22, main = true }).frame.Name = "Do_megaphone"
+			field.FocusLost:Connect(function(enter: boolean)
+				if enter then
+					send()
+				end
+			end)
+			Ui.text(p, "지금 돌아가는 모든 서버의 모두에게 — 화면 위 큰 알림 「공지」 + 채팅.", 0, y + 28, w, { color = C.off })
 		else
 			y = row(p, y, "체력", { { text = "가득 채우기(쓰러졌으면 일어난다)", id = "heal", w = 200, on = function() ask("heal") end } })
 			y = row(p, y, "무적", {

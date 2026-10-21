@@ -50,6 +50,28 @@ local function glyphInfo(font, code: number): (number, number)
 	return 63 - 32, font.asciiAdv[63 - 31] -- "?"
 end
 
+-- 깨진 UTF-8(반쪽 글자)은 「?」로 바꾼다 — 글자를 셀 때(utf8.codes) 오류가 나지 않게.
+--  2026-10-21 퍼블리시한 게임의 오류 보고: 「pixelText:55: invalid UTF-8 code」 554번. 빈칸을 지우는 패턴 %s는 바이트로 고르고 그 컴퓨터의 언어 설정을 따라,
+--  한글의 가운데 바이트(0x85 · 0xA0)를 빈칸으로 보아 지울 수 있다 → 반쪽 글자. 그래서 빈칸은 [ \t\r\n]로만 지우고(아래 fitLine · 이름 칸들), 들어오는 글은 여기서 한 번 더 고친다
+local function clean(text: string): string
+	if utf8.len(text) then
+		return text
+	end
+	local out, i = {}, 1
+	while i <= #text do
+		local n, bad = utf8.len(text, i)
+		if n then
+			table.insert(out, string.sub(text, i))
+			break
+		end
+		table.insert(out, string.sub(text, i, (bad :: number) - 1))
+		table.insert(out, "?")
+		i = (bad :: number) + 1
+	end
+	return table.concat(out)
+end
+exports.Clean = clean
+
 local function lineWidth(font, line: string): number
 	local w = 0
 	for _, code in utf8.codes(line) do
@@ -61,6 +83,7 @@ end
 
 function exports.Measure(text: string, fontKey: string?): (number, number)
 	local font = fonts[fontKey or "body"]
+	text = clean(text)
 	local w, n = 0, 0
 	for line in (text .. "\n"):gmatch("(.-)\n") do
 		w = math.max(w, lineWidth(font, line))
@@ -72,6 +95,7 @@ end
 -- 폭에 맞춰 줄바꿈: 띄어쓰기에서 먼저 끊고, 한 낱말이 폭보다 길면 글자에서 끊는다(공방 js/font.js wrap과 같은 규칙).
 function exports.Wrap(text: string, maxWidth: number, fontKey: string?): string
 	local font = fonts[fontKey or "body"]
+	text = clean(text)
 	local out = {}
 	for para in (text .. "\n"):gmatch("(.-)\n") do
 		local line = ""
@@ -112,13 +136,14 @@ local function fitLine(font, line: string, maxWidth: number): string
 		end
 		kept = try
 	end
-	return (kept:gsub("%s+$", "")) .. "…"
+	return (kept:gsub("[ \t]+$", "")) .. "…" -- (끝의 빈칸만 — %s는 한글의 가운데 바이트를 지울 수 있다)
 end
 
 -- 칸에 맞추기: 폭(maxWidth)을 넘으면 줄을 바꾸고, 줄 수(maxLines)를 넘으면 마지막 줄 끝을 "…"로 줄인다.
 -- maxLines = 1이면 줄을 바꾸지 않고 한 줄로 줄인다.
 function exports.Fit(text: string, maxWidth: number, maxLines: number?, fontKey: string?): string
 	local font = fonts[fontKey or "body"]
+	text = clean(text)
 	if maxLines == 1 then
 		return fitLine(font, (text:gsub("\n", " ")), maxWidth)
 	end

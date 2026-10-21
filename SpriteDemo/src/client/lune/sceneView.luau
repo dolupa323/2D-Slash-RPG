@@ -26,7 +26,7 @@ SceneView.TAG_DOWN = 4 -- 이름표: 발밑에서 이만큼 아래(화면 틀의
 -- 주민 머리 위의 퀘스트 표시: "!" 받을 수 있는 퀘스트가 있다 · "?" 다 해서 돌려줄 퀘스트가 있다 — 글자 그대로의 작은 표시(게임 세계의 굵은 도트).
 --  사용자 2026-10-07: "퀘스트가 있는건 표시가 받을수있는퀘스트는 ! , 완료된퀘스트는 ? 표시였는데 왜 갑자기 전구모양이 생긴건지" → 전구 · 책 그림을 걷어 내고 되돌렸다.
 --  부품 이름과 띄우는 높이는 공방에서 온다(data/ui.generated.luau의 questMark — 공방 시험 탭에서 먼저 보고 정한 것. "크기 너무 큽니다" → 피해 숫자만 한 점 글자).
-SceneView.MARK = { ["!"] = UI.questMark.new, ["?"] = UI.questMark.done }
+SceneView.MARK = { ["!"] = UI.questMark.new, ["?"] = UI.questMark.done, ["!!"] = UI.questMark.big } -- !! = 크고 주황색인 「!」(중요한 퀘스트 — 던전의 문 2026-10-21)
 SceneView.MARK_UP = UI.questMark.up
 SceneView.DOOR_MARK_UP = 9 -- 문 위의 퀘스트 표시: 문의 이름표(글씨 한 줄) 위로 이만큼(게임의 도트)
 
@@ -150,9 +150,11 @@ function SceneView.new(view: Frame, key: string, scene, tagLayer: Frame)
 	self.doorMarks = {}
 	self.portals = {}
 	for i, p in scene.portals do
-		local glow = Stage.image(self.portalLayer, "Portal_" .. tostring(p.id or p.to), ASSETS[PORTAL.img] or "", PORTAL.w, PORTAL.h) -- 이름표(id)가 없는 문도 있다(새로 지은 맵의 문 — 가는 곳으로 부른다)
+		local sc = p.scale or 1 -- 큰 문(던전의 문 — 2026-10-21)은 빛을 크게 · 계단 위로(lift점)
+		local gw, gh = round(PORTAL.w * sc), round(PORTAL.h * sc)
+		local glow = Stage.image(self.portalLayer, "Portal_" .. tostring(p.id or p.to), ASSETS[PORTAL.img] or "", gw, gh) -- 이름표(id)가 없는 문도 있다(새로 지은 맵의 문 — 가는 곳으로 부른다)
 		glow.ImageRectSize = Vector2.new(PORTAL.w, PORTAL.h)
-		glow.Position = UDim2.fromOffset(round(p.x - PORTAL.w / 2), p.y - PORTAL.h)
+		glow.Position = UDim2.fromOffset(round(p.x - gw / 2), p.y - gh - (p.lift or 0))
 		self.portals[i] = { label = glow, phase = i * 0.37, frame = -1, def = p, open = true } -- open = 지나갈 수 있는가(그 퀘스트를 받아야 열리는 문 — setPortals)
 		tag("↑ " .. p.label, p.x, p.y - math.max(p.h or 60, PORTAL.h), -(Ui.TAG_H + 2), C.accent, p)
 		local dest = SCENES.scenes[p.to]

@@ -28,11 +28,13 @@ local BY = {}
 for _, p in BM.products do
 	BY[p.id] = p
 end
--- 상점에서 팔지 않는 펫(쿠폰으로 받는 기본펫 「까망 동글이」 — ride.generated의 pets[].free · 2026-10-21): 이름 · 한 줄 설명 · 그림만 상품처럼
+-- 상점에서 팔지 않는 펫 · 탈것(쿠폰으로 받는 「아기 재까마귀」 · 「떠도는 책」 — ride.generated의 pets[].free · mounts[].free · 2026-10-21): 이름 · 한 줄 설명 · 그림만 상품처럼
 local RIDE_DATA = require(lune.data["ride.generated"])
-for _, q in RIDE_DATA.pets do
-	if q.free and not BY[q.id] then
-		BY[q.id] = { id = q.id, name = q.name, line = q.line or "", icon = "ride_" .. q.id, free = q.free }
+for _, list in { RIDE_DATA.pets, RIDE_DATA.mounts } do
+	for _, q in list do
+		if q.free and not BY[q.id] then
+			BY[q.id] = { id = q.id, name = q.name, line = q.line or "", icon = "ride_" .. q.id, free = q.free }
+		end
 	end
 end
 -- 그 상품(이름 · 한 줄 설명 · 그림 — 퀵슬롯의 설명 · 가방의 캐시 탭이 쓴다). 쿠폰 펫도 든다(위)
@@ -179,7 +181,7 @@ local function buildRename(body: Frame, ctx, w: number)
 	end)
 	if ok and typeof(changed) == "RBXScriptSignal" then
 		changed:Connect(function()
-			local bare = string.gsub(field.Text, "%s", "")
+			local bare = string.gsub(field.Text, "[ \t\r\n]", "") -- (%s 대신 — 한글의 가운데 바이트를 지우지 않게 · 2026-10-21)
 			if bare ~= field.Text then
 				field.Text = bare
 				return

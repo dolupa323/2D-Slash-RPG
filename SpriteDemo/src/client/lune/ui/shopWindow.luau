@@ -23,6 +23,8 @@ local ItemCell = require(script.Parent.itemCell)
 local BagWindow = require(script.Parent.bagWindow)
 local ItemDetail = require(script.Parent.itemDetail)
 local Windows = require(script.Parent.windows)
+local CountBox = require(script.Parent.countBox) -- 수량 창(2026-10-21)
+local CountPick = require(lune.ui.countPick)
 
 local C = Ui.COLOR
 local D = Items.data
@@ -92,7 +94,6 @@ local function buildStore(body: Frame, ctx, w: number)
 	end
 	local tab = 1
 	local sel = nil :: { tab: string, slot: number, id: any }? -- 고른 칸(id = 장비의 번호 · 묶음의 이름표)
-	local ask: number? = nil -- 찾을 수를 고르는 중이면 그 수
 	local hot: number? = nil -- 끌던 것을 놓을 칸
 	local lastClick = { slot = 0, t = 0 }
 	local dragEnd = 0
@@ -102,7 +103,7 @@ local function buildStore(body: Frame, ctx, w: number)
 		return KEYS[tab]
 	end
 	local function unselect()
-		sel, ask = nil, nil
+		sel = nil
 	end
 	local function redraw()
 		Windows.refresh(ctx.me())
@@ -113,6 +114,32 @@ local function buildStore(body: Frame, ctx, w: number)
 		if ui.bagShow then
 			ui.bagShow(tabKey)
 		end
+	end
+	-- 묶음을 찾는다: 둘 이상이면 수량 창(처음 = 그 묶음 전부 · 가장 많이 = 가방에 들어가는 만큼 — 2026-10-21 사용자 "모든 곳에서 수량받아서 처리해") · 하나면 바로
+	local function askTake(tabKey: string, slot: number, entry, to: number?)
+		local bag = ctx.bag()
+		if not bag or entry.n <= 1 then
+			take(tabKey, slot, 1, to)
+			return
+		end
+		local hi = math.min(entry.n, Bag.roomInView(bag, entry.item))
+		if hi < 1 then
+			take(tabKey, slot, nil, to) -- 가방에 자리가 없다(서버가 까닭을 알린다)
+			return
+		end
+		local def = Items.goods(entry.item)
+		CountBox.open({
+			owner = "store",
+			kind = "take",
+			icon = if def then def.icon else "coin",
+			name = if def then def.name else entry.item,
+			hi = hi,
+			onYes = function(n: number)
+				take(tabKey, slot, n, to)
+				unselect()
+				redraw()
+			end,
+		})
 	end
 
 	local tabs = {}
@@ -154,11 +181,14 @@ local function buildStore(body: Frame, ctx, w: number)
 			if not it then
 				unselect()
 			elseif twice then
-				take(key(), i, nil, nil) -- 두 번 누르기: 전부 찾는다
+				if it.item then
+					askTake(key(), i, it, nil) -- 두 번 누르기: 찾는다(묶음은 수량 창 — 처음 = 전부)
+				else
+					take(key(), i, nil, nil)
+				end
 				unselect()
 			else
 				sel = { tab = key(), slot = i, id = if it.item then it.item else it.id }
-				ask = nil
 				ui.detail = "shop"
 			end
 			redraw()
@@ -217,7 +247,12 @@ local function buildStore(body: Frame, ctx, w: number)
 					if ui.bagDrop then
 						local over, slot = ui.bagDrop(at, tabKey)
 						if over then
-							take(tabKey, from, nil, slot)
+							local it2 = cell.item
+							if tabKey ~= "gear" and it2 and it2.item then
+								askTake(tabKey, from, it2, slot) -- 묶음은 수량 창(처음 = 전부 — 2026-10-21)
+							else
+								take(tabKey, from, nil, slot)
+							end
 							if sel and sel.tab == tabKey and sel.slot == from then
 								unselect()
 							end
@@ -251,7 +286,25 @@ local function buildStore(body: Frame, ctx, w: number)
 			return false
 		end
 		local to = if tabKey == key() then slotAt(at) else nil
-		ctx.send("Item", "storeIn", tabKey, from, nil, to)
+		local bag = ctx.bag()
+		local it = if bag and bag[tabKey] then bag[tabKey][from] else nil
+		local def = if it and it.item then Items.goods(it.item) else nil
+		local hi = if def and bag then math.min(it.n, Bag.storeRoomInView(bag, it.item)) else 0
+		if def and it.n > 1 and hi >= 1 then
+			-- 묶음은 수량 창(처음 = 전부 · 가장 많이 = 창고에 들어가는 만큼 — 2026-10-21 사용자 "모든 곳에서 수량받아서 처리해")
+			CountBox.open({
+				owner = "store",
+				kind = "store",
+				icon = def.icon,
+				name = def.name,
+				hi = hi,
+				onYes = function(n: number)
+					ctx.send("Item", "storeIn", tabKey, from, n, to)
+				end,
+			})
+		else
+			ctx.send("Item", "storeIn", tabKey, from, nil, to)
+		end
 		if tabKey ~= key() then
 			tab = table.find(KEYS, tabKey) or tab
 			unselect()
@@ -313,7 +366,6 @@ local function buildStore(body: Frame, ctx, w: number)
 			redraw()
 		end }
 		if tabKey == "gear" then
-			ask = nil
 			spec.info = ItemInfo.gear(entry, me, bag.equip[entry.slot], false)
 			table.insert(spec.buttons, { text = WORDS.take, main = true, onClick = function()
 				take("gear", slot, nil, nil)
@@ -323,37 +375,16 @@ local function buildStore(body: Frame, ctx, w: number)
 			spec.key = table.concat({ "store", entry.id, entry.q, entry.star, tostring(entry.broken), me.level }, "|")
 		else
 			spec.info = ItemInfo.goods(entry.item, me, entry.n) -- 가진 수 = 창고의 그 묶음
-			if ask then
-				local n = math.clamp(ask, 1, entry.n)
-				ask = n
-				spec.ask = ItemDetail.ask("take", n, 1, entry.n, {
-					set = function(v: number)
-						ask = v
-						view.refresh()
-					end,
-					yes = function(countNow: number)
-						take(tabKey, slot, countNow, nil)
-						ask = nil
-						view.refresh()
-					end,
-					no = function()
-						ask = nil
-						view.refresh()
-					end,
-				})
-			else
-				table.insert(spec.buttons, { text = WORDS.take, main = true, onClick = function()
-					if entry.n == 1 then
-						take(tabKey, slot, 1, nil)
-						unselect()
-						redraw()
-					else
-						ask = entry.n -- 처음에는 그 묶음 전부
-						view.refresh()
-					end
-				end })
-			end
-			spec.key = table.concat({ "store", tabKey, slot, entry.item, entry.n, me.level, if ask then ask else "-" }, "|")
+			table.insert(spec.buttons, { text = WORDS.take, main = true, onClick = function()
+				if entry.n == 1 then
+					take(tabKey, slot, 1, nil)
+					unselect()
+					redraw()
+				else
+					askTake(tabKey, slot, entry, nil) -- 수량 창(처음 = 그 묶음 전부)
+				end
+			end })
+			spec.key = table.concat({ "store", tabKey, slot, entry.item, entry.n, me.level }, "|")
 		end
 		ItemDetail.show("shop", spec)
 	end
@@ -392,6 +423,7 @@ local function buildStore(body: Frame, ctx, w: number)
 	end
 
 	function view.destroy()
+		CountBox.hide("store")
 		ItemDetail.hide("shop")
 		if ui.detail == "shop" then
 			ui.detail = nil
@@ -411,7 +443,8 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 	local ui = ctx.ui
 	local panel = body.Parent :: GuiObject
 
-	-- 상점: 물건마다 한 줄([그림] 이름 · [달돈] 값 · 사기). 물약(단마다 따로 판다 — 가방의 소비 탭에 들어온다)과 달가루는 열 개씩도 산다
+	-- 상점: 물건마다 한 줄([그림] 이름 · [달돈] 값 · 사기). 물약(단마다 따로 판다 — 가방의 소비 탭에 들어온다) · 달가루처럼 여럿 사는 것은 「사기」를 누르면 수량 창이 뜬다
+	--  (2026-10-21 사용자: "잡화상점에서 물약이나 달가루 구매할때 1개 아니면 10개밖에 못사잖아 이거 수량 입력하는 모달 받아서 처리해야지" — 전에는 「1 · 10」 단추 둘이었다)
 	local rows = {}
 	local bx = w - ShopWindow.BUY_W
 	-- 물건이 창의 줄(MAX_ROWS)보다 많으면 목록이 스크롤한다(2026-10-18 — 달빛 부적 · 능력치 초기화 주문서로 열둘이 됐다. 창은 스마트폰의 화면 틀에 들어가야 한다)
@@ -427,18 +460,39 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 		local name = Ui.text(list, "", TX, y + 7, ShopWindow.NAME_W, { font = "body" })
 		local coin = Ui.smallIcon(list, "coin", bx - 8 - ShopWindow.PRICE_W - 19, y + 4)
 		local price = Ui.text(list, "", bx - 8 - ShopWindow.PRICE_W, y + 8, ShopWindow.PRICE_W, { align = "right", color = C.gold })
-		local half = math.floor((ShopWindow.BUY_W - 6) / 2)
-		local one = Ui.button(list, if many then "1" else "사기", bx, y, if many then half else ShopWindow.BUY_W, function()
-			ctx.send("Item", "buy", stock.id, 1)
+		local one = Ui.button(list, WORDS.ask.buy[2], bx, y, ShopWindow.BUY_W, function()
+			if not many then
+				ctx.send("Item", "buy", stock.id, 1)
+				return
+			end
+			-- 수량 창: 가장 많이 = 한 번에 파는 수 · 가진 달돈 · 가방의 자리(달가루는 가방에 들지 않는다). 하나도 못 사면 서버가 까닭을 알린다
+			local bag, me = ctx.bag(), ctx.me()
+			if not bag or not me then
+				return
+			end
+			local cost = Items.stockPrice(stock, me.level)
+			local hi = CountPick.buyMax(stock.max, cost, me.money, if stock.goods then Bag.roomInView(bag, stock.goods) else nil)
+			if hi < 1 then
+				ctx.send("Item", "buy", stock.id, 1)
+				return
+			end
+			CountBox.open({
+				owner = "shop",
+				kind = "buy",
+				icon = ShopWindow.stockIcon(stock, me.class),
+				name = stock.name,
+				hi = hi,
+				each = cost,
+				money = me.money,
+				onYes = function(n: number)
+					ctx.send("Item", "buy", stock.id, n)
+				end,
+			})
 		end)
-		local ten = if many
-			then Ui.button(list, "10", bx + half + 6, y, half, function()
-				ctx.send("Item", "buy", stock.id, 10)
-			end)
-			else nil
+		one.frame.Name = "Buy"
 		-- 아직 살 수 없는 것은 값과 단추 자리에 "Lv.10부터"
 		local lock = Ui.text(list, "", TX + ShopWindow.NAME_W, y + 8, w - TX - ShopWindow.NAME_W, { align = "right", color = C.dim })
-		rows[i] = { stock = stock, icon = icon, coin = coin, name = name, price = price, one = one, ten = ten, lock = lock }
+		rows[i] = { stock = stock, icon = icon, coin = coin, name = name, price = price, one = one, lock = lock }
 	end
 	-- 되사기(2026-10-18 — 메이플의 재구매): 물건의 줄 아래에 머리 한 줄 「되사기 — 이번 접속에 판 것」과 판 것들(가장 최근 것부터 · 판 값 그대로). 판 것이 없으면 감춘다
 	local backY = #stocks * ROW
@@ -485,10 +539,6 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 			row.lock:set(if open then "" else ("Lv.%d부터"):format(stock.from))
 			row.one.frame.Visible = open
 			row.one:setEnabled(me.money >= cost)
-			if row.ten then
-				row.ten.frame.Visible = open
-				row.ten:setEnabled(me.money >= cost * 10)
-			end
 		end
 		-- 되사기의 줄들
 		local sold = bag.buyback or {}
@@ -515,6 +565,7 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 	end
 
 	function view.destroy()
+		CountBox.hide("shop")
 		ui.shopDrop = nil
 	end
 	return view

@@ -41,6 +41,53 @@ function P.solidBox(scene, x: number, y: number): boolean
 	return false
 end
 
+-- 몸이 막힌 칸 안에 끼었으면 가장 가까운 빈 자리를 돌려준다(끼지 않았으면 그대로). 위가 먼저다: 칸의 윗면마다 올려 보고(그 땅 위에 선다),
+--  옆으로 가는 것은 두 배 먼 것으로 친다. 맵의 좌우 밖으로는 꺼내지 않는다.
+--  사용자 2026-10-21(폰): "대쉬하다가 맵을뚫고 낑기는 현상 발생합니다" — 끼면 걷기 · 뛰기 · 대쉬가 모두 막혀 그 자리에서 움직이지 못했다.
+--   어떤 길로 들어갔든(서버가 되돌려 준 자리 · 들어선 자리 …) 화면과 서버가 같은 셈으로 꺼낸다(boot.luau의 step · Warp · 서버 world.luau의 place · onMove)
+P.FREE_SIDE = 6 -- 옆으로는 이 칸 수까지 찾는다
+function P.freeSpot(scene, x: number, y: number): (number, number)
+	if not P.solidBox(scene, x, y) then
+		return x, y
+	end
+	local base = math.floor(y / T) * T
+	local best, bx, by = math.huge, x, y
+	for k = 0, scene.h + 2 do
+		local cy = base - k * T
+		local up = y - cy
+		if up >= best then
+			break
+		end
+		for d = 0, P.FREE_SIDE * T, 2 do
+			if up + d * 2 >= best then
+				break
+			end
+			local found = false
+			for _, side in { 1, -1 } do
+				local cx = x + side * d
+				if cx >= HALF and cx <= scene.w * T - HALF and not P.solidBox(scene, cx, cy) then
+					best, bx, by, found = up + d * 2, cx, cy, true
+					break
+				end
+			end
+			if found then
+				break
+			end
+		end
+	end
+	return bx, by
+end
+
+-- 끼었으면 꺼낸다(빠르기를 멈춘다). 꺼냈으면 true
+function P.unstick(scene, body): boolean
+	if not P.solidBox(scene, body.x, body.y) then
+		return false
+	end
+	body.x, body.y = P.freeSpot(scene, body.x, body.y)
+	body.vx, body.vy, body.ground = 0, 0, false
+	return true
+end
+
 -- 가시(^)에 닿아 있는가: 발이 놓인 칸이 가시일 때(몸 폭에서 양옆 두 점씩 뺀 안쪽 — 스치기만 한 것은 치지 않는다). 가시 위로 뛰어넘는 동안에는 닿지 않는다.
 --  닿으면 약한 피해를 입는다(서버 — sim/room.luau의 step. 사용자 2026-10-08: "맵에 가시 있잖아요 그거 닿으면 데미지 입게 약한데미지 입게하세요")
 function P.onSpike(scene, x: number, y: number): boolean

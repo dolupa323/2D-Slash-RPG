@@ -2,7 +2,8 @@
 -- 펫 · 탈것(dino-workshop/js/lune/design/ride.js): pets · mounts = 이름(그림은 chars.generated의 같은 이름 — 탈것은 <동작>_front가 영웅 앞에 다시 그리는 점) ·
 --  seat = 탈것의 기준점(발밑 가운데)에서 영웅의 발까지(dx는 오른쪽을 볼 때) · bob = 동작의 장마다 영웅을 더 내리는 점(위 = 음수) · pet = 따라오는 자리(behind) · 줍는 거리(reach) · 한 번에 하나씩(every초)
 --  riderSize = 탄 동안 영웅을 그리는 크기(서기 그림 그대로 줄여서 — 화면 화소에 맞춰 Sprite.sizeOn) · bobx = 동작의 장마다 영웅을 옮기는 가로 점(어깨를 따라 — 오른쪽을 볼 때 · 안장은 <동작>_front에 그려져 있다)
---  seat · bob · bobx는 탈것 그림의 점 — 탈것은 chars.generated의 size배로 그리므로 영웅의 자리도 그 배(rideView) · mountSpeed = 탄 동안 달리기 배수
+--  seat · bob · bobx는 탈것 그림의 점 — 탈것은 chars.generated의 size배로 그리므로 영웅의 자리도 그 배(rideView) · mountSpeed = 탄 동안 달리기 배수(탈것에 speed가 있으면 그것 — 쿠폰 탈것 1)
+--  free · line = 상점에서 팔지 않는 펫 · 탈것(쿠폰으로만 받는다 — 2026-10-21) · 가방의 설명 한 줄
 return {
 	pets = {
 		{ id = "pet_silver", name = "은빛 달토끼" },
@@ -54,6 +55,24 @@ return {
 				idle = { 0, 0, 0, 0 },
 				run = { -6, -6, -6, -6, -6, -6 },
 				jump = { -6 },
+			},
+		},
+		{
+			id = "mount_book",
+			name = "떠도는 책",
+			free = "coupon",
+			line = "쿠폰으로 받은 탈것 — 걷는 빠르기 그대로",
+			speed = 1,
+			seat = { dx = -4, dy = -24 },
+			bob = {
+				idle = { 0, 0, 0, 0, 0, 0 },
+				run = { 0, 0, 0, 0, 0, 0 },
+				jump = { 0, 0, 0, 0, 0, 0 },
+			},
+			bobx = {
+				idle = { 0, 0, 0, 0, 0, 0 },
+				run = { 0, 0, 0, 0, 0, 0 },
+				jump = { 0, 0, 0, 0, 0, 0 },
 			},
 		},
 	},

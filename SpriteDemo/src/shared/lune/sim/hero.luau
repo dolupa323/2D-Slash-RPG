@@ -472,7 +472,7 @@ function Hero.setLevel(h, level: number, job: number?)
 	-- 칸에 놓인 것 가운데 이제 배우지 않은 스킬은 뺀다
 	for _, slots in { h.slots, h.tslots } do
 		for i, id in slots do
-			if typeof(id) == "string" and not Quick.item(id) and (h.skills[id] or 0) < 1 then
+			if typeof(id) == "string" and not Quick.item(id) and not Quick.act(id) and not Quick.ride(id) and (h.skills[id] or 0) < 1 then -- (점프 · 상호작용 · 펫 · 탈것은 스킬이 아니다 — 2026-10-21)
 				slots[i] = false
 			end
 		end
@@ -526,7 +526,7 @@ function Hero.resetSkills(h)
 	h.sp = spEarned(h.level, h.class) -- 찍은 것이 없다: 받은 포인트가 그대로 남는다
 	for _, slots in { h.slots, h.tslots } do
 		for i, id in slots do
-			if typeof(id) == "string" and not Quick.item(id) and (h.skills[id] or 0) < 1 then
+			if typeof(id) == "string" and not Quick.item(id) and not Quick.act(id) and not Quick.ride(id) and (h.skills[id] or 0) < 1 then -- (점프 · 상호작용 · 펫 · 탈것은 스킬이 아니다 — 2026-10-21)
 				slots[i] = false
 			end
 		end
@@ -847,7 +847,7 @@ end
 -- 퀵슬롯을 바꾼다(클라이언트가 보낸 칸들 — 꼴과 놓아도 되는 것인지를 본다). touch = 스마트폰의 단추 배치(tslots)를 바꾼다
 function Hero.setSlots(h, list: any, touch: boolean?): boolean
 	local slots = Quick.clean(list, function(id)
-		return Hero.canSlot(h, id)
+		return (touch == true and Quick.act(id) ~= nil) or Hero.canSlot(h, id) -- 점프 · 상호작용은 폰의 배치에만(2026-10-21)
 	end)
 	if not slots then
 		return false
@@ -1037,14 +1037,14 @@ function Hero.unpack(id: any, data: any)
 	-- 퀵슬롯: 저장된 것이 말이 되면 그대로, 아니면(퀵슬롯이 생기기 전에 저장된 캐릭터 포함) 처음 차림(Hero.new가 놓아 둔 것)
 	--  예전 저장의 물약 칸("potion" — 물약이 한 가지였을 때)은 그때 마시던 물약의 칸으로 바꾼다(놓아 둔 자리가 그대로 남는다)
 	--  칸 하나가 맞지 않으면(그 스킬의 포인트를 돌려받았다 · 아이템의 이름표가 바뀌었다) 그 칸만 비운다(2026-10-18 검토 — 전에는 배치 전체가 처음 차림으로 돌아갔다)
-	local function salvage(list)
+	local function salvage(list, touch: boolean?)
 		if typeof(list) ~= "table" then
 			return list
 		end
 		local out, seen = table.create(Quick.N, false), {}
 		for i = 1, Quick.N do
 			local v = list[i]
-			if typeof(v) == "string" and #v <= 40 and not seen[v] and Hero.canSlot(h, v) then
+			if typeof(v) == "string" and #v <= 40 and not seen[v] and ((touch == true and Quick.act(v) ~= nil) or Hero.canSlot(h, v)) then -- 폰의 점프 · 상호작용은 옮겨 둔 자리 그대로(2026-10-21)
 				seen[v] = true
 				out[i] = v
 			end
@@ -1056,7 +1056,7 @@ function Hero.unpack(id: any, data: any)
 	end
 	-- 스마트폰의 단추 배치: 저장된 것이 말이 되면 그대로, 없으면(이것이 생기기 전에 저장된 캐릭터) 처음 차림
 	if data.tslots ~= nil then
-		Hero.setSlots(h, salvage(Quick.renew(data.tslots, myPotion)), true)
+		Hero.setSlots(h, salvage(Quick.renew(data.tslots, myPotion), true), true)
 	end
 
 	h.kit.on = data.kitOn == true and Kit.level(h, "toggle") > 0

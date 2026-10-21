@@ -33,14 +33,14 @@ for _, def in D.list do
 		mains += 1
 	end
 	-- 이름표 = 지역 + m(메인) / s(부탁) + 차례
-	expect(string.match(def.id, "^r%d[ms]%d+$") ~= nil or (def.city and string.match(def.id, "^cq%d%d$") ~= nil) or (def.kind == "job" and def.id == "job" .. tostring(def.reward.job)), "이름표의 꼴 " .. def.id) -- cq = 2편의 흩어진 퀘스트(2026-10-16)
+	expect(string.match(def.id, "^r%d[ms]%d+$") ~= nil or (def.city and (string.match(def.id, "^cq%d%d$") ~= nil or string.match(def.id, "^dq%d%d$") ~= nil)) or (def.kind == "job" and def.id == "job" .. tostring(def.reward.job)), "이름표의 꼴 " .. def.id) -- cq = 2편의 흩어진 퀘스트(2026-10-16)
 	if def.after then
 		expect(Q.def(def.after) ~= nil, "앞 퀘스트가 있다 " .. def.id)
 	end
 	if def.playable then
 		playable += 1
 		expect(SCENES.scenes[def.scene] ~= nil, "할 수 있는 퀘스트의 맵이 있다 " .. def.id)
-		expect(npcs[def.giver] ~= nil and npcs[def.endNpc] ~= nil, "주고받는 주민이 있다 " .. def.id)
+		expect(npcs[def.giver] ~= nil and (npcs[def.endNpc] ~= nil or def.endNpc == false), "주고받는 주민이 있다 " .. def.id) -- endNpc false = 그 자리에서 끝난다(던전의 문 「수정 틈의 문」 dq01 — 2026-10-21)
 		expect(#def.done > 0, "돌려줄 때의 말이 있다 " .. def.id)
 		expect(def.auto or #def.offer > 0, "받을 때의 말이 있다 " .. def.id)
 		for _, step in def.steps do

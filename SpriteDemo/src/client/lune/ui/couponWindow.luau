@@ -1,6 +1,6 @@
 -- 쿠폰 창 — 메뉴 → 「쿠폰」(2026-10-21 사용자: "쿠폰 코드 입력창있어야하고 그 쿠폰 입력하면 그 기본펫 지급하는 방식으로 합니다").
 --  위에 안내 두 줄 · 쿠폰 번호를 적는 칸과 「사용」 · 아래에 결과 두 줄(받았다 · 까닭). 번호는 서버가 본다(server/lune/modules/cash.luau의 CashServer.coupon —
---  쿠폰의 목록은 서버에만 있다). 받은 펫은 가방의 「캐시」 탭에 들어온다(꺼내 둔 펫이 없으면 바로 꺼낸다 — 산 펫과 같다).
+--  쿠폰의 목록은 서버에만 있다). 받은 펫 · 탈것은 가방의 「캐시」 탭에 들어온다(꺼내 둔 펫이 없으면 바로 꺼낸다 · 고른 탈것이 없으면 그것을 고른다 — 산 것과 같다).
 --  치수 · 글은 공방 js/lune/design/ui.js의 UILAYOUT.coupon. 화면 오른쪽의 옆 판(ui/windows.luau).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
@@ -21,11 +21,13 @@ function CouponWindow.size(): (number, number)
 	return S.w, S.noteY + S.noteH
 end
 
--- 펫의 이름(ride.generated의 pets — 상점에서 팔지 않는 펫도 든다)
+-- 펫 · 탈것의 이름(ride.generated의 pets · mounts — 상점에서 팔지 않는 것도 든다 · 쿠폰 탈것 「떠도는 책」 2026-10-21)
 local function petName(id: string?): string
-	for _, q in RIDE.pets do
-		if q.id == id then
-			return q.name
+	for _, list in { RIDE.pets, RIDE.mounts } do
+		for _, q in list do
+			if q.id == id then
+				return q.name
+			end
 		end
 	end
 	return id or ""
@@ -49,7 +51,7 @@ function CouponWindow.build(body: Frame, ctx, w: number, _h: number)
 			return
 		end
 		local text = field.Text
-		if string.gsub(text, "%s", "") == "" then
+		if string.gsub(text, "[ \t\r\n]", "") == "" then
 			say(W.empty, C.dim)
 			return
 		end
@@ -65,7 +67,7 @@ function CouponWindow.build(body: Frame, ctx, w: number, _h: number)
 			use:setEnabled(true)
 			if ok and typeof(res) == "table" and res.ok then
 				field.Text = ""
-				say(Format.fill(W.got, { name = petName(res.pet) }), C.accent)
+				say(Format.fill(W.got, { name = petName(res.pet or res.mount) }), C.accent)
 				if ctx.couponGot then
 					ctx.couponGot(res) -- 가진 펫 · 탈것을 다시 읽는다(가방의 캐시 탭 · 폰의 단추 배치 목록)
 				end

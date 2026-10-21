@@ -1003,4 +1003,21 @@ function Bag.countIn(view, id: any): number
 	return n
 end
 
+-- 보낸 것(Bag.view)에서 그 아이템이 가방에 몇 개 더 들어가나(Bag.room과 같은 셈 — 수량 창이 「최대」를 정한다 · 2026-10-21)
+function Bag.roomInView(view, id: any): number
+	local def = Items.goods(id)
+	if not def or not view or not view[def.tab] then
+		return 0
+	end
+	return roomIn(view[def.tab], view.size or #view[def.tab], def)
+end
+-- 창고에 몇 개 더 들어가나(보낸 것의 store · storeSize에서)
+function Bag.storeRoomInView(view, id: any): number
+	local def = Items.goods(id)
+	if not def or not view or not view.store or not view.store[def.tab] then
+		return 0
+	end
+	return roomIn(view.store[def.tab], view.storeSize or #view.store[def.tab], def)
+end
+
 return Bag

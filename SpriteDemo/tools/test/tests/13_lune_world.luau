@@ -1622,7 +1622,9 @@ do
 	handlers.Move(pc, x1 + 200, hc.y, 1)
 	eq(hc.x, x1 + 200, "몸을 옮기는 스킬을 쓴 직후에는 멀리 간 자리도 받는다")
 	handlers.Move(pc, x1 + 400, hc.y, 1)
-	eq(hc.x, x1 + 200, "한 번 쓰면 한 번만(이어서 또 멀리 간 자리는 받지 않는다)")
+	-- (되돌려 보낼 때 서버가 아는 자리가 땅 속이면 가장 가까운 빈 자리로 꺼낸다 — 2026-10-21. 이 시험의 x1 + 200은 사냥터의 턱에 조금 걸려 2점 옮겨진다)
+	expect(hc.x ~= x1 + 400 and math.abs(hc.x - (x1 + 200)) <= 16, ("한 번 쓰면 한 번만(이어서 또 멀리 간 자리는 받지 않는다) — %s"):format(tostring(hc.x)))
+	expect(not req("ReplicatedStorage/shared/lune/sim/physics").solidBox(SCENES.scenes[sc.scene], hc.x, hc.y), "되돌려 보낸 자리는 땅 속이 아니다")
 	run(2)
 	hc.x = x1
 	hc.cds.ax_leap = nil

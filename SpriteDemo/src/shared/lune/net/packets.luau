@@ -45,7 +45,7 @@ local packets = {
 	StatReset = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 2 } }, -- 찍은 능력치를 모두 되돌린다(공짜 — 2026-10-21)
 	Coupon = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 1, Burst = 2 } }, -- 쿠폰 번호를 적었다 → { ok, why?, pet? }(2026-10-21 · 서버 modules/cash.luau의 CashServer.coupon)
 	-- 물건을 다룬다: 하는 일(equip · unequip · dismantle · buy · enhance · transfer · restore · grow · storeIn · storeOut)과 그 대상 둘(번호 · 부위 · 수 등)
-	Item = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any, t.any }, RateLimit = { PerSecond = 8, Burst = 12 } },
+	Item = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any, t.any }, RateLimit = { PerSecond = 12, Burst = 20 } }, -- (2026-10-21: 8 · 12 → 12 · 20 — 가방 · 상점에서 빠르게 연달아 누르면 넘쳐 버려졌다 · 일마다 서버가 다시 본다)
 	-- 파티: 하는 일(invite · accept · decline · leave)과 대상(초대할 사람의 번호)
 	Party = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 4, Burst = 6 } },
 	-- 퀘스트: 하는 일(accept · complete · drop)과 퀘스트 id — 받기와 돌려주기는 그 주민 앞에서만
@@ -64,7 +64,7 @@ local packets = {
 	-- 수정 틈 토벌(2026-10-16): "view" · "enter" 단계 — 돌려주는 값 { ok, why, left, clears } (world.luau의 onRift · 셈은 sim/rift.luau)
 	-- 탈것(2026-10-16): 그 사람(선장 · 뱃사공 · 승강장 일꾼 — 이름표) 앞에서 오른다 — 돌려주는 값 { ok, why, time, dest } (world.luau의 onSail · 셈은 sim/voyage.luau)
 	Sail = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 2, Burst = 4 } },
-	Rift = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } },
+	Rift = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } }, -- 셋째 = 던전에 파티로 들어가는가(2026-10-21)
 	-- 경매장(메이플 옥션 방식 — 메뉴에서 어디서나): "mine" 내 것(판매 · 완료 탭) · "browse" 분류의 목록과 시세(장부의 이름, 새로 고침) · "list" 올리기(탭, 칸, 수, { 개당 값, 시간 }) ·
 	--  "buy" 사기(장부, 줄, 수, 본 값) · "settle" 내 것 하나(번호, "take" 수령 · "collect" 대금 수령 · "back" 취소 / 반환 · "relist" 재등록) · "all" 모두 받기
 	--  돌려주는 값 { ok, why, msg, rows(목록) · trades(시세) · board, mine(내 것), used · max(판매 수), now } — server/lune/modules/world.luau의 onMarket · 셈은 sim/market.luau
@@ -78,7 +78,8 @@ local packets = {
 	-- 스마트폰의 단추 배치를 바꿨다: 같은 꼴(칸들 전체) — PC의 퀵슬롯과 따로 저장한다. 돌려주는 값 = 서버가 가진 배치
 	TouchSlots = { Kind = "Function", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 8 } },
 	-- 내 자리(도트)와 보는 쪽. 움직임은 클라이언트가 셈하고 서버는 말이 되는지만 본다.
-	Move = { Kind = "Event", Direction = "ClientToServer", Args = { t.number, t.number, t.dir }, RateLimit = { PerSecond = 20, Burst = 30 } },
+	--  넷째 = 그 자리가 어느 맵(방)의 것인가(2026-10-21 — 서버가 아는 맵과 다르면 받지 않는다: 다른 맵의 자리를 이 맵의 자리로 믿어 땅 속으로 되돌려 보낼 수 있었다)
+	Move = { Kind = "Event", Direction = "ClientToServer", Args = { t.number, t.number, t.dir, t.any }, RateLimit = { PerSecond = 20, Burst = 30 } },
 	-- 문으로 다른 장면에 간다. 돌려주는 값 { scene, x, y, room } 또는 nil(문 앞이 아님)
 	Travel = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 2, Burst = 3 } },
 	-- 튜토리얼 「달빛 꿈」(2026-10-14): "done" n = 화면만 아는 n째 미션을 끝냈다(돌려주는 값 = 내 튜토리얼 상태) · "skip" = 꿈을 건너뛴다(이 계정의 캐릭터가 한 번 끝낸 뒤에만 — 돌려주는 값은 Travel과 같다)
@@ -128,6 +129,7 @@ local packets = {
 	Shot = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 { id, x, y, dir, speed, range, kind(쏜 졸개의 종류 — 제 그림이 있는 것은 그 그림으로 날아간다) }" },
 	MobCast = { Kind = "Event", Direction = "ServerToClient", Doc = "몬스터의 마법이 뜸 { id, kind(쓴 몬스터의 종류), x, y, dir(쓴 몬스터가 보던 쪽 — 앞으로 뻗는 마법은 그쪽으로 그린다) } — 그 종류의 마법 그림(cast)이 그 자리에서 한 번 돈다. 맞는 것은 서버가 예고 뒤에 따로 알린다(Hurt)" },
 	ShotEnd = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 번호" },
+	Megaphone = { Kind = "Event", Direction = "ServerToClient", Doc = "관리자의 확성기(모든 서버의 모두에게 — 2026-10-21): 글 — 화면 위 큰 알림 「공지」 + 채팅 알림 글" },
 	Sold = { Kind = "Event", Direction = "ServerToClient", Doc = "경매장에 올린 내 물건이 팔렸다 { name(물건 이름), n(팔린 수) } — 획득 알림 한 줄 · 「경매」 단추의 점(2026-10-18)" },
 	Elite = { Kind = "Event", Direction = "ServerToClient", Doc = "사냥터 정예가 나옴 { room(그 맵), mob(졸개 번호), kind, x · y(나온 자리 — 그 자리에 분홍 기운이 솟는다 · 높이 — 그 자리로 옮겨 그린다) } — 화면 위 가운데에 알림(2026-10-18)" },
 	Burst = { Kind = "Event", Direction = "ServerToClient", Doc = "폭탄병이 터짐 { mob, x, y }" },

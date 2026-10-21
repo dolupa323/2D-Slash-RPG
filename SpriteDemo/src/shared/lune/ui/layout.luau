@@ -49,6 +49,7 @@ L.SKILLS = D.skills -- 스킬 칸: 두 줄 x 여섯. 칸 위에 키 딱지(높�
 L.MENU = D.menu -- 창을 여는 단추: 여덟까지(row의 차례 + 「메뉴」), 오른쪽 끝에 붙여. 그림 아래에 이름(labels = 칸에 맞춘 짧은 이름)
 L.PARTY = D.party -- 파티원 칸: 한 사람 = 이름 한 줄 + 가는 체력 줄. ask = 초대 알림(위쪽 가운데)
 L.DEATH = D.death -- 쓰러졌을 때 묻는 상자(위쪽 가운데): 제목 · 묻는 글 · 안내 · 단추 하나
+L.COUNT = D.count -- 수량 창(화면 가운데 — 2026-10-21): 묻는 글 · [그림] 이름 · [−] [수량 칸] [+] [최대] · 범위 · 합계 · 「사기 · 취소」
 L.QUEST = D.quest -- 퀘스트 알리미: 이름 한 줄(본문 글씨) · 할 일 한 줄(작은 글씨) · 퀘스트 사이
 L.TAG = D.tag -- 이름표: 한 줄의 높이(쌓을 때) · 발밑에서 아래로 띄우는 만큼 · 가장 넓을 때
 L.MOBBAR = D.mobBar -- 졸개의 체력 띠: 크기(화면 틀의 점) · 발밑에서 위로(게임의 도트)
@@ -107,6 +108,7 @@ L.AUCTION = D.auction -- 경매장(넓은 창): 탭 셋 · 분류 단추 · 목�
 L.CINE = D.cine -- 퀘스트 연출(장면 — 2026-10-15): 장의 이름 · 보스의 이름 · 종이 · 「건너뛰기」의 자리(공방 js/lune/design/ui.js의 UILAYOUT.cine)
 L.DAILY = D.daily -- 일일 의뢰: 머리글(top) 아래 의뢰마다 한 칸(row — 맵의 이름 · 의뢰의 이름 · 오른쪽 단추 btnW · 진행 띠 barH), 가르는 줄 아래 보상 두 줄(payRow — 이름표 labelW)
 L.ATTEND = D.attend -- 출석(2026-10-15): 머리글(top) · 칸 cols x rows(cell · gap) · 가르는 줄 아래(lineY) 받을 것 한 줄(rowH) · 안내와 「받기」(btnW)
+L.DUNGEON = D.dungeon -- 던전 창(2026-10-21 — 수정 거울숲): 이름 · 오늘 · 레벨 · 글 · 완료 보상 · 안내 · [혼자 입장] [파티 입장] · 까닭(portalScale · portalLift = 던전의 문의 포탈 빛)
 L.RIFT = D.rift -- 수정 틈 토벌(2026-10-16): 머리글(top) 아래 단계마다 한 칸(row — 이름 · 「입장」 btnW · 몬스터 · 보상) · 아래 안내(footY)
 L.RIFT_HUD = D.riftHud -- 토벌 중 화면 위 가운데의 판(w x h · y)
 L.RIFT_END = D.riftEnd -- 토벌이 끝났을 때 가운데의 판(w · 줄 row · pad)
@@ -158,6 +160,20 @@ function L.touchChooser(n: number, uiH: number)
 	local scroll = contentH > viewH
 	local listW = K.cols * K.cell + (K.cols - 1) * K.gap
 	return { w = K.pad * 2 + listW + (if scroll then K.bar + K.gap else 0), h = K.titleH + viewH + K.footH, viewH = viewH, contentH = contentH, rowH = rowH, scroll = scroll }
+end
+-- 판이 칸 단추를 덮지 않게(2026-10-21 — 점프 · 상호작용도 끌어 옮기는 칸 단추가 되었다: 왼쪽 아래의 상호작용 단추를 판이 덮으면 끌 수 없다):
+--  판과 가로가 겹치는 칸 단추가 있으면 판은 그 단추의 위 끝(K.gap 위)에서 끝난다 — 넘치는 줄은 밀어서 본다.
+--  uiH = 화면 틀의 높이 · inset = 왼쪽 위의 Roblox 단추가 가리는 높이(판은 그만큼 내려 선다) · spots = 스마트폰 단추의 자리(UI.touch — 게임 도트) · ratio = 게임 도트 하나가 화면 틀의 몇 점인가
+function L.touchChooserFit(n: number, uiH: number, inset: number, spots, ratio: number)
+	local K = L.TOUCHCHOOSER
+	local widest = K.pad * 2 + K.cols * K.cell + (K.cols - 1) * K.gap + K.bar + K.gap -- 밀기 막대까지 든 폭
+	local limit = uiH - inset
+	for _, t in spots do
+		if t.slot and t.x * ratio < K.x + widest + K.gap then
+			limit = math.min(limit, math.floor(t.y * ratio) - K.gap - inset + K.bottom)
+		end
+	end
+	return L.touchChooser(n, limit)
 end
 
 -- 스마트폰의 메뉴(「메뉴」 단추를 누르면 뜨는 창 이름의 단추들). 사용자 2026-10-13(폰에서 해 보고): "메뉴탭 열었을때 스크롤이 되어야해 모든메뉴를 접근할수가 없다"

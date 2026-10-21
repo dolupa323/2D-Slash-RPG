@@ -6301,7 +6301,7 @@ end
 MODULES['ReplicatedStorage/shared/lune/data/assets.generated'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/export_lune_game.mjs).
 -- 그림 파일 이름 → 로블록스 에셋 id. 비어 있으면 아직 올리지 않았거나 그림이 바뀐 것이다(tools/write_lune_ids.mjs).
-return { ["chars_1.png"] = "rbxassetid://139441060788562", ["chars_2.png"] = "rbxassetid://130889718297355", ["chars_3.png"] = "rbxassetid://118737909005746", ["chars_mask_1.png"] = "rbxassetid://126243488570499", ["chars_mask_2.png"] = "rbxassetid://83581507329375", ["chars_mask_3.png"] = "rbxassetid://118174691333755", ["sky.png"] = "rbxassetid://132220205436830", ["far.png"] = "rbxassetid://70389067240845", ["near_hunt.png"] = "rbxassetid://72094974796206", ["ground_hunt_1.png"] = "rbxassetid://124122137516265", ["props_hunt.png"] = "rbxassetid://126214212380510", ["near_town.png"] = "rbxassetid://135098639271756", ["ground_town_1.png"] = "rbxassetid://125524698830662", ["props_town.png"] = "rbxassetid://136592239384770", ["villagers.png"] = "rbxassetid://96495918767937", ["back_in_storage.png"] = "rbxassetid://136086571022108", ["back_in_store.png"] = "rbxassetid://104786944273081", ["back_in_elder.png"] = "rbxassetid://108350436672963", ["back_in_forge.png"] = "rbxassetid://74669737693063", ["back_in_hall.png"] = "rbxassetid://112774948694614", ["back_in_shrine.png"] = "rbxassetid://113277212188271", ["back_in_cellar.png"] = "rbxassetid://128001628966145", ["ground_r1a1_1.png"] = "rbxassetid://83422870736818", ["props_r1a1.png"] = "rbxassetid://92002234447597", ["ground_dream_1.png"] = "rbxassetid://86568380381663", ["ground_r1af_1.png"] = "rbxassetid://103216651480847", ["ground_r1a3_1.png"] = "rbxassetid://124425202970650", ["ground_r1a4_1.png"] = "rbxassetid://119900898562100", ["far_r1b1.png"] = "rbxassetid://135605898532339", ["near_r1b1.png"] = "rbxassetid://100112472273007", ["ground_r1b1_1.png"] = "rbxassetid://131538873933480", ["ground_r1b2_1.png"] = "rbxassetid://125436913697859", ["props_r1b2.png"] = "rbxassetid://83042854732492", ["ground_r1bv_1.png"] = "rbxassetid://136234171407413", ["far_r1b3.png"] = "rbxassetid://118137839897783", ["near_r1b3.png"] = "rbxassetid://78384160036601", ["ground_r1b3_1.png"] = "rbxassetid://128714839542604", ["far_r1cc.png"] = "rbxassetid://126898606308718", ["near_r1cc.png"] = "rbxassetid://111427056380401", ["ground_r1cc_1.png"] = "rbxassetid://140563003927168", ["wall_r1c1.png"] = "rbxassetid://97274081468167", ["ground_r1c1_1.png"] = "rbxassetid://135881037967181", ["ground_r1c2_1.png"] = "rbxassetid://105408422281804", ["ground_r1c3_1.png"] = "rbxassetid://135881037967181", ["far_r2a1.png"] = "rbxassetid://71001089643339", ["near_r2a1.png"] = "rbxassetid://108372695232877", ["ground_r2a1_1.png"] = "rbxassetid://97783772162382", ["props_r2a1.png"] = "rbxassetid://71716194623912", ["ground_r2a2_1.png"] = "rbxassetid://127167083533193", ["ground_r2af_1.png"] = "rbxassetid://119700029947186", ["ground_r2a3_1.png"] = "rbxassetid://96467128886126", ["ground_r2a4_1.png"] = "rbxassetid://91945530040703", ["far_r2b1.png"] = "rbxassetid://105088993635856", ["near_r2b1.png"] = "rbxassetid://129053830092616", ["ground_r2b1_1.png"] = "rbxassetid://85390131222251", ["ground_r2b2_1.png"] = "rbxassetid://76022564274420", ["ground_r2b3_1.png"] = "rbxassetid://129600416411291", ["ground_r2bs_1.png"] = "rbxassetid://74893044822636", ["ground_r2b4_1.png"] = "rbxassetid://132464048359953", ["ground_r2c1_1.png"] = "rbxassetid://128991620683760", ["props_r2c1.png"] = "rbxassetid://81470874675773", ["wall_r2c2.png"] = "rbxassetid://103202435470997", ["ground_r2c2_1.png"] = "rbxassetid://73281231351055", ["ground_r2c3_1.png"] = "rbxassetid://132180829815320", ["far_ct.png"] = "rbxassetid://97327830237568", ["near_ct.png"] = "rbxassetid://123959722179055", ["ground_ct_1.png"] = "rbxassetid://76598854780556", ["ground_ct_2.png"] = "rbxassetid://75898659253993", ["ground_ct_3.png"] = "rbxassetid://122444051043555", ["props_ct.png"] = "rbxassetid://97653285658066", ["ladder.png"] = "rbxassetid://97882390366255", ["far_port.png"] = "rbxassetid://123435927909095", ["near_port.png"] = "rbxassetid://109231585638799", ["ground_port_1.png"] = "rbxassetid://96286569225918", ["ground_port_2.png"] = "rbxassetid://93446056838006", ["props_port.png"] = "rbxassetid://118209609634733", ["wall_r3a1.png"] = "rbxassetid://129110072342137", ["ground_r3a1_1.png"] = "rbxassetid://87088338783793", ["ground_r3a2_1.png"] = "rbxassetid://110586607494872", ["ground_r3ah_1.png"] = "rbxassetid://104190957152391", ["ground_r3a3_1.png"] = "rbxassetid://121121631436780", ["ground_r3a4_1.png"] = "rbxassetid://78659249870034", ["ground_r3b1_1.png"] = "rbxassetid://128556194381664", ["ground_r3b2_1.png"] = "rbxassetid://72136610127139", ["wall_r3t.png"] = "rbxassetid://83371466762190", ["ground_r3t_1.png"] = "rbxassetid://109803440895253", ["ground_r3c1_1.png"] = "rbxassetid://107949167237091", ["ground_r3c2_1.png"] = "rbxassetid://90516991888429", ["ground_r3cs_1.png"] = "rbxassetid://71960457769945", ["ground_r3c3_1.png"] = "rbxassetid://135669932767298", ["far_r3d1.png"] = "rbxassetid://114699110116551", ["near_r3d1.png"] = "rbxassetid://137859042761236", ["ground_r3d1_1.png"] = "rbxassetid://131514299450626", ["props_r3d1.png"] = "rbxassetid://101664768791520", ["ground_r3d2_1.png"] = "rbxassetid://94076994673843", ["ground_r3d3_1.png"] = "rbxassetid://89817150928070", ["far_r4a1.png"] = "rbxassetid://98546761697916", ["near_r4a1.png"] = "rbxassetid://86561589617474", ["ground_r4a1_1.png"] = "rbxassetid://108280608888790", ["props_r4a1.png"] = "rbxassetid://100270543281385", ["ground_r4a2_1.png"] = "rbxassetid://85486681117642", ["ground_r4a3_1.png"] = "rbxassetid://96575068202180", ["ground_r4a4_1.png"] = "rbxassetid://136066894609962", ["wall_r4b1.png"] = "rbxassetid://98532234413640", ["ground_r4b1_1.png"] = "rbxassetid://88887931673327", ["ground_r4b2_1.png"] = "rbxassetid://79877230107216", ["wall_r4b3.png"] = "rbxassetid://107012347372334", ["ground_r4b3_1.png"] = "rbxassetid://83501151151882", ["ground_r4bh_1.png"] = "rbxassetid://102429194534326", ["ground_r4b4_1.png"] = "rbxassetid://106845009391566", ["wall_r4c1.png"] = "rbxassetid://71375264584180", ["ground_r4c1_1.png"] = "rbxassetid://91599845869889", ["wall_r4c2.png"] = "rbxassetid://88127748464340", ["ground_r4c2_1.png"] = "rbxassetid://129647369434522", ["props_r4c2.png"] = "rbxassetid://93139914776457", ["ground_r4ch_1.png"] = "rbxassetid://124784973350172", ["ground_r4c3_1.png"] = "rbxassetid://123743019321609", ["wall_r4d1.png"] = "rbxassetid://123616397829506", ["ground_r4d1_1.png"] = "rbxassetid://72127690724163", ["ground_r4d2_1.png"] = "rbxassetid://131406388678943", ["far_seat.png"] = "rbxassetid://120679010601692", ["near_seat.png"] = "rbxassetid://100563375056858", ["ground_seat_1.png"] = "rbxassetid://95415409535077", ["props_seat.png"] = "rbxassetid://126707896892610", ["ground_sea1_1.png"] = "rbxassetid://116609311030052", ["ground_sea2_1.png"] = "rbxassetid://93028389629730", ["ground_r3b3_1.png"] = "rbxassetid://103749580294335", ["ground_r3b4_1.png"] = "rbxassetid://122662700242947", ["ground_r4d3_1.png"] = "rbxassetid://80335588821204", ["ground_r4e1_1.png"] = "rbxassetid://71537759534162", ["wall_sea5.png"] = "rbxassetid://121989276042041", ["ground_sea5_1.png"] = "rbxassetid://120770918735711", ["ground_sea6_1.png"] = "rbxassetid://82216607848324", ["ground_r1c4_1.png"] = "rbxassetid://98020574553503", ["ground_r2c4_1.png"] = "rbxassetid://115753437369109", ["ground_r3d4_1.png"] = "rbxassetid://118468232445975", ["ground_r4d4_1.png"] = "rbxassetid://117778839393938", ["ground_sea8_1.png"] = "rbxassetid://100524578086246", ["ground_r4es_1.png"] = "rbxassetid://125574607301148", ["ground_r1bl_1.png"] = "rbxassetid://102105250491349", ["ground_r2bl_1.png"] = "rbxassetid://94977117622940", ["ground_r2cl_1.png"] = "rbxassetid://120682725194519", ["ground_r3al_1.png"] = "rbxassetid://84627906941424", ["ground_r3cl_1.png"] = "rbxassetid://81455567612452", ["ground_r4bl_1.png"] = "rbxassetid://103887471752415", ["ground_r4cl_1.png"] = "rbxassetid://133911299211715", ["ground_r4dl_1.png"] = "rbxassetid://78653230925094", ["ground_r1bh_1.png"] = "rbxassetid://115812173236187", ["ground_r2ah_1.png"] = "rbxassetid://118410034190596", ["ground_r2bh_1.png"] = "rbxassetid://132009986769568", ["ground_r3bh_1.png"] = "rbxassetid://88949438100971", ["ground_r4ah_1.png"] = "rbxassetid://92032601099726", ["ground_r4dh_1.png"] = "rbxassetid://139731007351262", ["ground_sea3_1.png"] = "rbxassetid://73022952797720", ["ground_seaf_1.png"] = "rbxassetid://136179698367792", ["ground_sea4_1.png"] = "rbxassetid://133488858131653", ["ground_sea7_1.png"] = "rbxassetid://124740971075210", ["back_ct_store.png"] = "rbxassetid://126366947246540", ["back_ct_smith.png"] = "rbxassetid://136337303330969", ["back_ct_storage.png"] = "rbxassetid://134573437628573", ["back_ct_auction.png"] = "rbxassetid://111002919148565", ["back_ct_office.png"] = "rbxassetid://130229467844565", ["back_ct_harbor.png"] = "rbxassetid://96974337406579", ["back_ct_inn.png"] = "rbxassetid://110896398622871", ["back_ct_fisher.png"] = "rbxassetid://128557373754841", ["back_ct_stable.png"] = "rbxassetid://110252516764726", ["back_ct_spice.png"] = "rbxassetid://117260792010676", ["back_ct_guardpost.png"] = "rbxassetid://77243987648482", ["back_ct_musician.png"] = "rbxassetid://117717247885748", ["back_ct_flower.png"] = "rbxassetid://111657630555738", ["back_ct_oldhouse.png"] = "rbxassetid://98177958007897", ["back_ct_scribe.png"] = "rbxassetid://91218960586498", ["back_ct_maid.png"] = "rbxassetid://129403102377941", ["back_ct_castle.png"] = "rbxassetid://83503122707807", ["back_ct_terrace.png"] = "rbxassetid://82185564261733", ["vista_ct_terrace.png"] = "rbxassetid://72001134778535", ["back_ct_tower.png"] = "rbxassetid://111423026181041", ["sea_ship_out.png"] = "rbxassetid://80754181448263", ["ship_ship_out.png"] = "rbxassetid://92462106500365", ["sea_ship_home.png"] = "rbxassetid://126176094324469", ["ship_ship_home.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_out.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_out.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_home.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_home.png"] = "rbxassetid://102557987604449", ["sea_air_out.png"] = "rbxassetid://112775081132374", ["ship_air_out.png"] = "rbxassetid://108949678734397", ["sea_air_home.png"] = "rbxassetid://112775081132374", ["ship_air_home.png"] = "rbxassetid://108949678734397", ["worldmap_r1.png"] = "rbxassetid://102843140318075", ["worldmap_city.png"] = "rbxassetid://122109754685398", ["worldmap_r2.png"] = "rbxassetid://100140236436154", ["worldmap_sea.png"] = "rbxassetid://92576107471427", ["worldmap_r3.png"] = "rbxassetid://139284205415304", ["worldmap_r4.png"] = "rbxassetid://140105596121121", ["ui_kit.png"] = "rbxassetid://130784972332188", ["font_small_1.png"] = "rbxassetid://105450659975716", ["font_small_2.png"] = "rbxassetid://107436252829336", ["font_small_o_1.png"] = "rbxassetid://97414893618224", ["font_small_o_2.png"] = "rbxassetid://103679168006398", ["font_body_o_1.png"] = "rbxassetid://111645782980424", ["font_body_o_2.png"] = "rbxassetid://83949705319808", ["font_body_o_3.png"] = "rbxassetid://122937040402111", ["portal.png"] = "rbxassetid://73946472428073", ["title_sky.png"] = "rbxassetid://127573656029589", ["title_clouds.png"] = "rbxassetid://89882326454014", ["title_ridge.png"] = "rbxassetid://129071355183212", ["title_logo.png"] = "rbxassetid://114259324331432", ["cine_mural_axion.png"] = "rbxassetid://75681092154576", ["cine_mural_riven.png"] = "rbxassetid://99331828874405", ["cine_mural_reaper.png"] = "rbxassetid://76473369861673", ["cine_mural_mooni.png"] = "rbxassetid://112784522891949", ["cine_mural_salamander.png"] = "rbxassetid://106361966737710", ["shop_bg.png"] = "rbxassetid://108894476720705" }
+return { ["chars_1.png"] = "rbxassetid://139441060788562", ["chars_2.png"] = "rbxassetid://130889718297355", ["chars_3.png"] = "rbxassetid://118737909005746", ["chars_mask_1.png"] = "rbxassetid://126243488570499", ["chars_mask_2.png"] = "rbxassetid://83581507329375", ["chars_mask_3.png"] = "rbxassetid://118174691333755", ["sky.png"] = "rbxassetid://132220205436830", ["far.png"] = "rbxassetid://70389067240845", ["near_hunt.png"] = "rbxassetid://72094974796206", ["ground_hunt_1.png"] = "rbxassetid://124122137516265", ["props_hunt.png"] = "rbxassetid://126214212380510", ["near_town.png"] = "rbxassetid://135098639271756", ["ground_town_1.png"] = "rbxassetid://125524698830662", ["props_town.png"] = "rbxassetid://136592239384770", ["villagers.png"] = "rbxassetid://96495918767937", ["back_in_storage.png"] = "rbxassetid://136086571022108", ["back_in_store.png"] = "rbxassetid://104786944273081", ["back_in_elder.png"] = "rbxassetid://108350436672963", ["back_in_forge.png"] = "rbxassetid://74669737693063", ["back_in_hall.png"] = "rbxassetid://112774948694614", ["back_in_shrine.png"] = "rbxassetid://113277212188271", ["back_in_cellar.png"] = "rbxassetid://128001628966145", ["ground_r1a1_1.png"] = "rbxassetid://83422870736818", ["props_r1a1.png"] = "rbxassetid://92002234447597", ["ground_dream_1.png"] = "rbxassetid://86568380381663", ["ground_r1af_1.png"] = "rbxassetid://103216651480847", ["ground_r1a3_1.png"] = "rbxassetid://124425202970650", ["ground_r1a4_1.png"] = "rbxassetid://119900898562100", ["far_r1b1.png"] = "rbxassetid://135605898532339", ["near_r1b1.png"] = "rbxassetid://100112472273007", ["ground_r1b1_1.png"] = "rbxassetid://131538873933480", ["ground_r1b2_1.png"] = "rbxassetid://125436913697859", ["props_r1b2.png"] = "rbxassetid://83042854732492", ["ground_r1bv_1.png"] = "rbxassetid://136234171407413", ["far_r1b3.png"] = "rbxassetid://118137839897783", ["near_r1b3.png"] = "rbxassetid://78384160036601", ["ground_r1b3_1.png"] = "rbxassetid://128714839542604", ["far_r1cc.png"] = "rbxassetid://126898606308718", ["near_r1cc.png"] = "rbxassetid://111427056380401", ["ground_r1cc_1.png"] = "rbxassetid://140563003927168", ["wall_r1c1.png"] = "rbxassetid://97274081468167", ["ground_r1c1_1.png"] = "rbxassetid://135881037967181", ["ground_r1c2_1.png"] = "rbxassetid://105408422281804", ["ground_r1c3_1.png"] = "rbxassetid://135881037967181", ["far_r2a1.png"] = "rbxassetid://71001089643339", ["near_r2a1.png"] = "rbxassetid://108372695232877", ["ground_r2a1_1.png"] = "rbxassetid://97783772162382", ["props_r2a1.png"] = "rbxassetid://71040232429267", ["ground_r2a2_1.png"] = "rbxassetid://127167083533193", ["ground_r2af_1.png"] = "rbxassetid://119700029947186", ["ground_r2a3_1.png"] = "rbxassetid://96467128886126", ["ground_r2a4_1.png"] = "rbxassetid://91945530040703", ["far_r2b1.png"] = "rbxassetid://105088993635856", ["near_r2b1.png"] = "rbxassetid://129053830092616", ["ground_r2b1_1.png"] = "rbxassetid://85390131222251", ["ground_r2b2_1.png"] = "rbxassetid://76022564274420", ["ground_r2b3_1.png"] = "rbxassetid://129600416411291", ["ground_r2bs_1.png"] = "rbxassetid://74893044822636", ["ground_r2b4_1.png"] = "rbxassetid://132464048359953", ["ground_r2c1_1.png"] = "rbxassetid://128991620683760", ["props_r2c1.png"] = "rbxassetid://81470874675773", ["wall_r2c2.png"] = "rbxassetid://103202435470997", ["ground_r2c2_1.png"] = "rbxassetid://73281231351055", ["ground_r2c3_1.png"] = "rbxassetid://132180829815320", ["far_ct.png"] = "rbxassetid://97327830237568", ["near_ct.png"] = "rbxassetid://123959722179055", ["ground_ct_1.png"] = "rbxassetid://76598854780556", ["ground_ct_2.png"] = "rbxassetid://75898659253993", ["ground_ct_3.png"] = "rbxassetid://122444051043555", ["props_ct.png"] = "rbxassetid://97653285658066", ["ladder.png"] = "rbxassetid://97882390366255", ["far_port.png"] = "rbxassetid://123435927909095", ["near_port.png"] = "rbxassetid://109231585638799", ["ground_port_1.png"] = "rbxassetid://96286569225918", ["ground_port_2.png"] = "rbxassetid://93446056838006", ["props_port.png"] = "rbxassetid://118209609634733", ["wall_r3a1.png"] = "rbxassetid://129110072342137", ["ground_r3a1_1.png"] = "rbxassetid://87088338783793", ["ground_r3a2_1.png"] = "rbxassetid://110586607494872", ["ground_r3ah_1.png"] = "rbxassetid://104190957152391", ["ground_r3a3_1.png"] = "rbxassetid://121121631436780", ["ground_r3a4_1.png"] = "rbxassetid://78659249870034", ["ground_r3b1_1.png"] = "rbxassetid://128556194381664", ["ground_r3b2_1.png"] = "rbxassetid://72136610127139", ["wall_r3t.png"] = "rbxassetid://83371466762190", ["ground_r3t_1.png"] = "rbxassetid://109803440895253", ["ground_r3c1_1.png"] = "rbxassetid://107949167237091", ["ground_r3c2_1.png"] = "rbxassetid://90516991888429", ["ground_r3cs_1.png"] = "rbxassetid://71960457769945", ["ground_r3c3_1.png"] = "rbxassetid://135669932767298", ["far_r3d1.png"] = "rbxassetid://114699110116551", ["near_r3d1.png"] = "rbxassetid://137859042761236", ["ground_r3d1_1.png"] = "rbxassetid://131514299450626", ["props_r3d1.png"] = "rbxassetid://101664768791520", ["ground_r3d2_1.png"] = "rbxassetid://94076994673843", ["ground_r3d3_1.png"] = "rbxassetid://89817150928070", ["far_r4a1.png"] = "rbxassetid://98546761697916", ["near_r4a1.png"] = "rbxassetid://86561589617474", ["ground_r4a1_1.png"] = "rbxassetid://108280608888790", ["props_r4a1.png"] = "rbxassetid://100270543281385", ["ground_r4a2_1.png"] = "rbxassetid://85486681117642", ["ground_r4a3_1.png"] = "rbxassetid://96575068202180", ["ground_r4a4_1.png"] = "rbxassetid://136066894609962", ["wall_r4b1.png"] = "rbxassetid://98532234413640", ["ground_r4b1_1.png"] = "rbxassetid://88887931673327", ["ground_r4b2_1.png"] = "rbxassetid://79877230107216", ["wall_r4b3.png"] = "rbxassetid://107012347372334", ["ground_r4b3_1.png"] = "rbxassetid://83501151151882", ["ground_r4bh_1.png"] = "rbxassetid://102429194534326", ["ground_r4b4_1.png"] = "rbxassetid://106845009391566", ["wall_r4c1.png"] = "rbxassetid://71375264584180", ["ground_r4c1_1.png"] = "rbxassetid://91599845869889", ["wall_r4c2.png"] = "rbxassetid://88127748464340", ["ground_r4c2_1.png"] = "rbxassetid://129647369434522", ["props_r4c2.png"] = "rbxassetid://93139914776457", ["ground_r4ch_1.png"] = "rbxassetid://124784973350172", ["ground_r4c3_1.png"] = "rbxassetid://123743019321609", ["wall_r4d1.png"] = "rbxassetid://123616397829506", ["ground_r4d1_1.png"] = "rbxassetid://72127690724163", ["ground_r4d2_1.png"] = "rbxassetid://131406388678943", ["far_seat.png"] = "rbxassetid://120679010601692", ["near_seat.png"] = "rbxassetid://100563375056858", ["ground_seat_1.png"] = "rbxassetid://95415409535077", ["props_seat.png"] = "rbxassetid://126707896892610", ["ground_sea1_1.png"] = "rbxassetid://116609311030052", ["ground_sea2_1.png"] = "rbxassetid://93028389629730", ["ground_r3b3_1.png"] = "rbxassetid://103749580294335", ["ground_r3b4_1.png"] = "rbxassetid://122662700242947", ["ground_r4d3_1.png"] = "rbxassetid://80335588821204", ["ground_r4e1_1.png"] = "rbxassetid://71537759534162", ["wall_sea5.png"] = "rbxassetid://121989276042041", ["ground_sea5_1.png"] = "rbxassetid://120770918735711", ["ground_sea6_1.png"] = "rbxassetid://82216607848324", ["ground_r1c4_1.png"] = "rbxassetid://98020574553503", ["ground_r2c4_1.png"] = "rbxassetid://115753437369109", ["ground_r3d4_1.png"] = "rbxassetid://118468232445975", ["ground_r4d4_1.png"] = "rbxassetid://117778839393938", ["ground_sea8_1.png"] = "rbxassetid://100524578086246", ["ground_r4es_1.png"] = "rbxassetid://125574607301148", ["ground_r1bl_1.png"] = "rbxassetid://102105250491349", ["ground_r2bl_1.png"] = "rbxassetid://94977117622940", ["ground_r2cl_1.png"] = "rbxassetid://120682725194519", ["ground_r3al_1.png"] = "rbxassetid://84627906941424", ["ground_r3cl_1.png"] = "rbxassetid://81455567612452", ["ground_r4bl_1.png"] = "rbxassetid://103887471752415", ["ground_r4cl_1.png"] = "rbxassetid://133911299211715", ["ground_r4dl_1.png"] = "rbxassetid://78653230925094", ["ground_r1bh_1.png"] = "rbxassetid://115812173236187", ["ground_r2ah_1.png"] = "rbxassetid://118410034190596", ["ground_r2bh_1.png"] = "rbxassetid://132009986769568", ["ground_r3bh_1.png"] = "rbxassetid://88949438100971", ["ground_r4ah_1.png"] = "rbxassetid://92032601099726", ["ground_r4dh_1.png"] = "rbxassetid://139731007351262", ["ground_sea3_1.png"] = "rbxassetid://73022952797720", ["ground_seaf_1.png"] = "rbxassetid://136179698367792", ["ground_sea4_1.png"] = "rbxassetid://133488858131653", ["ground_sea7_1.png"] = "rbxassetid://124740971075210", ["back_ct_store.png"] = "rbxassetid://126366947246540", ["back_ct_smith.png"] = "rbxassetid://136337303330969", ["back_ct_storage.png"] = "rbxassetid://134573437628573", ["back_ct_auction.png"] = "rbxassetid://111002919148565", ["back_ct_office.png"] = "rbxassetid://130229467844565", ["back_ct_harbor.png"] = "rbxassetid://96974337406579", ["back_ct_inn.png"] = "rbxassetid://110896398622871", ["back_ct_fisher.png"] = "rbxassetid://128557373754841", ["back_ct_stable.png"] = "rbxassetid://110252516764726", ["back_ct_spice.png"] = "rbxassetid://117260792010676", ["back_ct_guardpost.png"] = "rbxassetid://77243987648482", ["back_ct_musician.png"] = "rbxassetid://117717247885748", ["back_ct_flower.png"] = "rbxassetid://111657630555738", ["back_ct_oldhouse.png"] = "rbxassetid://98177958007897", ["back_ct_scribe.png"] = "rbxassetid://91218960586498", ["back_ct_maid.png"] = "rbxassetid://129403102377941", ["back_ct_castle.png"] = "rbxassetid://83503122707807", ["back_ct_terrace.png"] = "rbxassetid://82185564261733", ["vista_ct_terrace.png"] = "rbxassetid://72001134778535", ["back_ct_tower.png"] = "rbxassetid://111423026181041", ["sea_ship_out.png"] = "rbxassetid://80754181448263", ["ship_ship_out.png"] = "rbxassetid://92462106500365", ["sea_ship_home.png"] = "rbxassetid://126176094324469", ["ship_ship_home.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_out.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_out.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_home.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_home.png"] = "rbxassetid://102557987604449", ["sea_air_out.png"] = "rbxassetid://112775081132374", ["ship_air_out.png"] = "rbxassetid://108949678734397", ["sea_air_home.png"] = "rbxassetid://112775081132374", ["ship_air_home.png"] = "rbxassetid://108949678734397", ["worldmap_r1.png"] = "rbxassetid://102843140318075", ["worldmap_city.png"] = "rbxassetid://122109754685398", ["worldmap_r2.png"] = "rbxassetid://100140236436154", ["worldmap_sea.png"] = "rbxassetid://92576107471427", ["worldmap_r3.png"] = "rbxassetid://139284205415304", ["worldmap_r4.png"] = "rbxassetid://140105596121121", ["ui_kit.png"] = "rbxassetid://137411895578654", ["font_small_1.png"] = "rbxassetid://105450659975716", ["font_small_2.png"] = "rbxassetid://107436252829336", ["font_small_o_1.png"] = "rbxassetid://97414893618224", ["font_small_o_2.png"] = "rbxassetid://103679168006398", ["font_body_o_1.png"] = "rbxassetid://111645782980424", ["font_body_o_2.png"] = "rbxassetid://83949705319808", ["font_body_o_3.png"] = "rbxassetid://122937040402111", ["portal.png"] = "rbxassetid://73946472428073", ["title_sky.png"] = "rbxassetid://127573656029589", ["title_clouds.png"] = "rbxassetid://89882326454014", ["title_ridge.png"] = "rbxassetid://129071355183212", ["title_logo.png"] = "rbxassetid://114259324331432", ["cine_mural_axion.png"] = "rbxassetid://75681092154576", ["cine_mural_riven.png"] = "rbxassetid://99331828874405", ["cine_mural_reaper.png"] = "rbxassetid://76473369861673", ["cine_mural_mooni.png"] = "rbxassetid://112784522891949", ["cine_mural_salamander.png"] = "rbxassetid://106361966737710", ["shop_bg.png"] = "rbxassetid://108894476720705" }
 
 end
 MODULES['ReplicatedStorage/shared/lune/data/attend.generated'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
@@ -6631,7 +6631,7 @@ return {
 			gap = 14,
 			panelPad = 10,
 			floor = 70,
-			minLoad = 0.5,
+			minLoad = 0.3,
 			key = "Backquote",
 			words = { title = "달빛 상점", leave = "나가기", loading = "달빛 상점으로 가는 중", back = "돌아가는 중", townOnly = "달빛 상점은 마을에서만 들어갈 수 있다", preview = "미리보기", hint = "펫 · 탈것을 누르면 여기에서 본다", mine = "보유" },
 		},
@@ -11005,6 +11005,82 @@ return {
 				},
 			},
 		},
+		mount_book = {
+			name = "떠도는 책",
+			fw = 41,
+			fh = 37,
+			ox = 21,
+			oy = 37,
+			size = 1.2,
+			clips = {
+				idle = {
+					fps = 6,
+					frames = {
+						{ 2, 273, 992, 34, 29, 4, 5 },
+						{ 3, 407, 33, 34, 28, 4, 6 },
+						{ 3, 381, 151, 34, 26, 4, 8 },
+						{ 3, 381, 151, 34, 26, 4, 8 },
+						{ 3, 934, 63, 34, 27, 4, 7 },
+						{ 3, 443, 33, 34, 28, 4, 6 },
+					},
+				},
+				idle_front = {
+					fps = 6,
+					frames = {
+						{ 2, 273, 992, 34, 29, 4, 5 },
+						{ 3, 407, 33, 34, 28, 4, 6 },
+						{ 3, 381, 151, 34, 26, 4, 8 },
+						{ 3, 381, 151, 34, 26, 4, 8 },
+						{ 3, 934, 63, 34, 27, 4, 7 },
+						{ 3, 443, 33, 34, 28, 4, 6 },
+					},
+				},
+				run = {
+					fps = 12,
+					frames = {
+						{ 2, 273, 992, 34, 29, 4, 5 },
+						{ 3, 407, 33, 34, 28, 4, 6 },
+						{ 3, 381, 151, 34, 26, 4, 8 },
+						{ 3, 381, 151, 34, 26, 4, 8 },
+						{ 3, 934, 63, 34, 27, 4, 7 },
+						{ 3, 443, 33, 34, 28, 4, 6 },
+					},
+				},
+				run_front = {
+					fps = 12,
+					frames = {
+						{ 2, 273, 992, 34, 29, 4, 5 },
+						{ 3, 407, 33, 34, 28, 4, 6 },
+						{ 3, 381, 151, 34, 26, 4, 8 },
+						{ 3, 381, 151, 34, 26, 4, 8 },
+						{ 3, 934, 63, 34, 27, 4, 7 },
+						{ 3, 443, 33, 34, 28, 4, 6 },
+					},
+				},
+				jump = {
+					fps = 12,
+					frames = {
+						{ 2, 273, 992, 34, 29, 4, 5 },
+						{ 3, 407, 33, 34, 28, 4, 6 },
+						{ 3, 381, 151, 34, 26, 4, 8 },
+						{ 3, 381, 151, 34, 26, 4, 8 },
+						{ 3, 934, 63, 34, 27, 4, 7 },
+						{ 3, 443, 33, 34, 28, 4, 6 },
+					},
+				},
+				jump_front = {
+					fps = 12,
+					frames = {
+						{ 2, 273, 992, 34, 29, 4, 5 },
+						{ 3, 407, 33, 34, 28, 4, 6 },
+						{ 3, 381, 151, 34, 26, 4, 8 },
+						{ 3, 381, 151, 34, 26, 4, 8 },
+						{ 3, 934, 63, 34, 27, 4, 7 },
+						{ 3, 443, 33, 34, 28, 4, 6 },
+					},
+				},
+			},
+		},
 		pet_crow = {
 			name = "아기 재까마귀",
 			fw = 43,
@@ -12249,7 +12325,7 @@ return {
 				name = "은달 항구",
 				scenes = { "ct", "ct_store", "ct_smith", "ct_storage", "ct_auction", "ct_office", "ct_harbor", "ct_inn", "ct_fisher", "ct_stable", "ct_spice", "ct_guardpost", "ct_musician", "ct_flower", "ct_oldhouse", "ct_scribe", "ct_maid", "ct_castle", "ct_terrace", "ct_tower" },
 				mobs = {  },
-				quests = { "cq02", "cq03", "cq04", "cq05", "cq06", "cq07", "cq08", "cq09", "cq10", "cq11", "cq12", "cq13", "cq14", "cq15", "cq16", "cq17", "cq18", "cq19", "cq20", "cq21", "cq22", "cq23", "cq24" },
+				quests = { "cq02", "cq03", "cq04", "cq05", "cq06", "cq07", "cq08", "dq01", "cq09", "cq10", "cq11", "cq12", "cq13", "cq14", "cq15", "cq16", "cq17", "cq18", "cq19", "cq20", "cq21", "cq22", "cq23", "cq24" },
 				shards = { "city1", "city2", "city3", "city4", "city5", "city6", "city7", "city8", "city9", "city10" },
 				stories = { "st_fountain", "st_tower", "st_manor", "st_oldhouse", "st_dock", "st_ferry" },
 			},
@@ -12489,6 +12565,34 @@ return {
 				kinds = { "golem", "censer", "bell", "golem" },
 				elite = "golem",
 				pay = { xp = 4720, money = 3675, dust = 748, gear = 0.25 },
+			},
+		},
+	},
+	dungeon = {
+		perDay = 1,
+		time = 600,
+		back = 8,
+		party = 4,
+		mob = { hp = 0.6, hit = 0.8 },
+		elite = { hp = 5, hit = 1.3 },
+		pay = { need = 0.5 },
+		words = { title = "던전", range = "Lv.{a} ~ {b}", today = "오늘 {n}/{max}", reset = "한국 시간 자정에 다시 열린다", pay = "완료 보상", xp = "경험치 {n}", note = "몬스터는 경험치 · 아이템을 주지 않는다 — 완료하면 경험치를 한꺼번에 받는다", time = "제한 시간 {m}분", solo = "혼자 입장", party = "파티 입장", partyHint = "같은 맵의 파티원이 함께 들어간다", partyNone = "함께 들어갈 파티원이 이 맵에 없다", done = "오늘은 이미 끝냈다", low = "Lv.{a}부터 들어갈 수 있다", high = "Lv.{b}까지 들어갈 수 있다", clear = "던전 완료!", fail = "시간이 다 됐다", back = "{s}초 뒤 수정 틈으로", closed = "수정 문이 굳게 닫혀 있다", closedHint = "은달 항구 성문 앞의 곰솔에게 이야기를 들어 보자", opened = "「{name}」의 문이 열렸다", openedSub = "문 앞에서 ↑ — 하루 한 번" },
+		tiers = {
+			{
+				id = "dg1",
+				kind = "dungeon",
+				name = "수정 거울숲",
+				lv = 30,
+				lvMax = 40,
+				mobLv = 34,
+				base = "r2a2",
+				door = { scene = "r2ah", x = 442 },
+				quest = "dq01",
+				npc = "woodcutter",
+				waves = 5,
+				kinds = { "stump", "snail", "frog", "spider", "spider" },
+				elite = "spider",
+				text = "수정 틈의 큰 문 너머, 수정 오솔길을 거울에 비춘 듯한 숲. 수정으로 빚은 메아리 짐승들이 끝없이 몰려나온다. 물결 다섯을 모두 막아 내면 완료.",
 			},
 		},
 	},
@@ -19217,10 +19321,11 @@ return {
 		dropCoin4 = { x = 118, y = 1, w = 19, h = 21 },
 		markNew = { x = 138, y = 1, w = 3, h = 7 },
 		markDone = { x = 142, y = 1, w = 5, h = 7 },
-		naviUp = { x = 148, y = 1, w = 15, h = 16 },
-		naviRight = { x = 164, y = 1, w = 15, h = 15 },
-		naviDown = { x = 180, y = 1, w = 14, h = 14 },
-		naviLeft = { x = 195, y = 1, w = 14, h = 14 },
+		markBig = { x = 148, y = 1, w = 6, h = 11 },
+		naviUp = { x = 155, y = 1, w = 15, h = 16 },
+		naviRight = { x = 171, y = 1, w = 15, h = 15 },
+		naviDown = { x = 187, y = 1, w = 14, h = 14 },
+		naviLeft = { x = 202, y = 1, w = 14, h = 14 },
 		dmg = { x = 1, y = 23, w = 50, h = 14, order = "0123456789", cw = 5, ch = 7, adv = 4 },
 		icons = {
 			x = 52,
@@ -19386,6 +19491,7 @@ return {
 				ride_mount_deer = { 90, 270 },
 				ride_mount_boar = { 108, 270 },
 				ride_pet_crow = { 126, 270 },
+				ride_mount_book = { 144, 270 },
 			},
 			size = 18,
 		},
@@ -19672,6 +19778,7 @@ return {
 				ride_mount_deer = { 0, 624 },
 				ride_mount_boar = { 24, 624 },
 				ride_pet_crow = { 48, 624 },
+				ride_mount_book = { 72, 624 },
 			},
 			size = 24,
 		},
@@ -19751,7 +19858,7 @@ return {
 		secret3 = { id = "rbxassetid://92242689796809", volume = 0.5, gap = 0.5 },
 		secret4 = { id = "rbxassetid://97651473620570", volume = 0.5, gap = 0.5 },
 	},
-	scene = { hunt = "field_a", town = "town", in_storage = "town", in_store = "town", in_elder = "town", in_forge = "town", in_hall = "town", in_shrine = "town", in_cellar = "dark", r1a1 = "field_a", dream = "dream", r1af = "town", r1a3 = "field_a", r1a4 = "field_a", r1b1 = "field_b", r1b2 = "field_b", r1bv = "town", r1b3 = "field_b", r1cc = "town", r1c1 = "field_c", r1c2 = "field_c", r1c3 = "field_c", r2a1 = "field_b", r2a2 = "field_b", r2af = "town", r2a3 = "field_b", r2a4 = "field_b", r2b1 = "dark", r2b2 = "dark", r2b3 = "dark", r2bs = "town", r2b4 = "dark", r2c1 = "dark", r2c2 = "dark", r2c3 = "dark", ct = "town", port = "town", r3a1 = "dark", r3a2 = "dark", r3ah = "town", r3a3 = "dark", r3a4 = "dark", r3b1 = "field_c", r3b2 = "field_c", r3t = "town", r3c1 = "field_c", r3c2 = "field_c", r3cs = "town", r3c3 = "field_c", r3d1 = "field_c", r3d2 = "field_c", r3d3 = "field_c", r4a1 = "field_c", r4a2 = "field_c", r4a3 = "field_c", r4a4 = "field_c", r4b1 = "field_c", r4b2 = "field_c", r4b3 = "dark", r4bh = "town", r4b4 = "field_c", r4c1 = "field_c", r4c2 = "dark", r4ch = "town", r4c3 = "dark", r4d1 = "dark", r4d2 = "dark", seat = "town", sea1 = "field_b", sea2 = "field_b", r3b3 = "field_c", r3b4 = "field_c", r4d3 = "dark", r4e1 = "dark", sea5 = "dark", sea6 = "dark", r1c4 = "lair", r2c4 = "lair", r3d4 = "lair", r4d4 = "lair", sea8 = "lair", r4es = "town", r1bl = "lair", r2bl = "lair", r2cl = "lair", r3al = "lair", r3cl = "lair", r4bl = "lair", r4cl = "lair", r4dl = "lair", r1bh = "dark", r2ah = "dark", r2bh = "dark", r3bh = "dark", r4ah = "dark", r4dh = "dark", sea3 = "dark", seaf = "town", sea4 = "dark", sea7 = "dark", ct_store = "town", ct_smith = "town", ct_storage = "town", ct_auction = "town", ct_office = "town", ct_harbor = "town", ct_inn = "town", ct_fisher = "town", ct_stable = "town", ct_spice = "town", ct_guardpost = "town", ct_musician = "town", ct_flower = "town", ct_oldhouse = "town", ct_scribe = "town", ct_maid = "town", ct_castle = "town", ct_terrace = "town", ct_tower = "town", ship_out = "field_b", ship_home = "field_b", ship_sea_out = "field_b", ship_sea_home = "field_b", air_out = "town", air_home = "town", rf1 = "dark", rf2 = "dark", rf3 = "dark" },
+	scene = { hunt = "field_a", town = "town", in_storage = "town", in_store = "town", in_elder = "town", in_forge = "town", in_hall = "town", in_shrine = "town", in_cellar = "dark", r1a1 = "field_a", dream = "dream", r1af = "town", r1a3 = "field_a", r1a4 = "field_a", r1b1 = "field_b", r1b2 = "field_b", r1bv = "town", r1b3 = "field_b", r1cc = "town", r1c1 = "field_c", r1c2 = "field_c", r1c3 = "field_c", r2a1 = "field_b", r2a2 = "field_b", r2af = "town", r2a3 = "field_b", r2a4 = "field_b", r2b1 = "dark", r2b2 = "dark", r2b3 = "dark", r2bs = "town", r2b4 = "dark", r2c1 = "dark", r2c2 = "dark", r2c3 = "dark", ct = "town", port = "town", r3a1 = "dark", r3a2 = "dark", r3ah = "town", r3a3 = "dark", r3a4 = "dark", r3b1 = "field_c", r3b2 = "field_c", r3t = "town", r3c1 = "field_c", r3c2 = "field_c", r3cs = "town", r3c3 = "field_c", r3d1 = "field_c", r3d2 = "field_c", r3d3 = "field_c", r4a1 = "field_c", r4a2 = "field_c", r4a3 = "field_c", r4a4 = "field_c", r4b1 = "field_c", r4b2 = "field_c", r4b3 = "dark", r4bh = "town", r4b4 = "field_c", r4c1 = "field_c", r4c2 = "dark", r4ch = "town", r4c3 = "dark", r4d1 = "dark", r4d2 = "dark", seat = "town", sea1 = "field_b", sea2 = "field_b", r3b3 = "field_c", r3b4 = "field_c", r4d3 = "dark", r4e1 = "dark", sea5 = "dark", sea6 = "dark", r1c4 = "lair", r2c4 = "lair", r3d4 = "lair", r4d4 = "lair", sea8 = "lair", r4es = "town", r1bl = "lair", r2bl = "lair", r2cl = "lair", r3al = "lair", r3cl = "lair", r4bl = "lair", r4cl = "lair", r4dl = "lair", r1bh = "dark", r2ah = "dark", r2bh = "dark", r3bh = "dark", r4ah = "dark", r4dh = "dark", sea3 = "dark", seaf = "town", sea4 = "dark", sea7 = "dark", ct_store = "town", ct_smith = "town", ct_storage = "town", ct_auction = "town", ct_office = "town", ct_harbor = "town", ct_inn = "town", ct_fisher = "town", ct_stable = "town", ct_spice = "town", ct_guardpost = "town", ct_musician = "town", ct_flower = "town", ct_oldhouse = "town", ct_scribe = "town", ct_maid = "town", ct_castle = "town", ct_terrace = "town", ct_tower = "town", ship_out = "field_b", ship_home = "field_b", ship_sea_out = "field_b", ship_sea_home = "field_b", air_out = "town", air_home = "town", rf1 = "dark", rf2 = "dark", rf3 = "dark", dg1 = "field_a" },
 	hidden = { r1bh = true, r2ah = true, r2bh = true, r3bh = true, r4ah = true, r4dh = true },
 	title = "title",
 	fade = 1.2,
@@ -19971,6 +20078,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = { "또 달빛 꿈을 꾸었구나.", "…그 꿈 이야기는 누구에게도 하지 마라.", "오늘부터 기술을 가르쳐 주마. 배우겠느냐?" },
 			wait = { "먼저 몸부터 풀고 오너라." },
@@ -19992,6 +20100,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "trainee", only = false, name = "수습 검병", n = 5, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20015,6 +20124,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "warrior", only = false, name = "갑옷 조각", n = 8, pct = 100, icon = "etc_plate", item = "etc_plate", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20038,6 +20148,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "puff", only = false, name = "포자 주머니", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20061,6 +20172,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "crow", only = false, name = "찢어진 명령서", n = 6, pct = 100, icon = "etc_order", item = "etc_order", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20084,6 +20196,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "archer", only = false, name = "궁병", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20107,6 +20220,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "bomber", only = false, name = "폭탄병", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20130,6 +20244,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "crab", only = false, name = "바위 게", n = 8, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 				{ ["type"] = "use", mob = false, only = false, name = "샘에서 물 뜨기", n = 1, pct = 100, icon = false, item = false, spot = "spring", place = "돌무더기 밑의 샘", act = "물 뜨기", x = 440, y = 128, up = 26, at = "r1b3", npc = false },
@@ -20154,6 +20269,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "ewarrior", only = false, name = "정예 검병", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 				{ ["type"] = "use", mob = false, only = false, name = "깃발 찾기", n = 1, pct = 100, icon = false, item = false, spot = "flag", place = "상자 틈의 깃발", act = "깃발 꺼내기", x = 236, y = 400, up = 34, at = "r1c1", npc = false },
@@ -20178,6 +20294,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "helm", only = false, name = "빈 투구", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20201,6 +20318,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "towerlieutenant", only = false, name = "성벽 거인", n = 1, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20224,6 +20342,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "earcher", only = false, name = "쇠 경첩", n = 12, pct = 100, icon = "etc_hinge", item = "etc_hinge", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20247,6 +20366,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "scoutcaptain", only = false, name = "쇠사슬 간수", n = 1, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20270,6 +20390,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "espearman", only = true, name = "정예 창병", n = 4, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20293,6 +20414,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -20314,6 +20436,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -20335,6 +20458,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -20356,6 +20480,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -20377,6 +20502,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -20398,6 +20524,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -20419,6 +20546,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {  },
 			offer = { "마을을 지켜 줘서 고맙네.", "이제 자네는 이 산골에 머물 사람이 아니야.", "나루의 선장 배를 타고 은달 항구로 가게.", "부두의 안내인에게 이 편지를 주게." },
 			wait = { "나루는 대장간 너머 바닷가에 있네.", "선장에게 말을 걸면 배에 태워 줄 걸세." },
@@ -20440,6 +20568,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "meet", mob = false, only = false, name = "대장장이 담금", n = 1, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = "citysmith" },
 				{ ["type"] = "meet", mob = false, only = false, name = "창고지기 한아름", n = 1, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = "citykeeper" },
@@ -20467,6 +20596,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {  },
 			offer = { "성문 밖에 나가 보셨어요?", "성문을 나서면 바로 수정 숲이에요.", "성문 앞의 견습 기사님이 일손을 찾아요." },
 			wait = { "1층 동쪽 끝의 큰 성문 앞이에요.", "성문지기 마루 아저씨 옆이요." },
@@ -20488,6 +20618,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {  },
 			offer = { "어이, 거기! 손 좀 빌려주게.", "향신료 가게의 다홍한테 이 짐 좀.", "성문 옆, 향 냄새 나는 집일세." },
 			wait = { "성문 옆의 향신료 가게야." },
@@ -20509,6 +20640,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "bud", only = false, name = "수정 봉오리", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20532,6 +20664,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "frog", only = false, name = "이끼 두꺼비", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20555,6 +20688,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "fox", only = false, name = "은 낚싯바늘", n = 1, pct = 20, icon = "etc_hook", item = "etc_hook", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20578,6 +20712,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "snail", only = false, name = "울림 껍질", n = 8, pct = 60, icon = "etc_ringshell", item = "etc_ringshell", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20585,6 +20720,30 @@ return {
 			wait = { "수정 오솔길의 달팽이예요." },
 			done = { "들어 봐요, 이 소리!", "…이 소리로 옛 노래를 불러 볼게요." },
 			reward = { xp = 943, money = 2700, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
+		},
+		{
+			id = "dq01",
+			kind = "side",
+			line = false,
+			region = false,
+			name = "수정 틈의 문",
+			lv = 30,
+			scene = "r2ah",
+			text = "성문 앞의 나무꾼 곰솔이 빛나는 연못의 수정 틈 안쪽에 커다란 수정 문이 생겼다고 한다. 문 너머로 수정이 빚은 짐승들이 끝없이 몰려나온다는데 — 가서 그 문에 손을 대 보자.",
+			after = false,
+			giver = "woodcutter",
+			endNpc = false,
+			auto = false,
+			playable = true,
+			city = true,
+			big = true,
+			steps = {
+				{ ["type"] = "use", mob = false, only = false, name = "문에 손 대기", n = 1, pct = 100, icon = false, item = false, spot = "riftgate", place = "수정 거울숲의 문", act = "문에 손 대기", x = 442, y = 160, up = 60, at = "r2ah", npc = false },
+			},
+			offer = { "자네, 빛나는 연못에 가 봤나?", "연못 둑의 수정 틈 안쪽에 큰 수정 문이 하나 생겼어.", "그 너머로 수정 짐승들이 끝없이 몰려나온다더군.", "몸 단련엔 그만한 데가 없지.", "가서 그 문에 손을 대 보게." },
+			wait = { "빛나는 연못의 「수정 틈으로」 안쪽이야.", "반달네 옛집 옆의 큰 수정 문일세." },
+			done = { "문에 손을 대자 안에서 빛이 일렁인다.", "하루 한 번 「수정 거울숲」에 들 수 있다." },
+			reward = { xp = 521, money = 2200, potions = 0, scrolls = 0, open = false, job = false, gear = false, store = 0 },
 		},
 		{
 			id = "cq09",
@@ -20601,6 +20760,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "use", mob = false, only = false, name = "노랫말 옮겨 적기", n = 1, pct = 100, icon = false, item = false, spot = "songwall", place = "빈집 벽의 노랫말", act = "노랫말 적기", x = 330, y = 160, up = 30, at = "r2ah", npc = false },
 			},
@@ -20624,6 +20784,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {  },
 			offer = { "노래의 빈칸이 다섯이에요.", "언덕의 서기님은 옛 기록을 다 봤대요.", "이 악보를 보여 줄래요?" },
 			wait = { "맨 위층, 서기의 방이에요." },
@@ -20645,6 +20806,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "use", mob = false, only = false, name = "별꽃 꺾기", n = 1, pct = 100, icon = false, item = false, spot = "starflower", place = "물가의 별꽃", act = "별꽃 꺾기", x = 405, y = 176, up = 22, at = "r2a3", npc = false },
 			},
@@ -20668,6 +20830,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "spider", only = false, name = "분홍 리본", n = 1, pct = 20, icon = "etc_ribbon", item = "etc_ribbon", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20691,6 +20854,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "stump", only = false, name = "수정싹", n = 10, pct = 60, icon = "etc_sprout", item = "etc_sprout", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20714,6 +20878,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "fox", only = false, name = "등불꼬리 여우", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20737,6 +20902,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {  },
 			offer = { "바다 건너 장에서 편지를 받았어요.", "갈매 할아버지 앞으로요.", "…이름이 아주 오래된 글씨예요." },
 			wait = { "장터 거리, 갈매 할아버지 집이에요." },
@@ -20758,6 +20924,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "snail", only = false, name = "수정 달팽이", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20781,6 +20948,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "quill", only = false, name = "기사의 박차", n = 5, pct = 40, icon = "etc_spur", item = "etc_spur", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20804,6 +20972,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "spider", only = false, name = "거미줄 실타래", n = 10, pct = 60, icon = "etc_silk", item = "etc_silk", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20827,6 +20996,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "golem", only = false, name = "골렘 심장석", n = 6, pct = 40, icon = "etc_heartstone", item = "etc_heartstone", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20850,6 +21020,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "censer", only = false, name = "떠도는 향로", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20873,6 +21044,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "fox", only = false, name = "여우 등불", n = 8, pct = 60, icon = "etc_foxfire", item = "etc_foxfire", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20896,6 +21068,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "use", mob = false, only = false, name = "담장 밑 살피기", n = 1, pct = 100, icon = false, item = false, spot = "manorwall", place = "성 담장 밑", act = "담장 살피기", x = 1626, y = 224, up = 30, at = "ct", npc = false },
 			},
@@ -20919,6 +21092,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "use", mob = false, only = false, name = "책등 살피기", n = 1, pct = 100, icon = false, item = false, spot = "scratchedbook", place = "긁힌 책등", act = "책등 살피기", x = 288, y = 176, up = 30, at = "r2bh", npc = false },
 			},
@@ -20942,6 +21116,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "stump", only = false, name = "수정싹 그루터기", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20965,6 +21140,7 @@ return {
 			auto = false,
 			playable = true,
 			city = true,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "spider", only = false, name = "거미 독주머니", n = 8, pct = 60, icon = "etc_venom", item = "etc_venom", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -20988,6 +21164,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = { "기사단의 옛 책을 보러 오셨다고요?", "옛 책은 아무에게나 안 보여 줘요." },
 			wait = { "…그래도 방법이 없진 않아요." },
@@ -21009,6 +21186,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "stump", only = false, name = "수정싹 그루터기", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21032,6 +21210,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "frog", only = false, name = "순찰대 표식", n = 8, pct = 50, icon = "etc_badge", item = "etc_badge", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21055,6 +21234,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "bud", only = false, name = "수정 봉오리", n = 15, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21078,6 +21258,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "quill", only = false, name = "수정 고슴도치", n = 15, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21101,6 +21282,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = { "명령서를 들고 본당으로 가요.", "보여 드릴 벽화가 있어요." },
 			wait = { "본당의 벽화를 봐 주세요." },
@@ -21122,6 +21304,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "dshard", only = false, name = "검은 결정", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 				{ ["type"] = "use", mob = false, only = false, name = "명령서 통 열기", n = 1, pct = 100, icon = false, item = false, spot = "ridgearch", place = "무너진 아치 밑", act = "통 열기", x = 554, y = 112, up = 34, at = "r2b4", npc = false },
@@ -21146,6 +21329,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "censer", only = false, name = "떠도는 향로", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21169,6 +21353,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "use", mob = false, only = false, name = "기록 건지기", n = 1, pct = 100, icon = false, item = false, spot = "pyre", place = "타는 제단", act = "기록 건지기", x = 582, y = 160, up = 40, at = "r2c4", npc = false },
 			},
@@ -21192,6 +21377,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "stump", only = false, name = "끈끈한 수정 진", n = 8, pct = 50, icon = "etc_resin", item = "etc_resin", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21215,6 +21401,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "use", mob = false, only = false, name = "옛집의 장부 보기", n = 1, pct = 100, icon = false, item = false, spot = "oldledger", place = "옛집의 장부", act = "장부 보기", x = 150, y = 176, up = 26, at = "r2ah", npc = false },
 			},
@@ -21238,6 +21425,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "frog", only = false, name = "빛 이끼", n = 10, pct = 50, icon = "etc_moss", item = "etc_moss", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21261,6 +21449,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -21282,6 +21471,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -21303,6 +21493,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "quill", only = false, name = "기사의 이름표", n = 10, pct = 50, icon = "etc_tag", item = "etc_tag", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21326,6 +21517,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "dshard", only = false, name = "검은 결정", n = 30, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21349,6 +21541,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "golem", only = false, name = "장부의 낱장", n = 8, pct = 40, icon = "etc_page", item = "etc_page", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21372,6 +21565,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -21393,6 +21587,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "bell", only = false, name = "종 조각", n = 8, pct = 50, icon = "etc_bellpiece", item = "etc_bellpiece", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21416,6 +21611,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "rat", only = false, name = "굴쥐", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21439,6 +21635,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = { "화롯골이 문을 닫아걸었대요.", "야영지의 소금 장수가 잘 알아요." },
 			wait = { "젖은 굴을 지나면 상인들의 야영지예요." },
@@ -21460,6 +21657,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "kobold", only = false, name = "그을린 수레 못", n = 8, pct = 50, icon = "etc_nail", item = "etc_nail", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21483,6 +21681,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "worm", only = false, name = "굴 지렁이", n = 15, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21506,6 +21705,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "thief", only = false, name = "불씨 도둑", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21529,6 +21729,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "cinder", only = false, name = "재 회오리", n = 18, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21552,6 +21753,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = { "화로 가장 안쪽에 옛 벽화가 있네.", "우리는 그것을 지우지 않았지." },
 			wait = { "식어 가는 불길 너머 벽화의 방이네." },
@@ -21573,6 +21775,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "bomber", only = false, name = "폭탄병", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21596,6 +21799,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -21617,6 +21821,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "rat", only = false, name = "굴쥐 수염", n = 10, pct = 50, icon = "etc_whisker", item = "etc_whisker", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21640,6 +21845,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -21661,6 +21867,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "kobold", only = false, name = "등잔 조각", n = 10, pct = 50, icon = "etc_lamp", item = "etc_lamp", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21684,6 +21891,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "cart", only = false, name = "폭주 광차", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21707,6 +21915,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "worm", only = false, name = "빈 불씨 단지", n = 8, pct = 40, icon = "etc_jar", item = "etc_jar", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21730,6 +21939,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "thief", only = false, name = "불씨 단지", n = 6, pct = 30, icon = "etc_ember", item = "etc_ember", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21753,6 +21963,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "bomber", only = false, name = "화약통", n = 10, pct = 50, icon = "etc_keg", item = "etc_keg", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21776,6 +21987,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -21797,6 +22009,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "chimney", only = false, name = "알껍데기 조각", n = 8, pct = 40, icon = "etc_shell", item = "etc_shell", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21820,6 +22033,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -21841,6 +22055,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = { "다들 외성 밖에 모였어요!", "할멈께 먼저 인사드리세요." },
 			wait = { "야영지 천막 앞에 계세요." },
@@ -21862,6 +22077,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "ewarrior", only = false, name = "정예 검병", n = 12, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21885,6 +22101,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "statue", only = false, name = "부서진 기사상", n = 10, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21908,6 +22125,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "bomber", only = false, name = "폭탄병", n = 15, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21931,6 +22149,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "espearman", only = false, name = "정예 창병", n = 15, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21954,6 +22173,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "kill", mob = "eye", only = false, name = "감시하는 눈", n = 20, pct = 100, icon = false, item = false, spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -21977,6 +22197,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = { "촌장님이 숙소에 와 계세요.", "하실 말씀이 있으시대요." },
 			wait = { "왔는가." },
@@ -21998,6 +22219,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -22019,6 +22241,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -22040,6 +22263,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "espearman", only = false, name = "부러진 창대", n = 12, pct = 60, icon = "etc_shaft", item = "etc_shaft", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -22063,6 +22287,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -22084,6 +22309,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "statue", only = false, name = "보급 상자", n = 8, pct = 50, icon = "etc_crate", item = "etc_crate", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -22107,6 +22333,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "earcher", only = false, name = "열쇠 조각", n = 4, pct = 20, icon = "etc_keypiece", item = "etc_keypiece", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -22130,6 +22357,7 @@ return {
 			auto = false,
 			playable = false,
 			city = false,
+			big = false,
 			steps = {  },
 			offer = {  },
 			wait = {  },
@@ -22151,6 +22379,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "espearman", only = false, name = "쇠 덧판", n = 15, pct = 60, icon = "etc_ironplate", item = "etc_ironplate", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -22174,6 +22403,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "book", only = false, name = "톱니", n = 10, pct = 50, icon = "etc_gear", item = "etc_gear", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -22197,6 +22427,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "ewarrior", only = false, name = "기사의 방패", n = 8, pct = 40, icon = "etc_shield", item = "etc_shield", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -22220,6 +22451,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "ewarrior", only = false, name = "용 비늘", n = 6, pct = 30, icon = "etc_scale", item = "etc_scale", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -22243,6 +22475,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "gloom", only = false, name = "쐐기 조각", n = 5, pct = 25, icon = "etc_wedge", item = "etc_wedge", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -22266,6 +22499,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "dummy", only = false, name = "달빛 서린 조각", n = 4, pct = 100, icon = "etc_moonshard", item = "etc_moonshard", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -22298,6 +22532,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "bell", only = false, name = "달빛 서린 종 조각", n = 4, pct = 100, icon = "fragment", item = "fragment", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -22330,6 +22565,7 @@ return {
 			auto = false,
 			playable = true,
 			city = false,
+			big = false,
 			steps = {
 				{ ["type"] = "gather", mob = "espearman", only = false, name = "바래지 않은 깃발 조각", n = 4, pct = 100, icon = "etc_cloth", item = "etc_cloth", spot = false, place = false, act = false, x = false, y = false, up = false, at = false, npc = false },
 			},
@@ -22357,7 +22593,8 @@ MODULES['ReplicatedStorage/shared/lune/data/ride.generated'] = function(script, 
 -- 펫 · 탈것(dino-workshop/js/lune/design/ride.js): pets · mounts = 이름(그림은 chars.generated의 같은 이름 — 탈것은 <동작>_front가 영웅 앞에 다시 그리는 점) ·
 --  seat = 탈것의 기준점(발밑 가운데)에서 영웅의 발까지(dx는 오른쪽을 볼 때) · bob = 동작의 장마다 영웅을 더 내리는 점(위 = 음수) · pet = 따라오는 자리(behind) · 줍는 거리(reach) · 한 번에 하나씩(every초)
 --  riderSize = 탄 동안 영웅을 그리는 크기(서기 그림 그대로 줄여서 — 화면 화소에 맞춰 Sprite.sizeOn) · bobx = 동작의 장마다 영웅을 옮기는 가로 점(어깨를 따라 — 오른쪽을 볼 때 · 안장은 <동작>_front에 그려져 있다)
---  seat · bob · bobx는 탈것 그림의 점 — 탈것은 chars.generated의 size배로 그리므로 영웅의 자리도 그 배(rideView) · mountSpeed = 탄 동안 달리기 배수
+--  seat · bob · bobx는 탈것 그림의 점 — 탈것은 chars.generated의 size배로 그리므로 영웅의 자리도 그 배(rideView) · mountSpeed = 탄 동안 달리기 배수(탈것에 speed가 있으면 그것 — 쿠폰 탈것 1)
+--  free · line = 상점에서 팔지 않는 펫 · 탈것(쿠폰으로만 받는다 — 2026-10-21) · 가방의 설명 한 줄
 return {
 	pets = {
 		{ id = "pet_silver", name = "은빛 달토끼" },
@@ -22409,6 +22646,24 @@ return {
 				idle = { 0, 0, 0, 0 },
 				run = { -6, -6, -6, -6, -6, -6 },
 				jump = { -6 },
+			},
+		},
+		{
+			id = "mount_book",
+			name = "떠도는 책",
+			free = "coupon",
+			line = "쿠폰으로 받은 탈것 — 걷는 빠르기 그대로",
+			speed = 1,
+			seat = { dx = -4, dy = -24 },
+			bob = {
+				idle = { 0, 0, 0, 0, 0, 0 },
+				run = { 0, 0, 0, 0, 0, 0 },
+				jump = { 0, 0, 0, 0, 0, 0 },
+			},
+			bobx = {
+				idle = { 0, 0, 0, 0, 0, 0 },
+				run = { 0, 0, 0, 0, 0, 0 },
+				jump = { 0, 0, 0, 0, 0, 0 },
 			},
 		},
 	},
@@ -25482,70 +25737,71 @@ local M = {
 			},
 			props = "props_r2a1.png",
 			rects = {
-				heartroot = { x = 0, y = 0, w = 93, h = 84 },
-				rootplate = { x = 95, y = 0, w = 96, h = 70 },
-				crystalhouse = { x = 0, y = 86, w = 66, h = 69 },
-				dtree = { x = 68, y = 86, w = 41, h = 65 },
-				kbanner = { x = 111, y = 86, w = 31, h = 65 },
-				guardpost = { x = 144, y = 86, w = 78, h = 64 },
-				watch = { x = 0, y = 157, w = 58, h = 63 },
-				ctree = { x = 60, y = 157, w = 41, h = 62 },
-				gate = { x = 103, y = 157, w = 54, h = 60 },
-				darch = { x = 159, y = 157, w = 60, h = 58 },
-				door = { x = 0, y = 222, w = 62, h = 57 },
-				dtree2 = { x = 64, y = 222, w = 40, h = 51 },
-				ctree2 = { x = 106, y = 222, w = 39, h = 48 },
-				bigstump = { x = 147, y = 222, w = 73, h = 47 },
-				lantern = { x = 222, y = 222, w = 27, h = 46 },
-				post_lamp = { x = 0, y = 281, w = 24, h = 44 },
-				post = { x = 26, y = 281, w = 20, h = 44 },
-				roadlamp = { x = 48, y = 281, w = 30, h = 43 },
-				stall = { x = 80, y = 281, w = 56, h = 40 },
-				krack = { x = 138, y = 281, w = 37, h = 40 },
-				denmouth = { x = 177, y = 281, w = 55, h = 38 },
-				dcrystal_big = { x = 0, y = 327, w = 46, h = 38 },
-				reeds = { x = 48, y = 327, w = 33, h = 37 },
-				mint = { x = 83, y = 327, w = 46, h = 36 },
-				crystal_big = { x = 131, y = 327, w = 42, h = 34 },
-				mstone = { x = 175, y = 327, w = 40, h = 34 },
-				sign = { x = 217, y = 327, w = 27, h = 34 },
-				web = { x = 0, y = 367, w = 48, h = 33 },
-				sign3 = { x = 50, y = 367, w = 29, h = 33 },
-				tent = { x = 81, y = 367, w = 60, h = 32 },
-				tlog2 = { x = 143, y = 367, w = 108, h = 31 },
-				tlog1 = { x = 0, y = 402, w = 123, h = 30 },
-				cledge2 = { x = 125, y = 402, w = 62, h = 30 },
-				road3 = { x = 189, y = 402, w = 48, h = 30 },
-				road1 = { x = 0, y = 434, w = 93, h = 29 },
-				dledge3 = { x = 95, y = 434, w = 63, h = 29 },
-				dledge2 = { x = 160, y = 434, w = 62, h = 29 },
-				barricade = { x = 0, y = 465, w = 65, h = 28 },
-				cledge3 = { x = 67, y = 465, w = 63, h = 28 },
-				dledge1 = { x = 132, y = 465, w = 63, h = 28 },
-				road2 = { x = 0, y = 495, w = 69, h = 27 },
-				supplies = { x = 71, y = 495, w = 51, h = 27 },
-				tlog3 = { x = 124, y = 495, w = 64, h = 26 },
-				cledge1 = { x = 190, y = 495, w = 62, h = 26 },
-				kettle = { x = 0, y = 524, w = 27, h = 26 },
-				barrels = { x = 29, y = 524, w = 32, h = 24 },
-				clog = { x = 63, y = 524, w = 56, h = 20 },
-				thorn = { x = 121, y = 524, w = 26, h = 20 },
-				bench = { x = 149, y = 524, w = 66, h = 19 },
-				eggs = { x = 217, y = 524, w = 36, h = 19 },
-				cbuds = { x = 0, y = 552, w = 24, h = 19 },
-				crate = { x = 26, y = 552, w = 23, h = 19 },
-				shroom = { x = 51, y = 552, w = 31, h = 18 },
-				kstone = { x = 84, y = 552, w = 31, h = 18 },
-				dcrystal_small = { x = 117, y = 552, w = 23, h = 18 },
-				reeds2 = { x = 142, y = 552, w = 21, h = 18 },
-				grass = { x = 165, y = 552, w = 31, h = 17 },
-				fence = { x = 198, y = 552, w = 27, h = 17 },
-				bush = { x = 0, y = 573, w = 41, h = 16 },
-				spikes = { x = 43, y = 573, w = 31, h = 16 },
-				crystal_small = { x = 76, y = 573, w = 22, h = 15 },
-				campfire = { x = 100, y = 573, w = 43, h = 14 },
-				rocks = { x = 145, y = 573, w = 35, h = 14 },
-				pond = { x = 182, y = 573, w = 32, h = 11 },
+				riftgate = { x = 0, y = 0, w = 80, h = 108 },
+				heartroot = { x = 82, y = 0, w = 93, h = 84 },
+				rootplate = { x = 0, y = 110, w = 96, h = 70 },
+				crystalhouse = { x = 98, y = 110, w = 66, h = 69 },
+				dtree = { x = 166, y = 110, w = 41, h = 65 },
+				kbanner = { x = 209, y = 110, w = 31, h = 65 },
+				guardpost = { x = 0, y = 182, w = 78, h = 64 },
+				watch = { x = 80, y = 182, w = 58, h = 63 },
+				ctree = { x = 140, y = 182, w = 41, h = 62 },
+				gate = { x = 183, y = 182, w = 54, h = 60 },
+				darch = { x = 0, y = 248, w = 60, h = 58 },
+				door = { x = 62, y = 248, w = 62, h = 57 },
+				dtree2 = { x = 126, y = 248, w = 40, h = 51 },
+				ctree2 = { x = 168, y = 248, w = 39, h = 48 },
+				bigstump = { x = 0, y = 308, w = 73, h = 47 },
+				lantern = { x = 75, y = 308, w = 27, h = 46 },
+				post_lamp = { x = 104, y = 308, w = 24, h = 44 },
+				post = { x = 130, y = 308, w = 20, h = 44 },
+				roadlamp = { x = 152, y = 308, w = 30, h = 43 },
+				stall = { x = 184, y = 308, w = 56, h = 40 },
+				krack = { x = 0, y = 357, w = 37, h = 40 },
+				denmouth = { x = 39, y = 357, w = 55, h = 38 },
+				dcrystal_big = { x = 96, y = 357, w = 46, h = 38 },
+				reeds = { x = 144, y = 357, w = 33, h = 37 },
+				mint = { x = 179, y = 357, w = 46, h = 36 },
+				crystal_big = { x = 0, y = 399, w = 42, h = 34 },
+				mstone = { x = 44, y = 399, w = 40, h = 34 },
+				sign = { x = 86, y = 399, w = 27, h = 34 },
+				web = { x = 115, y = 399, w = 48, h = 33 },
+				sign3 = { x = 165, y = 399, w = 29, h = 33 },
+				tent = { x = 196, y = 399, w = 60, h = 32 },
+				tlog2 = { x = 0, y = 435, w = 108, h = 31 },
+				tlog1 = { x = 110, y = 435, w = 123, h = 30 },
+				cledge2 = { x = 0, y = 468, w = 62, h = 30 },
+				road3 = { x = 64, y = 468, w = 48, h = 30 },
+				road1 = { x = 114, y = 468, w = 93, h = 29 },
+				dledge3 = { x = 0, y = 500, w = 63, h = 29 },
+				dledge2 = { x = 65, y = 500, w = 62, h = 29 },
+				barricade = { x = 129, y = 500, w = 65, h = 28 },
+				cledge3 = { x = 0, y = 531, w = 63, h = 28 },
+				dledge1 = { x = 65, y = 531, w = 63, h = 28 },
+				road2 = { x = 130, y = 531, w = 69, h = 27 },
+				supplies = { x = 201, y = 531, w = 51, h = 27 },
+				tlog3 = { x = 0, y = 561, w = 64, h = 26 },
+				cledge1 = { x = 66, y = 561, w = 62, h = 26 },
+				kettle = { x = 130, y = 561, w = 27, h = 26 },
+				barrels = { x = 159, y = 561, w = 32, h = 24 },
+				clog = { x = 193, y = 561, w = 56, h = 20 },
+				thorn = { x = 0, y = 589, w = 26, h = 20 },
+				bench = { x = 28, y = 589, w = 66, h = 19 },
+				eggs = { x = 96, y = 589, w = 36, h = 19 },
+				cbuds = { x = 134, y = 589, w = 24, h = 19 },
+				crate = { x = 160, y = 589, w = 23, h = 19 },
+				shroom = { x = 185, y = 589, w = 31, h = 18 },
+				kstone = { x = 218, y = 589, w = 31, h = 18 },
+				dcrystal_small = { x = 0, y = 611, w = 23, h = 18 },
+				reeds2 = { x = 25, y = 611, w = 21, h = 18 },
+				grass = { x = 48, y = 611, w = 31, h = 17 },
+				fence = { x = 81, y = 611, w = 27, h = 17 },
+				bush = { x = 110, y = 611, w = 41, h = 16 },
+				spikes = { x = 153, y = 611, w = 31, h = 16 },
+				crystal_small = { x = 186, y = 611, w = 22, h = 15 },
+				campfire = { x = 210, y = 611, w = 43, h = 14 },
+				rocks = { x = 0, y = 631, w = 35, h = 14 },
+				pond = { x = 37, y = 631, w = 32, h = 11 },
 			},
 			back = {
 				{ id = "gate", x = 440, y = 177 },
@@ -25669,70 +25925,71 @@ local M = {
 			},
 			props = "props_r2a1.png",
 			rects = {
-				heartroot = { x = 0, y = 0, w = 93, h = 84 },
-				rootplate = { x = 95, y = 0, w = 96, h = 70 },
-				crystalhouse = { x = 0, y = 86, w = 66, h = 69 },
-				dtree = { x = 68, y = 86, w = 41, h = 65 },
-				kbanner = { x = 111, y = 86, w = 31, h = 65 },
-				guardpost = { x = 144, y = 86, w = 78, h = 64 },
-				watch = { x = 0, y = 157, w = 58, h = 63 },
-				ctree = { x = 60, y = 157, w = 41, h = 62 },
-				gate = { x = 103, y = 157, w = 54, h = 60 },
-				darch = { x = 159, y = 157, w = 60, h = 58 },
-				door = { x = 0, y = 222, w = 62, h = 57 },
-				dtree2 = { x = 64, y = 222, w = 40, h = 51 },
-				ctree2 = { x = 106, y = 222, w = 39, h = 48 },
-				bigstump = { x = 147, y = 222, w = 73, h = 47 },
-				lantern = { x = 222, y = 222, w = 27, h = 46 },
-				post_lamp = { x = 0, y = 281, w = 24, h = 44 },
-				post = { x = 26, y = 281, w = 20, h = 44 },
-				roadlamp = { x = 48, y = 281, w = 30, h = 43 },
-				stall = { x = 80, y = 281, w = 56, h = 40 },
-				krack = { x = 138, y = 281, w = 37, h = 40 },
-				denmouth = { x = 177, y = 281, w = 55, h = 38 },
-				dcrystal_big = { x = 0, y = 327, w = 46, h = 38 },
-				reeds = { x = 48, y = 327, w = 33, h = 37 },
-				mint = { x = 83, y = 327, w = 46, h = 36 },
-				crystal_big = { x = 131, y = 327, w = 42, h = 34 },
-				mstone = { x = 175, y = 327, w = 40, h = 34 },
-				sign = { x = 217, y = 327, w = 27, h = 34 },
-				web = { x = 0, y = 367, w = 48, h = 33 },
-				sign3 = { x = 50, y = 367, w = 29, h = 33 },
-				tent = { x = 81, y = 367, w = 60, h = 32 },
-				tlog2 = { x = 143, y = 367, w = 108, h = 31 },
-				tlog1 = { x = 0, y = 402, w = 123, h = 30 },
-				cledge2 = { x = 125, y = 402, w = 62, h = 30 },
-				road3 = { x = 189, y = 402, w = 48, h = 30 },
-				road1 = { x = 0, y = 434, w = 93, h = 29 },
-				dledge3 = { x = 95, y = 434, w = 63, h = 29 },
-				dledge2 = { x = 160, y = 434, w = 62, h = 29 },
-				barricade = { x = 0, y = 465, w = 65, h = 28 },
-				cledge3 = { x = 67, y = 465, w = 63, h = 28 },
-				dledge1 = { x = 132, y = 465, w = 63, h = 28 },
-				road2 = { x = 0, y = 495, w = 69, h = 27 },
-				supplies = { x = 71, y = 495, w = 51, h = 27 },
-				tlog3 = { x = 124, y = 495, w = 64, h = 26 },
-				cledge1 = { x = 190, y = 495, w = 62, h = 26 },
-				kettle = { x = 0, y = 524, w = 27, h = 26 },
-				barrels = { x = 29, y = 524, w = 32, h = 24 },
-				clog = { x = 63, y = 524, w = 56, h = 20 },
-				thorn = { x = 121, y = 524, w = 26, h = 20 },
-				bench = { x = 149, y = 524, w = 66, h = 19 },
-				eggs = { x = 217, y = 524, w = 36, h = 19 },
-				cbuds = { x = 0, y = 552, w = 24, h = 19 },
-				crate = { x = 26, y = 552, w = 23, h = 19 },
-				shroom = { x = 51, y = 552, w = 31, h = 18 },
-				kstone = { x = 84, y = 552, w = 31, h = 18 },
-				dcrystal_small = { x = 117, y = 552, w = 23, h = 18 },
-				reeds2 = { x = 142, y = 552, w = 21, h = 18 },
-				grass = { x = 165, y = 552, w = 31, h = 17 },
-				fence = { x = 198, y = 552, w = 27, h = 17 },
-				bush = { x = 0, y = 573, w = 41, h = 16 },
-				spikes = { x = 43, y = 573, w = 31, h = 16 },
-				crystal_small = { x = 76, y = 573, w = 22, h = 15 },
-				campfire = { x = 100, y = 573, w = 43, h = 14 },
-				rocks = { x = 145, y = 573, w = 35, h = 14 },
-				pond = { x = 182, y = 573, w = 32, h = 11 },
+				riftgate = { x = 0, y = 0, w = 80, h = 108 },
+				heartroot = { x = 82, y = 0, w = 93, h = 84 },
+				rootplate = { x = 0, y = 110, w = 96, h = 70 },
+				crystalhouse = { x = 98, y = 110, w = 66, h = 69 },
+				dtree = { x = 166, y = 110, w = 41, h = 65 },
+				kbanner = { x = 209, y = 110, w = 31, h = 65 },
+				guardpost = { x = 0, y = 182, w = 78, h = 64 },
+				watch = { x = 80, y = 182, w = 58, h = 63 },
+				ctree = { x = 140, y = 182, w = 41, h = 62 },
+				gate = { x = 183, y = 182, w = 54, h = 60 },
+				darch = { x = 0, y = 248, w = 60, h = 58 },
+				door = { x = 62, y = 248, w = 62, h = 57 },
+				dtree2 = { x = 126, y = 248, w = 40, h = 51 },
+				ctree2 = { x = 168, y = 248, w = 39, h = 48 },
+				bigstump = { x = 0, y = 308, w = 73, h = 47 },
+				lantern = { x = 75, y = 308, w = 27, h = 46 },
+				post_lamp = { x = 104, y = 308, w = 24, h = 44 },
+				post = { x = 130, y = 308, w = 20, h = 44 },
+				roadlamp = { x = 152, y = 308, w = 30, h = 43 },
+				stall = { x = 184, y = 308, w = 56, h = 40 },
+				krack = { x = 0, y = 357, w = 37, h = 40 },
+				denmouth = { x = 39, y = 357, w = 55, h = 38 },
+				dcrystal_big = { x = 96, y = 357, w = 46, h = 38 },
+				reeds = { x = 144, y = 357, w = 33, h = 37 },
+				mint = { x = 179, y = 357, w = 46, h = 36 },
+				crystal_big = { x = 0, y = 399, w = 42, h = 34 },
+				mstone = { x = 44, y = 399, w = 40, h = 34 },
+				sign = { x = 86, y = 399, w = 27, h = 34 },
+				web = { x = 115, y = 399, w = 48, h = 33 },
+				sign3 = { x = 165, y = 399, w = 29, h = 33 },
+				tent = { x = 196, y = 399, w = 60, h = 32 },
+				tlog2 = { x = 0, y = 435, w = 108, h = 31 },
+				tlog1 = { x = 110, y = 435, w = 123, h = 30 },
+				cledge2 = { x = 0, y = 468, w = 62, h = 30 },
+				road3 = { x = 64, y = 468, w = 48, h = 30 },
+				road1 = { x = 114, y = 468, w = 93, h = 29 },
+				dledge3 = { x = 0, y = 500, w = 63, h = 29 },
+				dledge2 = { x = 65, y = 500, w = 62, h = 29 },
+				barricade = { x = 129, y = 500, w = 65, h = 28 },
+				cledge3 = { x = 0, y = 531, w = 63, h = 28 },
+				dledge1 = { x = 65, y = 531, w = 63, h = 28 },
+				road2 = { x = 130, y = 531, w = 69, h = 27 },
+				supplies = { x = 201, y = 531, w = 51, h = 27 },
+				tlog3 = { x = 0, y = 561, w = 64, h = 26 },
+				cledge1 = { x = 66, y = 561, w = 62, h = 26 },
+				kettle = { x = 130, y = 561, w = 27, h = 26 },
+				barrels = { x = 159, y = 561, w = 32, h = 24 },
+				clog = { x = 193, y = 561, w = 56, h = 20 },
+				thorn = { x = 0, y = 589, w = 26, h = 20 },
+				bench = { x = 28, y = 589, w = 66, h = 19 },
+				eggs = { x = 96, y = 589, w = 36, h = 19 },
+				cbuds = { x = 134, y = 589, w = 24, h = 19 },
+				crate = { x = 160, y = 589, w = 23, h = 19 },
+				shroom = { x = 185, y = 589, w = 31, h = 18 },
+				kstone = { x = 218, y = 589, w = 31, h = 18 },
+				dcrystal_small = { x = 0, y = 611, w = 23, h = 18 },
+				reeds2 = { x = 25, y = 611, w = 21, h = 18 },
+				grass = { x = 48, y = 611, w = 31, h = 17 },
+				fence = { x = 81, y = 611, w = 27, h = 17 },
+				bush = { x = 110, y = 611, w = 41, h = 16 },
+				spikes = { x = 153, y = 611, w = 31, h = 16 },
+				crystal_small = { x = 186, y = 611, w = 22, h = 15 },
+				campfire = { x = 210, y = 611, w = 43, h = 14 },
+				rocks = { x = 0, y = 631, w = 35, h = 14 },
+				pond = { x = 37, y = 631, w = 32, h = 11 },
 			},
 			back = {
 				{ id = "gate", x = 504, y = 129 },
@@ -25875,70 +26132,71 @@ local M = {
 			},
 			props = "props_r2a1.png",
 			rects = {
-				heartroot = { x = 0, y = 0, w = 93, h = 84 },
-				rootplate = { x = 95, y = 0, w = 96, h = 70 },
-				crystalhouse = { x = 0, y = 86, w = 66, h = 69 },
-				dtree = { x = 68, y = 86, w = 41, h = 65 },
-				kbanner = { x = 111, y = 86, w = 31, h = 65 },
-				guardpost = { x = 144, y = 86, w = 78, h = 64 },
-				watch = { x = 0, y = 157, w = 58, h = 63 },
-				ctree = { x = 60, y = 157, w = 41, h = 62 },
-				gate = { x = 103, y = 157, w = 54, h = 60 },
-				darch = { x = 159, y = 157, w = 60, h = 58 },
-				door = { x = 0, y = 222, w = 62, h = 57 },
-				dtree2 = { x = 64, y = 222, w = 40, h = 51 },
-				ctree2 = { x = 106, y = 222, w = 39, h = 48 },
-				bigstump = { x = 147, y = 222, w = 73, h = 47 },
-				lantern = { x = 222, y = 222, w = 27, h = 46 },
-				post_lamp = { x = 0, y = 281, w = 24, h = 44 },
-				post = { x = 26, y = 281, w = 20, h = 44 },
-				roadlamp = { x = 48, y = 281, w = 30, h = 43 },
-				stall = { x = 80, y = 281, w = 56, h = 40 },
-				krack = { x = 138, y = 281, w = 37, h = 40 },
-				denmouth = { x = 177, y = 281, w = 55, h = 38 },
-				dcrystal_big = { x = 0, y = 327, w = 46, h = 38 },
-				reeds = { x = 48, y = 327, w = 33, h = 37 },
-				mint = { x = 83, y = 327, w = 46, h = 36 },
-				crystal_big = { x = 131, y = 327, w = 42, h = 34 },
-				mstone = { x = 175, y = 327, w = 40, h = 34 },
-				sign = { x = 217, y = 327, w = 27, h = 34 },
-				web = { x = 0, y = 367, w = 48, h = 33 },
-				sign3 = { x = 50, y = 367, w = 29, h = 33 },
-				tent = { x = 81, y = 367, w = 60, h = 32 },
-				tlog2 = { x = 143, y = 367, w = 108, h = 31 },
-				tlog1 = { x = 0, y = 402, w = 123, h = 30 },
-				cledge2 = { x = 125, y = 402, w = 62, h = 30 },
-				road3 = { x = 189, y = 402, w = 48, h = 30 },
-				road1 = { x = 0, y = 434, w = 93, h = 29 },
-				dledge3 = { x = 95, y = 434, w = 63, h = 29 },
-				dledge2 = { x = 160, y = 434, w = 62, h = 29 },
-				barricade = { x = 0, y = 465, w = 65, h = 28 },
-				cledge3 = { x = 67, y = 465, w = 63, h = 28 },
-				dledge1 = { x = 132, y = 465, w = 63, h = 28 },
-				road2 = { x = 0, y = 495, w = 69, h = 27 },
-				supplies = { x = 71, y = 495, w = 51, h = 27 },
-				tlog3 = { x = 124, y = 495, w = 64, h = 26 },
-				cledge1 = { x = 190, y = 495, w = 62, h = 26 },
-				kettle = { x = 0, y = 524, w = 27, h = 26 },
-				barrels = { x = 29, y = 524, w = 32, h = 24 },
-				clog = { x = 63, y = 524, w = 56, h = 20 },
-				thorn = { x = 121, y = 524, w = 26, h = 20 },
-				bench = { x = 149, y = 524, w = 66, h = 19 },
-				eggs = { x = 217, y = 524, w = 36, h = 19 },
-				cbuds = { x = 0, y = 552, w = 24, h = 19 },
-				crate = { x = 26, y = 552, w = 23, h = 19 },
-				shroom = { x = 51, y = 552, w = 31, h = 18 },
-				kstone = { x = 84, y = 552, w = 31, h = 18 },
-				dcrystal_small = { x = 117, y = 552, w = 23, h = 18 },
-				reeds2 = { x = 142, y = 552, w = 21, h = 18 },
-				grass = { x = 165, y = 552, w = 31, h = 17 },
-				fence = { x = 198, y = 552, w = 27, h = 17 },
-				bush = { x = 0, y = 573, w = 41, h = 16 },
-				spikes = { x = 43, y = 573, w = 31, h = 16 },
-				crystal_small = { x = 76, y = 573, w = 22, h = 15 },
-				campfire = { x = 100, y = 573, w = 43, h = 14 },
-				rocks = { x = 145, y = 573, w = 35, h = 14 },
-				pond = { x = 182, y = 573, w = 32, h = 11 },
+				riftgate = { x = 0, y = 0, w = 80, h = 108 },
+				heartroot = { x = 82, y = 0, w = 93, h = 84 },
+				rootplate = { x = 0, y = 110, w = 96, h = 70 },
+				crystalhouse = { x = 98, y = 110, w = 66, h = 69 },
+				dtree = { x = 166, y = 110, w = 41, h = 65 },
+				kbanner = { x = 209, y = 110, w = 31, h = 65 },
+				guardpost = { x = 0, y = 182, w = 78, h = 64 },
+				watch = { x = 80, y = 182, w = 58, h = 63 },
+				ctree = { x = 140, y = 182, w = 41, h = 62 },
+				gate = { x = 183, y = 182, w = 54, h = 60 },
+				darch = { x = 0, y = 248, w = 60, h = 58 },
+				door = { x = 62, y = 248, w = 62, h = 57 },
+				dtree2 = { x = 126, y = 248, w = 40, h = 51 },
+				ctree2 = { x = 168, y = 248, w = 39, h = 48 },
+				bigstump = { x = 0, y = 308, w = 73, h = 47 },
+				lantern = { x = 75, y = 308, w = 27, h = 46 },
+				post_lamp = { x = 104, y = 308, w = 24, h = 44 },
+				post = { x = 130, y = 308, w = 20, h = 44 },
+				roadlamp = { x = 152, y = 308, w = 30, h = 43 },
+				stall = { x = 184, y = 308, w = 56, h = 40 },
+				krack = { x = 0, y = 357, w = 37, h = 40 },
+				denmouth = { x = 39, y = 357, w = 55, h = 38 },
+				dcrystal_big = { x = 96, y = 357, w = 46, h = 38 },
+				reeds = { x = 144, y = 357, w = 33, h = 37 },
+				mint = { x = 179, y = 357, w = 46, h = 36 },
+				crystal_big = { x = 0, y = 399, w = 42, h = 34 },
+				mstone = { x = 44, y = 399, w = 40, h = 34 },
+				sign = { x = 86, y = 399, w = 27, h = 34 },
+				web = { x = 115, y = 399, w = 48, h = 33 },
+				sign3 = { x = 165, y = 399, w = 29, h = 33 },
+				tent = { x = 196, y = 399, w = 60, h = 32 },
+				tlog2 = { x = 0, y = 435, w = 108, h = 31 },
+				tlog1 = { x = 110, y = 435, w = 123, h = 30 },
+				cledge2 = { x = 0, y = 468, w = 62, h = 30 },
+				road3 = { x = 64, y = 468, w = 48, h = 30 },
+				road1 = { x = 114, y = 468, w = 93, h = 29 },
+				dledge3 = { x = 0, y = 500, w = 63, h = 29 },
+				dledge2 = { x = 65, y = 500, w = 62, h = 29 },
+				barricade = { x = 129, y = 500, w = 65, h = 28 },
+				cledge3 = { x = 0, y = 531, w = 63, h = 28 },
+				dledge1 = { x = 65, y = 531, w = 63, h = 28 },
+				road2 = { x = 130, y = 531, w = 69, h = 27 },
+				supplies = { x = 201, y = 531, w = 51, h = 27 },
+				tlog3 = { x = 0, y = 561, w = 64, h = 26 },
+				cledge1 = { x = 66, y = 561, w = 62, h = 26 },
+				kettle = { x = 130, y = 561, w = 27, h = 26 },
+				barrels = { x = 159, y = 561, w = 32, h = 24 },
+				clog = { x = 193, y = 561, w = 56, h = 20 },
+				thorn = { x = 0, y = 589, w = 26, h = 20 },
+				bench = { x = 28, y = 589, w = 66, h = 19 },
+				eggs = { x = 96, y = 589, w = 36, h = 19 },
+				cbuds = { x = 134, y = 589, w = 24, h = 19 },
+				crate = { x = 160, y = 589, w = 23, h = 19 },
+				shroom = { x = 185, y = 589, w = 31, h = 18 },
+				kstone = { x = 218, y = 589, w = 31, h = 18 },
+				dcrystal_small = { x = 0, y = 611, w = 23, h = 18 },
+				reeds2 = { x = 25, y = 611, w = 21, h = 18 },
+				grass = { x = 48, y = 611, w = 31, h = 17 },
+				fence = { x = 81, y = 611, w = 27, h = 17 },
+				bush = { x = 110, y = 611, w = 41, h = 16 },
+				spikes = { x = 153, y = 611, w = 31, h = 16 },
+				crystal_small = { x = 186, y = 611, w = 22, h = 15 },
+				campfire = { x = 210, y = 611, w = 43, h = 14 },
+				rocks = { x = 0, y = 631, w = 35, h = 14 },
+				pond = { x = 37, y = 631, w = 32, h = 11 },
 			},
 			back = {
 				{ id = "gate", x = 432, y = 145 },
@@ -26038,70 +26296,71 @@ local M = {
 			},
 			props = "props_r2a1.png",
 			rects = {
-				heartroot = { x = 0, y = 0, w = 93, h = 84 },
-				rootplate = { x = 95, y = 0, w = 96, h = 70 },
-				crystalhouse = { x = 0, y = 86, w = 66, h = 69 },
-				dtree = { x = 68, y = 86, w = 41, h = 65 },
-				kbanner = { x = 111, y = 86, w = 31, h = 65 },
-				guardpost = { x = 144, y = 86, w = 78, h = 64 },
-				watch = { x = 0, y = 157, w = 58, h = 63 },
-				ctree = { x = 60, y = 157, w = 41, h = 62 },
-				gate = { x = 103, y = 157, w = 54, h = 60 },
-				darch = { x = 159, y = 157, w = 60, h = 58 },
-				door = { x = 0, y = 222, w = 62, h = 57 },
-				dtree2 = { x = 64, y = 222, w = 40, h = 51 },
-				ctree2 = { x = 106, y = 222, w = 39, h = 48 },
-				bigstump = { x = 147, y = 222, w = 73, h = 47 },
-				lantern = { x = 222, y = 222, w = 27, h = 46 },
-				post_lamp = { x = 0, y = 281, w = 24, h = 44 },
-				post = { x = 26, y = 281, w = 20, h = 44 },
-				roadlamp = { x = 48, y = 281, w = 30, h = 43 },
-				stall = { x = 80, y = 281, w = 56, h = 40 },
-				krack = { x = 138, y = 281, w = 37, h = 40 },
-				denmouth = { x = 177, y = 281, w = 55, h = 38 },
-				dcrystal_big = { x = 0, y = 327, w = 46, h = 38 },
-				reeds = { x = 48, y = 327, w = 33, h = 37 },
-				mint = { x = 83, y = 327, w = 46, h = 36 },
-				crystal_big = { x = 131, y = 327, w = 42, h = 34 },
-				mstone = { x = 175, y = 327, w = 40, h = 34 },
-				sign = { x = 217, y = 327, w = 27, h = 34 },
-				web = { x = 0, y = 367, w = 48, h = 33 },
-				sign3 = { x = 50, y = 367, w = 29, h = 33 },
-				tent = { x = 81, y = 367, w = 60, h = 32 },
-				tlog2 = { x = 143, y = 367, w = 108, h = 31 },
-				tlog1 = { x = 0, y = 402, w = 123, h = 30 },
-				cledge2 = { x = 125, y = 402, w = 62, h = 30 },
-				road3 = { x = 189, y = 402, w = 48, h = 30 },
-				road1 = { x = 0, y = 434, w = 93, h = 29 },
-				dledge3 = { x = 95, y = 434, w = 63, h = 29 },
-				dledge2 = { x = 160, y = 434, w = 62, h = 29 },
-				barricade = { x = 0, y = 465, w = 65, h = 28 },
-				cledge3 = { x = 67, y = 465, w = 63, h = 28 },
-				dledge1 = { x = 132, y = 465, w = 63, h = 28 },
-				road2 = { x = 0, y = 495, w = 69, h = 27 },
-				supplies = { x = 71, y = 495, w = 51, h = 27 },
-				tlog3 = { x = 124, y = 495, w = 64, h = 26 },
-				cledge1 = { x = 190, y = 495, w = 62, h = 26 },
-				kettle = { x = 0, y = 524, w = 27, h = 26 },
-				barrels = { x = 29, y = 524, w = 32, h = 24 },
-				clog = { x = 63, y = 524, w = 56, h = 20 },
-				thorn = { x = 121, y = 524, w = 26, h = 20 },
-				bench = { x = 149, y = 524, w = 66, h = 19 },
-				eggs = { x = 217, y = 524, w = 36, h = 19 },
-				cbuds = { x = 0, y = 552, w = 24, h = 19 },
-				crate = { x = 26, y = 552, w = 23, h = 19 },
-				shroom = { x = 51, y = 552, w = 31, h = 18 },
-				kstone = { x = 84, y = 552, w = 31, h = 18 },
-				dcrystal_small = { x = 117, y = 552, w = 23, h = 18 },
-				reeds2 = { x = 142, y = 552, w = 21, h = 18 },
-				grass = { x = 165, y = 552, w = 31, h = 17 },
-				fence = { x = 198, y = 552, w = 27, h = 17 },
-				bush = { x = 0, y = 573, w = 41, h = 16 },
-				spikes = { x = 43, y = 573, w = 31, h = 16 },
-				crystal_small = { x = 76, y = 573, w = 22, h = 15 },
-				campfire = { x = 100, y = 573, w = 43, h = 14 },
-				rocks = { x = 145, y = 573, w = 35, h = 14 },
-				pond = { x = 182, y = 573, w = 32, h = 11 },
+				riftgate = { x = 0, y = 0, w = 80, h = 108 },
+				heartroot = { x = 82, y = 0, w = 93, h = 84 },
+				rootplate = { x = 0, y = 110, w = 96, h = 70 },
+				crystalhouse = { x = 98, y = 110, w = 66, h = 69 },
+				dtree = { x = 166, y = 110, w = 41, h = 65 },
+				kbanner = { x = 209, y = 110, w = 31, h = 65 },
+				guardpost = { x = 0, y = 182, w = 78, h = 64 },
+				watch = { x = 80, y = 182, w = 58, h = 63 },
+				ctree = { x = 140, y = 182, w = 41, h = 62 },
+				gate = { x = 183, y = 182, w = 54, h = 60 },
+				darch = { x = 0, y = 248, w = 60, h = 58 },
+				door = { x = 62, y = 248, w = 62, h = 57 },
+				dtree2 = { x = 126, y = 248, w = 40, h = 51 },
+				ctree2 = { x = 168, y = 248, w = 39, h = 48 },
+				bigstump = { x = 0, y = 308, w = 73, h = 47 },
+				lantern = { x = 75, y = 308, w = 27, h = 46 },
+				post_lamp = { x = 104, y = 308, w = 24, h = 44 },
+				post = { x = 130, y = 308, w = 20, h = 44 },
+				roadlamp = { x = 152, y = 308, w = 30, h = 43 },
+				stall = { x = 184, y = 308, w = 56, h = 40 },
+				krack = { x = 0, y = 357, w = 37, h = 40 },
+				denmouth = { x = 39, y = 357, w = 55, h = 38 },
+				dcrystal_big = { x = 96, y = 357, w = 46, h = 38 },
+				reeds = { x = 144, y = 357, w = 33, h = 37 },
+				mint = { x = 179, y = 357, w = 46, h = 36 },
+				crystal_big = { x = 0, y = 399, w = 42, h = 34 },
+				mstone = { x = 44, y = 399, w = 40, h = 34 },
+				sign = { x = 86, y = 399, w = 27, h = 34 },
+				web = { x = 115, y = 399, w = 48, h = 33 },
+				sign3 = { x = 165, y = 399, w = 29, h = 33 },
+				tent = { x = 196, y = 399, w = 60, h = 32 },
+				tlog2 = { x = 0, y = 435, w = 108, h = 31 },
+				tlog1 = { x = 110, y = 435, w = 123, h = 30 },
+				cledge2 = { x = 0, y = 468, w = 62, h = 30 },
+				road3 = { x = 64, y = 468, w = 48, h = 30 },
+				road1 = { x = 114, y = 468, w = 93, h = 29 },
+				dledge3 = { x = 0, y = 500, w = 63, h = 29 },
+				dledge2 = { x = 65, y = 500, w = 62, h = 29 },
+				barricade = { x = 129, y = 500, w = 65, h = 28 },
+				cledge3 = { x = 0, y = 531, w = 63, h = 28 },
+				dledge1 = { x = 65, y = 531, w = 63, h = 28 },
+				road2 = { x = 130, y = 531, w = 69, h = 27 },
+				supplies = { x = 201, y = 531, w = 51, h = 27 },
+				tlog3 = { x = 0, y = 561, w = 64, h = 26 },
+				cledge1 = { x = 66, y = 561, w = 62, h = 26 },
+				kettle = { x = 130, y = 561, w = 27, h = 26 },
+				barrels = { x = 159, y = 561, w = 32, h = 24 },
+				clog = { x = 193, y = 561, w = 56, h = 20 },
+				thorn = { x = 0, y = 589, w = 26, h = 20 },
+				bench = { x = 28, y = 589, w = 66, h = 19 },
+				eggs = { x = 96, y = 589, w = 36, h = 19 },
+				cbuds = { x = 134, y = 589, w = 24, h = 19 },
+				crate = { x = 160, y = 589, w = 23, h = 19 },
+				shroom = { x = 185, y = 589, w = 31, h = 18 },
+				kstone = { x = 218, y = 589, w = 31, h = 18 },
+				dcrystal_small = { x = 0, y = 611, w = 23, h = 18 },
+				reeds2 = { x = 25, y = 611, w = 21, h = 18 },
+				grass = { x = 48, y = 611, w = 31, h = 17 },
+				fence = { x = 81, y = 611, w = 27, h = 17 },
+				bush = { x = 110, y = 611, w = 41, h = 16 },
+				spikes = { x = 153, y = 611, w = 31, h = 16 },
+				crystal_small = { x = 186, y = 611, w = 22, h = 15 },
+				campfire = { x = 210, y = 611, w = 43, h = 14 },
+				rocks = { x = 0, y = 631, w = 35, h = 14 },
+				pond = { x = 37, y = 631, w = 32, h = 11 },
 			},
 			back = {
 				{ id = "gate", x = 472, y = 161 },
@@ -26221,70 +26480,71 @@ local M = {
 			},
 			props = "props_r2a1.png",
 			rects = {
-				heartroot = { x = 0, y = 0, w = 93, h = 84 },
-				rootplate = { x = 95, y = 0, w = 96, h = 70 },
-				crystalhouse = { x = 0, y = 86, w = 66, h = 69 },
-				dtree = { x = 68, y = 86, w = 41, h = 65 },
-				kbanner = { x = 111, y = 86, w = 31, h = 65 },
-				guardpost = { x = 144, y = 86, w = 78, h = 64 },
-				watch = { x = 0, y = 157, w = 58, h = 63 },
-				ctree = { x = 60, y = 157, w = 41, h = 62 },
-				gate = { x = 103, y = 157, w = 54, h = 60 },
-				darch = { x = 159, y = 157, w = 60, h = 58 },
-				door = { x = 0, y = 222, w = 62, h = 57 },
-				dtree2 = { x = 64, y = 222, w = 40, h = 51 },
-				ctree2 = { x = 106, y = 222, w = 39, h = 48 },
-				bigstump = { x = 147, y = 222, w = 73, h = 47 },
-				lantern = { x = 222, y = 222, w = 27, h = 46 },
-				post_lamp = { x = 0, y = 281, w = 24, h = 44 },
-				post = { x = 26, y = 281, w = 20, h = 44 },
-				roadlamp = { x = 48, y = 281, w = 30, h = 43 },
-				stall = { x = 80, y = 281, w = 56, h = 40 },
-				krack = { x = 138, y = 281, w = 37, h = 40 },
-				denmouth = { x = 177, y = 281, w = 55, h = 38 },
-				dcrystal_big = { x = 0, y = 327, w = 46, h = 38 },
-				reeds = { x = 48, y = 327, w = 33, h = 37 },
-				mint = { x = 83, y = 327, w = 46, h = 36 },
-				crystal_big = { x = 131, y = 327, w = 42, h = 34 },
-				mstone = { x = 175, y = 327, w = 40, h = 34 },
-				sign = { x = 217, y = 327, w = 27, h = 34 },
-				web = { x = 0, y = 367, w = 48, h = 33 },
-				sign3 = { x = 50, y = 367, w = 29, h = 33 },
-				tent = { x = 81, y = 367, w = 60, h = 32 },
-				tlog2 = { x = 143, y = 367, w = 108, h = 31 },
-				tlog1 = { x = 0, y = 402, w = 123, h = 30 },
-				cledge2 = { x = 125, y = 402, w = 62, h = 30 },
-				road3 = { x = 189, y = 402, w = 48, h = 30 },
-				road1 = { x = 0, y = 434, w = 93, h = 29 },
-				dledge3 = { x = 95, y = 434, w = 63, h = 29 },
-				dledge2 = { x = 160, y = 434, w = 62, h = 29 },
-				barricade = { x = 0, y = 465, w = 65, h = 28 },
-				cledge3 = { x = 67, y = 465, w = 63, h = 28 },
-				dledge1 = { x = 132, y = 465, w = 63, h = 28 },
-				road2 = { x = 0, y = 495, w = 69, h = 27 },
-				supplies = { x = 71, y = 495, w = 51, h = 27 },
-				tlog3 = { x = 124, y = 495, w = 64, h = 26 },
-				cledge1 = { x = 190, y = 495, w = 62, h = 26 },
-				kettle = { x = 0, y = 524, w = 27, h = 26 },
-				barrels = { x = 29, y = 524, w = 32, h = 24 },
-				clog = { x = 63, y = 524, w = 56, h = 20 },
-				thorn = { x = 121, y = 524, w = 26, h = 20 },
-				bench = { x = 149, y = 524, w = 66, h = 19 },
-				eggs = { x = 217, y = 524, w = 36, h = 19 },
-				cbuds = { x = 0, y = 552, w = 24, h = 19 },
-				crate = { x = 26, y = 552, w = 23, h = 19 },
-				shroom = { x = 51, y = 552, w = 31, h = 18 },
-				kstone = { x = 84, y = 552, w = 31, h = 18 },
-				dcrystal_small = { x = 117, y = 552, w = 23, h = 18 },
-				reeds2 = { x = 142, y = 552, w = 21, h = 18 },
-				grass = { x = 165, y = 552, w = 31, h = 17 },
-				fence = { x = 198, y = 552, w = 27, h = 17 },
-				bush = { x = 0, y = 573, w = 41, h = 16 },
-				spikes = { x = 43, y = 573, w = 31, h = 16 },
-				crystal_small = { x = 76, y = 573, w = 22, h = 15 },
-				campfire = { x = 100, y = 573, w = 43, h = 14 },
-				rocks = { x = 145, y = 573, w = 35, h = 14 },
-				pond = { x = 182, y = 573, w = 32, h = 11 },
+				riftgate = { x = 0, y = 0, w = 80, h = 108 },
+				heartroot = { x = 82, y = 0, w = 93, h = 84 },
+				rootplate = { x = 0, y = 110, w = 96, h = 70 },
+				crystalhouse = { x = 98, y = 110, w = 66, h = 69 },
+				dtree = { x = 166, y = 110, w = 41, h = 65 },
+				kbanner = { x = 209, y = 110, w = 31, h = 65 },
+				guardpost = { x = 0, y = 182, w = 78, h = 64 },
+				watch = { x = 80, y = 182, w = 58, h = 63 },
+				ctree = { x = 140, y = 182, w = 41, h = 62 },
+				gate = { x = 183, y = 182, w = 54, h = 60 },
+				darch = { x = 0, y = 248, w = 60, h = 58 },
+				door = { x = 62, y = 248, w = 62, h = 57 },
+				dtree2 = { x = 126, y = 248, w = 40, h = 51 },
+				ctree2 = { x = 168, y = 248, w = 39, h = 48 },
+				bigstump = { x = 0, y = 308, w = 73, h = 47 },
+				lantern = { x = 75, y = 308, w = 27, h = 46 },
+				post_lamp = { x = 104, y = 308, w = 24, h = 44 },
+				post = { x = 130, y = 308, w = 20, h = 44 },
+				roadlamp = { x = 152, y = 308, w = 30, h = 43 },
+				stall = { x = 184, y = 308, w = 56, h = 40 },
+				krack = { x = 0, y = 357, w = 37, h = 40 },
+				denmouth = { x = 39, y = 357, w = 55, h = 38 },
+				dcrystal_big = { x = 96, y = 357, w = 46, h = 38 },
+				reeds = { x = 144, y = 357, w = 33, h = 37 },
+				mint = { x = 179, y = 357, w = 46, h = 36 },
+				crystal_big = { x = 0, y = 399, w = 42, h = 34 },
+				mstone = { x = 44, y = 399, w = 40, h = 34 },
+				sign = { x = 86, y = 399, w = 27, h = 34 },
+				web = { x = 115, y = 399, w = 48, h = 33 },
+				sign3 = { x = 165, y = 399, w = 29, h = 33 },
+				tent = { x = 196, y = 399, w = 60, h = 32 },
+				tlog2 = { x = 0, y = 435, w = 108, h = 31 },
+				tlog1 = { x = 110, y = 435, w = 123, h = 30 },
+				cledge2 = { x = 0, y = 468, w = 62, h = 30 },
+				road3 = { x = 64, y = 468, w = 48, h = 30 },
+				road1 = { x = 114, y = 468, w = 93, h = 29 },
+				dledge3 = { x = 0, y = 500, w = 63, h = 29 },
+				dledge2 = { x = 65, y = 500, w = 62, h = 29 },
+				barricade = { x = 129, y = 500, w = 65, h = 28 },
+				cledge3 = { x = 0, y = 531, w = 63, h = 28 },
+				dledge1 = { x = 65, y = 531, w = 63, h = 28 },
+				road2 = { x = 130, y = 531, w = 69, h = 27 },
+				supplies = { x = 201, y = 531, w = 51, h = 27 },
+				tlog3 = { x = 0, y = 561, w = 64, h = 26 },
+				cledge1 = { x = 66, y = 561, w = 62, h = 26 },
+				kettle = { x = 130, y = 561, w = 27, h = 26 },
+				barrels = { x = 159, y = 561, w = 32, h = 24 },
+				clog = { x = 193, y = 561, w = 56, h = 20 },
+				thorn = { x = 0, y = 589, w = 26, h = 20 },
+				bench = { x = 28, y = 589, w = 66, h = 19 },
+				eggs = { x = 96, y = 589, w = 36, h = 19 },
+				cbuds = { x = 134, y = 589, w = 24, h = 19 },
+				crate = { x = 160, y = 589, w = 23, h = 19 },
+				shroom = { x = 185, y = 589, w = 31, h = 18 },
+				kstone = { x = 218, y = 589, w = 31, h = 18 },
+				dcrystal_small = { x = 0, y = 611, w = 23, h = 18 },
+				reeds2 = { x = 25, y = 611, w = 21, h = 18 },
+				grass = { x = 48, y = 611, w = 31, h = 17 },
+				fence = { x = 81, y = 611, w = 27, h = 17 },
+				bush = { x = 110, y = 611, w = 41, h = 16 },
+				spikes = { x = 153, y = 611, w = 31, h = 16 },
+				crystal_small = { x = 186, y = 611, w = 22, h = 15 },
+				campfire = { x = 210, y = 611, w = 43, h = 14 },
+				rocks = { x = 0, y = 631, w = 35, h = 14 },
+				pond = { x = 37, y = 631, w = 32, h = 11 },
 			},
 			back = {
 				{ id = "gate", x = 32, y = 241 },
@@ -26415,70 +26675,71 @@ local M = {
 			},
 			props = "props_r2a1.png",
 			rects = {
-				heartroot = { x = 0, y = 0, w = 93, h = 84 },
-				rootplate = { x = 95, y = 0, w = 96, h = 70 },
-				crystalhouse = { x = 0, y = 86, w = 66, h = 69 },
-				dtree = { x = 68, y = 86, w = 41, h = 65 },
-				kbanner = { x = 111, y = 86, w = 31, h = 65 },
-				guardpost = { x = 144, y = 86, w = 78, h = 64 },
-				watch = { x = 0, y = 157, w = 58, h = 63 },
-				ctree = { x = 60, y = 157, w = 41, h = 62 },
-				gate = { x = 103, y = 157, w = 54, h = 60 },
-				darch = { x = 159, y = 157, w = 60, h = 58 },
-				door = { x = 0, y = 222, w = 62, h = 57 },
-				dtree2 = { x = 64, y = 222, w = 40, h = 51 },
-				ctree2 = { x = 106, y = 222, w = 39, h = 48 },
-				bigstump = { x = 147, y = 222, w = 73, h = 47 },
-				lantern = { x = 222, y = 222, w = 27, h = 46 },
-				post_lamp = { x = 0, y = 281, w = 24, h = 44 },
-				post = { x = 26, y = 281, w = 20, h = 44 },
-				roadlamp = { x = 48, y = 281, w = 30, h = 43 },
-				stall = { x = 80, y = 281, w = 56, h = 40 },
-				krack = { x = 138, y = 281, w = 37, h = 40 },
-				denmouth = { x = 177, y = 281, w = 55, h = 38 },
-				dcrystal_big = { x = 0, y = 327, w = 46, h = 38 },
-				reeds = { x = 48, y = 327, w = 33, h = 37 },
-				mint = { x = 83, y = 327, w = 46, h = 36 },
-				crystal_big = { x = 131, y = 327, w = 42, h = 34 },
-				mstone = { x = 175, y = 327, w = 40, h = 34 },
-				sign = { x = 217, y = 327, w = 27, h = 34 },
-				web = { x = 0, y = 367, w = 48, h = 33 },
-				sign3 = { x = 50, y = 367, w = 29, h = 33 },
-				tent = { x = 81, y = 367, w = 60, h = 32 },
-				tlog2 = { x = 143, y = 367, w = 108, h = 31 },
-				tlog1 = { x = 0, y = 402, w = 123, h = 30 },
-				cledge2 = { x = 125, y = 402, w = 62, h = 30 },
-				road3 = { x = 189, y = 402, w = 48, h = 30 },
-				road1 = { x = 0, y = 434, w = 93, h = 29 },
-				dledge3 = { x = 95, y = 434, w = 63, h = 29 },
-				dledge2 = { x = 160, y = 434, w = 62, h = 29 },
-				barricade = { x = 0, y = 465, w = 65, h = 28 },
-				cledge3 = { x = 67, y = 465, w = 63, h = 28 },
-				dledge1 = { x = 132, y = 465, w = 63, h = 28 },
-				road2 = { x = 0, y = 495, w = 69, h = 27 },
-				supplies = { x = 71, y = 495, w = 51, h = 27 },
-				tlog3 = { x = 124, y = 495, w = 64, h = 26 },
-				cledge1 = { x = 190, y = 495, w = 62, h = 26 },
-				kettle = { x = 0, y = 524, w = 27, h = 26 },
-				barrels = { x = 29, y = 524, w = 32, h = 24 },
-				clog = { x = 63, y = 524, w = 56, h = 20 },
-				thorn = { x = 121, y = 524, w = 26, h = 20 },
-				bench = { x = 149, y = 524, w = 66, h = 19 },
-				eggs = { x = 217, y = 524, w = 36, h = 19 },
-				cbuds = { x = 0, y = 552, w = 24, h = 19 },
-				crate = { x = 26, y = 552, w = 23, h = 19 },
-				shroom = { x = 51, y = 552, w = 31, h = 18 },
-				kstone = { x = 84, y = 552, w = 31, h = 18 },
-				dcrystal_small = { x = 117, y = 552, w = 23, h = 18 },
-				reeds2 = { x = 142, y = 552, w = 21, h = 18 },
-				grass = { x = 165, y = 552, w = 31, h = 17 },
-				fence = { x = 198, y = 552, w = 27, h = 17 },
-				bush = { x = 0, y = 573, w = 41, h = 16 },
-				spikes = { x = 43, y = 573, w = 31, h = 16 },
-				crystal_small = { x = 76, y = 573, w = 22, h = 15 },
-				campfire = { x = 100, y = 573, w = 43, h = 14 },
-				rocks = { x = 145, y = 573, w = 35, h = 14 },
-				pond = { x = 182, y = 573, w = 32, h = 11 },
+				riftgate = { x = 0, y = 0, w = 80, h = 108 },
+				heartroot = { x = 82, y = 0, w = 93, h = 84 },
+				rootplate = { x = 0, y = 110, w = 96, h = 70 },
+				crystalhouse = { x = 98, y = 110, w = 66, h = 69 },
+				dtree = { x = 166, y = 110, w = 41, h = 65 },
+				kbanner = { x = 209, y = 110, w = 31, h = 65 },
+				guardpost = { x = 0, y = 182, w = 78, h = 64 },
+				watch = { x = 80, y = 182, w = 58, h = 63 },
+				ctree = { x = 140, y = 182, w = 41, h = 62 },
+				gate = { x = 183, y = 182, w = 54, h = 60 },
+				darch = { x = 0, y = 248, w = 60, h = 58 },
+				door = { x = 62, y = 248, w = 62, h = 57 },
+				dtree2 = { x = 126, y = 248, w = 40, h = 51 },
+				ctree2 = { x = 168, y = 248, w = 39, h = 48 },
+				bigstump = { x = 0, y = 308, w = 73, h = 47 },
+				lantern = { x = 75, y = 308, w = 27, h = 46 },
+				post_lamp = { x = 104, y = 308, w = 24, h = 44 },
+				post = { x = 130, y = 308, w = 20, h = 44 },
+				roadlamp = { x = 152, y = 308, w = 30, h = 43 },
+				stall = { x = 184, y = 308, w = 56, h = 40 },
+				krack = { x = 0, y = 357, w = 37, h = 40 },
+				denmouth = { x = 39, y = 357, w = 55, h = 38 },
+				dcrystal_big = { x = 96, y = 357, w = 46, h = 38 },
+				reeds = { x = 144, y = 357, w = 33, h = 37 },
+				mint = { x = 179, y = 357, w = 46, h = 36 },
+				crystal_big = { x = 0, y = 399, w = 42, h = 34 },
+				mstone = { x = 44, y = 399, w = 40, h = 34 },
+				sign = { x = 86, y = 399, w = 27, h = 34 },
+				web = { x = 115, y = 399, w = 48, h = 33 },
+				sign3 = { x = 165, y = 399, w = 29, h = 33 },
+				tent = { x = 196, y = 399, w = 60, h = 32 },
+				tlog2 = { x = 0, y = 435, w = 108, h = 31 },
+				tlog1 = { x = 110, y = 435, w = 123, h = 30 },
+				cledge2 = { x = 0, y = 468, w = 62, h = 30 },
+				road3 = { x = 64, y = 468, w = 48, h = 30 },
+				road1 = { x = 114, y = 468, w = 93, h = 29 },
+				dledge3 = { x = 0, y = 500, w = 63, h = 29 },
+				dledge2 = { x = 65, y = 500, w = 62, h = 29 },
+				barricade = { x = 129, y = 500, w = 65, h = 28 },
+				cledge3 = { x = 0, y = 531, w = 63, h = 28 },
+				dledge1 = { x = 65, y = 531, w = 63, h = 28 },
+				road2 = { x = 130, y = 531, w = 69, h = 27 },
+				supplies = { x = 201, y = 531, w = 51, h = 27 },
+				tlog3 = { x = 0, y = 561, w = 64, h = 26 },
+				cledge1 = { x = 66, y = 561, w = 62, h = 26 },
+				kettle = { x = 130, y = 561, w = 27, h = 26 },
+				barrels = { x = 159, y = 561, w = 32, h = 24 },
+				clog = { x = 193, y = 561, w = 56, h = 20 },
+				thorn = { x = 0, y = 589, w = 26, h = 20 },
+				bench = { x = 28, y = 589, w = 66, h = 19 },
+				eggs = { x = 96, y = 589, w = 36, h = 19 },
+				cbuds = { x = 134, y = 589, w = 24, h = 19 },
+				crate = { x = 160, y = 589, w = 23, h = 19 },
+				shroom = { x = 185, y = 589, w = 31, h = 18 },
+				kstone = { x = 218, y = 589, w = 31, h = 18 },
+				dcrystal_small = { x = 0, y = 611, w = 23, h = 18 },
+				reeds2 = { x = 25, y = 611, w = 21, h = 18 },
+				grass = { x = 48, y = 611, w = 31, h = 17 },
+				fence = { x = 81, y = 611, w = 27, h = 17 },
+				bush = { x = 110, y = 611, w = 41, h = 16 },
+				spikes = { x = 153, y = 611, w = 31, h = 16 },
+				crystal_small = { x = 186, y = 611, w = 22, h = 15 },
+				campfire = { x = 210, y = 611, w = 43, h = 14 },
+				rocks = { x = 0, y = 631, w = 35, h = 14 },
+				pond = { x = 37, y = 631, w = 32, h = 11 },
 			},
 			back = {
 				{ id = "denmouth", x = 203, y = 97 },
@@ -26603,70 +26864,71 @@ local M = {
 			},
 			props = "props_r2a1.png",
 			rects = {
-				heartroot = { x = 0, y = 0, w = 93, h = 84 },
-				rootplate = { x = 95, y = 0, w = 96, h = 70 },
-				crystalhouse = { x = 0, y = 86, w = 66, h = 69 },
-				dtree = { x = 68, y = 86, w = 41, h = 65 },
-				kbanner = { x = 111, y = 86, w = 31, h = 65 },
-				guardpost = { x = 144, y = 86, w = 78, h = 64 },
-				watch = { x = 0, y = 157, w = 58, h = 63 },
-				ctree = { x = 60, y = 157, w = 41, h = 62 },
-				gate = { x = 103, y = 157, w = 54, h = 60 },
-				darch = { x = 159, y = 157, w = 60, h = 58 },
-				door = { x = 0, y = 222, w = 62, h = 57 },
-				dtree2 = { x = 64, y = 222, w = 40, h = 51 },
-				ctree2 = { x = 106, y = 222, w = 39, h = 48 },
-				bigstump = { x = 147, y = 222, w = 73, h = 47 },
-				lantern = { x = 222, y = 222, w = 27, h = 46 },
-				post_lamp = { x = 0, y = 281, w = 24, h = 44 },
-				post = { x = 26, y = 281, w = 20, h = 44 },
-				roadlamp = { x = 48, y = 281, w = 30, h = 43 },
-				stall = { x = 80, y = 281, w = 56, h = 40 },
-				krack = { x = 138, y = 281, w = 37, h = 40 },
-				denmouth = { x = 177, y = 281, w = 55, h = 38 },
-				dcrystal_big = { x = 0, y = 327, w = 46, h = 38 },
-				reeds = { x = 48, y = 327, w = 33, h = 37 },
-				mint = { x = 83, y = 327, w = 46, h = 36 },
-				crystal_big = { x = 131, y = 327, w = 42, h = 34 },
-				mstone = { x = 175, y = 327, w = 40, h = 34 },
-				sign = { x = 217, y = 327, w = 27, h = 34 },
-				web = { x = 0, y = 367, w = 48, h = 33 },
-				sign3 = { x = 50, y = 367, w = 29, h = 33 },
-				tent = { x = 81, y = 367, w = 60, h = 32 },
-				tlog2 = { x = 143, y = 367, w = 108, h = 31 },
-				tlog1 = { x = 0, y = 402, w = 123, h = 30 },
-				cledge2 = { x = 125, y = 402, w = 62, h = 30 },
-				road3 = { x = 189, y = 402, w = 48, h = 30 },
-				road1 = { x = 0, y = 434, w = 93, h = 29 },
-				dledge3 = { x = 95, y = 434, w = 63, h = 29 },
-				dledge2 = { x = 160, y = 434, w = 62, h = 29 },
-				barricade = { x = 0, y = 465, w = 65, h = 28 },
-				cledge3 = { x = 67, y = 465, w = 63, h = 28 },
-				dledge1 = { x = 132, y = 465, w = 63, h = 28 },
-				road2 = { x = 0, y = 495, w = 69, h = 27 },
-				supplies = { x = 71, y = 495, w = 51, h = 27 },
-				tlog3 = { x = 124, y = 495, w = 64, h = 26 },
-				cledge1 = { x = 190, y = 495, w = 62, h = 26 },
-				kettle = { x = 0, y = 524, w = 27, h = 26 },
-				barrels = { x = 29, y = 524, w = 32, h = 24 },
-				clog = { x = 63, y = 524, w = 56, h = 20 },
-				thorn = { x = 121, y = 524, w = 26, h = 20 },
-				bench = { x = 149, y = 524, w = 66, h = 19 },
-				eggs = { x = 217, y = 524, w = 36, h = 19 },
-				cbuds = { x = 0, y = 552, w = 24, h = 19 },
-				crate = { x = 26, y = 552, w = 23, h = 19 },
-				shroom = { x = 51, y = 552, w = 31, h = 18 },
-				kstone = { x = 84, y = 552, w = 31, h = 18 },
-				dcrystal_small = { x = 117, y = 552, w = 23, h = 18 },
-				reeds2 = { x = 142, y = 552, w = 21, h = 18 },
-				grass = { x = 165, y = 552, w = 31, h = 17 },
-				fence = { x = 198, y = 552, w = 27, h = 17 },
-				bush = { x = 0, y = 573, w = 41, h = 16 },
-				spikes = { x = 43, y = 573, w = 31, h = 16 },
-				crystal_small = { x = 76, y = 573, w = 22, h = 15 },
-				campfire = { x = 100, y = 573, w = 43, h = 14 },
-				rocks = { x = 145, y = 573, w = 35, h = 14 },
-				pond = { x = 182, y = 573, w = 32, h = 11 },
+				riftgate = { x = 0, y = 0, w = 80, h = 108 },
+				heartroot = { x = 82, y = 0, w = 93, h = 84 },
+				rootplate = { x = 0, y = 110, w = 96, h = 70 },
+				crystalhouse = { x = 98, y = 110, w = 66, h = 69 },
+				dtree = { x = 166, y = 110, w = 41, h = 65 },
+				kbanner = { x = 209, y = 110, w = 31, h = 65 },
+				guardpost = { x = 0, y = 182, w = 78, h = 64 },
+				watch = { x = 80, y = 182, w = 58, h = 63 },
+				ctree = { x = 140, y = 182, w = 41, h = 62 },
+				gate = { x = 183, y = 182, w = 54, h = 60 },
+				darch = { x = 0, y = 248, w = 60, h = 58 },
+				door = { x = 62, y = 248, w = 62, h = 57 },
+				dtree2 = { x = 126, y = 248, w = 40, h = 51 },
+				ctree2 = { x = 168, y = 248, w = 39, h = 48 },
+				bigstump = { x = 0, y = 308, w = 73, h = 47 },
+				lantern = { x = 75, y = 308, w = 27, h = 46 },
+				post_lamp = { x = 104, y = 308, w = 24, h = 44 },
+				post = { x = 130, y = 308, w = 20, h = 44 },
+				roadlamp = { x = 152, y = 308, w = 30, h = 43 },
+				stall = { x = 184, y = 308, w = 56, h = 40 },
+				krack = { x = 0, y = 357, w = 37, h = 40 },
+				denmouth = { x = 39, y = 357, w = 55, h = 38 },
+				dcrystal_big = { x = 96, y = 357, w = 46, h = 38 },
+				reeds = { x = 144, y = 357, w = 33, h = 37 },
+				mint = { x = 179, y = 357, w = 46, h = 36 },
+				crystal_big = { x = 0, y = 399, w = 42, h = 34 },
+				mstone = { x = 44, y = 399, w = 40, h = 34 },
+				sign = { x = 86, y = 399, w = 27, h = 34 },
+				web = { x = 115, y = 399, w = 48, h = 33 },
+				sign3 = { x = 165, y = 399, w = 29, h = 33 },
+				tent = { x = 196, y = 399, w = 60, h = 32 },
+				tlog2 = { x = 0, y = 435, w = 108, h = 31 },
+				tlog1 = { x = 110, y = 435, w = 123, h = 30 },
+				cledge2 = { x = 0, y = 468, w = 62, h = 30 },
+				road3 = { x = 64, y = 468, w = 48, h = 30 },
+				road1 = { x = 114, y = 468, w = 93, h = 29 },
+				dledge3 = { x = 0, y = 500, w = 63, h = 29 },
+				dledge2 = { x = 65, y = 500, w = 62, h = 29 },
+				barricade = { x = 129, y = 500, w = 65, h = 28 },
+				cledge3 = { x = 0, y = 531, w = 63, h = 28 },
+				dledge1 = { x = 65, y = 531, w = 63, h = 28 },
+				road2 = { x = 130, y = 531, w = 69, h = 27 },
+				supplies = { x = 201, y = 531, w = 51, h = 27 },
+				tlog3 = { x = 0, y = 561, w = 64, h = 26 },
+				cledge1 = { x = 66, y = 561, w = 62, h = 26 },
+				kettle = { x = 130, y = 561, w = 27, h = 26 },
+				barrels = { x = 159, y = 561, w = 32, h = 24 },
+				clog = { x = 193, y = 561, w = 56, h = 20 },
+				thorn = { x = 0, y = 589, w = 26, h = 20 },
+				bench = { x = 28, y = 589, w = 66, h = 19 },
+				eggs = { x = 96, y = 589, w = 36, h = 19 },
+				cbuds = { x = 134, y = 589, w = 24, h = 19 },
+				crate = { x = 160, y = 589, w = 23, h = 19 },
+				shroom = { x = 185, y = 589, w = 31, h = 18 },
+				kstone = { x = 218, y = 589, w = 31, h = 18 },
+				dcrystal_small = { x = 0, y = 611, w = 23, h = 18 },
+				reeds2 = { x = 25, y = 611, w = 21, h = 18 },
+				grass = { x = 48, y = 611, w = 31, h = 17 },
+				fence = { x = 81, y = 611, w = 27, h = 17 },
+				bush = { x = 110, y = 611, w = 41, h = 16 },
+				spikes = { x = 153, y = 611, w = 31, h = 16 },
+				crystal_small = { x = 186, y = 611, w = 22, h = 15 },
+				campfire = { x = 210, y = 611, w = 43, h = 14 },
+				rocks = { x = 0, y = 631, w = 35, h = 14 },
+				pond = { x = 37, y = 631, w = 32, h = 11 },
 			},
 			back = {
 				{ id = "gate", x = 504, y = 145 },
@@ -26794,70 +27056,71 @@ local M = {
 			},
 			props = "props_r2a1.png",
 			rects = {
-				heartroot = { x = 0, y = 0, w = 93, h = 84 },
-				rootplate = { x = 95, y = 0, w = 96, h = 70 },
-				crystalhouse = { x = 0, y = 86, w = 66, h = 69 },
-				dtree = { x = 68, y = 86, w = 41, h = 65 },
-				kbanner = { x = 111, y = 86, w = 31, h = 65 },
-				guardpost = { x = 144, y = 86, w = 78, h = 64 },
-				watch = { x = 0, y = 157, w = 58, h = 63 },
-				ctree = { x = 60, y = 157, w = 41, h = 62 },
-				gate = { x = 103, y = 157, w = 54, h = 60 },
-				darch = { x = 159, y = 157, w = 60, h = 58 },
-				door = { x = 0, y = 222, w = 62, h = 57 },
-				dtree2 = { x = 64, y = 222, w = 40, h = 51 },
-				ctree2 = { x = 106, y = 222, w = 39, h = 48 },
-				bigstump = { x = 147, y = 222, w = 73, h = 47 },
-				lantern = { x = 222, y = 222, w = 27, h = 46 },
-				post_lamp = { x = 0, y = 281, w = 24, h = 44 },
-				post = { x = 26, y = 281, w = 20, h = 44 },
-				roadlamp = { x = 48, y = 281, w = 30, h = 43 },
-				stall = { x = 80, y = 281, w = 56, h = 40 },
-				krack = { x = 138, y = 281, w = 37, h = 40 },
-				denmouth = { x = 177, y = 281, w = 55, h = 38 },
-				dcrystal_big = { x = 0, y = 327, w = 46, h = 38 },
-				reeds = { x = 48, y = 327, w = 33, h = 37 },
-				mint = { x = 83, y = 327, w = 46, h = 36 },
-				crystal_big = { x = 131, y = 327, w = 42, h = 34 },
-				mstone = { x = 175, y = 327, w = 40, h = 34 },
-				sign = { x = 217, y = 327, w = 27, h = 34 },
-				web = { x = 0, y = 367, w = 48, h = 33 },
-				sign3 = { x = 50, y = 367, w = 29, h = 33 },
-				tent = { x = 81, y = 367, w = 60, h = 32 },
-				tlog2 = { x = 143, y = 367, w = 108, h = 31 },
-				tlog1 = { x = 0, y = 402, w = 123, h = 30 },
-				cledge2 = { x = 125, y = 402, w = 62, h = 30 },
-				road3 = { x = 189, y = 402, w = 48, h = 30 },
-				road1 = { x = 0, y = 434, w = 93, h = 29 },
-				dledge3 = { x = 95, y = 434, w = 63, h = 29 },
-				dledge2 = { x = 160, y = 434, w = 62, h = 29 },
-				barricade = { x = 0, y = 465, w = 65, h = 28 },
-				cledge3 = { x = 67, y = 465, w = 63, h = 28 },
-				dledge1 = { x = 132, y = 465, w = 63, h = 28 },
-				road2 = { x = 0, y = 495, w = 69, h = 27 },
-				supplies = { x = 71, y = 495, w = 51, h = 27 },
-				tlog3 = { x = 124, y = 495, w = 64, h = 26 },
-				cledge1 = { x = 190, y = 495, w = 62, h = 26 },
-				kettle = { x = 0, y = 524, w = 27, h = 26 },
-				barrels = { x = 29, y = 524, w = 32, h = 24 },
-				clog = { x = 63, y = 524, w = 56, h = 20 },
-				thorn = { x = 121, y = 524, w = 26, h = 20 },
-				bench = { x = 149, y = 524, w = 66, h = 19 },
-				eggs = { x = 217, y = 524, w = 36, h = 19 },
-				cbuds = { x = 0, y = 552, w = 24, h = 19 },
-				crate = { x = 26, y = 552, w = 23, h = 19 },
-				shroom = { x = 51, y = 552, w = 31, h = 18 },
-				kstone = { x = 84, y = 552, w = 31, h = 18 },
-				dcrystal_small = { x = 117, y = 552, w = 23, h = 18 },
-				reeds2 = { x = 142, y = 552, w = 21, h = 18 },
-				grass = { x = 165, y = 552, w = 31, h = 17 },
-				fence = { x = 198, y = 552, w = 27, h = 17 },
-				bush = { x = 0, y = 573, w = 41, h = 16 },
-				spikes = { x = 43, y = 573, w = 31, h = 16 },
-				crystal_small = { x = 76, y = 573, w = 22, h = 15 },
-				campfire = { x = 100, y = 573, w = 43, h = 14 },
-				rocks = { x = 145, y = 573, w = 35, h = 14 },
-				pond = { x = 182, y = 573, w = 32, h = 11 },
+				riftgate = { x = 0, y = 0, w = 80, h = 108 },
+				heartroot = { x = 82, y = 0, w = 93, h = 84 },
+				rootplate = { x = 0, y = 110, w = 96, h = 70 },
+				crystalhouse = { x = 98, y = 110, w = 66, h = 69 },
+				dtree = { x = 166, y = 110, w = 41, h = 65 },
+				kbanner = { x = 209, y = 110, w = 31, h = 65 },
+				guardpost = { x = 0, y = 182, w = 78, h = 64 },
+				watch = { x = 80, y = 182, w = 58, h = 63 },
+				ctree = { x = 140, y = 182, w = 41, h = 62 },
+				gate = { x = 183, y = 182, w = 54, h = 60 },
+				darch = { x = 0, y = 248, w = 60, h = 58 },
+				door = { x = 62, y = 248, w = 62, h = 57 },
+				dtree2 = { x = 126, y = 248, w = 40, h = 51 },
+				ctree2 = { x = 168, y = 248, w = 39, h = 48 },
+				bigstump = { x = 0, y = 308, w = 73, h = 47 },
+				lantern = { x = 75, y = 308, w = 27, h = 46 },
+				post_lamp = { x = 104, y = 308, w = 24, h = 44 },
+				post = { x = 130, y = 308, w = 20, h = 44 },
+				roadlamp = { x = 152, y = 308, w = 30, h = 43 },
+				stall = { x = 184, y = 308, w = 56, h = 40 },
+				krack = { x = 0, y = 357, w = 37, h = 40 },
+				denmouth = { x = 39, y = 357, w = 55, h = 38 },
+				dcrystal_big = { x = 96, y = 357, w = 46, h = 38 },
+				reeds = { x = 144, y = 357, w = 33, h = 37 },
+				mint = { x = 179, y = 357, w = 46, h = 36 },
+				crystal_big = { x = 0, y = 399, w = 42, h = 34 },
+				mstone = { x = 44, y = 399, w = 40, h = 34 },
+				sign = { x = 86, y = 399, w = 27, h = 34 },
+				web = { x = 115, y = 399, w = 48, h = 33 },
+				sign3 = { x = 165, y = 399, w = 29, h = 33 },
+				tent = { x = 196, y = 399, w = 60, h = 32 },
+				tlog2 = { x = 0, y = 435, w = 108, h = 31 },
+				tlog1 = { x = 110, y = 435, w = 123, h = 30 },
+				cledge2 = { x = 0, y = 468, w = 62, h = 30 },
+				road3 = { x = 64, y = 468, w = 48, h = 30 },
+				road1 = { x = 114, y = 468, w = 93, h = 29 },
+				dledge3 = { x = 0, y = 500, w = 63, h = 29 },
+				dledge2 = { x = 65, y = 500, w = 62, h = 29 },
+				barricade = { x = 129, y = 500, w = 65, h = 28 },
+				cledge3 = { x = 0, y = 531, w = 63, h = 28 },
+				dledge1 = { x = 65, y = 531, w = 63, h = 28 },
+				road2 = { x = 130, y = 531, w = 69, h = 27 },
+				supplies = { x = 201, y = 531, w = 51, h = 27 },
+				tlog3 = { x = 0, y = 561, w = 64, h = 26 },
+				cledge1 = { x = 66, y = 561, w = 62, h = 26 },
+				kettle = { x = 130, y = 561, w = 27, h = 26 },
+				barrels = { x = 159, y = 561, w = 32, h = 24 },
+				clog = { x = 193, y = 561, w = 56, h = 20 },
+				thorn = { x = 0, y = 589, w = 26, h = 20 },
+				bench = { x = 28, y = 589, w = 66, h = 19 },
+				eggs = { x = 96, y = 589, w = 36, h = 19 },
+				cbuds = { x = 134, y = 589, w = 24, h = 19 },
+				crate = { x = 160, y = 589, w = 23, h = 19 },
+				shroom = { x = 185, y = 589, w = 31, h = 18 },
+				kstone = { x = 218, y = 589, w = 31, h = 18 },
+				dcrystal_small = { x = 0, y = 611, w = 23, h = 18 },
+				reeds2 = { x = 25, y = 611, w = 21, h = 18 },
+				grass = { x = 48, y = 611, w = 31, h = 17 },
+				fence = { x = 81, y = 611, w = 27, h = 17 },
+				bush = { x = 110, y = 611, w = 41, h = 16 },
+				spikes = { x = 153, y = 611, w = 31, h = 16 },
+				crystal_small = { x = 186, y = 611, w = 22, h = 15 },
+				campfire = { x = 210, y = 611, w = 43, h = 14 },
+				rocks = { x = 0, y = 631, w = 35, h = 14 },
+				pond = { x = 37, y = 631, w = 32, h = 11 },
 			},
 			back = {
 				{ id = "gate", x = 472, y = 177 },
@@ -26985,70 +27248,71 @@ local M = {
 			},
 			props = "props_r2a1.png",
 			rects = {
-				heartroot = { x = 0, y = 0, w = 93, h = 84 },
-				rootplate = { x = 95, y = 0, w = 96, h = 70 },
-				crystalhouse = { x = 0, y = 86, w = 66, h = 69 },
-				dtree = { x = 68, y = 86, w = 41, h = 65 },
-				kbanner = { x = 111, y = 86, w = 31, h = 65 },
-				guardpost = { x = 144, y = 86, w = 78, h = 64 },
-				watch = { x = 0, y = 157, w = 58, h = 63 },
-				ctree = { x = 60, y = 157, w = 41, h = 62 },
-				gate = { x = 103, y = 157, w = 54, h = 60 },
-				darch = { x = 159, y = 157, w = 60, h = 58 },
-				door = { x = 0, y = 222, w = 62, h = 57 },
-				dtree2 = { x = 64, y = 222, w = 40, h = 51 },
-				ctree2 = { x = 106, y = 222, w = 39, h = 48 },
-				bigstump = { x = 147, y = 222, w = 73, h = 47 },
-				lantern = { x = 222, y = 222, w = 27, h = 46 },
-				post_lamp = { x = 0, y = 281, w = 24, h = 44 },
-				post = { x = 26, y = 281, w = 20, h = 44 },
-				roadlamp = { x = 48, y = 281, w = 30, h = 43 },
-				stall = { x = 80, y = 281, w = 56, h = 40 },
-				krack = { x = 138, y = 281, w = 37, h = 40 },
-				denmouth = { x = 177, y = 281, w = 55, h = 38 },
-				dcrystal_big = { x = 0, y = 327, w = 46, h = 38 },
-				reeds = { x = 48, y = 327, w = 33, h = 37 },
-				mint = { x = 83, y = 327, w = 46, h = 36 },
-				crystal_big = { x = 131, y = 327, w = 42, h = 34 },
-				mstone = { x = 175, y = 327, w = 40, h = 34 },
-				sign = { x = 217, y = 327, w = 27, h = 34 },
-				web = { x = 0, y = 367, w = 48, h = 33 },
-				sign3 = { x = 50, y = 367, w = 29, h = 33 },
-				tent = { x = 81, y = 367, w = 60, h = 32 },
-				tlog2 = { x = 143, y = 367, w = 108, h = 31 },
-				tlog1 = { x = 0, y = 402, w = 123, h = 30 },
-				cledge2 = { x = 125, y = 402, w = 62, h = 30 },
-				road3 = { x = 189, y = 402, w = 48, h = 30 },
-				road1 = { x = 0, y = 434, w = 93, h = 29 },
-				dledge3 = { x = 95, y = 434, w = 63, h = 29 },
-				dledge2 = { x = 160, y = 434, w = 62, h = 29 },
-				barricade = { x = 0, y = 465, w = 65, h = 28 },
-				cledge3 = { x = 67, y = 465, w = 63, h = 28 },
-				dledge1 = { x = 132, y = 465, w = 63, h = 28 },
-				road2 = { x = 0, y = 495, w = 69, h = 27 },
-				supplies = { x = 71, y = 495, w = 51, h = 27 },
-				tlog3 = { x = 124, y = 495, w = 64, h = 26 },
-				cledge1 = { x = 190, y = 495, w = 62, h = 26 },
-				kettle = { x = 0, y = 524, w = 27, h = 26 },
-				barrels = { x = 29, y = 524, w = 32, h = 24 },
-				clog = { x = 63, y = 524, w = 56, h = 20 },
-				thorn = { x = 121, y = 524, w = 26, h = 20 },
-				bench = { x = 149, y = 524, w = 66, h = 19 },
-				eggs = { x = 217, y = 524, w = 36, h = 19 },
-				cbuds = { x = 0, y = 552, w = 24, h = 19 },
-				crate = { x = 26, y = 552, w = 23, h = 19 },
-				shroom = { x = 51, y = 552, w = 31, h = 18 },
-				kstone = { x = 84, y = 552, w = 31, h = 18 },
-				dcrystal_small = { x = 117, y = 552, w = 23, h = 18 },
-				reeds2 = { x = 142, y = 552, w = 21, h = 18 },
-				grass = { x = 165, y = 552, w = 31, h = 17 },
-				fence = { x = 198, y = 552, w = 27, h = 17 },
-				bush = { x = 0, y = 573, w = 41, h = 16 },
-				spikes = { x = 43, y = 573, w = 31, h = 16 },
-				crystal_small = { x = 76, y = 573, w = 22, h = 15 },
-				campfire = { x = 100, y = 573, w = 43, h = 14 },
-				rocks = { x = 145, y = 573, w = 35, h = 14 },
-				pond = { x = 182, y = 573, w = 32, h = 11 },
+				riftgate = { x = 0, y = 0, w = 80, h = 108 },
+				heartroot = { x = 82, y = 0, w = 93, h = 84 },
+				rootplate = { x = 0, y = 110, w = 96, h = 70 },
+				crystalhouse = { x = 98, y = 110, w = 66, h = 69 },
+				dtree = { x = 166, y = 110, w = 41, h = 65 },
+				kbanner = { x = 209, y = 110, w = 31, h = 65 },
+				guardpost = { x = 0, y = 182, w = 78, h = 64 },
+				watch = { x = 80, y = 182, w = 58, h = 63 },
+				ctree = { x = 140, y = 182, w = 41, h = 62 },
+				gate = { x = 183, y = 182, w = 54, h = 60 },
+				darch = { x = 0, y = 248, w = 60, h = 58 },
+				door = { x = 62, y = 248, w = 62, h = 57 },
+				dtree2 = { x = 126, y = 248, w = 40, h = 51 },
+				ctree2 = { x = 168, y = 248, w = 39, h = 48 },
+				bigstump = { x = 0, y = 308, w = 73, h = 47 },
+				lantern = { x = 75, y = 308, w = 27, h = 46 },
+				post_lamp = { x = 104, y = 308, w = 24, h = 44 },
+				post = { x = 130, y = 308, w = 20, h = 44 },
+				roadlamp = { x = 152, y = 308, w = 30, h = 43 },
+				stall = { x = 184, y = 308, w = 56, h = 40 },
+				krack = { x = 0, y = 357, w = 37, h = 40 },
+				denmouth = { x = 39, y = 357, w = 55, h = 38 },
+				dcrystal_big = { x = 96, y = 357, w = 46, h = 38 },
+				reeds = { x = 144, y = 357, w = 33, h = 37 },
+				mint = { x = 179, y = 357, w = 46, h = 36 },
+				crystal_big = { x = 0, y = 399, w = 42, h = 34 },
+				mstone = { x = 44, y = 399, w = 40, h = 34 },
+				sign = { x = 86, y = 399, w = 27, h = 34 },
+				web = { x = 115, y = 399, w = 48, h = 33 },
+				sign3 = { x = 165, y = 399, w = 29, h = 33 },
+				tent = { x = 196, y = 399, w = 60, h = 32 },
+				tlog2 = { x = 0, y = 435, w = 108, h = 31 },
+				tlog1 = { x = 110, y = 435, w = 123, h = 30 },
+				cledge2 = { x = 0, y = 468, w = 62, h = 30 },
+				road3 = { x = 64, y = 468, w = 48, h = 30 },
+				road1 = { x = 114, y = 468, w = 93, h = 29 },
+				dledge3 = { x = 0, y = 500, w = 63, h = 29 },
+				dledge2 = { x = 65, y = 500, w = 62, h = 29 },
+				barricade = { x = 129, y = 500, w = 65, h = 28 },
+				cledge3 = { x = 0, y = 531, w = 63, h = 28 },
+				dledge1 = { x = 65, y = 531, w = 63, h = 28 },
+				road2 = { x = 130, y = 531, w = 69, h = 27 },
+				supplies = { x = 201, y = 531, w = 51, h = 27 },
+				tlog3 = { x = 0, y = 561, w = 64, h = 26 },
+				cledge1 = { x = 66, y = 561, w = 62, h = 26 },
+				kettle = { x = 130, y = 561, w = 27, h = 26 },
+				barrels = { x = 159, y = 561, w = 32, h = 24 },
+				clog = { x = 193, y = 561, w = 56, h = 20 },
+				thorn = { x = 0, y = 589, w = 26, h = 20 },
+				bench = { x = 28, y = 589, w = 66, h = 19 },
+				eggs = { x = 96, y = 589, w = 36, h = 19 },
+				cbuds = { x = 134, y = 589, w = 24, h = 19 },
+				crate = { x = 160, y = 589, w = 23, h = 19 },
+				shroom = { x = 185, y = 589, w = 31, h = 18 },
+				kstone = { x = 218, y = 589, w = 31, h = 18 },
+				dcrystal_small = { x = 0, y = 611, w = 23, h = 18 },
+				reeds2 = { x = 25, y = 611, w = 21, h = 18 },
+				grass = { x = 48, y = 611, w = 31, h = 17 },
+				fence = { x = 81, y = 611, w = 27, h = 17 },
+				bush = { x = 110, y = 611, w = 41, h = 16 },
+				spikes = { x = 153, y = 611, w = 31, h = 16 },
+				crystal_small = { x = 186, y = 611, w = 22, h = 15 },
+				campfire = { x = 210, y = 611, w = 43, h = 14 },
+				rocks = { x = 0, y = 631, w = 35, h = 14 },
+				pond = { x = 37, y = 631, w = 32, h = 11 },
 			},
 			back = {
 				{ id = "gate", x = 856, y = 177 },
@@ -27132,70 +27396,71 @@ local M = {
 			},
 			props = "props_r2a1.png",
 			rects = {
-				heartroot = { x = 0, y = 0, w = 93, h = 84 },
-				rootplate = { x = 95, y = 0, w = 96, h = 70 },
-				crystalhouse = { x = 0, y = 86, w = 66, h = 69 },
-				dtree = { x = 68, y = 86, w = 41, h = 65 },
-				kbanner = { x = 111, y = 86, w = 31, h = 65 },
-				guardpost = { x = 144, y = 86, w = 78, h = 64 },
-				watch = { x = 0, y = 157, w = 58, h = 63 },
-				ctree = { x = 60, y = 157, w = 41, h = 62 },
-				gate = { x = 103, y = 157, w = 54, h = 60 },
-				darch = { x = 159, y = 157, w = 60, h = 58 },
-				door = { x = 0, y = 222, w = 62, h = 57 },
-				dtree2 = { x = 64, y = 222, w = 40, h = 51 },
-				ctree2 = { x = 106, y = 222, w = 39, h = 48 },
-				bigstump = { x = 147, y = 222, w = 73, h = 47 },
-				lantern = { x = 222, y = 222, w = 27, h = 46 },
-				post_lamp = { x = 0, y = 281, w = 24, h = 44 },
-				post = { x = 26, y = 281, w = 20, h = 44 },
-				roadlamp = { x = 48, y = 281, w = 30, h = 43 },
-				stall = { x = 80, y = 281, w = 56, h = 40 },
-				krack = { x = 138, y = 281, w = 37, h = 40 },
-				denmouth = { x = 177, y = 281, w = 55, h = 38 },
-				dcrystal_big = { x = 0, y = 327, w = 46, h = 38 },
-				reeds = { x = 48, y = 327, w = 33, h = 37 },
-				mint = { x = 83, y = 327, w = 46, h = 36 },
-				crystal_big = { x = 131, y = 327, w = 42, h = 34 },
-				mstone = { x = 175, y = 327, w = 40, h = 34 },
-				sign = { x = 217, y = 327, w = 27, h = 34 },
-				web = { x = 0, y = 367, w = 48, h = 33 },
-				sign3 = { x = 50, y = 367, w = 29, h = 33 },
-				tent = { x = 81, y = 367, w = 60, h = 32 },
-				tlog2 = { x = 143, y = 367, w = 108, h = 31 },
-				tlog1 = { x = 0, y = 402, w = 123, h = 30 },
-				cledge2 = { x = 125, y = 402, w = 62, h = 30 },
-				road3 = { x = 189, y = 402, w = 48, h = 30 },
-				road1 = { x = 0, y = 434, w = 93, h = 29 },
-				dledge3 = { x = 95, y = 434, w = 63, h = 29 },
-				dledge2 = { x = 160, y = 434, w = 62, h = 29 },
-				barricade = { x = 0, y = 465, w = 65, h = 28 },
-				cledge3 = { x = 67, y = 465, w = 63, h = 28 },
-				dledge1 = { x = 132, y = 465, w = 63, h = 28 },
-				road2 = { x = 0, y = 495, w = 69, h = 27 },
-				supplies = { x = 71, y = 495, w = 51, h = 27 },
-				tlog3 = { x = 124, y = 495, w = 64, h = 26 },
-				cledge1 = { x = 190, y = 495, w = 62, h = 26 },
-				kettle = { x = 0, y = 524, w = 27, h = 26 },
-				barrels = { x = 29, y = 524, w = 32, h = 24 },
-				clog = { x = 63, y = 524, w = 56, h = 20 },
-				thorn = { x = 121, y = 524, w = 26, h = 20 },
-				bench = { x = 149, y = 524, w = 66, h = 19 },
-				eggs = { x = 217, y = 524, w = 36, h = 19 },
-				cbuds = { x = 0, y = 552, w = 24, h = 19 },
-				crate = { x = 26, y = 552, w = 23, h = 19 },
-				shroom = { x = 51, y = 552, w = 31, h = 18 },
-				kstone = { x = 84, y = 552, w = 31, h = 18 },
-				dcrystal_small = { x = 117, y = 552, w = 23, h = 18 },
-				reeds2 = { x = 142, y = 552, w = 21, h = 18 },
-				grass = { x = 165, y = 552, w = 31, h = 17 },
-				fence = { x = 198, y = 552, w = 27, h = 17 },
-				bush = { x = 0, y = 573, w = 41, h = 16 },
-				spikes = { x = 43, y = 573, w = 31, h = 16 },
-				crystal_small = { x = 76, y = 573, w = 22, h = 15 },
-				campfire = { x = 100, y = 573, w = 43, h = 14 },
-				rocks = { x = 145, y = 573, w = 35, h = 14 },
-				pond = { x = 182, y = 573, w = 32, h = 11 },
+				riftgate = { x = 0, y = 0, w = 80, h = 108 },
+				heartroot = { x = 82, y = 0, w = 93, h = 84 },
+				rootplate = { x = 0, y = 110, w = 96, h = 70 },
+				crystalhouse = { x = 98, y = 110, w = 66, h = 69 },
+				dtree = { x = 166, y = 110, w = 41, h = 65 },
+				kbanner = { x = 209, y = 110, w = 31, h = 65 },
+				guardpost = { x = 0, y = 182, w = 78, h = 64 },
+				watch = { x = 80, y = 182, w = 58, h = 63 },
+				ctree = { x = 140, y = 182, w = 41, h = 62 },
+				gate = { x = 183, y = 182, w = 54, h = 60 },
+				darch = { x = 0, y = 248, w = 60, h = 58 },
+				door = { x = 62, y = 248, w = 62, h = 57 },
+				dtree2 = { x = 126, y = 248, w = 40, h = 51 },
+				ctree2 = { x = 168, y = 248, w = 39, h = 48 },
+				bigstump = { x = 0, y = 308, w = 73, h = 47 },
+				lantern = { x = 75, y = 308, w = 27, h = 46 },
+				post_lamp = { x = 104, y = 308, w = 24, h = 44 },
+				post = { x = 130, y = 308, w = 20, h = 44 },
+				roadlamp = { x = 152, y = 308, w = 30, h = 43 },
+				stall = { x = 184, y = 308, w = 56, h = 40 },
+				krack = { x = 0, y = 357, w = 37, h = 40 },
+				denmouth = { x = 39, y = 357, w = 55, h = 38 },
+				dcrystal_big = { x = 96, y = 357, w = 46, h = 38 },
+				reeds = { x = 144, y = 357, w = 33, h = 37 },
+				mint = { x = 179, y = 357, w = 46, h = 36 },
+				crystal_big = { x = 0, y = 399, w = 42, h = 34 },
+				mstone = { x = 44, y = 399, w = 40, h = 34 },
+				sign = { x = 86, y = 399, w = 27, h = 34 },
+				web = { x = 115, y = 399, w = 48, h = 33 },
+				sign3 = { x = 165, y = 399, w = 29, h = 33 },
+				tent = { x = 196, y = 399, w = 60, h = 32 },
+				tlog2 = { x = 0, y = 435, w = 108, h = 31 },
+				tlog1 = { x = 110, y = 435, w = 123, h = 30 },
+				cledge2 = { x = 0, y = 468, w = 62, h = 30 },
+				road3 = { x = 64, y = 468, w = 48, h = 30 },
+				road1 = { x = 114, y = 468, w = 93, h = 29 },
+				dledge3 = { x = 0, y = 500, w = 63, h = 29 },
+				dledge2 = { x = 65, y = 500, w = 62, h = 29 },
+				barricade = { x = 129, y = 500, w = 65, h = 28 },
+				cledge3 = { x = 0, y = 531, w = 63, h = 28 },
+				dledge1 = { x = 65, y = 531, w = 63, h = 28 },
+				road2 = { x = 130, y = 531, w = 69, h = 27 },
+				supplies = { x = 201, y = 531, w = 51, h = 27 },
+				tlog3 = { x = 0, y = 561, w = 64, h = 26 },
+				cledge1 = { x = 66, y = 561, w = 62, h = 26 },
+				kettle = { x = 130, y = 561, w = 27, h = 26 },
+				barrels = { x = 159, y = 561, w = 32, h = 24 },
+				clog = { x = 193, y = 561, w = 56, h = 20 },
+				thorn = { x = 0, y = 589, w = 26, h = 20 },
+				bench = { x = 28, y = 589, w = 66, h = 19 },
+				eggs = { x = 96, y = 589, w = 36, h = 19 },
+				cbuds = { x = 134, y = 589, w = 24, h = 19 },
+				crate = { x = 160, y = 589, w = 23, h = 19 },
+				shroom = { x = 185, y = 589, w = 31, h = 18 },
+				kstone = { x = 218, y = 589, w = 31, h = 18 },
+				dcrystal_small = { x = 0, y = 611, w = 23, h = 18 },
+				reeds2 = { x = 25, y = 611, w = 21, h = 18 },
+				grass = { x = 48, y = 611, w = 31, h = 17 },
+				fence = { x = 81, y = 611, w = 27, h = 17 },
+				bush = { x = 110, y = 611, w = 41, h = 16 },
+				spikes = { x = 153, y = 611, w = 31, h = 16 },
+				crystal_small = { x = 186, y = 611, w = 22, h = 15 },
+				campfire = { x = 210, y = 611, w = 43, h = 14 },
+				rocks = { x = 0, y = 631, w = 35, h = 14 },
+				pond = { x = 37, y = 631, w = 32, h = 11 },
 			},
 			back = {
 				{ id = "gate", x = 32, y = 337 },
@@ -36151,70 +36416,71 @@ local M = {
 			},
 			props = "props_r2a1.png",
 			rects = {
-				heartroot = { x = 0, y = 0, w = 93, h = 84 },
-				rootplate = { x = 95, y = 0, w = 96, h = 70 },
-				crystalhouse = { x = 0, y = 86, w = 66, h = 69 },
-				dtree = { x = 68, y = 86, w = 41, h = 65 },
-				kbanner = { x = 111, y = 86, w = 31, h = 65 },
-				guardpost = { x = 144, y = 86, w = 78, h = 64 },
-				watch = { x = 0, y = 157, w = 58, h = 63 },
-				ctree = { x = 60, y = 157, w = 41, h = 62 },
-				gate = { x = 103, y = 157, w = 54, h = 60 },
-				darch = { x = 159, y = 157, w = 60, h = 58 },
-				door = { x = 0, y = 222, w = 62, h = 57 },
-				dtree2 = { x = 64, y = 222, w = 40, h = 51 },
-				ctree2 = { x = 106, y = 222, w = 39, h = 48 },
-				bigstump = { x = 147, y = 222, w = 73, h = 47 },
-				lantern = { x = 222, y = 222, w = 27, h = 46 },
-				post_lamp = { x = 0, y = 281, w = 24, h = 44 },
-				post = { x = 26, y = 281, w = 20, h = 44 },
-				roadlamp = { x = 48, y = 281, w = 30, h = 43 },
-				stall = { x = 80, y = 281, w = 56, h = 40 },
-				krack = { x = 138, y = 281, w = 37, h = 40 },
-				denmouth = { x = 177, y = 281, w = 55, h = 38 },
-				dcrystal_big = { x = 0, y = 327, w = 46, h = 38 },
-				reeds = { x = 48, y = 327, w = 33, h = 37 },
-				mint = { x = 83, y = 327, w = 46, h = 36 },
-				crystal_big = { x = 131, y = 327, w = 42, h = 34 },
-				mstone = { x = 175, y = 327, w = 40, h = 34 },
-				sign = { x = 217, y = 327, w = 27, h = 34 },
-				web = { x = 0, y = 367, w = 48, h = 33 },
-				sign3 = { x = 50, y = 367, w = 29, h = 33 },
-				tent = { x = 81, y = 367, w = 60, h = 32 },
-				tlog2 = { x = 143, y = 367, w = 108, h = 31 },
-				tlog1 = { x = 0, y = 402, w = 123, h = 30 },
-				cledge2 = { x = 125, y = 402, w = 62, h = 30 },
-				road3 = { x = 189, y = 402, w = 48, h = 30 },
-				road1 = { x = 0, y = 434, w = 93, h = 29 },
-				dledge3 = { x = 95, y = 434, w = 63, h = 29 },
-				dledge2 = { x = 160, y = 434, w = 62, h = 29 },
-				barricade = { x = 0, y = 465, w = 65, h = 28 },
-				cledge3 = { x = 67, y = 465, w = 63, h = 28 },
-				dledge1 = { x = 132, y = 465, w = 63, h = 28 },
-				road2 = { x = 0, y = 495, w = 69, h = 27 },
-				supplies = { x = 71, y = 495, w = 51, h = 27 },
-				tlog3 = { x = 124, y = 495, w = 64, h = 26 },
-				cledge1 = { x = 190, y = 495, w = 62, h = 26 },
-				kettle = { x = 0, y = 524, w = 27, h = 26 },
-				barrels = { x = 29, y = 524, w = 32, h = 24 },
-				clog = { x = 63, y = 524, w = 56, h = 20 },
-				thorn = { x = 121, y = 524, w = 26, h = 20 },
-				bench = { x = 149, y = 524, w = 66, h = 19 },
-				eggs = { x = 217, y = 524, w = 36, h = 19 },
-				cbuds = { x = 0, y = 552, w = 24, h = 19 },
-				crate = { x = 26, y = 552, w = 23, h = 19 },
-				shroom = { x = 51, y = 552, w = 31, h = 18 },
-				kstone = { x = 84, y = 552, w = 31, h = 18 },
-				dcrystal_small = { x = 117, y = 552, w = 23, h = 18 },
-				reeds2 = { x = 142, y = 552, w = 21, h = 18 },
-				grass = { x = 165, y = 552, w = 31, h = 17 },
-				fence = { x = 198, y = 552, w = 27, h = 17 },
-				bush = { x = 0, y = 573, w = 41, h = 16 },
-				spikes = { x = 43, y = 573, w = 31, h = 16 },
-				crystal_small = { x = 76, y = 573, w = 22, h = 15 },
-				campfire = { x = 100, y = 573, w = 43, h = 14 },
-				rocks = { x = 145, y = 573, w = 35, h = 14 },
-				pond = { x = 182, y = 573, w = 32, h = 11 },
+				riftgate = { x = 0, y = 0, w = 80, h = 108 },
+				heartroot = { x = 82, y = 0, w = 93, h = 84 },
+				rootplate = { x = 0, y = 110, w = 96, h = 70 },
+				crystalhouse = { x = 98, y = 110, w = 66, h = 69 },
+				dtree = { x = 166, y = 110, w = 41, h = 65 },
+				kbanner = { x = 209, y = 110, w = 31, h = 65 },
+				guardpost = { x = 0, y = 182, w = 78, h = 64 },
+				watch = { x = 80, y = 182, w = 58, h = 63 },
+				ctree = { x = 140, y = 182, w = 41, h = 62 },
+				gate = { x = 183, y = 182, w = 54, h = 60 },
+				darch = { x = 0, y = 248, w = 60, h = 58 },
+				door = { x = 62, y = 248, w = 62, h = 57 },
+				dtree2 = { x = 126, y = 248, w = 40, h = 51 },
+				ctree2 = { x = 168, y = 248, w = 39, h = 48 },
+				bigstump = { x = 0, y = 308, w = 73, h = 47 },
+				lantern = { x = 75, y = 308, w = 27, h = 46 },
+				post_lamp = { x = 104, y = 308, w = 24, h = 44 },
+				post = { x = 130, y = 308, w = 20, h = 44 },
+				roadlamp = { x = 152, y = 308, w = 30, h = 43 },
+				stall = { x = 184, y = 308, w = 56, h = 40 },
+				krack = { x = 0, y = 357, w = 37, h = 40 },
+				denmouth = { x = 39, y = 357, w = 55, h = 38 },
+				dcrystal_big = { x = 96, y = 357, w = 46, h = 38 },
+				reeds = { x = 144, y = 357, w = 33, h = 37 },
+				mint = { x = 179, y = 357, w = 46, h = 36 },
+				crystal_big = { x = 0, y = 399, w = 42, h = 34 },
+				mstone = { x = 44, y = 399, w = 40, h = 34 },
+				sign = { x = 86, y = 399, w = 27, h = 34 },
+				web = { x = 115, y = 399, w = 48, h = 33 },
+				sign3 = { x = 165, y = 399, w = 29, h = 33 },
+				tent = { x = 196, y = 399, w = 60, h = 32 },
+				tlog2 = { x = 0, y = 435, w = 108, h = 31 },
+				tlog1 = { x = 110, y = 435, w = 123, h = 30 },
+				cledge2 = { x = 0, y = 468, w = 62, h = 30 },
+				road3 = { x = 64, y = 468, w = 48, h = 30 },
+				road1 = { x = 114, y = 468, w = 93, h = 29 },
+				dledge3 = { x = 0, y = 500, w = 63, h = 29 },
+				dledge2 = { x = 65, y = 500, w = 62, h = 29 },
+				barricade = { x = 129, y = 500, w = 65, h = 28 },
+				cledge3 = { x = 0, y = 531, w = 63, h = 28 },
+				dledge1 = { x = 65, y = 531, w = 63, h = 28 },
+				road2 = { x = 130, y = 531, w = 69, h = 27 },
+				supplies = { x = 201, y = 531, w = 51, h = 27 },
+				tlog3 = { x = 0, y = 561, w = 64, h = 26 },
+				cledge1 = { x = 66, y = 561, w = 62, h = 26 },
+				kettle = { x = 130, y = 561, w = 27, h = 26 },
+				barrels = { x = 159, y = 561, w = 32, h = 24 },
+				clog = { x = 193, y = 561, w = 56, h = 20 },
+				thorn = { x = 0, y = 589, w = 26, h = 20 },
+				bench = { x = 28, y = 589, w = 66, h = 19 },
+				eggs = { x = 96, y = 589, w = 36, h = 19 },
+				cbuds = { x = 134, y = 589, w = 24, h = 19 },
+				crate = { x = 160, y = 589, w = 23, h = 19 },
+				shroom = { x = 185, y = 589, w = 31, h = 18 },
+				kstone = { x = 218, y = 589, w = 31, h = 18 },
+				dcrystal_small = { x = 0, y = 611, w = 23, h = 18 },
+				reeds2 = { x = 25, y = 611, w = 21, h = 18 },
+				grass = { x = 48, y = 611, w = 31, h = 17 },
+				fence = { x = 81, y = 611, w = 27, h = 17 },
+				bush = { x = 110, y = 611, w = 41, h = 16 },
+				spikes = { x = 153, y = 611, w = 31, h = 16 },
+				crystal_small = { x = 186, y = 611, w = 22, h = 15 },
+				campfire = { x = 210, y = 611, w = 43, h = 14 },
+				rocks = { x = 0, y = 631, w = 35, h = 14 },
+				pond = { x = 37, y = 631, w = 32, h = 11 },
 			},
 			back = {
 				{ id = "denmouth", x = 45, y = 145 },
@@ -37017,83 +37283,86 @@ local M = {
 			},
 			props = "props_r2a1.png",
 			rects = {
-				heartroot = { x = 0, y = 0, w = 93, h = 84 },
-				rootplate = { x = 95, y = 0, w = 96, h = 70 },
-				crystalhouse = { x = 0, y = 86, w = 66, h = 69 },
-				dtree = { x = 68, y = 86, w = 41, h = 65 },
-				kbanner = { x = 111, y = 86, w = 31, h = 65 },
-				guardpost = { x = 144, y = 86, w = 78, h = 64 },
-				watch = { x = 0, y = 157, w = 58, h = 63 },
-				ctree = { x = 60, y = 157, w = 41, h = 62 },
-				gate = { x = 103, y = 157, w = 54, h = 60 },
-				darch = { x = 159, y = 157, w = 60, h = 58 },
-				door = { x = 0, y = 222, w = 62, h = 57 },
-				dtree2 = { x = 64, y = 222, w = 40, h = 51 },
-				ctree2 = { x = 106, y = 222, w = 39, h = 48 },
-				bigstump = { x = 147, y = 222, w = 73, h = 47 },
-				lantern = { x = 222, y = 222, w = 27, h = 46 },
-				post_lamp = { x = 0, y = 281, w = 24, h = 44 },
-				post = { x = 26, y = 281, w = 20, h = 44 },
-				roadlamp = { x = 48, y = 281, w = 30, h = 43 },
-				stall = { x = 80, y = 281, w = 56, h = 40 },
-				krack = { x = 138, y = 281, w = 37, h = 40 },
-				denmouth = { x = 177, y = 281, w = 55, h = 38 },
-				dcrystal_big = { x = 0, y = 327, w = 46, h = 38 },
-				reeds = { x = 48, y = 327, w = 33, h = 37 },
-				mint = { x = 83, y = 327, w = 46, h = 36 },
-				crystal_big = { x = 131, y = 327, w = 42, h = 34 },
-				mstone = { x = 175, y = 327, w = 40, h = 34 },
-				sign = { x = 217, y = 327, w = 27, h = 34 },
-				web = { x = 0, y = 367, w = 48, h = 33 },
-				sign3 = { x = 50, y = 367, w = 29, h = 33 },
-				tent = { x = 81, y = 367, w = 60, h = 32 },
-				tlog2 = { x = 143, y = 367, w = 108, h = 31 },
-				tlog1 = { x = 0, y = 402, w = 123, h = 30 },
-				cledge2 = { x = 125, y = 402, w = 62, h = 30 },
-				road3 = { x = 189, y = 402, w = 48, h = 30 },
-				road1 = { x = 0, y = 434, w = 93, h = 29 },
-				dledge3 = { x = 95, y = 434, w = 63, h = 29 },
-				dledge2 = { x = 160, y = 434, w = 62, h = 29 },
-				barricade = { x = 0, y = 465, w = 65, h = 28 },
-				cledge3 = { x = 67, y = 465, w = 63, h = 28 },
-				dledge1 = { x = 132, y = 465, w = 63, h = 28 },
-				road2 = { x = 0, y = 495, w = 69, h = 27 },
-				supplies = { x = 71, y = 495, w = 51, h = 27 },
-				tlog3 = { x = 124, y = 495, w = 64, h = 26 },
-				cledge1 = { x = 190, y = 495, w = 62, h = 26 },
-				kettle = { x = 0, y = 524, w = 27, h = 26 },
-				barrels = { x = 29, y = 524, w = 32, h = 24 },
-				clog = { x = 63, y = 524, w = 56, h = 20 },
-				thorn = { x = 121, y = 524, w = 26, h = 20 },
-				bench = { x = 149, y = 524, w = 66, h = 19 },
-				eggs = { x = 217, y = 524, w = 36, h = 19 },
-				cbuds = { x = 0, y = 552, w = 24, h = 19 },
-				crate = { x = 26, y = 552, w = 23, h = 19 },
-				shroom = { x = 51, y = 552, w = 31, h = 18 },
-				kstone = { x = 84, y = 552, w = 31, h = 18 },
-				dcrystal_small = { x = 117, y = 552, w = 23, h = 18 },
-				reeds2 = { x = 142, y = 552, w = 21, h = 18 },
-				grass = { x = 165, y = 552, w = 31, h = 17 },
-				fence = { x = 198, y = 552, w = 27, h = 17 },
-				bush = { x = 0, y = 573, w = 41, h = 16 },
-				spikes = { x = 43, y = 573, w = 31, h = 16 },
-				crystal_small = { x = 76, y = 573, w = 22, h = 15 },
-				campfire = { x = 100, y = 573, w = 43, h = 14 },
-				rocks = { x = 145, y = 573, w = 35, h = 14 },
-				pond = { x = 182, y = 573, w = 32, h = 11 },
+				riftgate = { x = 0, y = 0, w = 80, h = 108 },
+				heartroot = { x = 82, y = 0, w = 93, h = 84 },
+				rootplate = { x = 0, y = 110, w = 96, h = 70 },
+				crystalhouse = { x = 98, y = 110, w = 66, h = 69 },
+				dtree = { x = 166, y = 110, w = 41, h = 65 },
+				kbanner = { x = 209, y = 110, w = 31, h = 65 },
+				guardpost = { x = 0, y = 182, w = 78, h = 64 },
+				watch = { x = 80, y = 182, w = 58, h = 63 },
+				ctree = { x = 140, y = 182, w = 41, h = 62 },
+				gate = { x = 183, y = 182, w = 54, h = 60 },
+				darch = { x = 0, y = 248, w = 60, h = 58 },
+				door = { x = 62, y = 248, w = 62, h = 57 },
+				dtree2 = { x = 126, y = 248, w = 40, h = 51 },
+				ctree2 = { x = 168, y = 248, w = 39, h = 48 },
+				bigstump = { x = 0, y = 308, w = 73, h = 47 },
+				lantern = { x = 75, y = 308, w = 27, h = 46 },
+				post_lamp = { x = 104, y = 308, w = 24, h = 44 },
+				post = { x = 130, y = 308, w = 20, h = 44 },
+				roadlamp = { x = 152, y = 308, w = 30, h = 43 },
+				stall = { x = 184, y = 308, w = 56, h = 40 },
+				krack = { x = 0, y = 357, w = 37, h = 40 },
+				denmouth = { x = 39, y = 357, w = 55, h = 38 },
+				dcrystal_big = { x = 96, y = 357, w = 46, h = 38 },
+				reeds = { x = 144, y = 357, w = 33, h = 37 },
+				mint = { x = 179, y = 357, w = 46, h = 36 },
+				crystal_big = { x = 0, y = 399, w = 42, h = 34 },
+				mstone = { x = 44, y = 399, w = 40, h = 34 },
+				sign = { x = 86, y = 399, w = 27, h = 34 },
+				web = { x = 115, y = 399, w = 48, h = 33 },
+				sign3 = { x = 165, y = 399, w = 29, h = 33 },
+				tent = { x = 196, y = 399, w = 60, h = 32 },
+				tlog2 = { x = 0, y = 435, w = 108, h = 31 },
+				tlog1 = { x = 110, y = 435, w = 123, h = 30 },
+				cledge2 = { x = 0, y = 468, w = 62, h = 30 },
+				road3 = { x = 64, y = 468, w = 48, h = 30 },
+				road1 = { x = 114, y = 468, w = 93, h = 29 },
+				dledge3 = { x = 0, y = 500, w = 63, h = 29 },
+				dledge2 = { x = 65, y = 500, w = 62, h = 29 },
+				barricade = { x = 129, y = 500, w = 65, h = 28 },
+				cledge3 = { x = 0, y = 531, w = 63, h = 28 },
+				dledge1 = { x = 65, y = 531, w = 63, h = 28 },
+				road2 = { x = 130, y = 531, w = 69, h = 27 },
+				supplies = { x = 201, y = 531, w = 51, h = 27 },
+				tlog3 = { x = 0, y = 561, w = 64, h = 26 },
+				cledge1 = { x = 66, y = 561, w = 62, h = 26 },
+				kettle = { x = 130, y = 561, w = 27, h = 26 },
+				barrels = { x = 159, y = 561, w = 32, h = 24 },
+				clog = { x = 193, y = 561, w = 56, h = 20 },
+				thorn = { x = 0, y = 589, w = 26, h = 20 },
+				bench = { x = 28, y = 589, w = 66, h = 19 },
+				eggs = { x = 96, y = 589, w = 36, h = 19 },
+				cbuds = { x = 134, y = 589, w = 24, h = 19 },
+				crate = { x = 160, y = 589, w = 23, h = 19 },
+				shroom = { x = 185, y = 589, w = 31, h = 18 },
+				kstone = { x = 218, y = 589, w = 31, h = 18 },
+				dcrystal_small = { x = 0, y = 611, w = 23, h = 18 },
+				reeds2 = { x = 25, y = 611, w = 21, h = 18 },
+				grass = { x = 48, y = 611, w = 31, h = 17 },
+				fence = { x = 81, y = 611, w = 27, h = 17 },
+				bush = { x = 110, y = 611, w = 41, h = 16 },
+				spikes = { x = 153, y = 611, w = 31, h = 16 },
+				crystal_small = { x = 186, y = 611, w = 22, h = 15 },
+				campfire = { x = 210, y = 611, w = 43, h = 14 },
+				rocks = { x = 0, y = 631, w = 35, h = 14 },
+				pond = { x = 37, y = 631, w = 32, h = 11 },
 			},
 			back = {
+				{ id = "riftgate", x = 442, y = 161 },
 				{ id = "gate", x = 42, y = 177 },
 				{ id = "ctree", x = 86, y = 177 },
 				{ id = "cbuds", x = 150, y = 177 },
+				{ id = "ctree2", x = 246, y = 161 },
 				{ id = "crystalhouse", x = 330, y = 161 },
-				{ id = "crystal_small", x = 422, y = 161 },
-				{ id = "ctree2", x = 464, y = 161 },
+				{ id = "crystal_small", x = 384, y = 161 },
 			},
 			front = {  },
 			spawn = { x = 80, y = 176 },
 			portals = {
 				{ x = 42, y = 176, to = "r2a3", label = "빛나는 연못으로", h = 60 },
+				{ x = 442, y = 160, to = "dg1", label = "수정 거울숲", h = 104, dungeon = "dg1", done = "dq01", scale = 1.5, lift = 6 },
 			},
 			warps = {  },
 			warpAlpha = 0.28,
@@ -39458,70 +39727,71 @@ local M = {
 			},
 			props = "props_r2a1.png",
 			rects = {
-				heartroot = { x = 0, y = 0, w = 93, h = 84 },
-				rootplate = { x = 95, y = 0, w = 96, h = 70 },
-				crystalhouse = { x = 0, y = 86, w = 66, h = 69 },
-				dtree = { x = 68, y = 86, w = 41, h = 65 },
-				kbanner = { x = 111, y = 86, w = 31, h = 65 },
-				guardpost = { x = 144, y = 86, w = 78, h = 64 },
-				watch = { x = 0, y = 157, w = 58, h = 63 },
-				ctree = { x = 60, y = 157, w = 41, h = 62 },
-				gate = { x = 103, y = 157, w = 54, h = 60 },
-				darch = { x = 159, y = 157, w = 60, h = 58 },
-				door = { x = 0, y = 222, w = 62, h = 57 },
-				dtree2 = { x = 64, y = 222, w = 40, h = 51 },
-				ctree2 = { x = 106, y = 222, w = 39, h = 48 },
-				bigstump = { x = 147, y = 222, w = 73, h = 47 },
-				lantern = { x = 222, y = 222, w = 27, h = 46 },
-				post_lamp = { x = 0, y = 281, w = 24, h = 44 },
-				post = { x = 26, y = 281, w = 20, h = 44 },
-				roadlamp = { x = 48, y = 281, w = 30, h = 43 },
-				stall = { x = 80, y = 281, w = 56, h = 40 },
-				krack = { x = 138, y = 281, w = 37, h = 40 },
-				denmouth = { x = 177, y = 281, w = 55, h = 38 },
-				dcrystal_big = { x = 0, y = 327, w = 46, h = 38 },
-				reeds = { x = 48, y = 327, w = 33, h = 37 },
-				mint = { x = 83, y = 327, w = 46, h = 36 },
-				crystal_big = { x = 131, y = 327, w = 42, h = 34 },
-				mstone = { x = 175, y = 327, w = 40, h = 34 },
-				sign = { x = 217, y = 327, w = 27, h = 34 },
-				web = { x = 0, y = 367, w = 48, h = 33 },
-				sign3 = { x = 50, y = 367, w = 29, h = 33 },
-				tent = { x = 81, y = 367, w = 60, h = 32 },
-				tlog2 = { x = 143, y = 367, w = 108, h = 31 },
-				tlog1 = { x = 0, y = 402, w = 123, h = 30 },
-				cledge2 = { x = 125, y = 402, w = 62, h = 30 },
-				road3 = { x = 189, y = 402, w = 48, h = 30 },
-				road1 = { x = 0, y = 434, w = 93, h = 29 },
-				dledge3 = { x = 95, y = 434, w = 63, h = 29 },
-				dledge2 = { x = 160, y = 434, w = 62, h = 29 },
-				barricade = { x = 0, y = 465, w = 65, h = 28 },
-				cledge3 = { x = 67, y = 465, w = 63, h = 28 },
-				dledge1 = { x = 132, y = 465, w = 63, h = 28 },
-				road2 = { x = 0, y = 495, w = 69, h = 27 },
-				supplies = { x = 71, y = 495, w = 51, h = 27 },
-				tlog3 = { x = 124, y = 495, w = 64, h = 26 },
-				cledge1 = { x = 190, y = 495, w = 62, h = 26 },
-				kettle = { x = 0, y = 524, w = 27, h = 26 },
-				barrels = { x = 29, y = 524, w = 32, h = 24 },
-				clog = { x = 63, y = 524, w = 56, h = 20 },
-				thorn = { x = 121, y = 524, w = 26, h = 20 },
-				bench = { x = 149, y = 524, w = 66, h = 19 },
-				eggs = { x = 217, y = 524, w = 36, h = 19 },
-				cbuds = { x = 0, y = 552, w = 24, h = 19 },
-				crate = { x = 26, y = 552, w = 23, h = 19 },
-				shroom = { x = 51, y = 552, w = 31, h = 18 },
-				kstone = { x = 84, y = 552, w = 31, h = 18 },
-				dcrystal_small = { x = 117, y = 552, w = 23, h = 18 },
-				reeds2 = { x = 142, y = 552, w = 21, h = 18 },
-				grass = { x = 165, y = 552, w = 31, h = 17 },
-				fence = { x = 198, y = 552, w = 27, h = 17 },
-				bush = { x = 0, y = 573, w = 41, h = 16 },
-				spikes = { x = 43, y = 573, w = 31, h = 16 },
-				crystal_small = { x = 76, y = 573, w = 22, h = 15 },
-				campfire = { x = 100, y = 573, w = 43, h = 14 },
-				rocks = { x = 145, y = 573, w = 35, h = 14 },
-				pond = { x = 182, y = 573, w = 32, h = 11 },
+				riftgate = { x = 0, y = 0, w = 80, h = 108 },
+				heartroot = { x = 82, y = 0, w = 93, h = 84 },
+				rootplate = { x = 0, y = 110, w = 96, h = 70 },
+				crystalhouse = { x = 98, y = 110, w = 66, h = 69 },
+				dtree = { x = 166, y = 110, w = 41, h = 65 },
+				kbanner = { x = 209, y = 110, w = 31, h = 65 },
+				guardpost = { x = 0, y = 182, w = 78, h = 64 },
+				watch = { x = 80, y = 182, w = 58, h = 63 },
+				ctree = { x = 140, y = 182, w = 41, h = 62 },
+				gate = { x = 183, y = 182, w = 54, h = 60 },
+				darch = { x = 0, y = 248, w = 60, h = 58 },
+				door = { x = 62, y = 248, w = 62, h = 57 },
+				dtree2 = { x = 126, y = 248, w = 40, h = 51 },
+				ctree2 = { x = 168, y = 248, w = 39, h = 48 },
+				bigstump = { x = 0, y = 308, w = 73, h = 47 },
+				lantern = { x = 75, y = 308, w = 27, h = 46 },
+				post_lamp = { x = 104, y = 308, w = 24, h = 44 },
+				post = { x = 130, y = 308, w = 20, h = 44 },
+				roadlamp = { x = 152, y = 308, w = 30, h = 43 },
+				stall = { x = 184, y = 308, w = 56, h = 40 },
+				krack = { x = 0, y = 357, w = 37, h = 40 },
+				denmouth = { x = 39, y = 357, w = 55, h = 38 },
+				dcrystal_big = { x = 96, y = 357, w = 46, h = 38 },
+				reeds = { x = 144, y = 357, w = 33, h = 37 },
+				mint = { x = 179, y = 357, w = 46, h = 36 },
+				crystal_big = { x = 0, y = 399, w = 42, h = 34 },
+				mstone = { x = 44, y = 399, w = 40, h = 34 },
+				sign = { x = 86, y = 399, w = 27, h = 34 },
+				web = { x = 115, y = 399, w = 48, h = 33 },
+				sign3 = { x = 165, y = 399, w = 29, h = 33 },
+				tent = { x = 196, y = 399, w = 60, h = 32 },
+				tlog2 = { x = 0, y = 435, w = 108, h = 31 },
+				tlog1 = { x = 110, y = 435, w = 123, h = 30 },
+				cledge2 = { x = 0, y = 468, w = 62, h = 30 },
+				road3 = { x = 64, y = 468, w = 48, h = 30 },
+				road1 = { x = 114, y = 468, w = 93, h = 29 },
+				dledge3 = { x = 0, y = 500, w = 63, h = 29 },
+				dledge2 = { x = 65, y = 500, w = 62, h = 29 },
+				barricade = { x = 129, y = 500, w = 65, h = 28 },
+				cledge3 = { x = 0, y = 531, w = 63, h = 28 },
+				dledge1 = { x = 65, y = 531, w = 63, h = 28 },
+				road2 = { x = 130, y = 531, w = 69, h = 27 },
+				supplies = { x = 201, y = 531, w = 51, h = 27 },
+				tlog3 = { x = 0, y = 561, w = 64, h = 26 },
+				cledge1 = { x = 66, y = 561, w = 62, h = 26 },
+				kettle = { x = 130, y = 561, w = 27, h = 26 },
+				barrels = { x = 159, y = 561, w = 32, h = 24 },
+				clog = { x = 193, y = 561, w = 56, h = 20 },
+				thorn = { x = 0, y = 589, w = 26, h = 20 },
+				bench = { x = 28, y = 589, w = 66, h = 19 },
+				eggs = { x = 96, y = 589, w = 36, h = 19 },
+				cbuds = { x = 134, y = 589, w = 24, h = 19 },
+				crate = { x = 160, y = 589, w = 23, h = 19 },
+				shroom = { x = 185, y = 589, w = 31, h = 18 },
+				kstone = { x = 218, y = 589, w = 31, h = 18 },
+				dcrystal_small = { x = 0, y = 611, w = 23, h = 18 },
+				reeds2 = { x = 25, y = 611, w = 21, h = 18 },
+				grass = { x = 48, y = 611, w = 31, h = 17 },
+				fence = { x = 81, y = 611, w = 27, h = 17 },
+				bush = { x = 110, y = 611, w = 41, h = 16 },
+				spikes = { x = 153, y = 611, w = 31, h = 16 },
+				crystal_small = { x = 186, y = 611, w = 22, h = 15 },
+				campfire = { x = 210, y = 611, w = 43, h = 14 },
+				rocks = { x = 0, y = 631, w = 35, h = 14 },
+				pond = { x = 37, y = 631, w = 32, h = 11 },
 			},
 			back = {
 				{ id = "gate", x = 440, y = 177 },
@@ -39856,70 +40126,71 @@ local M = {
 			},
 			props = "props_r2a1.png",
 			rects = {
-				heartroot = { x = 0, y = 0, w = 93, h = 84 },
-				rootplate = { x = 95, y = 0, w = 96, h = 70 },
-				crystalhouse = { x = 0, y = 86, w = 66, h = 69 },
-				dtree = { x = 68, y = 86, w = 41, h = 65 },
-				kbanner = { x = 111, y = 86, w = 31, h = 65 },
-				guardpost = { x = 144, y = 86, w = 78, h = 64 },
-				watch = { x = 0, y = 157, w = 58, h = 63 },
-				ctree = { x = 60, y = 157, w = 41, h = 62 },
-				gate = { x = 103, y = 157, w = 54, h = 60 },
-				darch = { x = 159, y = 157, w = 60, h = 58 },
-				door = { x = 0, y = 222, w = 62, h = 57 },
-				dtree2 = { x = 64, y = 222, w = 40, h = 51 },
-				ctree2 = { x = 106, y = 222, w = 39, h = 48 },
-				bigstump = { x = 147, y = 222, w = 73, h = 47 },
-				lantern = { x = 222, y = 222, w = 27, h = 46 },
-				post_lamp = { x = 0, y = 281, w = 24, h = 44 },
-				post = { x = 26, y = 281, w = 20, h = 44 },
-				roadlamp = { x = 48, y = 281, w = 30, h = 43 },
-				stall = { x = 80, y = 281, w = 56, h = 40 },
-				krack = { x = 138, y = 281, w = 37, h = 40 },
-				denmouth = { x = 177, y = 281, w = 55, h = 38 },
-				dcrystal_big = { x = 0, y = 327, w = 46, h = 38 },
-				reeds = { x = 48, y = 327, w = 33, h = 37 },
-				mint = { x = 83, y = 327, w = 46, h = 36 },
-				crystal_big = { x = 131, y = 327, w = 42, h = 34 },
-				mstone = { x = 175, y = 327, w = 40, h = 34 },
-				sign = { x = 217, y = 327, w = 27, h = 34 },
-				web = { x = 0, y = 367, w = 48, h = 33 },
-				sign3 = { x = 50, y = 367, w = 29, h = 33 },
-				tent = { x = 81, y = 367, w = 60, h = 32 },
-				tlog2 = { x = 143, y = 367, w = 108, h = 31 },
-				tlog1 = { x = 0, y = 402, w = 123, h = 30 },
-				cledge2 = { x = 125, y = 402, w = 62, h = 30 },
-				road3 = { x = 189, y = 402, w = 48, h = 30 },
-				road1 = { x = 0, y = 434, w = 93, h = 29 },
-				dledge3 = { x = 95, y = 434, w = 63, h = 29 },
-				dledge2 = { x = 160, y = 434, w = 62, h = 29 },
-				barricade = { x = 0, y = 465, w = 65, h = 28 },
-				cledge3 = { x = 67, y = 465, w = 63, h = 28 },
-				dledge1 = { x = 132, y = 465, w = 63, h = 28 },
-				road2 = { x = 0, y = 495, w = 69, h = 27 },
-				supplies = { x = 71, y = 495, w = 51, h = 27 },
-				tlog3 = { x = 124, y = 495, w = 64, h = 26 },
-				cledge1 = { x = 190, y = 495, w = 62, h = 26 },
-				kettle = { x = 0, y = 524, w = 27, h = 26 },
-				barrels = { x = 29, y = 524, w = 32, h = 24 },
-				clog = { x = 63, y = 524, w = 56, h = 20 },
-				thorn = { x = 121, y = 524, w = 26, h = 20 },
-				bench = { x = 149, y = 524, w = 66, h = 19 },
-				eggs = { x = 217, y = 524, w = 36, h = 19 },
-				cbuds = { x = 0, y = 552, w = 24, h = 19 },
-				crate = { x = 26, y = 552, w = 23, h = 19 },
-				shroom = { x = 51, y = 552, w = 31, h = 18 },
-				kstone = { x = 84, y = 552, w = 31, h = 18 },
-				dcrystal_small = { x = 117, y = 552, w = 23, h = 18 },
-				reeds2 = { x = 142, y = 552, w = 21, h = 18 },
-				grass = { x = 165, y = 552, w = 31, h = 17 },
-				fence = { x = 198, y = 552, w = 27, h = 17 },
-				bush = { x = 0, y = 573, w = 41, h = 16 },
-				spikes = { x = 43, y = 573, w = 31, h = 16 },
-				crystal_small = { x = 76, y = 573, w = 22, h = 15 },
-				campfire = { x = 100, y = 573, w = 43, h = 14 },
-				rocks = { x = 145, y = 573, w = 35, h = 14 },
-				pond = { x = 182, y = 573, w = 32, h = 11 },
+				riftgate = { x = 0, y = 0, w = 80, h = 108 },
+				heartroot = { x = 82, y = 0, w = 93, h = 84 },
+				rootplate = { x = 0, y = 110, w = 96, h = 70 },
+				crystalhouse = { x = 98, y = 110, w = 66, h = 69 },
+				dtree = { x = 166, y = 110, w = 41, h = 65 },
+				kbanner = { x = 209, y = 110, w = 31, h = 65 },
+				guardpost = { x = 0, y = 182, w = 78, h = 64 },
+				watch = { x = 80, y = 182, w = 58, h = 63 },
+				ctree = { x = 140, y = 182, w = 41, h = 62 },
+				gate = { x = 183, y = 182, w = 54, h = 60 },
+				darch = { x = 0, y = 248, w = 60, h = 58 },
+				door = { x = 62, y = 248, w = 62, h = 57 },
+				dtree2 = { x = 126, y = 248, w = 40, h = 51 },
+				ctree2 = { x = 168, y = 248, w = 39, h = 48 },
+				bigstump = { x = 0, y = 308, w = 73, h = 47 },
+				lantern = { x = 75, y = 308, w = 27, h = 46 },
+				post_lamp = { x = 104, y = 308, w = 24, h = 44 },
+				post = { x = 130, y = 308, w = 20, h = 44 },
+				roadlamp = { x = 152, y = 308, w = 30, h = 43 },
+				stall = { x = 184, y = 308, w = 56, h = 40 },
+				krack = { x = 0, y = 357, w = 37, h = 40 },
+				denmouth = { x = 39, y = 357, w = 55, h = 38 },
+				dcrystal_big = { x = 96, y = 357, w = 46, h = 38 },
+				reeds = { x = 144, y = 357, w = 33, h = 37 },
+				mint = { x = 179, y = 357, w = 46, h = 36 },
+				crystal_big = { x = 0, y = 399, w = 42, h = 34 },
+				mstone = { x = 44, y = 399, w = 40, h = 34 },
+				sign = { x = 86, y = 399, w = 27, h = 34 },
+				web = { x = 115, y = 399, w = 48, h = 33 },
+				sign3 = { x = 165, y = 399, w = 29, h = 33 },
+				tent = { x = 196, y = 399, w = 60, h = 32 },
+				tlog2 = { x = 0, y = 435, w = 108, h = 31 },
+				tlog1 = { x = 110, y = 435, w = 123, h = 30 },
+				cledge2 = { x = 0, y = 468, w = 62, h = 30 },
+				road3 = { x = 64, y = 468, w = 48, h = 30 },
+				road1 = { x = 114, y = 468, w = 93, h = 29 },
+				dledge3 = { x = 0, y = 500, w = 63, h = 29 },
+				dledge2 = { x = 65, y = 500, w = 62, h = 29 },
+				barricade = { x = 129, y = 500, w = 65, h = 28 },
+				cledge3 = { x = 0, y = 531, w = 63, h = 28 },
+				dledge1 = { x = 65, y = 531, w = 63, h = 28 },
+				road2 = { x = 130, y = 531, w = 69, h = 27 },
+				supplies = { x = 201, y = 531, w = 51, h = 27 },
+				tlog3 = { x = 0, y = 561, w = 64, h = 26 },
+				cledge1 = { x = 66, y = 561, w = 62, h = 26 },
+				kettle = { x = 130, y = 561, w = 27, h = 26 },
+				barrels = { x = 159, y = 561, w = 32, h = 24 },
+				clog = { x = 193, y = 561, w = 56, h = 20 },
+				thorn = { x = 0, y = 589, w = 26, h = 20 },
+				bench = { x = 28, y = 589, w = 66, h = 19 },
+				eggs = { x = 96, y = 589, w = 36, h = 19 },
+				cbuds = { x = 134, y = 589, w = 24, h = 19 },
+				crate = { x = 160, y = 589, w = 23, h = 19 },
+				shroom = { x = 185, y = 589, w = 31, h = 18 },
+				kstone = { x = 218, y = 589, w = 31, h = 18 },
+				dcrystal_small = { x = 0, y = 611, w = 23, h = 18 },
+				reeds2 = { x = 25, y = 611, w = 21, h = 18 },
+				grass = { x = 48, y = 611, w = 31, h = 17 },
+				fence = { x = 81, y = 611, w = 27, h = 17 },
+				bush = { x = 110, y = 611, w = 41, h = 16 },
+				spikes = { x = 153, y = 611, w = 31, h = 16 },
+				crystal_small = { x = 186, y = 611, w = 22, h = 15 },
+				campfire = { x = 210, y = 611, w = 43, h = 14 },
+				rocks = { x = 0, y = 631, w = 35, h = 14 },
+				pond = { x = 37, y = 631, w = 32, h = 11 },
 			},
 			back = {
 				{ id = "denmouth", x = 203, y = 97 },
@@ -40634,6 +40905,747 @@ local M = {
 			npcSheet = nil,
 			ret = "ct",
 		},
+		dg1 = {
+			name = "수정 거울숲",
+			region = false,
+			also = false,
+			w = 34,
+			h = 14,
+			tall = false,
+			indoor = false,
+			ship = false,
+			rest = false,
+			story = false,
+			sea = false,
+			sky = "#5a6a82",
+			deep = "#232931",
+			rows = { "..................................", "..................................", "..................................", "..................................", "..................................", "...........................====...", "..........====........====........", "................====..............", "......====...====........#########", "####..................############", "######.............###############", "##################################", "##################################", "##################################" },
+			layers = {
+				{ img = "sky.png", w = 384, h = 216, f = 0.03, y = 0 },
+				{ img = "far_r2a1.png", w = 768, h = 168, f = 0.14, y = 44 },
+				{ img = "near_r2a1.png", w = 768, h = 128, f = 0.34, y = 92 },
+			},
+			ground = {
+				{ img = "ground_r2a2_1.png", x = 0, w = 544, h = 224 },
+			},
+			props = "props_r2a1.png",
+			rects = {
+				riftgate = { x = 0, y = 0, w = 80, h = 108 },
+				heartroot = { x = 82, y = 0, w = 93, h = 84 },
+				rootplate = { x = 0, y = 110, w = 96, h = 70 },
+				crystalhouse = { x = 98, y = 110, w = 66, h = 69 },
+				dtree = { x = 166, y = 110, w = 41, h = 65 },
+				kbanner = { x = 209, y = 110, w = 31, h = 65 },
+				guardpost = { x = 0, y = 182, w = 78, h = 64 },
+				watch = { x = 80, y = 182, w = 58, h = 63 },
+				ctree = { x = 140, y = 182, w = 41, h = 62 },
+				gate = { x = 183, y = 182, w = 54, h = 60 },
+				darch = { x = 0, y = 248, w = 60, h = 58 },
+				door = { x = 62, y = 248, w = 62, h = 57 },
+				dtree2 = { x = 126, y = 248, w = 40, h = 51 },
+				ctree2 = { x = 168, y = 248, w = 39, h = 48 },
+				bigstump = { x = 0, y = 308, w = 73, h = 47 },
+				lantern = { x = 75, y = 308, w = 27, h = 46 },
+				post_lamp = { x = 104, y = 308, w = 24, h = 44 },
+				post = { x = 130, y = 308, w = 20, h = 44 },
+				roadlamp = { x = 152, y = 308, w = 30, h = 43 },
+				stall = { x = 184, y = 308, w = 56, h = 40 },
+				krack = { x = 0, y = 357, w = 37, h = 40 },
+				denmouth = { x = 39, y = 357, w = 55, h = 38 },
+				dcrystal_big = { x = 96, y = 357, w = 46, h = 38 },
+				reeds = { x = 144, y = 357, w = 33, h = 37 },
+				mint = { x = 179, y = 357, w = 46, h = 36 },
+				crystal_big = { x = 0, y = 399, w = 42, h = 34 },
+				mstone = { x = 44, y = 399, w = 40, h = 34 },
+				sign = { x = 86, y = 399, w = 27, h = 34 },
+				web = { x = 115, y = 399, w = 48, h = 33 },
+				sign3 = { x = 165, y = 399, w = 29, h = 33 },
+				tent = { x = 196, y = 399, w = 60, h = 32 },
+				tlog2 = { x = 0, y = 435, w = 108, h = 31 },
+				tlog1 = { x = 110, y = 435, w = 123, h = 30 },
+				cledge2 = { x = 0, y = 468, w = 62, h = 30 },
+				road3 = { x = 64, y = 468, w = 48, h = 30 },
+				road1 = { x = 114, y = 468, w = 93, h = 29 },
+				dledge3 = { x = 0, y = 500, w = 63, h = 29 },
+				dledge2 = { x = 65, y = 500, w = 62, h = 29 },
+				barricade = { x = 129, y = 500, w = 65, h = 28 },
+				cledge3 = { x = 0, y = 531, w = 63, h = 28 },
+				dledge1 = { x = 65, y = 531, w = 63, h = 28 },
+				road2 = { x = 130, y = 531, w = 69, h = 27 },
+				supplies = { x = 201, y = 531, w = 51, h = 27 },
+				tlog3 = { x = 0, y = 561, w = 64, h = 26 },
+				cledge1 = { x = 66, y = 561, w = 62, h = 26 },
+				kettle = { x = 130, y = 561, w = 27, h = 26 },
+				barrels = { x = 159, y = 561, w = 32, h = 24 },
+				clog = { x = 193, y = 561, w = 56, h = 20 },
+				thorn = { x = 0, y = 589, w = 26, h = 20 },
+				bench = { x = 28, y = 589, w = 66, h = 19 },
+				eggs = { x = 96, y = 589, w = 36, h = 19 },
+				cbuds = { x = 134, y = 589, w = 24, h = 19 },
+				crate = { x = 160, y = 589, w = 23, h = 19 },
+				shroom = { x = 185, y = 589, w = 31, h = 18 },
+				kstone = { x = 218, y = 589, w = 31, h = 18 },
+				dcrystal_small = { x = 0, y = 611, w = 23, h = 18 },
+				reeds2 = { x = 25, y = 611, w = 21, h = 18 },
+				grass = { x = 48, y = 611, w = 31, h = 17 },
+				fence = { x = 81, y = 611, w = 27, h = 17 },
+				bush = { x = 110, y = 611, w = 41, h = 16 },
+				spikes = { x = 153, y = 611, w = 31, h = 16 },
+				crystal_small = { x = 186, y = 611, w = 22, h = 15 },
+				campfire = { x = 210, y = 611, w = 43, h = 14 },
+				rocks = { x = 0, y = 631, w = 35, h = 14 },
+				pond = { x = 37, y = 631, w = 32, h = 11 },
+			},
+			back = {
+				{ id = "gate", x = 504, y = 129 },
+				{ id = "gate", x = 32, y = 145 },
+				{ id = "cledge1", x = 128, y = 152 },
+				{ id = "cledge2", x = 192, y = 124 },
+				{ id = "cledge3", x = 240, y = 154 },
+				{ id = "cledge1", x = 288, y = 136 },
+				{ id = "cledge2", x = 384, y = 124 },
+				{ id = "cledge3", x = 464, y = 106 },
+				{ id = "ctree", x = 53, y = 145 },
+				{ id = "mint", x = 152, y = 177 },
+				{ id = "clog", x = 251, y = 177 },
+				{ id = "crystal_small", x = 306, y = 161 },
+				{ id = "sign", x = 490, y = 129 },
+				{ id = "grass", x = 112, y = 177 },
+				{ id = "rocks", x = 174, y = 177 },
+				{ id = "shroom", x = 224, y = 177 },
+				{ id = "grass", x = 296, y = 177 },
+				{ id = "bush", x = 334, y = 161 },
+				{ id = "grass", x = 379, y = 145 },
+				{ id = "grass", x = 434, y = 129 },
+				{ id = "shroom", x = 475, y = 129 },
+			},
+			front = {  },
+			spawn = { x = 48, y = 144 },
+			portals = {
+				{ x = 32, y = 144, to = "r2ah", label = "수정 틈으로", h = 60 },
+			},
+			warps = {  },
+			warpAlpha = 0.28,
+			mobs = {
+				{
+					kind = "stump",
+					x = 196.8,
+					y = 96,
+					range = { 161.6, 222.4 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 388.8,
+					y = 96,
+					range = { 353.6, 414.4 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 116.8,
+					y = 176,
+					range = { 102.4, 198.4 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 174.4,
+					y = 96,
+					range = { 161.6, 188.8 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 214.4,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 276.8,
+					y = 112,
+					range = { 267.2, 296 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 281.6,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 340.8,
+					y = 160,
+					range = { 315.2, 344 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 360,
+					y = 144,
+					range = { 355.2, 398.4 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 408,
+					y = 128,
+					range = { 401.6, 446.4 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 436.8,
+					y = 128,
+					range = { 412.8, 446.4 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 215,
+					y = 96,
+					range = { 161.6, 222.4 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 102,
+					y = 176,
+					range = { 102.4, 198.4 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 232,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 264,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 374,
+					y = 144,
+					range = { 355.2, 398.4 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "stump",
+					x = 426,
+					y = 128,
+					range = { 412.8, 446.4 },
+					lv = 34,
+					wave = 1,
+				},
+				{
+					kind = "snail",
+					x = 196.8,
+					y = 96,
+					range = { 161.6, 222.4 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 388.8,
+					y = 96,
+					range = { 353.6, 414.4 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 116.8,
+					y = 176,
+					range = { 102.4, 198.4 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 174.4,
+					y = 96,
+					range = { 161.6, 188.8 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 214.4,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 276.8,
+					y = 112,
+					range = { 267.2, 296 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 281.6,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 340.8,
+					y = 160,
+					range = { 315.2, 344 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 360,
+					y = 144,
+					range = { 355.2, 398.4 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 408,
+					y = 128,
+					range = { 401.6, 446.4 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 436.8,
+					y = 128,
+					range = { 412.8, 446.4 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 215,
+					y = 96,
+					range = { 161.6, 222.4 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 102,
+					y = 176,
+					range = { 102.4, 198.4 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 232,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 264,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 374,
+					y = 144,
+					range = { 355.2, 398.4 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "snail",
+					x = 426,
+					y = 128,
+					range = { 412.8, 446.4 },
+					lv = 34,
+					wave = 2,
+				},
+				{
+					kind = "frog",
+					x = 196.8,
+					y = 96,
+					range = { 161.6, 222.4 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 388.8,
+					y = 96,
+					range = { 353.6, 414.4 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 116.8,
+					y = 176,
+					range = { 102.4, 198.4 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 174.4,
+					y = 96,
+					range = { 161.6, 188.8 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 214.4,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 276.8,
+					y = 112,
+					range = { 267.2, 296 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 281.6,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 340.8,
+					y = 160,
+					range = { 315.2, 344 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 360,
+					y = 144,
+					range = { 355.2, 398.4 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 408,
+					y = 128,
+					range = { 401.6, 446.4 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 436.8,
+					y = 128,
+					range = { 412.8, 446.4 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 215,
+					y = 96,
+					range = { 161.6, 222.4 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 102,
+					y = 176,
+					range = { 102.4, 198.4 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 232,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 264,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 374,
+					y = 144,
+					range = { 355.2, 398.4 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "frog",
+					x = 426,
+					y = 128,
+					range = { 412.8, 446.4 },
+					lv = 34,
+					wave = 3,
+				},
+				{
+					kind = "spider",
+					x = 196.8,
+					y = 96,
+					range = { 161.6, 222.4 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 388.8,
+					y = 96,
+					range = { 353.6, 414.4 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 116.8,
+					y = 176,
+					range = { 102.4, 198.4 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 174.4,
+					y = 96,
+					range = { 161.6, 188.8 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 214.4,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 276.8,
+					y = 112,
+					range = { 267.2, 296 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 281.6,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 340.8,
+					y = 160,
+					range = { 315.2, 344 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 360,
+					y = 144,
+					range = { 355.2, 398.4 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 408,
+					y = 128,
+					range = { 401.6, 446.4 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 436.8,
+					y = 128,
+					range = { 412.8, 446.4 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 215,
+					y = 96,
+					range = { 161.6, 222.4 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 102,
+					y = 176,
+					range = { 102.4, 198.4 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 232,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 264,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 374,
+					y = 144,
+					range = { 355.2, 398.4 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 426,
+					y = 128,
+					range = { 412.8, 446.4 },
+					lv = 34,
+					wave = 4,
+				},
+				{
+					kind = "spider",
+					x = 276.8,
+					y = 112,
+					range = { 267.2, 296 },
+					lv = 34,
+					wave = 5,
+					elite = true,
+				},
+				{
+					kind = "spider",
+					x = 281.6,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 5,
+					elite = true,
+				},
+				{
+					kind = "spider",
+					x = 214.4,
+					y = 176,
+					range = { 203.2, 302.4 },
+					lv = 34,
+					wave = 5,
+				},
+				{
+					kind = "spider",
+					x = 340.8,
+					y = 160,
+					range = { 315.2, 344 },
+					lv = 34,
+					wave = 5,
+				},
+				{
+					kind = "spider",
+					x = 196.8,
+					y = 96,
+					range = { 161.6, 222.4 },
+					lv = 34,
+					wave = 5,
+				},
+				{
+					kind = "spider",
+					x = 360,
+					y = 144,
+					range = { 355.2, 398.4 },
+					lv = 34,
+					wave = 5,
+				},
+				{
+					kind = "spider",
+					x = 174.4,
+					y = 96,
+					range = { 161.6, 188.8 },
+					lv = 34,
+					wave = 5,
+				},
+				{
+					kind = "spider",
+					x = 388.8,
+					y = 96,
+					range = { 353.6, 414.4 },
+					lv = 34,
+					wave = 5,
+				},
+			},
+			elite = false,
+			rift = "dg1",
+			dungeon = "dg1",
+			bosses = nil,
+			npcs = nil,
+			npcSheet = nil,
+			ret = "ct",
+		},
 	},
 }
 -- 토벌의 방(rf1#3처럼 장면 이름 뒤에 #번호 — 2026-10-16): 그 장면(rf1)의 자료를 쓴다. 들어갈 때마다 따로 된 방이 열린다(서버의 방 · 화면 모두 이 이름으로 찾는다)
@@ -40745,6 +41757,7 @@ return {
 		{ id = "attend", name = "출석", key = false, from = 1, menu = true, need = false },
 		{ id = "achieve", name = "업적", key = false, from = 1, menu = true, need = false },
 		{ id = "cash", name = "달빛 상점", key = "Backquote", from = 1, menu = false, need = false },
+		{ id = "dungeon", name = "던전", key = false, from = 1, menu = false, need = false },
 		{ id = "rift", name = "토벌", key = false, from = 1, menu = false, need = false },
 		{ id = "tome", name = "모험의 서", key = false, from = 1, menu = true, need = "tome" },
 		{ id = "coupon", name = "쿠폰", key = false, from = 1, menu = true, need = false },
@@ -40753,7 +41766,7 @@ return {
 		{ no = 1, name = "이동 패드", kind = "pad", slot = false, act = false, x = 10, y = 138, w = 64, h = 64 },
 		{ no = 2, name = "칸 2(처음에는 사냥기)", kind = "big", slot = 2, act = false, x = 330, y = 160, w = 44, h = 44 },
 		{ no = 3, name = "칸 3(처음에는 보스기)", kind = "big", slot = 3, act = false, x = 286, y = 172, w = 34, h = 34 },
-		{ no = 4, name = "뛰기", kind = "big", slot = false, act = "jump", x = 340, y = 116, w = 34, h = 34 },
+		{ no = 4, name = "칸 13(처음에는 점프)", kind = "big", slot = 13, act = false, x = 340, y = 116, w = 34, h = 34 },
 		{ no = 5, name = "칸 4(처음에는 대쉬)", kind = "big", slot = 4, act = false, x = 296, y = 130, w = 32, h = 32 },
 		{ no = 6, name = "칸 5(처음에는 물약)", kind = "skill", slot = 5, act = false, x = 262, y = 148, w = 24, h = 24 },
 		{ no = 7, name = "칸 6", kind = "skill", slot = 6, act = false, x = 262, y = 118, w = 24, h = 24 },
@@ -40763,7 +41776,7 @@ return {
 		{ no = 11, name = "칸 10", kind = "skill", slot = 10, act = false, x = 234, y = 154, w = 24, h = 24 },
 		{ no = 12, name = "칸 11", kind = "skill", slot = 11, act = false, x = 258, y = 180, w = 24, h = 24 },
 		{ no = 13, name = "칸 12", kind = "skill", slot = 12, act = false, x = 206, y = 158, w = 24, h = 24 },
-		{ no = 14, name = "상호작용(줍기 · 문 · 말 걸기)", kind = "etc", slot = false, act = "interact", x = 82, y = 140, w = 30, h = 30 },
+		{ no = 14, name = "칸 14(처음에는 상호작용)", kind = "etc", slot = 14, act = false, x = 82, y = 140, w = 30, h = 30 },
 		{ no = 15, name = "메뉴", kind = "etc", slot = false, act = "menu", x = 338, y = 4, w = 42, h = 20 },
 		{ no = 16, name = "보스 체력", kind = "hud", slot = false, act = false, x = 112, y = 4, w = 160, h = 12 },
 		{ no = 17, name = "버프", kind = "hud", slot = false, act = false, x = 250, y = 20, w = 80, h = 10 },
@@ -40908,6 +41921,23 @@ return {
 		auction = { w = 600, h = 320, top = 28, purseW = 104, slotsW = 110, catW = 52, catGap = 4, catH = 22, classW = 104, refreshW = 76, searchY = 56, searchW = 200, sortW = 104, listTop = 84, row = 28, icon = 24, priceW = 84, btnW = 60, btnH = 22, sellerW = 96, leftW = 76, sellW = 88, backW = 52, listW = 300, formX = 320, field = 22, labelW = 72, formRow = 30, qtyField = 52, qtyLabelW = 30, ofW = 60, priceField = 110, hourW = 68, registerW = 120, allW = 88, footH = 30, askW = 60, bar = 4 },
 		touchMenu = { w = 240, row = 40, btnH = 36, pad = 6, top = 40, bottom = 8, bar = 4 },
 		touchChooser = { cols = 5, cell = 44, gap = 6, nameH = 28, pad = 12, titleH = 34, footH = 44, x = 12, top = 8, bottom = 8, bar = 4 },
+		dungeon = { w = 300, infoY = 22, textY = 40, textLines = 3, lineY = 88, payY = 95, payLabelW = 64, noteY = 113, noteLines = 2, resetY = 143, btnY = 162, btnGap = 8, footY = 194, h = 210, portalScale = 1.5, portalLift = 6 },
+		count = {
+			w = 264,
+			pad = 14,
+			titleY = 12,
+			itemY = 34,
+			iconS = 22,
+			fieldY = 66,
+			stepW = 28,
+			fieldW = 92,
+			maxW = 56,
+			gap = 4,
+			noteY = 100,
+			buttonY = 124,
+			h = 164,
+			words = { range = "{lo} ~ {hi}개", max = "최대", cost = "합계 {n}", short = "달돈이 모자란다", gain = "받을 달돈 +{n}", have = "가진 수 {n}" },
+		},
 		coupon = {
 			w = 300,
 			guideH = 34,
@@ -41071,7 +42101,7 @@ return {
 		dummyLv = 1,
 		dropItem = "potion",
 	},
-	questMark = { new = "markNew", done = "markDone", up = 2 },
+	questMark = { new = "markNew", done = "markDone", big = "markBig", up = 2 },
 	words = {
 		equip = "장착",
 		equipIf = "장착하면",
@@ -41089,6 +42119,7 @@ return {
 		accept = "수락",
 		decline = "거절",
 		ask = {
+			buy = { "몇 개를 살까요?", "사기" },
 			discard = { "몇 개를 버릴까요?", "버리기" },
 			store = { "몇 개를 맡길까요?", "맡기기" },
 			take = { "몇 개를 찾을까요?", "찾기" },
@@ -41171,29 +42202,53 @@ return {
 		blink = 1.6,
 		drag = 5,
 		emptyAlpha = 0.5,
+		acts = {
+			act_jump = { home = 13, name = "점프" },
+			act_interact = { home = 14, name = "상호작용" },
+		},
 		words = { pick = "놓을 칸을 고르세요", hint = "스킬을 누르거나 끌어서 퀵슬롯에 놓는다", armed = "반짝이는 칸을 누르면 그 칸에 놓인다", at = "퀵슬롯 {key}", none = "퀵슬롯에 없음", passive = "늘 켜져 있다(퀵슬롯에 놓지 않는다)", unlearned = "배우면 퀵슬롯에 놓을 수 있다", later = "아직 쓸 수 없는 스킬이다", slot = "퀵슬롯 {n}" },
 		labels = { "Ctrl", "Q", "A", "Shift", "W", "S", "E", "D", "R", "F", "1", "2", "X", "3" },
-		touch = { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 },
+		touch = { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 },
 		touchCheck = {
 			{
 				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
-				{ false, "m", "b", "d", "potion", false, false, false, false, false, false, false, false, false },
+				{ false, "m", "b", "d", "potion", false, false, false, false, false, false, false, "act_jump", "act_interact" },
 			},
 			{
 				{ "potion", "m", "b", "d", "x", false, false, false, false, false, false, false, false, false },
-				{ false, "m", "b", "d", "x", "potion", false, false, false, false, false, false, false, false },
+				{ false, "m", "b", "d", "x", "potion", false, false, false, false, false, false, "act_jump", "act_interact" },
 			},
 			{
 				{ "potion", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", false, false },
-				{ false, "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", false, false },
+				{ false, "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "act_jump", "act_interact" },
 			},
 			{
 				{ false, "m", false, false, false, false, false, false, false, false, false, false, false, false },
-				{ false, "m", false, false, false, false, false, false, false, false, false, false, false, false },
+				{ false, "m", false, false, false, false, false, false, false, false, false, false, "act_jump", "act_interact" },
 			},
 			{
 				{ "potion", "m", "b", "d", "e", false, "g", "h", "i", "j", "k", "l", false, false },
-				{ false, "m", "b", "d", "e", "potion", "g", "h", "i", "j", "k", "l", false, false },
+				{ false, "m", "b", "d", "e", "potion", "g", "h", "i", "j", "k", "l", "act_jump", "act_interact" },
+			},
+			{
+				{ false, "m", "b", "act_jump", "d", false, false, false, false, false, false, false, "x", "act_interact" },
+				{ false, "m", "b", "act_jump", "d", false, false, false, false, false, false, false, "x", "act_interact" },
+			},
+			{
+				{ false, "m", "b", "d", "act_interact", false, false, false, false, false, false, false, false, false },
+				{ false, "m", "b", "d", "act_interact", false, false, false, false, false, false, false, "act_jump", false },
+			},
+			{
+				{ false, "act_jump", "b", "act_jump", false, false, false, false, false, false, false, false, "q", "r" },
+				{ false, "act_jump", "b", "r", false, false, false, false, false, false, false, false, "q", "act_interact" },
+			},
+			{
+				{ "potion", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", false },
+				{ false, "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "act_jump", "act_interact" },
+			},
+			{
+				{ false, "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "act_jump", "act_interact" },
+				{ false, "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "act_jump", "act_interact" },
 			},
 		},
 		check = {
@@ -41280,6 +42335,62 @@ return {
 				"",
 				9,
 				{ "potion", "m", "b", "d", false, false, false, false, false, false, false, false, false, false },
+			},
+			{
+				{ false, "m", "b", "d", "potion", false, false, false, false, false, false, false, "act_jump", "act_interact" },
+				"place",
+				"x",
+				13,
+				false,
+			},
+			{
+				{ false, "m", "b", "d", "potion", false, false, false, false, false, false, false, "act_jump", "act_interact" },
+				"place",
+				"x",
+				14,
+				false,
+			},
+			{
+				{ false, "m", "b", "d", "potion", false, false, false, false, false, false, false, "act_jump", "act_interact" },
+				"clear",
+				"",
+				13,
+				false,
+			},
+			{
+				{ false, "m", "b", "d", "potion", false, false, false, false, false, false, false, "act_jump", "act_interact" },
+				"clear",
+				"",
+				14,
+				false,
+			},
+			{
+				{ false, "m", "b", "d", "potion", false, false, false, false, false, false, false, "act_jump", "act_interact" },
+				"place",
+				"act_jump",
+				2,
+				{ false, "act_jump", "b", "d", "potion", false, false, false, false, false, false, false, "m", "act_interact" },
+			},
+			{
+				{ false, "m", "b", "d", "potion", false, false, false, false, false, false, false, "act_jump", "act_interact" },
+				"place",
+				"act_interact",
+				7,
+				{ false, "m", "b", "d", "potion", false, "act_interact", false, false, false, false, false, "act_jump", false },
+			},
+			{
+				{ false, "m", "b", "d", "potion", false, false, false, false, false, false, false, "act_jump", "act_interact" },
+				"place",
+				"m",
+				13,
+				{ false, "act_jump", "b", "d", "potion", false, false, false, false, false, false, false, "m", "act_interact" },
+			},
+			{
+				{ false, "m", "b", "d", "potion", false, false, false, false, false, false, false, "act_jump", "act_interact" },
+				"place",
+				"act_jump",
+				14,
+				{ false, "m", "b", "d", "potion", false, false, false, false, false, false, false, "act_interact", "act_jump" },
 			},
 		},
 	},
@@ -46477,7 +47588,7 @@ local packets = {
 	StatReset = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 2 } }, -- 찍은 능력치를 모두 되돌린다(공짜 — 2026-10-21)
 	Coupon = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 1, Burst = 2 } }, -- 쿠폰 번호를 적었다 → { ok, why?, pet? }(2026-10-21 · 서버 modules/cash.luau의 CashServer.coupon)
 	-- 물건을 다룬다: 하는 일(equip · unequip · dismantle · buy · enhance · transfer · restore · grow · storeIn · storeOut)과 그 대상 둘(번호 · 부위 · 수 등)
-	Item = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any, t.any }, RateLimit = { PerSecond = 8, Burst = 12 } },
+	Item = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any, t.any }, RateLimit = { PerSecond = 12, Burst = 20 } }, -- (2026-10-21: 8 · 12 → 12 · 20 — 가방 · 상점에서 빠르게 연달아 누르면 넘쳐 버려졌다 · 일마다 서버가 다시 본다)
 	-- 파티: 하는 일(invite · accept · decline · leave)과 대상(초대할 사람의 번호)
 	Party = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 4, Burst = 6 } },
 	-- 퀘스트: 하는 일(accept · complete · drop)과 퀘스트 id — 받기와 돌려주기는 그 주민 앞에서만
@@ -46496,7 +47607,7 @@ local packets = {
 	-- 수정 틈 토벌(2026-10-16): "view" · "enter" 단계 — 돌려주는 값 { ok, why, left, clears } (world.luau의 onRift · 셈은 sim/rift.luau)
 	-- 탈것(2026-10-16): 그 사람(선장 · 뱃사공 · 승강장 일꾼 — 이름표) 앞에서 오른다 — 돌려주는 값 { ok, why, time, dest } (world.luau의 onSail · 셈은 sim/voyage.luau)
 	Sail = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 2, Burst = 4 } },
-	Rift = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } },
+	Rift = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } }, -- 셋째 = 던전에 파티로 들어가는가(2026-10-21)
 	-- 경매장(메이플 옥션 방식 — 메뉴에서 어디서나): "mine" 내 것(판매 · 완료 탭) · "browse" 분류의 목록과 시세(장부의 이름, 새로 고침) · "list" 올리기(탭, 칸, 수, { 개당 값, 시간 }) ·
 	--  "buy" 사기(장부, 줄, 수, 본 값) · "settle" 내 것 하나(번호, "take" 수령 · "collect" 대금 수령 · "back" 취소 / 반환 · "relist" 재등록) · "all" 모두 받기
 	--  돌려주는 값 { ok, why, msg, rows(목록) · trades(시세) · board, mine(내 것), used · max(판매 수), now } — server/lune/modules/world.luau의 onMarket · 셈은 sim/market.luau
@@ -46510,7 +47621,8 @@ local packets = {
 	-- 스마트폰의 단추 배치를 바꿨다: 같은 꼴(칸들 전체) — PC의 퀵슬롯과 따로 저장한다. 돌려주는 값 = 서버가 가진 배치
 	TouchSlots = { Kind = "Function", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 8 } },
 	-- 내 자리(도트)와 보는 쪽. 움직임은 클라이언트가 셈하고 서버는 말이 되는지만 본다.
-	Move = { Kind = "Event", Direction = "ClientToServer", Args = { t.number, t.number, t.dir }, RateLimit = { PerSecond = 20, Burst = 30 } },
+	--  넷째 = 그 자리가 어느 맵(방)의 것인가(2026-10-21 — 서버가 아는 맵과 다르면 받지 않는다: 다른 맵의 자리를 이 맵의 자리로 믿어 땅 속으로 되돌려 보낼 수 있었다)
+	Move = { Kind = "Event", Direction = "ClientToServer", Args = { t.number, t.number, t.dir, t.any }, RateLimit = { PerSecond = 20, Burst = 30 } },
 	-- 문으로 다른 장면에 간다. 돌려주는 값 { scene, x, y, room } 또는 nil(문 앞이 아님)
 	Travel = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 2, Burst = 3 } },
 	-- 튜토리얼 「달빛 꿈」(2026-10-14): "done" n = 화면만 아는 n째 미션을 끝냈다(돌려주는 값 = 내 튜토리얼 상태) · "skip" = 꿈을 건너뛴다(이 계정의 캐릭터가 한 번 끝낸 뒤에만 — 돌려주는 값은 Travel과 같다)
@@ -46560,6 +47672,7 @@ local packets = {
 	Shot = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 { id, x, y, dir, speed, range, kind(쏜 졸개의 종류 — 제 그림이 있는 것은 그 그림으로 날아간다) }" },
 	MobCast = { Kind = "Event", Direction = "ServerToClient", Doc = "몬스터의 마법이 뜸 { id, kind(쓴 몬스터의 종류), x, y, dir(쓴 몬스터가 보던 쪽 — 앞으로 뻗는 마법은 그쪽으로 그린다) } — 그 종류의 마법 그림(cast)이 그 자리에서 한 번 돈다. 맞는 것은 서버가 예고 뒤에 따로 알린다(Hurt)" },
 	ShotEnd = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 번호" },
+	Megaphone = { Kind = "Event", Direction = "ServerToClient", Doc = "관리자의 확성기(모든 서버의 모두에게 — 2026-10-21): 글 — 화면 위 큰 알림 「공지」 + 채팅 알림 글" },
 	Sold = { Kind = "Event", Direction = "ServerToClient", Doc = "경매장에 올린 내 물건이 팔렸다 { name(물건 이름), n(팔린 수) } — 획득 알림 한 줄 · 「경매」 단추의 점(2026-10-18)" },
 	Elite = { Kind = "Event", Direction = "ServerToClient", Doc = "사냥터 정예가 나옴 { room(그 맵), mob(졸개 번호), kind, x · y(나온 자리 — 그 자리에 분홍 기운이 솟는다 · 높이 — 그 자리로 옮겨 그린다) } — 화면 위 가운데에 알림(2026-10-18)" },
 	Burst = { Kind = "Event", Direction = "ServerToClient", Doc = "폭탄병이 터짐 { mob, x, y }" },
@@ -48485,6 +49598,23 @@ function Bag.countIn(view, id: any): number
 	return n
 end
 
+-- 보낸 것(Bag.view)에서 그 아이템이 가방에 몇 개 더 들어가나(Bag.room과 같은 셈 — 수량 창이 「최대」를 정한다 · 2026-10-21)
+function Bag.roomInView(view, id: any): number
+	local def = Items.goods(id)
+	if not def or not view or not view[def.tab] then
+		return 0
+	end
+	return roomIn(view[def.tab], view.size or #view[def.tab], def)
+end
+-- 창고에 몇 개 더 들어가나(보낸 것의 store · storeSize에서)
+function Bag.storeRoomInView(view, id: any): number
+	local def = Items.goods(id)
+	if not def or not view or not view.store or not view.store[def.tab] then
+		return 0
+	end
+	return roomIn(view.store[def.tab], view.storeSize or #view.store[def.tab], def)
+end
+
 return Bag
 
 end
@@ -49449,13 +50579,13 @@ function Cash.couponCode(text: any): string?
 	if typeof(text) ~= "string" or #text > 64 then
 		return nil
 	end
-	local code = string.upper((string.gsub(text, "[%s%-]", "")))
+	local code = string.upper((string.gsub(text, "[ \t\r\n%-]", "")))
 	if code == "" or #code > Cash.COUPON_MAX or string.find(code, "[^%w]") then
 		return nil
 	end
 	return code
 end
--- 쿠폰을 쓴다: def = 서버의 쿠폰 { code, pet?, from?, till? } · 됐으면 true와 받은 것({ pet = 이름표 }), 아니면 false와 까닭
+-- 쿠폰을 쓴다: def = 서버의 쿠폰 { code, pet?, mount?, from?, till? } · 됐으면 true와 받은 것({ pet = 이름표, mount = 이름표 }), 아니면 false와 까닭
 function Cash.redeem(acct, def, now: number): (boolean, any)
 	local c = acct.bm
 	if def.from and now < def.from then
@@ -49465,15 +50595,21 @@ function Cash.redeem(acct, def, now: number): (boolean, any)
 	elseif c.coupons[def.code] then
 		return false, "이미 쓴 쿠폰이다"
 	end
+	if def.pet and not PET[def.pet] then
+		return false, "없는 펫이다"
+	elseif def.mount and not MOUNT[def.mount] then
+		return false, "없는 탈것이다"
+	end
 	if def.pet then
-		if not PET[def.pet] then
-			return false, "없는 펫이다"
-		end
 		c.pets[def.pet] = true -- 펫: 계정에 바로(꺼내 둔 것이 없으면 바로 꺼낸다 — 산 펫과 같다)
 		c.petOut = c.petOut or def.pet
 	end
+	if def.mount then
+		c.mounts[def.mount] = true -- 탈것(2026-10-21 쿠폰 탈것 「떠도는 책」): 계정에 바로(고른 것이 없으면 그것을 고른다 — 산 탈것과 같다)
+		c.mount = c.mount or def.mount
+	end
 	c.coupons[def.code] = now
-	return true, { pet = def.pet }
+	return true, { pet = def.pet, mount = def.mount }
 end
 
 -- 살 수 있게 된 상품인가: 로블록스 상품 번호가 있고(대시보드에서 만든 뒤) 게임에 만들어 둔 것(built — 펫 · 순간이동 · 꾸밈 · 패스는 아직)
@@ -51436,7 +52572,7 @@ function Hero.setLevel(h, level: number, job: number?)
 	-- 칸에 놓인 것 가운데 이제 배우지 않은 스킬은 뺀다
 	for _, slots in { h.slots, h.tslots } do
 		for i, id in slots do
-			if typeof(id) == "string" and not Quick.item(id) and (h.skills[id] or 0) < 1 then
+			if typeof(id) == "string" and not Quick.item(id) and not Quick.act(id) and not Quick.ride(id) and (h.skills[id] or 0) < 1 then -- (점프 · 상호작용 · 펫 · 탈것은 스킬이 아니다 — 2026-10-21)
 				slots[i] = false
 			end
 		end
@@ -51490,7 +52626,7 @@ function Hero.resetSkills(h)
 	h.sp = spEarned(h.level, h.class) -- 찍은 것이 없다: 받은 포인트가 그대로 남는다
 	for _, slots in { h.slots, h.tslots } do
 		for i, id in slots do
-			if typeof(id) == "string" and not Quick.item(id) and (h.skills[id] or 0) < 1 then
+			if typeof(id) == "string" and not Quick.item(id) and not Quick.act(id) and not Quick.ride(id) and (h.skills[id] or 0) < 1 then -- (점프 · 상호작용 · 펫 · 탈것은 스킬이 아니다 — 2026-10-21)
 				slots[i] = false
 			end
 		end
@@ -51811,7 +52947,7 @@ end
 -- 퀵슬롯을 바꾼다(클라이언트가 보낸 칸들 — 꼴과 놓아도 되는 것인지를 본다). touch = 스마트폰의 단추 배치(tslots)를 바꾼다
 function Hero.setSlots(h, list: any, touch: boolean?): boolean
 	local slots = Quick.clean(list, function(id)
-		return Hero.canSlot(h, id)
+		return (touch == true and Quick.act(id) ~= nil) or Hero.canSlot(h, id) -- 점프 · 상호작용은 폰의 배치에만(2026-10-21)
 	end)
 	if not slots then
 		return false
@@ -52001,14 +53137,14 @@ function Hero.unpack(id: any, data: any)
 	-- 퀵슬롯: 저장된 것이 말이 되면 그대로, 아니면(퀵슬롯이 생기기 전에 저장된 캐릭터 포함) 처음 차림(Hero.new가 놓아 둔 것)
 	--  예전 저장의 물약 칸("potion" — 물약이 한 가지였을 때)은 그때 마시던 물약의 칸으로 바꾼다(놓아 둔 자리가 그대로 남는다)
 	--  칸 하나가 맞지 않으면(그 스킬의 포인트를 돌려받았다 · 아이템의 이름표가 바뀌었다) 그 칸만 비운다(2026-10-18 검토 — 전에는 배치 전체가 처음 차림으로 돌아갔다)
-	local function salvage(list)
+	local function salvage(list, touch: boolean?)
 		if typeof(list) ~= "table" then
 			return list
 		end
 		local out, seen = table.create(Quick.N, false), {}
 		for i = 1, Quick.N do
 			local v = list[i]
-			if typeof(v) == "string" and #v <= 40 and not seen[v] and Hero.canSlot(h, v) then
+			if typeof(v) == "string" and #v <= 40 and not seen[v] and ((touch == true and Quick.act(v) ~= nil) or Hero.canSlot(h, v)) then -- 폰의 점프 · 상호작용은 옮겨 둔 자리 그대로(2026-10-21)
 				seen[v] = true
 				out[i] = v
 			end
@@ -52020,7 +53156,7 @@ function Hero.unpack(id: any, data: any)
 	end
 	-- 스마트폰의 단추 배치: 저장된 것이 말이 되면 그대로, 없으면(이것이 생기기 전에 저장된 캐릭터) 처음 차림
 	if data.tslots ~= nil then
-		Hero.setSlots(h, salvage(Quick.renew(data.tslots, myPotion)), true)
+		Hero.setSlots(h, salvage(Quick.renew(data.tslots, myPotion), true), true)
 	end
 
 	h.kit.on = data.kitOn == true and Kit.level(h, "toggle") > 0
@@ -54116,6 +55252,53 @@ function P.solidBox(scene, x: number, y: number): boolean
 	return false
 end
 
+-- 몸이 막힌 칸 안에 끼었으면 가장 가까운 빈 자리를 돌려준다(끼지 않았으면 그대로). 위가 먼저다: 칸의 윗면마다 올려 보고(그 땅 위에 선다),
+--  옆으로 가는 것은 두 배 먼 것으로 친다. 맵의 좌우 밖으로는 꺼내지 않는다.
+--  사용자 2026-10-21(폰): "대쉬하다가 맵을뚫고 낑기는 현상 발생합니다" — 끼면 걷기 · 뛰기 · 대쉬가 모두 막혀 그 자리에서 움직이지 못했다.
+--   어떤 길로 들어갔든(서버가 되돌려 준 자리 · 들어선 자리 …) 화면과 서버가 같은 셈으로 꺼낸다(boot.luau의 step · Warp · 서버 world.luau의 place · onMove)
+P.FREE_SIDE = 6 -- 옆으로는 이 칸 수까지 찾는다
+function P.freeSpot(scene, x: number, y: number): (number, number)
+	if not P.solidBox(scene, x, y) then
+		return x, y
+	end
+	local base = math.floor(y / T) * T
+	local best, bx, by = math.huge, x, y
+	for k = 0, scene.h + 2 do
+		local cy = base - k * T
+		local up = y - cy
+		if up >= best then
+			break
+		end
+		for d = 0, P.FREE_SIDE * T, 2 do
+			if up + d * 2 >= best then
+				break
+			end
+			local found = false
+			for _, side in { 1, -1 } do
+				local cx = x + side * d
+				if cx >= HALF and cx <= scene.w * T - HALF and not P.solidBox(scene, cx, cy) then
+					best, bx, by, found = up + d * 2, cx, cy, true
+					break
+				end
+			end
+			if found then
+				break
+			end
+		end
+	end
+	return bx, by
+end
+
+-- 끼었으면 꺼낸다(빠르기를 멈춘다). 꺼냈으면 true
+function P.unstick(scene, body): boolean
+	if not P.solidBox(scene, body.x, body.y) then
+		return false
+	end
+	body.x, body.y = P.freeSpot(scene, body.x, body.y)
+	body.vx, body.vy, body.ground = 0, 0, false
+	return true
+end
+
 -- 가시(^)에 닿아 있는가: 발이 놓인 칸이 가시일 때(몸 폭에서 양옆 두 점씩 뺀 안쪽 — 스치기만 한 것은 치지 않는다). 가시 위로 뛰어넘는 동안에는 닿지 않는다.
 --  닿으면 약한 피해를 입는다(서버 — sim/room.luau의 step. 사용자 2026-10-08: "맵에 가시 있잖아요 그거 닿으면 데미지 입게 약한데미지 입게하세요")
 function P.onSpike(scene, x: number, y: number): boolean
@@ -54876,10 +56059,19 @@ function Q.talkMenu(at, rows: number)
 	return out
 end
 
--- 주민 머리 위의 표시: "?" 돌려줄 것이 있다 · "!" 줄 것이 있다 · nil
+-- 주민 머리 위의 표시: "?" 돌려줄 것이 있다 · "!!" 큰 「!」(줄 것 가운데 중요한 것 — def.big · 던전의 문 2026-10-21) · "!" 줄 것이 있다 · nil
 function Q.mark(book, level: number, npc: string, region: any?, also: any?): string?
 	local at = Q.atNpc(book, level, npc, region, also)
-	return if #at.ready > 0 then "?" elseif #at.offer > 0 then "!" else nil
+	if #at.ready > 0 then
+		return "?"
+	end
+	for _, id in at.offer do
+		local def = byId[id]
+		if def and def.big then
+			return "!!"
+		end
+	end
+	return if #at.offer > 0 then "!" else nil
 end
 
 -- ---------- 길잡이(알리미가 적는다 — 메이플스토리의 전구 구실) ----------
@@ -55276,14 +56468,21 @@ MODULES['ReplicatedStorage/shared/lune/sim/rift'] = function(script, game, requi
 --  제한 시간을 넘기면 실패(보상 없음 · 횟수도 쓰지 않는다). 숫자 · 이름은 모두 제 제안이다.
 --  캐릭터마다의 기록 h.rift = { day = 보상을 받은 날 · used = 그날 받은 수 · clears = 모두 끝낸 수 }.
 --  방의 셈(Rift.start · Rift.step)은 sim/room.luau가 부른다 — 방의 몬스터 가운데 물결(wave)이 있는 것만 움직인다.
+--  구간 던전(2026-10-21 — 공방 design/dungeon.js · city.generated의 dungeon)도 같은 셈을 쓴다: 단계의 kind = "dungeon"(dg1 — 수정 거울숲).
+--   다른 점: 들어가는 곳 = 그 구간 사냥터의 틈 안의 문(퀘스트를 끝내야 열린다) · 하루 한 번(완료한 날을 적는다 — r.dungeon[단계] = 날) · 몬스터는 경험치 · 물건 · 퀘스트의 숫자를 주지 않는다(sim/room.luau)
+--   · 완료 = 끝낸 때 내 레벨의 한 레벨 경험치의 pay.need배를 한꺼번에(Rift.dungeonXp) · 제한 시간 · 돌아가기까지의 초가 따로다
 local lune = script.Parent.Parent
-local D = require(lune.data["city.generated"]).rift
+local CITY = require(lune.data["city.generated"])
+local D = CITY.rift
+local DG = CITY.dungeon
+local N = require(lune.config.numbers)
 local ITEMS = require(lune.data["items.generated"])
 local Daily = require(script.Parent.daily)
 local Items = require(script.Parent.items)
 
 local Rift = {}
 Rift.DATA = D
+Rift.DUNGEON = DG
 Rift.START = 2 -- 들어가서 첫 물결이 나오기까지(초)
 Rift.STAGGER = 0.2 -- 한 물결의 몬스터가 하나씩 나타나는 간격(초)
 Rift.FAIL_BACK = 5 -- 실패하면 몇 초 뒤 광장으로
@@ -55293,6 +56492,21 @@ for i, t in D.tiers do
 	tierById[t.id] = t
 	t.index = i
 end
+for i, t in DG.tiers do
+	tierById[t.id] = t -- 던전(kind = "dungeon")
+	t.index = i
+end
+-- 던전의 단계인가
+function Rift.isDungeon(t: any): boolean
+	return typeof(t) == "table" and t.kind == "dungeon"
+end
+-- 그 단계의 제한 시간 · 끝난 뒤 돌아가기까지(초)
+function Rift.timeOf(t): number
+	return if Rift.isDungeon(t) then DG.time else D.time
+end
+function Rift.backOf(t): number
+	return if Rift.isDungeon(t) then DG.back else D.back
+end
 function Rift.tier(id: any)
 	return if typeof(id) == "string" then tierById[id] else nil
 end
@@ -55301,13 +56515,13 @@ function Rift.tierOfKey(key: any)
 	if typeof(key) ~= "string" then
 		return nil
 	end
-	local base = string.match(key, "^(rf%d+)#%d+$")
+	local base = string.match(key, "^(%a+%d+)#%d+$")
 	return if base then tierById[base] else nil
 end
 
 -- ---------- 캐릭터마다의 기록 ----------
 function Rift.new()
-	return { day = 0, used = 0, clears = 0 }
+	return { day = 0, used = 0, clears = 0, dungeon = {} } -- dungeon = 던전마다 완료한 날(Daily.dayOf — 하루 한 번 · 한국 시간 자정에 다시)
 end
 -- 오늘 남은 보상 횟수
 function Rift.left(r, now: number): number
@@ -55329,7 +56543,7 @@ function Rift.use(r, now: number): boolean
 	return true
 end
 function Rift.pack(r)
-	return { day = r.day, used = r.used, clears = r.clears }
+	return { day = r.day, used = r.used, clears = r.clears, dungeon = table.clone(r.dungeon or {}) }
 end
 function Rift.unpack(data: any)
 	local r = Rift.new()
@@ -55337,8 +56551,51 @@ function Rift.unpack(data: any)
 		r.day = math.floor(tonumber(data.day) or 0)
 		r.used = math.clamp(math.floor(tonumber(data.used) or 0), 0, D.perDay)
 		r.clears = math.max(0, math.floor(tonumber(data.clears) or 0))
+		if typeof(data.dungeon) == "table" then
+			for id, day in data.dungeon do
+				if typeof(id) == "string" and tierById[id] and typeof(day) == "number" then
+					r.dungeon[id] = math.floor(day)
+				end
+			end
+		end
 	end
 	return r
+end
+
+-- ---------- 던전(2026-10-21) ----------
+-- 오늘 그 던전을 끝냈는가(한국 시간 자정에 다시 — 일일 의뢰와 같은 날)
+function Rift.dungeonDone(r, id: string, now: number): boolean
+	return (r.dungeon or {})[id] == Daily.dayOf(now)
+end
+-- 끝냈다고 적는다(오늘 이미 끝냈으면 false)
+function Rift.dungeonMark(r, id: string, now: number): boolean
+	r.dungeon = r.dungeon or {}
+	if r.dungeon[id] == Daily.dayOf(now) then
+		return false
+	end
+	r.dungeon[id] = Daily.dayOf(now)
+	return true
+end
+-- 완료 보상의 경험치: 그 레벨의 한 레벨 경험치의 pay.need배
+function Rift.dungeonXp(level: number): number
+	return math.max(1, math.floor(N.xpNeed(level) * DG.pay.need + 0.5))
+end
+-- 그 던전에 들어갈 수 있는가. 맞으면 nil, 아니면 까닭(문이 열렸는가 = 그 퀘스트를 끝냈는가 · 레벨 · 오늘)
+function Rift.canDungeon(h, t, now: number): string?
+	local W = DG.words
+	local st = h.quests and h.quests[t.quest]
+	if not h.alive then
+		return "쓰러진 채로는 들어갈 수 없다"
+	elseif not (st and st.done) then
+		return W.closed
+	elseif h.level < t.lv then
+		return (string.gsub(W.low, "{a}", tostring(t.lv)))
+	elseif h.level > t.lvMax then
+		return (string.gsub(W.high, "{b}", tostring(t.lvMax)))
+	elseif Rift.dungeonDone(h.rift, t.id, now) then
+		return W.done
+	end
+	return nil
 end
 
 -- 들어갈 수 있는가(레벨). 맞으면 nil, 아니면 까닭
@@ -55374,7 +56631,7 @@ function Rift.start(room, t)
 			mob.away, mob.state, mob.respawn = true, "gone", math.huge -- 물결이 올 때까지 없다
 		end
 	end
-	room.rift = { tier = t.id, state = "wait", wave = 0, waves = waves, t = 0, after = 0, left = 0, changed = true }
+	room.rift = { tier = t.id, state = "wait", wave = 0, waves = waves, t = 0, after = 0, left = 0, changed = true, time = Rift.timeOf(t), back = Rift.backOf(t), dungeon = Rift.isDungeon(t) }
 end
 
 local function startWave(room, w: number)
@@ -55438,7 +56695,7 @@ function Rift.step(room, heroes, dt: number)
 				R.state, R.after = "clear", 0
 				R.changed = true
 			end
-		elseif R.t >= D.time then
+		elseif R.t >= (R.time or D.time) then
 			R.state, R.after = "fail", 0
 			clearAll(room)
 			R.changed = true
@@ -55454,13 +56711,13 @@ function Rift.view(room)
 	if not R then
 		return nil
 	end
-	return { tier = R.tier, state = R.state, wave = R.wave, waves = R.waves, left = R.left, t = math.floor(R.t * 10) / 10, time = D.time, after = math.floor(R.after * 10) / 10 }
+	return { tier = R.tier, state = R.state, wave = R.wave, waves = R.waves, left = R.left, t = math.floor(R.t * 10) / 10, time = R.time or D.time, back = R.back or D.back, after = math.floor(R.after * 10) / 10, dungeon = R.dungeon == true }
 end
 
 -- 광장으로 돌려보낼 때가 되었는가(완료 back초 · 실패 FAIL_BACK초 뒤)
 function Rift.due(room): boolean
 	local R = room.rift
-	return R ~= nil and ((R.state == "clear" and R.after >= D.back) or (R.state == "fail" and R.after >= Rift.FAIL_BACK))
+	return R ~= nil and ((R.state == "clear" and R.after >= (R.back or D.back)) or (R.state == "fail" and R.after >= Rift.FAIL_BACK))
 end
 
 return Rift
@@ -55512,6 +56769,7 @@ local BIG_HIT = 1.4 -- 센 타격: 세기 배수가 이만큼 넘는 타(대지 
 local Room = {}
 Room.__index = Room
 Room.bodyOf = bodyOf
+Room.physics = Physics -- 서버가 사람을 세우는 자리 · 받은 자리가 땅 속인지 본다(world.luau — 지역 이름의 한도 때문에 따로 부르지 않는다 · 2026-10-21)
 
 function Room.new(key: string, scene, rng)
 	local self = setmetatable({}, Room)
@@ -55542,7 +56800,13 @@ function Room.new(key: string, scene, rng)
 		local kind = COMBAT.mobs[def.kind]
 		-- 피해 숫자의 배율(dmgScale)과 쓰임의 보정(targetBonus — 맞는 갈래의 기술은 피해가 그만큼 더 뜬다)만큼 체력도 크다: 맞는 기술로 잡는 타수는 그대로다
 		local maxHp = math.max(1, math.floor(N.mobHp(def.lv) * kind.hp * RULES.dmgScale * (1 + RULES.targetBonus / 100) + 0.5))
-		if def.elite then
+		if scene.dungeon then
+			-- 던전(2026-10-21 — 수정 거울숲): 많이 몰려나오니 하나하나는 무르게 · 마지막 물결의 정예는 던전의 배
+			maxHp = math.max(1, math.floor(maxHp * Rift.DUNGEON.mob.hp + 0.5))
+			if def.elite then
+				maxHp *= Rift.DUNGEON.elite.hp
+			end
+		elseif def.elite then
 			maxHp *= Rift.DATA.elite.hp -- 토벌의 정예: 체력이 몇 배
 		end
 		local mob = {
@@ -55694,6 +56958,8 @@ function Room:hurtHero(events, h, mob, mul: number)
 	local casting = (h.actUntil or 0) > self.time or self.caster:acting(h)
 	if mob.fieldElite then
 		mul *= FE.hit -- 사냥터 정예
+	elseif self.scene and self.scene.dungeon then
+		mul *= Rift.DUNGEON.mob.hit * (if mob.elite then Rift.DUNGEON.elite.hit else 1) -- 던전의 몬스터(2026-10-21)
 	elseif mob.elite then
 		mul *= Rift.DATA.elite.hit -- 토벌의 정예는 더 세게 친다
 	end
@@ -56751,6 +58017,12 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 				end
 			end
 			table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = 0, ups = 0, gains = gains, credit = credit, loot = {} })
+			return dead, dmg
+		end
+		-- 던전의 몬스터(2026-10-21 사용자: "그 몬스터들은 아이템이나 경험치를 주는게 아니라 다잡고나서 던전 다깼다고 나오면서 일괄 경험치를 지급"):
+		--  경험치 · 물건 · 퀘스트와 일일 의뢰의 숫자를 주지 않는다(보상은 다 쓰러뜨렸을 때 한꺼번에 — 서버의 riftPay)
+		if self.scene and self.scene.dungeon then
+			table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = 0, ups = 0, gains = {}, credit = {}, loot = {} })
 			return dead, dmg
 		end
 		-- 사냥터 정예: 보통의 것을 잡으면 센다(정예 자신 · 토벌의 물결은 세지 않는다)
@@ -57891,7 +59163,7 @@ end
 
 -- 이름으로 찾기: 그 글이 이름에 들어 있는 줄만(빈 글이면 모두). 영문은 대소문자를 가리지 않는다. 목록 · 시세 모두(줄에 it가 있다)
 function V.filter(rows, query: string?)
-	local q = string.lower((string.gsub(query or "", "^%s*(.-)%s*$", "%1")))
+	local q = string.lower((string.gsub(query or "", "^[ \t\r\n]*(.-)[ \t\r\n]*$", "%1"))) -- (%s 대신 — 한글의 가운데 바이트를 지우지 않게 · 2026-10-21)
 	if q == "" then
 		return rows
 	end
@@ -58055,6 +59327,63 @@ function V.tradeSub(it): string
 end
 
 return V
+
+end
+MODULES['ReplicatedStorage/shared/lune/ui/countPick'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
+-- 수량 창의 셈(client/lune/ui/countBox.luau가 쓴다 · 자동 검사가 그대로 부른다 — 2026-10-21).
+--  사용자: "잡화상점에서 물약이나 달가루 구매할때 1개 아니면 10개밖에 못사잖아 이거 수량 입력하는 모달 받아서 처리해야지 이렇게하면안되는거야 모든 곳에서 수량받아서 처리해"
+--  수를 정하는 일: buy 사기 · sell 팔기 · discard 버리기 · store 맡기기 · take 찾기 · split 나누기(공방 js/lune/design/ui.js의 WORDS.ask · UILAYOUT.count)
+local CountPick = {}
+
+-- 적은 글 → 고친 글 · 그 수(비었으면 nil): 숫자만 · 맨 앞의 0은 뗀다 · hi를 넘으면 hi로(경매장의 수량 칸과 같은 셈)
+function CountPick.parse(text: string, hi: number): (string, number?)
+	local s = string.gsub(text, "%D", "")
+	s = string.sub((string.gsub(s, "^0+", "")), 1, #tostring(math.max(1, hi)) + 1) -- 한 자리 더(넘게 적으면 최대로 — 넘는 것을 알아야 한다)
+	local n = tonumber(s)
+	if not n then
+		return "", nil
+	elseif n > hi then
+		return tostring(hi), hi
+	end
+	return s, n
+end
+
+-- 고를 수 있는 가장 많은 수: 나누기 = 하나를 남긴 수 · 나머지 = 그 칸의 수
+function CountPick.hi(kind: string, have: number): number
+	return if kind == "split" then have - 1 else have
+end
+
+-- 처음 적혀 있는 수: 사기 1 · 나누기 절반 · 나머지 그 칸의 전부(메이플스토리처럼 — 제가 정한 것)
+function CountPick.first(kind: string, hi: number): number
+	if kind == "buy" then
+		return math.min(1, hi)
+	elseif kind == "split" then
+		return math.max(1, math.floor((hi + 1) / 2))
+	end
+	return hi
+end
+
+-- 상점에서 한 번에 살 수 있는 가장 많은 수: 한 번에 파는 수(stock.max) · 가진 달돈으로 · 가방의 자리(room — 모르면 nil)
+function CountPick.buyMax(stockMax: number, price: number, money: number, room: number?): number
+	local n = stockMax
+	if price > 0 then
+		n = math.min(n, math.floor(money / price))
+	end
+	if room then
+		n = math.min(n, room)
+	end
+	return math.max(0, n)
+end
+
+-- [−] · [+]: 한 칸씩(lo ~ hi 안) · 비어 있었으면 [+]는 lo · [−]는 lo
+function CountPick.step(n: number?, d: number, lo: number, hi: number): number
+	if not n then
+		return lo
+	end
+	return math.clamp(n + d, lo, math.max(lo, hi))
+end
+
+return CountPick
 
 end
 MODULES['ReplicatedStorage/shared/lune/ui/format'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
@@ -58718,6 +60047,7 @@ L.SKILLS = D.skills -- 스킬 칸: 두 줄 x 여섯. 칸 위에 키 딱지(높�
 L.MENU = D.menu -- 창을 여는 단추: 여덟까지(row의 차례 + 「메뉴」), 오른쪽 끝에 붙여. 그림 아래에 이름(labels = 칸에 맞춘 짧은 이름)
 L.PARTY = D.party -- 파티원 칸: 한 사람 = 이름 한 줄 + 가는 체력 줄. ask = 초대 알림(위쪽 가운데)
 L.DEATH = D.death -- 쓰러졌을 때 묻는 상자(위쪽 가운데): 제목 · 묻는 글 · 안내 · 단추 하나
+L.COUNT = D.count -- 수량 창(화면 가운데 — 2026-10-21): 묻는 글 · [그림] 이름 · [−] [수량 칸] [+] [최대] · 범위 · 합계 · 「사기 · 취소」
 L.QUEST = D.quest -- 퀘스트 알리미: 이름 한 줄(본문 글씨) · 할 일 한 줄(작은 글씨) · 퀘스트 사이
 L.TAG = D.tag -- 이름표: 한 줄의 높이(쌓을 때) · 발밑에서 아래로 띄우는 만큼 · 가장 넓을 때
 L.MOBBAR = D.mobBar -- 졸개의 체력 띠: 크기(화면 틀의 점) · 발밑에서 위로(게임의 도트)
@@ -58776,6 +60106,7 @@ L.AUCTION = D.auction -- 경매장(넓은 창): 탭 셋 · 분류 단추 · 목�
 L.CINE = D.cine -- 퀘스트 연출(장면 — 2026-10-15): 장의 이름 · 보스의 이름 · 종이 · 「건너뛰기」의 자리(공방 js/lune/design/ui.js의 UILAYOUT.cine)
 L.DAILY = D.daily -- 일일 의뢰: 머리글(top) 아래 의뢰마다 한 칸(row — 맵의 이름 · 의뢰의 이름 · 오른쪽 단추 btnW · 진행 띠 barH), 가르는 줄 아래 보상 두 줄(payRow — 이름표 labelW)
 L.ATTEND = D.attend -- 출석(2026-10-15): 머리글(top) · 칸 cols x rows(cell · gap) · 가르는 줄 아래(lineY) 받을 것 한 줄(rowH) · 안내와 「받기」(btnW)
+L.DUNGEON = D.dungeon -- 던전 창(2026-10-21 — 수정 거울숲): 이름 · 오늘 · 레벨 · 글 · 완료 보상 · 안내 · [혼자 입장] [파티 입장] · 까닭(portalScale · portalLift = 던전의 문의 포탈 빛)
 L.RIFT = D.rift -- 수정 틈 토벌(2026-10-16): 머리글(top) 아래 단계마다 한 칸(row — 이름 · 「입장」 btnW · 몬스터 · 보상) · 아래 안내(footY)
 L.RIFT_HUD = D.riftHud -- 토벌 중 화면 위 가운데의 판(w x h · y)
 L.RIFT_END = D.riftEnd -- 토벌이 끝났을 때 가운데의 판(w · 줄 row · pad)
@@ -58827,6 +60158,20 @@ function L.touchChooser(n: number, uiH: number)
 	local scroll = contentH > viewH
 	local listW = K.cols * K.cell + (K.cols - 1) * K.gap
 	return { w = K.pad * 2 + listW + (if scroll then K.bar + K.gap else 0), h = K.titleH + viewH + K.footH, viewH = viewH, contentH = contentH, rowH = rowH, scroll = scroll }
+end
+-- 판이 칸 단추를 덮지 않게(2026-10-21 — 점프 · 상호작용도 끌어 옮기는 칸 단추가 되었다: 왼쪽 아래의 상호작용 단추를 판이 덮으면 끌 수 없다):
+--  판과 가로가 겹치는 칸 단추가 있으면 판은 그 단추의 위 끝(K.gap 위)에서 끝난다 — 넘치는 줄은 밀어서 본다.
+--  uiH = 화면 틀의 높이 · inset = 왼쪽 위의 Roblox 단추가 가리는 높이(판은 그만큼 내려 선다) · spots = 스마트폰 단추의 자리(UI.touch — 게임 도트) · ratio = 게임 도트 하나가 화면 틀의 몇 점인가
+function L.touchChooserFit(n: number, uiH: number, inset: number, spots, ratio: number)
+	local K = L.TOUCHCHOOSER
+	local widest = K.pad * 2 + K.cols * K.cell + (K.cols - 1) * K.gap + K.bar + K.gap -- 밀기 막대까지 든 폭
+	local limit = uiH - inset
+	for _, t in spots do
+		if t.slot and t.x * ratio < K.x + widest + K.gap then
+			limit = math.min(limit, math.floor(t.y * ratio) - K.gap - inset + K.bottom)
+		end
+	end
+	return L.touchChooser(n, limit)
 end
 
 -- 스마트폰의 메뉴(「메뉴」 단추를 누르면 뜨는 창 이름의 단추들). 사용자 2026-10-13(폰에서 해 보고): "메뉴탭 열었을때 스크롤이 되어야해 모든메뉴를 접근할수가 없다"
@@ -59791,8 +61136,20 @@ function Q.ride(what: any): string?
 	return nil
 end
 
--- 칸에 놓인 것의 그림 이름(화면의 그림 24x24 — 공방의 아이콘 이름)
-function Q.pic(what: string): string
+-- 폰의 단추 배치에만 놓이는 「하는 일」: 점프 · 상호작용(2026-10-21 사용자: "모바일에서 상호작용, 점프키 같은거 위치 다 바꿀수있어야해요 드래그앤 드랍으로 다른 버튼들처럼").
+--  { [이름표] = { home = 처음 놓이는 칸, name = 단추의 글 } } — 공방 ui.js의 QUICK.acts. 늘 하나씩 있다(빼지도 · 밖에서 온 것으로 덮지도 못한다 — 끌어서 자리만 바꾼다)
+Q.ACTS = UI.quick.acts or {}
+local ACT_KIND = { act_jump = "jump", act_interact = "interact" }
+-- 칸에 놓인 것이 점프 · 상호작용이면 "jump" · "interact"
+function Q.act(what: any): string?
+	return if typeof(what) == "string" and Q.ACTS[what] then ACT_KIND[what] else nil
+end
+
+-- 칸에 놓인 것의 그림 이름(화면의 그림 24x24 — 공방의 아이콘 이름). 점프 · 상호작용은 그림이 없다(단추에 글로 적는다 — touch.luau)
+function Q.pic(what: string): string?
+	if Q.ACTS[what] then
+		return nil
+	end
 	local g = GOODS[what]
 	if g then
 		return g.icon
@@ -59846,6 +61203,9 @@ function Q.place(slots, what: string, j: number)
 	if i == j then
 		return out
 	end
+	if not i and Q.ACTS[out[j]] then
+		return nil -- 점프 · 상호작용(폰)은 밖에서 온 것으로 덮지 않는다 — 끌어서 자리만 바꾼다(2026-10-21)
+	end
 	local old = out[j]
 	out[j] = what
 	if i then
@@ -59856,8 +61216,8 @@ end
 
 -- 칸에서 뺀다(소비 아이템도 빠진다 — 가방의 소비 탭에서 다시 끌어다 놓는다)
 function Q.clear(slots, i: number)
-	if i < 1 or i > Q.N then
-		return nil
+	if i < 1 or i > Q.N or Q.ACTS[slots[i]] then
+		return nil -- (점프 · 상호작용은 빼지 못한다 — 2026-10-21)
 	end
 	local out = copy(slots)
 	out[i] = false
@@ -59891,17 +61251,47 @@ local hasTouch = {}
 for _, i in Q.TOUCH do
 	hasTouch[i] = true
 end
+--  2026-10-21: 점프 · 상호작용(Q.ACTS)은 늘 하나씩 — 없으면 처음 칸(home)에 넣는다(거기 있던 것은 단추가 있는 첫 빈 칸으로 · 빈 칸이 없으면 빠진다). 둘 이상이면 첫 것만 남긴다
+local ACT_ORDER = { "act_jump", "act_interact" } -- (공방의 Object.entries(QUICK.acts)와 같은 차례)
+local function firstFree(out): number?
+	for _, j in Q.TOUCH do
+		if not out[j] then
+			return j
+		end
+	end
+	return nil
+end
 function Q.touchFix(slots)
 	local out = copy(slots)
 	for k = 1, Q.N do
 		if not hasTouch[k] and out[k] then
-			for _, j in Q.TOUCH do
-				if not out[j] then
-					out[j] = out[k]
-					break
-				end
+			local j = firstFree(out)
+			if j then
+				out[j] = out[k]
 			end
 			out[k] = false
+		end
+	end
+	for _, id in ACT_ORDER do
+		local a = Q.ACTS[id]
+		if a then
+			local at = find(out, id)
+			if at then
+				for k = at + 1, Q.N do
+					if out[k] == id then
+						out[k] = false
+					end
+				end
+			else
+				local old = out[a.home]
+				out[a.home] = id
+				if old then
+					local j = firstFree(out)
+					if j then
+						out[j] = old
+					end
+				end
+			end
 		end
 	end
 	return out
@@ -62000,7 +63390,7 @@ function CashServer.processReceipt(info, key: string?)
 	return Decision.NotProcessedYet
 end
 
--- 쿠폰을 쓴다(2026-10-21 — 메뉴의 「쿠폰」 창): text = 적은 글 → { ok, why?, pet? }
+-- 쿠폰을 쓴다(2026-10-21 — 메뉴의 「쿠폰」 창): text = 적은 글 → { ok, why?, pet?, mount? }
 --  틀린 번호는 1분에 다섯 번까지(번호를 마구 넣어 맞히지 못하게) · 준 것과 쓴 쿠폰을 한 번의 저장으로 함께 적는다(저장에 실패하면 되돌린다 — 결제와 같다)
 Coupons.TRIES, Coupons.WINDOW = 5, 60
 function CashServer.coupon(s, text: any)
@@ -62033,10 +63423,10 @@ function CashServer.coupon(s, text: any)
 		s.acct.bm = Cash.unpack(before, Account.MAX)
 		return { ok = false, why = "저장하지 못했다 — 잠시 뒤에 다시 적어 주세요" }
 	end
-	if got.pet then
-		W.notify(s, got.pet) -- 화면이 가진 것을 다시 읽고 · 꺼낸 펫을 같은 맵의 사람들에게도
+	if got.pet or got.mount then
+		W.notify(s, got.pet or got.mount) -- 화면이 가진 것을 다시 읽고 · 꺼낸 펫을 같은 맵의 사람들에게도
 	end
-	return { ok = true, pet = got.pet }
+	return { ok = true, pet = got.pet, mount = got.mount }
 end
 
 -- 쓴 쿠폰의 보상을 지금의 목록에 맞춘다(계정을 읽었을 때 — 2026-10-21 사용자: "지금 내 테스트 계정에서 다시 쿠폰을 입력할수없어서 동글이는 사라지고, 재까마귀를 테스트할수도없어").
@@ -62050,8 +63440,46 @@ function CashServer.syncCoupons(acct): boolean
 			c.petOut = c.petOut or def.pet
 			changed = true
 		end
+		if def and def.mount and Cash.MOUNT[def.mount] and not c.mounts[def.mount] then -- 쿠폰 탈것도 같이(2026-10-21)
+			c.mounts[def.mount] = true
+			c.mount = c.mount or def.mount
+			changed = true
+		end
 	end
 	return changed
+end
+
+-- 쿠폰 기록을 지운다(관리자 — 2026-10-21 사용자: "쿠폰 기록을 초기화해줘 쿠폰등록하는것부터 영상을찍어야해"): 쓴 쿠폰을 모두 잊고 쿠폰으로만 받는 펫 · 탈것(free)을 뺀다
+--  (꺼내 둔 펫이면 넣고 · 고른 탈것이면 고르지 않은 것으로 — 타고 있었으면 내린다: 탄 동안인지는 서버의 s.riding이 bm.mount를 본다).
+--  쿠폰을 처음 넣기 전의 계정으로 — 돌려주는 것: 지운 쿠폰의 수 · 뺀 펫 · 탈것의 수
+function CashServer.resetCoupons(acct): (number, number)
+	local c = acct.bm
+	local codes, pets = 0, 0
+	for code in c.coupons do
+		c.coupons[code] = nil
+		codes += 1
+	end
+	for id in c.pets do
+		local def = Cash.PET[id]
+		if def and def.free then
+			c.pets[id] = nil
+			pets += 1
+			if c.petOut == id then
+				c.petOut = false
+			end
+		end
+	end
+	for id in c.mounts do
+		local def = Cash.MOUNT[id]
+		if def and def.free then
+			c.mounts[id] = nil
+			pets += 1
+			if c.mount == id then
+				c.mount = false
+			end
+		end
+	end
+	return codes, pets
 end
 
 -- 구매 창을 띄운다(서버가 한도를 본 뒤에만). → true / false · 까닭
@@ -62087,27 +63515,53 @@ function CashServer.prompt(s, key: any): (boolean, string?)
 	return true
 end
 
--- 상품의 실제 값(로블록스 — 대시보드에서 바꾼 값 · 가격 실험이 있으면 그 값). 10분 동안 기억한다 · 못 읽으면 nil(화면은 설계의 값)
+-- 상품의 실제 값(로블록스 — 대시보드에서 바꾼 값 · 가격 실험이 있으면 그 값). 못 읽은 상품은 화면이 설계의 값을 쓴다
 --  로블록스 문서: MarketplaceService:GetProductInfoAsync(번호, Enum.InfoType.Product).PriceInRobux(GetProductInfo는 낡은 이름)
-local PRICE_KEEP = 600
-local priceAt, priceOf = 0, {}
-function CashServer.prices(): { [string]: number }
-	local now = os.clock()
-	if now - priceAt < PRICE_KEEP and next(priceOf) ~= nil then
-		return priceOf
+--  2026-10-21 사용자 "달빛상점 로딩 너무길다": 전에는 상점에 들어갈 때(prices()) 상품 열일곱을 하나씩 차례로 물어 그 답을 다 받을 때까지 상점이 열리지 않았다
+--   (10분마다 한 번 · 하나도 못 읽으면 들어갈 때마다) → 이제는 서버가 켜질 때 뒤에서 한꺼번에(상품마다 따로) 묻고 10분마다 뒤에서 새로 받는다. prices()는 기다리지 않고 받아 둔 것을 준다
+local PRICE_KEEP, PRICE_RETRY = 600, 30 -- 새로 받는 사이(초) · 하나도 못 읽었을 때 다시 묻는 사이(초)
+local priceOf = {}
+local priceBusy = false
+local function fetchPrices()
+	if priceBusy then
+		return 0
 	end
-	priceAt = now
+	priceBusy = true
+	local left, got = 0, 0
 	for _, p in Cash.PRODUCTS do
 		if typeof(p.rid) == "number" and p.rid > 0 then
-			local ok, info = pcall(function()
-				return MarketplaceService:GetProductInfoAsync(p.rid, Enum.InfoType.Product)
+			left += 1
+			task.spawn(function()
+				local ok, info = pcall(function()
+					return MarketplaceService:GetProductInfoAsync(p.rid, Enum.InfoType.Product)
+				end)
+				if ok and typeof(info) == "table" and typeof(info.PriceInRobux) == "number" then
+					priceOf[p.id] = info.PriceInRobux
+					got += 1
+				end
+				left -= 1
 			end)
-			if ok and typeof(info) == "table" and typeof(info.PriceInRobux) == "number" then
-				priceOf[p.id] = info.PriceInRobux
-			end
 		end
 	end
+	local t0 = os.clock()
+	while left > 0 and os.clock() - t0 < 20 do
+		task.wait(0.1)
+	end
+	priceBusy = false
+	return got
+end
+CashServer.fetchPrices = fetchPrices
+function CashServer.prices(): { [string]: number }
 	return priceOf
+end
+-- 뒤에서 값을 받아 두기 시작한다(CashServer.start가 부른다 — 서버가 켜질 때)
+local function keepPrices()
+	task.spawn(function()
+		while true do
+			local got = fetchPrices()
+			task.wait(if got > 0 then PRICE_KEEP else PRICE_RETRY)
+		end
+	end)
 end
 
 -- 게임 패스를 가졌는가(들어올 때 · 산 순간 — 로블록스가 산 기록을 주지 않으니 물어서 기억한다)
@@ -62137,6 +63591,7 @@ end
 
 function CashServer.start(hooks)
 	W = hooks
+	keepPrices() -- 상품의 값을 뒤에서 받아 둔다(상점에 들어갈 때 기다리지 않게 — 2026-10-21)
 	pcall(function()
 		MarketplaceService.ProcessReceipt = CashServer.processReceipt
 	end)
@@ -62229,13 +63684,15 @@ end
 MODULES['ServerScriptService/server/lune/modules/coupons'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 쿠폰(2026-10-21 사용자: "쿠폰 코드 입력창있어야하고 그 쿠폰 입력하면 그 기본펫 지급하는 방식으로 합니다" · "제가 무료 쿠폰으로 푸는 용도로 사용할 펫입니다").
 --  서버에만 있는 목록이다 — ServerScriptService 아래라 화면(사람의 컴퓨터)에는 보내지지 않는다. 번호를 바꾸거나 더하려면 아래 LIST를 고친다.
---  code = 적는 번호(대문자 · 숫자만 — 화면에서 적은 글의 빈칸 · 줄표는 빼고 대문자로 맞춘 뒤 견준다. 가장 길게 24자) · pet = 주는 펫(design/ride.js의 이름표)
+--  code = 적는 번호(대문자 · 숫자만 — 화면에서 적은 글의 빈칸 · 줄표는 빼고 대문자로 맞춘 뒤 견준다. 가장 길게 24자) · pet = 주는 펫 · mount = 주는 탈것(design/ride.js의 이름표)
 --  from · till = 쓸 수 있는 때(os.time — 없으면 늘). 한 계정이 한 쿠폰을 한 번만 쓴다(계정 저장의 bm.coupons). 셈은 shared/lune/sim/cash.luau의 Cash.redeem
 local Coupons = {}
 
 Coupons.LIST = {
 	-- 기본펫 「아기 재까마귀」(쿠폰으로만 받는 펫 — 2026-10-21: 처음의 「까망 동글이」를 사용자가 재까마귀로 바꿨다). 번호는 제가 정한 것 — 나눠 줄 번호로 바꾸시면 된다
 	{ code = "DONGGEULI", pet = "pet_crow" },
+	-- 쿠폰 탈것 「떠도는 책」(2026-10-21 사용자: "간단한 탈것 하나 만들어볼래? 무료로뿌릴거고 쿠폰용이야" — 걷는 빠르기 그대로). 번호는 제가 정한 것 — 나눠 줄 번호로 바꾸시면 된다
+	{ code = "FLYINGBOOK", mount = "mount_book" },
 }
 
 local BY = {}
@@ -62249,6 +63706,98 @@ function Coupons.find(code: string?)
 end
 
 return Coupons
+
+end
+MODULES['ServerScriptService/server/lune/modules/megaphone'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
+-- 확성기(관리자 — 2026-10-21 사용자: "로블록스는 서버가 여러개가 돌아가는 구조잖아 내가 모든 서버에 확성기로 말할수있나? 어드민기능으로 확성기같은게 필요한데").
+--  관리 창(메뉴 → 「관리」 → 「계정」)의 「확성기」 칸에 적고 「보내기」 → 이 서버가 글을 거른 뒤(Roblox의 TextService — 다른 사람에게 보이는 글은 반드시 거른다)
+--  이 서버의 모두에게 바로 띄우고, MessagingService로 지금 돌아가는 다른 모든 서버에 보낸다 → 각 서버가 그 서버의 모두에게(화면 위 큰 알림 「공지」 + 채팅 알림 글).
+--  보낸 서버도 MessagingService의 소식을 받는다 — 소식마다 번호(id)를 붙여, 이미 띄운 것은 다시 띄우지 않는다.
+--  관리자인지는 부르는 쪽(world.luau onAdmin)이 계정 번호로 가린다.
+local MessagingService = game:GetService("MessagingService")
+local TextService = game:GetService("TextService")
+local HttpService = game:GetService("HttpService")
+
+local Megaphone = {}
+Megaphone.TOPIC = "LuneMegaphone"
+Megaphone.MAX = 80 -- 보낼 수 있는 글자 수(채팅에는 다 보이고 · 큰 알림에는 두 줄까지)
+Megaphone.GAP = 5 -- 한 번 보낸 뒤 다음을 보낼 수 있을 때까지(초)
+
+local deliver: (string) -> () = function() end
+local seen, order = {}, {} -- 이미 띄운 소식의 번호(가장 최근 50개)
+local lastAt = -math.huge
+
+local function remember(id: string)
+	seen[id] = true
+	table.insert(order, id)
+	while #order > 50 do
+		seen[table.remove(order, 1)] = nil
+	end
+end
+
+-- 듣기 시작한다. fn(글) = 이 서버의 모두에게 띄운다
+function Megaphone.start(fn: (string) -> ())
+	deliver = fn
+	task.spawn(function()
+		pcall(function()
+			MessagingService:SubscribeAsync(Megaphone.TOPIC, function(msg)
+				local d = msg and msg.Data
+				if typeof(d) == "table" and typeof(d.id) == "string" and typeof(d.text) == "string" and not seen[d.id] then
+					remember(d.id)
+					deliver(d.text)
+				end
+			end)
+		end)
+	end)
+end
+
+-- 적은 글 → 보낼 글(앞뒤 빈칸을 빼고 줄바꿈 · 탭은 빈칸으로) 또는 nil과 까닭
+function Megaphone.clean(text: any): (string?, string?)
+	if typeof(text) ~= "string" then
+		return nil, "보낼 글을 적어 주세요"
+	end
+	text = string.gsub(text, "[\t\r\n]", " ")
+	text = string.gsub(text, "^ +", "")
+	text = string.gsub(text, " +$", "")
+	if text == "" then
+		return nil, "보낼 글을 적어 주세요"
+	end
+	local n = utf8.len(text)
+	if not n then
+		return nil, "글자가 깨졌다 — 다시 적어 주세요"
+	end
+	if n > Megaphone.MAX then
+		return nil, ("%d자까지 보낸다(지금 %d자)"):format(Megaphone.MAX, n)
+	end
+	return text, nil
+end
+
+-- 보낸다: player = 보내는 관리자 · now = 지금(초). 돌려주는 것: 됐는가 · 알릴 글
+function Megaphone.send(player, text: any, now: number): (boolean, string)
+	local clean, why = Megaphone.clean(text)
+	if not clean then
+		return false, why :: string
+	end
+	if now - lastAt < Megaphone.GAP then
+		return false, ("%d초 뒤에 다시 보낼 수 있다"):format(math.ceil(Megaphone.GAP - (now - lastAt)))
+	end
+	local ok, filtered = pcall(function()
+		return TextService:FilterStringAsync(clean, player.UserId):GetNonChatStringForBroadcastAsync()
+	end)
+	if not ok or typeof(filtered) ~= "string" or filtered == "" then
+		return false, "글을 거르지 못했다 — 다시 보내 주세요"
+	end
+	lastAt = now
+	local id = HttpService:GenerateGUID(false)
+	remember(id)
+	deliver(filtered) -- 이 서버는 바로
+	local sent = pcall(function()
+		MessagingService:PublishAsync(Megaphone.TOPIC, { id = id, text = filtered })
+	end)
+	return true, if sent then "모든 서버에 보냈다" else "이 서버에만 띄웠다(다른 서버로 보내지 못했다 — 잠시 뒤에 다시)"
+end
+
+return Megaphone
 
 end
 MODULES['ServerScriptService/server/lune/modules/store'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
@@ -62776,7 +64325,11 @@ local WARP_SLACK, WARP_TIME = 280, 1.5 -- 2~4차의 스킬을 쓴 직후(초)에
 local SAVE_EVERY = 60 -- 바뀐 캐릭터를 이 간격(초)으로 저장한다
 local STOP_WAIT = 20 -- 서버가 닫힐 때 쓰고 있는 저장을 기다리는 시간의 위(초 — 로블록스가 닫히는 서버에 주는 30초 안)
 -- 같은 계정이 다른 서버에서 하는 중일 때(modules/store.luau의 잠금): 이만큼 다시 물어 보고(서버를 옮겨 올 때 앞 서버가 저장을 끝내고 잠금을 푼다) 끝내 안 풀리면 내보낸다
-local LOCK_TRIES, LOCK_WAIT = 6, 1.5
+-- 계정을 잡을 때 기다리는 수 · 사이(초) — 1.5초 x 24번 = 36초.
+--  2026-10-21 퍼블리시한 게임의 오류 보고: 게임을 고쳐 올린 때(서버들이 닫히며 사람들을 새 서버로 옮김) 「계정을 다른 서버가 잡고 있다 — 내보낸다」가 열 명 넘게.
+--  닫히는 서버는 Roblox가 주는 30초 안에 모두를 저장하고 잠금을 푸는데(World.stop), 전에는 새 서버가 7.5초(1.5초 x 6번)만 기다리고 내보냈다 → 30초보다 길게 기다린다
+--  (화면은 서버가 답할 때까지 2초마다 다시 묻는다 — 60초까지: client boot의 Ready)
+local LOCK_TRIES, LOCK_WAIT = 24, 1.5
 local LOCK_KICK = "이 계정은 다른 서버에서 하는 중입니다. 잠시 뒤에 다시 들어와 주세요."
 local LOAD_KICK = "저장소가 지금 답하지 않습니다. 잠시 뒤에 다시 들어와 주세요." -- 계정을 읽지 못했다(2026-10-18 검토: 빈 계정으로 들여보내면 저장된 것을 덮어썼다)
 local function holdAccount(userId: number): boolean
@@ -63013,7 +64566,7 @@ local function place(s, key: string, x: number, y: number, pushed: boolean?)
 		fromRoom:forget(s.hero) -- 떠난 방에 남은 늦은 타를 버린다(Room:forget)
 	end
 	s.scene = key
-	s.hero.x, s.hero.y = x, y
+	s.hero.x, s.hero.y = Room.physics.freeSpot(SCENES.scenes[key], x, y) -- 세우는 자리가 땅 속이면 가장 가까운 빈 자리로(화면도 같은 셈으로 꺼낸다 — 2026-10-21 폰에서 끼임)
 	s.skill = nil
 	s.hero.last = key -- 다시 들어오면 여기서 시작한다(resumeScene이 들어가면 안 되는 곳을 가린다)
 	Hero.arrive(s.hero) -- 들어선 뒤 잠깐은 피해를 받지 않는다
@@ -63854,13 +65407,25 @@ for _, x in Bond.DATA.shards do
 	SHARD_SCENES[x.scene] = true
 end
 
-local function onMove(player, x: number, y: number, dir: number)
+local moveTo: (any, string, number, number) -> () -- 그 사람을 그 장면의 (x, y)로 옮긴다(화면에는 Revive — 아래에서 채운다)
+local function onMove(player, x: number, y: number, dir: number, key: any)
 	local s = sessions[player]
 	if not s or not s.hero or not s.hero.alive then
 		return
 	end
 	local scene = SCENES.scenes[s.scene]
 	local hero = s.hero
+	-- 다른 맵(방)의 자리(2026-10-21): 서버가 아는 맵의 자리로 받지 않는다 — 받으면 그 맵의 땅 속을 「서버가 아는 자리」로 적었다가 화면을 그리로 되돌려 보낼 수 있었다
+	--  (사용자 2026-10-21 폰: "대쉬하다가 맵을뚫고 낑기는 현상"). 4초 넘게 계속 다른 맵이면 화면과 서버가 어긋난 것이다(문의 대답이 늦어 화면만 옛 맵에 남았다 …) — 서버의 맵으로 다시 보낸다
+	if typeof(key) == "string" and key ~= s.scene then
+		s.wrongSince = s.wrongSince or World.now
+		if World.now - s.wrongSince >= 4 and World.now - (s.resyncAt or -99) >= 4 then
+			s.wrongSince, s.resyncAt = nil, World.now
+			moveTo(s, s.scene, hero.x, hero.y)
+		end
+		return
+	end
+	s.wrongSince = nil
 	if x < 0 or x > scene.w * G.TILE or y < -200 or y > scene.h * G.TILE + G.FALL_OUT then
 		return
 	end
@@ -63898,6 +65463,7 @@ local function onMove(player, x: number, y: number, dir: number)
 			--  되돌리지 않으면 그 뒤의 보고가 모두 멀어서, 서버가 아는 자리와 화면의 자리가 영영 어긋난다(2026-10-07의 가시 고장과 같은 일)
 			if World.now - (s.warpSent or -9) > 0.5 then
 				s.warpSent = World.now
+				hero.x, hero.y = Room.physics.freeSpot(scene, hero.x, hero.y) -- 되돌려 보낼 자리도 땅 속이면 꺼내서(2026-10-21 — 끼임)
 				fire("Warp", player, hero.x, hero.y)
 			end
 			return
@@ -63921,7 +65487,7 @@ local function onMove(player, x: number, y: number, dir: number)
 end
 
 local tutChanged: (any) -> () -- 튜토리얼의 진행이 바뀌었을 때(아래 applyResult 앞에서 채운다)
-local riftExitSpot: () -> (number, number) -- 토벌에서 나와 서는 곳 = 토벌대장 앞(아래 onRift 곁에서 채운다)
+local riftExitSpot: (any?) -> (number, number) -- 토벌에서 나와 서는 곳 = 토벌대장 앞 · 던전 = 그 문 앞(아래 onRift 곁에서 채운다)
 -- 튜토리얼의 미션을 넘겼다(before째부터 지금 앞까지): 넘긴 미션마다 경험치(design/tutorial.js의 xp — 수련 인형 앞까지는 Lv.1 몫의 share씩, upAt 미션에서 Lv.2가 되게 채운다).
 --  「경험치 · 레벨 업」이 화면에 뜨게 Gain을 보낸다. 그 뒤의 미션은 경험치가 없다
 local function tutAdvanced(s, before: number)
@@ -64066,6 +65632,9 @@ local function onTravel(player, to: string)
 	local scene = SCENES.scenes[s.scene]
 	for _, p in scene.portals do
 		if p.to == to and math.abs(p.x - s.hero.x) <= 28 and math.abs(p.y - s.hero.y) <= 28 then
+			if p.dungeon then
+				return nil -- 던전의 문(2026-10-21): 맵을 옮기지 않는다 — 앞에서 ↑ = 던전 창(들어가기는 Rift "enter")
+			end
 			if not Quests.portalOpen(s.hero.quests, p) then
 				return nil -- 그 퀘스트를 받아야 · 끝내야 열리는 문(달의 사당 안의 「사당 지하」 · 마을의 나루): 화면에도 보이지 않는다
 			end
@@ -64080,8 +65649,9 @@ local function onTravel(player, to: string)
 					x, y = back.x, back.y
 				end
 			end
-			if Rift.tierOfKey(s.scene) then
-				x, y = riftExitSpot() -- 토벌에서 나왔다: 토벌대장 앞
+			local fromTier = Rift.tierOfKey(s.scene)
+			if fromTier then
+				x, y = riftExitSpot(fromTier) -- 토벌에서 나왔다: 토벌대장 앞 · 던전에서 나왔다: 그 문 앞
 			end
 			local from = s.scene
 			place(s, to, x, y)
@@ -64099,7 +65669,7 @@ local function onTravel(player, to: string)
 			sendWho(from)
 			sendWho(to)
 			sendParty(Party.members(book, player.UserId)) -- 파티원이 어느 맵에 있는지 바뀌었다
-			return { scene = to, x = x, y = y, room = room }
+			return { scene = to, x = s.hero.x, y = s.hero.y, room = room } -- place가 땅 속에서 꺼낸 자리(2026-10-21)
 		end
 	end
 	return nil
@@ -64976,6 +66546,17 @@ local function onQuest(player, action: string, id: any)
 	elseif action == "use" then
 		-- 맵에 놓인 것 앞에서 ↑를 눌렀다(샘에서 물을 뜬다 · 깃발을 꺼낸다): 그 자리 가까이에 서 있어야 한다
 		ok, why = Quests.use(h.quests, id, s.scene, h.x, h.y)
+		-- 돌려주는 사람이 없는 퀘스트(endNpc false — 던전의 문 「수정 틈의 문」 2026-10-21): 다 했으면 그 자리에서 끝난다
+		if ok and def.endNpc == false and Quests.isReady(h.quests, id) then
+			local reward, ups = Hero.questDone(h, id)
+			if reward then
+				done = id
+				fire("Gain", player, { xp = reward.xp, ups = ups, level = h.level, quest = def.name, money = reward.money })
+				if ups > 0 then
+					sendWho(s.scene)
+				end
+			end
+		end
 	elseif action == "drop" then
 		ok, why = Hero.questDrop(h, id) -- 모으던 물건도 가방에서 사라진다
 	else
@@ -65161,8 +66742,17 @@ end
 -- ---------- 수정 틈 토벌(2026-10-16 — sim/rift.luau · 공방 design/city.js의 RIFT) ----------
 --  광장의 토벌대장 앞에서 「입장」: 같은 맵에 있는 파티원(그 단계의 레벨이 되는 사람)이 함께 rf1#번호의 따로 된 방으로 간다.
 --  방이 완료되면 그 방의 사람마다 보상(하루 횟수가 남았으면) · back초 뒤 광장으로. 실패하면 조금 뒤 광장으로. 빈 토벌의 방은 치운다
-local riftSerial = 0
-riftExitSpot = function(): (number, number)
+riftExitSpot = function(t: any?): (number, number)
+	if Rift.isDungeon(t) then
+		-- 던전에서 나왔다: 그 문의 왼쪽 앞 · 문이 선 땅의 높이(반달네 옛집의 높은 땅 — 2026-10-21 고침: 전에는 맵 시작 자리의 높이(한 칸 아래)라 땅 속에 섰다)
+		local dsc = SCENES.scenes[t.door.scene]
+		for _, p in dsc.portals do
+			if p.dungeon == t.id then
+				return p.x - 30, p.y
+			end
+		end
+		return t.door.x - 30, dsc.spawn.y
+	end
 	local sc = SCENES.scenes[Rift.DATA.scene]
 	for _, n in sc.npcs or {} do
 		if n.id == Rift.DATA.npc then
@@ -65171,8 +66761,8 @@ riftExitSpot = function(): (number, number)
 	end
 	return sc.spawn.x, sc.spawn.y
 end
--- 그 사람을 그 장면의 (x, y)로 옮긴다(화면에는 Revive로 — World.jump와 같다)
-local function moveTo(s, key: string, x: number, y: number)
+-- 그 사람을 그 장면의 (x, y)로 옮긴다(화면에는 Revive로 — World.jump와 같다). (onMove가 먼저 쓴다 — 위에서 이름만 지었다)
+moveTo = function(s, key: string, x: number, y: number)
 	local from = s.scene
 	if not s.hero.alive then
 		Hero.revive(s.hero) -- 화면은 「Revive」를 받으면 살아난 것으로 본다 — 서버도 맞춘다(2026-10-18 검토: 쓰러진 채 옮겨지면 쓰러진 상자 없이 멈췄다)
@@ -65181,7 +66771,7 @@ local function moveTo(s, key: string, x: number, y: number)
 	key = s.scene -- (파티마다 따로 들어가는 장면이면 그 파티의 방)
 	local room = roomOf(key):describe(s.hero.id)
 	room.who = roster(key)
-	fire("Revive", s.player, { scene = key, x = x, y = y, room = room })
+	fire("Revive", s.player, { scene = key, x = s.hero.x, y = s.hero.y, room = room }) -- place가 땅 속에서 꺼낸 자리(2026-10-21)
 	sendSelf(s)
 	sendWho(from)
 	sendWho(key)
@@ -65189,9 +66779,16 @@ local function moveTo(s, key: string, x: number, y: number)
 end
 local function riftReply(s, ok: boolean?, why: string?)
 	local now = os.time()
-	return { ok = ok == true, why = why, left = Rift.left(s.hero.rift, now), clears = s.hero.rift.clears }
+	local done = {} -- 던전마다 오늘 끝냈는가(2026-10-21)
+	for _, t in Rift.DUNGEON.tiers do
+		done[t.id] = Rift.dungeonDone(s.hero.rift, t.id, now)
+	end
+	return { ok = ok == true, why = why, left = Rift.left(s.hero.rift, now), clears = s.hero.rift.clears, dungeonDone = done }
 end
-local function onRift(player, action: string, id: any)
+-- 던전에 들어간다(2026-10-21 — 수정 거울숲): 그 문 앞(같은 맵 · 가로 60점 안)에서 · 문이 열렸고(퀘스트) · 레벨 · 오늘 아직 안 했을 때.
+--  party = true면 같은 맵의 파티원도 함께(그 사람도 들어갈 수 있을 때 · 장면을 보는 중이 아닐 때 — 넷까지) · 아니면 혼자
+local riftSerial = 0
+local function onRift(player, action: string, id: any, party: any)
 	local s = sessions[player]
 	if not s or not s.hero then
 		return nil
@@ -65201,7 +66798,42 @@ local function onRift(player, action: string, id: any)
 	elseif action ~= "enter" then
 		return riftReply(s, nil, "모르는 일이다")
 	end
+	local function dungeonEnter(s, t, party: boolean) -- (world.luau의 지역 이름이 Luau의 한도(200)에 닿아 onRift 안에 둔다)
+		local now = os.time()
+		if s.scene ~= t.door.scene or math.abs(s.hero.x - t.door.x) > 60 then
+			return riftReply(s, nil, "던전의 문 앞에서 들어갈 수 있다")
+		end
+		local why = Rift.canDungeon(s.hero, t, now)
+		if why then
+			return riftReply(s, nil, why)
+		end
+		local going = { s }
+		if party then
+			for _, uid in Party.members(book, s.player.UserId) do
+				local ms = byUser[uid]
+				if ms and ms ~= s and ms.hero and ms.scene == s.scene and #going < Rift.DUNGEON.party and not Rift.canDungeon(ms.hero, t, now) and not ms.hero.inCine then
+					table.insert(going, ms)
+				end
+			end
+			if #going < 2 then
+				return riftReply(s, nil, Rift.DUNGEON.words.partyNone)
+			end
+		end
+		riftSerial += 1
+		local key = t.id .. "#" .. riftSerial
+		local room = roomOf(key)
+		local sc = SCENES.scenes[key]
+		for i, ms in going do
+			moveTo(ms, key, sc.spawn.x + (i - 1) * 12, sc.spawn.y)
+			Analytics.custom(ms, "DungeonEnter", 1, t.id)
+		end
+		toRoom(key, "RiftView", Rift.view(room))
+		return riftReply(s, true)
+	end
 	local t = Rift.tier(id)
+	if t and Rift.isDungeon(t) then
+		return dungeonEnter(s, t, party == true)
+	end
 	if not t then
 		return riftReply(s, nil, "모르는 토벌이다")
 	elseif s.scene ~= Rift.DATA.scene or not nearNpcId(s, Rift.DATA.npc) then
@@ -65217,7 +66849,7 @@ local function onRift(player, action: string, id: any)
 	local key = t.id .. "#" .. riftSerial
 	local room = roomOf(key)
 	local sc = SCENES.scenes[key]
-	local going = { s }
+	local going: { any } = { s }
 	for _, uid in Party.members(book, player.UserId) do
 		local ms = byUser[uid]
 		-- 같은 맵의 파티원이 함께 들어간다 — 그 사람도 토벌대장과 인사를 나눴고 · 장면(퀘스트 연출)을 보는 중이 아닐 때만(2026-10-18 검토: 인사 전의 파티원 · 장면 중인 파티원도 끌려갔다)
@@ -65237,6 +66869,28 @@ end
 local function riftPay(key: string, room)
 	local t = Rift.tier(room.rift.tier)
 	local now = os.time()
+	if Rift.isDungeon(t) then
+		-- 던전 완료(2026-10-21): 오늘 처음이면 끝낸 때 내 레벨의 한 레벨 경험치의 pay.need배를 한꺼번에 · 하루 한 번(한국 시간 자정에 다시)
+		for _, s in inRoom(key) do
+			local h = s.hero
+			s.dirty = true
+			if not Rift.dungeonMark(h.rift, t.id, now) then
+				fire("RiftPay", s.player, { none = true, dungeon = true })
+				continue
+			end
+			local xp = Rift.dungeonXp(h.level)
+			local ups = Hero.gainXp(h, xp)
+			Analytics.custom(s, "DungeonClear", 1, t.id)
+			fire("Gain", s.player, { xp = xp, ups = ups, level = h.level })
+			if ups > 0 then
+				fire("Quests", s.player, Quests.view(h.quests))
+				sendWho(key)
+			end
+			sendSelf(s)
+			fire("RiftPay", s.player, { xp = xp, dungeon = true })
+		end
+		return
+	end
 	for _, s in inRoom(key) do
 		local h = s.hero
 		h.rift.clears += 1
@@ -66124,7 +67778,20 @@ local function onAdmin(player, what: string, a: any, b: any, c: any)
 	local function no(msg: string)
 		return { ok = false, msg = msg }
 	end
-	if what == "xp" then
+	if what == "megaphone" then
+		-- 확성기(2026-10-21 사용자: "모든 서버에 확성기로 말할수있나? 어드민기능으로 확성기같은게 필요한데") — 글을 거른 뒤 모든 서버의 모두에게(server/lune/modules/megaphone.luau)
+		local ok, msg = require(script.Parent.megaphone).send(player, a, os.time())
+		return { ok = ok, msg = msg }
+	elseif what == "coupons" then
+		-- 쿠폰 기록 지우기(내 계정 — 쿠폰을 처음 넣는 것부터 다시 해 볼 때 · 2026-10-21): 쓴 쿠폰 · 쿠폰 펫 · 쿠폰 탈것을 지우고 바로 저장 · 화면과 같은 맵의 사람들에게 알린다
+		local codes, pets = CashServer.resetCoupons(s.acct)
+		if not saveNow(s) then
+			return no("저장하지 못했다 — 다시 눌러 주세요")
+		end
+		fire("CashGot", player, "") -- 화면이 가진 것을 다시 읽는다(가방의 캐시 탭)
+		sendWho(s.scene) -- 꺼내 둔 쿠폰 펫 · 타고 있던 쿠폰 탈것이 사라진다
+		return done(("쿠폰 기록 %d개 · 쿠폰 펫 · 탈것 %d개를 지웠다"):format(codes, pets))
+	elseif what == "xp" then
 		if not ADMIN_XP[a] then
 			return no("없는 배율이다")
 		end
@@ -66663,10 +68330,12 @@ function World.tick(dt: number)
 					end
 				end
 				if Rift.due(room) then
-					local x, y = riftExitSpot()
+					local t = Rift.tier(room.rift.tier)
+					local x, y = riftExitSpot(t)
+					local back = if Rift.isDungeon(t) then t.door.scene else Rift.DATA.scene
 					for _, s in here do
 						if s.hero.alive then
-							moveTo(s, Rift.DATA.scene, x, y)
+							moveTo(s, back, x, y)
 						end
 					end
 				end
@@ -66842,6 +68511,12 @@ function World.start()
 		end,
 	})
 	listenSold() -- 다른 서버에서 내 서버의 사람의 물건이 팔렸다는 알림(2026-10-18)
+	-- 관리자의 확성기(2026-10-21): 다른 서버에서 보낸 것도 이 서버의 모두에게(캐릭터 고르기 화면에 있는 사람도)
+	require(script.Parent.megaphone).start(function(text: string)
+		for p in sessions do
+			fire("Megaphone", p, text)
+		end
+	end)
 	-- 달빛 상점 안(s.shop)에서는 받지 않는 일 — 움직임 · 기술 · 줍기 · 물약 · 문 · 경매장 · 퀘스트 · 아이템 …(맵에서 빠져 있다 — 2026-10-21)
 	local function outside(fn)
 		return function(player, ...)
@@ -71097,6 +72772,28 @@ local function glyphInfo(font, code: number): (number, number)
 	return 63 - 32, font.asciiAdv[63 - 31] -- "?"
 end
 
+-- 깨진 UTF-8(반쪽 글자)은 「?」로 바꾼다 — 글자를 셀 때(utf8.codes) 오류가 나지 않게.
+--  2026-10-21 퍼블리시한 게임의 오류 보고: 「pixelText:55: invalid UTF-8 code」 554번. 빈칸을 지우는 패턴 %s는 바이트로 고르고 그 컴퓨터의 언어 설정을 따라,
+--  한글의 가운데 바이트(0x85 · 0xA0)를 빈칸으로 보아 지울 수 있다 → 반쪽 글자. 그래서 빈칸은 [ \t\r\n]로만 지우고(아래 fitLine · 이름 칸들), 들어오는 글은 여기서 한 번 더 고친다
+local function clean(text: string): string
+	if utf8.len(text) then
+		return text
+	end
+	local out, i = {}, 1
+	while i <= #text do
+		local n, bad = utf8.len(text, i)
+		if n then
+			table.insert(out, string.sub(text, i))
+			break
+		end
+		table.insert(out, string.sub(text, i, (bad :: number) - 1))
+		table.insert(out, "?")
+		i = (bad :: number) + 1
+	end
+	return table.concat(out)
+end
+exports.Clean = clean
+
 local function lineWidth(font, line: string): number
 	local w = 0
 	for _, code in utf8.codes(line) do
@@ -71108,6 +72805,7 @@ end
 
 function exports.Measure(text: string, fontKey: string?): (number, number)
 	local font = fonts[fontKey or "body"]
+	text = clean(text)
 	local w, n = 0, 0
 	for line in (text .. "\n"):gmatch("(.-)\n") do
 		w = math.max(w, lineWidth(font, line))
@@ -71119,6 +72817,7 @@ end
 -- 폭에 맞춰 줄바꿈: 띄어쓰기에서 먼저 끊고, 한 낱말이 폭보다 길면 글자에서 끊는다(공방 js/font.js wrap과 같은 규칙).
 function exports.Wrap(text: string, maxWidth: number, fontKey: string?): string
 	local font = fonts[fontKey or "body"]
+	text = clean(text)
 	local out = {}
 	for para in (text .. "\n"):gmatch("(.-)\n") do
 		local line = ""
@@ -71159,13 +72858,14 @@ local function fitLine(font, line: string, maxWidth: number): string
 		end
 		kept = try
 	end
-	return (kept:gsub("%s+$", "")) .. "…"
+	return (kept:gsub("[ \t]+$", "")) .. "…" -- (끝의 빈칸만 — %s는 한글의 가운데 바이트를 지울 수 있다)
 end
 
 -- 칸에 맞추기: 폭(maxWidth)을 넘으면 줄을 바꾸고, 줄 수(maxLines)를 넘으면 마지막 줄 끝을 "…"로 줄인다.
 -- maxLines = 1이면 줄을 바꾸지 않고 한 줄로 줄인다.
 function exports.Fit(text: string, maxWidth: number, maxLines: number?, fontKey: string?): string
 	local font = fonts[fontKey or "body"]
+	text = clean(text)
 	if maxLines == 1 then
 		return fitLine(font, (text:gsub("\n", " ")), maxWidth)
 	end
@@ -71882,6 +73582,16 @@ end
 
 -- 펫 꺼내기 · 넣기와 탈것 타기 · 내리기(2026-10-21 사용자: "펫을 넣고 빼는거, 라이딩을 타는거 이런게 달빛상점에 들어가서 하는게 아닙니다" —
 --  가방의 캐시 탭 · 퀵슬롯 · N 키가 같이 쓴다). 서버가 정하고 이름표(Who)로 알린다 — 화면의 펫 · 탈것은 그것을 따른다
+-- 소비 아이템(물약 · 주문서)을 쓴다 — 서버의 빈도 제한(초당 3번) 안으로: 0.34초 안에 거듭 누른 것은 보내지 않는다
+--  (2026-10-21 퍼블리시한 게임의 오류 보고: 'Potion' 요청이 빈도 제한을 넘어 버려졌다 — 버려진 누름은 아무 일도 하지 않았다). what = 그 아이템(nil = 지금 마실 수 있는 가장 좋은 물약)
+local potionSent = -9
+state.sendPotion = function(what: string?)
+	if os.clock() - potionSent < 0.34 then
+		return
+	end
+	potionSent = os.clock()
+	Net.FireServer("Potion", what)
+end
 local function cashInvoke(action: string, a: any)
 	local ok, res = pcall(Net.Invoke, "Cash", action, a)
 	if ok and res and res.list then
@@ -72006,6 +73716,7 @@ local function enterScene(key: string, x: number, y: number, room)
 	HallStones.enter(scene, state.over) -- 명예의 전당이면 비석 면에 순위를 새긴다
 	state.body = P.newBody(scene)
 	state.body.x, state.body.y = x, y
+	P.unstick(scene, state.body) -- 들어선 자리가 땅 속이면 꺼낸다(2026-10-21)
 	if state.me then
 		state.body.run, state.body.jump = state.me.run or 1, state.me.jump or 1 -- 걸음 · 뛰는 힘의 배수(패시브)는 장면이 바뀌어도 그대로
 	end
@@ -72611,11 +74322,29 @@ local function step()
 	local wantUp = Input.take("up") and body.ground and not state.skill
 	local hop = wantUp and state.view:warpNear(body.x, body.y)
 	if hop then
-		Net.FireServer("Hop", hop.id) -- 간이 포탈: 서버가 같은 맵의 짝 자리로 옮기고 Warp로 알린다(막 없이 바로)
+		-- 간이 포탈: 서버가 같은 맵의 짝 자리로 옮기고 Warp로 알린다(막 없이 바로). 옮겨지기 전에 ↑를 거듭 누른 것은 보내지 않는다(0.6초 —
+		--  2026-10-21 퍼블리시한 게임의 오류 보고: 'Hop' 요청이 빈도 제한(초당 2번)을 넘어 버려졌다)
+		if os.clock() - (state.hopSent or -9) >= 0.6 then
+			state.hopSent = os.clock()
+			Net.FireServer("Hop", hop.id)
+		end
 		wantUp = false
 	end
 	if wantUp then
 		local portal = state.view:portalNear(body.x, body.y)
+		if portal and portal.dungeon then
+			-- 던전의 문(2026-10-21 — 수정 거울숲): 맵을 옮기지 않고 던전 창을 연다(문에서 멀어지면 닫힌다 — 아래 state.ui.npc). 오늘 끝냈는가는 서버에 묻는다
+			state.ui.npc, state.ui.scene = { x = portal.x, y = portal.y }, state.sceneKey
+			Windows.open("dungeon", portal.dungeon)
+			task.spawn(function()
+				local wc = Windows.context()
+				if wc and wc.riftDo then
+					wc.riftDo("view")
+				end
+			end)
+			Music.sfx("secret4")
+			return
+		end
 		if portal then
 			-- 서버에 묻는 것과 막을 치는 것을 같이 시작한다(막이 다 덮일 즈음 대답이 와 있다). 서버가 받아 주지 않으면 그 자리에서 막만 다시 걷힌다
 			local from = state.sceneKey
@@ -72663,6 +74392,17 @@ local function step()
 			end
 			return
 		end
+		-- 닫힌 던전의 문 앞(그 퀘스트를 끝내기 전 — 2026-10-21): 「수정 문이 굳게 닫혀 있다」와 누구에게 들으면 되는지
+		for _, p in scene.portals do
+			if p.dungeon and math.abs(p.x - body.x) <= 40 and math.abs(p.y - body.y) <= 40 and not Quests.portalOpen(state.quests, p) then
+				if state.fx then
+					local DW = require(lune.sim.rift).DUNGEON.words
+					state.fx:float(DW.closed, p.x, p.y - 70, Effects.MINT, 1.6)
+					state.fx:float(DW.closedHint, p.x, p.y - 56, Effects.MINT, 2.2)
+				end
+				return
+			end
+		end
 		-- 주민 앞이면: 해 주는 일(상점 · 강화 · 창고)이 있으면 그 창을 열고, 없으면 말을 건다(한 번 더 누르면 다음 말)
 		local npc = state.view:npcNear(body.x, body.y)
 		if npc then
@@ -72690,6 +74430,7 @@ local function step()
 		Windows.close("forge")
 		Windows.close("daily")
 		Windows.close("rift") -- 토벌 창도(2026-10-18 검토: 「입장」 뒤 토벌의 방 안에서도 열려 있었다)
+		Windows.close("dungeon") -- 던전 창도(2026-10-21 — 문에서 멀어지면 · 들어가면)
 	end
 	-- 말하던 주민에게서 멀어지면 대화가 닫힌다
 	if Talk.npc and math.abs(Talk.npc.x - body.x) > 44 then
@@ -72710,11 +74451,13 @@ local function step()
 				if goods and goods.kind == "bmRename" then
 					Windows.open("cash", "rename", true) -- 이름 바꾸기 주문서: 새 이름을 적는 칸(이름이 바뀔 때 서버가 주문서를 쓴다)
 				elseif what and Quick.item(what) then
-					Net.FireServer("Potion", what) -- 소비 아이템: 그 칸에 놓인 바로 그 아이템을 쓴다
+					state.sendPotion(what) -- 소비 아이템: 그 칸에 놓인 바로 그 아이템을 쓴다
 				elseif what and Quick.ride(what) == "pet" then
 					state.togglePet(what) -- 펫: 꺼낸다 · 넣는다(2026-10-21 — 가방의 캐시 탭에서 퀵슬롯에)
 				elseif what and Quick.ride(what) == "mount" then
 					state.toggleRide(what) -- 탈것: 탄다 · 내린다
+				elseif what and Quick.act(what) then
+					-- 점프 · 상호작용(폰의 칸 단추 — touch.luau가 바로 뛰기 · 상호작용을 누른다 · 2026-10-21): 여기서는 할 일이 없다
 				elseif what then
 					trySkill(what, from[1] .. i) -- 그 칸의 키(힘을 모을 때 누르고 있는지 본다)
 				end
@@ -72722,7 +74465,7 @@ local function step()
 		end
 	end
 	if Input.take("potion") then
-		Net.FireServer("Potion")
+		state.sendPotion(nil)
 	end
 	-- 탈것 타기 · 내리기(N — 제가 정한 키 · 2026-10-20): 고른 탈것으로(없으면 알린다 — 상점에서 산다)
 	if Input.take("ride") and not state.dead then
@@ -72796,8 +74539,10 @@ local function step()
 		end
 		input = { mx = mx, jump = Input.take("jump"), down = Input.held("down"), up = Input.held("up") or Input.held("climb") } -- up = 사다리를 오른다(2026-10-16 밤 · climb = 폰의 조이스틱을 위로 — 2026-10-17)
 		-- 탄 동안은 더 빨리(2026-10-21 사용자 "속도도 더 빨라야함" — ride.generated의 mountSpeed · 사다리 위에서는 탈것을 감추고 제 빠르기)
+		--  탈것에 speed가 있으면 그것(쿠폰 탈것 「떠도는 책」 = 1 — 사용자 "이동속도는 유료보다 느리게 그냥 플레이어 이동속도로")
 		if state.ride and state.ride:riding() and body.climb == nil then
-			input.speed = RIDE_DATA.mountSpeed or 1
+			local m = RideView.MOUNT[state.ride.rideId]
+			input.speed = (m and m.speed) or RIDE_DATA.mountSpeed or 1
 		end
 		if input.jump and input.down and body.ground and P.onPlatform(scene, body) then
 			TutView.dropped = true -- 튜토리얼: 얇은 발판을 내려왔다(↓ + 뛰기)
@@ -72815,6 +74560,11 @@ local function step()
 	end
 	local airWas = body.air or 0
 	P.step(scene, body, input, STEP)
+	-- 막힌 칸 안에 끼었으면 바로 가장 가까운 빈 자리로 꺼낸다(위가 먼저 — sim/physics.luau의 freeSpot). 사다리를 탄 동안은 보지 않는다
+	--  사용자 2026-10-21(폰): "대쉬하다가 맵을뚫고 낑기는 현상" — 끼면 걷기 · 뛰기 · 대쉬가 다 막혔다
+	if body.climb == nil and P.unstick(scene, body) then
+		state.reportT = REPORT -- 꺼낸 자리를 바로 알린다
+	end
 	if (body.air or 0) > airWas and state.fx then
 		state.fx:hop(body.x, body.y) -- 2단 점프: 공중에서 발을 구른 자리에 점이 흩어진다
 	end
@@ -72829,12 +74579,14 @@ local function step()
 
 	-- 내 자리를 서버에 알린다(바뀌었을 때만)
 	state.reportT += STEP
-	if state.reportT >= REPORT then
+	-- (실제 시간으로도 0.08초 사이를 둔다 — 화면이 멈췄다가 밀린 걸음을 한꺼번에 따라잡을 때 한 장면에 여러 번 보내 서버의 빈도 제한(초당 20)을 넘었다: 2026-10-21 오류 보고 'Move')
+	if state.reportT >= REPORT and os.clock() - (state.reportClock or -9) >= 0.08 then
+		state.reportClock = os.clock()
 		state.reportT = 0
 		local x, y = math.floor(body.x * 10 + 0.5) / 10, math.floor(body.y * 10 + 0.5) / 10
 		if x ~= state.sentX or y ~= state.sentY or state.dir ~= state.sentDir then
 			state.sentX, state.sentY, state.sentDir = x, y, state.dir
-			Net.FireServer("Move", x, y, state.dir)
+			Net.FireServer("Move", x, y, state.dir, state.sceneKey) -- 어느 맵의 자리인가(2026-10-21 — 서버는 다른 맵의 늦은 보고를 받지 않는다)
 		end
 	end
 end
@@ -73470,6 +75222,7 @@ local function listen()
 	Net.OnClient("Warp", function(x, y)
 		if state.body and typeof(x) == "number" and typeof(y) == "number" then
 			state.body.x, state.body.y, state.body.vx, state.body.vy = x, y, 0, 0
+			P.unstick(SCENES.scenes[state.sceneKey], state.body) -- 되돌려 준 자리가 땅 속이면 꺼낸다(2026-10-21 — 폰에서 끼임)
 			state.body.climb = nil -- 사다리를 잡고 있었으면 놓는다(그대로면 다음 장에 사다리로 끌려가 서버와 엇갈렸다 — 2026-10-18 검토)
 			state.push = nil -- 밀려나는 중 · 스킬이 몸을 밀고 나가는 중이면 멈춘다(그대로면 다시 멀어져 한 번 더 되돌려졌다 — 2026-10-18 검토)
 			if state.skill then
@@ -73774,6 +75527,14 @@ local function listen()
 		end
 	end)
 	-- 경매장에 올린 것이 팔렸다(2026-10-18 — 다른 서버의 구매도 서버가 옮겨 준다): 획득 알림 한 줄 · 「경매」 단추의 점(경매장을 열면 꺼진다)
+	-- 관리자의 확성기(2026-10-21 — 모든 서버의 모두에게): 화면 위 큰 알림 「공지」(8초 · 두 줄까지) + 채팅 알림 글(다 보인다)
+	Net.OnClient("Megaphone", function(text)
+		if typeof(text) ~= "string" then
+			return
+		end
+		pcall(Guide.banner, "공지", text, 8)
+		Chat.note("[공지] " .. text)
+	end)
 	Net.OnClient("Sold", function(e)
 		if typeof(e) ~= "table" then
 			return
@@ -74394,8 +76155,17 @@ function Boot.start()
 		rift = function()
 			return state.rift
 		end,
-		riftDo = function(action: string, id: any)
-			local ok, res = pcall(Net.Invoke, "Rift", action, id)
+		-- 같은 맵에 파티원이 있는가(던전 창의 「파티 입장」 — 2026-10-21)
+		partyHere = function(): boolean
+			for _, m in (state.party and state.party.members) or {} do
+				if m.id ~= state.myId and m.scene == state.sceneKey then
+					return true
+				end
+			end
+			return false
+		end,
+		riftDo = function(action: string, id: any, party: boolean?)
+			local ok, res = pcall(Net.Invoke, "Rift", action, id, party == true) -- party = 던전에 파티로 들어간다(2026-10-21)
 			if not ok or not res then
 				return nil
 			end
@@ -74651,6 +76421,7 @@ function Boot.start()
 	end
 	Windows.register("tome", TomeWindow) -- 모험의 서(메뉴 → 「모험의 서」 — 2026-10-16)
 	Windows.register("rift", RiftWindow) -- 수정 틈 토벌(토벌대장 앞에서 ↑ — 2026-10-16)
+	Windows.register("dungeon", require(script.Parent.ui.dungeonWindow)) -- 던전(그 문 앞에서 ↑ — 2026-10-21 · 수정 거울숲)
 	Windows.register("auction", AuctionWindow) -- 경매장(메뉴 · Y — 메이플 옥션 방식. 은달 항구의 경매사 앞에서 ↑로도)
 	Windows.register("bag", BagWindow)
 	Windows.register("equip", EquipWindow)
@@ -74708,7 +76479,15 @@ function Boot.start()
 	end)
 	-- 채팅은 Roblox의 기본 채팅이다(chat.luau — 창 · 입력줄 · 채널 탭을 켜고 색과 이름만 맞춘다). 글을 치는 동안에는 게임의 키를 받지 않고, PC에서는 파티원 칸을 채팅 창의 아래로 내린다
 	Chat.init()
-	Input.typing = Chat.focused
+	-- 글을 치는 중 = 채팅의 입력줄 · 수량 창이 떠 있는 동안(2026-10-21 — 수량 칸 밖을 눌러도 Q · W …가 스킬로 나가지 않게)
+	local CountBoxMod = require(script.Parent.ui.countBox)
+	Input.typing = function(): boolean
+		return Chat.focused() or CountBoxMod.shown()
+	end
+	-- 한글 입력 상태로 보이는 글쇠가 이어지면(input.luau의 Input.poll — 2026-10-21 사용자 "로블록스에서 한글쓴다음에 키가 안먹히는 버그"): 화면 위 큰 알림으로 한/영 키를 알린다(1분에 한 번)
+	Input.onIme = function()
+		pcall(Guide.banner, Input.IME_WORDS.head, Input.IME_WORDS.line, 6)
+	end
 	local function placeParty()
 		PartyHud.setTop(if Touch.on then 0 else Chat.bottom)
 	end
@@ -75021,6 +76800,12 @@ function Boot.start()
 		choices = function()
 			-- 소비 아이템: 가방에 있는 것과 이미 단추에 놓아 둔 것(다 써서 0개여도 놓아 둔 것은 남는다)
 			local list = {}
+			-- 점프 · 상호작용(2026-10-21 사용자: "상호작용, 점프키 같은거 위치 다 바꿀수있어야해요 드래그앤 드랍으로 다른 버튼들처럼"): 고르면 고른 단추와 자리를 바꾼다
+			for _, id in { "act_jump", "act_interact" } do
+				if Quick.ACTS[id] then
+					table.insert(list, { what = id, name = Quick.ACTS[id].name })
+				end
+			end
 			for _, g in Items.data.GOODS do
 				if g.tab == "use" and (Bag.countIn(state.bag, g.id) > 0 or Quick.find(state.touchSlots, g.id)) then
 					table.insert(list, { what = g.id, name = g.short })
@@ -75315,7 +77100,7 @@ function Boot.start()
 			})
 		end
 		Guide.step(dt)
-		MapName.step(dt, (BossView.box ~= nil and BossView.box.Visible) or CineView.active() or Windows.anyOpen()) -- 보스 체력 · 퀘스트 연출이 그 자리를 쓰거나 창이 열리면(창의 윗부분과 겹친다 — 2026-10-18) 바로 사라진다. 보스 체력은 칸이 보일 때만(전에는 한 번 보인 보스의 이름이 남아, 첫 보스 뒤로 맵 이름이 영영 안 떴다 — 2026-10-18 검토)
+		MapName.step(dt, (BossView.box ~= nil and BossView.box.Visible) or (RiftView.box ~= nil and RiftView.box.Visible) or CineView.active() or Windows.anyOpen()) -- 보스 체력 · 토벌 · 던전의 판(같은 위 가운데 — 2026-10-21) · 퀘스트 연출이 그 자리를 쓰거나 창이 열리면(창의 윗부분과 겹친다 — 2026-10-18) 바로 사라진다. 보스 체력은 칸이 보일 때만(전에는 한 번 보인 보스의 이름이 남아, 첫 보스 뒤로 맵 이름이 영영 안 떴다 — 2026-10-18 검토)
 		GainLog.step(dt)
 		markT += dt
 		if markT >= 0.25 then
@@ -78608,9 +80393,9 @@ function Guide.init(root: Frame)
 	hintBox = Stage.place(root, "GuideHint", "tc", (Stage.REF_W - Guide.HINT_W) / 2, Guide.HINT_Y, Guide.HINT_W, 40)
 	hint = Ui.text(hintBox, "", 0, 0, Guide.HINT_W, { align = "center", outline = true, color = C.accent, lines = Guide.HINT_LINES, line = Ui.M.small + 4 })
 	hintBox.Visible = false
-	bannerBox = Stage.place(root, "GuideBanner", "tc", (Stage.REF_W - Guide.BANNER_W) / 2, Guide.BANNER_Y, Guide.BANNER_W, 44)
+	bannerBox = Stage.place(root, "GuideBanner", "tc", (Stage.REF_W - Guide.BANNER_W) / 2, Guide.BANNER_Y, Guide.BANNER_W, Ui.M.body + 8 + Ui.M.smallLine * 2)
 	title = Ui.text(bannerBox, "", 0, 0, Guide.BANNER_W, { font = "body", align = "center", outline = true, color = C.gold })
-	sub = Ui.text(bannerBox, "", 0, Ui.M.body + 8, Guide.BANNER_W, { align = "center", outline = true, color = C.text })
+	sub = Ui.text(bannerBox, "", 0, Ui.M.body + 8, Guide.BANNER_W, { align = "center", outline = true, color = C.text, lines = 2 }) -- 두 줄까지(관리자의 확성기 — 2026-10-21)
 	bannerBox.Visible = false
 end
 
@@ -79601,6 +81386,8 @@ MODULES['Client/lune/input'] = function(script, game, require, task, os, typeof,
 --  키는 "하는 일 → 키" 표(BIND)를 거쳐 읽는다 — 유저가 키를 바꾸는 화면(키 설정)이 이 표를 고치게 된다.
 --  스마트폰 단추(터치)도 같은 "하는 일" 이름으로 Input.press / Input.release를 부른다.
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local GuiService = game:GetService("GuiService")
 
 local Input = {}
 
@@ -79681,6 +81468,8 @@ end
 
 local held: { [string]: boolean } = {}
 local pressed: { [string]: boolean } = {} -- 누른 순간(한 번 읽으면 지워진다)
+local byKey: { [string]: boolean } = {} -- 키보드로 누른 하는 일(아래 Input.poll이 뗄 수 있는 것 — 폰 단추로 누른 것은 건드리지 않는다)
+local wasDown: { [string]: boolean } = {} -- 지난 장면에 그 키가 눌려 있었는가(Input.poll)
 
 function Input.press(action: string)
 	if not held[action] then
@@ -79743,9 +81532,14 @@ function Input.init()
 			end
 			return
 		end
+		if input.KeyCode.Value == 0 then
+			Input.imeAt = os.clock() -- 무슨 키인지 모르는 글쇠(한글 입력 상태로 보인다 — 아래 Input.poll)
+			return
+		end
 		local action = actionOf(input.KeyCode)
 		if action then
 			Input.press(action)
+			byKey[action] = true
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input)
@@ -79755,13 +81549,76 @@ function Input.init()
 		local action = actionOf(input.KeyCode)
 		if action then
 			Input.release(action)
+			byKey[action] = nil
 		end
 	end)
 	-- 창이 뒤로 가면 누르고 있던 키를 모두 뗀 것으로 친다
 	UserInputService.WindowFocusReleased:Connect(function()
 		table.clear(held)
 		table.clear(pressed)
+		table.clear(byKey)
 	end)
+	-- 장면마다 키의 지금 상태로 맞춘다(게임의 장면 LuneFrame — 카메라 바로 앞 — 보다 먼저)
+	RunService:BindToRenderStep("LuneInputPoll", Enum.RenderPriority.Input.Value, function()
+		Input.poll(os.clock())
+	end)
+end
+
+-- 키의 지금 상태로 맞춘다(2026-10-21 사용자: "로블록스에서 한글쓴다음에 키가 안먹히는 버그가있거든? 로블록스에서 유명한 버그야 이거 확인해봐"):
+--  알려진 것 — Windows에서 한/영 키가 「한」인 동안 Roblox에서 글자 키가 먹지 않거나, 누른 키가 영어로 다시 누를 때까지 눌린 채로 남는다
+--  (나무위키 「Roblox」의 2019년 기록 · DevForum 「Movement key in Korean doesn't work」 2021 — 게임 안에서만, Studio에서는 나지 않는다고 했다). 채팅에 한글을 친 뒤 그대로 두면 이 상태다.
+--  우리 게임은 이동이 방향키 · 뛰기가 Space라 그대로지만, 퀵슬롯(Q W E R A S D F X) · 줍기(Z) · 탈것(N) · 창의 키는 글자다 — 누름 · 뗌 소식만 믿으면 스킬 키가 눌린 채로 남아 계속 나가거나 먹지 않는다.
+--  그래서 ① 묶인 키마다 UserInputService:IsKeyDown을 장면마다 본다: 뗐는데 눌린 채인 것은 떼고(키보드로 누른 것만) · 이번 장면에 새로 눌린 것을 모르면 누른다(소식과 둘 중 먼저 온 것 —
+--   글을 치는 중 · 캐릭터 고르기 · 키 설정 · Roblox 메뉴가 열린 동안에는 누르지 않는다. 그동안 눌려 있던 키는 뗐다가 다시 눌러야 먹는다)
+--  ② 무슨 키인지 모르는 글쇠(KeyCode 0 — Unknown · None)가 오고 그 장면에 묶인 키가 하나도 눌려 있지 않으면 한 번으로 센다 → 3초 안에 두 번이면 Input.onIme(boot가 큰 알림 「한글 입력 상태」)를 부른다(1분에 한 번).
+--  IsKeyDown이 한글 상태에서 맞게 나오는지 · 한글 상태의 글쇠가 KeyCode 0으로 오는지는 이 컴퓨터에서 확인하지 못했다(Studio에서는 이 버그가 나지 않는다고 한다) — 맞지 않으면 둘 다 아무 일도 하지 않는다
+Input.onIme = nil :: (() -> ())?
+Input.IME_WORDS = { head = "한글 입력 상태", line = "글자 키가 먹지 않으면 한/영 키를 눌러 영문으로 바꿔 주세요" } -- 큰 알림의 제목 · 아랫줄(제가 정한 글)
+Input.imeAt = nil :: number?
+local imeMiss: { number } = {}
+local imeShown = -math.huge
+Input.IME_GAP, Input.IME_WINDOW, Input.IME_COUNT = 60, 3, 2
+-- 알아내기(자동 검사가 바꿔 끼운다)
+Input.isDown = function(key: Enum.KeyCode): boolean
+	return UserInputService:IsKeyDown(key)
+end
+Input.blocked = function(): boolean
+	return Input.paused or captureFn ~= nil or UserInputService:GetFocusedTextBox() ~= nil or (Input.typing ~= nil and Input.typing()) or GuiService.MenuIsOpen
+end
+
+function Input.poll(now: number)
+	local blocked = Input.blocked()
+	local anyDown = false
+	for action, key in Input.BIND do
+		local down = Input.isDown(key)
+		if down then
+			anyDown = true
+			if not wasDown[action] and not held[action] and not blocked then
+				Input.press(action)
+				byKey[action] = true
+			end
+		elseif byKey[action] then
+			byKey[action] = nil
+			held[action] = nil
+		end
+		wasDown[action] = down or nil
+	end
+	if Input.imeAt then
+		Input.imeAt = nil
+		if not anyDown then
+			table.insert(imeMiss, now)
+			while imeMiss[1] and now - imeMiss[1] > Input.IME_WINDOW do
+				table.remove(imeMiss, 1)
+			end
+			if #imeMiss >= Input.IME_COUNT and now - imeShown >= Input.IME_GAP then
+				imeShown = now
+				table.clear(imeMiss)
+				if Input.onIme then
+					Input.onIme()
+				end
+			end
+		end
+	end
 end
 
 return Input
@@ -81687,13 +83544,15 @@ function RiftView.draw()
 	RiftView.name:set(if t then t.name else "")
 	RiftView.clock:set(("%d:%02d"):format(math.floor(rest / 60), math.floor(rest % 60)))
 	RiftView.clock:color(if rest < 60 then C.red else C.text)
+	local DW = Rift.DUNGEON.words -- 던전(2026-10-21 — 수정 거울숲)의 글
+	local dg = v.dungeon == true
 	local what
 	if v.state == "wait" then
 		what = W.ready
 	elseif v.state == "clear" then
-		what = W.clear
+		what = if dg then DW.clear else W.clear
 	elseif v.state == "fail" then
-		what = W.fail
+		what = if dg then DW.fail else W.fail
 	else
 		what = (if v.wave >= v.waves then W.eliteWave else Format.fill(W.wave, { a = v.wave, b = v.waves })) .. " · " .. Format.fill(W.mobs, { n = v.left })
 	end
@@ -81705,13 +83564,20 @@ function RiftView.draw()
 	if not over then
 		return
 	end
-	RiftView.title:set(if v.state == "clear" then W.clear else W.fail)
+	RiftView.title:set(if v.state == "clear" then (if dg then DW.clear else W.clear) else (if dg then DW.fail else W.fail))
 	RiftView.title:color(if v.state == "clear" then C.green else C.red)
 	for i = 1, ROWS do
 		row(i, nil, "")
 	end
 	local p = RiftView.paid
-	if v.state == "clear" and p then
+	if v.state == "clear" and p and dg then
+		-- 던전: 경험치 한 줄(오늘 이미 끝냈으면 그 말)
+		if p.none then
+			row(1, nil, DW.done, C.dim)
+		else
+			row(1, nil, ("경험치 %s"):format(Format.comma(p.xp or 0)))
+		end
+	elseif v.state == "clear" and p then
 		if p.none then
 			row(1, nil, W.noPay, C.dim)
 		else
@@ -81725,8 +83591,9 @@ function RiftView.draw()
 			end
 		end
 	end
-	local wait = (if v.state == "clear" then D.back else Rift.FAIL_BACK) - (v.after + RiftView.since)
-	RiftView.back:set(Format.fill(W.back, { n = math.max(0, math.ceil(wait)) }))
+	local wait = (if v.state == "clear" then (v.back or D.back) else Rift.FAIL_BACK) - (v.after + RiftView.since)
+	local n = math.max(0, math.ceil(wait))
+	RiftView.back:set(if dg then Format.fill(DW.back, { s = n }) else Format.fill(W.back, { n = n }))
 end
 
 -- 매 장면(boot의 LuneFrame): 받은 뒤로 흐른 시간 — 초가 바뀔 때만 다시 그린다
@@ -81773,7 +83640,7 @@ SceneView.TAG_DOWN = 4 -- 이름표: 발밑에서 이만큼 아래(화면 틀의
 -- 주민 머리 위의 퀘스트 표시: "!" 받을 수 있는 퀘스트가 있다 · "?" 다 해서 돌려줄 퀘스트가 있다 — 글자 그대로의 작은 표시(게임 세계의 굵은 도트).
 --  사용자 2026-10-07: "퀘스트가 있는건 표시가 받을수있는퀘스트는 ! , 완료된퀘스트는 ? 표시였는데 왜 갑자기 전구모양이 생긴건지" → 전구 · 책 그림을 걷어 내고 되돌렸다.
 --  부품 이름과 띄우는 높이는 공방에서 온다(data/ui.generated.luau의 questMark — 공방 시험 탭에서 먼저 보고 정한 것. "크기 너무 큽니다" → 피해 숫자만 한 점 글자).
-SceneView.MARK = { ["!"] = UI.questMark.new, ["?"] = UI.questMark.done }
+SceneView.MARK = { ["!"] = UI.questMark.new, ["?"] = UI.questMark.done, ["!!"] = UI.questMark.big } -- !! = 크고 주황색인 「!」(중요한 퀘스트 — 던전의 문 2026-10-21)
 SceneView.MARK_UP = UI.questMark.up
 SceneView.DOOR_MARK_UP = 9 -- 문 위의 퀘스트 표시: 문의 이름표(글씨 한 줄) 위로 이만큼(게임의 도트)
 
@@ -81897,9 +83764,11 @@ function SceneView.new(view: Frame, key: string, scene, tagLayer: Frame)
 	self.doorMarks = {}
 	self.portals = {}
 	for i, p in scene.portals do
-		local glow = Stage.image(self.portalLayer, "Portal_" .. tostring(p.id or p.to), ASSETS[PORTAL.img] or "", PORTAL.w, PORTAL.h) -- 이름표(id)가 없는 문도 있다(새로 지은 맵의 문 — 가는 곳으로 부른다)
+		local sc = p.scale or 1 -- 큰 문(던전의 문 — 2026-10-21)은 빛을 크게 · 계단 위로(lift점)
+		local gw, gh = round(PORTAL.w * sc), round(PORTAL.h * sc)
+		local glow = Stage.image(self.portalLayer, "Portal_" .. tostring(p.id or p.to), ASSETS[PORTAL.img] or "", gw, gh) -- 이름표(id)가 없는 문도 있다(새로 지은 맵의 문 — 가는 곳으로 부른다)
 		glow.ImageRectSize = Vector2.new(PORTAL.w, PORTAL.h)
-		glow.Position = UDim2.fromOffset(round(p.x - PORTAL.w / 2), p.y - PORTAL.h)
+		glow.Position = UDim2.fromOffset(round(p.x - gw / 2), p.y - gh - (p.lift or 0))
 		self.portals[i] = { label = glow, phase = i * 0.37, frame = -1, def = p, open = true } -- open = 지나갈 수 있는가(그 퀘스트를 받아야 열리는 문 — setPortals)
 		tag("↑ " .. p.label, p.x, p.y - math.max(p.h or 60, PORTAL.h), -(Ui.TAG_H + 2), C.accent, p)
 		local dest = SCENES.scenes[p.to]
@@ -82545,7 +84414,7 @@ local function nameField(parent: Instance, x: number, y: number, w: number, h: n
 	box.Parent = field
 	-- 띄어쓰기는 적히지 않는다(이름에 쓸 수 없다 — 끝에 딸려 들어온 빈칸 때문에 중복 확인이 안 되는 일이 없게). 너무 길게도 적히지 않는다(자세한 규칙은 중복 확인이 알려 준다)
 	box:GetPropertyChangedSignal("Text"):Connect(function()
-		local bare = string.gsub(box.Text, "%s", "")
+		local bare = string.gsub(box.Text, "[ \t\r\n]", "") -- (%s는 한글의 가운데 바이트를 빈칸으로 볼 수 있다 — 반쪽 글자가 생겼다 · 2026-10-21 오류 보고)
 		if bare ~= box.Text then
 			box.Text = bare
 			return
@@ -83361,7 +85230,6 @@ local opts = nil
 local root: Frame = nil
 local buttons = {} -- 누르는 단추들 { t, frame, stroke, hit, … }
 local slotButtons = {} -- [칸] = 단추
-local actButton = nil
 local menuDot: Frame? = nil -- 「메뉴」 단추 오른쪽 위의 노란 점(받을 출석 · 업적이 있다 — 2026-10-15)
 local pad = nil -- 조이스틱 { frame, knob, radius }
 local chooser: Frame? = nil -- 놓을 것의 목록
@@ -83414,14 +85282,22 @@ local function paintButton(b)
 			edge, alpha = C.accent, 0 -- 고르는 중 · 놓을 칸 · 켜 둔 사출기
 		elseif not slotOn then
 			alpha = 0.55 -- 빈 칸은 흐리게
+		elseif Quick.act(slotOn) == "interact" then
+			edge, alpha = (if state.act then C.accent else C.lineHot), (if state.act then 0 else 0.4) -- 상호작용: 가까이에 무엇이 있으면 밝아진다
 		end
-	elseif t.act == "interact" then
-		edge, alpha = (if state.act then C.accent else C.lineHot), (if state.act then 0 else 0.4)
 	end
 	b.stroke.Color = edge
 	b.stroke.Transparency = alpha
 	b.frame.BackgroundColor3 = if b.down or active then C.accent else C.ink
 	b.frame.BackgroundTransparency = if b.down then 0.55 elseif active then 0.72 elseif t.slot and not slotOn and not Touch.arranging then 0.7 else 0.4
+end
+
+-- 점프 · 상호작용이 놓인 칸 단추의 글(상호작용은 가까이에 있는 것에 따라 바뀐다 — 줍기 · 들어가기 · 말 걸기 …)
+local function actWord(kind: string?): string
+	if kind == "jump" then
+		return Quick.ACTS.act_jump.name
+	end
+	return if state.act then ACT_WORDS[state.act] else Quick.ACTS.act_interact.name
 end
 
 local function paintAll()
@@ -83433,7 +85309,14 @@ end
 -- 칸 단추에 놓인 것을 그린다: 그림 · 남은 수 · 다시 쓰기까지 남은 시간
 local function paintSlot(b)
 	local what = state.slots[b.t.slot]
-	Ui.setPic(b.pic, if what then Quick.pic(what) else nil)
+	-- 점프 · 상호작용(2026-10-21 — 칸 단추에 놓이는 「하는 일」): 그림 대신 글
+	local act = Quick.act(what)
+	b.act:show(act ~= nil)
+	if act then
+		b.act:set(actWord(act))
+		b.act:color(if act == "interact" and not state.act then C.dim else C.text)
+	end
+	Ui.setPic(b.pic, if what and not act then Quick.pic(what) else nil)
 	b.plus:show(not what)
 	if what and Quick.item(what) then
 		local n = if Hud.countOf then Hud.countOf(what) else 0
@@ -83461,12 +85344,12 @@ local function paintSlots()
 	end
 end
 
--- 상호작용 단추: 가까이에 있는 것에 따라 글이 바뀌고 밝아진다
+-- 상호작용 단추: 가까이에 있는 것에 따라 글이 바뀌고 밝아진다(상호작용이 놓인 칸 단추 — 2026-10-21부터 어느 칸에든 놓인다)
 local function paintAct()
-	if actButton then
-		actButton.label:set(if state.act then ACT_WORDS[state.act] else "상호작용")
-		actButton.label:color(if state.act then C.text else C.dim)
-		paintButton(actButton)
+	for _, b in slotButtons do
+		if Quick.act(state.slots[b.t.slot]) == "interact" then
+			paintSlot(b)
+		end
 	end
 end
 
@@ -83491,9 +85374,9 @@ local function openChooser()
 		return
 	end
 	local list = opts.choices() -- { { what, name } … } — 물약 · 배운(쓸 수 있는) 스킬 · 가진 펫 · 탈것
-	-- 판은 왼쪽 위(칸 단추는 모두 오른쪽 아래 — 덮지 않는다) · 화면에 들어가는 만큼만 길어지고 넘치는 줄은 밀어서 본다(2026-10-21 점검 — Layout.touchChooser)
+	-- 판은 왼쪽 위 · 화면에 들어가는 만큼만 길어지고 넘치는 줄은 밀어서 본다(2026-10-21 점검 — Layout.touchChooser). 왼쪽 아래의 칸 단추(처음에는 상호작용)는 덮지 않는다(그 위에서 끝난다)
 	local K = Layout.TOUCHCHOOSER
-	local m = Layout.touchChooser(#list, Stage.uiH - Stage.insetTop)
+	local m = Layout.touchChooserFit(#list, Stage.uiH, Stage.insetTop, UI.touch, Stage.ratio) -- 칸 단추(왼쪽 아래의 상호작용 …)를 덮지 않게 그 위에서 끝난다(2026-10-21)
 	local cols, cell, gap, pad0 = K.cols, K.cell, K.gap, K.pad
 	local w, h = m.w, m.h
 	local holder = Stage.place(Stage.ui, "TouchChooser", "tl", K.x, K.top, w, h)
@@ -83517,8 +85400,13 @@ local function openChooser()
 		slot.frame.ZIndex = 2
 		local now = selected and state.slots[selected] == item.what
 		slot:setOn(now == true)
-		local pic = Ui.pic(slot.frame, Quick.pic(item.what), math.floor((cell - PIC) / 2), math.floor((cell - PIC) / 2))
-		pic.ZIndex = 2
+		if Quick.act(item.what) then
+			-- 점프 · 상호작용(2026-10-21): 그림 대신 글 — 고르면 고른 단추와 자리를 바꾼다(빼거나 덮지는 못한다)
+			Ui.text(slot.frame, item.name, 0, math.floor(cell / 2) - 6, cell, { align = "center", outline = true, z = 3 })
+		else
+			local pic = Ui.pic(slot.frame, Quick.pic(item.what), math.floor((cell - PIC) / 2), math.floor((cell - PIC) / 2))
+			pic.ZIndex = 2
+		end
 		local placed = Quick.find(state.slots, item.what) ~= nil
 		Ui.text(scroll, item.name, x - 3, y + cell + 2, cell + 6, { align = "center", color = if placed then C.accent else C.text, outline = true, lines = 2 }) -- 이미 어느 단추에 놓여 있는 것은 민트 · 긴 이름(「목도리 달토끼」)은 두 줄
 		local hit = Ui.hit(slot.frame)
@@ -83552,6 +85440,18 @@ function Touch.arrange(on: boolean, slot: number?)
 		Input.release("tslot:" .. i)
 	end
 	table.clear(held)
+	-- 점프 · 상호작용을 누르고 있었으면 놓는다(배치를 시작하는 순간 눌린 채 남지 않게)
+	for _, b in slotButtons do
+		local f = b.actFinger
+		if f then
+			b.actFinger, b.down = nil, false
+			if f.kind == "jump" then
+				Input.release("jump")
+			else
+				opts.onAct(false)
+			end
+		end
+	end
 	if drag and drag.ghost then
 		drag.ghost:Destroy()
 	end
@@ -83646,14 +85546,47 @@ local function makeSlot(t)
 	b.veil = veil
 	b.wait = Ui.text(b.mid, "", -30, -7, 60, { font = "body", align = "center", outline = true, z = 7 })
 	b.wait.label.Frame.ZIndex = 7
+	-- 점프 · 상호작용이 놓였을 때의 글(2026-10-21): 큰 단추는 본문 글씨(전의 「점프」 단추와 같다) · 작은 단추는 작은 글씨
+	b.act = Ui.text(b.mid, "", -40, if k == 2 or t.kind == "big" then -7 else -6, 80, { font = if t.kind == "big" then "body" else nil, align = "center", outline = true, z = 6 })
+	b.act:show(false)
 	slotButtons[t.slot] = b
 
 	local i = t.slot
+	-- 점프 · 상호작용을 누른 손가락(떼면 놓는다 — 아래 b.release)
+	b.release = function(input: InputObject)
+		local f = b.actFinger
+		if f and sameFinger(input, f.input) then
+			b.actFinger = nil
+			b.down = false
+			paintButton(b)
+			if f.kind == "jump" then
+				Input.release("jump")
+			else
+				opts.onAct(false)
+			end
+		end
+	end
 	b.hit.InputBegan:Connect(function(input)
 		if not isPress(input) then
 			return
 		end
 		local what = state.slots[i]
+		local act = Quick.act(what)
+		if act and not Touch.arranging and not state.pick then
+			-- 점프 · 상호작용: 그 단추가 하던 일 그대로(누르고 있는 동안 — 점프는 2단 점프 · 하단 점프, 상호작용은 줍기를 이어서)
+			if b.actFinger then
+				return
+			end
+			b.actFinger = { input = input, kind = act }
+			b.down = true
+			paintButton(b)
+			if act == "jump" then
+				Input.press("jump")
+			else
+				opts.onAct(true)
+			end
+			return
+		end
 		if Touch.arranging then
 			-- 배치 중: 누르면 그 칸을 고르고, 끌면 자리를 바꾼다
 			selected = i
@@ -83677,14 +85610,10 @@ local function makeSlot(t)
 	return b
 end
 
+-- 칸이 아닌 단추: 「메뉴」뿐이다(점프 · 상호작용은 2026-10-21부터 칸 단추에 놓이는 것 — 「단추 배치」에서 끌어 옮긴다)
 local function makeAct(t)
 	local b = makeButton(t)
-	if t.act == "jump" then
-		b.label = Ui.text(b.mid, "점프", -40, -7, 80, { font = "body", align = "center", outline = true })
-	elseif t.act == "interact" then
-		b.label = Ui.text(b.mid, "상호작용", -40, -6, 80, { align = "center", outline = true })
-		actButton = b
-	elseif t.act == "menu" then
+	if t.act == "menu" then
 		b.label = Ui.text(b.mid, "메뉴", -40, -7, 80, { font = "body", align = "center", outline = true })
 		local dot = Ui.box(b.mid, math.floor(t.w / 2) - 8, -math.floor(t.h / 2) + 2, 6, 6, Ui.COLOR.ink)
 		Ui.box(dot, 1, 1, 4, 4, Ui.COLOR.gold)
@@ -83704,11 +85633,7 @@ local function makeAct(t)
 		finger = input
 		b.down = true
 		paintButton(b)
-		if t.act == "jump" then
-			Input.press("jump")
-		elseif t.act == "interact" then
-			opts.onAct(true)
-		elseif t.act == "menu" then
+		if t.act == "menu" then
 			opts.onMenu()
 		end
 	end)
@@ -83717,11 +85642,6 @@ local function makeAct(t)
 			finger = nil
 			b.down = false
 			paintButton(b)
-			if t.act == "jump" then
-				Input.release("jump")
-			elseif t.act == "interact" then
-				opts.onAct(false)
-			end
 		end
 	end
 	return b
@@ -83832,7 +85752,7 @@ local function build()
 	end
 	table.clear(buttons)
 	table.clear(slotButtons)
-	actButton, pad = nil, nil
+	pad = nil
 	for _, t in UI.touch do
 		if t.kind == "pad" then
 			makePad(t)
@@ -83859,7 +85779,9 @@ function Touch.frameOf(name: string, arg: number?): GuiObject?
 		return if pad then pad.frame else nil
 	end
 	for _, b in buttons do
-		if (name == "slot" and b.t.slot == arg) or (name ~= "slot" and b.t.act == name) then
+		-- 점프 · 상호작용은 그것이 놓인 칸 단추(2026-10-21 — 「단추 배치」에서 옮겼으면 옮긴 자리)
+		local holds = b.t.slot and Quick.act(state.slots[b.t.slot])
+		if (name == "slot" and b.t.slot == arg) or (name ~= "slot" and (b.t.act == name or holds == name)) then
 			return b.frame
 		end
 	end
@@ -83979,7 +85901,12 @@ function Touch.init(options)
 				local ghost = Ui.group(Stage.ui, 0, 0, PIC + 8, PIC + 8, "TouchGhost")
 				ghost.ZIndex = 400
 				Ui.slot(ghost, 0, 0, PIC + 8):setOn(true)
-				Ui.pic(ghost, Quick.pic(state.slots[d.from]), 4, 4).ZIndex = 2
+				local dragged = state.slots[d.from]
+				if Quick.act(dragged) then
+					Ui.text(ghost, Quick.ACTS[dragged].name, -16, math.floor((PIC + 8) / 2) - 6, PIC + 40, { align = "center", outline = true, z = 3 }) -- 점프 · 상호작용: 글(2026-10-21)
+				else
+					Ui.pic(ghost, Quick.pic(dragged), 4, 4).ZIndex = 2
+				end
 				d.ghost = ghost
 			end
 			if d.moved and d.ghost then
@@ -84530,7 +86457,7 @@ local C = Ui.COLOR
 
 local AdminWindow = {}
 AdminWindow.W, AdminWindow.H = 356, 300
-AdminWindow.TABS = { { id = "grow", name = "성장" }, { id = "item", name = "아이템" }, { id = "move", name = "이동" }, { id = "fight", name = "전투" } }
+AdminWindow.TABS = { { id = "grow", name = "성장" }, { id = "item", name = "아이템" }, { id = "move", name = "이동" }, { id = "fight", name = "전투" }, { id = "acct", name = "계정" } } -- 계정 = 쿠폰 기록 지우기(2026-10-21)
 AdminWindow.XP = { 1, 2, 5, 10, 50, 100 } -- 경험치 배율(서버가 같은 표로 다시 본다)
 AdminWindow.DMG = { 1, 5, 20, 100 } -- 피해 배율
 AdminWindow.BOSS_SHOW = { 100, 75, 60, 50, 40 } -- 보스의 그림 크기 미리보기(서 있는 그림의 몇 %)
@@ -84609,7 +86536,7 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 	local status = Ui.text(body, "관리자에게만 보이는 창이다", 0, h - 15, w, { color = C.dim })
 
 	-- 서버에 부탁한다(대답이 오면 아래 줄에 적는다)
-	local function ask(what: string, a: any, b: any, c: any)
+	local function ask(what: string, a: any, b: any, c: any, after: ((any) -> ())?) -- after = 대답을 받은 뒤(확성기: 보냈으면 칸을 비운다)
 		status:set("…")
 		status:color(C.dim)
 		task.spawn(function()
@@ -84623,6 +86550,9 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 			else
 				status:set(tostring(got.msg or ""))
 				status:color(if got.ok then C.green else C.red)
+			end
+			if after then
+				after(got)
 			end
 		end)
 	end
@@ -84777,6 +86707,32 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 					view.draw()
 				end, { h = 22, font = "small" }).frame.Name = "Do_placeNext"
 			end
+		elseif tab == "acct" then
+			-- 쿠폰 기록 지우기(2026-10-21 사용자: "쿠폰 기록을 초기화해줘 쿠폰등록하는것부터 영상을찍어야해") — 내 계정의 쓴 쿠폰 · 쿠폰 펫 · 쿠폰 탈것을 지운다(서버의 CashServer.resetCoupons)
+			y = row(p, y, "쿠폰", { { text = "쓴 기록 지우기", id = "couponReset", w = 110, on = function() ask("coupons") end } })
+			Ui.text(p, "쓴 쿠폰 기록과 쿠폰으로 받은 펫을 지운다.", 0, y + 4, w, { color = C.off })
+			Ui.text(p, "쿠폰을 처음 넣는 것부터 다시 해 볼 때 — 메뉴 → 「쿠폰」.", 0, y + 18, w, { color = C.off })
+			y += 44
+			-- 확성기(2026-10-21 사용자: "모든 서버에 확성기로 말할수있나? 어드민기능으로 확성기같은게 필요한데"): 적고 「보내기」(또는 Enter) → 모든 서버의 모두에게
+			--  화면 위 큰 알림 「공지」 + 채팅 알림 글(서버가 글을 거른 뒤 — server/lune/modules/megaphone.luau · 80자까지 · 5초에 한 번)
+			Ui.text(p, "확성기", 0, y + 6, 78, { color = C.dim })
+			local SENDW = 64
+			local field = Ui.field(p, 82, y, w - 82 - SENDW - 4, 22, "모든 서버에 보낼 글(80자까지)")
+			field.Name = "MegaphoneInput"
+			local function send()
+				ask("megaphone", field.Text, nil, nil, function(got)
+					if typeof(got) == "table" and got.ok then
+						field.Text = "" -- 보냈으면 비운다(못 보냈으면 적은 글을 그대로 둔다)
+					end
+				end)
+			end
+			Ui.button(p, "보내기", w - SENDW, y, SENDW, send, { h = 22, main = true }).frame.Name = "Do_megaphone"
+			field.FocusLost:Connect(function(enter: boolean)
+				if enter then
+					send()
+				end
+			end)
+			Ui.text(p, "지금 돌아가는 모든 서버의 모두에게 — 화면 위 큰 알림 「공지」 + 채팅.", 0, y + 28, w, { color = C.off })
 		else
 			y = row(p, y, "체력", { { text = "가득 채우기(쓰러졌으면 일어난다)", id = "heal", w = 200, on = function() ask("heal") end } })
 			y = row(p, y, "무적", {
@@ -85751,6 +87707,8 @@ local Ui = require(script.Parent.ui)
 local ItemCell = require(script.Parent.itemCell)
 local ItemDetail = require(script.Parent.itemDetail)
 local Windows = require(script.Parent.windows)
+local CountBox = require(script.Parent.countBox) -- 수량 창(2026-10-21)
+local CountPick = require(lune.ui.countPick)
 local BMW = require(lune.data["bm.generated"]).shop.words -- 캐시 탭의 글(2026-10-21)
 
 local C = Ui.COLOR
@@ -85877,11 +87835,45 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		ctx.send("Potion", entry.item)
 	end
 	-- 팔 때 묻는 것: 장비는 팔지 말지만, 묶음은 몇 개를(처음에는 전부). 팔 수 없는 것(퀘스트의 물건)은 nil
+	-- 수를 정하는 일(버리기 · 나누기 · 맡기기 · 팔기)은 화면 가운데의 수량 창으로(2026-10-21 사용자: "… 수량 입력하는 모달 받아서 처리해야지 … 모든 곳에서 수량받아서 처리해" —
+	--  전에는 상세 판의 「-10 -1 +1 +10」). 처음 수 = 나누기 절반 · 나머지 그 칸의 전부 · 맡기기는 창고에 들어가는 만큼까지
+	local function askCount(kind: string, tabKey: string, slot: number, entry)
+		local bag = ctx.bag()
+		local def = Items.goods(entry.item)
+		if not bag or not def then
+			return
+		end
+		local hi = CountPick.hi(kind, entry.n)
+		if kind == "store" then
+			hi = math.min(hi, Bag.storeRoomInView(bag, entry.item))
+		end
+		if hi < 1 then
+			if kind == "store" then
+				ctx.send("Item", "storeIn", tabKey, slot, 1) -- 창고가 가득 찼다(서버가 까닭을 알린다)
+			end
+			return
+		end
+		CountBox.open({
+			owner = "bag",
+			kind = kind,
+			icon = def.icon,
+			name = def.name,
+			hi = hi,
+			gainEach = if kind == "sell" then def.sell else nil,
+			onYes = function(n: number)
+				local action = if kind == "store" then "storeIn" else kind -- "discard" · "sell" · "split"
+				ctx.send("Item", action, tabKey, slot, n)
+				if kind == "store" and ui.storeShow then
+					ui.storeShow(tabKey)
+				end
+				unselect()
+				redraw()
+			end,
+		})
+	end
 	local function sellAsk(tabKey: string, entry)
 		if tabKey == "gear" then
 			return { kind = "sellGear" }
-		elseif Items.goodsSell(entry.item) > 0 then
-			return { kind = "sell", n = entry.n }
 		end
 		return nil
 	end
@@ -86004,6 +87996,9 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					if ui.shopDrop and ui.shopDrop(at) then
 						choose(tabKey, from, it)
 						ask = sellAsk(tabKey, it)
+						if tabKey ~= "gear" and Items.goodsSell(it.item) > 0 then
+							askCount("sell", tabKey, from, it) -- 묶음은 수량 창(처음 = 전부)
+						end
 						redraw()
 						return true
 					end
@@ -86228,38 +88223,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			local def = Items.goods(entry.item)
 			local have = Bag.countIn(bag, entry.item)
 			spec.info = ItemInfo.goods(entry.item, me, have)
-			if ask and ask.n then
-				-- 수를 고른다: 버리기 · 맡기기 · 팔기는 1 ~ 그 칸의 수, 나누기는 1 ~ 하나를 남긴 수
-				local kind = ask.kind
-				local hi = if kind == "split" then entry.n - 1 else entry.n
-				if hi < 1 then
-					ask = nil
-				else
-					local n = math.clamp(ask.n, 1, hi)
-					ask.n = n
-					spec.ask = ItemDetail.ask(kind, n, 1, hi, {
-						gain = if kind == "sell" then function(count: number)
-							return def.sell * count
-						end else nil,
-						set = function(v: number)
-							ask = { kind = kind, n = v }
-							view.refresh()
-						end,
-						yes = function(count: number)
-							local action = if kind == "store" then "storeIn" else kind -- "discard" · "sell" · "split"
-							ctx.send("Item", action, tabKey, slot, count)
-							if kind == "store" and ui.storeShow then
-								ui.storeShow(tabKey)
-							end
-							ask = nil
-							redraw()
-						end,
-						no = stopAsk,
-					})
-				end
-			else
-				ask = nil
-			end
+			ask = nil -- (묶음의 수는 수량 창이 정한다 — 위의 askCount)
 			if not ask then
 				if tabKey == "use" then
 					button(WORDS.use, function()
@@ -86270,13 +88234,11 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					end)
 				end
 				button(WORDS.discard, function()
-					ask = { kind = "discard", n = entry.n } -- 처음에는 그 칸의 묶음 전부
-					view.refresh()
+					askCount("discard", tabKey, slot, entry) -- 처음에는 그 칸의 묶음 전부
 				end)
 				if entry.n > 1 then
 					button(WORDS.split, function()
-						ask = { kind = "split", n = math.floor(entry.n / 2) } -- 처음에는 절반
-						view.refresh()
+						askCount("split", tabKey, slot, entry) -- 처음에는 절반
 					end)
 				end
 				if service == "store" and def.kind ~= "quest" then -- 퀘스트 물건은 맡길 수 없다(sim/bag.luau의 storeIn)
@@ -86289,18 +88251,16 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 							unselect()
 							redraw()
 						else
-							ask = { kind = "store", n = entry.n }
-							view.refresh()
+							askCount("store", tabKey, slot, entry) -- 처음에는 그 칸의 묶음 전부
 						end
 					end)
 				elseif service == "shop" and def.sell > 0 then
 					button(WORDS.sell, function()
-						ask = { kind = "sell", n = entry.n }
-						view.refresh()
+						askCount("sell", tabKey, slot, entry)
 					end)
 				end
 			end
-			spec.key = table.concat({ tabKey, slot, entry.item, entry.n, have, me.level, service or "-", if ask then ask.kind .. (ask.n or "") else "-" }, "|")
+			spec.key = table.concat({ tabKey, slot, entry.item, entry.n, have, me.level, service or "-" }, "|")
 		end
 		ItemDetail.show("bag", spec)
 	end
@@ -86369,6 +88329,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 	end
 
 	function view.destroy()
+		CountBox.hide("bag")
 		ItemDetail.hide("bag")
 		if ui.detail == "bag" then
 			ui.detail = nil
@@ -86412,11 +88373,13 @@ local BY = {}
 for _, p in BM.products do
 	BY[p.id] = p
 end
--- 상점에서 팔지 않는 펫(쿠폰으로 받는 기본펫 「까망 동글이」 — ride.generated의 pets[].free · 2026-10-21): 이름 · 한 줄 설명 · 그림만 상품처럼
+-- 상점에서 팔지 않는 펫 · 탈것(쿠폰으로 받는 「아기 재까마귀」 · 「떠도는 책」 — ride.generated의 pets[].free · mounts[].free · 2026-10-21): 이름 · 한 줄 설명 · 그림만 상품처럼
 local RIDE_DATA = require(lune.data["ride.generated"])
-for _, q in RIDE_DATA.pets do
-	if q.free and not BY[q.id] then
-		BY[q.id] = { id = q.id, name = q.name, line = q.line or "", icon = "ride_" .. q.id, free = q.free }
+for _, list in { RIDE_DATA.pets, RIDE_DATA.mounts } do
+	for _, q in list do
+		if q.free and not BY[q.id] then
+			BY[q.id] = { id = q.id, name = q.name, line = q.line or "", icon = "ride_" .. q.id, free = q.free }
+		end
 	end
 end
 -- 그 상품(이름 · 한 줄 설명 · 그림 — 퀵슬롯의 설명 · 가방의 캐시 탭이 쓴다). 쿠폰 펫도 든다(위)
@@ -86563,7 +88526,7 @@ local function buildRename(body: Frame, ctx, w: number)
 	end)
 	if ok and typeof(changed) == "RBXScriptSignal" then
 		changed:Connect(function()
-			local bare = string.gsub(field.Text, "%s", "")
+			local bare = string.gsub(field.Text, "[ \t\r\n]", "") -- (%s 대신 — 한글의 가운데 바이트를 지우지 않게 · 2026-10-21)
 			if bare ~= field.Text then
 				field.Text = bare
 				return
@@ -86880,10 +88843,216 @@ end
 return CashWindow
 
 end
+MODULES['Client/lune/ui/countBox'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
+-- 수량 창 — 수를 정해야 하는 일(사기 · 팔기 · 버리기 · 맡기기 · 찾기 · 나누기)을 누르면 화면 가운데에 뜬다(메이플스토리의 수량 창처럼).
+--  사용자 2026-10-21: "잡화상점에서 물약이나 달가루 구매할때 1개 아니면 10개밖에 못사잖아 이거 수량 입력하는 모달 받아서 처리해야지 이렇게하면안되는거야 모든 곳에서 수량받아서 처리해"
+--  전에는 상점이 「1 · 10」 단추, 가방 · 창고는 상세 판의 「-10 -1 +1 +10」이었다. 경매장은 그 창 안의 수량 칸 그대로(이미 적는다).
+--  짜임(공방 js/lune/design/ui.js의 UILAYOUT.count — 횡스크롤 시험 탭의 paintCount와 같은 그림):
+--   묻는 글(WORDS.ask — 노랑) · [그림] 이름 · [−] [수량 칸] [+] [최대] · 왼쪽 「1 ~ 99개」 · 오른쪽 합계(살 때 — 모자라면 빨강) / 받을 달돈(팔 때) · 「사기 · 취소」
+--  수량 칸에 바로 적는다(숫자만 · 최대를 넘으면 최대로 · 비면 확인이 눌리지 않는다 — 셈은 shared/lune/ui/countPick.luau) · Enter = 확인. PC에서는 열리자마자 칸에 적을 수 있다(적힌 수가 골라져 있다)
+--  창 밖은 눌리지 않는다(어두운 막) · 한 번에 하나 — 그 창(owner)이 닫히면 같이 닫힌다(CountBox.hide(owner))
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local lune = ReplicatedStorage.shared.lune
+local Layout = require(lune.ui.layout)
+local Format = require(lune.ui.format)
+local CountPick = require(lune.ui.countPick)
+local WORDS = require(lune.data["ui.generated"]).words
+local Stage = require(script.Parent.Parent.stage)
+local Ui = require(script.Parent.ui)
+
+local C = Ui.COLOR
+local M = Ui.M
+local K = Layout.COUNT
+local KW = K.words
+
+local CountBox = {}
+
+local layer: Frame? = nil
+local shown = nil -- { owner, holder, field, yes(), no(), n }
+
+local function root(): Frame
+	if not layer then
+		layer = Stage.group(Stage.ui, "CountBox", 170) -- 상세 판(156) · 메뉴(160) 위
+	end
+	return layer :: Frame
+end
+
+function CountBox.shown(): boolean
+	return shown ~= nil
+end
+
+-- 지금 떠 있는 창의 주인(없으면 nil)
+function CountBox.owner(): string?
+	return if shown then shown.owner else nil
+end
+
+-- 닫는다. owner를 주면 그 창의 것일 때만
+function CountBox.hide(owner: string?)
+	if shown and (owner == nil or shown.owner == owner) then
+		shown.holder:Destroy()
+		shown = nil
+	end
+end
+
+-- 띄운다. spec = {
+--   owner = 띄운 창("shop" · "bag" · "store") · kind = 하는 일(WORDS.ask의 이름표) · icon = 그림의 이름 · name = 이름
+--   hi = 고를 수 있는 가장 많은 수(1 이상) · n = 처음 수(없으면 CountPick.first) · each = 하나의 값(살 때 — 합계) · money = 가진 달돈(살 때)
+--   gainEach = 하나를 팔 때 받는 달돈(팔 때) · onYes = function(n) 확인했을 때 · onNo = function() 취소했을 때(없어도 된다) }
+function CountBox.open(spec)
+	CountBox.hide()
+	local words = WORDS.ask[spec.kind]
+	local lo, hi = 1, math.max(1, spec.hi)
+	local holder = Stage.group(root(), "Box", 1)
+	-- 어두운 막: 창 밖을 누르지 못한다(누르면 아무 일도 없다)
+	local veil = Instance.new("TextButton")
+	veil.Name = "Veil"
+	veil.Text = ""
+	veil.AutoButtonColor = false
+	veil.BackgroundColor3 = Color3.new(0, 0, 0)
+	veil.BackgroundTransparency = 0.55
+	veil.BorderSizePixel = 0
+	veil.Size = UDim2.fromScale(1, 1)
+	veil.Parent = holder
+	local box = Instance.new("Frame")
+	box.Name = "Box"
+	box.BackgroundTransparency = 1
+	box.AnchorPoint = Vector2.new(0.5, 0.5)
+	box.Position = UDim2.fromScale(0.5, 0.5)
+	box.Size = UDim2.fromOffset(K.w, K.h)
+	box.Parent = holder
+	local panel = Ui.panel(box, 0, 0, K.w, K.h)
+	local inner = K.w - K.pad * 2
+	Ui.text(panel, words[1], K.pad, K.titleY, inner, { font = "body", color = C.gold })
+	local slot = Ui.slot(panel, K.pad, K.itemY, K.iconS)
+	Ui.smallIcon(slot.frame, spec.icon or "coin", math.floor((K.iconS - 18) / 2), math.floor((K.iconS - 18) / 2))
+	Ui.text(panel, spec.name or "", K.pad + K.iconS + 6, K.itemY + math.floor((K.iconS - M.body) / 2), inner - K.iconS - 6, { font = "body" })
+	-- [−] [수량 칸] [+] … [최대]
+	local x = K.pad
+	local field
+	local n: number? = nil
+	local paint
+	local function setN(v: number?)
+		n = v
+		local text = if v then tostring(v) else ""
+		if field.Text ~= text then
+			field.Text = text
+		end
+		paint()
+	end
+	local minus = Ui.button(panel, "-", x, K.fieldY, K.stepW, function()
+		setN(CountPick.step(n, -1, lo, hi))
+	end)
+	minus.frame.Name = "Minus"
+	x += K.stepW + K.gap
+	field = Ui.field(panel, x, K.fieldY, K.fieldW, M.button, "")
+	field.Name = "CountInput"
+	field.TextXAlignment = Enum.TextXAlignment.Center
+	x += K.fieldW + K.gap
+	local plus = Ui.button(panel, "+", x, K.fieldY, K.stepW, function()
+		setN(CountPick.step(n, 1, lo, hi))
+	end)
+	plus.frame.Name = "Plus"
+	Ui.button(panel, KW.max, K.pad + inner - K.maxW, K.fieldY, K.maxW, function()
+		setN(hi)
+	end).frame.Name = "Max"
+	Ui.text(panel, Format.fill(KW.range, { lo = lo, hi = hi }), K.pad, K.noteY, math.floor(inner / 2), { color = C.dim })
+	local sum = Ui.text(panel, "", K.pad + math.floor(inner / 2), K.noteY, inner - math.floor(inner / 2), { align = "right", color = C.gold })
+	local half = math.floor((inner - 6) / 2)
+	local state = { owner = spec.owner, holder = holder, field = field }
+	local function yes()
+		if not n or n < lo or n > hi then
+			return
+		end
+		if spec.each and spec.money and spec.each * n > spec.money then
+			return
+		end
+		local count = n
+		CountBox.hide()
+		spec.onYes(count)
+	end
+	local function no()
+		CountBox.hide()
+		if spec.onNo then
+			spec.onNo()
+		end
+	end
+	local yesBtn = Ui.button(panel, words[2], K.pad, K.buttonY, half, yes, { main = true })
+	yesBtn.frame.Name = "Yes"
+	Ui.button(panel, WORDS.askNo, K.pad + half + 6, K.buttonY, inner - half - 6, no).frame.Name = "No"
+	paint = function()
+		local ok = n ~= nil and n >= lo and n <= hi
+		if spec.each then
+			local total = spec.each * (n or 0)
+			local short = spec.money ~= nil and total > spec.money
+			sum:set(if short then KW.short else Format.fill(KW.cost, { n = Format.comma(total) }))
+			sum:color(if short then C.red else C.gold)
+			ok = ok and not short
+		elseif spec.gainEach then
+			sum:set(Format.fill(KW.gain, { n = Format.comma(spec.gainEach * (n or 0)) }))
+		else
+			sum:set("")
+		end
+		yesBtn:setEnabled(ok)
+		minus:setEnabled(n ~= nil and n > lo)
+		plus:setEnabled(n == nil or n < hi)
+		state.n = n
+	end
+	field:GetPropertyChangedSignal("Text"):Connect(function()
+		local text, v = CountPick.parse(field.Text, hi)
+		if text ~= field.Text then
+			field.Text = text -- 다시 불린다
+			return
+		end
+		n = v
+		paint()
+	end)
+	field.FocusLost:Connect(function(enter: boolean)
+		if enter then
+			yes()
+		end
+	end)
+	state.yes, state.no = yes, no
+	shown = state
+	setN(math.clamp(spec.n or CountPick.first(spec.kind, hi), lo, hi))
+	-- PC: 열리자마자 칸에 적는다(적힌 수가 골라져 있어 바로 고쳐 적힌다). 폰은 칸을 눌러야 자판이 뜬다
+	if not UserInputService.TouchEnabled or UserInputService.KeyboardEnabled then
+		pcall(function()
+			field:CaptureFocus()
+			field.SelectionStart = 1
+			field.CursorPosition = #field.Text + 1
+		end)
+	end
+	return state
+end
+
+-- (시험용 · 화면이 부르는 것과 같다) 칸에 적은 것처럼 · 확인 · 취소 · 지금의 수
+function CountBox.type(text: string)
+	if shown then
+		shown.field.Text = text
+	end
+end
+function CountBox.yes()
+	if shown then
+		shown.yes()
+	end
+end
+function CountBox.no()
+	if shown then
+		shown.no()
+	end
+end
+function CountBox.value(): number?
+	return if shown then shown.n else nil
+end
+
+return CountBox
+
+end
 MODULES['Client/lune/ui/couponWindow'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 쿠폰 창 — 메뉴 → 「쿠폰」(2026-10-21 사용자: "쿠폰 코드 입력창있어야하고 그 쿠폰 입력하면 그 기본펫 지급하는 방식으로 합니다").
 --  위에 안내 두 줄 · 쿠폰 번호를 적는 칸과 「사용」 · 아래에 결과 두 줄(받았다 · 까닭). 번호는 서버가 본다(server/lune/modules/cash.luau의 CashServer.coupon —
---  쿠폰의 목록은 서버에만 있다). 받은 펫은 가방의 「캐시」 탭에 들어온다(꺼내 둔 펫이 없으면 바로 꺼낸다 — 산 펫과 같다).
+--  쿠폰의 목록은 서버에만 있다). 받은 펫 · 탈것은 가방의 「캐시」 탭에 들어온다(꺼내 둔 펫이 없으면 바로 꺼낸다 · 고른 탈것이 없으면 그것을 고른다 — 산 것과 같다).
 --  치수 · 글은 공방 js/lune/design/ui.js의 UILAYOUT.coupon. 화면 오른쪽의 옆 판(ui/windows.luau).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
@@ -86904,11 +89073,13 @@ function CouponWindow.size(): (number, number)
 	return S.w, S.noteY + S.noteH
 end
 
--- 펫의 이름(ride.generated의 pets — 상점에서 팔지 않는 펫도 든다)
+-- 펫 · 탈것의 이름(ride.generated의 pets · mounts — 상점에서 팔지 않는 것도 든다 · 쿠폰 탈것 「떠도는 책」 2026-10-21)
 local function petName(id: string?): string
-	for _, q in RIDE.pets do
-		if q.id == id then
-			return q.name
+	for _, list in { RIDE.pets, RIDE.mounts } do
+		for _, q in list do
+			if q.id == id then
+				return q.name
+			end
 		end
 	end
 	return id or ""
@@ -86932,7 +89103,7 @@ function CouponWindow.build(body: Frame, ctx, w: number, _h: number)
 			return
 		end
 		local text = field.Text
-		if string.gsub(text, "%s", "") == "" then
+		if string.gsub(text, "[ \t\r\n]", "") == "" then
 			say(W.empty, C.dim)
 			return
 		end
@@ -86948,7 +89119,7 @@ function CouponWindow.build(body: Frame, ctx, w: number, _h: number)
 			use:setEnabled(true)
 			if ok and typeof(res) == "table" and res.ok then
 				field.Text = ""
-				say(Format.fill(W.got, { name = petName(res.pet) }), C.accent)
+				say(Format.fill(W.got, { name = petName(res.pet or res.mount) }), C.accent)
 				if ctx.couponGot then
 					ctx.couponGot(res) -- 가진 펫 · 탈것을 다시 읽는다(가방의 캐시 탭 · 폰의 단추 배치 목록)
 				end
@@ -87140,6 +89311,100 @@ function DeathBox.show(root: Instance, onReturn: () -> (), weakMin: number?)
 end
 
 return DeathBox
+
+end
+MODULES['Client/lune/ui/dungeonWindow'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
+-- 던전 창 — 그 던전의 문 앞에서 ↑(2026-10-21 — 공방 design/dungeon.js · 수정 거울숲). 문은 그 퀘스트(「수정 틈의 문」)를 끝내야 열린다.
+--  사용자: "수정틈안에 들어가면 던전 입장 멋지게 있고, 파티로 들어갈수도있고 개인으로 들어갈수도있는 문이 하나 있고, 거기에 포탈타는것처럼 상호작용하면, 던전 ui 가 나오는거지"
+--  위부터: 이름(본문 · 금색) · 오른쪽 「오늘 0/1」 / 「Lv.30 ~ 40 · 제한 시간 10분」 / 던전의 글 / 줄 / 「완료 보상」 「경험치 8,932」(지금 내 레벨로) /
+--   「몬스터는 경험치 · 아이템을 주지 않는다 — …」 / 「한국 시간 자정에 다시 열린다」 / [혼자 입장] [파티 입장] / 들어가지 못한 까닭(빨강) · 안내 한 줄.
+--  들어가기는 서버가 정한다(ctx.riftDo("enter", 던전, 파티인가) → world.luau의 onRift · dungeonEnter). 모양은 공방 시험 탭의 js/lune/ui/paint.js(paintDungeon)와 같다.
+--  화면 오른쪽의 옆 판(ui/windows.luau). 문에서 멀어지면 닫힌다(boot.luau).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local lune = ReplicatedStorage.shared.lune
+local Rift = require(lune.sim.rift)
+local Format = require(lune.ui.format)
+local Layout = require(lune.ui.layout)
+local Ui = require(script.Parent.ui)
+
+local C = Ui.COLOR
+local S = Layout.DUNGEON
+local DG = Rift.DUNGEON
+local W = DG.words
+
+local DungeonWindow = {}
+DungeonWindow.TITLE = W.title
+
+function DungeonWindow.size(): (number, number)
+	return S.w, S.h
+end
+
+-- 그 던전(arg = 단계의 이름표 — 없으면 첫 던전)
+local function tierOf(arg: any)
+	local t = Rift.tier(arg)
+	return if Rift.isDungeon(t) then t else DG.tiers[1]
+end
+DungeonWindow.tierOf = tierOf
+
+function DungeonWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
+	local t = tierOf(arg)
+	local view = {}
+	Ui.text(body, t.name, 0, 2, w - 80, { font = "body", color = C.gold })
+	local today = Ui.text(body, "", 0, 4, w, { align = "right", color = C.accent })
+	Ui.text(body, Format.fill(W.range, { a = t.lv, b = t.lvMax }) .. " · " .. Format.fill(W.time, { m = math.floor(DG.time / 60) }), 0, S.infoY, w, { color = C.dim })
+	Ui.text(body, t.text, 0, S.textY, w, { lines = S.textLines, color = C.text })
+	Ui.line(body, 0, S.lineY, w)
+	Ui.text(body, W.pay, 0, S.payY, S.payLabelW, { color = C.dim })
+	local xp = Ui.text(body, "", S.payLabelW, S.payY, w - S.payLabelW, { color = C.gold })
+	Ui.text(body, W.note, 0, S.noteY, w, { lines = S.noteLines, color = C.dim })
+	Ui.text(body, W.reset, 0, S.resetY, w, { color = C.dim })
+	local half = math.floor((w - S.btnGap) / 2)
+	local entering = false
+	local function enter(party: boolean)
+		if entering then
+			return -- 답을 기다리는 중(두 번 눌러 방에 든 뒤 「문 앞에서 …」가 뜨지 않게)
+		end
+		entering = true
+		ctx.riftDo("enter", t.id, party)
+		entering = false
+	end
+	local solo = Ui.button(body, W.solo, 0, S.btnY, half, function()
+		enter(false)
+	end, { main = true })
+	solo.frame.Name = "Solo"
+	local party = Ui.button(body, W.party, half + S.btnGap, S.btnY, w - half - S.btnGap, function()
+		enter(true)
+	end)
+	party.frame.Name = "Party"
+	local note = Ui.text(body, "", 0, S.footY, w, { color = C.dim })
+
+	function view.refresh()
+		local me = ctx.me()
+		local level = if me then me.level else 1
+		local got = ctx.rift()
+		local done = got and got.dungeonDone and got.dungeonDone[t.id] == true
+		today:set(Format.fill(W.today, { n = if done then 1 else 0, max = DG.perDay }))
+		today:color(if done then C.dim else C.accent)
+		xp:set(Format.fill(W.xp, { n = Format.comma(Rift.dungeonXp(level)) }))
+		local open = not done and level >= t.lv and level <= t.lvMax
+		solo:setEnabled(open)
+		party:setEnabled(open and ctx.partyHere ~= nil and ctx.partyHere())
+		local why = got and got.why
+		if not why and done then
+			why = W.done
+		elseif not why and level < t.lv then
+			why = Format.fill(W.low, { a = t.lv })
+		elseif not why and level > t.lvMax then
+			why = Format.fill(W.high, { b = t.lvMax })
+		end
+		note:set(why or W.partyHint)
+		note:color(if why then C.red else C.dim)
+	end
+	view.refresh()
+	return view
+end
+
+return DungeonWindow
 
 end
 MODULES['Client/lune/ui/equipWindow'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
@@ -87725,7 +89990,9 @@ function ForgeWindow.build(body: Frame, ctx, w: number, h: number, arg: any)
 		hammer.Visible = beforeReveal and t < ForgeWindow.REVEAL
 		if hammer.Visible then
 			local nextAt = ForgeWindow.STRIKES[strike + 1]
-			local lift = if since < 0.1 then 0 elseif nextAt then math.min(1, (t - ForgeWindow.STRIKES[strike] - 0.1) / math.max(0.05, nextAt - ForgeWindow.STRIKES[strike] - 0.15)) else 1
+			-- 앞의 내려치기(첫 내려치기 전이면 연출의 시작 0초). 2026-10-21: 전에는 첫 내려치기 전에 STRIKES[0](없음)으로 빼서 장마다 오류가 났다(퍼블리시한 게임의 오류 보고 1,727번)
+			local prevAt = ForgeWindow.STRIKES[strike] or 0
+			local lift = if since < 0.1 then 0 elseif nextAt then math.min(1, math.max(0, t - prevAt - 0.1) / math.max(0.05, nextAt - prevAt - 0.15)) else 1
 			hammer.Position = UDim2.fromOffset(math.floor(S / 2) - 11, math.floor(-6 - 14 * lift)) -- 치는 순간 머리가 칸의 윗쪽에 닿는다
 		end
 		flash.BackgroundTransparency = if beforeReveal and since < 0.12 then 0.35 + since * 5 else 1
@@ -88334,8 +90601,8 @@ MODULES['Client/lune/ui/itemDetail'] = function(script, game, require, task, os,
 --  사용자 2026-10-08: "장비 탭에서 각각의 장비를 선택하면 그 해당장비가 장비창 옆에 작은모달이 떠서 아이템 스펙이 나와야합니다. 인벤토리에서 선택도 마찬가지입니다. 기타아이템, 소비아이템 모두 마찬가지입니다."
 --  판의 짜임(공방 js/lune/design/ui.js의 UILAYOUT.detail — 횡스크롤 시험 탭의 paintDetail과 같은 그림):
 --   위에 그림 칸과 이름(본문 글씨 — 색 = 성능 단) · 그 아래 갈래 / 줄마다 이름(흐린 글)과 값 / 알림 글(장착하면 전투력 +n …) / 단추(장착 · 사용 · 분해 · 버리기 …).
---   버리기 · 맡기기 · 찾기 · 팔기 · 나누기를 누르면 단추 자리에 "몇 개를 …할까요?"와 수를 고르는 단추 · 「…한다 · 그만둔다」가 뜬다(spec.ask — ItemDetail.ask가 짓는다).
---	장비를 팔 때는 수를 고르지 않고 팔지 말지만 묻는다.
+--   장비를 팔 때 · 분해할 때는 단추 자리에 묻는 글과 「팔기 · 취소」가 뜬다(spec.ask — ItemDetail.ask가 짓는다).
+--   버리기 · 맡기기 · 찾기 · 팔기 · 나누기의 수는 화면 가운데의 수량 창이 정한다(ui/countBox.luau — 2026-10-21. 전에는 여기의 「-10 -1 +1 +10」이었다 — 그 그림은 아래에 남아 있지만 쓰는 곳이 없다)
 --  적는 글은 shared/lune/ui/itemInfo.luau가 짓는다(공방의 gearInfo · goodsInfo와 같은 글). 판은 창들보다 위, 닫기(X)들보다 아래의 층에 뜬다.
 --  PC · 스마트폰 같은 판이다 — 칸을 누르면(손가락으로 톡) 뜨고, 판의 ×나 빈 칸을 누르면 닫힌다.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -89027,7 +91294,7 @@ function MapWindow.build(body: Frame, ctx, w: number, _h: number)
 			-- ③ 퀘스트의 표시: 표시의 오른쪽 위에
 			local mark = if p.node then marks[p.id] else nil
 			if mark then
-				local part = Kit.part(group, if mark == "?" then UI.questMark.done else UI.questMark.new, 0, 0)
+				local part = Kit.part(group, if mark == "?" then UI.questMark.done elseif mark == "!!" then UI.questMark.big else UI.questMark.new, 0, 0) -- !! = 큰 「!」(2026-10-21)
 				part.Position = UDim2.fromOffset(x + r, y - r - part.Size.Y.Offset + 2)
 				part.Name = "Quest"
 				part.ZIndex = 5
@@ -89844,6 +92111,8 @@ local ItemCell = require(script.Parent.itemCell)
 local BagWindow = require(script.Parent.bagWindow)
 local ItemDetail = require(script.Parent.itemDetail)
 local Windows = require(script.Parent.windows)
+local CountBox = require(script.Parent.countBox) -- 수량 창(2026-10-21)
+local CountPick = require(lune.ui.countPick)
 
 local C = Ui.COLOR
 local D = Items.data
@@ -89913,7 +92182,6 @@ local function buildStore(body: Frame, ctx, w: number)
 	end
 	local tab = 1
 	local sel = nil :: { tab: string, slot: number, id: any }? -- 고른 칸(id = 장비의 번호 · 묶음의 이름표)
-	local ask: number? = nil -- 찾을 수를 고르는 중이면 그 수
 	local hot: number? = nil -- 끌던 것을 놓을 칸
 	local lastClick = { slot = 0, t = 0 }
 	local dragEnd = 0
@@ -89923,7 +92191,7 @@ local function buildStore(body: Frame, ctx, w: number)
 		return KEYS[tab]
 	end
 	local function unselect()
-		sel, ask = nil, nil
+		sel = nil
 	end
 	local function redraw()
 		Windows.refresh(ctx.me())
@@ -89934,6 +92202,32 @@ local function buildStore(body: Frame, ctx, w: number)
 		if ui.bagShow then
 			ui.bagShow(tabKey)
 		end
+	end
+	-- 묶음을 찾는다: 둘 이상이면 수량 창(처음 = 그 묶음 전부 · 가장 많이 = 가방에 들어가는 만큼 — 2026-10-21 사용자 "모든 곳에서 수량받아서 처리해") · 하나면 바로
+	local function askTake(tabKey: string, slot: number, entry, to: number?)
+		local bag = ctx.bag()
+		if not bag or entry.n <= 1 then
+			take(tabKey, slot, 1, to)
+			return
+		end
+		local hi = math.min(entry.n, Bag.roomInView(bag, entry.item))
+		if hi < 1 then
+			take(tabKey, slot, nil, to) -- 가방에 자리가 없다(서버가 까닭을 알린다)
+			return
+		end
+		local def = Items.goods(entry.item)
+		CountBox.open({
+			owner = "store",
+			kind = "take",
+			icon = if def then def.icon else "coin",
+			name = if def then def.name else entry.item,
+			hi = hi,
+			onYes = function(n: number)
+				take(tabKey, slot, n, to)
+				unselect()
+				redraw()
+			end,
+		})
 	end
 
 	local tabs = {}
@@ -89975,11 +92269,14 @@ local function buildStore(body: Frame, ctx, w: number)
 			if not it then
 				unselect()
 			elseif twice then
-				take(key(), i, nil, nil) -- 두 번 누르기: 전부 찾는다
+				if it.item then
+					askTake(key(), i, it, nil) -- 두 번 누르기: 찾는다(묶음은 수량 창 — 처음 = 전부)
+				else
+					take(key(), i, nil, nil)
+				end
 				unselect()
 			else
 				sel = { tab = key(), slot = i, id = if it.item then it.item else it.id }
-				ask = nil
 				ui.detail = "shop"
 			end
 			redraw()
@@ -90038,7 +92335,12 @@ local function buildStore(body: Frame, ctx, w: number)
 					if ui.bagDrop then
 						local over, slot = ui.bagDrop(at, tabKey)
 						if over then
-							take(tabKey, from, nil, slot)
+							local it2 = cell.item
+							if tabKey ~= "gear" and it2 and it2.item then
+								askTake(tabKey, from, it2, slot) -- 묶음은 수량 창(처음 = 전부 — 2026-10-21)
+							else
+								take(tabKey, from, nil, slot)
+							end
 							if sel and sel.tab == tabKey and sel.slot == from then
 								unselect()
 							end
@@ -90072,7 +92374,25 @@ local function buildStore(body: Frame, ctx, w: number)
 			return false
 		end
 		local to = if tabKey == key() then slotAt(at) else nil
-		ctx.send("Item", "storeIn", tabKey, from, nil, to)
+		local bag = ctx.bag()
+		local it = if bag and bag[tabKey] then bag[tabKey][from] else nil
+		local def = if it and it.item then Items.goods(it.item) else nil
+		local hi = if def and bag then math.min(it.n, Bag.storeRoomInView(bag, it.item)) else 0
+		if def and it.n > 1 and hi >= 1 then
+			-- 묶음은 수량 창(처음 = 전부 · 가장 많이 = 창고에 들어가는 만큼 — 2026-10-21 사용자 "모든 곳에서 수량받아서 처리해")
+			CountBox.open({
+				owner = "store",
+				kind = "store",
+				icon = def.icon,
+				name = def.name,
+				hi = hi,
+				onYes = function(n: number)
+					ctx.send("Item", "storeIn", tabKey, from, n, to)
+				end,
+			})
+		else
+			ctx.send("Item", "storeIn", tabKey, from, nil, to)
+		end
 		if tabKey ~= key() then
 			tab = table.find(KEYS, tabKey) or tab
 			unselect()
@@ -90134,7 +92454,6 @@ local function buildStore(body: Frame, ctx, w: number)
 			redraw()
 		end }
 		if tabKey == "gear" then
-			ask = nil
 			spec.info = ItemInfo.gear(entry, me, bag.equip[entry.slot], false)
 			table.insert(spec.buttons, { text = WORDS.take, main = true, onClick = function()
 				take("gear", slot, nil, nil)
@@ -90144,37 +92463,16 @@ local function buildStore(body: Frame, ctx, w: number)
 			spec.key = table.concat({ "store", entry.id, entry.q, entry.star, tostring(entry.broken), me.level }, "|")
 		else
 			spec.info = ItemInfo.goods(entry.item, me, entry.n) -- 가진 수 = 창고의 그 묶음
-			if ask then
-				local n = math.clamp(ask, 1, entry.n)
-				ask = n
-				spec.ask = ItemDetail.ask("take", n, 1, entry.n, {
-					set = function(v: number)
-						ask = v
-						view.refresh()
-					end,
-					yes = function(countNow: number)
-						take(tabKey, slot, countNow, nil)
-						ask = nil
-						view.refresh()
-					end,
-					no = function()
-						ask = nil
-						view.refresh()
-					end,
-				})
-			else
-				table.insert(spec.buttons, { text = WORDS.take, main = true, onClick = function()
-					if entry.n == 1 then
-						take(tabKey, slot, 1, nil)
-						unselect()
-						redraw()
-					else
-						ask = entry.n -- 처음에는 그 묶음 전부
-						view.refresh()
-					end
-				end })
-			end
-			spec.key = table.concat({ "store", tabKey, slot, entry.item, entry.n, me.level, if ask then ask else "-" }, "|")
+			table.insert(spec.buttons, { text = WORDS.take, main = true, onClick = function()
+				if entry.n == 1 then
+					take(tabKey, slot, 1, nil)
+					unselect()
+					redraw()
+				else
+					askTake(tabKey, slot, entry, nil) -- 수량 창(처음 = 그 묶음 전부)
+				end
+			end })
+			spec.key = table.concat({ "store", tabKey, slot, entry.item, entry.n, me.level }, "|")
 		end
 		ItemDetail.show("shop", spec)
 	end
@@ -90213,6 +92511,7 @@ local function buildStore(body: Frame, ctx, w: number)
 	end
 
 	function view.destroy()
+		CountBox.hide("store")
 		ItemDetail.hide("shop")
 		if ui.detail == "shop" then
 			ui.detail = nil
@@ -90232,7 +92531,8 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 	local ui = ctx.ui
 	local panel = body.Parent :: GuiObject
 
-	-- 상점: 물건마다 한 줄([그림] 이름 · [달돈] 값 · 사기). 물약(단마다 따로 판다 — 가방의 소비 탭에 들어온다)과 달가루는 열 개씩도 산다
+	-- 상점: 물건마다 한 줄([그림] 이름 · [달돈] 값 · 사기). 물약(단마다 따로 판다 — 가방의 소비 탭에 들어온다) · 달가루처럼 여럿 사는 것은 「사기」를 누르면 수량 창이 뜬다
+	--  (2026-10-21 사용자: "잡화상점에서 물약이나 달가루 구매할때 1개 아니면 10개밖에 못사잖아 이거 수량 입력하는 모달 받아서 처리해야지" — 전에는 「1 · 10」 단추 둘이었다)
 	local rows = {}
 	local bx = w - ShopWindow.BUY_W
 	-- 물건이 창의 줄(MAX_ROWS)보다 많으면 목록이 스크롤한다(2026-10-18 — 달빛 부적 · 능력치 초기화 주문서로 열둘이 됐다. 창은 스마트폰의 화면 틀에 들어가야 한다)
@@ -90248,18 +92548,39 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 		local name = Ui.text(list, "", TX, y + 7, ShopWindow.NAME_W, { font = "body" })
 		local coin = Ui.smallIcon(list, "coin", bx - 8 - ShopWindow.PRICE_W - 19, y + 4)
 		local price = Ui.text(list, "", bx - 8 - ShopWindow.PRICE_W, y + 8, ShopWindow.PRICE_W, { align = "right", color = C.gold })
-		local half = math.floor((ShopWindow.BUY_W - 6) / 2)
-		local one = Ui.button(list, if many then "1" else "사기", bx, y, if many then half else ShopWindow.BUY_W, function()
-			ctx.send("Item", "buy", stock.id, 1)
+		local one = Ui.button(list, WORDS.ask.buy[2], bx, y, ShopWindow.BUY_W, function()
+			if not many then
+				ctx.send("Item", "buy", stock.id, 1)
+				return
+			end
+			-- 수량 창: 가장 많이 = 한 번에 파는 수 · 가진 달돈 · 가방의 자리(달가루는 가방에 들지 않는다). 하나도 못 사면 서버가 까닭을 알린다
+			local bag, me = ctx.bag(), ctx.me()
+			if not bag or not me then
+				return
+			end
+			local cost = Items.stockPrice(stock, me.level)
+			local hi = CountPick.buyMax(stock.max, cost, me.money, if stock.goods then Bag.roomInView(bag, stock.goods) else nil)
+			if hi < 1 then
+				ctx.send("Item", "buy", stock.id, 1)
+				return
+			end
+			CountBox.open({
+				owner = "shop",
+				kind = "buy",
+				icon = ShopWindow.stockIcon(stock, me.class),
+				name = stock.name,
+				hi = hi,
+				each = cost,
+				money = me.money,
+				onYes = function(n: number)
+					ctx.send("Item", "buy", stock.id, n)
+				end,
+			})
 		end)
-		local ten = if many
-			then Ui.button(list, "10", bx + half + 6, y, half, function()
-				ctx.send("Item", "buy", stock.id, 10)
-			end)
-			else nil
+		one.frame.Name = "Buy"
 		-- 아직 살 수 없는 것은 값과 단추 자리에 "Lv.10부터"
 		local lock = Ui.text(list, "", TX + ShopWindow.NAME_W, y + 8, w - TX - ShopWindow.NAME_W, { align = "right", color = C.dim })
-		rows[i] = { stock = stock, icon = icon, coin = coin, name = name, price = price, one = one, ten = ten, lock = lock }
+		rows[i] = { stock = stock, icon = icon, coin = coin, name = name, price = price, one = one, lock = lock }
 	end
 	-- 되사기(2026-10-18 — 메이플의 재구매): 물건의 줄 아래에 머리 한 줄 「되사기 — 이번 접속에 판 것」과 판 것들(가장 최근 것부터 · 판 값 그대로). 판 것이 없으면 감춘다
 	local backY = #stocks * ROW
@@ -90306,10 +92627,6 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 			row.lock:set(if open then "" else ("Lv.%d부터"):format(stock.from))
 			row.one.frame.Visible = open
 			row.one:setEnabled(me.money >= cost)
-			if row.ten then
-				row.ten.frame.Visible = open
-				row.ten:setEnabled(me.money >= cost * 10)
-			end
 		end
 		-- 되사기의 줄들
 		local sold = bag.buyback or {}
@@ -90336,6 +92653,7 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 	end
 
 	function view.destroy()
+		CountBox.hide("shop")
 		ui.shopDrop = nil
 	end
 	return view
@@ -98701,7 +101019,9 @@ do
 	handlers.Move(pc, x1 + 200, hc.y, 1)
 	eq(hc.x, x1 + 200, "몸을 옮기는 스킬을 쓴 직후에는 멀리 간 자리도 받는다")
 	handlers.Move(pc, x1 + 400, hc.y, 1)
-	eq(hc.x, x1 + 200, "한 번 쓰면 한 번만(이어서 또 멀리 간 자리는 받지 않는다)")
+	-- (되돌려 보낼 때 서버가 아는 자리가 땅 속이면 가장 가까운 빈 자리로 꺼낸다 — 2026-10-21. 이 시험의 x1 + 200은 사냥터의 턱에 조금 걸려 2점 옮겨진다)
+	expect(hc.x ~= x1 + 400 and math.abs(hc.x - (x1 + 200)) <= 16, ("한 번 쓰면 한 번만(이어서 또 멀리 간 자리는 받지 않는다) — %s"):format(tostring(hc.x)))
+	expect(not req("ReplicatedStorage/shared/lune/sim/physics").solidBox(SCENES.scenes[sc.scene], hc.x, hc.y), "되돌려 보낸 자리는 땅 속이 아니다")
 	run(2)
 	hc.x = x1
 	hc.cds.ax_leap = nil
@@ -101038,7 +103358,7 @@ do
 			expect(width(ask) <= L.detailInner(), ("묻는 글 %s(폭 %d)이 판의 속(%d)에 들어간다"):format(ask, width(ask), L.detailInner()))
 			expect(widthBody(pair[2]) <= two - 6, "하는 단추의 글 " .. pair[2])
 		end
-		eq(kinds, 7, "수를 고르는 일: 버리기 · 맡기기 · 찾기 · 팔기 · 나누기 · 장비 팔기 · 분해(2026-10-18 — 분해도 한 번 묻는다)")
+		eq(kinds, 8, "수를 고르는 일: 사기(2026-10-21 수량 창) · 버리기 · 맡기기 · 찾기 · 팔기 · 나누기 · 장비 팔기 · 분해(2026-10-18 — 분해도 한 번 묻는다)")
 		expect(widthBody(WD.askNo) <= two - 6, "그만두는 단추의 글")
 		expect(widthBody(WD.sort) <= L.STORE.sortW - 6, "창고의 정렬 단추의 글")
 		expect(width(WD.shopHint) <= SHOP.w - SHOP.hintX, "상점의 안내 글(끌어다 놓으면 판다)이 달돈 · 달가루의 오른쪽에 들어간다")
@@ -102254,14 +104574,14 @@ for _, def in D.list do
 		mains += 1
 	end
 	-- 이름표 = 지역 + m(메인) / s(부탁) + 차례
-	expect(string.match(def.id, "^r%d[ms]%d+$") ~= nil or (def.city and string.match(def.id, "^cq%d%d$") ~= nil) or (def.kind == "job" and def.id == "job" .. tostring(def.reward.job)), "이름표의 꼴 " .. def.id) -- cq = 2편의 흩어진 퀘스트(2026-10-16)
+	expect(string.match(def.id, "^r%d[ms]%d+$") ~= nil or (def.city and (string.match(def.id, "^cq%d%d$") ~= nil or string.match(def.id, "^dq%d%d$") ~= nil)) or (def.kind == "job" and def.id == "job" .. tostring(def.reward.job)), "이름표의 꼴 " .. def.id) -- cq = 2편의 흩어진 퀘스트(2026-10-16)
 	if def.after then
 		expect(Q.def(def.after) ~= nil, "앞 퀘스트가 있다 " .. def.id)
 	end
 	if def.playable then
 		playable += 1
 		expect(SCENES.scenes[def.scene] ~= nil, "할 수 있는 퀘스트의 맵이 있다 " .. def.id)
-		expect(npcs[def.giver] ~= nil and npcs[def.endNpc] ~= nil, "주고받는 주민이 있다 " .. def.id)
+		expect(npcs[def.giver] ~= nil and (npcs[def.endNpc] ~= nil or def.endNpc == false), "주고받는 주민이 있다 " .. def.id) -- endNpc false = 그 자리에서 끝난다(던전의 문 「수정 틈의 문」 dq01 — 2026-10-21)
 		expect(#def.done > 0, "돌려줄 때의 말이 있다 " .. def.id)
 		expect(def.auto or #def.offer > 0, "받을 때의 말이 있다 " .. def.id)
 		for _, step in def.steps do
@@ -108825,7 +111145,7 @@ do
 		expect(pixelText.Measure("↑ " .. step.act, "small") <= 220, "자리의 글이 이름표에 들어간다 " .. def.name)
 		-- 문 바로 앞이면 ↑가 문으로 간다 — 자리는 문에서 떨어져 있어야 한다
 		for _, p in sc.portals do
-			expect(math.abs(p.x - step.x) > 60 or math.abs(p.y - step.y) > 48, ("자리가 문 「%s」과 겹치지 않는다 %s"):format(p.label, def.name))
+			expect(math.abs(p.x - step.x) > 60 or math.abs(p.y - step.y) > 48 or (p.dungeon ~= nil and p.done == def.id), ("자리가 문 「%s」과 겹치지 않는다 %s"):format(p.label, def.name)) -- 던전의 문 앞의 「문에 손 대기」는 그 문이 닫혀 있는 동안의 것(2026-10-21)
 		end
 		-- 주민 바로 앞이어도 안 된다(↑가 한 가지 일만 하게)
 		for _, n in sc.npcs or {} do
@@ -110453,6 +112773,12 @@ do
 			end
 			return item
 		end,
+		field = function() -- 글을 적는 칸(확성기 — 2026-10-21)
+			local f = frame("Field")
+			f.Text = ""
+			f.FocusLost = { Connect = function() end }
+			return f
+		end,
 		button = function(_, text, x, y, w, onClick, opts)
 			local font = if opts and opts.font then opts.font elseif opts and opts.h and opts.h < 26 then "small" else "body"
 			table.insert(buttons, { text = text, x = x, w = w, font = font, click = onClick })
@@ -110521,7 +112847,7 @@ do
 			for _, b in buttons do
 				table.insert(names, b.text)
 			end
-			expect(#names >= 3, "탭에 단추가 있다 " .. t.name)
+			expect(#names >= (if t.id == "acct" then 1 else 3), "탭에 단추가 있다 " .. t.name) -- (계정 탭은 쿠폰 기록 지우기 하나 — 2026-10-21)
 			for _, name in names do
 				for _, b in buttons do
 					if b.text == name then
@@ -110617,6 +112943,11 @@ do
 				h.tut.step = Tut.TOTAL
 			end
 			local trip = handlers.Travel(pAdmin, portal.to)
+			if portal.dungeon then
+				-- 던전의 문(2026-10-21 — 수정 거울숲): 맵을 옮기지 않는다(앞에서 ↑ = 던전 창 · 들어가기는 Rift "enter")
+				expect(trip == nil and sAdmin.scene == here, ("%s: 던전의 문 %s으로는 걸어 들어가지 못한다"):format(key, portal.to))
+				continue
+			end
 			expect(trip ~= nil and SCENES.base(trip.scene) == portal.to and sAdmin.scene == trip.scene, ("%s: 관리로 옮긴 뒤 문 %s을 지난다"):format(key, portal.to))
 			if key == Tut.SCENE then
 				expect(h.tut.done, "꿈의 문을 지나면 튜토리얼이 끝난다")
@@ -111966,6 +114297,7 @@ for ci, class in { "riven", "axion", "mooni" } do
 	local tslots = table.clone(slots0)
 	tslots[9], tslots[1] = tslots[1], false
 	tslots[6], tslots[3] = tslots[3], false
+	tslots[13], tslots[14] = "act_jump", "act_interact" -- 폰의 칸 13 · 14 = 점프 · 상호작용(2026-10-21 — 늘 하나씩 있다)
 	local tback = handlers.TouchSlots(p, tslots)
 	expect(same(tback, tslots), class .. ": 스마트폰의 배치도 받아 둔다")
 
@@ -113219,7 +115551,7 @@ for _, def in Quests.list do
 		-- ㄷ) 다 했다: 돌려줄 주민이 선 맵
 		t = Navi.target(def.id, book, level, nil)
 		expect(Quests.isReady(book, def.id), "다 한 퀘스트 " .. def.id)
-		expect(t ~= nil and t.kind == "npc" and t.npc == def.endNpc and t.scene == Quests.endScene(def) and npcIn(t.scene, def.endNpc), ("다 하면 돌려줄 주민에게 %s"):format(def.id))
+		expect(def.endNpc == false or (t ~= nil and t.kind == "npc" and t.npc == def.endNpc and t.scene == Quests.endScene(def) and npcIn(t.scene, def.endNpc)), ("다 하면 돌려줄 주민에게 %s"):format(def.id)) -- endNpc false = 그 자리에서 끝난다(2026-10-21)
 		if t and def.region == "r1" then
 			expect(walk(def.scene, t, book) ~= nil, ("하던 맵에서 돌려줄 주민까지 문을 따라 닿는다 %s"):format(def.id))
 		end
@@ -113474,7 +115806,7 @@ do
 	local panels, scrolls = {}, {}
 	MOCK("Client/lune/ui/ui", {
 		COLOR = setmetatable({}, { __index = function(_, k) return k end }),
-		M = { small = 10, body = 12 },
+		M = { small = 10, body = 12, smallLine = 14 },
 		measure = function(text: string, font: string?) return (pixelText.Measure(text, font or "small")) end,
 		box = function(parent, x, y, w, h, color, alpha)
 			expect(w > 0 and h > 0, "네모의 크기가 0보다 크다")
@@ -114001,10 +116333,10 @@ do
 	end
 	MOCK("Client/lune/ui/ui", {
 		COLOR = setmetatable({}, { __index = function(_, k) return k end }),
-		M = { small = 10, body = 12 },
+		M = { small = 10, body = 12, smallLine = 14 },
 		text = function(parent, text, x, y, width, opts)
 			local isTitle = opts and opts.font == "body"
-			local isSub = opts and opts.font == nil and opts.lines == nil
+			local isSub = opts and opts.font == nil and opts.color == "text" -- 안내 한 줄은 accent
 			return { set = function(_, v)
 				if isTitle then
 					shownTitle = v
@@ -114639,17 +116971,19 @@ do
 		if t.slot then
 			slots[t.slot] = t
 		end
-		if t.act == "interact" then
-			act = t
-		end
 	end
+	act = slots[Quick.ACTS.act_interact.home] -- 상호작용이 처음 놓이는 칸 단추(2026-10-21 — 전의 상호작용 단추 자리)
 	expect(slots[1] == nil, "칸 1의 단추는 없다(상호작용 단추 아래에 있던 것)")
 	for i = 2, 12 do
 		expect(slots[i] ~= nil, "칸 " .. i .. "의 단추가 있다")
 	end
-	-- 2026-10-21에 늘린 칸 13 · 14는 PC의 퀵슬롯에만(스마트폰은 사용자가 정한 단추 열하나 그대로 — 펫 · 탈것은 가방의 캐시 탭에서)
-	expect(slots[13] == nil and slots[14] == nil, "칸 13 · 14의 단추는 없다")
-	eq(#Quick.TOUCH, 11, "단추가 있는 칸은 열하나")
+	-- 2026-10-21(사용자: "상호작용, 점프키 같은거 위치 다 바꿀수있어야해요 드래그앤 드랍으로 다른 버튼들처럼"): 전의 점프 · 상호작용 단추가 칸 13 · 14의 단추가 되었다
+	expect(slots[13] ~= nil and slots[14] ~= nil, "칸 13 · 14의 단추가 있다(처음에는 점프 · 상호작용)")
+	eq(slots[Quick.ACTS.act_jump.home], slots[13], "점프는 처음에 칸 13(전의 점프 단추 자리)")
+	eq(#Quick.TOUCH, 13, "단추가 있는 칸은 열셋(칸 2 ~ 14)")
+	for _, t in UI.touch do
+		expect(t.act ~= "jump" and t.act ~= "interact", "따로 된 점프 · 상호작용 단추는 없다 — " .. t.name)
+	end
 	for _, t in UI.touch do
 		if t ~= act and t.kind ~= "hud" then
 			local under = t.y >= act.y + act.h and t.y < act.y + act.h + 40 and t.x < act.x + act.w and t.x + t.w > act.x
@@ -114665,6 +116999,7 @@ do
 		local pc = Quick.start(c.skills)
 		expect(start[1] == false and start[5] == Quick.START_POTION, class .. ": 새 캐릭터의 물약은 칸 5의 단추에")
 		expect(start[2] == pc[2] and start[3] == pc[3] and start[4] == pc[4], class .. ": 사냥기 · 보스기 · 이동기는 큰 단추 그대로")
+		expect(start[13] == "act_jump" and start[14] == "act_interact", class .. ": 새 캐릭터의 폰 배치 — 점프 · 상호작용은 전의 그 단추 자리(칸 13 · 14)")
 		local h = Hero.new(1, class)
 		expect(same(h.tslots, start), class .. ": 새 캐릭터의 폰 배치")
 		expect(same(h.slots, pc) and h.slots[1] == Quick.START_POTION, class .. ": PC의 퀵슬롯은 그대로(물약은 첫 칸)")
@@ -119271,7 +121606,10 @@ bag.equip.weapon = real
 ui.forgeResult, ui.forgeSeq = "ok", ui.forgeSeq + 1
 view.refresh()
 expect(textAt("★0 → ★1") ~= nil, "결과가 뜨기 전에는 누르기 전의 별")
-view.step(0.5)
+-- 첫 내려치기(0.05초) 전의 장(2026-10-21 퍼블리시한 게임의 오류 보고: forgeWindow:417 — STRIKES[0]으로 빼서 장마다 오류였다)
+local okEarly, errEarly = pcall(view.step, 0.02)
+expect(okEarly, "첫 내려치기 전의 장도 오류 없이 — " .. tostring(errEarly))
+view.step(0.48)
 expect(view.animating() and textAt("★0 → ★1") ~= nil, "망치를 내려치는 중")
 view.step(0.6)
 expect(textAt("★1 → ★2") ~= nil, "결과가 뜨면 새 별")
@@ -122738,12 +125076,6 @@ local Items = req("ReplicatedStorage/shared/lune/sim/items")
 local Layout = req("ReplicatedStorage/shared/lune/ui/layout")
 local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
 local K = Layout.TOUCHCHOOSER
-local leftmost = math.huge -- 칸 단추 가운데 가장 왼쪽(화면 틀의 점 — 게임 도트 x 2)
-for _, t in UI.touch do
-	if t.slot then
-		leftmost = math.min(leftmost, t.x * 2)
-	end
-end
 local few = Layout.touchChooser(7, 432)
 expect(not few.scroll and few.viewH == 2 * few.rowH, "놓을 것이 일곱이면 두 줄 · 밀지 않는다")
 local uses = 0
@@ -122767,10 +125099,17 @@ for who, c in CLASSES.classes do
 		n += 1
 	end
 	for _, inset in { 0, 40 } do
-		local m = Layout.touchChooser(n, 432 - inset)
+		local m = Layout.touchChooserFit(n, 432, inset, UI.touch, 2)
 		expect(K.top + m.h <= 432 - inset - K.bottom, ("%s: 놓을 것 %d개 — 판의 아래 끝 %d(화면 틀 %d 안)"):format(who, n, inset + K.top + m.h, 432))
 		expect(m.scroll and m.viewH < m.contentH, who .. ": 다 보이지 않는 줄은 밀어서 본다")
-		expect(K.x + m.w < leftmost, ("%s: 판의 오른쪽 끝 %d — 칸 단추(왼쪽 끝 %d)를 덮지 않는다"):format(who, K.x + m.w, leftmost))
+		-- 판이 칸 단추를 덮지 않는다(2026-10-21 — 왼쪽 아래의 칸 14(처음에는 상호작용)도 끌어 옮기는 단추다: 판은 그 위에서 끝난다)
+		local px0, py0, px1, py1 = K.x, inset + K.top, K.x + m.w, inset + K.top + m.h
+		for _, t in UI.touch do
+			if t.slot then
+				local over = px0 < t.x * 2 + t.w * 2 and t.x * 2 < px1 and py0 < t.y * 2 + t.h * 2 and t.y * 2 < py1
+				expect(not over, ("%s: 판(%d,%d ~ %d,%d)이 칸 %d의 단추를 덮지 않는다"):format(who, px0, py0, px1, py1, t.slot))
+			end
+		end
 	end
 end
 
@@ -123310,6 +125649,26 @@ for _, ratio in { 2, 2.5 } do
 	end
 end
 
+-- ⑦ 깨진 글(2026-10-21 퍼블리시한 게임의 오류 보고: pixelText:55 invalid UTF-8 code 554번)
+do
+	local broken = "가나" .. string.sub("다", 1, 2) -- 「다」의 앞 두 바이트만(반쪽 글자)
+	expect(utf8.len(broken) == nil, "(반쪽 글자를 만들었다)")
+	local okM, w = pcall(pixelText.Measure, broken, "small")
+	expect(okM and typeof(w) == "number" and w > 0, "반쪽 글자가 있어도 폭을 잰다(오류 없이)")
+	local fixed = pixelText.Clean(broken)
+	expect(utf8.len(fixed) ~= nil and string.sub(fixed, 1, 6) == "가나", "반쪽 글자는 「?」로 — 앞의 글은 그대로: " .. fixed)
+	eq(pixelText.Clean("달빛나그네"), "달빛나그네", "온전한 글은 그대로")
+	local okF, fit = pcall(pixelText.Fit, broken .. "라마바사아자차카", 30, 1, "small")
+	expect(okF and utf8.len(fit) ~= nil, "줄여도 온전한 글")
+	-- 한글로 줄인 끝의 빈칸만 지운다(%s는 한글의 가운데 바이트를 빈칸으로 볼 수 있다)
+	for _, name in { "은빛달토끼를좋아하는용사", "가나다라마바사아자차카타", "한글 이름 줄이기 시험" } do
+		local f = pixelText.Fit(name, 40, 1, "small")
+		expect(utf8.len(f) ~= nil and string.sub(f, -3) == "…", "줄인 이름이 온전한 글 — " .. f)
+	end
+	local Cash2 = req("ReplicatedStorage/shared/lune/sim/cash")
+	eq(Cash2.couponCode(" dong geuli	"), "DONGGEULI", "쿠폰 번호의 빈칸 · 탭을 뺀다")
+end
+
 -- ⑥ 달빛 상점(2026-10-21 사용자: "달빛패스 일딴 비활성화해 그리고 달빛상점에서 펫은 펫 탭으로 따로 빼고 편의 가 아니라 그리고 지금 달빛상점 들어가면 ui가 너무 작아 모바일에서도 반응형")
 do
 	local SHOP = BM.shop
@@ -123444,6 +125803,1597 @@ do
 	expect(sq.acct.bm.pets.pet_crow == true and sq.acct.bm.petOut == "pet_crow", "이미 쓴 쿠폰의 계정이 들어오면 지금의 쿠폰 펫(아기 재까마귀)을 받는다")
 	expect(disk[7002].bm.pets and table.find(disk[7002].bm.pets, "pet_crow") ~= nil, "바로 저장한다")
 	World.removePlayer(q)
+end
+
+-- 관리자의 「쿠폰 기록 지우기」(2026-10-21 사용자: "쿠폰 기록을 초기화해줘 쿠폰등록하는것부터 영상을찍어야해")
+do
+	local Admin = req("ServerScriptService/server/lune/modules/admin")
+	local aid = next(Admin.IDS)
+	local pa = { UserId = aid, Name = "admin", DisplayName = "admin", attrs = {} }
+	pa.SetAttribute = function(self, k, v) self.attrs[k] = v end
+	pa.Kick = function() end
+	handlers.Ready(pa)
+	local mk = handlers.Chars(pa, "create", "쿠폰영상", "axion")
+	handlers.Chars(pa, "enter", mk.id)
+	local sa = World.session(pa)
+	expect(handlers.Coupon(pa, code).ok, "관리자도 쿠폰을 쓴다")
+	expect(sa.acct.bm.pets.pet_crow and sa.acct.bm.petOut == "pet_crow", "쿠폰 펫을 받았다")
+	sa.acct.bm.pets.pet_silver = true -- 산 펫은 지우지 않는다
+	local res = handlers.Admin(pa, "coupons")
+	expect(res and res.ok, "쿠폰 기록을 지운다 — " .. tostring(res and res.msg))
+	expect(next(sa.acct.bm.coupons) == nil, "쓴 쿠폰이 없다")
+	expect(not sa.acct.bm.pets.pet_crow and sa.acct.bm.petOut == false, "쿠폰 펫도 빠지고 꺼내 둔 것도 넣었다")
+	expect(sa.acct.bm.pets.pet_silver == true, "산 펫은 그대로")
+	expect(disk[aid] and (disk[aid].bm.coupons == nil or next(disk[aid].bm.coupons) == nil), "바로 저장한다")
+	local again = handlers.Coupon(pa, code)
+	expect(again and again.ok and sa.acct.bm.pets.pet_crow, "다시 처음부터 쿠폰을 쓸 수 있다")
+	local np = { UserId = 7003, Name = "user7003", DisplayName = "user7003", attrs = {} }
+	np.SetAttribute = function(self, k, v) self.attrs[k] = v end
+	np.Kick = function() end
+	handlers.Ready(np)
+	local mk2 = handlers.Chars(np, "create", "보통손님", "riven")
+	handlers.Chars(np, "enter", mk2.id)
+	eq(handlers.Admin(np, "coupons"), nil, "관리자가 아니면 듣지 않는다")
+	World.removePlayer(pa)
+	World.removePlayer(np)
+end
+
+end)
+runTest('71_lune_megaphone', function()
+-- 「달의 계승자」 — 관리자의 확성기(server/lune/modules/megaphone.luau · world.luau onAdmin "megaphone" · 2026-10-21).
+--  사용자: "로블록스는 서버가 여러개가 돌아가는 구조잖아 내가 모든 서버에 확성기로 말할수있나? 어드민기능으로 확성기같은게 필요한데"
+--  보는 것: ① 글 고르기(빈 글 · 80자 넘음 · 줄바꿈) ② 관리자가 보내면 글을 거른 뒤 이 서버의 모두에게(캐릭터 고르기 화면의 사람도) · 다른 서버로 보낸다(MessagingService)
+--   ③ 보낸 서버로 되돌아온 소식은 다시 띄우지 않는다 · 다른 서버에서 온 소식은 띄운다 ④ 5초에 한 번 ⑤ 관리자가 아니면 듣지 않는다
+local PACKETS = req("ReplicatedStorage/shared/lune/net/packets")
+local packets = PACKETS.list or PACKETS
+expect(packets.Megaphone ~= nil and packets.Megaphone.Direction == "ServerToClient", "확성기 패킷(서버 → 화면)")
+
+local handlers, fired, published = {}, {}, {}
+local subscribed = nil
+MOCK("ReplicatedStorage/shared/lune/net/net", {
+	FireClient = function(name, player, ...)
+		table.insert(fired, { name = name, player = player, args = { ... } })
+	end,
+	OnServer = function(name, fn)
+		handlers[name] = fn
+	end,
+})
+local function signal()
+	return { Connect = function() end }
+end
+SERVICE("MessagingService", {
+	PublishAsync = function(_, topic, data)
+		table.insert(published, { topic = topic, data = data })
+	end,
+	SubscribeAsync = function(_, topic, fn)
+		if topic == "LuneMegaphone" then
+			subscribed = fn
+		end
+	end,
+})
+SERVICE("HttpService", { GenerateGUID = (function()
+	local n = 0
+	return function()
+		n += 1
+		return "id-" .. n
+	end
+end)() })
+SERVICE("Players", { PlayerAdded = signal(), PlayerRemoving = signal(), GetPlayers = function() return {} end })
+SERVICE("RunService", { Heartbeat = signal() })
+SERVICE("TextService", { FilterStringAsync = function(_, text) return { GetNonChatStringForBroadcastAsync = function() return (string.gsub(text, "나쁜말", "####")) end } end })
+local disk, names = {}, {}
+MOCK("ServerScriptService/server/lune/modules/store", {
+	lock = function() return true end,
+	unlock = function() end,
+	loadAccount = function(id) return disk[id] end,
+	saveAccount = function(id, data) disk[id] = data; return true end,
+	loadOld = function() return nil end,
+	nameOwner = function(key) return names[key] end,
+	claimName = function(key, id) names[key] = id; return true end,
+	freeName = function(key) names[key] = nil end,
+	rankSet = function() end,
+	rankRemove = function() end,
+	rankTop = function() return {} end,
+	rankInfoSet = function() end,
+	rankInfoGet = function() return nil end,
+	rankInfoRemove = function() end,
+	isOffline = function() return false end,
+	marketRead = function() return true, nil end,
+	marketUpdate = function(_, fn) return true, nil, nil, fn(nil) end,
+})
+local World = req("ServerScriptService/server/lune/modules/world")
+local Admin = req("ServerScriptService/server/lune/modules/admin")
+local Megaphone = req("ServerScriptService/server/lune/modules/megaphone")
+World.start()
+expect(subscribed ~= nil, "다른 서버의 소식을 듣는다(MessagingService · LuneMegaphone)")
+
+-- ① 글 고르기
+eq((Megaphone.clean("  점검 안내  ")), "점검 안내", "앞뒤 빈칸을 뺀다")
+eq((Megaphone.clean("한 줄\n두 줄")), "한 줄 두 줄", "줄바꿈은 빈칸으로")
+local none, whyEmpty = Megaphone.clean("   ")
+expect(none == nil and whyEmpty ~= nil, "빈 글은 보내지 않는다")
+local long, whyLong = Megaphone.clean(string.rep("가", Megaphone.MAX + 1))
+expect(long == nil and string.find(whyLong or "", tostring(Megaphone.MAX)) ~= nil, "80자를 넘으면 보내지 않는다 — " .. tostring(whyLong))
+expect(Megaphone.clean(string.rep("가", Megaphone.MAX)) ~= nil, "80자는 보낸다")
+expect(Megaphone.clean("가나" .. string.sub("다", 1, 2)) == nil, "깨진 글은 보내지 않는다")
+
+local function person(id: number, name: string?)
+	local p = { UserId = id, Name = "u" .. id, DisplayName = "u" .. id, attrs = {} }
+	p.SetAttribute = function(self, k, v) self.attrs[k] = v end
+	p.Kick = function() end
+	handlers.Ready(p)
+	if name then
+		local made = handlers.Chars(p, "create", name, "riven")
+		handlers.Chars(p, "enter", made.id)
+	end
+	return p
+end
+local admin = person(next(Admin.IDS), "확성기시험")
+local other = person(7101, "듣는사람")
+local lobby = person(7102) -- 캐릭터 고르기 화면에 있는 사람
+local function heard(p)
+	local out = {}
+	for _, f in fired do
+		if f.name == "Megaphone" and f.player == p then
+			table.insert(out, f.args[1])
+		end
+	end
+	return out
+end
+
+-- ② 보낸다
+local r = handlers.Admin(admin, "megaphone", "오늘 밤 9시에 점검합니다 나쁜말")
+expect(r and r.ok and r.msg == "모든 서버에 보냈다", "보냈다 — " .. tostring(r and r.msg))
+for _, p in { admin, other, lobby } do
+	local got = heard(p)
+	eq(#got, 1, p.Name .. ": 한 번 받는다")
+	eq(got[1], "오늘 밤 9시에 점검합니다 ####", p.Name .. ": 거른 글을 받는다")
+end
+eq(#published, 1, "다른 서버로 한 번 보낸다")
+eq(published[1].topic, "LuneMegaphone", "확성기의 주제")
+eq(published[1].data.text, "오늘 밤 9시에 점검합니다 ####", "다른 서버로도 거른 글")
+-- ③ 되돌아온 소식 · 다른 서버의 소식
+subscribed({ Data = published[1].data })
+eq(#heard(other), 1, "보낸 서버로 되돌아온 소식은 다시 띄우지 않는다")
+subscribed({ Data = { id = "other-server-1", text = "다른 서버의 공지" } })
+eq(heard(other)[2], "다른 서버의 공지", "다른 서버에서 온 소식은 띄운다")
+subscribed({ Data = { id = "other-server-1", text = "다른 서버의 공지" } })
+eq(#heard(other), 2, "같은 소식이 두 번 와도 한 번만")
+subscribed({ Data = { text = "번호 없는 소식" } })
+eq(#heard(other), 2, "꼴이 이상한 소식은 버린다")
+-- ④ 5초에 한 번
+local again = handlers.Admin(admin, "megaphone", "한 번 더")
+expect(again and not again.ok and string.find(again.msg or "", "초 뒤") ~= nil, "5초 안에 다시 보내지 못한다 — " .. tostring(again and again.msg))
+-- ⑤ 관리자가 아니면
+eq(handlers.Admin(other, "megaphone", "몰래 공지"), nil, "관리자가 아니면 듣지 않는다")
+eq(#published, 1, "(보내지 않았다)")
+for _, p in { admin, other, lobby } do
+	World.removePlayer(p)
+end
+
+-- 큰 알림(client guide.luau — Guide.BANNER_W 480점 · 두 줄)에 80자가 들어간다(채팅에는 다 보인다)
+do
+	local BANNER_W = 480 -- guide.luau의 Guide.BANNER_W(guide는 화면 모듈을 줄줄이 불러서 여기서 부르지 않는다)
+	local pixelText = req("Client/ui/pixelText")
+	local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
+	pixelText.Register("small_o", KIT.font.small_o, {})
+	for _, text in { string.rep("가", Megaphone.MAX), string.rep("점검 안내 ", 16) } do
+		local cut = text
+		local n = utf8.len(cut) :: number
+		if n > Megaphone.MAX then
+			cut = string.sub(cut, 1, (utf8.offset(cut, Megaphone.MAX + 1) :: number) - 1)
+		end
+		local fit = pixelText.Fit(cut, BANNER_W, 2, "small_o")
+		expect(string.sub(fit, -3) ~= "…", ("80자가 큰 알림 두 줄에 들어간다(%d자)"):format(utf8.len(cut) :: number))
+	end
+end
+
+end)
+runTest('72_lune_coupon_mount', function()
+-- 「달의 계승자」 — 쿠폰 탈것 「떠도는 책」(mount_book · 2026-10-21).
+--  사용자: "간단한 탈것 하나 만들어볼래? 무료로뿌릴거고 쿠폰용이야 애니메이션 소요가 심하지않게 이미 있는 떠도는 책 몬스터에서 위에 플레이어가 타는형식으로
+--   라이딩 만들고 이동속도는 유료보다 느리게 그냥 플레이어 이동속도로 만들어줘"
+--  보는 것: ① 탈것 표(쿠폰 · 걷는 빠르기 1 — 유료 셋은 mountSpeed) ② 달빛 상점의 상품이 아니다 ③ 그림 = 몬스터 「떠도는 책」의 장 수 · 칸 크기 그대로 · 서기 · 뛰기 · 점프와 영웅 앞에 다시 그리는 것 · 아이콘
+--   ④ 쿠폰의 셈(탈것을 받고 고른 것이 없으면 고른다 · 이미 고른 것은 그대로) ⑤ 서버(번호 → 탈것 · 저장 · 쓴 쿠폰을 지금의 목록에 맞춤 · 관리자의 쿠폰 기록 지우기가 탈것도 뺀다)
+local RIDE = req("ReplicatedStorage/shared/lune/data/ride.generated")
+local CHARS = req("ReplicatedStorage/shared/lune/data/chars.generated")
+local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
+local BM = req("ReplicatedStorage/shared/lune/data/bm.generated")
+local Cash = req("ReplicatedStorage/shared/lune/sim/cash")
+local Account = req("ReplicatedStorage/shared/lune/sim/account")
+local Quick = req("ReplicatedStorage/shared/lune/ui/quick")
+
+-- ① 탈것 표
+local book = nil
+for _, m in RIDE.mounts do
+	if m.id == "mount_book" then
+		book = m
+	elseif not m.free then
+		expect(m.speed == nil, m.id .. ": 유료 탈것은 따로 빠르기를 적지 않는다(mountSpeed)")
+	end
+end
+expect(book ~= nil, "탈것 표에 「떠도는 책」")
+eq(book.name, "떠도는 책", "이름")
+eq(book.free, "coupon", "쿠폰으로만 받는다")
+eq(book.speed, 1, "걷는 빠르기 그대로(빠르기 배수 1)")
+expect(RIDE.mountSpeed > book.speed, ("유료 탈것(%.1f배)보다 느리다"):format(RIDE.mountSpeed))
+expect(typeof(book.line) == "string" and book.line ~= "", "가방의 설명 한 줄")
+expect(Cash.MOUNT.mount_book ~= nil, "서버의 탈것 표에도(타기 · 내리기)")
+eq(Quick.ride("mount_book"), "mount", "퀵슬롯에 놓으면 탈것")
+
+-- ② 상품이 아니다
+for _, p in BM.products do
+	expect(p.id ~= "mount_book", "달빛 상점의 상품이 아니다(쿠폰으로만)")
+end
+for _, ids in BM.shop.rows do
+	expect(table.find(ids, "mount_book") == nil, "상점의 어느 탭에도 없다")
+end
+
+-- ③ 그림
+do
+	local mon, c = CHARS.chars.book, CHARS.chars.mount_book
+	expect(c ~= nil, "탈것의 그림")
+	eq(c.fw, mon.fw, "칸 폭 = 몬스터의 칸")
+	eq(c.fh, mon.fh, "칸 높이 = 몬스터의 칸")
+	eq(c.ox, mon.ox, "기준점(가로) = 몬스터의 것")
+	expect(c.oy > mon.oy, "땅에서 띄운다(책갈피 끈이 땅에 끌리지 않게)")
+	eq(c.size, CHARS.chars.mount_wolf.size, "다른 탈것과 같은 배율")
+	for _, clip in { "idle", "run", "jump" } do
+		expect(c.clips[clip] ~= nil and c.clips[clip .. "_front"] ~= nil, clip .. ": 탈것과 영웅 앞에 다시 그리는 것")
+		eq(#c.clips[clip].frames, #mon.clips.idle.frames, clip .. ": 몬스터의 여섯 장")
+		eq(#c.clips[clip .. "_front"].frames, #c.clips[clip].frames, clip .. ": 앞에 다시 그리는 것도 같은 장 수")
+		-- 책 전체를 영웅 앞에(이어서 사용자 "책 라이딩 z인덱스가 플레이어가 더 높으면 안됩니다 . 책이 우선으로 보여져야해요"): 앞에 다시 그리는 장 = 탈것의 그 장(그림판의 같은 칸)
+		for i, f in c.clips[clip].frames do
+			eq(table.concat(c.clips[clip .. "_front"].frames[i], ","), table.concat(f, ","), ("%s %d장: 책 전체가 영웅 앞에"):format(clip, i))
+		end
+		for _, v in book.bob[clip] do
+			eq(v, 0, clip .. ": 영웅이 흔들리지 않는다(세로)")
+		end
+		for _, v in book.bobx[clip] do
+			eq(v, 0, clip .. ": 영웅이 흔들리지 않는다(가로)")
+		end
+	end
+	expect(c.clips.run.fps > c.clips.idle.fps, "달릴 때 책장이 더 빨리 퍼덕인다")
+	expect(book.seat.dy < 0, "영웅은 책 위에 앉는다")
+end
+expect(KIT.parts.icons.icons.ride_mount_book ~= nil and KIT.parts.pics.icons.ride_mount_book ~= nil, "아이콘 18점 · 24점")
+
+-- ④ 쿠폰의 셈
+do
+	local acct = Account.new()
+	local ok, got = Cash.redeem(acct, { code = "TESTBOOK", mount = "mount_book" }, 1000)
+	expect(ok and got.mount == "mount_book" and got.pet == nil, "쓰면 탈것을 받는다")
+	expect(acct.bm.mounts.mount_book == true and acct.bm.mount == "mount_book", "고른 탈것이 없으면 그것을 고른다")
+	expect(acct.bm.petOut == false, "펫은 그대로(없다)")
+	local acct2 = Account.new()
+	acct2.bm.mounts.mount_wolf, acct2.bm.mount = true, "mount_wolf"
+	expect(Cash.redeem(acct2, { code = "TESTBOOK", mount = "mount_book" }, 1000), "다른 계정도 쓴다")
+	eq(acct2.bm.mount, "mount_wolf", "이미 고른 탈것은 그대로")
+	local bad, why = Cash.redeem(Account.new(), { code = "NOPE", mount = "mount_none" }, 1000)
+	expect(not bad and why == "없는 탈것이다", "없는 탈것이면 쓰지 않는다")
+	local back = Cash.unpack(Cash.pack(acct.bm), Account.MAX)
+	expect(back.mounts.mount_book == true and back.mount == "mount_book", "받은 탈것이 저장된다")
+end
+
+-- ⑤ 서버
+local function json(v)
+	if typeof(v) ~= "table" then
+		return v
+	end
+	local out = {}
+	for k, x in v do
+		out[k] = json(x)
+	end
+	return out
+end
+local disk = {}
+local handlers, fired = {}, {}
+MOCK("ReplicatedStorage/shared/lune/net/net", {
+	FireClient = function(name, player, ...)
+		table.insert(fired, { name = name, player = player, args = { ... } })
+	end,
+	OnServer = function(name, fn)
+		handlers[name] = fn
+	end,
+})
+local function signal()
+	return { Connect = function() end }
+end
+SERVICE("MessagingService", { PublishAsync = function() end, SubscribeAsync = function() end })
+SERVICE("Players", { PlayerAdded = signal(), PlayerRemoving = signal(), GetPlayers = function() return {} end })
+SERVICE("RunService", { Heartbeat = signal() })
+SERVICE("TextService", { FilterStringAsync = function(_, text) return { GetNonChatStringForBroadcastAsync = function() return text end } end })
+local names = {}
+MOCK("ServerScriptService/server/lune/modules/store", {
+	lock = function() return true end,
+	unlock = function() end,
+	loadAccount = function(id) return json(disk[id]) end,
+	saveAccount = function(id, value)
+		disk[id] = json(value)
+		return true
+	end,
+	loadOld = function() return nil end,
+	nameOwner = function(key) return names[key] end,
+	claimName = function(key, id)
+		if names[key] ~= nil and names[key] ~= id then
+			return false
+		end
+		names[key] = id
+		return true
+	end,
+	freeName = function(key) names[key] = nil end,
+	rankSet = function() end,
+	rankRemove = function() end,
+	rankTop = function() return {} end,
+	rankInfoSet = function() end,
+	rankInfoGet = function() return nil end,
+	rankInfoRemove = function() end,
+	isOffline = function() return false end,
+	marketRead = function() return true, nil end,
+	marketUpdate = function(_, fn) return true, nil, nil, json(fn(nil)) end,
+})
+local World = req("ServerScriptService/server/lune/modules/world")
+local Coupons = req("ServerScriptService/server/lune/modules/coupons")
+local Admin = req("ServerScriptService/server/lune/modules/admin")
+World.start()
+local code = nil
+for _, def in Coupons.LIST do
+	if def.mount == "mount_book" then
+		code = def.code
+	end
+end
+expect(code ~= nil, "「떠도는 책」을 주는 쿠폰 번호가 있다")
+expect(Cash.couponCode(code) == code, "번호의 꼴(대문자 · 숫자 · 24자 안) — " .. tostring(code))
+local function person(id: number, name: string)
+	local p = { UserId = id, Name = "u" .. id, DisplayName = "u" .. id, attrs = {} }
+	p.SetAttribute = function(self, k, v) self.attrs[k] = v end
+	p.Kick = function() end
+	handlers.Ready(p)
+	local made = handlers.Chars(p, "create", name, "riven")
+	handlers.Chars(p, "enter", made.id)
+	return p, World.session(p)
+end
+local p, s = person(7201, "책타는손님")
+local r = handlers.Coupon(p, string.lower(code))
+expect(r and r.ok and r.mount == "mount_book", "맞는 번호면 탈것을 받는다 — " .. tostring(r and r.why))
+expect(s.acct.bm.mounts.mount_book and s.acct.bm.mount == "mount_book", "계정에 들어오고 고른 탈것이 된다")
+expect(disk[p.UserId] and disk[p.UserId].bm.mounts and table.find(disk[p.UserId].bm.mounts, "mount_book") ~= nil, "바로 저장한다")
+local cashGot = false
+for _, f in fired do
+	cashGot = cashGot or (f.name == "CashGot" and f.player == p and f.args[1] == "mount_book")
+end
+expect(cashGot, "화면에 알린다(가진 것을 다시 읽는다)")
+local r2 = handlers.Coupon(p, code)
+expect(r2 and not r2.ok and r2.why == "이미 쓴 쿠폰이다", "두 번째는 안 된다")
+local rideRes = handlers.Cash(p, "ride", "mount_book")
+expect(rideRes and rideRes.ok and rideRes.riding and s.riding == true, "받은 탈것에 탄다")
+local off = handlers.Cash(p, "ride", false)
+expect(off and off.ok and not off.riding, "내린다")
+World.removePlayer(p)
+
+-- 쓴 쿠폰을 지금의 목록에 맞춘다(쿠폰의 탈것이 없는 계정)
+do
+	local old = Account.new()
+	old.bm.coupons[code] = 1000
+	disk[7202] = json(Account.pack(old))
+	local q = { UserId = 7202, Name = "u7202", DisplayName = "u7202", attrs = {} }
+	q.SetAttribute = function(self, k, v) self.attrs[k] = v end
+	q.Kick = function() end
+	handlers.Ready(q)
+	local sq = World.session(q)
+	expect(sq.acct.bm.mounts.mount_book == true and sq.acct.bm.mount == "mount_book", "쓴 쿠폰의 탈것이 없으면 넣어 준다")
+	World.removePlayer(q)
+end
+
+-- 관리자의 「쿠폰 기록 지우기」가 쿠폰 탈것도 뺀다(산 탈것은 그대로)
+do
+	local pa = { UserId = next(Admin.IDS), Name = "admin", DisplayName = "admin", attrs = {} }
+	pa.SetAttribute = function(self, k, v) self.attrs[k] = v end
+	pa.Kick = function() end
+	handlers.Ready(pa)
+	local mk = handlers.Chars(pa, "create", "책영상", "axion")
+	handlers.Chars(pa, "enter", mk.id)
+	local sa = World.session(pa)
+	expect(handlers.Coupon(pa, code).ok, "관리자도 쿠폰을 쓴다")
+	sa.acct.bm.mounts.mount_deer = true -- 산 탈것
+	local res = handlers.Admin(pa, "coupons")
+	expect(res and res.ok and string.find(res.msg or "", "탈것", 1, true) ~= nil, "쿠폰 기록을 지운다 — " .. tostring(res and res.msg))
+	expect(not sa.acct.bm.mounts.mount_book and sa.acct.bm.mount == false, "쿠폰 탈것이 빠지고 고른 것도 풀린다")
+	expect(sa.acct.bm.mounts.mount_deer == true, "산 탈것은 그대로")
+	local again = handlers.Coupon(pa, code)
+	expect(again and again.ok and sa.acct.bm.mounts.mount_book, "다시 처음부터 쿠폰을 쓸 수 있다")
+	World.removePlayer(pa)
+end
+
+end)
+runTest('73_lune_input_ime', function()
+-- 「달의 계승자」 — 한글 입력 상태에서 키가 먹지 않거나 눌린 채로 남는 Roblox의 버그에 대비(client/lune/input.luau의 Input.poll · 2026-10-21).
+--  사용자: "로블록스에서 한글쓴다음에 키가 안먹히는 버그가있거든? 로블록스에서 유명한 버그야 이거 확인해봐"
+--  보는 것: ① 뗀 소식이 오지 않아도 키를 떼면 뗀다(스킬이 계속 나가지 않는다) ② 누른 소식이 오지 않아도 키가 눌리면 누른다 ③ 소식과 맞추기가 두 번 누르지 않는다
+--   ④ 글을 치는 동안 · 그때부터 누르고 있던 키는 누르지 않는다 ⑤ 폰 단추로 누른 것은 떼지 않는다 ⑥ 무슨 키인지 모르는 글쇠가 3초 안에 두 번 → 「한글 입력 상태」 알림(1분에 한 번 · 묶인 키가 눌린 장면은 세지 않는다)
+--   ⑦ 알림의 글이 큰 알림 칸(가로 480점)에 들어간다
+local function signal()
+	local sig = { fns = {} }
+	function sig:Connect(fn)
+		table.insert(self.fns, fn)
+		return { Disconnect = function() end }
+	end
+	function sig:Fire(...)
+		for _, f in self.fns do
+			f(...)
+		end
+	end
+	return sig
+end
+local began, ended, unfocus = signal(), signal(), signal()
+local down = {} -- 지금 눌린 키(IsKeyDown이 보는 것)
+local steps = {}
+SERVICE("UserInputService", {
+	InputBegan = began,
+	InputEnded = ended,
+	WindowFocusReleased = unfocus,
+	IsKeyDown = function(_, key) return down[key] == true end,
+	GetFocusedTextBox = function() return nil end,
+})
+SERVICE("RunService", { BindToRenderStep = function(_, name, _priority, fn) steps[name] = fn end })
+SERVICE("GuiService", { MenuIsOpen = false })
+local Input = req("Client/lune/input")
+local typing = false
+Input.typing = function() return typing end
+Input.bind("slot:2", Enum.KeyCode.Q)
+Input.init()
+expect(steps.LuneInputPoll ~= nil, "장면마다 키의 지금 상태로 맞춘다(BindToRenderStep)")
+local Q = Input.BIND["slot:2"]
+local function key(k)
+	return { UserInputType = Enum.UserInputType.Keyboard, KeyCode = k }
+end
+local now = 100
+local function frame(dt: number?)
+	now += dt or 1 / 60
+	Input.poll(now)
+end
+
+-- ① 뗀 소식이 오지 않았다(한글 상태에서 키가 눌린 채로 남던 것)
+down[Q] = true
+began:Fire(key(Q))
+frame()
+expect(Input.held("slot:2") and Input.take("slot:2"), "누르면 누른다")
+down[Q] = nil -- 키를 뗐다 — InputEnded는 오지 않는다
+frame()
+expect(not Input.held("slot:2"), "뗀 소식이 없어도 키를 떼면 뗀다(스킬이 계속 나가지 않는다)")
+
+-- ② 누른 소식이 오지 않았다(한글 상태에서 키가 먹지 않던 것)
+down[Q] = true
+frame()
+expect(Input.held("slot:2") and Input.take("slot:2"), "누른 소식이 없어도 키가 눌리면 누른다")
+frame()
+expect(not Input.take("slot:2"), "누르고 있는 동안 다시 누른 것으로 치지 않는다")
+down[Q] = nil
+frame()
+expect(not Input.held("slot:2"), "떼면 뗀다")
+
+-- ③ 소식과 맞추기가 두 번 누르지 않는다
+down[Q] = true
+began:Fire(key(Q))
+frame()
+expect(Input.take("slot:2"), "한 번")
+frame()
+expect(not Input.take("slot:2"), "두 번은 아니다")
+down[Q] = nil
+ended:Fire(key(Q))
+frame()
+expect(not Input.held("slot:2"), "뗀 소식으로 뗀다")
+
+-- ④ 글을 치는 동안
+typing = true
+down[Q] = true
+began:Fire(key(Q))
+frame()
+expect(not Input.held("slot:2"), "채팅에 글을 치는 동안에는 누르지 않는다")
+typing = false
+frame()
+expect(not Input.held("slot:2"), "글을 다 친 뒤에도 그때부터 누르고 있던 키는 누르지 않는다(친 글자가 스킬로 나가지 않게)")
+down[Q] = nil
+frame()
+down[Q] = true
+frame()
+expect(Input.take("slot:2"), "떼고 다시 누르면 먹는다")
+down[Q] = nil
+frame()
+
+-- ⑤ 폰 단추로 누른 것은 떼지 않는다(키보드는 눌려 있지 않다)
+Input.press("left")
+frame()
+frame()
+expect(Input.held("left"), "폰 단추로 누른 걷기는 그대로")
+Input.release("left")
+
+-- ⑥ 한글 입력 상태 알림
+local shown = 0
+Input.onIme = function()
+	shown += 1
+end
+local unknown = { Value = 0 }
+began:Fire(key(unknown))
+frame()
+eq(shown, 0, "한 번은 알리지 않는다(한/영 키 하나일 수 있다)")
+began:Fire(key(unknown))
+frame(0.2)
+eq(shown, 1, "3초 안에 두 번이면 알린다")
+began:Fire(key(unknown))
+frame(0.2)
+began:Fire(key(unknown))
+frame(0.2)
+eq(shown, 1, "1분 안에는 다시 알리지 않는다")
+frame(61)
+began:Fire(key(unknown))
+frame()
+frame(4) -- 3초가 지났다
+began:Fire(key(unknown))
+frame()
+eq(shown, 1, "3초가 지난 두 번째는 처음부터 센다")
+began:Fire(key(unknown))
+frame()
+eq(shown, 2, "1분이 지나면 다시 알린다")
+frame(61)
+down[Q] = true
+began:Fire(key(unknown))
+frame()
+began:Fire(key(unknown))
+frame()
+eq(shown, 2, "묶인 키가 눌린 장면의 모르는 글쇠는 세지 않는다(키가 먹고 있다)")
+down[Q] = nil
+frame()
+
+-- ⑦ 알림의 글이 큰 알림 칸에 들어간다(guide.luau — 가로 480점 · 제목 body · 아랫줄 small 두 줄)
+do
+	local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
+	local pixelText = req("Client/ui/pixelText")
+	pixelText.Register("small_o", KIT.font.small_o, {})
+	pixelText.Register("body_o", KIT.font.body_o, {})
+	local W = Input.IME_WORDS
+	expect(pixelText.Measure(W.head, "body_o") <= 480, "제목 「" .. W.head .. "」이 한 줄에")
+	local fit = pixelText.Fit(W.line, 480, 2, "small_o")
+	expect(string.sub(fit, -3) ~= "…", "아랫줄이 두 줄 안에 — " .. W.line)
+end
+
+end)
+runTest('74_lune_count_box', function()
+-- 「달의 계승자」 — 수량 창(client/lune/ui/countBox.luau · shared/lune/ui/countPick.luau · 2026-10-21).
+--  사용자: "잡화상점에서 물약이나 달가루 구매할때 1개 아니면 10개밖에 못사잖아 이거 수량 입력하는 모달 받아서 처리해야지 이렇게하면안되는거야 모든 곳에서 수량받아서 처리해"
+--  보는 것: ① 적은 글 고르기(숫자만 · 맨 앞 0 · 최대를 넘으면 최대) ② 처음 수 · 가장 많은 수(나누기 · 사기 = 달돈 · 가방의 자리) ③ 가방 · 창고에 더 들어가는 수(서버의 셈과 같다)
+--   ④ 창: 적고 확인 → 그 수로 · 비면 확인이 안 된다 · [−] [+] [최대] · Enter · 취소 · 달돈이 모자라면 확인이 안 된다 · 창의 주인이 닫히면 같이 닫힌다
+--   ⑤ 글이 칸에 들어간다 · 줄의 치수 ⑥ 상점에 「1 · 10」 단추가 없고 모든 곳이 수량 창을 쓴다
+local CountPick = req("ReplicatedStorage/shared/lune/ui/countPick")
+local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
+local Items = req("ReplicatedStorage/shared/lune/sim/items")
+local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
+local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+
+-- ① 적은 글
+local function parse(text, hi)
+	local t, n = CountPick.parse(text, hi)
+	return t .. "|" .. tostring(n)
+end
+eq(parse("12", 99), "12|12", "숫자 그대로")
+eq(parse("1a2", 99), "12|12", "숫자만")
+eq(parse("005", 99), "5|5", "맨 앞의 0은 뗀다")
+eq(parse("150", 99), "99|99", "최대를 넘으면 최대로")
+eq(parse("", 99), "|nil", "비면 수가 없다")
+eq(parse("0", 99), "|nil", "0은 수가 아니다")
+eq(parse("123456", 9999), "9999|9999", "아무리 길게 적어도 최대로")
+-- ② 처음 수 · 가장 많은 수
+eq(CountPick.hi("split", 10), 9, "나누기는 하나를 남긴다")
+eq(CountPick.hi("discard", 10), 10, "버리기는 그 칸의 전부까지")
+eq(CountPick.first("buy", 99), 1, "사기는 처음 1")
+eq(CountPick.first("split", 9), 5, "나누기는 처음 절반(10개 → 5)")
+eq(CountPick.first("sell", 10), 10, "팔기 · 버리기 · 맡기기 · 찾기는 처음 전부")
+eq(CountPick.buyMax(99, 100, 1250, nil), 12, "달돈으로 살 수 있는 만큼")
+eq(CountPick.buyMax(99, 100, 1e9, 40), 40, "가방에 들어가는 만큼")
+eq(CountPick.buyMax(10, 100, 1e9, nil), 10, "한 번에 파는 수까지")
+eq(CountPick.buyMax(99, 100, 50, nil), 0, "하나도 못 사면 0")
+eq(CountPick.step(nil, 1, 1, 9), 1, "비어 있으면 [+]는 1")
+eq(CountPick.step(9, 1, 1, 9), 9, "최대에서 [+]는 그대로")
+eq(CountPick.step(1, -1, 1, 9), 1, "1에서 [−]는 그대로")
+
+-- ③ 더 들어가는 수: 보낸 것(Bag.view)의 셈 = 서버의 셈(Bag.room)
+do
+	local h = Hero.new(1, "riven")
+	Bag.init(h)
+	local potion = nil
+	for _, s in Items.data.STOCK do
+		if s.goods and not potion then
+			potion = s.goods
+		end
+	end
+	potion = potion or "potion1"
+	Bag.give(h, potion, 7)
+	local view = Bag.view(h)
+	eq(Bag.roomInView(view, potion), Bag.room(h, potion), "가방에 더 들어가는 수 = 서버의 셈")
+	expect(Bag.storeRoomInView(view, potion) > 0, "빈 창고에는 들어간다")
+end
+
+-- ④ 창
+local function signal()
+	local sig = { fns = {} }
+	function sig:Connect(fn)
+		table.insert(self.fns, fn)
+		return { Disconnect = function() end }
+	end
+	function sig:Fire(...)
+		for _, f in self.fns do
+			f(...)
+		end
+	end
+	return sig
+end
+local buttons, texts, fields = {}, {}, {}
+local function frame(name)
+	return { Name = name, Visible = true, Destroy = function(self) self.dead = true end }
+end
+MOCK("Client/lune/ui/ui", {
+	COLOR = setmetatable({}, { __index = function(_, k) return k end }),
+	M = { small = 10, body = 12, button = 26, smallLine = 14 },
+	panel = function() return frame("Panel") end,
+	slot = function() return { frame = frame("Slot") } end,
+	smallIcon = function() return frame("Icon") end,
+	text = function(_, text)
+		local t = { text = text, tone = nil }
+		function t:set(v) self.text = v end
+		function t:color(c) self.tone = c end
+		function t:show() end
+		table.insert(texts, t)
+		return t
+	end,
+	button = function(_, text, _x, _y, _w, onClick)
+		local b = { text = text, onClick = onClick, enabled = true, frame = frame("Button") }
+		function b:setEnabled(v) self.enabled = v end
+		buttons[#buttons + 1] = b
+		return b
+	end,
+	field = function()
+		local changed = signal()
+		local f = { FocusLost = signal(), Name = "Field", TextXAlignment = nil }
+		local store = { Text = "" }
+		f.GetPropertyChangedSignal = function() return changed end
+		f.CaptureFocus = function() end
+		setmetatable(f, {
+			__index = function(_, k) return store[k] end,
+			__newindex = function(_, k, v)
+				local old = store[k]
+				store[k] = v
+				if k == "Text" and old ~= v then
+					changed:Fire()
+				end
+			end,
+		})
+		table.insert(fields, f)
+		return f
+	end,
+})
+local groups = {}
+MOCK("Client/lune/stage", { ui = frame("Ui"), group = function(_, name)
+	local g = frame(name)
+	table.insert(groups, g)
+	return g
+end })
+SERVICE("UserInputService", { TouchEnabled = false, KeyboardEnabled = true })
+local CountBox = req("Client/lune/ui/countBox")
+local function find(text)
+	for i = #buttons, 1, -1 do
+		if buttons[i].text == text then
+			return buttons[i]
+		end
+	end
+	return nil
+end
+local W = UI.words
+local KW = UI.layout.count.words
+local got = nil
+local function open(spec)
+	table.clear(buttons)
+	table.clear(texts)
+	table.clear(fields)
+	got = nil
+	spec.onYes = function(n)
+		got = n
+	end
+	return CountBox.open(spec)
+end
+-- 사기: 처음 1 · 적은 수로 산다
+open({ owner = "shop", kind = "buy", icon = "potion", name = "작은 달빛 물약", hi = 40, each = 50, money = 100000 })
+expect(CountBox.shown() and CountBox.owner() == "shop", "상점이 띄운 수량 창")
+eq(fields[1].Text, "1", "사기는 처음 1")
+eq(CountBox.value(), 1, "지금의 수 1")
+CountBox.type("25")
+eq(CountBox.value(), 25, "적은 수 25")
+local sum = nil
+for _, t in texts do
+	if t.text == string.gsub(KW.cost, "{n}", "1,250") then
+		sum = t
+	end
+end
+expect(sum ~= nil, "합계 1,250이 보인다 — 50 x 25")
+find(W.ask.buy[2]).onClick()
+eq(got, 25, "「사기」 → 25개를 산다")
+expect(not CountBox.shown(), "확인하면 닫힌다")
+-- 최대를 넘게 적으면 최대로 · [최대] · [−] [+]
+open({ owner = "shop", kind = "buy", icon = "dust", name = "달가루", hi = 40, each = 50, money = 100000 })
+CountBox.type("999")
+eq(fields[1].Text, "40", "최대를 넘게 적으면 최대(40)로")
+find("-").onClick()
+eq(CountBox.value(), 39, "[−] 한 칸")
+find("+").onClick()
+eq(CountBox.value(), 40, "[+] 한 칸")
+expect(not find("+").enabled, "최대에서는 [+]가 눌리지 않는다")
+CountBox.type("3")
+find(KW.max).onClick()
+eq(CountBox.value(), 40, "[최대]")
+-- 비면 확인이 안 된다 · Enter
+CountBox.type("")
+expect(not find(W.ask.buy[2]).enabled, "비면 「사기」가 눌리지 않는다")
+find(W.ask.buy[2]).onClick()
+eq(got, nil, "(비었을 때 누르면 아무 일도 없다)")
+CountBox.type("7")
+fields[1].FocusLost:Fire(true)
+eq(got, 7, "Enter = 확인")
+-- 달돈이 모자라면
+open({ owner = "shop", kind = "buy", icon = "potion", name = "물약", hi = 99, each = 100, money = 250 })
+CountBox.type("5")
+local short = false
+for _, t in texts do
+	short = short or (t.text == KW.short and t.tone == "red")
+end
+expect(short and not find(W.ask.buy[2]).enabled, "달돈이 모자라면 빨간 글 · 「사기」가 눌리지 않는다")
+-- 취소
+local cancelled = false
+open({ owner = "bag", kind = "discard", icon = "potion", name = "물약", hi = 12, onNo = nil })
+eq(fields[1].Text, "12", "버리기는 처음 그 칸의 전부")
+find(W.askNo).onClick()
+expect(not CountBox.shown() and got == nil, "「취소」 → 아무것도 하지 않고 닫힌다")
+local _ = cancelled
+-- 팔기: 받을 달돈
+open({ owner = "bag", kind = "sell", icon = "potion", name = "물약", hi = 10, gainEach = 7 })
+local gain = false
+for _, t in texts do
+	gain = gain or t.text == string.gsub(KW.gain, "{n}", "70")
+end
+expect(gain, "팔기: 받을 달돈 +70(7 x 10)")
+-- 창의 주인이 닫히면 같이 닫힌다(다른 창이 닫히면 그대로)
+CountBox.hide("shop")
+expect(CountBox.shown(), "다른 창(상점)이 닫혀도 가방의 수량 창은 그대로")
+CountBox.hide("bag")
+expect(not CountBox.shown(), "가방이 닫히면 같이 닫힌다")
+-- 나누기: 처음 절반
+open({ owner = "bag", kind = "split", icon = "potion", name = "물약", hi = CountPick.hi("split", 10) })
+eq(fields[1].Text, "5", "나누기는 처음 절반")
+CountBox.hide()
+
+-- ⑤ 글이 칸에 들어간다 · 줄의 치수
+do
+	local K = UI.layout.count
+	local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
+	local pixelText = req("Client/ui/pixelText")
+	pixelText.Register("small", KIT.font.small, {})
+	pixelText.Register("body_o", KIT.font.body_o, {})
+	local inner = K.w - K.pad * 2
+	local half = math.floor((inner - 6) / 2)
+	for kind, pair in W.ask do
+		expect(pixelText.Measure(pair[1], "body_o") <= inner, ("묻는 글 「%s」이 한 줄에"):format(pair[1]))
+		expect(pixelText.Measure(pair[2], "body_o") <= half - 6, ("단추 「%s」"):format(pair[2]))
+		local _k = kind
+	end
+	expect(pixelText.Measure(W.askNo, "body_o") <= inner - half - 6 - 6, "「취소」")
+	expect(pixelText.Measure(KW.max, "body_o") <= K.maxW - 6, "「최대」")
+	local halfNote = math.floor(inner / 2)
+	expect(pixelText.Measure((string.gsub(string.gsub(KW.range, "{lo}", "1"), "{hi}", "9999")), "small") <= halfNote, "범위 「1 ~ 9999개」")
+	expect(pixelText.Measure((string.gsub(KW.cost, "{n}", "999,999,999")), "small") <= inner - halfNote, "합계(아홉 자리)")
+	expect(pixelText.Measure(KW.short, "small") <= inner - halfNote, "「달돈이 모자란다」")
+	expect(pixelText.Measure((string.gsub(KW.gain, "{n}", "9,999,999")), "small") <= inner - halfNote, "받을 달돈(일곱 자리)")
+	expect(K.stepW * 2 + K.fieldW + K.gap * 2 + K.gap + K.maxW <= inner, "[−] 칸 [+] [최대]가 한 줄에")
+	expect(K.fieldY + 26 <= K.noteY and K.noteY + 14 <= K.buttonY and K.buttonY + 26 + K.pad <= K.h, "줄이 겹치지 않고 창 안에")
+	expect(K.itemY + K.iconS <= K.fieldY, "그림 줄 아래에 수량 줄")
+	expect(K.w <= 768 - 32 and K.h <= 432 - 32, "가장 작은 화면(768 x 432)에도 들어간다")
+end
+
+-- ⑥ 상점의 물건 가운데 여럿 사는 것(물약 · 달가루 · 부적 · 주문서)은 수량 창 — 상점 창의 「1 · 10」 단추는 없다(이름 · 값만 · 단추는 「사기」 하나)
+do
+	local many = 0
+	for _, s in Items.data.STOCK do
+		if (s.max or 1) > 1 then
+			many += 1
+		end
+	end
+	expect(many >= 3, "여럿 사는 물건이 있다(물약 · 귀환 주문서 · 달가루 · 부적) — " .. many)
+end
+
+end)
+runTest('75_lune_dungeon', function()
+-- 「달의 계승자」 — 구간 던전 「수정 거울숲」(dg1 · 2026-10-21 — 공방 design/dungeon.js · shared sim/rift.luau · room.luau · server world.luau).
+--  사용자: "… 수정틈안에 들어가면 던전 입장 멋지게 있고, 파티로 들어갈수도있고 개인으로 들어갈수도있는 문이 하나 있고 … 퀘스트 알림이 일반 느낌표가 아니라 엄청 중요한것처럼 크고 색도다른 느낌표 …
+--   메이플에 몬스터파크 처럼 몬스터가 엄청 많이 나오고 … 그 몬스터들은 아이템이나 경험치를 주는게 아니라 다잡고나서 던전 다깼다고 나오면서 일괄 경험치를 지급 … 하루에 한번 … 한국시간 자정에 초기화"
+--  보는 것: ① 자료(던전 · 장면 · 물결 · 문 · 퀘스트 · 곰솔) ② 큰 「!」 ③ 방의 셈(무른 몬스터 · 정예 · 잡아도 경험치 · 물건 · 퀘스트의 숫자가 없다) ④ 하루 한 번(한국 시간 자정)
+--   ⑤ 서버: 닫힌 문 · 곰솔에게 받기 · 문에 손 대기로 그 자리에서 끝남 · 문으로 맵을 옮기지 않음 · 혼자 입장 · 다 쓰러뜨리면 경험치를 한꺼번에 · 문 앞으로 · 오늘 다시는 안 됨 · 파티 입장
+local Rift = req("ReplicatedStorage/shared/lune/sim/rift")
+local Room = req("ReplicatedStorage/shared/lune/sim/room")
+local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+local Daily = req("ReplicatedStorage/shared/lune/sim/daily")
+local Quests = req("ReplicatedStorage/shared/lune/sim/quests")
+local N = req("ReplicatedStorage/shared/lune/config/numbers")
+local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
+local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
+local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
+local DG = Rift.DUNGEON
+
+-- ① 자료
+eq(#DG.tiers, 1, "던전 하나(30~40 — 수정 거울숲)")
+local t = Rift.tier("dg1")
+expect(t ~= nil and Rift.isDungeon(t), "dg1 = 던전")
+eq(t.name, "수정 거울숲", "이름")
+eq(t.lv, 30, "Lv.30부터")
+eq(t.lvMax, 40, "Lv.40까지")
+eq(DG.perDay, 1, "하루 한 번")
+eq(t.door.scene, "r2ah", "문 = 반달네 옛집(빛나는 연못의 수정 틈 안)")
+expect(not Rift.isDungeon(Rift.tier("rf1")), "토벌은 던전이 아니다")
+local sc = SCENES.scenes.dg1
+expect(sc ~= nil and sc.dungeon == "dg1" and sc.rift == "dg1", "장면 dg1(던전)")
+eq(#sc.portals, 1, "나가는 문은 하나")
+eq(sc.portals[1].to, "r2ah", "그 문은 수정 틈(반달네 옛집)으로")
+eq(#(sc.warps or {}), 0, "간이 포탈 없음")
+expect(not sc.rest, "쉬는 곳이 아니다")
+local waves, elites, total, byWave = 0, 0, 0, {}
+for _, m in sc.mobs do
+	waves = math.max(waves, m.wave or 0)
+	byWave[m.wave] = (byWave[m.wave] or 0) + 1
+	total += 1
+	eq(m.lv, t.mobLv, "몬스터의 레벨 " .. m.kind)
+	expect(COMBAT.mobs[m.kind] ~= nil, "몬스터 " .. m.kind .. "의 수치")
+	if m.elite then
+		elites += 1
+		eq(m.wave, t.waves, "정예는 마지막 물결")
+	end
+end
+eq(waves, t.waves, "물결 수")
+eq(elites, 2, "정예 둘")
+expect(total >= 60, ("몬스터가 많다(몬스터파크처럼) — %d마리"):format(total))
+for w = 1, waves - 1 do
+	expect((byWave[w] or 0) >= 12, ("물결 %d에 %d마리"):format(w, byWave[w] or 0))
+end
+local door = nil
+for _, p in SCENES.scenes.r2ah.portals do
+	if p.dungeon == "dg1" then
+		door = p
+	end
+end
+expect(door ~= nil and door.to == "dg1" and door.done == "dq01", "반달네 옛집에 던전의 문(퀘스트를 끝내야 열린다)")
+eq(door.x, t.door.x, "문의 자리")
+local q = Quests.def("dq01")
+expect(q ~= nil and q.big == true, "퀘스트 「수정 틈의 문」 = 큰 「!」")
+eq(q.giver, "woodcutter", "주는 사람 = 곰솔")
+eq(q.endNpc, false, "돌려주러 가지 않는다(그 자리에서 끝난다)")
+eq(q.lv, 30, "Lv.30에 열린다")
+eq(q.steps[1].type, "use", "문에 손 대기")
+expect(math.abs(q.steps[1].x - door.x) <= 30, "손 대는 자리 = 그 문 앞")
+local cutter = nil
+for _, n in SCENES.scenes.ct.npcs do
+	if n.id == "woodcutter" then
+		cutter = n
+	end
+end
+expect(cutter ~= nil, "곰솔은 은달 항구(건물 밖)에 서 있다")
+expect(UI.questMark.big ~= nil and UI.questMark.big ~= UI.questMark.new, "큰 「!」의 그림이 따로 있다")
+local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
+local bigPart, newPart = KIT.parts[UI.questMark.big], KIT.parts[UI.questMark.new]
+expect(bigPart and newPart and bigPart.h > newPart.h and bigPart.w > newPart.w, "큰 「!」가 보통 「!」보다 크다")
+
+-- ② 큰 「!」
+do
+	local book = {}
+	eq(Quests.mark(book, 30, "woodcutter", SCENES.scenes.ct.region, SCENES.scenes.ct.also), "!!", "Lv.30 — 곰솔 머리 위에 큰 「!」")
+	expect(Quests.mark(book, 29, "woodcutter", SCENES.scenes.ct.region, SCENES.scenes.ct.also) ~= "!!", "Lv.29에는 아직 없다")
+	book.dq01 = { done = true, c = {} }
+	expect(Quests.mark(book, 30, "woodcutter", SCENES.scenes.ct.region, SCENES.scenes.ct.also) ~= "!!", "끝낸 뒤에는 없다")
+end
+
+-- ③ 방의 셈
+do
+	local room = Room.new("dg1#1", SCENES.scenes["dg1#1"], Random.new(3))
+	expect(room.rift ~= nil and room.rift.dungeon and room.rift.time == DG.time, "던전의 방(제한 시간 = 던전의 것)")
+	local rf = Room.new("rf1#90", SCENES.scenes["rf1#90"], Random.new(3))
+	local function hpOf(r, kind, elite)
+		for _, m in r.mobs do
+			if m.kind == kind and (m.elite == true) == elite then
+				return m.maxHp, m.lv
+			end
+		end
+		return nil, nil
+	end
+	local a, al = hpOf(room, "stump", false)
+	local b, bl = hpOf(rf, "stump", false)
+	if a and b and al == bl then
+		eq(a, math.floor(b * DG.mob.hp + 0.5), "던전의 몬스터는 무르다(체력 x " .. DG.mob.hp .. ")")
+	end
+	local e = hpOf(room, t.elite, true)
+	local plain = hpOf(room, t.elite, false)
+	if e and plain then
+		eq(e, plain * DG.elite.hp, "정예의 체력")
+	end
+	-- 잡아도 경험치 · 물건 · 퀘스트의 숫자가 없다
+	local h = Hero.new(7501, "riven")
+	h.level = 34
+	local heroes = { [h.id] = h }
+	for _ = 1, math.floor((Rift.START + 0.2) / 0.05) do
+		room:step(heroes, 0.05)
+	end
+	for _ = 1, 80 do
+		room:step(heroes, 0.05)
+	end
+	local mob = nil
+	for _, m in room.mobs do
+		if m.wave == 1 and not m.away and m.state ~= "gone" then
+			mob = m
+		end
+	end
+	expect(mob ~= nil, "첫 물결이 나왔다")
+	if mob then
+		local xp0 = h.xp
+		local out = room:damageMob(mob, mob.hp + 1, mob.x, h.id)
+		local kills = (typeof(out) == "table" and out.kills) or {}
+		local k = kills[1]
+		if k then
+			eq(k.xp, 0, "잡아도 경험치 없음")
+			eq(#k.credit, 0, "퀘스트 · 일일 의뢰의 숫자 없음")
+			eq(#k.loot, 0, "물건 없음")
+			expect(k.drop == nil, "떨어지는 것 없음")
+		end
+		eq(h.xp, xp0, "영웅의 경험치 그대로")
+	end
+end
+
+-- ④ 하루 한 번(한국 시간 자정)
+do
+	local r = Rift.new()
+	local now = 1760000000
+	expect(not Rift.dungeonDone(r, "dg1", now), "처음 = 오늘 아직 안 함")
+	expect(Rift.dungeonMark(r, "dg1", now), "끝냈다고 적는다")
+	expect(Rift.dungeonDone(r, "dg1", now), "오늘 끝냈다")
+	expect(not Rift.dungeonMark(r, "dg1", now + 60), "같은 날 두 번은 안 된다")
+	local nextDay = now + Daily.left(now) + 1
+	expect(not Rift.dungeonDone(r, "dg1", nextDay), "한국 시간 자정이 지나면 다시")
+	eq(Daily.dayOf(nextDay), Daily.dayOf(now) + 1, "(자정 = 일일 의뢰와 같은 날의 경계)")
+	local back = Rift.unpack(Rift.pack(r))
+	expect(Rift.dungeonDone(back, "dg1", now), "저장되고 읽힌다")
+	expect(not Rift.dungeonDone(Rift.unpack({ day = 0, used = 0, clears = 0 }), "dg1", now), "예전 저장(던전이 없던 때)도 읽힌다")
+	eq(Rift.dungeonXp(35), math.floor(N.xpNeed(35) * DG.pay.need + 0.5), "완료 경험치 = 한 레벨의 절반(Lv.35)")
+	expect(Rift.dungeonXp(40) > Rift.dungeonXp(30), "레벨이 높으면 더")
+end
+
+-- ⑤ 서버
+local handlers, sent = {}, {}
+MOCK("ReplicatedStorage/shared/lune/net/net", {
+	FireClient = function(name, player, ...)
+		table.insert(sent, { name = name, player = player, args = { ... } })
+	end,
+	OnServer = function(name, fn)
+		handlers[name] = fn
+	end,
+})
+local function signal()
+	return { Connect = function() end }
+end
+SERVICE("Players", { PlayerAdded = signal(), PlayerRemoving = signal(), GetPlayers = function() return {} end })
+SERVICE("RunService", { Heartbeat = signal() })
+SERVICE("MessagingService", { PublishAsync = function() end, SubscribeAsync = function() end })
+SERVICE("TextService", { FilterStringAsync = function(_, text) return { GetNonChatStringForBroadcastAsync = function() return text end } end })
+local disk, names = {}, {}
+MOCK("ServerScriptService/server/lune/modules/store", {
+	lock = function() return true end,
+	unlock = function() end,
+	loadAccount = function(id) return disk[id] end,
+	saveAccount = function(id, data) disk[id] = data; return true end,
+	loadOld = function() return nil end,
+	nameOwner = function(key) return names[key] end,
+	claimName = function(key, id) names[key] = id; return true end,
+	freeName = function(key) names[key] = nil end,
+	rankSet = function() end, rankRemove = function() end, rankTop = function() return {} end,
+	rankInfoSet = function() end, rankInfoGet = function() return nil end, rankInfoRemove = function() end,
+	isOffline = function() return false end,
+	marketRead = function() return true, nil end,
+	marketUpdate = function(_, fn) return true, nil, nil, fn(nil) end,
+})
+local World = req("ServerScriptService/server/lune/modules/world")
+World.start()
+local function newPlayer(id: number, name: string, class: string)
+	local p = { UserId = id, Name = name, DisplayName = name, attrs = {}, SetAttribute = function(self, k, v) self.attrs[k] = v end, Kick = function() end }
+	handlers.Ready(p)
+	local made = handlers.Chars(p, "create", name, class)
+	handlers.Chars(p, "enter", made.id)
+	return p, World.session(p)
+end
+local p, s = newPlayer(7505, "거울숲시험", "riven")
+local p2, s2 = newPlayer(7506, "거울숲동료", "axion")
+s.hero.level, s2.hero.level = 34, 34
+-- 문이 닫혀 있다(퀘스트 전)
+World.jump(p, "r2ah")
+s.hero.x, s.hero.y = door.x - 10, door.y
+local res = handlers.Rift(p, "enter", "dg1", false)
+expect(res and not res.ok and res.why == DG.words.closed, "퀘스트를 끝내기 전에는 문이 닫혀 있다 — " .. tostring(res and res.why))
+expect(not Quests.portalOpen(s.hero.quests, door), "포탈의 빛도 꺼져 있다")
+-- 곰솔에게 받는다(은달 항구 · 건물 밖)
+World.jump(p, "ct")
+s.hero.x, s.hero.y = cutter.x + 8, cutter.y
+handlers.Quest(p, "accept", "dq01")
+expect(s.hero.quests.dq01 ~= nil and not s.hero.quests.dq01.done, "곰솔에게서 받았다")
+-- 문에 손을 댄다 → 그 자리에서 끝난다 · 문이 열린다
+World.jump(p, "r2ah")
+s.hero.x, s.hero.y = q.steps[1].x, q.steps[1].y or door.y
+table.clear(sent)
+handlers.Quest(p, "use", "dq01")
+expect(s.hero.quests.dq01 and s.hero.quests.dq01.done, "문에 손을 대자 그 자리에서 끝났다")
+local gain = false
+for _, f in sent do
+	gain = gain or (f.name == "Gain" and f.player == p and f.args[1].quest == q.name)
+end
+expect(gain, "퀘스트의 보상(경험치)을 알린다")
+expect(Quests.portalOpen(s.hero.quests, door), "문이 열렸다(포탈의 빛)")
+-- 문으로는 맵을 옮기지 않는다
+s.hero.x, s.hero.y = door.x, door.y
+eq(handlers.Travel(p, "dg1"), nil, "던전의 문으로 걸어 들어가지 못한다(던전 창으로만)")
+eq(s.scene, "r2ah", "그대로 반달네 옛집")
+-- 파티로 — 같은 맵에 파티원이 없으면
+res = handlers.Rift(p, "enter", "dg1", true)
+expect(res and not res.ok and res.why == DG.words.partyNone, "파티 입장 — 함께 들어갈 파티원이 없다")
+-- 멀면
+s.hero.x = door.x - 200
+res = handlers.Rift(p, "enter", "dg1", false)
+expect(res and not res.ok, "문에서 멀면 들어가지 못한다")
+-- 혼자 입장
+s.hero.x = door.x - 10
+res = handlers.Rift(p, "view")
+expect(res and res.dungeonDone and res.dungeonDone.dg1 == false, "오늘 아직 안 했다")
+res = handlers.Rift(p, "enter", "dg1", false)
+expect(res and res.ok, "혼자 입장 — " .. tostring(res and res.why))
+expect(string.match(s.scene, "^dg1#%d+$") ~= nil, "따로 된 방: " .. tostring(s.scene))
+local key = s.scene
+local room = World.room(key)
+local TICK = 1 / 20
+local function tickFor(sec: number)
+	for _ = 1, math.floor(sec / TICK + 0.5) do
+		World.tick(TICK)
+	end
+end
+s.hero.invuln = 1e9
+local level0, xp0 = s.hero.level, s.hero.xp
+local want = Rift.dungeonXp(level0)
+table.clear(sent)
+tickFor(Rift.START + 0.2)
+for _ = 1, room.rift.waves do
+	tickFor(Rift.STAGGER * 30 + 1)
+	local before = s.hero.xp
+	for _, mob in room.mobs do
+		if mob.wave == room.rift.wave and not mob.away and mob.state ~= "gone" and mob.state ~= "dead" then
+			room:damageMob(mob, mob.hp + 1, mob.x, s.hero.id)
+		end
+	end
+	tickFor(3)
+	if room.rift.state == "run" then
+		eq(s.hero.xp, before, "물결을 쓸어도 경험치가 오르지 않는다(물결 " .. room.rift.wave .. ")")
+	end
+end
+eq(room.rift.state, "clear", "다 쓰러뜨리면 완료")
+local paid = nil
+for _, f in sent do
+	if f.name == "RiftPay" and f.player == p then
+		paid = f.args[1]
+	end
+end
+expect(paid ~= nil and paid.dungeon and paid.xp == want, ("「던전 완료!」와 경험치를 한꺼번에 — %s / %d"):format(tostring(paid and paid.xp), want))
+local got = 0
+do
+	local L, x = level0, xp0
+	got = -x
+	while L < s.hero.level do
+		got += N.xpNeed(L)
+		L += 1
+	end
+	got += s.hero.xp
+end
+eq(got, want, "영웅이 받은 경험치 = 완료 보상")
+local viewNow = handlers.Rift(p, "view")
+expect(viewNow and viewNow.dungeonDone and viewNow.dungeonDone.dg1 == true, "오늘 끝냈다고 적혔다(서버의 시계로)")
+-- back초 뒤 문 앞으로
+tickFor(DG.back + 0.5)
+eq(s.scene, "r2ah", "끝나면 수정 틈(반달네 옛집)으로")
+expect(math.abs(s.hero.x - door.x) <= 60, "그 문 앞에")
+expect(not req("ReplicatedStorage/shared/lune/sim/physics").solidBox(SCENES.scenes.r2ah, s.hero.x, s.hero.y), ("나와 선 자리는 땅 속이 아니다 (%s, %s) — 2026-10-21 고침"):format(tostring(s.hero.x), tostring(s.hero.y)))
+eq(s.hero.y, door.y, "문이 선 높은 땅의 높이")
+-- 오늘 다시는 안 된다
+res = handlers.Rift(p, "enter", "dg1", false)
+expect(res and not res.ok and res.why == DG.words.done, "오늘은 이미 끝냈다")
+-- 파티 입장: 같은 맵 · 문이 열린 파티원과 함께(오늘 안 한 사람만 — 여기서는 동료가 이끈다)
+handlers.Party(p2, "invite", p.UserId)
+handlers.Party(p, "accept", p2.UserId)
+if World.sameParty(p.UserId, p2.UserId) then
+	s2.hero.quests.dq01 = { done = true, c = {} }
+	World.jump(p2, "r2ah")
+	s2.hero.x, s2.hero.y = door.x - 12, door.y
+	local partner = newPlayer
+	local _ = partner
+	local p3, s3 = newPlayer(7507, "거울숲셋째", "reaper")
+	s3.hero.level = 35
+	s3.hero.quests.dq01 = { done = true, c = {} }
+	handlers.Party(p2, "invite", p3.UserId)
+	handlers.Party(p3, "accept", p2.UserId)
+	World.jump(p3, "r2ah")
+	s3.hero.x, s3.hero.y = door.x - 20, door.y
+	res = handlers.Rift(p2, "enter", "dg1", true)
+	expect(res and res.ok, "파티 입장 — " .. tostring(res and res.why))
+	expect(string.match(s2.scene, "^dg1#%d+$") ~= nil, "이끈 사람이 들어갔다")
+	if World.sameParty(p2.UserId, p3.UserId) then
+		eq(s3.scene, s2.scene, "같은 맵의 파티원이 함께")
+	end
+	eq(s.scene, "r2ah", "오늘 이미 끝낸 파티원은 따라가지 않는다")
+end
+
+end)
+runTest('76_lune_unstick_touch_acts', function()
+-- 「달의 계승자」 — 땅 속에 끼지 않게(2026-10-21) · 폰의 점프 · 상호작용 단추도 끌어 옮기기(2026-10-21).
+--  사용자(폰 스크린샷 — 세 갈래 길 오른쪽의 턱 안에 캐릭터가 박혀 있다): "모바일에서 내가 지금준 스크린샷처럼 대쉬하다가 맵을뚫고 낑기는 현상 발생합니다
+--   그리고 모바일에서 상호작용, 점프키 같은거 위치 다 바꿀수있어야해요 드래그앤 드랍으로 다른 버튼들처럼"
+--  보는 것: ① 끼었으면 꺼낸다(sim/physics.luau의 freeSpot · unstick — 위가 먼저) ② 모든 맵의 서는 자리(시작 · 문 · 간이 포탈 · 사람 · 사다리)는 땅 속이 아니다
+--   ③ 서버: 다른 맵의 자리 보고는 받지 않는다 · 계속 어긋나면 서버의 맵으로 다시 보낸다 · 되돌려 보내는 자리 · 세우는 자리는 땅 속이 아니다 · 던전에서 나와 서는 자리
+--   ④ 칸 셈: 점프 · 상호작용은 폰의 칸 13 · 14에 처음 놓이고 · 늘 하나씩 · 빼지도 덮지도 못하고 · 끌면 자리를 바꾼다 · PC의 퀵슬롯에는 놓이지 않는다 · 스킬을 다시 찍어도 남는다
+--   ⑤ 폰 단추(client/lune/touch.luau를 가짜 화면으로): 점프 · 상호작용을 누르면 그 일을 하고 · 「단추 배치」에서 끌면 자리를 바꾸고 · 목록에서 골라도 바꾸고 · 「비우기」는 안 되고 · 판이 단추를 덮지 않는다
+local P = req("ReplicatedStorage/shared/lune/sim/physics")
+local G = req("ReplicatedStorage/shared/lune/config/game")
+local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
+local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
+local CLASSES = req("ReplicatedStorage/shared/lune/data/classes.generated")
+local Quick = req("ReplicatedStorage/shared/lune/ui/quick")
+local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+local Rift = req("ReplicatedStorage/shared/lune/sim/rift")
+local T = G.TILE
+
+local function same(a, b)
+	for i = 1, Quick.N do
+		if (a[i] or false) ~= (b[i] or false) then
+			return false
+		end
+	end
+	return true
+end
+
+-- ① 꺼내기 — 스크린샷의 자리: 세 갈래 길(r1af)의 오른쪽 턱(x 336부터 한 칸 · x 368부터 두 칸) 안, 발 높이 176(아래 땅)
+do
+	local sc = SCENES.scenes.r1af
+	expect(P.solidBox(sc, 385, 176), "세 갈래 길 x 385 · 발 176 = 턱 안(스크린샷의 자리)")
+	local x, y = P.freeSpot(sc, 385, 176)
+	expect(not P.solidBox(sc, x, y), ("꺼낸 자리는 땅 속이 아니다 (%s, %s)"):format(x, y))
+	eq(y, 144, "위로 — 턱의 윗면(144)에 선다")
+	eq(x, 385, "가로는 그대로")
+	local bx, by = P.freeSpot(sc, 200, 176)
+	expect(bx == 200 and by == 176, "끼지 않았으면 그대로")
+	-- 한 칸 턱 바로 안(가장자리): 위로 한 칸
+	x, y = P.freeSpot(sc, 345, 176)
+	expect(not P.solidBox(sc, x, y) and y == 160 and x == 345, ("한 칸 턱 안 → 그 윗면 (%s, %s)"):format(x, y))
+	-- 몸을 꺼내면 빠르기를 멈춘다
+	local body = { x = 385, y = 176, vx = 520, vy = 30, ground = true }
+	expect(P.unstick(sc, body), "끼었으면 꺼냈다고 알린다")
+	expect(body.vx == 0 and body.vy == 0 and not P.solidBox(sc, body.x, body.y), "꺼낸 몸은 멈추고 땅 속이 아니다")
+	expect(not P.unstick(sc, body), "다시 부르면 그대로")
+	-- 대쉬로 턱을 향해 달려도 몸은 턱에 들어가지 않는다(물리 그대로 — 이 셈은 원래 막는다)
+	local b2 = { x = 300, y = 176, vx = 0, vy = 0, ground = true }
+	for _ = 1, 60 do
+		P.step(sc, b2, { mx = 0, vx = 520, float = true }, 1 / 60)
+		expect(not P.solidBox(sc, b2.x, b2.y), "대쉬 중에도 턱 안에 들어가지 않는다")
+	end
+	-- 모든 맵의 아무 자리나: 꺼낸 자리는 늘 땅 속이 아니다 · 맵 안이다
+	local rng = Random.new(76)
+	local bad = 0
+	for key, s in SCENES.scenes do
+		if typeof(s) == "table" and s.rows and s.w and s.h then
+			for _ = 1, 40 do
+				local px, py = rng:NextNumber(8, s.w * T - 8), rng:NextNumber(20, s.h * T)
+				local fx, fy = P.freeSpot(s, px, py)
+				if P.solidBox(s, fx, fy) or fx < 0 or fx > s.w * T then
+					bad += 1
+					if bad <= 3 then
+						expect(false, ("%s (%d, %d) → (%d, %d)이 땅 속"):format(key, px, py, fx, fy))
+					end
+				end
+			end
+		end
+	end
+	eq(bad, 0, "모든 맵에서 꺼낸 자리는 땅 속이 아니다")
+end
+
+-- ② 서는 자리들
+do
+	local inWall = {}
+	for key, s in SCENES.scenes do
+		if typeof(s) == "table" and s.rows and s.spawn then
+			local function check(what, x, y)
+				if P.solidBox(s, x, y) then
+					table.insert(inWall, ("%s %s (%d, %d)"):format(key, what, x, y))
+				end
+			end
+			check("시작 자리", s.spawn.x, s.spawn.y)
+			for _, p in s.portals or {} do
+				check("문 → " .. tostring(p.to), p.x, p.y)
+			end
+			for _, w in s.warps or {} do
+				check("간이 포탈 " .. tostring(w.id), w.x, w.y)
+			end
+			for _, n in s.npcs or {} do
+				check("사람 " .. tostring(n.name), n.x, n.y)
+			end
+			for i, l in s.ladders or {} do
+				for y = l.top, l.bottom, 4 do
+					check("사다리 " .. i, l.x, y)
+				end
+			end
+		end
+	end
+	eq(#inWall, 0, "서는 자리가 땅 속인 곳이 없다 " .. table.concat(inWall, " · ", 1, math.min(#inWall, 4)))
+end
+
+-- ③ 서버
+local handlers, sent = {}, {}
+MOCK("ReplicatedStorage/shared/lune/net/net", {
+	FireClient = function(name, player, ...)
+		table.insert(sent, { name = name, player = player, args = { ... } })
+	end,
+	OnServer = function(name, fn)
+		handlers[name] = fn
+	end,
+})
+local function signal()
+	return { Connect = function() end }
+end
+SERVICE("Players", { PlayerAdded = signal(), PlayerRemoving = signal(), GetPlayers = function() return {} end })
+SERVICE("RunService", { Heartbeat = signal() })
+SERVICE("MessagingService", { PublishAsync = function() end, SubscribeAsync = function() end })
+SERVICE("TextService", { FilterStringAsync = function(_, text) return { GetNonChatStringForBroadcastAsync = function() return text end } end })
+local disk, names = {}, {}
+MOCK("ServerScriptService/server/lune/modules/store", {
+	lock = function() return true end,
+	unlock = function() end,
+	loadAccount = function(id) return disk[id] end,
+	saveAccount = function(id, data) disk[id] = data; return true end,
+	loadOld = function() return nil end,
+	nameOwner = function(key) return names[key] end,
+	claimName = function(key, id) names[key] = id; return true end,
+	freeName = function(key) names[key] = nil end,
+	rankSet = function() end, rankRemove = function() end, rankTop = function() return {} end,
+	rankInfoSet = function() end, rankInfoGet = function() return nil end, rankInfoRemove = function() end,
+	isOffline = function() return false end,
+	marketRead = function() return true, nil end,
+	marketUpdate = function(_, fn) return true, nil, nil, fn(nil) end,
+})
+local World = req("ServerScriptService/server/lune/modules/world")
+World.start()
+local p = { UserId = 7601, Name = "끼임시험", DisplayName = "끼임시험", attrs = {}, SetAttribute = function(self, k, v) self.attrs[k] = v end, Kick = function() end }
+handlers.Ready(p)
+local made = handlers.Chars(p, "create", "끼임시험", "riven")
+handlers.Chars(p, "enter", made.id)
+local s = World.session(p)
+local function last(name: string)
+	local got = nil
+	for _, f in sent do
+		if f.name == name and f.player == p then
+			got = f
+		end
+	end
+	return got
+end
+local function tickFor(sec: number)
+	for _ = 1, math.floor(sec * 20 + 0.5) do
+		World.tick(1 / 20)
+	end
+end
+do
+	World.jump(p, "r1af")
+	eq(s.scene, "r1af", "세 갈래 길")
+	local sc = SCENES.scenes.r1af
+	tickFor(2.5) -- (관리 이동 직후 2초는 옮겨 놓은 자리에서 먼 보고를 늦은 보고로 본다 — LOAD_STALE)
+	handlers.Move(p, 200, 176, 1, "r1af")
+	eq(s.hero.x, 200, "이 맵의 자리 보고는 받는다")
+	-- 다른 맵의 자리: 받지 않는다(늦은 보고 · 어긋난 화면)
+	handlers.Move(p, 230, 176, 1, "hunt")
+	eq(s.hero.x, 200, "다른 맵(달그림자 사냥터)의 자리 보고는 받지 않는다")
+	handlers.Move(p, 210, 176, 1)
+	eq(s.hero.x, 210, "맵을 적지 않은 보고는 예전처럼 받는다")
+	-- 4초 넘게 계속 다른 맵이면: 서버의 맵으로 다시 보낸다(Revive)
+	table.clear(sent)
+	handlers.Move(p, 230, 176, 1, "hunt")
+	tickFor(2)
+	handlers.Move(p, 230, 176, 1, "hunt")
+	expect(last("Revive") == nil, "2초는 기다린다(장면을 옮기는 중일 수 있다)")
+	tickFor(2.5)
+	handlers.Move(p, 230, 176, 1, "hunt")
+	local rv = last("Revive")
+	expect(rv ~= nil and rv.args[1].scene == "r1af", "4초 넘게 어긋나면 서버의 맵(세 갈래 길)으로 다시 보낸다")
+	eq(s.scene, "r1af", "그대로 세 갈래 길")
+	-- 되돌려 보내는 자리: 서버가 아는 자리가 땅 속이어도 꺼내서 보낸다
+	tickFor(1)
+	handlers.Move(p, 210, 176, 1, "r1af")
+	s.hero.x, s.hero.y = 385, 176 -- (어떤 길로든 서버의 자리가 턱 안이 되었다고 치고)
+	table.clear(sent)
+	tickFor(1)
+	handlers.Move(p, 30, 176, 1, "r1af") -- 너무 먼 보고 → 되돌려 보낸다
+	local w = last("Warp")
+	expect(w ~= nil, "먼 보고는 되돌려 보낸다(Warp)")
+	if w then
+		expect(not P.solidBox(sc, w.args[1], w.args[2]), ("되돌려 보내는 자리는 땅 속이 아니다 (%s, %s)"):format(tostring(w.args[1]), tostring(w.args[2])))
+		eq(w.args[2], 144, "턱의 윗면으로")
+	end
+	expect(not P.solidBox(sc, s.hero.x, s.hero.y), "서버가 아는 자리도 꺼냈다")
+	-- 문을 지나 들어선 자리 · 관리 이동으로 선 자리는 땅 속이 아니다
+	for _, key in { "r1af", "hunt", "r2ah", "ct" } do
+		World.jump(p, key)
+		expect(not P.solidBox(SCENES.scenes[key], s.hero.x, s.hero.y), key .. ": 들어선 자리는 땅 속이 아니다")
+	end
+	-- 던전에서 나와 서는 자리(반달네 옛집 — 문이 선 높은 땅): 전에는 맵 시작 자리의 높이라 땅 속이었다
+	local t = Rift.tier("dg1")
+	local door = nil
+	for _, q in SCENES.scenes[t.door.scene].portals do
+		if q.dungeon == t.id then
+			door = q
+		end
+	end
+	expect(door ~= nil, "던전의 문")
+	if door then
+		expect(P.solidBox(SCENES.scenes.r2ah, door.x - 30, SCENES.scenes.r2ah.spawn.y), "(전의 자리 = 문 왼쪽 30점 · 시작 자리의 높이는 땅 속이었다)")
+		expect(not P.solidBox(SCENES.scenes.r2ah, door.x - 30, door.y), "이제의 자리 = 문 왼쪽 30점 · 문의 높이는 땅 속이 아니다")
+	end
+end
+
+-- ④ 칸 셈 — 점프 · 상호작용
+do
+	local J, I = "act_jump", "act_interact"
+	eq(Quick.ACTS[J].home, 13, "점프는 처음에 칸 13")
+	eq(Quick.ACTS[I].home, 14, "상호작용은 처음에 칸 14")
+	eq(Quick.act(J), "jump", "점프")
+	eq(Quick.act(I), "interact", "상호작용")
+	expect(Quick.act("potion1") == nil and Quick.act(false) == nil, "다른 것은 아니다")
+	local spot = {}
+	for _, t in UI.touch do
+		if t.slot then
+			spot[t.slot] = t
+		end
+	end
+	expect(spot[13] and spot[13].x == 340 and spot[13].y == 116, "칸 13의 단추 = 전의 점프 단추 자리(사냥기 위)")
+	expect(spot[14] and spot[14].x == 82 and spot[14].y == 140, "칸 14의 단추 = 전의 상호작용 단추 자리(조이스틱 오른쪽)")
+	for class, c in CLASSES.classes do
+		local start = Quick.touchStart(c.skills)
+		expect(start[13] == J and start[14] == I, class .. ": 새 캐릭터의 폰 배치에 점프 · 상호작용")
+		local h = Hero.new(1, class)
+		expect(h.tslots[13] == J and h.tslots[14] == I, class .. ": 새 캐릭터")
+		expect(Quick.find(h.slots, J) == nil and Quick.find(h.slots, I) == nil, class .. ": PC의 퀵슬롯에는 없다")
+	end
+	local base = Quick.touchStart(CLASSES.classes.riven.skills)
+	-- 끌어서 자리를 바꾼다(놓인 것끼리)
+	local moved = Quick.place(base, J, 2)
+	expect(moved and moved[2] == J and moved[13] == base[2], "점프를 칸 2(가장 큰 단추)로 끌면 사냥기와 자리를 바꾼다")
+	moved = Quick.place(base, base[4], 14)
+	expect(moved and moved[14] == base[4] and moved[4] == I, "대쉬를 상호작용 단추로 끌면 둘이 자리를 바꾼다")
+	-- 빼지 못하고 · 밖에서 온 것으로 덮지 못한다
+	expect(Quick.clear(base, 13) == nil and Quick.clear(base, 14) == nil, "점프 · 상호작용은 「비우기」가 안 된다")
+	expect(Quick.place(base, "potion2", 13) == nil, "가방에서 끌어 온 물약으로 점프를 덮지 못한다")
+	expect(Quick.place(base, "potion2", 6) ~= nil, "빈 칸에는 놓인다")
+	-- 없으면 처음 칸에 · 둘이면 하나만 · 처음 칸에 있던 것은 빈 칸으로
+	local old = table.clone(base)
+	old[13], old[14] = false, false -- (이것이 생기기 전에 저장된 폰 배치)
+	old[13] = "zz"
+	local fixed = Quick.touchFix(old)
+	expect(fixed[13] == J and fixed[14] == I, "예전 배치에도 점프 · 상호작용이 처음 칸에 들어온다")
+	expect(Quick.find(fixed, "zz") ~= nil, "칸 13에 있던 것은 빈 단추로 옮겨진다")
+	local twice = table.clone(base)
+	twice[6] = J
+	fixed = Quick.touchFix(twice)
+	local n = 0
+	for i = 1, Quick.N do
+		if fixed[i] == J then
+			n += 1
+		end
+	end
+	eq(n, 1, "점프가 둘이면 하나만 남는다")
+	expect(same(Quick.touchFix(fixed), fixed), "한 번 손본 것은 그대로")
+	-- 서버: 폰 배치는 받고 · PC 배치에는 안 받는다 · 스킬을 다시 찍어도 남는다
+	local h = Hero.new(2, "axion")
+	local mine = table.clone(h.tslots)
+	mine[13], mine[2] = mine[2], J
+	expect(Hero.setSlots(h, mine, true) and h.tslots[2] == J and h.tslots[13] == mine[13], "폰 배치: 점프를 옮겨 보낸 것을 받는다")
+	local pc = table.clone(h.slots)
+	pc[6] = J
+	expect(not Hero.setSlots(h, pc, false), "PC의 퀵슬롯에는 점프 · 상호작용을 놓지 못한다")
+	Hero.resetSkills(h)
+	expect(h.tslots[2] == J and Quick.find(h.tslots, I) ~= nil, "스킬을 처음부터 다시 찍어도 점프 · 상호작용은 남는다")
+	local back = Hero.unpack(2, Hero.pack(h))
+	expect(back and back.tslots[2] == J and back.tslots[14] == I, "저장하고 다시 읽어도 옮긴 자리 그대로")
+	-- 접속한 사람: TouchSlots로 바꾸면 남는다
+	local ts = table.clone(s.hero.tslots)
+	local from13 = ts[13]
+	ts[13], ts[3] = ts[3], from13
+	local got = handlers.TouchSlots(p, ts)
+	expect(got and got[3] == J, "접속한 사람의 폰 배치: 점프를 칸 3(보스기 단추)으로")
+end
+
+-- ⑤ 폰 단추(touch.luau를 가짜 화면으로)
+do
+	RESET()
+	local function sig()
+		local q = { fns = {} }
+		function q:Connect(fn)
+			table.insert(self.fns, fn)
+			return { Disconnect = function() end }
+		end
+		function q:Fire(...)
+			for _, f in self.fns do
+				f(...)
+			end
+		end
+		return q
+	end
+	local changed, ended = sig(), sig()
+	SERVICE("UserInputService", { InputChanged = changed, InputEnded = ended, TouchEnabled = true, KeyboardEnabled = false })
+	SERVICE("RunService", { Heartbeat = sig() })
+	local function frame(name)
+		local f = Instance.new("Frame")
+		f.Name = name
+		f.AbsolutePosition = Vector2.new(0, 0)
+		f.GetChildren = function() return {} end
+		f.Destroy = function() end
+		return f
+	end
+	local uiRoot = frame("Ui")
+	MOCK("Client/lune/stage", {
+		ratio = 2, uiScale = 1, uiH = 432, insetTop = 0, ui = uiRoot,
+		gui = { GetAttribute = function() return true end, GetAttributeChangedSignal = function() return sig() end },
+		group = function(_, name) return frame(name) end,
+		place = function(_, name) return frame(name) end,
+		onResize = function() end,
+	})
+	local texts, hits, buttons = {}, {}, {}
+	MOCK("Client/lune/ui/ui", {
+		COLOR = setmetatable({}, { __index = function(_, k) return k end }),
+		text = function(parent, text, x, y, width, opts)
+			local item = { text = text, parent = parent, x = x, width = width, shown = true, label = { Frame = {} }, opts = opts }
+			function item.set(self, v) self.text = v end
+			function item.show(self, on) self.shown = on end
+			function item.color(self, c) self.col = c end
+			table.insert(texts, item)
+			return item
+		end,
+		pic = function(_, name) return { name = name } end,
+		setPic = function(pic, name) pic.name = name end,
+		slot = function() local f = frame("Slot"); return { frame = f, setOn = function() end } end,
+		hit = function(f) local h = { Activated = sig(), frame = f }; table.insert(hits, h); return h end,
+		panel = function() return frame("Panel") end,
+		scroll = function() return frame("Scroll") end,
+		button = function(_, text, _, _, _, fn) local b = { text = text, fn = fn, frame = {} }; table.insert(buttons, b); return b end,
+		box = function() return frame("Box") end,
+		group = function(_, _, _, _, _, name) return frame(name) end,
+	})
+	MOCK("Client/lune/hud", { active = {}, marks = {}, countOf = function() return 0 end })
+	local pressed = {}
+	MOCK("Client/lune/input", {
+		press = function(a) pressed[a] = true end,
+		release = function(a) pressed[a] = false end,
+	})
+	UDim = UDim or { new = function(scale, offset) return { Scale = scale, Offset = offset } end } -- (가짜 화면에는 UDim이 없다 — 단추의 둥근 모서리)
+	local Touch = req("Client/lune/touch")
+	local applied, acts = {}, {}
+	local choices = { { what = "act_jump", name = "점프" }, { what = "act_interact", name = "상호작용" } }
+	Touch.init({
+		choices = function() return choices end,
+		apply = function(next) table.insert(applied, next); Touch.setSlots(next) end,
+		repeats = function() return false end,
+		onAct = function(down) table.insert(acts, down) end,
+		onToggle = function() end,
+		onMenu = function() end,
+	})
+	expect(Touch.on, "터치 화면이면 켜진다")
+	-- 단추 틀(T + 번호)과 그 누르는 칸(Hit)
+	local byNo, hitOf = {}, {}
+	for _, inst in CREATED do
+		if inst.ClassName == "Frame" and typeof(inst.Name) == "string" and string.match(inst.Name, "^T%d+$") then
+			byNo[tonumber(string.sub(inst.Name, 2))] = inst
+			local pos, size = inst.Position, inst.Size
+			inst.AbsolutePosition = Vector2.new(pos.X.Offset, pos.Y.Offset)
+			inst.AbsoluteSize = Vector2.new(size.X.Offset, size.Y.Offset)
+		end
+	end
+	for _, inst in CREATED do
+		if inst.ClassName == "TextButton" and inst.Name == "Hit" and inst.Parent then
+			for no, f in byNo do
+				if inst.Parent == f then
+					hitOf[no] = inst
+				end
+			end
+		end
+	end
+	local noOf = {}
+	for _, t in UI.touch do
+		if t.slot then
+			noOf[t.slot] = t.no
+		end
+	end
+	expect(hitOf[noOf[13]] ~= nil and hitOf[noOf[14]] ~= nil, "칸 13 · 14의 단추가 있다(전의 점프 · 상호작용 자리)")
+	local function actText(no)
+		for _, it in texts do
+			if it.width == 80 and it.x == -40 and it.parent and it.parent.Parent == byNo[no] then
+				return it
+			end
+		end
+		return nil
+	end
+	local start = Quick.touchStart(CLASSES.classes.riven.skills)
+	Touch.setSlots(start)
+	local jt, it = actText(noOf[13]), actText(noOf[14])
+	expect(jt and jt.shown and jt.text == "점프", "칸 13의 단추에 「점프」")
+	expect(it and it.shown and it.text == "상호작용", "칸 14의 단추에 「상호작용」")
+	Touch.setAct("npc")
+	expect(it and it.text == "말 걸기", "주민 곁이면 「말 걸기」(전의 상호작용 단추와 같다)")
+	Touch.setAct(nil)
+	-- 누르기 · 떼기
+	local finger = { UserInputType = Enum.UserInputType.Touch, Position = { X = 0, Y = 0 } }
+	hitOf[noOf[13]].InputBegan:Fire(finger)
+	expect(pressed.jump == true, "점프 단추를 누르면 뛰기를 누른다")
+	ended:Fire(finger)
+	expect(pressed.jump == false, "손을 떼면 뛰기를 뗀다")
+	local f2 = { UserInputType = Enum.UserInputType.Touch, Position = { X = 0, Y = 0 } }
+	hitOf[noOf[14]].InputBegan:Fire(f2)
+	expect(acts[#acts] == true, "상호작용 단추를 누르면 상호작용")
+	ended:Fire(f2)
+	expect(acts[#acts] == false, "떼면 놓는다")
+	eq(Touch.frameOf("jump"), byNo[noOf[13]], "튜토리얼이 가리키는 점프 단추 = 칸 13의 단추")
+	-- 「단추 배치」: 점프를 칸 2(가장 큰 단추) 위로 끌어 놓는다
+	Touch.arrange(true)
+	local drag = { UserInputType = Enum.UserInputType.Touch, Position = { X = byNo[noOf[13]].AbsolutePosition.X + 10, Y = byNo[noOf[13]].AbsolutePosition.Y + 10 } }
+	hitOf[noOf[13]].InputBegan:Fire(drag)
+	expect(pressed.jump ~= true, "배치 중에 누르면 뛰지 않는다")
+	local c2 = byNo[noOf[2]].AbsolutePosition + byNo[noOf[2]].AbsoluteSize / 2
+	drag.Position = { X = c2.X, Y = c2.Y }
+	changed:Fire(drag)
+	ended:Fire(drag)
+	local after = applied[#applied]
+	expect(after and after[2] == "act_jump" and after[13] == start[2], "점프를 칸 2 위에 놓으면 사냥기와 자리를 바꾼다")
+	eq(Touch.frameOf("jump"), byNo[noOf[2]], "점프 단추는 이제 칸 2의 자리")
+	local jt2 = actText(noOf[2])
+	expect(jt2 and jt2.shown and jt2.text == "점프", "칸 2의 단추에 「점프」가 적힌다")
+	-- 목록에서 골라도 바꾼다: 칸 7을 고르고 「상호작용」
+	local n0 = #applied
+	Touch.arrange(true, 7)
+	-- 목록의 칸: 그 칸의 글이 「상호작용」인 것 — 지금 그려진 목록의 것 하나만 누른다(누르면 목록이 다시 그려져 칸이 새로 생긴다)
+	local pick = nil
+	for _, h in table.clone(hits) do
+		for _, tx in texts do
+			if tx.parent == h.frame and tx.text == "상호작용" then
+				pick = h
+			end
+		end
+	end
+	expect(pick ~= nil, "목록에 「상호작용」이 있다")
+	if pick then
+		pick.Activated:Fire()
+	end
+	local after2 = applied[#applied]
+	expect(#applied > n0 and after2[7] == "act_interact" and not after2[14], "목록에서 「상호작용」을 고르면 고른 단추(칸 7)로 옮겨진다")
+	-- 「비우기」: 점프 · 상호작용이 놓인 단추는 안 된다
+	n0 = #applied
+	Touch.arrange(true, 7)
+	local clearBtn = nil
+	for _, b in table.clone(buttons) do
+		if b.text == "비우기" then
+			clearBtn = b -- (지금 그려진 판의 것 = 마지막)
+		end
+	end
+	if clearBtn then
+		clearBtn.fn()
+	end
+	eq(#applied, n0, "상호작용이 놓인 단추는 「비우기」가 안 된다")
+	Touch.arrange(false)
 end
 
 end)

@@ -43,6 +43,7 @@ local BIG_HIT = 1.4 -- 센 타격: 세기 배수가 이만큼 넘는 타(대지 
 local Room = {}
 Room.__index = Room
 Room.bodyOf = bodyOf
+Room.physics = Physics -- 서버가 사람을 세우는 자리 · 받은 자리가 땅 속인지 본다(world.luau — 지역 이름의 한도 때문에 따로 부르지 않는다 · 2026-10-21)
 
 function Room.new(key: string, scene, rng)
 	local self = setmetatable({}, Room)
@@ -73,7 +74,13 @@ function Room.new(key: string, scene, rng)
 		local kind = COMBAT.mobs[def.kind]
 		-- 피해 숫자의 배율(dmgScale)과 쓰임의 보정(targetBonus — 맞는 갈래의 기술은 피해가 그만큼 더 뜬다)만큼 체력도 크다: 맞는 기술로 잡는 타수는 그대로다
 		local maxHp = math.max(1, math.floor(N.mobHp(def.lv) * kind.hp * RULES.dmgScale * (1 + RULES.targetBonus / 100) + 0.5))
-		if def.elite then
+		if scene.dungeon then
+			-- 던전(2026-10-21 — 수정 거울숲): 많이 몰려나오니 하나하나는 무르게 · 마지막 물결의 정예는 던전의 배
+			maxHp = math.max(1, math.floor(maxHp * Rift.DUNGEON.mob.hp + 0.5))
+			if def.elite then
+				maxHp *= Rift.DUNGEON.elite.hp
+			end
+		elseif def.elite then
 			maxHp *= Rift.DATA.elite.hp -- 토벌의 정예: 체력이 몇 배
 		end
 		local mob = {
@@ -225,6 +232,8 @@ function Room:hurtHero(events, h, mob, mul: number)
 	local casting = (h.actUntil or 0) > self.time or self.caster:acting(h)
 	if mob.fieldElite then
 		mul *= FE.hit -- 사냥터 정예
+	elseif self.scene and self.scene.dungeon then
+		mul *= Rift.DUNGEON.mob.hit * (if mob.elite then Rift.DUNGEON.elite.hit else 1) -- 던전의 몬스터(2026-10-21)
 	elseif mob.elite then
 		mul *= Rift.DATA.elite.hit -- 토벌의 정예는 더 세게 친다
 	end
@@ -1282,6 +1291,12 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 				end
 			end
 			table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = 0, ups = 0, gains = gains, credit = credit, loot = {} })
+			return dead, dmg
+		end
+		-- 던전의 몬스터(2026-10-21 사용자: "그 몬스터들은 아이템이나 경험치를 주는게 아니라 다잡고나서 던전 다깼다고 나오면서 일괄 경험치를 지급"):
+		--  경험치 · 물건 · 퀘스트와 일일 의뢰의 숫자를 주지 않는다(보상은 다 쓰러뜨렸을 때 한꺼번에 — 서버의 riftPay)
+		if self.scene and self.scene.dungeon then
+			table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = 0, ups = 0, gains = {}, credit = {}, loot = {} })
 			return dead, dmg
 		end
 		-- 사냥터 정예: 보통의 것을 잡으면 센다(정예 자신 · 토벌의 물결은 세지 않는다)

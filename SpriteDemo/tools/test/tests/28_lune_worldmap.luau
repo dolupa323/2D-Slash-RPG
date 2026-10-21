@@ -255,7 +255,7 @@ do
 		expect(pixelText.Measure("↑ " .. step.act, "small") <= 220, "자리의 글이 이름표에 들어간다 " .. def.name)
 		-- 문 바로 앞이면 ↑가 문으로 간다 — 자리는 문에서 떨어져 있어야 한다
 		for _, p in sc.portals do
-			expect(math.abs(p.x - step.x) > 60 or math.abs(p.y - step.y) > 48, ("자리가 문 「%s」과 겹치지 않는다 %s"):format(p.label, def.name))
+			expect(math.abs(p.x - step.x) > 60 or math.abs(p.y - step.y) > 48 or (p.dungeon ~= nil and p.done == def.id), ("자리가 문 「%s」과 겹치지 않는다 %s"):format(p.label, def.name)) -- 던전의 문 앞의 「문에 손 대기」는 그 문이 닫혀 있는 동안의 것(2026-10-21)
 		end
 		-- 주민 바로 앞이어도 안 된다(↑가 한 가지 일만 하게)
 		for _, n in sc.npcs or {} do

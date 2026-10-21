@@ -75,12 +75,6 @@ local Items = req("ReplicatedStorage/shared/lune/sim/items")
 local Layout = req("ReplicatedStorage/shared/lune/ui/layout")
 local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
 local K = Layout.TOUCHCHOOSER
-local leftmost = math.huge -- 칸 단추 가운데 가장 왼쪽(화면 틀의 점 — 게임 도트 x 2)
-for _, t in UI.touch do
-	if t.slot then
-		leftmost = math.min(leftmost, t.x * 2)
-	end
-end
 local few = Layout.touchChooser(7, 432)
 expect(not few.scroll and few.viewH == 2 * few.rowH, "놓을 것이 일곱이면 두 줄 · 밀지 않는다")
 local uses = 0
@@ -104,9 +98,16 @@ for who, c in CLASSES.classes do
 		n += 1
 	end
 	for _, inset in { 0, 40 } do
-		local m = Layout.touchChooser(n, 432 - inset)
+		local m = Layout.touchChooserFit(n, 432, inset, UI.touch, 2)
 		expect(K.top + m.h <= 432 - inset - K.bottom, ("%s: 놓을 것 %d개 — 판의 아래 끝 %d(화면 틀 %d 안)"):format(who, n, inset + K.top + m.h, 432))
 		expect(m.scroll and m.viewH < m.contentH, who .. ": 다 보이지 않는 줄은 밀어서 본다")
-		expect(K.x + m.w < leftmost, ("%s: 판의 오른쪽 끝 %d — 칸 단추(왼쪽 끝 %d)를 덮지 않는다"):format(who, K.x + m.w, leftmost))
+		-- 판이 칸 단추를 덮지 않는다(2026-10-21 — 왼쪽 아래의 칸 14(처음에는 상호작용)도 끌어 옮기는 단추다: 판은 그 위에서 끝난다)
+		local px0, py0, px1, py1 = K.x, inset + K.top, K.x + m.w, inset + K.top + m.h
+		for _, t in UI.touch do
+			if t.slot then
+				local over = px0 < t.x * 2 + t.w * 2 and t.x * 2 < px1 and py0 < t.y * 2 + t.h * 2 and t.y * 2 < py1
+				expect(not over, ("%s: 판(%d,%d ~ %d,%d)이 칸 %d의 단추를 덮지 않는다"):format(who, px0, py0, px1, py1, t.slot))
+			end
+		end
 	end
 end

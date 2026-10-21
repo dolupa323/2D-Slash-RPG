@@ -65,7 +65,7 @@ function CashServer.processReceipt(info, key: string?)
 	return Decision.NotProcessedYet
 end
 
--- 쿠폰을 쓴다(2026-10-21 — 메뉴의 「쿠폰」 창): text = 적은 글 → { ok, why?, pet? }
+-- 쿠폰을 쓴다(2026-10-21 — 메뉴의 「쿠폰」 창): text = 적은 글 → { ok, why?, pet?, mount? }
 --  틀린 번호는 1분에 다섯 번까지(번호를 마구 넣어 맞히지 못하게) · 준 것과 쓴 쿠폰을 한 번의 저장으로 함께 적는다(저장에 실패하면 되돌린다 — 결제와 같다)
 Coupons.TRIES, Coupons.WINDOW = 5, 60
 function CashServer.coupon(s, text: any)
@@ -98,10 +98,10 @@ function CashServer.coupon(s, text: any)
 		s.acct.bm = Cash.unpack(before, Account.MAX)
 		return { ok = false, why = "저장하지 못했다 — 잠시 뒤에 다시 적어 주세요" }
 	end
-	if got.pet then
-		W.notify(s, got.pet) -- 화면이 가진 것을 다시 읽고 · 꺼낸 펫을 같은 맵의 사람들에게도
+	if got.pet or got.mount then
+		W.notify(s, got.pet or got.mount) -- 화면이 가진 것을 다시 읽고 · 꺼낸 펫을 같은 맵의 사람들에게도
 	end
-	return { ok = true, pet = got.pet }
+	return { ok = true, pet = got.pet, mount = got.mount }
 end
 
 -- 쓴 쿠폰의 보상을 지금의 목록에 맞춘다(계정을 읽었을 때 — 2026-10-21 사용자: "지금 내 테스트 계정에서 다시 쿠폰을 입력할수없어서 동글이는 사라지고, 재까마귀를 테스트할수도없어").
@@ -115,8 +115,46 @@ function CashServer.syncCoupons(acct): boolean
 			c.petOut = c.petOut or def.pet
 			changed = true
 		end
+		if def and def.mount and Cash.MOUNT[def.mount] and not c.mounts[def.mount] then -- 쿠폰 탈것도 같이(2026-10-21)
+			c.mounts[def.mount] = true
+			c.mount = c.mount or def.mount
+			changed = true
+		end
 	end
 	return changed
+end
+
+-- 쿠폰 기록을 지운다(관리자 — 2026-10-21 사용자: "쿠폰 기록을 초기화해줘 쿠폰등록하는것부터 영상을찍어야해"): 쓴 쿠폰을 모두 잊고 쿠폰으로만 받는 펫 · 탈것(free)을 뺀다
+--  (꺼내 둔 펫이면 넣고 · 고른 탈것이면 고르지 않은 것으로 — 타고 있었으면 내린다: 탄 동안인지는 서버의 s.riding이 bm.mount를 본다).
+--  쿠폰을 처음 넣기 전의 계정으로 — 돌려주는 것: 지운 쿠폰의 수 · 뺀 펫 · 탈것의 수
+function CashServer.resetCoupons(acct): (number, number)
+	local c = acct.bm
+	local codes, pets = 0, 0
+	for code in c.coupons do
+		c.coupons[code] = nil
+		codes += 1
+	end
+	for id in c.pets do
+		local def = Cash.PET[id]
+		if def and def.free then
+			c.pets[id] = nil
+			pets += 1
+			if c.petOut == id then
+				c.petOut = false
+			end
+		end
+	end
+	for id in c.mounts do
+		local def = Cash.MOUNT[id]
+		if def and def.free then
+			c.mounts[id] = nil
+			pets += 1
+			if c.mount == id then
+				c.mount = false
+			end
+		end
+	end
+	return codes, pets
 end
 
 -- 구매 창을 띄운다(서버가 한도를 본 뒤에만). → true / false · 까닭
@@ -152,27 +190,53 @@ function CashServer.prompt(s, key: any): (boolean, string?)
 	return true
 end
 
--- 상품의 실제 값(로블록스 — 대시보드에서 바꾼 값 · 가격 실험이 있으면 그 값). 10분 동안 기억한다 · 못 읽으면 nil(화면은 설계의 값)
+-- 상품의 실제 값(로블록스 — 대시보드에서 바꾼 값 · 가격 실험이 있으면 그 값). 못 읽은 상품은 화면이 설계의 값을 쓴다
 --  로블록스 문서: MarketplaceService:GetProductInfoAsync(번호, Enum.InfoType.Product).PriceInRobux(GetProductInfo는 낡은 이름)
-local PRICE_KEEP = 600
-local priceAt, priceOf = 0, {}
-function CashServer.prices(): { [string]: number }
-	local now = os.clock()
-	if now - priceAt < PRICE_KEEP and next(priceOf) ~= nil then
-		return priceOf
+--  2026-10-21 사용자 "달빛상점 로딩 너무길다": 전에는 상점에 들어갈 때(prices()) 상품 열일곱을 하나씩 차례로 물어 그 답을 다 받을 때까지 상점이 열리지 않았다
+--   (10분마다 한 번 · 하나도 못 읽으면 들어갈 때마다) → 이제는 서버가 켜질 때 뒤에서 한꺼번에(상품마다 따로) 묻고 10분마다 뒤에서 새로 받는다. prices()는 기다리지 않고 받아 둔 것을 준다
+local PRICE_KEEP, PRICE_RETRY = 600, 30 -- 새로 받는 사이(초) · 하나도 못 읽었을 때 다시 묻는 사이(초)
+local priceOf = {}
+local priceBusy = false
+local function fetchPrices()
+	if priceBusy then
+		return 0
 	end
-	priceAt = now
+	priceBusy = true
+	local left, got = 0, 0
 	for _, p in Cash.PRODUCTS do
 		if typeof(p.rid) == "number" and p.rid > 0 then
-			local ok, info = pcall(function()
-				return MarketplaceService:GetProductInfoAsync(p.rid, Enum.InfoType.Product)
+			left += 1
+			task.spawn(function()
+				local ok, info = pcall(function()
+					return MarketplaceService:GetProductInfoAsync(p.rid, Enum.InfoType.Product)
+				end)
+				if ok and typeof(info) == "table" and typeof(info.PriceInRobux) == "number" then
+					priceOf[p.id] = info.PriceInRobux
+					got += 1
+				end
+				left -= 1
 			end)
-			if ok and typeof(info) == "table" and typeof(info.PriceInRobux) == "number" then
-				priceOf[p.id] = info.PriceInRobux
-			end
 		end
 	end
+	local t0 = os.clock()
+	while left > 0 and os.clock() - t0 < 20 do
+		task.wait(0.1)
+	end
+	priceBusy = false
+	return got
+end
+CashServer.fetchPrices = fetchPrices
+function CashServer.prices(): { [string]: number }
 	return priceOf
+end
+-- 뒤에서 값을 받아 두기 시작한다(CashServer.start가 부른다 — 서버가 켜질 때)
+local function keepPrices()
+	task.spawn(function()
+		while true do
+			local got = fetchPrices()
+			task.wait(if got > 0 then PRICE_KEEP else PRICE_RETRY)
+		end
+	end)
 end
 
 -- 게임 패스를 가졌는가(들어올 때 · 산 순간 — 로블록스가 산 기록을 주지 않으니 물어서 기억한다)
@@ -202,6 +266,7 @@ end
 
 function CashServer.start(hooks)
 	W = hooks
+	keepPrices() -- 상품의 값을 뒤에서 받아 둔다(상점에 들어갈 때 기다리지 않게 — 2026-10-21)
 	pcall(function()
 		MarketplaceService.ProcessReceipt = CashServer.processReceipt
 	end)

@@ -92,13 +92,15 @@ function RiftView.draw()
 	RiftView.name:set(if t then t.name else "")
 	RiftView.clock:set(("%d:%02d"):format(math.floor(rest / 60), math.floor(rest % 60)))
 	RiftView.clock:color(if rest < 60 then C.red else C.text)
+	local DW = Rift.DUNGEON.words -- 던전(2026-10-21 — 수정 거울숲)의 글
+	local dg = v.dungeon == true
 	local what
 	if v.state == "wait" then
 		what = W.ready
 	elseif v.state == "clear" then
-		what = W.clear
+		what = if dg then DW.clear else W.clear
 	elseif v.state == "fail" then
-		what = W.fail
+		what = if dg then DW.fail else W.fail
 	else
 		what = (if v.wave >= v.waves then W.eliteWave else Format.fill(W.wave, { a = v.wave, b = v.waves })) .. " · " .. Format.fill(W.mobs, { n = v.left })
 	end
@@ -110,13 +112,20 @@ function RiftView.draw()
 	if not over then
 		return
 	end
-	RiftView.title:set(if v.state == "clear" then W.clear else W.fail)
+	RiftView.title:set(if v.state == "clear" then (if dg then DW.clear else W.clear) else (if dg then DW.fail else W.fail))
 	RiftView.title:color(if v.state == "clear" then C.green else C.red)
 	for i = 1, ROWS do
 		row(i, nil, "")
 	end
 	local p = RiftView.paid
-	if v.state == "clear" and p then
+	if v.state == "clear" and p and dg then
+		-- 던전: 경험치 한 줄(오늘 이미 끝냈으면 그 말)
+		if p.none then
+			row(1, nil, DW.done, C.dim)
+		else
+			row(1, nil, ("경험치 %s"):format(Format.comma(p.xp or 0)))
+		end
+	elseif v.state == "clear" and p then
 		if p.none then
 			row(1, nil, W.noPay, C.dim)
 		else
@@ -130,8 +139,9 @@ function RiftView.draw()
 			end
 		end
 	end
-	local wait = (if v.state == "clear" then D.back else Rift.FAIL_BACK) - (v.after + RiftView.since)
-	RiftView.back:set(Format.fill(W.back, { n = math.max(0, math.ceil(wait)) }))
+	local wait = (if v.state == "clear" then (v.back or D.back) else Rift.FAIL_BACK) - (v.after + RiftView.since)
+	local n = math.max(0, math.ceil(wait))
+	RiftView.back:set(if dg then Format.fill(DW.back, { s = n }) else Format.fill(W.back, { n = n }))
 end
 
 -- 매 장면(boot의 LuneFrame): 받은 뒤로 흐른 시간 — 초가 바뀔 때만 다시 그린다

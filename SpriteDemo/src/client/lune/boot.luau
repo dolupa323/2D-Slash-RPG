@@ -276,6 +276,16 @@ end
 
 -- 펫 꺼내기 · 넣기와 탈것 타기 · 내리기(2026-10-21 사용자: "펫을 넣고 빼는거, 라이딩을 타는거 이런게 달빛상점에 들어가서 하는게 아닙니다" —
 --  가방의 캐시 탭 · 퀵슬롯 · N 키가 같이 쓴다). 서버가 정하고 이름표(Who)로 알린다 — 화면의 펫 · 탈것은 그것을 따른다
+-- 소비 아이템(물약 · 주문서)을 쓴다 — 서버의 빈도 제한(초당 3번) 안으로: 0.34초 안에 거듭 누른 것은 보내지 않는다
+--  (2026-10-21 퍼블리시한 게임의 오류 보고: 'Potion' 요청이 빈도 제한을 넘어 버려졌다 — 버려진 누름은 아무 일도 하지 않았다). what = 그 아이템(nil = 지금 마실 수 있는 가장 좋은 물약)
+local potionSent = -9
+state.sendPotion = function(what: string?)
+	if os.clock() - potionSent < 0.34 then
+		return
+	end
+	potionSent = os.clock()
+	Net.FireServer("Potion", what)
+end
 local function cashInvoke(action: string, a: any)
 	local ok, res = pcall(Net.Invoke, "Cash", action, a)
 	if ok and res and res.list then
@@ -400,6 +410,7 @@ local function enterScene(key: string, x: number, y: number, room)
 	HallStones.enter(scene, state.over) -- 명예의 전당이면 비석 면에 순위를 새긴다
 	state.body = P.newBody(scene)
 	state.body.x, state.body.y = x, y
+	P.unstick(scene, state.body) -- 들어선 자리가 땅 속이면 꺼낸다(2026-10-21)
 	if state.me then
 		state.body.run, state.body.jump = state.me.run or 1, state.me.jump or 1 -- 걸음 · 뛰는 힘의 배수(패시브)는 장면이 바뀌어도 그대로
 	end
@@ -1005,11 +1016,29 @@ local function step()
 	local wantUp = Input.take("up") and body.ground and not state.skill
 	local hop = wantUp and state.view:warpNear(body.x, body.y)
 	if hop then
-		Net.FireServer("Hop", hop.id) -- 간이 포탈: 서버가 같은 맵의 짝 자리로 옮기고 Warp로 알린다(막 없이 바로)
+		-- 간이 포탈: 서버가 같은 맵의 짝 자리로 옮기고 Warp로 알린다(막 없이 바로). 옮겨지기 전에 ↑를 거듭 누른 것은 보내지 않는다(0.6초 —
+		--  2026-10-21 퍼블리시한 게임의 오류 보고: 'Hop' 요청이 빈도 제한(초당 2번)을 넘어 버려졌다)
+		if os.clock() - (state.hopSent or -9) >= 0.6 then
+			state.hopSent = os.clock()
+			Net.FireServer("Hop", hop.id)
+		end
 		wantUp = false
 	end
 	if wantUp then
 		local portal = state.view:portalNear(body.x, body.y)
+		if portal and portal.dungeon then
+			-- 던전의 문(2026-10-21 — 수정 거울숲): 맵을 옮기지 않고 던전 창을 연다(문에서 멀어지면 닫힌다 — 아래 state.ui.npc). 오늘 끝냈는가는 서버에 묻는다
+			state.ui.npc, state.ui.scene = { x = portal.x, y = portal.y }, state.sceneKey
+			Windows.open("dungeon", portal.dungeon)
+			task.spawn(function()
+				local wc = Windows.context()
+				if wc and wc.riftDo then
+					wc.riftDo("view")
+				end
+			end)
+			Music.sfx("secret4")
+			return
+		end
 		if portal then
 			-- 서버에 묻는 것과 막을 치는 것을 같이 시작한다(막이 다 덮일 즈음 대답이 와 있다). 서버가 받아 주지 않으면 그 자리에서 막만 다시 걷힌다
 			local from = state.sceneKey
@@ -1057,6 +1086,17 @@ local function step()
 			end
 			return
 		end
+		-- 닫힌 던전의 문 앞(그 퀘스트를 끝내기 전 — 2026-10-21): 「수정 문이 굳게 닫혀 있다」와 누구에게 들으면 되는지
+		for _, p in scene.portals do
+			if p.dungeon and math.abs(p.x - body.x) <= 40 and math.abs(p.y - body.y) <= 40 and not Quests.portalOpen(state.quests, p) then
+				if state.fx then
+					local DW = require(lune.sim.rift).DUNGEON.words
+					state.fx:float(DW.closed, p.x, p.y - 70, Effects.MINT, 1.6)
+					state.fx:float(DW.closedHint, p.x, p.y - 56, Effects.MINT, 2.2)
+				end
+				return
+			end
+		end
 		-- 주민 앞이면: 해 주는 일(상점 · 강화 · 창고)이 있으면 그 창을 열고, 없으면 말을 건다(한 번 더 누르면 다음 말)
 		local npc = state.view:npcNear(body.x, body.y)
 		if npc then
@@ -1084,6 +1124,7 @@ local function step()
 		Windows.close("forge")
 		Windows.close("daily")
 		Windows.close("rift") -- 토벌 창도(2026-10-18 검토: 「입장」 뒤 토벌의 방 안에서도 열려 있었다)
+		Windows.close("dungeon") -- 던전 창도(2026-10-21 — 문에서 멀어지면 · 들어가면)
 	end
 	-- 말하던 주민에게서 멀어지면 대화가 닫힌다
 	if Talk.npc and math.abs(Talk.npc.x - body.x) > 44 then
@@ -1104,11 +1145,13 @@ local function step()
 				if goods and goods.kind == "bmRename" then
 					Windows.open("cash", "rename", true) -- 이름 바꾸기 주문서: 새 이름을 적는 칸(이름이 바뀔 때 서버가 주문서를 쓴다)
 				elseif what and Quick.item(what) then
-					Net.FireServer("Potion", what) -- 소비 아이템: 그 칸에 놓인 바로 그 아이템을 쓴다
+					state.sendPotion(what) -- 소비 아이템: 그 칸에 놓인 바로 그 아이템을 쓴다
 				elseif what and Quick.ride(what) == "pet" then
 					state.togglePet(what) -- 펫: 꺼낸다 · 넣는다(2026-10-21 — 가방의 캐시 탭에서 퀵슬롯에)
 				elseif what and Quick.ride(what) == "mount" then
 					state.toggleRide(what) -- 탈것: 탄다 · 내린다
+				elseif what and Quick.act(what) then
+					-- 점프 · 상호작용(폰의 칸 단추 — touch.luau가 바로 뛰기 · 상호작용을 누른다 · 2026-10-21): 여기서는 할 일이 없다
 				elseif what then
 					trySkill(what, from[1] .. i) -- 그 칸의 키(힘을 모을 때 누르고 있는지 본다)
 				end
@@ -1116,7 +1159,7 @@ local function step()
 		end
 	end
 	if Input.take("potion") then
-		Net.FireServer("Potion")
+		state.sendPotion(nil)
 	end
 	-- 탈것 타기 · 내리기(N — 제가 정한 키 · 2026-10-20): 고른 탈것으로(없으면 알린다 — 상점에서 산다)
 	if Input.take("ride") and not state.dead then
@@ -1190,8 +1233,10 @@ local function step()
 		end
 		input = { mx = mx, jump = Input.take("jump"), down = Input.held("down"), up = Input.held("up") or Input.held("climb") } -- up = 사다리를 오른다(2026-10-16 밤 · climb = 폰의 조이스틱을 위로 — 2026-10-17)
 		-- 탄 동안은 더 빨리(2026-10-21 사용자 "속도도 더 빨라야함" — ride.generated의 mountSpeed · 사다리 위에서는 탈것을 감추고 제 빠르기)
+		--  탈것에 speed가 있으면 그것(쿠폰 탈것 「떠도는 책」 = 1 — 사용자 "이동속도는 유료보다 느리게 그냥 플레이어 이동속도로")
 		if state.ride and state.ride:riding() and body.climb == nil then
-			input.speed = RIDE_DATA.mountSpeed or 1
+			local m = RideView.MOUNT[state.ride.rideId]
+			input.speed = (m and m.speed) or RIDE_DATA.mountSpeed or 1
 		end
 		if input.jump and input.down and body.ground and P.onPlatform(scene, body) then
 			TutView.dropped = true -- 튜토리얼: 얇은 발판을 내려왔다(↓ + 뛰기)
@@ -1209,6 +1254,11 @@ local function step()
 	end
 	local airWas = body.air or 0
 	P.step(scene, body, input, STEP)
+	-- 막힌 칸 안에 끼었으면 바로 가장 가까운 빈 자리로 꺼낸다(위가 먼저 — sim/physics.luau의 freeSpot). 사다리를 탄 동안은 보지 않는다
+	--  사용자 2026-10-21(폰): "대쉬하다가 맵을뚫고 낑기는 현상" — 끼면 걷기 · 뛰기 · 대쉬가 다 막혔다
+	if body.climb == nil and P.unstick(scene, body) then
+		state.reportT = REPORT -- 꺼낸 자리를 바로 알린다
+	end
 	if (body.air or 0) > airWas and state.fx then
 		state.fx:hop(body.x, body.y) -- 2단 점프: 공중에서 발을 구른 자리에 점이 흩어진다
 	end
@@ -1223,12 +1273,14 @@ local function step()
 
 	-- 내 자리를 서버에 알린다(바뀌었을 때만)
 	state.reportT += STEP
-	if state.reportT >= REPORT then
+	-- (실제 시간으로도 0.08초 사이를 둔다 — 화면이 멈췄다가 밀린 걸음을 한꺼번에 따라잡을 때 한 장면에 여러 번 보내 서버의 빈도 제한(초당 20)을 넘었다: 2026-10-21 오류 보고 'Move')
+	if state.reportT >= REPORT and os.clock() - (state.reportClock or -9) >= 0.08 then
+		state.reportClock = os.clock()
 		state.reportT = 0
 		local x, y = math.floor(body.x * 10 + 0.5) / 10, math.floor(body.y * 10 + 0.5) / 10
 		if x ~= state.sentX or y ~= state.sentY or state.dir ~= state.sentDir then
 			state.sentX, state.sentY, state.sentDir = x, y, state.dir
-			Net.FireServer("Move", x, y, state.dir)
+			Net.FireServer("Move", x, y, state.dir, state.sceneKey) -- 어느 맵의 자리인가(2026-10-21 — 서버는 다른 맵의 늦은 보고를 받지 않는다)
 		end
 	end
 end
@@ -1864,6 +1916,7 @@ local function listen()
 	Net.OnClient("Warp", function(x, y)
 		if state.body and typeof(x) == "number" and typeof(y) == "number" then
 			state.body.x, state.body.y, state.body.vx, state.body.vy = x, y, 0, 0
+			P.unstick(SCENES.scenes[state.sceneKey], state.body) -- 되돌려 준 자리가 땅 속이면 꺼낸다(2026-10-21 — 폰에서 끼임)
 			state.body.climb = nil -- 사다리를 잡고 있었으면 놓는다(그대로면 다음 장에 사다리로 끌려가 서버와 엇갈렸다 — 2026-10-18 검토)
 			state.push = nil -- 밀려나는 중 · 스킬이 몸을 밀고 나가는 중이면 멈춘다(그대로면 다시 멀어져 한 번 더 되돌려졌다 — 2026-10-18 검토)
 			if state.skill then
@@ -2168,6 +2221,14 @@ local function listen()
 		end
 	end)
 	-- 경매장에 올린 것이 팔렸다(2026-10-18 — 다른 서버의 구매도 서버가 옮겨 준다): 획득 알림 한 줄 · 「경매」 단추의 점(경매장을 열면 꺼진다)
+	-- 관리자의 확성기(2026-10-21 — 모든 서버의 모두에게): 화면 위 큰 알림 「공지」(8초 · 두 줄까지) + 채팅 알림 글(다 보인다)
+	Net.OnClient("Megaphone", function(text)
+		if typeof(text) ~= "string" then
+			return
+		end
+		pcall(Guide.banner, "공지", text, 8)
+		Chat.note("[공지] " .. text)
+	end)
 	Net.OnClient("Sold", function(e)
 		if typeof(e) ~= "table" then
 			return
@@ -2788,8 +2849,17 @@ function Boot.start()
 		rift = function()
 			return state.rift
 		end,
-		riftDo = function(action: string, id: any)
-			local ok, res = pcall(Net.Invoke, "Rift", action, id)
+		-- 같은 맵에 파티원이 있는가(던전 창의 「파티 입장」 — 2026-10-21)
+		partyHere = function(): boolean
+			for _, m in (state.party and state.party.members) or {} do
+				if m.id ~= state.myId and m.scene == state.sceneKey then
+					return true
+				end
+			end
+			return false
+		end,
+		riftDo = function(action: string, id: any, party: boolean?)
+			local ok, res = pcall(Net.Invoke, "Rift", action, id, party == true) -- party = 던전에 파티로 들어간다(2026-10-21)
 			if not ok or not res then
 				return nil
 			end
@@ -3045,6 +3115,7 @@ function Boot.start()
 	end
 	Windows.register("tome", TomeWindow) -- 모험의 서(메뉴 → 「모험의 서」 — 2026-10-16)
 	Windows.register("rift", RiftWindow) -- 수정 틈 토벌(토벌대장 앞에서 ↑ — 2026-10-16)
+	Windows.register("dungeon", require(script.Parent.ui.dungeonWindow)) -- 던전(그 문 앞에서 ↑ — 2026-10-21 · 수정 거울숲)
 	Windows.register("auction", AuctionWindow) -- 경매장(메뉴 · Y — 메이플 옥션 방식. 은달 항구의 경매사 앞에서 ↑로도)
 	Windows.register("bag", BagWindow)
 	Windows.register("equip", EquipWindow)
@@ -3102,7 +3173,15 @@ function Boot.start()
 	end)
 	-- 채팅은 Roblox의 기본 채팅이다(chat.luau — 창 · 입력줄 · 채널 탭을 켜고 색과 이름만 맞춘다). 글을 치는 동안에는 게임의 키를 받지 않고, PC에서는 파티원 칸을 채팅 창의 아래로 내린다
 	Chat.init()
-	Input.typing = Chat.focused
+	-- 글을 치는 중 = 채팅의 입력줄 · 수량 창이 떠 있는 동안(2026-10-21 — 수량 칸 밖을 눌러도 Q · W …가 스킬로 나가지 않게)
+	local CountBoxMod = require(script.Parent.ui.countBox)
+	Input.typing = function(): boolean
+		return Chat.focused() or CountBoxMod.shown()
+	end
+	-- 한글 입력 상태로 보이는 글쇠가 이어지면(input.luau의 Input.poll — 2026-10-21 사용자 "로블록스에서 한글쓴다음에 키가 안먹히는 버그"): 화면 위 큰 알림으로 한/영 키를 알린다(1분에 한 번)
+	Input.onIme = function()
+		pcall(Guide.banner, Input.IME_WORDS.head, Input.IME_WORDS.line, 6)
+	end
 	local function placeParty()
 		PartyHud.setTop(if Touch.on then 0 else Chat.bottom)
 	end
@@ -3415,6 +3494,12 @@ function Boot.start()
 		choices = function()
 			-- 소비 아이템: 가방에 있는 것과 이미 단추에 놓아 둔 것(다 써서 0개여도 놓아 둔 것은 남는다)
 			local list = {}
+			-- 점프 · 상호작용(2026-10-21 사용자: "상호작용, 점프키 같은거 위치 다 바꿀수있어야해요 드래그앤 드랍으로 다른 버튼들처럼"): 고르면 고른 단추와 자리를 바꾼다
+			for _, id in { "act_jump", "act_interact" } do
+				if Quick.ACTS[id] then
+					table.insert(list, { what = id, name = Quick.ACTS[id].name })
+				end
+			end
 			for _, g in Items.data.GOODS do
 				if g.tab == "use" and (Bag.countIn(state.bag, g.id) > 0 or Quick.find(state.touchSlots, g.id)) then
 					table.insert(list, { what = g.id, name = g.short })
@@ -3709,7 +3794,7 @@ function Boot.start()
 			})
 		end
 		Guide.step(dt)
-		MapName.step(dt, (BossView.box ~= nil and BossView.box.Visible) or CineView.active() or Windows.anyOpen()) -- 보스 체력 · 퀘스트 연출이 그 자리를 쓰거나 창이 열리면(창의 윗부분과 겹친다 — 2026-10-18) 바로 사라진다. 보스 체력은 칸이 보일 때만(전에는 한 번 보인 보스의 이름이 남아, 첫 보스 뒤로 맵 이름이 영영 안 떴다 — 2026-10-18 검토)
+		MapName.step(dt, (BossView.box ~= nil and BossView.box.Visible) or (RiftView.box ~= nil and RiftView.box.Visible) or CineView.active() or Windows.anyOpen()) -- 보스 체력 · 토벌 · 던전의 판(같은 위 가운데 — 2026-10-21) · 퀘스트 연출이 그 자리를 쓰거나 창이 열리면(창의 윗부분과 겹친다 — 2026-10-18) 바로 사라진다. 보스 체력은 칸이 보일 때만(전에는 한 번 보인 보스의 이름이 남아, 첫 보스 뒤로 맵 이름이 영영 안 떴다 — 2026-10-18 검토)
 		GainLog.step(dt)
 		markT += dt
 		if markT >= 0.25 then

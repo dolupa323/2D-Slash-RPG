@@ -192,7 +192,10 @@ bag.equip.weapon = real
 ui.forgeResult, ui.forgeSeq = "ok", ui.forgeSeq + 1
 view.refresh()
 expect(textAt("★0 → ★1") ~= nil, "결과가 뜨기 전에는 누르기 전의 별")
-view.step(0.5)
+-- 첫 내려치기(0.05초) 전의 장(2026-10-21 퍼블리시한 게임의 오류 보고: forgeWindow:417 — STRIKES[0]으로 빼서 장마다 오류였다)
+local okEarly, errEarly = pcall(view.step, 0.02)
+expect(okEarly, "첫 내려치기 전의 장도 오류 없이 — " .. tostring(errEarly))
+view.step(0.48)
 expect(view.animating() and textAt("★0 → ★1") ~= nil, "망치를 내려치는 중")
 view.step(0.6)
 expect(textAt("★1 → ★2") ~= nil, "결과가 뜨면 새 별")

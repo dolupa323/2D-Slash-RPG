@@ -264,7 +264,7 @@ function MapWindow.build(body: Frame, ctx, w: number, _h: number)
 			-- ③ 퀘스트의 표시: 표시의 오른쪽 위에
 			local mark = if p.node then marks[p.id] else nil
 			if mark then
-				local part = Kit.part(group, if mark == "?" then UI.questMark.done else UI.questMark.new, 0, 0)
+				local part = Kit.part(group, if mark == "?" then UI.questMark.done elseif mark == "!!" then UI.questMark.big else UI.questMark.new, 0, 0) -- !! = 큰 「!」(2026-10-21)
 				part.Position = UDim2.fromOffset(x + r, y - r - part.Size.Y.Offset + 2)
 				part.Name = "Quest"
 				part.ZIndex = 5

@@ -414,7 +414,9 @@ function ForgeWindow.build(body: Frame, ctx, w: number, h: number, arg: any)
 		hammer.Visible = beforeReveal and t < ForgeWindow.REVEAL
 		if hammer.Visible then
 			local nextAt = ForgeWindow.STRIKES[strike + 1]
-			local lift = if since < 0.1 then 0 elseif nextAt then math.min(1, (t - ForgeWindow.STRIKES[strike] - 0.1) / math.max(0.05, nextAt - ForgeWindow.STRIKES[strike] - 0.15)) else 1
+			-- 앞의 내려치기(첫 내려치기 전이면 연출의 시작 0초). 2026-10-21: 전에는 첫 내려치기 전에 STRIKES[0](없음)으로 빼서 장마다 오류가 났다(퍼블리시한 게임의 오류 보고 1,727번)
+			local prevAt = ForgeWindow.STRIKES[strike] or 0
+			local lift = if since < 0.1 then 0 elseif nextAt then math.min(1, math.max(0, t - prevAt - 0.1) / math.max(0.05, nextAt - prevAt - 0.15)) else 1
 			hammer.Position = UDim2.fromOffset(math.floor(S / 2) - 11, math.floor(-6 - 14 * lift)) -- 치는 순간 머리가 칸의 윗쪽에 닿는다
 		end
 		flash.BackgroundTransparency = if beforeReveal and since < 0.12 then 0.35 + since * 5 else 1

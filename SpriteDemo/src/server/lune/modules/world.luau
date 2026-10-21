@@ -74,7 +74,11 @@ local WARP_SLACK, WARP_TIME = 280, 1.5 -- 2~4차의 스킬을 쓴 직후(초)에
 local SAVE_EVERY = 60 -- 바뀐 캐릭터를 이 간격(초)으로 저장한다
 local STOP_WAIT = 20 -- 서버가 닫힐 때 쓰고 있는 저장을 기다리는 시간의 위(초 — 로블록스가 닫히는 서버에 주는 30초 안)
 -- 같은 계정이 다른 서버에서 하는 중일 때(modules/store.luau의 잠금): 이만큼 다시 물어 보고(서버를 옮겨 올 때 앞 서버가 저장을 끝내고 잠금을 푼다) 끝내 안 풀리면 내보낸다
-local LOCK_TRIES, LOCK_WAIT = 6, 1.5
+-- 계정을 잡을 때 기다리는 수 · 사이(초) — 1.5초 x 24번 = 36초.
+--  2026-10-21 퍼블리시한 게임의 오류 보고: 게임을 고쳐 올린 때(서버들이 닫히며 사람들을 새 서버로 옮김) 「계정을 다른 서버가 잡고 있다 — 내보낸다」가 열 명 넘게.
+--  닫히는 서버는 Roblox가 주는 30초 안에 모두를 저장하고 잠금을 푸는데(World.stop), 전에는 새 서버가 7.5초(1.5초 x 6번)만 기다리고 내보냈다 → 30초보다 길게 기다린다
+--  (화면은 서버가 답할 때까지 2초마다 다시 묻는다 — 60초까지: client boot의 Ready)
+local LOCK_TRIES, LOCK_WAIT = 24, 1.5
 local LOCK_KICK = "이 계정은 다른 서버에서 하는 중입니다. 잠시 뒤에 다시 들어와 주세요."
 local LOAD_KICK = "저장소가 지금 답하지 않습니다. 잠시 뒤에 다시 들어와 주세요." -- 계정을 읽지 못했다(2026-10-18 검토: 빈 계정으로 들여보내면 저장된 것을 덮어썼다)
 local function holdAccount(userId: number): boolean
@@ -311,7 +315,7 @@ local function place(s, key: string, x: number, y: number, pushed: boolean?)
 		fromRoom:forget(s.hero) -- 떠난 방에 남은 늦은 타를 버린다(Room:forget)
 	end
 	s.scene = key
-	s.hero.x, s.hero.y = x, y
+	s.hero.x, s.hero.y = Room.physics.freeSpot(SCENES.scenes[key], x, y) -- 세우는 자리가 땅 속이면 가장 가까운 빈 자리로(화면도 같은 셈으로 꺼낸다 — 2026-10-21 폰에서 끼임)
 	s.skill = nil
 	s.hero.last = key -- 다시 들어오면 여기서 시작한다(resumeScene이 들어가면 안 되는 곳을 가린다)
 	Hero.arrive(s.hero) -- 들어선 뒤 잠깐은 피해를 받지 않는다
@@ -1152,13 +1156,25 @@ for _, x in Bond.DATA.shards do
 	SHARD_SCENES[x.scene] = true
 end
 
-local function onMove(player, x: number, y: number, dir: number)
+local moveTo: (any, string, number, number) -> () -- 그 사람을 그 장면의 (x, y)로 옮긴다(화면에는 Revive — 아래에서 채운다)
+local function onMove(player, x: number, y: number, dir: number, key: any)
 	local s = sessions[player]
 	if not s or not s.hero or not s.hero.alive then
 		return
 	end
 	local scene = SCENES.scenes[s.scene]
 	local hero = s.hero
+	-- 다른 맵(방)의 자리(2026-10-21): 서버가 아는 맵의 자리로 받지 않는다 — 받으면 그 맵의 땅 속을 「서버가 아는 자리」로 적었다가 화면을 그리로 되돌려 보낼 수 있었다
+	--  (사용자 2026-10-21 폰: "대쉬하다가 맵을뚫고 낑기는 현상"). 4초 넘게 계속 다른 맵이면 화면과 서버가 어긋난 것이다(문의 대답이 늦어 화면만 옛 맵에 남았다 …) — 서버의 맵으로 다시 보낸다
+	if typeof(key) == "string" and key ~= s.scene then
+		s.wrongSince = s.wrongSince or World.now
+		if World.now - s.wrongSince >= 4 and World.now - (s.resyncAt or -99) >= 4 then
+			s.wrongSince, s.resyncAt = nil, World.now
+			moveTo(s, s.scene, hero.x, hero.y)
+		end
+		return
+	end
+	s.wrongSince = nil
 	if x < 0 or x > scene.w * G.TILE or y < -200 or y > scene.h * G.TILE + G.FALL_OUT then
 		return
 	end
@@ -1196,6 +1212,7 @@ local function onMove(player, x: number, y: number, dir: number)
 			--  되돌리지 않으면 그 뒤의 보고가 모두 멀어서, 서버가 아는 자리와 화면의 자리가 영영 어긋난다(2026-10-07의 가시 고장과 같은 일)
 			if World.now - (s.warpSent or -9) > 0.5 then
 				s.warpSent = World.now
+				hero.x, hero.y = Room.physics.freeSpot(scene, hero.x, hero.y) -- 되돌려 보낼 자리도 땅 속이면 꺼내서(2026-10-21 — 끼임)
 				fire("Warp", player, hero.x, hero.y)
 			end
 			return
@@ -1219,7 +1236,7 @@ local function onMove(player, x: number, y: number, dir: number)
 end
 
 local tutChanged: (any) -> () -- 튜토리얼의 진행이 바뀌었을 때(아래 applyResult 앞에서 채운다)
-local riftExitSpot: () -> (number, number) -- 토벌에서 나와 서는 곳 = 토벌대장 앞(아래 onRift 곁에서 채운다)
+local riftExitSpot: (any?) -> (number, number) -- 토벌에서 나와 서는 곳 = 토벌대장 앞 · 던전 = 그 문 앞(아래 onRift 곁에서 채운다)
 -- 튜토리얼의 미션을 넘겼다(before째부터 지금 앞까지): 넘긴 미션마다 경험치(design/tutorial.js의 xp — 수련 인형 앞까지는 Lv.1 몫의 share씩, upAt 미션에서 Lv.2가 되게 채운다).
 --  「경험치 · 레벨 업」이 화면에 뜨게 Gain을 보낸다. 그 뒤의 미션은 경험치가 없다
 local function tutAdvanced(s, before: number)
@@ -1364,6 +1381,9 @@ local function onTravel(player, to: string)
 	local scene = SCENES.scenes[s.scene]
 	for _, p in scene.portals do
 		if p.to == to and math.abs(p.x - s.hero.x) <= 28 and math.abs(p.y - s.hero.y) <= 28 then
+			if p.dungeon then
+				return nil -- 던전의 문(2026-10-21): 맵을 옮기지 않는다 — 앞에서 ↑ = 던전 창(들어가기는 Rift "enter")
+			end
 			if not Quests.portalOpen(s.hero.quests, p) then
 				return nil -- 그 퀘스트를 받아야 · 끝내야 열리는 문(달의 사당 안의 「사당 지하」 · 마을의 나루): 화면에도 보이지 않는다
 			end
@@ -1378,8 +1398,9 @@ local function onTravel(player, to: string)
 					x, y = back.x, back.y
 				end
 			end
-			if Rift.tierOfKey(s.scene) then
-				x, y = riftExitSpot() -- 토벌에서 나왔다: 토벌대장 앞
+			local fromTier = Rift.tierOfKey(s.scene)
+			if fromTier then
+				x, y = riftExitSpot(fromTier) -- 토벌에서 나왔다: 토벌대장 앞 · 던전에서 나왔다: 그 문 앞
 			end
 			local from = s.scene
 			place(s, to, x, y)
@@ -1397,7 +1418,7 @@ local function onTravel(player, to: string)
 			sendWho(from)
 			sendWho(to)
 			sendParty(Party.members(book, player.UserId)) -- 파티원이 어느 맵에 있는지 바뀌었다
-			return { scene = to, x = x, y = y, room = room }
+			return { scene = to, x = s.hero.x, y = s.hero.y, room = room } -- place가 땅 속에서 꺼낸 자리(2026-10-21)
 		end
 	end
 	return nil
@@ -2274,6 +2295,17 @@ local function onQuest(player, action: string, id: any)
 	elseif action == "use" then
 		-- 맵에 놓인 것 앞에서 ↑를 눌렀다(샘에서 물을 뜬다 · 깃발을 꺼낸다): 그 자리 가까이에 서 있어야 한다
 		ok, why = Quests.use(h.quests, id, s.scene, h.x, h.y)
+		-- 돌려주는 사람이 없는 퀘스트(endNpc false — 던전의 문 「수정 틈의 문」 2026-10-21): 다 했으면 그 자리에서 끝난다
+		if ok and def.endNpc == false and Quests.isReady(h.quests, id) then
+			local reward, ups = Hero.questDone(h, id)
+			if reward then
+				done = id
+				fire("Gain", player, { xp = reward.xp, ups = ups, level = h.level, quest = def.name, money = reward.money })
+				if ups > 0 then
+					sendWho(s.scene)
+				end
+			end
+		end
 	elseif action == "drop" then
 		ok, why = Hero.questDrop(h, id) -- 모으던 물건도 가방에서 사라진다
 	else
@@ -2459,8 +2491,17 @@ end
 -- ---------- 수정 틈 토벌(2026-10-16 — sim/rift.luau · 공방 design/city.js의 RIFT) ----------
 --  광장의 토벌대장 앞에서 「입장」: 같은 맵에 있는 파티원(그 단계의 레벨이 되는 사람)이 함께 rf1#번호의 따로 된 방으로 간다.
 --  방이 완료되면 그 방의 사람마다 보상(하루 횟수가 남았으면) · back초 뒤 광장으로. 실패하면 조금 뒤 광장으로. 빈 토벌의 방은 치운다
-local riftSerial = 0
-riftExitSpot = function(): (number, number)
+riftExitSpot = function(t: any?): (number, number)
+	if Rift.isDungeon(t) then
+		-- 던전에서 나왔다: 그 문의 왼쪽 앞 · 문이 선 땅의 높이(반달네 옛집의 높은 땅 — 2026-10-21 고침: 전에는 맵 시작 자리의 높이(한 칸 아래)라 땅 속에 섰다)
+		local dsc = SCENES.scenes[t.door.scene]
+		for _, p in dsc.portals do
+			if p.dungeon == t.id then
+				return p.x - 30, p.y
+			end
+		end
+		return t.door.x - 30, dsc.spawn.y
+	end
 	local sc = SCENES.scenes[Rift.DATA.scene]
 	for _, n in sc.npcs or {} do
 		if n.id == Rift.DATA.npc then
@@ -2469,8 +2510,8 @@ riftExitSpot = function(): (number, number)
 	end
 	return sc.spawn.x, sc.spawn.y
 end
--- 그 사람을 그 장면의 (x, y)로 옮긴다(화면에는 Revive로 — World.jump와 같다)
-local function moveTo(s, key: string, x: number, y: number)
+-- 그 사람을 그 장면의 (x, y)로 옮긴다(화면에는 Revive로 — World.jump와 같다). (onMove가 먼저 쓴다 — 위에서 이름만 지었다)
+moveTo = function(s, key: string, x: number, y: number)
 	local from = s.scene
 	if not s.hero.alive then
 		Hero.revive(s.hero) -- 화면은 「Revive」를 받으면 살아난 것으로 본다 — 서버도 맞춘다(2026-10-18 검토: 쓰러진 채 옮겨지면 쓰러진 상자 없이 멈췄다)
@@ -2479,7 +2520,7 @@ local function moveTo(s, key: string, x: number, y: number)
 	key = s.scene -- (파티마다 따로 들어가는 장면이면 그 파티의 방)
 	local room = roomOf(key):describe(s.hero.id)
 	room.who = roster(key)
-	fire("Revive", s.player, { scene = key, x = x, y = y, room = room })
+	fire("Revive", s.player, { scene = key, x = s.hero.x, y = s.hero.y, room = room }) -- place가 땅 속에서 꺼낸 자리(2026-10-21)
 	sendSelf(s)
 	sendWho(from)
 	sendWho(key)
@@ -2487,9 +2528,16 @@ local function moveTo(s, key: string, x: number, y: number)
 end
 local function riftReply(s, ok: boolean?, why: string?)
 	local now = os.time()
-	return { ok = ok == true, why = why, left = Rift.left(s.hero.rift, now), clears = s.hero.rift.clears }
+	local done = {} -- 던전마다 오늘 끝냈는가(2026-10-21)
+	for _, t in Rift.DUNGEON.tiers do
+		done[t.id] = Rift.dungeonDone(s.hero.rift, t.id, now)
+	end
+	return { ok = ok == true, why = why, left = Rift.left(s.hero.rift, now), clears = s.hero.rift.clears, dungeonDone = done }
 end
-local function onRift(player, action: string, id: any)
+-- 던전에 들어간다(2026-10-21 — 수정 거울숲): 그 문 앞(같은 맵 · 가로 60점 안)에서 · 문이 열렸고(퀘스트) · 레벨 · 오늘 아직 안 했을 때.
+--  party = true면 같은 맵의 파티원도 함께(그 사람도 들어갈 수 있을 때 · 장면을 보는 중이 아닐 때 — 넷까지) · 아니면 혼자
+local riftSerial = 0
+local function onRift(player, action: string, id: any, party: any)
 	local s = sessions[player]
 	if not s or not s.hero then
 		return nil
@@ -2499,7 +2547,42 @@ local function onRift(player, action: string, id: any)
 	elseif action ~= "enter" then
 		return riftReply(s, nil, "모르는 일이다")
 	end
+	local function dungeonEnter(s, t, party: boolean) -- (world.luau의 지역 이름이 Luau의 한도(200)에 닿아 onRift 안에 둔다)
+		local now = os.time()
+		if s.scene ~= t.door.scene or math.abs(s.hero.x - t.door.x) > 60 then
+			return riftReply(s, nil, "던전의 문 앞에서 들어갈 수 있다")
+		end
+		local why = Rift.canDungeon(s.hero, t, now)
+		if why then
+			return riftReply(s, nil, why)
+		end
+		local going = { s }
+		if party then
+			for _, uid in Party.members(book, s.player.UserId) do
+				local ms = byUser[uid]
+				if ms and ms ~= s and ms.hero and ms.scene == s.scene and #going < Rift.DUNGEON.party and not Rift.canDungeon(ms.hero, t, now) and not ms.hero.inCine then
+					table.insert(going, ms)
+				end
+			end
+			if #going < 2 then
+				return riftReply(s, nil, Rift.DUNGEON.words.partyNone)
+			end
+		end
+		riftSerial += 1
+		local key = t.id .. "#" .. riftSerial
+		local room = roomOf(key)
+		local sc = SCENES.scenes[key]
+		for i, ms in going do
+			moveTo(ms, key, sc.spawn.x + (i - 1) * 12, sc.spawn.y)
+			Analytics.custom(ms, "DungeonEnter", 1, t.id)
+		end
+		toRoom(key, "RiftView", Rift.view(room))
+		return riftReply(s, true)
+	end
 	local t = Rift.tier(id)
+	if t and Rift.isDungeon(t) then
+		return dungeonEnter(s, t, party == true)
+	end
 	if not t then
 		return riftReply(s, nil, "모르는 토벌이다")
 	elseif s.scene ~= Rift.DATA.scene or not nearNpcId(s, Rift.DATA.npc) then
@@ -2515,7 +2598,7 @@ local function onRift(player, action: string, id: any)
 	local key = t.id .. "#" .. riftSerial
 	local room = roomOf(key)
 	local sc = SCENES.scenes[key]
-	local going = { s }
+	local going: { any } = { s }
 	for _, uid in Party.members(book, player.UserId) do
 		local ms = byUser[uid]
 		-- 같은 맵의 파티원이 함께 들어간다 — 그 사람도 토벌대장과 인사를 나눴고 · 장면(퀘스트 연출)을 보는 중이 아닐 때만(2026-10-18 검토: 인사 전의 파티원 · 장면 중인 파티원도 끌려갔다)
@@ -2535,6 +2618,28 @@ end
 local function riftPay(key: string, room)
 	local t = Rift.tier(room.rift.tier)
 	local now = os.time()
+	if Rift.isDungeon(t) then
+		-- 던전 완료(2026-10-21): 오늘 처음이면 끝낸 때 내 레벨의 한 레벨 경험치의 pay.need배를 한꺼번에 · 하루 한 번(한국 시간 자정에 다시)
+		for _, s in inRoom(key) do
+			local h = s.hero
+			s.dirty = true
+			if not Rift.dungeonMark(h.rift, t.id, now) then
+				fire("RiftPay", s.player, { none = true, dungeon = true })
+				continue
+			end
+			local xp = Rift.dungeonXp(h.level)
+			local ups = Hero.gainXp(h, xp)
+			Analytics.custom(s, "DungeonClear", 1, t.id)
+			fire("Gain", s.player, { xp = xp, ups = ups, level = h.level })
+			if ups > 0 then
+				fire("Quests", s.player, Quests.view(h.quests))
+				sendWho(key)
+			end
+			sendSelf(s)
+			fire("RiftPay", s.player, { xp = xp, dungeon = true })
+		end
+		return
+	end
 	for _, s in inRoom(key) do
 		local h = s.hero
 		h.rift.clears += 1
@@ -3422,7 +3527,20 @@ local function onAdmin(player, what: string, a: any, b: any, c: any)
 	local function no(msg: string)
 		return { ok = false, msg = msg }
 	end
-	if what == "xp" then
+	if what == "megaphone" then
+		-- 확성기(2026-10-21 사용자: "모든 서버에 확성기로 말할수있나? 어드민기능으로 확성기같은게 필요한데") — 글을 거른 뒤 모든 서버의 모두에게(server/lune/modules/megaphone.luau)
+		local ok, msg = require(script.Parent.megaphone).send(player, a, os.time())
+		return { ok = ok, msg = msg }
+	elseif what == "coupons" then
+		-- 쿠폰 기록 지우기(내 계정 — 쿠폰을 처음 넣는 것부터 다시 해 볼 때 · 2026-10-21): 쓴 쿠폰 · 쿠폰 펫 · 쿠폰 탈것을 지우고 바로 저장 · 화면과 같은 맵의 사람들에게 알린다
+		local codes, pets = CashServer.resetCoupons(s.acct)
+		if not saveNow(s) then
+			return no("저장하지 못했다 — 다시 눌러 주세요")
+		end
+		fire("CashGot", player, "") -- 화면이 가진 것을 다시 읽는다(가방의 캐시 탭)
+		sendWho(s.scene) -- 꺼내 둔 쿠폰 펫 · 타고 있던 쿠폰 탈것이 사라진다
+		return done(("쿠폰 기록 %d개 · 쿠폰 펫 · 탈것 %d개를 지웠다"):format(codes, pets))
+	elseif what == "xp" then
 		if not ADMIN_XP[a] then
 			return no("없는 배율이다")
 		end
@@ -3961,10 +4079,12 @@ function World.tick(dt: number)
 					end
 				end
 				if Rift.due(room) then
-					local x, y = riftExitSpot()
+					local t = Rift.tier(room.rift.tier)
+					local x, y = riftExitSpot(t)
+					local back = if Rift.isDungeon(t) then t.door.scene else Rift.DATA.scene
 					for _, s in here do
 						if s.hero.alive then
-							moveTo(s, Rift.DATA.scene, x, y)
+							moveTo(s, back, x, y)
 						end
 					end
 				end
@@ -4140,6 +4260,12 @@ function World.start()
 		end,
 	})
 	listenSold() -- 다른 서버에서 내 서버의 사람의 물건이 팔렸다는 알림(2026-10-18)
+	-- 관리자의 확성기(2026-10-21): 다른 서버에서 보낸 것도 이 서버의 모두에게(캐릭터 고르기 화면에 있는 사람도)
+	require(script.Parent.megaphone).start(function(text: string)
+		for p in sessions do
+			fire("Megaphone", p, text)
+		end
+	end)
 	-- 달빛 상점 안(s.shop)에서는 받지 않는 일 — 움직임 · 기술 · 줍기 · 물약 · 문 · 경매장 · 퀘스트 · 아이템 …(맵에서 빠져 있다 — 2026-10-21)
 	local function outside(fn)
 		return function(player, ...)

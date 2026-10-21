@@ -584,10 +584,19 @@ function Q.talkMenu(at, rows: number)
 	return out
 end
 
--- 주민 머리 위의 표시: "?" 돌려줄 것이 있다 · "!" 줄 것이 있다 · nil
+-- 주민 머리 위의 표시: "?" 돌려줄 것이 있다 · "!!" 큰 「!」(줄 것 가운데 중요한 것 — def.big · 던전의 문 2026-10-21) · "!" 줄 것이 있다 · nil
 function Q.mark(book, level: number, npc: string, region: any?, also: any?): string?
 	local at = Q.atNpc(book, level, npc, region, also)
-	return if #at.ready > 0 then "?" elseif #at.offer > 0 then "!" else nil
+	if #at.ready > 0 then
+		return "?"
+	end
+	for _, id in at.offer do
+		local def = byId[id]
+		if def and def.big then
+			return "!!"
+		end
+	end
+	return if #at.offer > 0 then "!" else nil
 end
 
 -- ---------- 길잡이(알리미가 적는다 — 메이플스토리의 전구 구실) ----------

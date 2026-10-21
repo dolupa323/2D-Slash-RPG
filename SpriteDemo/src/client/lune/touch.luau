@@ -36,7 +36,6 @@ local opts = nil
 local root: Frame = nil
 local buttons = {} -- 누르는 단추들 { t, frame, stroke, hit, … }
 local slotButtons = {} -- [칸] = 단추
-local actButton = nil
 local menuDot: Frame? = nil -- 「메뉴」 단추 오른쪽 위의 노란 점(받을 출석 · 업적이 있다 — 2026-10-15)
 local pad = nil -- 조이스틱 { frame, knob, radius }
 local chooser: Frame? = nil -- 놓을 것의 목록
@@ -89,14 +88,22 @@ local function paintButton(b)
 			edge, alpha = C.accent, 0 -- 고르는 중 · 놓을 칸 · 켜 둔 사출기
 		elseif not slotOn then
 			alpha = 0.55 -- 빈 칸은 흐리게
+		elseif Quick.act(slotOn) == "interact" then
+			edge, alpha = (if state.act then C.accent else C.lineHot), (if state.act then 0 else 0.4) -- 상호작용: 가까이에 무엇이 있으면 밝아진다
 		end
-	elseif t.act == "interact" then
-		edge, alpha = (if state.act then C.accent else C.lineHot), (if state.act then 0 else 0.4)
 	end
 	b.stroke.Color = edge
 	b.stroke.Transparency = alpha
 	b.frame.BackgroundColor3 = if b.down or active then C.accent else C.ink
 	b.frame.BackgroundTransparency = if b.down then 0.55 elseif active then 0.72 elseif t.slot and not slotOn and not Touch.arranging then 0.7 else 0.4
+end
+
+-- 점프 · 상호작용이 놓인 칸 단추의 글(상호작용은 가까이에 있는 것에 따라 바뀐다 — 줍기 · 들어가기 · 말 걸기 …)
+local function actWord(kind: string?): string
+	if kind == "jump" then
+		return Quick.ACTS.act_jump.name
+	end
+	return if state.act then ACT_WORDS[state.act] else Quick.ACTS.act_interact.name
 end
 
 local function paintAll()
@@ -108,7 +115,14 @@ end
 -- 칸 단추에 놓인 것을 그린다: 그림 · 남은 수 · 다시 쓰기까지 남은 시간
 local function paintSlot(b)
 	local what = state.slots[b.t.slot]
-	Ui.setPic(b.pic, if what then Quick.pic(what) else nil)
+	-- 점프 · 상호작용(2026-10-21 — 칸 단추에 놓이는 「하는 일」): 그림 대신 글
+	local act = Quick.act(what)
+	b.act:show(act ~= nil)
+	if act then
+		b.act:set(actWord(act))
+		b.act:color(if act == "interact" and not state.act then C.dim else C.text)
+	end
+	Ui.setPic(b.pic, if what and not act then Quick.pic(what) else nil)
 	b.plus:show(not what)
 	if what and Quick.item(what) then
 		local n = if Hud.countOf then Hud.countOf(what) else 0
@@ -136,12 +150,12 @@ local function paintSlots()
 	end
 end
 
--- 상호작용 단추: 가까이에 있는 것에 따라 글이 바뀌고 밝아진다
+-- 상호작용 단추: 가까이에 있는 것에 따라 글이 바뀌고 밝아진다(상호작용이 놓인 칸 단추 — 2026-10-21부터 어느 칸에든 놓인다)
 local function paintAct()
-	if actButton then
-		actButton.label:set(if state.act then ACT_WORDS[state.act] else "상호작용")
-		actButton.label:color(if state.act then C.text else C.dim)
-		paintButton(actButton)
+	for _, b in slotButtons do
+		if Quick.act(state.slots[b.t.slot]) == "interact" then
+			paintSlot(b)
+		end
 	end
 end
 
@@ -166,9 +180,9 @@ local function openChooser()
 		return
 	end
 	local list = opts.choices() -- { { what, name } … } — 물약 · 배운(쓸 수 있는) 스킬 · 가진 펫 · 탈것
-	-- 판은 왼쪽 위(칸 단추는 모두 오른쪽 아래 — 덮지 않는다) · 화면에 들어가는 만큼만 길어지고 넘치는 줄은 밀어서 본다(2026-10-21 점검 — Layout.touchChooser)
+	-- 판은 왼쪽 위 · 화면에 들어가는 만큼만 길어지고 넘치는 줄은 밀어서 본다(2026-10-21 점검 — Layout.touchChooser). 왼쪽 아래의 칸 단추(처음에는 상호작용)는 덮지 않는다(그 위에서 끝난다)
 	local K = Layout.TOUCHCHOOSER
-	local m = Layout.touchChooser(#list, Stage.uiH - Stage.insetTop)
+	local m = Layout.touchChooserFit(#list, Stage.uiH, Stage.insetTop, UI.touch, Stage.ratio) -- 칸 단추(왼쪽 아래의 상호작용 …)를 덮지 않게 그 위에서 끝난다(2026-10-21)
 	local cols, cell, gap, pad0 = K.cols, K.cell, K.gap, K.pad
 	local w, h = m.w, m.h
 	local holder = Stage.place(Stage.ui, "TouchChooser", "tl", K.x, K.top, w, h)
@@ -192,8 +206,13 @@ local function openChooser()
 		slot.frame.ZIndex = 2
 		local now = selected and state.slots[selected] == item.what
 		slot:setOn(now == true)
-		local pic = Ui.pic(slot.frame, Quick.pic(item.what), math.floor((cell - PIC) / 2), math.floor((cell - PIC) / 2))
-		pic.ZIndex = 2
+		if Quick.act(item.what) then
+			-- 점프 · 상호작용(2026-10-21): 그림 대신 글 — 고르면 고른 단추와 자리를 바꾼다(빼거나 덮지는 못한다)
+			Ui.text(slot.frame, item.name, 0, math.floor(cell / 2) - 6, cell, { align = "center", outline = true, z = 3 })
+		else
+			local pic = Ui.pic(slot.frame, Quick.pic(item.what), math.floor((cell - PIC) / 2), math.floor((cell - PIC) / 2))
+			pic.ZIndex = 2
+		end
 		local placed = Quick.find(state.slots, item.what) ~= nil
 		Ui.text(scroll, item.name, x - 3, y + cell + 2, cell + 6, { align = "center", color = if placed then C.accent else C.text, outline = true, lines = 2 }) -- 이미 어느 단추에 놓여 있는 것은 민트 · 긴 이름(「목도리 달토끼」)은 두 줄
 		local hit = Ui.hit(slot.frame)
@@ -227,6 +246,18 @@ function Touch.arrange(on: boolean, slot: number?)
 		Input.release("tslot:" .. i)
 	end
 	table.clear(held)
+	-- 점프 · 상호작용을 누르고 있었으면 놓는다(배치를 시작하는 순간 눌린 채 남지 않게)
+	for _, b in slotButtons do
+		local f = b.actFinger
+		if f then
+			b.actFinger, b.down = nil, false
+			if f.kind == "jump" then
+				Input.release("jump")
+			else
+				opts.onAct(false)
+			end
+		end
+	end
 	if drag and drag.ghost then
 		drag.ghost:Destroy()
 	end
@@ -321,14 +352,47 @@ local function makeSlot(t)
 	b.veil = veil
 	b.wait = Ui.text(b.mid, "", -30, -7, 60, { font = "body", align = "center", outline = true, z = 7 })
 	b.wait.label.Frame.ZIndex = 7
+	-- 점프 · 상호작용이 놓였을 때의 글(2026-10-21): 큰 단추는 본문 글씨(전의 「점프」 단추와 같다) · 작은 단추는 작은 글씨
+	b.act = Ui.text(b.mid, "", -40, if k == 2 or t.kind == "big" then -7 else -6, 80, { font = if t.kind == "big" then "body" else nil, align = "center", outline = true, z = 6 })
+	b.act:show(false)
 	slotButtons[t.slot] = b
 
 	local i = t.slot
+	-- 점프 · 상호작용을 누른 손가락(떼면 놓는다 — 아래 b.release)
+	b.release = function(input: InputObject)
+		local f = b.actFinger
+		if f and sameFinger(input, f.input) then
+			b.actFinger = nil
+			b.down = false
+			paintButton(b)
+			if f.kind == "jump" then
+				Input.release("jump")
+			else
+				opts.onAct(false)
+			end
+		end
+	end
 	b.hit.InputBegan:Connect(function(input)
 		if not isPress(input) then
 			return
 		end
 		local what = state.slots[i]
+		local act = Quick.act(what)
+		if act and not Touch.arranging and not state.pick then
+			-- 점프 · 상호작용: 그 단추가 하던 일 그대로(누르고 있는 동안 — 점프는 2단 점프 · 하단 점프, 상호작용은 줍기를 이어서)
+			if b.actFinger then
+				return
+			end
+			b.actFinger = { input = input, kind = act }
+			b.down = true
+			paintButton(b)
+			if act == "jump" then
+				Input.press("jump")
+			else
+				opts.onAct(true)
+			end
+			return
+		end
 		if Touch.arranging then
 			-- 배치 중: 누르면 그 칸을 고르고, 끌면 자리를 바꾼다
 			selected = i
@@ -352,14 +416,10 @@ local function makeSlot(t)
 	return b
 end
 
+-- 칸이 아닌 단추: 「메뉴」뿐이다(점프 · 상호작용은 2026-10-21부터 칸 단추에 놓이는 것 — 「단추 배치」에서 끌어 옮긴다)
 local function makeAct(t)
 	local b = makeButton(t)
-	if t.act == "jump" then
-		b.label = Ui.text(b.mid, "점프", -40, -7, 80, { font = "body", align = "center", outline = true })
-	elseif t.act == "interact" then
-		b.label = Ui.text(b.mid, "상호작용", -40, -6, 80, { align = "center", outline = true })
-		actButton = b
-	elseif t.act == "menu" then
+	if t.act == "menu" then
 		b.label = Ui.text(b.mid, "메뉴", -40, -7, 80, { font = "body", align = "center", outline = true })
 		local dot = Ui.box(b.mid, math.floor(t.w / 2) - 8, -math.floor(t.h / 2) + 2, 6, 6, Ui.COLOR.ink)
 		Ui.box(dot, 1, 1, 4, 4, Ui.COLOR.gold)
@@ -379,11 +439,7 @@ local function makeAct(t)
 		finger = input
 		b.down = true
 		paintButton(b)
-		if t.act == "jump" then
-			Input.press("jump")
-		elseif t.act == "interact" then
-			opts.onAct(true)
-		elseif t.act == "menu" then
+		if t.act == "menu" then
 			opts.onMenu()
 		end
 	end)
@@ -392,11 +448,6 @@ local function makeAct(t)
 			finger = nil
 			b.down = false
 			paintButton(b)
-			if t.act == "jump" then
-				Input.release("jump")
-			elseif t.act == "interact" then
-				opts.onAct(false)
-			end
 		end
 	end
 	return b
@@ -507,7 +558,7 @@ local function build()
 	end
 	table.clear(buttons)
 	table.clear(slotButtons)
-	actButton, pad = nil, nil
+	pad = nil
 	for _, t in UI.touch do
 		if t.kind == "pad" then
 			makePad(t)
@@ -534,7 +585,9 @@ function Touch.frameOf(name: string, arg: number?): GuiObject?
 		return if pad then pad.frame else nil
 	end
 	for _, b in buttons do
-		if (name == "slot" and b.t.slot == arg) or (name ~= "slot" and b.t.act == name) then
+		-- 점프 · 상호작용은 그것이 놓인 칸 단추(2026-10-21 — 「단추 배치」에서 옮겼으면 옮긴 자리)
+		local holds = b.t.slot and Quick.act(state.slots[b.t.slot])
+		if (name == "slot" and b.t.slot == arg) or (name ~= "slot" and (b.t.act == name or holds == name)) then
 			return b.frame
 		end
 	end
@@ -654,7 +707,12 @@ function Touch.init(options)
 				local ghost = Ui.group(Stage.ui, 0, 0, PIC + 8, PIC + 8, "TouchGhost")
 				ghost.ZIndex = 400
 				Ui.slot(ghost, 0, 0, PIC + 8):setOn(true)
-				Ui.pic(ghost, Quick.pic(state.slots[d.from]), 4, 4).ZIndex = 2
+				local dragged = state.slots[d.from]
+				if Quick.act(dragged) then
+					Ui.text(ghost, Quick.ACTS[dragged].name, -16, math.floor((PIC + 8) / 2) - 6, PIC + 40, { align = "center", outline = true, z = 3 }) -- 점프 · 상호작용: 글(2026-10-21)
+				else
+					Ui.pic(ghost, Quick.pic(dragged), 4, 4).ZIndex = 2
+				end
 				d.ghost = ghost
 			end
 			if d.moved and d.ghost then

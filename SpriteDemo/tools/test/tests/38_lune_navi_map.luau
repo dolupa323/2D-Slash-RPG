@@ -186,7 +186,7 @@ for _, def in Quests.list do
 		-- ㄷ) 다 했다: 돌려줄 주민이 선 맵
 		t = Navi.target(def.id, book, level, nil)
 		expect(Quests.isReady(book, def.id), "다 한 퀘스트 " .. def.id)
-		expect(t ~= nil and t.kind == "npc" and t.npc == def.endNpc and t.scene == Quests.endScene(def) and npcIn(t.scene, def.endNpc), ("다 하면 돌려줄 주민에게 %s"):format(def.id))
+		expect(def.endNpc == false or (t ~= nil and t.kind == "npc" and t.npc == def.endNpc and t.scene == Quests.endScene(def) and npcIn(t.scene, def.endNpc)), ("다 하면 돌려줄 주민에게 %s"):format(def.id)) -- endNpc false = 그 자리에서 끝난다(2026-10-21)
 		if t and def.region == "r1" then
 			expect(walk(def.scene, t, book) ~= nil, ("하던 맵에서 돌려줄 주민까지 문을 따라 닿는다 %s"):format(def.id))
 		end
@@ -441,7 +441,7 @@ do
 	local panels, scrolls = {}, {}
 	MOCK("Client/lune/ui/ui", {
 		COLOR = setmetatable({}, { __index = function(_, k) return k end }),
-		M = { small = 10, body = 12 },
+		M = { small = 10, body = 12, smallLine = 14 },
 		measure = function(text: string, font: string?) return (pixelText.Measure(text, font or "small")) end,
 		box = function(parent, x, y, w, h, color, alpha)
 			expect(w > 0 and h > 0, "네모의 크기가 0보다 크다")
@@ -968,10 +968,10 @@ do
 	end
 	MOCK("Client/lune/ui/ui", {
 		COLOR = setmetatable({}, { __index = function(_, k) return k end }),
-		M = { small = 10, body = 12 },
+		M = { small = 10, body = 12, smallLine = 14 },
 		text = function(parent, text, x, y, width, opts)
 			local isTitle = opts and opts.font == "body"
-			local isSub = opts and opts.font == nil and opts.lines == nil
+			local isSub = opts and opts.font == nil and opts.color == "text" -- 안내 한 줄은 accent
 			return { set = function(_, v)
 				if isTitle then
 					shownTitle = v

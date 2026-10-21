@@ -139,6 +139,26 @@ for _, ratio in { 2, 2.5 } do
 	end
 end
 
+-- ⑦ 깨진 글(2026-10-21 퍼블리시한 게임의 오류 보고: pixelText:55 invalid UTF-8 code 554번)
+do
+	local broken = "가나" .. string.sub("다", 1, 2) -- 「다」의 앞 두 바이트만(반쪽 글자)
+	expect(utf8.len(broken) == nil, "(반쪽 글자를 만들었다)")
+	local okM, w = pcall(pixelText.Measure, broken, "small")
+	expect(okM and typeof(w) == "number" and w > 0, "반쪽 글자가 있어도 폭을 잰다(오류 없이)")
+	local fixed = pixelText.Clean(broken)
+	expect(utf8.len(fixed) ~= nil and string.sub(fixed, 1, 6) == "가나", "반쪽 글자는 「?」로 — 앞의 글은 그대로: " .. fixed)
+	eq(pixelText.Clean("달빛나그네"), "달빛나그네", "온전한 글은 그대로")
+	local okF, fit = pcall(pixelText.Fit, broken .. "라마바사아자차카", 30, 1, "small")
+	expect(okF and utf8.len(fit) ~= nil, "줄여도 온전한 글")
+	-- 한글로 줄인 끝의 빈칸만 지운다(%s는 한글의 가운데 바이트를 빈칸으로 볼 수 있다)
+	for _, name in { "은빛달토끼를좋아하는용사", "가나다라마바사아자차카타", "한글 이름 줄이기 시험" } do
+		local f = pixelText.Fit(name, 40, 1, "small")
+		expect(utf8.len(f) ~= nil and string.sub(f, -3) == "…", "줄인 이름이 온전한 글 — " .. f)
+	end
+	local Cash2 = req("ReplicatedStorage/shared/lune/sim/cash")
+	eq(Cash2.couponCode(" dong geuli	"), "DONGGEULI", "쿠폰 번호의 빈칸 · 탭을 뺀다")
+end
+
 -- ⑥ 달빛 상점(2026-10-21 사용자: "달빛패스 일딴 비활성화해 그리고 달빛상점에서 펫은 펫 탭으로 따로 빼고 편의 가 아니라 그리고 지금 달빛상점 들어가면 ui가 너무 작아 모바일에서도 반응형")
 do
 	local SHOP = BM.shop
@@ -273,4 +293,37 @@ do
 	expect(sq.acct.bm.pets.pet_crow == true and sq.acct.bm.petOut == "pet_crow", "이미 쓴 쿠폰의 계정이 들어오면 지금의 쿠폰 펫(아기 재까마귀)을 받는다")
 	expect(disk[7002].bm.pets and table.find(disk[7002].bm.pets, "pet_crow") ~= nil, "바로 저장한다")
 	World.removePlayer(q)
+end
+
+-- 관리자의 「쿠폰 기록 지우기」(2026-10-21 사용자: "쿠폰 기록을 초기화해줘 쿠폰등록하는것부터 영상을찍어야해")
+do
+	local Admin = req("ServerScriptService/server/lune/modules/admin")
+	local aid = next(Admin.IDS)
+	local pa = { UserId = aid, Name = "admin", DisplayName = "admin", attrs = {} }
+	pa.SetAttribute = function(self, k, v) self.attrs[k] = v end
+	pa.Kick = function() end
+	handlers.Ready(pa)
+	local mk = handlers.Chars(pa, "create", "쿠폰영상", "axion")
+	handlers.Chars(pa, "enter", mk.id)
+	local sa = World.session(pa)
+	expect(handlers.Coupon(pa, code).ok, "관리자도 쿠폰을 쓴다")
+	expect(sa.acct.bm.pets.pet_crow and sa.acct.bm.petOut == "pet_crow", "쿠폰 펫을 받았다")
+	sa.acct.bm.pets.pet_silver = true -- 산 펫은 지우지 않는다
+	local res = handlers.Admin(pa, "coupons")
+	expect(res and res.ok, "쿠폰 기록을 지운다 — " .. tostring(res and res.msg))
+	expect(next(sa.acct.bm.coupons) == nil, "쓴 쿠폰이 없다")
+	expect(not sa.acct.bm.pets.pet_crow and sa.acct.bm.petOut == false, "쿠폰 펫도 빠지고 꺼내 둔 것도 넣었다")
+	expect(sa.acct.bm.pets.pet_silver == true, "산 펫은 그대로")
+	expect(disk[aid] and (disk[aid].bm.coupons == nil or next(disk[aid].bm.coupons) == nil), "바로 저장한다")
+	local again = handlers.Coupon(pa, code)
+	expect(again and again.ok and sa.acct.bm.pets.pet_crow, "다시 처음부터 쿠폰을 쓸 수 있다")
+	local np = { UserId = 7003, Name = "user7003", DisplayName = "user7003", attrs = {} }
+	np.SetAttribute = function(self, k, v) self.attrs[k] = v end
+	np.Kick = function() end
+	handlers.Ready(np)
+	local mk2 = handlers.Chars(np, "create", "보통손님", "riven")
+	handlers.Chars(np, "enter", mk2.id)
+	eq(handlers.Admin(np, "coupons"), nil, "관리자가 아니면 듣지 않는다")
+	World.removePlayer(pa)
+	World.removePlayer(np)
 end

@@ -241,17 +241,19 @@ do
 		if t.slot then
 			slots[t.slot] = t
 		end
-		if t.act == "interact" then
-			act = t
-		end
 	end
+	act = slots[Quick.ACTS.act_interact.home] -- 상호작용이 처음 놓이는 칸 단추(2026-10-21 — 전의 상호작용 단추 자리)
 	expect(slots[1] == nil, "칸 1의 단추는 없다(상호작용 단추 아래에 있던 것)")
 	for i = 2, 12 do
 		expect(slots[i] ~= nil, "칸 " .. i .. "의 단추가 있다")
 	end
-	-- 2026-10-21에 늘린 칸 13 · 14는 PC의 퀵슬롯에만(스마트폰은 사용자가 정한 단추 열하나 그대로 — 펫 · 탈것은 가방의 캐시 탭에서)
-	expect(slots[13] == nil and slots[14] == nil, "칸 13 · 14의 단추는 없다")
-	eq(#Quick.TOUCH, 11, "단추가 있는 칸은 열하나")
+	-- 2026-10-21(사용자: "상호작용, 점프키 같은거 위치 다 바꿀수있어야해요 드래그앤 드랍으로 다른 버튼들처럼"): 전의 점프 · 상호작용 단추가 칸 13 · 14의 단추가 되었다
+	expect(slots[13] ~= nil and slots[14] ~= nil, "칸 13 · 14의 단추가 있다(처음에는 점프 · 상호작용)")
+	eq(slots[Quick.ACTS.act_jump.home], slots[13], "점프는 처음에 칸 13(전의 점프 단추 자리)")
+	eq(#Quick.TOUCH, 13, "단추가 있는 칸은 열셋(칸 2 ~ 14)")
+	for _, t in UI.touch do
+		expect(t.act ~= "jump" and t.act ~= "interact", "따로 된 점프 · 상호작용 단추는 없다 — " .. t.name)
+	end
 	for _, t in UI.touch do
 		if t ~= act and t.kind ~= "hud" then
 			local under = t.y >= act.y + act.h and t.y < act.y + act.h + 40 and t.x < act.x + act.w and t.x + t.w > act.x
@@ -267,6 +269,7 @@ do
 		local pc = Quick.start(c.skills)
 		expect(start[1] == false and start[5] == Quick.START_POTION, class .. ": 새 캐릭터의 물약은 칸 5의 단추에")
 		expect(start[2] == pc[2] and start[3] == pc[3] and start[4] == pc[4], class .. ": 사냥기 · 보스기 · 이동기는 큰 단추 그대로")
+		expect(start[13] == "act_jump" and start[14] == "act_interact", class .. ": 새 캐릭터의 폰 배치 — 점프 · 상호작용은 전의 그 단추 자리(칸 13 · 14)")
 		local h = Hero.new(1, class)
 		expect(same(h.tslots, start), class .. ": 새 캐릭터의 폰 배치")
 		expect(same(h.slots, pc) and h.slots[1] == Quick.START_POTION, class .. ": PC의 퀵슬롯은 그대로(물약은 첫 칸)")
