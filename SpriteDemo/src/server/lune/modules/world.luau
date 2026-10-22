@@ -183,7 +183,7 @@ local function roster(key: string)
 	for _, s in inRoom(key) do
 		-- pet = 꺼내 둔 펫 · ride = 탄 탈것(2026-10-20 — 다른 사람의 화면도 같이 그린다)
 		local bm = s.acct and s.acct.bm
-		table.insert(list, { id = s.hero.id, name = s.name, class = s.hero.class, level = s.hero.level, pet = bm and bm.petOut or false, ride = if s.riding and bm then bm.mount else false })
+		table.insert(list, { id = s.hero.id, name = s.name, class = s.hero.class, level = s.hero.level, pet = bm and bm.petOut or false, ride = if s.riding and bm then bm.mount else false, look = s.hero.look }) -- look = 무기 · 로브 색(염색 — 2026-10-22)
 	end
 	return list
 end
@@ -1010,6 +1010,11 @@ local function onCharsInner(player, action: string, a: any, b: any)
 			hero.home = SCENES.gone[hero.home]
 		end
 		s.hero, s.cid, s.name = hero, c.id, c.name
+		task.spawn(function() -- 영구 게임 패스(경험치 · 드롭률 1.25배 — 2026-10-22): 로블록스에 물어 이 캐릭터에 얹는다(묻는 동안 들어서는 것을 기다리지 않게)
+			if CashServer.applyPasses(s) and s.hero == hero then
+				sendSelf(s)
+			end
+		end)
 		acct.last = c.id
 		-- 첫 퀘스트를 아직 끝내지 않은 새 캐릭터는 사당 안(사제의 방)에서 시작한다 — 그 밖에는 마지막으로 있던 맵(없으면 마지막 마을 · 시작 마을)
 		--  사용자 2026-10-16 밤: "게임을 시작하면 항상 초승달마을에서 시작합니다" → 메이플처럼 나갔던 맵의 시작 자리에서 다시 시작한다(resumeScene)
@@ -1920,8 +1925,11 @@ local function onPetPick(player, dropId: number)
 	if (s.petT or 0) > World.now then
 		return
 	end
-	s.petT = World.now + PETRULE.every * 0.8 -- 화면이 every초마다 보낸다(조금 일찍 와도 받는다 — 프레임의 어긋남)
-	pickupDrop(s, dropId, PETRULE.reach + PETRULE.slack)
+	local q = Cash.PET[s.acct.bm.petOut]
+	local every = if q and not q.free and PETRULE.suck then PETRULE.suck.every else PETRULE.every -- 로벅스 펫은 빨아들인다(더 자주 — 2026-10-22)
+	s.petT = World.now + every * 0.8 -- 화면이 every초마다 보낸다(조금 일찍 와도 받는다 — 프레임의 어긋남)
+	local sucks = q and not q.free and PETRULE.suck
+	pickupDrop(s, dropId, if sucks and PETRULE.suck.reach then PETRULE.suck.reach else PETRULE.reach + PETRULE.slack) -- 로벅스 펫은 더 먼 것까지(10-22 「범위 더크게」)
 end
 
 -- 그 주민 앞에 서 있는가(상점 · 강화 · 창고는 주민 앞에서만)
@@ -1953,6 +1961,14 @@ local function onItem(player, action: string, a: any, b: any, c: any, d: any)
 		result, why = Bag.dismantle(h, a)
 		if result and s.acct then
 			Achieve.add(s.acct.ach, "dismantle") -- 업적: 장비를 n개 분해한다
+		end
+		ok = result ~= nil
+	elseif action == "dismantleMany" then
+		-- 여러 개 분해(2026-10-22): a = 장비 번호들 · 업적은 분해한 수만큼
+		local n
+		result, why, n = Bag.dismantleMany(h, a)
+		if result and s.acct then
+			Achieve.add(s.acct.ach, "dismantle", n)
 		end
 		ok = result ~= nil
 	elseif action == "grow" then
@@ -2068,6 +2084,8 @@ local function onPotion(player, id: any)
 		local ok, msg = nil, nil
 		if goods.kind == "bmRename" then
 			msg = "가방에서 쓰면 새 이름을 적는 칸이 열린다" -- 이름은 Cash "rename"이 바꾼다(그때 주문서를 쓴다)
+		elseif goods.kind == "bmDyePoint" or goods.kind == "bmDyeRobe" then
+			msg = "가방에서 쓰면 색을 고르는 창이 열린다" -- 색은 Cash "dye"가 바꾼다(그때 염색약을 쓴다 — 2026-10-22)
 		elseif Bag.count(h, goods.id) <= 0 then
 			msg = "가진 것이 없다"
 		else
@@ -4248,6 +4266,30 @@ local function onCash(player, a: any, b: any)
 		sendSelf(s)
 		saveNow(s)
 		return { ok = true, name = b }
+	elseif a == "dye" then
+		-- 염색약(2026-10-22 — sim/dye.luau · 사용자 "무기 색깔 바꾸는거 할수있어? 로브색깔이나"): b = { part = point · robe, id = 색 · "base"(원래) }.
+		--  그 곳의 염색약을 하나 쓰고 이 캐릭터의 색을 바꾼다 → 저장 · 방 사람들의 화면(Who — 다른 사람에게도 그 색으로)
+		local Dye = require(lune.sim.dye)
+		local h = s.hero
+		local part = if typeof(b) == "table" then b.part else nil
+		local item = Dye.ITEM[part]
+		if not h or not item then
+			return { ok = false, why = "캐릭터로 들어간 뒤에 쓴다" }
+		elseif Bag.count(h, item) <= 0 then
+			return { ok = false, why = Dye.data.words.none }
+		end
+		local ok, why = Dye.apply(h, part, b.id)
+		if not ok then
+			return { ok = false, why = why }
+		end
+		Bag.take(h, item, 1)
+		sendBag(s)
+		sendSelf(s)
+		if not s.shop then
+			sendWho(s.scene)
+		end
+		saveNow(s)
+		return { ok = true, part = part, id = b.id, name = Dye.name(part, b.id), look = h.look }
 	end
 	return { ok = false, why = "모르는 요청" }
 end
@@ -4324,6 +4366,9 @@ function World.start()
 		end,
 		notify = function(s, key)
 			fire("CashGot", s.player, key)
+			if Cash.product(key) and Cash.product(key).kind == "pass" and s.hero then
+				sendSelf(s) -- 산 영구 패스의 효과(버프 줄의 「영구」 — 2026-10-22)
+			end
 			if (Cash.PET[key] or Cash.MOUNT[key]) and s.scene then
 				sendWho(s.scene) -- 산 펫을 바로 꺼냈다(꺼내 둔 것이 없었으면) — 다른 사람의 화면에도
 			end

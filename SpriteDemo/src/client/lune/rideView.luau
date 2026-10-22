@@ -10,6 +10,12 @@
 --    순간 이동(영웅의 발밑 땅으로): 영웅이 땅에 서 있을 때 가로 warpX · 세로 warpY보다 멀면 · 가려는데 stuck초 동안 못 가고 영웅이 behind점보다 멀면 · 맵 아래로 떨어지면
 --   줍기: 내 펫만(drops · onPick을 받은 것) — 영웅에게서 reach점 안 · 펫의 높이에서 위아래 magnet점 안의 떨어진 것에 달려가(chase) 펫에서 원 magnet점 안이면 onPick(번호, x, y)(자석 — 10-21)
 --    → 서버(world.luau의 onPetPick)가 확인하고 줍는다. 한 번 해 본 것 · 가다가 막힌 것은 3초 동안 다시 보지 않는다
+--   2026-10-22 사용자 "펫이 너무 멍청해서 조금이라도 높은턱이 있으면 멍청하게 못줍는다 펫 지능 상향해라 로벅스 펫은 자석범위로 빨아들이는 형태로 한다
+--    원래이미 펫을 가지고 있는사람들도 패치 적용되면 똑같이 적용 되어야한다" →
+--    · 모든 펫: 주우러 갈 것 = 펫의 높이에서 위아래 climb점 안(전에는 magnet 24 — 두 칸 턱 위의 것을 아예 보지 않았다) · 고른 것이 머리 위 hop점 안이면 그 밑에서 뛰어오른다
+--      (전에는 벽에 막힐 때만 뛰어 떠 있는 발판 위의 것은 못 주웠다) · 고른 것이 아래층이면 낭떠러지를 걸어 내려가고 얇은 발판은 뚫고 내려간다 · 주우러 갈 때는 웅크림이 windupChase초
+--    · 로벅스 펫(design/ride.js에서 free가 없는 펫): 펫 몸 둘레 suck.r점 원 안의 것을 높이 · 턱과 상관없이 suck.every초마다 빨아들인다 — 펫의 종류로 정해진다(이미 산 사람도 같다)
+--      같은 날 "로벅스 펫 빨아들이기 범위 더크게" → suck.r 80 → 160 · 서버가 받는 영웅과의 거리 suck.reach 256
 --  탈것: 탄 동안 영웅의 발밑에 탈것을 그리고, 영웅은 서기 모습으로 앉는 자리(seat)에 · 탈것의 등(<동작>_front)을 영웅 앞에 다시 그린다(다리가 몸에 묻혀 앉은 것으로 보인다).
 --   사다리 위 · 기술을 쓰는 동안은 탈것을 감춘다(사용자 10-20 「탈것은 사다리에서 감추기 좋습니다」) — 영웅은 제 동작 그대로.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,6 +29,15 @@ RideView.__index = RideView
 local MOUNT = {}
 for _, m in RIDE.mounts do
 	MOUNT[m.id] = m
+end
+local PET = {} -- 펫의 종류(free = 쿠폰 펫 — 그 밖은 로벅스 펫)
+for _, q in RIDE.pets do
+	PET[q.id] = q
+end
+-- 로벅스 펫인가(빨아들인다 — 2026-10-22). 쿠폰 펫 · 모르는 것은 아니다
+function RideView.sucks(id: any): boolean
+	local q = PET[id]
+	return q ~= nil and not q.free and RIDE.pet.suck ~= nil
 end
 RideView.MOUNT = MOUNT
 local P = RIDE.pet
@@ -141,14 +156,15 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 	end
 	-- 주우러 갈 것: 영웅에게서 reach점 안 · 펫의 높이에서 위아래 magnet점 안(턱 · 발판 위에 놓여 펫이 오르지 못해도 원 안이면 줍는다) · 펫에게서 가장 가까운 것
 	local goal = if self.goal and drops then drops[self.goal] else nil
-	if goal and (math.abs(goal.x - hero.x) > P.reach + P.slack or math.abs(goal.y - b.y) > P.magnet) then
+	local climb = P.climb or P.magnet -- 주우러 갈 높이 차(2026-10-22: 24 → 40)
+	if goal and (math.abs(goal.x - hero.x) > P.reach + P.slack or math.abs(goal.y - b.y) > climb) then
 		goal = nil -- 영웅이 멀어졌다 · 펫이 다른 높이로 갔다
 	end
 	self.goal = if goal then self.goal else nil
 	if not goal and drops and onPick and b.ground and now >= self.nextPick then
 		local bd = math.huge
 		for id, d in drops do
-			if math.abs(d.x - hero.x) <= P.reach and math.abs(d.y - b.y) <= P.magnet and (self.tried[id] or 0) <= now then
+			if math.abs(d.x - hero.x) <= P.reach and math.abs(d.y - b.y) <= climb and (self.tried[id] or 0) <= now then
 				local dd = math.abs(d.x - b.x)
 				if dd < bd then
 					self.goal, goal, bd = id, d, dd
@@ -170,14 +186,19 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 	local mx = if math.abs(d) <= (if goal then 1 else 2) then 0 elseif d > 0 then 1 else -1
 	local input = { mx = mx, speed = speed / G.RUN }
 	local heroBelow = not hero.air and hero.y > b.y + 8
+	local goalUp = goal ~= nil and goal.y < b.y - 6 and math.abs(goal.x - b.x) <= (P.hop or 0) -- 고른 것이 머리 위(턱 · 떠 있는 발판 위)
+	local goalDown = goal ~= nil and goal.y > b.y + 6 -- 고른 것이 아래층
 	local wantJump = false
+	if b.ground and goalUp then
+		wantJump = true -- 그 밑에서 뛰어오른다(얇은 발판은 밑에서 뚫고 올라 그 위에 선다 · 턱은 옆으로 다가가며 오른다)
+	end
 	if b.ground and mx ~= 0 then
 		if Physics.solidBox(scene, b.x + mx * 2, b.y) then
 			wantJump = true -- 벽 · 턱
 		elseif not groundBelow(scene, b.x + mx * (HALF + 2), b.y, 2) then
 			-- 낭떠러지: 영웅이 아래면 걸어 떨어진다 · 같은 높이의 건너편이면 뛰어 건넌다 · 위면 멈춘다(메이플의 일반 펫은 다른 발판으로 오르지 않는다)
-			if heroBelow then
-				-- 그대로 걷는다
+			if heroBelow or goalDown then
+				-- 그대로 걷는다(영웅 · 주우러 갈 것이 아래층)
 			elseif not hero.air and math.abs(hero.y - b.y) <= 8 then
 				wantJump = true
 			else
@@ -186,11 +207,11 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 		end
 	end
 	-- 하단 점프: 영웅이 아래에 있고 펫이 얇은 발판 위면(영웅 쪽으로 가까울 때)
-	if b.ground and heroBelow and Physics.onPlatform(scene, b) and math.abs(hero.x - b.x) <= P.behind + 24 then
+	if b.ground and ((heroBelow and math.abs(hero.x - b.x) <= P.behind + 24) or (goalDown and math.abs(goal.x - b.x) <= (P.hop or 0))) and Physics.onPlatform(scene, b) then
 		input.down, input.jump = true, true
 	elseif wantJump then
 		if not self.windT then
-			self.windT = now + P.windup -- 웅크린다(그 자리에 선다)
+			self.windT = now + (if goal then (P.windupChase or P.windup) else P.windup) -- 웅크린다(그 자리에 선다 — 주우러 갈 때는 짧게)
 		end
 		if now >= self.windT then
 			input.jump, self.windT = true, nil
@@ -232,11 +253,14 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 	--  펫이 잘 올라가지 못하더라도 주워지게") · 원 안의 것은 갈 곳이 아니어도 지나가며 줍는다(가장 가까운 것 하나 — every초마다)
 	if drops and onPick and now >= self.nextPick then
 		local cy = b.y - 6 -- 펫 몸의 가운데쯤(발밑에서 6점 위)
+		local suck = RideView.sucks(self.petId) -- 로벅스 펫: 둘레 suck.r점 원 안을 빨아들인다(2026-10-22)
+		local radius = if suck then P.suck.r else P.magnet
+		local far = if suck then (P.suck.reach or P.reach + P.slack) else P.reach + P.slack -- 서버가 받는 영웅과의 거리(로벅스 펫은 더 멀리 — 10-22 「범위 더크게」)
 		local pick, pd = nil, math.huge
 		for id, d in drops do
 			local ddx, ddy = d.x - b.x, d.y - 4 - cy
 			local dist = math.sqrt(ddx * ddx + ddy * ddy)
-			if dist <= P.magnet and dist < pd and (self.tried[id] or 0) <= now and math.abs(d.x - hero.x) <= P.reach + P.slack then
+			if dist <= radius and dist < pd and (self.tried[id] or 0) <= now and math.abs(d.x - hero.x) <= far then
 				pick, pd = id, dist
 			end
 		end
@@ -245,7 +269,7 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 			if self.goal == pick then
 				self.goal = nil
 			end
-			self.nextPick = now + P.every
+			self.nextPick = now + (if suck then P.suck.every else P.every)
 			onPick(pick, b.x, cy)
 		end
 	end

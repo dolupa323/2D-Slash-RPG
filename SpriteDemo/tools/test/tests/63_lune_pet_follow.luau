@@ -138,13 +138,15 @@ drops[8] = { x = hx + 20, y = GROUND }
 drops[9] = { x = hx + 24, y = GROUND }
 run(rv, 2, hx, GROUND, -1, false, false, drops, onPick)
 eq(#picked, 3, "⑤ 나란한 둘을 차례로")
-expect(picked[3] and picked[2] and picked[3].t - picked[2].t >= P.every - 0.02, "⑤ 둘째는 every초 뒤")
+local every = if RideView.sucks(rv.petId) then P.suck.every else P.every -- (은빛 달토끼 = 로벅스 펫: 빨아들이는 간격 — 2026-10-22)
+expect(picked[3] and picked[2] and picked[3].t - picked[2].t >= every - 0.02, "⑤ 둘째는 줍는 간격(every · 로벅스 펫은 suck.every) 뒤")
 local high = { [10] = { x = hx - 20, y = GROUND - 40 } } -- 펫보다 40점 위(위 발판에 떨어진 것)
 local highPicked = 0
 run(rv, 2, hx, GROUND, -1, false, false, high, function()
 	highPicked += 1
 end)
-eq(highPicked, 0, "⑤ 펫에서 원 magnet점(24)보다 먼 높이(40점 위)의 것은 줍지 않는다")
+-- (2026-10-22 사용자 "로벅스 펫은 자석범위로 빨아들이는 형태로": 전에는 「40점 위의 것은 줍지 않는다」였다 — 은빛 달토끼는 로벅스 펫이라 둘레 suck.r점 안이면 빨아들인다)
+eq(highPicked, 1, "⑤ 로벅스 펫은 40점 위의 것도 둘레 원 안이면 빨아들인다")
 -- ⑤-자석(2026-10-21 사용자 "펫의 줍기판정이 살짝 자석처럼 … 원형판정으로 지형이 좀 안좋거나 , 펫이 잘 올라가지 못하더라도 주워지게"):
 --  펫이 오를 수 없는 곳(땅보다 18점 위 — 공중의 턱)에 놓인 것도 원 안이면 줍는다 · 그 자리에 서지 않아도 지나가며
 local ledge = { [11] = { x = hx - 30, y = GROUND - 18 } }

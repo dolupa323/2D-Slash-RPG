@@ -152,6 +152,7 @@ local function build(ctx)
 	Ui.box(pv, 16, floorUi, SP.previewW - 32, 2, C.line).ZIndex = 2
 	local cx, floor = math.floor(SP.previewW / ratio / 2), math.floor(floorUi / ratio)
 	local hero = Sprite.new(world, ctx.who(), 3)
+	hero:setLook(ctx.myLook and ctx.myLook()) -- 내 무기 · 로브 색(염색 — 2026-10-22)
 	local ride = RideView.new(world, 3, nil)
 	parts = { root = r, content = content, loading = loading, world = world, hero = hero, ride = ride, pet = nil, petId = ctx.myPet(), rideId = ctx.myRide(), name = nameText, cx = cx, floor = floor }
 	setPreview(nil)

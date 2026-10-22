@@ -85,6 +85,10 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 	local tab = 1
 	local sel = nil :: { tab: string, slot: number, id: any }? -- 고른 칸(id = 장비의 번호 · 묶음의 이름표 — 칸의 것이 바뀌면 고른 것을 푼다)
 	local ask = nil :: { kind: string, n: number? }? -- 수를 고르는 중(버리기 · 맡기기 · 팔기 · 나누기 — 장비 팔기는 n 없이 묻기만)
+	-- 여러 개 분해(2026-10-22 사용자: "장비 분해를 한번에 여러개 할수있게 해달라" — 공방 시험 탭의 luneTab.js bulkSpec과 같다): 장비 탭 아래 「분해」로 켠다 →
+	--  칸을 누르면 고름 · 풂(bulk[장비 번호]) → 옆 판에 고른 수 · 받는 달가루 · [분해] [모두] [취소] → [분해]는 한 번 더 묻는다(bulkAsk) → 서버가 한꺼번에(Bag.dismantleMany)
+	local bulk = nil :: { [any]: boolean }?
+	local bulkAsk = false
 	local hot: number? = nil -- 끌던 것을 놓을 칸
 	local lastClick = { slot = 0, t = 0 }
 	local dragEnd = 0 -- 마지막으로 끌기를 끝낸 때(그 직후에 오는 "눌렀다"는 끌기의 끝이지 누른 것이 아니다)
@@ -130,6 +134,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			if tab ~= i then
 				tab = i
 				unselect()
+				bulk, bulkAsk = nil, false -- 여러 개 분해는 장비 탭에서만
 				gridRoot.CanvasPosition = Vector2.zero -- 다른 탭은 맨 위부터
 				if KEYS[i] == "cash" and not (ctx.cash and ctx.cash()) and ctx.cashFetch then
 					ctx.cashFetch() -- 가진 펫 · 탈것을 서버에 묻는다(받으면 다시 그린다)
@@ -150,6 +155,9 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		local g = Items.goods(entry.item)
 		if g and g.kind == "bmRename" and ctx.openRename then
 			ctx.openRename() -- 이름 바꾸기 주문서: 새 이름을 적는 칸(상점 창 — 이름이 바뀔 때 서버가 주문서를 쓴다)
+			return
+		elseif g and (g.kind == "bmDyePoint" or g.kind == "bmDyeRobe") and ctx.openDye then
+			ctx.openDye(if g.kind == "bmDyePoint" then "point" else "robe") -- 염색약: 색을 고르는 창(색이 바뀔 때 서버가 염색약을 쓴다 — 2026-10-22)
 			return
 		end
 		ctx.send("Potion", entry.item)
@@ -218,6 +226,14 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			local now = os.clock()
 			-- 끌어서 놓은 것은 누른 것이 아니다(끌기를 끝낼 때 놓은 자리의 칸에도 "눌렀다"가 온다 — 그대로 받으면 방금 옮긴 것의 고르기가 풀린다)
 			if ctx.quick.dragging() or now - dragEnd < 0.2 then
+				return
+			end
+			if bulk and key() == "gear" then
+				if it and it.id ~= nil then
+					bulk[it.id] = if bulk[it.id] then nil else true -- 여러 개 분해: 누르면 고름 · 풂
+				end
+				bulkAsk = false
+				redraw()
 				return
 			end
 			local twice = it ~= nil and lastClick.slot == n and now - lastClick.t < DOUBLE
@@ -384,6 +400,18 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		view.refresh()
 	end)
 	sort.frame.Name = "Sort"
+	-- 「분해」(여러 개 분해를 켠다 · 켠 동안은 「취소」 — 장비 탭에서만)
+	local bulkBtn = Ui.button(body, WORDS.dismantle, BAG.sortW + BAG.footGap, fy, BAG.bulkW, function()
+		if bulk then
+			bulk, bulkAsk = nil, false
+		else
+			bulk, bulkAsk = {}, false
+			sel, ask = nil, nil
+			ui.detail = "bag"
+		end
+		redraw()
+	end)
+	bulkBtn.frame.Name = "Bulk"
 	local grow = Ui.button(body, "", w - BAG.growW, fy, BAG.growW, function()
 		ctx.send("Item", "grow")
 	end, { font = "small" })
@@ -398,6 +426,76 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 	local function detail(bag, me)
 		if ui.detail ~= "bag" then
 			unselect() -- 다른 창에서 골랐다
+			bulk, bulkAsk = nil, false
+		end
+		if bulk and key() == "gear" then
+			-- 여러 개 분해의 판: 고른 장비의 수 · 받는 달가루 · [분해] [모두 · 풀기] [취소] — [분해]는 한 번 더 묻는다
+			local W = WORDS.bulk
+			local ids, gain, first = {}, 0, nil
+			local all, allOn = 0, true -- 「모두」가 고를 것(강화하지 않았고 지금보다 좋지 않은 장비)이 다 골라졌나
+			for i = 1, bag.size do
+				local it = bag.gear[i]
+				if it then
+					if bulk[it.id] then
+						table.insert(ids, it.id)
+						gain += Items.dismantle(it)
+						first = first or it
+					end
+					if (it.star or 0) <= 0 and not BagWindow.better(me, bag, it) then
+						all += 1
+						allOn = allOn and bulk[it.id] == true
+					end
+				end
+			end
+			for id in bulk do
+				if not table.find(ids, id) then
+					bulk[id] = nil -- 가방에서 사라진 것(서버가 다시 보낸 가방에 없다)
+				end
+			end
+			local spec = { item = first, buttons = {}, onClose = function()
+				bulk, bulkAsk = nil, false
+				redraw()
+			end }
+			spec.info = { name = W.title, tone = "text", sub = W.sub, rows = { { W.picked, ("%d개"):format(#ids) }, { W.gain, "+" .. Format.short(gain), "gold" } }, notes = { { W.hint, "dim" } } }
+			if bulkAsk and #ids > 0 then
+				spec.ask = {
+					text = Format.fill(W.ask, { n = #ids }) .. "  " .. Format.fill(WORDS.gainDust, { n = Format.short(gain) }),
+					yes = { text = W.go, onClick = function()
+						ctx.send("Item", "dismantleMany", ids)
+						bulk, bulkAsk = {}, false -- 분해한 뒤에도 여러 개 분해는 켜 둔다(이어서 더 고른다)
+						redraw()
+					end },
+					no = { text = WORDS.askNo, onClick = function()
+						bulkAsk = false
+						redraw()
+					end },
+				}
+			else
+				bulkAsk = false
+				table.insert(spec.buttons, { text = W.go, main = true, off = #ids == 0, onClick = function()
+					bulkAsk = true
+					redraw()
+				end })
+				table.insert(spec.buttons, { text = if all > 0 and allOn then W.none else W.all, onClick = function()
+					local on = not (all > 0 and allOn)
+					for i = 1, bag.size do
+						local it = bag.gear[i]
+						if it and (it.star or 0) <= 0 and not BagWindow.better(me, bag, it) then
+							bulk[it.id] = if on then true else nil
+						elseif it and not on then
+							bulk[it.id] = nil
+						end
+					end
+					redraw()
+				end })
+				table.insert(spec.buttons, { text = W.stop, onClick = function()
+					bulk, bulkAsk = nil, false
+					redraw()
+				end })
+			end
+			spec.key = table.concat({ "bulk", #ids, gain, tostring(bulkAsk), tostring(all > 0 and allOn), if first then first.id else 0 }, "|")
+			ItemDetail.show("bag", spec)
+			return
 		end
 		if sel and sel.tab == "cash" then
 			-- 캐시 탭의 펫 · 탈것(가진 것의 차례가 바뀌어도 이름표로 따라간다)
@@ -607,12 +705,15 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			end
 			grow.frame.Visible = false
 			sort.frame.Visible = false
+			bulkBtn.frame.Visible = false
 			money:set(Format.short(me.money))
 			dust:set(Format.short(bag.dust))
 			essence:set(Format.short(bag.essence))
 			return
 		end
 		sort.frame.Visible = true
+		bulkBtn.frame.Visible = key() == "gear"
+		bulkBtn:setText(if bulk then WORDS.bulk.stop else WORDS.dismantle)
 		local list = bag[key()]
 		-- 스크롤: 늘린 가방은 네 줄을 넘는다 — 넘는 만큼 칸을 만들고 스크롤 틀의 속을 늘린다
 		local rows = math.ceil(bag.size / COLS)
@@ -634,7 +735,8 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		for i, cell in cells do
 			cell.frame.Visible = i <= rows * COLS -- 줄여진 적은 없지만, 넘치는 칸은 숨긴다
 			local item = list[i] or nil
-			cell:set(item, { locked = i > bag.size, selected = sel ~= nil and sel.tab == key() and sel.slot == i, hot = hot == i, better = key() == "gear" and BagWindow.better(me, bag, item) })
+			local picked = bulk ~= nil and key() == "gear" and item and bulk[item.id] == true -- 여러 개 분해로 고른 칸(2026-10-22)
+			cell:set(item, { locked = i > bag.size, selected = picked or (sel ~= nil and sel.tab == key() and sel.slot == i), hot = hot == i, better = key() == "gear" and BagWindow.better(me, bag, item) })
 		end
 		-- 가방 늘리기(세 탭이 함께 늘어난다 — 값이 적혀 있다). 다 늘렸으면 단추가 없다
 		grow.frame.Visible = bag.growCost ~= false

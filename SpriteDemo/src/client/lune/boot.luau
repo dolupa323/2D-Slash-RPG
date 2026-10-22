@@ -415,6 +415,7 @@ local function enterScene(key: string, x: number, y: number, room)
 		state.body.run, state.body.jump = state.me.run or 1, state.me.jump or 1 -- 걸음 · 뛰는 힘의 배수(패시브)는 장면이 바뀌어도 그대로
 	end
 	state.sprite = Sprite.new(state.view.heroLayer, state.who)
+	state.sprite:setLook(state.me and state.me.look) -- 무기 · 로브 색(염색 — 2026-10-22)
 	-- 내 펫 · 탈것: 들어선 방의 이름표(room.who)에서 읽는다(2026-10-21 사용자 "펫은 게임 종료할때 소환되어있는게 게임 종료하고 재접속하면 그대로 소환 되어야하고" —
 	--  서버는 꺼내 둔 펫을 저장하고 이름표에 실어 보냈지만, 화면은 따로 오는 Who에서만 읽어 접속한 뒤 누가 드나들기 전까지 펫이 없었다)
 	for _, w in (room and room.who) or {} do
@@ -1144,6 +1145,8 @@ local function step()
 				local goods = what and Quick.item(what) and Items.goods(what)
 				if goods and goods.kind == "bmRename" then
 					Windows.open("cash", "rename", true) -- 이름 바꾸기 주문서: 새 이름을 적는 칸(이름이 바뀔 때 서버가 주문서를 쓴다)
+				elseif goods and (goods.kind == "bmDyePoint" or goods.kind == "bmDyeRobe") then
+					Windows.open("cash", if goods.kind == "bmDyePoint" then "dye:point" else "dye:robe", true) -- 염색약: 색을 고르는 창(바꿀 때 서버가 염색약을 쓴다 — 2026-10-22)
 				elseif what and Quick.item(what) then
 					state.sendPotion(what) -- 소비 아이템: 그 칸에 놓인 바로 그 아이템을 쓴다
 				elseif what and Quick.ride(what) == "pet" then
@@ -1759,6 +1762,23 @@ paintBuffs = function()
 	if expLeft > 0 and BUFFTIP.exp then
 		table.insert(list, { pic = "buff_exp", text = if expLeft >= 60 then ("%d분"):format(math.ceil(expLeft / 60)) else tostring(math.ceil(expLeft)), tip = { kind = "none", title = BUFFTIP.exp.title, tag = "", lines = { BUFFTIP.exp.text, leftText(expLeft), BUFFTIP.exp.hint } } })
 	end
+	-- 영구 게임 패스(2026-10-22 — 경험치 · 드롭률 1.25배 패스): 버프 줄 끝에 그 상품의 그림 · 시간 대신 「영구」 · 설명 = 더하는 몫(%)
+	if me.passes and BUFFTIP.pass then
+		for _, id in { "xp125", "drop125" } do
+			local p = if me.passes[id] then CashWindow.product(id) else nil
+			if p and typeof(p.effect) == "table" then
+				local lines = {}
+				if (p.effect.xp or 0) > 0 then
+					table.insert(lines, Format.fill(BUFFTIP.pass.xp, { n = math.floor(p.effect.xp * 100 + 0.5) }))
+				end
+				if (p.effect.drop or 0) > 0 then
+					table.insert(lines, Format.fill(BUFFTIP.pass.drop, { n = math.floor(p.effect.drop * 100 + 0.5) }))
+				end
+				table.insert(lines, BUFFTIP.pass.hint)
+				table.insert(list, { pic = p.icon, text = BUFFTIP.forever, tip = { kind = "none", title = p.name, tag = "", lines = lines } })
+			end
+		end
+	end
 	Hud.setBuffs(list)
 	QuestHud.setBuffs(#list > 0) -- 퀘스트 알리미는 버프가 없을 때만 그 자리로 올라붙는다
 end
@@ -1769,6 +1789,9 @@ local function listen()
 	Net.OnClient("Self", function(me)
 		local jobWas = state.me and state.me.job
 		state.me = me
+		if state.sprite then
+			state.sprite:setLook(me.look) -- 무기 · 로브 색(염색약을 쓰면 서버가 다시 보낸다)
+		end
 		state.weakLeft, state.weakAt = me.weak or 0, state.now -- 쓰러진 벌칙(약해짐)의 남은 초 — 받은 때부터 화면이 센다(paintBuffs)
 		state.expLeft, state.expAt = me.expLeft or 0, state.now -- 경험치 쿠폰(유료)의 남은 초
 		if jobWas and me.job and me.job > jobWas and state.onJob then
@@ -2188,7 +2211,7 @@ local function listen()
 			state.ui.forgeWhy = e.why -- 되살리기가 안 됐다: 대장장이 창의 결과 줄에(머리 위에만 떴다 — 2026-10-18 검토)
 		elseif e.action == "restore" and e.ok then
 			state.ui.forgeResult, state.ui.forgeWhy, state.ui.forgeMat = "restore", nil, nil -- 「되살렸다 — 12성」(대장장이 창의 RESULT — 붉은 「안 된 까닭」 줄이 아니다)
-		elseif e.action == "dismantle" and e.ok and state.fx then
+		elseif (e.action == "dismantle" or e.action == "dismantleMany") and e.ok and state.fx then -- (여러 개 분해도 — 2026-10-22)
 			state.fx:float("+" .. Format.short(e.result) .. " 달가루", state.body.x, state.body.y - 34, Effects.MINT)
 		elseif e.action == "sell" and e.ok and state.fx then
 			state.fx:float("+" .. Format.short(e.result) .. " 달돈", state.body.x, state.body.y - 34, Effects.GOLD) -- 상점에 팔았다
@@ -2906,6 +2929,16 @@ function Boot.start()
 		openRename = function()
 			Windows.open("cash", "rename", true) -- 가방에서 이름 바꾸기 주문서를 썼다 → 이름을 적는 칸
 		end,
+		-- 염색약(2026-10-22): 가방 · 퀵슬롯에서 쓰면 색을 고르는 창(part = point · robe) · 내 직업 · 지금 색(창의 미리보기)
+		openDye = function(part: string)
+			Windows.open("cash", "dye:" .. part, true)
+		end,
+		myClass = function()
+			return state.who
+		end,
+		myLook = function()
+			return state.me and state.me.look
+		end,
 		-- 일일 의뢰: 서버가 준 상태 · 받기와 내기(서버가 정한다 — 게시판 앞이어야 한다)
 		daily = function()
 			return state.daily
@@ -3013,7 +3046,8 @@ function Boot.start()
 	Windows.register("attend", AttendWindow) -- 출석(메뉴 → 「출석」 · 그날 처음 들어오면 한 번)
 	Windows.register("achieve", AchieveWindow) -- 업적(메뉴 → 「업적」)
 	Windows.register("coupon", CouponWindow) -- 쿠폰(메뉴 → 「쿠폰」 — 2026-10-21)
-	Windows.register("cash", CashWindow) -- 달빛 상점의 판(창으로는 이름 바꾸기 칸만 — 가방에서 이름 바꾸기 주문서를 쓰면. 상점은 들어가는 공간: cashShop.luau)
+	Windows.register("cash", CashWindow) -- 달빛 상점의 판(창으로는 이름 바꾸기 칸 · 염색만 — 가방에서 주문서 · 염색약을 쓰면. 상점은 들어가는 공간: cashShop.luau)
+	CashWindow.ctx = Windows.context() -- (염색 창의 제목이 내 직업을 본다 — 살라맨더는 「머리 색」)
 	-- 가방의 캐시 탭(2026-10-21): 펫 꺼내기 · 넣기 · 탈것 타기 · 내리기 · 지금 꺼낸 것 · 상품의 이름(창 ctx에 더한다)
 	do
 		local wctx = Windows.context()

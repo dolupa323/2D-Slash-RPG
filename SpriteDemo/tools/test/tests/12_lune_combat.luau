@@ -675,6 +675,9 @@ end
 do
 	local n = 0
 	for key, sc in SCENES.scenes do
+		if sc.swarm then
+			continue -- 던전의 몰려오기(2026-10-22): 몬스터는 양 끝의 수정 문(왼쪽 = 나가는 문)에서 나와 맵 전체를 달린다 — 사람은 가운데에서 들어선다(Hero.arrive)
+		end
 		for _, m in sc.mobs do
 			local see = COMBAT.mobs[m.kind].see
 			for _, p in sc.portals do

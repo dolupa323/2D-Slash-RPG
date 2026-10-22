@@ -146,7 +146,7 @@ return {
 		gainLog = { lines = 6, lineH = 13, life = 5, fade = 0.8, merge = 1.5 },
 		cine = { cardY = 0.4, titleX = 48, titleY = 0.58, noteW = 330, notePad = 16, skip = "건너뛰기", skipW = 76, skipH = 22, edge = 12 },
 		win = { pad = 18, head = 44, foot = 14, edge = 16, top = 16, bodyW = 300 },
-		bag = { cols = 6, rows = 4, gridY = 22, footH = 74, footY = 10, purseY = 39, gap = 8, countW = 70, scrollW = 36, sortW = 64, growW = 118 },
+		bag = { cols = 6, rows = 4, gridY = 22, footH = 74, footY = 10, purseY = 39, gap = 8, countW = 70, scrollW = 36, sortW = 48, bulkW = 44, footGap = 6, growW = 118 },
 		store = { gridY = 22, footH = 46, footY = 10, sortW = 64 },
 		detail = { w = 232, pad = 12, gap = 8, nameLines = 2, nameLine = 16, subGap = 4, rowTop = 10, rowH = 16, labelW = 80, noteTop = 8, noteLine = 15, noteLines = 2, btnTop = 10, btnGap = 6, btnCols = 3, stepW = 34, closeW = 16, starRow = 11, starGap = 5 },
 		equip = {
@@ -181,7 +181,7 @@ return {
 		riftEnd = { w = 236, row = 20, pad = 12 },
 		tome = { w = 340, headY = 22, barY = 40, barH = 6, partY = 52, partRow = 20, partBarX = 92, partBarW = 150, rewardY = 160, rewardH = 58, mobY = 232, mobRow = 14 },
 		achieve = { w = 340, barY = 16, barH = 6, tabY = 40, listY = 68, row = 46, rows = 5, sideW = 96, btnW = 64, barW = 150, footY = 8, allW = 96, scrollW = 3 },
-		cash = { w = 340, tabY = 20, listY = 48, row = 46, rows = 5, iconS = 28, textX = 36, sideW = 72, btnW = 64, priceY = 4, btnY = 18, countY = 32, footY = 8, allW = 96, scrollW = 3, passY = 4, passRow = 18, passInfoY = 34, passBarY = 50, passGridY = 62, passCols = 10, passGap = 2, passCellH = 40, renameY = 36, renameH = 84 },
+		cash = { w = 340, tabY = 20, listY = 48, row = 46, rows = 5, iconS = 28, textX = 36, sideW = 72, btnW = 64, priceY = 4, btnY = 18, countY = 32, footY = 8, allW = 96, scrollW = 3, passY = 4, passRow = 18, passInfoY = 34, passBarY = 50, passGridY = 62, passCols = 10, passGap = 2, passCellH = 40, renameY = 36, renameH = 84, dyeY = 36, dyeBox = 96, dyeGX = 106, dyeCols = 4, dyeCellW = 54, dyeCellH = 44, dyeGap = 4, dyeChipH = 22, dyeChipPad = 6, dyeNameY = 28, dyeBtnY = 8, dyeDot = 3 },
 		sound = {
 			w = 300,
 			row = 34,
@@ -234,7 +234,7 @@ return {
 		auction = { w = 600, h = 320, top = 28, purseW = 104, slotsW = 110, catW = 52, catGap = 4, catH = 22, classW = 104, refreshW = 76, searchY = 56, searchW = 200, sortW = 104, listTop = 84, row = 28, icon = 24, priceW = 84, btnW = 60, btnH = 22, sellerW = 96, leftW = 76, sellW = 88, backW = 52, listW = 300, formX = 320, field = 22, labelW = 72, formRow = 30, qtyField = 52, qtyLabelW = 30, ofW = 60, priceField = 110, hourW = 68, registerW = 120, allW = 88, footH = 30, askW = 60, bar = 4 },
 		touchMenu = { w = 240, row = 40, btnH = 36, pad = 6, top = 40, bottom = 8, bar = 4 },
 		touchChooser = { cols = 5, cell = 44, gap = 6, nameH = 28, pad = 12, titleH = 34, footH = 44, x = 12, top = 8, bottom = 8, bar = 4 },
-		dungeon = { w = 300, infoY = 22, textY = 40, textLines = 3, lineY = 88, payY = 95, payLabelW = 64, noteY = 113, noteLines = 2, resetY = 143, btnY = 162, btnGap = 8, footY = 194, h = 210, portalScale = 1.5, portalLift = 6 },
+		dungeon = { w = 300, infoY = 22, textY = 40, textLines = 3, lineY = 88, payY = 95, payLabelW = 64, noteY = 113, noteLines = 2, resetY = 143, btnY = 162, btnGap = 8, footY = 194, h = 210, portalScale = 1.5, portalLift = 6, comboGap = 4 },
 		count = {
 			w = 264,
 			pad = 14,
@@ -441,6 +441,7 @@ return {
 			sellGear = { "이 장비를 팔까요?", "팔기" },
 			dismantle = { "이 장비를 분해할까요?", "분해" },
 		},
+		bulk = { title = "여러 개 분해", sub = "분해할 장비를 누르세요", picked = "고른 장비", gain = "받는 달가루", go = "분해", all = "모두", none = "풀기", stop = "취소", ask = "장비 {n}개를 분해할까요?", hint = "「모두」는 강화한 장비(★)와 지금보다 좋은 장비(▲)를 빼고 고른다" },
 		askNo = "취소",
 		gain = "달돈 +{n}",
 		gainDust = "달가루 +{n}",
@@ -459,6 +460,8 @@ return {
 		heat = "지금 열기 {n}",
 		weak = { title = "약해짐", text = "쓰러진 벌칙 — 경험치 · 물건을 80% 덜 얻는다", hint = "잡화 상인의 달빛 부적을 쓰면 바로 풀린다" },
 		exp = { title = "경험치 쿠폰", text = "사냥 경험치 1.5배", hint = "게임 안에 있는 동안만 줄어든다" },
+		forever = "영구",
+		pass = { xp = "사냥 경험치 +{n}%", drop = "장비 · 재료가 나올 확률 +{n}%", hint = "영구 — 계정의 모든 캐릭터" },
 	},
 	xpTip = { title = "경험치", now = "{xp} / {need} ({pct}%)", left = "다음 레벨까지 {n}" },
 	statTip = {

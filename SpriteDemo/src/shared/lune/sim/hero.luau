@@ -11,6 +11,7 @@ local Bond = require(script.Parent.bond)
 local Rift = require(script.Parent.rift)
 local Tutorial = require(script.Parent.tutorial)
 local Cash = require(script.Parent.cash) -- 유료 상품(경험치 쿠폰의 배율 · 2026-10-20)
+local Dye = require(script.Parent.dye) -- 무기 · 로브 색(염색 — 2026-10-22)
 local Kit = require(script.Parent.kit) -- 1차의 온오프 사출기 · 핵심 장치 · 패시브
 local Buffs = require(script.Parent.buffs) -- 2~4차의 버프
 local Passives = require(script.Parent.passives) -- 2~4차의 패시브
@@ -274,6 +275,7 @@ function Hero.new(id: any, class: string)
 	h.cine = {} -- 본 퀘스트 연출(장면) { [id] = true } — 한 캐릭터에 한 번만 튼다(2026-10-15 — shared/lune/cine.luau)
 	h.inCine = false -- 장면이 도는 중(맞지 않는다 — 저장하지 않는다. 서버가 90초 뒤에 저절로 푼다)
 	h.played = 0 -- 이 캐릭터로 논 시간(초 · 저장한다 — 서버가 센다. 로블록스 분석의 LevelUp 값 · 2026-10-15)
+	h.look = {} -- 무기 · 로브 색(염색약 — sim/dye.luau · 2026-10-22): { point = 색?, robe = 색? } · 없으면 원래 색
 	Quests.start(h.quests, h.level) -- (저절로 받는 퀘스트는 이제 없다 — 첫 퀘스트도 사제에게 말을 걸어 받는다)
 	h.maxHp = maxHpOf(h)
 	h.hp = h.maxHp
@@ -902,6 +904,7 @@ function Hero.pack(h)
 		tut = Tutorial.pack(h.tut),
 		cine = Hero.cineList(h),
 		played = math.floor(h.played or 0),
+		look = Dye.clean(h.look), -- 무기 · 로브 색(2026-10-22)
 	}
 end
 
@@ -955,6 +958,7 @@ function Hero.unpack(id: any, data: any)
 		end
 	end
 	h.played = if whole(data.played, 0, 1e10) then data.played else 0 -- (이것이 생기기 전의 저장 = 0부터 센다)
+	h.look = Dye.clean(data.look) -- 무기 · 로브 색(이것이 생기기 전의 저장 · 모르는 색 = 원래 색)
 	Quests.jobsDone(h.quests, h.job) -- 이미 닿은 차수의 전직 퀘스트는 끝낸 것으로(다시 받지 않게)
 	autoJobs(h)
 	Quests.start(h.quests, h.level) -- 퀘스트가 생기기 전에 저장된 캐릭터도 첫 메인을 받는다
@@ -1106,6 +1110,7 @@ function Hero.view(h)
 	return {
 		cine = Hero.cineList(h), -- 본 퀘스트 연출(화면이 다시 틀지 않게)
 		class = h.class,
+		look = Dye.clean(h.look), -- 무기 · 로브 색(내 캐릭터의 그림 · 염색 창)
 		level = h.level,
 		xp = h.xp,
 		need = N.xpNeed(h.level),
@@ -1133,6 +1138,7 @@ function Hero.view(h)
 		alive = h.alive,
 		weak = math.ceil(h.weak),
 		expLeft = math.ceil(h.expLeft or 0), -- 경험치 쿠폰의 남은 시간(오른쪽 위 버프 줄)
+		passes = h.passOwn or {}, -- 가진 영구 게임 패스 { [상품] = true }(버프 줄 끝의 「영구」 — 2026-10-22 · 서버가 계정의 것을 물어 얹는다: CashServer.applyPasses)
 	}
 end
 

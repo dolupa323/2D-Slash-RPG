@@ -56,8 +56,8 @@
   "id": "rbxassetid://105450659975716"
  },
  "ui_kit.png": {
-  "hash": "5d182292226434f4f65b9be777b81759",
-  "id": "rbxassetid://137411895578654"
+  "hash": "d2371d5895eb82f0c8fe2206c86f07ca",
+  "id": "rbxassetid://100482730607578"
  },
  "font_small_2.png": {
   "hash": "a39c57d23acf7233f3419f3f15021ff7",
@@ -880,8 +880,8 @@
   "id": "rbxassetid://102843140318075"
  },
  "chars_3.png": {
-  "hash": "c2984aa8b776257822a0497f2f97152b",
-  "id": "rbxassetid://118737909005746"
+  "hash": "145f8e42849def47e9ee0296ba757ddb",
+  "id": "rbxassetid://110906936684772"
  },
  "chars_4.png": {
   "hash": "a5307478dd644876cb3d15b1f1e86434",
@@ -892,8 +892,8 @@
   "id": "rbxassetid://108149976755839"
  },
  "chars_mask_3.png": {
-  "hash": "a86b440673e10582f9bdee8e8f226a62",
-  "id": "rbxassetid://118174691333755"
+  "hash": "91de48404aeacba36dfb258f4cfd405b",
+  "id": "rbxassetid://88680934346320"
  },
  "chars_mask_4.png": {
   "hash": "8d933227add7ce55d1ac30f995a00629",
@@ -1162,5 +1162,37 @@
  "shop_bg.png": {
   "hash": "967296300d765673a6bb7efb12280f73",
   "id": "rbxassetid://108894476720705"
+ },
+ "ground_dg1_1.png": {
+  "hash": "39c37fc8fb56721990f7a330535d3208",
+  "id": "rbxassetid://102570354131734"
+ },
+ "dye_p_silver.png": {
+  "hash": "20796920f4c2265e0e3a76f4d9e5908e",
+  "id": "rbxassetid://126401709770258"
+ },
+ "dye_p_leaf.png": {
+  "hash": "987b5b2f2dcf4f35c5b39a0979830e6d",
+  "id": "rbxassetid://121733401543210"
+ },
+ "dye_p_sky.png": {
+  "hash": "56f996f272aa9cc76cabaaffc9e99d0a",
+  "id": "rbxassetid://71015167556773"
+ },
+ "dye_body.png": {
+  "hash": "870d797e41dc671eb70fd609a5a4fb01",
+  "id": "rbxassetid://112828849522258"
+ },
+ "dye_p_violet.png": {
+  "hash": "155f5d429c0271e900c70a80c508583c",
+  "id": "rbxassetid://93966095955442"
+ },
+ "dye_p_gold.png": {
+  "hash": "269d41a6f518a88046e1bbd06e305dc8",
+  "id": "rbxassetid://88495036923449"
+ },
+ "dye_p_flame.png": {
+  "hash": "d3a6ea2301101baa293c68d1cf64ced2",
+  "id": "rbxassetid://137681254954031"
  }
 }

@@ -8,6 +8,9 @@
 --  구간 던전(2026-10-21 — 공방 design/dungeon.js · city.generated의 dungeon)도 같은 셈을 쓴다: 단계의 kind = "dungeon"(dg1 — 수정 거울숲).
 --   다른 점: 들어가는 곳 = 그 구간 사냥터의 틈 안의 문(퀘스트를 끝내야 열린다) · 하루 한 번(완료한 날을 적는다 — r.dungeon[단계] = 날) · 몬스터는 경험치 · 물건 · 퀘스트의 숫자를 주지 않는다(sim/room.luau)
 --   · 완료 = 끝낸 때 내 레벨의 한 레벨 경험치의 pay.need배를 한꺼번에(Rift.dungeonXp) · 제한 시간 · 돌아가기까지의 초가 따로다
+--  몰려오기(2026-10-22 — 사용자: "일자맵에다가 가운데로 계속 몬스터 몰려오는 형식으로 해줘 쾌감 느껴지게" · 공방 design/dungeon.js의 DUNGEON.swarm):
+--   일자 맵이 있는 던전(t.swarm)은 물결 대신 장면의 몬스터를 적힌 차례대로 하나씩 내보낸다 — 한꺼번에 서 있는 수(cap)가 차지 않았고 간격(every)이 지났으면 다음 것.
+--   cap · every는 처치한 몫만큼 처음 → 끝(Rift.swarmPace — 잡을수록 더 많이 · 더 자주). 다 쓰러뜨리면 완료. 움직임(가장 가까운 사람에게 곧장)은 sim/room.luau
 local lune = script.Parent.Parent
 local CITY = require(lune.data["city.generated"])
 local D = CITY.rift
@@ -158,6 +161,13 @@ function Rift.rollGear(t, rng, who: string)
 	return Items.make(slot, Items.stageOf(t.mobLv), Items.rollQuality(rng), if slot == "weapon" then who else nil)
 end
 
+-- 몰려오기: 처치한 수 · 모두의 수에서 한꺼번에 서 있는 수(cap)와 나오는 간격(every — 초). 공방 dungeon.js의 swarmPace와 같은 셈
+function Rift.swarmPace(killed: number, total: number): (number, number)
+	local S = DG.swarm
+	local k = if total > 0 then math.min(1, killed / total) else 0
+	return math.floor(S.cap[1] + (S.cap[2] - S.cap[1]) * k + 0.5), S.every[1] + (S.every[2] - S.every[1]) * k
+end
+
 -- ---------- 방의 셈 ----------
 --  room.rift = { tier, state("wait" 들어가 기다림 · "run" 싸우는 중 · "clear" 완료 · "fail" 실패), wave(지금 물결), waves(물결 수), t(싸운 시간), after(끝난 뒤 지난 시간), left(지금 물결의 남은 몬스터) }
 function Rift.start(room, t)
@@ -169,6 +179,17 @@ function Rift.start(room, t)
 		end
 	end
 	room.rift = { tier = t.id, state = "wait", wave = 0, waves = waves, t = 0, after = 0, left = 0, changed = true, time = Rift.timeOf(t), back = Rift.backOf(t), dungeon = Rift.isDungeon(t) }
+	if t.swarm then
+		-- 몰려오기: 나오는 차례 = 장면에 적힌 차례(몬스터의 번호 차례)
+		local queue = {}
+		for _, mob in room.mobs do
+			if mob.wave then
+				table.insert(queue, mob)
+			end
+		end
+		local R = room.rift
+		R.swarm, R.queue, R.total, R.next, R.spawnT, R.left = true, queue, #queue, 1, 0, #queue
+	end
 end
 
 local function startWave(room, w: number)
@@ -206,6 +227,57 @@ local function clearAll(room)
 	end
 end
 
+-- 몰려오기: 하나를 내보낸다(그 몬스터의 나오는 자리 = 양 끝의 수정 문)
+local function swarmSpawn(room, mob)
+	local S = DG.swarm
+	mob.away = false
+	mob.state, mob.t, mob.respawn, mob.x, mob.hp, mob.target = "gone", 0, 0, mob.homeX, mob.maxHp, nil
+	mob.bind, mob.bindImm, mob.stun, mob.rend, mob.cracks, mob.marks = 0, 0, 0, 0, 0, nil
+	mob.dir = if mob.homeX < (mob.a + mob.b) / 2 then 1 else -1
+	mob.pace = room.rng:NextNumber(S.pace[1], S.pace[2]) -- 몬스터마다 다른 걸음(한 덩어리로 겹쳐 오지 않게)
+end
+-- 몰려오기: 나와 있고 아직 쓰러지지 않은 것
+local function swarmAlive(room): number
+	local n = 0
+	for _, mob in room.rift.queue do
+		if not mob.away and mob.state ~= "dead" then
+			n += 1
+		end
+	end
+	return n
+end
+-- 몰려오기의 한 걸음
+local function stepSwarm(room, dt: number)
+	local R = room.rift
+	R.t += dt
+	R.spawnT -= dt
+	local alive = swarmAlive(room)
+	local killed = (R.next - 1) - alive
+	local cap, every = Rift.swarmPace(killed, R.total)
+	while R.spawnT <= 0 and R.next <= R.total and alive < cap do
+		swarmSpawn(room, R.queue[R.next])
+		R.next += 1
+		alive += 1
+		R.spawnT += every
+	end
+	if R.spawnT < 0 then
+		R.spawnT = 0 -- (꽉 차서 못 내보낸 동안은 쌓아 두지 않는다 — 자리가 나면 바로 하나)
+	end
+	local left = R.total - ((R.next - 1) - alive)
+	if left ~= R.left then
+		R.left = left
+		R.changed = true
+	end
+	if left == 0 then
+		R.state, R.after = "clear", 0
+		R.changed = true
+	elseif R.t >= (R.time or D.time) then
+		R.state, R.after = "fail", 0
+		clearAll(room)
+		R.changed = true
+	end
+end
+
 -- 한 걸음: 상태가 바뀌었으면 R.changed = true(서버가 방에 알린다)
 function Rift.step(room, heroes, dt: number)
 	local R = room.rift
@@ -216,8 +288,15 @@ function Rift.step(room, heroes, dt: number)
 		R.after += dt
 		if R.after >= Rift.START then
 			R.state, R.after = "run", 0
-			startWave(room, 1)
+			if R.swarm then
+				R.wave = 1 -- (몰려오기는 물결이 없다 — 화면은 처치한 수를 본다)
+				R.changed = true
+			else
+				startWave(room, 1)
+			end
 		end
+	elseif R.state == "run" and R.swarm then
+		stepSwarm(room, dt)
 	elseif R.state == "run" then
 		R.t += dt
 		local n = leftOf(room)
@@ -248,7 +327,8 @@ function Rift.view(room)
 	if not R then
 		return nil
 	end
-	return { tier = R.tier, state = R.state, wave = R.wave, waves = R.waves, left = R.left, t = math.floor(R.t * 10) / 10, time = R.time or D.time, back = R.back or D.back, after = math.floor(R.after * 10) / 10, dungeon = R.dungeon == true }
+	return { tier = R.tier, state = R.state, wave = R.wave, waves = R.waves, left = R.left, t = math.floor(R.t * 10) / 10, time = R.time or D.time, back = R.back or D.back, after = math.floor(R.after * 10) / 10, dungeon = R.dungeon == true,
+		swarm = R.swarm == true, total = R.total } -- 몰려오기(2026-10-22): 처치한 수 = total - left
 end
 
 -- 광장으로 돌려보낼 때가 되었는가(완료 back초 · 실패 FAIL_BACK초 뒤)

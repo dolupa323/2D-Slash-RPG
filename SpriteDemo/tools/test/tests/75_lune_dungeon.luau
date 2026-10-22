@@ -3,6 +3,8 @@
 --   메이플에 몬스터파크 처럼 몬스터가 엄청 많이 나오고 … 그 몬스터들은 아이템이나 경험치를 주는게 아니라 다잡고나서 던전 다깼다고 나오면서 일괄 경험치를 지급 … 하루에 한번 … 한국시간 자정에 초기화"
 --  보는 것: ① 자료(던전 · 장면 · 물결 · 문 · 퀘스트 · 곰솔) ② 큰 「!」 ③ 방의 셈(무른 몬스터 · 정예 · 잡아도 경험치 · 물건 · 퀘스트의 숫자가 없다) ④ 하루 한 번(한국 시간 자정)
 --   ⑤ 서버: 닫힌 문 · 곰솔에게 받기 · 문에 손 대기로 그 자리에서 끝남 · 문으로 맵을 옮기지 않음 · 혼자 입장 · 다 쓰러뜨리면 경험치를 한꺼번에 · 문 앞으로 · 오늘 다시는 안 됨 · 파티 입장
+--  2026-10-22 몰려오기(사용자: "일자맵에다가 가운데로 계속 몬스터 몰려오는 형식으로 해줘 쾌감 느껴지게"): 일자 맵 · 나오는 차례(종류마다 per · 마지막 + 정예) · 양 끝에서 나옴 ·
+--   한꺼번에 서 있는 수(cap)를 넘지 않음 · 잡을수록 더 많이 · 더 자주 · 가장 가까운 사람에게 곧장(느린 달팽이도) · 처치한 수를 화면에 보냄
 local Rift = req("ReplicatedStorage/shared/lune/sim/rift")
 local Room = req("ReplicatedStorage/shared/lune/sim/room")
 local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
@@ -25,28 +27,61 @@ eq(DG.perDay, 1, "하루 한 번")
 eq(t.door.scene, "r2ah", "문 = 반달네 옛집(빛나는 연못의 수정 틈 안)")
 expect(not Rift.isDungeon(Rift.tier("rf1")), "토벌은 던전이 아니다")
 local sc = SCENES.scenes.dg1
-expect(sc ~= nil and sc.dungeon == "dg1" and sc.rift == "dg1", "장면 dg1(던전)")
+expect(sc ~= nil and sc.dungeon == "dg1" and sc.rift == "dg1" and sc.swarm == true, "장면 dg1(던전 · 몰려오기)")
 eq(#sc.portals, 1, "나가는 문은 하나")
 eq(sc.portals[1].to, "r2ah", "그 문은 수정 틈(반달네 옛집)으로")
 eq(#(sc.warps or {}), 0, "간이 포탈 없음")
 expect(not sc.rest, "쉬는 곳이 아니다")
-local waves, elites, total, byWave = 0, 0, 0, {}
-for _, m in sc.mobs do
-	waves = math.max(waves, m.wave or 0)
-	byWave[m.wave] = (byWave[m.wave] or 0) + 1
+-- 일자 맵(2026-10-22): 땅 윗면이 한 줄(발판 · 턱 없음) · 가운데에 선다
+do
+	local surface = {}
+	for x = 0, sc.w - 1 do
+		for y = 0, sc.h - 1 do
+			if string.sub(sc.rows[y + 1], x + 1, x + 1) ~= "." then
+				surface[y] = (surface[y] or 0) + 1
+				break
+			end
+		end
+	end
+	local rowsUsed = 0
+	for _ in surface do
+		rowsUsed += 1
+	end
+	eq(rowsUsed, 1, "일자 맵 — 땅의 윗면이 한 높이")
+	expect(math.abs(sc.spawn.x - sc.w * 16 / 2) <= 16, "가운데에 선다")
+	expect(sc.portals[1].x < sc.w * 16 / 4, "나가는 문은 왼쪽 끝")
+end
+local SW = DG.swarm
+local elites, total, byGroup, lastGroup = 0, 0, {}, 0
+for i, m in sc.mobs do
 	total += 1
+	byGroup[m.wave] = (byGroup[m.wave] or 0) + 1
+	lastGroup = math.max(lastGroup, m.wave)
 	eq(m.lv, t.mobLv, "몬스터의 레벨 " .. m.kind)
 	expect(COMBAT.mobs[m.kind] ~= nil, "몬스터 " .. m.kind .. "의 수치")
+	expect(m.x <= SW.edge * 16 + 1 or m.x >= (sc.w - SW.edge) * 16 - 1, ("양 끝의 수정 문에서 나온다 (%d번째 x %d)"):format(i, m.x))
+	expect(m.range[1] <= 16 and m.range[2] >= (sc.w - 1) * 16, "맵 전체를 달린다")
 	if m.elite then
 		elites += 1
-		eq(m.wave, t.waves, "정예는 마지막 물결")
+		expect(i > #sc.mobs - SW.elites, "정예는 맨 끝")
+	end
+	if i > 1 then
+		expect((m.x < sc.w * 8) ~= (sc.mobs[i - 1].x < sc.w * 8), "나오는 쪽은 번갈아")
 	end
 end
-eq(waves, t.waves, "물결 수")
-eq(elites, 2, "정예 둘")
-expect(total >= 60, ("몬스터가 많다(몬스터파크처럼) — %d마리"):format(total))
-for w = 1, waves - 1 do
-	expect((byWave[w] or 0) >= 12, ("물결 %d에 %d마리"):format(w, byWave[w] or 0))
+eq(elites, SW.elites, "정예 " .. SW.elites)
+eq(total, t.total, "모두 " .. t.total .. "마리")
+expect(total >= 150, ("몬스터가 많다(몬스터파크처럼) — %d마리"):format(total))
+for g = 1, #t.kinds - 1 do
+	eq(byGroup[g], SW.per, ("%d째 종류 %s"):format(g, t.kinds[g]))
+end
+eq(byGroup[lastGroup], SW.last + SW.elites, "마지막 = 거미 " .. SW.last .. " + 정예 " .. SW.elites)
+do
+	local cap0, every0 = Rift.swarmPace(0, total)
+	local cap1, every1 = Rift.swarmPace(total, total)
+	eq(cap0, SW.cap[1], "처음에 한꺼번에 " .. SW.cap[1])
+	eq(cap1, SW.cap[2], "끝에는 " .. SW.cap[2])
+	expect(every1 < every0, "잡을수록 더 자주 나온다")
 end
 local door = nil
 for _, p in SCENES.scenes.r2ah.portals do
@@ -137,6 +172,81 @@ do
 		end
 		eq(h.xp, xp0, "영웅의 경험치 그대로")
 	end
+end
+
+-- ③-2 몰려오기의 셈: 양 끝에서 나와 가운데의 사람에게 곧장 · 한꺼번에 cap을 넘지 않음 · 잡을수록 더 · 처치한 수
+do
+	local room = Room.new("dg1#2", SCENES.scenes["dg1#2"], Random.new(5))
+	local R = room.rift
+	expect(R.swarm == true and R.total == t.total, "몰려오기의 방")
+	local h = Hero.new(7502, "riven")
+	h.level, h.x, h.y = 34, sc.spawn.x, sc.spawn.y
+	h.invuln = 1e9
+	local heroes = { [h.id] = h }
+	local function aliveNow()
+		local n = 0
+		for _, m in room.mobs do
+			if m.wave and not m.away and m.state ~= "dead" then
+				n += 1
+			end
+		end
+		return n
+	end
+	local maxAlive = 0
+	for _ = 1, math.floor((Rift.START + 6) / 0.05) do
+		room:step(heroes, 0.05)
+		maxAlive = math.max(maxAlive, aliveNow())
+	end
+	eq(R.state, "run", "싸우는 중")
+	eq(maxAlive, SW.cap[1], "처음에는 한꺼번에 " .. SW.cap[1] .. "까지만 서 있다")
+	-- 몰려온다: 처음 나온 것들은 가운데 쪽으로 왔다(느린 달팽이도 같은 빠르기 — 여기서는 그루터기)
+	local near = 0
+	for _, m in room.mobs do
+		if m.wave and not m.away and m.state ~= "dead" and m.state ~= "gone" and math.abs(m.x - h.x) < sc.w * 16 / 2 - SW.edge * 16 - 40 then
+			near += 1
+		end
+	end
+	expect(near >= 4, ("양 끝에서 가운데로 몰려왔다(%d)"):format(near))
+	eq(R.left, R.total, "아직 하나도 못 잡았다 — 남은 수 그대로")
+	local view = Rift.view(room)
+	expect(view.swarm == true and view.total == t.total and view.left == t.total, "화면에 처치한 수를 보낸다(total - left)")
+	-- 달팽이(아주 느린 것)도 몰려오는 빠르기로 온다
+	local snail = nil
+	for _, m in room.mobs do
+		if m.kind == "snail" then
+			snail = m
+			break
+		end
+	end
+	if snail then
+		snail.away, snail.state, snail.x, snail.pace, snail.cd, snail.t = false, "idle", snail.a + 20, 1, 0, 0
+		local x0 = snail.x
+		room:stepMob(snail, heroes, 1, {})
+		expect(snail.x - x0 >= SW.speed * 0.99, ("달팽이도 1초에 %d점쯤 몰려온다 (%.1f)"):format(SW.speed, snail.x - x0))
+		snail.away, snail.state, snail.x = true, "gone", snail.homeX
+	end
+	-- 다 잡는다: 나오는 대로 쓰러뜨린다 — 잡을수록 한꺼번에 더 많이 선다 · 끝나면 완료
+	local peak, xp0 = 0, h.xp
+	for _ = 1, 4000 do
+		room:step(heroes, 0.05)
+		local n = aliveNow()
+		local killed = (R.next - 1) - n
+		local cap = Rift.swarmPace(killed, R.total)
+		expect(n <= cap, "한꺼번에 서 있는 수는 그때의 cap을 넘지 않는다")
+		peak = math.max(peak, n)
+		for _, m in room.mobs do
+			if m.wave and not m.away and (m.state == "idle" or m.state == "run" or m.state == "atk") and math.random() < 0.012 then
+				room:damageMob(m, m.hp + 1, m.x, h.id)
+			end
+		end
+		if R.state ~= "run" then
+			break
+		end
+	end
+	eq(R.state, "clear", "모두 쓰러뜨리면 완료")
+	eq(R.left, 0, "남은 몬스터 0")
+	expect(peak > SW.cap[1], ("잡을수록 한꺼번에 더 많이 선다(가장 많을 때 %d)"):format(peak))
+	eq(h.xp, xp0, "하나하나는 경험치를 주지 않는다")
 end
 
 -- ④ 하루 한 번(한국 시간 자정)
@@ -256,17 +366,19 @@ local level0, xp0 = s.hero.level, s.hero.xp
 local want = Rift.dungeonXp(level0)
 table.clear(sent)
 tickFor(Rift.START + 0.2)
-for _ = 1, room.rift.waves do
-	tickFor(Rift.STAGGER * 30 + 1)
+for _ = 1, 600 do
+	tickFor(0.5)
 	local before = s.hero.xp
 	for _, mob in room.mobs do
-		if mob.wave == room.rift.wave and not mob.away and mob.state ~= "gone" and mob.state ~= "dead" then
+		if mob.wave and not mob.away and mob.state ~= "gone" and mob.state ~= "dead" and mob.state ~= "spawn" then
 			room:damageMob(mob, mob.hp + 1, mob.x, s.hero.id)
 		end
 	end
-	tickFor(3)
+	tickFor(0.1)
 	if room.rift.state == "run" then
-		eq(s.hero.xp, before, "물결을 쓸어도 경험치가 오르지 않는다(물결 " .. room.rift.wave .. ")")
+		eq(s.hero.xp, before, "몰려오는 것을 쓸어도 경험치가 오르지 않는다")
+	else
+		break
 	end
 end
 eq(room.rift.state, "clear", "다 쓰러뜨리면 완료")

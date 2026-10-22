@@ -93,7 +93,7 @@ local packets = {
 	-- 떨어진 것을 줍는다(물건 번호)
 	Pickup = { Kind = "Event", Direction = "ClientToServer", Args = { t.number }, RateLimit = { PerSecond = 10, Burst = 15 } },
 	-- 내 펫이 떨어진 것에 닿았다(물건 번호 — 2026-10-20). 서버가 펫을 꺼내 두었는지 · 영웅에게서 가까운지 · 주인을 확인하고 줍는다(펫은 0.3초에 하나)
-	PetPick = { Kind = "Event", Direction = "ClientToServer", Args = { t.number }, RateLimit = { PerSecond = 6, Burst = 8 } },
+	PetPick = { Kind = "Event", Direction = "ClientToServer", Args = { t.number }, RateLimit = { PerSecond = 10, Burst = 15 } }, -- (6 · 8 → 10 · 15 — 로벅스 펫은 0.15초마다 빨아들인다: 2026-10-22)
 	-- 확인용(Studio에서만 듣는다): "xp" 경험치를 준다 · "money" 달돈을 준다 · "hp" 체력을 정한다 · "reset" 캐릭터를 지운다(직업 고르기부터 다시)
 	Debug = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number }, RateLimit = { PerSecond = 5, Burst = 5 } },
 	-- 관리자의 시험용 명령(하는 일, 값 셋). 서버가 보낸 사람의 계정 번호로 관리자인지 올 때마다 다시 가린다 — 관리자가 아니면 아무 일도 하지 않고 nil(server/lune/modules/admin.luau)

@@ -208,7 +208,8 @@ local function fetchPrices()
 			left += 1
 			task.spawn(function()
 				local ok, info = pcall(function()
-					return MarketplaceService:GetProductInfoAsync(p.rid, Enum.InfoType.Product)
+					-- 게임 패스는 InfoType.GamePass로 읽는다(로블록스 문서 「game passes」 — 2026-10-22: 전에는 모두 Product로 읽어 패스의 값을 못 읽었다)
+					return MarketplaceService:GetProductInfoAsync(p.rid, if p.kind == "pass" then Enum.InfoType.GamePass else Enum.InfoType.Product)
 				end)
 				if ok and typeof(info) == "table" and typeof(info.PriceInRobux) == "number" then
 					priceOf[p.id] = info.PriceInRobux
@@ -256,6 +257,25 @@ function CashServer.owns(s, key: string): boolean
 	return s.passes[key]
 end
 
+-- 영구 게임 패스의 효과를 그 사람의 캐릭터에 얹는다(2026-10-22 — 경험치 1.25배 · 드롭률 1.25배 패스: 들어설 때 · 산 순간). 바뀌었으면 true
+--  가졌는지는 로블록스에 묻는다(CashServer.owns — 처음 한 번만 · 그 뒤로는 기억한 것). 효과의 셈 = Cash.passEffect(공방 bm.js의 effect)
+function CashServer.applyPasses(s): boolean
+	local h = s and s.hero
+	if not h or s.guest then
+		return false
+	end
+	local own = {}
+	for _, p in Cash.PRODUCTS do
+		if p.kind == "pass" and typeof(p.effect) == "table" and Cash.ready(p) and CashServer.owns(s, p.id) then
+			own[p.id] = true
+		end
+	end
+	local xp, drop = Cash.passEffect(own)
+	local changed = (h.passXp or 0) ~= xp or (h.passDrop or 0) ~= drop
+	h.passXp, h.passDrop, h.passOwn = xp, drop, own
+	return changed
+end
+
 -- 이벤트를 잇는다 — 진짜 로블록스의 이벤트일 때만(검사 틀 — 가짜 로블록스 — 에는 결제 서비스가 없다: 조용히 넘어간다)
 local function on(get, fn)
 	local ok, sig = pcall(get)
@@ -287,6 +307,7 @@ function CashServer.start(hooks)
 		if s and k and purchased then
 			s.passes = s.passes or {}
 			s.passes[k] = true
+			CashServer.applyPasses(s) -- 영구 패스의 효과를 바로(2026-10-22)
 			W.notify(s, k)
 		end
 	end)

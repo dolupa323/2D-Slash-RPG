@@ -5,7 +5,9 @@
 --  사는 것: 「구매」 → ctx.cashDo("buy", 상품) → 서버가 한도를 보고 로블록스의 구매 창을 띄운다(server/lune/modules/cash.luau) →
 --   결제가 끝나면 서버(ProcessReceipt)가 보관함에 넣고 "CashGot"을 보낸다(boot가 알림을 띄우고 창을 고쳐 그린다). 결제를 이 창이 셈하지는 않는다.
 --  보관함 → 가방: 「받기」 · 「모두 받기」 → ctx.cashDo("take", 줄?). 이름 바꾸기(arg "rename"): 가방에서 「이름 바꾸기 주문서」를 쓰면 이 창이 이름 칸으로 열린다 → ctx.cashDo("rename", 새 이름).
+--  염색(arg "dye:point" · "dye:robe" — 2026-10-22): 가방에서 「무기 염색약」 · 「로브 염색약」을 쓰면 색을 고르는 모습으로 열린다 → ctx.cashDo("dye", { part, id }). 모양은 공방 paint.js의 paintDye(?lunedemo=cashdye)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local lune = ReplicatedStorage.shared.lune
 local BM = require(lune.data["bm.generated"])
 local Items = require(lune.sim.items)
@@ -13,6 +15,10 @@ local Bag = require(lune.sim.bag)
 local Format = require(lune.ui.format)
 local Layout = require(lune.ui.layout)
 local Ui = require(script.Parent.ui)
+local Stage = require(script.Parent.Parent.stage)
+local Sprite = require(script.Parent.Parent.sprite)
+local Dye = require(lune.sim.dye)
+local DYE = Dye.data
 
 local C = Ui.COLOR
 local S = Layout.CASH
@@ -47,13 +53,35 @@ for _, ids in SHOP.rows do
 	MOST = math.max(MOST, #ids)
 end
 
+-- 염색의 모습이면 고르는 곳(point · robe)
+local function dyePart(arg: any): string?
+	local part = if typeof(arg) == "string" and string.sub(arg, 1, 4) == "dye:" then string.sub(arg, 5) else nil
+	return if part and Dye.ITEM[part] then part else nil
+end
+CashWindow.dyePart = dyePart
+function CashWindow.dyeH(): number
+	return S.dyeY + S.dyeBox + S.dyeBtnY + Ui.M.button
+end
+
 function CashWindow.size(arg: any): (number, number)
 	if arg == "rename" then
 		return S.w, S.renameH
+	elseif dyePart(arg) then
+		return S.w, CashWindow.dyeH()
 	end
 	return S.w, S.listY + S.rows * S.row + S.footY + Ui.M.button
 end
+-- 염색 창의 제목: 무기 색 · 로브 색(살라맨더의 무기 색은 「머리 색」 — 사용자 10-22 "살라맨더 머리색 바뀌는걸로하죠")
+function CashWindow.dyeTitle(part: string, class: string?): string
+	local hero = class and DYE.heroes[class]
+	return if part == "robe" then DYE.words.title.robe elseif hero and hero.hair then DYE.words.title.hair else DYE.words.title.point
+end
 function CashWindow.title(arg: any): string
+	local part = dyePart(arg)
+	if part then
+		local ctx = CashWindow.ctx
+		return CashWindow.dyeTitle(part, ctx and ctx.myClass and ctx.myClass())
+	end
 	return if arg == "rename" then W.renameTitle else SHOP.title
 end
 
@@ -206,9 +234,145 @@ local function buildRename(body: Frame, ctx, w: number)
 	return view
 end
 
+local function rgbOf(n: number): Color3
+	return Color3.fromRGB(bit32.rshift(n, 16), bit32.band(bit32.rshift(n, 8), 255), bit32.band(n, 255))
+end
+-- 색 칸의 색: 무기 = 두 색(본색 · 밝은 날 — 그 영웅의 무기를 그 색으로) · 로브 = 한 색
+function CashWindow.dyeChip(part: string, class: string, id: string): { Color3 }
+	local hero = DYE.heroes[class] or DYE.heroes.axion
+	if part == "point" then
+		local two = if id == Dye.BASE then hero.base else hero.chips[id]
+		return { rgbOf(two[1]), rgbOf(two[2]) }
+	end
+	local q = Dye.find("robe", id)
+	return { rgbOf(if q then q.rgb else DYE.bodyRgb) }
+end
+-- 그 칸의 자리(창의 속 기준) — i는 1부터(「원래」가 1)
+function CashWindow.dyeCell(i: number): (number, number)
+	local col, row = (i - 1) % S.dyeCols, (i - 1) // S.dyeCols
+	return S.dyeGX + col * (S.dyeCellW + S.dyeGap), S.dyeY + row * (S.dyeCellH + S.dyeGap)
+end
+
+-- 염색의 모습: 안내 · 가진 염색약 · 왼쪽 미리보기(내 캐릭터가 고른 색으로 숨 쉰다) · 오른쪽 색 칸(「원래」 + 색) · 알림 · 「변경」
+local DYE_BIND = "LuneDyePreview"
+local function buildDye(body: Frame, ctx, w: number, part: string)
+	local view = {}
+	local DW = DYE.words
+	local class = (ctx.myClass and ctx.myClass()) or "axion"
+	local item = Dye.ITEM[part]
+	local function myLook()
+		return Dye.clean(ctx.myLook and ctx.myLook())
+	end
+	local pick = Dye.current(myLook(), part)
+	local note, tone, busy = nil, nil, false
+	Ui.text(body, DW.text, 0, 2, w, { color = C.dim })
+	local have = Ui.text(body, "", 0, 18, w, {})
+	-- 미리보기: 판 안은 게임 도트(한 도트 = 화면 틀 dyeDot점을 화면의 정수 화소로 반올림 — 공방 탭과 같은 크기)
+	local box = S.dyeBox
+	Ui.box(body, 0, S.dyeY, box, box, C.line)
+	local pv = Ui.box(body, 1, S.dyeY + 1, box - 2, box - 2, C.ink)
+	pv.ClipsDescendants = true
+	local dotPx = math.max(1, math.floor(S.dyeDot * Stage.uiScale + 0.5))
+	local ratio = dotPx / Stage.uiScale
+	local world = Instance.new("Frame")
+	world.Name = "World"
+	world.BackgroundTransparency = 1
+	world.BorderSizePixel = 0
+	world.Size = UDim2.fromOffset((box - 2) / ratio, (box - 2) / ratio)
+	world.Parent = pv
+	local grow = Instance.new("UIScale")
+	grow.Scale = ratio
+	grow.Parent = world
+	local hero = Sprite.new(world, class, 2)
+	-- 서 있는 첫 장의 보이는 폭을 판 가운데에(발밑을 가운데에 두면 한쪽으로 긴 무기 — 액시온의 도끼 — 가 판 밖으로 잘린다)
+	local f1 = hero.char.clips.idle.frames[1]
+	local mid = if f1 then f1[6] + f1[4] / 2 - hero.char.ox else 0
+	local cx, floor = math.floor((box - 2) / ratio / 2 - mid), math.floor((box - 2) * 0.8 / ratio)
+	local function preview()
+		local l = myLook()
+		l[part] = if pick == Dye.BASE then nil else pick
+		hero:setLook(l)
+	end
+	preview()
+	local t0 = os.clock()
+	pcall(RunService.UnbindFromRenderStep, RunService, DYE_BIND)
+	RunService:BindToRenderStep(DYE_BIND, Enum.RenderPriority.Last.Value, function()
+		hero:set("idle", Sprite.frameAt(hero.char, "idle", os.clock() - t0, false), cx, floor, 1)
+	end)
+	-- 색 칸
+	local cells = {}
+	local cw = S.dyeCellW - S.dyeChipPad * 2
+	for i, id in Dye.choices(part) do
+		local x, y = CashWindow.dyeCell(i)
+		local frame = Ui.box(body, x, y, S.dyeCellW, S.dyeCellH, C.line)
+		frame.Name = "Dye_" .. id
+		Ui.box(frame, 1, 1, S.dyeCellW - 2, S.dyeCellH - 2, C.panel)
+		local chips = CashWindow.dyeChip(part, class, id)
+		local each = math.floor(cw / #chips)
+		for k, c in chips do
+			local cwk = if k == #chips then cw - each * (k - 1) else each
+			Ui.box(frame, S.dyeChipPad + each * (k - 1), 4, cwk, S.dyeChipH, c)
+		end
+		local name = Ui.text(frame, Dye.name(part, id), 1, S.dyeNameY, S.dyeCellW - 2, { align = "center" })
+		local hit = Ui.hit(frame)
+		hit.Activated:Connect(function()
+			if busy then
+				return
+			end
+			pick = id
+			note = nil
+			preview()
+			view.refresh()
+		end)
+		cells[i] = { id = id, frame = frame, name = name }
+	end
+	local btnY = S.dyeY + box + S.dyeBtnY
+	local noteText = Ui.text(body, "", 0, btnY + math.floor((Ui.M.button - Ui.M.small) / 2), w - S.btnW - 8, { color = C.dim })
+	local go
+	go = Ui.button(body, DW.go, w - S.btnW, btnY, S.btnW, function()
+		if busy then
+			return
+		end
+		busy = true
+		view.refresh()
+		local res = ctx.cashDo("dye", { part = part, id = pick })
+		busy = false
+		if res and res.ok then
+			note, tone = Format.fill(DW.done, { name = res.name or Dye.name(part, pick) }), C.green
+		else
+			note, tone = (res and res.why) or DW.none, C.red
+		end
+		view.refresh()
+	end, { main = true })
+	go.frame.Name = "DyeGo"
+	function view.refresh()
+		local n = Bag.countIn(ctx.bag(), item)
+		have:set(Format.fill(DW.have, { n = n }))
+		have:color(if n > 0 then C.gold else C.red)
+		local now = Dye.current(myLook(), part)
+		for _, c in cells do
+			c.frame.BackgroundColor3 = if c.id == pick then C.accent else C.line
+			c.name:color(if c.id == pick then C.accent elseif c.id == now then C.text else C.dim)
+		end
+		go:setEnabled(n > 0 and pick ~= now and not busy)
+		noteText:set(note or (if pick == now and n > 0 then DW.pick else ""))
+		noteText:color(tone or C.dim)
+	end
+	function view.destroy()
+		pcall(RunService.UnbindFromRenderStep, RunService, DYE_BIND)
+	end
+	view.refresh()
+	return view
+end
+
 function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
+	CashWindow.ctx = ctx
 	if arg == "rename" then
 		return buildRename(body, ctx, w)
+	end
+	local part = dyePart(arg)
+	if part then
+		return buildDye(body, ctx, w, part)
 	end
 	local view = {}
 	local tab = 1

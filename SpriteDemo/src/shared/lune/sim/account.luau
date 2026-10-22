@@ -464,7 +464,7 @@ function Account.view(acct)
 	local chars = {}
 	for _, c in acct.chars do
 		local level = if typeof(c.hero.level) == "number" then c.hero.level else 1
-		table.insert(chars, { id = c.id, name = c.name, class = c.class, level = level })
+		table.insert(chars, { id = c.id, name = c.name, class = c.class, level = level, look = c.hero.look }) -- look = 무기 · 로브 색(염색 — 고르는 화면의 그림도 그 색)
 	end
 	return { chars = chars, max = Account.maxChars(acct), last = acct.last, sound = acct.sound } -- sound = 소리 설정(처음 화면부터 그 크기로 튼다)
 end

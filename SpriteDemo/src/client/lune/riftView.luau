@@ -2,6 +2,7 @@
 --  화면 위 가운데의 판: 윗줄 = 단계의 이름(금색)과 남은 시간(1분 아래면 빨강) · 아랫줄 = 「물결 2/4 · 남은 몬스터 6」(마지막 물결은 「정예」) · 「곧 몰려온다」 · 「토벌 완료」 · 「시간이 다 됐다」.
 --  끝나면 가운데의 판: 「토벌 완료」와 받은 것(경험치 · 달돈 · 달가루 · 장비) — 오늘 보상을 다 받았으면 그 말 / 「시간이 다 됐다」 · 아래 「n초 뒤 광장으로」.
 --  무엇이 언제 바뀌는지는 서버가 정한다(sim/rift.luau — RiftView · RiftPay). 여기서는 받은 것을 그리고, 시계만 받은 뒤로 흐르게 한다.
+--  던전의 몰려오기(2026-10-22): 아랫줄 = 「처치 87 / 163」 · 판 아래에 「12 연속 처치!」(gap초 안에 또 잡으면 이어진다 · from부터 보인다 — 늘 때 잠깐 하얗게). 공방 paint.js의 paintRiftHud와 같다
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local Rift = require(lune.sim.rift)
@@ -20,6 +21,7 @@ local RiftView = {}
 RiftView.view = nil -- 서버가 마지막으로 알린 상태(Rift.view) — 토벌의 방에 있을 때만
 RiftView.since = 0 -- 그것을 받은 뒤로 흐른 시간(초)
 RiftView.paid = nil -- 완료의 보상(RiftPay)
+RiftView.comboN, RiftView.comboT, RiftView.comboFlash = 0, 0, 0 -- 몰려오기의 연속 처치(수 · 남은 시간 · 늘어난 뒤 하얀 시간)
 
 function RiftView.init(root: Frame)
 	local H = Layout.RIFT_HUD
@@ -30,6 +32,11 @@ function RiftView.init(root: Frame)
 	RiftView.name = Ui.text(box, "", 10, 6, H.w - 70, { color = C.gold })
 	RiftView.clock = Ui.text(box, "", 10, 6, H.w - 20, { align = "right" })
 	RiftView.what = Ui.text(box, "", 10, 21, H.w - 20)
+	-- 연속 처치(몰려오기): 판 바로 아래 가운데
+	local cb = Stage.place(root, "RiftCombo", "tc", math.floor((Stage.REF_W - H.w) / 2), H.y + H.h + Layout.DUNGEON.comboGap, H.w, M.body + 4)
+	cb.Visible = false
+	RiftView.comboBox = cb
+	RiftView.combo = Ui.text(cb, "", 0, 0, H.w, { font = "body", align = "center", outline = true, color = C.gold })
 	-- 끝의 판(완료 · 실패)
 	local E = Layout.RIFT_END
 	local eh = E.pad * 2 + M.body + 8 + ROWS * E.row + M.small + 6
@@ -51,6 +58,8 @@ end
 -- 토벌의 방에 들어섰다 · 나왔다(view = 방의 rift — 없으면 숨긴다)
 function RiftView.enter(view: any)
 	RiftView.view, RiftView.since, RiftView.paid = view, 0, nil
+	RiftView.comboN, RiftView.comboT, RiftView.comboFlash = 0, 0, 0
+	RiftView.comboBox.Visible = false
 	RiftView.box.Visible = view ~= nil
 	RiftView.endBox.Visible = false
 	RiftView.draw()
@@ -59,6 +68,13 @@ end
 function RiftView.set(view: any)
 	if not RiftView.view then
 		return
+	end
+	-- 몰려오기: 남은 수가 줄었으면 그만큼 연속 처치에 더한다(gap초 안에 또 줄면 이어진다)
+	local before = RiftView.view
+	if typeof(view) == "table" and view.swarm and view.state == "run" and before.swarm and (view.left or 0) < (before.left or 0) then
+		RiftView.comboN += before.left - view.left
+		RiftView.comboT = Rift.DUNGEON.swarm.combo.gap
+		RiftView.comboFlash = 0.15
 	end
 	RiftView.view, RiftView.since = view, 0
 	RiftView.draw()
@@ -101,6 +117,8 @@ function RiftView.draw()
 		what = if dg then DW.clear else W.clear
 	elseif v.state == "fail" then
 		what = if dg then DW.fail else W.fail
+	elseif v.swarm then
+		what = Format.fill(DW.kills, { n = (v.total or 0) - (v.left or 0), max = v.total or 0 }) -- 몰려오기: 처치한 수
 	else
 		what = (if v.wave >= v.waves then W.eliteWave else Format.fill(W.wave, { a = v.wave, b = v.waves })) .. " · " .. Format.fill(W.mobs, { n = v.left })
 	end
@@ -148,6 +166,28 @@ end
 function RiftView.update(dt: number)
 	if not RiftView.view then
 		return
+	end
+	-- 연속 처치: gap초 동안 더 잡지 않으면 끊긴다 · from부터 보인다 · 늘어난 뒤 0.15초는 하얗게
+	if RiftView.comboT > 0 then
+		RiftView.comboT -= dt
+		RiftView.comboFlash = math.max(0, RiftView.comboFlash - dt)
+		if RiftView.comboT <= 0 or RiftView.view.state ~= "run" then
+			RiftView.comboN, RiftView.comboT = 0, 0
+		end
+	end
+	local show = RiftView.comboN >= Rift.DUNGEON.swarm.combo.from
+	RiftView.comboBox.Visible = show
+	if show then
+		-- (바뀔 때만 고쳐 쓴다 — 장면마다 글자를 다시 짓지 않게)
+		local text, white = Format.fill(Rift.DUNGEON.words.combo, { n = RiftView.comboN }), RiftView.comboFlash > 0
+		if text ~= RiftView.comboText then
+			RiftView.comboText = text
+			RiftView.combo:set(text)
+		end
+		if white ~= RiftView.comboWhite then
+			RiftView.comboWhite = white
+			RiftView.combo:color(if white then C.text else C.gold)
+		end
 	end
 	local before = math.floor(RiftView.since)
 	RiftView.since += dt

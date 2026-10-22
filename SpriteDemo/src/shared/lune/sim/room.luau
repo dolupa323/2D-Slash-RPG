@@ -17,6 +17,7 @@ local Lines = require(script.Parent.lines) -- 타수 나누기(한 타를 여러
 local Quests = require(script.Parent.quests) -- 스토리 보스: 그 퀘스트를 하는 사람이 있을 때만 선다
 local BossPat = require(script.Parent.bosspat) -- 스토리 보스: 표시된 자리 · 도약 · 물결의 자리와 시간(화면과 같은 셈)
 local Rift = require(script.Parent.rift) -- 수정 틈 토벌(물결로 몰려오는 반복 던전 — 2026-10-16)
+local Cash = require(script.Parent.cash) -- 드롭률 1.25배 패스(영구 게임 패스 — 2026-10-22)
 local RULES = COMBAT.rules
 local FE = COMBAT.fieldElite -- 사냥터 정예(2026-10-18 — 공방 combat.js FIELD_ELITE)
 local CASTRULE = COMBAT.castRule
@@ -382,6 +383,53 @@ function Room:stepMob(mob, heroes, dt: number, events)
 		return
 	end
 
+	-- 던전의 몰려오기(2026-10-22 — 사용자: "일자맵에다가 가운데로 계속 몬스터 몰려오는 형식으로 해줘 쾌감 느껴지게" · 공방 design/dungeon.js의 DUNGEON.swarm):
+	--  보는 거리와 상관없이 가장 가까운 사람에게 곧장 · 빠르기 = swarm.speed x 제 걸음(pace — 그 몬스터의 쫓는 빠르기가 더 빠르면 그것: 느린 달팽이도 같이 몰려온다)
+	--  멀리서 쏘는 것(두꺼비)도 near점 안으로 다가와서 쏜다 · 나는 것은 덮칠 거리(fly.see)에 들면 덮친다
+	if self.rift and self.rift.swarm and mob.wave then
+		if def.fly then
+			mob.alt = def.fly.alt
+		end
+		local best, bestD = nil, math.huge
+		for id, h in heroes do
+			if h.alive and not Buffs.stealth(h) then
+				local d = math.abs(h.x - mob.x)
+				if d < bestD then
+					best, bestD = id, d
+				end
+			end
+		end
+		mob.target = best
+		local target = best and heroes[best]
+		if not target then
+			mob.state = "idle"
+			return
+		end
+		local dx = target.x - mob.x
+		if dx ~= 0 then
+			mob.dir = sign(dx)
+		end
+		local SW = Rift.DUNGEON.swarm
+		if def.fly then
+			if mob.cd <= 0 and math.abs(dx) <= def.fly.see then
+				mob.state, mob.t, mob.struck, mob.diveX = "atk", 0, false, math.clamp(target.x, mob.a, mob.b)
+				return
+			end
+		else
+			local reach = math.min(atk.reach, SW.near)
+			if mob.cd <= 0 and math.abs(target.y - mob.y) <= atk.up and math.abs(dx) <= reach * 0.9 then
+				mob.state, mob.t, mob.struck = "atk", 0, false
+				return
+			end
+			if math.abs(dx) <= reach * 0.6 then
+				mob.state = "idle"
+				return
+			end
+		end
+		mob.x = math.clamp(mob.x + mob.dir * math.max(def.chase, SW.speed * (mob.pace or 1)) * dt, mob.a, mob.b)
+		mob.state = "run"
+		return
+	end
 	-- 서 있기 · 어슬렁 · 쫓기
 	if def.fly then
 		mob.alt = def.fly.alt -- 덮치는 동안이 아니면 제 높이에 떠 있다
@@ -1891,7 +1939,8 @@ function Room:lootFor(hero, mob)
 	end
 	-- 떨어지는 것은 모두 방의 드롭 난수로 굴린다(졸개의 움직임을 굴리는 난수와 따로 — 드롭의 확률을 고쳐도 싸움의 흐름이 달라지지 않는다)
 	local lootRng = self.lootRng or self.rng
-	local item = Items.rollDrop(lootRng, mob.lv, hero.class, mul)
+	local dropMul = mul * Cash.dropMul(hero) -- 드롭률 1.25배 패스(2026-10-22): 장비 · 재료 · 귀한 물건만 — 달가루(강화 재료)는 그대로(mul)
+	local item = Items.rollDrop(lootRng, mob.lv, hero.class, dropMul)
 	if item then
 		table.insert(out, self:addDrop({ kind = "gear", item = item, amount = 1 }, mob.x + (#out + 1) * 9, mob.y, hero.id))
 	end
@@ -1906,10 +1955,10 @@ function Room:lootFor(hero, mob)
 			table.insert(out, self:addDrop({ kind = "goods", goods = id, amount = 1, name = g.name, icon = g.icon }, mob.x + (#out + 1) * 9, mob.y, hero.id))
 		end
 	end
-	for _, id in Items.rollMats(lootRng, mob.lv, mul) do
+	for _, id in Items.rollMats(lootRng, mob.lv, dropMul) do
 		goods(id)
 	end
-	for _, id in Items.rollRare(lootRng, mob.lv, mul) do
+	for _, id in Items.rollRare(lootRng, mob.lv, dropMul) do
 		goods(id)
 	end
 	return out

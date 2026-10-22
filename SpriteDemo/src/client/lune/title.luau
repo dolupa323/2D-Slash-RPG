@@ -308,6 +308,7 @@ function Title.run(select, io)
 			local slot = { x = x, char = c }
 			if c then
 				slot.sprite = Sprite.new(a, c.class, 2)
+				slot.sprite:setLook(c.look) -- 그 캐릭터의 무기 · 로브 색(염색 — 2026-10-22)
 				slot.name = Ui.tag(b, if c.name ~= "" then c.name else "이름 없음", WHITE, 130, true)
 				slot.sub = Ui.tag(b, ("Lv.%d %s"):format(c.level, CLASSES.classes[c.class].name), GRAY, 130)
 				local hit = Instance.new("TextButton")

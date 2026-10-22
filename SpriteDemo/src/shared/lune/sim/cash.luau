@@ -154,7 +154,7 @@ function Cash.grant(acct, key: string, receiptId: string, now: number, baseChars
 		addBox(c, "bm_money_" .. band, 1)
 	elseif key == "dust" then
 		addBox(c, "bm_dust_" .. band, 1)
-	elseif key == "bagx" or key == "storex" or key == "rename" or key == "exp" then
+	elseif key == "bagx" or key == "storex" or key == "rename" or key == "exp" or key == "dyepoint" or key == "dyerobe" then -- (염색약 — 2026-10-22)
 		addBox(c, "bm_" .. key, 1)
 	elseif key == "charx" then
 		c.slots = math.min(c.slots + 1, D.rules.charCap - (baseChars or 6))
@@ -307,9 +307,24 @@ function Cash.marketPlus(acct, now: number): number
 	return if acct and acct.bm and Pass.active(acct.bm.pass, now) then Pass.DATA.auctionPlus else 0
 end
 
--- 사냥 경험치 배율(경험치 쿠폰)
+-- 사냥 경험치 배율: 경험치 쿠폰(30분 1.5배)과 영구 게임 패스(h.passXp — 경험치 1.25배 패스 = 0.25)를 더한다(둘 다면 1.75배 — 2026-10-22 제가 정한 것)
 function Cash.expMul(h): number
-	return if (h.expLeft or 0) > 0 then D.rules.exp.mul else 1
+	return 1 + (if (h.expLeft or 0) > 0 then D.rules.exp.mul - 1 else 0) + (h.passXp or 0)
+end
+-- 장비 · 재료 · 귀한 물건이 나올 확률의 배율(영구 게임 패스 h.passDrop — 드롭률 1.25배 패스 = 0.25). 달돈 · 달가루 · 퀘스트 물건에는 붙지 않는다(sim/room.luau의 lootFor)
+function Cash.dropMul(h): number
+	return 1 + (h.passDrop or 0)
+end
+-- 영구 게임 패스의 효과를 더한다: owned = { [상품] = true } → 경험치 · 드롭에 더할 몫(상품의 effect — 공방 bm.js)
+function Cash.passEffect(owned: any): (number, number)
+	local xp, drop = 0, 0
+	for _, p in D.products do
+		if p.kind == "pass" and typeof(p.effect) == "table" and typeof(owned) == "table" and owned[p.id] == true then
+			xp += p.effect.xp or 0
+			drop += p.effect.drop or 0
+		end
+	end
+	return xp, drop
 end
 
 -- ---------- 저장 ----------
@@ -459,7 +474,7 @@ function Cash.check(): { string }
 			end
 		end
 	end
-	for _, id in { "bm_bagx", "bm_storex", "bm_rename", "bm_exp" } do
+	for _, id in { "bm_bagx", "bm_storex", "bm_rename", "bm_exp", "bm_dyepoint", "bm_dyerobe" } do
 		local g = Items.goods(id)
 		if not g or not g.paid then
 			table.insert(bad, id)

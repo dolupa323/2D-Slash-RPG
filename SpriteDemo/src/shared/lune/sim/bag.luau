@@ -531,6 +531,38 @@ function Bag.dismantle(h, id: any): (number?, string?)
 	return dust
 end
 
+-- 여러 개 분해(2026-10-22 사용자: "장비 분해를 한번에 여러개 할수있게 해달라"): ids = 장비 번호들 → 받은 달가루 · 분해한 수(가방에 없는 것 · 겹친 것은 건너뛴다 · 하나도 없으면 nil · 까닭)
+Bag.BULK_MAX = 200
+function Bag.dismantleMany(h, ids: any): (number?, string?, number?)
+	if typeof(ids) ~= "table" then
+		return nil, "고른 장비가 없다"
+	end
+	local n0 = 0
+	for _ in ids do
+		n0 += 1
+		if n0 > Bag.BULK_MAX then
+			return nil, "한 번에 너무 많다"
+		end
+	end
+	local seen, total, n = {}, 0, 0
+	for _, id in ids do
+		if (typeof(id) == "number" or typeof(id) == "string") and not seen[id] then
+			seen[id] = true
+			local it, where, index = Bag.find(h, id)
+			if it and where == "gear" then
+				total += Items.dismantle(it)
+				h.gear[index] = false
+				n += 1
+			end
+		end
+	end
+	if n == 0 then
+		return nil, "가방에 없는 장비다"
+	end
+	h.dust += total
+	return total, nil, n
+end
+
 -- 가방을 늘리는 값(더 못 늘리면 nil)
 function Bag.growCost(h): number?
 	return BAG.costs[h.bagGrow + 1]
