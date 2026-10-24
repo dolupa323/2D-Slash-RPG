@@ -19,6 +19,7 @@ local N = require(lune.config.numbers)
 local ITEMS = require(lune.data["items.generated"])
 local Daily = require(script.Parent.daily)
 local Items = require(script.Parent.items)
+local Weekly = require(script.Parent.weekly) -- 주간 보스의 기록도 여기에 같이 저장한다(2026-10-24 — r.week)
 
 local Rift = {}
 Rift.DATA = D
@@ -61,7 +62,7 @@ end
 
 -- ---------- 캐릭터마다의 기록 ----------
 function Rift.new()
-	return { day = 0, used = 0, clears = 0, dungeon = {} } -- dungeon = 던전마다 완료한 날(Daily.dayOf — 하루 한 번 · 한국 시간 자정에 다시)
+	return { day = 0, used = 0, clears = 0, dungeon = {}, week = {} } -- dungeon = 던전마다 완료한 날(Daily.dayOf — 하루 한 번 · 한국 시간 자정에 다시) · week = 주간 보스마다 격파한 주(sim/weekly.luau — 2026-10-24)
 end
 -- 오늘 남은 보상 횟수
 function Rift.left(r, now: number): number
@@ -83,7 +84,7 @@ function Rift.use(r, now: number): boolean
 	return true
 end
 function Rift.pack(r)
-	return { day = r.day, used = r.used, clears = r.clears, dungeon = table.clone(r.dungeon or {}) }
+	return { day = r.day, used = r.used, clears = r.clears, dungeon = table.clone(r.dungeon or {}), week = Weekly.clean(r.week) }
 end
 function Rift.unpack(data: any)
 	local r = Rift.new()
@@ -98,6 +99,7 @@ function Rift.unpack(data: any)
 				end
 			end
 		end
+		r.week = Weekly.clean(data.week) -- 주간 보스(2026-10-24 — 그 전의 저장 = 이번 주 아직 안 함)
 	end
 	return r
 end

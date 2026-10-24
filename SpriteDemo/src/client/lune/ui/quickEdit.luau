@@ -7,6 +7,7 @@
 --  소비 아이템(물약)은 가방의 소비 탭에서 끌어다 놓는다("인벤토리 열고 소비아이템도 드래그앤 드랍으로 퀵슬롯에 올릴수있어야합니다"). 칸의 셈은 shared/lune/ui/quick.luau, 그리는 것은 hud.luau.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local Quick = require(ReplicatedStorage.shared.lune.ui.quick)
 local Layout = require(ReplicatedStorage.shared.lune.ui.layout)
 local Stage = require(script.Parent.Parent.stage)
@@ -206,6 +207,17 @@ function QuickEdit.init(h)
 	end)
 	UserInputService.WindowFocusReleased:Connect(function()
 		finish(nil)
+	end)
+	-- 누르던 손가락 · 마우스 단추를 이미 뗐는데(뗀 알림을 놓쳤다 — 스크롤 틀이 손가락을 가져가는 때 등) 끄는 그림이 남아 있으면 놓지 않고 거둔다
+	--  (2026-10-23 사용자: "모바일 환경에서 드래그앤 드랍으로 키를 바꾸려고하면 이상하게 아이콘 잔상이 남는버그")
+	RunService.Heartbeat:Connect(function()
+		local p = pending
+		if p and p.input then
+			local st = p.input.UserInputState
+			if st == Enum.UserInputState.End or st == Enum.UserInputState.Cancel then
+				finish(nil)
+			end
+		end
 	end)
 end
 

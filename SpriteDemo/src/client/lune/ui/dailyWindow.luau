@@ -17,9 +17,20 @@ local W = Daily.WORDS
 
 local DailyWindow = {}
 DailyWindow.ROWS = Daily.DATA.perDay
+-- 그 게시판의 의뢰 수(기도 탑 = 셋 — 2026-10-25)
+local function rowsOf(arg: any): number
+	local board = if typeof(arg) == "string" then Daily.DATA.boards[arg] else nil
+	return if board and board.perDay then board.perDay else Daily.DATA.perDay
+end
 
-function DailyWindow.size(): (number, number)
-	return S.w, S.top + DailyWindow.ROWS * S.row + S.payY + 2 * S.payRow
+function DailyWindow.size(arg: any): (number, number)
+	return S.w, S.top + rowsOf(arg) * S.row + S.payY + 2 * S.payRow
+end
+
+-- 창의 제목: 기도 탑은 「기도 탑」(다른 게시판은 공방의 이름 「일일 의뢰」)
+function DailyWindow.title(arg: any): string?
+	local board = if typeof(arg) == "string" then Daily.DATA.boards[arg] else nil
+	return if board then board.title else nil
 end
 
 -- 의뢰의 이름: 「포자 주머니 30마리」
@@ -34,7 +45,8 @@ function DailyWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 	Ui.text(body, W.reset, 0, 2, w, { align = "right", color = C.dim })
 	local rows = {}
 	local textW = w - S.btnW - 8
-	for i = 1, DailyWindow.ROWS do
+	local nRows = rowsOf(region)
+	for i = 1, nRows do
 		local y = S.top + (i - 1) * S.row
 		local by = y + 14
 		local row = {}
@@ -54,7 +66,7 @@ function DailyWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 		row.bar = Ui.bar(body, 0, y + 34, textW, S.barH + 2, C.accent, C.panel2)
 		rows[i] = row
 	end
-	local y = S.top + DailyWindow.ROWS * S.row
+	local y = S.top + nRows * S.row
 	Ui.line(body, 0, y, w)
 	y += S.payY
 	-- 보상: 의뢰 하나 = 경험치 · [달돈] / 둘을 다 내면 = [달가루]
@@ -62,7 +74,7 @@ function DailyWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 	local xp = Ui.text(body, "", S.labelW, y + 4, w - S.labelW, { color = C.gold })
 	local coin = Ui.smallIcon(body, "coin", S.labelW, y)
 	local money = Ui.text(body, "", S.labelW, y + 4, w - S.labelW, { color = C.gold })
-	Ui.text(body, W.all, 0, y + S.payRow + 4, S.labelW - 4, { color = C.dim })
+	local allLabel = Ui.text(body, W.all, 0, y + S.payRow + 4, S.labelW - 4, { color = C.dim }) -- 기도 탑은 「의뢰마다」(달가루가 의뢰마다 — 2026-10-25)
 	Ui.smallIcon(body, "dust", S.labelW, y + S.payRow)
 	local dust = Ui.text(body, "", S.labelW + 21, y + S.payRow + 4, w - S.labelW - 21, { color = C.gold })
 
@@ -92,10 +104,12 @@ function DailyWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 		local xpText = if pay then ("%s %s"):format(W.xp, Format.short(pay.xp)) else ""
 		xp:set(xpText)
 		local mx = S.labelW + Ui.measure(xpText) + 12
-		coin.Visible = pay ~= nil
+		local hasMoney = pay ~= nil and (pay.money or 0) > 0 -- 기도 탑은 달돈이 없다(2026-10-25)
+		coin.Visible = hasMoney
 		coin.Position = UDim2.fromOffset(mx, y)
 		money:move(mx + 21, y + 4)
-		money:set(if pay then Format.short(pay.money) else "")
+		money:set(if hasMoney then Format.short(pay.money) else "")
+		allLabel:set(if pay and pay.each then W.eachDust or W.all else W.all)
 		dust:set(if pay then Format.short(pay.dust) else "")
 	end
 	view.refresh()

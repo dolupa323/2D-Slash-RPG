@@ -384,7 +384,7 @@ end
 
 -- 방의 이름 → 맵의 이름(r1c4#5 → r1c4): 파티마다 따로 들어가는 장면(스토리 보스의 방 · 사당 지하 · 꿈)의 방에서도 장면의 맵과 견준다(2026-10-21)
 local function baseOf(map: any): any
-	return if type(map) == "string" then (string.match(map, "^(.-)#%d+$") or map) else map
+	return if type(map) == "string" then (string.match(map, "^(.-)#w?[nh]?%d+$") or map) else map
 end
 
 -- 틀 장면: 그 퀘스트의 그 때(on)이고 맵이 맞고 아직 보지 않은 것. seen = { [id] = true }

@@ -26,7 +26,8 @@ SceneView.TAG_DOWN = 4 -- 이름표: 발밑에서 이만큼 아래(화면 틀의
 -- 주민 머리 위의 퀘스트 표시: "!" 받을 수 있는 퀘스트가 있다 · "?" 다 해서 돌려줄 퀘스트가 있다 — 글자 그대로의 작은 표시(게임 세계의 굵은 도트).
 --  사용자 2026-10-07: "퀘스트가 있는건 표시가 받을수있는퀘스트는 ! , 완료된퀘스트는 ? 표시였는데 왜 갑자기 전구모양이 생긴건지" → 전구 · 책 그림을 걷어 내고 되돌렸다.
 --  부품 이름과 띄우는 높이는 공방에서 온다(data/ui.generated.luau의 questMark — 공방 시험 탭에서 먼저 보고 정한 것. "크기 너무 큽니다" → 피해 숫자만 한 점 글자).
-SceneView.MARK = { ["!"] = UI.questMark.new, ["?"] = UI.questMark.done, ["!!"] = UI.questMark.big } -- !! = 크고 주황색인 「!」(중요한 퀘스트 — 던전의 문 2026-10-21)
+SceneView.MARK = { ["!"] = UI.questMark.new, ["?"] = UI.questMark.done, ["!!"] = UI.questMark.big, ["M!"] = UI.questMark.main, ["M?"] = UI.questMark.mainDone, ["D!"] = UI.questMark.daily, ["D?"] = UI.questMark.dailyDone } -- D! · D? = 기도 탑의 초록 표시(2026-10-25) -- !! = 크고 주황색인 「!」(중요한 퀘스트 — 던전의 문 2026-10-21) · M! · M? = 메인 퀘스트(금빛 초승달 — 2026-10-24)
+local MARK_RANK = { ["M?"] = 5, ["?"] = 4, ["D?"] = 4, ["!!"] = 3, ["M!"] = 2, ["!"] = 1, ["D!"] = 1 } -- 문 위에는 그 안의 주민들 가운데 앞서는 것 하나
 SceneView.MARK_UP = UI.questMark.up
 SceneView.DOOR_MARK_UP = 9 -- 문 위의 퀘스트 표시: 문의 이름표(글씨 한 줄) 위로 이만큼(게임의 도트)
 
@@ -351,7 +352,7 @@ function SceneView:setMarks(markOf: (string) -> string?)
 		local best: string? = nil
 		for _, id in d.ids do
 			local mark = markOf(id)
-			if mark == "?" or (mark == "!" and best == nil) then
+			if mark and MARK_RANK[mark] and (best == nil or MARK_RANK[mark] > MARK_RANK[best]) then
 				best = mark
 			end
 		end
@@ -372,7 +373,10 @@ function SceneView:npcNear(x: number, y: number)
 	local best, bestD = nil, 30
 	for _, npc in self.npcs do
 		local d = math.abs(npc.def.x - x)
-		if d < bestD and math.abs(npc.def.y - y) < 24 and not npc.def.stone then -- 명예의 전당의 비석은 말을 걸지 않는다(순위는 비석에 새겨져 있다 — hallStones.luau)
+		-- 명예의 전당의 비석(순위가 새겨진 면 face가 있는 것)만 말을 걸지 않는다(순위는 비석에 새겨져 있다 — hallStones.luau).
+		--  2026-10-25 사용자 "일일기도탑 상호작용안되는데?": 전에는 그림 없는 자리(stone)를 모두 빼서 기도 탑 · 초승달 마을의 의뢰 게시판 · 사당 지하의 낡은 비석도 ↑가 듣지 않았다
+		local carved = npc.def.stone and typeof(npc.def.face) == "table"
+		if d < bestD and math.abs(npc.def.y - y) < 24 and not carved then
 			best, bestD = npc.def, d
 		end
 	end
@@ -402,6 +406,9 @@ end
 
 function SceneView:destroy()
 	Canvas.detach() -- 그림판은 다음 장면이 다시 쓴다(맵 틀과 같이 없애지 않는다)
+	if self.splitBox then
+		self.splitBox:Destroy() -- 화면 가르기의 조각(client/lune/cast.luau의 split — 2026-10-24)
+	end
 	self.root:Destroy()
 	for _, t in self.tags do
 		t.label:Destroy()

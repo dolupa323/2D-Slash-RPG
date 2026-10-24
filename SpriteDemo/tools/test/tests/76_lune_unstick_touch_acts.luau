@@ -309,7 +309,8 @@ do
 	end
 	local uiRoot = frame("Ui")
 	MOCK("Client/lune/stage", {
-		ratio = 2, uiScale = 1, uiH = 432, insetTop = 0, ui = uiRoot,
+		ratio = 2, uiScale = 1, scale = 2, uiH = 432, insetTop = 0, ui = uiRoot, -- scale = 게임 세계의 배율(폰 — 터치 단추의 크기 셈 Layout.touchK · 2026-10-23)
+		touchLike = function() return true end,
 		gui = { GetAttribute = function() return true end, GetAttributeChangedSignal = function() return sig() end },
 		group = function(_, name) return frame(name) end,
 		place = function(_, name) return frame(name) end,

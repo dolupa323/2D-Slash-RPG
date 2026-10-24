@@ -21,6 +21,8 @@ local Stage = require(script.Parent.stage)
 local Input = require(script.Parent.input)
 local Hud = require(script.Parent.hud)
 local Ui = require(script.Parent.ui.ui)
+local G = require(ReplicatedStorage.shared.lune.config.game)
+local VIEW_W, VIEW_H = G.VIEW_W, G.VIEW_H -- 게임 화면(도트)
 
 local C = Ui.COLOR
 local PIC = 24 -- 그림 한 장(화면 틀의 점)
@@ -50,6 +52,12 @@ end
 
 local function sameFinger(input: InputObject, began: InputObject): boolean
 	return input == began or (began.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseButton1)
+end
+
+-- 그 손가락(마우스 단추)을 이미 뗐나 — 뗀 알림(InputEnded)을 놓쳐도 끄는 그림이 남지 않게(2026-10-23 사용자: "모바일 환경에서 드래그앤 드랍으로 키를 바꾸려고하면 이상하게 아이콘 잔상이 남는버그")
+local function lifted(input: InputObject): boolean
+	local st = input.UserInputState
+	return st == Enum.UserInputState.End or st == Enum.UserInputState.Cancel
 end
 
 local function moved(input: InputObject, began: InputObject): boolean
@@ -286,13 +294,19 @@ end
 local function px(v: number): number
 	return math.floor(v * Stage.ratio + 0.5)
 end
+-- 단추의 자리(게임 도트) — 큰 화면(태블릿)에서는 줄여 구석 쪽으로(Layout.touchRect · 2026-10-23). k는 build가 정한다
+local K_NOW = 1
+local function rectOf(t): (number, number, number, number)
+	return Layout.touchRect(t, K_NOW, VIEW_W, VIEW_H)
+end
 
 local function makeButton(t)
-	local size = px(t.w)
+	local rx, ry, rw, rh = rectOf(t)
+	local size = px(rw)
 	local frame = Instance.new("Frame")
 	frame.Name = "T" .. t.no
-	frame.Position = UDim2.fromOffset(px(t.x), px(t.y))
-	frame.Size = UDim2.fromOffset(px(t.w), px(t.h))
+	frame.Position = UDim2.fromOffset(px(rx), px(ry))
+	frame.Size = UDim2.fromOffset(px(rw), px(rh))
 	frame.BackgroundColor3 = C.ink
 	frame.BackgroundTransparency = 0.4
 	frame.BorderSizePixel = 0
@@ -396,6 +410,9 @@ local function makeSlot(t)
 		if Touch.arranging then
 			-- 배치 중: 누르면 그 칸을 고르고, 끌면 자리를 바꾼다
 			selected = i
+			if drag and drag.ghost then
+				drag.ghost:Destroy() -- 끄는 중에 다른 단추를 또 눌렀다(다른 손가락): 앞의 끌기를 그만두고 그 그림을 거둔다 — 덮어쓰면 그림이 화면에 남았다(2026-10-23)
+			end
 			drag = { from = i, input = input, start = Vector2.new(input.Position.X, input.Position.Y), moved = false, ghost = nil }
 			openChooser()
 			paintAll()
@@ -455,10 +472,11 @@ end
 
 -- 조이스틱: 바깥 원(자리는 그대로) + 가운데 손잡이(손가락을 따라 원 안에서 움직인다)
 local function makePad(t)
-	local size = px(t.w)
+	local rx, ry, rw = rectOf(t)
+	local size = px(rw)
 	local base = Instance.new("Frame")
 	base.Name = "Pad"
-	base.Position = UDim2.fromOffset(px(t.x), px(t.y))
+	base.Position = UDim2.fromOffset(px(rx), px(ry))
 	base.Size = UDim2.fromOffset(size, size)
 	base.BackgroundColor3 = C.ink
 	base.BackgroundTransparency = 0.55
@@ -559,6 +577,7 @@ local function build()
 	table.clear(buttons)
 	table.clear(slotButtons)
 	pad = nil
+	K_NOW = Layout.touchK(Stage.scale, UI.touch) -- 폰 1 · 큰 화면은 1보다 작게
 	for _, t in UI.touch do
 		if t.kind == "pad" then
 			makePad(t)
@@ -764,6 +783,34 @@ function Touch.init(options)
 	end)
 	-- 누르고 있는 공격 스킬은 이어서 쓴다(손가락으로 연타하지 않아도 되게 — 물약 · 그 밖의 스킬은 한 번만)
 	RunService.Heartbeat:Connect(function(dt)
+		-- 끄던 손가락을 이미 뗐는데(뗀 알림을 놓쳤다 — 스크롤 틀이 손가락을 가져가는 때 등) 끌기가 남아 있으면 놓지 않고 거둔다(2026-10-23 — 잔상)
+		if drag and lifted(drag.input) then
+			local d = drag
+			drag = nil
+			if d.ghost then
+				d.ghost:Destroy()
+			end
+		end
+		-- 같은 까닭으로 눌린 채 남은 것: 조이스틱 · 누르고 있는 칸 단추 · 점프 · 상호작용(뗀 알림을 놓치면 캐릭터가 계속 걷거나 스킬을 계속 썼다)
+		if pad and pad.finger and lifted(pad.finger) then
+			pad.stop()
+		end
+		for i, h in held do
+			if lifted(h.input) then
+				held[i] = nil
+				Input.release("tslot:" .. i)
+				local sb = slotButtons[i]
+				if sb then
+					sb.down = false
+					paintButton(sb)
+				end
+			end
+		end
+		for _, b in buttons do
+			if b.actFinger and b.release and lifted(b.actFinger.input) then
+				b.release(b.actFinger.input)
+			end
+		end
 		for i, h in held do
 			h.t += dt
 			if h.t >= h.next then
@@ -778,8 +825,8 @@ function Touch.init(options)
 	end)
 
 	local function decide()
-		local forced = Stage.gui:GetAttribute("Touch")
-		local on = forced == true or (forced == nil and UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled)
+		local on = Stage.touchLike() -- (2026-10-23: 마지막으로 쓴 입력 — PreferredInput. 전에는 키보드가 붙은 태블릿에서 꺼졌다)
+		local was = Touch.on
 		Touch.on = on
 		root.Visible = on
 		if not on then
@@ -791,8 +838,14 @@ function Touch.init(options)
 		if opts.onToggle then
 			opts.onToggle(on)
 		end
+		if was ~= on and Stage.refit then
+			Stage.refit() -- 터치 화면이면 게임 화면을 꽉 차게(Stage.scalesFor) — 배율이 바뀌면 단추를 새로 짓는다(onResize)
+		end
 	end
 	Stage.gui:GetAttributeChangedSignal("Touch"):Connect(decide)
+	pcall(function()
+		UserInputService:GetPropertyChangedSignal("PreferredInput"):Connect(decide) -- 터치 ↔ 키보드 · 마우스로 바꿔 쥐었다
+	end)
 	decide()
 end
 

@@ -12,7 +12,7 @@ T.DATA = UIG.tutorial
 T.SCENE = T.DATA.scene
 -- 그 장면(방)이 꿈인가: 꿈은 들어갈 때마다 따로 된 방(dream#번호 — 파티마다 따로 들어가는 장면 · 2026-10-21)이라 이름 뒤의 #번호를 떼고 본다
 function T.isDream(key: any): boolean
-	return type(key) == "string" and (string.match(key, "^(.-)#%d+$") or key) == T.SCENE
+	return type(key) == "string" and (string.match(key, "^(.-)#w?[nh]?%d+$") or key) == T.SCENE
 end
 T.STEPS = T.DATA.steps
 T.TOTAL = #T.DATA.steps

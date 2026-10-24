@@ -154,6 +154,9 @@ local function roomOf(key: string)
 		room.matesOf = function(h)
 			return World.matesIn(key, h)
 		end
+		room.alliesOf = function(h) -- 치유 · 수호령이 닿는 같은 맵의 파티원 모두(레벨 차이를 보지 않는다 — 2026-10-24)
+			return World.alliesIn(key, h)
+		end
 		rooms[key] = room
 	end
 	return room
@@ -183,7 +186,7 @@ local function roster(key: string)
 	for _, s in inRoom(key) do
 		-- pet = 꺼내 둔 펫 · ride = 탄 탈것(2026-10-20 — 다른 사람의 화면도 같이 그린다)
 		local bm = s.acct and s.acct.bm
-		table.insert(list, { id = s.hero.id, name = s.name, class = s.hero.class, level = s.hero.level, pet = bm and bm.petOut or false, ride = if s.riding and bm then bm.mount else false, look = s.hero.look }) -- look = 무기 · 로브 색(염색 — 2026-10-22)
+		table.insert(list, { id = s.hero.id, name = s.name, class = s.hero.class, level = s.hero.level, pet = bm and bm.petOut or false, ride = if s.riding and bm then bm.mount else false, look = s.hero.look, wskin = bm and bm.wskin or false }) -- look = 무기 · 로브 색(염색 — 2026-10-22) · wskin = 장착한 캐시 무기(2026-10-23)
 	end
 	return list
 end
@@ -264,7 +267,7 @@ local function resumeScene(h): (string, number?, number?)
 	if typeof(key) ~= "string" then
 		return home, nil, nil
 	end
-	local base = string.match(key, "^(.-)#%d+$") or key
+	local base = string.match(key, "^(.-)#w?[nh]?%d+$") or key
 	local sc = rawget(SCENES.scenes, base)
 	if not sc then
 		return home, nil, nil
@@ -294,7 +297,8 @@ local function roomKeyFor(s, key: string): string
 	end
 	for _, uid in Party.members(book, s.player.UserId) do
 		local ms = byUser[uid]
-		if ms and ms ~= s and ms.hero and ms.scene and ms.scene ~= key and SCENES.base(ms.scene) == key then
+		-- (주간 보스의 방 <방>#wn번호 · #wh번호에는 따라 들어가지 않는다 — 보스의 문에서 들어간 사람만: 2026-10-24)
+		if ms and ms ~= s and ms.hero and ms.scene and ms.scene ~= key and SCENES.base(ms.scene) == key and not string.find(ms.scene, "#w", 1, true) then
 			return ms.scene
 		end
 	end
@@ -315,6 +319,7 @@ local function place(s, key: string, x: number, y: number, pushed: boolean?)
 		fromRoom:forget(s.hero) -- 떠난 방에 남은 늦은 타를 버린다(Room:forget)
 	end
 	s.scene = key
+	require(script.Parent.macroGuard).onScene(s, key) -- 매크로 확인: 마을 · 실내에 들르면 쉼(2026-10-23)
 	s.hero.x, s.hero.y = Room.physics.freeSpot(SCENES.scenes[key], x, y) -- 세우는 자리가 땅 속이면 가장 가까운 빈 자리로(화면도 같은 셈으로 꺼낸다 — 2026-10-21 폰에서 끼임)
 	s.skill = nil
 	s.hero.last = key -- 다시 들어오면 여기서 시작한다(resumeScene이 들어가면 안 되는 곳을 가린다)
@@ -486,7 +491,16 @@ local function pushRank(s)
 	end
 	local sent = s.rankSent or {}
 	s.rankSent = sent
-	local level, power = Rank.levelScore(h.level, h.xp, Hero.xpNeed(h)), Hero.power(h)
+	local fixAt = Rank.MAX_FIX[key] -- 저장본에서 찾은 오른 때(2026-10-24 — sim/rank.luau)
+	if h.level >= N.MAX_LEVEL and fixAt and (not h.maxAt or h.maxAt > fixAt) then
+		h.maxAt = fixAt
+		s.dirty = true
+	end
+	if h.level >= N.MAX_LEVEL and not h.maxAt then
+		h.maxAt = os.time() -- 만렙에 오른 때가 적히기 전(2026-10-24)에 만렙이 되었고 MAX_FIX에도 없는 캐릭터: 서버가 처음 본 때로 채운다
+		s.dirty = true
+	end
+	local level, power = Rank.levelScore(h.level, h.xp, Hero.xpNeed(h), h.maxAt), Hero.power(h)
 	if sent.key ~= key or sent.name ~= s.name then
 		Store.rankInfoSet(key, { name = s.name, class = h.class }, s.guest == true)
 		sent.key, sent.name, sent.level, sent.power = key, s.name, nil, nil
@@ -833,11 +847,21 @@ end
 local TAKEN, LATER = Account.TEXT.taken, Account.TEXT.later
 -- Roblox의 글 거르기를 거친다. 돌려주는 것: 물어봤는가(서비스가 답했는가), 걸러진 데 없이 그대로인가
 --  Studio에서는 걸러 주지 않고 그대로 돌려준다 — 실제 서버에서만 걸러진다(그래서 우리 목록 Account.nameBanned가 따로 있다)
+-- Roblox의 글 거르기(모두에게 보이는 글 — Broadcast). 가려진 데(#)가 있으면 두 번 더 물어 한 번이라도 깨끗하면 깨끗한 것으로 본다(2026-10-25 사용자: "Ryuville 이라는 닉네임이 왜 … 사용못하는 닉네임으로 걸리는거야?" —
+--  우리 금칙어에는 걸리지 않는 이름이 들어올 때 Roblox의 거르기에 가려져 이름이 지워졌다. Roblox의 거르기는 같은 글도 때에 따라 다르게 · 잘못 가린다는 보고가 있다:
+--  devforum.roblox.com/t/inconsistency-of-filtering/33736 · /t/text-being-falsely-censored-at-a-much-higher-rate/4743424). 돌려주는 것: 물어봤는가, 깨끗한가
 local function filtered(name: string, userId: number): (boolean, boolean)
-	local asked, clean = pcall(function()
-		return TextService:FilterStringAsync(name, userId):GetNonChatStringForBroadcastAsync()
-	end)
-	return asked, asked and clean == name
+	local askedAny = false
+	for _ = 1, 3 do -- (묻는 것 자체가 Roblox에 다녀오는 시간이 걸린다 — 따로 기다리지 않는다)
+		local asked, out = pcall(function()
+			return TextService:FilterStringAsync(name, userId):GetNonChatStringForBroadcastAsync()
+		end)
+		askedAny = askedAny or asked
+		if asked and out == name then
+			return true, true
+		end
+	end
+	return askedAny, false
 end
 
 local NAME_BURST, NAME_GAP = 5, 3 -- 이름 확인(저장소에 묻는 것): 한 사람이 한 번에 5번까지 · 3초마다 한 번씩 다시 찬다
@@ -982,8 +1006,14 @@ local function onCharsInner(player, action: string, a: any, b: any)
 		--  (Studio에서는 글 거르기가 걸러 주지 않는다 — 거기서 지은 이름도 실제 서버에 들어올 때 여기서 걸린다). 걸리면 이름을 비우고 다시 짓게 한다. 물어보지 못했으면 그냥 들여보낸다.
 		if not s.guest then
 			local asked, clean = filtered(c.name, player.UserId)
-			if Account.nameBanned(c.name) or (asked and not clean) then
-				Store.freeName(Account.nameKey(c.name), player.UserId)
+			local banned = Account.nameBanned(c.name)
+			if banned or (asked and not clean) then
+				-- 우리 금칙어에 걸린 이름만 장부에서 놓는다. Roblox의 거르기에 가려진 이름은 그 사람의 것으로 남겨 둔다 — 남이 가져가지 못하고,
+				--  거르기가 다시 깨끗하다고 하면 「이름 짓기」에서 같은 이름을 다시 지을 수 있다(2026-10-25 — 전에는 장부에서도 놓아 누구나 가져갈 수 있었다)
+				if banned then
+					Store.freeName(Account.nameKey(c.name), player.UserId)
+				end
+				warn(("[이름] 들어올 때 이름을 비웠다(%s): %s"):format(if banned then "금칙어" else "Roblox 글 거르기", c.name))
 				c.name = ""
 				saveAccount(s)
 				return { ok = false, why = Account.TEXT.gone, select = Account.view(acct) }
@@ -1003,8 +1033,8 @@ local function onCharsInner(player, action: string, a: any, b: any)
 		hero.storeExtra = Account.storeExtra(acct)
 		Bag.loadStore(hero, acct.store) -- 창고는 계정의 것: 어느 캐릭터로 들어가든 같은 창고다
 		-- 뺀 맵에 남은 저장(반달 나루 — 2026-10-16 밤): 마지막 맵 · 마지막으로 들른 마을을 그 자리를 대신하는 곳으로(scenes의 gone)
-		if hero.last and SCENES.gone[string.match(hero.last, "^(.-)#%d+$") or hero.last] then
-			hero.last = SCENES.gone[string.match(hero.last, "^(.-)#%d+$") or hero.last]
+		if hero.last and SCENES.gone[string.match(hero.last, "^(.-)#w?[nh]?%d+$") or hero.last] then
+			hero.last = SCENES.gone[string.match(hero.last, "^(.-)#w?[nh]?%d+$") or hero.last]
 		end
 		if hero.home and SCENES.gone[hero.home] then
 			hero.home = SCENES.gone[hero.home]
@@ -1110,7 +1140,9 @@ local function rankBoards()
 				table.insert(rows, row)
 			end
 		end
-		boards[board] = Rank.view(board, rows, Store.rankInfoGet)
+		local view, keys = Rank.view(board, rows, Store.rankInfoGet)
+		local first = if board == "level" then require(script.Parent.firstMax).get() else nil
+		boards[board] = if first then Rank.pinFirst(view, first, keys, N.MAX_LEVEL) else view -- 만렙 최초 달성은 레벨 판 1위에 고정(2026-10-24)
 	end
 	rankCache, rankAt = boards, World.now
 	return boards
@@ -1169,6 +1201,7 @@ local function onMove(player, x: number, y: number, dir: number, key: any)
 	end
 	local scene = SCENES.scenes[s.scene]
 	local hero = s.hero
+	require(script.Parent.macroGuard).onMove(s, x, y) -- 매크로 확인: 들른 칸(2026-10-23)
 	-- 다른 맵(방)의 자리(2026-10-21): 서버가 아는 맵의 자리로 받지 않는다 — 받으면 그 맵의 땅 속을 「서버가 아는 자리」로 적었다가 화면을 그리로 되돌려 보낼 수 있었다
 	--  (사용자 2026-10-21 폰: "대쉬하다가 맵을뚫고 낑기는 현상"). 4초 넘게 계속 다른 맵이면 화면과 서버가 어긋난 것이다(문의 대답이 늦어 화면만 옛 맵에 남았다 …) — 서버의 맵으로 다시 보낸다
 	if typeof(key) == "string" and key ~= s.scene then
@@ -1199,7 +1232,11 @@ local function onMove(player, x: number, y: number, dir: number, key: any)
 	local dx, dy = math.abs(x - hero.x), math.abs(y - hero.y)
 	refillMove(s)
 	if hero.warpMark then -- 서버가 몸을 옮기는 스킬을 돌렸다(sim/caster.luau) — 그 뒤의 첫 보고부터 WARP_TIME초
-		hero.warpAt, hero.warpMark = World.now, nil
+		-- 옮긴 지 WARP_TIME초가 지난 표시는 버린다(2026-10-25 — 서버가 몸을 옮기는 돌격 · 망령 돌진 · 불꽃 돌진 뒤 몇 초 지나 온 먼 보고까지 받았다)
+		if typeof(hero.warpMark) ~= "number" or roomOf(s.scene).time - hero.warpMark <= WARP_TIME then
+			hero.warpAt = World.now
+		end
+		hero.warpMark = nil
 	end
 	local jumpedOk = s.jumped and dx <= JUMP_SLACK and dy <= JUMP_SLACK -- 맵을 옮긴 직후의 첫 보고(아무 데나가 아니라 넉넉한 거리 안 — 2026-10-18 검토)
 	-- 자동 검사만 세우는 표시: 다음 보고 하나를 거리와 상관없이 받는다(서버의 세션에만 있다 — 화면이 보내는 어떤 것으로도 서지 않는다).
@@ -1386,8 +1423,8 @@ local function onTravel(player, to: string)
 	local scene = SCENES.scenes[s.scene]
 	for _, p in scene.portals do
 		if p.to == to and math.abs(p.x - s.hero.x) <= 28 and math.abs(p.y - s.hero.y) <= 28 then
-			if p.dungeon then
-				return nil -- 던전의 문(2026-10-21): 맵을 옮기지 않는다 — 앞에서 ↑ = 던전 창(들어가기는 Rift "enter")
+			if p.dungeon or p.weekly then
+				return nil -- 던전의 문(2026-10-21) · 보스의 문(2026-10-24): 맵을 옮기지 않는다 — 앞에서 ↑ = 던전 · 보스 창(들어가기는 Rift · Week "enter")
 			end
 			if not Quests.portalOpen(s.hero.quests, p) then
 				return nil -- 그 퀘스트를 받아야 · 끝내야 열리는 문(달의 사당 안의 「사당 지하」 · 마을의 나루): 화면에도 보이지 않는다
@@ -1476,10 +1513,14 @@ local function applyResult(cur, key: string, result)
 		toRoom(key, "Hits", cur.player.UserId, result.hits)
 	end
 	local grew = false
+	local guard = if #result.kills > 0 then require(script.Parent.macroGuard) else nil -- 매크로 확인: 처치를 센다(2026-10-23)
 	for _, kill in result.kills do
 		for _, gain in kill.gains do
 			local gs = byUser[gain.hero]
 			if gs then
+				if guard then
+					guard.onKill(gs)
+				end
 				if gs.acct then
 					Achieve.killed(gs.acct.ach, kill.kind, key, #kill.gains > 1) -- 업적: 처치 · 파티로 처치(함께 잡은 사람이 있다) · 그 지역의 몬스터 종류
 					Cash.passAdd(gs.acct, "kill", os.time(), 1) -- 달빛 패스: 몬스터 100마리마다 달빛 2
@@ -1564,6 +1605,20 @@ local function matesIn(key: string, hero)
 	return if #mates > 1 then mates else nil
 end
 World.matesIn = matesIn -- (방의 matesOf — roomOf가 이것보다 위에 있어 World를 거친다)
+-- 같은 맵의 파티원 모두(레벨 차이를 보지 않는다 — 나도 든다): 무니의 치유 · 수호령이 닿는 사람(2026-10-24 — sim/party.luau의 Party.near). 혼자면 nil
+World.alliesIn = function(key: string, hero)
+	local here, heroOf = {}, {}
+	for _, o in inRoom(key) do
+		if o.hero.alive then
+			here[o.hero.id], heroOf[o.hero.id] = o.hero, o.hero
+		end
+	end
+	local list = {}
+	for _, mid in Party.near(book, hero.id, here) do
+		table.insert(list, heroOf[mid])
+	end
+	return if #list > 1 then list else nil
+end
 
 -- 같은 맵에 쓰러져 있는 파티원들(reach 안 — 소생이 일으킨다)
 local function fallenIn(key: string, hero, reach: number)
@@ -1572,7 +1627,7 @@ local function fallenIn(key: string, hero, reach: number)
 		here[o.hero.id], heroOf[o.hero.id] = o.hero, o.hero
 	end
 	local out = {}
-	for _, mid in Party.mates(book, hero.id, here) do
+	for _, mid in Party.near(book, hero.id, here) do -- (레벨 차이를 보지 않는다 — 2026-10-24)
 		local mate = heroOf[mid]
 		if mate ~= hero and not mate.alive and math.abs(mate.x - hero.x) <= reach and math.abs(mate.y - hero.y) <= 80 then
 			table.insert(out, mate)
@@ -1589,6 +1644,13 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 		if s.riding then
 			s.riding = false -- 기술을 쓰면 탈것에서 내린다(design/ride.js — 화면은 먼저 내린다)
 			sendWho(s.scene)
+		end
+		if seg == nil or seg == 1 then
+			require(script.Parent.macroGuard).onSkill(s, id) -- 매크로 확인: 같은 스킬을 다시 누른 간격(2026-10-23)
+		end
+		-- 매크로 확인 문제가 떠 있는 동안은 스킬을 받지 않는다(2026-10-24 사용자 "매크로 완전히 파훼할수있어야해" — 전에는 문제가 떠 있어도 매크로가 계속 쳤다)
+		if s.hero.inCheck then
+			return
 		end
 		s.hero.inCine = false -- 기술을 쓴다 = 장면을 보는 중이 아니다(장면 동안 맞지 않는 것을 싸움에 쓰지 못하게 — 2026-10-18 검토)
 	end
@@ -1620,9 +1682,10 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 						here[o.hero.id], sessionOf[o.hero.id] = o.hero, o
 					end
 				end
-				for _, mid in Party.mates(book, hero.id, here) do
+				for _, mid in Party.near(book, hero.id, here) do -- 같은 맵의 파티원 모두(레벨 차이를 보지 않는다 — 2026-10-24: 전에는 경험치 나누기의 목록이라 20레벨 넘게 차이 나면 받지 못했다)
 					local o = sessionOf[mid]
-					if o and o ~= s and math.abs(o.hero.x - hero.x) <= reach and math.abs(o.hero.y - hero.y) <= math.min(reach, 120) then
+					-- reach 9999 = 같은 맵의 파티원 모두(높이도 보지 않는다 — 2026-10-23: 120도트 위 · 아래 층의 파티원은 「같은 맵 모두」인데도 받지 못했다)
+					if o and o ~= s and (reach >= 9999 or (math.abs(o.hero.x - hero.x) <= reach and math.abs(o.hero.y - hero.y) <= math.min(reach, 120))) then
 						Buffs.give(o.hero, id, pow, hero.x, hero.y)
 						sendSelf(o)
 						sendBuffs(o)
@@ -1987,6 +2050,14 @@ local function onItem(player, action: string, a: any, b: any, c: any, d: any)
 			why = "파는 사람 앞이 아니다"
 		else
 			result, why = Bag.sell(h, a, b, c)
+			ok = result ~= nil
+		end
+	elseif action == "sellMany" then
+		-- 여러 개 판매(2026-10-23): a = 장비 번호들 · 잡화 상인 앞에서만(한 칸 팔기와 같다)
+		if not nearNpc(s, "shop") then
+			why = "파는 사람 앞이 아니다"
+		else
+			result, why = Bag.sellMany(h, a)
 			ok = result ~= nil
 		end
 	elseif action == "buyback" then
@@ -3545,7 +3616,25 @@ local function onAdmin(player, what: string, a: any, b: any, c: any)
 	local function no(msg: string)
 		return { ok = false, msg = msg }
 	end
-	if what == "megaphone" then
+	if what == "macroList" then
+		-- 매크로 확인(2026-10-23): 이 서버의 사람들(의심이 높은 차례) · 최근 일
+		local guard = require(script.Parent.macroGuard)
+		local rows = guard.list(sessions)
+		return { ok = true, msg = ("이 서버의 사람 %d명"):format(#rows), rows = rows, log = guard.log }
+	elseif what == "macroSend" or what == "macroClear" then
+		-- 그 사람에게 지금 문제를 보낸다 · 보상 멈춤과 놓친 기록을 풀어 준다(a = 그 사람의 UserId)
+		local target = byUser[a]
+		if not target or not target.hero then
+			return no("이 서버에 없는 사람이다")
+		end
+		local guard = require(script.Parent.macroGuard)
+		if what == "macroSend" then
+			guard.force(target)
+			return { ok = true, msg = (target.name or "") .. "에게 매크로 확인을 보냈다" }
+		end
+		guard.clear(target)
+		return { ok = true, msg = (target.name or "") .. "의 보상 멈춤을 풀었다" }
+	elseif what == "megaphone" then
 		-- 확성기(2026-10-21 사용자: "모든 서버에 확성기로 말할수있나? 어드민기능으로 확성기같은게 필요한데") — 글을 거른 뒤 모든 서버의 모두에게(server/lune/modules/megaphone.luau)
 		local ok, msg = require(script.Parent.megaphone).send(player, a, os.time())
 		return { ok = ok, msg = msg }
@@ -3955,6 +4044,21 @@ function World.tick(dt: number)
 	stepBots(dt)
 	-- 사람: 무적 · 벌칙 · 물약 대기 시간, 쓰러졌으면 마을에서 일어난다
 	for _, s in sessions do
+		-- 매크로 확인(2026-10-23): 1초마다 — 때가 되면 문제를 보낸다 · 시간이 다 된 문제는 놓침
+		s.macroT = (s.macroT or 0) + dt
+		if s.macroT >= 1 and s.hero then
+			s.macroT = 0
+			require(script.Parent.macroGuard).tick(s, s.scene)
+			CashServer.maxGift(s) -- 레벨 순위 1위 선물(백금 사슴 — 2026-10-25): 처음 만렙(세계 기록)의 캐릭터로 있으면 계정에 넣는다 — 한 사람만(이미 있으면 아무것도 하지 않는다)
+			-- 만렙 최초 달성(2026-10-24): 이 접속에서 경험치로 막 만렙이 된 캐릭터(h.maxNow)이고 아직 세계 기록이 없으면 적어 본다 — 관리자 · 확인용 임시 계정 · 시험 봇 · Studio는 빼고.
+			--  (2026-10-24 사용자: "만렙 달성 알림같은거 이상한사람으로 뜨면 안된다" — 전에는 만렙인 캐릭터가 들어오기만 해도 적어 봐서, 이미 만렙이던 사람 · Studio의 시험 캐릭터가 「처음」으로 적힐 수 있었다)
+			if s.hero.maxNow and s.hero.level >= N.MAX_LEVEL and s.cid and s.name ~= "" and not s.guest and not isBot(s.player) and not Admin.is(s.player) and not World.studio and not Store.isOffline() then
+				local FirstMax = require(script.Parent.firstMax)
+				if not FirstMax.get() then
+					FirstMax.try({ key = Rank.charKey(s.player.UserId, s.cid), name = s.name, class = s.hero.class }, World.now)
+				end
+			end
+		end
 		-- 버프: 시간이 다 되면 사라진다(끝났을 때 알린다)
 		if s.hero then
 			local ended = Buffs.tick(s.hero, dt)
@@ -4107,6 +4211,39 @@ function World.tick(dt: number)
 					end
 				end
 			end
+			if room.weekly then
+				-- 주간 보스(2026-10-24 — sim/weekly.luau): 바뀐 상태를 알리고, 격파면 방의 사람마다 이번 주의 격파를 적는다 · 때가 되면 보스의 문 앞으로
+				local Weekly = require(lune.sim.weekly) -- (world.luau의 지역 이름이 Luau의 한도에 닿아 여기서 부른다)
+				local wk = room.weekly
+				if wk.changed then
+					wk.changed = false
+					toRoom(key, "WeekView", Weekly.roomView(room))
+					if wk.state == "clear" and not wk.paid then
+						wk.paid = true
+						local now = os.time()
+						for _, s in here do
+							local first = Weekly.mark(s.hero.rift, wk.boss, wk.mode, now)
+							s.dirty = true
+							Analytics.custom(s, "WeeklyClear", 1, wk.boss .. "_" .. wk.mode)
+							fire("WeekPay", s.player, { boss = wk.boss, mode = wk.mode, first = first, view = Weekly.view(s.hero.rift, now) })
+						end
+					end
+				end
+				if Weekly.due(room) then
+					local b = Weekly.boss(wk.boss)
+					local dsc = SCENES.scenes[b.door.scene]
+					local dy = dsc.spawn.y
+					for _, p in dsc.portals do
+						if p.weekly == b.id then
+							dy = p.y
+						end
+					end
+					wk.backAt = nil -- 한 번만
+					for _, s in here do
+						moveTo(s, b.door.scene, b.door.x - 30, dy)
+					end
+				end
+			end
 			if ticks % SNAP_EVERY == 0 and #room.mobs > 0 then
 				toRoom(key, "Snap", key, room:snapshot())
 			end
@@ -4136,6 +4273,7 @@ local function onCash(player, a: any, b: any)
 	end
 	local now = os.time()
 	if a == "view" then
+		CashServer.recheck(s) -- 상점을 열 때 가지지 않았던 패스를 다시 묻는다(게임 밖에서 산 것 — 2026-10-24 · 30초에 한 번까지)
 		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices())
 		view.ok = true
 		view.riding = s.riding == true
@@ -4196,6 +4334,19 @@ local function onCash(player, a: any, b: any)
 			s.dirty = true
 			saveSoon(s)
 			if s.scene then
+				sendWho(s.scene)
+			end
+		end
+		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices())
+		view.ok, view.why = ok == true, why
+		return view
+	elseif a == "wskin" then
+		-- 캐시 무기를 장착한다(이름표) · 해제한다(false) — 계정의 모든 캐릭터의 무기(2026-10-23) → 방 사람들의 화면에도(Who)
+		local ok, why = Cash.setWskin(s.acct, b)
+		if ok then
+			s.dirty = true
+			saveSoon(s)
+			if s.scene and not s.shop then
 				sendWho(s.scene)
 			end
 		end
@@ -4308,7 +4459,15 @@ function World.start()
 			fire("Megaphone", p, text)
 		end
 	end)
+	-- 만렙 최초 달성(2026-10-24): 어느 서버에서 처음 만렙이 나오면 이 서버의 모두에게 축하 알림 · 레벨 판을 바로 다시 읽는다(1위 박제)
+	require(script.Parent.firstMax).start(function(rec)
+		rankCache = nil
+		for p in sessions do
+			fire("FirstMax", p, { name = rec.name, class = rec.class, level = N.MAX_LEVEL })
+		end
+	end)
 	-- 달빛 상점 안(s.shop)에서는 받지 않는 일 — 움직임 · 기술 · 줍기 · 물약 · 문 · 경매장 · 퀘스트 · 아이템 …(맵에서 빠져 있다 — 2026-10-21)
+	World.studio = select(2, pcall(function() return RunService:IsStudio() end)) == true -- Studio에서 도는가(만렙 최초 달성을 적지 않는다 — 2026-10-24)
 	local function outside(fn)
 		return function(player, ...)
 			local s = sessions[player]
@@ -4344,9 +4503,67 @@ function World.start()
 	Net.OnServer("Achieve", Analytics.wrap("Achieve", onAchieve, World.session))
 	Net.OnServer("Bond", Analytics.wrap("Bond", onBond, World.session))
 	Net.OnServer("Rift", Analytics.wrap("Rift", onRift, World.session))
+	-- 주간 보스(2026-10-24 — sim/weekly.luau · 공방 design/weekboss.js): "view" → 보스마다 이번 주의 격파 · "enter" 보스 · 난이도 · 파티인가 → 그 보스의 문 앞(같은 맵 · 가로 60점 안)에서,
+	--  문이 열렸고(보스 퀘스트) · 레벨 · 이번 주 아직이면 <방>#wn번호 · #wh번호의 따로 된 방으로. party = 같은 맵의 파티원(그 사람도 들어갈 수 있을 때 · 넷까지)도 함께
+	local weekSerial = 0
+	Net.OnServer("Week", Analytics.wrap("Week", outside(function(player, action: any, id: any, mode: any, party: any)
+		local Weekly = require(lune.sim.weekly)
+		local s = sessions[player]
+		if not s or not s.hero then
+			return nil
+		end
+		local now = os.time()
+		local function reply(ok: boolean?, why: string?)
+			return { ok = ok == true, why = why, view = Weekly.view(s.hero.rift, now) }
+		end
+		if action == "view" then
+			return reply(true)
+		elseif action ~= "enter" then
+			return reply(nil, "모르는 일이다")
+		end
+		local b = Weekly.boss(id)
+		if not b or (mode ~= "normal" and mode ~= "hard") then
+			return reply(nil, "모르는 보스다")
+		elseif s.scene ~= b.door.scene or math.abs(s.hero.x - b.door.x) > 60 then
+			return reply(nil, "보스의 문 앞에서 들어갈 수 있다")
+		end
+		local why = Weekly.canEnter(s.hero, b, mode, now)
+		if why then
+			return reply(nil, why)
+		end
+		local going = { s }
+		if party == true then
+			for _, uid in Party.members(book, s.player.UserId) do
+				local ms = byUser[uid]
+				if ms and ms ~= s and ms.hero and ms.scene == s.scene and #going < Weekly.DATA.party and not Weekly.canEnter(ms.hero, b, mode, now) and not ms.hero.inCine then
+					table.insert(going, ms)
+				end
+			end
+			if #going < 2 then
+				return reply(nil, Weekly.DATA.words.partyNone)
+			end
+		end
+		weekSerial += 1
+		local key = Weekly.key(b, mode, weekSerial)
+		local room = roomOf(key)
+		local sc = SCENES.scenes[key]
+		for i, ms in going do
+			moveTo(ms, key, sc.spawn.x + (i - 1) * 12, sc.spawn.y)
+			Analytics.custom(ms, "WeeklyEnter", 1, b.id .. "_" .. mode)
+		end
+		toRoom(key, "WeekView", Weekly.roomView(room))
+		return reply(true)
+	end), World.session))
 	Net.OnServer("Sail", Analytics.wrap("Sail", onSail, World.session))
 	Net.OnServer("Market", Analytics.wrap("Market", onMarket, World.session))
 	Net.OnServer("Cash", Analytics.wrap("Cash", onCash, World.session))
+	Net.OnServer("Macro", function(player, action, a, b) -- 매크로 확인의 대답 · 「다시 확인」(2026-10-23 — modules/macroGuard.luau)
+		local s = sessions[player]
+		if not s or not s.hero then
+			return { result = "bad" }
+		end
+		return require(script.Parent.macroGuard).onRemote(s, action, a, b)
+	end)
 	-- 로블록스 결제: 산 것은 이 셈으로만 준다(server/lune/modules/cash.luau)
 	CashServer.start({
 		sessionOf = function(userId)

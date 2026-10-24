@@ -33,7 +33,7 @@ for _, def in D.list do
 		mains += 1
 	end
 	-- 이름표 = 지역 + m(메인) / s(부탁) + 차례
-	expect(string.match(def.id, "^r%d[ms]%d+$") ~= nil or (def.city and (string.match(def.id, "^cq%d%d$") ~= nil or string.match(def.id, "^dq%d%d$") ~= nil)) or (def.kind == "job" and def.id == "job" .. tostring(def.reward.job)), "이름표의 꼴 " .. def.id) -- cq = 2편의 흩어진 퀘스트(2026-10-16)
+	expect(string.match(def.id, "^r%d[ms]%d+$") ~= nil or (def.city and (string.match(def.id, "^cq%d%d$") ~= nil or string.match(def.id, "^dq%d%d$") ~= nil or string.match(def.id, "^wq%d%d$") ~= nil)) or (def.kind == "job" and def.id == "job" .. tostring(def.reward.job)), "이름표의 꼴 " .. def.id) -- cq = 2편의 흩어진 퀘스트(2026-10-16)
 	if def.after then
 		expect(Q.def(def.after) ~= nil, "앞 퀘스트가 있다 " .. def.id)
 	end
@@ -165,11 +165,32 @@ do
 	-- 첫머리의 퀘스트가 귀환 주문서를 준다(사용자: "완전 초반부 퀘스트에서 마을귀환주문서를 뿌려야합니다")
 	expect(Q.def("r1m1").reward.scrolls >= 1, "첫 퀘스트의 보상에 귀환 주문서가 있다")
 end
--- 2지역(2026-10-10): 첫 메인은 앞 지역의 메인이 끝나지 않아도 레벨만 되면 받는다 · 그 뒤는 앞 메인을 끝내야 열린다
+-- 2지역: 첫 메인은 도시의 「성문 앞의 견습 기사」(cq03 — 2026-10-24부터 메인)를 끝내야 열린다(전에는 레벨만 되면 — 사용자 2026-10-24 "메인 도시로 오면 메인스토리가 끝나잖아 이어지는 메인스토리 쭉 만들어") · 그 뒤는 앞 메인을 끝내야 열린다
 do
 	local b = {}
 	eq(Q.state(b, 29, "r2m1"), "locked", "2지역의 첫 메인은 Lv.30부터")
-	eq(Q.state(b, 30, "r2m1"), "open", "Lv.30이면 1지역의 메인을 다 하지 않아도 받는다")
+	eq(Q.state(b, 30, "r2m1"), "locked", "도시의 「성문 앞의 견습 기사」를 끝내기 전에는 받지 못한다")
+	eq(Q.def("cq03").kind, "main", "「성문 앞의 견습 기사」는 메인이다")
+	eq(Q.def("r2m1").after, "cq03", "2편의 첫 메인은 「성문 앞의 견습 기사」 뒤")
+	eq(Q.def("r3m1").after, "r2m9", "3편의 첫 메인은 2편의 마지막 메인 뒤")
+	eq(Q.def("r4m1").after, "r3m9", "4편의 첫 메인은 3편의 마지막 메인(분화구의 깃발) 뒤")
+	-- 메인은 보스와 싸우지 않는다(사용자 2026-10-24 "메인퀘스트에 보스가 연관되는게 아니야 메인퀘스트는 그냥 쭉 이야기가 진행되는거야") — 2~4편의 메인 스물일곱은 모두 할 수 있고, 보스를 잡는 할 일이 없다
+	for _, r in { "r2", "r3", "r4" } do
+		for k = 1, 9 do
+			local id = r .. "m" .. k
+			local def = Q.def(id)
+			expect(def ~= nil and def.playable, "메인을 할 수 있다 " .. id)
+			for _, st in (def and def.steps or {}) do
+				local mob = st.mob and COMBAT.mobs[st.mob]
+				expect(not (mob and mob.boss), "메인에 보스 싸움이 없다 " .. id .. " " .. tostring(st.mob))
+			end
+		end
+	end
+	eq(Q.def("r3m9").name, "분화구의 깃발", "3편의 끝 = 분화구의 깃발(↑ 찾기)")
+	eq(Q.def("r4m8").name, "열린 성문", "4편 여덟째 = 열린 성문(↑ 빗장 풀기)")
+	eq(Q.def("r4m9").name, "봉인의 문", "4편 아홉째 = 봉인의 문(↑ 살피기)")
+	b.cq03 = { done = true, c = {} }
+	eq(Q.state(b, 30, "r2m1"), "open", "「성문 앞의 견습 기사」를 끝내면 Lv.30에 받는다")
 	eq(Q.state(b, 40, "r2m2"), "locked", "2지역도 앞 메인을 끝내야 다음이 열린다")
 	expect(Q.accept(b, 30, "r2m1"), "「수정 숲으로」를 받는다")
 	eq(Q.state(b, 30, "r2m1"), "ready", "할 일이 없는 메인은 받자마자 돌려줄 수 있다(하늬에게 말을 건다)")
@@ -177,7 +198,7 @@ do
 	eq(Q.def("r2m1").endNpc, "squire", "하늬에게 돌려준다")
 	expect(Q.complete(b, "r2m1") ~= nil, "돌려준다")
 	eq(Q.state(b, 31, "r2m2"), "open", "다음 메인이 열린다")
-	eq(Q.state(b, 60, "r2m7"), "locked", "보스가 없는 메인은 받을 수 없다")
+	eq(Q.state(b, 60, "r2m7"), "locked", "앞 메인을 끝내지 않은 메인은 받을 수 없다")
 end
 -- 주민은 제가 선 지역의 퀘스트만 준다(2026-10-10): 여러 맵에 서는 샛별은 1지역에서는 「마을 밖의 그림자」를, 3지역에서는 「땅속으로」를 준다 — 돌려받는 것은 어디서든
 do
@@ -186,7 +207,7 @@ do
 		return table.find(list, id) ~= nil
 	end
 	for _, def in D.list do
-		expect(def.region == string.sub(def.id, 1, 2) or def.kind == "job" or (def.city and (def.region == false or def.region == "r1" or def.region == "r2")), "퀘스트의 지역 " .. def.id) -- 2편의 퀘스트: 도시(false) · 반달 나루(r2)
+		expect(def.region == string.sub(def.id, 1, 2) or def.kind == "job" or (def.city and (def.region == false or def.region == "r1" or def.region == "r2" or (string.match(def.id, "^wq") ~= nil and (def.region == "r3" or def.region == "r4")))), "퀘스트의 지역 " .. def.id) -- 2편의 퀘스트: 도시(false) · 반달 나루(r2) · 주간 보스의 퀘스트(wq — 주는 사람이 선 지역)
 	end
 	for key, scene in SCENES.scenes do
 		expect(scene.region == false or scene.region == "r1" or scene.region == "r2" or scene.region == "r3" or scene.region == "r4", "장면의 지역 " .. key)
@@ -194,6 +215,7 @@ do
 	eq(SCENES.scenes.town.region, "r1", "마을은 1지역")
 	eq(SCENES.scenes.port.region, "r3", "등불 포구는 3지역의 들머리")
 	b.r1m1 = { done = true, c = {} } -- (줄의 앞의 것 — 첫 기술 — 을 끝냈다)
+	b.r2m9 = { done = true, c = {} } -- (3편의 첫 메인은 2편의 마지막 메인 뒤 — 2026-10-24)
 	expect(has(Q.atNpc(b, 60, "guide", "r1").offer, "r1m2"), "1지역의 샛별은 마을 밖의 그림자를 준다")
 	expect(not has(Q.atNpc(b, 60, "guide", "r3").offer, "r1m2"), "3지역의 샛별은 1지역의 퀘스트를 주지 않는다")
 	expect(has(Q.atNpc(b, 60, "guide", "r3").offer, "r3m1"), "3지역의 샛별은 땅속으로를 준다")
@@ -333,7 +355,7 @@ expect(math.abs(hits / tries * 100 - def3.steps[1].pct) < 2, ("모으는 물건�
 -- (2026-10-15부터 메인 줄에는 같은 졸개를 잡는 퀘스트가 둘 있지 않다 — 위의 「줄에서 두 번 잡지 않는다」)
 
 -- ---- 5) 그만두기 · 하는 중인 것의 차례 ----
-local b4 = {}
+local b4 = { cq03 = { done = true, c = {} } } -- (2편의 첫 메인은 「성문 앞의 견습 기사」 뒤 — 2026-10-24)
 local side2 -- 2지역의 첫 부탁(줄을 아직 짜지 않은 지역 — 메인끼리, 부탁끼리 차례로 열린다)
 for _, def in D.list do
 	if def.kind == "side" and def.playable and def.region == "r2" and not side2 then

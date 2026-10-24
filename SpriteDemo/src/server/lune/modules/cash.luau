@@ -124,6 +124,35 @@ function CashServer.syncCoupons(acct): boolean
 	return changed
 end
 
+-- 레벨 순위 1위 선물(2026-10-25 사용자: "사슴 라이딩인데 하얀색+황금색으로 된 사슴라이딩하나 만들자 만렙 축하선물로줄거야" → 바로 "랭킹 1등으로 한사람만주는거야 백금사슴"):
+--  탈것 가운데 free = "max"인 것(백금 사슴)을 레벨 순위 1위 한 사람에게만 — 처음으로 Lv.150에 오른 캐릭터(세계 기록 firstMax — 순위판 1위에 고정된 그 캐릭터)로 게임에 있는 계정.
+--  (2026-10-24 기록 = 강타) · 기록이 아직 없는 서버에서는 처음 만렙이 적히는 순간 그 사람이 받는다. world.luau가 1초마다 부른다.
+--  넣었으면 곧바로 저장하고 화면에 알린다(CashGot — 「레벨 순위 1위 선물」). 고른 탈것이 없으면 그것을 고른다. 넣었으면 그 탈것의 이름표, 아니면 nil
+local Rank = require(lune.sim.rank)
+function CashServer.maxGift(s): string?
+	if not s.hero or not s.cid or not s.acct or not s.loaded or s.guest then
+		return nil
+	end
+	local rec = require(script.Parent.firstMax).get()
+	if not rec or rec.key ~= Rank.charKey(s.player.UserId, s.cid) then
+		return nil -- 1위(처음 만렙)의 캐릭터가 아니다
+	end
+	local c = s.acct.bm
+	for id, def in Cash.MOUNT do
+		if def.free == "max" and not c.mounts[id] then
+			c.mounts[id] = true
+			c.mount = c.mount or id
+			s.dirty = true
+			if W then
+				W.saveNow(s)
+				W.notify(s, id)
+			end
+			return id
+		end
+	end
+	return nil
+end
+
 -- 쿠폰 기록을 지운다(관리자 — 2026-10-21 사용자: "쿠폰 기록을 초기화해줘 쿠폰등록하는것부터 영상을찍어야해"): 쓴 쿠폰을 모두 잊고 쿠폰으로만 받는 펫 · 탈것(free)을 뺀다
 --  (꺼내 둔 펫이면 넣고 · 고른 탈것이면 고르지 않은 것으로 — 타고 있었으면 내린다: 탄 동안인지는 서버의 s.riding이 bm.mount를 본다).
 --  쿠폰을 처음 넣기 전의 계정으로 — 돌려주는 것: 지운 쿠폰의 수 · 뺀 펫 · 탈것의 수
@@ -241,20 +270,50 @@ local function keepPrices()
 end
 
 -- 게임 패스를 가졌는가(들어올 때 · 산 순간 — 로블록스가 산 기록을 주지 않으니 물어서 기억한다)
+--  「가졌다」는 그 접속 내내 기억한다. 「안 가졌다」는 RECHECK초가 지나면 다시 묻는다(2026-10-24 사용자: "게임 밖에서 로블록스 측에서 패스결제하면 게임에서 패스 구매한걸로 적용이 안된다" —
+--  전에는 들어올 때 한 번 물은 「안 가졌다」를 접속이 끝날 때까지 기억해, 게임 안에 있는 동안 로블록스 웹의 게임 페이지에서 산 패스는 다시 들어오기 전까지 적용되지 않았다.
+--  로블록스의 그 함수도 「안 가졌다」는 잠깐만 기억한다고 한다 — DevForum의 보고, 공식 문서에는 적혀 있지 않다)
+CashServer.RECHECK = 30
 function CashServer.owns(s, key: string): boolean
 	local p = Cash.product(key)
 	if not p or p.kind ~= "pass" or not (typeof(p.rid) == "number" and p.rid > 0) then
 		return false
 	end
 	s.passes = s.passes or {}
-	if s.passes[key] == nil then
-		local ok, has = pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, s.player.UserId, p.rid)
-		if not ok then
-			return false -- 물어보지 못했다 — 다음에 다시
-		end
-		s.passes[key] = has == true
+	s.passAsked = s.passAsked or {}
+	if s.passes[key] == true then
+		return true
 	end
+	local now = os.clock()
+	if s.passes[key] == false and now - (s.passAsked[key] or -math.huge) < CashServer.RECHECK then
+		return false
+	end
+	s.passAsked[key] = now
+	local ok, has = pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, s.player.UserId, p.rid)
+	if not ok then
+		return s.passes[key] == true -- 물어보지 못했다 — 다음에 다시
+	end
+	s.passes[key] = has == true
 	return s.passes[key]
+end
+
+-- 가지지 않았던 패스를 다시 물어, 새로 가진 것이 있으면 효과를 얹고 알린다(「구매가 적용되었다」 · 버프 줄의 「영구」). 새로 가진 패스의 목록
+function CashServer.recheck(s): { string }
+	if not s or not s.hero or s.guest then
+		return {}
+	end
+	local before = table.clone(s.passes or {})
+	CashServer.applyPasses(s)
+	local got = {}
+	for k, v in s.passes or {} do
+		if v == true and before[k] ~= true then
+			table.insert(got, k)
+			if W then
+				W.notify(s, k)
+			end
+		end
+	end
+	return got
 end
 
 -- 영구 게임 패스의 효과를 그 사람의 캐릭터에 얹는다(2026-10-22 — 경험치 1.25배 · 드롭률 1.25배 패스: 들어설 때 · 산 순간). 바뀌었으면 true
@@ -287,6 +346,21 @@ end
 function CashServer.start(hooks)
 	W = hooks
 	keepPrices() -- 상품의 값을 뒤에서 받아 둔다(상점에 들어갈 때 기다리지 않게 — 2026-10-21)
+	-- 게임 밖(로블록스 웹)에서 산 게임 패스(2026-10-24): RECHECK초마다 게임에 있는 사람의 가지지 않은 패스를 다시 묻는다
+	task.spawn(function()
+		while true do
+			task.wait(CashServer.RECHECK)
+			local ok, list = pcall(function()
+				return Players:GetPlayers()
+			end)
+			for _, pl in (if ok and typeof(list) == "table" then list else {}) do
+				local s = W.sessionOf(pl.UserId)
+				if s then
+					pcall(CashServer.recheck, s)
+				end
+			end
+		end
+	end)
 	pcall(function()
 		MarketplaceService.ProcessReceipt = CashServer.processReceipt
 	end)

@@ -36,7 +36,29 @@ function BossView.init(root: Frame)
 	BossView.barFx = HpBar.attach(BossView.bar, B.w, B.h) -- 닳은 자리가 밝게 남았다 줄어든다 · 번쩍임(사용자 2026-10-13: "몬스터 체력바도  유저 체력바처럼 고도화 되어야합니다.")
 	BossView.hpText = Ui.text(box, "", B.pad, B.barY + math.floor((B.h - M.small) / 2), B.w - B.pad * 2, { align = "center", outline = true, z = 6 })
 	BossView.pat = Ui.text(box, "", 0, B.patY, B.w, { font = "body", color = PINK, align = "center", outline = true })
+	-- 주간 보스의 방(2026-10-24): 이름 줄의 오른쪽 끝에 「노말 · 14:59」(난이도의 색 · 남은 시간). 그 밖의 방에서는 비어 있다
+	BossView.week = Ui.text(box, "", 0, Layout.WEEKLY.timeY, B.w, { align = "right", color = C.dim, outline = true })
 	BossView.shownName, BossView.shownHp, BossView.shownPat = nil, nil, nil
+end
+
+-- 주간 보스의 방의 상태(서버의 WeekView · 방에 들어설 때의 room.weekly — sim/weekly.luau의 roomView): 남은 시간을 받은 뒤로 흐르게 한다. nil = 주간의 방이 아니다
+function BossView.setWeekly(view)
+	BossView.weekly = view
+	BossView.weeklyAt = os.clock()
+	BossView.shownWeek = nil
+	if BossView.week and not view then
+		BossView.week:set("")
+	end
+end
+local function weekText(): string?
+	local v = BossView.weekly
+	if not v then
+		return nil
+	end
+	local W = require(ReplicatedStorage.shared.lune.sim.weekly).DATA
+	local mode = W.modes[v.mode]
+	local left = if v.state == "fight" then math.max(0, (v.left or 0) - (os.clock() - (BossView.weeklyAt or os.clock()))) else 0
+	return (if mode then mode.name else "") .. " · " .. string.format("%d:%02d", math.floor(left / 60), math.floor(left % 60))
 end
 
 -- 체력 글: "지금 / 최대"(칸에 안 들어가면 짧게 — shared/lune/ui/format.luau의 hp)
@@ -248,6 +270,17 @@ function BossView:update(dt: number)
 		if BossView.shownPat ~= shownPat then
 			BossView.shownPat = shownPat
 			BossView.pat:set(shownPat)
+		end
+		local wt = weekText()
+		if BossView.week and BossView.shownWeek ~= wt then
+			BossView.shownWeek = wt
+			BossView.week:set(wt or "")
+			local v = BossView.weekly
+			if v and v.mode == "hard" then
+				BossView.week:color(Color3.fromRGB(217, 48, 107)) -- 하드의 색(design/weekboss.js의 modes)
+			else
+				BossView.week:color(Color3.fromRGB(47, 127, 168))
+			end
 		end
 		BossView.barFx:step(dt)
 	else

@@ -89,7 +89,7 @@ function Others:setWho(roster)
 			end
 			o.rv:setPet(w.pet)
 			o.rv:setRide(w.ride)
-			o.sprite:setLook(w.look) -- 그 사람의 무기 · 로브 색(염색 — 2026-10-22)
+			o.sprite:setLook({ point = w.look and w.look.point, robe = w.look and w.look.robe, skin = w.wskin or nil }) -- 그 사람의 무기 · 로브 색(염색 — 2026-10-22) · 캐시 무기(2026-10-23)
 			if o.name ~= w.name or o.level ~= w.level then
 				o.name, o.level = w.name, w.level
 				o.tag:SetText(Others.tagText(w.level, w.name))

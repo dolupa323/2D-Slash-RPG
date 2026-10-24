@@ -47,7 +47,7 @@ end
 -- 그 아이템의 아이콘 이름
 function ItemCell.icon(it): string
 	if it.ride then
-		return "ride_" .. it.ride -- 펫 · 탈것(가방의 캐시 탭 — 2026-10-21)
+		return if it.kind == "wskin" then it.ride else "ride_" .. it.ride -- 펫 · 탈것(가방의 캐시 탭 — 2026-10-21) · 캐시 무기는 제 이름의 아이콘(2026-10-23)
 	end
 	if it.item then
 		local g = Items.goods(it.item)

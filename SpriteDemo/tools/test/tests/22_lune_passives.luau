@@ -246,7 +246,7 @@ do
 	local fx = PASS.ax_stance.fx
 	near(Passives.cut(a, false), 1 - fx.cut, 1e-6, "굳센 자세: 받는 피해 -8%")
 	near(Passives.cut(a, true), 1 - fx.cutCast, 1e-6, "기술을 쓰는 동안에는 -20%")
-	local s = hero("salamander", { sl_tough = 10, sl_heat = 10 })
+	local s = hero("salamander", { sl_tough = 5, sl_heat = 10 }) -- (달궈진 몸 마스터 10 → 5 — 2026-10-25)
 	eq(Passives.cut(s, false), 1, "달아오르지 않았으면 그대로")
 	s.kit.heat = 80
 	near(Passives.cut(s, false), 1 - PASS.sl_tough.fx.cutHot, 1e-6, "달궈진 몸: 달아오름 동안 -20%")

@@ -48,6 +48,8 @@ local acceptBtn, declineBtn
 local lines: { string } = {}
 local onEnd: (() -> ())? = nil
 local endHint: string? = nil
+-- 묻는 말(2026-10-23 — 뱃사공 · 선장 · 승강장 일꾼: "갈건지 말건지 … 물어봐야해"): 마지막 장에 「탑승」(okText) · 「거절」 단추 · 그 장에서는 ↑ · 스페이스 · 판으로 하지 않는다(단추만)
+local askMode = false
 local started = 0 -- 지금 말이 나오기 시작한 때(os.clock)
 local fitted: { string } = {} -- 지금 말을 폭에 맞춰 바꾼 줄들
 local total = 0 -- 지금 말의 글자 수
@@ -82,6 +84,7 @@ function Talk.init()
 	panel = Ui.panel(box, 0, 0, 1, 1)
 	local hit = Ui.hit(box) -- 판 아무 데나 누르면 다음(스마트폰) — 단추는 이 위에 놓는다
 	hit.Name = "Next"
+	hit.ZIndex = 0 -- (2026-10-23 사용자 "미션을 거절 눌렀는데 강제 수락되는 문제": 이 판이 9로 「수락 · 거절」 단추(1)보다 위에 있어 「거절」을 누르면 이 판이 받아 「다음」 = 수락이 됐다 · 단추 · 고르는 줄보다 아래로)
 	hit.Activated:Connect(function()
 		if Talk.npc and Talk.npc ~= Talk.CINE then -- 장면의 말은 장면이 넘긴다(화면 위의 누르는 판 — cineView.luau)
 			Talk.next(Talk.npc)
@@ -253,7 +256,7 @@ end
 local function paintFoot()
 	local last = Talk.index >= #lines
 	local done = full()
-	local offer = done and last and endHint == "수락"
+	local offer = done and last and (endHint == "수락" or askMode)
 	acceptBtn.frame.Visible = offer
 	declineBtn.frame.Visible = offer
 	hintStr = if menuItems then "고르기" elseif Talk.npc == Talk.CINE then "다음" elseif last and endHint then endHint elseif last then "닫기" else "다음" -- 장면의 말은 늘 「다음」(장면이 이어진다)
@@ -324,7 +327,8 @@ function Talk.place()
 end
 
 -- 말을 시작한다. questName = 이름표 뒤의 퀘스트 이름 · finish = 마지막 말 뒤에 일어날 일 · finishHint = 그 일의 이름(「수락」이면 「수락 · 거절」 단추, 「완료」면 「↑ 완료」)
-function Talk.start(npc, list: { string }, questName: string?, finish: (() -> ())?, finishHint: string?)
+--  opts.ask = 묻는 말(마지막 장에 「finishHint」 · 「거절」 단추 — 단추를 눌러야 finish)
+function Talk.start(npc, list: { string }, questName: string?, finish: (() -> ())?, finishHint: string?, opts: { ask: boolean? }?)
 	-- 고르는 말이 떠 있던 중에 다른 말(장면 · 이야기)이 오면 고르는 말을 걷는다 — 남아 있으면 말이 비고 다음 ↑가 옛 고르기를 했다(2026-10-18 검토)
 	if menuItems then
 		menuItems, menuPick = nil, nil
@@ -332,6 +336,8 @@ function Talk.start(npc, list: { string }, questName: string?, finish: (() -> ()
 	end
 	Talk.npc, Talk.index = npc, 1
 	lines, onEnd, endHint = list, finish, finishHint
+	askMode = opts ~= nil and opts.ask == true and finish ~= nil
+	acceptBtn:setText(if askMode then finishHint or "" else WORDS.accept or "수락")
 	baseName = npc.name or npc.id or ""
 	nameStr = baseName
 	nameText:set(nameStr)
@@ -371,6 +377,7 @@ function Talk.menu(npc, items: { any }, onPick: (number) -> ())
 	menuItems, menuPick, menuSel = list, onPick, 1
 	Talk.npc, Talk.index = npc, 1
 	lines, onEnd, endHint = { "" }, nil, nil
+	askMode = false
 	baseName = npc.name or npc.id or ""
 	nameStr = baseName
 	nameText:set(nameStr)
@@ -405,7 +412,8 @@ function Talk.with(npc): boolean
 end
 
 -- 다음 말로: 나오는 중이면 그 말을 한 번에 다 보이고, 다 나왔으면 다음 말(마지막 말 뒤에는 그 일 — 수락 · 완료). 말하는 중이 아니면 그 주민의 평소 말을 시작한다. 대화가 끝났으면 false
-function Talk.next(npc): boolean
+--  force = 「수락」 · 「탑승」 단추를 눌렀다(묻는 말의 마지막 장은 단추로만 넘어간다)
+function Talk.next(npc, force: boolean?): boolean
 	if menuItems and Talk.npc == npc then -- 고르는 말: 고른 줄의 일을 한다(그 일이 새 말을 시작한다)
 		local pick, i = menuPick, menuSel
 		Talk.close()
@@ -424,6 +432,9 @@ function Talk.next(npc): boolean
 		return true
 	end
 	if Talk.index >= #lines then
+		if askMode and not force then
+			return true -- 묻는 장: ↑ · 스페이스 · 판으로는 타지 않는다(「탑승」 단추 · X · Esc · 「거절」)
+		end
 		local finish = onEnd
 		Talk.close()
 		if Talk.onFinish then
@@ -442,7 +453,7 @@ end
 -- 「수락」 단추(↑ · 스페이스와 같다)
 function Talk.accept()
 	if Talk.npc then
-		Talk.next(Talk.npc)
+		Talk.next(Talk.npc, true)
 	end
 end
 
@@ -462,6 +473,7 @@ end
 function Talk.close()
 	Talk.npc, Talk.index = nil, 0
 	lines, onEnd, endHint = {}, nil, nil
+	askMode = false
 	if menuItems then
 		menuItems, menuPick = nil, nil
 		if menuBar then

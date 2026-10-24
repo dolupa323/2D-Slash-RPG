@@ -1,0 +1,43 @@
+-- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/export_lune_game.mjs).
+-- 매크로 확인(js/lune/design/macro.js · 2026-10-23 사용자 "현재 게임에서 매크로 유저들이 많아 어떻게 잡을지 해결해봐"). 언제 띄우나 · 의심 · 문제 · 놓쳤을 때 · 화면의 글 — 셈은 shared/lune/sim/macro.luau
+return {
+	hunt = { window = 300, kills = 6 },
+	rest = 900,
+	first = 300,
+	gap = {
+		low = { 900, 1500 },
+		mid = { 480, 720 },
+		high = { 180, 300 },
+	},
+	afterPass = 900,
+	suspect = {
+		minGap = 1,
+		min = 30,
+		keep = 60,
+		cv = { high = 0.02, mid = 0.05 },
+		still = { window = 600, cells = 3, kills = 30, cell = 32 },
+		long = 3600,
+	},
+	time = 60,
+	tries = 3,
+	pick = 3,
+	cells = 9,
+	pool = { "piglet", "crab", "bat", "helm", "shroom", "puff", "crow", "snail", "frog", "spider", "fox", "quill", "censer", "bell", "jelly", "mimic" },
+	stop = { 0, 600, 3600, 21600 },
+	forget = 86400,
+	look = {
+		w = 252,
+		pad = 12,
+		cell = 44,
+		gap = 5,
+		pic = 38,
+		title = 18,
+		ask = 18,
+		mid = 10,
+		info = 18,
+		btnW = 96,
+		top = 92,
+		stop = { w = 200, h = 34, y = 54 },
+	},
+	words = { title = "매크로 확인", ask = "위의 몬스터 셋을 아래에서 모두 눌러 주세요", left = "남은 시간 {n}초", tries = "남은 기회 {n}번", ok = "확인", reset = "처음부터", picked = "{n} / 3", pass = "확인되었습니다", wrong = "맞지 않았습니다", fail = "확인하지 못했습니다", stop = "사냥 보상 멈춤", stopHint = "눌러서 다시 확인", stopWait = "{m}분 뒤에 다시 확인", stopNote = "사냥 보상(경험치 · 달돈 · 떨어지는 것 · 퀘스트 처치 수)이 멈췄습니다" },
+}

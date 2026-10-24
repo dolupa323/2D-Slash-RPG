@@ -63,6 +63,11 @@ function HallStones.enter(scene, parent: Instance)
 	boards, nextFetch, placedKey = nil, 0, ""
 end
 
+-- 곧 다시 받는다(만렙 최초 달성 — 레벨 판의 1위가 바뀌었다, 2026-10-24)
+function HallStones.soon()
+	nextFetch = 0
+end
+
 function HallStones.leave()
 	gen += 1
 	if layer then

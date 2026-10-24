@@ -553,7 +553,7 @@ do
 	-- 사출기의 타는 사출기를 다시 부르지 않는다
 	eq(#strike(roomE, hE, "sl_punch", 1, nil).hits, 2, "제 타 하나 + 불티 하나뿐")
 
-	-- 뜨거운 피: 초마다 최대 체력의 0.5% · 달아오름 동안 걸음 +10%
+	-- 뜨거운 피: 초마다 최대 체력의 regen%(2026-10-23 0.5 → 0.3 — 피흡 너프) · 달아오름 동안 걸음 +10%
 	local hb = Hero.new(8, "salamander")
 	hb.level = 30
 	hb.skills.sl_blood, hb.skills.sl_heat = 10, 10
@@ -564,7 +564,7 @@ do
 		local _, healed = Kit.tick(hb, 0.1)
 		healedSum += healed
 	end
-	near(healedSum, hb.maxHp * pas.regen / 100 * 10, 0.05, "10초에 최대 체력의 5%")
+	near(healedSum + hb.kit.regen, hb.maxHp * pas.regen / 100 * 10, 0.05, ("10초에 최대 체력의 %s%%(찬 것 + 아직 1 못 채운 나머지)"):format(tostring(pas.regen * 10)))
 	eq(hb.hp, hp0 + healedSum, "체력이 찬다")
 	hb.hp = hb.maxHp
 	eq(select(2, Kit.tick(hb, 5)), 0, "가득하면 차지 않는다")

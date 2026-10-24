@@ -29,7 +29,7 @@ end
 
 -- 장면의 이름표 → (지역 이름, 맵 이름). 지역 이름이 맵 이름과 같으면(은달 항구) 지역 줄은 비운다
 function MapName.titleOf(key: string): (string, string)
-	local base = string.match(key, "^(.-)#%d+$") or key
+	local base = string.match(key, "^(.-)#w?[nh]?%d+$") or key
 	local sc = SCENES.scenes[base]
 	local mapName = if sc then sc.name or "" else ""
 	local rid = WM.nodeOf(base)

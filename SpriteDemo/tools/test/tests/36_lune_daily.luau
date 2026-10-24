@@ -469,3 +469,65 @@ do
 	expect(t2.n == DD.kills and t2.have == 3, "덜 잡은 것은 잡은 수 그대로")
 	expect(Daily.turnIn(old, "r1", 1, now) ~= nil, "바로 낼 수 있다")
 end
+
+-- ---- 기도 탑(2026-10-25 사용자 "대도시에 일일퀘스트 할수있는 기도 탑같은거 만들고 거기에 초록색 아이콘으로 떠서 일일퀘스트 받을수있게 각 레벨에 맞는 경험치주고 달가루 조금주는식으로 하루에 3개 할수있게") ----
+do
+	local T = DD.boards.tower
+	expect(T ~= nil and T.scene == "ct" and T.npc == "tower", "은달 항구(ct)에 기도 탑(tower)")
+	eq(T.perDay, 3, "하루 셋")
+	expect(T.green == true and T.dustEach == true, "초록 표시 · 의뢰마다 달가루")
+	eq(Daily.regionAt("ct", "tower"), "tower", "기도 탑 앞에서 ↑ = 기도 탑의 의뢰")
+	local placed = false
+	for _, n in SCENES.scenes.ct.npcs do
+		placed = placed or (n.id == "tower" and n.stone == true)
+	end
+	expect(placed, "은달 항구에 말 거는 자리(그림은 소품 — stone)가 있다")
+	expect(UI.questMark.daily ~= nil and KIT.parts[UI.questMark.daily] ~= nil and KIT.parts[UI.questMark.dailyDone] ~= nil, "초록 「!」 · 「?」 그림이 있다")
+	-- 모든 지역의 풀: 1지역부터 4지역까지
+	local regionsSeen = {}
+	for _, q in T.pool do
+		regionsSeen[string.sub(q.scene, 1, 2)] = true
+	end
+	expect(regionsSeen.r1 and regionsSeen.r2 and regionsSeen.r3 and regionsSeen.r4, "풀 = 모든 지역의 사냥터")
+	local h = Hero.new(1, "axion")
+	h.level = 29
+	expect(Daily.sync(h, "tower", NOW) == nil, "Lv.29에는 열리지 않는다(Lv.30부터)")
+	for _, L in { 30, 60, 100, 150 } do
+		h.level = L
+		h.daily = {}
+		local st = Daily.sync(h, "tower", NOW)
+		eq(st and #st.tasks, 3, ("Lv.%d: 의뢰 셋"):format(L))
+		local seen = {}
+		for _, t in st.tasks do
+			local q = Daily.entry("tower", t.scene, t.mob)
+			expect(q ~= nil and q.lv[1] <= L, ("Lv.%d: %s(Lv.%s~)는 갈 수 있는 사냥터"):format(L, t.mob, q and tostring(q.lv[1]) or "?"))
+			expect(not seen[t.scene .. t.mob], ("Lv.%d: 서로 다른 의뢰"):format(L))
+			seen[t.scene .. t.mob] = true
+		end
+	end
+	-- 보상: 의뢰마다 내 레벨의 경험치 + 달가루 조금 · 달돈 없음
+	h.level = 150
+	h.daily, h.money, h.dust = {}, 0, 0
+	local st = Daily.sync(h, "tower", NOW)
+	for i = 1, 3 do
+		expect(Daily.accept(h, "tower", i, NOW), "수락 " .. i)
+		st.tasks[i].have = st.tasks[i].n
+		local r = Daily.turnIn(h, "tower", i, NOW)
+		expect(r ~= nil and r.xp == T.pay.xp[150] and r.money == 0 and r.dust == T.pay.dust[150], ("의뢰 %d: 경험치 %s · 달가루 %s · 달돈 0"):format(i, tostring(r and r.xp), tostring(r and r.dust)))
+	end
+	eq(h.dust, T.pay.dust[150] * 3, "달가루는 의뢰마다(셋 = 세 번)")
+	eq(h.money, 0, "달돈은 없다")
+	expect(T.pay.xp[150] == DD.pay.xp[150], "경험치는 다른 게시판의 의뢰 하나와 같다(내 레벨 몬스터 30마리 치)")
+	local view = Daily.view(h, NOW)
+	expect(view.boards.tower and view.boards.tower.pay.each == true, "창에 「의뢰마다」 달가루")
+	-- 저장: 셋이 그대로
+	local back = Daily.unpack(Daily.pack(h.daily))
+	eq(back.tower and #back.tower.tasks, 3, "저장하고 불러도 셋")
+	-- 창: 셋 줄(다른 게시판은 둘)
+	local DW = req("Client/lune/ui/dailyWindow")
+	local _, h2 = DW.size("r1")
+	local _, h3 = DW.size("tower")
+	expect(h3 > h2, ("기도 탑 창은 한 줄 더 높다(%d > %d)"):format(h3, h2))
+	eq(DW.title("tower"), "기도 탑", "창의 제목")
+end
+

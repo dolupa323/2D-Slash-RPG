@@ -9,6 +9,7 @@ local Fx = require(script.Parent.Parent.fx)
 local Common = require(script.Parent.common)
 local COMBAT = require(script.Parent.Parent.data["combat.generated"])
 local poly, disc, oval, starPts, drawFist, drawBird = Fx.poly, Fx.disc, Fx.oval, Fx.starPts, Fx.drawFist, Fx.drawBird
+local line = Fx.line -- 화룡 승천의 뿔(2026-10-24)
 local dash, buff, flame = Common.dash, Common.buff, Common.flame
 local floor, sin, cos, min, max, abs, sqrt = math.floor, math.sin, math.cos, math.min, math.max, math.abs, math.sqrt
 local function R(v: number): number
@@ -301,6 +302,98 @@ local function dragonEnd(g)
 	g.hitAt(x, y, 56, 60, 12, { lift = 260, kb = 120 })
 end
 
+-- 화룡 승천(4차 광역기 · 다시 쓰기 12초 · 맵 전체 — 2026-10-24 사용자 "무니, 리븐 광역기 만든것처럼 엑시온, 리퍼, 살라맨더 4차 스킬포인트 조정해서 그 빈포인트로 투자하는 완전 멋진 광역기만들자"):
+--  주먹을 내지르면(punch 4장) 불꽃 용이 주먹에서 뛰쳐나와 화면을 휘감아 난다 — 앞으로 화면 끝까지 → 위로 감아 돌아 뒤쪽 끝까지 → 하늘로 솟구친다(1.2초).
+--  몸 = 마디 스물넷(머리에서 꼬리로 작아지는 불덩이 · 어두운 테 · 밝은 등 · 등 가시) · 머리 = 큰 불덩이 + 벌린 턱 · 뿔 둘 · 흰 눈 · 지나간 자리에 불티.
+--  용의 머리가 지나가는 차례로 적마다 불꽃이 터진다. 판정은 쓰는 순간 한 번: 맵의 모든 적. 이름 · 모양 · 길은 제가 정한 것(화염 질주의 돌진 · 불새와 겹치지 않게 「하늘을 나는 용」으로)
+local WYRM_T, WYRM_SEG = 1.2, 24
+local WYRM_PATH = { { 10, -14 }, { 150, -40 }, { 300, -24 }, { 340, -84 }, { 180, -104 }, { -80, -76 }, { -290, -96 }, { -270, -170 }, { -90, -230 }, { 10, -340 } } -- (앞 · 위) 도트 — 앞 = 주먹 쪽
+local function wyrmAt(x0: number, y0: number, dir: number, u: number)
+	local n = #WYRM_PATH - 1
+	local f = math.clamp(u, 0, 1) * n
+	local i = math.min(n - 1, floor(f))
+	local t = f - i
+	local p0, p1, p2, p3 = WYRM_PATH[max(1, i)], WYRM_PATH[i + 1], WYRM_PATH[i + 2], WYRM_PATH[math.min(n + 1, i + 3)]
+	local function cr(a: number, b: number, c: number, d: number): number -- 캣멀롬 곡선(점을 지나는 부드러운 길)
+		return 0.5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (3 * b - a - 3 * c + d) * t * t * t)
+	end
+	return x0 + dir * cr(p0[1], p1[1], p2[1], p3[1]), y0 + cr(p0[2], p1[2], p2[2], p3[2])
+end
+local function drawWyrm(ctx, x0: number, y0: number, dir: number, u: number, tone)
+	for j = WYRM_SEG, 1, -1 do
+		local uj = u - j * 0.011
+		if uj > 0 then
+			local x, y = wyrmAt(x0, y0, dir, uj)
+			local r = max(2, floor(7 - j * 0.22))
+			disc(ctx, x, y, r + 1, tone.d)
+			disc(ctx, x, y, r, tone.n)
+			disc(ctx, x, y - 1, max(1, r - 2), tone.l)
+			if j % 3 == 0 then -- 등 가시
+				poly(ctx, { { x - 2, y - r }, { x + 2, y - r }, { x, y - r - 4 } }, tone.l)
+			end
+		end
+	end
+	local hx, hy = wyrmAt(x0, y0, dir, u)
+	local nx = wyrmAt(x0, y0, dir, min(1, u + 0.01))
+	local f = if nx >= hx then 1 else -1 -- 머리는 나아가는 쪽을 본다
+	disc(ctx, hx, hy, 9, tone.d)
+	disc(ctx, hx, hy, 8, tone.n)
+	disc(ctx, hx - f, hy - 2, 5, tone.l)
+	poly(ctx, { { hx + f * 4, hy - 3 }, { hx + f * 15, hy - 6 }, { hx + f * 6, hy } }, tone.n) -- 벌린 턱(위)
+	poly(ctx, { { hx + f * 4, hy + 2 }, { hx + f * 13, hy + 6 }, { hx + f * 5, hy + 5 } }, tone.d) -- 벌린 턱(아래)
+	line(ctx, hx - f * 2, hy - 7, hx - f * 9, hy - 15, tone.l, 2) -- 뿔
+	line(ctx, hx + f, hy - 8, hx - f * 4, hy - 17, tone.l, 2)
+	disc(ctx, hx + f * 2, hy - 3, 1, tone.w) -- 눈
+	disc(ctx, hx + f * 17, hy - 2, 3, tone.l) -- 입김
+	disc(ctx, hx + f * 21, hy - 3, 2, tone.w)
+end
+local function wyrm(g)
+	local x0, y0, dir, tone = g.fwd(10), g.y - 14, g.dir, g.tone
+	g.shake(3, 0.3)
+	local embers = {}
+	for i = 1, 44 do
+		embers[i] = { u = g.rnd(), dx = (g.rnd() - 0.5) * 10, dy = (g.rnd() - 0.5) * 10, c = if g.rnd() < 0.5 then tone.l else tone.n }
+	end
+	local life = WYRM_T + 0.5
+	g.fx.add(life, function(ctx, k)
+		local t = k * life
+		for _, e in embers do -- 지나간 자리의 불티(위로 떠오르며 꺼진다)
+			local age = t - e.u * WYRM_T
+			if age > 0 and age < 0.45 then
+				local ex, ey = wyrmAt(x0, y0, dir, e.u)
+				ctx:alpha(1 - age / 0.45)
+				ctx:style(e.c)
+				ctx:rect(R(ex + e.dx), R(ey + e.dy - age * 30), 2, 2)
+			end
+		end
+		ctx:alpha(if t < WYRM_T then 1 else max(0, (life - t) / 0.5))
+		drawWyrm(ctx, x0, y0, dir, t / WYRM_T, tone)
+		ctx:alpha(1)
+	end)
+	-- 판정은 여기 한 번: 맵의 모든 적 — 불꽃은 용의 머리가 그 적에게 가장 가까이 지나가는 때에
+	for _, m in g.mobs() do
+		g.hurt(m, 12, { stop = 0.08 })
+		local mx, my = m.x, m.y - (m.h or 16) / 2
+		local best, bu = math.huge, 0
+		for s = 0, 60 do
+			local px, py = wyrmAt(x0, y0, dir, s / 60)
+			local d = (px - mx) ^ 2 + ((py - my) * 0.5) ^ 2
+			if d < best then
+				best, bu = d, s / 60
+			end
+		end
+		g.after(bu * WYRM_T, function()
+			g.fx.pop(mx, my, tone, { r = 9, life = 0.2 })
+			g.fx.shards(mx, my, 7, tone, flame)
+			g.fx.ring(mx, my + (m.h or 16) / 2, 3, 18, tone, { squash = 0.35, life = 0.3 })
+		end)
+	end
+	g.after(WYRM_T * 0.78, function() -- 하늘로 솟구친다
+		g.invert(0.05)
+		g.shake(5, 0.3)
+	end)
+end
+
 local skills = {
 	{ id = "sl_beam", key = "Q", shot = 0.46, segs = { { clip = "wave", fps = 18, ev = { [7] = function(g)
 		local x, y, gy, dir, tone = g.fwd(12), g.y - 9, g.y, g.dir, g.tone -- 시트의 광선(182x16)을 주먹 높이에 그대로 깐다
@@ -333,34 +426,54 @@ local skills = {
 	end, [11] = slam } } } },
 }
 
--- 불꽃 돌진: 적에게 달려들며 친다 — 꺾인 불 자국 + 맞는 순간 별 모양 불티. 이어 누르면 세 번까지
-do
-	local segs = {}
-	for i = 0, 2 do
-		segs[i + 1] = { clip = "dash", loop = true, dur = 0.15, fps = 20, float = true, trail = true, needPress = i > 0, start = function(g)
-			local m, x0 = g.nearest(130, { front = i == 0 }), g.x
-			if not m then
-				g.move(260, 0.12)
-				return
-			end
-			g.face(sign(m.x - g.x, g.dir))
-			local tx = m.x - g.dir * 12
-			g.move(abs(tx - g.x) / 0.12, 0.12)
-			g.after(0.13, function()
-				g.fx.cut((x0 + g.x) / 2, g.y - 8, abs(g.x - x0) + 12, (i - 1) * 12, g.tone, { life = 0.3, th = 3 })
-				g.fx.pop(m.x, m.y - m.h - 8, g.tone, { r = 8 })
-				g.fx.shards(m.x, m.y - m.h - 8, 4, g.tone, flame)
-				g.hurt(m, 6, { stop = 0.04, kb = 40 })
-			end)
-		end }
+-- 불꽃 돌진(2차 이동기 — 2026-10-25 사용자 "샐래맨더도 불꽃돌진 일반이동기로 쿨타임달고 보스기 추가 … 액시온도 도약강타 일반 이동기로 바꾸고 앞으로 돌진하는스킬로 바꾸고 쿨타임달고 보스기 새로 만들어"): 피해는 없다(리븐 · 리퍼와 같게 — 마스터 5 · 다시 쓰기 5초 · 공중에서도).
+--  아주 짧은 순간이동을 steps번(0.03초마다 · 잔상) · 바닥에 남는 불티 줄 · 끝에서 작은 불꽃. 거리(모두 합친 것)는 스킬 레벨마다(공방 combat.js의 MOVECAST → moveCast.dist)
+local function fireRush(g)
+	local mc = COMBAT.moveCast and COMBAT.moveCast.sl_rush
+	local steps = if mc then mc.steps else 6
+	local total = if mc then mc.dist[math.clamp(g.sk("sl_rush"), 1, #mc.dist)] else 90
+	local tone = g.tone
+	for i = 0, steps - 1 do
+		g.after(i * 0.03, function()
+			local x0 = g.x
+			g.ghost()
+			g.teleport(g.fwd(total / steps))
+			g.fx.shards((x0 + g.x) / 2, g.y - 2, 2, tone, flameWith({ speed = 12, up = 30, life = 0.35 }))
+		end)
 	end
-	table.insert(skills, { id = "sl_rush", key = "S", shot = 0.2, segs = segs })
+	g.after(steps * 0.03, function()
+		g.fx.pop(g.fwd(6), g.y - 8, tone, { r = 6, life = 0.16 })
+		g.fx.shards(g.x, g.y - 8, 6, tone, flame)
+	end)
 end
+-- 작열권(2차 보스기 — 2026-10-25 사용자 "샐래맨더도 불꽃돌진 일반이동기로 쿨타임달고 보스기 추가 … 액시온도 도약강타 일반 이동기로 바꾸고 앞으로 돌진하는스킬로 바꾸고 쿨타임달고 보스기 새로 만들어"): 주먹을 크게 내질러(punch 6장) 앞의 적에 박고(한 번) · 0.12초 뒤 그 자리에서 불꽃이 X자로 터진다(한 번 더). 이름 · 모양 · 숫자는 제가 정한 것
+local function blast(g)
+	local x, y, dir, tone = g.fwd(26), g.y - 9, g.dir, g.tone
+	g.fx.add(0.18, function(ctx, k) -- 앞으로 뻗는 큰 불주먹
+		ctx:alpha(1 - k * 0.6)
+		drawFist(ctx, x - dir * 8 + dir * 10 * k, y, 6, dir, tone)
+		ctx:alpha(1)
+	end)
+	g.hit(0, 44, 28, 4, 4, { kb = 20, stop = 0.05 })
+	g.after(0.12, function()
+		for _, a in { 45, -45 } do
+			g.fx.cut(x, y, 34, a, tone, { th = 5, life = 0.25 })
+		end
+		g.fx.ring(x, y, 3, 22, tone, { squash = 1, back = false, life = 0.25 })
+		g.fx.shards(x, y, 10, tone, flameWith({ speed = 120 }))
+		g.hitAt(x, g.y, 24, 30, 6, { kb = 80, stop = 0.06 })
+		g.shake(1, 0.1)
+	end)
+end
+table.insert(skills, { id = "sl_blast", key = "S", shot = 0.6, segs = { { clip = "punch", fps = 22, ev = { [6] = blast } } } })
+table.insert(skills, { id = "sl_rush", key = "V", air = true, shot = 0.3, segs = { -- 불꽃 돌진(이동기 — 위 fireRush)
+	{ clip = "dash", loop = true, dur = 0.2, fps = 20, float = true, start = fireRush },
+} })
 
 local more = {
 	buff("sl_tempo", "1"),
 	{ id = "sl_vent", key = "Z", instant = true, shot = 0.16, cast = vent },
-	{ id = "sl_meteor", key = "E", shot = 1.3, segs = { { clip = "slam", fps = 20, ev = { [11] = function(g) -- 꼬리를 끄는 불덩이가 포물선으로 날아가 불바다를 남긴다
+	{ id = "sl_meteor", key = "E", shot = 1.0, segs = { { clip = "slam", from = 5, fps = 26, ev = { [11] = function(g) -- 꼬리를 끄는 불덩이가 포물선으로 날아가 불바다를 남긴다(선딜 0.55 → 0.23초 — 2026-10-25 사용자 "불덩이 던지기 선딜 줄이고": 5장부터 초당 26장)
 		local dir, tone = g.dir, g.tone
 		g.shot({
 			x = g.x,
@@ -432,14 +545,16 @@ local more = {
 		g.fx.ring(g.x, g.y - 9, 4, 20, g.tone, { squash = 0.9, back = false })
 		g.fx.shards(g.x, g.y - 9, 10, g.tone, flameWith({ speed = 90 }))
 	end },
-	{ id = "sl_tide", key = "R", ground = true, shot = 0.62, segs = { { clip = "wave", fps = 18, ev = { [7] = function(g) -- 계단처럼 솟았다 꺼지는 불 세모들이 양쪽으로 달려간다
-		local tone = g.tone
+	{ id = "sl_tide", key = "R", air = true, shot = 0.62, segs = { { clip = "wave", fps = 18, float = true, ev = { [7] = function(g) -- 계단처럼 솟았다 꺼지는 불 세모들이 양쪽으로 달려간다
+		-- 뛰는 중에도 쓴다 — 쓰는 동안 그 자리에 떠 있고 불길은 그 높이에서 나간다(2026-10-25 사용자 "점프해서 쓰면 그 점프한 위치에서 해일이 나가야지 다 떨어지고나서 나가면어떻게하라는거야" —
+		--  처음엔 떨어지며 쓰고 불길은 발밑 땅을 따라 굴렀다)
+		local tone, gy = g.tone, g.y
 		g.shake(1, 0.1)
-		g.fx.ring(g.x, g.y, 4, 30, tone)
+		g.fx.ring(g.x, gy, 4, 30, tone)
 		for _, s in { -1, 1 } do
 			g.shot({
 				x = g.x + s * 10,
-				y = g.y,
+				y = gy,
 				vx = s * 200,
 				life = 0.9,
 				w = 28,
@@ -528,6 +643,9 @@ local more = {
 			end,
 		})
 	end },
+	{ id = "sl_wyrm", key = "B", shot = 0.9, segs = { { clip = "punch", fps = 16, start = function(g) -- 화룡 승천(위 wyrm)
+		g.dim(0.5, 1.6)
+	end, ev = { [4] = wyrm } } } },
 	{ id = "sl_dragon", key = "G", shot = 0.88, segs = {
 		{ clip = "dash", fps = 16, loop = true, dur = 0.62, float = true, trail = true, start = function(g)
 			g.dim(0.4, 1.3)

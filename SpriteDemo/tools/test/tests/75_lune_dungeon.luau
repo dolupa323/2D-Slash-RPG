@@ -17,7 +17,38 @@ local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
 local DG = Rift.DUNGEON
 
 -- ① 자료
-eq(#DG.tiers, 1, "던전 하나(30~40 — 수정 거울숲)")
+eq(#DG.tiers, 2, "던전 둘(30~40 수정 거울숲 · 40~50 검은 거울숲 — 2026-10-24)")
+-- 둘째 던전(2026-10-24): 금서고(r2bh)의 문 · 한결의 큰 「!!」 · 그 구간 사냥터 넷이 몰려온다 · 나가는 문은 금서고로
+do
+	local t2 = Rift.tier("dg2")
+	expect(t2 ~= nil and Rift.isDungeon(t2), "dg2 = 던전")
+	eq(t2.name, "검은 거울숲", "둘째 던전의 이름")
+	eq(t2.lv, 40, "Lv.40부터")
+	eq(t2.lvMax, 50, "Lv.50까지")
+	eq(t2.door.scene, "r2bh", "문 = 금서고")
+	eq(t2.quest, "dq02", "퀘스트 「금서고의 검은 문」")
+	local q2 = Quests.def("dq02")
+	expect(q2 and q2.big and q2.giver == "hangyeol" and q2.scene == "r2bh", "한결이 주는 큰 「!!」 · 금서고에서 끝난다")
+	local s2 = SCENES.scenes.dg2
+	expect(s2 and s2.dungeon == "dg2" and s2.swarm == true, "장면 dg2(던전 · 몰려오기)")
+	eq(s2.portals[1].to, "r2bh", "나가는 문은 금서고로")
+	local door2 = nil
+	for _, p in SCENES.scenes.r2bh.portals do
+		if p.dungeon == "dg2" then
+			door2 = p
+		end
+	end
+	expect(door2 ~= nil and door2.done == "dq02", "금서고의 문은 그 퀘스트를 끝내야 열린다")
+	local kinds = {}
+	for _, m in s2.mobs do
+		kinds[m.kind] = true
+		eq(m.lv, t2.mobLv, "둘째 던전의 몬스터 레벨 " .. m.kind)
+	end
+	expect(kinds.fox and kinds.bud and kinds.quill and kinds.dshard, "여우 · 수정 봉오리 · 수정 고슴도치 · 검은 결정")
+	local r = Rift.new()
+	local now = 1760000000
+	expect(Rift.dungeonMark(r, "dg1", now) and not Rift.dungeonDone(r, "dg2", now), "던전마다 하루 한 번은 따로")
+end
 local t = Rift.tier("dg1")
 expect(t ~= nil and Rift.isDungeon(t), "dg1 = 던전")
 eq(t.name, "수정 거울숲", "이름")

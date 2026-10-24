@@ -109,6 +109,7 @@ L.CINE = D.cine -- 퀘스트 연출(장면 — 2026-10-15): 장의 이름 · 보
 L.DAILY = D.daily -- 일일 의뢰: 머리글(top) 아래 의뢰마다 한 칸(row — 맵의 이름 · 의뢰의 이름 · 오른쪽 단추 btnW · 진행 띠 barH), 가르는 줄 아래 보상 두 줄(payRow — 이름표 labelW)
 L.ATTEND = D.attend -- 출석(2026-10-15): 머리글(top) · 칸 cols x rows(cell · gap) · 가르는 줄 아래(lineY) 받을 것 한 줄(rowH) · 안내와 「받기」(btnW)
 L.DUNGEON = D.dungeon -- 던전 창(2026-10-21 — 수정 거울숲): 이름 · 오늘 · 레벨 · 글 · 완료 보상 · 안내 · [혼자 입장] [파티 입장] · 까닭(portalScale · portalLift = 던전의 문의 포탈 빛)
+L.WEEKLY = D.weekly -- 보스 창(2026-10-24 — 주간 보스): 이름 · 이번 주 · 글 · [노말] [하드] · 입장 레벨 · 격파 보상 · 안내 · [혼자 입장] [파티 입장] · 까닭(timeY = 보스의 방의 남은 시간 줄)
 L.RIFT = D.rift -- 수정 틈 토벌(2026-10-16): 머리글(top) 아래 단계마다 한 칸(row — 이름 · 「입장」 btnW · 몬스터 · 보상) · 아래 안내(footY)
 L.RIFT_HUD = D.riftHud -- 토벌 중 화면 위 가운데의 판(w x h · y)
 L.RIFT_END = D.riftEnd -- 토벌이 끝났을 때 가운데의 판(w · 줄 row · pad)
@@ -259,6 +260,35 @@ function L.equipBody(ratio: number): (number, number, number)
 	local rx = s + L.EQUIP.gap + L.EQUIP.textW + L.EQUIP.gap
 	local sheet = L.EQUIP.sheet
 	return rx + L.EQUIP.accCols * s, math.max(5 * (s + 2) - 2, 2 * s + 12 + sheet.top + #sheet.rows * sheet.row + 4), rx
+end
+
+-- 스마트폰 · 태블릿의 터치 단추 자리(2026-10-23 — 사용자 "모바일버전으로 아이패드로 플레이할때 불편하다고하네 방법을 찾아봐"):
+--  UI.touch의 자리는 게임 화면(384x216 도트)에 적혀 있다. 큰 화면(태블릿)에서는 게임 화면이 커지는 만큼 단추도 커진다(10.2인치 iPad에서 이동 패드 지름 약 180점).
+--  → 이동 패드의 지름이 TOUCH_PAD_MAX(화면의 점 — Roblox 기본 점프 단추가 큰 화면에서 120점)를 넘지 않게 k배로 줄이고, 단추마다 가까운 구석(왼쪽 · 오른쪽 / 위 · 아래)에서의
+--  거리도 k배로 해 구석 쪽으로 모은다(위 구석 = 화면 위 4분의 1에 있는 것만). 폰은 패드가 그보다 작아 k = 1(그대로). 가장 작은 단추도 TOUCH_MIN점(Apple의 누르는 칸 44pt) 밑으로는 줄이지 않는다. [제가 정한 것 — 144]
+L.TOUCH_PAD_MAX = 144
+L.TOUCH_MIN = 44
+function L.touchK(scale: number, spots): number
+	local padW, least = 64, math.huge
+	for _, t in spots do
+		if t.kind == "pad" then
+			padW = t.w
+		end
+		if t.kind == "pad" or t.slot or t.act then
+			least = math.min(least, t.w, t.h) -- 누르는 단추만(hud는 자리뿐)
+		end
+	end
+	local k = L.TOUCH_PAD_MAX / math.max(1, padW * scale)
+	if least < math.huge then
+		k = math.max(k, L.TOUCH_MIN / math.max(1, least * scale))
+	end
+	return math.min(1, k)
+end
+-- 단추 t의 자리(게임 도트 — x, y, w, h) · viewW · viewH = 게임 화면(384x216)
+function L.touchRect(t, k: number, viewW: number, viewH: number): (number, number, number, number)
+	local x = if t.x + t.w / 2 < viewW / 2 then t.x * k else viewW - (viewW - t.x) * k
+	local y = if t.y + t.h / 2 < viewH / 4 then t.y * k else viewH - (viewH - t.y) * k -- 위 구석에는 화면 위 4분의 1의 것(메뉴)만 — 스킬 칸의 무리가 위아래로 갈라지지 않게
+	return x, y, t.w * k, t.h * k
 end
 
 return L

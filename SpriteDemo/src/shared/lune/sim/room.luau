@@ -17,6 +17,7 @@ local Lines = require(script.Parent.lines) -- 타수 나누기(한 타를 여러
 local Quests = require(script.Parent.quests) -- 스토리 보스: 그 퀘스트를 하는 사람이 있을 때만 선다
 local BossPat = require(script.Parent.bosspat) -- 스토리 보스: 표시된 자리 · 도약 · 물결의 자리와 시간(화면과 같은 셈)
 local Rift = require(script.Parent.rift) -- 수정 틈 토벌(물결로 몰려오는 반복 던전 — 2026-10-16)
+local Weekly = require(script.Parent.weekly) -- 주간 보스(노말 · 하드 — 2026-10-24): 방 이름 <방>#wn번호 · #wh번호
 local Cash = require(script.Parent.cash) -- 드롭률 1.25배 패스(영구 게임 패스 — 2026-10-22)
 local RULES = COMBAT.rules
 local FE = COMBAT.fieldElite -- 사냥터 정예(2026-10-18 — 공방 combat.js FIELD_ELITE)
@@ -143,14 +144,21 @@ function Room.new(key: string, scene, rng)
 	end
 	-- 스토리 보스(장면의 bosses — 공방 design/bosses.js의 STORYBOSS): 졸개의 목록 끝에 자리를 잡아 둔다(번호가 바뀌지 않게). 처음에는 없다(state "gone" · away) —
 	--  그 퀘스트를 하는 사람이 방에 있을 때만 나타난다(Room:stepPresence). 부르는 졸개(호령)의 자리도 미리 잡아 둔다(away — 불릴 때 나온다)
-	local function hpOf(lv: number, kind): number
-		return math.max(1, math.floor(N.mobHp(lv) * kind.hp * RULES.dmgScale * (1 + RULES.targetBonus / 100) + 0.5))
+	local function hpOf(lv: number, kind, mul: number?): number
+		return math.max(1, math.floor(N.mobHp(lv) * (mul or kind.hp) * RULES.dmgScale * (1 + RULES.targetBonus / 100) + 0.5))
 	end
+	-- 주간 보스의 방(2026-10-24 — sim/weekly.luau): 이름이 <방>#wn번호 · #wh번호면 그 난이도의 레벨 · 체력(그 레벨 몬스터 체력의 배) · 세기로 세운다. 그 보스 하나만 선다(퀘스트와 상관없이)
+	local wMode, wBoss = Weekly.ofKey(key)
 	for _, def in scene.bosses or {} do
 		local kind = COMBAT.mobs[def.kind]
-		local maxHp = hpOf(def.lv, kind)
+		local wk = if wMode and wBoss and def.kind == wBoss.id and kind.story.week then kind.story.week[wMode] else nil
+		local lv = if wk then wk.lv else def.lv
+		local maxHp = hpOf(lv, kind, if wk then wk.hp else nil)
+		if wk then
+			self.weeklyHit = wk.hit -- 보스와 그 졸개가 치는 세기의 배(Room:hurtHero)
+		end
 		local boss = {
-			id = #self.mobs + 1, kind = def.kind, def = kind, lv = def.lv, homeX = def.x, y = def.y, a = def.range[1], b = def.range[2], x = def.x, dir = -1,
+			id = #self.mobs + 1, kind = def.kind, def = kind, lv = lv, homeX = def.x, y = def.y, a = def.range[1], b = def.range[2], x = def.x, dir = -1,
 			state = "gone", t = 0, hp = maxHp, maxHp = maxHp, cd = 0, wait = 0, goal = def.x, target = nil :: any, aggro = 0, struck = false, respawn = math.huge,
 			boss = true, away = true, pat = 0, rest = 0, used = {}, adds = {},
 		}
@@ -160,11 +168,12 @@ function Room.new(key: string, scene, rng)
 		for _, p in kind.story.patterns do
 			if p.summon then
 				local ak = COMBAT.mobs[p.summon.kind]
-				local hp = hpOf(p.summon.lv, ak)
+				local alv = if wk then math.max(1, wk.lv - 2) else p.summon.lv -- 주간의 방: 보스의 레벨에 맞춘다
+				local hp = hpOf(alv, ak)
 				for i = 1, p.summon.max do
 					local x = math.clamp(p.summon.at[(i - 1) % #p.summon.at + 1], def.range[1], def.range[2]) -- 보스의 구간 안에서 나온다(밖에서 나와 첫걸음에 28점 끌려 들어왔다 — 2026-10-18 검토)
 					local add = {
-						id = #self.mobs + 1, kind = p.summon.kind, def = ak, lv = p.summon.lv, homeX = x, y = def.y, a = def.range[1], b = def.range[2], x = x, dir = 1,
+						id = #self.mobs + 1, kind = p.summon.kind, def = ak, lv = alv, homeX = x, y = def.y, a = def.range[1], b = def.range[2], x = x, dir = 1,
 						state = "gone", t = 0, hp = hp, maxHp = hp, cd = 0, wait = 0, goal = x, target = nil :: any, aggro = 0, struck = false, respawn = math.huge,
 						add = true, away = true,
 					}
@@ -176,6 +185,9 @@ function Room.new(key: string, scene, rng)
 	end
 	if scene.rift then
 		Rift.start(self, Rift.tier(scene.rift)) -- 토벌의 방: 물결이 올 때까지 몬스터가 없다
+	end
+	if wMode and wBoss and self.weeklyHit then
+		Weekly.start(self, wMode, wBoss) -- 주간 보스의 방: 제한 시간 · 격파 · 돌아가기(sim/weekly.luau)
 	end
 	return self
 end
@@ -237,6 +249,9 @@ function Room:hurtHero(events, h, mob, mul: number)
 		mul *= Rift.DUNGEON.mob.hit * (if mob.elite then Rift.DUNGEON.elite.hit else 1) -- 던전의 몬스터(2026-10-21)
 	elseif mob.elite then
 		mul *= Rift.DATA.elite.hit -- 토벌의 정예는 더 세게 친다
+	end
+	if self.weeklyHit and (mob.boss or mob.add) then
+		mul *= self.weeklyHit -- 주간 보스의 난이도(하드는 더 세게 — 2026-10-24)
 	end
 	local raw = N.rawHit("mob", mob.lv) * (1 - Hero.cut(h, mob.lv) / 100) * mul * Kit.cut(h, self:nearCrystal(h)) * Buffs.cut(h) * Passives.cut(h, casting)
 	-- 죽음의 가호: 쓰러질 피해를 한 번 버틴다(체력 1로 남는다)
@@ -582,6 +597,22 @@ end
 --  그 보스를 잡는 퀘스트를 하는 중인 사람이 방에 있는 첫 보스 하나. 나머지는 없다
 --  (2026-10-18 검토: 늘 이야기의 차례로 골라, 앞 퀘스트의 사람이 들어오면 다른 사람이 20%까지 깎은 보스가 사라지고 앞 보스가 섰다 · 쓰러지는 보스 위에 다음 보스가 섰다)
 function Room:stepPresence(heroes)
+	if self.weekly then
+		-- 주간 보스의 방: 사람이 들어오면 그 보스가 한 번 선다(쓰러뜨리거나 시간이 다 되면 다시 서지 않는다). 다른 보스는 서지 않는다
+		local wk = self.weekly
+		for _, mob in self.bosses do
+			if mob.kind == wk.boss and wk.state == "fight" and not mob.fought and next(heroes) ~= nil then
+				mob.fought = true
+				mob.away = false
+				mob.state, mob.t, mob.x, mob.hp, mob.dir, mob.target = "spawn", 0, mob.homeX, mob.maxHp, -1, nil
+				mob.pat, mob.rest, mob.used = 0, 0, {}
+				mob.raged, mob.lastPat, mob.chain, mob.chainPat, mob.quick, mob.aim, mob.alt = false, 0, nil, 0, 1, 0, 0
+			elseif (mob.kind ~= wk.boss or wk.state == "fail") and not mob.away and mob.state ~= "dead" then
+				self:bossAway(mob)
+			end
+		end
+		return
+	end
 	local function needed(mob): boolean
 		for _, h in heroes do
 			if Quests.wantsKill(h.quests, mob.kind, self.key) then
@@ -974,6 +1005,9 @@ function Room:step(heroes, dt: number)
 	if self.rift then
 		Rift.step(self, heroes, dt) -- 토벌: 물결 · 제한 시간
 	end
+	if self.weekly then
+		Weekly.step(self, dt) -- 주간 보스: 제한 시간(2026-10-24)
+	end
 	if self.eliteNews then
 		-- 사냥터 정예가 나왔다: 방 사람들에게(화면이 알림을 띄우고 그 자리의 높이로 그린다)
 		local e = self.eliteNews
@@ -1213,17 +1247,22 @@ function Room:mobsInBox(x0: number, x1: number, y0: number, y1: number, cx: numb
 end
 
 -- 졸개가 맞는다. 쓰러졌으면 true.
---  hitBy = 이번 삶에서 한 대라도 친 사람들(쓰러지면 Room:strike가 거둔다 — 퀘스트 · 일일 의뢰의 숫자를 그 사람들에게도 준다)
+--  hitBy = 이번 삶에서 친 사람마다 깎은 체력([번호] = 점 — 쓰러지면 Room:strike가 거둔다: 퀘스트 · 일일 의뢰의 숫자 · 경험치를 때린 만큼 나눈다 — 2026-10-22)
+--   남은 체력보다 큰 타는 남은 만큼만 센다(막타가 몫을 부풀리지 않게)
 function Room:damageMob(mob, dmg: number, fromX: number, byId: any): boolean
+	local took = math.min(dmg, mob.hp)
 	mob.hp = math.max(0, mob.hp - dmg)
 	mob.target, mob.aggro = byId, 5
-	if byId ~= nil and dmg > 0 then
+	if byId ~= nil and took > 0 then
 		mob.hitBy = mob.hitBy or {}
-		mob.hitBy[byId] = true
+		mob.hitBy[byId] = (mob.hitBy[byId] or 0) + took
 	end
 	if mob.hp <= 0 then
 		mob.state, mob.t, mob.target = "dead", 0, nil
 		mob.bind, mob.stun, mob.rend, mob.cracks = 0, 0, 0, 0
+		if mob.boss and self.weekly and mob.kind == self.weekly.boss then
+			Weekly.cleared(self) -- 주간 보스를 격파했다(서버가 방의 사람마다 이번 주의 격파를 적는다 — 2026-10-24)
+		end
 		return true
 	end
 	if mob.boss then
@@ -1351,33 +1390,88 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 		if self.eliteSlot and not mob.fieldElite and not mob.wave then
 			self:eliteCount()
 		end
-		local list = self:liveMates(hero, mates)
-		local share = Party.share(#list)
-		local gains, myXp, myUps = {}, 0, 0
+		-- 경험치 = 때린 만큼 나눈다(2026-10-22 사용자: "지금 필드에서 막타 뺏기면 경험치도 못먹나?" → "때린만큼 나눠받기로 하자" — 전에는 막타를 친 사람 · 그 파티만 받았다).
+		--  몫 = 이번 삶에서 그 사람이 깎은 체력 / 지금 이 방에 살아 있는 친 사람들이 깎은 체력의 합 — 떠났거나 쓰러진 사람의 몫은 남은 사람들의 비율로 나눈다(제가 정한 것).
+		--  막타를 친 사람(hero)은 늘 든다(방이 스스로 친 타 — 독 · 소환 — 처럼 센 것이 없으면 그 사람이 다 받는다).
+		--  그 사람의 몫은 같은 맵의 파티원과 지금처럼 나눈다(Party.share — 레벨 차이 · 벌칙은 받는 사람마다). 떨어지는 것 = 가장 많이 깎은 사람(과 그 파티)의 것
+		local here = function(h)
+			return h == hero or (h.alive and (not self.here or self.here[h]))
+		end
+		local who, total = {}, 0
+		for _, h in self.heroes or { hero } do
+			local d = hitBy[h.id] or 0
+			if d > 0 and here(h) then
+				table.insert(who, { hero = h, dmg = d })
+				total += d
+			end
+		end
+		if total <= 0 then
+			who, total = { { hero = hero, dmg = 1 } }, 1
+		elseif not hitBy[hero.id] then
+			table.insert(who, { hero = hero, dmg = 0 }) -- (막타가 센 타가 아닌 때 — 몫 0이어도 떨어지는 것의 주인 후보로)
+		end
+		table.sort(who, function(p, q)
+			return p.dmg > q.dmg or (p.dmg == q.dmg and p.hero == hero)
+		end)
 		local xpMul = if mob.fieldElite then FE.xp else 1 -- 사냥터 정예는 경험치가 xp배
-		for _, mate in list do
-			-- 사람마다 제 레벨 차이 · 벌칙을 넣은 경험치에 나눈 몫을 곱한다
-			local xp = math.max(1, math.floor(Hero.killXp(mate, mob.lv, mob.def.hp) * xpMul * share + 0.5))
-			local ups = Hero.gainXp(mate, xp)
+		local sum, order = {}, {}
+		local function matesOf(h)
+			return self:liveMates(h, if h == hero then mates elseif self.matesOf then self.matesOf(h) else nil)
+		end
+		for _, w in who do
+			if w.dmg > 0 then
+				local list = matesOf(w.hero)
+				local part = (w.dmg / total) * Party.share(#list)
+				for _, mate in list do
+					if not sum[mate] then
+						sum[mate] = 0
+						table.insert(order, mate)
+					end
+					-- 사람마다 제 레벨 차이 · 벌칙을 넣은 경험치에 나눈 몫을 곱한다
+					sum[mate] += Hero.killXp(mate, mob.lv, mob.def.hp) * xpMul * part
+				end
+			end
+		end
+		local gains, myXp, myUps = {}, 0, 0
+		for _, mate in order do
+			local xp = math.max(1, math.floor(sum[mate] + 0.5))
+			if mate.noReward then
+				xp = 0 -- 매크로 확인: 사냥 보상이 멈췄다 · 문제가 떠 있다(2026-10-23 — server macroGuard.luau가 단다 · 저장하지 않는다)
+			end
+			local ups = if xp > 0 then Hero.gainXp(mate, xp) else 0
 			table.insert(gains, { hero = mate.id, xp = xp, ups = ups, level = mate.level })
 			if mate == hero then
 				myXp, myUps = xp, ups
 			end
 		end
-		-- 퀘스트 · 일일 의뢰의 숫자를 받는 사람(credit): 경험치를 받는 사람(잡은 사람 · 같은 맵의 파티원) + 이 몬스터를 한 대라도 친, 지금 이 방에 살아 있는 사람
-		--  사용자 2026-10-21: "몇마리 잡아라 … 내가 한대만 치면 다른사람이 잡아도 잡은걸로 판정이 들어가야해요" — 경험치 · 떨어지는 것은 그대로(잡은 사람 · 그 파티)
+		-- 퀘스트 · 일일 의뢰의 숫자를 받는 사람(credit): 경험치를 받는 사람(친 사람들 · 그 같은 맵의 파티원) + 이 몬스터를 한 대라도 친, 지금 이 방에 살아 있는 사람
+		--  사용자 2026-10-21: "몇마리 잡아라 … 내가 한대만 치면 다른사람이 잡아도 잡은걸로 판정이 들어가야해요"
 		local credit, counted = {}, {}
-		for _, mate in list do
-			table.insert(credit, mate.id)
+		for _, mate in order do
+			if not mate.noReward then -- (보상이 멈춘 사람은 퀘스트 · 일일 의뢰의 숫자도 오르지 않는다)
+				table.insert(credit, mate.id)
+			end
 			counted[mate.id] = true
 		end
 		for _, h in self.heroes or {} do
-			if hitBy[h.id] and not counted[h.id] and h.alive then
+			if hitBy[h.id] and not counted[h.id] and h.alive and not h.noReward then
 				table.insert(credit, h.id)
 				counted[h.id] = true
 			end
 		end
-		local drop, loot = self:dropFor(hero, mob), self:lootFor(hero, mob)
+		-- 떨어지는 것: 가장 많이 깎은 사람(같으면 막타)의 것 · 그 사람의 같은 맵 파티원도 줍는다
+		local owner = nil
+		for _, w in who do
+			if not w.hero.noReward then
+				owner = w.hero -- 보상이 멈춘 사람은 떨어지는 것의 주인이 되지 않는다(다음으로 많이 깎은 사람 — 아무도 없으면 떨어지지 않는다)
+				break
+			end
+		end
+		local list = if owner then matesOf(owner) else {}
+		local drop, loot = nil, {}
+		if owner then
+			drop, loot = self:dropFor(owner, mob), self:lootFor(owner, mob)
+		end
 		if #list > 1 then
 			local friends = {}
 			for _, mate in list do
@@ -1458,7 +1552,26 @@ function Room:stepPlaced(heroes, dt: number, events)
 		end
 		local result = nil
 		local power = Hero.powerRaw(hero) * Kit.attack(hero) * Buffs.dmg(hero) * Passives.atk(hero)
-		if self.time >= p.next and (def.tick or def.every) then
+		-- 치유하는 것(수정 수호령 — design/combat.js PLACED의 heal · hurt, 2026-10-23 · 10-24 hurt 1 = 조금이라도 다치면): 칠 때가 되면 range 안의 나와 파티원 가운데 체력이 hurt 아래인 사람이 있으면
+		--  치는 대신 가장 다친 사람을 최대 체력의 heal(마스터 — 스킬 레벨의 세기 p.pow)만큼 치유한다(사용자: "아군 회복에 본인도 포함 되어야해")
+		local healed = false
+		if def.heal and self.time >= p.next and def.every then
+			local best, low = nil, def.hurt or 1
+			for _, m in self:liveMates(hero, if self.alliesOf then self.alliesOf(hero) elseif self.matesOf then self.matesOf(hero) else nil) do -- (치유 = 같은 맵의 파티원 모두 — 레벨 차이를 보지 않는다, 2026-10-24)
+				local share = m.hp / math.max(1, m.maxHp)
+				if m.alive and share < low and math.abs(m.x - p.x) <= def.range and math.abs(m.y - p.y) <= 80 then
+					best, low = m, share
+				end
+			end
+			if best then
+				p.next += def.every
+				local amount = math.min(best.maxHp - best.hp, math.max(1, math.floor(best.maxHp * def.heal * p.pow + 0.5)))
+				best.hp += amount
+				table.insert(events, { type = "healed", hero = best.id, amount = amount, by = hero.id })
+				healed = true
+			end
+		end
+		if not healed and self.time >= p.next and (def.tick or def.every) then
 			local gap = def.tick or def.every
 			p.next += gap
 			local targets = if def.tick then self:mobsInBox(p.x - def.w / 2, p.x + def.w / 2, p.y - def.h, p.y + 6, p.x) else { self:nearestMob(p.x, p.y, def.range, nil) }
@@ -2080,7 +2193,7 @@ function Room:describe(heroId: any?)
 	for i, c in self.crystals do
 		crystals[i] = Room.crystalView(c, self.time)
 	end
-	return { key = self.key, mobs = mobs, drops = drops, crystals = crystals, snap = self:snapshot(), rift = Rift.view(self) }
+	return { key = self.key, mobs = mobs, drops = drops, crystals = crystals, snap = self:snapshot(), rift = Rift.view(self), weekly = Weekly.roomView(self) } -- weekly = 주간 보스의 방이면 그 상태(2026-10-24)
 end
 
 return Room

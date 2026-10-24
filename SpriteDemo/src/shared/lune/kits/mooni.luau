@@ -312,6 +312,109 @@ local function range(g)
 	g.hitAt(x, y, 62, 60, 6, { lift = 240 })
 end
 
+-- 달빛 낙하(4차 — 2026-10-24 사용자 "하늘이 어둡게물들고 빛줄기가 순차적으로 쾅쾅쾅 떨어지는 광역기 … 스킬 이펙트만 순차적으로 떨어지는거고 데미지는 스킬 실행하는시점에 동시판정들어가야한다"
+--   → "전혀 광역기가 아니잖아 쿨타임 12초고 전맵에 닿아야하는거야 그리고 레이저는 에셋 레이저 똑같이 써도되는데 그게 달에서 순차적으로 발사되는식으로"):
+--  판정: 쓰는 순간 그 맵의 모든 적(층 · 거리와 상관없이)이 한꺼번에 맞는다(한 번). 그 뒤는 그림만 — 피해는 없다.
+--  ① 하늘이 물든다: 화면 전체(카메라 기준 · 뒤 그림판이라 사람 · 몬스터는 그 앞에 밝다)에 위가 짙고 아래로 옅어지는 남색 밤하늘 · 반짝이는 별 · 화면 위 가운데로 내려와 뜨는 큰 초승달
+--  ② 초승달에서 맞은 적에게(가까운 차례로 FALL_N까지 — 적이 적으면 앞쪽 빈자리로) 레이저가 0.1초 간격으로 한 줄씩 발사된다 — 월광선과 같은 레이저(바깥 번짐 · 네온 · 밝은 속 · 흰 심, 끝은 뾰족)
+--  ③ 닿은 자리마다 쾅 — 초승달 모양 충격파(반원) · 흰 섬광 · 별 반짝임 · 수정 파편
+--  (처음 것은 액시온 「달기둥」과 같은 빛기둥 · 고리를 썼다 — 빛기둥(fx.beam) · 고리(fx.ring)는 쓰지 않는다)
+local FALL_N, FALL_GAP = 8, 0.1 -- 레이저 수 · 사이(초)
+local FALL_SPOTS = { 40, 100, 160, 70, 130 } -- 적이 다섯보다 적을 때 채우는 자리(내 앞 몇 도트)
+local NIGHT = 0x10173a -- 물든 하늘의 빛깔(짙은 남색)
+local FALL_LIFE = 1.9 -- 하늘이 물들어 있는 시간(초)
+-- 초승달이 뜨는 자리(화면 위 가운데)
+local function moonAt(g): (number, number)
+	local cam = g.cam
+	return cam.x + 192, cam.y + 34
+end
+-- 레이저 한 줄 a → b(굵기 th): 월광선(drawRay)과 같은 네 겹 · 끝은 뾰족
+local function laser(ctx, tone, ax: number, ay: number, bx: number, by: number, th: number)
+	local dx, dy = bx - ax, by - ay
+	local l = max(1, sqrt(dx * dx + dy * dy))
+	local ux, uy = dx / l, dy / l
+	local mx, my = bx - ux * min(28, l * 0.3), by - uy * min(28, l * 0.3)
+	for _, layer in { { th + 8, tone.n, 0.3 }, { th, tone.n, 1 }, { th * 0.62, tone.l, 1 }, { th * 0.3, tone.w, 1 } } do
+		local w = layer[1]
+		local nx, ny = -uy * w / 2, ux * w / 2
+		ctx:alpha(layer[3])
+		poly(ctx, { { ax + nx, ay + ny }, { mx + nx, my + ny }, { mx - nx, my - ny }, { ax - nx, ay - ny } }, layer[2])
+		poly(ctx, { { mx + nx, my + ny }, { bx, by }, { mx - nx, my - ny } }, layer[2])
+	end
+	ctx:alpha(1)
+end
+local function fall(g)
+	local x, y, dir, tone = g.x, g.y, g.dir, g.tone
+	local spots = {}
+	for _, m in g.mobs() do -- 판정은 여기 한 번: 맵의 모든 적
+		g.hurt(m, 10, { stop = 0.06 })
+		spots[#spots + 1] = { m.x, m.y - 6, abs(m.x - x) + abs(m.y - y) }
+	end
+	table.sort(spots, function(p, q)
+		return p[3] < q[3]
+	end)
+	for i = #spots + 1, #FALL_SPOTS do
+		spots[i] = { x + dir * FALL_SPOTS[i], y, 0 }
+	end
+	g.fx.add(FALL_LIFE, function(ctx, k)
+		local cam, t = g.cam, k * FALL_LIFE
+		local a = if k < 0.12 then k / 0.12 elseif k > 0.82 then (1 - k) / 0.18 else 1
+		for b = 0, 5 do -- 위가 짙고 아래로 옅어지는 남색
+			ctx:alpha(a * (0.78 - b * 0.1))
+			ctx:style(NIGHT)
+			ctx:rect(R(cam.x) - 8, R(cam.y) - 8 + b * 40, 400, 40)
+		end
+		for i = 1, 18 do -- 반짝이는 별
+			if (floor(t * 9) + i) % 4 ~= 0 then
+				local sx, sy = R(cam.x + (i * 67) % 384), R(cam.y + 8 + (i * 37) % 100)
+				ctx:alpha(a * (if i % 3 == 0 then 1 else 0.7))
+				ctx:style(if i % 3 == 0 then tone.w else tone.l)
+				ctx:rect(sx, sy, 1, 1)
+				if i % 5 == 0 then
+					ctx:rect(sx - 1, sy, 3, 1)
+					ctx:rect(sx, sy - 1, 1, 3)
+				end
+			end
+		end
+		local mx, my = moonAt(g)
+		my -= 30 * max(0, 1 - t / 0.3) -- 위에서 내려와 뜬다
+		ctx:alpha(a * 0.25)
+		disc(ctx, mx, my, 22, tone.l)
+		ctx:alpha(a)
+		poly(ctx, crescentPts(mx, my, 15, 9, 95, 265, 1, 10), tone.w)
+		poly(ctx, crescentPts(mx, my, 15, 3, 110, 250, 1, 8), tone.l)
+		ctx:alpha(1)
+	end, { back = true })
+	for i = 1, min(FALL_N, #spots) do
+		local bx, by = spots[i][1], spots[i][2]
+		g.after(0.3 + (i - 1) * FALL_GAP, function() -- ② 달에서 레이저 발사
+			g.fx.add(0.32, function(ctx, k)
+				local sx, sy = moonAt(g)
+				local th = if k < 0.12 then 12 * (k / 0.12) elseif k < 0.55 then 12 else 12 * (1 - (k - 0.55) / 0.45)
+				if th >= 2 then
+					laser(ctx, tone, sx, sy + 6, bx, by, th)
+				end
+			end)
+			g.fx.add(0.32, function(ctx, k) -- ③ 쾅: 초승달 모양 충격파
+				ctx:alpha(1 - k)
+				poly(ctx, crescentPts(bx, by + 6, 10 + 34 * k, max(1, 7 * (1 - k)), 8, 172, 1, 9), tone.l)
+				ctx:alpha(1)
+			end, { back = true })
+			g.fx.add(0.08, function(ctx)
+				disc(ctx, bx, by, 9, tone.w)
+			end)
+			for j = 0, 2 do
+				local ox = (j - 1) * 9
+				g.fx.add(0.4, function(ctx, k)
+					poly(ctx, starPts(bx + ox, by - 2 - j * 4 - 26 * k, max(1, 7 * (1 - k)), k * 3), if j == 1 then tone.w else tone.l)
+				end)
+			end
+			g.fx.shards(bx, by + 3, 8, tone, { up = 130, kind = "tri" })
+			g.shake(3, 0.08)
+		end)
+	end
+end
+
 -- ---- Aseprite로 그린 수정(assetpack/lune/fx/mooni_crystals.aseprite → 앞 · 뒤 두 장). { x, y, w, h } ----
 local CR = { tall = { 0, 8, 15, 40 }, mid = { 18, 20, 14, 28 }, small = { 34, 32, 9, 16 }, prison = { 46, 8, 32, 40 }, spirit = { 82, 4, 11, 19 } }
 -- 수정 한 개: 밑동 가운데가 (x, y). grow < 1이면 땅에서 솟는 중(윗부분부터 드러난다). o = { flip, sc, alpha, grow }
@@ -574,7 +677,8 @@ local skills = {
 		g.fx.hex(g.fwd(14), g.y, 4, 26, g.tone, { squash = 0.35 })
 	end } } } },
 	buff("mn_tide", "1"),
-	{ id = "mn_heal", key = "X", shot = 0.75, segs = { { clip = "heal", fps = 20, ev = { [10] = function(g) -- 떠오르는 더하기 표시 + 수정마다 작은 고리
+	-- 달빛 치유: 동작을 6번째 장부터 초당 24장으로 — 회복이 드는 때 0.5초 → 0.17초 · 동작 0.9초 → 0.5초(2026-10-24 사용자 "무니 달빛치유 스킬 선딜 짧게 줄여")
+	{ id = "mn_heal", key = "X", shot = 0.75, segs = { { clip = "heal", from = 6, fps = 24, ev = { [10] = function(g) -- 떠오르는 더하기 표시 + 수정마다 작은 고리
 		g.fx.rise(g.x, g.y, 12, g.tone, { w = 26 })
 		g.fx.ring(g.x, g.y, 4, 30, g.tone)
 		for _, c in crystals(g) do
@@ -737,6 +841,7 @@ local skills = {
 	end, [12] = function(g)
 		g.fx.rise(g.x, g.y, 20, g.tone, { w = 200, life = 1.1 })
 	end } } } },
+	{ id = "mn_fall", key = "N", shot = 0.6, segs = { { clip = "heal", fps = 18, start = fall } } }, -- 달빛 낙하: 판정은 쓰는 순간 한 번(위 fall)
 	{ id = "mn_prison", key = "B", shot = 1.2, segs = { { clip = "heal", fps = 20, ev = { [10] = function(g) -- 적을 수정 속에 가둔다: 육각 테가 조여 들고 → 발밑에서 수정이 솟아 몸을 삼키고 → 다 닫히면 별빛이 튄다
 		local tone = g.tone
 		g.shake(3, 0.15)

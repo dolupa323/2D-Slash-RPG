@@ -16,6 +16,7 @@ local Ui = require(script.Parent.ui.ui)
 local CashWindow = require(script.Parent.ui.cashWindow)
 local Sprite = require(script.Parent.sprite)
 local RideView = require(script.Parent.rideView)
+local WeaponFx = require(script.Parent.weaponFx) -- 캐시 무기의 피어오르는 점(2026-10-23)
 local Curtain = require(script.Parent.curtain)
 
 local SP = BM.shop.space
@@ -38,6 +39,12 @@ function CashShop.layout(uiW: number, uiH: number, us: number?)
 	return Layout.shopSpace(uiW, uiH, us)
 end
 
+-- 탈것마다 영웅의 발이 탈것의 기준점(발밑)보다 위에 있는 점(탈것 그림의 점 — ride.generated의 seat.dy · 미리보기의 높이를 잰다)
+local RIDE_SEAT = {}
+for _, q in RIDE.mounts do
+	RIDE_SEAT[q.id] = -((q.seat and q.seat.dy) or 0)
+end
+local L0 -- 지은 때의 치수(Layout.shopSpace — 미리보기의 높이)
 -- 미리보기에 보일 펫 · 탈것: id = 상품의 이름표(pet_ · mount_) · nil = 지금 꺼내 둔 것 · 탄 것
 local function setPreview(id: string?)
 	if not parts then
@@ -48,7 +55,10 @@ local function setPreview(id: string?)
 		p.petId = id
 	elseif id and string.sub(id, 1, 6) == "mount_" then
 		p.rideId = id
+	elseif id and string.sub(id, 1, 6) == "wskin_" then
+		p.skinId = id -- 캐시 무기(2026-10-23): 미리보기 영웅이 그 무기를 든다
 	end
+	p.hero:setLook({ point = p.look and p.look.point, robe = p.look and p.look.robe, skin = p.skinId })
 	if p.pet and p.pet.who ~= p.petId then
 		p.pet.sprite:destroy()
 		p.pet = nil
@@ -57,6 +67,24 @@ local function setPreview(id: string?)
 		p.pet = { who = p.petId, sprite = Sprite.new(p.world, p.petId, 2) }
 	end
 	p.ride:setRide(p.rideId)
+	-- 큰 탈것(거대 탈것 「이끼 골렘」 — 2026-10-22)이 미리보기 판에 다 들어가게 판 안의 배율을 줄인다(보통 탈것 · 펫은 그대로 — 판에 들어간다)
+	local fit = 1
+	local mc = p.rideId and p.ride.mount and p.ride.mount.char
+	if mc then
+		local f1 = mc.clips.idle.frames[1]
+		local ms = Sprite.sizeOn(mc.size or 1)
+		local seat = (p.ride.mount and RIDE_SEAT[p.rideId]) or 0
+		local needW = ((if f1 then f1[4] else mc.fw) * ms) + 16
+		local needH = (seat * ms) + 34 -- 등 높이 + 탄 영웅(약 22점) + 여유
+		fit = math.min(1, p.availW / needW, p.availH / needH)
+	end
+	if fit ~= p.fit then
+		p.fit = fit
+		local r = p.ratio * fit
+		p.scale.Scale = r
+		p.world.Size = UDim2.fromOffset(SP.previewW / r, L0.panelH / r)
+		p.cx, p.floor = math.floor(SP.previewW / r / 2), math.floor(p.floorUi / r)
+	end
 	local name = nil
 	if id then
 		for _, q in BM.products do
@@ -80,6 +108,7 @@ function CashShop.step(now: number, dt: number)
 	local hx, hy, hs = p.ride:update(now, dt, cx, floor, 1, false, false, false, nil, nil)
 	local char = p.hero.char
 	p.hero:set("idle", Sprite.frameAt(char, "idle", now, false), hx or cx, hy or floor, 1, hs) -- 탄 동안 작게(게임과 같다)
+	p.wfx:step({ p.hero }, dt) -- 캐시 무기의 피어오르는 점
 	if p.pet then
 		local pc = p.pet.sprite.char
 		p.pet.sprite:set("idle", Sprite.frameAt(pc, "idle", now, false), cx - 30, floor, 1)
@@ -152,9 +181,12 @@ local function build(ctx)
 	Ui.box(pv, 16, floorUi, SP.previewW - 32, 2, C.line).ZIndex = 2
 	local cx, floor = math.floor(SP.previewW / ratio / 2), math.floor(floorUi / ratio)
 	local hero = Sprite.new(world, ctx.who(), 3)
-	hero:setLook(ctx.myLook and ctx.myLook()) -- 내 무기 · 로브 색(염색 — 2026-10-22)
+	local look = ctx.myLook and ctx.myLook() -- 내 무기 · 로브 색(염색 — 2026-10-22) · 캐시 무기는 장착한 것(setPreview가 입힌다)
 	local ride = RideView.new(world, 3, nil)
-	parts = { root = r, content = content, loading = loading, world = world, hero = hero, ride = ride, pet = nil, petId = ctx.myPet(), rideId = ctx.myRide(), name = nameText, cx = cx, floor = floor }
+	L0 = L
+	parts = { root = r, content = content, loading = loading, world = world, hero = hero, ride = ride, pet = nil, petId = ctx.myPet(), rideId = ctx.myRide(), name = nameText, cx = cx, floor = floor,
+		scale = scale, ratio = ratio, fit = 1, floorUi = floorUi, availW = SP.previewW / ratio, availH = floorUi / ratio, -- (큰 탈것은 setPreview가 fit배로 줄인다)
+		look = look, skinId = ctx.mySkin and ctx.mySkin() or nil, wfx = WeaponFx.new() } -- 캐시 무기(2026-10-23 — 미리보기에서도 점이 피어오른다)
 	setPreview(nil)
 	-- 상점 판: 상점 창의 것을 그대로(같은 탭 · 줄 · 단추). 펫 · 탈것 줄을 누르면 미리보기에
 	local panel = Ui.panel(group, L.panelX, 0, L.panelW, L.panelH)
@@ -229,6 +261,7 @@ function CashShop.leave(ctx)
 				parts.pet.sprite:destroy()
 			end
 			parts.hero:destroy()
+			parts.wfx:destroy() -- (캐시 무기의 점)
 			parts.ride:destroy()
 		end
 		if root then

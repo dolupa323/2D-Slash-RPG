@@ -7,6 +7,8 @@
 local Fx = require(script.Parent.Parent.fx)
 local Common = require(script.Parent.common)
 local crescentPts, starPts, poly, drawAxe = Fx.crescentPts, Fx.starPts, Fx.poly, Fx.drawAxe
+local line = Fx.line -- 월광 균열의 금(2026-10-24)
+local COMBAT = require(script.Parent.Parent.data["combat.generated"]) -- 돌격의 레벨마다의 거리(moveCast — 2026-10-25)
 local dash, buff = Common.dash, Common.buff
 local floor, sin, cos, min, max, abs, sqrt = math.floor, math.sin, math.cos, math.min, math.max, math.abs, math.sqrt
 
@@ -241,6 +243,89 @@ end
 
 local OUTLINE = { { -2, 0 }, { 2, 0 }, { 0, -2 }, { 0, 2 }, { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } }
 
+-- 월광 균열(4차 광역기 · 다시 쓰기 12초 · 맵 전체 — 2026-10-24 사용자 "무니, 리븐 광역기 만든것처럼 엑시온, 리퍼, 살라맨더 4차 스킬포인트 조정해서 그 빈포인트로 투자하는 완전 멋진 광역기만들자"):
+--  도끼를 땅에 내리찍으면(smash 7장) 그 자리에서 양쪽 화면 끝까지 땅이 갈라진다 — 꺾인 금이 0.4초 만에 번지고 곁가지가 난다(어두운 테 + 깜빡이는 빛나는 속).
+--  금이 닿는 차례로 적마다 발밑에서 돌가시 셋이 솟고 달빛이 터지며 띄운다(다른 층의 적에게는 금이 세로로 타고 오른다). 판정은 찍는 순간 한 번: 맵의 모든 적.
+--  이름 · 모양 · 숫자는 제가 정한 것(달빛 기둥의 빛기둥 · 지진의 톱니 물결과 겹치지 않게 「땅의 금」으로)
+local CRACK_W, CRACK_SPEED = 520, 1300 -- 금이 번지는 거리(양쪽 · 도트) · 빠르기(초당 도트)
+local function crackLine(x0: number, y: number, side: number, rnd)
+	local pts, branches = { { x0, y } }, {}
+	local x = x0
+	while abs(x - x0) < CRACK_W do
+		x += side * (10 + rnd() * 10)
+		pts[#pts + 1] = { x, y + (rnd() - 0.5) * 5 }
+		if rnd() < 0.22 then
+			local bx, by = x, y
+			local b = { { bx, by } }
+			for _ = 1, 3 do
+				bx += side * (4 + rnd() * 6)
+				by += (if rnd() < 0.5 then -1 else 1) * (3 + rnd() * 5)
+				b[#b + 1] = { bx, by }
+			end
+			branches[#branches + 1] = { at = abs(x - x0), pts = b }
+		end
+	end
+	return pts, branches
+end
+local function drawCrack(ctx, pts, x0: number, reach: number, tone, glow: boolean)
+	for i = 1, #pts - 1 do
+		local p, q = pts[i], pts[i + 1]
+		if abs(q[1] - x0) > reach then
+			break
+		end
+		line(ctx, p[1], p[2], q[1], q[2], tone.d, 3)
+		line(ctx, p[1], p[2], q[1], q[2], if glow then tone.w else tone.l, 1)
+	end
+end
+local function crack(g)
+	local x0, y, tone = g.fwd(10), g.y, g.tone
+	g.shake(6, 0.4)
+	g.invert(0.06)
+	g.fx.ring(x0, y, 6, 64, tone, { squash = 0.3, back = true, life = 0.5 })
+	g.fx.shards(x0, y - 4, 12, tone, { kind = "tri", speed = 120, up = 90, life = 0.6 })
+	-- 판정은 여기 한 번: 맵의 모든 적 — 솟는 그림은 금이 닿는 차례로
+	for _, m in g.mobs() do
+		g.hurt(m, 12, { lift = 160, stop = 0.08 })
+		local mx, my = m.x, m.y
+		local climb = y - my -- 다른 층(위면 +)
+		g.after(min(0.42, abs(mx - x0) / CRACK_SPEED), function()
+			if abs(climb) > 12 then
+				local pts, n = {}, max(2, floor(abs(climb) / 10))
+				for i = 0, n do
+					pts[#pts + 1] = { mx + (if i == 0 or i == n then 0 else (g.rnd() - 0.5) * 8), y - climb * i / n }
+				end
+				g.fx.add(0.5, function(ctx, k)
+					ctx:alpha(if k < 0.6 then 1 else (1 - k) / 0.4)
+					drawCrack(ctx, pts, mx, 9999, tone, k < 0.3)
+					ctx:alpha(1)
+				end)
+			end
+			for i = -1, 1 do
+				g.fx.spike(mx + i * 7, my, 7, 14 + (1 - abs(i)) * 10, tone, { life = 0.45, lean = i * 3 })
+			end
+			g.fx.pop(mx, my - 10, tone, { r = 9, life = 0.2 })
+			g.fx.shards(mx, my - 6, 6, tone, { kind = "tri", speed = 80, up = 110, life = 0.5 })
+		end)
+	end
+	-- 양쪽으로 번지는 금 — 0.4초에 화면 끝까지, 그 뒤 빛이 바래며 사라진다
+	for _, side in { -1, 1 } do
+		local pts, branches = crackLine(x0, y, side, g.rnd)
+		g.fx.add(1.1, function(ctx, k)
+			local t = k * 1.1
+			local reach = min(CRACK_W, t * CRACK_SPEED)
+			local glow = (t * 12) % 1 < 0.5 -- 깜빡이는 속
+			ctx:alpha(if t < 0.75 then 1 else max(0, (1.1 - t) / 0.35))
+			drawCrack(ctx, pts, x0, reach, tone, glow)
+			for _, b in branches do
+				if b.at <= reach then
+					drawCrack(ctx, b.pts, x0, 9999, tone, glow)
+				end
+			end
+			ctx:alpha(1)
+		end)
+	end
+end
+
 local skills = {
 	{ id = "ax_slam", key = "Q", ground = true, shot = 1.15, holdFor = 0.9, segs = { { clip = "smash", from = 0, to = 3, loopFrom = 2, fps = 16, charge = true }, { clip = "smash", from = 4, fps = 18, ev = { [7] = slam } } } },
 	{
@@ -321,12 +406,48 @@ do
 	table.insert(skills, { id = "ax_rend", key = "S", shot = 0.62, segs = segs })
 end
 
+-- 돌격(3차 이동기 — 예전 「도약 강타」 · 2026-10-25 사용자 "샐래맨더도 불꽃돌진 일반이동기로 쿨타임달고 보스기 추가 … 액시온도 도약강타 일반 이동기로 바꾸고 앞으로 돌진하는스킬로 바꾸고 쿨타임달고 보스기 새로 만들어"): 피해는 없다(리븐 · 리퍼와 같게 — 마스터 5 · 다시 쓰기 5초 · 공중에서도).
+--  도끼를 앞세우고 아주 짧은 순간이동을 steps번(0.03초마다 · 잔상 · 발밑에 튀는 흙먼지) · 끝에서 작은 고리 · 흔들림. 거리는 스킬 레벨마다(공방 combat.js의 MOVECAST → moveCast.dist)
+local function assault(g)
+	local mc = COMBAT.moveCast and COMBAT.moveCast.ax_leap
+	local steps = if mc then mc.steps else 6
+	local total = if mc then mc.dist[math.clamp(g.sk("ax_leap"), 1, #mc.dist)] else 90
+	local tone = g.tone
+	for i = 0, steps - 1 do
+		g.after(i * 0.03, function()
+			g.ghost()
+			g.teleport(g.fwd(total / steps))
+			g.fx.shards(g.x - g.dir * 6, g.y - 1, 2, tone, { kind = "dot", dir = -g.dir, spread = 0.5, speed = 50, up = 30, life = 0.3 })
+		end)
+	end
+	g.after(steps * 0.03, function()
+		g.fx.ring(g.fwd(10), g.y, 3, 18, tone, { life = 0.2 })
+		g.shake(1, 0.08)
+	end)
+end
+-- 회전 내려치기(3차 보스기 — 2026-10-25 사용자 "샐래맨더도 불꽃돌진 일반이동기로 쿨타임달고 보스기 추가 … 액시온도 도약강타 일반 이동기로 바꾸고 앞으로 돌진하는스킬로 바꾸고 쿨타임달고 보스기 새로 만들어"): 도끼를 앞으로 크게 한 바퀴(atk3) — 올려 베기(3장) · 머리 위(7장) · 내려찍기(11장 — 가장 세다 · 땅에 금과 파편). 이름 · 모양 · 숫자는 제가 정한 것
+local function wheel(g, n: number)
+	local x, y, dir, tone = g.fwd(10), g.y - 16, g.dir, g.tone
+	if n == 1 then
+		g.fx.slash(x, y, dir, 30 * g.big, -40, 70, tone, { thick = 6, life = 0.2 })
+		g.hit(0, 46, 44, 4, 3, { stop = 0.03 })
+	elseif n == 2 then
+		g.fx.slash(x, y, dir, 34 * g.big, 70, 160, tone, { thick = 6, life = 0.2 })
+		g.hit(-10, 46, 56, 4, 3, { stop = 0.03 })
+	else
+		g.fx.slash(x, y, dir, 40 * g.big, 150, -45, tone, { thick = 9, life = 0.28 })
+		g.fx.cut(g.fwd(30), g.y - 1, 40, 0, tone, { th = 2, life = 0.35 })
+		g.fx.shards(g.fwd(30), g.y - 4, 10, tone, { kind = "bar", up = 60, speed = 110 })
+		g.hit(0, 54, 50, 4, 8, { stop = 0.08, kb = 60 })
+		g.shake(2, 0.12)
+	end
+end
+
 local more = {
 	buff("ax_breath", "1"),
 	{
 		id = "ax_whirl",
 		key = "E",
-		ground = true,
 		shot = 0.85,
 		holdFor = 2,
 		segs = {
@@ -338,7 +459,8 @@ local more = {
 				hold = true,
 				max = 3,
 				min = 0.3,
-				walk = 0.6,
+				walk = 1,
+				free = true, -- 누르는 동안 제 빠르기로 걷고 · 뛰고 · 대쉬한다(2026-10-25 사용자 "몰아치기 는 범위늘리고 키다운하는동안 점프 대쉬 할수있게해 이속도 원래이속으로 다닐수있고" — 전에는 땅에서만 · 0.6배로 걸었다)
 				turn = true,
 				start = function(g)
 					g.s.w = 1
@@ -348,66 +470,34 @@ local more = {
 				end,
 				every = { 0.16, function(g)
 					g.s.w = -g.s.w
-					g.fx.slash(g.x, g.y - 9, g.s.w, 32 * g.big, -30, 70, g.tone, { thick = 6, life = 0.2 })
-					g.hit(-40, 40, 28, 4, 2, {})
+					g.fx.slash(g.x, g.y - 9, g.s.w, 44 * g.big, -30, 70, g.tone, { thick = 6, life = 0.2 })
+					g.hit(-56, 56, 36, 4, 2, {}) -- 범위 ±40 · 위 28 → ±56 · 위 36(2026-10-25 — 제가 정한 값)
 				end },
 			},
 			{ clip = "smash", from = 3, fps = 20, ev = { [7] = function(g)
 				local k = min(3, g.s.spun or 0)
-				g.fx.ring(g.x, g.y, 8, 50 + k * 14, g.tone)
+				g.fx.ring(g.x, g.y, 8, 62 + k * 16, g.tone)
 				g.fx.ring(g.x, g.y, 4, 30, g.tone, { delay = 0.06 })
 				g.fx.shards(g.x, g.y - 6, 12 + k * 4, g.tone, { kind = "mix", up = 120 })
-				g.hit(-52 - k * 8, 52 + k * 8, 40, 4, 5 + k * 4, { lift = 220 })
+				g.hit(-64 - k * 10, 64 + k * 10, 46, 4, 5 + k * 4, { lift = 220 }) -- (±52 + 8k → ±64 + 10k · 2026-10-25)
 				g.shake(1, 0.1)
 			end } },
 		},
 	},
-	{
-		id = "ax_leap",
-		key = "D",
-		air = true,
-		shot = 0.95,
-		segs = { -- 뛰어오르는 동작 · 떨어지는 동작은 팩의 것을 그대로 쓰고, 땅에 닿은 뒤에만 내려찍는 장을 쓴다
-			{
-				clip = "jump",
-				fps = 12,
-				loopFrom = 3,
-				till = function(g)
-					return g.hero.vy >= 0
-				end,
-				max = 0.8,
-				start = function(g)
-					if g.ground then
-						g.hop(250)
-					end
-					g.move(85, 0.5)
-					g.s.top = g.y
-				end,
-			},
-			{
-				clip = "fall",
-				fps = 12,
-				till = function(g)
-					return g.ground
-				end,
-				max = 1.4,
-				every = { 0.03, function(g)
-					g.s.top = min(g.s.top, g.y)
-				end },
-			},
-			{ clip = "smash", from = 7, fps = 18, ev = { [7] = function(g) -- 떨어진 높이만큼 세다: 세로 줄 + 사방으로 가는 금
-				local fall, x, y = g.y - g.s.top, g.fwd(18), g.y
-				g.fx.cut(x, y - 44, 86, 90, g.tone, { th = 3, life = 0.2 })
-				for _, c in { { 8, 46 }, { 172, 46 }, { 24, 30 }, { 156, 30 }, { 40, 18 }, { 140, 18 } } do
-					local a, l = c[1], c[2]
-					g.fx.cut(x + cos(a * 0.01745) * l * 0.5, y - 1 - sin(a * 0.01745) * l * 0.2, l, a, g.tone, { th = 2, life = 0.35, delay = 0.03 })
-				end
-				g.fx.ring(x, y, 3, 20, g.tone, { life = 0.2 })
-				g.hit(-42, 42, 46, 4, floor(12 + fall * 0.15 + 0.5), { stop = 0.08 }) -- 등 뒤 42도트까지 친다 — 뛰어넘은 적(붙어 있던 적)도 맞는다(사용자 2026-10-08: "등뒤도 타격범위가있게")
-				g.shake(1, 0.1)
-			end } },
-		},
-	},
+	{ id = "ax_wheel", key = "D", shot = 0.7, segs = { { clip = "atk3", from = 0, to = 12, fps = 22, ev = { -- 회전 내려치기(위 wheel)
+		[3] = function(g)
+			wheel(g, 1)
+		end,
+		[7] = function(g)
+			wheel(g, 2)
+		end,
+		[11] = function(g)
+			wheel(g, 3)
+		end,
+	} } } },
+	{ id = "ax_leap", key = "V", air = true, shot = 0.3, segs = { -- 돌격(이동기 — 위 assault)
+		{ clip = "dash", loop = true, dur = 0.2, fps = 20, float = true, start = assault },
+	} },
 	{ id = "ax_pulse", key = "Z", shot = 0.56, segs = { { clip = "smash", fps = 18, start = function(g) -- 사냥용 광역기: 위 · 아래층까지 넓게, 약하게
 		g.fx.rise(g.x, g.y, 10, g.tone, { w = 36 })
 	end, ev = { [7] = pulse } } } },
@@ -481,6 +571,9 @@ local more = {
 			g.fx.cut(g.x + cos(a * 0.01745) * 20, g.y - 1, 40, a, g.tone, { th = 2, life = 0.4 })
 		end
 	end },
+	{ id = "ax_crack", key = "B", shot = 1.0, segs = { { clip = "smash", fps = 14, start = function(g) -- 월광 균열(위 crack)
+		g.dim(0.45, 1.4)
+	end, ev = { [7] = crack } } } },
 	{ id = "ax_pillars", key = "G", shot = 1.0, segs = { { clip = "smash", fps = 11, start = function(g)
 		g.dim(0.5, 1.5)
 		g.fx.ring(g.x, g.y, 46, 4, g.tone, { life = 0.5 })

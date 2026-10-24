@@ -189,6 +189,26 @@ do
 	expect(CashServer.applyPasses(s), "드롭률 패스를 샀다 — 바뀌었다")
 	eq(s.hero.passDrop, 0.25, "드롭률 패스의 효과(+25%)")
 	expect(not CashServer.applyPasses(s), "다시 얹어도 그대로")
+	-- 게임 밖(로블록스 웹)에서 산 패스(2026-10-24 사용자: "게임 밖에서 로블록스 측에서 패스결제하면 게임에서 패스 구매한걸로 적용이 안된다"):
+	--  「안 가졌다」는 RECHECK초가 지나면 다시 묻는다 → 새로 가진 것을 얹고 알린다(CashGot)
+	s.passes.drop125 = false
+	s.passAsked = s.passAsked or {}
+	s.passAsked.drop125 = nil
+	CashServer.applyPasses(s) -- (지금 물었다 — 그 때를 적는다)
+	eq(s.hero.passDrop or 0, 0, "드롭률 패스가 없는 것으로 시작")
+	owned[CashS.product("drop125").rid] = true -- 웹에서 샀다
+	table.clear(sent)
+	eq(#CashServer.recheck(s), 0, "RECHECK초 안에는 다시 묻지 않는다")
+	s.passAsked.drop125 = nil -- (RECHECK초가 지났다 — 시험 틀은 게임 모듈의 시계가 따로라 적힌 때를 지운다)
+	local got = CashServer.recheck(s)
+	eq(got[1], "drop125", "다시 물어 새로 가진 패스를 찾았다")
+	eq(s.hero.passDrop, 0.25, "웹에서 산 드롭률 패스의 효과가 얹혔다")
+	local told = false
+	for _, f in sent do
+		told = told or (f.name == "CashGot" and f.player == p and f.args[1] == "drop125")
+	end
+	expect(told, "산 것을 화면에 알린다(CashGot)")
+	eq(#CashServer.recheck(s), 0, "가진 것은 다시 알리지 않는다")
 	World.removePlayer(p)
 end
 CashS.product("xp125").rid, CashS.product("drop125").rid = realXp, realDrop

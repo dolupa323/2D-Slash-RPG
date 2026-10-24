@@ -238,16 +238,16 @@ local money = Items.goods("bm_money_30")
 expect(textOf(("지금 사면 달돈 %s(Lv.30)"):format(req("ReplicatedStorage/shared/lune/ui/format").comma(money.amount))) ~= nil, "지금 사면 드는 달돈(Lv.30)")
 local cr = CashWindow.rows(view, T.money)
 eq(cr[2].id, "dust", "둘째 줄 = 달가루 상자")
-eq(cr[2].state, "full", "이번 주에 셋을 샀으면 더 못 산다")
-local full = textOf("이번 주 3/3")
-expect(full ~= nil and full.tint == "red", "빨간 「이번 주 3/3」")
+-- 2026-10-22 사용자 "달빛상점에서 달가루 상자, 달돈주머니 구매 제한 푼다" — 이번 주에 셋을 샀어도 「구매」(전에는 꺼지고 빨간 「이번 주 3/3」)
+eq(cr[2].state, "buy", "이번 주에 셋을 샀어도 또 산다")
+expect(textOf("이번 주 3/3") == nil, "「이번 주 n/3」 줄이 없다")
 local offBuy = 0
 for _, b in buttonsNamed(W.buy) do
 	if not b.enabled then
 		offBuy += 1
 	end
 end
-eq(offBuy, 1, "다 산 상품의 「구매」는 꺼진다")
+eq(offBuy, 0, "재화 탭의 「구매」가 모두 켜져 있다")
 -- 보관함: 받기 · 모두 받기
 tabs[T.box].click()
 local takes = buttonsNamed(W.take)

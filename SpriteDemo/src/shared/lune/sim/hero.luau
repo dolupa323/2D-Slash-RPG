@@ -275,6 +275,7 @@ function Hero.new(id: any, class: string)
 	h.cine = {} -- 본 퀘스트 연출(장면) { [id] = true } — 한 캐릭터에 한 번만 튼다(2026-10-15 — shared/lune/cine.luau)
 	h.inCine = false -- 장면이 도는 중(맞지 않는다 — 저장하지 않는다. 서버가 90초 뒤에 저절로 푼다)
 	h.played = 0 -- 이 캐릭터로 논 시간(초 · 저장한다 — 서버가 센다. 로블록스 분석의 LevelUp 값 · 2026-10-15)
+	h.maxAt = nil -- 만렙에 오른 때(os.time — 저장한다). 레벨 순위에서 만렙끼리는 먼저 오른 사람이 위(2026-10-24 사용자: "만렙이면 찍은 순서대로 제일먼저찍은사람이 1위 여야하는데" — sim/rank.luau)
 	h.look = {} -- 무기 · 로브 색(염색약 — sim/dye.luau · 2026-10-22): { point = 색?, robe = 색? } · 없으면 원래 색
 	Quests.start(h.quests, h.level) -- (저절로 받는 퀘스트는 이제 없다 — 첫 퀘스트도 사제에게 말을 걸어 받는다)
 	h.maxHp = maxHpOf(h)
@@ -561,6 +562,10 @@ function Hero.gainXp(h, amount: number): number
 	end
 	if h.level >= N.MAX_LEVEL then
 		h.xp = 0
+		if not h.maxAt then
+			h.maxAt = os.time() -- 만렙에 오른 때(레벨 순위에서 만렙끼리의 차례)
+			h.maxNow = true -- 이 접속에서 경험치로 막 만렙이 됐다(저장하지 않는다 — 만렙 최초 달성 알림은 이것일 때만: world.luau)
+		end
 	end
 	if ups > 0 then
 		local from = h.job
@@ -595,7 +600,7 @@ end
 -- ---------- 맞기 · 물약 · 쓰러짐 ----------
 -- 맞는다. 실제로 들어간 피해를 돌려준다(무적 중이거나 쓰러져 있으면 0).
 function Hero.hurt(h, amount: number): number
-	if not h.alive or h.invuln > 0 or h.god or h.inCine then -- god = 관리자의 시험용 무적(저장하지 않는다) · inCine = 퀘스트 연출이 도는 중
+	if not h.alive or h.invuln > 0 or h.god or h.inCine or h.inCheck then -- god = 관리자의 시험용 무적(저장하지 않는다) · inCine = 퀘스트 연출이 도는 중 · inCheck = 매크로 확인 문제가 떠 있다(2026-10-23)
 		return 0
 	end
 	local dmg = math.max(1, math.floor(amount + 0.5))
@@ -904,6 +909,7 @@ function Hero.pack(h)
 		tut = Tutorial.pack(h.tut),
 		cine = Hero.cineList(h),
 		played = math.floor(h.played or 0),
+		maxAt = h.maxAt, -- 만렙에 오른 때(2026-10-24)
 		look = Dye.clean(h.look), -- 무기 · 로브 색(2026-10-22)
 	}
 end
@@ -958,6 +964,7 @@ function Hero.unpack(id: any, data: any)
 		end
 	end
 	h.played = if whole(data.played, 0, 1e10) then data.played else 0 -- (이것이 생기기 전의 저장 = 0부터 센다)
+	h.maxAt = if whole(data.maxAt, 1, 1e11) and h.level >= N.MAX_LEVEL then data.maxAt else nil -- 만렙에 오른 때(이것이 생기기 전에 만렙이 된 캐릭터 = 없음 — 서버가 처음 본 때로 채운다: world.luau pushRank)
 	h.look = Dye.clean(data.look) -- 무기 · 로브 색(이것이 생기기 전의 저장 · 모르는 색 = 원래 색)
 	Quests.jobsDone(h.quests, h.job) -- 이미 닿은 차수의 전직 퀘스트는 끝낸 것으로(다시 받지 않게)
 	autoJobs(h)

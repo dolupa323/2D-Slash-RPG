@@ -16,6 +16,10 @@ end
 for _, q in DYE.robe do
 	DYE_ROBE[q.id] = Color3.fromRGB(bit32.rshift(q.rgb, 16), bit32.band(bit32.rshift(q.rgb, 8), 255), bit32.band(q.rgb, 255))
 end
+local DYE_SKIN = {} -- 캐시 무기(2026-10-23 — design/wskin.js): 무기의 점만 그 재질로 담은 판(염색 판과 같은 칸 · 무기 색보다 앞선다)
+for _, q in DYE.skins do
+	DYE_SKIN[q.id] = q.page
+end
 local OVER = { "robeL", "pointL" } -- 겹치는 차례(로브 위에 무기 — 서로 겹치는 점은 없다)
 local WHITE = Color3.new(1, 1, 1)
 
@@ -85,12 +89,13 @@ local function layer(self, key: string, image: string?, color: Color3?)
 	self.tint = nil -- 색 · 투명도를 다시 맞춘다
 end
 
--- 무기 · 로브 색: look = { point = 색?, robe = 색? }(sim/dye.luau) — 없거나 모르는 색이면 원래 색. 흰 실루엣(mask)에는 겹치지 않는다
+-- 무기 · 로브 색: look = { point = 색?, robe = 색?, skin = 캐시 무기? }(sim/dye.luau · 캐시 무기는 계정의 것 — Who의 wskin) — 없거나 모르는 색이면 원래 색. 흰 실루엣(mask)에는 겹치지 않는다
 function Sprite:setLook(look: any)
 	if self.masked then
 		return
 	end
-	local point = if typeof(look) == "table" then DYE_POINT[look.point] else nil
+	self.skin = if typeof(look) == "table" and DYE_SKIN[look.skin] then look.skin else nil -- (무기에서 피어오르는 점 — client weaponFx.luau가 본다)
+	local point = if typeof(look) == "table" then (DYE_SKIN[look.skin] or DYE_POINT[look.point]) else nil
 	local robe = if typeof(look) == "table" then DYE_ROBE[look.robe] else nil
 	local key = (point or "-") .. "/" .. (if robe then tostring(robe) else "-")
 	if key == self.lookKey then
@@ -205,6 +210,10 @@ function Sprite:set(clip: string, frame: number, x: number, y: number, dir: numb
 	if self.lookKey then
 		cut(self, f, flip)
 	end
+	-- 지금 그린 장의 자리(캐시 무기의 점이 피어오르는 자리를 셈한다 — weaponFx.luau): 왼쪽 위 · 한 점의 크기 · 오른쪽을 보는가 · 장
+	local box = self.box or {}
+	box.x, box.y, box.s, box.right, box.f = label.Position.X.Offset, label.Position.Y.Offset, s, flip, f
+	self.box = box
 	label.Visible = true
 end
 

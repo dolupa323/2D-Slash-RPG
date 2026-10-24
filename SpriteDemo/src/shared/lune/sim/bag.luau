@@ -563,6 +563,40 @@ function Bag.dismantleMany(h, ids: any): (number?, string?, number?)
 	return total, nil, n
 end
 
+-- 여러 개 판매(2026-10-23 사용자: "인벤토리에서 모두판매할때 등급에 따라 판매할수있게해줘"): 장비 번호들을 한꺼번에 상점에 판다(Bag.sell의 장비와 같은 값 · 되사기 목록에도) → 받은 달돈 · 까닭 · 판 수
+--  고르는 일(칸 · 등급 단추)은 화면이 한다 — 여기는 가방에 있는 장비만 판다(한 번에 BULK_MAX개까지)
+function Bag.sellMany(h, ids: any): (number?, string?, number?)
+	if typeof(ids) ~= "table" then
+		return nil, "고른 장비가 없다"
+	end
+	local n0 = 0
+	for _ in ids do
+		n0 += 1
+		if n0 > Bag.BULK_MAX then
+			return nil, "한 번에 너무 많다"
+		end
+	end
+	local seen, total, n = {}, 0, 0
+	for _, id in ids do
+		if (typeof(id) == "number" or typeof(id) == "string") and not seen[id] then
+			seen[id] = true
+			local it, where, index = Bag.find(h, id)
+			if it and where == "gear" then
+				local price = Items.sellPrice(it)
+				h.gear[index] = false
+				total += price
+				remember(h, "gear", it, price)
+				n += 1
+			end
+		end
+	end
+	if n == 0 then
+		return nil, "가방에 없는 장비다"
+	end
+	h.money += total
+	return total, nil, n
+end
+
 -- 가방을 늘리는 값(더 못 늘리면 nil)
 function Bag.growCost(h): number?
 	return BAG.costs[h.bagGrow + 1]

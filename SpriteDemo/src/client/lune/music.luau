@@ -86,7 +86,7 @@ end
 
 -- 그 장면의 곡을 튼다
 function Music.scene(sceneKey: string)
-	Music.play(MUSIC.scene[sceneKey] or MUSIC.scene[string.match(sceneKey, "^(.-)#%d+$") or ""]) -- 토벌의 방(rf1#3)은 그 장면(rf1)의 곡
+	Music.play(MUSIC.scene[sceneKey] or MUSIC.scene[string.match(sceneKey, "^(.-)#w?[nh]?%d+$") or ""]) -- 토벌의 방(rf1#3)은 그 장면(rf1)의 곡
 end
 
 -- 짧은 징글을 한 번 튼다(배경 음악은 그동안 줄인다)

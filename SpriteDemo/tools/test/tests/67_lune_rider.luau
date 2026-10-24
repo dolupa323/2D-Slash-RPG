@@ -63,9 +63,11 @@ for _, m in RIDE.mounts do
 	expect(x == nil and y == nil and s == nil, m.id .. ": 사다리 · 기술 중(감춤)에는 nil — 영웅은 제 크기 · 제 동작")
 	-- ④ 질주 여섯 장 · 장마다 영웅 앞에 다시 그리는 등
 	local c = CHARS.chars[m.id]
-	eq(#c.clips.run.frames, 6, m.id .. ": 달리기 = 질주 여섯 장")
-	eq(#c.clips.run_front.frames, 6, m.id .. ": 장마다 등(_front)")
-	eq(#m.bob.run, 6, m.id .. ": 장마다 영웅의 높이")
+	-- (거대 탈것 「이끼 골렘」은 질주가 아니라 느린 걷기 네 장 — 2026-10-22 · 시험 80)
+	local runN = if m.id == "mount_golem" then 4 else 6
+	eq(#c.clips.run.frames, runN, m.id .. (if runN == 6 then ": 달리기 = 질주 여섯 장" else ": 달리기 = 느린 걷기 네 장"))
+	eq(#c.clips.run_front.frames, runN, m.id .. ": 장마다 등(_front)")
+	eq(#m.bob.run, runN, m.id .. ": 장마다 영웅의 높이")
 	rv:destroy()
 end
 

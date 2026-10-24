@@ -9,6 +9,8 @@ local Common = require(script.Parent.common)
 local crescentPts, starPts, poly, disc, oval, line = Fx.crescentPts, Fx.starPts, Fx.poly, Fx.disc, Fx.oval, Fx.line
 local dash, buff, coilBind, bindCast = Common.dash, Common.buff, Common.coilBind, Common.bindCast
 local floor, sin, cos, min, max, abs, ceil, PI = math.floor, math.sin, math.cos, math.min, math.max, math.abs, math.ceil, math.pi
+local COMBAT = require(script.Parent.Parent.data["combat.generated"]) -- 망령 돌진의 레벨마다의 거리(moveCast — 2026-10-25)
+local hands, ghostRush -- (아래 도우미 — 스킬 표보다 먼저 이름만)
 local function R(v: number): number
 	return floor(v + 0.5)
 end
@@ -191,6 +193,136 @@ local function drawGate(ctx, p, tone)
 	end
 end
 
+-- 백귀야행(4차 광역기 · 다시 쓰기 12초 · 맵 전체 — 2026-10-24 사용자 "무니, 리븐 광역기 만든것처럼 엑시온, 리퍼, 살라맨더 4차 스킬포인트 조정해서 그 빈포인트로 투자하는 완전 멋진 광역기만들자"):
+--  낫을 치켜들면(skill 동작) 망령 열여섯이 몸에서 쏟아져 양쪽 화면 끝까지 물결치며 날아간다(둥근 머리 · 꼬리 셋 · 검은 눈 — 하나씩 높이 · 빠르기 · 너울이 다르다).
+--  망령이 지나가는 차례로 적마다 할퀸 자국 셋이 나고 흰 영혼이 뽑혀 나와 리퍼에게 휘어 날아와 스민다. 판정은 쓰는 순간 한 번: 맵의 모든 적.
+--  이름 · 모양 · 숫자는 제가 정한 것(사신 강림의 겹 초승달 · 단죄의 떨어지는 낫과 겹치지 않게 「망령 떼」로)
+local PARADE_N, PARADE_SPEED, PARADE_LIFE = 16, 760, 0.8
+local EYE = 0x141a26
+local function ghostAt(gh, t: number)
+	return gh.x0 + gh.side * gh.speed * t, gh.y0 - gh.alt + sin(t * gh.freq + gh.ph) * gh.amp
+end
+local function drawGhost(ctx, gh, t: number, tone)
+	local x, y = ghostAt(gh, t)
+	for j = 3, 1, -1 do -- 꼬리(뒤로 갈수록 작고 어둡다)
+		local tx, ty = ghostAt(gh, max(0, t - j * 0.025))
+		disc(ctx, tx, ty + 1, max(1, gh.r - j), if j == 3 then tone.d else tone.n)
+	end
+	disc(ctx, x, y, gh.r + 1, tone.n)
+	disc(ctx, x, y, gh.r, tone.w)
+	ctx:style(EYE)
+	ctx:rect(R(x) - 2, R(y) - 1, 1, 2)
+	ctx:rect(R(x) + 1, R(y) - 1, 1, 2)
+end
+local function parade(g)
+	local x0, y0, tone = g.x, g.y - 18, g.tone
+	g.shake(3, 0.3)
+	local ghosts = {}
+	for i = 1, PARADE_N do
+		ghosts[i] = { x0 = x0, y0 = y0, side = if i % 2 == 0 then 1 else -1, delay = (i - 1) * 0.022, speed = PARADE_SPEED * (0.8 + g.rnd() * 0.4), alt = g.rnd() * 50 - 10, amp = 4 + g.rnd() * 8, freq = 12 + g.rnd() * 8, ph = g.rnd() * 6.28, r = 3 + floor(g.rnd() * 3) }
+	end
+	local life = PARADE_LIFE + 0.4
+	g.fx.add(life, function(ctx, k)
+		local t = k * life
+		for _, gh in ghosts do
+			local lt = t - gh.delay
+			if lt > 0 and lt < PARADE_LIFE then
+				ctx:alpha(if lt < PARADE_LIFE - 0.15 then 1 else (PARADE_LIFE - lt) / 0.15)
+				drawGhost(ctx, gh, lt, tone)
+			end
+		end
+		ctx:alpha(1)
+	end)
+	-- 판정은 여기 한 번: 맵의 모든 적 — 할퀸 자국 · 뽑혀 나오는 영혼은 망령이 지나가는 차례로
+	for _, m in g.mobs() do
+		g.hurt(m, 12, { stop = 0.08 })
+		local mx, my = m.x, m.y - (m.h or 16) / 2 - 2
+		g.after(min(0.6, abs(mx - x0) / PARADE_SPEED + 0.05), function()
+			for i = -1, 1 do
+				g.fx.cut(mx + i * 4, my, 20, 65, tone, { th = 2, life = 0.2, delay = (i + 1) * 0.03 })
+			end
+			local hx, hy = g.x, g.y - 20
+			g.fx.add(0.55, function(ctx, k) -- 영혼: 적에게서 흰 구슬이 솟았다가 리퍼에게로 휘어 날아온다
+				local e = k * k
+				local px, py = mx + (hx - mx) * e, my - 30 * sin(k * PI) + (hy - my) * e
+				disc(ctx, px, py, 3, tone.n)
+				disc(ctx, px, py, 2, tone.w)
+			end)
+		end)
+	end
+	g.after(0.7, function()
+		g.fx.ring(g.x, g.y, 4, 40, tone, { squash = 0.35, back = true, life = 0.4 })
+		g.fx.aura(g.x, g.y, tone, { r = 14, h = 30 })
+	end)
+end
+
+-- 망자의 손(3차 사냥기 — 2026-10-25 사용자 "리퍼도 망령돌진 일반 이동기로 변경하고 사냥기 추가하자 리븐작업한것처럼"):
+--  낫으로 땅을 긋자(slash 4장) 앞 땅 세 곳(28 · 70 · 112도트)에 0.07초씩 차례로 저승의 금이 열리고 뼈만 남은 손이 솟아 할퀸다 — 손마다 그 자리(폭 ±22 · 위 28도트 — 제 층만)의 적을 한 번 · 조금 띄운다.
+--  그림: 바닥의 어두운 틈(분홍 테) → 솟는 뼈 손(팔뼈 · 손바닥 · 갈고리 손가락 넷) → 할퀸 자국 셋 → 가라앉는다. 이름 · 모양 · 숫자는 제가 정한 것(망령 · 낫과 겹치지 않게 「땅에서 솟는 손」)
+local HANDS, HAND_W, HAND_H = { 28, 70, 112 }, 22, 28
+local GAP = 0x141a26
+local function drawHand(ctx, x: number, gy: number, k: number, dir: number, tone)
+	local rise = if k < 0.35 then k / 0.35 elseif k > 0.7 then (1 - k) / 0.3 else 1 -- 솟았다 → 머문다 → 가라앉는다
+	ctx:style(tone.d)
+	ctx:rect(R(x) - 9, R(gy) - 1, 18, 2) -- 저승의 틈(분홍 테)
+	ctx:style(GAP)
+	ctx:rect(R(x) - 7, R(gy) - 1, 14, 1)
+	local h = 30 * rise
+	if h < 2 then
+		return
+	end
+	local wy = gy - h -- 손 끝의 높이
+	line(ctx, x - 1, gy - 1, x + dir, wy + 11, tone.w, 2) -- 팔뼈
+	disc(ctx, x + dir * 2, wy + 8, 4, tone.l) -- 손바닥
+	disc(ctx, x + dir * 2, wy + 8, 3, tone.w)
+	for i = 0, 3 do -- 갈고리 손가락 넷(위로 뻗었다가 끝이 앞으로 굽는다)
+		local fx0 = x + dir * 2 + (i - 1.5) * 3
+		line(ctx, fx0, wy + 5, fx0 + dir, wy - 2, tone.w, 1)
+		line(ctx, fx0 + dir, wy - 2, fx0 + dir * 3, wy - 4, tone.n, 1)
+	end
+end
+function hands(g)
+	local x, y, dir, tone = g.x, g.y, g.dir, g.tone
+	for i, d in HANDS do
+		local hx, t = x + dir * d, (i - 1) * 0.07
+		g.after(t, function()
+			g.fx.add(0.5, function(ctx, k)
+				drawHand(ctx, hx, y, k, dir, tone)
+			end)
+			g.fx.shards(hx, y - 2, 4, tone, { kind = "tri", speed = 50, up = 60, life = 0.35 })
+		end)
+		g.after(t + 0.1, function()
+			for j = -1, 1 do -- 할퀸 자국 셋
+				g.fx.cut(hx + j * 4, y - 16, 22, 60 * dir, tone, { th = 2, life = 0.18, delay = (j + 1) * 0.03 })
+			end
+			g.hitAt(hx, y, HAND_W, HAND_H, 4, { lift = 120, stop = 0.03 })
+		end)
+	end
+end
+
+-- 망령 돌진(3차 이동기 — 2026-10-25 사용자 "리퍼도 망령돌진 일반 이동기로 변경하고 사냥기 추가하자 리븐작업한것처럼"): 피해는 없다(리븐 연쇄 순보와 같게 — 마스터 5 · 다시 쓰기 5초 · 공중에서도).
+--  유령처럼 몸이 비치며 앞으로 미끄러진다 — 아주 짧은 순간이동을 steps번(0.03초마다 · 지나는 자리마다 잔상) · 바닥을 긁는 자국 · 끝에서 작은 영혼 불씨. 거리(모두 합친 것)는 스킬 레벨마다(공방 combat.js의 MOVECAST → moveCast.dist)
+function ghostRush(g)
+	local mc = COMBAT.moveCast and COMBAT.moveCast.rp_drag
+	local steps = if mc then mc.steps else 6
+	local total = if mc then mc.dist[math.clamp(g.sk("rp_drag"), 1, #mc.dist)] else 90
+	local tone = g.tone
+	for i = 0, steps - 1 do
+		g.after(i * 0.03, function()
+			local x0 = g.x
+			g.ghost()
+			g.teleport(g.fwd(total / steps))
+			local x1, y = g.x, R(g.y) - 1
+			g.fx.add(0.4, function(ctx, k) -- 바닥을 긁는 자국
+				ctx:style(if k < 0.4 then tone.l else tone.n)
+				ctx:rect(R(min(x0, x1)), y, max(1, R(abs(x1 - x0))), 1)
+			end, { back = true })
+		end)
+	end
+	g.after(steps * 0.03, function()
+		g.fx.shards(g.x, g.y - 10, 5, tone, { kind = "dot", up = 40, speed = 30, life = 0.35 })
+	end)
+end
 local skills = {
 	{ id = "rp_double", key = "Q", shot = 0.5, segs = { { clip = "dslash", fps = 20, ev = {
 		[3] = function(g)
@@ -284,25 +416,11 @@ local skills = {
 		end,
 	} } } },
 	buff("rp_chill", "1"),
-	{ id = "rp_drag", key = "E", shot = 0.72, segs = {
-		{ clip = "dash", loop = true, dur = 0.5, fps = 26, float = true, trail = true, start = function(g)
-			g.move(250, 0.5)
-		end, every = { 0.03, function(g) -- 걸린 적을 끌고 간다 · 바닥을 긁는 자국
-			for _, m in g.mobs() do
-				if not m.boss and (m.x - g.x) * g.dir > -6 and (m.x - g.x) * g.dir < 24 and abs(m.y - g.y) < 20 then
-					g.drag(m, g.x + g.dir * 16)
-				end
-			end
-			local x, y, tone = R(g.x - g.dir * 6), R(g.y) - 1, g.tone
-			g.fx.add(0.4, function(ctx, k)
-				ctx:style(if k < 0.4 then tone.l else tone.n)
-				ctx:rect(x - 4, y, 8, 1)
-			end, { back = true })
-		end } },
-		{ clip = "slash", fps = 22, ev = { [5] = function(g)
-			g.fx.slash(g.fwd(4), g.y - 6, g.dir, 34, -40, 130, g.tone, { thick = 9, life = 0.28 })
-			g.hit(-6, 46, 40, 4, 8, { lift = 230, stop = 0.05 })
-		end } },
+	{ id = "rp_hands", key = "E", shot = 0.5, segs = { { clip = "slash", fps = 20, ev = { [4] = function(g) -- 망자의 손(위 hands)
+		hands(g)
+	end } } } },
+	{ id = "rp_drag", key = "V", air = true, shot = 0.3, segs = { -- 망령 돌진(이동기 — 위 ghostRush): 몸이 비치며 앞으로 미끄러진다
+		{ clip = "dash", loop = true, dur = 0.2, fps = 26, float = true, start = ghostRush },
 	} },
 	{ id = "rp_judge", key = "D", shot = 0.62, segs = { { clip = "slash", fps = 12, ev = { [2] = function(g) -- 적 머리 위 표시점 → 세로로 떨어지는 낫 모양 셋
 		local m = g.boss() or g.nearest(260)
@@ -401,6 +519,9 @@ local more = {
 		g.fx.aura(g.x, g.y, g.tone, { r = 24, h = 44 })
 		g.fx.rise(g.x, g.y, 18, g.tone, { w = 50, life = 1.1 })
 	end },
+	{ id = "rp_parade", key = "N", shot = 1.0, segs = { { clip = "skill", fps = 13, float = true, start = function(g) -- 백귀야행(위 parade)
+		g.dim(0.65, 1.6)
+	end, ev = { [4] = parade } } } },
 	{ id = "rp_advent", key = "G", shot = 1.14, segs = { { clip = "skill", fps = 13, float = true, start = function(g)
 		g.dim(0.62, 2.1)
 		g.fx.rise(g.x, g.y, 18, g.tone, { w = 60, life = 1.3 })

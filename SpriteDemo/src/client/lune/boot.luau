@@ -21,6 +21,7 @@ local CLASSES = require(lune.data["classes.generated"])
 local Stage = require(script.Parent.stage)
 local SceneView = require(script.Parent.sceneView)
 local Sprite = require(script.Parent.sprite)
+local WeaponFx = require(script.Parent.weaponFx) -- 캐시 무기의 피어오르는 점(2026-10-23)
 local Input = require(script.Parent.input)
 local MobsView = require(script.Parent.mobsView)
 local Overlay = require(script.Parent.overlay)
@@ -327,6 +328,16 @@ state.cashFetchNow = function()
 	end)
 end
 -- id = 그 펫(꺼내 둔 것이면 넣는다)
+-- 내 그림의 모습(2026-10-23): 염색(캐릭터의 것 — Self의 look) + 장착한 캐시 무기(계정의 것 — Who의 wskin)
+state.lookOf = function(look: any)
+	return { point = if typeof(look) == "table" then look.point else nil, robe = if typeof(look) == "table" then look.robe else nil, skin = state.mySkin }
+end
+-- 캐시 무기: id = 그것(장착한 것이면 해제한다) — 가방의 캐시 탭(2026-10-23)
+state.toggleWskin = function(id: string)
+	once(function()
+		cashInvoke("wskin", if state.mySkin == id then false else id)
+	end)
+end
 state.togglePet = function(id: string)
 	once(function()
 		cashInvoke("pet", if state.myPet == id then false else id)
@@ -415,19 +426,22 @@ local function enterScene(key: string, x: number, y: number, room)
 		state.body.run, state.body.jump = state.me.run or 1, state.me.jump or 1 -- 걸음 · 뛰는 힘의 배수(패시브)는 장면이 바뀌어도 그대로
 	end
 	state.sprite = Sprite.new(state.view.heroLayer, state.who)
-	state.sprite:setLook(state.me and state.me.look) -- 무기 · 로브 색(염색 — 2026-10-22)
+	state.wfx = state.wfx or WeaponFx.new() -- 캐시 무기의 점(장면이 바뀌어도 하나 — 없어진 그림의 점은 스스로 거둔다)
 	-- 내 펫 · 탈것: 들어선 방의 이름표(room.who)에서 읽는다(2026-10-21 사용자 "펫은 게임 종료할때 소환되어있는게 게임 종료하고 재접속하면 그대로 소환 되어야하고" —
 	--  서버는 꺼내 둔 펫을 저장하고 이름표에 실어 보냈지만, 화면은 따로 오는 Who에서만 읽어 접속한 뒤 누가 드나들기 전까지 펫이 없었다)
 	for _, w in (room and room.who) or {} do
 		if state.myId ~= nil and w.id == state.myId then
 			state.myPet, state.myRide = w.pet or nil, w.ride or nil
+			state.mySkin = w.wskin or nil -- 장착한 캐시 무기(계정의 것 — 2026-10-23)
 		end
 	end
+	state.sprite:setLook(state.lookOf(state.me and state.me.look)) -- 무기 · 로브 색(염색 — 2026-10-22) · 캐시 무기(2026-10-23)
 	state.ride = RideView.new(state.view.heroLayer, 1, scene) -- 내 펫 · 탈것(영웅의 ZIndex 1 — 탈것 · 펫은 그 뒤, 탈것의 등은 그 앞 · 펫은 이 맵의 땅 위를 걷는다)
 	state.ride:setPet(state.myPet)
 	state.ride:setRide(state.myRide)
 	state.mobs = MobsView.new(state.view.mobLayer, room, state.over)
 	RiftView.enter(room.rift) -- 토벌의 방이면 위 가운데의 판(아니면 숨긴다)
+	BossView.setWeekly(room.weekly) -- 주간 보스의 방이면 보스 체력 바 위에 난이도 · 남은 시간(아니면 숨긴다 — 2026-10-24)
 	if not Voyage.onShip(key) then
 		VoyageView.stop() -- 배에서 내렸다
 	end
@@ -739,6 +753,9 @@ end
 
 -- 새 캐릭터는 첫 퀘스트 「첫 기술」을 끝내야(사제에게 말을 걸어야) 기술을 쓴다 — 그때 스킬 칸이 생긴다
 local function skillsLocked(): boolean
+	if require(script.Parent.ui.macroWindow).isOpen() then
+		return true -- 매크로 확인 문제가 떠 있는 동안은 스킬을 쓰지 못한다(서버도 받지 않는다 — 2026-10-24)
+	end
 	if Tutorial.isDream(state.sceneKey) then
 		return false -- 꿈(튜토리얼)에서는 첫 사냥기를 써 본다(사제에게 배우기 전이어도)
 	end
@@ -865,6 +882,12 @@ local function trySkill(id: string, action: string?)
 	local sk = state.skill
 	if sk then
 		if sk.kit then
+			-- 자유 구간(몰아치기 — 2026-10-25)에서 대쉬: 돌던 채로 대쉬만큼 미끄러진다(대쉬의 빠르기 · 거리 · 다시 쓰기 그대로 — 서버의 이동 몫 초당 300점 안)
+			if sk.s and sk.s.free and def.type == "move" and not sk.imp and (state.cds[id] or 0) <= state.clock then
+				state.cds[id] = state.clock + def.cd
+				sk.imp = { v = state.dir * def.speed, t = def.dist / def.speed }
+				state.fx:streaks(state.body.x, state.body.y, def.speed, state.dir, CLASSES.classes[state.who].tone)
+			end
 			return -- 2~4차의 스킬을 쓰는 중이다
 		end
 		-- 같은 키를 한 번 더: 이어지는 구간이 있으면 예약한다
@@ -1040,6 +1063,19 @@ local function step()
 			Music.sfx("secret4")
 			return
 		end
+		if portal and portal.weekly then
+			-- 보스의 문(2026-10-24 — 주간 보스): 맵을 옮기지 않고 보스 창을 연다(문에서 멀어지면 닫힌다). 이번 주에 격파했는가는 서버에 묻는다
+			state.ui.npc, state.ui.scene = { x = portal.x, y = portal.y }, state.sceneKey
+			Windows.open("weekly", portal.weekly)
+			task.spawn(function()
+				local wc = Windows.context()
+				if wc and wc.weekDo then
+					wc.weekDo("view")
+				end
+			end)
+			Music.sfx("secret4")
+			return
+		end
 		if portal then
 			-- 서버에 묻는 것과 막을 치는 것을 같이 시작한다(막이 다 덮일 즈음 대답이 와 있다). 서버가 받아 주지 않으면 그 자리에서 막만 다시 걷힌다
 			local from = state.sceneKey
@@ -1089,6 +1125,15 @@ local function step()
 		end
 		-- 닫힌 던전의 문 앞(그 퀘스트를 끝내기 전 — 2026-10-21): 「수정 문이 굳게 닫혀 있다」와 누구에게 들으면 되는지
 		for _, p in scene.portals do
+			if p.weekly and math.abs(p.x - body.x) <= 40 and math.abs(p.y - body.y) <= 40 and not Quests.portalOpen(state.quests, p) then
+				-- 닫힌 보스의 문(그 보스 퀘스트를 끝내기 전 — 2026-10-24)
+				if state.fx then
+					local WW = require(lune.sim.weekly).DATA.words
+					state.fx:float(WW.closed, p.x, p.y - 70, Effects.MINT, 1.6)
+					state.fx:float(WW.closedHint, p.x, p.y - 56, Effects.MINT, 2.2)
+				end
+				return
+			end
 			if p.dungeon and math.abs(p.x - body.x) <= 40 and math.abs(p.y - body.y) <= 40 and not Quests.portalOpen(state.quests, p) then
 				if state.fx then
 					local DW = require(lune.sim.rift).DUNGEON.words
@@ -1126,6 +1171,7 @@ local function step()
 		Windows.close("daily")
 		Windows.close("rift") -- 토벌 창도(2026-10-18 검토: 「입장」 뒤 토벌의 방 안에서도 열려 있었다)
 		Windows.close("dungeon") -- 던전 창도(2026-10-21 — 문에서 멀어지면 · 들어가면)
+		Windows.close("weekly") -- 보스 창도(2026-10-24)
 	end
 	-- 말하던 주민에게서 멀어지면 대화가 닫힌다
 	if Talk.npc and math.abs(Talk.npc.x - body.x) > 44 then
@@ -1211,6 +1257,9 @@ local function step()
 		end
 		if vx ~= nil then
 			input = { mx = 0, vx = vx, float = s.float == true, down = false }
+		elseif s.free then
+			-- 자유 구간(몰아치기 — 2026-10-25 사용자 "몰아치기 는 범위늘리고 키다운하는동안 점프 대쉬 할수있게해 이속도 원래이속으로 다닐수있고"): 누르고 있는 동안 제 빠르기로 걷고 · 뛰고(2단 점프까지) · 대쉬한다(대쉬는 trySkill이 sk.imp로 얹는다 — 위)
+			input = { mx = mx, jump = Input.take("jump"), down = Input.held("down") }
 		elseif (s.walk or 0) > 0 then
 			input = { mx = mx, speed = s.walk, float = s.float == true, down = false }
 		else
@@ -1537,6 +1586,14 @@ local function draw(dt: number)
 	Cast.speed = tonumber(Stage.gui:GetAttribute("FxSpeed")) or 1 -- 확인용: PlayerGui.LuneStage의 속성 FxSpeed(예: 0.05)로 이펙트를 느리게 돌려 본다
 	cast:update(dt)
 	cast:draw()
+	-- 캐시 무기의 피어오르는 점(2026-10-23): 내 영웅 · 다른 사람들의 그림(그린 뒤)
+	if state.wfx then
+		local list = { state.sprite }
+		for _, o in state.others.list do
+			table.insert(list, o.sprite)
+		end
+		state.wfx:step(list, dt)
+	end
 	-- 이름표(발밑): 모두 제 주인의 발밑 그 자리에 둔다 — 옮기지 않는다(사용자 2026-10-07: 내 이름이 주민 이름 아래로 밀려 내려가던 것).
 	--  겹치면 앞선 것만 보인다: 내 것 → 다른 사람들 → 주민 · 문 → 다친 졸개
 	local tags = { { x = Overlay.x(body.x) - math.floor(state.tag.Width / 2), y = Overlay.y(body.y) + Others.TAG_DOWN, w = state.tag.Width, frame = state.tag.Frame, move = true } }
@@ -1790,7 +1847,7 @@ local function listen()
 		local jobWas = state.me and state.me.job
 		state.me = me
 		if state.sprite then
-			state.sprite:setLook(me.look) -- 무기 · 로브 색(염색약을 쓰면 서버가 다시 보낸다)
+			state.sprite:setLook(state.lookOf(me.look)) -- 무기 · 로브 색(염색약을 쓰면 서버가 다시 보낸다) · 캐시 무기
 		end
 		state.weakLeft, state.weakAt = me.weak or 0, state.now -- 쓰러진 벌칙(약해짐)의 남은 초 — 받은 때부터 화면이 센다(paintBuffs)
 		state.expLeft, state.expAt = me.expLeft or 0, state.now -- 경험치 쿠폰(유료)의 남은 초
@@ -2037,8 +2094,12 @@ local function listen()
 		-- 내 펫 · 탈것(서버가 정한 것 — 펫을 꺼냈다 · 탔다 · 기술을 써서 내렸다)
 		for _, w in roster do
 			if w.id == state.myId then
-				local changed = state.myPet ~= (w.pet or nil) or state.myRide ~= (w.ride or nil)
+				local changed = state.myPet ~= (w.pet or nil) or state.myRide ~= (w.ride or nil) or state.mySkin ~= (w.wskin or nil)
 				state.myPet, state.myRide = w.pet or nil, w.ride or nil
+				state.mySkin = w.wskin or nil -- 장착한 캐시 무기(2026-10-23)
+				if state.sprite then
+					state.sprite:setLook(state.lookOf(state.me and state.me.look))
+				end
 				if state.ride then
 					state.ride:setPet(state.myPet)
 					state.ride:setRide(state.myRide)
@@ -2213,7 +2274,7 @@ local function listen()
 			state.ui.forgeResult, state.ui.forgeWhy, state.ui.forgeMat = "restore", nil, nil -- 「되살렸다 — 12성」(대장장이 창의 RESULT — 붉은 「안 된 까닭」 줄이 아니다)
 		elseif (e.action == "dismantle" or e.action == "dismantleMany") and e.ok and state.fx then -- (여러 개 분해도 — 2026-10-22)
 			state.fx:float("+" .. Format.short(e.result) .. " 달가루", state.body.x, state.body.y - 34, Effects.MINT)
-		elseif e.action == "sell" and e.ok and state.fx then
+		elseif (e.action == "sell" or e.action == "sellMany") and e.ok and state.fx then -- (여러 개 판매도 — 2026-10-23)
 			state.fx:float("+" .. Format.short(e.result) .. " 달돈", state.body.x, state.body.y - 34, Effects.GOLD) -- 상점에 팔았다
 		elseif e.action == "use" and e.ok and e.why and state.fx then
 			state.fx:float(e.why, state.body.x, state.body.y - 46, Effects.MINT, 1.6) -- 달빛 부적 · 능력치 초기화 주문서를 썼다(「약해짐이 풀렸다」 · 「능력치를 모두 되돌렸다」 — 2026-10-18 검토: 전에는 실패만 띄웠다)
@@ -2251,6 +2312,18 @@ local function listen()
 		end
 		pcall(Guide.banner, "공지", text, 8)
 		Chat.note("[공지] " .. text)
+	end)
+	-- 만렙 최초 달성(2026-10-24 사용자 "150만렙 맨 처음 찍는 유저 나타나면 바로 전서버에 축하알림뜨면서 레벨 랭킹 1위 실시간 박제되게"):
+	--  모든 서버의 모두에게 화면 위 큰 알림 「축하」(10초) + 채팅 알림 글 · 명예의 전당 비석을 바로 다시 받는다(레벨 판 1위에 고정 — 서버의 rankBoards)
+	Net.OnClient("FirstMax", function(e)
+		if typeof(e) ~= "table" or typeof(e.name) ~= "string" then
+			return
+		end
+		local Rank = require(lune.sim.rank)
+		local text = Format.fill(Rank.FIRST_TEXT, { name = e.name, level = tonumber(e.level) or 150 })
+		pcall(Guide.banner, Rank.FIRST_TITLE, text, 10)
+		Chat.note(("[%s] %s"):format(Rank.FIRST_TITLE, text))
+		HallStones.soon()
 	end)
 	Net.OnClient("Sold", function(e)
 		if typeof(e) ~= "table" then
@@ -2587,6 +2660,7 @@ function Boot.start()
 		return false
 	end
 	-- 탈것(2026-10-16): 떠나는 탈것의 사람(마을의 선장 · 부두의 선장과 뱃사공 · 꼭대기의 승강장 일꾼)에게 말을 걸면 「○○로 가는 배」 → 「탑승」 → 서버가 갑판으로 옮긴다
+	--  2026-10-23 사용자: "갈건지 말건지 안물어보고 그냥 바로 배태워버리는데 이러면안된다 물어봐야해" → 마지막 장 = 묻는 말(r.ask) + 「탑승」 · 「거절」 단추(그 장은 단추로만 — Talk.start의 ask)
 	state.sailTalk = function(npc): boolean
 		local r = Voyage.route(state.sceneKey, npc.id)
 		if not r then
@@ -2597,14 +2671,18 @@ function Boot.start()
 			Talk.start(npc, { r.locked or "아직은 탈 수 없다." }, npc.role)
 			return true
 		end
-		Talk.start(npc, r.lines, npc.role, function()
+		local said = table.clone(r.lines)
+		if r.ask then
+			table.insert(said, r.ask)
+		end
+		Talk.start(npc, said, npc.role, function()
 			task.spawn(function()
 				local ok, res = pcall(Net.Invoke, "Sail", npc.id)
 				if ok and res and not res.ok and res.why and state.fx and state.body then
 					state.fx:float(res.why, state.body.x, state.body.y - 46, Effects.MINT, 1.6)
 				end
 			end)
-		end, W.board)
+		end, W.board, { ask = true })
 		return true
 	end
 	state.openNpc = function(npc): boolean
@@ -2881,6 +2959,22 @@ function Boot.start()
 			end
 			return false
 		end,
+		-- 주간 보스(2026-10-24): 서버의 마지막 대답 { ok, why, view = { done, reset } } · 묻기 / 들어가기
+		week = function()
+			return state.week
+		end,
+		weekDo = function(action: string, id: any, mode: any, party: boolean?)
+			local ok, res = pcall(Net.Invoke, "Week", action, id, mode, party == true)
+			if not ok or not res then
+				return nil
+			end
+			state.week = res
+			if not res.ok and res.why and state.fx and state.body then
+				state.fx:float(res.why, state.body.x, state.body.y - 46, Effects.MINT, 1.6)
+			end
+			Windows.refresh(state.me)
+			return res
+		end,
 		riftDo = function(action: string, id: any, party: boolean?)
 			local ok, res = pcall(Net.Invoke, "Rift", action, id, party == true) -- party = 던전에 파티로 들어간다(2026-10-21)
 			if not ok or not res then
@@ -3053,6 +3147,10 @@ function Boot.start()
 		local wctx = Windows.context()
 		wctx.togglePet = state.togglePet
 		wctx.toggleRide = state.toggleRide
+		wctx.toggleWskin = state.toggleWskin -- 캐시 무기(2026-10-23)
+		wctx.mySkin = function()
+			return state.mySkin
+		end
 		wctx.myPet = function()
 			return state.myPet
 		end
@@ -3150,6 +3248,7 @@ function Boot.start()
 	Windows.register("tome", TomeWindow) -- 모험의 서(메뉴 → 「모험의 서」 — 2026-10-16)
 	Windows.register("rift", RiftWindow) -- 수정 틈 토벌(토벌대장 앞에서 ↑ — 2026-10-16)
 	Windows.register("dungeon", require(script.Parent.ui.dungeonWindow)) -- 던전(그 문 앞에서 ↑ — 2026-10-21 · 수정 거울숲)
+	Windows.register("weekly", require(script.Parent.ui.weeklyWindow)) -- 주간 보스(그 보스의 문 앞에서 ↑ — 2026-10-24)
 	Windows.register("auction", AuctionWindow) -- 경매장(메뉴 · Y — 메이플 옥션 방식. 은달 항구의 경매사 앞에서 ↑로도)
 	Windows.register("bag", BagWindow)
 	Windows.register("equip", EquipWindow)
@@ -3402,6 +3501,38 @@ function Boot.start()
 			Windows.refresh(state.me)
 		end
 	end
+	-- 매크로 확인(2026-10-23 — ui/macroWindow.luau · 서버 modules/macroGuard.luau): 문제가 왔다 · 보상 멈춤 · 결과
+	do
+		local MacroWindow = require(script.Parent.ui.macroWindow)
+		MacroWindow.say = function(text: string, good: boolean)
+			if state.fx and state.body then
+				state.fx:float(text, state.body.x, state.body.y - 46, if good then Effects.MINT else Effects.PINK, 1.8)
+			end
+		end
+		Net.OnClient("MacroView", function(v)
+			MacroWindow.update(v)
+		end)
+		-- 새 문제가 떴다: 열려 있는 창 · 달빛 상점 · 대화를 모두 닫는다(2026-10-24 사용자 "매크로 뭐 다른 ui 열면 안열린다고")
+		MacroWindow.onOpen = function()
+			while Windows.closeTop() do
+			end
+			if CashShop.isOpen() then
+				CashShop.leave(state.shopCtx)
+			end
+			Talk.close()
+		end
+		-- 게임 창이 앞에 있는가를 서버에 알린다(창이 앞에 없는데 스킬이 들어오면 매크로로 본다 — 서버 modules/macroGuard.luau · 2026-10-24)
+		local UIS = game:GetService("UserInputService")
+		local function focus(on: boolean)
+			task.spawn(pcall, Net.Invoke, "Macro", "focus", on)
+		end
+		UIS.WindowFocused:Connect(function()
+			focus(true)
+		end)
+		UIS.WindowFocusReleased:Connect(function()
+			focus(false)
+		end)
+	end
 	-- 배(2026-10-16 — sim/voyage.luau): 갑판에 올랐다 · 닿았다
 	Net.OnClient("Voyage", function(v)
 		if typeof(v) ~= "table" then
@@ -3421,6 +3552,24 @@ function Boot.start()
 			Music.sfx("success")
 		end
 	end)
+	-- 주간 보스(2026-10-24): 방의 상태(싸움 · 격파 · 시간 끝) · 격파했다(보상은 아직 없다 — 사용자: 보상설계는 나중에)
+	Net.OnClient("WeekView", function(view)
+		BossView.setWeekly(view)
+		if view and view.state == "clear" then
+			Music.sfx("success")
+			local b = require(lune.sim.weekly).boss(view.boss)
+			local WW = require(lune.sim.weekly).DATA.words
+			Guide.banner(Format.fill(WW.clear, { name = if b then b.name else "" }), Format.fill(WW.back, { s = math.ceil(view.back or 0) }), 3)
+		elseif view and view.state == "fail" then
+			local WW = require(lune.sim.weekly).DATA.words
+			Guide.banner(WW.fail, Format.fill(WW.back, { s = math.ceil(view.back or 0) }), 3)
+		end
+	end)
+	Net.OnClient("WeekPay", function(p)
+		if p and p.view then
+			state.week = { ok = true, view = p.view }
+		end
+	end)
 	Net.OnClient("RiftPay", function(p)
 		RiftView.pay(p)
 		if state.rift and p then
@@ -3432,13 +3581,11 @@ function Boot.start()
 	end)
 	-- 로벅스로 산 것이 보관함에 들어왔다(서버의 ProcessReceipt가 저장까지 마친 뒤 — 2026-10-20): 가운데 위 알림 · 상점 창을 고쳐 그린다
 	Net.OnClient("CashGot", function(key)
-		local p = nil
-		for _, q in CashWindow.PRODUCTS do
-			if q.id == key then
-				p = q
-			end
-		end
-		if p then
+		local p = CashWindow.product(key) -- 상점에서 팔지 않는 펫 · 탈것(쿠폰 · 만렙 축하 선물)도 이름이 있다(2026-10-25 — 전에는 상품 목록에서만 찾아 알림이 뜨지 않았다)
+		if p and p.free == "max" then
+			local W = CashWindow.WORDS
+			Guide.banner(W.giftMax or CashWindow.TITLE, Format.fill(W.gotOwn, { name = p.name }), 4) -- 만렙 축하 선물(백금 사슴)
+		elseif p and not p.free then -- (쿠폰 펫 · 탈것은 쿠폰 창이 알린다 — 예전처럼 띠를 띄우지 않는다)
 			local W = CashWindow.WORDS
 			Guide.banner(CashWindow.TITLE, if key == "charx" then W.gotSlot elseif key == "pass" then W.gotPass elseif string.sub(key, 1, 4) == "pet_" or string.sub(key, 1, 6) == "mount_" then Format.fill(W.gotOwn, { name = p.name }) else Format.fill(W.got, { name = p.name }), 3)
 		end
@@ -3493,11 +3640,12 @@ function Boot.start()
 				-- 의뢰 게시판: 낼 의뢰가 있으면 「?」 · 안 받은 의뢰가 있으면 「!」
 				for region, board in Daily.DATA.boards do
 					if board.npc == npcId and board.scene == state.sceneKey then
-						return if level >= math.max(Daily.FROM, board.from or 0) and state.daily then Daily.mark(state.daily.boards[region]) else nil
+						local mk = if level >= math.max(Daily.FROM, board.from or 0) and state.daily then Daily.mark(state.daily.boards[region]) else nil
+						return if mk and board.green then "D" .. mk else mk -- 기도 탑은 초록 「!」 · 「?」(2026-10-25)
 					end
 				end
 				local here = SCENES.scenes[state.sceneKey]
-				return Quests.mark(state.quests, level, npcId, here.region, here.also)
+				return Quests.markFull(state.quests, level, npcId, here.region, here.also) -- 메인은 금빛 초승달의 「!」 · 「?」(2026-10-24)
 			end)
 			-- 그 퀘스트를 받아야 열리는 문(달의 사당 안의 「사당 지하」 — 메인 「불타는 마을」): 받기 전에는 보이지 않는다
 			state.view:setPortals(function(p)

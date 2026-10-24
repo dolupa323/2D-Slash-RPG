@@ -169,6 +169,19 @@ function ItemDetail.show(owner: string, spec)
 		Ui.button(panel, ask.no.text, K.pad + half + K.btnGap, y, half, ask.no.onClick).frame.Name = "No"
 		y += M.button
 	elseif #spec.buttons > 0 then
+		-- 고르기 단추(spec.chips — 여러 개 판매의 등급 · 2026-10-23): { text, on = 켜짐(민트) · off = 없음(흐림) · onClick } — 셋씩 줄을 바꾼다
+		if spec.chips and #spec.chips > 0 then
+			y += K.btnTop
+			local cw = Layout.detailButtonW(K.btnCols)
+			for i, c in spec.chips do
+				local col, row = (i - 1) % K.btnCols, (i - 1) // K.btnCols
+				local chip = Ui.button(panel, c.text, K.pad + col * (cw + K.btnGap), y + row * (M.button + K.btnGap), cw, c.onClick, { main = c.on == true })
+				chip.frame.Name = "Chip" .. i
+				chip:setEnabled(not c.off)
+			end
+			local rows = math.ceil(#spec.chips / K.btnCols)
+			y += rows * M.button + (rows - 1) * K.btnGap
+		end
 		y += K.btnTop
 		local n = #spec.buttons
 		local perRow = math.min(n, K.btnCols)

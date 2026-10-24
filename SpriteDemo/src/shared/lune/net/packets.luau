@@ -65,12 +65,16 @@ local packets = {
 	-- 탈것(2026-10-16): 그 사람(선장 · 뱃사공 · 승강장 일꾼 — 이름표) 앞에서 오른다 — 돌려주는 값 { ok, why, time, dest } (world.luau의 onSail · 셈은 sim/voyage.luau)
 	Sail = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 2, Burst = 4 } },
 	Rift = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } }, -- 셋째 = 던전에 파티로 들어가는가(2026-10-21)
+	-- 주간 보스(2026-10-24): "view" · "enter" 보스 · 난이도("normal" | "hard") · 파티인가 — 돌려주는 값 { ok, why, view = { done = { 보스 = 격파한 난이도 | false }, reset = 다음 초기화까지 초 } } (world.luau · 셈은 sim/weekly.luau)
+	Week = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } },
 	-- 경매장(메이플 옥션 방식 — 메뉴에서 어디서나): "mine" 내 것(판매 · 완료 탭) · "browse" 분류의 목록과 시세(장부의 이름, 새로 고침) · "list" 올리기(탭, 칸, 수, { 개당 값, 시간 }) ·
 	--  "buy" 사기(장부, 줄, 수, 본 값) · "settle" 내 것 하나(번호, "take" 수령 · "collect" 대금 수령 · "back" 취소 / 반환 · "relist" 재등록) · "all" 모두 받기
 	--  돌려주는 값 { ok, why, msg, rows(목록) · trades(시세) · board, mine(내 것), used · max(판매 수), now } — server/lune/modules/world.luau의 onMarket · 셈은 sim/market.luau
 	Market = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any, t.any }, RateLimit = { PerSecond = 3, Burst = 6 } },
 	-- 유료 상품의 창(2026-10-20): "view" · "buy"(상품) · "take"(보관함의 줄) · "rename"(새 이름) — 산 것은 로블록스의 ProcessReceipt가 준다(server/lune/modules/cash.luau)
 	Cash = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 3, Burst = 6 } },
+	-- 매크로 확인(2026-10-23): "answer"(문제의 번호, 고른 칸 셋) · "again"(보상 멈춤에서 다시 확인) → { result = pass · wrong · fail · bad, check?, stopped, retryIn } (server modules/macroGuard.luau)
+	Macro = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 3, Burst = 6 } },
 	-- 소리 설정을 저장한다 { music = 0~10, sfx = 0~10, on = 켰는가 } — 꼴은 서버가 다시 본다(계정에 저장 — sim/account.luau의 setSound)
 	Sound = { Kind = "Event", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 12 } },
 	-- 퀵슬롯을 바꿨다: 칸들 전체 { "potion" · 스킬의 이름표 · false … } — 꼴과 놓아도 되는 스킬인지는 서버가 다시 본다. 돌려주는 값 = 서버가 가진 칸들(받아들였으면 보낸 것, 아니면 예전 것)
@@ -118,8 +122,11 @@ local packets = {
 	Quests = { Kind = "Event", Direction = "ServerToClient", Doc = "내 퀘스트의 상태 { [id] = { done, c = { 할 일마다의 수 } } } — 바뀔 때마다. 둘째 값 = 방금 끝낸 퀘스트의 id(없으면 nil)" },
 	DailyView = { Kind = "Event", Direction = "ServerToClient", Doc = "일일 의뢰의 상태(sim/daily.luau의 view) — 잡은 수가 오를 때마다" },
 	AchDone = { Kind = "Event", Direction = "ServerToClient", Doc = "새로 해낸 업적들의 id { … } — 화면 위의 띠 「업적 달성 · 이름」(2026-10-15)" },
+	MacroView = { Kind = "Event", Direction = "ServerToClient", Doc = "매크로 확인: { check = 문제(위의 셋 · 아래 아홉 · 남은 초 · 남은 기회 — 답은 없다) 또는 nil, stopped = 사냥 보상 멈춤, retryIn = 다시 확인까지 초, result = 방금의 결과 } (2026-10-23)" },
 	Voyage = { Kind = "Event", Direction = "ServerToClient", Doc = "배: { left = 닿기까지 초, dest } 갑판에 올랐다 · { arrived = 장면, dest } 닿았다(2026-10-16)" },
 	RiftView = { Kind = "Event", Direction = "ServerToClient", Doc = "토벌의 방의 상태(sim/rift.luau의 view — 물결 · 남은 몬스터 · 시간 · 완료 · 실패, 2026-10-16)" },
+	WeekView = { Kind = "Event", Direction = "ServerToClient", Doc = "주간 보스의 방의 상태(sim/weekly.luau의 roomView — { boss, mode, state = fight | clear | fail, left, back }, 2026-10-24)" },
+	WeekPay = { Kind = "Event", Direction = "ServerToClient", Doc = "주간 보스를 격파했다 { boss, mode, first(이번 주 처음), view } — 보상은 아직 없다(사용자: 보상설계는 나중에, 2026-10-24)" },
 	RiftPay = { Kind = "Event", Direction = "ServerToClient", Doc = "토벌 완료의 보상 { xp, money, dust, gear(장비의 꼴 · 없으면 nil), full(가방이 차서 장비를 못 받았다), none(오늘 보상을 다 받았다), left }" },
 	BondView = { Kind = "Event", Direction = "ServerToClient", Doc = "2편의 도시 생활(sim/bond.luau의 view)과 알림 { kind = shard · quest · open, … } — 달조각을 주웠다 · 퀘스트로 호감도가 올랐다 · 모험의 서가 열렸다(2026-10-16)" },
 	AttendNew = { Kind = "Event", Direction = "ServerToClient", Doc = "게임 중에 자정이 지나 출석 칸이 찼다 — 출석 창을 띄운다(2026-10-15)" },
@@ -130,6 +137,7 @@ local packets = {
 	MobCast = { Kind = "Event", Direction = "ServerToClient", Doc = "몬스터의 마법이 뜸 { id, kind(쓴 몬스터의 종류), x, y, dir(쓴 몬스터가 보던 쪽 — 앞으로 뻗는 마법은 그쪽으로 그린다) } — 그 종류의 마법 그림(cast)이 그 자리에서 한 번 돈다. 맞는 것은 서버가 예고 뒤에 따로 알린다(Hurt)" },
 	ShotEnd = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 번호" },
 	Megaphone = { Kind = "Event", Direction = "ServerToClient", Doc = "관리자의 확성기(모든 서버의 모두에게 — 2026-10-21): 글 — 화면 위 큰 알림 「공지」 + 채팅 알림 글" },
+	FirstMax = { Kind = "Event", Direction = "ServerToClient", Doc = "만렙 최초 달성(모든 서버의 모두에게 — 2026-10-24): { name, class, level } — 화면 위 큰 알림 「축하」 + 채팅 알림 글 · 명예의 전당을 바로 다시 받는다" },
 	Sold = { Kind = "Event", Direction = "ServerToClient", Doc = "경매장에 올린 내 물건이 팔렸다 { name(물건 이름), n(팔린 수) } — 획득 알림 한 줄 · 「경매」 단추의 점(2026-10-18)" },
 	Elite = { Kind = "Event", Direction = "ServerToClient", Doc = "사냥터 정예가 나옴 { room(그 맵), mob(졸개 번호), kind, x · y(나온 자리 — 그 자리에 분홍 기운이 솟는다 · 높이 — 그 자리로 옮겨 그린다) } — 화면 위 가운데에 알림(2026-10-18)" },
 	Burst = { Kind = "Event", Direction = "ServerToClient", Doc = "폭탄병이 터짐 { mob, x, y }" },

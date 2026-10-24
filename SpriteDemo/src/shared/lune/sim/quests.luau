@@ -221,7 +221,7 @@ end
 --   하드코딩 박는식으로 개발을하면안되요" — 전에는 그 퀘스트의 맵에서 잡은 것만 세고 떨어뜨렸다). 이야기의 자리에서만 세는 일(only — 사당 지하를 지키는 「불타는 마을」)만 그 맵을 본다.
 -- 방의 이름 → 장면의 이름(r1c4#5 → r1c4): 파티마다 따로 들어가는 장면(스토리 보스 · 사당 지하 · 꿈 — scenes의 inst)의 방에서도 설계의 scene과 견준다(2026-10-21)
 local function baseOf(scene: any): any
-	return if type(scene) == "string" then (string.match(scene, "^(.-)#%d+$") or scene) else scene
+	return if type(scene) == "string" then (string.match(scene, "^(.-)#w?[nh]?%d+$") or scene) else scene
 end
 Q.baseOf = baseOf
 local function counts(def, step, scene: string): boolean
@@ -584,9 +584,19 @@ function Q.talkMenu(at, rows: number)
 	return out
 end
 
--- 주민 머리 위의 표시: "?" 돌려줄 것이 있다 · "!!" 큰 「!」(줄 것 가운데 중요한 것 — def.big · 던전의 문 2026-10-21) · "!" 줄 것이 있다 · nil
-function Q.mark(book, level: number, npc: string, region: any?, also: any?): string?
+-- 주민 머리 위의 표시(메인을 가른다 — 2026-10-24 사용자 "메인퀘스트도 느낌표 메인퀘스트로 특별하게 뜨게하고, 일반 사이드 퀘스트와 구분되어지게"):
+--  "M?" 돌려줄 메인 · "?" 돌려줄 것 · "!!" 큰 「!」(줄 것 가운데 중요한 것 — def.big · 던전 · 보스의 문) · "M!" 줄 메인 · "!" 줄 것 · nil. 앞에 있는 것일수록 먼저
+local function isMain(id: string): boolean
+	local def = byId[id]
+	return def ~= nil and def.kind == "main"
+end
+function Q.markFull(book, level: number, npc: string, region: any?, also: any?): string?
 	local at = Q.atNpc(book, level, npc, region, also)
+	for _, id in at.ready do
+		if isMain(id) then
+			return "M?"
+		end
+	end
 	if #at.ready > 0 then
 		return "?"
 	end
@@ -596,7 +606,17 @@ function Q.mark(book, level: number, npc: string, region: any?, also: any?): str
 			return "!!"
 		end
 	end
+	for _, id in at.offer do
+		if isMain(id) then
+			return "M!"
+		end
+	end
 	return if #at.offer > 0 then "!" else nil
+end
+-- 메인을 가르지 않는 표시: "?" · "!!" · "!" · nil(지도 · 시험들이 쓴다)
+function Q.mark(book, level: number, npc: string, region: any?, also: any?): string?
+	local m = Q.markFull(book, level, npc, region, also)
+	return if m == "M?" then "?" elseif m == "M!" then "!" else m
 end
 
 -- ---------- 길잡이(알리미가 적는다 — 메이플스토리의 전구 구실) ----------

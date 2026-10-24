@@ -368,7 +368,7 @@ do
 			for _, b in buttons do
 				table.insert(names, b.text)
 			end
-			expect(#names >= (if t.id == "acct" then 1 else 3), "탭에 단추가 있다 " .. t.name) -- (계정 탭은 쿠폰 기록 지우기 하나 — 2026-10-21)
+			expect(#names >= (if t.id == "acct" or t.id == "macro" then 1 else 3), "탭에 단추가 있다 " .. t.name) -- (계정 탭은 쿠폰 기록 지우기 하나 — 2026-10-21 · 매크로 탭은 목록을 받기 전에는 「새로 고침」 하나 — 2026-10-23)
 			for _, name in names do
 				for _, b in buttons do
 					if b.text == name then
@@ -464,9 +464,9 @@ do
 				h.tut.step = Tut.TOTAL
 			end
 			local trip = handlers.Travel(pAdmin, portal.to)
-			if portal.dungeon then
-				-- 던전의 문(2026-10-21 — 수정 거울숲): 맵을 옮기지 않는다(앞에서 ↑ = 던전 창 · 들어가기는 Rift "enter")
-				expect(trip == nil and sAdmin.scene == here, ("%s: 던전의 문 %s으로는 걸어 들어가지 못한다"):format(key, portal.to))
+			if portal.dungeon or portal.weekly then
+				-- 던전의 문(2026-10-21 — 수정 거울숲) · 보스의 문(2026-10-24 — 주간 보스): 맵을 옮기지 않는다(앞에서 ↑ = 던전 · 보스 창 · 들어가기는 Rift · Week "enter")
+				expect(trip == nil and sAdmin.scene == here, ("%s: 던전 · 보스의 문 %s으로는 걸어 들어가지 못한다"):format(key, portal.to))
 				continue
 			end
 			expect(trip ~= nil and SCENES.base(trip.scene) == portal.to and sAdmin.scene == trip.scene, ("%s: 관리로 옮긴 뒤 문 %s을 지난다"):format(key, portal.to))

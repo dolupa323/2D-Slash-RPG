@@ -89,6 +89,22 @@ def lint_ui_names():
     print(f'[UI 부품 이름] 키트 부품 {len(names)}개, 없는 이름 {bad}개')
     return bad
 
+def lint_windows():
+    """「달의 계승자」의 화면 코드가 등록하는 창(Windows.register("id", …))이 공방의 창 목록(ui.generated.luau의 windows — 공방 design/basics.js의 WINDOWS)에 모두 있는지 본다.
+    없으면 게임이 시작할 때 windows.luau의 assert(「공방에 없는 창」)로 멈춘다 — 2026-10-24 보스 창(weekly)을 목록에 빠뜨려 캐릭터 선택에서 「잠시만 기다려 주세요」로 멈췄다."""
+    import re
+    ui = open(os.path.join(SRC, 'shared', 'lune', 'data', 'ui.generated.luau'), encoding='utf-8').read()
+    have = set(re.findall(r'\{ id = "(\w+)", name = "[^"]*", key = ', ui))
+    bad, n = 0, 0
+    for f in glob.glob(os.path.join(SRC, 'client', 'lune', '**', '*.luau'), recursive=True):
+        for k, line in enumerate(open(f, encoding='utf-8').read().split(NL), 1):
+            for m in re.finditer(r'Windows\.register\("(\w+)"', line):
+                n += 1
+                if m.group(1) not in have:
+                    bad += 1; print(f'  공방 창 목록에 없는 창 {m.group(1)} ({os.path.relpath(f, SRC)}:{k}) — 공방 design/basics.js의 WINDOWS에 넣을 것')
+    print(f'[창 등록] 등록 {n}곳, 공방 목록에 없는 창 {bad}개')
+    return bad
+
 def lint_render_step():
     """「달의 계승자」의 화면 코드(src/client/lune)는 화면을 RunService.RenderStepped 이벤트(PreRender 포함)에서 고치면 안 된다 — RunService:BindToRenderStep으로 고친다.
     그 이벤트는 Roblox가 그 장의 틀 크기를 셈한 뒤에 불려서, 그림의 자리(ImageRect)는 이번 장에 · 틀의 크기(Size)는 다음 장에 적용된다.
@@ -133,6 +149,7 @@ if __name__ == '__main__':
     bad += lint_ui_names()
     bad += lint_globals()
     bad += lint_render_step()
+    bad += lint_windows()
     mods, tests = bundle()
     print(f'[묶음] 모듈 {mods}개 · 테스트 파일 {tests}개')
     r = subprocess.run([LUAU, OUT], capture_output=True, text=True, encoding='utf-8', errors='replace')

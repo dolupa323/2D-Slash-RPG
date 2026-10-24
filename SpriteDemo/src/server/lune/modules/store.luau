@@ -15,7 +15,7 @@ local function studio(): boolean
 	return ok and yes == true
 end
 
-local NAME = { account = "LuneAccount_v1", names = "LuneNames_v1", old = "LuneHero_v1", rankInfo = "LuneRankInfo_v1", market = "LuneMarket_v2" }
+local NAME = { account = "LuneAccount_v1", names = "LuneNames_v1", old = "LuneHero_v1", rankInfo = "LuneRankInfo_v1", market = "LuneMarket_v2", world = "LuneWorld_v1" } -- world = 세계의 기록(만렙 최초 달성 — 2026-10-24)
 local RANK = { level = "LuneRankLevel_v1", power = "LuneRankPower_v1", robux = "LuneRankRobux_v1" } -- 순위판(OrderedDataStore): 열쇠 → 점수
 local RETRIES = 3
 local WAIT = 1
@@ -23,7 +23,7 @@ local WAIT = 1
 local Store = {}
 
 local stores = {}
-local memory = { account = {}, names = {}, market = {} } -- DataStore를 못 쓸 때의 임시 저장
+local memory = { account = {}, names = {}, market = {}, world = {} } -- DataStore를 못 쓸 때의 임시 저장
 local offline = false
 
 local function getStore(which: string)
@@ -436,6 +436,55 @@ function Store.marketUpdate(key: string, fn: (any) -> (any, any, any)): (boolean
 		return false, nil, nil, nil
 	end
 	return true, a, b, doc
+end
+
+-- ---------- 세계의 기록(LuneWorld_v1 — 2026-10-24) ----------
+--  사용자: "150만렙 맨 처음 찍는 유저 나타나면 바로 전서버에 축하알림뜨면서 레벨 랭킹 1위 실시간 박제되게 이벤트 만들고"
+--  열쇠 firstMax = 처음 만렙에 오른 캐릭터 { key, name, class, at }. 비어 있을 때만 적는다(UpdateAsync — 여러 서버에서 같은 때 올라도 한 사람만 적힌다).
+function Store.firstMaxGet(): any
+	if offline then
+		return memory.world.firstMax
+	end
+	local ok, result = read("world", "firstMax")
+	if ok then
+		return result
+	end
+	return if offline then memory.world.firstMax else nil
+end
+-- 적어 본다: 돌려주는 것 = 내가 처음인가(true · 이미 남이 있으면 false · 적지 못했으면 nil), 저장소에 있는 기록
+function Store.firstMaxClaim(rec): (boolean?, any)
+	if offline then
+		if memory.world.firstMax then
+			return false, memory.world.firstMax
+		end
+		memory.world.firstMax = rec
+		return true, rec
+	end
+	local ds = getStore("world")
+	if not ds then
+		return nil, nil
+	end
+	local mine, have = false, nil
+	local ok, err = try(function()
+		mine, have = false, nil
+		ds:UpdateAsync("firstMax", function(old)
+			if typeof(old) == "table" and old.key then
+				have = old
+				return nil -- 이미 있다: 그대로 둔다
+			end
+			mine, have = true, rec
+			return rec
+		end)
+	end)
+	if not ok then
+		warn(("[lune] 만렙 최초 기록을 적지 못했다: %s"):format(tostring(err)))
+		if studio() then
+			offline = true
+			return Store.firstMaxClaim(rec)
+		end
+		return nil, nil
+	end
+	return mine, have
 end
 
 function Store.isOffline(): boolean

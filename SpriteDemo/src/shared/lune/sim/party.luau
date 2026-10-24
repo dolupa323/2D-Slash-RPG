@@ -151,6 +151,18 @@ function Party.share(n: number): number
 end
 
 -- 경험치를 나눌 사람들: killer의 파티원 가운데 here(같은 맵에 있는 살아 있는 사람들 { [번호] = { level } })에 있고 레벨 차이가 20 안쪽인 사람(killer도 든다)
+-- 같은 방에 있는 파티원 모두(나도 든다 · 레벨 차이를 보지 않는다): 치유 · 파티 버프 · 소생이 닿는 사람(2026-10-24 사용자: "무니 힐 이랑 버프 아직도 파티원 적용 안된다" —
+--  전에는 이것들도 경험치 나누기의 목록(Party.mates — 레벨 차이 LEVEL_GAP 안쪽)을 써서, 레벨이 20 넘게 차이 나는 파티원에게는 치유도 버프도 가지 않았다)
+function Party.near(book, id: any, here): { any }
+	local list = {}
+	for _, m in Party.members(book, id) do
+		if m == id or here[m] then
+			table.insert(list, m)
+		end
+	end
+	return list
+end
+
 function Party.mates(book, killer: any, here): { any }
 	local me = here[killer]
 	local list = {}

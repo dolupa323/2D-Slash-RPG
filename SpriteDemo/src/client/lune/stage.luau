@@ -8,6 +8,7 @@
 --   그래서 2배가 안 되는 화면에서는 정수 배율을 버리고 화면에 꽉 차게 키운다 — 화면 틀의 격자는 가장 작은 격자(768x432) 그대로다(화면 틀의 한 점 = 게임 도트의 반).
 --  Studio에서 스마트폰 화면을 흉내 내려면 화면 틀(LuneStage)의 속성 Screen = "844x390"처럼 준다(그 크기의 화면인 것처럼 가운데에 그린다). 손가락 단추는 속성 Touch = true.
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -32,10 +33,15 @@ end
 -- 화면 크기(w x h)에서의 두 배율: 게임 세계의 배율, 화면 틀의 배율.
 --  2배 이상 들어가는 화면: 게임 세계는 들어가는 가장 큰 정수 배율(도트가 뭉개지지 않게), 화면 틀은 uiScaleFor.
 --  그보다 작은 화면(스마트폰): 게임 세계를 화면에 꽉 차게(소수 배율), 화면 틀의 격자는 가장 작은 격자 그대로(게임 도트 하나 = 화면 틀의 두 점).
-function Stage.scalesFor(w: number, h: number): (number, number)
+--  touch = 손가락으로 하는 화면(태블릿 — 2026-10-23 사용자 "아이패드로 플레이할때 불편하다고하네"): 정수 배율로는 화면을 6% 넘게 비우면(10.2인치 iPad 1080x810 → 2배 = 화면의 38%)
+--   폰처럼 꽉 차게 키운다 · 화면 틀은 기준 격자(960x540). PC는 그대로 정수 배율(도트가 뭉개지지 않게). [제가 정한 것 — 6%]
+function Stage.scalesFor(w: number, h: number, touch: boolean?): (number, number)
 	local fitScale = math.min(w / G.VIEW_W, h / G.VIEW_H)
 	if fitScale >= 2 then
 		local s = math.floor(fitScale)
+		if touch and s < fitScale * 0.94 then
+			return fitScale, fitScale * G.VIEW_W / UI.grid.w
+		end
 		return s, Stage.uiScaleFor(s)
 	end
 	local s = math.max(0.5, fitScale)
@@ -62,6 +68,7 @@ function Stage.init()
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.DisplayOrder = 0
 	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+	Stage.gui = gui -- (먼저 — 처음 맞출 때 Touch 속성을 본다: Stage.touchLike)
 
 	-- 게임 화면 밖(배율이 딱 맞지 않을 때의 가장자리)은 검게 덮는다
 	local back = Instance.new("Frame")
@@ -108,7 +115,7 @@ function Stage.init()
 				size = Vector2.new(math.min(real.X, tonumber(fw) :: number), math.min(real.Y, tonumber(fh) :: number))
 			end
 		end
-		local s, us = Stage.scalesFor(size.X, size.Y)
+		local s, us = Stage.scalesFor(size.X, size.Y, Stage.touchLike())
 		local changed = s ~= Stage.scale or us ~= Stage.uiScale
 		Stage.scale, Stage.uiScale, Stage.ratio = s, us, s / us
 		Stage.uiW, Stage.uiH = G.VIEW_W * s / us, G.VIEW_H * s / us
@@ -132,12 +139,30 @@ function Stage.init()
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 	gui:GetAttributeChangedSignal("Screen"):Connect(fit)
+	Stage.refit = fit -- 터치인가가 바뀌면(touch.luau) 다시 맞춘다
 	fit()
 
 	Stage.gui = gui
 	Stage.view = view
 	Stage.ui = ui
 	return Stage
+end
+
+-- 손가락으로 하는 화면인가(터치 단추를 켜는 판단 — touch.luau · countBox.luau가 같이 쓴다). 2026-10-23:
+--  전에는 TouchEnabled and not KeyboardEnabled — iPad에 키보드 케이스를 끼우면 KeyboardEnabled가 켜져 터치 단추가 아예 나오지 않았을 수 있다.
+--  → Roblox의 PreferredInput(마지막으로 쓴 입력 — 터치를 쓰면 Touch)이 있으면 그것으로. Studio에서는 화면 틀의 속성 Touch(true · false)가 앞선다
+function Stage.touchLike(): boolean
+	local forced = if Stage.gui then Stage.gui:GetAttribute("Touch") else nil
+	if forced ~= nil then
+		return forced == true
+	end
+	local ok, pref = pcall(function()
+		return UserInputService.PreferredInput == Enum.PreferredInput.Touch
+	end)
+	if ok then
+		return pref
+	end
+	return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 end
 
 -- 화면 틀의 격자가 바뀌면(창 크기가 바뀌어 배율이 달라지면) fn을 부른다

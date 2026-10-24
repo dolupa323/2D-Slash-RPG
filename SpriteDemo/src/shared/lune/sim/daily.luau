@@ -51,9 +51,12 @@ end
 
 -- 그 레벨 · 그날의 의뢰들: 갈 수 있는 사냥터(그 몬스터의 가장 낮은 레벨 ≤ 내 레벨) 가운데 레벨이 높은 near곳에서 차례로 돈다(공방의 dailyPick과 같은 셈)
 --  skip = 피할 몬스터(퀘스트 줄에서 아직 끝내지 않은 퀘스트의 몬스터 — Quests.lineMobs): 지나온 사냥터에서 뽑는다. 다 빠지면 예전대로(2026-10-15)
+--  게시판마다 다른 수(기도 탑 — 2026-10-25): board.perDay · board.near가 있으면 그것(모든 지역의 풀에서 하루 셋)
 function Daily.pick(region: string, level: number, day: number, skip: { [string]: boolean }?)
+	local board = DATA.boards[region]
+	local near, per = board.near or DATA.near, board.perDay or DATA.perDay
 	local can, top = {}, {}
-	for _, q in DATA.boards[region].pool do
+	for _, q in board.pool do
 		if q.lv[1] <= level then
 			table.insert(can, q)
 			if not (skip and skip[q.mob]) then
@@ -64,11 +67,11 @@ function Daily.pick(region: string, level: number, day: number, skip: { [string]
 	if #top == 0 then
 		top = can
 	end
-	while #top > DATA.near do
+	while #top > near do
 		table.remove(top, 1)
 	end
 	local out = {}
-	for i = 1, DATA.perDay do
+	for i = 1, per do
 		local q = top[(day + i - 1) % #top + 1]
 		out[i] = { scene = q.scene, mob = q.mob, n = DATA.kills, have = 0, st = Daily.OPEN }
 	end
@@ -143,14 +146,19 @@ function Daily.turnIn(h, region: string, i: any, now: number)
 		return nil, DATA.words.notYet
 	end
 	t.st = Daily.DONE
-	local level = math.clamp(h.level, 1, #DATA.pay.xp)
+	local board = DATA.boards[region]
+	local pay = board.pay or DATA.pay -- 게시판마다의 보상(기도 탑 = 경험치 + 의뢰마다 달가루 — 2026-10-25)
+	local level = math.clamp(h.level, 1, #pay.xp)
 	local q = entry(region, t.scene, t.mob)
-	local reward = { xp = DATA.pay.xp[level], money = DATA.pay.money[level], dust = 0, all = true, name = if q then q.name else "" }
+	local reward = { xp = pay.xp[level], money = pay.money[level], dust = 0, all = true, name = if q then q.name else "" }
 	h.money += reward.money
 	for _, x in st.tasks do
 		reward.all = reward.all and x.st == Daily.DONE
 	end
-	if reward.all and not st.bonus then
+	if board.dustEach then
+		reward.dust = pay.dust[level] -- 의뢰마다 달가루 조금(덤은 없다)
+		h.dust += reward.dust
+	elseif reward.all and not st.bonus then
 		st.bonus = true
 		reward.dust = DATA.pay.dust[level]
 		h.dust += reward.dust
@@ -173,7 +181,8 @@ function Daily.view(h, now: number)
 				local q = entry(region, t.scene, t.mob)
 				tasks[i] = { scene = t.scene, mob = t.mob, name = if q then q.name else "", place = if q then q.place else "", n = t.n, have = t.have, st = t.st }
 			end
-			out.boards[region] = { tasks = tasks, bonus = st.bonus, pay = { xp = DATA.pay.xp[level], money = DATA.pay.money[level], dust = DATA.pay.dust[level] } }
+			local pay = DATA.boards[region].pay or DATA.pay
+			out.boards[region] = { tasks = tasks, bonus = st.bonus, pay = { xp = pay.xp[level], money = pay.money[level], dust = pay.dust[level], each = DATA.boards[region].dustEach == true } }
 		end
 	end
 	return out, fresh
@@ -229,7 +238,7 @@ function Daily.unpack(data: any)
 		local st = data[region]
 		if typeof(st) == "table" and whole(st.day, 0, 1e7) and typeof(st.tasks) == "table" then
 			local tasks, fine = {}, true
-			for i = 1, DATA.perDay do
+			for i = 1, DATA.boards[region].perDay or DATA.perDay do
 				local t = st.tasks[i]
 				if typeof(t) == "table" and entry(region, t.scene, t.mob) and whole(t.n, 1, 9999) and whole(t.have, 0, t.n) and whole(t.st, Daily.OPEN, Daily.DONE) then
 					tasks[i] = { scene = t.scene, mob = t.mob, n = t.n, have = t.have, st = t.st }

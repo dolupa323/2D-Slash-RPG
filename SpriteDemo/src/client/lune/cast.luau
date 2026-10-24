@@ -232,6 +232,12 @@ local function makeG(self, a)
 			self.invertT = t
 		end
 	end
+	-- 화면 가르기(위 Cast:split — 내 기술만): y = 자르는 높이(게임 세계의 점) · dir = 아래 조각이 어긋나는 쪽
+	function g.split(y: number, dir: number)
+		if a.own then
+			self:split(y, dir, a.tone)
+		end
+	end
 	function g.dim(amount: number, t: number)
 		if a.own then
 			self.dimA, self.dimT, self.dimLife = amount, t, t
@@ -458,16 +464,43 @@ function Cast:instant(a, id: string)
 end
 
 -- 그 사람에게 걸린 버프(서버가 알려 준 것)를 받아 적는다. list = { { id, t, dur, x, y } … }
+-- 버프를 건 직업의 색(공용은 받은 사람의 색)
+local function buffTone(a, id: string)
+	local def = COMBAT.buffs[id]
+	local kit = def and def.who ~= "all" and Kitset.of(def.who)
+	return if kit and kit.tone then Cast.tone(kit.tone) else a.tone
+end
 function Cast:setBuffs(a, list)
 	local old = a.buffs
 	a.buffs = {}
 	for _, b in list do
 		a.buffs[b.id] = { t = b.t, dur = b.dur, x = b.x, y = b.y }
+		-- 파티원이 걸어 준 버프가 막 걸렸다: 받은 사람의 몸에도 그 직업 색의 기운이 솟는다(2026-10-24 사용자 "파티케어 스킬 … 적용안되는 버그" —
+		--  전에는 건 사람의 몸에만 기운이 보여, 받은 사람은 오른쪽 위 칸 말고는 걸린 줄 몰랐다). 건 자리가 내 자리와 멀거나 다른 직업의 버프면 남이 건 것
+		local def = COMBAT.buffs[b.id]
+		if def and not old[b.id] and b.dur - b.t < 1.5 and b.x and b.y then
+			local byOther = (def.who ~= "all" and def.who ~= a.who) or abs(b.x - a.x) > 24 or abs(b.y - a.y) > 24
+			if byOther then
+				local tone = buffTone(a, b.id)
+				self.fx.aura(a.x, a.y, tone, { r = 12, h = 30, life = 0.6 })
+				self.fx.ring(a.x, a.y - 2, 4, 22, tone, { squash = 0.35, back = true, life = 0.5 })
+			end
+		end
 	end
-	-- 사라진 것: 끝났을 때의 이펙트(굳었던 빛이 깨져 흩어진다 · 돔이 깨진다)
-	for id in old do
-		if not a.buffs[id] and a.kit and a.kit.onBuffEnd then
-			a.kit.onBuffEnd(a.g, id)
+	for id, was in old do
+		if not a.buffs[id] then
+			-- 죽음의 가호가 쓰러질 피해를 버텨 주고 사라졌다(시간이 남아 있었다): 몸에서 그 색의 빛이 터진다 — 버텨 준 것이 보인다(2026-10-24)
+			local def = COMBAT.buffs[id]
+			if def and def.fx.ward and was.t > 0.5 then
+				local tone = buffTone(a, id)
+				self.fx.aura(a.x, a.y, tone, { r = 18, h = 40, life = 0.8 })
+				self.fx.ring(a.x, a.y - 14, 6, 34, tone, { squash = 1, back = false, life = 0.45 })
+				self.fx.shards(a.x, a.y - 14, 12, tone, { speed = 60, up = 70, kind = "dot", grav = -40, life = 0.7 })
+			end
+			-- 사라진 것: 끝났을 때의 이펙트(굳었던 빛이 깨져 흩어진다 · 돔이 깨진다)
+			if a.kit and a.kit.onBuffEnd then
+				a.kit.onBuffEnd(a.g, id)
+			end
 		end
 	end
 end
@@ -531,7 +564,97 @@ function Cast:proc(a, kind: string, m, sx: number, sy: number, land: () -> (), e
 	return true
 end
 
+-- 화면 가르기(리븐 4차 천지 가르기 — 2026-10-24 사용자 "모니터 잘린다음에잘려야지 선만긋고 흔들리면어떡해"):
+--  그 순간의 장면(view.root)을 통째로 둘 복사해 위 · 아래 두 조각(화면 틀의 잘린 틀)에 담고, 위는 등 뒤 · 위로 · 아래는 앞 · 아래로 어긋났다가 다시 붙는다.
+--  그동안 진짜 장면은 숨긴다(복사한 조각은 그 순간에 멈춘 모습). 벌어진 틈은 검고 가운데에 빛나는 칼자국 줄. 시험 탭(luneTab.js의 split)과 같은 때 · 같은 폭
+--  자르는 줄은 수평이다(Roblox의 화면 틀은 기울인 채로 잘라 내지 못한다 — 시험 탭도 같게 수평)
+local SPLIT = { life = 0.45, open = 0.15, hold = 0.7, dx = 16, gap = 5 } -- 초 · 벌어지는 몫 · 붙기 시작하는 몫 · 앞뒤로 어긋나는 점 · 위아래로 벌어지는 점
+function Cast:split(wy: number, dir: number, tone)
+	local view = self.view
+	local root = view.root
+	local parent = root and root.Parent
+	if self.splitFx or not parent then
+		return
+	end
+	local W, H = G.VIEW_W, G.VIEW_H
+	local cut = math.clamp(R(wy - view.camY), 40, H - 40)
+	local box = Instance.new("Frame") -- 조각들을 담는 틀(장면이 바뀌면 SceneView:destroy가 같이 지운다)
+	box.Name = "Split"
+	box.BackgroundColor3 = Color3.fromRGB(5, 7, 10) -- 벌어진 틈의 빛깔
+	box.BorderSizePixel = 0
+	box.Size = UDim2.fromScale(1, 1)
+	box.ZIndex = root.ZIndex + 1
+	box.Parent = parent
+	view.splitBox = box
+	local pieces = {}
+	for i, part in { { 0, cut }, { cut, H - cut } } do
+		local clip = Instance.new("Frame")
+		clip.Name = "Piece" .. i
+		clip.BackgroundTransparency = 1
+		clip.BorderSizePixel = 0
+		clip.ClipsDescendants = true
+		clip.Position = UDim2.fromOffset(0, part[1])
+		clip.Size = UDim2.fromOffset(W, part[2])
+		clip.ZIndex = 2
+		clip.Parent = box
+		local copy = root:Clone()
+		copy.Position = UDim2.fromOffset(0, -part[1])
+		copy.Visible = true
+		copy.Parent = clip
+		pieces[i] = clip
+	end
+	local function bar(h: number, color: Color3, z: number): Frame
+		local f = Instance.new("Frame")
+		f.BackgroundColor3 = color
+		f.BorderSizePixel = 0
+		f.Size = UDim2.new(1, 0, 0, h)
+		f.Position = UDim2.fromOffset(0, cut - h // 2)
+		f.ZIndex = z
+		f.Parent = box
+		return f
+	end
+	local function rgb(c): Color3
+		return Color3.fromRGB(bit32.rshift(c, 16) % 256, bit32.rshift(c, 8) % 256, c % 256)
+	end
+	local glow = bar(6, rgb(tone and tone.n or 0x3effd7), 1)
+	local line = bar(2, Color3.new(1, 1, 1), 3)
+	root.Visible = false
+	self.splitFx = { t = 0, cut = cut, dir = if dir < 0 then -1 else 1, pieces = pieces, box = box, glow = glow, line = line, root = root }
+end
+local function endSplit(self)
+	local s = self.splitFx
+	self.splitFx = nil
+	if s.box.Parent then
+		s.box:Destroy()
+	end
+	if self.view.splitBox == s.box then
+		self.view.splitBox = nil
+	end
+	if s.root.Parent then
+		s.root.Visible = true
+	end
+end
+function Cast:stepSplit(dt: number)
+	local s = self.splitFx
+	if not s then
+		return
+	end
+	s.t += dt
+	local k = s.t / SPLIT.life
+	if k >= 1 or not s.root.Parent then
+		endSplit(self)
+		return
+	end
+	local open = if k < SPLIT.open then k / SPLIT.open elseif k < SPLIT.hold then 1 else max(0, 1 - (k - SPLIT.hold) / (1 - SPLIT.hold))
+	local dx, gap = R(SPLIT.dx * open) * s.dir, R(SPLIT.gap * open)
+	s.pieces[1].Position = UDim2.fromOffset(-dx, -gap)
+	s.pieces[2].Position = UDim2.fromOffset(dx, s.cut + gap)
+	s.line.BackgroundTransparency = 1 - open
+	s.glow.BackgroundTransparency = 1 - 0.5 * open
+end
+
 function Cast:update(dt: number)
+	self:stepSplit(dt) -- (멈칫과 상관없이 진짜 시간으로)
 	dt *= Cast.speed
 	self.shakeT = max(0, self.shakeT - dt)
 	if self.shakeT == 0 then

@@ -67,7 +67,7 @@ function WM.nodeOf(sceneKey: any): (string?, string?)
 	if typeof(sceneKey) ~= "string" or not SCENES.scenes[sceneKey] then
 		return nil, nil
 	end
-	sceneKey = string.match(sceneKey, "^(.-)#%d+$") or sceneKey -- 토벌의 방(rf1#3) = 그 장면(rf1) — 캐시가 방마다 쌓이지 않게(2026-10-16)
+	sceneKey = string.match(sceneKey, "^(.-)#w?[nh]?%d+$") or sceneKey -- 토벌의 방(rf1#3) = 그 장면(rf1) — 캐시가 방마다 쌓이지 않게(2026-10-16)
 	local hit = nodeCache[sceneKey]
 	if hit ~= nil then
 		if hit == false then

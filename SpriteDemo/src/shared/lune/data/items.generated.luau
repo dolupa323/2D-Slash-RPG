@@ -282,7 +282,7 @@ return {
 		{ id = "charm", npc = "merchant", name = "달빛 부적", from = 10, price = false, perLv = 300, max = 10, item = false, goods = "charm" },
 	},
 	OPEN = { bag = 2, store = 1, forge = 8 },
-	NPCDO = { merchant = "shop", smith = "smith", keeper = "store", board = "daily", auctioneer = "auction", clerk = "daily", warden = "rift", citysmith = "smith", citykeeper = "store" },
+	NPCDO = { merchant = "shop", smith = "smith", keeper = "store", board = "daily", auctioneer = "auction", clerk = "daily", warden = "rift", citysmith = "smith", citykeeper = "store", tower = "daily" },
 	MARKET = {
 		fee = 5,
 		deposit = 100,

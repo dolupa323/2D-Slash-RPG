@@ -7,9 +7,11 @@
 --  옮기며 바뀐 이름: end → finish · until → till.
 local Fx = require(script.Parent.Parent.fx)
 local Common = require(script.Parent.common)
-local poly, disc, starPts = Fx.poly, Fx.disc, Fx.starPts
+local COMBAT = require(script.Parent.Parent.data["combat.generated"]) -- 연쇄 순보의 레벨마다의 거리(moveCast — 2026-10-24)
+local poly, disc, starPts, line, crescentPts = Fx.poly, Fx.disc, Fx.starPts, Fx.line, Fx.crescentPts
 local dash, buff = Common.dash, Common.buff
 local floor, sin, cos, min, max, abs, ceil = math.floor, math.sin, math.cos, math.min, math.max, math.abs, math.ceil
+local R = Fx.R -- 반올림(그림의 점 자리)
 
 local riven
 
@@ -70,6 +72,98 @@ local function star(g, from, t, hop: boolean?, o)
 			end
 		end,
 	})
+end
+
+local lance, chainSteps, cleaveRush -- (아래 도우미 — 스킬 표보다 먼저 이름만)
+-- 그림자 창(3차 사냥기 — 2026-10-24 사용자 "사냥기는 새로 설계해서 넣어"): 그림자 창 넷이 높이를 조금씩 달리해(땅 · 위로 6 · 12 · 18도트) 앞 130도트까지 차례로 꿰뚫고 지나간다.
+--  창마다 그 높이의 띠(앞 10 ~ 130 · 위 10 아래 6도트)에 든 적을 한 번씩 · 맞은 적에게 표식. 그림: 어두운 자루 · 민트 잎날 · 뒤에 남는 꼬리 · 끝에서 작은 섬광
+--  범위를 줄였다(2026-10-24 사용자 "그림자창 범위 너무 넓어 3차스킬인데 조정하고"): 앞 190 → 130도트 · 높이 72 → 18도트(제 층만 — 위층의 적은 맞지 않는다). 4차 무영참(앞 4 ~ 164 · 높이 46)보다 좁다. 숫자는 제가 정한 것
+local LANES = { 0, 6, 12, 18 }
+local LANCE_REACH = 130
+function lance(g)
+	local x, y, dir, tone = g.x, g.y, g.dir, g.tone
+	for i, up in LANES do
+		local ly, delay = y - up, (i - 1) * 0.06
+		g.after(delay, function()
+			g.fx.add(0.26, function(ctx, k)
+				local u = min(1, k / 0.55)
+				local hx, tx, yy = x + dir * (10 + (LANCE_REACH - 10) * u), x + dir * (10 + (LANCE_REACH - 10) * max(0, u - 0.4)), R(ly - 9)
+				ctx:alpha(if k < 0.55 then 1 else (1 - k) / 0.45)
+				line(ctx, tx, yy, hx, yy, tone.n, 1) -- 꼬리
+				line(ctx, hx - dir * 46, yy - 1, hx - dir * 13, yy - 1, tone.d, 3) -- 자루
+				poly(ctx, { { hx + dir * 5, yy }, { hx - dir * 9, yy - 5 }, { hx - dir * 16, yy }, { hx - dir * 9, yy + 5 } }, tone.n) -- 잎날
+				poly(ctx, { { hx + dir * 2, yy }, { hx - dir * 9, yy - 2 }, { hx - dir * 13, yy }, { hx - dir * 9, yy + 2 } }, tone.w)
+				ctx:alpha(1)
+			end)
+		end)
+		g.after(delay + 0.08, function()
+			g.hitAt(x + dir * (LANCE_REACH + 10) / 2, ly, (LANCE_REACH - 10) / 2, 10, 4, { mark = true, stop = 0.03 })
+		end)
+		g.after(delay + 0.15, function()
+			g.fx.shards(x + dir * LANCE_REACH, ly - 9, 3, tone, { kind = "bar", speed = 60, up = 10, life = 0.25 })
+		end)
+	end
+end
+
+-- 연쇄 순보(3차 이동기 — 2026-10-24 사용자 "리븐 3차스킬 연쇄순보는 쿨타임 5초 이동기로 재설계 … 마스터레벨 5짜리 이동기"): 피해는 없다.
+--  앞으로 순간이동을 steps번 잇는다 — 순간이동마다 잔상 · 속도선 · 작은 연기. 거리(모두 합친 것)는 스킬 레벨마다(공방 combat.js의 MOVECAST → moveCast.dist)
+function chainSteps(g)
+	local mc = COMBAT.moveCast and COMBAT.moveCast.rv_chain
+	local steps = if mc then mc.steps else 3
+	local total = if mc then mc.dist[math.clamp(g.sk("rv_chain"), 1, #mc.dist)] else 90
+	for i = 0, steps - 1 do
+		g.after(i * 0.07, function()
+			local x0 = g.x
+			g.ghost()
+			g.fx.shards(x0, g.y - 8, 4, g.tone, { kind = "dot", up = 40, speed = 30, life = 0.3 })
+			g.teleport(g.fwd(total / steps))
+			g.fx.streaks((x0 + g.x) / 2, g.y - 6, 5, -g.dir, g.tone, { w = max(8, abs(g.x - x0)) })
+			g.fx.shards(g.x, g.y - 8, 3, g.tone, { kind = "dot", up = 30, speed = 20, life = 0.25 })
+		end)
+	end
+end
+
+-- 천지 가르기(4차 · 다시 쓰기 12초 · 맵 전체 — 2026-10-24 다시 만듦(2026-10-24 사용자 "천지가르기 리메이크할게 그냥 리븐이 엄청나게 빨리 이동하면서 … 광역기야" → 같은 날 "천지가르기 그림자난무처럼 베어 내는 이펙트를 빠르게 하는걸로하자")):
+--  ① 연기 속으로 사라졌다가 ② 리븐이 좌우로 번갈아 여섯 번 내달린다(순간이동 0.05초마다 · 지난 자리마다 잔상) — 내달릴 때마다 그 길을 가로지르는 긴 벤 자국(그림자 난무의 벤 자국을 빠르게)
+--  ③ 처음 자리로 돌아와 큰 X자 · 반전 섬광 ④ 내달리기 시작하는 순간 맵의 모든 적(층 · 거리와 상관없이)이 한꺼번에 맞고 표식 — 적마다 짧은 X자 벤 자국(그림만 차례로)
+--  처음 것(번개)은 같은 날 벤 자국으로 바꿨다. 내달리는 거리 · 차례 · 각도는 제가 정한 것
+local RUSH = { 150, -120, 190, -160, 110, 0 } -- 처음 자리에서 앞(+) · 뒤(−)로 몇 도트(마지막 0 = 처음 자리로 돌아온다)
+local RUSH_ANG = { 18, -24, 8, -14, 30, -10 } -- 내달릴 때마다 긋는 벤 자국의 기울기(그림자 난무와 같은 결)
+local RUSH_GAP = 0.05
+function cleaveRush(g)
+	local x0, y, dir, tone = g.x, g.y, g.dir, g.tone
+	g.dim(0.5, 1.0)
+	-- 판정은 여기 한 번: 맵의 모든 적 — 적마다 짧은 X자 벤 자국은 그림만 차례로
+	for i, m in g.mobs() do
+		g.hurt(m, 12, { mark = true, stop = 0.1 })
+		local mx, my = m.x, m.y - (m.h or 16) / 2 - 4
+		local t = min(0.4, (i - 1) * 0.025)
+		g.fx.cut(mx, my, 40, 35, tone, { th = 3, life = 0.18, delay = t })
+		g.fx.cut(mx, my, 40, -35, tone, { th = 3, life = 0.18, delay = t + 0.04 })
+	end
+	-- 좌우로 번갈아 내달린다: 지난 자리에 잔상 · 지나간 길을 가로지르는 긴 벤 자국
+	for i, off in RUSH do
+		g.after((i - 1) * RUSH_GAP, function()
+			local ax = g.x
+			g.ghost()
+			g.teleport(x0 + dir * off)
+			local bx = g.x
+			if bx ~= ax then
+				g.face(if bx > ax then 1 else -1)
+			end
+			g.fx.cut((ax + bx) / 2, y - 10, abs(bx - ax) + 70, RUSH_ANG[i], tone, { th = 4, life = 0.22 })
+			g.fx.shards(bx, y - 10, 4, tone, { kind = "mix", speed = 60, life = 0.3 })
+			g.shake(1, 0.05)
+		end)
+	end
+	-- 처음 자리로 돌아왔다: 큰 X자 · 반전 섬광 · 흔들림
+	g.after(#RUSH * RUSH_GAP, function()
+		g.face(dir)
+		g.invert(0.06)
+		g.fx.cut(g.x, y - 10, 200, 35, tone, { th = 6, life = 0.3 })
+		g.fx.cut(g.x, y - 10, 200, -35, tone, { th = 6, life = 0.3, delay = 0.04 })
+		g.shake(4, 0.25)
+	end)
 end
 
 local skills = {
@@ -140,39 +234,13 @@ local skills = {
 		end } },
 	} },
 	buff("rv_quick", "1"),
-	{ id = "rv_chain", key = "E", shot = 0.45, segs = { { clip = "smokein", loop = true, dur = 0.72, float = true, fps = 30, start = function(g) -- 적과 적 사이를 잇는 꺾인 빛줄
-		local list = {}
-		for _, m in g.mobs() do
-			if abs(m.x - g.x) < 180 and abs(m.y - g.y) < 50 then
-				list[#list + 1] = m
-			end
-		end
-		local gx = g.x
-		table.sort(list, function(a, b)
-			if a.mark ~= b.mark then
-				return a.mark > b.mark
-			end
-			return abs(a.x - gx) < abs(b.x - gx)
-		end)
-		local px, py = g.x, g.y - 9
-		for i = 0, min(#list, 5) - 1 do
-			local m = list[i + 1]
-			g.after(i * 0.12, function()
-				if m.dead >= 0 then
-					return
-				end
-				local side = if i % 2 == 1 then 1 else -1
-				if g.teleport(m.x + side * 10) then
-					g.face(-side)
-				end
-				g.fx.bolt(px, py, g.x, g.y - 9, g.tone)
-				px = g.x
-				g.fx.cut(m.x, m.y - m.h - 8, 28, 30 * side, g.tone, { th = 3 })
-				g.hurt(m, 6, { mark = true })
-				g.ghost()
-			end)
-		end
-	end } } },
+	{ id = "rv_lance", key = "E", shot = 0.5, segs = { { clip = "slash", fps = 20, ev = { [4] = function(g)
+		lance(g)
+	end } } } },
+	{ id = "rv_chain", key = "V", air = true, shot = 0.35, segs = { -- 연쇄 순보(이동기): 연기 속으로 사라졌다가 앞으로 순간이동을 세 번 잇는다
+		{ clip = "smokeout", from = 0, to = 5, fps = 30, float = true },
+		{ clip = "smokein", fps = 26, float = true, start = chainSteps },
+	} },
 	{ id = "rv_flurry", key = "D", shot = 0.8, holdFor = 2, segs = {
 		{ clip = "dslash", from = 0, to = 10, loopFrom = 4, fps = 40, hold = true, max = 3, min = 0.3, every = { 0.125, function(g) -- 앞에 겹겹이 쌓이는 짧은 벤 자국
 			g.s.n += 1
@@ -240,6 +308,10 @@ do
 	} })
 end
 
+table.insert(skills, { id = "rv_cleave", key = "B", shot = 0.9, segs = { -- 천지 가르기(위 cleaveRush): 연기 속으로 사라졌다가 좌우로 내달리며 벤다
+	{ clip = "smokeout", from = 0, to = 5, fps = 30, float = true },
+	{ clip = "dslash", fps = 24, float = true, start = cleaveRush },
+} })
 table.insert(skills, { id = "rv_eclipse", key = "3", instant = true, shot = 0.6, cast = function(g)
 	g.buff("rv_eclipse")
 	g.fx.aura(g.x, g.y, g.tone, { r = 20, h = 34 })

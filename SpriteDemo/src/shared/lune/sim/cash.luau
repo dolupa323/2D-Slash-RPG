@@ -8,6 +8,7 @@
 --   slots = 사서 늘린 캐릭터 칸 · store = 확장권으로 늘린 창고(번) — 가방의 것은 캐릭터마다(h.bagPaid · sim/bag.luau)
 --   pass = 달빛 패스(끝나는 때 · 달빛 · 받은 칸 — sim/pass.luau, 2026-10-20)
 --   pets · mounts = 산 펫 · 탈것 { [이름] = true } · petOut = 꺼내 둔 펫(없으면 false — 계정의 모든 캐릭터가 같이) · mount = 고른 탈것(탄 동안인지는 서버의 그 사람의 것 — s.riding)
+--   wskins = 산 캐시 무기 { [이름] = true } · wskin = 장착한 것(없으면 false — 계정의 모든 캐릭터의 무기 · 2026-10-23 design/wskin.js)
 --  [제안] 값 · 수 · 한도는 모두 설계의 제안이다.
 local lune = script.Parent.Parent
 local D = require(lune.data["bm.generated"])
@@ -30,6 +31,11 @@ for _, q in RIDE.mounts do
 	MOUNT[q.id] = q
 end
 Cash.PET, Cash.MOUNT, Cash.RIDE = PET, MOUNT, RIDE
+local WSKIN = {} -- 캐시 무기의 이름표(상품 이름과 같다 — dye.generated의 skins · 2026-10-23)
+for _, q in require(lune.data["dye.generated"]).skins do
+	WSKIN[q.id] = q
+end
+Cash.WSKIN = WSKIN
 for _, p in D.products do
 	PRODUCT[p.id] = p
 	if typeof(p.rid) == "number" and p.rid > 0 then
@@ -43,7 +49,7 @@ local function whole(v: any, lo: number, hi: number): boolean
 end
 
 function Cash.new()
-	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petOut = false, mount = false, coupons = {} } -- coupons = 이 계정이 쓴 쿠폰 { [번호] = 쓴 때 }(2026-10-21)
+	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petOut = false, mount = false, coupons = {}, wskins = {}, wskin = false } -- coupons = 이 계정이 쓴 쿠폰 { [번호] = 쓴 때 }(2026-10-21)
 end
 
 function Cash.product(key: any)
@@ -168,6 +174,9 @@ function Cash.grant(acct, key: string, receiptId: string, now: number, baseChars
 	elseif MOUNT[key] then
 		c.mounts[key] = true -- 탈것: 산 계정에 바로(고른 것이 없으면 그것을 고른다)
 		c.mount = c.mount or key
+	elseif WSKIN[key] then
+		c.wskins[key] = true -- 캐시 무기: 산 계정에 바로 · 바로 장착한다(산 것이 바로 보이게 — 제가 정한 것)
+		c.wskin = key
 	elseif key == "pass" then
 		-- 달빛 패스: 지난 패스에서 받지 않은 칸은 먼저 보관함에(물약은 계정의 가장 높은 레벨) → 새 30일
 		if not Pass.active(c.pass, now) then
@@ -280,6 +289,16 @@ function Cash.ownList(set): { string }
 	end
 	return out
 end
+-- 가진 캐시 무기의 이름표들(상품의 차례)
+function Cash.skinList(set): { string }
+	local out = {}
+	for _, q in require(lune.data["dye.generated"]).skins do
+		if set[q.id] then
+			table.insert(out, q.id)
+		end
+	end
+	return out
+end
 -- 펫을 꺼낸다(id) · 넣는다(false) → true / nil · 까닭
 function Cash.setPet(acct, id: any): (boolean?, string?)
 	local c = acct.bm
@@ -290,6 +309,18 @@ function Cash.setPet(acct, id: any): (boolean?, string?)
 		return nil, "가진 펫이 아니다"
 	end
 	c.petOut = id
+	return true
+end
+-- 캐시 무기를 장착한다(이름표) · 해제한다(false) → true / nil · 까닭
+function Cash.setWskin(acct, id: any): (boolean?, string?)
+	local c = acct.bm
+	if id == false then
+		c.wskin = false
+		return true
+	elseif typeof(id) ~= "string" or not c.wskins[id] then
+		return nil, "가진 캐시 무기가 아니다"
+	end
+	c.wskin = id
 	return true
 end
 -- 탈 것을 고른다 → true / nil · 까닭(타고 내리는 것은 서버의 그 사람 — s.riding)
@@ -342,7 +373,12 @@ function Cash.pack(c)
 	end
 	table.sort(pets)
 	table.sort(mounts)
-	return { box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petOut = c.petOut, mount = c.mount, coupons = table.clone(c.coupons) }
+	local wskins = {}
+	for k in c.wskins do
+		table.insert(wskins, k)
+	end
+	table.sort(wskins)
+	return { box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petOut = c.petOut, mount = c.mount, coupons = table.clone(c.coupons), wskins = wskins, wskin = c.wskin }
 end
 
 -- 꼴이 이상한 것은 버린다(없는 아이템 · 이상한 수). 생기기 전의 저장 = 빈 것
@@ -378,7 +414,7 @@ function Cash.unpack(data: any, baseChars: number?)
 	c.slots = if whole(data.slots, 0, D.rules.charCap - (baseChars or 6)) then data.slots else 0
 	c.store = if whole(data.store, 0, D.rules.storeSteps) then data.store else 0
 	c.pass = Pass.unpack(data.pass)
-	for _, pair in { { "pets", PET }, { "mounts", MOUNT } } do
+	for _, pair in { { "pets", PET }, { "mounts", MOUNT }, { "wskins", WSKIN } } do
 		if typeof(data[pair[1]]) == "table" then
 			for _, k in data[pair[1]] do
 				if typeof(k) == "string" and pair[2][k] then
@@ -389,6 +425,7 @@ function Cash.unpack(data: any, baseChars: number?)
 	end
 	c.petOut = if typeof(data.petOut) == "string" and c.pets[data.petOut] then data.petOut else false
 	c.mount = if typeof(data.mount) == "string" and c.mounts[data.mount] then data.mount else false
+	c.wskin = if typeof(data.wskin) == "string" and c.wskins[data.wskin] then data.wskin else false
 	if typeof(data.coupons) == "table" then
 		local n = 0
 		for code, at in data.coupons do
@@ -454,13 +491,13 @@ function Cash.view(acct, now: number, owned: any?, live: number?, prices: any?)
 	local list = {}
 	for _, p in D.products do
 		local robux = if typeof(prices) == "table" and typeof(prices[p.id]) == "number" then prices[p.id] else p.robux -- 로블록스의 실제 값(대시보드에서 바꾸면 그 값) · 못 읽었으면 설계의 값
-		table.insert(list, { id = p.id, ready = Cash.ready(p), bought = Cash.bought(c, p.id, now), own = (owned ~= nil and owned[p.id] == true) or c.pets[p.id] == true or c.mounts[p.id] == true, robux = robux }) -- own = 게임 패스를 가졌다 · 펫 · 탈것을 샀다
+		table.insert(list, { id = p.id, ready = Cash.ready(p), bought = Cash.bought(c, p.id, now), own = (owned ~= nil and owned[p.id] == true) or c.pets[p.id] == true or c.mounts[p.id] == true or c.wskins[p.id] == true, robux = robux }) -- own = 게임 패스를 가졌다 · 펫 · 탈것을 샀다
 	end
 	local box = {}
 	for _, e in c.box do
 		table.insert(box, { id = e.id, n = e.n })
 	end
-	return { list = list, box = box, band = Cash.bandOf(Cash.topLevel(acct, live)), slots = c.slots, store = c.store, pass = Pass.view(c.pass, now), pets = Cash.ownList(c.pets), mounts = Cash.ownList(c.mounts), petOut = c.petOut, mount = c.mount }
+	return { list = list, box = box, band = Cash.bandOf(Cash.topLevel(acct, live)), slots = c.slots, store = c.store, pass = Pass.view(c.pass, now), pets = Cash.ownList(c.pets), mounts = Cash.ownList(c.mounts), petOut = c.petOut, mount = c.mount, wskins = Cash.skinList(c.wskins), wskin = c.wskin }
 end
 
 -- 확인용(테스트): 상품 표가 아이템 표와 맞는가

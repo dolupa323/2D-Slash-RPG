@@ -90,12 +90,12 @@ do
 			end
 		end
 	end
-	eq(seen, 45, "2~4차의 쓰는 스킬 45개(소생까지)")
+	eq(seen, 50, "2~4차의 쓰는 스킬 50개(소생까지 · 이동기는 세지 않는다 — 2026-10-24 무니 4차 달빛 낙하 · 리븐 그림자 창 · 천지 가르기(연쇄 순보는 이동기로 빠짐) · 2026-10-25 액시온 월광 균열 · 리퍼 백귀야행 · 살라맨더 화룡 승천 · 리퍼 망자의 손(망령 돌진은 이동기로 빠짐))")
 	expect(Hero.ready("mn_revive") and CAST.mn_revive.heal.revive > 0, "소생이 게임에 들어와 있다")
 	-- 차수의 배수: 앞 차수의 1.4배씩 — 2차 1.4 · 3차 1.96 · 4차 2.744(사냥기는 x0.7)
 	near(CAST.ax_rend.rate, N.data.POWER.dps * 1.4, 1e-3, "2차 보스기의 초당 피해")
 	near(CAST.ax_crescent.rate, N.data.POWER.dps * 0.7 * 1.4, 1e-3, "2차 사냥기의 초당 피해")
-	near(CAST.ax_leap.rate, N.data.POWER.dps * 1.96, 1e-3, "3차 보스기")
+	near(CAST.ax_wheel.rate, N.data.POWER.dps * 1.96, 1e-3, "3차 보스기(회전 내려치기 — 2026-10-25 도약 강타가 이동기 「돌격」이 됐다)")
 	near(CAST.ax_execute.rate, N.data.POWER.dps * 2.744, 1e-3, "4차 보스기")
 	-- 새 차수의 스킬은 레벨 1부터 앞 차수의 같은 갈래 스킬을 마스터한 것보다 세다(사용자 2026-10-08: "당연히 1차 마스터보다 2차 1레벨 스킬이 강해야합니다. 이건 기본이에요")
 	--  같은 시간 동안 넣는 피해로 견준다: 레벨 1 = 앞 차수 마스터의 1.1배 · 마스터 = 1.4배
@@ -126,9 +126,8 @@ do
 			end
 		end
 	end
-	-- 도약 강타: 등 뒤까지 친다 — 붙어 있던 적(뛰어넘은 적)도 맞는다(따로 정한 재는 자리가 없다)
-	eq(CAST.ax_leap.at, nil, "도약 강타는 붙어 있는 적으로 잰다")
-	near(Caster.profile("ax_leap", 0).hits, 1, 1e-6, "붙어 있던 적이 내려찍기에 맞는다")
+	-- 회전 내려치기(2026-10-25 — 도약 강타 대신 새 3차 보스기): 붙어 있는 적이 세 번 맞는다
+	eq(CAST.ax_wheel.at, nil, "회전 내려치기는 붙어 있는 적으로 잰다")
 	-- 새 차수가 열리면 그 차수의 사냥기 · 보스기가 레벨 1로 생긴다 · 퀵슬롯에 놓을 수 있다
 	local h = Hero.new(2, "axion")
 	while h.level < 30 do
@@ -153,8 +152,8 @@ do
 		else
 			expect(p.time > 0.2 and p.time < 3, ("쓰는 시간이 말이 된다 %s %.2f"):format(id, p.time))
 		end
-		if def.type == "bind" or def.type == "heal" then
-			eq(p.measured, 0, "묶기 · 회복은 피해가 없다 " .. id)
+		if def.type == "bind" or def.type == "heal" or def.type == "move" then
+			eq(p.measured, 0, "묶기 · 회복 · 이동기(연쇄 순보 — 2026-10-24)는 피해가 없다 " .. id)
 		else
 			expect(p.measured > 0, "붙어 있는 적이 맞는다 " .. id)
 		end
@@ -657,10 +656,11 @@ do
 	end
 	eq(echoes, 2, "여섯 타에 메아리 도끼 둘(세 번째 타마다)")
 	-- 열기: 2~4차의 주먹에도 오른다
-	local s = hero("salamander", { sl_rush = 20, sl_heat = 10 })
+	local s = hero("salamander", { sl_blast = 20, sl_heat = 10 })
 	local _, _, cs, tickS = dry(s)
-	cs:dryCast(s, "sl_rush", 0, tickS)
-	near(s.kit.heat, 30, 1e-6, "불꽃 돌진 세 타: 열기 +30")
+	cs:dryCast(s, "sl_blast", 0, tickS)
+	drain(cs, tickS)
+	near(s.kit.heat, 20, 1e-6, "작열권 두 타(2026-10-25 — 불꽃 돌진은 이동기가 됐다): 열기 +20")
 	expect(Kit.level(s, "core") > 0, "열기를 배웠다")
 end
 
@@ -677,23 +677,302 @@ do
 	expect(long >= 15 and long <= 17, "난도질: 2초 누르면 1초에 8타쯤 " .. long)
 end
 
--- 「때까지」 구간이 있는 스킬(도약)은 다시 시작하는 데 빈 방에서 잰 한 번의 시간의 60%는 걸린다(2026-10-18 검토 — 구간을 잇달아 보내 하늘에 있는 시간을 건너뛰면 보스에게 두세 배였다)
+-- (「때까지」 구간이 있는 스킬의 다시 쓰기 시간 검사 — 도약 강타가 2026-10-25 이동기 「돌격」이 되어 그런 구간이 있는 스킬이 없다. 셈은 caster.luau에 그대로 있다)
+
+-- ---- 달빛 낙하(무니 4차 — 2026-10-24 사용자 "스킬 이펙트만 순차적으로 떨어지는거고 데미지는 스킬 실행하는시점에 동시판정들어가야한다" → "쿨타임 12초고 전맵에 닿아야하는거야") ----
+--  쓰는 순간(첫 걸음) 맵의 모든 적(멀리 · 뒤 · 다른 층)이 맞고, 레이저가 차례로 떨어지는 동안에는 더 맞지 않는다
 do
-	local h = hero("axion", { ax_leap = 1 })
-	local room = Caster.makeDry(X + 14, Y)
-	local c = Caster.new(room) -- 재 보는 방이 아니다(서버처럼)
-	local need = Caster.profile("ax_leap", 0).time * 0.6
-	expect(need > 0.2, ("도약을 한 번 쓰는 시간을 쟀다(%.2f초의 60%%)"):format(need / 0.6))
-	expect(c:begin(h, "ax_leap", 1, nil) == true, "도약을 쓴다")
-	expect(c:begin(h, "ax_leap", 2, nil) == true, "떨어지는 구간을 바로 보낸다(서버는 하늘에 있는 동안을 모른다)")
-	expect(c:begin(h, "ax_leap", 3, nil) == true, "내려찍는 구간도")
-	room.time += need * 0.5
-	c:sub(SUB)
-	expect(c:begin(h, "ax_leap", 1, nil) ~= true, "잰 시간의 60%가 지나기 전에는 다시 쓰지 못한다")
-	room.time += need
-	for _ = 1, 120 do
-		room.time += SUB
-		c:sub(SUB)
+	local h = hero("mooni", { mn_fall = 10 })
+	local room, first, c, tick = dry(h)
+	room.mobs = {}
+	local SPOT = { { 14, 0 }, { 60, 0 }, { 110, 0 }, { 195, 0 }, { -30, 0 }, { 230, 0 }, { -60, 0 }, { 900, 0 }, { -700, 0 }, { 80, -96 }, { 2500, -200 } }
+	for i, d in SPOT do
+		local m = table.clone(first)
+		m.id, m.x, m.homeX, m.goal, m.y = i, X + d[1], X + d[1], X + d[1], Y + d[2]
+		room.mobs[i] = m
 	end
-	expect(c:begin(h, "ax_leap", 1, nil) == true, "지나면 다시 쓴다")
+	expect(c:begin(h, "mn_fall", 1, nil) == true, "달빛 낙하를 쓴다")
+	tick()
+	local a = c:actor(h)
+	local now = {}
+	for _, e in a.out.hits do
+		now[e.mob] = true
+	end
+	for i, d in SPOT do
+		expect(now[i] == true, ("쓰는 순간 맞는다 — 내 앞 %d도트 · 높이 %d의 적"):format(d[1], d[2]))
+	end
+	local n0 = #a.out.hits
+	for _ = 1, 150 do
+		tick()
+	end
+	drain(c, tick)
+	eq(#a.out.hits, n0, "레이저가 떨어지는 동안에는 더 맞지 않는다(판정은 쓰는 순간 한 번)")
+	eq(COMBAT.cast.mn_fall.cd, 12, "다시 쓰기 12초")
 end
+
+-- ---- 수정 산맥을 20까지 찍어 둔 캐릭터(2026-10-24 마스터 20 → 10): 불러오면 10이 되고 넘친 10포인트는 4차 포인트로 돌아온다(다른 스킬은 그대로) ----
+do
+	local fresh = Hero.new(1, "mooni")
+	fresh.level, fresh.job = 150, 4
+	Hero.recalc(fresh)
+	local earned = Hero.spLeft(fresh, 4) -- Lv.150이 4차에서 받는 포인트
+	local arc = math.min(30, earned - 20 - 10) -- 수정 산맥 20 + 만월 베기 arc가 받은 포인트 안 · 달빛 낙하 10을 찍을 자리를 남긴다
+	local function saved(rangeLv: number)
+		local h = Hero.new(1, "mooni")
+		h.level, h.job = 150, 4
+		Hero.recalc(h)
+		local data = Hero.pack(h)
+		data.skills.mn_range, data.skills.mn_arc = rangeLv, arc
+		return Hero.unpack(1, data)
+	end
+	expect(arc >= 1, ("Lv.150의 4차 포인트 %d — 만월 베기 %d"):format(earned, arc))
+	local old, now = saved(20), saved(10)
+	eq(old.skills.mn_range, 10, "수정 산맥 20 → 불러오면 10(새 마스터)")
+	eq(old.skills.mn_arc, arc, "다른 스킬은 그대로(만월 베기)")
+	eq(Hero.spLeft(old, 4), Hero.spLeft(now, 4), ("넘친 10포인트가 4차 포인트로 남는다(%d)"):format(Hero.spLeft(old, 4)))
+	eq(Hero.spLeft(old, 4), earned - 10 - (arc - 1), "남은 4차 포인트 = 받은 것 − 수정 산맥 10 − 만월 베기(처음부터 받은 1레벨은 빼고)")
+	expect(Hero.spLeft(old, 4) >= 10, "달빛 낙하를 마스터(10)할 포인트가 있다")
+	eq(Caster.scale(old.skills.mn_range, CAST.mn_range.max), 1, "수정 산맥 10 = 새 마스터라 세기는 전과 같은 100%")
+end
+
+-- ---- 리븐(2026-10-24 사용자 "연쇄순보는 쿨타임 5초 이동기로 재설계 … 그림자분신 … 마스터레벨을 10 … 사냥기는 새로 설계해서 넣어 … 월식 … 10 … 큰 창이 휘둘러지고 화면이 잘리는듯한 모션 … 광역기 12초짜리 전맵") ----
+do
+	local tiers = CLASSES.classes.riven.tiers
+	local function maxOf(id: string): number?
+		for _, t in tiers do
+			for _, sk in t.skills do
+				if sk.id == id then
+					return sk.max
+				end
+			end
+		end
+		return nil
+	end
+	eq(maxOf("rv_clone"), 10, "그림자 분신 마스터 10")
+	eq(maxOf("rv_eclipse"), 10, "월식 마스터 10")
+	eq(maxOf("rv_chain"), 5, "연쇄 순보 마스터 5")
+	eq(maxOf("rv_lance"), 20, "그림자 창(새 3차 사냥기) 마스터 20")
+	eq(maxOf("rv_cleave"), 10, "천지 가르기 마스터 10")
+	eq(CAST.rv_chain.type, "move", "연쇄 순보 = 이동기")
+	eq(CAST.rv_chain.cd, 5, "연쇄 순보 다시 쓰기 5초")
+	eq(CAST.rv_cleave.cd, 12, "천지 가르기 다시 쓰기 12초")
+	-- 연쇄 순보: 피해 없이 앞으로 세 번 순간이동 — 레벨 1에서 모두 120 · 마스터에서 180도트
+	for _, case in { { 1, 60 }, { 5, 90 } } do -- (120 · 180 → 60 · 90 — 2026-10-25 사용자 "전체적으로 이동기 너무 길어")
+		local h = hero("riven", { rv_chain = case[1] })
+		local room, foe, c, tick = dry(h)
+		foe.x = X + 3000
+		local x0 = h.x
+		c:dryCast(h, "rv_chain", 0, tick)
+		drain(c, tick)
+		near(h.x - x0, case[2], 1, ("연쇄 순보 Lv.%d: 앞으로 %d도트"):format(case[1], case[2]))
+		eq(#c:actor(h).out.hits, 0, "연쇄 순보는 피해가 없다")
+	end
+	-- 그림자 창: 앞 130도트까지 · 제 층의 적만 맞고 표식 — 위층(32 · 48도트 위) · 뒤 · 앞 180도트는 안 맞는다(2026-10-24 사용자 "그림자창 범위 너무 넓어 3차스킬인데 조정하고" — 전에는 앞 190 · 위 72도트까지)
+	do
+		local h = hero("riven", { rv_lance = 20, rv_mark = 10 })
+		local room, first, c, tick = dry(h)
+		room.mobs = {}
+		for i, d in { { 30, 0 }, { 120, 0 }, { 180, 0 }, { 100, -48 }, { -40, 0 }, { 260, 0 }, { 100, -32 } } do
+			local m = table.clone(first)
+			m.id, m.x, m.homeX, m.goal, m.y = i, X + d[1], X + d[1], X + d[1], Y + d[2]
+			room.mobs[i] = m
+		end
+		c:dryCast(h, "rv_lance", 0, tick)
+		drain(c, tick)
+		local hit = {}
+		for _, e in c:actor(h).out.hits do
+			hit[e.mob] = true
+		end
+		expect(hit[1] and hit[2], "그림자 창: 앞 30 · 120도트의 적")
+		expect(not hit[3], "그림자 창: 앞 180도트의 적은 안 맞는다(130도트까지)")
+		expect(not hit[4] and not hit[7], "그림자 창: 위층(32 · 48도트 위)의 적은 안 맞는다")
+		expect(not hit[5] and not hit[6], "그림자 창: 뒤 40 · 앞 260도트의 적은 안 맞는다")
+	end
+	-- 천지 가르기: 가르는 순간 맵의 모든 적(멀리 · 뒤 · 다른 층)이 한꺼번에
+	do
+		local h = hero("riven", { rv_cleave = 10 })
+		local room, first, c, tick = dry(h)
+		room.mobs = {}
+		local SPOT = { { 14, 0 }, { 300, 0 }, { -500, 0 }, { 60, -120 }, { 2500, -200 } }
+		for i, d in SPOT do
+			local m = table.clone(first)
+			m.id, m.x, m.homeX, m.goal, m.y = i, X + d[1], X + d[1], X + d[1], Y + d[2]
+			room.mobs[i] = m
+		end
+		c:dryCast(h, "rv_cleave", 0, tick)
+		drain(c, tick)
+		local hit, n = {}, 0
+		for _, e in c:actor(h).out.hits do
+			if not hit[e.mob] then
+				n += 1
+			end
+			hit[e.mob] = true
+		end
+		eq(n, #SPOT, "천지 가르기: 맵의 모든 적이 맞는다")
+		near(h.x, X, 1, "천지 가르기: 좌우로 내달린 뒤 처음 자리로 돌아온다(2026-10-24 다시 만듦)")
+	end
+end
+
+-- ---- 4차 광역기 셋(2026-10-25 사용자 "무니, 리븐 광역기 만든것처럼 엑시온, 리퍼, 살라맨더 4차 스킬포인트 조정해서 그 빈포인트로 투자하는 완전 멋진 광역기만들자") ----
+--  큰 기술(달빛 기둥 · 사신 강림 · 화염 질주) 마스터 20 → 10 · 새 광역기 마스터 10 · 다시 쓰기 12초 · 쓰는 순간 맵의 모든 적(멀리 · 뒤 · 다른 층)이 한 번씩
+for _, case in { { "axion", "ax_crack", "ax_pillars", "월광 균열" }, { "reaper", "rp_parade", "rp_advent", "백귀야행" }, { "salamander", "sl_wyrm", "sl_dragon", "화룡 승천" } } do
+	local cls, id, low, name = case[1], case[2], case[3], case[4]
+	local function maxOf(sid: string): number?
+		for _, t in CLASSES.classes[cls].tiers do
+			for _, sk in t.skills do
+				if sk.id == sid then
+					return sk.max
+				end
+			end
+		end
+		return nil
+	end
+	eq(maxOf(low), 10, name .. ": 줄인 큰 기술 " .. low .. " 마스터 10")
+	eq(maxOf(id), 10, name .. " 마스터 10")
+	eq(CAST[id].cd, 12, name .. " 다시 쓰기 12초")
+	local h = hero(cls, { [id] = 10 })
+	local room, first, c, tick = dry(h)
+	room.mobs = {}
+	local SPOT = { { 14, 0 }, { 300, 0 }, { -500, 0 }, { 60, -120 }, { 2500, -200 } }
+	for i, d in SPOT do
+		local m = table.clone(first)
+		m.id, m.x, m.homeX, m.goal, m.y = i, X + d[1], X + d[1], X + d[1], Y + d[2]
+		room.mobs[i] = m
+	end
+	c:dryCast(h, id, 0, tick)
+	drain(c, tick)
+	local hit, n, lines = {}, 0, 0
+	for _, e in c:actor(h).out.hits do
+		if not hit[e.mob] then
+			n += 1
+		end
+		hit[e.mob] = true
+		lines += 1
+	end
+	eq(n, #SPOT, name .. ": 맵의 모든 적이 맞는다(멀리 · 뒤 · 다른 층)")
+end
+
+-- ---- 리퍼 3차(2026-10-25 사용자 "리퍼도 망령돌진 일반 이동기로 변경하고 사냥기 추가하자 리븐작업한것처럼") ----
+--  망령 돌진 = 이동기(마스터 5 · 다시 쓰기 5초 · 피해 없음 · 레벨 1 120 → 마스터 180도트) · 새 사냥기 망자의 손(마스터 20 · 앞 130도트 · 제 층만) · 망령 소환 15 → 10
+do
+	local function maxOf(id: string): number?
+		for _, t in CLASSES.classes.reaper.tiers do
+			for _, sk in t.skills do
+				if sk.id == id then
+					return sk.max
+				end
+			end
+		end
+		return nil
+	end
+	eq(maxOf("rp_drag"), 5, "망령 돌진 마스터 5")
+	eq(maxOf("rp_hands"), 20, "망자의 손(새 3차 사냥기) 마스터 20")
+	eq(maxOf("rp_ghost"), 10, "망령 소환 마스터 10")
+	eq(CAST.rp_drag.type, "move", "망령 돌진 = 이동기")
+	eq(CAST.rp_drag.cd, 5, "망령 돌진 다시 쓰기 5초")
+	for _, case in { { 1, 60 }, { 5, 90 } } do -- (120 · 180 → 60 · 90 — 2026-10-25 사용자 "전체적으로 이동기 너무 길어")
+		local h = hero("reaper", { rp_drag = case[1] })
+		local room, foe, c, tick = dry(h)
+		foe.x = X + 3000
+		local x0 = h.x
+		c:dryCast(h, "rp_drag", 0, tick)
+		drain(c, tick)
+		near(h.x - x0, case[2], 1, ("망령 돌진 Lv.%d: 앞으로 %d도트"):format(case[1], case[2]))
+		eq(#c:actor(h).out.hits, 0, "망령 돌진은 피해가 없다")
+	end
+	-- 망자의 손: 앞 130도트까지 제 층만 — 뒤 · 앞 180 · 위층(32 · 48도트 위)은 안 맞는다
+	local h = hero("reaper", { rp_hands = 20 })
+	local room, first, c, tick = dry(h)
+	room.mobs = {}
+	for i, d in { { 30, 0 }, { 70, 0 }, { 120, 0 }, { 180, 0 }, { -40, 0 }, { 70, -32 }, { 70, -48 } } do
+		local m = table.clone(first)
+		m.id, m.x, m.homeX, m.goal, m.y = i, X + d[1], X + d[1], X + d[1], Y + d[2]
+		room.mobs[i] = m
+	end
+	c:dryCast(h, "rp_hands", 0, tick)
+	drain(c, tick)
+	local hit = {}
+	for _, e in c:actor(h).out.hits do
+		hit[e.mob] = true
+	end
+	expect(hit[1] and hit[2] and hit[3], "망자의 손: 앞 30 · 70 · 120도트의 적")
+	expect(not hit[4], "망자의 손: 앞 180도트의 적은 안 맞는다")
+	expect(not hit[5], "망자의 손: 뒤의 적은 안 맞는다")
+	expect(not hit[6] and not hit[7], "망자의 손: 위층(32 · 48도트 위)의 적은 안 맞는다")
+end
+
+-- ---- 살라맨더 · 액시온(2026-10-25 사용자 "샐래맨더도 불꽃돌진 일반이동기로 쿨타임달고 보스기 추가 · 불덩이 던지기 선딜 줄이고 · 4차 화염해일 점프해서 쓸수있게 ·
+--      액시온도 도약강타 일반 이동기로 바꾸고 앞으로 돌진하는스킬로 바꾸고 쿨타임달고 보스기 새로 만들어 · 몰아치기는 범위늘리고 키다운하는동안 점프 대쉬 할수있게해 이속도 원래이속으로") ----
+do
+	local function maxOf(cls: string, id: string): number?
+		for _, t in CLASSES.classes[cls].tiers do
+			for _, sk in t.skills do
+				if sk.id == id then
+					return sk.max
+				end
+			end
+		end
+		return nil
+	end
+	for _, c in { { "salamander", "sl_rush", 5 }, { "salamander", "sl_blast", 20 }, { "salamander", "sl_tough", 5 }, { "axion", "ax_leap", 5 }, { "axion", "ax_wheel", 20 }, { "axion", "ax_pulse", 10 } } do
+		eq(maxOf(c[1], c[2]), c[3], ("%s 마스터 %d"):format(c[2], c[3]))
+	end
+	for _, id in { "sl_rush", "ax_leap" } do
+		eq(CAST[id].type, "move", id .. " = 이동기")
+		eq(CAST[id].cd, 5, id .. " 다시 쓰기 5초")
+		for _, case in { { 1, 60 }, { 5, 90 } } do -- (120 · 180 → 60 · 90 — 2026-10-25 사용자 "전체적으로 이동기 너무 길어")
+			local h = hero(if id == "sl_rush" then "salamander" else "axion", { [id] = case[1] })
+			local room, foe, c, tick = dry(h)
+			foe.x = X + 3000
+			local x0 = h.x
+			c:dryCast(h, id, 0, tick)
+			drain(c, tick)
+			near(h.x - x0, case[2], 1, ("%s Lv.%d: 앞으로 %d도트"):format(id, case[1], case[2]))
+			eq(#c:actor(h).out.hits, 0, id .. "는 피해가 없다")
+		end
+	end
+	-- 새 보스기: 붙어 있는 적에게 작열권 두 번 · 회전 내려치기 세 번
+	for _, case in { { "salamander", "sl_blast", 2 }, { "axion", "ax_wheel", 3 } } do
+		local h = hero(case[1], { [case[2]] = 20 })
+		local _, _, c, tick = dry(h)
+		c:dryCast(h, case[2], 0, tick)
+		drain(c, tick)
+		local n = 0
+		for _, e in c:actor(h).out.hits do
+			if not e.proc then
+				n += 1
+			end
+		end
+		expect(n >= case[3], ("%s: 붙어 있는 적이 %d번 넘게 맞는다(%d — 타수 나누기 포함)"):format(case[2], case[3], n))
+	end
+	-- 화염 해일: 공중(땅 40도트 위)에서 쓰면 그 높이에서 나간다(2026-10-25 사용자 "점프한 위치에서 해일이 나가야지") — 그 높이의 적이 맞고 40도트 아래 땅의 적은 맞지 않는다 · 쓰는 동안 떠 있다
+	do
+		local h = hero("salamander", { sl_tide = 30 })
+		local room, first, c, tick = dry(h)
+		h.y = Y - 40
+		room.mobs = {}
+		for i, d in { { 60, -40 }, { 140, -40 }, { 60, 0 } } do
+			local m = table.clone(first)
+			m.id, m.x, m.homeX, m.goal, m.y = i, X + d[1], X + d[1], X + d[1], Y + d[2]
+			room.mobs[i] = m
+		end
+		c:dryCast(h, "sl_tide", 0, tick)
+		drain(c, tick)
+		local hit = {}
+		for _, e in c:actor(h).out.hits do
+			hit[e.mob] = true
+		end
+		expect(hit[1] and hit[2], "화염 해일: 공중에서 쓰면 그 높이(40도트 위)의 적이 맞는다")
+		expect(not hit[3], "화염 해일: 40도트 아래 땅의 적은 맞지 않는다(그 높이에서 나간다)")
+		expect(Kitset.skill("sl_tide").segs[1].float == true, "쓰는 동안 그 자리에 떠 있다(float)")
+	end
+	-- 몰아치기: 범위 ±56(전에는 ±40) — 앞 50도트의 적도 맞는다
+	do
+		local h = hero("axion", { ax_whirl = 20 })
+		local room, first, c, tick = dry(h, 50)
+		c:dryCast(h, "ax_whirl", 0, tick, 0.6)
+		drain(c, tick)
+		expect(#c:actor(h).out.hits > 0, "몰아치기: 앞 50도트의 적이 맞는다")
+	end
+end
+

@@ -61,7 +61,7 @@ for key, sc in S.scenes do
 	-- 시작 자리와 문은 땅 위에 서 있다(발밑이 막힌 칸, 몸은 걸리지 않음)
 	local spots = { { "시작 자리", sc.spawn } }
 	for _, p in sc.portals do
-		expect(S.scenes[p.to] ~= nil, key .. " 문이 가는 장면 " .. p.to)
+		expect(S.scenes[p.to] ~= nil or p.weekly == p.to, key .. " 문이 가는 장면 " .. p.to) -- 보스의 문(2026-10-24): 가는 곳 = 보스의 이름표(맵을 옮기지 않는다 — 보스 창)
 		table.insert(spots, { "문 " .. p.to, p })
 	end
 	for _, n in sc.npcs or {} do

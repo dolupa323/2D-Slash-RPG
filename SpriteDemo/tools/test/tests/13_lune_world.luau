@@ -1632,8 +1632,9 @@ do
 	handlers.Move(pc, x1 + 300, hc.y, 1)
 	eq(hc.x, x1, "그래도 너무 멀면 받지 않는다")
 	run(2)
+	local before = hc.x -- (돌격은 서버가 몸을 앞으로 옮긴다 — 2026-10-25 도약 강타가 이동기 「돌격」이 됐다)
 	handlers.Move(pc, hc.x + 200, hc.y, 1)
-	eq(hc.x, x1, "조금 지나면 다시 받지 않는다")
+	eq(hc.x, before, "조금 지나면 다시 받지 않는다(옮긴 표시는 WARP_TIME초만)")
 	World.removePlayer(pc)
 	World.removePlayer(pw)
 end
@@ -2063,6 +2064,7 @@ do
 	eq(disk[1501].chars[1].name, "", "비운 것을 바로 저장한다")
 	local out2 = handlers.Chars(pr, "enter", sel.chars[2].id)
 	expect(out2.ok == false and out2.select.chars[2].name == "", "Roblox의 글 거르기에 걸리는 이름도 비워진다")
+	eq(nameBook["욕설대장"], 1501, "Roblox의 거르기에 가려진 이름은 장부에 그 사람의 것으로 남는다(남이 가져가지 못한다 — 2026-10-25 「Ryuville」)")
 	eq(World.session(pr).hero, nil, "세계에 서지 않았다")
 	-- 새로 지으면 들어간다(캐릭터의 레벨 · 물건은 그대로다 — 이름만 다시 짓는다)
 	eq(handlers.Chars(pr, "name", sel.chars[1].id, "다시지음").ok, true, "이름을 새로 짓는다")

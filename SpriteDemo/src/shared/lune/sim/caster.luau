@@ -443,7 +443,7 @@ local function makeG(self, a)
 		end
 		return best
 	end
-	g.shake, g.stop, g.invert, g.dim, g.ghost, g.sprite, g.call = NOOP, NOOP, NOOP, NOOP, NOOP, NOOP, NOOP
+	g.shake, g.stop, g.invert, g.dim, g.ghost, g.sprite, g.call, g.split = NOOP, NOOP, NOOP, NOOP, NOOP, NOOP, NOOP, NOOP -- split = 화면 가르기(화면만 — 2026-10-24)
 	-- 소생(무니 4차): 쓰러져 비석이 선 파티원을 그 자리에서 일으킨다 — 최대 체력의 일부로(설계 CASTRULE.heal의 revive). 쓰러진 벌칙도 없던 일이 된다
 	function g.revive()
 		local ctx = a.ctx
@@ -480,7 +480,7 @@ local function makeG(self, a)
 			Caster.MOVERS[id] = true
 		end
 		if not self.dry and not self.probe then
-			hero.warpMark = true
+			hero.warpMark = self.room.time -- 옮긴 때(방의 시계) — 서버는 이때부터 WARP_TIME초 안의 첫 보고에만 먼 자리를 받는다(2026-10-25: 전에는 true라 몇 초 뒤의 보고도 받았다)
 		end
 	end
 	function g.move(v: number, t: number)
@@ -560,8 +560,22 @@ local function makeG(self, a)
 			return
 		end
 		local s = Hero.skillScale(hero.skills[ctx.id] or 0, def.max) * (k or 1)
-		for _, mate in (if room.liveMates then room:liveMates(hero, ctx.mates) else ctx.mates or { hero }) do -- 지금 이 방에 살아 있는 파티원만(쓰기 시작할 때의 목록이라 — 2026-10-18 검토)
-			if mate.alive and abs(mate.x - hero.x) <= h.reach and abs(mate.y - hero.y) <= 80 then
+		local allies = if room.alliesOf then room.alliesOf(hero) else ctx.mates -- 같은 맵의 파티원 모두(레벨 차이를 보지 않는다 — 2026-10-24: 전에는 경험치 나누기의 목록이라 20레벨 넘게 차이 나는 파티원은 치유받지 못했다)
+		-- 수정 둘레에서도(설명 "수정이 있으면 수정 둘레에서도 치유가 인다" — 2026-10-24: 전에는 무니 곁만 보아 수정 곁의 파티원은 치유받지 못했다). 수정 곁 = 공명 거리(core.near)
+		local near = KIT.mooni.core.near
+		local function inReach(mate): boolean
+			if abs(mate.x - hero.x) <= h.reach and abs(mate.y - hero.y) <= 80 then
+				return true
+			end
+			for _, c in room.crystals or {} do
+				if c.owner == hero.id and abs(mate.x - c.x) <= near and abs(mate.y - c.y) <= 80 then
+					return true
+				end
+			end
+			return false
+		end
+		for _, mate in (if room.liveMates then room:liveMates(hero, allies) else allies or { hero }) do -- 지금 이 방에 살아 있는 파티원만
+			if mate.alive and inReach(mate) then
 				local amount = min(mate.maxHp - mate.hp, floor(mate.maxHp * h.hp * s + 0.5))
 				if amount > 0 then
 					mate.hp += amount

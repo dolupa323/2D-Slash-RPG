@@ -16,7 +16,7 @@ local book = nil
 for _, m in RIDE.mounts do
 	if m.id == "mount_book" then
 		book = m
-	elseif not m.free then
+	elseif not m.free and m.id ~= "mount_golem" then -- (거대 탈것 「이끼 골렘」은 일부러 느리다 — speed 0.6 · 2026-10-22 · 시험 80)
 		expect(m.speed == nil, m.id .. ": 유료 탈것은 따로 빠르기를 적지 않는다(mountSpeed)")
 	end
 end
@@ -212,3 +212,56 @@ do
 	expect(again and again.ok and sa.acct.bm.mounts.mount_book, "다시 처음부터 쿠폰을 쓸 수 있다")
 	World.removePlayer(pa)
 end
+
+-- 레벨 순위 1위 선물 「백금 사슴」(mount_deer_gold · 2026-10-25 사용자: "… 만렙 축하선물로줄거야" → "랭킹 1등으로 한사람만주는거야 백금사슴")
+--  보는 것: ① 탈것 표(free = max · 수정 사슴과 같은 칸 · 장 수 · 빠르기) ② 상점의 상품이 아니다 — 누가 받는지(1위 한 사람만)는 시험 88
+do
+	local gift, deer = nil, nil
+	for _, q in RIDE.mounts do
+		if q.id == "mount_deer_gold" then
+			gift = q
+		elseif q.id == "mount_deer" then
+			deer = q
+		end
+	end
+	expect(gift ~= nil and gift.free == "max", "탈것 표에 백금 사슴(free = max)")
+	expect(gift and deer and gift.speed == deer.speed, "빠르기는 수정 사슴과 같다")
+	local a, b = CHARS.chars.mount_deer_gold, CHARS.chars.mount_deer
+	expect(a ~= nil and b ~= nil and a.fw == b.fw and a.fh == b.fh and a.clips.run.n == b.clips.run.n and a.clips.idle.n == b.clips.idle.n, "그림: 수정 사슴과 같은 칸 · 같은 장 수")
+	local inShop = false
+	for _, q in BM.products do
+		inShop = inShop or q.id == "mount_deer_gold"
+	end
+	expect(not inShop, "달빛 상점에서 팔지 않는다")
+end
+
+-- 기도 탑의 일일 의뢰를 서버로(2026-10-25 — 셈은 시험 36): 탑 앞에서 수락 · 다 잡으면 보상 받기(경험치 · 달가루 · 달돈 없음) · 탑에서 멀면 안 된다
+do
+	local pt, st = person(7401, "기도탑손님")
+	st.hero.level = 60
+	World.jump(pt, "ct")
+	local tower = nil
+	for _, n in req("ReplicatedStorage/shared/lune/data/scenes.generated").scenes.ct.npcs do
+		if n.id == "tower" then
+			tower = n
+		end
+	end
+	expect(tower ~= nil, "은달 항구에 기도 탑의 자리")
+	st.hero.x, st.hero.y = tower.x + 300, tower.y
+	local far = handlers.Daily(pt, "accept", "tower", 1)
+	expect(far and not far.ok, "탑에서 멀면 받지 못한다")
+	st.hero.x = tower.x
+	local r1 = handlers.Daily(pt, "accept", "tower", 1)
+	expect(r1 and r1.ok, "탑 앞에서 수락한다 — " .. tostring(r1 and r1.why))
+	local t = st.hero.daily.tower and st.hero.daily.tower.tasks[1]
+	expect(t ~= nil and t.st == 1, "하는 중")
+	if t then
+		t.have = t.n
+	end
+	local dust0, money0 = st.hero.dust, st.hero.money
+	local r2 = handlers.Daily(pt, "turn", "tower", 1)
+	expect(r2 and r2.ok and r2.reward and r2.reward.dust > 0 and r2.reward.money == 0, "보상 받기: 달가루 > 0 · 달돈 0 — " .. tostring(r2 and r2.why))
+	expect(st.hero.dust > dust0 and st.hero.money == money0, "달가루가 늘고 달돈은 그대로")
+	World.removePlayer(pt)
+end
+

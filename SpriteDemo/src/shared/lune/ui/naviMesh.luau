@@ -187,7 +187,7 @@ end
 local cache = {}
 -- 토벌의 방(rf1#3)은 그 장면(rf1)의 틀을 같이 쓴다 — 들어갈 때마다 새 틀이 쌓이지 않게(2026-10-16)
 local function baseKey(k: string): string
-	return string.match(k, "^(.-)#%d+$") or k
+	return string.match(k, "^(.-)#w?[nh]?%d+$") or k
 end
 function Mesh.of(sceneKey: string)
 	sceneKey = baseKey(sceneKey)

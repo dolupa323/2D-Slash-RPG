@@ -170,7 +170,7 @@ function CountBox.open(spec)
 	shown = state
 	setN(math.clamp(spec.n or CountPick.first(spec.kind, hi), lo, hi))
 	-- PC: 열리자마자 칸에 적는다(적힌 수가 골라져 있어 바로 고쳐 적힌다). 폰은 칸을 눌러야 자판이 뜬다
-	if not UserInputService.TouchEnabled or UserInputService.KeyboardEnabled then
+	if not Stage.touchLike() then -- (2026-10-23 — 터치 단추와 같은 판단)
 		pcall(function()
 			field:CaptureFocus()
 			field.SelectionStart = 1

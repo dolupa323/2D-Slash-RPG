@@ -10,6 +10,7 @@ local CLASSES = require(lune.data["classes.generated"])
 local Market = require(lune.sim.market) -- 경매장에 맡긴 것의 꼴
 local Attend = require(lune.sim.attend) -- 출석(계정의 것 — 2026-10-15)
 local Achieve = require(lune.sim.achieve) -- 업적(계정의 것 — 2026-10-15)
+local Macro = require(lune.sim.macro) -- 매크로 확인(놓친 때 · 보상 멈춤 — 계정에 남는다, 2026-10-23)
 local Cash = require(lune.sim.cash) -- 유료 상품(구매 보관함 · 처리한 결제 · 주간 수 · 사서 늘린 칸 — 2026-10-20)
 local NAMES = require(lune.data["names.generated"]) -- 이름의 규칙(공방의 js/lune/design/names.js)
 local SOUND = require(lune.data["ui.generated"]).layout.sound -- 소리 설정의 칸 수(steps) · 처음 크기(start)
@@ -54,7 +55,7 @@ end
 function Account.new()
 	-- spent = 이 계정이 게임에 쓴 로벅스(명예의 전당의 후원 판) · sound = 소리 설정
 	-- market = 경매장에 맡긴 것(올린 물건 · 아직 찾지 않은 것 — sim/market.luau). 창고처럼 계정의 캐릭터들이 같이 본다
-	return { next = 1, last = false, chars = {}, store = false, storeGot = {}, broken = {}, spent = 0, sound = Account.soundDefault(), market = Market.newBook(), tutDone = false, att = Attend.new(), ach = Achieve.new(), bm = Cash.new() } -- att = 출석(sim/attend.luau) · ach = 업적(sim/achieve.luau) — 계정의 것(2026-10-15) -- tutDone = 이 계정의 캐릭터가 튜토리얼 「달빛 꿈」을 한 번 끝냈다(그 뒤의 새 캐릭터는 건너뛸 수 있다)
+	return { next = 1, last = false, chars = {}, store = false, storeGot = {}, broken = {}, spent = 0, sound = Account.soundDefault(), market = Market.newBook(), tutDone = false, att = Attend.new(), ach = Achieve.new(), bm = Cash.new(), macro = Macro.newSaved() } -- att = 출석(sim/attend.luau) · ach = 업적(sim/achieve.luau) — 계정의 것(2026-10-15) -- tutDone = 이 계정의 캐릭터가 튜토리얼 「달빛 꿈」을 한 번 끝냈다(그 뒤의 새 캐릭터는 건너뛸 수 있다)
 end
 
 -- 이름을 견줄 때의 꼴(영문은 소문자로 — Moon과 moon은 같은 이름이다)
@@ -409,7 +410,7 @@ function Account.pack(acct)
 	for _, raw in acct.broken do
 		table.insert(chars, raw)
 	end
-	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, storeGot = acct.storeGot, spent = acct.spent, sound = acct.sound, market = Market.packBook(acct.market), tutDone = acct.tutDone == true, att = Attend.pack(acct.att), ach = Achieve.pack(acct.ach), bm = Cash.pack(acct.bm) }
+	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, storeGot = acct.storeGot, spent = acct.spent, sound = acct.sound, market = Market.packBook(acct.market), tutDone = acct.tutDone == true, att = Attend.pack(acct.att), ach = Achieve.pack(acct.ach), bm = Cash.pack(acct.bm), macro = Macro.pack(acct.macro) }
 end
 
 function Account.unpack(data: any)
@@ -419,6 +420,7 @@ function Account.unpack(data: any)
 	local acct = Account.new()
 	-- 유료 상품의 것을 캐릭터보다 먼저 읽는다: 사서 늘린 캐릭터 칸이 있어야 일곱 번째 캐릭터부터가 「읽지 못한 것」으로 빠지지 않는다
 	acct.bm = Cash.unpack(data.bm, Account.MAX)
+	acct.macro = Macro.unpack(data.macro)
 	local top = 0
 	for _, raw in data.chars do
 		local fine = typeof(raw) == "table" and whole(raw.id, 1, 9e9) and typeof(raw.name) == "string" and CLASSES.classes[raw.class] ~= nil and typeof(raw.hero) == "table" and not Account.find(acct, raw.id)

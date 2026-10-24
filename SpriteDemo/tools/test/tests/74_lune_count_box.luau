@@ -111,7 +111,7 @@ MOCK("Client/lune/ui/ui", {
 	end,
 })
 local groups = {}
-MOCK("Client/lune/stage", { ui = frame("Ui"), group = function(_, name)
+MOCK("Client/lune/stage", { ui = frame("Ui"), touchLike = function() return false end --[[ PC(2026-10-23 — 수량 창이 터치인가를 Stage.touchLike로 본다) ]], group = function(_, name)
 	local g = frame(name)
 	table.insert(groups, g)
 	return g

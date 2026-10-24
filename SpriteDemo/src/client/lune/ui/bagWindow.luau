@@ -89,6 +89,9 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 	--  칸을 누르면 고름 · 풂(bulk[장비 번호]) → 옆 판에 고른 수 · 받는 달가루 · [분해] [모두] [취소] → [분해]는 한 번 더 묻는다(bulkAsk) → 서버가 한꺼번에(Bag.dismantleMany)
 	local bulk = nil :: { [any]: boolean }?
 	local bulkAsk = false
+	-- 여러 개 판매(2026-10-23 사용자: "인벤토리에서 모두판매할때 등급에 따라 판매할수있게해줘 낡은만 팔거나, 허름한만 팔거나, 빼어난만 팔거나" — 공방 탭의 bulkSellSpec과 같다):
+	--  잡화 상인의 상점 창이 옆에 있으면(ui.service == "shop") 「분해」 자리가 「판매」 → 칸 · 등급 단추(그 등급의 장비를 모두 고름 · 다시 누르면 풂 · ★는 빼고) → [판매]는 한 번 더 묻는다 → 서버 Bag.sellMany
+	local bulkMode = "dismantle" -- "dismantle" · "sell"(켤 때 정한다 — 상점 창이 닫히면 판매는 꺼진다)
 	local hot: number? = nil -- 끌던 것을 놓을 칸
 	local lastClick = { slot = 0, t = 0 }
 	local dragEnd = 0 -- 마지막으로 끌기를 끝낸 때(그 직후에 오는 "눌렀다"는 끌기의 끝이지 누른 것이 아니다)
@@ -114,6 +117,10 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		end
 		for _, id in v.mounts or {} do
 			table.insert(out, { ride = id, kind = "mount", on = myRide == id })
+		end
+		local mySkin = if ctx.mySkin then ctx.mySkin() else v.wskin
+		for _, id in v.wskins or {} do
+			table.insert(out, { ride = id, kind = "wskin", on = (mySkin or v.wskin) == id }) -- 캐시 무기(2026-10-23)
 		end
 		return out
 	end
@@ -246,6 +253,8 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					ctx.togglePet(it.ride)
 				elseif it.kind == "mount" and ctx.toggleRide then
 					ctx.toggleRide(it.ride)
+				elseif it.kind == "wskin" and ctx.toggleWskin then
+					ctx.toggleWskin(it.ride) -- 캐시 무기: 장착 · 해제
 				end
 			elseif twice then
 				-- 두 번 누르기: 장비는 장착, 소비 아이템은 사용
@@ -406,6 +415,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			bulk, bulkAsk = nil, false
 		else
 			bulk, bulkAsk = {}, false
+			bulkMode = if ui.service == "shop" then "sell" else "dismantle"
 			sel, ask = nil, nil
 			ui.detail = "bag"
 		end
@@ -427,6 +437,81 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		if ui.detail ~= "bag" then
 			unselect() -- 다른 창에서 골랐다
 			bulk, bulkAsk = nil, false
+		end
+		if bulk and bulkMode == "sell" and ui.service ~= "shop" then
+			bulk, bulkAsk = nil, false -- 상점 창이 닫혔다: 여러 개 판매를 끈다(분해로 바뀌지 않게)
+		end
+		if bulk and bulkMode == "sell" and key() == "gear" then
+			local W = WORDS.bulkSell
+			local ids, gain, first = {}, 0, nil
+			local ofGrade = {} -- 등급마다 등급 단추가 고를 장비(★ 빼고)
+			for i = 1, bag.size do
+				local it = bag.gear[i]
+				if it then
+					if bulk[it.id] then
+						table.insert(ids, it.id)
+						gain += Items.sellPrice(it)
+						first = first or it
+					end
+					if (it.star or 0) <= 0 then
+						ofGrade[it.q] = ofGrade[it.q] or {}
+						table.insert(ofGrade[it.q], it.id)
+					end
+				end
+			end
+			for id in bulk do
+				if not table.find(ids, id) then
+					bulk[id] = nil -- 가방에서 사라진 것
+				end
+			end
+			local spec = { item = first, buttons = {}, chips = {}, onClose = function()
+				bulk, bulkAsk = nil, false
+				redraw()
+			end }
+			spec.info = { name = W.title, tone = "text", sub = W.sub, rows = { { W.picked, ("%d개"):format(#ids) }, { W.gain, "+" .. Format.short(gain), "gold" } }, notes = { { W.hint, "dim" } } }
+			local grades = {}
+			for q, def in Items.data.QUALITY do
+				local list = ofGrade[q] or {}
+				local on = #list > 0
+				for _, id in list do
+					on = on and bulk[id] == true
+				end
+				table.insert(grades, (if on then "1" else "0") .. #list)
+				table.insert(spec.chips, { text = def.name, on = on, off = #list == 0, onClick = function()
+					for _, id in list do
+						bulk[id] = if on then nil else true -- 다 골라져 있으면 풀고, 아니면 모두 고른다
+					end
+					bulkAsk = false
+					redraw()
+				end })
+			end
+			if bulkAsk and #ids > 0 then
+				spec.ask = {
+					text = Format.fill(W.ask, { n = #ids }) .. "  " .. Format.fill(WORDS.gain, { n = Format.short(gain) }),
+					yes = { text = W.go, onClick = function()
+						ctx.send("Item", "sellMany", ids)
+						bulk, bulkAsk = {}, false -- 판 뒤에도 켜 둔다(이어서 더 고른다)
+						redraw()
+					end },
+					no = { text = WORDS.askNo, onClick = function()
+						bulkAsk = false
+						redraw()
+					end },
+				}
+			else
+				bulkAsk = false
+				table.insert(spec.buttons, { text = W.go, main = true, off = #ids == 0, onClick = function()
+					bulkAsk = true
+					redraw()
+				end })
+				table.insert(spec.buttons, { text = W.stop, onClick = function()
+					bulk, bulkAsk = nil, false
+					redraw()
+				end })
+			end
+			spec.key = table.concat({ "bulkSell", #ids, gain, tostring(bulkAsk), table.concat(grades, ","), if first then first.id else 0 }, "|")
+			ItemDetail.show("bag", spec)
+			return
 		end
 		if bulk and key() == "gear" then
 			-- 여러 개 분해의 판: 고른 장비의 수 · 받는 달가루 · [분해] [모두 · 풀기] [취소] — [분해]는 한 번 더 묻는다
@@ -512,6 +597,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			end
 			local prod = ctx.cashProduct and ctx.cashProduct(entry.ride)
 			local isPet = entry.kind == "pet"
+			local isSkin = entry.kind == "wskin" -- 캐시 무기(2026-10-23): 장착 · 해제(퀵슬롯에는 놓지 않는다)
 			local spec = { item = entry, buttons = {}, onClose = function()
 				unselect()
 				redraw()
@@ -519,27 +605,31 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			spec.info = {
 				name = if prod then prod.name else entry.ride,
 				tone = "text",
-				sub = (if isPet then BMW.petKind else BMW.mountKind) .. (if entry.on then " · " .. (if isPet then BMW.petOutTag else BMW.rideTag) else ""),
+				sub = (if isSkin then BMW.skinKind elseif isPet then BMW.petKind else BMW.mountKind) .. (if entry.on then " · " .. (if isSkin then BMW.skinTag elseif isPet then BMW.petOutTag else BMW.rideTag) else ""),
 				rows = {},
-				notes = { { if prod then prod.line or "" else "", "text" }, { if isPet then BMW.bagHint else BMW.rideHint, "dim" } },
+				notes = { { if prod then prod.line or "" else "", "text" }, { if isSkin then BMW.skinHint elseif isPet then BMW.bagHint else BMW.rideHint, "dim" } },
 			}
 			table.insert(spec.buttons, {
-				text = if isPet then (if entry.on then BMW.petOff else BMW.petOn) else (if entry.on then BMW.rideOff else BMW.rideOn),
+				text = if isSkin then (if entry.on then BMW.skinOff else BMW.skinOn) elseif isPet then (if entry.on then BMW.petOff else BMW.petOn) else (if entry.on then BMW.rideOff else BMW.rideOn),
 				main = not entry.on,
 				onClick = function()
-					if isPet and ctx.togglePet then
+					if isSkin and ctx.toggleWskin then
+						ctx.toggleWskin(entry.ride)
+					elseif isPet and ctx.togglePet then
 						ctx.togglePet(entry.ride)
 					elseif not isPet and ctx.toggleRide then
 						ctx.toggleRide(entry.ride)
 					end
 				end,
 			})
-			table.insert(spec.buttons, {
-				text = WORDS.quick,
-				onClick = function()
-					ctx.quick.pick(entry.ride) -- 퀵슬롯이 반짝인다 — 놓을 칸을 누른다
-				end,
-			})
+			if not isSkin then -- (캐시 무기는 퀵슬롯에 놓지 않는다 — 한 번 장착하면 그대로)
+				table.insert(spec.buttons, {
+					text = WORDS.quick,
+					onClick = function()
+						ctx.quick.pick(entry.ride) -- 퀵슬롯이 반짝인다 — 놓을 칸을 누른다
+					end,
+				})
+			end
 			spec.key = table.concat({ "cash", entry.ride, tostring(entry.on) }, "|")
 			ItemDetail.show("bag", spec)
 			return
@@ -713,7 +803,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		end
 		sort.frame.Visible = true
 		bulkBtn.frame.Visible = key() == "gear"
-		bulkBtn:setText(if bulk then WORDS.bulk.stop else WORDS.dismantle)
+		bulkBtn:setText(if bulk then WORDS.bulk.stop elseif ui.service == "shop" then WORDS.bulkSell.go else WORDS.dismantle) -- 상점 창이 옆에 있으면 「판매」(2026-10-23)
 		local list = bag[key()]
 		-- 스크롤: 늘린 가방은 네 줄을 넘는다 — 넘는 만큼 칸을 만들고 스크롤 틀의 속을 늘린다
 		local rows = math.ceil(bag.size / COLS)
