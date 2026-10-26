@@ -308,3 +308,57 @@ end
 -- ④ 마을에 들러 쉼으로 치는 것은 10분부터(2026-10-24 — 몇 분마다 2분씩 들르는 매크로)
 eq(Macro.REST_STAY, 600, "마을 · 실내에 600초 넘게 머물러야 쉼")
 World.removePlayer(p)
+-- ⑤ 파티를 맺고 잠수한 사람: 파티원이 잡아도 매크로 확인의 처치로 세지 않는다(경험치는 그대로 나눠 받는다)
+--  (2026-10-26 사용자: "사냥터에서 그냥 아무것도 안하고 잠수하고있었는데 매크로 정지당했다고억울하다고하면" — 전에는 경험치를 나눠 받는 파티원도 처치로 세었다)
+do
+	local function join(uid, name, cls)
+		local q = { UserId = uid, Name = name, DisplayName = name, attrs = {}, SetAttribute = function(self, k, v) self.attrs[k] = v end, Kick = function() end }
+		handlers.Ready(q)
+		local m = handlers.Chars(q, "create", name, cls)
+		handlers.Chars(q, "enter", m.id)
+		World.jump(q, "hunt")
+		local qs = World.session(q)
+		qs.hero.level, qs.hero.job = 60, 2
+		qs.hero.tut.done = true
+		return q, qs
+	end
+	local pa, a = join(8521, "사냥하는도끼", "axion")
+	local pb, b = join(8522, "잠수하는무니", "mooni")
+	handlers.Party(pa, "invite", 8522)
+	handlers.Party(pb, "accept")
+	expect(World.sameParty(8521, 8522), "둘은 파티 · 같은 사냥터")
+	World.tick(1.1)
+	expect(a.macro ~= nil and b.macro ~= nil, "둘 다 매크로 확인이 시작됐다")
+	local room = World.room("hunt")
+	local xb0, kills = b.hero.xp, 0
+	a.hero.dmgBoost = 1000
+	for _ = 1, 80 do
+		local foe
+		for _, mob in room.mobs do
+			if mob.state ~= "gone" and mob.state ~= "dead" and mob.state ~= "spawn" and mob.hp > 0 then
+				foe = mob
+				break
+			end
+		end
+		if foe then
+			a.trust, a.stale = true, nil
+			a.hero.x, a.hero.y, a.hero.dir = foe.x - 16, foe.y, 1
+			handlers.Move(pa, a.hero.x, a.hero.y, 1)
+			handlers.Skill(pa, "ax_combo", 1, a.hero.x, a.hero.y, 1)
+		end
+		for _ = 1, 12 do
+			World.tick(1 / 20)
+		end
+		kills = #a.macro.kills
+		if kills >= 8 then
+			break
+		end
+	end
+	expect(kills >= 6, "때린 사람(도끼)은 처치가 세진다 — " .. kills)
+	eq(#b.macro.kills, 0, "잠수한 파티원(무니)은 처치가 세지지 않는다")
+	local now = a.macro.kills[#a.macro.kills] or 0 -- (서버 모듈의 시계 — 시험은 고정된 때를 쓴다)
+	expect(Macro.hunting(a.macro, now) and not Macro.hunting(b.macro, now), "도끼만 「사냥 중」")
+	expect(b.hero.xp > xb0 or b.hero.level > 60, "잠수한 파티원도 경험치는 그대로 나눠 받는다")
+	World.removePlayer(pa)
+	World.removePlayer(pb)
+end

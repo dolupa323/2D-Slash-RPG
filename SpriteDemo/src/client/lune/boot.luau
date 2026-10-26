@@ -81,6 +81,8 @@ local Others = require(script.Parent.othersView)
 local PartyHud = require(script.Parent.partyHud)
 local PartyWindow = require(script.Parent.ui.partyWindow)
 local Chat = require(script.Parent.chat)
+local ChatBubbles = require(script.Parent.chatBubbles)
+local DpsMeter = require(script.Parent.dpsMeter) -- 개인 연무장의 피해 측정 판(2026-10-26)
 local Quests = require(lune.sim.quests)
 local Daily = require(lune.sim.daily) -- 일일 의뢰(마을의 게시판)
 local Navi = require(lune.ui.navi) -- 퀘스트 길찾기(셈)
@@ -390,6 +392,8 @@ local function enterScene(key: string, x: number, y: number, room)
 		Windows.close("auction") -- 경매장은 마을에서만(2026-10-21) — 마을 밖으로 나가면 닫는다
 	end
 	Talk.hush() -- 주민의 혼잣말 말풍선(화면 틀의 층에 있어 맵을 지워도 남는다)
+	ChatBubbles.hush() -- 사람들의 채팅 말풍선도
+	DpsMeter.show(scene.dojo == true) -- 개인 연무장이면 피해 측정 판(나가면 지운다)
 	HallStones.leave()
 	-- 이전 장면의 것을 치운다. 하나를 치우다 오류가 나도 나머지를 마저 치우고 새 장면을 그린다 — 치우기는 이 함수의 맨 앞이라, 여기서 멈추면 새 장면이 통째로 안 그려진다
 	--  (2026-10-13: 이펙트를 치우다 난 오류 하나로 문을 지난 뒤의 화면이 깨졌다 — 캐릭터와 몬스터가 없고 이전 맵이 남았다). 오류는 출력 창에 알린다
@@ -462,6 +466,8 @@ local function enterScene(key: string, x: number, y: number, room)
 	state.grave = Grave.new(state.view.graveLayer) -- 내 비석(쓰러졌을 때만 보인다)
 	state.tag = Ui.tag(state.over, Others.tagText(if state.me then state.me.level else 1, state.myName), Ui.COLOR.text, 220, true, Others.levelText(if state.me then state.me.level else 1)) -- 판 바깥 왼쪽에 레벨(2026-10-21)
 	state.tagLevel = if state.me then state.me.level else 1
+	state.tagTitle = if state.me then state.me.title or false else false
+	Others.setTitle(state.tag, state.tagTitle) -- 내 이름표 아래의 칭호(2026-10-26)
 	PartyHud.set(state.party, state.myId, key)
 	state.fx = Effects.new(state.view.topLayer, state.over, state.view.heroLayer)
 	state.others.fx = state.fx -- 다른 사람의 대쉬도 같은 효과를 낸다
@@ -1681,6 +1687,8 @@ local function draw(dt: number)
 		end
 	end
 	Talk.place() -- 대화창의 글자가 한 글자씩 나오고, 혼잣말 말풍선은 그 주민을 따라간다
+	ChatBubbles.place() -- 채팅 말풍선은 그 사람을 따라간다
+	DpsMeter.paint(os.clock()) -- 피해 측정 판(연무장에서만 — 멈춤 · 숫자)
 end
 
 -- 장치의 모습을 화면에 옮긴다(내 상태가 올 때마다): 걸음 · 뛰는 힘의 배수 · 켜 둔 사출기의 칸 · 버프 자리(켜 둔 사출기) · 영혼과 열기(직업 묶음이 그린다)
@@ -1878,6 +1886,10 @@ local function listen()
 				state.drawQuests() -- 레벨이 올라 새로 받을 수 있는 퀘스트의 표시
 			end
 		end
+		if state.tag and state.tagTitle ~= (me.title or false) then
+			state.tagTitle = me.title or false
+			Others.setTitle(state.tag, state.tagTitle) -- 내 이름표 아래의 칭호(2026-10-26)
+		end
 		if state.afterSelf then
 			state.afterSelf(me)
 		end
@@ -1910,6 +1922,9 @@ local function listen()
 			local m = state.mobs and state.mobs:get(h.mob)
 			if m then
 				m.hp = h.hp
+				if by == state.myId then
+					DpsMeter.add(h.dmg, os.clock()) -- 개인 연무장: 내 타의 피해를 잰다(연무장이 아니면 아무것도 하지 않는다)
+				end
 				-- 시험 탭과 같은 자리 · 같은 색: 발밑에서 16도트 위(우두머리는 30)에서 뜬다. 치명타는 때린 사람 직업의 밝은 색(보통의 타는 희다).
 				--  맞는 순간 파편이 튀고, 쓰러지면 세모 파편이 터진다(시험 탭의 hurt)
 				--  타수 나누기(sim/lines.luau): 한 타가 여러 줄(h.lines — 줄마다의 피해, 합 = h.dmg)로 오면 메이플처럼 한 줄씩 stagger초 사이로 rise점씩 위에 쌓여 뜬다(다다다다).
@@ -2315,6 +2330,21 @@ local function listen()
 	end)
 	-- 만렙 최초 달성(2026-10-24 사용자 "150만렙 맨 처음 찍는 유저 나타나면 바로 전서버에 축하알림뜨면서 레벨 랭킹 1위 실시간 박제되게"):
 	--  모든 서버의 모두에게 화면 위 큰 알림 「축하」(10초) + 채팅 알림 글 · 명예의 전당 비석을 바로 다시 받는다(레벨 판 1위에 고정 — 서버의 rankBoards)
+	-- 칭호를 받았다(2026-10-26): 화면 위 알림 「칭호 획득 · 「이름」 칭호를 받았습니다」 + 채팅 알림 글
+	Net.OnClient("TitleGot", function(ids)
+		if typeof(ids) ~= "table" then
+			return
+		end
+		local Titles = require(lune.sim.titles)
+		for _, id in ids do
+			local t = Titles.def(id)
+			if t then
+				local text = Format.fill(Titles.WORDS.got, { name = t.name })
+				pcall(Guide.banner, Titles.WORDS.banner, text, 6)
+				Chat.note(("[%s] %s"):format(Titles.WORDS.banner, text))
+			end
+		end
+	end)
 	Net.OnClient("FirstMax", function(e)
 		if typeof(e) ~= "table" or typeof(e.name) ~= "string" then
 			return
@@ -3306,6 +3336,23 @@ function Boot.start()
 	end)
 	-- 채팅은 Roblox의 기본 채팅이다(chat.luau — 창 · 입력줄 · 채널 탭을 켜고 색과 이름만 맞춘다). 글을 치는 동안에는 게임의 키를 받지 않고, PC에서는 파티원 칸을 채팅 창의 아래로 내린다
 	Chat.init()
+	-- 채팅 말풍선(2026-10-26): 받은 글을 보낸 사람의 머리 위에(chatBubbles.luau). 자리 = 나는 내 몸 · 다른 사람은 이 맵의 그 사람(없으면 숨긴다)
+	ChatBubbles.where = function(id)
+		if id == state.myId then
+			if state.body and state.view then
+				return state.body.x, state.body.y
+			end
+			return nil, nil
+		end
+		local o = state.others and state.others.list[id]
+		if o and o.placed then
+			return o.x, o.y
+		end
+		return nil, nil
+	end
+	ChatBubbles.init()
+	DpsMeter.init(Hud.root) -- 개인 연무장의 피해 측정 판(화면 위 가운데 — 대화 · 장면 동안은 화면 아래쪽과 같이 숨는다)
+	Stage.onResize(DpsMeter.place)
 	-- 글을 치는 중 = 채팅의 입력줄 · 수량 창이 떠 있는 동안(2026-10-21 — 수량 칸 밖을 눌러도 Q · W …가 스킬로 나가지 않게)
 	local CountBoxMod = require(script.Parent.ui.countBox)
 	Input.typing = function(): boolean
@@ -3582,9 +3629,10 @@ function Boot.start()
 	-- 로벅스로 산 것이 보관함에 들어왔다(서버의 ProcessReceipt가 저장까지 마친 뒤 — 2026-10-20): 가운데 위 알림 · 상점 창을 고쳐 그린다
 	Net.OnClient("CashGot", function(key)
 		local p = CashWindow.product(key) -- 상점에서 팔지 않는 펫 · 탈것(쿠폰 · 만렙 축하 선물)도 이름이 있다(2026-10-25 — 전에는 상품 목록에서만 찾아 알림이 뜨지 않았다)
-		if p and p.free == "max" then
+		if p and (p.free == "max" or p.free == "max2" or p.free == "max3") then
 			local W = CashWindow.WORDS
-			Guide.banner(W.giftMax or CashWindow.TITLE, Format.fill(W.gotOwn, { name = p.name }), 4) -- 만렙 축하 선물(백금 사슴)
+			local head = if p.free == "max2" then W.giftMax2 elseif p.free == "max3" then W.giftMax3 else W.giftMax
+			Guide.banner(head or CashWindow.TITLE, Format.fill(W.gotOwn, { name = p.name }), 4) -- 레벨 순위 1 · 2 · 3위 선물(백금 · 실버 · 동색 사슴 — 2026-10-26)
 		elseif p and not p.free then -- (쿠폰 펫 · 탈것은 쿠폰 창이 알린다 — 예전처럼 띠를 띄우지 않는다)
 			local W = CashWindow.WORDS
 			Guide.banner(CashWindow.TITLE, if key == "charx" then W.gotSlot elseif key == "pass" then W.gotPass elseif string.sub(key, 1, 4) == "pet_" or string.sub(key, 1, 6) == "mount_" then Format.fill(W.gotOwn, { name = p.name }) else Format.fill(W.got, { name = p.name }), 3)

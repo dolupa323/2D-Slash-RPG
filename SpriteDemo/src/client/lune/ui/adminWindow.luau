@@ -342,6 +342,22 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 				end
 			end)
 			Ui.text(p, "지금 돌아가는 모든 서버의 모두에게 — 화면 위 큰 알림 「공지」 + 채팅.", 0, y + 28, w, { color = C.off })
+			y += 48
+			-- 칭호 넣어 보기(2026-10-26 사용자: "나 어드민으로 껴볼수있게 해야지 난디자인을 봐야하는데"): 칭호마다 단추 하나(받고 바로 단다) · 「빼기」 = 모두 뺀다. 이 캐릭터에만(세계 기록은 그대로)
+			local TitlesMod = require(game:GetService("ReplicatedStorage").shared.lune.sim.titles)
+			-- 칭호가 셋(운영자 · 최초의 계승자 · 만월의 계승자)이라 한 줄에 칭호만 · 「빼기」는 다음 줄(운영자 칭호는 관리자에게 늘 있어 빼기 = 떼기만)
+			local list = {}
+			for _, t in TitlesMod.LIST do
+				table.insert(list, { text = t.name, id = "title_" .. t.id, w = 80, on = function() ask("title", t.id) end })
+			end
+			y = row(p, y, "칭호", list)
+			y = row(p, y, "", { { text = "모두 빼기", id = "titleOff", w = 80, on = function() ask("title", "") end } })
+			-- 순위 사슴(2026-10-26 사용자: "1위는 금은동 다주고 … 그리고 나도 볼수있어야지"): 백금 · 실버 · 동색 사슴을 내 계정에 넣는다 · 뺀다(가방 「캐시」 탭에서 탄다)
+			y = row(p, y, "순위 사슴", {
+				{ text = "셋 받기", id = "rankMountsGive", w = 64, on = function() ask("rankMounts", "give") end },
+				{ text = "빼기", id = "rankMountsTake", w = 48, on = function() ask("rankMounts", "take") end },
+			})
+			Ui.text(p, "칭호 · 순위 사슴을 내 것에 넣어 모습을 본다(사슴은 가방 「캐시」 탭).", 0, y + 4, w, { color = C.off })
 		else
 			y = row(p, y, "체력", { { text = "가득 채우기(쓰러졌으면 일어난다)", id = "heal", w = 200, on = function() ask("heal") end } })
 			y = row(p, y, "무적", {

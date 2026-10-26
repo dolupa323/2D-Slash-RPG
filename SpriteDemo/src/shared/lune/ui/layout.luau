@@ -120,10 +120,11 @@ L.SOUND = D.sound -- 소리 설정: 줄마다 이름(labelW) · 「−」(btn) �
 L.CRAFT = D.craft -- 제작(대장장이): 탭(tabH) 아래에 장비마다 한 줄(row) — 윗줄 = [아이콘 칸] 이름 · [달돈] 삯(feeW) · 「제작」(makeW x makeH), 아랫줄 = 재료 둘([그림] 이름 가진 수/드는 수 — 하나에 matW)
 L.STAT = D.stat -- 능력치 창: 속의 폭 · 줄(top부터 row씩) · 주/부의 자리 · 값의 오른쪽 끝 · + 단추의 폭 · tip = 능력치에 마우스를 올렸을 때 창 옆에 뜨는 설명 판
 L.SKILL = D.skill -- 스킬 창: 차수 탭 · 안내 줄 · 스킬들(cols줄 x rows) · 오른쪽의 설명
+L.DOJO = D.dojo -- 개인 연무장의 피해 측정 판(2026-10-26): 폭 · 줄 · 안쪽 · 위에서 · 「초기화」의 폭 · 멈췄다고 보는 초(idle) · 글(words)
 
 -- 능력치 창의 속(폭 · 높이). n = 능력치의 수
 function L.statBody(n: number): (number, number)
-	return L.STAT.w, L.STAT.top + n * L.STAT.row + 8 + M.button + 14 + 20
+	return L.STAT.w, L.STAT.top + n * L.STAT.row + 8 + M.button + 14 + 20 + (L.STAT.titleTop or 0) + M.button -- 맨 아래 「칭호」 줄(2026-10-26)
 end
 
 -- 달빛 상점의 공간(client/lune/cashShop.luau): 미리보기와 상점 판을 한 묶음으로 가운데에 나란히 — 묶음을 화면에 맞춰 키운다(k배).

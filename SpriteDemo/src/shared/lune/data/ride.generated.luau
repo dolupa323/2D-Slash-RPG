@@ -91,6 +91,40 @@ return {
 			},
 		},
 		{
+			id = "mount_deer_silver",
+			name = "실버 사슴",
+			free = "max2",
+			line = "레벨 순위 2위(두 번째 Lv.150) 한 사람만의 선물 — 수정 사슴과 같은 빠르기",
+			seat = { dx = -3, dy = -14 },
+			bob = {
+				idle = { 1, 1, 1, 1 },
+				run = { -1, -1, -1, -1, -1, -1 },
+				jump = { -1 },
+			},
+			bobx = {
+				idle = { 0, 0, 0, 0 },
+				run = { 0, 0, 0, 0, 0, 0 },
+				jump = { 0 },
+			},
+		},
+		{
+			id = "mount_deer_bronze",
+			name = "동색 사슴",
+			free = "max3",
+			line = "레벨 순위 3위(세 번째 Lv.150) 한 사람만의 선물 — 수정 사슴과 같은 빠르기",
+			seat = { dx = -3, dy = -14 },
+			bob = {
+				idle = { 1, 1, 1, 1 },
+				run = { -1, -1, -1, -1, -1, -1 },
+				jump = { -1 },
+			},
+			bobx = {
+				idle = { 0, 0, 0, 0 },
+				run = { 0, 0, 0, 0, 0, 0 },
+				jump = { 0 },
+			},
+		},
+		{
 			id = "mount_book",
 			name = "떠도는 책",
 			free = "coupon",

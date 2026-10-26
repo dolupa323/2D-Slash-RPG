@@ -74,7 +74,7 @@ local function routeNext(from, target)
 			return cur
 		end
 		for _, portal in SCENES.scenes[cur].portals do
-			if not prev[portal.to] then
+			if not prev[portal.to] and SCENES.scenes[portal.to] then -- (개인 연무장의 나가는 문 @home은 장면이 아니다 — 2026-10-26)
 				prev[portal.to] = cur
 				table.insert(queue, portal.to)
 			end

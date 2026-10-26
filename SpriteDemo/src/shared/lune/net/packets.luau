@@ -43,6 +43,7 @@ local packets = {
 	-- 전직하며 받은 공짜 초기화를 쓴다(스킬 창의 「초기화」 — 찍은 스킬을 모두 되돌린다)
 	SkillReset = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 2 } },
 	StatReset = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 2 } }, -- 찍은 능력치를 모두 되돌린다(공짜 — 2026-10-21)
+	Title = { Kind = "Event", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 3, Burst = 5 } }, -- 칭호를 단다(가진 칭호의 이름표 · ""이면 뗀다 — 2026-10-26)
 	Coupon = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 1, Burst = 2 } }, -- 쿠폰 번호를 적었다 → { ok, why?, pet? }(2026-10-21 · 서버 modules/cash.luau의 CashServer.coupon)
 	-- 물건을 다룬다: 하는 일(equip · unequip · dismantle · buy · enhance · transfer · restore · grow · storeIn · storeOut)과 그 대상 둘(번호 · 부위 · 수 등)
 	Item = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any, t.any }, RateLimit = { PerSecond = 12, Burst = 20 } }, -- (2026-10-21: 8 · 12 → 12 · 20 — 가방 · 상점에서 빠르게 연달아 누르면 넘쳐 버려졌다 · 일마다 서버가 다시 본다)
@@ -137,6 +138,7 @@ local packets = {
 	MobCast = { Kind = "Event", Direction = "ServerToClient", Doc = "몬스터의 마법이 뜸 { id, kind(쓴 몬스터의 종류), x, y, dir(쓴 몬스터가 보던 쪽 — 앞으로 뻗는 마법은 그쪽으로 그린다) } — 그 종류의 마법 그림(cast)이 그 자리에서 한 번 돈다. 맞는 것은 서버가 예고 뒤에 따로 알린다(Hurt)" },
 	ShotEnd = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 번호" },
 	Megaphone = { Kind = "Event", Direction = "ServerToClient", Doc = "관리자의 확성기(모든 서버의 모두에게 — 2026-10-21): 글 — 화면 위 큰 알림 「공지」 + 채팅 알림 글" },
+	TitleGot = { Kind = "Event", Direction = "ServerToClient", Doc = "칭호를 받았다(2026-10-26): { 칭호의 이름표 … } — 화면 위 알림 「칭호 획득」" },
 	FirstMax = { Kind = "Event", Direction = "ServerToClient", Doc = "만렙 최초 달성(모든 서버의 모두에게 — 2026-10-24): { name, class, level } — 화면 위 큰 알림 「축하」 + 채팅 알림 글 · 명예의 전당을 바로 다시 받는다" },
 	Sold = { Kind = "Event", Direction = "ServerToClient", Doc = "경매장에 올린 내 물건이 팔렸다 { name(물건 이름), n(팔린 수) } — 획득 알림 한 줄 · 「경매」 단추의 점(2026-10-18)" },
 	Elite = { Kind = "Event", Direction = "ServerToClient", Doc = "사냥터 정예가 나옴 { room(그 맵), mob(졸개 번호), kind, x · y(나온 자리 — 그 자리에 분홍 기운이 솟는다 · 높이 — 그 자리로 옮겨 그린다) } — 화면 위 가운데에 알림(2026-10-18)" },

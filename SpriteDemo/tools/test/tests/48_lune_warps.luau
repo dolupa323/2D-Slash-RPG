@@ -7,7 +7,7 @@ local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
 local hunting, withWarps = 0, 0
 for key, sc in SCENES.scenes do
 	local mobs = #(sc.mobs or {}) > 0
-	if mobs and key ~= "in_cellar" and key ~= "dream" and not sc.rift then -- rift = 수정 틈 토벌(한 화면의 던전 — 간이 포탈 없음, 2026-10-16)
+	if mobs and key ~= "in_cellar" and key ~= "dream" and not sc.rift and not sc.dojo then -- rift = 수정 틈 토벌(한 화면의 던전 — 간이 포탈 없음, 2026-10-16) · dojo = 개인 연무장(한 화면의 방 — 2026-10-26)
 		hunting += 1
 		local w = sc.warps or {}
 		eq(#w, 2, "사냥터마다 간이 포탈 한 쌍 " .. key)

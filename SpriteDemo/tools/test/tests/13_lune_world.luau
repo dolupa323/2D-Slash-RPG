@@ -163,7 +163,7 @@ local function routeNext(from, target)
 			return cur
 		end
 		for _, portal in SCENES.scenes[cur].portals do
-			if not prev[portal.to] then
+			if not prev[portal.to] and SCENES.scenes[portal.to] then -- (개인 연무장의 나가는 문 @home은 장면이 아니다 — 2026-10-26)
 				prev[portal.to] = cur
 				table.insert(queue, portal.to)
 			end
@@ -348,7 +348,7 @@ do
 	local doors = 0
 	for _, door in town.portals do
 		local inside = SCENES.scenes[door.to]
-		if inside.indoor then
+		if inside.indoor and not inside.dojo then -- (개인 연무장은 따로 본다 — 시험 91: 몬스터가 있고 · 그 사람만의 방 · 나가는 문 = 들어온 마을)
 			doors += 1
 			eq(handlers.Travel(p1, door.to), nil, "문 앞이 아니면 못 들어간다 " .. door.to)
 			s1.trust, s1.stale = true, nil
@@ -2062,10 +2062,14 @@ do
 	eq(out.select.chars[1].name, "", "이름이 비워졌다")
 	eq(nameBook["성관계장인"], nil, "그 이름은 장부에서 빠졌다")
 	eq(disk[1501].chars[1].name, "", "비운 것을 바로 저장한다")
-	local out2 = handlers.Chars(pr, "enter", sel.chars[2].id)
-	expect(out2.ok == false and out2.select.chars[2].name == "", "Roblox의 글 거르기에 걸리는 이름도 비워진다")
-	eq(nameBook["욕설대장"], 1501, "Roblox의 거르기에 가려진 이름은 장부에 그 사람의 것으로 남는다(남이 가져가지 못한다 — 2026-10-25 「Ryuville」)")
 	eq(World.session(pr).hero, nil, "세계에 서지 않았다")
+	-- Roblox의 글 거르기에 지금 가려지는 이름은 비우지 않는다(2026-10-26 「LaNu」 — 지을 때 거른 이름이 거르기가 그때그때 달라 지워졌다)
+	local out2 = handlers.Chars(pr, "enter", sel.chars[2].id)
+	expect(out2 ~= nil and out2.self ~= nil and out2.name == "욕설대장", "Roblox의 거르기에 가려져도 그 이름 그대로 들어간다")
+	eq(disk[1501].chars[2].name, "욕설대장", "저장된 이름도 그대로다")
+	eq(nameBook["욕설대장"], 1501, "장부도 그 사람의 것 그대로")
+	World.removePlayer(pr)
+	rawReady(pr)
 	-- 새로 지으면 들어간다(캐릭터의 레벨 · 물건은 그대로다 — 이름만 다시 짓는다)
 	eq(handlers.Chars(pr, "name", sel.chars[1].id, "다시지음").ok, true, "이름을 새로 짓는다")
 	local inn = handlers.Chars(pr, "enter", sel.chars[1].id)
@@ -2368,7 +2372,7 @@ do
 	for key, scn in SCENES.scenes do
 		if SCENES.homes[key] then
 			expect(scn.ret == false, "마을 자신은 돌아갈 곳이 없다 " .. key)
-		elseif key ~= "dream" and not scn.ship then -- (꿈 · 배와 비행선의 갑판은 쓸 수 없다)
+		elseif key ~= "dream" and not scn.ship and not scn.dojo then -- (꿈 · 배와 비행선의 갑판은 쓸 수 없다 · 개인 연무장은 들어온 마을로 — 서버가 그때 정한다: 시험 91)
 			expect(typeof(scn.ret) == "string" and SCENES.homes[scn.ret] == true, ("가장 가까운 마을이 있다 %s → %s"):format(key, tostring(scn.ret)))
 		end
 	end

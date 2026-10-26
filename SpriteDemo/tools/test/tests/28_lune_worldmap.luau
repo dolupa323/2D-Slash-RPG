@@ -78,8 +78,9 @@ do
 	eq(WM.nodeOf(nil), nil, "장면이 없다")
 	-- 게임의 모든 장면이 문을 따라 어느 마디엔가 닿는다(지역의 맵 · 실내 · 숨은 방 · 도시와 바다는 이어진 지역의 마디로)
 	local outside = 0
-	for key in SCENES.scenes do
-		if WM.nodeOf(key) == nil then
+	for key, sc in SCENES.scenes do
+		-- (개인 연무장은 뺀다 — 2026-10-26: 나가는 문이 들어온 마을(@home)이라 어느 마을의 마디인지 장면만으로는 모른다 · 연무장에서는 월드맵에 「내가 있는 곳」이 없다 — 제가 정한 것)
+		if WM.nodeOf(key) == nil and not sc.dojo then
 			outside += 1
 		end
 	end

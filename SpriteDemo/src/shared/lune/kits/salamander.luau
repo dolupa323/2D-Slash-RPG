@@ -421,8 +421,10 @@ local skills = {
 			g.hit(0, 42, 26, 4, 5, { kb = 150, stop = 0.05 })
 		end,
 	} } } },
-	{ id = "sl_slam", key = "W", ground = true, shot = 0.78, segs = { { clip = "slam", fps = 16, ev = { [3] = function(g)
-		gather(g, 8 / 16)
+	-- 화염 강타: 선딜을 줄였다(2026-10-26 사용자 "샐러맨더 2차 사냥기 선딜좀줄이자") — 팔을 든 5째 장부터 초당 20장(전에는 0째 장부터 16장): 내리치기까지 0.69 → 0.30초 · 한 번 0.70초(전 1.19초).
+	--  불덩이를 모으는 그림은 첫 장에서 바로(내리칠 때까지 0.3초). 장 · 빠르기는 제가 정한 것(3차 불덩이 던지기와 같은 법 — S218)
+	{ id = "sl_slam", key = "W", ground = true, shot = 0.45, segs = { { clip = "slam", from = 5, fps = 20, ev = { [5] = function(g)
+		gather(g, 6 / 20)
 	end, [11] = slam } } } },
 }
 

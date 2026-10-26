@@ -61,7 +61,7 @@ for key, sc in S.scenes do
 	-- 시작 자리와 문은 땅 위에 서 있다(발밑이 막힌 칸, 몸은 걸리지 않음)
 	local spots = { { "시작 자리", sc.spawn } }
 	for _, p in sc.portals do
-		expect(S.scenes[p.to] ~= nil or p.weekly == p.to, key .. " 문이 가는 장면 " .. p.to) -- 보스의 문(2026-10-24): 가는 곳 = 보스의 이름표(맵을 옮기지 않는다 — 보스 창)
+		expect(S.scenes[p.to] ~= nil or p.weekly == p.to or (p.to == "@home" and sc.dojo == true), key .. " 문이 가는 장면 " .. p.to) -- 보스의 문(2026-10-24): 가는 곳 = 보스의 이름표(맵을 옮기지 않는다 — 보스 창)
 		table.insert(spots, { "문 " .. p.to, p })
 	end
 	for _, n in sc.npcs or {} do
@@ -91,7 +91,11 @@ do
 	local doors, inside = 0, {}
 	for _, p in town0.portals do
 		local dest = S.scenes[p.to]
-		if dest.indoor then
+		if dest.dojo then
+			-- 개인 연무장(2026-10-26): 주민이 없고, 나가는 문 하나 = 들어온 마을(@home — 마을이 둘이라 마을 이름이 아니다). 시작 자리는 문 앞
+			expect(#dest.portals == 1 and dest.portals[1].to == "@home", p.to .. " 나가는 문은 하나 — 들어온 마을로")
+			eq(dest.spawn.x, dest.portals[1].x, p.to .. " 시작 자리는 문 앞")
+		elseif dest.indoor then
 			doors += 1
 			-- 나가는 문은 하나(마을로). 그 밖의 문은 그 방에서 내려가는 지하뿐이다 — 퀘스트를 받아야 열리고(need), 지하의 문은 다시 그 방으로 올라온다(달의 사당 → 사당 지하. 2026-10-13)
 			local outs = 0

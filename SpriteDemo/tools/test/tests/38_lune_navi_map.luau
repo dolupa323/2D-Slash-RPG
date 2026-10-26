@@ -320,7 +320,7 @@ do
 		if sc.region == "r1" then
 			for _, p in sc.portals or {} do
 				local to = SCENES.scenes[p.to]
-				expect(to == nil or to.region == "r1", ("1지역에서 다른 지역으로 가는 문이 없다(배로만) %s → %s"):format(key, p.to))
+				expect(to == nil or to.region == "r1" or to.dojo, ("1지역에서 다른 지역으로 가는 문이 없다(배로만) %s → %s"):format(key, p.to)) -- (개인 연무장은 지역이 없다 — 나가는 문이 들어온 마을로만 · 2026-10-26)
 			end
 		end
 	end

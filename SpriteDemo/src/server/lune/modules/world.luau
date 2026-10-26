@@ -186,7 +186,7 @@ local function roster(key: string)
 	for _, s in inRoom(key) do
 		-- pet = 꺼내 둔 펫 · ride = 탄 탈것(2026-10-20 — 다른 사람의 화면도 같이 그린다)
 		local bm = s.acct and s.acct.bm
-		table.insert(list, { id = s.hero.id, name = s.name, class = s.hero.class, level = s.hero.level, pet = bm and bm.petOut or false, ride = if s.riding and bm then bm.mount else false, look = s.hero.look, wskin = bm and bm.wskin or false }) -- look = 무기 · 로브 색(염색 — 2026-10-22) · wskin = 장착한 캐시 무기(2026-10-23)
+		table.insert(list, { id = s.hero.id, name = s.name, class = s.hero.class, level = s.hero.level, pet = bm and bm.petOut or false, ride = if s.riding and bm then bm.mount else false, look = s.hero.look, wskin = bm and bm.wskin or false, title = s.hero.title or false }) -- look = 무기 · 로브 색(염색 — 2026-10-22) · wskin = 장착한 캐시 무기(2026-10-23) · title = 단 칭호(2026-10-26)
 	end
 	return list
 end
@@ -221,6 +221,7 @@ local function selfView(s)
 	view.tut = Tutorial.pack(s.hero.tut) -- 튜토리얼의 진행(꿈의 미션 판)
 	view.tutSkip = s.acct ~= nil and s.acct.tutDone == true -- 「건너뛰기」를 보일까(이 계정이 한 번 끝냈다)
 	view.haste = Buffs.haste(s.hero)
+	view.titles, view.title = require(lune.sim.titles).owned(s.hero), s.hero.title or false -- 가진 칭호 · 단 칭호(능력치 창 · 내 이름표 — 2026-10-26)
 	if s.acct then
 		view.attReady = Attend.ready(s.acct.att) -- 받을 출석 칸 · 업적 보상의 수(「메뉴」 단추의 점 — 2026-10-15)
 		view.achReady = Achieve.ready(s.acct.ach)
@@ -295,7 +296,8 @@ local function roomKeyFor(s, key: string): string
 	if s.scene and s.scene ~= key and SCENES.base(s.scene) == key then
 		return s.scene
 	end
-	for _, uid in Party.members(book, s.player.UserId) do
+	-- 개인 연무장(inst "solo" — 2026-10-26 사용자: "개인연무장은 개인한명만 들어갈수있고 각각플레이어는 따로쓰는거야"): 파티원의 방으로도 들어가지 않는다 — 늘 새 방
+	for _, uid in (if sc.inst == "solo" then {} else Party.members(book, s.player.UserId)) do
 		local ms = byUser[uid]
 		-- (주간 보스의 방 <방>#wn번호 · #wh번호에는 따라 들어가지 않는다 — 보스의 문에서 들어간 사람만: 2026-10-24)
 		if ms and ms ~= s and ms.hero and ms.scene and ms.scene ~= key and SCENES.base(ms.scene) == key and not string.find(ms.scene, "#w", 1, true) then
@@ -1002,22 +1004,24 @@ local function onCharsInner(player, action: string, a: any, b: any)
 		elseif c.name == "" then
 			return { ok = false, why = "이름을 먼저 지어야 합니다" }
 		end
-		-- 이름을 다시 본다: 지을 때는 괜찮았어도 그 뒤에 금칙어가 늘었거나 Roblox의 글 거르기가 달라졌을 수 있다
-		--  (Studio에서는 글 거르기가 걸러 주지 않는다 — 거기서 지은 이름도 실제 서버에 들어올 때 여기서 걸린다). 걸리면 이름을 비우고 다시 짓게 한다. 물어보지 못했으면 그냥 들여보낸다.
+		-- 이름을 다시 본다: 지은 뒤에 우리 금칙어(Account.nameBanned)가 늘었으면 이름을 비우고 다시 짓게 한다.
+		--  Roblox의 글 거르기로는 이제 비우지 않는다(2026-10-26 사용자: "LaNu 라는 닉네임도 지금 똑같은 방식으로 날아갔어 … 이런일이 절대 생기면안된다").
+		--  전에는 들어올 때마다 다시 물어 가려져 오면 비웠다 — 지을 때 거르기를 거친 이름(「Ryuville」 · 「LaNu」)이 Roblox의 거르기가 그때그때 달라 지워졌다(세 번 물어도 · S220).
+		--  지을 때 모두에게 보이는 글(Broadcast)로 거른 이름이다. 지금 가려져 오면 서버 출력에만 남긴다(제가 정한 것 — create.roblox.com/docs/ui/text-filtering).
 		if not s.guest then
-			local asked, clean = filtered(c.name, player.UserId)
-			local banned = Account.nameBanned(c.name)
-			if banned or (asked and not clean) then
-				-- 우리 금칙어에 걸린 이름만 장부에서 놓는다. Roblox의 거르기에 가려진 이름은 그 사람의 것으로 남겨 둔다 — 남이 가져가지 못하고,
-				--  거르기가 다시 깨끗하다고 하면 「이름 짓기」에서 같은 이름을 다시 지을 수 있다(2026-10-25 — 전에는 장부에서도 놓아 누구나 가져갈 수 있었다)
-				if banned then
-					Store.freeName(Account.nameKey(c.name), player.UserId)
-				end
-				warn(("[이름] 들어올 때 이름을 비웠다(%s): %s"):format(if banned then "금칙어" else "Roblox 글 거르기", c.name))
+			if Account.nameBanned(c.name) then
+				Store.freeName(Account.nameKey(c.name), player.UserId)
+				warn(("[이름] 들어올 때 이름을 비웠다(금칙어): %s"):format(c.name))
 				c.name = ""
 				saveAccount(s)
 				return { ok = false, why = Account.TEXT.gone, select = Account.view(acct) }
 			end
+			task.spawn(function()
+				local asked, clean = filtered(c.name, player.UserId)
+				if asked and not clean then
+					warn(("[이름] Roblox 글 거르기가 지금은 가린다(이름은 그대로 둔다): %s · %d"):format(c.name, player.UserId))
+				end
+			end)
 		end
 		local hero = Hero.unpack(player.UserId, c.hero)
 		if not hero then
@@ -1433,6 +1437,10 @@ local function onTravel(player, to: string)
 			if waking and not Tutorial.canExit(s.hero.tut) then
 				return nil -- 꿈의 빛나는 문: 미션을 다 하기 전에는 열리지 않는다
 			end
+			-- @home = 들어온 마을(개인 연무장의 나가는 문 — 2026-10-26): 마지막으로 들른 마을 · 작은 마을(없으면 시작 마을) · 그 마을의 연무장 문 앞으로(아래 back)
+			if to == "@home" then
+				to = if s.hero.home and SCENES.homes[s.hero.home] and rawget(SCENES.scenes, s.hero.home) then s.hero.home else SCENES.start
+			end
 			local dest = SCENES.scenes[to]
 			local x, y = dest.spawn.x, dest.spawn.y
 			for _, back in dest.portals do
@@ -1515,12 +1523,18 @@ local function applyResult(cur, key: string, result)
 	local grew = false
 	local guard = if #result.kills > 0 then require(script.Parent.macroGuard) else nil -- 매크로 확인: 처치를 센다(2026-10-23)
 	for _, kill in result.kills do
+		-- 매크로 확인의 처치 = 그 몬스터를 실제로 때린 사람만(kill.hitters — 경험치를 나눠 받는 같은 맵의 파티원은 세지 않는다: 2026-10-26 파티를 맺고 잠수한 사람이 문제를 받았다)
+		if guard then
+			for _, id in kill.hitters or {} do
+				local hs = byUser[id]
+				if hs then
+					guard.onKill(hs)
+				end
+			end
+		end
 		for _, gain in kill.gains do
 			local gs = byUser[gain.hero]
 			if gs then
-				if guard then
-					guard.onKill(gs)
-				end
 				if gs.acct then
 					Achieve.killed(gs.acct.ach, kill.kind, key, #kill.gains > 1) -- 업적: 처치 · 파티로 처치(함께 잡은 사람이 있다) · 그 지역의 몬스터 종류
 					Cash.passAdd(gs.acct, "kill", os.time(), 1) -- 달빛 패스: 몬스터 100마리마다 달빛 2
@@ -2182,6 +2196,10 @@ local function onPotion(player, id: any)
 		local h = s.hero
 		local here = SCENES.scenes[s.scene]
 		local to = here and here.ret
+		if here and here.dojo then
+			-- 개인 연무장(2026-10-26): 두 마을에서 들어와 장면에 가장 가까운 마을이 없다 — 들어온 마을(마지막으로 들른 마을 · 없으면 시작 마을)로
+			to = if h.home and SCENES.homes[h.home] and rawget(SCENES.scenes, h.home) then h.home else SCENES.start
+		end
 		local why = nil
 		if not h.alive then
 			return
@@ -3638,6 +3656,53 @@ local function onAdmin(player, what: string, a: any, b: any, c: any)
 		-- 확성기(2026-10-21 사용자: "모든 서버에 확성기로 말할수있나? 어드민기능으로 확성기같은게 필요한데") — 글을 거른 뒤 모든 서버의 모두에게(server/lune/modules/megaphone.luau)
 		local ok, msg = require(script.Parent.megaphone).send(player, a, os.time())
 		return { ok = ok, msg = msg }
+	elseif what == "title" then
+		-- 칭호를 내 캐릭터에 넣어 보기 · 모두 빼기(2026-10-26 사용자: "나 어드민으로 껴볼수있게 해야지 난디자인을 봐야하는데"): a = 칭호의 이름표(받고 바로 단다) · ""(가진 칭호를 모두 뺀다).
+		--  세계 기록(1위 · 열 사람)은 건드리지 않는다 — 이 캐릭터에만. 방 사람들의 이름표에도 바로
+		local Titles = require(lune.sim.titles)
+		if a == "" then
+			-- 모두 뺀다 — 운영자 칭호(rule admin)는 갖고 있되 떼기만 한다(빼도 1초 뒤에 서버가 다시 넣어 달아 버린다)
+			for id in h.titles do
+				local t = Titles.def(id)
+				if not (t and t.rule == "admin") then
+					h.titles[id] = nil
+				end
+			end
+			h.title = nil
+		elseif Titles.def(a) then
+			Titles.give(h, a)
+			Titles.wear(h, a)
+		else
+			return no("없는 칭호다")
+		end
+		s.dirty = true
+		sendWho(s.scene)
+		return done(if a == "" then "칭호를 모두 뺐다" else ("「%s」를 달았다"):format(Titles.def(a).name))
+	elseif what == "rankMounts" then
+		-- 순위 사슴(백금 · 실버 · 동색 — free max · max2 · max3) 넣어 보기 · 빼기(2026-10-26 사용자: "그리고 나도 볼수있어야지"): 내 계정에만 · 바로 저장 · 가방 「캐시」 탭과 방 사람들의 화면을 고친다
+		if a ~= "give" and a ~= "take" then
+			return no("모르는 일이다")
+		end
+		local c = s.acct.bm
+		local n = 0
+		for _, id in CashServer.rankMounts() do
+			if a == "give" and not c.mounts[id] then
+				c.mounts[id] = true
+				n += 1
+			elseif a == "take" and c.mounts[id] then
+				c.mounts[id] = nil
+				n += 1
+				if c.mount == id then
+					c.mount = false -- 고른 탈것이었으면 고르지 않은 것으로(타고 있었으면 내린다 — 탄 동안인지는 bm.mount를 본다)
+				end
+			end
+		end
+		if not saveNow(s) then
+			return no("저장하지 못했다 — 다시 눌러 주세요")
+		end
+		fire("CashGot", player, "")
+		sendWho(s.scene)
+		return done(if a == "give" then ("순위 사슴 %d마리를 넣었다(가방 「캐시」 탭)"):format(n) else ("순위 사슴 %d마리를 뺐다"):format(n))
 	elseif what == "coupons" then
 		-- 쿠폰 기록 지우기(내 계정 — 쿠폰을 처음 넣는 것부터 다시 해 볼 때 · 2026-10-21): 쓴 쿠폰 · 쿠폰 펫 · 쿠폰 탈것을 지우고 바로 저장 · 화면과 같은 맵의 사람들에게 알린다
 		local codes, pets = CashServer.resetCoupons(s.acct)
@@ -4050,6 +4115,14 @@ function World.tick(dt: number)
 			s.macroT = 0
 			require(script.Parent.macroGuard).tick(s, s.scene)
 			CashServer.maxGift(s) -- 레벨 순위 1위 선물(백금 사슴 — 2026-10-25): 처음 만렙(세계 기록)의 캐릭터로 있으면 계정에 넣는다 — 한 사람만(이미 있으면 아무것도 하지 않는다)
+			-- 칭호(2026-10-26 — server/lune/modules/titles.luau): 처음 만렙 · 만렙 열 사람의 기록에 있는 캐릭터면 준다(받았으면 알림 · 이름표). 기록에 적는 것은 만렙 최초 달성과 같은 사람만
+			local gotTitles = require(script.Parent.titles).grant(s, require(script.Parent.firstMax).get(), s.cid ~= nil and s.name ~= "" and not s.guest and not isBot(s.player) and not Admin.is(s.player) and not World.studio and not Store.isOffline(), World.now, Admin.is(s.player)) -- (운영자 칭호 = 관리자 계정만 — 2026-10-26)
+			if #gotTitles > 0 then
+				s.dirty = true
+				fire("TitleGot", s.player, gotTitles)
+				sendSelf(s)
+				sendWho(s.scene)
+			end
 			-- 만렙 최초 달성(2026-10-24): 이 접속에서 경험치로 막 만렙이 된 캐릭터(h.maxNow)이고 아직 세계 기록이 없으면 적어 본다 — 관리자 · 확인용 임시 계정 · 시험 봇 · Studio는 빼고.
 			--  (2026-10-24 사용자: "만렙 달성 알림같은거 이상한사람으로 뜨면 안된다" — 전에는 만렙인 캐릭터가 들어오기만 해도 적어 봐서, 이미 만렙이던 사람 · Studio의 시험 캐릭터가 「처음」으로 적힐 수 있었다)
 			if s.hero.maxNow and s.hero.level >= N.MAX_LEVEL and s.cid and s.name ~= "" and not s.guest and not isBot(s.player) and not Admin.is(s.player) and not World.studio and not Store.isOffline() then
@@ -4464,6 +4537,17 @@ function World.start()
 		rankCache = nil
 		for p in sessions do
 			fire("FirstMax", p, { name = rec.name, class = rec.class, level = N.MAX_LEVEL })
+		end
+	end)
+	-- 칭호(2026-10-26): 만렙 열 사람의 기록을 읽어 둔다(주는 것은 1초마다 — 아래 사람마다의 일)
+	require(script.Parent.titles).start()
+	-- 칭호를 단다 · 뗀다(능력치 창의 「칭호」 줄 — ""이면 뗀다). 가진 것만 — 방 사람들의 이름표에도 바로
+	Net.OnServer("Title", function(player, id)
+		local s = sessions[player]
+		if s and s.hero and require(lune.sim.titles).wear(s.hero, id) then
+			s.dirty = true
+			sendSelf(s)
+			sendWho(s.scene)
 		end
 	end)
 	-- 달빛 상점 안(s.shop)에서는 받지 않는 일 — 움직임 · 기술 · 줍기 · 물약 · 문 · 경매장 · 퀘스트 · 아이템 …(맵에서 빠져 있다 — 2026-10-21)

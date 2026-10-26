@@ -22,7 +22,7 @@ do
 		for i, p in sc.portals do
 			local at = ("%s의 문 %d"):format(sceneKey, i)
 			expect(typeof(p.x) == "number" and typeof(p.y) == "number", at .. ": 자리")
-			expect(typeof(p.to) == "string" and (S.scenes[p.to] ~= nil or p.weekly == p.to), at .. ": 가는 곳") -- 보스의 문(2026-10-24)
+			expect(typeof(p.to) == "string" and (S.scenes[p.to] ~= nil or p.weekly == p.to or (p.to == "@home" and sc.dojo == true)), at .. ": 가는 곳") -- 보스의 문(2026-10-24) · 개인 연무장의 나가는 문 = 들어온 마을(@home — 2026-10-26)
 			expect(typeof(p.label) == "string" and p.label ~= "", at .. ": 어디로 가는지의 글")
 			expect(p.h == nil or typeof(p.h) == "number", at .. ": 문의 높이")
 		end

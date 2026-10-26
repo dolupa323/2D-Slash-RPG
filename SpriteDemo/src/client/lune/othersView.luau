@@ -29,6 +29,12 @@ end
 function Others.levelText(level: number): string
 	return ("Lv.%d"):format(level)
 end
+-- 이름표 아래의 칭호(2026-10-26 — sim/titles.luau): 단 칭호의 이름 · 그 칭호의 색. 없으면 숨긴다(나 · 다른 사람 모두)
+local Titles = require(ReplicatedStorage.shared.lune.sim.titles)
+function Others.setTitle(tag, id: any)
+	local t = Titles.def(id)
+	Ui.tagTitle(tag, if t then t.name else "", if t then Ui.COLOR[t.color] or Ui.COLOR.gold else nil)
+end
 
 function Others.new(heroLayer: Frame, tagLayer: Frame, myId: any, ladders: any, scene: any)
 	local self = setmetatable({}, Others)
@@ -94,6 +100,10 @@ function Others:setWho(roster)
 				o.name, o.level = w.name, w.level
 				o.tag:SetText(Others.tagText(w.level, w.name))
 				Ui.tagLead(o.tag, Others.levelText(w.level))
+			end
+			if o.title ~= (w.title or false) then
+				o.title = w.title or false
+				Others.setTitle(o.tag, o.title) -- 그 사람이 단 칭호(2026-10-26)
 			end
 		end
 	end

@@ -268,6 +268,13 @@ end
 local ranks = {} -- [판] = OrderedDataStore
 local rankMemory = { level = {}, power = {}, robux = {} } -- [판][열쇠] = 점수(메모리에만 있는 것 · 저장소를 못 쓸 때의 것)
 local infoMemory = {} -- [열쇠] = { name, class }
+-- 읽어 둔 이름은 10~15분 뒤에 다시 읽는다(2026-10-26 사용자: "지금 랭킹 한국어 류빌로 나오잖아 닉네임은 Ryuville인데" — 전에는 서버가 닫힐 때까지 처음 읽은 이름을 썼다:
+--  다른 서버에서 이름을 바꾸면(이름 바꾸기 주문서 · 운영자가 고친 이름) 이 서버의 순위판에는 옛 이름이 남았다). 다시 읽는 때를 열쇠마다 흩어 한꺼번에 읽지 않게
+local INFO_KEEP, INFO_SPREAD = 600, 300
+local infoUntil = {} -- [열쇠] = 다시 읽을 때(os.clock)
+local function infoKept(key: string)
+	infoUntil[key] = os.clock() + INFO_KEEP + math.random() * INFO_SPREAD
+end
 
 local function getRank(board: string)
 	if ranks[board] or offline then
@@ -354,6 +361,7 @@ end
 -- 순위판에 적힌 열쇠의 이름 · 직업
 function Store.rankInfoSet(key: string, info, memoryOnly: boolean?)
 	infoMemory[key] = info
+	infoKept(key)
 	local ds = if memoryOnly then nil else getStore("rankInfo")
 	if ds and not offline then
 		try(function()
@@ -363,19 +371,25 @@ function Store.rankInfoSet(key: string, info, memoryOnly: boolean?)
 end
 
 function Store.rankInfoGet(key: string)
-	if infoMemory[key] then
-		return infoMemory[key]
+	local kept = infoMemory[key]
+	if kept and os.clock() < (infoUntil[key] or 0) then
+		return kept
 	end
 	local ok, result = read("rankInfo", key)
-	if ok and typeof(result) == "table" then
-		infoMemory[key] = result
-		return result
+	if ok then
+		infoMemory[key] = if typeof(result) == "table" then result else nil
+		infoKept(key)
+		return infoMemory[key]
 	end
-	return nil
+	if kept then
+		infoKept(key) -- 읽지 못했다(메모리 모드 · 저장소가 답하지 않는다): 읽어 둔 것을 그대로 쓴다
+	end
+	return kept
 end
 
 function Store.rankInfoRemove(key: string)
 	infoMemory[key] = nil
+	infoUntil[key] = nil
 	local ds = getStore("rankInfo")
 	if ds and not offline then
 		try(function()
@@ -485,6 +499,65 @@ function Store.firstMaxClaim(rec): (boolean?, any)
 		return nil, nil
 	end
 	return mine, have
+end
+
+-- 열쇠 maxTen = 만렙에 오른 차례대로 열 캐릭터 { { key, name, class, at } … }(오른 때의 차례 — 2026-10-26 칭호 「만월의 십인」).
+--  열이 차기 전에만 더한다(이미 있는 캐릭터는 다시 넣지 않는다 · 열이 차면 그대로). 돌려주는 것: 저장소에 있는 목록(읽지 못했으면 nil)
+function Store.maxTenGet(): any
+	if offline then
+		return memory.world.maxTen or {}
+	end
+	local ok, result = read("world", "maxTen")
+	if ok then
+		return if typeof(result) == "table" then result else {}
+	end
+	return if offline then memory.world.maxTen or {} else nil
+end
+function Store.maxTenAdd(rec, cap: number): any
+	local function add(old)
+		local list = if typeof(old) == "table" then old else {}
+		for _, r in list do
+			if typeof(r) == "table" and r.key == rec.key then
+				return nil, list -- 이미 있다
+			end
+		end
+		if #list >= cap then
+			return nil, list -- 다 찼다
+		end
+		local new = table.clone(list)
+		local at = 1
+		while at <= #new and (new[at].at or 0) <= rec.at do
+			at += 1
+		end
+		table.insert(new, at, rec)
+		return new, new
+	end
+	if offline then
+		local new, have = add(memory.world.maxTen)
+		memory.world.maxTen = new or have
+		return have
+	end
+	local ds = getStore("world")
+	if not ds then
+		return nil
+	end
+	local have = nil
+	local ok, err = try(function()
+		ds:UpdateAsync("maxTen", function(old)
+			local new, now = add(old)
+			have = now
+			return new
+		end)
+	end)
+	if not ok then
+		warn(("[lune] 만렙 열 사람의 기록을 적지 못했다: %s"):format(tostring(err)))
+		if studio() then
+			offline = true
+			return Store.maxTenAdd(rec, cap)
+		end
+		return nil
+	end
+	return have
 end
 
 function Store.isOffline(): boolean

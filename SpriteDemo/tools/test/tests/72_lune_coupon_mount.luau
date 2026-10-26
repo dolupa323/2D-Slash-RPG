@@ -234,6 +234,28 @@ do
 	end
 	expect(not inShop, "달빛 상점에서 팔지 않는다")
 end
+-- 레벨 순위 2위 「실버 사슴」 · 3위 「동색 사슴」(2026-10-26 — 누가 받는지는 시험 88): 표(free = max2 · max3) · 수정 사슴과 같은 칸 · 장 수 · 빠르기 · 상점에서 팔지 않는다
+do
+	for _, case in { { "mount_deer_silver", "max2" }, { "mount_deer_bronze", "max3" } } do
+		local gift, deer = nil, nil
+		for _, q in RIDE.mounts do
+			if q.id == case[1] then
+				gift = q
+			elseif q.id == "mount_deer" then
+				deer = q
+			end
+		end
+		expect(gift ~= nil and gift.free == case[2], ("탈것 표에 %s(free = %s)"):format(case[1], case[2]))
+		expect(gift and deer and gift.speed == deer.speed, "빠르기는 수정 사슴과 같다 " .. case[1])
+		local g, d = CHARS.chars[case[1]], CHARS.chars.mount_deer
+		expect(g ~= nil and d ~= nil and g.fw == d.fw and g.fh == d.fh and g.clips.run.n == d.clips.run.n and g.clips.idle.n == d.clips.idle.n, "그림: 수정 사슴과 같은 칸 · 같은 장 수 " .. case[1])
+		local inShop = false
+		for _, q in BM.products do
+			inShop = inShop or q.id == case[1]
+		end
+		expect(not inShop, "달빛 상점에서 팔지 않는다 " .. case[1])
+	end
+end
 
 -- 기도 탑의 일일 의뢰를 서버로(2026-10-25 — 셈은 시험 36): 탑 앞에서 수락 · 다 잡으면 보상 받기(경험치 · 달가루 · 달돈 없음) · 탑에서 멀면 안 된다
 do
@@ -265,3 +287,15 @@ do
 	World.removePlayer(pt)
 end
 
+
+-- 모든 펫 · 탈것에 아이콘이 있다: 가방 「캐시」 탭 · 상세 판의 18점(세계 아이콘 — parts.icons)과 상점의 24점(parts.pics)
+--  (2026-10-26 사용자: 동색 사슴의 칸이 비어 "이거 아이콘 원래 없는거야?" — 24점 묶음만 다시 지어 18점 묶음에 백금 · 실버 · 동색 사슴이 없었다)
+do
+	local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
+	for _, list in { RIDE.pets, RIDE.mounts } do
+		for _, q in list do
+			expect(KIT.parts.icons.icons["ride_" .. q.id] ~= nil, "18점 아이콘(가방 「캐시」 칸)이 있다 " .. q.id)
+			expect(KIT.parts.pics.icons["ride_" .. q.id] ~= nil, "24점 아이콘(상점)이 있다 " .. q.id)
+		end
+	end
+end

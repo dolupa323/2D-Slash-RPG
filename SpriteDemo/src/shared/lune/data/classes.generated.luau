@@ -200,7 +200,7 @@ return {
 					job = 3,
 					lv = 60,
 					skills = {
-						{ id = "rp_hands", name = "망자의 손", ["type"] = "mob", max = 20, text = "앞 땅 세 곳에 저승의 금이 열리고 뼈만 남은 손이 차례로 솟아 할퀸다. 맞은 적은 조금 떠오른다.", replaces = "rp_throw" },
+						{ id = "rp_hands", name = "그림자 흡혈", ["type"] = "mob", max = 20, text = "앞으로 그림자 웅덩이가 번지고 세 곳에서 칠흑의 송곳니가 차례로 솟아 적을 꿰뚫는다. 맞은 적의 피가 리퍼에게 빨려 든다. 맞은 적은 조금 떠오른다.", replaces = "rp_throw" },
 						{ id = "rp_drag", name = "망령 돌진", ["type"] = "move", max = 5, text = "유령처럼 몸이 비치며 앞으로 빠르게 미끄러진다(레벨이 오를수록 멀리). 공중에서도 된다. 다시 쓰기 5초.", cd = 5 },
 						{ id = "rp_judge", name = "단죄", ["type"] = "boss", max = 20, text = "적 하나의 머리 위로 사신의 낫이 연달아 세 번 떨어진다. 화면 안이면 어디든 닿는다.", replaces = "rp_ambush" },
 						{ id = "rp_ghost", name = "망령 소환", ["type"] = "summon", max = 10, text = "영혼 3을 태워 망령 하나를 60초 부린다. 가까운 적을 낫으로 벤다.", needs = "rp_soul", dur = 60 },
@@ -225,7 +225,7 @@ return {
 						{ id = "rp_gate", name = "저승문", ["type"] = "install", max = 15, text = "10초 동안 저승문을 연다. 둘레의 적을 계속 끌어당기고, 문 곁에서 쓰러진 적은 영혼 2. 다시 쓰기 60초.", dur = 10, cd = 60 },
 						{ id = "rp_expert", name = "낫 달인", ["type"] = "passive", max = 10, text = "최종 데미지 +, 공격력 +, 크리티컬 데미지 +.", needs = "rp_mastery" },
 						{ id = "rp_ghost2", name = "망령 군단", ["type"] = "passive", max = 10, text = "망령을 셋까지 부린다. 망령이 쓰러뜨려도 영혼을 얻는다.", needs = "rp_ghost" },
-						{ id = "rp_touch", name = "죽음의 손길", ["type"] = "passive", max = 10, text = "최종 데미지 +, 체력이 30% 아래인 적에게 데미지 +. 회전 낫 · 망자의 손의 피해가 크게 오른다.", needs = "rp_soul2" },
+						{ id = "rp_touch", name = "죽음의 손길", ["type"] = "passive", max = 10, text = "최종 데미지와 두 사냥기 · 약한 적에게 주는 피해 +.", needs = "rp_soul2" },
 						{ id = "c_hero", name = "달의 용사", ["type"] = "party", max = 10, text = "60초 동안 파티 모두의 기본 능력치 +15%. 끝나기 전에 다시 건다.", dur = 60 },
 						{ id = "c_will", name = "용사의 의지", ["type"] = "guard", max = 5, text = "걸려 있는 상태 이상을 모두 풀고 3초 동안 걸리지 않는다. 다시 쓰기 300초.", dur = 3, cd = 300 },
 					},

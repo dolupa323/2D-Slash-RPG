@@ -56,8 +56,8 @@
   "id": "rbxassetid://105450659975716"
  },
  "ui_kit.png": {
-  "hash": "b3efc63b4ec6a65f2199fcc1b51a2b21",
-  "id": "rbxassetid://119720045715383"
+  "hash": "e50b122b8af3499e65cd3968c86c14a1",
+  "id": "rbxassetid://95065221156996"
  },
  "font_small_2.png": {
   "hash": "a39c57d23acf7233f3419f3f15021ff7",
@@ -296,16 +296,16 @@
   "id": "rbxassetid://105088993635856"
  },
  "chars_2.png": {
-  "hash": "2e9654274733647bef6c08ec732ce7e4",
-  "id": "rbxassetid://102753162096157"
+  "hash": "c030cbbaf009d54b97b9a9366c9a25f2",
+  "id": "rbxassetid://83041087079092"
  },
  "ground_r2b3_2.png": {
   "hash": "5ab61b982be63132f8be7920125c1cdb",
   "id": "rbxassetid://88569035446839"
  },
  "chars_mask_2.png": {
-  "hash": "a8e6966d8fb750843741e5704193245f",
-  "id": "rbxassetid://92305662639586"
+  "hash": "66ef6dbf9948ac49835c20654a4775dd",
+  "id": "rbxassetid://135068017419618"
  },
  "ground_r2b1_2.png": {
   "hash": "c6791ddd14da3aa7b4f513a6fecef26f",
@@ -880,24 +880,24 @@
   "id": "rbxassetid://102843140318075"
  },
  "chars_3.png": {
-  "hash": "ab5bdfc7b9ac5bc245ff51090c6339cb",
-  "id": "rbxassetid://113921853790392"
+  "hash": "6a6c871a119a0553bd48c31ccd77430e",
+  "id": "rbxassetid://92057025364283"
  },
  "chars_4.png": {
-  "hash": "71521d8c5b9947cddbcdabdc7bf5baf8",
-  "id": "rbxassetid://70755538109146"
+  "hash": "9f5b95b139f9a7ad741c34fa923cfc00",
+  "id": "rbxassetid://135777619079253"
  },
  "chars_5.png": {
   "hash": "2f9084c0a49ade7d1d6eaf7519e88003",
   "id": "rbxassetid://108149976755839"
  },
  "chars_mask_3.png": {
-  "hash": "9b3451bc366927b3e13100fdd789483f",
-  "id": "rbxassetid://103872381750421"
+  "hash": "96b3c375880097114022331dbebb44ad",
+  "id": "rbxassetid://93492148878335"
  },
  "chars_mask_4.png": {
-  "hash": "c118fc6b2cca0e0fdbbb94a1a36494c7",
-  "id": "rbxassetid://98692735198115"
+  "hash": "586204edbbbb4c33ad2bab716dac33ff",
+  "id": "rbxassetid://87646612569542"
  },
  "chars_mask_5.png": {
   "hash": "7a1c900289271103612492938079fa69",
@@ -1214,5 +1214,9 @@
  "ground_dg2_1.png": {
   "hash": "79a2683c432efbf5ea35c2fecb219804",
   "id": "rbxassetid://101634884884276"
+ },
+ "back_in_dojo.png": {
+  "hash": "6910b801ab88f4c3cc9aad70b8757422",
+  "id": "rbxassetid://123526558736053"
  }
 }

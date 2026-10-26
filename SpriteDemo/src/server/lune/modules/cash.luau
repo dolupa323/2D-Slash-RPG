@@ -129,28 +129,60 @@ end
 --  (2026-10-24 기록 = 강타) · 기록이 아직 없는 서버에서는 처음 만렙이 적히는 순간 그 사람이 받는다. world.luau가 1초마다 부른다.
 --  넣었으면 곧바로 저장하고 화면에 알린다(CashGot — 「레벨 순위 1위 선물」). 고른 탈것이 없으면 그것을 고른다. 넣었으면 그 탈것의 이름표, 아니면 nil
 local Rank = require(lune.sim.rank)
+-- 2위 · 3위(2026-10-26 사용자: "만렙 두번째, 세번째로 찍은 사람들한테 보상으로 줄거야 1등 황금사슴 들어간거처럼 2등 실버사슴 3등 동색사슴이야"):
+--  free = "max2" · "max3" — 만렙에 오른 차례의 세계 기록(maxTen — server titles.luau)의 둘째 · 셋째 캐릭터. 1위는 그대로 처음 만렙의 기록(firstMax)
+--  받는 것(같은 날 사용자: "1위는 금은동 다주고 2위는 은 동 주고 3위는 동 주고"): 1위 = 금 · 은 · 동 · 2위 = 은 · 동 · 3위 = 동
+CashServer.RANK_GIFTS = { { "max", "max2", "max3" }, { "max2", "max3" }, { "max3" } }
+-- 순위 사슴(free = max · max2 · max3)의 이름표들(관리 창 「순위 사슴」 — 관리자가 모습을 본다)
+function CashServer.rankMounts(): { string }
+	local list = {}
+	for id, def in Cash.MOUNT do
+		if def.free == "max" or def.free == "max2" or def.free == "max3" then
+			table.insert(list, id)
+		end
+	end
+	table.sort(list)
+	return list
+end
 function CashServer.maxGift(s): string?
 	if not s.hero or not s.cid or not s.acct or not s.loaded or s.guest then
 		return nil
 	end
+	local key = Rank.charKey(s.player.UserId, s.cid)
+	local rank = nil
 	local rec = require(script.Parent.firstMax).get()
-	if not rec or rec.key ~= Rank.charKey(s.player.UserId, s.cid) then
-		return nil -- 1위(처음 만렙)의 캐릭터가 아니다
-	end
-	local c = s.acct.bm
-	for id, def in Cash.MOUNT do
-		if def.free == "max" and not c.mounts[id] then
-			c.mounts[id] = true
-			c.mount = c.mount or id
-			s.dirty = true
-			if W then
-				W.saveNow(s)
-				W.notify(s, id)
-			end
-			return id
+	if rec and rec.key == key then
+		rank = 1
+	else
+		local ten = require(script.Parent.titles).ten()
+		if ten and ten[2] and ten[2].key == key then
+			rank = 2
+		elseif ten and ten[3] and ten[3].key == key then
+			rank = 3
 		end
 	end
-	return nil
+	if not rank then
+		return nil -- 1 · 2 · 3위(만렙에 오른 차례)의 캐릭터가 아니다
+	end
+	local c = s.acct.bm
+	local given = {}
+	for _, want in CashServer.RANK_GIFTS[rank] do
+		for id, def in Cash.MOUNT do
+			if def.free == want and not c.mounts[id] then
+				c.mounts[id] = true
+				c.mount = c.mount or id -- (고른 탈것이 없으면 가장 높은 것 — 금 → 은 → 동의 차례로 넣는다)
+				s.dirty = true
+				table.insert(given, id)
+			end
+		end
+	end
+	if #given > 0 and W then
+		W.saveNow(s) -- 저장한 뒤에 알린다(받은 것마다)
+		for _, id in given do
+			W.notify(s, id)
+		end
+	end
+	return given[1]
 end
 
 -- 쿠폰 기록을 지운다(관리자 — 2026-10-21 사용자: "쿠폰 기록을 초기화해줘 쿠폰등록하는것부터 영상을찍어야해"): 쓴 쿠폰을 모두 잊고 쿠폰으로만 받는 펫 · 탈것(free)을 뺀다

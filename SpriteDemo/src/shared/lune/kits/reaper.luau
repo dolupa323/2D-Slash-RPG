@@ -256,46 +256,124 @@ local function parade(g)
 	end)
 end
 
--- 망자의 손(3차 사냥기 — 2026-10-25 사용자 "리퍼도 망령돌진 일반 이동기로 변경하고 사냥기 추가하자 리븐작업한것처럼"):
---  낫으로 땅을 긋자(slash 4장) 앞 땅 세 곳(28 · 70 · 112도트)에 0.07초씩 차례로 저승의 금이 열리고 뼈만 남은 손이 솟아 할퀸다 — 손마다 그 자리(폭 ±22 · 위 28도트 — 제 층만)의 적을 한 번 · 조금 띄운다.
---  그림: 바닥의 어두운 틈(분홍 테) → 솟는 뼈 손(팔뼈 · 손바닥 · 갈고리 손가락 넷) → 할퀸 자국 셋 → 가라앉는다. 이름 · 모양 · 숫자는 제가 정한 것(망령 · 낫과 겹치지 않게 「땅에서 솟는 손」)
-local HANDS, HAND_W, HAND_H = { 28, 70, 112 }, 22, 28
-local GAP = 0x141a26
-local function drawHand(ctx, x: number, gy: number, k: number, dir: number, tone)
-	local rise = if k < 0.35 then k / 0.35 elseif k > 0.7 then (1 - k) / 0.3 else 1 -- 솟았다 → 머문다 → 가라앉는다
-	ctx:style(tone.d)
-	ctx:rect(R(x) - 9, R(gy) - 1, 18, 2) -- 저승의 틈(분홍 테)
-	ctx:style(GAP)
-	ctx:rect(R(x) - 7, R(gy) - 1, 14, 1)
-	local h = 30 * rise
+-- 그림자 흡혈(3차 사냥기 — 처음 「망자의 손」(뼈 손) → 2026-10-26 사용자: "리퍼 3차 사냥기 이펙트 너무 쓰레기야 훨씬 멋지게 약간 그림자+흡혈느낌이야 해골바가지가아니라"):
+--  낫으로 땅을 긋자(slash 4장) 앞으로 그림자 웅덩이가 번진다(앞 6 → 132도트 · 위로 그림자 불꽃이 일렁인다) → 세 곳(28 · 70 · 112도트)에서 0.07초씩 차례로 칠흑의 송곳니 다발이 솟는다
+--  (큰 것 하나 + 작은 것 둘 — 앞으로 휘고 날끝이 핏빛) → 맞은 적은 핏방울이 튀고 송곳니 자국 둘이 엇갈려 문다 → 피 줄기 셋이 곡선을 그리며 리퍼에게 빨려 들어가 몸에 핏빛 기운(그림뿐 — 회복은 없다).
+--  맞는 띠 = 송곳니의 높이(위 30도트 — 제 층만) · 폭 ±22도트 · 한 번씩 · 조금 띄운다. 공방 시험 탭 js/lune/kits/reaper.js와 줄마다 같다. 이름 · 구성 · 색은 제가 정한 것
+local FANGS, FANG_W, FANG_H = { 28, 70, 112 }, 22, 30
+local BLOOD = { w = 0xffd6e2, l = 0xff5f86, n = 0xd61f4f, d = 0x6e0b2b }
+local SHADE = { w = 0xb11fa5, l = 0x393e46, n = 0x232931, d = 0x12161c }
+-- 그림자 웅덩이: 바닥을 따라 앞으로 번지고(0.2 — 앞끝에 핏빛 불씨) · 위로 그림자 불꽃 여섯이 일렁이고 · 테두리에 자홍 물결 · 끝에서 옅어진다
+local function drawPool(ctx, x: number, gy: number, dir: number, k: number)
+	local s, t = min(1, k / 0.2), k * 0.7
+	local a, b = x + dir * 6, x + dir * (6 + 126 * s)
+	local x0, w, y = R(min(a, b)), R(abs(b - a)), R(gy)
+	if w < 1 then
+		return
+	end
+	ctx:alpha(if k > 0.72 then max(0, (1 - k) / 0.28) else 1)
+	ctx:style(SHADE.d)
+	ctx:rect(x0, y - 2, w, 3)
+	ctx:style(SHADE.n)
+	ctx:rect(x0 + 2, y - 3, max(0, w - 4), 1)
+	ctx:style(SHADE.w) -- 자홍 물결
+	for px = 0, w - 1, 9 do
+		if (px + floor(t * 40)) % 18 < 9 then
+			ctx:rect(x0 + px, y - 3, 2, 1)
+		end
+	end
+	for i = 0, 5 do -- 그림자 불꽃(굵은 혀 — 밑이 넓고 끝이 가늘다)
+		local fx0, hgt = x0 + (i * 23 + 5) % w, R(2 + (sin(t * 11 + i * 2.1) + 1) * 2.5 * s)
+		ctx:style(SHADE.d)
+		ctx:rect(fx0 - 1, y - 3 - R(hgt * 0.5), 3, R(hgt * 0.5))
+		ctx:rect(fx0, y - 3 - hgt, 1, hgt)
+	end
+	if s < 1 then -- 번지는 앞끝의 핏빛 불씨
+		local hx = R(b)
+		ctx:style(BLOOD.n)
+		ctx:rect(hx - 1, y - 3, 2, 2)
+		ctx:style(BLOOD.l)
+		ctx:rect(hx, y - 3, 1, 1)
+	end
+	ctx:alpha(1)
+end
+-- 송곳니 하나: 밑동 폭 w · 높이 h · 날끝이 앞으로 lean만큼 휜다. 칠흑의 몸 · 안쪽 결 · 앞날의 윗부분만 핏빛 · 날끝 밝은 피
+local function drawFang(ctx, x: number, gy: number, h: number, w: number, lean: number, dir: number)
 	if h < 2 then
 		return
 	end
-	local wy = gy - h -- 손 끝의 높이
-	line(ctx, x - 1, gy - 1, x + dir, wy + 11, tone.w, 2) -- 팔뼈
-	disc(ctx, x + dir * 2, wy + 8, 4, tone.l) -- 손바닥
-	disc(ctx, x + dir * 2, wy + 8, 3, tone.w)
-	for i = 0, 3 do -- 갈고리 손가락 넷(위로 뻗었다가 끝이 앞으로 굽는다)
-		local fx0 = x + dir * 2 + (i - 1.5) * 3
-		line(ctx, fx0, wy + 5, fx0 + dir, wy - 2, tone.w, 1)
-		line(ctx, fx0 + dir, wy - 2, fx0 + dir * 3, wy - 4, tone.n, 1)
+	local function P(dx: number, dy: number)
+		return { x + dir * dx, gy - dy }
+	end
+	poly(ctx, { P(-w, 0), P(w, 0), P(w * 0.6 + lean * 0.3, h * 0.45), P(lean, h), P(-w * 0.2 + lean * 0.4, h * 0.55) }, SHADE.d)
+	poly(ctx, { P(-w * 0.3, 0), P(w * 0.4, 0), P(lean * 0.7, h * 0.8), P(-w * 0.1 + lean * 0.3, h * 0.5) }, SHADE.n)
+	local m1, m2, tip = P(w * 0.6 + lean * 0.3, h * 0.45), P(lean * 0.75, h * 0.78), P(lean, h)
+	line(ctx, m1[1], m1[2], m2[1], m2[2], BLOOD.d, 1) -- 앞날의 윗부분만 핏빛
+	line(ctx, m2[1], m2[2], tip[1], tip[2], BLOOD.n, 2)
+	ctx:style(BLOOD.l)
+	ctx:rect(R(tip[1]), R(tip[2]), 1, 1)
+end
+-- 송곳니 다발: 솟았다(0.22 — 조금 넘쳐 솟는다) → 머문다 → 가라앉는다(0.68부터)
+local function drawFangs(ctx, x: number, gy: number, dir: number, k: number)
+	local rise = if k < 0.22 then min(1.12, (k / 0.22) * 1.12) elseif k < 0.3 then 1.12 - (k - 0.22) / 0.08 * 0.12 elseif k > 0.68 then max(0, (1 - k) / 0.32) else 1
+	drawFang(ctx, x - dir * 8, gy, 20 * rise, 4, 5, dir)
+	drawFang(ctx, x + dir * 9, gy, 15 * rise, 3, 6, dir)
+	drawFang(ctx, x, gy, FANG_H * rise, 6, 7, dir)
+end
+-- 피 줄기: 적의 몸 → 리퍼의 가슴으로 휘어 드는 핏방울 셋(지나온 길이 이어진 핏빛 띠)
+local function drawSiphon(ctx, x0: number, y0: number, x1: number, y1: number, k: number)
+	local cx, cy = (x0 + x1) / 2, min(y0, y1) - 26
+	local function at(u: number): (number, number)
+		return (1 - u) * (1 - u) * x0 + 2 * (1 - u) * u * cx + u * u * x1, (1 - u) * (1 - u) * y0 + 2 * (1 - u) * u * cy + u * u * y1
+	end
+	for i = 0, 2 do
+		local u = max(0, min(1, (k - i * 0.12) / 0.62))
+		if u > 0 and u < 1 then
+			for j = 8, 1, -1 do -- 이어진 핏빛 띠
+				local ax, ay = at(max(0, u - j * 0.035))
+				local bx, by = at(max(0, u - (j - 1) * 0.035))
+				line(ctx, ax, ay, bx, by, if j > 4 then BLOOD.d else BLOOD.n, 1)
+			end
+			local px, py = at(u)
+			disc(ctx, px, py, 2, BLOOD.n)
+			ctx:style(BLOOD.l)
+			ctx:rect(R(px), R(py) - 1, 1, 1)
+		end
 	end
 end
 function hands(g)
-	local x, y, dir, tone = g.x, g.y, g.dir, g.tone
-	for i, d in HANDS do
+	local x, y, dir = g.x, g.y, g.dir
+	local drained = false
+	g.fx.add(0.7, function(ctx, k)
+		drawPool(ctx, x, y, dir, k)
+	end, { back = true })
+	for i, d in FANGS do
 		local hx, t = x + dir * d, (i - 1) * 0.07
 		g.after(t, function()
 			g.fx.add(0.5, function(ctx, k)
-				drawHand(ctx, hx, y, k, dir, tone)
+				drawFangs(ctx, hx, y, dir, k)
 			end)
-			g.fx.shards(hx, y - 2, 4, tone, { kind = "tri", speed = 50, up = 60, life = 0.35 })
+			g.fx.shards(hx, y - 2, 5, SHADE, { kind = "tri", speed = 50, up = 70, life = 0.35 })
 		end)
-		g.after(t + 0.1, function()
-			for j = -1, 1 do -- 할퀸 자국 셋
-				g.fx.cut(hx + j * 4, y - 16, 22, 60 * dir, tone, { th = 2, life = 0.18, delay = (j + 1) * 0.03 })
+		g.after(t + 0.08, function()
+			local hit = g.hitAt(hx, y, FANG_W, FANG_H, 4, { lift = 120, stop = 0.03 }) or {}
+			for _, m in hit do
+				local mx, my, px, py = m.x, m.y - 12, g.x, g.y - 14
+				g.fx.shards(mx, my, 6, BLOOD, { kind = "dot", speed = 70, up = 50, life = 0.35 }) -- 핏방울 · 핏빛 고리
+				g.fx.ring(mx, my, 3, 11, BLOOD, { life = 0.22 })
+				g.fx.cut(mx - 3, my, 14, 70, BLOOD, { th = 2, life = 0.16 }) -- 송곳니 자국 둘
+				g.fx.cut(mx + 3, my, 14, 110, BLOOD, { th = 2, life = 0.16, delay = 0.03 })
+				g.fx.add(0.45, function(ctx, k)
+					drawSiphon(ctx, mx, my, px, py, k)
+				end, { delay = 0.06 })
+				if not drained then
+					drained = true
+					g.after(0.42, function()
+						g.fx.pop(g.x, g.y - 14, BLOOD, { r = 6 })
+						g.fx.aura(g.x, g.y, BLOOD, { r = 13, h = 28, rings = false })
+					end)
+				end
 			end
-			g.hitAt(hx, y, HAND_W, HAND_H, 4, { lift = 120, stop = 0.03 })
 		end)
 	end
 end
@@ -416,7 +494,7 @@ local skills = {
 		end,
 	} } } },
 	buff("rp_chill", "1"),
-	{ id = "rp_hands", key = "E", shot = 0.5, segs = { { clip = "slash", fps = 20, ev = { [4] = function(g) -- 망자의 손(위 hands)
+	{ id = "rp_hands", key = "E", shot = 0.5, segs = { { clip = "slash", fps = 20, ev = { [4] = function(g) -- 그림자 흡혈(위 hands — 처음 「망자의 손」)
 		hands(g)
 	end } } } },
 	{ id = "rp_drag", key = "V", air = true, shot = 0.3, segs = { -- 망령 돌진(이동기 — 위 ghostRush): 몸이 비치며 앞으로 미끄러진다

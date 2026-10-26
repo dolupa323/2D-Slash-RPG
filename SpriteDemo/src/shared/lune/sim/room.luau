@@ -288,6 +288,16 @@ function Room:stepMob(mob, heroes, dt: number, events)
 	local def, atk = mob.def, mob.def.atk
 	mob.t += dt
 	mob.cd = math.max(0, mob.cd - dt)
+	-- 개인 연무장의 수련 인형(2026-10-26): 제자리에 서 있기만 한다(움직이지도 치지도 않는다) — 나오는 동작 · 맞고 멈칫하는 동작만 마저 한다
+	if self.scene and self.scene.dojo then
+		if mob.state == "gone" or mob.state == "dead" then
+			mob.state, mob.t, mob.hp = "spawn", 0, mob.maxHp
+		elseif (mob.state == "spawn" and mob.t >= SPAWN_TIME) or (mob.state == "hit" and mob.t >= RULES.stagger) or (mob.state ~= "spawn" and mob.state ~= "hit" and mob.state ~= "idle") then
+			mob.state, mob.t = "idle", 0
+		end
+		mob.x, mob.target, mob.aggro = mob.homeX, nil, 0
+		return
+	end
 	-- 묶였거나(바인드 — 저승 사슬 · 수정 감옥) 넘어져 있으면(지진) 움직이지도 치지도 못한다 — 맞고 멈칫하는 동작만 마저 한다
 	if ((mob.bind or 0) > 0 or (mob.stun or 0) > 0) and mob.state ~= "gone" and mob.state ~= "dead" and mob.state ~= "spawn" then
 		if mob.state ~= "hit" or mob.t >= RULES.stagger then
@@ -1250,6 +1260,12 @@ end
 --  hitBy = 이번 삶에서 친 사람마다 깎은 체력([번호] = 점 — 쓰러지면 Room:strike가 거둔다: 퀘스트 · 일일 의뢰의 숫자 · 경험치를 때린 만큼 나눈다 — 2026-10-22)
 --   남은 체력보다 큰 타는 남은 만큼만 센다(막타가 몫을 부풀리지 않게)
 function Room:damageMob(mob, dmg: number, fromX: number, byId: any): boolean
+	-- 개인 연무장(scene.dojo — 2026-10-26)의 수련 인형: 맞아도 쓰러지지 않는다(체력이 늘 가득 · 친 사람의 몫도 적지 않는다 — 보상이 없다). 맞으면 멈칫하는 동작만
+	if self.scene and self.scene.dojo then
+		mob.hp = mob.maxHp
+		mob.state, mob.t = "hit", 0
+		return false
+	end
 	local took = math.min(dmg, mob.hp)
 	mob.hp = math.max(0, mob.hp - dmg)
 	mob.target, mob.aggro = byId, 5
@@ -1484,7 +1500,16 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 				d.friends = friends
 			end
 		end
-		table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = myXp, ups = myUps, gains = gains, credit = credit, drop = drop, loot = loot, elite = mob.fieldElite or nil }) -- elite = 사냥터 정예(분석이 센다)
+		-- 실제로 때린 사람(이 몬스터의 체력을 깎은 사람 · 막타를 친 사람 — 소환수 · 설치물은 그 주인): 매크로 확인이 「사냥 중」을 셀 때 이 사람들만(server macroGuard)
+		--  (2026-10-26 사용자: "사냥터에서 그냥 아무것도 안하고 잠수하고있었는데 매크로 정지당했다고억울하다고하면" — 전에는 경험치를 나눠 받는 같은 맵의 파티원도 처치로 세어,
+		--   파티를 맺고 잠수한 사람이 파티원의 사냥으로 「사냥 중」이 되어 문제를 받고 · 잠수 중이라 놓쳤다)
+		local hitters = { hero.id }
+		for _, w in who do
+			if w.dmg > 0 and w.hero ~= hero then
+				table.insert(hitters, w.hero.id)
+			end
+		end
+		table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = myXp, ups = myUps, gains = gains, credit = credit, hitters = hitters, drop = drop, loot = loot, elite = mob.fieldElite or nil }) -- elite = 사냥터 정예(분석이 센다)
 	end
 	return dead, dmg
 end

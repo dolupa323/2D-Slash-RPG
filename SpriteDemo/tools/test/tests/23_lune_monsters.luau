@@ -105,7 +105,7 @@ do
 		expect(n == 1 and kinds[kind], ("%s에는 %s 한 종류만"):format(key, kind))
 	end
 	for key, scene in SCENES.scenes do
-		if scene.region == "r1" and not scene.story and not scene.tut and #scene.mobs > 0 then -- tut = 튜토리얼의 꿈(사냥터가 아니다)
+		if scene.region == "r1" and not scene.story and not scene.tut and not scene.dojo and #scene.mobs > 0 then -- tut = 튜토리얼의 꿈(사냥터가 아니다) · dojo = 개인 연무장(2026-10-26 — 쓰러지지 않는 수련 인형)
 			expect(ONE[key] ~= nil, "1지역의 사냥터는 모두 표에 있다 " .. key)
 		end
 	end
@@ -119,7 +119,7 @@ end
 for key, scene in SCENES.scenes do
 	for _, m in scene.mobs do
 		-- 이야기의 방(사당 지하 — 2차 전직의 수련 인형)은 사냥터가 아니다: 그 퀘스트를 하는 동안에만 나온다(2026-10-13)
-		if COMBAT.mobs[m.kind].bare and not scene.story and not scene.tut and not scene.rift then -- tut = 튜토리얼의 꿈(2026-10-14 — 수련 인형을 빌려 쓴다) · rift = 수정 틈 토벌(2026-10-16 — 사냥터의 몬스터를 물결로 빌려 쓰는 던전: 사냥터가 아니다)
+		if COMBAT.mobs[m.kind].bare and not scene.story and not scene.tut and not scene.rift and not scene.dojo then -- (dojo = 개인 연무장의 수련 인형 — 사냥터가 아니다 · 2026-10-26) -- tut = 튜토리얼의 꿈(2026-10-14 — 수련 인형을 빌려 쓴다) · rift = 수정 틈 토벌(2026-10-16 — 사냥터의 몬스터를 물결로 빌려 쓰는 던전: 사냥터가 아니다)
 			eq(placed[m.kind], key, ("%s는 %s에만"):format(m.kind, tostring(placed[m.kind])))
 		end
 	end

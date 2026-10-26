@@ -382,4 +382,13 @@ return {
 			reward = { dust = 10 },
 		},
 	},
+	titles = {
+		ten = 10,
+		words = { label = "칭호", none = "없음", change = "바꾸기", banner = "칭호 획득", got = "「{name}」 칭호를 받았습니다" },
+		list = {
+			{ id = "gm", name = "운영자", color = "red", rule = "admin", line = "게임을 만들고 돌보는 사람" },
+			{ id = "max1", name = "최초의 계승자", color = "gold", rule = "first", line = "가장 먼저 Lv.150에 오른 단 한 사람" },
+			{ id = "max10", name = "만월의 계승자", color = "accent", rule = "ten", line = "Lv.150에 오른 차례로 열 사람" },
+		},
+	},
 }

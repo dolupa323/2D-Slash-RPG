@@ -8,6 +8,7 @@ local N = require(ReplicatedStorage.shared.lune.config.numbers)
 local Format = require(ReplicatedStorage.shared.lune.ui.format)
 local Layout = require(ReplicatedStorage.shared.lune.ui.layout)
 local UI = require(ReplicatedStorage.shared.lune.data["ui.generated"])
+local Titles = require(ReplicatedStorage.shared.lune.sim.titles) -- 칭호(2026-10-26)
 local Stage = require(script.Parent.Parent.stage)
 local Ui = require(script.Parent.ui)
 
@@ -145,6 +146,21 @@ function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 	-- 전투력(왼쪽)과 체력(오른쪽)을 한 줄에
 	local power = Ui.text(body, "", 0, y + 10, math.floor(w / 2), { color = C.gold })
 	local hp = Ui.text(body, "", math.floor(w / 2), y + 10, w - math.floor(w / 2), { align = "right" })
+	-- 칭호(2026-10-26 — sim/titles.luau): 「칭호」 · 단 칭호의 이름(그 색 · 없으면 「없음」) · 「바꾸기」 = 없음 → 가진 칭호를 높은 차례로 → 없음. 가진 칭호가 없으면 단추가 꺼진다
+	local TW = Titles.WORDS
+	local ty = y + 10 + S.titleTop
+	local titleLabel = Ui.text(body, TW.label, 0, ty + math.floor((Ui.M.button - Ui.M.body) / 2), S.tagX - 4, { font = "body", color = C.dim })
+	local titleName = Ui.text(body, "", S.tagX, ty + math.floor((Ui.M.button - Ui.M.body) / 2), w - S.tagX - S.resetW - 6, { font = "body" })
+	local change = Ui.button(body, TW.change, w - S.resetW, ty, S.resetW, function()
+		if not last then
+			return
+		end
+		local list = last.titles or {}
+		local nextId = if not last.title then list[1] else list[(table.find(list, last.title) or 0) + 1]
+		ctx.send("Title", nextId or "")
+	end)
+	change.frame.Name = "Do_title"
+	titleLabel.label.Frame.Name = "TitleLabel" -- (글 칸은 frame이 없다 — label.Frame. 2026-10-26: titleLabel.frame으로 적어 창을 짓다 멈춰 능력치 창이 비었다)
 
 	local view = {}
 	function view.refresh(me)
@@ -168,6 +184,10 @@ function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 		reset:setEnabled(spent) -- 찍은 능력치가 있을 때만
 		power:set(("전투력 %s"):format(Format.short(me.power)))
 		hp:set(("최대 체력 %s"):format(Format.short(me.maxHp))) -- 「체력」은 능력치의 이름이라 「최대 체력」(2026-10-15)
+		local worn = Titles.def(me.title)
+		titleName:set(if worn then worn.name else TW.none)
+		titleName:color(if worn then C[worn.color] or C.gold else C.off)
+		change:setEnabled(me.titles ~= nil and #me.titles > 0)
 		-- 떠 있는 설명은 새 값으로(레벨이 오르면 1점의 값이 달라진다)
 		if tip then
 			local id = tip.id

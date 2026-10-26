@@ -12,6 +12,7 @@ local Rift = require(script.Parent.rift)
 local Tutorial = require(script.Parent.tutorial)
 local Cash = require(script.Parent.cash) -- 유료 상품(경험치 쿠폰의 배율 · 2026-10-20)
 local Dye = require(script.Parent.dye) -- 무기 · 로브 색(염색 — 2026-10-22)
+local Titles = require(script.Parent.titles) -- 칭호(2026-10-26)
 local Kit = require(script.Parent.kit) -- 1차의 온오프 사출기 · 핵심 장치 · 패시브
 local Buffs = require(script.Parent.buffs) -- 2~4차의 버프
 local Passives = require(script.Parent.passives) -- 2~4차의 패시브
@@ -277,6 +278,8 @@ function Hero.new(id: any, class: string)
 	h.played = 0 -- 이 캐릭터로 논 시간(초 · 저장한다 — 서버가 센다. 로블록스 분석의 LevelUp 값 · 2026-10-15)
 	h.maxAt = nil -- 만렙에 오른 때(os.time — 저장한다). 레벨 순위에서 만렙끼리는 먼저 오른 사람이 위(2026-10-24 사용자: "만렙이면 찍은 순서대로 제일먼저찍은사람이 1위 여야하는데" — sim/rank.luau)
 	h.look = {} -- 무기 · 로브 색(염색약 — sim/dye.luau · 2026-10-22): { point = 색?, robe = 색? } · 없으면 원래 색
+	h.titles = {} -- 가진 칭호 { [id] = true }(sim/titles.luau — 2026-10-26 · 저장한다)
+	h.title = nil -- 이름표 아래에 단 칭호(없으면 nil)
 	Quests.start(h.quests, h.level) -- (저절로 받는 퀘스트는 이제 없다 — 첫 퀘스트도 사제에게 말을 걸어 받는다)
 	h.maxHp = maxHpOf(h)
 	h.hp = h.maxHp
@@ -911,6 +914,8 @@ function Hero.pack(h)
 		played = math.floor(h.played or 0),
 		maxAt = h.maxAt, -- 만렙에 오른 때(2026-10-24)
 		look = Dye.clean(h.look), -- 무기 · 로브 색(2026-10-22)
+		titles = Titles.owned(h), -- 가진 칭호(2026-10-26)
+		title = h.title or false, -- 단 칭호
 	}
 end
 
@@ -966,6 +971,7 @@ function Hero.unpack(id: any, data: any)
 	h.played = if whole(data.played, 0, 1e10) then data.played else 0 -- (이것이 생기기 전의 저장 = 0부터 센다)
 	h.maxAt = if whole(data.maxAt, 1, 1e11) and h.level >= N.MAX_LEVEL then data.maxAt else nil -- 만렙에 오른 때(이것이 생기기 전에 만렙이 된 캐릭터 = 없음 — 서버가 처음 본 때로 채운다: world.luau pushRank)
 	h.look = Dye.clean(data.look) -- 무기 · 로브 색(이것이 생기기 전의 저장 · 모르는 색 = 원래 색)
+	Titles.unpack(h, data.titles, data.title) -- 칭호(이것이 생기기 전의 저장 = 없음 — 서버가 세계 기록을 보고 준다)
 	Quests.jobsDone(h.quests, h.job) -- 이미 닿은 차수의 전직 퀘스트는 끝낸 것으로(다시 받지 않게)
 	autoJobs(h)
 	Quests.start(h.quests, h.level) -- 퀘스트가 생기기 전에 저장된 캐릭터도 첫 메인을 받는다

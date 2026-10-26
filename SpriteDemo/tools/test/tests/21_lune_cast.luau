@@ -788,6 +788,26 @@ do
 		expect(not hit[4] and not hit[7], "그림자 창: 위층(32 · 48도트 위)의 적은 안 맞는다")
 		expect(not hit[5] and not hit[6], "그림자 창: 뒤 40 · 앞 260도트의 적은 안 맞는다")
 	end
+	-- 그림자 창: 맞는 띠 = 창이 그려진 높이부터 바닥까지(2026-10-26 사용자 "그림자창 y축 범위가 이펙트랑 일치안해서") — 30점 떠 있는 적(맨 위 창의 그림 y-32 ~ y-22가 몸을 지난다)도 맞는다
+	do
+		local h = hero("riven", { rv_lance = 20 })
+		local room, first, c, tick = dry(h)
+		room.mobs = {}
+		for i, d in { { 60, 0, 30 }, { 90, 0, 0 }, { 120, -32, 0 } } do
+			local m = table.clone(first)
+			m.id, m.x, m.homeX, m.goal, m.y, m.alt = i, X + d[1], X + d[1], X + d[1], Y + d[2], d[3]
+			room.mobs[i] = m
+		end
+		c:dryCast(h, "rv_lance", 0, tick)
+		drain(c, tick)
+		local n = {}
+		for _, e in c:actor(h).out.hits do
+			n[e.mob] = (n[e.mob] or 0) + 1
+		end
+		expect((n[1] or 0) >= 1, "그림자 창: 30점 떠 있는 적도 맞는다(맨 위 창이 몸을 지난다)")
+		eq(n[2], 4, "그림자 창: 땅의 적은 창 넷에 모두 맞는다")
+		expect(n[3] == nil, "그림자 창: 위층(32점 위)은 여전히 안 맞는다")
+	end
 	-- 천지 가르기: 가르는 순간 맵의 모든 적(멀리 · 뒤 · 다른 층)이 한꺼번에
 	do
 		local h = hero("riven", { rv_cleave = 10 })

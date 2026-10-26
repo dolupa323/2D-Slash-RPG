@@ -192,7 +192,9 @@ eq(levelTop(pb)[1].name, "첫만렙", "1위는 그대로")
 -- ③-2 레벨 순위 1위 선물 「백금 사슴」(2026-10-25 사용자: "랭킹 1등으로 한사람만주는거야 백금사슴"): 처음 만렙(1위)의 계정만 받는다 — 두 번째 만렙 · 만렙 아닌 사람은 받지 않는다
 run(1.2)
 expect(a.acct.bm.mounts.mount_deer_gold == true, "1위(첫만렙)의 계정에 백금 사슴이 들어왔다")
-eq(#got(pa, "CashGot") > 0 and got(pa, "CashGot")[#got(pa, "CashGot")] or nil, "mount_deer_gold", "1위의 화면에 알렸다")
+expect(table.find(got(pa, "CashGot"), "mount_deer_gold") ~= nil, "1위의 화면에 알렸다")
+expect(a.acct.bm.mounts.mount_deer_silver and a.acct.bm.mounts.mount_deer_bronze, "1위는 실버 · 동색 사슴도 받는다(2026-10-26 사용자 \"1위는 금은동 다주고\")")
+eq(a.acct.bm.mount, "mount_deer_gold", "고른 탈것이 없었으면 가장 높은 백금 사슴을 고른다")
 expect(not c.acct.bm.mounts.mount_deer_gold, "두 번째 만렙(높은점수)은 받지 않는다")
 expect(not b.acct.bm.mounts.mount_deer_gold, "만렙이 아닌 사람(구경꾼)은 받지 않는다")
 run(1.2)
@@ -203,6 +205,28 @@ for _, k in got(pa, "CashGot") do
 	end
 end
 eq(giftTold, 1, "한 번만 준다")
+-- ③-3 레벨 순위 2위 · 3위 선물(2026-10-26 사용자: "만렙 두번째, 세번째로 찍은 사람들한테 … 2등 실버사슴 3등 동색사슴"): 만렙에 오른 차례(세계 기록 maxTen)의 둘째 · 셋째의 계정만
+do
+	local TitleServer = req("ServerScriptService/server/lune/modules/titles")
+	local Rank = req("ReplicatedStorage/shared/lune/sim/rank")
+	TitleServer.reset({ { key = Rank.charKey(pa.UserId, a.cid), at = 1 }, { key = Rank.charKey(pc.UserId, c.cid), at = 2 }, { key = Rank.charKey(pb.UserId, b.cid), at = 3 } })
+	run(1.2)
+	local m = function(s0) return s0.acct.bm.mounts end
+	-- (2026-10-26 사용자: "1위는 금은동 다주고 2위는 은 동 주고 3위는 동 주고")
+	expect(m(c).mount_deer_silver == true and m(c).mount_deer_bronze == true and not m(c).mount_deer_gold, "2위(둘째로 만렙)는 실버 · 동색 사슴(백금은 아니다)")
+	expect(m(b).mount_deer_bronze == true and not m(b).mount_deer_silver and not m(b).mount_deer_gold, "3위(셋째로 만렙)는 동색 사슴만")
+	expect(m(a).mount_deer_gold and m(a).mount_deer_silver and m(a).mount_deer_bronze, "1위는 셋 다")
+	local told = got(pc, "CashGot")
+	expect(table.find(told, "mount_deer_silver") ~= nil and table.find(told, "mount_deer_bronze") ~= nil, "2위의 화면에 받은 둘을 알렸다")
+	run(1.2)
+	local again = 0
+	for _, k in got(pc, "CashGot") do
+		if k == "mount_deer_silver" then
+			again += 1
+		end
+	end
+	eq(again, 1, "2위 선물도 한 번만")
+end
 
 -- ④ 다른 서버에서 먼저 적힌 것(새로 켜진 서버): 소식을 받으면 1위에 고정 · 이 서버의 모두에게 알림
 local FirstMax = req("ServerScriptService/server/lune/modules/firstMax")

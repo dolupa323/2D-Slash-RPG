@@ -68,7 +68,9 @@ local rooms = 0
 for _, p in ct.portals do
 	local to = SCENES.scenes[p.to]
 	expect(to ~= nil, "문이 닿는 곳이 있다 " .. p.to)
-	if to and to.indoor then
+	if to and to.dojo then
+		expect(#to.portals == 1 and to.portals[1].to == "@home", "개인 연무장의 문은 들어온 마을로(@home — 2026-10-26)")
+	elseif to and to.indoor then
 		rooms += 1
 		local back = false
 		for _, q in to.portals do

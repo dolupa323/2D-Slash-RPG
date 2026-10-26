@@ -325,6 +325,28 @@ function Ui.tagLead(label, text: string)
 	label.lead.Frame.Visible = text ~= ""
 end
 
+-- 이름표 아래의 칭호(2026-10-26): 판 바로 아래 가운데에 작은 글 한 줄(그 칭호의 색). ""이면 숨긴다. 이름이 바뀌어 판의 폭이 바뀌면 다시 가운데로
+Ui.TAG_TITLE_GAP = 3
+function Ui.tagTitle(label, text: string, color: Color3?)
+	local P = Layout.TAG.plate
+	if not label.title then
+		label.title = pixelText.new(label.Frame, { Text = text, Font = "small_o", Color = color or C.gold, MaxWidth = 160, MaxLines = 1 })
+		label.title.Frame.Name = "Title"
+		local function center()
+			label.title.Frame.Position = UDim2.fromOffset(math.floor((label.Width - label.title.Width) / 2), M.small + P.padY + Ui.TAG_TITLE_GAP)
+		end
+		label.titleCenter = center
+		label.Frame:GetPropertyChangedSignal("Size"):Connect(center)
+	else
+		label.title:SetText(text)
+		if color then
+			label.title:SetColor(color)
+		end
+	end
+	label.titleCenter()
+	label.title.Frame.Visible = text ~= ""
+end
+
 -- ---------- 누르는 것 ----------
 function Ui.hit(parent: Instance): TextButton
 	local hit = Instance.new("TextButton")

@@ -469,7 +469,9 @@ do
 				expect(trip == nil and sAdmin.scene == here, ("%s: 던전 · 보스의 문 %s으로는 걸어 들어가지 못한다"):format(key, portal.to))
 				continue
 			end
-			expect(trip ~= nil and SCENES.base(trip.scene) == portal.to and sAdmin.scene == trip.scene, ("%s: 관리로 옮긴 뒤 문 %s을 지난다"):format(key, portal.to))
+			-- (개인 연무장의 나가는 문 @home = 마지막으로 들른 마을 — 2026-10-26)
+			local want = if portal.to == "@home" then (if h.home and SCENES.homes[h.home] then h.home else SCENES.start) else portal.to
+			expect(trip ~= nil and SCENES.base(trip.scene) == want and sAdmin.scene == trip.scene, ("%s: 관리로 옮긴 뒤 문 %s을 지난다"):format(key, portal.to))
 			if key == Tut.SCENE then
 				expect(h.tut.done, "꿈의 문을 지나면 튜토리얼이 끝난다")
 			end
@@ -489,4 +491,18 @@ do
 	end
 	expect(raised, "화면에 일어났다고 알린다(Raise)")
 	expect(ask("goto", "town").ok and sAdmin.scene == "town", "일어난 뒤에는 옮길 수 있다")
+end
+
+-- ---- 순위 사슴 넣어 보기 · 빼기(2026-10-26 사용자: "1위는 금은동 다주고 … 그리고 나도 볼수있어야지") — 관리자의 계정에만 ----
+do
+	local c = sAdmin.acct.bm
+	local r = handlers.Admin(pAdmin, "rankMounts", "give")
+	expect(r and r.ok, "순위 사슴 「셋 받기」")
+	expect(c.mounts.mount_deer_gold and c.mounts.mount_deer_silver and c.mounts.mount_deer_bronze, "백금 · 실버 · 동색 사슴이 관리자의 계정에 들어왔다")
+	c.mount = "mount_deer_silver"
+	r = handlers.Admin(pAdmin, "rankMounts", "take")
+	expect(r and r.ok, "순위 사슴 「빼기」")
+	expect(not c.mounts.mount_deer_gold and not c.mounts.mount_deer_silver and not c.mounts.mount_deer_bronze, "셋 다 빠졌다")
+	expect(c.mount == false or c.mount == nil, "고른 탈것이 순위 사슴이었으면 고르지 않은 것으로")
+	expect(handlers.Admin(pAdmin, "rankMounts", "모름").ok == false, "모르는 일은 하지 않는다")
 end
