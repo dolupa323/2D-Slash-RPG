@@ -164,6 +164,25 @@ do -- 사면(결제 처리) 보관함에 드롭률 쿠폰 한 장
 	end
 	eq(n, 1, "보관함에 드롭률 쿠폰 한 장(받기 → 가방 → 쓰기는 경험치 쿠폰과 같다)")
 end
+do -- 경매장에 올릴 수 있다(2026-10-30 사용자: "드롭률 쿠폰이랑 경험치쿠폰 로벅스로 사는거 경매장에 올릴수 있게해줘"): 사면 보관함 → 받기로 가방 → 경매장의 「판매」 목록
+	local Market = req("ReplicatedStorage/shared/lune/sim/market")
+	local View = req("ReplicatedStorage/shared/lune/ui/auctionView")
+	local a3 = Account.new()
+	local h3 = Hero.new(3, "riven")
+	expect(Cash.grant(a3, "exp", "rExp9", NOW, Account.MAX) and Cash.grant(a3, "drop", "rDrop9", NOW, Account.MAX), "경험치 · 드롭률 쿠폰을 산다")
+	local moved = Cash.take(h3, a3.bm)
+	eq(moved, 2, "보관함 → 가방(둘)")
+	local bagView = Bag.view(h3)
+	for _, id in { "bm_exp", "bm_drop" } do
+		local listed = false
+		for _, e in View.sellables(bagView) do
+			if e.it.item == id then
+				listed = Market.sellable(e.it) == true
+			end
+		end
+		expect(listed, Items.goods(id).name .. ": 경매장 「판매」 목록에 든다(올릴 수 있다)")
+	end
+end
 -- 달가루 상자 = 한 시간 반치(2026-10-27 사용자 "로벅스로 구매하는 달가루의 효율이 조금더 좋게")
 eq(req("ReplicatedStorage/shared/lune/data/bm.generated").rules.dustHours, 1.5, "달가루 상자 = 가장 높은 캐릭터의 한 시간 반 사냥치")
 local box50 = Items.goods("bm_dust_50")

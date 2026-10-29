@@ -309,8 +309,8 @@ return {
 		{ id = "bm_rename", name = "이름 바꾸기 주문서", icon = "bm_rename", kind = "bmRename", text = "쓰면 이 캐릭터의 이름을 바꾼다." },
 		{ id = "bm_dyepoint", name = "무기 염색약", icon = "bm_dyepoint", kind = "bmDyePoint", text = "쓰면 이 캐릭터의 무기 색을 고른 색으로 바꾼다(6가지 · 살라맨더는 머리 색)." },
 		{ id = "bm_dyerobe", name = "로브 염색약", icon = "bm_dyerobe", kind = "bmDyeRobe", text = "쓰면 이 캐릭터의 로브 색을 고른 색으로 바꾼다(6가지)." },
-		{ id = "bm_exp", name = "경험치 쿠폰", icon = "bm_exp", kind = "bmExp", text = "쓰면 30분 동안 사냥 경험치 1.5배(게임 안에서만 줄어든다)." },
-		{ id = "bm_drop", name = "드롭률 쿠폰", icon = "bm_drop", kind = "bmDrop", text = "쓰면 30분 동안 드롭률 1.5배(게임 안에서만 줄어든다)." },
+		{ id = "bm_exp", name = "경험치 쿠폰", icon = "bm_exp", kind = "bmExp", text = "쓰면 30분 동안 사냥 경험치 1.5배(접속 시간만 센다)." },
+		{ id = "bm_drop", name = "드롭률 쿠폰", icon = "bm_drop", kind = "bmDrop", text = "쓰면 30분 동안 드롭률 1.5배(접속 시간만 센다)." },
 	},
 	rules = {
 		bagCap = 64,

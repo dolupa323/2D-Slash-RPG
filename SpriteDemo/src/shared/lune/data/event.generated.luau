@@ -10,7 +10,7 @@ return {
 			from = { 10, 24 },
 			to = { 11, 7 },
 			tz = 9,
-			candy = { id = "etc_candy", chance = 8 },
+			candy = { id = "etc_candy", chance = 15 },
 			npc = "witch",
 			shop = {
 				{ id = "mount", kind = "mount", ride = "mount_wolf_hw", cost = 400 },

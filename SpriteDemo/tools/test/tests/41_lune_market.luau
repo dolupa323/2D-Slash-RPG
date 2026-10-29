@@ -1821,6 +1821,30 @@ do
 	va.destroy()
 	advance(2)
 	vb.destroy()
+	-- 로벅스로 산 아이템을 거래할 수 없는 계정(로블록스 정책 IsPaidItemTradingAllowed = false — 2026-10-30 사용자 "경험치, 드롭률 쿠폰 경매장 등록 안된다는데?" → "알림안뜨는데"):
+	--  판매 목록의 그 줄에 「거래 불가 — 로블록스 정책」 · 골라도 「등록」이 눌리지 않는다(전에는 등록을 눌러야 창 맨 아래 줄에만 떴다) · 정책이 막지 않는 계정은 그대로 올린다
+	do
+		Bag.give(sa.hero, "bm_exp", 2)
+		sa.policy = { IsPaidItemTradingAllowed = false }
+		local wl, vl = open(pa, sa)
+		press(wl, "tab", W.tabs[2])
+		press(wl, "button", W.sell)
+		expect(has(wl, W.paidLock), "막힌 계정: 판매 목록의 경험치 쿠폰 줄에 「" .. W.paidLock .. "」")
+		local nth = 0
+		for i = 1, count(wl, "hit") do
+			nth = i
+		end
+		press(wl, "hit", nil, nth)
+		expect(find(wl, "button", W.register).enabled == false, "막힌 계정: 쿠폰을 골라도 「등록」이 눌리지 않는다")
+		vl.destroy()
+		sa.policy = { IsPaidItemTradingAllowed = true }
+		local wo, vo = open(pa, sa)
+		press(wo, "tab", W.tabs[2])
+		press(wo, "button", W.sell)
+		expect(not has(wo, W.paidLock), "정책이 막지 않는 계정: 표시 없음")
+		vo.destroy()
+		sa.policy = nil
+	end
 	eq(#overflow, 0, "칸을 넘는 글이 없다: " .. table.concat(overflow, " / "))
 	eq(#warnings, 0, "경고가 없다: " .. table.concat(warnings, " / "))
 end

@@ -42,6 +42,9 @@ def bundle():
     parts.append('PLAY_NODODGE = %s' % ('true' if os.environ.get('LUNE_PLAY_NODODGE') else 'false'))
     # LUNE_RAID=1: tests/104_lune_raid_dps.luau measures the 4-player max DPS against the weekly boss for real (about 2 minutes); unset = it only checks the recorded numbers against the boss HP
     parts.append('RAID_FULL = %s' % ('true' if os.environ.get('LUNE_RAID') else 'false'))
+    # LUNE_RAID_LV=98,118: measure at these entry levels (normal,hard) instead of the weekly boss's own — sizing a new boss's HP (2026-10-29 용암 거인)
+    rl = os.environ.get('LUNE_RAID_LV', '')
+    parts.append('RAID_LV = %s' % (('{ normal = %d, hard = %d }' % tuple(int(x) for x in rl.split(',')[:2])) if rl else 'nil'))
     # LUNE_LANG_SWEEP=1: every dot-font text is translated to English while the tests run; finish() lists what could not be translated (mock.luau)
     parts.append('LANG_SWEEP = %s; SWEEP_MISSING = {}; SWEEP_TEST = ""' % ('true' if os.environ.get('LUNE_LANG_SWEEP') else 'false'))
     count = 0

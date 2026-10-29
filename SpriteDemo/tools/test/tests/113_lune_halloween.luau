@@ -383,6 +383,68 @@ for _ = 1, 12 do
 end
 eq(Bag.count(sq.hero, E.candy.id), 250, "한 번만 받는다")
 World.removePlayer(pq)
+-- ⑧ 하드 보상의 방의 사탕(2026-10-30 사용자: "지금 하드보스 격파했는데 사탕 60개만준다는데?"): 상자에서 떨어진 사탕 덩이의 합 · 방이 닫힌 뒤 가방에 든 사탕
+Event.clock = function()
+	return t24 + 7200
+end
+local Weekly = req("ReplicatedStorage/shared/lune/sim/weekly")
+Bag.take(sa.hero, E.candy.id, Bag.count(sa.hero, E.candy.id))
+local rb = handlers.Admin(pa, "box", "hard")
+expect(rb and rb.ok and Weekly.isBox(sa.scene), "관리 「보상의 방 · 하드」 — " .. tostring(rb and rb.msg))
+local broom = World.room(sa.scene)
+local chest = SCENES.scenes[sa.scene].chest
+sa.hero.x, sa.hero.y = chest.x, chest.y
+local ro = handlers.Week(pa, "open")
+expect(ro and ro.ok, "상자를 연다 — " .. tostring(ro and (ro.why or ro.msg)))
+local piles, sum = 0, 0
+for _, d in broom.drops do
+	if d.kind == "goods" and d.goods == E.candy.id then
+		piles += 1
+		sum += d.amount
+	end
+end
+print(("[113] 하드 상자의 사탕: 덩이 %d · 합 %d(설계 %d)"):format(piles, sum, E.boss.hard))
+do
+	local xs = {}
+	for _, d in broom.drops do
+		table.insert(xs, ("%s%s@%d,%d"):format(d.kind == "goods" and d.goods == E.candy.id and "C" or d.kind:sub(1, 1), "", math.floor(d.x), math.floor(d.y)))
+	end
+	table.sort(xs)
+	print("[113] 떨어진 자리(" .. #xs .. "): " .. table.concat(xs, " "), "방 폭", (SCENES.scenes[sa.scene].w or 0) * 16, "상자", chest.x, chest.y)
+end
+eq(sum, E.boss.hard, "하드 상자의 사탕 합 = " .. E.boss.hard)
+World.boxSettle(broom)
+eq(Bag.count(sa.hero, E.candy.id), E.boss.hard, "방이 닫히면 줍지 않은 사탕도 가방에(합 " .. E.boss.hard .. ")")
+-- 실제 보스(불씨 도둑 두목 · 하드 — 물약 · 주문서 덩이까지 든 상자): 덩이를 하나씩 직접 주워 가방의 사탕을 센다
+Bag.take(sa.hero, E.candy.id, Bag.count(sa.hero, E.candy.id))
+local tk = World.openBoxFor({ sa }, "thiefboss", "hard", { [sa.hero.id] = true }, 1, nil)
+local troom = World.room(tk)
+local tchest = SCENES.scenes[tk].chest
+sa.hero.x, sa.hero.y = tchest.x, tchest.y
+local to = handlers.Week(pa, "open")
+expect(to and to.ok, "도둑 두목 하드 상자를 연다 — " .. tostring(to and (to.why or to.msg)))
+local ids, cand, total = {}, 0, 0
+for id, d in troom.drops do
+	table.insert(ids, id)
+	total += 1
+	if d.kind == "goods" and d.goods == E.candy.id then
+		cand += d.amount
+	end
+end
+table.sort(ids)
+local fails = {}
+for _, id in ids do
+	local d = troom.drops[id]
+	if d then
+		sa.hero.x, sa.hero.y = d.x, d.y
+		handlers.Pickup(pa, id)
+		if troom.drops[id] then
+			table.insert(fails, ("%s@%d"):format(d.kind, math.floor(d.x)))
+		end
+	end
+end
+print(("[113] 도둑 두목 하드 상자: 덩이 %d · 사탕 %d · 주운 뒤 가방의 사탕 %d · 못 주운 것 %s"):format(total, cand, Bag.count(sa.hero, E.candy.id), table.concat(fails, " ")))
+eq(Bag.count(sa.hero, E.candy.id), E.boss.hard, "덩이를 다 주우면 가방에 사탕 " .. E.boss.hard)
 World.removePlayer(pa)
 Event.clock = os.time
 World.removePlayer(p)

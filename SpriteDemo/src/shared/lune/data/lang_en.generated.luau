@@ -4041,5 +4041,8 @@ return {
 		["아쉽다… 달가루 +{n}"] = "Too bad… Moondust +{1}",
 		["많이 나왔다! 달가루 +{n}"] = "Lots! Moondust +{1}",
 		["대박! 달가루 +{n}"] = "JACKPOT! Moondust +{1}",
+		["거래 불가 — 로블록스 정책(로벅스로 산 아이템)"] = "Not tradeable — Roblox policy (bought with Robux)",
+		["쓰면 #분 동안 사냥 경험치 #배(접속 시간만 센다)."] = "Gives # min of #× hunting EXP (online time only).",
+		["쓰면 #분 동안 드롭률 #배(접속 시간만 센다)."] = "Gives # min of #× drop rate (online time only).",
 	},
 }

@@ -11,6 +11,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local Market = require(lune.sim.market)
+local Items = require(lune.sim.items) -- (로벅스로 산 아이템인가 — paid · 2026-10-30)
 local Format = require(lune.ui.format)
 local Layout = require(lune.ui.layout)
 local View = require(lune.ui.auctionView)
@@ -66,6 +67,7 @@ function AuctionWindow.build(body: Frame, ctx, w: number, h: number)
 	local serverNow, gotAt = os.time(), os.clock() -- 서버의 시계(남은 시간은 이것으로 센다)
 	local busy = false
 	local note, noteTone = "", "dim"
+	local paidLock = false -- 이 계정은 로벅스로 산 아이템을 거래할 수 없다(로블록스 정책 — 서버가 대답마다 알린다 · 2026-10-30)
 	local query, sort = "", View.SORTS[1]
 	local ask, askQty = nil, 1 :: number? -- 사려고 묻는 중인 줄 · 그 수(수량 칸이 비었으면 nil)
 	local detail = nil -- 상세를 보는 줄(구매 목록에서 누른 것)
@@ -105,6 +107,12 @@ function AuctionWindow.build(body: Frame, ctx, w: number, h: number)
 				end
 				if typeof(res.used) == "number" then
 					used, max = res.used, res.max or max
+					-- 로벅스로 산 아이템을 거래할 수 없는 계정인가(로블록스 정책 — 서버가 대답마다 알린다 · 2026-10-30): 바뀌면 판매 목록을 다시 그린다
+					local was = paidLock
+					paidLock = res.paidLock == true
+					if was ~= paidLock and fillBag then
+						fillBag(true)
+					end
 				end
 				if res.rows and res.board == board() then
 					rows, trades = res.rows, res.trades or trades
@@ -425,6 +433,10 @@ function AuctionWindow.build(body: Frame, ctx, w: number, h: number)
 	local bagH = pageH - bagTop - 4
 	local bagHolder = Ui.group(pForm, 0, bagTop, S.listW, bagH, "List")
 	local bagCells = {}
+	-- 로벅스로 산 아이템인데 이 계정은 거래할 수 없다(로블록스 정책 — 2026-10-30)
+	local function locked(it): boolean
+		return paidLock and it ~= nil and it.item ~= nil and (Items.goods(it.item) or {}).paid == true
+	end
 	-- 고른 칸의 물건(가방이 그 사이에 달라졌으면 nil)
 	local function picked()
 		local bag = ctx.bag()
@@ -521,7 +533,11 @@ function AuctionWindow.build(body: Frame, ctx, w: number, h: number)
 		if it and me then
 			sub = View.sub(it, me, if bag and not it.item then bag.equip[it.slot] else nil)
 		end
+		if locked(it) then
+			sub = W.paidLock
+		end
 		formSub:set(sub)
+		formSub:color(if locked(it) then C.red else C.dim)
 		countLabel:show(stack)
 		showField(countBox, stack)
 		countOf:show(stack)
@@ -536,7 +552,7 @@ function AuctionWindow.build(body: Frame, ctx, w: number, h: number)
 		depositText:color(if form.short then C.red else C.dim)
 		getIcon.Visible = form.price ~= nil
 		getText:set(if form.price then Format.comma(form.pay) else "")
-		register:setEnabled(not busy and it ~= nil and form.ok and count >= 1 and used < max)
+		register:setEnabled(not busy and it ~= nil and form.ok and count >= 1 and used < max and not locked(it))
 		for _, c in bagCells do
 			c.cell:setOn(pick ~= nil and c.tab == pick.tab and c.slot == pick.slot)
 		end
@@ -549,7 +565,7 @@ function AuctionWindow.build(body: Frame, ctx, w: number, h: number)
 		for _, e in list do
 			table.insert(parts, ("%s%d:%s"):format(e.tab, e.slot, View.name(e.it)))
 		end
-		local key = table.concat(parts, "|")
+		local key = table.concat(parts, "|") .. (if paidLock then "|L" else "")
 		if key == sellKey and not force then
 			paintForm()
 			return
@@ -568,6 +584,9 @@ function AuctionWindow.build(body: Frame, ctx, w: number, h: number)
 				Ui.setWorldIcon(icon, ItemCell.icon(e.it))
 				Ui.text(row, View.name(e.it), nx, 2, rw - nx, { color = C[View.tone(e.it)] or C.text })
 				local sub, tone = View.sub(e.it, me, if bag and not e.it.item then bag.equip[e.it.slot] else nil)
+				if locked(e.it) then
+					sub, tone = W.paidLock, "red"
+				end
 				Ui.text(row, sub, nx, 15, rw - nx, { color = C[tone] or C.dim })
 				Ui.hit(row).Activated:Connect(function()
 					pick = { tab = e.tab, slot = e.slot }

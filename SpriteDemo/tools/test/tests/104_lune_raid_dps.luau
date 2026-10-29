@@ -59,6 +59,18 @@ local Weekly = req("ReplicatedStorage/shared/lune/sim/weekly")
 World.start()
 
 local B = Weekly.boss("shadowarcher")
+if RAID_LV then
+	-- (LUNE_RAID_LV — 새 보스의 체력을 볼 때: 그 입장 레벨 + 2의 보스로 · 재는 동안 쓰러지지 않게 체력을 아주 크게 — 2026-10-29 용암 거인)
+	for _, mode in { "normal", "hard" } do
+		local m = table.clone(B[mode])
+		m.lv, m.hp = RAID_LV[mode] + 2, 1e6
+		B[mode] = m
+		local wk = COMBAT.mobs[B.id].story.week -- (방의 보스는 이 표에서 레벨 · 체력을 읽는다 — sim/room.luau)
+		local w2 = table.clone(wk[mode])
+		w2.lv, w2.hp = m.lv, m.hp
+		wk[mode] = w2
+	end
+end
 local RAID = Weekly.DATA.raid -- 설계의 기준(weekboss.js RAIDDPS)
 expect(RAID ~= nil, "설계의 기준(RAIDDPS)이 게임에 들어와 있다")
 
@@ -324,7 +336,7 @@ end
 -- ---------- 한 판: 들어가서 warm초 뒤부터 secs초 동안 보스에게 들어간 피해 ----------
 local function fight(classes: { string }, mode: string, holds: { [string]: string }?, secs: number, warm: number)
 	local m0 = B[mode]
-	local level = m0.need
+	local level = (RAID_LV and RAID_LV[mode]) or m0.need -- (LUNE_RAID_LV — 새 보스의 체력을 볼 때 그 입장 레벨로: 2026-10-29)
 	local star = RAID.gear[mode]
 	local ps, hands = {}, {}
 	for i, class in classes do
@@ -436,7 +448,7 @@ for _, mode in { "normal", "hard" } do
 		holds[class] = best.hold
 		result[mode].solo[class] = best
 		local h = best.heroes[1]
-		print(("[RAID] %s Lv.%d 혼자 %-10s | 초당 %7.0f | 전투력 %d | 보스기 %s(누르기 %s) | %s"):format(mode, m0.need, class, best.dps, h.power, tostring(h.filler), best.hold, usesText(h.uses)))
+		print(("[RAID] %s Lv.%d 혼자 %-10s | 초당 %7.0f | 전투력 %d | 보스기 %s(누르기 %s) | %s"):format(mode, (RAID_LV and RAID_LV[mode]) or m0.need, class, best.dps, h.power, tostring(h.filler), best.hold, usesText(h.uses)))
 		-- 보스기 한 번에 들어간 피해 ÷ 설계의 한 번(전투력 x rate x (쓰는 시간 + 다시 쓰기 몫) x 스킬 레벨의 세기 x 보스기 1.5) — 1을 크게 넘으면 설계보다 세다
 		local f = h.filler
 		local def = f and COMBAT.cast[f]
@@ -470,7 +482,7 @@ for _, mode in { "normal", "hard" } do
 		r.without = CLASSES.order[skip]
 		table.insert(result[mode].party, r)
 		print(("[RAID] %s Lv.%d 파티(%s 빼고) | 초당 %7.0f | 혼자 넷의 합 %7.0f | 파티 버프로 x%.3f | 보스 체력 %d → %.1f분"):format(
-			mode, m0.need, CLASSES.order[skip], r.dps, solo, r.buffGain, r.maxHp, r.maxHp / r.dps / 60))
+			mode, (RAID_LV and RAID_LV[mode]) or m0.need, CLASSES.order[skip], r.dps, solo, r.buffGain, r.maxHp, r.maxHp / r.dps / 60))
 	end
 	local sum, lo, hi = 0, math.huge, 0
 	for _, r in result[mode].party do
@@ -490,5 +502,5 @@ for _, mode in { "normal", "hard" } do
 	local r = result[mode]
 	local hp = r.party[1].maxHp
 	local loMin = hp / r.lo / 60
-	expect(loMin * 60 <= Weekly.DATA.time, ("%s: 가장 약한 직업 조합도 최대 출력이면 제한 시간 안에 깬다(%.1f분 ≤ %d분)"):format(mode, loMin, Weekly.DATA.time / 60))
+	expect(RAID_LV ~= nil or loMin * 60 <= Weekly.DATA.time, ("%s: 가장 약한 직업 조합도 최대 출력이면 제한 시간 안에 깬다(%.1f분 ≤ %d분)"):format(mode, loMin, Weekly.DATA.time / 60))
 end

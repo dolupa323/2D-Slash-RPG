@@ -3266,6 +3266,7 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 		local out = extra or {}
 		out.ok, out.why, out.now = ok == true, why, now
 		out.used, out.max = Market.count(book), MARKET.slots + Cash.marketPlus(s.acct, now) -- 달빛 패스가 있는 시즌이면 칸이 더(2026-10-20)
+		out.paidLock = typeof(s.policy) == "table" and s.policy.IsPaidItemTradingAllowed == false or nil -- 로벅스로 산 아이템을 거래할 수 없는 계정(로블록스 정책) — 창이 판매 목록에 미리 적는다(2026-10-30)
 		return out
 	end
 	if s.guest then
