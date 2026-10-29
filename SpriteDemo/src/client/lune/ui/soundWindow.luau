@@ -16,7 +16,10 @@ local SoundWindow = {}
 
 function SoundWindow.size(): (number, number)
 	local V = S.view
-	return S.w, #S.rows * S.row + S.muteY + Ui.M.button + V.gap + V.headH + #V.rows * S.row + Ui.M.small
+	local G = S.lang
+	local P = S.touch
+	return S.w, #S.rows * S.row + S.muteY + Ui.M.button + V.gap + V.headH + #V.rows * S.row + Ui.M.small + G.gap + G.headH + S.row + Ui.M.small -- (언어 — 2026-10-27)
+		+ P.gap + P.rowH + Ui.M.small -- (폰 단추 배치 — 2026-10-28: 제목과 단추가 한 줄)
 end
 
 -- 줄 안에서의 자리: 첫 칸의 x · 「+」의 x
@@ -91,6 +94,43 @@ function SoundWindow.build(body: Frame, ctx, w: number, _h: number)
 		end, { h = S.btn })
 	end
 	Ui.text(body, V.note, 0, vy + V.headH + #V.rows * S.row, w, { color = C.dim })
+	-- 언어(2026-10-27 — 공방 paintSound와 같은 모양): 줄 위에 「언어」 · 자동 / 한국어 / English(고른 것이 강조) · 안내. 고르면 바로 화면의 글이 바뀌고 계정에 저장된다
+	local G = S.lang
+	local gy = vy + V.headH + #V.rows * S.row + Ui.M.small + G.gap
+	Ui.box(body, 0, gy, w, 1, C.line)
+	Ui.text(body, G.head, 0, gy + 6, w, { color = C.dim })
+	local langs = {}
+	for j, def in G.choices do
+		local id = def[1]
+		langs[id] = Ui.button(body, def[2], (j - 1) * (G.btnW + 8), gy + G.headH, G.btnW, function()
+			if ViewOpts.lang ~= id then
+				ViewOpts.lang = id
+				ViewOpts.applyLang()
+				ctx.saveSound()
+				view.refresh()
+			end
+		end, { h = S.btn })
+	end
+	Ui.text(body, G.note, 0, gy + G.headH + S.row, w, { color = C.dim })
+	-- 폰 단추 배치(2026-10-28 — 공방 paintSound와 같은 모양): 새 배치 / 예전 배치(상호작용 단추가 조이스틱 바로 옆) · 고르면 바로 단추가 옮겨지고 계정에 저장된다
+	local P = S.touch
+	local py = gy + G.headH + S.row + Ui.M.small + P.gap
+	local px = w - #P.choices * P.btnW - (#P.choices - 1) * 8 -- 단추는 오른쪽 끝에 붙인다(제목과 한 줄 — 창이 폰의 가장 작은 격자에 들어가게)
+	Ui.box(body, 0, py, w, 1, C.line)
+	Ui.text(body, P.head, 0, py + 4 + math.floor((S.btn - Ui.M.small) / 2), px - 6, { color = C.dim })
+	local layouts = {}
+	for j, def in P.choices do
+		local id = def[1]
+		layouts[id] = Ui.button(body, def[2], px + (j - 1) * (P.btnW + 8), py + 4, P.btnW, function()
+			if ViewOpts.touch ~= id then
+				ViewOpts.touch = id
+				ViewOpts.applyTouch()
+				ctx.saveSound()
+				view.refresh()
+			end
+		end, { h = S.btn })
+	end
+	Ui.text(body, P.note, 0, py + P.rowH, w, { color = C.dim })
 
 	function view.refresh()
 		for _, row in rows do
@@ -110,6 +150,12 @@ function SoundWindow.build(body: Frame, ctx, w: number, _h: number)
 		for key, b in toggles do
 			b:setText(if ViewOpts[key] then V.on else V.off)
 			b:setMain(ViewOpts[key] == true)
+		end
+		for id, b in langs do
+			b:setMain(ViewOpts.lang == id)
+		end
+		for id, b in layouts do
+			b:setMain(ViewOpts.touch == id)
 		end
 	end
 	view.refresh()

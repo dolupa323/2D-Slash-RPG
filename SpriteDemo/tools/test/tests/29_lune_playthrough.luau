@@ -48,6 +48,7 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	claimName = function(key, id) book[key] = id; return true end,
 	freeName = function(key) book[key] = nil end,
 	rankSet = function(board, key, score) rankDisk[board] = rankDisk[board] or {}; rankDisk[board][key] = score end,
+	rankRaise = function(board, key, score) local d = rankDisk[board]; if d and d[key] and d[key] < score then d[key] = score end end,
 	rankRemove = function(board, key) if rankDisk[board] then rankDisk[board][key] = nil end end,
 	rankTop = function() return {} end,
 	rankInfoSet = function(key, info) rankInfo[key] = info end,

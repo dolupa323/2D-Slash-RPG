@@ -378,3 +378,29 @@ eq(calls[#calls][1], "rename", "서버에 이름 바꾸기를 묻는다")
 eq(calls[#calls][2], "새이름", "적은 이름")
 expect(textOf("이름이 「새이름」이 되었다") ~= nil, "바뀐 이름의 알림")
 eq(fields[#fields].Text, "", "칸을 비운다")
+
+-- 한정 판매(2026-10-29 사용자: "거인 라이딩 황금으로 해서 한정 20개 판매로 해서 판매하고 다팔리면 안파는식으로"): 꾸밈 탭의 황금 골렘 줄 = 「한정 20개 · 남은 n개」 · 다 팔리면 「품절」(구매가 꺼진다)
+do
+	local W = BM.shop.words
+	local function golemRow(left)
+		local v = Cash.view(acct, NOW, nil, nil, nil, { mount_golem_gold = left })
+		for _, e in v.list do
+			if e.id == "mount_golem_gold" then
+				e.ready = true -- (대시보드 번호가 들어간 뒤의 모습)
+			end
+		end
+		for _, r in CashWindow.rows(v, T.look) do
+			if r.id == "mount_golem_gold" then
+				return r
+			end
+		end
+		return nil
+	end
+	local r7 = golemRow(7)
+	expect(r7 ~= nil and r7.state == "buy", "남은 것이 있으면 「구매」")
+	eq(r7 and r7.count, (W.stockLeft:gsub("{max}", "20"):gsub("{n}", "7")), "남은 수를 띄운다")
+	local r0 = golemRow(0)
+	eq(r0 and r0.state, "soldOut", "다 팔리면 「품절」")
+	expect(r0 and r0.full == true, "남은 수는 빨간 글")
+	expect(W.soldOut == "품절", "품절의 글")
+end

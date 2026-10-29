@@ -56,6 +56,10 @@ local function killsIn(st, now: number, sec: number): number
 end
 
 function Macro.onKill(st, now: number)
+	if st.saved.stopped then
+		-- 「사냥 보상 멈춤」인데도 잡은 수(2026-10-28 매크로 방지 날파리 — design/afk.js의 when.kills): 보상이 0인데 화면 위의 「사냥 보상 멈춤」을 누르지 않고 계속 잡는다 = 사람이 아니다
+		st.stopKills = (st.stopKills or 0) + 1
+	end
 	local prev = st.kills[#st.kills]
 	if prev == nil or now - prev >= D.rest then
 		st.rest = now -- 한참 쉬다가 다시 잡기 시작했다
@@ -109,7 +113,8 @@ function Macro.onSkill(st, id: string, clock: number)
 end
 
 -- 의심: "high" · "mid" · "low"(띄우는 때만 앞당긴다)
-function Macro.level(st, now: number): string
+--  noLong = 오래 쉬지 않은 것(long)은 보지 않는다(매크로 방지 날파리 — 오래 사냥한 것만으로는 날아오지 않는다 · 2026-10-28)
+function Macro.level(st, now: number, noLong: boolean?): string
 	local S = D.suspect
 	local level = "low"
 	if #st.gaps >= S.min then
@@ -140,7 +145,7 @@ function Macro.level(st, now: number): string
 			level = "mid"
 		end
 	end
-	if now - st.rest >= S.long then
+	if not noLong and now - st.rest >= S.long then
 		level = "mid"
 	end
 	return level
@@ -291,6 +296,7 @@ function Macro.answer(st, token: any, picks: any, now: number): string
 		st.passAt = now
 		st.rest = now -- 다음 확인은 다시 쉬지 않은 사냥 시간을 채운 뒤
 		st.saved.stopped, st.saved.stopUntil, st.saved.pending = false, 0, false
+		st.stopKills = 0
 		return "pass"
 	end
 	c.tries -= 1
@@ -304,6 +310,10 @@ end
 -- 보상이 멈췄나 · 문제가 떠 있나(떠 있는 동안도 보상은 없다 — 대신 맞지 않는다)
 function Macro.stopped(st): boolean
 	return st.saved.stopped
+end
+-- 보상 멈춤이 된 뒤로(이 접속에서) 잡은 수 — 통과하거나 풀리면 0
+function Macro.stopKills(st): number
+	return if st.saved.stopped then st.stopKills or 0 else 0
 end
 function Macro.pending(st): boolean
 	return st.check ~= nil
@@ -323,6 +333,7 @@ function Macro.clear(st)
 	st.force = false
 	st.saved.stopped, st.saved.stopUntil, st.saved.pending = false, 0, false
 	st.saved.fails = {}
+	st.stopKills = 0
 end
 
 return Macro

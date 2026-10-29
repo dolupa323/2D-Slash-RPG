@@ -15,6 +15,7 @@ local PORTAL = require(lune.data["portal.generated"])
 local Stage = require(script.Parent.stage)
 local Canvas = require(script.Parent.canvas)
 local Kit = require(script.Parent.ui.kit)
+local Event = require(ReplicatedStorage.shared.lune.sim.event) -- 기간 이벤트의 주민(2026-10-29)
 local Ui = require(script.Parent.ui.ui)
 local Overlay = require(script.Parent.overlay)
 
@@ -119,11 +120,14 @@ function SceneView.new(view: Frame, key: string, scene, tagLayer: Frame)
 	self.npcs = {}
 	if scene.npcs then
 		local nw, nh = scene.npcCell[1], scene.npcCell[2]
-		for i, n in scene.npcs do
-			local label = Stage.image(self.npcLayer, n.id, ASSETS[scene.npcSheet] or "", nw, nh)
-			label.Position = UDim2.fromOffset(round(n.x - nw / 2), n.y - nh)
-			label.Visible = not n.stone -- 비석(명예의 전당): 방 그림에 그려져 있다 — 이름표와 말만 있다
-			self.npcs[i] = { def = n, label = label, nw = nw, nh = nh, shown = "" }
+		for _, n in scene.npcs do
+			-- 기간 이벤트의 주민(n.event — 할로윈의 호박 마녀 · 2026-10-29)은 그 기간에만 세운다(sim/event.luau). 장면에 들어설 때 본다
+			if Event.npcOn(n) then
+				local label = Stage.image(self.npcLayer, n.id, ASSETS[scene.npcSheet] or "", nw, nh)
+				label.Position = UDim2.fromOffset(round(n.x - nw / 2), n.y - nh)
+				label.Visible = not n.stone -- 비석(명예의 전당): 방 그림에 그려져 있다 — 이름표와 말만 있다
+				table.insert(self.npcs, { def = n, label = label, nw = nw, nh = nh, shown = "" })
+			end
 		end
 	end
 

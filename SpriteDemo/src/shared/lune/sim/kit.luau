@@ -46,7 +46,14 @@ end
 -- 힘 모으기의 단계(액시온: 깊은 호흡을 배우면 3단계) · 모으는 영혼의 수(리퍼: 영혼 주머니) · 달아오르는 열기(살라맨더: 끓는 피)
 function Kit.chargeLevels(h): number
 	local fx = pass(h, "ax_charge2")
-	return if fx then fx.levels else (KIT[h.class].core.levels or 0)
+	local n = if fx then fx.levels else (KIT[h.class].core.levels or 0)
+	-- 만근(액시온 4차 — 옛 「달 그림자 도끼」 자리 · 2026-10-28 리마스터): 한 단계 더(4단계 — 설계 KITUP.axion.fast.levels)
+	local up = COMBAT.kitUp[h.class]
+	local fast = up and up.fast
+	if fast and fast.levels and h.skills and (h.skills[fast.id] or 0) > 0 then
+		n += fast.levels
+	end
+	return n
 end
 function Kit.soulMax(h): number
 	local fx = pass(h, "rp_soul2")
@@ -159,7 +166,7 @@ function Kit.cut(h, near: boolean?): number
 end
 
 -- ---------- 힘 모으기(액시온) ----------
--- 단계마다 붙는 피해(레벨 1 ~ 마스터 사이를 고르게 — 공방의 chargeBonus와 같은 셈)
+-- 단계마다 오르는 초당 피해(레벨 1 ~ 마스터 사이를 고르게 — 공방의 chargeBonus와 같은 셈)
 function Kit.chargeBonus(lv: number, max: number): number
 	if lv <= 0 then
 		return 0
@@ -168,16 +175,53 @@ function Kit.chargeBonus(lv: number, max: number): number
 	return b[1] + (b[2] - b[1]) * (if max > 1 then (lv - 1) / (max - 1) else 1)
 end
 
+-- 힘이 모이는 시간을 줄이는 몫(액시온 「전투 호흡」 — 2026-10-28 리마스터: 공격 속도 대신 모으는 시간 −25%). 서버의 영웅은 걸린 버프에서, 화면의 영웅(kitHero)은 서버가 준 chargeCut
+local BUFF = COMBAT.buffs
+function Kit.chargeCut(h): number
+	if typeof(h.buffs) ~= "table" then
+		return math.clamp(h.chargeCut or 0, 0, 0.6)
+	end
+	local cut = 0
+	for id, b in h.buffs do
+		local fx = BUFF[id] and BUFF[id].fx
+		if fx and fx.chargeCut then
+			cut += fx.chargeCut * (b.pow or 1)
+		end
+	end
+	return math.clamp(cut, 0, 0.6)
+end
+
+-- 모아 친 한 방의 피해 배수(2026-10-28 사용자 "차징안하고 여러대 때리는거보다 풀차징해서 때리는 한방이 더쎄야해 시간을 생각해서 dps 계산을해서 설계를해야해"):
+--  모은 시간만큼(그동안 톡톡 쳤으면 넣었을 피해) x 단계마다 초당 피해 +bonus — 그래서 n단계로 치면 초당 피해가 늘 1 + n x bonus배다.
+--  base = 모으지 않고 한 번 다 쓰는 시간 · per = 한 단계가 모이는 시간(전투 호흡을 빼기 전 — 전투 호흡은 빨리 모일 뿐 한 방은 그대로라 그만큼 초당 피해가 오른다)
+function Kit.chargeMul(h, level: number, base: number, per: number): number
+	local core = KIT[h.class].core
+	if level <= 0 or not core.bonus or base <= 0 then
+		return 1
+	end
+	return (1 + level * Kit.chargeBonus(h.skills[core.id] or 0, SKILL[core.id].max)) * (base + level * per) / base
+end
+
+-- 1차의 그 기술을 모으지 않고 한 번 다 쓰는 시간(구간들의 시간을 더한 것 — 공격 속도를 곱하기 전)
+local function firstTime(skillId: string): number
+	local t = 0
+	for _, s in COMBAT.skills[skillId].segs do
+		t += s.time
+	end
+	return t
+end
+
 -- 그 기술을 held초 동안 모았을 때: 단계 · 피해의 배수 · 더 닿는 거리(도트). 모을 수 없는 기술 · 배우지 않았으면 0 · 1 · 0
-function Kit.charge(h, skillId: string, held: number): (number, number, number)
+--  from = 이 단계에서 모으기 시작한다(넘치는 힘 — 끝까지 모은 강타를 맞힌 직후의 강타는 2단계부터 · 2026-10-28)
+function Kit.charge(h, skillId: string, held: number, from: number?): (number, number, number)
 	local core = KIT[h.class].core
 	local per = core.per and core.per[skillId]
 	local lv = h.skills[core.id] or 0
-	if not per or lv < 1 or held <= 0 then
+	if not per or lv < 1 then
 		return 0, 1, 0
 	end
-	local level = math.clamp(math.floor(held / per + 1e-6), 0, Kit.chargeLevels(h))
-	return level, 1 + level * Kit.chargeBonus(lv, SKILL[core.id].max), level * core.reach
+	local level = math.clamp(math.floor(math.max(held, 0) / (per * (1 - Kit.chargeCut(h))) + 1e-6) + (from or 0), 0, Kit.chargeLevels(h))
+	return level, Kit.chargeMul(h, level, firstTime(skillId), per), level * core.reach
 end
 
 -- 그 기술을 가장 오래 모으는 시간(초 — 모을 수 없으면 0)
@@ -187,13 +231,17 @@ function Kit.chargeTime(h, skillId: string): number
 	if not per or (h.skills[core.id] or 0) < 1 then
 		return 0
 	end
-	return per * Kit.chargeLevels(h)
+	return per * (1 - Kit.chargeCut(h)) * Kit.chargeLevels(h)
 end
 
--- 그 단계로 쳤을 때의 피해의 배수 · 더 닿는 거리(서버가 단계를 따로 정했을 때 — 넘치는 힘)
-function Kit.chargeAt(h, level: number): (number, number)
+-- 1차의 그 기술을 그 단계로 쳤을 때의 피해의 배수 · 더 닿는 거리(서버가 단계를 따로 정했을 때 — 넘치는 힘)
+function Kit.chargeAt(h, level: number, skillId: string): (number, number)
 	local core = KIT[h.class].core
-	return 1 + level * Kit.chargeBonus(h.skills[core.id] or 0, SKILL[core.id].max), level * (core.reach or 0)
+	local per = core.per and core.per[skillId]
+	if not per then
+		return 1, 0
+	end
+	return Kit.chargeMul(h, level, firstTime(skillId), per), level * (core.reach or 0)
 end
 
 -- ---------- 맞혔을 때 · 쓰러뜨렸을 때(방이 부른다) ----------

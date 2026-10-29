@@ -12,6 +12,8 @@ local Tutorial = require(lune.sim.tutorial)
 local Voyage = require(lune.sim.voyage)
 local Net = require(lune.net.net)
 local Analytics = require(script.Parent.analytics)
+local MD = require(lune.data["macro.generated"])
+local COMBAT = require(lune.data["combat.generated"])
 
 local Guard = {}
 local rng = Random.new()
@@ -39,6 +41,14 @@ function Guard.huntScene(key: string?): boolean
 		return false
 	end
 	return not Tutorial.isDream(base) and not Voyage.onShip(base)
+end
+
+-- 문제가 닫혔다(통과 · 놓침 · 시간 끝 · 관리자가 풂): MD.after초 동안 맞지 않는다 — 문제를 푸는 동안 둘러싼 몬스터에게 닫히자마자 쓰러지지 않게
+--  (2026-10-28 사용자 "현재 매크로 방지문제가 뜨면 그걸 푸는동안 죽어버려 방지문제를 푸는동안은 무적이여야해" — 떠 있는 동안은 Hero.hurt가 막고 몬스터 · 날파리가 노리지 않는다)
+local function shield(s)
+	if s.hero then
+		s.hero.invuln = math.max(s.hero.invuln or 0, MD.after)
+	end
 end
 
 -- 방이 보는 표시(저장하지 않는다)
@@ -137,6 +147,7 @@ function Guard.tick(s, key: string?)
 		push(s, nil)
 	elseif what == "expire" then
 		local n, wait = Macro.fail(st, now)
+		shield(s)
 		note(s, "fail", n, wait)
 		Analytics.custom(s, "MacroCheck", 1, "fail")
 		mark(s)
@@ -154,6 +165,9 @@ function Guard.onRemote(s, action: string, a: any, b: any)
 	local now = os.time()
 	if action == "answer" then
 		local r = Macro.answer(st, a, b, now)
+		if r == "pass" or r == "fail" then
+			shield(s) -- 문제가 닫혔다
+		end
 		if r == "pass" or r == "fail" or r == "wrong" then
 			local n = if r == "fail" then #st.saved.fails else nil
 			note(s, r, n, if r == "fail" then Macro.retryIn(st, now) else nil)
@@ -179,6 +193,21 @@ function Guard.onRemote(s, action: string, a: any, b: any)
 	return { result = "bad" }
 end
 
+-- 매크로 방지 날파리(2026-10-28 — design/afk.js의 when): 이 사람에게 날파리를 보낼 때인가 — 「사냥 보상 멈춤」 · 매크로 의심(오래 쉬지 않은 것은 빼고)이 그 단계
+--  (사용자 "그냥 뜨는게 아니라 어느정도 매크로라고 판명되면 뜨는걸로하자" — 전에는 2분 동안 아무것도 안 하면 왔다)
+function Guard.flyWanted(s): boolean
+	local st = s.macro
+	if not st or Macro.pending(st) then
+		return false
+	end
+	local W = COMBAT.afk.when
+	-- 2026-10-28 사용자 "진짜 매크로여야 나오는수준으로": 「사냥 보상 멈춤」인데도 그 뒤로 kills마리 넘게 잡았을 때만(잠깐 자리를 비워 확인을 놓친 사람은 그동안 잡지 않는다)
+	if W.stopped and Macro.stopped(st) and Macro.stopKills(st) >= (W.kills or 0) then
+		return true
+	end
+	return #W.levels > 0 and table.find(W.levels, Macro.level(st, os.time(), true)) ~= nil
+end
+
 -- 관리자
 function Guard.force(s)
 	if s.macro then
@@ -189,6 +218,7 @@ end
 function Guard.clear(s)
 	if s.macro then
 		Macro.clear(s.macro)
+		shield(s)
 		note(s, "clear")
 		mark(s)
 		push(s, "pass")

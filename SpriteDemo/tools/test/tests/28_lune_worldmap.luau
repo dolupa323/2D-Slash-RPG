@@ -256,7 +256,16 @@ do
 		expect(pixelText.Measure("↑ " .. step.act, "small") <= 220, "자리의 글이 이름표에 들어간다 " .. def.name)
 		-- 문 바로 앞이면 ↑가 문으로 간다 — 자리는 문에서 떨어져 있어야 한다
 		for _, p in sc.portals do
-			expect(math.abs(p.x - step.x) > 60 or math.abs(p.y - step.y) > 48 or ((p.dungeon ~= nil or p.weekly ~= nil) and p.done == def.id), ("자리가 문 「%s」과 겹치지 않는다 %s"):format(p.label, def.name)) -- 던전 · 보스의 문 앞의 「문에 손 대기」는 그 문이 닫혀 있는 동안의 것(2026-10-21 · 보스의 문 2026-10-24)
+			-- 보스의 문을 여는 퀘스트보다 앞(after)의 퀘스트가 쓰는 자리도 그 문이 닫혀 있는 동안의 것(2026-10-27 — 메인 「그림자 능선」의 「무너진 아치 밑」 → 「능선 너머의 그림자」 → 아치의 문)
+			local early = false
+			if p.weekly ~= nil then
+				for _, q in QD.list do
+					if q.id == p.done and q.after == def.id then
+						early = true
+					end
+				end
+			end
+			expect(math.abs(p.x - step.x) > 60 or math.abs(p.y - step.y) > 48 or ((p.dungeon ~= nil or p.weekly ~= nil) and p.done == def.id) or early, ("자리가 문 「%s」과 겹치지 않는다 %s"):format(p.label, def.name)) -- 던전 · 보스의 문 앞의 「문에 손 대기」는 그 문이 닫혀 있는 동안의 것(2026-10-21 · 보스의 문 2026-10-24)
 		end
 		-- 주민 바로 앞이어도 안 된다(↑가 한 가지 일만 하게)
 		for _, n in sc.npcs or {} do

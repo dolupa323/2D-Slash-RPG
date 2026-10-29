@@ -186,7 +186,7 @@ function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 		hp:set(("최대 체력 %s"):format(Format.short(me.maxHp))) -- 「체력」은 능력치의 이름이라 「최대 체력」(2026-10-15)
 		local worn = Titles.def(me.title)
 		titleName:set(if worn then worn.name else TW.none)
-		titleName:color(if worn then C[worn.color] or C.gold else C.off)
+		titleName:color(if worn then Titles.tint(worn, C) else C.off)
 		change:setEnabled(me.titles ~= nil and #me.titles > 0)
 		-- 떠 있는 설명은 새 값으로(레벨이 오르면 1점의 값이 달라진다)
 		if tip then

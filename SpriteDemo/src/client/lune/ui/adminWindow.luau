@@ -11,19 +11,41 @@ local SCENES = require(lune.data["scenes.generated"])
 local WORLDMAP = require(lune.data["worldmap.generated"])
 local ITEMS = require(lune.data["items.generated"])
 local N = require(lune.config.numbers)
+local Lang = require(lune.lang)
+local Format = require(lune.ui.format)
 local Ui = require(script.Parent.ui)
+local ViewOpts = require(script.Parent.Parent.viewOpts)
 
 local C = Ui.COLOR
 
 local AdminWindow = {}
+AdminWindow.LANG_W = 60 -- 아래 줄 오른쪽의 언어 단추(2026-10-27)
+
+-- 언어 단추의 글 = 누르면 바뀔 말(지금 한국어면 「English」 · 영문이면 「한국어」 — 「한국어」는 영문으로 바꾸지 않는다: Lang.KEEP)
+function AdminWindow.langLabel(): string
+	return if Lang.code == "en" then "한국어" else "English"
+end
+
+-- 한국어 ↔ English(사용자 2026-10-27: "관리탭에서 영문, 한글 바꿀수있게"): 게임 설정 창의 「언어」와 같은 값을 바꾸고 계정에 저장한다
+function AdminWindow.switchLang(ctx)
+	ViewOpts.lang = if Lang.code == "en" then "ko" else "en"
+	ViewOpts.applyLang()
+	if ctx.saveSound then
+		ctx.saveSound()
+	end
+end
 AdminWindow.W, AdminWindow.H = 356, 300
-AdminWindow.TABS = { { id = "grow", name = "성장" }, { id = "item", name = "아이템" }, { id = "move", name = "이동" }, { id = "fight", name = "전투" }, { id = "acct", name = "계정" }, { id = "macro", name = "매크로" } } -- 계정 = 쿠폰 기록 지우기(2026-10-21) · 매크로 = 매크로 확인(2026-10-23)
+AdminWindow.TABS = { { id = "grow", name = "성장" }, { id = "item", name = "아이템" }, { id = "move", name = "이동" }, { id = "fight", name = "전투" }, { id = "acct", name = "계정" }, { id = "macro", name = "매크로" }, { id = "ban", name = "정지" }, { id = "event", name = "이벤트" } } -- 계정 = 쿠폰 기록 지우기(2026-10-21) · 매크로 = 매크로 확인(2026-10-23) · 정지 = 닉네임으로 영구 정지(2026-10-26) · 이벤트 = 기간 이벤트의 사탕 지급(2026-10-29)
 AdminWindow.XP = { 1, 2, 5, 10, 50, 100 } -- 경험치 배율(서버가 같은 표로 다시 본다)
 AdminWindow.DMG = { 1, 5, 20, 100 } -- 피해 배율
 AdminWindow.BOSS_SHOW = { 100, 75, 60, 50, 40 } -- 보스의 그림 크기 미리보기(서 있는 그림의 몇 %)
 AdminWindow.LEVELS = { 10, 20, 30, 60, 100, 150 } -- 바로 가는 레벨
 AdminWindow.STAGES = { 1, 10, 20, 30, 60, 100 } -- 한 벌을 받는 장비의 단계
-AdminWindow.PER_PAGE = 15 -- 이동 탭의 한 쪽(세 줄 x 다섯)
+AdminWindow.RARE = { 0, 25, 100 } -- 주간 보스의 이름 붙은 장비 확률(%) — 0 = 설계의 값(2026-10-27 사용자 "나는 이런 희귀아이템 확률조절해서 테스트할수있게해줘")
+AdminWindow.rare = 1 -- 지금 고른 것(RARE의 차례 — 서버의 세션에만 걸린다: 다시 들어오면 설계의 값)
+AdminWindow.CANDY_ME = { 100, 1000, 5000 } -- 이벤트 탭: 나에게 주는 사탕의 수
+AdminWindow.CANDY_TO = { 10, 100, 1000 } -- 이벤트 탭: 닉네임에게 주는 사탕의 수(서버가 다시 본다 — 한 번에 9,999까지)
+AdminWindow.LINES = 5 -- 이동 탭의 한 쪽 = 다섯 줄(한 줄에 맵 셋 — 영문의 긴 이름이면 둘)
 
 function AdminWindow.size(): (number, number)
 	return AdminWindow.W, AdminWindow.H
@@ -78,23 +100,44 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 	local placeGroup, placePage = 1, 1
 	local goodsPage = 1
 	local macroGot = nil -- 매크로 탭: 서버가 보낸 이 서버의 사람들 · 최근 일(탭을 열 때 · 「새로 고침」)
+	local banName, banGot = "", nil -- 정지 탭: 적은 닉네임 · 서버가 찾아 준 그 사람(계정 번호 · 로블록스 이름)
+	local candyName, eventPick = "", 1 -- 이벤트 탭: 받을 사람의 닉네임 · 고른 이벤트
 	local tabs = {}
-	local tx = 0
-	for _, t in AdminWindow.TABS do
-		local item
-		item = Ui.tab(body, t.name, tx, 0, function()
-			tab = t.id
-			view.draw()
-		end)
-		if item.frame then
-			item.frame.Name = "Tab_" .. t.id -- 탭마다 이름(Play에서 가려 누를 수 있게)
+	-- 탭 줄: 언어를 바꾸면 이름의 폭이 달라져 다시 놓는다
+	local function layTabs()
+		for _, item in tabs do
+			if item.frame then
+				item.frame:Destroy()
+			end
 		end
-		tabs[t.id] = item
-		tx += item.width + 16
+		table.clear(tabs)
+		local tx = 0
+		for _, t in AdminWindow.TABS do
+			local item
+			item = Ui.tab(body, t.name, tx, 0, function()
+				tab = t.id
+				view.draw()
+			end)
+			if item.frame then
+				item.frame.Name = "Tab_" .. t.id -- 탭마다 이름(Play에서 가려 누를 수 있게)
+			end
+			tabs[t.id] = item
+			tx += item.width + 16
+		end
 	end
+	layTabs()
 	Ui.line(body, 0, 20, w)
 	Ui.line(body, 0, h - 20, w)
-	local status = Ui.text(body, "관리자에게만 보이는 창이다", 0, h - 15, w, { color = C.dim })
+	local status = Ui.text(body, "관리자에게만 보이는 창이다", 0, h - 15, w - AdminWindow.LANG_W - 6, { color = C.dim })
+	-- 언어 단추(아래 줄 오른쪽 — 어느 탭에서나): 한국어 ↔ English
+	local langBtn
+	langBtn = Ui.button(body, AdminWindow.langLabel(), w - AdminWindow.LANG_W, h - 18, AdminWindow.LANG_W, function()
+		AdminWindow.switchLang(ctx)
+		langBtn:setText(AdminWindow.langLabel())
+		layTabs()
+		view.draw()
+	end, { h = 16, font = "small" })
+	langBtn.frame.Name = "Do_lang"
 
 	-- 서버에 부탁한다(대답이 오면 아래 줄에 적는다)
 	local function ask(what: string, a: any, b: any, c: any, after: ((any) -> ())?) -- after = 대답을 받은 뒤(확성기: 보냈으면 칸을 비운다)
@@ -119,12 +162,16 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 	end
 
 	-- 한 줄: 왼쪽에 이름, 그 옆에 단추들. 돌려주는 것: 다음 줄의 y
+	--  단추는 글이 들어가게 넓히고(영문은 길다 — 2026-10-27), 창의 폭을 넘으면 다음 줄로 넘긴다
 	local function row(parent: Frame, y: number, label: string, buttons, bw: number?)
 		Ui.text(parent, label, 0, y + 6, 78, { color = C.dim })
 		local x = 82
 		local width = bw or 40
 		for _, b in buttons do
-			local bwidth = b.w or width
+			local bwidth = math.max(b.w or width, Ui.measure(b.text) + 8)
+			if x > 82 and x + bwidth > w then
+				x, y = 82, y + 26
+			end
 			Ui.button(parent, b.text, x, y, bwidth, b.on, { h = 22, main = b.main == true }).frame.Name = "Do_" .. (b.id or b.text)
 			x += bwidth + 4
 		end
@@ -177,6 +224,12 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 				{ text = "성벽 거인", id = "qboss1", w = 76, on = function() ask("quests", "to", "r1m7") end }, -- 2026-10-15 보스의 새 이름(망루의 부관 → 성벽 거인 · 정찰대장 → 쇠사슬 간수)
 				{ text = "쇠사슬 간수", id = "qboss2", w = 88, on = function() ask("quests", "to", "r1m8") end },
 				{ text = "불타는 마을", id = "qcellar", w = 86, on = function() ask("quests", "to", "r1m9") end }, -- 사당 지하(달의 사당 안의 포탈로 내려간다 — 2026-10-13)
+			})
+			-- 문으로 들어가는 보스전(2026-10-27 그림자 사수): 보스 퀘스트를 끝낸 것으로 · 레벨 · 이번 주 기록을 지우고 그 보스의 문 앞으로
+			y = row(p, y, "보스전", {
+				{ text = "그림자 사수", id = "wkshadow", w = 76, on = function() ask("week", "shadowarcher") end },
+				{ text = "부단장", id = "wkvice", w = 56, on = function() ask("week", "fallenknight") end }, -- 2026-10-28
+				{ text = "도둑 두목", id = "wkthief", w = 70, on = function() ask("week", "thiefboss") end }, -- 2026-10-28 셋째(기믹 보스) — 셋이 한 줄에 들도록 폭은 글자에 맞춘다(넓으면 줄이 넘어 창 밖으로 나간다)
 			})
 			Ui.text(p, "레벨 · 차수를 바꾸면 능력치와 스킬을 다시 찍는다.", 0, y + 4, w, { color = C.off })
 		elseif tab == "item" then
@@ -249,14 +302,23 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 			end
 			local top = gy + 28
 			local list = groups[placeGroup].list
-			local per = AdminWindow.PER_PAGE
+			-- 맵 단추: 한 줄에 셋 — 이름이 단추에 들어가지 않으면(영문의 긴 이름) 둘(2026-10-27)
+			local cols = 3
+			for _, at in list do
+				if Ui.measure(at.name) + 8 > math.floor((w - 6) / 3) then
+					cols = 2
+					break
+				end
+			end
+			local bw = math.floor((w - (cols - 1) * 3) / cols)
+			local per = AdminWindow.LINES * cols
 			local pages = math.max(1, math.ceil(#list / per))
 			placePage = math.clamp(placePage, 1, pages)
 			for i = 1, per do
 				local at = list[(placePage - 1) * per + i]
 				if at then
-					local col, line = (i - 1) % 3, math.floor((i - 1) / 3)
-					Ui.button(p, at.name, col * 119, top + line * 26, 116, function()
+					local col, line = (i - 1) % cols, math.floor((i - 1) / cols)
+					Ui.button(p, at.name, col * (bw + 3), top + line * 26, bw, function()
 						ask("goto", at.key)
 					end, { h = 22, font = "small" }).frame.Name = "Do_goto_" .. at.key
 				end
@@ -316,6 +378,97 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 					y += 14
 				end
 			end
+		elseif tab == "ban" then
+			-- 정지(2026-10-26 사용자: "클라 라는 닉네임 유저 찾아서 ip 까지 딴다음에 아예 게임못하게 정지시켜"): 닉네임을 적고 「찾기」로 누구인지 본 뒤 「정지」 —
+			--  서버가 로블록스의 정지(BanAsync — 영구 · 부계정도)를 건다(server/lune/modules/ban.luau). 「풀기」 = 정지를 푼다
+			Ui.text(p, "닉네임", 0, 6, 78, { color = C.dim })
+			local field = Ui.field(p, 82, 0, w - 82, 22, "정지할 사람의 닉네임")
+			field.Name = "BanInput"
+			field.Text = banName
+			field:GetPropertyChangedSignal("Text"):Connect(function()
+				banName = field.Text
+				if banGot and banGot.name ~= banName then
+					banGot = nil -- 찾은 뒤 이름을 고쳤다: 찾은 사람을 지운다(다시 찾기)
+				end
+			end)
+			local function act(action: string)
+				local name = field.Text
+				ask("ban", name, action, nil, function(got)
+					if alive and typeof(got) == "table" and got.uid then
+						banGot = { name = name, uid = got.uid, roblox = got.roblox, done = if got.ok and action ~= "find" then action else nil }
+						if tab == "ban" then
+							view.draw()
+						end
+					end
+				end)
+			end
+			y = row(p, 28, "", {
+				{ text = "찾기", id = "banFind", w = 56, on = function() act("find") end },
+				{ text = "정지", id = "banDo", w = 56, main = true, on = function() act("ban") end },
+				{ text = "풀기", id = "banUndo", w = 56, on = function() act("unban") end },
+			})
+			if banGot then
+				Ui.text(p, ("계정 번호 %d · 로블록스 @%s"):format(banGot.uid, tostring(banGot.roblox)), 0, y + 2, w, { color = C.text }).label.Frame.Name = "BanWho" -- (Ui.text에는 .frame이 없다 — 2026-10-26 능력치 창)
+				if banGot.done then
+					Ui.text(p, if banGot.done == "ban" then "영구 정지됨" else "정지 풀림", 0, y + 16, w, { color = if banGot.done == "ban" then C.red else C.green })
+				end
+			end
+			y += 36
+			Ui.text(p, "닉네임의 계정을 이 게임에서 영구 정지한다.", 0, y, w, { color = C.off })
+			Ui.text(p, "접속 중이면 바로 쫓겨나고 다시 못 들어온다.", 0, y + 14, w, { color = C.off })
+			Ui.text(p, "로블록스가 같은 사람의 부계정으로 보는 계정도 막는다.", 0, y + 28, w, { color = C.off })
+			Ui.text(p, "IP는 로블록스가 주지 않아 쓰지 않는다.", 0, y + 42, w, { color = C.off })
+			Ui.text(p, "풀기 = 정지를 푼다 · 관리자는 정지할 수 없다.", 0, y + 56, w, { color = C.off })
+		elseif tab == "event" then
+			-- 기간 이벤트의 사탕(2026-10-29 사용자: "나 어드민 호박사탕 지급 탭 만들어주고"): 나에게 · 닉네임에게 — 서버가 이 서버에 있으면 바로 · 다른 서버에 있으면 곧 ·
+			--  접속하지 않았으면 다음에 그 캐릭터로 들어올 때(server/lune/modules/gifts.luau). 이벤트가 닫혀 있어도 준다(상점은 기간에만 열린다)
+			local EventMod = require(lune.sim.event)
+			local evs = EventMod.DATA.list
+			eventPick = math.clamp(eventPick, 1, math.max(1, #evs))
+			local e = evs[eventPick]
+			if not e then
+				Ui.text(p, "이벤트가 없다", 0, 6, w, { color = C.off })
+				return
+			end
+			local evButtons = {}
+			for i, q in evs do
+				table.insert(evButtons, { text = q.name, id = "ev_" .. q.id, w = 80, main = i == eventPick, on = function()
+					eventPick = i
+					view.draw()
+				end })
+			end
+			y = row(p, y, "이벤트", evButtons)
+			local candyShown = e.candy.id
+			for _, g in ITEMS.GOODS do
+				if g.id == e.candy.id then
+					candyShown = g.name
+				end
+			end
+			local open = EventMod.on(e.id)
+			Ui.text(p, ("%s · %s"):format(candyShown, if open then "지금 열림" else "지금 닫힘"), 82, y - 2, w - 82, { color = if open then C.green else C.off })
+			y += 18
+			local mine = {}
+			for _, n in AdminWindow.CANDY_ME do
+				table.insert(mine, { text = "+" .. Format.comma(n), id = "candyMe" .. n, w = 52, on = function() ask("candy", e.id, "", n) end })
+			end
+			table.insert(mine, { text = "모두 빼기", id = "candyClear", w = 64, on = function() ask("candyClear", e.id) end })
+			y = row(p, y, "나에게", mine)
+			Ui.text(p, "닉네임", 0, y + 6, 78, { color = C.dim })
+			local field = Ui.field(p, 82, y, w - 82, 22, "받을 사람의 닉네임")
+			field.Name = "CandyInput"
+			field.Text = candyName
+			field:GetPropertyChangedSignal("Text"):Connect(function()
+				candyName = field.Text
+			end)
+			y += 28
+			local to = {}
+			for _, n in AdminWindow.CANDY_TO do
+				table.insert(to, { text = "+" .. Format.comma(n), id = "candyTo" .. n, w = 52, on = function() ask("candy", e.id, field.Text, n) end })
+			end
+			y = row(p, y, "닉네임에게", to)
+			Ui.text(p, "이 서버에 있으면 바로 · 다른 서버에 있으면 곧 받는다.", 0, y + 4, w, { color = C.off })
+			Ui.text(p, "접속하지 않았으면 다음에 그 캐릭터로 들어올 때 받는다.", 0, y + 18, w, { color = C.off })
+			Ui.text(p, "받는 사람의 화면 위에 「운영자의 선물」 알림이 뜬다.", 0, y + 32, w, { color = C.off })
 		elseif tab == "acct" then
 			-- 쿠폰 기록 지우기(2026-10-21 사용자: "쿠폰 기록을 초기화해줘 쿠폰등록하는것부터 영상을찍어야해") — 내 계정의 쓴 쿠폰 · 쿠폰 펫 · 쿠폰 탈것을 지운다(서버의 CashServer.resetCoupons)
 			y = row(p, y, "쿠폰", { { text = "쓴 기록 지우기", id = "couponReset", w = 110, on = function() ask("coupons") end } })
@@ -346,12 +499,24 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 			-- 칭호 넣어 보기(2026-10-26 사용자: "나 어드민으로 껴볼수있게 해야지 난디자인을 봐야하는데"): 칭호마다 단추 하나(받고 바로 단다) · 「빼기」 = 모두 뺀다. 이 캐릭터에만(세계 기록은 그대로)
 			local TitlesMod = require(game:GetService("ReplicatedStorage").shared.lune.sim.titles)
 			-- 칭호가 셋(운영자 · 최초의 계승자 · 만월의 계승자)이라 한 줄에 칭호만 · 「빼기」는 다음 줄(운영자 칭호는 관리자에게 늘 있어 빼기 = 떼기만)
-			local list = {}
+			-- 2026-10-27: 직업마다의 「가장 앞선 자」 다섯이 더해져 단추가 여덟이 되자 줄이 셋으로 접혀 아래 「순위 사슴」이 창 밖으로 밀렸다(시험 30)
+			--   → 직업 칭호 다섯은 단추 하나(누를 때마다 다음 직업의 것을 받아 단다 — 색을 차례로 본다) · 「모두 빼기」도 같은 줄에
+			local list, firsts = {}, {}
 			for _, t in TitlesMod.LIST do
-				table.insert(list, { text = t.name, id = "title_" .. t.id, w = 80, on = function() ask("title", t.id) end })
+				if t.rule == "classFirst" then
+					table.insert(firsts, t)
+				else
+					table.insert(list, { text = t.name, id = "title_" .. t.id, w = 80, on = function() ask("title", t.id) end })
+				end
 			end
+			if #firsts > 0 then
+				table.insert(list, { text = firsts[1].name .. " ▸", id = "titleClass", w = 80, on = function()
+					AdminWindow.classTitle = (AdminWindow.classTitle or 0) % #firsts + 1
+					ask("title", firsts[AdminWindow.classTitle].id)
+				end })
+			end
+			table.insert(list, { text = "모두 빼기", id = "titleOff", w = 64, on = function() ask("title", "") end })
 			y = row(p, y, "칭호", list)
-			y = row(p, y, "", { { text = "모두 빼기", id = "titleOff", w = 80, on = function() ask("title", "") end } })
 			-- 순위 사슴(2026-10-26 사용자: "1위는 금은동 다주고 … 그리고 나도 볼수있어야지"): 백금 · 실버 · 동색 사슴을 내 계정에 넣는다 · 뺀다(가방 「캐시」 탭에서 탄다)
 			y = row(p, y, "순위 사슴", {
 				{ text = "셋 받기", id = "rankMountsGive", w = 64, on = function() ask("rankMounts", "give") end },
@@ -369,6 +534,25 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 				table.insert(ds, { text = "x" .. v, id = "dmg" .. v, main = on.dmg == v, on = function() ask("dmg", v) end })
 			end
 			y = row(p, y, "피해 배율", ds)
+			-- 희귀 장신구(2026-10-27): 확률 = 누를 때마다 설계의 값(2%) → 25% → 100% — 내가 든 파티의 격파에만(다른 사람의 격파에는 걸리지 않는다) · 흑수정 마안을 가방에 바로
+			local rp = AdminWindow.RARE[AdminWindow.rare]
+			y = row(p, y, "희귀 장신구", {
+				{ text = if rp == 0 then "확률 기본" else ("확률 %d%%"):format(rp), id = "rare", w = 82, main = rp ~= 0, on = function()
+					AdminWindow.rare = AdminWindow.rare % #AdminWindow.RARE + 1
+					ask("rare", AdminWindow.RARE[AdminWindow.rare])
+				end },
+				-- (보스마다 하나 — 2026-10-29 불씨 도둑 두목의 허리띠를 더하며 이름을 짧게: 창의 높이가 정해져 있어 줄이 늘지 않게)
+				{ text = "마안 받기", id = "unique", w = 76, on = function() ask("unique", "archer_eye") end }, -- 흑수정 마안(그림자 사수 · 하드)
+				{ text = "견장 받기", id = "unique2", w = 76, on = function() ask("unique", "vice_pauldron") end }, -- 검은 맹세 견장(타락한 부단장 · 하드 — 2026-10-28)
+				{ text = "허리띠 받기", id = "unique3", w = 84, on = function() ask("unique", "thief_belt") end }, -- 잿불 도적의 허리띠(불씨 도둑 두목 · 하드 — 2026-10-29)
+			})
+			-- 잠수 방지 날파리(2026-10-28): 2분 기다리지 않고 지금 나에게 부른다(사냥터에서만 — 무적이면 찔려도 피해가 없다)
+			y = row(p, y, "날파리", { { text = "지금 부르기", id = "fly", w = 96, on = function() ask("fly") end } })
+			-- 보상의 방(2026-10-28): 보스를 잡지 않고 상자를 열어 본다(나 혼자 · 이번 주의 격파를 적지 않는다)
+			y = row(p, y, "보상의 방", {
+				{ text = "노말", id = "boxN", w = 56, on = function() ask("box", "normal") end },
+				{ text = "하드", id = "boxH", w = 56, on = function() ask("box", "hard") end },
+			})
 			-- 보스의 그림 크기 미리보기(화면 쪽만 — 서버에 묻지 않는다): 받은 동작 그림을 작게 그릴수록 또렷하다. 고른 크기를 알려 주면 설계값(공방 bosses.js의 BOSS_SHOW)으로 굳힌다
 			local now = ctx.bossShow and ctx.bossShow() -- 고운 그림이 없으면 nil(이 줄을 그리지 않는다)
 			if now then

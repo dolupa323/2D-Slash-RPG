@@ -14,6 +14,7 @@
 --    원래이미 펫을 가지고 있는사람들도 패치 적용되면 똑같이 적용 되어야한다" →
 --    · 모든 펫: 주우러 갈 것 = 펫의 높이에서 위아래 climb점 안(전에는 magnet 24 — 두 칸 턱 위의 것을 아예 보지 않았다) · 고른 것이 머리 위 hop점 안이면 그 밑에서 뛰어오른다
 --      (전에는 벽에 막힐 때만 뛰어 떠 있는 발판 위의 것은 못 주웠다) · 고른 것이 아래층이면 낭떠러지를 걸어 내려가고 얇은 발판은 뚫고 내려간다 · 주우러 갈 때는 웅크림이 windupChase초
+--   2026-10-28 사용자 "무료펫 상하 단차를 조금더 수월하게 움직이게하자 지금 언덕을 잘 못넘어" → 한 칸(stepUp점) 턱은 계단처럼 걸어 오른다 · 더 높은 턱의 웅크림 windup 0.2 → 0.06초
 --    · 로벅스 펫(design/ride.js에서 free가 없는 펫): 펫 몸 둘레 suck.r점 원 안의 것을 높이 · 턱과 상관없이 suck.every초마다 빨아들인다 — 펫의 종류로 정해진다(이미 산 사람도 같다)
 --      같은 날 "로벅스 펫 빨아들이기 범위 더크게" → suck.r 80 → 160 · 서버가 받는 영웅과의 거리 suck.reach 256
 --  탈것: 탄 동안 영웅의 발밑에 탈것을 그리고, 영웅은 서기 모습으로 앉는 자리(seat)에 · 탈것의 등(<동작>_front)을 영웅 앞에 다시 그린다(다리가 몸에 묻혀 앉은 것으로 보인다).
@@ -164,7 +165,7 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 	if not goal and drops and onPick and b.ground and now >= self.nextPick then
 		local bd = math.huge
 		for id, d in drops do
-			if math.abs(d.x - hero.x) <= P.reach and math.abs(d.y - b.y) <= climb and (self.tried[id] or 0) <= now then
+			if not d.nopet and math.abs(d.x - hero.x) <= P.reach and math.abs(d.y - b.y) <= climb and (self.tried[id] or 0) <= now then -- (nopet = 보상의 방의 것 — 직접 주워야 한다 · 2026-10-28)
 				local dd = math.abs(d.x - b.x)
 				if dd < bd then
 					self.goal, goal, bd = id, d, dd
@@ -185,6 +186,14 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 	local d = tx - b.x
 	local mx = if math.abs(d) <= (if goal then 1 else 2) then 0 elseif d > 0 then 1 else -1
 	local input = { mx = mx, speed = speed / G.RUN }
+	-- 영웅이 위(한 칸 턱 위)에 섰는데 펫이 턱 바로 밑에서 갈 곳과 2점 안이라 멈췄다: 그쪽으로 한 걸음 더(아래의 걸어 오르기가 턱 위로 올린다 — 2026-10-28)
+	if mx == 0 and b.ground and not goal and not hero.air and hero.y < b.y - 4 then
+		local s = if tx >= b.x then 1 else -1
+		if Physics.solidBox(scene, b.x + s * 2, b.y) then
+			mx = s
+			input.mx = s
+		end
+	end
 	local heroBelow = not hero.air and hero.y > b.y + 8
 	local goalUp = goal ~= nil and goal.y < b.y - 6 and math.abs(goal.x - b.x) <= (P.hop or 0) -- 고른 것이 머리 위(턱 · 떠 있는 발판 위)
 	local goalDown = goal ~= nil and goal.y > b.y + 6 -- 고른 것이 아래층
@@ -193,9 +202,25 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 		wantJump = true -- 그 밑에서 뛰어오른다(얇은 발판은 밑에서 뚫고 올라 그 위에 선다 · 턱은 옆으로 다가가며 오른다)
 	end
 	if b.ground and mx ~= 0 then
+		-- 낮은 턱(P.stepUp점 — 한 칸)은 계단처럼 걸어 오른다(2026-10-28 사용자 "무료펫 상하 단차를 조금더 수월하게 움직이게하자 지금 언덕을 잘 못넘어" —
+		--  전에는 한 칸 턱마다 웅크렸다(windup) 뛰어서 계단 같은 언덕에서 턱마다 멈칫했다). 그 위가 비어 있어야 오른다 · 더 높으면 전처럼 뛴다
+		local lift = 0
 		if Physics.solidBox(scene, b.x + mx * 2, b.y) then
-			wantJump = true -- 벽 · 턱
-		elseif not groundBelow(scene, b.x + mx * (HALF + 2), b.y, 2) then
+			for h = 1, P.stepUp or 0 do
+				if not Physics.solidBox(scene, b.x + mx * 2, b.y - h) and not Physics.solidBox(scene, b.x, b.y - h) then
+					lift = h
+					break
+				end
+			end
+		end
+		if lift > 0 then
+			b.x += mx * 2 -- 턱 위로(그 칸만큼 앞으로 함께 — 몸이 턱에 걸쳐야 받친다: 들어 올리기만 하면 가장자리에서 받침 없이 다시 떨어졌다)
+			b.y -= lift
+		elseif Physics.solidBox(scene, b.x + mx * 2, b.y) then
+			wantJump = true -- 벽 · 높은 턱
+		elseif not groundBelow(scene, b.x + mx * (HALF + 2), b.y, 2) and not Physics.solidBox(scene, b.x + mx * (HALF + 2), b.y) then
+			-- (앞이 턱 · 벽이면 그 자리에 몸이 들어가지 않아 「땅이 없다」로 읽혔다 — 낭떠러지가 아니다: 다가가서 위에서 오르거나 뛴다. 2026-10-28 — 전에는 영웅이 위에 있으면
+			--  턱 바로 앞에서 「낭떠러지 앞이니 선다」가 되어 1.2초 서 있다가 순간 이동했다 = 「언덕을 잘 못 넘는다」의 까닭)
 			-- 낭떠러지: 영웅이 아래면 걸어 떨어진다 · 같은 높이의 건너편이면 뛰어 건넌다 · 위면 멈춘다(메이플의 일반 펫은 다른 발판으로 오르지 않는다)
 			if heroBelow or goalDown then
 				-- 그대로 걷는다(영웅 · 주우러 갈 것이 아래층)
@@ -260,7 +285,7 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 		for id, d in drops do
 			local ddx, ddy = d.x - b.x, d.y - 4 - cy
 			local dist = math.sqrt(ddx * ddx + ddy * ddy)
-			if dist <= radius and dist < pd and (self.tried[id] or 0) <= now and math.abs(d.x - hero.x) <= far then
+			if not d.nopet and dist <= radius and dist < pd and (self.tried[id] or 0) <= now and math.abs(d.x - hero.x) <= far then
 				pick, pd = id, dist
 			end
 		end

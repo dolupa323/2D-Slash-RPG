@@ -122,6 +122,10 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		for _, id in v.wskins or {} do
 			table.insert(out, { ride = id, kind = "wskin", on = (mySkin or v.wskin) == id }) -- 캐시 무기(2026-10-23)
 		end
+		local myD = if ctx.myDskin then ctx.myDskin() else v.dskin
+		for _, id in v.dskins or {} do
+			table.insert(out, { ride = id, kind = "dskin", on = (myD or v.dskin) == id }) -- 데미지 스킨(2026-10-29 — 할로윈)
+		end
 		return out
 	end
 	-- 모든 창을 다시 그린다(상세 판은 하나뿐이라, 여기서 고르면 다른 창이 고른 것은 풀린다)
@@ -195,8 +199,11 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			name = def.name,
 			hi = hi,
 			gainEach = if kind == "sell" then def.sell else nil,
+			gainDust = if kind == "dismantleGoods" then function(n: number): number
+				return Items.goodsDust(entry.item, n) or 0
+			end else nil, -- 물약 · 귀환 주문서의 분해: 받을 달가루(0이면 「분해」가 눌리지 않는다 — 2026-10-27)
 			onYes = function(n: number)
-				local action = if kind == "store" then "storeIn" else kind -- "discard" · "sell" · "split"
+				local action = if kind == "store" then "storeIn" else kind -- "discard" · "sell" · "split" · "dismantleGoods"
 				ctx.send("Item", action, tabKey, slot, n)
 				if kind == "store" and ui.storeShow then
 					ui.storeShow(tabKey)
@@ -255,6 +262,8 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					ctx.toggleRide(it.ride)
 				elseif it.kind == "wskin" and ctx.toggleWskin then
 					ctx.toggleWskin(it.ride) -- 캐시 무기: 장착 · 해제
+				elseif it.kind == "dskin" and ctx.toggleDskin then
+					ctx.toggleDskin(it.ride) -- 데미지 스킨: 장착 · 해제(2026-10-29)
 				end
 			elseif twice then
 				-- 두 번 누르기: 장비는 장착, 소비 아이템은 사용
@@ -597,7 +606,12 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			end
 			local prod = ctx.cashProduct and ctx.cashProduct(entry.ride)
 			local isPet = entry.kind == "pet"
-			local isSkin = entry.kind == "wskin" -- 캐시 무기(2026-10-23): 장착 · 해제(퀵슬롯에는 놓지 않는다)
+			local isD = entry.kind == "dskin" -- 데미지 스킨(2026-10-29): 캐시 무기처럼 장착 · 해제
+			local isSkin = entry.kind == "wskin" or isD -- 캐시 무기(2026-10-23): 장착 · 해제(퀵슬롯에는 놓지 않는다)
+			if isD then
+				local q = require(lune.sim.event).dskin(entry.ride)
+				prod = q and { name = q.name, line = q.line } or prod
+			end
 			local spec = { item = entry, buttons = {}, onClose = function()
 				unselect()
 				redraw()
@@ -605,15 +619,17 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			spec.info = {
 				name = if prod then prod.name else entry.ride,
 				tone = "text",
-				sub = (if isSkin then BMW.skinKind elseif isPet then BMW.petKind else BMW.mountKind) .. (if entry.on then " · " .. (if isSkin then BMW.skinTag elseif isPet then BMW.petOutTag else BMW.rideTag) else ""),
+				sub = (if isD then BMW.dskinKind elseif isSkin then BMW.skinKind elseif isPet then BMW.petKind else BMW.mountKind) .. (if entry.on then " · " .. (if isSkin then BMW.skinTag elseif isPet then BMW.petOutTag else BMW.rideTag) else ""),
 				rows = {},
-				notes = { { if prod then prod.line or "" else "", "text" }, { if isSkin then BMW.skinHint elseif isPet then BMW.bagHint else BMW.rideHint, "dim" } },
+				notes = { { if prod then prod.line or "" else "", "text" }, { if isD then BMW.dskinHint elseif isSkin then BMW.skinHint elseif isPet then BMW.bagHint else BMW.rideHint, "dim" } },
 			}
 			table.insert(spec.buttons, {
 				text = if isSkin then (if entry.on then BMW.skinOff else BMW.skinOn) elseif isPet then (if entry.on then BMW.petOff else BMW.petOn) else (if entry.on then BMW.rideOff else BMW.rideOn),
 				main = not entry.on,
 				onClick = function()
-					if isSkin and ctx.toggleWskin then
+					if isD and ctx.toggleDskin then
+						ctx.toggleDskin(entry.ride)
+					elseif isSkin and ctx.toggleWskin then
 						ctx.toggleWskin(entry.ride)
 					elseif isPet and ctx.togglePet then
 						ctx.togglePet(entry.ride)
@@ -739,6 +755,12 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					end, true, def.lv ~= false and me.level < def.lv)
 					button(WORDS.quick, function()
 						ctx.quick.pick(entry.item) -- 퀵슬롯(스마트폰: 칸 단추)이 반짝인다 — 놓을 칸을 누른다
+					end)
+				end
+				if Items.goodsDust(entry.item, 1) ~= nil then
+					-- 물약 · 귀환 주문서: 분해하면 소량의 달가루(2026-10-27 사용자 "포션이랑 마을귀환주문서 분해할수있게하고 분해하면 소량의 달가루 주는형식으로")
+					button(WORDS.dismantle, function()
+						askCount("dismantleGoods", tabKey, slot, entry) -- 처음에는 그 칸의 묶음 전부
 					end)
 				end
 				button(WORDS.discard, function()

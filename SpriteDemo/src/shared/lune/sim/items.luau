@@ -83,6 +83,23 @@ function Items.make(slot: string, stage: number, q: number?, who: string?)
 	return { slot = slot, stage = stage, q = q or D.NORMAL, star = 0, who = if slot == "weapon" then who else nil, fails = 0, broken = false }
 end
 
+-- 보스만 주는 이름 붙은 장비(2026-10-27 — 공방 js/lune/design/items.js의 UNIQUES · 사용자 "하드에서만 70제로 뜨는거야 이름을 멋있게 붙여야지"):
+--  장비에 u(이름표)가 붙는다 — 이름 · 상세의 글은 그것의 것, 세기는 같은 부위 · 단계 · 성능의 장비와 같다(별 강화도 된다)
+local UNIQUE = {}
+for _, u in D.UNIQUES or {} do
+	UNIQUE[u.id] = u
+end
+function Items.unique(id: any)
+	return if typeof(id) == "string" then UNIQUE[id] else nil
+end
+function Items.makeUnique(id: string)
+	local u = UNIQUE[id]
+	assert(u, "없는 이름표 " .. tostring(id))
+	local it = Items.make(u.slot, u.stage, u.q)
+	it.u = id
+	return it
+end
+
 -- 저장된 것 · 받은 것의 꼴이 맞는가
 function Items.valid(it: any): boolean
 	if typeof(it) ~= "table" or not SLOT[it.slot] then
@@ -97,12 +114,18 @@ function Items.valid(it: any): boolean
 	if it.slot == "weapon" and D.KINDS[it.who] == nil then
 		return false
 	end
+	if it.u ~= nil then
+		local u = UNIQUE[it.u]
+		if not u or u.slot ~= it.slot or u.stage ~= it.stage then
+			return false -- 모르는 이름표 · 부위나 단계가 다르다
+		end
+	end
 	return it.star <= Items.starCap(it.stage)
 end
 
 -- 같은 장비인가(부서진 것을 되살릴 때 쓴다): 부위 · 단계 · 무기라면 직업
 function Items.same(a, b): boolean
-	return a.slot == b.slot and a.stage == b.stage and a.who == b.who
+	return a.slot == b.slot and a.stage == b.stage and a.who == b.who and a.u == b.u
 end
 
 -- 낄 수 있는 레벨(사냥 장비는 단계가 곧 레벨이다)
@@ -128,23 +151,36 @@ function Items.baseName(it): string
 end
 
 function Items.name(it): string
+	local u = it.u and UNIQUE[it.u]
+	if u then
+		return u.name -- 이름 붙은 장비(보스 — 2026-10-27)
+	end
 	local head = if it.q == D.NORMAL then "" else D.QUALITY[it.q].name .. " "
 	return ("%sLv.%d %s"):format(head, it.stage, Items.baseName(it))
 end
 
 -- ---------- 옵션 · 방어 ----------  (2026-10-15 — 공방 numbers.js 2-1 · items.js의 gearOpt와 같은 셈)
---  무기 = 공격력 · 방어구 = 올스탯 · 방어력 · 장신구 = 올스탯(방어구의 절반). 성능이 기본 옵션에 % 로, 별이 그 위에 % 로 붙는다(레벨이 높은 장비일수록 기본 옵션이 커서 별 하나에 더 오른다).
---  돌려주는 것 { base = 별 없이, total = 별까지 } — 각각 { atk } 또는 { stat, def } 또는 { stat }. 부서진 것(흔적)은 모두 0
+--  무기 = 공격력 · 방어구 = 올스탯 · 공격력 · 방어력 · 장신구 = 올스탯 · 공격력(방어구의 절반). 성능이 기본 옵션에 % 로, 별이 그 위에 % 로 붙는다(레벨이 높은 장비일수록 기본 옵션이 커서 별 하나에 더 오른다).
+--  공격력은 2026-10-28 방어구 · 장신구에도(사용자 "다른 장비들도 공격력 기본옵션으로 붙이고 스타포스할때 같이올라가게") — 적어도 1 · 이름 붙은 장비는 제 값(u.atk — 흑수정 마안 2)
+--  돌려주는 것 { base = 별 없이, total = 별까지 } — 각각 { atk } 또는 { stat, atk, def } 또는 { stat, atk }. 부서진 것(흔적)은 모두 0
 local SPEC = N.data.SPEC
+-- 방어구 · 장신구의 기본 공격력(k = 1 방어구 · SPEC.acc.atk 장신구 — 적어도 1). 이름 붙은 장비는 제 값
+local function gearAtk(it, k: number, q: number): number
+	local u = it.u and UNIQUE[it.u]
+	if u and u.atk then
+		return u.atk
+	end
+	return math.max(1, round(N.armorAtk(it.stage) * k * q))
+end
 function Items.options(it)
 	local q = 1 + D.QUALITY[it.q].bonus / 100
 	local base
 	if it.slot == "weapon" then
 		base = { atk = round(N.weaponAtk(it.stage) * q) }
 	elseif ARMOR[it.slot] then
-		base = { stat = round(N.armorStat(it.stage) * q), def = round(N.armorDef(it.stage) * q) }
+		base = { stat = round(N.armorStat(it.stage) * q), atk = gearAtk(it, 1, q), def = round(N.armorDef(it.stage) * q) }
 	else
-		base = { stat = round(N.armorStat(it.stage) * SPEC.acc.stat * q) }
+		base = { stat = round(N.armorStat(it.stage) * SPEC.acc.stat * q), atk = gearAtk(it, SPEC.acc.atk, q) }
 	end
 	local total = {}
 	if it.broken then
@@ -172,9 +208,11 @@ function Items.sum(list)
 				local k = 1 + N.starPct("armor", it.star) / 100
 				if ARMOR[it.slot] then
 					stat += round(round(N.armorStat(it.stage) * q) * k)
+					atk += round(gearAtk(it, 1, q) * k)
 					def += round(round(N.armorDef(it.stage) * q) * k)
 				else
 					stat += round(round(N.armorStat(it.stage) * SPEC.acc.stat * q) * k)
+					atk += round(gearAtk(it, SPEC.acc.atk, q) * k)
 				end
 			end
 		end
@@ -436,6 +474,15 @@ function Items.restore(it, spare): boolean
 end
 
 -- ---------- 분해 ----------
+-- 물약 · 귀환 주문서를 n개 분해하면 받는 달가루(2026-10-27 사용자: "포션이랑 마을귀환주문서 분해할수있게하고 분해하면 소량의 달가루") — 하나의 몫(dust — 소수)에 n을 곱해 내린다. 분해할 수 없는 것은 nil
+function Items.goodsDust(id: any, n: number): number?
+	local def = Items.goods(id)
+	if not def or typeof(def.dust) ~= "number" or def.dust <= 0 then
+		return nil
+	end
+	return math.floor(def.dust * n + 1e-9)
+end
+
 function Items.dismantle(it): number
 	-- Lv.10부터는 적어도 1(분해했는데 0이 나오지 않게 — 공방의 dismantleDust와 같은 셈)
 	return math.max(if it.stage >= 10 then 1 else 0, round(D.DUST.dismantle * (it.stage / 10) ^ 3 + D.DUST.back / 100 * Items.starDust(it.stage, it.star)))

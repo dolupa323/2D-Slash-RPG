@@ -51,7 +51,7 @@ function Q.stepHint(def, step): string
 	local mob = COMBAT.mobs[step.mob]
 	local name = if mob then mob.name else step.name
 	if step.type == "gather" then
-		return ("%s의 %s%s 잡으면 떨어진다"):format(place, name, josa(name, "을", "를"))
+		return ("%s의 %s에게서 떨어진다"):format(place, name) -- (조사를 고르지 않는 말 — 영문은 틀 하나로 바꾼다: 2026-10-27)
 	elseif step.type == "use" then
 		return ("%s — %s 앞에서 ↑"):format(place, step.place) -- 맵에 놓인 것 앞에서 ↑를 누르는 일
 	elseif step.type == "visit" then

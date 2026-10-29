@@ -13,6 +13,7 @@ local Cash = require(lune.sim.cash)
 local Account = require(lune.sim.account)
 
 local Coupons = require(script.Parent.coupons)
+local Store = require(script.Parent.store)
 
 local CashServer = {}
 local W -- World가 넘겨주는 것: sessionOf(userId) · saveNow(s) · afterSpent(s) · notify(s, key) · now()
@@ -29,6 +30,34 @@ function CashServer.forget(userId: number)
 	pending[userId] = nil
 end
 
+-- ---------- 한정 판매(2026-10-29 사용자: "거인 라이딩 황금으로 해서 한정 20개 판매로 해서 판매하고 다팔리면 안파는식으로") ----------
+--  상품의 stock = 모든 서버를 합쳐 팔 수 있는 수(store.luau의 세계 기록 stock_<상품>). 구매 창을 띄우기 전에 한 개를 잡아 두고(HOLD초) · 결제가 오면 판 것으로 ·
+--  사지 않고 창을 닫으면 놓는다. 남은 수는 STOCK_KEEP초마다 다시 읽어 상점 줄에 보낸다(「남은 n개」 · 다 팔리면 「품절」 — 구매 창을 띄우지 않는다)
+CashServer.HOLD = 600 -- 잡아 두는 시간(초 — 로블록스의 구매 창이 떠 있을 만한 시간 · 제가 정한 것)
+CashServer.STOCK_KEEP = 30
+CashServer.clock = os.time
+local stockLeft = {} -- [상품] = 남은 수(판 수만 뺀다 — 남이 잡아 둔 것은 빼지 않는다)
+local function noteStock(key: string, rec)
+	local p = Cash.product(key)
+	if p and p.stock and typeof(rec) == "table" and typeof(rec.sold) == "number" then
+		stockLeft[key] = math.max(0, p.stock - rec.sold)
+	end
+end
+function CashServer.stocks(): { [string]: number }
+	return stockLeft
+end
+-- 한정 판매하는 상품의 남은 수를 새로 읽는다
+function CashServer.readStocks()
+	for _, p in Cash.PRODUCTS do
+		if p.stock then
+			local ok, read, rec = pcall(Store.stockGet, p.id, CashServer.clock())
+			if ok and read then
+				noteStock(p.id, rec)
+			end
+		end
+	end
+end
+
 -- 결제 하나를 처리한다(로블록스가 부른다 · 테스트와 Studio의 Debug도 같은 길로).
 --  info = { PlayerId, ProductId, PurchaseId, CurrencySpent } · key = 상품(없으면 ProductId로 찾는다)
 function CashServer.processReceipt(info, key: string?)
@@ -43,6 +72,23 @@ function CashServer.processReceipt(info, key: string?)
 		return Decision.NotProcessedYet -- 이 서버에 없거나 계정을 다 읽지 못했다 — 들어올 때 다시
 	end
 	local acct = s.acct
+	local p = Cash.product(k)
+	-- 한정 판매: 잡아 둔 것을 판 것으로 적는다(이미 준 결제 — 로블록스가 다시 보낸 것 — 은 다시 세지 않는다)
+	local took = false
+	if p and p.stock and not Cash.granted(acct.bm, tostring(info.PurchaseId)) then
+		local done, rec = Store.stockTake(k, info.PlayerId, p.stock, CashServer.clock())
+		if not done then
+			return Decision.NotProcessedYet -- 기록에 닿지 못했다 — 로블록스가 다시 보낸다
+		end
+		took = true
+		noteStock(k, rec)
+	end
+	local function untake()
+		if took then
+			local _, rec = Store.stockUntake(k, info.PlayerId, CashServer.clock(), CashServer.HOLD)
+			noteStock(k, rec)
+		end
+	end
 	local before, spentBefore = Cash.pack(acct.bm), acct.spent
 	local ok, why = Cash.grant(acct, k, tostring(info.PurchaseId), W.now(), Account.MAX, s.hero and s.hero.level)
 	if not ok then
@@ -51,6 +97,7 @@ function CashServer.processReceipt(info, key: string?)
 		end
 		acct.bm = Cash.unpack(before, Account.MAX)
 		warn("[Cash] 줄 수 없는 상품", k, why)
+		untake()
 		return Decision.NotProcessedYet
 	end
 	acct.spent += math.max(0, math.floor(tonumber(info.CurrencySpent) or 0))
@@ -62,6 +109,7 @@ function CashServer.processReceipt(info, key: string?)
 	end
 	acct.bm = Cash.unpack(before, Account.MAX)
 	acct.spent = spentBefore
+	untake()
 	return Decision.NotProcessedYet
 end
 
@@ -233,6 +281,19 @@ function CashServer.prompt(s, key: any): (boolean, string?)
 	if not ok then
 		return false, why
 	end
+	-- 한정 판매: 한 개를 잡아 둔 뒤에 구매 창을 띄운다(다 팔렸거나 남은 것을 모두 남이 잡았으면 띄우지 않는다)
+	if p.stock then
+		local held, rec = Store.stockHold(key, uid, p.stock, CashServer.clock(), CashServer.HOLD)
+		noteStock(key, rec)
+		if held == nil then
+			return false, "지금은 남은 수를 확인할 수 없다 — 잠시 뒤에 다시"
+		elseif not held then
+			if typeof(rec) == "table" and rec.sold >= p.stock then
+				return false, Cash.WORDS.soldOut
+			end
+			return false, "남은 것을 다른 분이 결제하는 중이다 — 잠시 뒤에 다시"
+		end
+	end
 	local done, err = pcall(function()
 		if p.kind == "product" then
 			addPending(uid, key, 1)
@@ -246,6 +307,10 @@ function CashServer.prompt(s, key: any): (boolean, string?)
 	if not done then
 		addPending(uid, key, -1)
 		warn("[Cash] 구매 창을 띄우지 못했다", key, err)
+		if p.stock then
+			local _, rec = Store.stockRelease(key, uid, CashServer.clock())
+			noteStock(key, rec)
+		end
 		return false, "구매 창을 띄우지 못했다"
 	end
 	return true
@@ -378,6 +443,12 @@ end
 function CashServer.start(hooks)
 	W = hooks
 	keepPrices() -- 상품의 값을 뒤에서 받아 둔다(상점에 들어갈 때 기다리지 않게 — 2026-10-21)
+	task.spawn(function() -- 한정 판매의 남은 수(2026-10-29)
+		while true do
+			pcall(CashServer.readStocks)
+			task.wait(CashServer.STOCK_KEEP)
+		end
+	end)
 	-- 게임 밖(로블록스 웹)에서 산 게임 패스(2026-10-24): RECHECK초마다 게임에 있는 사람의 가지지 않은 패스를 다시 묻는다
 	task.spawn(function()
 		while true do
@@ -403,6 +474,13 @@ function CashServer.start(hooks)
 		local k = Cash.byRid(productId)
 		if k and not isPurchased then
 			addPending(userId, k, -1)
+			local p = Cash.product(k)
+			if p and p.stock then
+				task.spawn(function() -- 한정 판매: 잡아 둔 것을 놓는다(사지 않았다)
+					local _, rec = Store.stockRelease(k, userId, CashServer.clock())
+					noteStock(k, rec)
+				end)
+			end
 		end
 	end)
 	on(function()

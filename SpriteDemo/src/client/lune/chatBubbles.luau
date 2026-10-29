@@ -45,7 +45,7 @@ local function make(id: any)
 end
 
 function Bubbles.init()
-	root = Stage.group(Overlay.root, "ChatBubbles", 55) -- 대화창(60) 아래
+	root = Stage.group(Overlay.root, "ChatBubbles", 53) -- 대화창(60) 아래 · 장면이 세계를 덮는 층(CineLook 54 · CineLow 55)보다도 아래(2026-10-29 — 전에는 55로 장면의 덮개와 같아 어느 쪽이 위인지 정해지지 않았다)
 	pcall(function()
 		TextChatService.MessageReceived:Connect(function(message: TextChatMessage)
 			local source = message.TextSource

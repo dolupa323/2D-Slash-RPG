@@ -323,7 +323,7 @@ return {
 					kind = "climb",
 					x = 0.606,
 					y = 0.1682,
-					scenes = { "r2c1", "r2c2", "r2c3" },
+					scenes = { "r2c1", "r2c2", "r2c3", "r2c5" },
 				},
 				{
 					id = "r2cl",
@@ -487,7 +487,7 @@ return {
 					kind = "climb",
 					x = 0.366,
 					y = 0.5727,
-					scenes = { "r3b3", "r3b4" },
+					scenes = { "r3b3", "r3b4", "r3b5" },
 				},
 				{
 					id = "r3t",
@@ -1003,6 +1003,7 @@ return {
 		r2c1 = { region = "r2", node = "r2c" },
 		r2c2 = { region = "r2", node = "r2c" },
 		r2c3 = { region = "r2", node = "r2c" },
+		r2c5 = { region = "r2", node = "r2c" },
 		r2cl = { region = "r2", node = "r2cl" },
 		r2c4 = { region = "r2", node = "r2c4" },
 		port = { region = "r3", node = "port" },
@@ -1017,6 +1018,7 @@ return {
 		r3bh = { region = "r3", node = "r3bh" },
 		r3b3 = { region = "r3", node = "r3b" },
 		r3b4 = { region = "r3", node = "r3b" },
+		r3b5 = { region = "r3", node = "r3b" },
 		r3t = { region = "r3", node = "r3t" },
 		r3c1 = { region = "r3", node = "r3c1" },
 		r3c2 = { region = "r3", node = "r3c2" },
@@ -1063,4 +1065,10 @@ return {
 	},
 	kinds = { town = "큰 마을", village = "작은 마을", rest = "쉼터 · 갈림목", hunt = "사냥터", road = "길 맵", climb = "오르는 맵(던전)", dead = "막다른 곳", boss = "보스" },
 	artSize = { w = 384, h = 256 },
+	coach = {
+		name = "역마차",
+		stations = { "town", "r1af", "r1bv", "r1cc", "ct", "r2af", "r2bs", "port", "r3ah", "r3t", "r3cs", "r4bh", "r4ch", "seat", "seaf" },
+		fare = { base = 50, step = 20 },
+		words = { title = "역마차", menu = "{name} · 달돈 {n}", more = "다른 정류장 보기", none = "이 땅에는 갈 정류장이 없다네.", ask = "{name}까지 달돈 {n}이네. 가겠나?", board = "탄다", notHere = "마부 곁에서 탄다", far = "배로 가야 하는 곳이다", poor = "달돈이 모자란다", done = "{name}에 닿았다", busy = "지금은 탈 수 없다" },
+	},
 }

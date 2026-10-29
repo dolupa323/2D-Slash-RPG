@@ -85,7 +85,7 @@ function PartyHud.ask(ask)
 	Ui.text(panel, ask.name, a.pad, 12, a.w - a.pad * 2, { font = "body", color = C.gold })
 	Ui.text(panel, PartyHud.ASK_TEXT, a.pad, 32, a.w - a.pad * 2)
 	local bw = math.floor((a.w - a.pad * 2 - 8) / 2)
-	Ui.button(panel, "받기", a.pad, 52, bw, function()
+	Ui.button(panel, "수락", a.pad, 52, bw, function()
 		PartyHud.send("Party", "accept")
 		PartyHud.ask(nil)
 	end, { main = true }).frame.Name = "Accept"

@@ -28,6 +28,9 @@ local floor, max, min, abs, sqrt, sin = math.floor, math.max, math.min, math.abs
 local SUB = 1 / 60 -- 한 걸음을 이보다 잘게 나눠 돌린다(빠르게 날아가는 것이 적을 건너뛰지 않게)
 local GRACE = 0.3 -- 구간이 제 시간을 다 쓴 뒤 다음 구간의 알림을 기다리는 시간(초)
 local EARLY = 0.15 -- 화면의 시계가 이만큼 앞서 있어도 받는다(초)
+-- 모으는 구간의 「뗐다」를 서버가 그 구간을 닫은 뒤에도 기다리는 시간(초 — 보통 구간은 0.2). 끝까지 모으면 서버는 GRACE 뒤에 구간을 닫는데,
+--  화면이 멈칫하면(한 화면에 STEP 5걸음까지만 따라잡는다 — boot.luau) · 네트워크가 흔들리면 화면의 「뗐다」가 그보다 늦게 온다(2026-10-29 제보 — 아래 begin)
+local LATE_CHARGE = 1.0
 local BIG_W = 12 -- 센 타격으로 치는 몫(시험 탭: 12 넘는 피해는 직업의 밝은 색으로 뜬다)
 local PULL = 1 / 3.9 -- 시험 탭의 끌어당기는 빠르기(도트/초 — 0.02^t로 줄어든다)를 옮겨지는 거리로 바꾼다(1 / ln 50)
 local TRIALS = 10 -- 재 볼 때 쓰는 횟수(다섯 번째마다 터지는 것 같은 것까지 고르게 든다)
@@ -77,7 +80,7 @@ local function chargeOf(hero, s): (number, number)
 	if not core.bonus or (hero.skills[core.id] or 0) < 1 then
 		return s.per or RULE.charge, 0
 	end
-	return s.per or RULE.charge, Kit.chargeLevels(hero) -- 깊은 호흡(3차)을 배우면 3단계
+	return (s.per or RULE.charge) * (1 - Kit.chargeCut(hero)), Kit.chargeLevels(hero) -- 깊은 호흡(3차)을 배우면 3단계 · 만근(4차) 4단계 · 전투 호흡이면 빨리 모인다(2026-10-28)
 end
 Caster.chargeOf = chargeOf
 
@@ -166,6 +169,7 @@ function Caster:enter(a)
 			m.mark = if aliveMob(m) then self.room:marksOf(a.hero, m) else 0 -- 깊은 표식을 배웠으면 셋까지 겹친다
 			m.markT = max(0, till - now)
 			m.markWas = m.mark
+			m.markSeen = m.markAt and m.markAt[id] or 0 -- 묶음에 비춰 준 표식의 차례(Room:mark)
 		end
 	end
 end
@@ -174,13 +178,16 @@ function Caster:leave(a)
 	local hero, room = a.hero, self.room
 	if hero.class == "riven" then
 		for _, m in room.mobs do
-			if (m.markWas or 0) > 0 and m.mark <= 0 and m.marks then
-				m.marks[hero.id] = nil -- 묶음이 표식을 태웠다(터뜨렸다)
+			-- 묶음이 표식을 태웠다(터뜨렸다). 다만 묶음이 본 뒤에 새로 남은 표식(터뜨린 타에 붙은 그림자 표창 — room.luau kitAfter)은 지우지 않는다:
+			--  2026-10-29 사용자 제보 "연막순보를 썼을때 표식을 모두 터트리지만 표식이 남아있다고 표시되는 경우 … 다시 연막순보를 쓰면 표식이 터지는 이펙트는 있지만 데미지는 안들어갑니다" —
+			--  전에는 새 표식도 함께 지웠다(화면은 그 표창의 맞은 기록으로 표식을 받아 띄웠고, 다음 순보는 화면에서만 터졌다)
+			if (m.markWas or 0) > 0 and m.mark <= 0 and m.marks and (m.markAt and m.markAt[hero.id] or 0) == (m.markSeen or 0) then
+				m.marks[hero.id] = nil
 				if m.markN then
 					m.markN[hero.id] = nil
 				end
 			end
-			m.mark, m.markWas = 0, nil
+			m.mark, m.markWas, m.markSeen = 0, nil, nil
 		end
 	elseif hero.class == "mooni" then
 		for i = #room.crystals, 1, -1 do
@@ -219,14 +226,30 @@ local function castScale(lv: number, max: number): number
 end
 Caster.scale = castScale
 
--- 그 스킬의 몫 1의 세기(전투력에 곱한다). lv = 모은 단계
+-- 그 스킬의 힘을 모으는 구간의 한 단계 시간(전투 호흡을 빼기 전 — 모으는 구간이 없으면 0)
+local PER = {}
+local function perOf(id: string): number
+	if PER[id] == nil then
+		local per = 0
+		local sk = Kitset.skill(id)
+		for _, s in if sk then sk.segs or {} else {} do
+			if s.charge then
+				per = s.per or RULE.charge
+				break
+			end
+		end
+		PER[id] = per
+	end
+	return PER[id]
+end
+
+-- 그 스킬의 몫 1의 세기(전투력에 곱한다). lv = 모은 단계 — 모은 한 방은 모은 시간만큼 커지고 단계마다 초당 피해 +(Kit.chargeMul · 2026-10-28)
 local function unitOf(hero, id: string, lv: number): number
 	local def = CAST[id]
 	local base = Caster.profile(id, 0)
 	local p = if lv > 0 then Caster.profile(id, lv) else base
 	local scale = castScale(hero.skills[id] or 0, def.max)
-	local core = KIT[hero.class].core
-	local charge = if lv > 0 and core.bonus then 1 + lv * Kit.chargeBonus(hero.skills[core.id] or 0, COMBAT.kitSkill[core.id].max) else 1
+	local charge = if lv > 0 then Kit.chargeMul(hero, lv, base.time, perOf(id)) else 1
 	return def.rate * (base.time + def.cdTime) * scale * charge / p.w
 end
 
@@ -241,7 +264,8 @@ end
 
 function Caster:context(a, id: string, lv: number, mates)
 	local def = CAST[id]
-	return { id = id, lv = lv, kind = if def.type == "mob" or def.type == "boss" then def.type else nil, unit = if self.probe then 1 else unitOf(a.hero, id, lv), lines = if self.probe then 1 else Caster.lines(id), mates = mates }
+	-- 모아 친 한 방(모은 단계 1 이상 — 액시온)은 피해 숫자 한 줄(2026-10-28 사용자: "딜도 단일타수로 빵 뜨고" → 고르심 「모은 한 방만 한 숫자」)
+	return { id = id, lv = lv, kind = if def.type == "mob" or def.type == "boss" then def.type else nil, unit = if self.probe then 1 else unitOf(a.hero, id, lv), lines = if self.probe or lv > 0 then 1 else Caster.lines(id), mates = mates }
 end
 
 -- 졸개 하나에게 몫 w의 타. 맞았으면 true(landed에 적는다)
@@ -307,6 +331,7 @@ function Caster:strike(a, m, w: number, o, landed): boolean
 			local surge = Passives.get(hero, "surge")
 			if surge then
 				hero.pass.surge = room.time + surge.surge
+				a.out.kit = true -- 내 상태를 다시 보낸다(화면이 넘치는 힘의 남은 시간을 안다)
 			end
 		end
 	end
@@ -321,13 +346,14 @@ function Caster:follow(a, landed, o)
 	end
 	local hero, room = a.hero, self.room
 	local power = Hero.powerRaw(hero) * Kit.attack(hero) * Buffs.dmg(hero) * Passives.atk(hero)
-	room:kitAfter(hero, landed, hero.x, hero.y, nil, power, a.ctx.mates, a.out, { mark = o.mark == true })
+	room:kitAfter(hero, landed, hero.x, hero.y, nil, power, a.ctx.mates, a.out, { mark = o.mark == true, charge = a.ctx.lv or 0 }) -- charge = 모은 단계(액시온의 메아리 도끼는 끝까지 모은 타에만 — 2026-10-28)
 	if o.mark and hero.class == "riven" then
 		for _, l in landed do
 			local m = l.mob
 			local n = room:marksOf(hero, m)
 			if n > 0 then
 				m.mark, m.markWas = n, n -- 방금 남긴 표식(묶음이 이어서 읽는다)
+				m.markSeen = m.markAt and m.markAt[hero.id] or 0
 			end
 		end
 	end
@@ -706,7 +732,7 @@ local function endSkill(self, a)
 	local sk = a.skill
 	if sk then
 		closeSeg(self, a)
-		a.last = { id = sk.id, i = sk.i, at = self.room.time, ctx = sk.ctx }
+		a.last = { id = sk.id, i = sk.i, at = self.room.time, ctx = sk.ctx, t = sk.t } -- t = 그 구간에서 흐른 시간(모으는 구간이면 모은 단계를 이것으로 센다)
 		if a.skill == sk then
 			a.skill = nil
 		end
@@ -759,28 +785,35 @@ function Caster:begin(hero, id: string, seg: number, mates, info): (boolean, num
 		ctx.fallen = info and info.fallen
 	else
 		local prev = skill.segs[seg - 1]
+		local held = nil -- 앞 구간(모으는 구간)에서 흐른 시간 — 서버의 시계
 		if cur and cur.id == id and cur.i == seg - 1 then
 			if cur.t < cur.need - EARLY then
 				return false, nil -- 앞 구간이 아직 한창이다
 			end
-			if prev.charge then
-				-- 모은 단계는 서버가 흐른 시간으로 셈한다(화면이 말한 단계를 믿지 않는다). 만월 동안에는 모으지 않아도 끝까지 모은 것으로 친다
-				local per, levels = chargeOf(hero, prev)
-				lv = if Buffs.full(hero) then levels else math.clamp(floor((cur.t - segTime(hero.class, prev)) / per + 0.08), 0, levels)
-				-- 넘치는 힘(액시온 4차): 끝까지 모은 강타를 맞힌 직후에는 모으지 않아도 높은 단계에서 시작한다(한 번 쓰면 사라진다)
-				local surge = Passives.get(hero, "surge")
-				if surge and levels > 0 and hero.pass.surge > self.room.time and lv < surge.surgeFrom then
-					lv = min(surge.surgeFrom, levels)
-					hero.pass.surge = -1e9
-					surged = true
-				end
-			end
+			held = cur.t
 			ctx = cur.ctx
 			closeSeg(self, a)
-		elseif not cur and a.last and a.last.id == id and a.last.i == seg - 1 and self.room.time - a.last.at <= GRACE + 0.2 then
+		elseif not cur and a.last and a.last.id == id and a.last.i == seg - 1 and self.room.time - a.last.at <= GRACE + (if prev.charge then LATE_CHARGE else 0.2) then
 			ctx = a.last.ctx -- 앞 구간이 막 끝났다(알림이 조금 늦었다)
+			held = a.last.t
 		else
 			return false, nil
+		end
+		if prev.charge and held then
+			-- 모은 단계는 서버가 흐른 시간으로 셈한다(화면이 말한 단계를 믿지 않는다). 만월 동안에는 모으지 않아도 끝까지 모은 것으로 친다
+			--  2026-10-29 사용자 제보(초승달 가르기를 전투 호흡을 건 채 끝까지 모아 쓰면 이펙트는 나가는데 피해가 없다 — 곡괭이 코볼트 맵 왼쪽 끝의 벽에 붙어서):
+			--  전에는 끝까지 모아 서버가 구간을 닫은 뒤(GRACE) 「뗐다」가 오면 위의 둘째 길로 가서 단계를 0으로 셌다 — 0단계 초승달은 낮게(발 위 11도트) 날아가
+			--  바로 앞의 한 칸 높이 바위에 부딪혀 사라졌고, 화면은 4단계(높이 떠서 바위를 넘는 것)를 그렸다. 이제 닫힌 구간도 그 구간에서 흐른 시간(끝까지 = 다 모은 단계)으로 센다
+			local per, levels = chargeOf(hero, prev)
+			-- 넘치는 힘(액시온 4차): 끝까지 모은 강타를 맞힌 직후(3초)의 강타는 2단계에서 모으기 시작한다(한 번 쓰면 사라진다 — world.luau의 1차와 같다 · 2026-10-28: 전에는 「적어도 2단계」라 누르고 있으면 이득이 없었다)
+			local surge = Passives.get(hero, "surge")
+			local from = 0
+			if surge and levels > 0 and not Buffs.full(hero) and hero.pass.surge > self.room.time then
+				from = surge.surgeFrom
+				hero.pass.surge = -1e9
+				surged = true
+			end
+			lv = if Buffs.full(hero) then levels else math.clamp(floor(max(0, held - segTime(hero.class, prev)) / per + 0.08) + from, 0, levels)
 		end
 		if lv > 0 or not ctx then
 			ctx = self:context(a, id, lv, mates)

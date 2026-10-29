@@ -531,6 +531,29 @@ function Bag.dismantle(h, id: any): (number?, string?)
 	return dust
 end
 
+-- 물약 · 귀환 주문서를 분해한다(2026-10-27): 그 탭의 그 칸에서 n개 → 받은 달가루(못 했으면 nil · 까닭). 받는 달가루가 0이면 하지 않는다(작은 물약은 14개부터)
+function Bag.dismantleGoods(h, tab: any, slot: any, n: any): (number?, string?)
+	if (tab ~= "use" and tab ~= "etc") or not whole(slot, 1, Bag.size(h)) or not whole(n, 1, 1e6) then
+		return nil, "가방에 없는 물건이다"
+	end
+	local s = h[tab][slot]
+	if not s or s.n < n then
+		return nil, "가진 것이 모자란다"
+	end
+	local dust = Items.goodsDust(s.item, n)
+	if dust == nil then
+		return nil, "분해할 수 없는 물건이다"
+	elseif dust < 1 then
+		return nil, "더 많이 분해해야 달가루가 나온다"
+	end
+	s.n -= n
+	if s.n <= 0 then
+		h[tab][slot] = false
+	end
+	h.dust += dust
+	return dust
+end
+
 -- 여러 개 분해(2026-10-22 사용자: "장비 분해를 한번에 여러개 할수있게 해달라"): ids = 장비 번호들 → 받은 달가루 · 분해한 수(가방에 없는 것 · 겹친 것은 건너뛴다 · 하나도 없으면 nil · 까닭)
 Bag.BULK_MAX = 200
 function Bag.dismantleMany(h, ids: any): (number?, string?, number?)
@@ -811,14 +834,14 @@ end
 
 -- ---------- 저장 ----------
 local function packItem(it)
-	return { it.slot, it.stage, it.q, it.star, it.who or "", it.fails or 0, if it.broken then 1 else 0 }
+	return { it.slot, it.stage, it.q, it.star, it.who or "", it.fails or 0, if it.broken then 1 else 0, it.u } -- 8째 = 이름표(보스의 이름 붙은 장비 — 2026-10-27 · 없으면 비운다)
 end
 
 local function unpackItem(row: any)
 	if typeof(row) ~= "table" then
 		return nil
 	end
-	local it = { slot = row[1], stage = row[2], q = row[3], star = row[4], who = if row[5] ~= "" then row[5] else nil, fails = row[6], broken = row[7] == 1 }
+	local it = { slot = row[1], stage = row[2], q = row[3], star = row[4], who = if row[5] ~= "" then row[5] else nil, fails = row[6], broken = row[7] == 1, u = if typeof(row[8]) == "string" then row[8] else nil }
 	-- 별이 그 단계의 상한을 넘으면(설계의 상한이 줄었다) 장비를 버리지 않고 상한으로 맞춘다(2026-10-18 검토)
 	if typeof(it.stage) == "number" and it.stage >= 1 and it.stage <= 200 and typeof(it.star) == "number" and it.star > Items.starCap(it.stage) then
 		it.star = Items.starCap(it.stage)
@@ -993,7 +1016,7 @@ end
 
 -- ---------- 클라이언트에 보내는 것 ----------
 local function viewItem(it)
-	return { id = it.id, slot = it.slot, stage = it.stage, q = it.q, star = it.star, who = it.who, broken = it.broken, fails = it.fails or 0 }
+	return { id = it.id, slot = it.slot, stage = it.stage, q = it.q, star = it.star, who = it.who, broken = it.broken, fails = it.fails or 0, u = it.u }
 end
 
 -- 칸들을 보낼 꼴로(길이 size — 빈 칸은 false)

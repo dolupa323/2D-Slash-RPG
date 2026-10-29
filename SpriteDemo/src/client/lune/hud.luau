@@ -251,6 +251,8 @@ function Hud.setSlots(list)
 		slot.count:color(if slot.item and n == 0 then C.red else C.text)
 		if slot.id then
 			Hud.byId[slot.id] = slot
+		elseif slot.item and Quick.isPotion(slot.item) then
+			Hud.byId[slot.item] = slot -- 물약도 다시 마시기까지가 덮인다(2026-10-27 사용자 "포션 … 3초 쿨타임")
 		end
 		if what and Layout.slotCell(i) == 2 then
 			Hud.top = true -- 윗줄에 놓인 것이 있다
@@ -613,13 +615,23 @@ end
 function Hud.setTouch(on: boolean)
 	Hud.touch = on
 	local v = if on and UI.hudTouch.vitals then UI.hudTouch.vitals else UI.hud.vitals
-	Hud.vitalsBox.Position = Stage.atPosition(v.at, v.x, v.y)
+	local vx = if on and Hud.legacy and UI.touchOld then UI.touchOld.vitalsX else v.x -- 예전 배치(2026-10-28)의 체력 막대 자리
+	Hud.vitalsBox.Position = Stage.atPosition(v.at, vx, v.y)
 	-- 버프 자리: 스마트폰에서는 오른쪽 위의 「메뉴」 단추만큼 왼쪽으로
 	local bf = if on and UI.hudTouch.buffs then UI.hudTouch.buffs else UI.hud.buffs
 	Hud.buffRoot.Position = Stage.atPosition(bf.at, bf.x, bf.y)
 	Hud.skillRoot.Visible = not on and not Hud.locked
 	for _, item in Hud.menu or {} do
 		item.frame.Visible = not on
+	end
+end
+
+-- 폰 단추 배치(2026-10-28 — 게임 설정 창): 예전 배치면 체력 막대도 그때의 자리로
+Hud.legacy = false
+function Hud.setLegacy(on: boolean)
+	Hud.legacy = on == true
+	if Hud.touch and Hud.vitalsBox then
+		Hud.setTouch(true)
 	end
 end
 

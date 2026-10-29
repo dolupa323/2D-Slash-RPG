@@ -207,7 +207,8 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	nameOwner = function(key) return names[key] end,
 	claimName = function(key, id) names[key] = id; return true end,
 	freeName = function(key) names[key] = nil end,
-	rankSet = function() end, rankRemove = function() end, rankTop = function() return {} end,
+	rankSet = function() end,
+	rankRaise = function() end, rankRemove = function() end, rankTop = function() return {} end,
 	rankInfoSet = function() end, rankInfoGet = function() return nil end, rankInfoRemove = function() end,
 	isOffline = function() return false end,
 	marketRead = function() return true, nil end,
@@ -256,6 +257,38 @@ do
 	handlers.Skill(p, "ax_combo", 1, s.hero.x, s.hero.y, 1)
 	expect(s.skill == nil, "문제가 떠 있는 동안 스킬을 받지 않는다")
 end
+-- 2026-10-28 사용자 "현재 매크로 방지문제가 뜨면 그걸 푸는동안 죽어버려 방지문제를 푸는동안은 무적이여야해": 몬스터 한가운데 체력 1로 20초를 서 있어도 쓰러지지 않는다
+do
+	local room = World.room(s.scene)
+	local mob = nil
+	for _, m in room.mobs do
+		if not m.afk and not m.away then
+			mob = m
+			break
+		end
+	end
+	local hp0 = s.hero.hp
+	s.hero.hp, s.hero.invuln = 1, 0
+	local hurt = 0
+	for _ = 1, 400 do
+		if mob then
+			s.hero.x, s.hero.y = mob.x, mob.y -- 몬스터에 붙어 있다
+		end
+		World.tick(1 / 20)
+		if s.hero.hp < 1 or not s.hero.alive then
+			hurt += 1
+		end
+	end
+	expect(s.hero.alive and s.hero.hp == 1, "문제가 떠 있는 동안 몬스터 곁에 20초 서 있어도 맞지 않는다")
+	local chasing = 0
+	for _, m in room.mobs do
+		if m.target == s.hero.id and (m.state == "atk" or m.state == "run") then
+			chasing += 1
+		end
+	end
+	eq(chasing, 0, "문제를 푸는 동안 몬스터가 노리지 않는다")
+	s.hero.hp = hp0
+end
 if check then
 	local wrong = {}
 	for i, cell in check.cells do
@@ -268,6 +301,7 @@ if check then
 	end
 	expect(s.macro.saved.stopped and s.acct.macro.stopped, "세 번 틀리면 보상 멈춤(계정에 남는다)")
 	expect(s.hero.noReward == true and not s.hero.inCheck, "보상 멈춤: 보상 없음 · 맞기는 한다")
+	expect(s.hero.invuln >= 2.9, ("놓쳐 문제가 닫힌 뒤에도 3초 맞지 않는다(%.1f초 — 2026-10-28)"):format(s.hero.invuln))
 	local again = handlers.Macro(p, "again")
 	expect(again and again.check ~= nil, "첫 놓침은 「다시 확인」으로 곧바로 새 문제")
 	if again and again.check then
@@ -277,8 +311,10 @@ if check then
 				table.insert(right, i)
 			end
 		end
+		s.hero.invuln = 0
 		local r = handlers.Macro(p, "answer", again.check.token, right)
 		expect(r and r.result == "pass" and not r.stopped, "맞히면 통과 · 보상 멈춤이 풀린다")
+		expect(s.hero.invuln >= 2.9, ("통과해 문제가 닫힌 뒤 3초 맞지 않는다(%.1f초 — 둘러싼 몬스터에게 바로 쓰러지지 않게)"):format(s.hero.invuln))
 		World.tick(1.1)
 		expect(not s.hero.noReward and not s.hero.inCheck, "통과한 뒤에는 보상 · 맞기가 그대로")
 	end
@@ -345,6 +381,10 @@ do
 			a.hero.x, a.hero.y, a.hero.dir = foe.x - 16, foe.y, 1
 			handlers.Move(pa, a.hero.x, a.hero.y, 1)
 			handlers.Skill(pa, "ax_combo", 1, a.hero.x, a.hero.y, 1)
+			for _ = 1, 5 do
+				World.tick(1 / 20) -- 도끼 내려찍기(2026-10-28 액시온 리마스터): 모으는 구간 뒤에 내려찍는 구간을 보낸다
+			end
+			handlers.Skill(pa, "ax_combo", 2, a.hero.x, a.hero.y, 1)
 		end
 		for _ = 1, 12 do
 			World.tick(1 / 20)

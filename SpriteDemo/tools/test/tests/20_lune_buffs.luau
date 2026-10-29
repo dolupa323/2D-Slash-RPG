@@ -9,6 +9,7 @@ local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
 local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
 local Room = req("ReplicatedStorage/shared/lune/sim/room")
 local Buffs = req("ReplicatedStorage/shared/lune/sim/buffs")
+local Kit = req("ReplicatedStorage/shared/lune/sim/kit")
 local FLOOR = CLASSES.skillRule.floor
 local BUFF = COMBAT.buffs
 
@@ -67,16 +68,25 @@ end
 
 -- ---- 2) 걸기 · 세기 · 다시 쓰기 · 사라지기 ----
 do
+	-- 액시온 「전투 호흡」(2026-10-28 리마스터): 공격 속도가 아니라 힘이 모이는 시간 −25%
 	local h = hero("axion")
 	eq(Buffs.cast(h, "ax_breath", 0), nil, "배우지 않은 버프는 걸리지 않는다")
-	eq(Buffs.haste(h), 1, "버프가 없으면 공격 속도 그대로")
+	eq(Kit.chargeCut(h), 0, "버프가 없으면 모으는 시간 그대로")
 	h.skills.ax_breath = 1
 	near(Buffs.cast(h, "ax_breath", 0) or 0, FLOOR, 1e-6, "레벨 1의 세기")
 	expect(Buffs.has(h, "ax_breath"), "걸렸다")
-	near(Buffs.haste(h), 1 + BUFF.ax_breath.fx.haste * FLOOR, 1e-6, "레벨 1: 공격 속도 +10%")
+	eq(Buffs.haste(h), 1, "전투 호흡은 공격 속도를 올리지 않는다")
+	near(Kit.chargeCut(h), BUFF.ax_breath.fx.chargeCut * FLOOR, 1e-6, "레벨 1: 모으는 시간 −")
 	h.skills.ax_breath = BUFF.ax_breath.max
 	Buffs.cast(h, "ax_breath", 1)
-	near(Buffs.haste(h), 1.25, 1e-6, "마스터: 공격 속도 +25%")
+	near(Kit.chargeCut(h), 0.25, 1e-6, "마스터: 모으는 시간 −25%")
+	h.skills.ax_charge = 1
+	near(Kit.chargeTime(h, "ax_slam"), COMBAT.kit.axion.core.per.ax_slam * 0.75 * Kit.chargeLevels(h), 1e-6, "마스터: 대지 강타를 끝까지 모으는 시간이 0.75배")
+	eq(Kit.chargeCut({ class = "axion", skills = {}, chargeCut = 0.25 }), 0.25, "화면의 영웅(버프 목록이 없다)은 서버가 준 몫")
+	-- 공격 속도 버프(리븐의 rv_quick)
+	local rv = hero("riven", { rv_quick = BUFF.rv_quick.max })
+	Buffs.cast(rv, "rv_quick", 1)
+	near(Buffs.haste(rv), 1 + BUFF.rv_quick.fx.haste, 1e-6, "마스터: 공격 속도 +25%")
 	-- 남의 직업의 버프 · 없는 것
 	h.skills.rv_quick = 10
 	eq(Buffs.cast(h, "rv_quick", 2), nil, "남의 직업의 버프")
@@ -99,7 +109,7 @@ do
 		end
 	end
 	eq(#ended, 2, "60초가 지나면 둘 다 사라진다")
-	eq(Buffs.haste(h), 1, "사라지면 공격 속도도 돌아온다")
+	eq(Kit.chargeCut(h), 0, "사라지면 모으는 시간도 돌아온다")
 	-- 다시 쓰기(극딜 120초)
 	h.skills.ax_fullmoon = 20
 	expect(Buffs.cast(h, "ax_fullmoon", 100) ~= nil, "만월을 건다")

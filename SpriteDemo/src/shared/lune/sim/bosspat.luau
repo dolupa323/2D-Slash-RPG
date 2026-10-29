@@ -22,10 +22,18 @@ end
 -- 표시된 자리들(spots): { { x, wait } … } — wait = 예고가 끝난 뒤 그 자리가 터지기까지 더 기다리는 시간(초)
 --  aim = 'grid': 방 전체에 gap 간격 — 짝수 자리는 바로, 홀수 자리는 lag초 뒤(두 번에 나눠 터진다. 자리를 바꿔 서서 피한다)
 --  aim = 'hero': 겨눈 사람의 발밑(aim — 방 안으로 당긴다)과 그 좌우 spread 간격으로 n곳 — 하나씩 0.07초 간격으로 떨어진다
-function BossPat.spots(p, aim: number, lo: number, hi: number): { { number } }
+--  aim = 'row': 보스(from)의 앞(dir)으로 start에서 gap 간격으로 n곳 — 가까운 것부터 lag초씩 늦게 터진다(폭탄 깔기 — 불씨 도둑 두목 2026-10-28 · 터진 자리로 건너간다)
+function BossPat.spots(p, aim: number, lo: number, hi: number, from: number?, dir: number?): { { number } }
 	local sp = p.spots
 	local list = {}
-	if sp.aim == "grid" then
+	if sp.aim == "row" then
+		for i = 0, sp.n - 1 do
+			local x = (from or aim) + (dir or 1) * (sp.start + i * sp.gap)
+			if x > lo + sp.r and x < hi - sp.r then
+				table.insert(list, { x, i * sp.lag })
+			end
+		end
+	elseif sp.aim == "grid" then
 		local x, n = lo + sp.gap / 2, 0
 		while x <= hi - sp.r do
 			table.insert(list, { x, if n % 2 == 1 then sp.lag else 0 })
@@ -58,8 +66,12 @@ function BossPat.leapAlt(p, t: number): number
 end
 
 -- 도약이 내려앉는 자리(몸의 가운데): 겨눈 자리 aim에서 돌망치가 떨어지는 거리(leap.aim)만큼 못 미친 데 — 보스가 움직이는 범위 [a, b] 안. 보는 쪽도 돌려준다
+--  leap.back(2026-10-27 그림자 사수 「물러서기」): 겨눈 자리에서 멀어지는 쪽으로 back만큼(보는 쪽은 겨눈 쪽 그대로 — 내려앉아 곧바로 쏜다)
 function BossPat.leapTo(p, x: number, dir: number, aim: number, a: number, b: number): (number, number)
 	local d = if aim > x then 1 elseif aim < x then -1 else dir
+	if p.leap.back then
+		return math.clamp(x - d * p.leap.back, a, b), d
+	end
 	return math.clamp(aim - d * p.leap.aim, a, b), d
 end
 

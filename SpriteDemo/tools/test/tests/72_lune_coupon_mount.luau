@@ -16,7 +16,7 @@ local book = nil
 for _, m in RIDE.mounts do
 	if m.id == "mount_book" then
 		book = m
-	elseif not m.free and m.id ~= "mount_golem" then -- (거대 탈것 「이끼 골렘」은 일부러 느리다 — speed 0.6 · 2026-10-22 · 시험 80)
+	elseif not m.free and not string.find(m.id, "^mount_golem") then -- (거대 탈것 「이끼 골렘」 · 「황금 골렘」(2026-10-29)은 일부러 느리다 — speed 0.6 · 2026-10-22 · 시험 80)
 		expect(m.speed == nil, m.id .. ": 유료 탈것은 따로 빠르기를 적지 않는다(mountSpeed)")
 	end
 end
@@ -131,6 +131,7 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	end,
 	freeName = function(key) names[key] = nil end,
 	rankSet = function() end,
+	rankRaise = function() end,
 	rankRemove = function() end,
 	rankTop = function() return {} end,
 	rankInfoSet = function() end,

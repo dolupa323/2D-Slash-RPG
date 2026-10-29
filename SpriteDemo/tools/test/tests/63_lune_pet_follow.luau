@@ -163,6 +163,27 @@ run(rv, 4, 700, MESA, 1, false, false)
 eq(last.y, MESA, "⑥ 턱을 뛰어 올라 대지 위에 선다")
 expect(math.abs(last.x - (700 - P.behind)) <= 3, ("⑥ 대지 위 영웅의 뒤 %d점(실제 %d)"):format(P.behind, 700 - last.x))
 
+-- ⑥-2(2026-10-28 사용자 "무료펫 상하 단차를 조금더 수월하게 움직이게하자 지금 언덕을 잘 못넘어"): 한 칸(16점) 턱은 뛰지 않고 걸어 오른다 · 웅크려 멈추지 않는다
+rv = fresh(560, GROUND, 1)
+local airT, stopT = 0, 0
+local px0 = rv.body.x
+for _ = 1, math.floor(2.5 / DT + 0.5) do
+	now += DT
+	local bx = rv.body.x
+	rv:update(now, DT, 760, MESA, 1, true, false, false)
+	if not rv.body.ground then
+		airT += DT
+	end
+	if rv.body.x <= bx and rv.body.x < 760 - P.behind - 3 then
+		stopT += DT
+	end
+end
+eq(rv.body.y, MESA, "⑥-2 한 칸 턱 위로 올라섰다")
+eq(airT, 0, "⑥-2 뛰지 않고 걸어 올랐다(공중에 뜬 시간 0)")
+eq(rv.warps, 1, "⑥-2 순간 이동하지 않았다(처음 꺼낼 때 한 번뿐 — 전에는 턱 앞을 낭떠러지로 읽어 1.2초 서 있다가 순간 이동했다)")
+expect(rv.body.x > px0 + 100 and stopT < 0.1, ("⑥-2 턱 앞에서 멈칫하지 않았다(멈춘 시간 %.2f초)"):format(stopT))
+expect(P.stepUp ~= nil and P.stepUp >= 16 and P.stepUp < 32 and P.windup <= 0.1, "걸어 오르는 높이 = 한 칸 · 더 높은 턱 앞의 웅크림은 짧게")
+
 -- ⑦ 영웅이 위 얇은 발판(윗면 128 — 48점 위)에: 펫은 땅에서 기다린다(순간 이동 안 함)
 rv = fresh(120, GROUND, 1)
 local w0 = rv.warps

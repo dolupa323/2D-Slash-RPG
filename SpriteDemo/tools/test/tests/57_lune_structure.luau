@@ -281,8 +281,11 @@ do
 	local sc = SCENES.scenes.r2a1
 	expect(sc.elite == true, "성문 밖 숲길에는 나온다")
 	local room = Room.new("r2a1", sc, Random.new(3))
-	eq(#room.mobs, #sc.mobs + 1, "몬스터 목록 끝에 정예의 자리 하나(번호가 바뀌지 않게)")
-	local slot = room.mobs[#room.mobs]
+	-- (2026-10-28부터 그 뒤에 잠수 방지 날파리의 자리가 붙는다 — 정예의 자리는 장면의 몬스터 바로 다음)
+	local flies = if Room.huntRoom(sc) then COMBAT.afk.slots else 0
+	eq(#room.mobs, #sc.mobs + 1 + flies, "몬스터 목록 끝에 정예의 자리 하나(번호가 바뀌지 않게) + 날파리의 자리")
+	local slot = room.mobs[#sc.mobs + 1]
+	eq(room.eliteSlot, slot, "정예의 자리 = 장면의 몬스터 바로 다음")
 	expect(slot.fieldElite and slot.elite and slot.away and slot.state == "gone", "처음에는 없다")
 	local plain = room.mobs[1]
 	eq(slot.kind, plain.kind, "그 맵의 몬스터")

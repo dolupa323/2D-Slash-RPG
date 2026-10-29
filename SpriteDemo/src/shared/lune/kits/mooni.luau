@@ -11,6 +11,7 @@ local Common = require(script.Parent.common)
 local crescentPts, starPts, poly, line, disc, drawCrystal, polyIn = Fx.crescentPts, Fx.starPts, Fx.poly, Fx.line, Fx.disc, Fx.drawCrystal, Fx.polyIn
 local dash, buff, distSeg = Common.dash, Common.buff, Common.distSeg
 local floor, sin, cos, min, max, abs, sqrt, atan2, PI = math.floor, math.sin, math.cos, math.min, math.max, math.abs, math.sqrt, math.atan2, math.pi
+local SIDES = { -1, 1 } -- 왼쪽 · 오른쪽(공명 폭발의 수정 가시)
 local function R(v: number): number
 	return floor(v + 0.5)
 end
@@ -687,23 +688,25 @@ local skills = {
 		end
 		g.heal(1) -- 나와 가까운 파티원의 체력을 되돌린다(세기는 서버가 정한다)
 	end } } } },
-	{ id = "mn_burst", key = "E", shot = 0.56, segs = { { clip = "spin", fps = 16, ev = { [6] = function(g) -- 수정마다 육각으로 퍼지는 파편 고리. 금 간 수정은 한 번 더 터지면 사라진다
-		local cs, tone = crystals(g), g.tone
-		if #cs == 0 then
-			g.fx.hex(g.x, g.y - 8, 4, 30, tone, { squash = 1, back = false })
-			g.hitAt(g.x, g.y, 34, 40, 5, {})
-			return
+	-- 공명 폭발(3차 사냥기) — 2026-10-26 고침(사용자 "무니 3차 만들어봐" · 플레이어 의견 "3차 사냥기가 수정을 파괴하는 방식이라 수정에 기대는 무니 특성과 역시너지"):
+	--  전에는 수정 자리에서만 터지고(그 타는 수정에서 나간 타라 수정을 맺지 못했다) 두 번 터지면 수정이 사라져, 30초 이어 쓰면 2차 달빛 파도의 1/3이었다.
+	--  이제는 대검으로 내 둘레(앞뒤 64도트)를 직접 친다 — 이 타가 맞으면 수정이 맺힌다. 맺혀 있는 수정도 모두 함께 터지고(수정마다 6), 수정은 깨지지 않는다(달빛 파도와 같은 고리 — 쓸수록 수정이 쌓인다)
+	{ id = "mn_burst", key = "E", shot = 0.56, segs = { { clip = "spin", fps = 16, ev = { [6] = function(g) -- 발밑의 육각 섬광 · 땅을 따라 번지는 납작한 육각 · 바깥으로 차례로 솟는 수정 가시 · 수정마다 육각 파편 고리
+		local tone = g.tone
+		g.fx.hex(g.x, g.y - 8, 4, 34, tone, { squash = 1, back = false })
+		g.fx.hex(g.x, g.y, 5, 64, tone, { squash = 0.25, delay = 0.03 })
+		for i = 1, 4 do
+			for _, side in SIDES do
+				g.fx.spike(g.x + side * i * 16, g.y, 8, 22 - i * 3, tone, { delay = i * 0.035, lean = side * 2 })
+			end
 		end
-		for _, c in cs do
+		g.fx.shards(g.x, g.y - 8, 10, tone, { kind = "tri", speed = 120, up = 60 })
+		g.hitAt(g.x, g.y, 64, 50, 10, { lift = 120 }) -- 직접 타(맞으면 수정이 맺힌다)
+		for _, c in crystals(g) do
 			g.fx.hex(c.x, c.y - 8, 4, 46, tone, { squash = 1, back = false })
 			g.fx.hex(c.x, c.y, 4, 40, tone, { squash = 0.3, delay = 0.05 })
 			g.fx.shards(c.x, c.y - 8, 10, tone, { kind = "tri", speed = 130, up = 50 })
-			g.hitAt(c.x, c.y, 46, 54, 10, { lift = 160, proc = true })
-			if c.cracked then
-				c.dead = true
-			else
-				c.cracked = true
-			end
+			g.hitAt(c.x, c.y, 46, 54, 6, { lift = 160, proc = true })
 		end
 		g.shake(1, 0.1)
 	end } } } },

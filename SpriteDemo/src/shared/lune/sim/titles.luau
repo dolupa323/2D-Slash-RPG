@@ -17,6 +17,26 @@ function Titles.def(id: any)
 	return if typeof(id) == "string" then BY[id] else nil
 end
 
+-- 칭호의 색: 화면의 색표(palette)의 이름 · 또는 "#RRGGBB"(직업마다의 첫 만렙 — 그 직업의 색: 2026-10-27). 모르는 것은 금빛
+function Titles.tint(t, palette)
+	local c = t and t.color
+	if typeof(c) == "string" and string.match(c, "^#%x%x%x%x%x%x$") then
+		local n = tonumber(string.sub(c, 2), 16) :: number
+		return Color3.fromRGB(bit32.rshift(n, 16), bit32.band(bit32.rshift(n, 8), 255), bit32.band(n, 255))
+	end
+	return palette[c] or palette.gold
+end
+
+-- 황금왕(후원 순위 1위 — 2026-10-29)의 주: 목요일 0시(한국 시간)에 바뀐다. 1970-01-01은 목요일이라 한국 시간으로 옮긴 초를 7일로 나누면 목요일 0시마다 1씩 오른다(제가 정한 때)
+Titles.KST = 9 * 3600
+function Titles.goldWeek(now: number): number
+	return (math.floor(now) + Titles.KST) // (7 * 86400)
+end
+-- 그 주가 시작한 때(os.time — 목요일 0시 한국 시간)
+function Titles.goldWeekStart(week: number): number
+	return week * 7 * 86400 - Titles.KST
+end
+
 -- 가진 칭호의 목록(높은 차례 — 저장 · 화면에 보내는 꼴)
 function Titles.owned(h): { string }
 	local list = {}
@@ -44,13 +64,14 @@ function Titles.unpack(h, list: any, worn: any)
 	h.title = if typeof(worn) == "string" and h.titles[worn] then worn else nil
 end
 
--- 준다: 새로 받았으면 true. 받은 것이 단 것보다 높으면(또는 단 것이 없으면) 받은 것을 단다
+-- 준다: 새로 받았으면 true. 단 칭호가 없을 때만 받은 것을 단다 — 단 것이 있으면 그대로(사용자 2026-10-27: "칭호는 그냥 바꿔끼는거야" — 능력치 창 「바꾸기」로 고른다.
+--  전에는 받은 것이 단 것보다 높으면 바꿔 달았다)
 function Titles.give(h, id: string): boolean
 	if not BY[id] or h.titles[id] then
 		return false
 	end
 	h.titles[id] = true
-	if not h.title or ORDER[id] < ORDER[h.title] then
+	if not h.title then
 		h.title = id
 	end
 	return true

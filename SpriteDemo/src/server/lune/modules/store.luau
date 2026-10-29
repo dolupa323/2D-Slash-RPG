@@ -313,6 +313,35 @@ function Store.rankSet(board: string, key: string, score: number, memoryOnly: bo
 	end
 end
 
+-- 그 판의 그 열쇠의 점수를 score로 올린다 — 이미 적혀 있고 그보다 낮을 때만(없는 줄은 만들지 않는다: 지운 캐릭터가 되살아나지 않게 · 2026-10-29 Rank.fixMax)
+function Store.rankRaise(board: string, key: string, score: number)
+	if not RANK[board] then
+		return
+	end
+	local kept = rankMemory[board][key]
+	if kept ~= nil then
+		if kept < score then
+			rankMemory[board][key] = score
+		end
+		return
+	end
+	local ds = getRank(board)
+	if not ds or offline then
+		return
+	end
+	local ok, err = try(function()
+		ds:UpdateAsync(key, function(old)
+			if typeof(old) == "number" and old < score then
+				return score
+			end
+			return nil -- 없거나 이미 같거나 높다: 쓰지 않는다
+		end)
+	end)
+	if not ok then
+		warn(("[lune] 순위판 %s의 점수를 올리지 못했다: %s"):format(board, tostring(err)))
+	end
+end
+
 function Store.rankRemove(board: string, key: string)
 	if not RANK[board] then
 		return
@@ -403,7 +432,9 @@ end
 --  저장소를 못 쓰면(Studio에서 API 접근이 꺼져 있을 때) 이 서버의 메모리에 둔다 — 그 판 안에서는 올리고 살 수 있다(끄면 사라진다).
 --  잠깐 말을 듣지 않는다고 메모리로 넘어가지는 않는다(장부는 여러 서버가 같이 본다 — 이 서버만의 장부가 생기면 안 된다): 못 읽고 못 썼다고 알릴 뿐이다.
 -- 장부를 읽는다 → 읽었는가, 문서(없으면 nil)
-function Store.marketRead(key: string): (boolean, any)
+--  fresh = 지금의 값으로(UseCache = false). 그냥 읽으면 로블록스가 한 서버에서 4초 동안 같은 값(옛 값일 수 있다)을 준다(공식 문서 data-stores/versioning-listing-and-caching).
+--   2026-10-27 사용자: "구매판정은 샀다고 보였는데 완료전에 다른사람이 구매하거나 하는거아니냐고" — 산 것이 장부에 적혔는지 다시 볼 때 옛 값을 읽어 「못 샀다」로 돈을 돌려주면, 물건은 아무에게도 가지 않고 판 사람은 대금을 받았다
+function Store.marketRead(key: string, fresh: boolean?): (boolean, any)
 	local ds = getStore("market")
 	if offline then
 		return true, memory.market[key]
@@ -412,6 +443,11 @@ function Store.marketRead(key: string): (boolean, any)
 		return false, nil -- (라이브) 이 서버만의 장부를 만들지 않는다
 	end
 	local ok, result = try(function()
+		if fresh then
+			local opts = Instance.new("DataStoreGetOptions")
+			opts.UseCache = false
+			return ds:GetAsync("b_" .. key, opts)
+		end
 		return ds:GetAsync("b_" .. key)
 	end)
 	if not ok then
@@ -558,6 +594,284 @@ function Store.maxTenAdd(rec, cap: number): any
 		return nil
 	end
 	return have
+end
+
+-- 직업마다의 첫 만렙(2026-10-27 사용자: "직업별 첫 만렙 유저들 칭호 만들거야") — 열쇠 firstMax_<직업> = { key, name, class, at }. 비어 있을 때만 적는다(firstMax와 같다)
+function Store.classFirstGet(class: string): (boolean, any)
+	if offline then
+		return true, memory.world["firstMax_" .. class]
+	end
+	local ok, result = read("world", "firstMax_" .. class)
+	if ok then
+		return true, result
+	end
+	return offline, if offline then memory.world["firstMax_" .. class] else nil
+end
+-- 적어 본다 → 저장소에 있는 기록(내 것이든 남의 것이든 · 적지 못했으면 nil)
+function Store.classFirstClaim(class: string, rec): any
+	local key = "firstMax_" .. class
+	if offline then
+		memory.world[key] = memory.world[key] or rec
+		return memory.world[key]
+	end
+	local ds = getStore("world")
+	if not ds then
+		return nil
+	end
+	local have = nil
+	local ok, err = try(function()
+		ds:UpdateAsync(key, function(old)
+			if typeof(old) == "table" and old.key then
+				have = old
+				return nil -- 이미 있다: 그대로 둔다
+			end
+			have = rec
+			return rec
+		end)
+	end)
+	if not ok then
+		warn(("[lune] 직업의 첫 만렙 기록을 적지 못했다: %s"):format(tostring(err)))
+		if studio() then
+			offline = true
+			return Store.classFirstClaim(class, rec)
+		end
+		return nil
+	end
+	return have
+end
+
+-- 황금왕(후원 순위 1위 — 2026-10-29 사용자: "매주 목요일마다 확인하고 그 주 1위에게 칭호 지급하고 다음주에 바뀌었다면 또 바뀐 1위한테 지급하고 2위한테서 뺏고"):
+--  열쇠 goldKing = { user = 그 계정의 번호(없으면 0), week = 정한 주(Titles.goldWeek), spent = 그때의 후원, at = 정한 때 }. 한 주에 한 번만 적힌다(UpdateAsync — 여러 서버가 같은 때 정해도 먼저 적은 것)
+--  goldKingGet → 읽었는가, 기록(없으면 nil) · goldKingSettle(week, rec) → 저장소에 있는 그 주의 기록(이미 그 주에 정해졌으면 그것 · 적지 못했으면 nil)
+function Store.goldKingGet(): (boolean, any)
+	if offline then
+		return true, memory.world.goldKing
+	end
+	local ok, result = read("world", "goldKing")
+	if ok then
+		return true, if typeof(result) == "table" then result else nil
+	end
+	return offline, if offline then memory.world.goldKing else nil
+end
+function Store.goldKingSettle(week: number, rec): any
+	local function pick(old)
+		if typeof(old) == "table" and old.week == week then
+			return nil, old -- 이 주는 이미 정해졌다
+		end
+		return rec, rec
+	end
+	if offline then
+		local new, have = pick(memory.world.goldKing)
+		memory.world.goldKing = new or have
+		return have
+	end
+	local ds = getStore("world")
+	if not ds then
+		return nil
+	end
+	local have = nil
+	local ok, err = try(function()
+		ds:UpdateAsync("goldKing", function(old)
+			local new, now = pick(old)
+			have = now
+			return new
+		end)
+	end)
+	if not ok then
+		warn(("[lune] 황금왕 기록을 적지 못했다: %s"):format(tostring(err)))
+		if studio() then
+			offline = true
+			return Store.goldKingSettle(week, rec)
+		end
+		return nil
+	end
+	return have
+end
+
+-- 한정 판매(2026-10-29 사용자: "거인 라이딩 황금으로 해서 한정 20개 판매로 해서 판매하고 다팔리면 안파는식으로"): 열쇠 stock_<상품> = { sold = 판 수, holds = { [사람 번호(글)] = 끝나는 때 } }.
+--  모든 서버가 같은 기록을 본다(UpdateAsync). 구매 창을 띄우기 전에 한 개를 잡아 두고(hold) — 결제가 오면 그것을 판 것으로 · 창을 닫으면 놓는다 · 시간이 지나면 저절로 풀린다.
+--  돌려주는 것은 모두 (해냈는가, 기록) — 저장소에 닿지 못했으면 (nil, nil)
+local function stockClean(old, now: number)
+	local rec = { sold = 0, holds = {} }
+	if typeof(old) == "table" then
+		rec.sold = if typeof(old.sold) == "number" then math.max(0, math.floor(old.sold)) else 0
+		if typeof(old.holds) == "table" then
+			for uid, till in old.holds do
+				if typeof(uid) == "string" and typeof(till) == "number" and till > now then
+					rec.holds[uid] = till
+				end
+			end
+		end
+	end
+	return rec
+end
+local function holdCount(rec, except: string?): number
+	local n = 0
+	for uid in rec.holds do
+		if uid ~= except then
+			n += 1
+		end
+	end
+	return n
+end
+Store.stockHoldCount = holdCount
+-- fn(rec) → 바꿀 것인가(true면 적는다), 해냈는가
+local function stockUpdate(key: string, now: number, fn): (boolean?, any)
+	local name = "stock_" .. key
+	if offline then
+		local rec = stockClean(memory.world[name], now)
+		local write, done = fn(rec)
+		if write then
+			memory.world[name] = rec
+		end
+		return done, rec
+	end
+	local ds = getStore("world")
+	if not ds then
+		return nil, nil
+	end
+	local done, have = false, nil
+	local ok, err = try(function()
+		ds:UpdateAsync(name, function(old)
+			local rec = stockClean(old, now)
+			local write, d = fn(rec)
+			done, have = d, rec
+			return if write then rec else nil
+		end)
+	end)
+	if not ok then
+		warn(("[lune] 한정 판매 기록(%s)을 적지 못했다: %s"):format(key, tostring(err)))
+		if studio() then
+			offline = true
+			return stockUpdate(key, now, fn)
+		end
+		return nil, nil
+	end
+	return done, have
+end
+function Store.stockGet(key: string, now: number): (boolean, any)
+	if offline then
+		return true, stockClean(memory.world["stock_" .. key], now)
+	end
+	local ok, result = read("world", "stock_" .. key)
+	if ok then
+		return true, stockClean(result, now)
+	end
+	return offline, if offline then stockClean(memory.world["stock_" .. key], now) else nil
+end
+-- 한 개를 잡는다(이미 잡아 둔 사람이면 시간만 늘린다): 판 수 + 남이 잡은 수가 limit 밑이어야 한다
+function Store.stockHold(key: string, userId: number, limit: number, now: number, secs: number): (boolean?, any)
+	local uid = tostring(userId)
+	return stockUpdate(key, now, function(rec)
+		if rec.holds[uid] == nil and rec.sold + holdCount(rec) >= limit then
+			return false, false
+		end
+		rec.holds[uid] = now + secs
+		return true, true
+	end)
+end
+-- 결제가 왔다: 잡아 둔 것을 판 것으로(잡아 둔 것이 풀렸어도 판다 — 돈을 받고 주지 않는 일은 없게: limit을 넘으면 서버 출력에 남긴다)
+function Store.stockTake(key: string, userId: number, limit: number, now: number): (boolean?, any)
+	local uid = tostring(userId)
+	return stockUpdate(key, now, function(rec)
+		if rec.holds[uid] == nil and rec.sold + holdCount(rec) >= limit then
+			warn(("[lune] 한정 판매 %s: 잡아 둔 것이 풀린 뒤에 결제가 왔다 — %d개를 넘겨 준다(%d)"):format(key, limit, userId))
+		end
+		rec.holds[uid] = nil
+		rec.sold += 1
+		return true, true
+	end)
+end
+-- 판 것을 되돌린다(준 것을 저장하지 못했다 — 다시 올 결제가 다시 가져가게 잡아 둔다)
+function Store.stockUntake(key: string, userId: number, now: number, secs: number): (boolean?, any)
+	return stockUpdate(key, now, function(rec)
+		rec.sold = math.max(0, rec.sold - 1)
+		rec.holds[tostring(userId)] = now + secs
+		return true, true
+	end)
+end
+-- 놓는다(구매 창을 사지 않고 닫았다)
+function Store.stockRelease(key: string, userId: number, now: number): (boolean?, any)
+	local uid = tostring(userId)
+	return stockUpdate(key, now, function(rec)
+		if rec.holds[uid] == nil then
+			return false, true
+		end
+		rec.holds[uid] = nil
+		return true, true
+	end)
+end
+
+-- 관리자의 선물 상자(2026-10-29 사용자: "나 어드민 호박사탕 지급 탭 만들어주고" — server/lune/modules/gifts.luau): 열쇠 gift_<계정 번호> = { { name = 받을 캐릭터의 이름, id = 아이템, n = 수, at = 보낸 때 } … }
+--  모든 서버가 같은 기록을 본다(UpdateAsync). 그 캐릭터로 들어오면(또는 지금 그 캐릭터로 있는 서버가 소식을 받으면) 그 이름의 것만 꺼낸다 — 다른 캐릭터의 것은 남는다
+Store.GIFT_MAX = 50 -- 한 계정에 쌓아 두는 선물의 수(넘으면 가장 오래된 것부터 버린다 — 잘못 누른 것이 끝없이 쌓이지 않게)
+local function giftClean(old)
+	local list = {}
+	if typeof(old) == "table" then
+		for _, g in old do
+			if typeof(g) == "table" and typeof(g.name) == "string" and typeof(g.id) == "string" and typeof(g.n) == "number" and g.n >= 1 then
+				table.insert(list, { name = g.name, id = g.id, n = math.floor(g.n), at = if typeof(g.at) == "number" then g.at else 0 })
+			end
+		end
+	end
+	return list
+end
+-- fn(list) → 바꿀 것인가, 돌려줄 것. 돌려주는 것: 해냈는가(저장소에 닿지 못했으면 nil), fn이 돌려준 것
+local function giftUpdate(userId: number, fn): (boolean?, any)
+	local name = "gift_" .. tostring(userId)
+	if offline then
+		local list = giftClean(memory.world[name])
+		local write, out = fn(list)
+		if write then
+			memory.world[name] = list
+		end
+		return true, out
+	end
+	local ds = getStore("world")
+	if not ds then
+		return nil, nil
+	end
+	local out = nil
+	local ok, err = try(function()
+		ds:UpdateAsync(name, function(old)
+			local list = giftClean(old)
+			local write, o = fn(list)
+			out = o
+			return if write then list else nil
+		end)
+	end)
+	if not ok then
+		warn(("[lune] 선물 상자(%s)를 적지 못했다: %s"):format(tostring(userId), tostring(err)))
+		if studio() then
+			offline = true
+			return giftUpdate(userId, fn)
+		end
+		return nil, nil
+	end
+	return true, out
+end
+function Store.giftAdd(userId: number, gift): boolean?
+	local ok = giftUpdate(userId, function(list)
+		table.insert(list, { name = gift.name, id = gift.id, n = gift.n, at = gift.at or os.time() })
+		while #list > Store.GIFT_MAX do
+			table.remove(list, 1)
+		end
+		return true, true
+	end)
+	return ok
+end
+-- 그 캐릭터(이름)의 선물을 모두 꺼낸다 → 해냈는가, { { id, n } … }
+function Store.giftTake(userId: number, name: string): (boolean?, { any })
+	local ok, got = giftUpdate(userId, function(list)
+		local mine = {}
+		for i = #list, 1, -1 do
+			if list[i].name == name then
+				table.insert(mine, 1, table.remove(list, i))
+			end
+		end
+		return #mine > 0, mine
+	end)
+	return ok, got or {}
 end
 
 function Store.isOffline(): boolean

@@ -25,20 +25,28 @@ function DeathBox.hide()
 end
 
 -- root = 늘 보이는 화면의 틀 · onReturn = 「마을로 돌아간다」를 눌렀을 때 · weakMin = 되살아난 뒤 약해짐이 남는 분(0이면 그 줄을 비운다 — Lv.10 아래는 벌칙이 없다)
-function DeathBox.show(root: Instance, onReturn: () -> (), weakMin: number?)
+--  lives = 주간 보스의 방에서 싸우는 동안의 내 남은 데스 카운트(2026-10-27 — 없으면 여느 상자): 묻는 글 「일어나면 데스 카운트 3 → 2」 · 단추 「일어나기」(1이면 「모두 썼다」 · 「나가기」) ·
+--   안내 「파티원의 소생으로 일어나면 줄지 않는다」(글은 design/weekboss.js의 words — 자리는 이 상자 그대로)
+function DeathBox.show(root: Instance, onReturn: () -> (), weakMin: number?, lives: number?)
 	DeathBox.hide()
 	local holder = Stage.place(root, "DeathBox", D.at, D.x, D.y, D.w, D.h)
 	holder.ZIndex = 40
 	local panel = Ui.panel(holder, 0, 0, D.w, D.h)
 	local inner = D.w - D.pad * 2
+	local text, hint, yes = D.text, D.hint, D.yes
+	if lives then
+		local W = require(ReplicatedStorage.shared.lune.sim.weekly).DATA.words
+		text = if lives > 1 then (string.gsub(string.gsub(W.deathText, "{n}", tostring(lives)), "{m}", tostring(lives - 1))) else W.deathLast
+		hint, yes = W.deathHint, if lives > 1 then W.deathYes else W.deathOut
+	end
 	Ui.text(panel, D.title, D.pad, D.titleY, inner, { font = "body", color = C.gold })
-	Ui.text(panel, D.text, D.pad, D.textY, inner)
+	Ui.text(panel, text, D.pad, D.textY, inner)
 	if weakMin and weakMin > 0 then -- 쓰러진 벌칙(2026-10-18 — 전에는 화면 어디에도 보이지 않았다)
 		Ui.text(panel, (string.gsub(D.weak, "{m}", tostring(weakMin))), D.pad, D.weakY, inner, { color = C.red })
 	end
-	Ui.text(panel, D.hint, D.pad, D.hintY, inner, { color = C.dim })
+	Ui.text(panel, hint, D.pad, D.hintY, inner, { color = C.dim })
 	local sent = false
-	Ui.button(panel, D.yes, D.pad, D.buttonY, inner, function()
+	Ui.button(panel, yes, D.pad, D.buttonY, inner, function()
 		if not sent then
 			sent = true -- 한 번만 보낸다(서버가 마을로 옮기면 이 상자는 사라진다)
 			onReturn()

@@ -16,6 +16,8 @@ local SPEC = N.data.SPEC
 local STATS = N.data.STATS
 
 local I = {}
+-- 옵션의 차례(상세 판 · 강화 창): 올스탯 · 공격력 · 방어력(공방 items.js의 OPT_ORDER — 2026-10-28 방어구 · 장신구에도 공격력이 붙어서)
+I.ORDER = { "stat", "atk", "def" }
 
 -- 스펙이 오지 않았을 때(본보기 · 시험)의 스펙: 그 레벨의 점수를 다 주스탯에 · 그 장비들만 · 패시브 없이(공방 items.js의 specOf와 같은 셈)
 function I.specOf(level: number, list)
@@ -31,7 +33,7 @@ end
 -- 그 레벨의 본보기 캐릭터의 스펙(같은 레벨 보통 무기 + 방어구 넷 · 찍은 점수는 다 주스탯 · 패시브 없이 — 공방 items.js의 refSpec) — 내 스펙을 모를 때 쓴다
 function I.refSpec(level: number)
 	local all = 4 * N.armorStat(level)
-	return { main = STATS.base + STATS.perLevel * (level - 1) + all, sub = STATS.base + all, atk = N.weaponAtk(level), k = 1 + SPEC.crit.chance / 100 * (SPEC.crit.mul - 1) }
+	return { main = STATS.base + STATS.perLevel * (level - 1) + all, sub = STATS.base + all, atk = N.weaponAtk(level) + 4 * math.max(1, math.floor(N.armorAtk(level) + 0.5)), k = 1 + SPEC.crit.chance / 100 * (SPEC.crit.mul - 1) } -- (방어구 넷의 공격력도 — 2026-10-28)
 end
 
 -- 지금 장착한 것(worn — 없으면 nil)을 it로 바꾸면 달라지는 전투력. sp = 내 스펙 { main, sub, atk, k }
@@ -61,7 +63,7 @@ function I.gear(it, me, worn: any, isWorn: boolean?)
 		table.insert(rows, { W.job, CLASSES.classes[it.who].name, if it.who == me.class then "text" else "red" })
 	end
 	table.insert(rows, { W.quality, if q.bonus == 0 then q.name else ("%s %s%d%%"):format(q.name, if q.bonus > 0 then "+" else "", q.bonus), tier })
-	for _, k in { "atk", "stat", "def" } do
+	for _, k in I.ORDER do
 		if o.base[k] ~= nil then
 			table.insert(rows, { W[k], I.optText(o.base[k], o.total[k]), if k == "def" then "text" else "gold" })
 		end
@@ -92,6 +94,10 @@ function I.gear(it, me, worn: any, isWorn: boolean?)
 	local name = Items.name(it)
 	if it.broken then
 		name = name .. " " .. W.broken
+	end
+	local u = Items.unique(it.u)
+	if u then
+		table.insert(notes, 1, { u.text, "text" }) -- 이름 붙은 장비(보스 — 2026-10-27)의 글을 맨 위에
 	end
 	return {
 		name = name,

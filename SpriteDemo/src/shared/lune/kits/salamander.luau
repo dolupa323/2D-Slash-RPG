@@ -82,6 +82,48 @@ local function fist(g, dmg: number) -- 앞으로 날아가는 각진 주먹 모�
 	end })
 end
 
+-- 불덩이 던지기의 불덩이 하나(2026-10-27 — 공방 kits/salamander.js의 meteorOrb를 줄마다 옮긴 것): 손 높이로 곧게 140점 날아갔다가 0.6초 만에 손으로 돌아온다
+--  (그사이 영웅이 움직이면 그 손으로) · 가는 길 · 오는 길에 한 번씩 꿰뚫어 태운다
+local ORB = { reach = 140, life = 0.6, up = 12 }
+local function meteorOrb(g)
+	local dir, tone = g.dir, g.tone
+	local function hand(): number
+		return g.fwd(8)
+	end
+	g.fx.ring(hand(), g.y - ORB.up, 1, 8, tone, { squash = 1, back = false, life = 0.14 })
+	g.shot({
+		x = hand(),
+		y = g.y - ORB.up,
+		life = ORB.life,
+		w = 16,
+		h = 16,
+		dmg = 3,
+		o = {},
+		every = { 0.03, function(p)
+			g.fx.shards(p.x, p.y, 1, tone, flameWith({ speed = 12, up = 0, life = 0.22 }))
+		end },
+		update = function(p)
+			local k = min(1, p.t / p.life)
+			p.x = hand() + dir * ORB.reach * sin(math.pi * k)
+			p.y = g.y - ORB.up
+			if k > 0.5 and not p.turned then
+				p.turned = true
+				table.clear(p.hitSet)
+			end
+		end,
+		draw = function(ctx, p)
+			disc(ctx, p.x, p.y, 5, tone.n)
+			disc(ctx, p.x, p.y, 3, tone.l)
+			ctx:style(tone.w)
+			ctx:rect(R(p.x) - 1, R(p.y) - 1, 2, 2)
+		end,
+		finish = function(_p) -- 받기: 손에서 작게 번쩍
+			g.fx.ring(hand(), g.y - ORB.up, 1, 7, tone, { squash = 1, back = false, life = 0.12 })
+			g.fx.shards(hand(), g.y - ORB.up, 4, tone, flameWith({ speed = 50, life = 0.25 }))
+		end,
+	})
+end
+
 local function fireZone(g, x: number, y: number, w: number, life: number) -- 바닥에서 일렁이는 낮은 불길 줄(계속 태운다)
 	local tone = g.tone
 	return g.shot({ x = x, y = y, life = life, back = true, tick = 0.5, w = w, h = 22, dmg = 2, o = { proc = true }, draw = function(ctx, p)
@@ -291,15 +333,79 @@ local function vent(g)
 	g.s.heat = 0
 	g.shake(1 + h / 50, 0.15)
 end
-local function dragonEnd(g)
-	local x, y, tone = g.fwd(24), g.y, g.tone
-	g.invert(0.08)
-	g.shake(8, 0.4)
-	g.fx.ring(x, y - 8, 4, 40, tone, { squash = 1, back = false })
-	g.fx.ring(x, y, 8, 70, tone)
-	g.fx.beam(x, y, 26, 120, tone)
-	g.fx.shards(x, y - 8, 28, tone, flameWith({ speed = 220, up = 110 }))
-	g.hitAt(x, y, 56, 60, 12, { lift = 260, kb = 120 })
+-- 화산권(4차 극딜기 sl_dragon · 다시 쓰기 60초) — 2026-10-26 다시 지음(사용자 "살라맨더 4차 60초쿨 극딜기 … 돌진하는 매커니즘을 좀 빼고 스킬설계를 다시해봐"):
+--  전에는 「화염 질주」 — 310도트를 돌진하며 불길을 남기고 끝에서 터졌다(쓰면 몸이 멀리 가 버려 보스 앞에서 쓰기 어려웠다).
+--  이제는 제자리에서: 땅을 내려치면(slam) 앞의 땅이 갈라지며 달아오르고 → 거대한 불주먹이 땅에서 솟구쳐 적을 띄운다(한 번) → 꼭대기에서 크게 터진다(한 번) → 그 자리가 4초 동안 불탄다.
+--  솟는 주먹은 살라맨더의 주먹 모양(drawFist)을 위로 세운 것 · 둘레의 불꽃 혀와 불기둥 · 연기는 이 직업의 것. 이름 · 모양 · 숫자는 제가 정한 것
+local VOLCANO_AT, VOLCANO_W = 70, 150 -- 솟는 자리(내 앞 몇 도트) · 터지고 불타는 너비
+local function upFist(ctx, x: number, y: number, s: number, tone) -- 위로 치켜든 주먹(앞에서 본 모습): 팔목 · 어두운 테 · 손가락 마디 넷(밝은 윗면 · 사이의 금) · 가로지르는 엄지 · 반짝임. (x, y) = 주먹의 가운데
+	poly(ctx, { { x - s * 0.55, y + s * 0.6 }, { x + s * 0.55, y + s * 0.6 }, { x + s * 0.8, y + s * 2.6 }, { x - s * 0.8, y + s * 2.6 } }, tone.d) -- 팔목
+	poly(ctx, { { x - s * 0.45, y + s * 0.6 }, { x + s * 0.2, y + s * 0.6 }, { x + s * 0.3, y + s * 2.6 }, { x - s * 0.6, y + s * 2.6 } }, tone.n)
+	local function box(x0: number, y0: number, x1: number, y1: number, c, cut: number)
+		poly(ctx, { { x0 + cut, y0 }, { x1 - cut, y0 }, { x1, y0 + cut }, { x1, y1 - cut }, { x1 - cut, y1 }, { x0 + cut, y1 }, { x0, y1 - cut }, { x0, y0 + cut } }, c)
+	end
+	box(x - s - 1, y - s * 0.85 - 1, x + s + 1, y + s * 0.85 + 1, tone.d, s * 0.35) -- 어두운 테
+	box(x - s, y - s * 0.85, x + s, y + s * 0.85, tone.n, s * 0.3) -- 주먹
+	local fw = s * 0.5
+	for i = 0, 3 do -- 손가락 마디 넷: 밝은 윗면 · 사이의 어두운 금
+		local fx0 = x - s + i * fw
+		box(fx0 + 1, y - s * 0.8, fx0 + fw - 1, y - s * 0.15, tone.l, 1)
+		if i > 0 then
+			line(ctx, fx0, y - s * 0.85, fx0, y + s * 0.05, tone.d, 1)
+		end
+	end
+	box(x - s * 0.95, y + s * 0.12, x + s * 0.35, y + s * 0.5, tone.l, 1) -- 엄지(앞을 가로지른다)
+	line(ctx, x - s * 0.95, y + s * 0.52, x + s * 0.35, y + s * 0.52, tone.d, 1)
+	ctx:style(tone.w)
+	ctx:rect(R(x - s * 0.8), R(y - s * 0.72), 2, 1) -- 반짝임
+end
+local function volcanoCrack(g) -- 쓰기 시작: 앞의 땅이 갈라지며 붉게 달아오른다(솟을 자리를 미리 알린다)
+	local cx, y, tone = g.fwd(VOLCANO_AT), g.y, g.tone
+	g.fx.add(0.55, function(ctx, k)
+		local w = VOLCANO_W / 2 * min(1, k * 2.5)
+		for i = -6, 6 do
+			local x0 = cx + i * w / 6
+			local x1 = cx + (i + 1) * w / 6
+			if i < 6 then
+				line(ctx, x0, y + (if i % 2 == 0 then 0 else 1), x1, y + (if i % 2 == 0 then 1 else 0), if k > 0.6 and i % 2 == 0 then tone.w else tone.l, 1)
+			end
+		end
+		for i = -3, 3 do
+			tongue(ctx, cx + i * w / 3, y, 5, (4 + 5 * abs(sin(k * 14 + i))) * min(1, k * 2), tone, { core = false })
+		end
+	end, { back = true })
+end
+local function volcano(g) -- 내려친 순간: 솟는 불주먹(한 번) → 꼭대기에서 터짐(한 번) → 불타는 땅
+	local cx, y, tone = g.fwd(VOLCANO_AT), g.y, g.tone
+	g.shake(4, 0.2)
+	g.fx.add(0.2, function(ctx, k)
+		poly(ctx, starPts(cx, y - 4, 34 * (1 - k * 0.6), k * 2), if k < 0.5 then tone.w else tone.l)
+	end)
+	g.fx.add(0.42, function(ctx, k) -- 땅에서 솟구치는 거대한 불주먹 + 감싸는 불꽃 혀
+		local rise = if k < 0.55 then 1 - (1 - k / 0.55) ^ 2 else 1
+		local fy = y - 10 - 56 * rise
+		for i = -2, 2 do
+			tongue(ctx, cx + i * 9, y, 14 - abs(i) * 2, (66 - abs(i) * 14) * rise, tone, { sway = sin(k * 24 + i) * 3, core = i == 0 })
+		end
+		upFist(ctx, cx, fy, 13, tone)
+	end)
+	g.fx.shards(cx, y - 10, 18, tone, flameWith({ speed = 120, up = 220 }))
+	g.hitAt(cx, y, VOLCANO_W / 2 - 5, 100, 8, { lift = 280, stop = 0.06 }) -- 솟구침: 띄운다
+	g.after(0.3, function() -- 꼭대기에서 터진다: 큰 섬광 · 양옆으로 차례로 솟는 불기둥 · 불티 · 연기
+		local top = y - 66
+		g.invert(0.08)
+		g.shake(8, 0.4)
+		g.fx.add(0.3, function(ctx, k)
+			poly(ctx, starPts(cx, top, 64 * (1 - k * 0.7), k), if k < 0.4 then tone.w else tone.l)
+		end)
+		for i = -4, 4 do
+			pillar(g, cx + i * 18, y, 16 - abs(i), 74 - abs(i) * 11, { delay = abs(i) * 0.04, life = 0.7, seed = i })
+		end
+		g.fx.shards(cx, top, 34, tone, flameWith({ speed = 240, up = 80 }))
+		smoke(g, cx, y - 20, 8, 0.25)
+		g.hitAt(cx, y, VOLCANO_W / 2, 90, 14, { kb = 120, stop = 0.1 }) -- 터짐
+		fireZone(g, cx, y, VOLCANO_W, 4) -- 터진 자리가 4초 동안 불탄다
+	end)
 end
 
 -- 화룡 승천(4차 광역기 · 다시 쓰기 12초 · 맵 전체 — 2026-10-24 사용자 "무니, 리븐 광역기 만든것처럼 엑시온, 리퍼, 살라맨더 4차 스킬포인트 조정해서 그 빈포인트로 투자하는 완전 멋진 광역기만들자"):
@@ -475,33 +581,14 @@ table.insert(skills, { id = "sl_rush", key = "V", air = true, shot = 0.3, segs =
 local more = {
 	buff("sl_tempo", "1"),
 	{ id = "sl_vent", key = "Z", instant = true, shot = 0.16, cast = vent },
-	{ id = "sl_meteor", key = "E", shot = 1.0, segs = { { clip = "slam", from = 5, fps = 26, ev = { [11] = function(g) -- 꼬리를 끄는 불덩이가 포물선으로 날아가 불바다를 남긴다(선딜 0.55 → 0.23초 — 2026-10-25 사용자 "불덩이 던지기 선딜 줄이고": 5장부터 초당 26장)
-		local dir, tone = g.dir, g.tone
-		g.shot({
-			x = g.x,
-			y = g.y - 34,
-			vx = dir * 150,
-			vy = -150,
-			g = 420,
-			life = 2.5,
-			every = { 0.04, function(p)
-				g.fx.shards(p.x, p.y, 1, tone, flameWith({ speed = 10, up = 0, life = 0.3 }))
-			end },
-			draw = function(ctx, p)
-				disc(ctx, p.x, p.y, 5, tone.n)
-				disc(ctx, p.x, p.y, 3, tone.l)
-				ctx:style(tone.w)
-				ctx:rect(R(p.x) - 1, R(p.y) - 1, 2, 2)
-			end,
-			finish = function(p)
-				local gy = floor(p.y / 16) * 16
-				g.fx.ring(p.x, gy, 6, 42, tone)
-				g.fx.shards(p.x, gy - 4, 16, tone, flameWith({ speed = 150, up = 90 }))
-				g.hitAt(p.x, gy, 42, 44, 8, { lift = 150 })
-				fireZone(g, p.x, gy, 76, 6)
-			end,
-		})
-	end } } } },
+	-- 불덩이 던지기(2026-10-27 다시 — 사용자: "곡사로 던지는게아니라 메이플스토리에 플레임 위자드처럼 직사로 던지고 던지고 던지고 받고받고받고 …"):
+	--  팔을 내뻗는 장(wave 10~13)을 세 번 — 장마다 불덩이 하나를 곧게(meteorOrb) → 셋이 차례로 손에 돌아오는 동안 자세를 거둔다(wave 14~17). 그 앞의 포물선 · 불바다는 뺐다
+	{ id = "sl_meteor", key = "E", shot = 0.7, segs = {
+		{ clip = "wave", from = 10, to = 13, fps = 24, ev = { [12] = meteorOrb } },
+		{ clip = "wave", from = 10, to = 13, fps = 24, ev = { [12] = meteorOrb } },
+		{ clip = "wave", from = 10, to = 13, fps = 24, ev = { [12] = meteorOrb } },
+		{ clip = "wave", from = 14, to = 17, fps = 48 }, -- 자세를 곧 거둔다 — 불덩이는 그 뒤에 돌아와 손에 잡힌다. 후딜(셋째를 던진 뒤) 0.58 → 0.17초(2026-10-27 사용자 "3차 불덩이 날릴때 날리고 후 경직이 너무심해")
+	} },
 	{ id = "sl_barrage", key = "D", shot = 0.8, holdFor = 2, segs = {
 		{ clip = "punch", from = 0, to = 12, loopFrom = 6, fps = 36, hold = true, max = 3, min = 0.4, every = { 0.08, function(g) -- 앞에 겹쳐 찍히는 주먹 자국들
 			if g.held < 0.16 then
@@ -519,7 +606,7 @@ local more = {
 			end
 			g.fx.ring(x, y, 4, 30, g.tone, { squash = 1, back = false })
 			g.fx.shards(x, y, 14, g.tone, flameWith({ speed = 160 }))
-			g.hit(0, 60, 44, 4, R(10 + h / 5), { kb = 160, stop = 0.08 })
+			g.hit(0, 60, 44, 4, R(10 + h / 8), { kb = 160, stop = 0.08 }) -- 열기만큼: h / 5 → h / 8(2026-10-27 사용자 "살라 난타 조금 너프하자" — 열기 100이면 30 → 22.5)
 			g.shake(1, 0.12)
 		end } },
 	} },
@@ -547,7 +634,7 @@ local more = {
 		g.fx.ring(g.x, g.y - 9, 4, 20, g.tone, { squash = 0.9, back = false })
 		g.fx.shards(g.x, g.y - 9, 10, g.tone, flameWith({ speed = 90 }))
 	end },
-	{ id = "sl_tide", key = "R", air = true, shot = 0.62, segs = { { clip = "wave", fps = 18, float = true, ev = { [7] = function(g) -- 계단처럼 솟았다 꺼지는 불 세모들이 양쪽으로 달려간다
+	{ id = "sl_tide", key = "R", air = true, shot = 0.62, segs = { { clip = "wave", from = 3, to = 8, fps = 18, float = true, ev = { [7] = function(g) -- 선딜 0.39 → 0.18 → 0.22초(2026-10-27 사용자 "샐래맨더 4차 화염해일 선딜 좀 줄이자" — 불을 모아 웅크린 3째 장부터 · 10-28 "공속이 너무 빨라졌어 … 지금은 너무빨라" → 초당 22 → 18장) -- 계단처럼 솟았다 꺼지는 불 세모들이 양쪽으로 달려간다
 		-- 뛰는 중에도 쓴다 — 쓰는 동안 그 자리에 떠 있고 불길은 그 높이에서 나간다(2026-10-25 사용자 "점프해서 쓰면 그 점프한 위치에서 해일이 나가야지 다 떨어지고나서 나가면어떻게하라는거야" —
 		--  처음엔 떨어지며 쓰고 불길은 발밑 땅을 따라 굴렀다)
 		local tone, gy = g.tone, g.y
@@ -576,7 +663,7 @@ local more = {
 				end,
 			})
 		end
-	end } } } },
+	end } }, { clip = "wave", from = 9, to = 17, fps = 32, float = true } } }, -- 해일을 보낸 뒤 자세를 거둔다 — 선딜 0.22초 · 후딜 0.39초 · 한 번 0.61초(10-27 0.45초 → 10-28 사용자 "공속이 너무 빨라졌어 원래 이전보다는 빨라야하는게 맞는데 지금은 너무빨라" — 처음 1.0초보다는 빠르게 · 공방 kits/salamander.js와 같다)
 	{ id = "sl_king", key = "F", shot = 0.95, segs = { -- 누를 때마다 좌우 주먹: 첫 주먹 → 둘째 주먹 → 셋째에 겹 폭발
 		{ clip = "punch", from = 0, to = 9, fps = 26, ev = { [6] = function(g)
 			fist(g, 9)
@@ -648,19 +735,11 @@ local more = {
 	{ id = "sl_wyrm", key = "B", shot = 0.9, segs = { { clip = "punch", fps = 16, start = function(g) -- 화룡 승천(위 wyrm)
 		g.dim(0.5, 1.6)
 	end, ev = { [4] = wyrm } } } },
-	{ id = "sl_dragon", key = "G", shot = 0.88, segs = {
-		{ clip = "dash", fps = 16, loop = true, dur = 0.62, float = true, trail = true, start = function(g)
+	{ id = "sl_dragon", key = "G", ground = true, shot = 0.75, segs = { -- 화산권(위 volcano — 돌진 없이 제자리에서)
+		{ clip = "slam", from = 5, fps = 20, start = function(g) -- (화염 강타와 같은 장 — 내려치기까지 0.3초)
 			g.dim(0.4, 1.3)
-			g.move(310, 0.62)
-			g.fx.ring(g.x, g.y - 8, 4, 26, g.tone, { squash = 1, back = false })
-		end, every = { 0.045, function(g) -- 지나간 자리에 불길이 남아 계속 태운다
-			local x, y, tone = g.x - g.dir * 8, g.y, g.tone
-			g.fx.spike(x, y, 9, 12 + g.rnd() * 10, tone, { life = 1.1 })
-			g.fx.shards(x, y - 6, 2, tone, flame)
-			g.hitAt(g.x, y, 16, 26, 2, { kb = 20 })
-			g.shot({ x = x, y = y, life = 1.1, w = 12, h = 16, dmg = 1, tick = 0.35, o = { proc = true } })
-		end } },
-		{ clip = "punch", from = 9, fps = 18, ev = { [12] = dragonEnd } },
+			volcanoCrack(g)
+		end, ev = { [11] = volcano } },
 	} },
 	{ id = "sl_ember", key = "T" }, -- 사출기: 켜고 끈다(판정은 아래 onHit)
 	dash("sl_roll", "dash", 3, 430, 73),
@@ -750,7 +829,7 @@ local salamander = {
 			return
 		end
 		-- 발밑에서 Common.GAUGE_DOWN만큼 아래: 이름표(발밑 2~9점)에 가리지 않는다(사용자 2026-10-11: "캐릭터 아래에 게이지 보여주는 스킬들이 … 닉네임이랑 겹쳐서 가려버리는 문제")
-		local x, y, w = R(g.x) - 9, R(g.y) + Common.GAUGE_DOWN, R((18 * g.s.heat) / 100)
+		local x, y, w = R(g.x) - 9, R(g.y) + Common.gaugeDown(g), R((18 * g.s.heat) / 100) -- (칭호를 달았으면 칭호 줄 밑 — 2026-10-28)
 		ctx:style(0x12161c)
 		ctx:rect(x - 1, y - 1, 20, 4)
 		ctx:style(if hot(g) then (if floor(g.clock * 10) % 2 == 1 then g.tone.l else g.tone.n) else g.tone.d)

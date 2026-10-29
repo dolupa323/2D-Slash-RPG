@@ -260,6 +260,7 @@ function Hero.new(id: any, class: string)
 		invuln = 0, -- 맞은 뒤 무적이 남은 시간(초)
 		weak = 0, -- 쓰러진 뒤 벌칙이 남은 시간(초)
 		expLeft = 0, -- 경험치 쿠폰(유료)이 남은 시간(초) — 게임 안에 있는 동안만 준다(Hero.tick)
+		dropLeft = 0, -- 드롭률 쿠폰(유료 — 2026-10-27)이 남은 시간(초) — 경험치 쿠폰과 같다
 		potionWait = 0,
 		revive = 0, -- 쓰러진 뒤 일어나기까지 남은 시간(초)
 	}
@@ -602,7 +603,8 @@ end
 
 -- ---------- 맞기 · 물약 · 쓰러짐 ----------
 -- 맞는다. 실제로 들어간 피해를 돌려준다(무적 중이거나 쓰러져 있으면 0).
-function Hero.hurt(h, amount: number): number
+--  free = 쓰러져도 약해짐 벌칙이 없다(보스전 — 2026-10-27 사용자 "보스에서 죽는건 그 죽음패널티 들어가면안된다잉" · 방이 Room:bossFight로 정한다)
+function Hero.hurt(h, amount: number, free: boolean?): number
 	if not h.alive or h.invuln > 0 or h.god or h.inCine or h.inCheck then -- god = 관리자의 시험용 무적(저장하지 않는다) · inCine = 퀘스트 연출이 도는 중 · inCheck = 매크로 확인 문제가 떠 있다(2026-10-23)
 		return 0
 	end
@@ -614,7 +616,7 @@ function Hero.hurt(h, amount: number): number
 		h.revive = RULES.reviveWait -- 이 시간이 지나야 마을로 돌아갈 수 있다(쓰러지는 동작 · 비석이 서는 동안)
 		h.weakWas = h.weak -- 소생으로 그 자리에서 일어나면 이번 벌칙은 없던 일이 된다
 		-- 벌칙은 숫자 뼈대대로 정해 둔 레벨부터(그 전에는 벌칙이 없다)
-		if h.level >= N.data.BODY.death.free then
+		if h.level >= N.data.BODY.death.free and not free then
 			h.weak = N.deathMinutes(h.level) * 60
 		end
 	end
@@ -650,6 +652,8 @@ function Hero.drink(h, id: any): (number?, string?)
 		return nil, "가진 물약이 없다"
 	elseif h.level < def.lv then
 		return nil, ("Lv.%d부터 쓸 수 있다"):format(def.lv)
+	elseif h.alive and (h.flyLock or 0) > 0 then
+		return nil, COMBAT.afk.words.potion -- 잠수 방지 날파리가 쫓는 동안(2026-10-28 사용자 "잠수하고있는 유저를 포션 제한 걸면서 툭툭 쳐서 죽이는거야" — sim/room.luau의 stepFly가 건다)
 	elseif not h.alive or h.potionWait > 0 or h.hp >= h.maxHp then
 		return nil -- 쓰러졌다 · 아직 다시 쓸 수 없다 · 체력이 가득하다(까닭을 띄우지 않는다 — 키를 누르고 있을 때마다 뜨면 시끄럽다)
 	end
@@ -666,7 +670,9 @@ function Hero.tick(h, dt: number): boolean
 	h.invuln = math.max(0, h.invuln - dt)
 	h.weak = math.max(0, h.weak - dt)
 	h.expLeft = math.max(0, (h.expLeft or 0) - dt)
+	h.dropLeft = math.max(0, (h.dropLeft or 0) - dt)
 	h.potionWait = math.max(0, h.potionWait - dt)
+	h.flyLock = math.max(0, (h.flyLock or 0) - dt) -- 날파리가 쫓는 동안의 물약 막힘(방이 매 순간 다시 건다 — 저장하지 않는다)
 	-- 쓰러져 있는 동안: 저절로 일어나지 않는다 — 그 자리에 비석이 서고, 마을로 돌아갈지는 그 사람이 정한다(사용자 2026-10-08:
 	--  "죽으면 비석 세우고, 모달띄워서 마을로 갈거냐고 물어보는 딜레이를 넣읍시다"). 그 사이에 파티원이 소생으로 일으켜 줄 수 있다
 	if not h.alive then
@@ -904,6 +910,7 @@ function Hero.pack(h)
 		resets = h.resets or 0,
 		weak = math.floor(h.weak),
 		expLeft = math.floor(h.expLeft or 0),
+		dropLeft = math.floor(h.dropLeft or 0),
 		bag = Bag.pack(h),
 		quests = Quests.pack(h.quests),
 		daily = Daily.pack(h.daily),
@@ -947,6 +954,7 @@ function Hero.unpack(id: any, data: any)
 	h.money = if whole(data.money, 0, 9e15) then data.money else 0
 	h.weak = if whole(data.weak, 0, 3600) then data.weak else 0
 	h.expLeft = if whole(data.expLeft, 0, Cash.RULES.exp.cap) then data.expLeft else 0 -- 경험치 쿠폰 — 생기기 전의 저장 = 0
+	h.dropLeft = if whole(data.dropLeft, 0, Cash.RULES.drop.cap) then data.dropLeft else 0 -- 드롭률 쿠폰(2026-10-27) — 생기기 전의 저장 = 0
 	-- 공짜 초기화: 이것이 생기기 전에 전직한 캐릭터(2026-10-11 이전 — 저장에 없다)는 한 번 받는다
 	h.resets = if whole(data.resets, 0, 1) then data.resets elseif data.resets == nil and h.job >= 2 then 1 else 0
 	h.last = if typeof(data.last) == "string" and #data.last <= 40 then data.last else nil -- 없는 장면이면 서버가 마지막 마을 · 시작 마을로(world.luau의 resumeScene)
@@ -1151,6 +1159,7 @@ function Hero.view(h)
 		alive = h.alive,
 		weak = math.ceil(h.weak),
 		expLeft = math.ceil(h.expLeft or 0), -- 경험치 쿠폰의 남은 시간(오른쪽 위 버프 줄)
+		dropLeft = math.ceil(h.dropLeft or 0), -- 드롭률 쿠폰의 남은 시간(2026-10-27)
 		passes = h.passOwn or {}, -- 가진 영구 게임 패스 { [상품] = true }(버프 줄 끝의 「영구」 — 2026-10-22 · 서버가 계정의 것을 물어 얹는다: CashServer.applyPasses)
 	}
 end

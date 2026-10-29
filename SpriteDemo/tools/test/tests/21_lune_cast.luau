@@ -95,8 +95,13 @@ do
 	-- 차수의 배수: 앞 차수의 1.4배씩 — 2차 1.4 · 3차 1.96 · 4차 2.744(사냥기는 x0.7)
 	near(CAST.ax_rend.rate, N.data.POWER.dps * 1.4, 1e-3, "2차 보스기의 초당 피해")
 	near(CAST.ax_crescent.rate, N.data.POWER.dps * 0.7 * 1.4, 1e-3, "2차 사냥기의 초당 피해")
-	near(CAST.ax_wheel.rate, N.data.POWER.dps * 1.96, 1e-3, "3차 보스기(회전 내려치기 — 2026-10-25 도약 강타가 이동기 「돌격」이 됐다)")
-	near(CAST.ax_execute.rate, N.data.POWER.dps * 2.744, 1e-3, "4차 보스기")
+	-- (tune = 따로 조정한 배수 — 2026-10-27 회전 내려치기 · 처단 x1.15 · 단죄 · 참수 x1.3: 설계의 사다리는 그것을 나눠 본다)
+	near(CAST.ax_wheel.rate / (CAST.ax_wheel.tune or 1), N.data.POWER.dps * 1.96, 1e-3, "3차 보스기(회전 내려치기 — 2026-10-25 도약 강타가 이동기 「돌격」이 됐다)")
+	near(CAST.ax_execute.rate / (CAST.ax_execute.tune or 1), N.data.POWER.dps * 2.744, 1e-3, "4차 보스기")
+	near(CAST.ax_wheel.tune or 1, 1.15, 1e-6, "회전 내려치기 +15%(2026-10-27 사용자 \"액시온 회전내려치기 조금 상향\")")
+	near(CAST.rp_judge.tune or 1, 1.3, 1e-6, "단죄 +30%(2026-10-27 사용자 \"리퍼 단죄는 좀더 상향\")")
+	eq(CAST.ax_execute.tune, CAST.ax_wheel.tune, "처단도 회전 내려치기만큼(4차 레벨 1 > 3차 마스터를 지킨다)")
+	eq(CAST.rp_behead.tune, CAST.rp_judge.tune, "참수도 단죄만큼")
 	-- 새 차수의 스킬은 레벨 1부터 앞 차수의 같은 갈래 스킬을 마스터한 것보다 세다(사용자 2026-10-08: "당연히 1차 마스터보다 2차 1레벨 스킬이 강해야합니다. 이건 기본이에요")
 	--  같은 시간 동안 넣는 피해로 견준다: 레벨 1 = 앞 차수 마스터의 1.1배 · 마스터 = 1.4배
 	local FLOORC = COMBAT.castRule.floor
@@ -107,6 +112,7 @@ do
 	for class, c in CLASSES.classes do
 		for _, kind in { "mob", "boss" } do
 			local prev = N.data.POWER.dps * (if kind == "mob" then RULES.mobShare else 1) -- 1차를 마스터했을 때 1초에 넣는 피해(전투력의 몇 배)
+			local prevReal = prev -- 따로 조정한 배수(tune)까지 넣은 값 — 「레벨 1 > 앞 차수 마스터」는 이것으로 본다
 			for job = 2, 4 do
 				local found = nil
 				for _, sk in c.tiers[job].skills do
@@ -116,12 +122,13 @@ do
 				end
 				expect(found ~= nil and CAST[found.id] ~= nil, ("%s %d차의 %s가 있다"):format(class, job, kind))
 				if found and CAST[found.id] then
-					local master = CAST[found.id].rate
+					local real = CAST[found.id].rate
+					local master = real / (CAST[found.id].tune or 1)
 					local first = master * Caster.scale(1, found.max)
-					expect(first > prev, ("%s %d차 %s 레벨 1(%.3f)이 앞 차수 마스터(%.3f)보다 세다"):format(class, job, found.id, first, prev))
+					expect(real * Caster.scale(1, found.max) > prevReal, ("%s %d차 %s 레벨 1(%.3f)이 앞 차수 마스터(%.3f)보다 세다"):format(class, job, found.id, real * Caster.scale(1, found.max), prevReal))
 					near(first / prev, 1.1, 0.002, ("레벨 1 = 앞 차수 마스터의 1.1배 %s"):format(found.id))
 					near(master / prev, 1.4, 0.002, ("마스터 = 앞 차수 마스터의 1.4배 %s"):format(found.id))
-					prev = master
+					prev, prevReal = master, real
 				end
 			end
 		end
@@ -159,12 +166,11 @@ do
 		end
 	end
 	-- 따로 정한 것
-	eq(Caster.profile("mn_burst", 0).w, 20, "공명 폭발: 수정 둘이 터질 때가 기준")
-	eq(Caster.profile("mn_burst", 0).measured, 5, "공명 폭발: 수정이 없으면 제 둘레만")
+	eq(Caster.profile("mn_burst", 0).w, 10, "공명 폭발: 내 둘레를 직접 치는 타(10)가 기준 — 수정은 덤(2026-10-26)")
 	eq(Caster.profile("sl_vent", 0).w, 23, "열 방출: 열기가 가득일 때가 기준")
 	-- 몇 가지는 값을 못 박아 둔다(묶음의 값이 바뀌면 알게)
-	near(Caster.profile("ax_rend", 0).w, 14, 1e-6, "쪼개기 6 + 8")
-	near(Caster.profile("ax_execute", 0).w, 20, 1e-6, "처단: 12 + 다섯 번째마다 40")
+	near(Caster.profile("ax_rend", 0).w, 10, 1e-6, "쪼개기: 모아 쪼개는 한 방 10(2026-10-28 액시온 리마스터 — 예전 두 번 6 + 8)")
+	near(Caster.profile("ax_execute", 0).w, 12, 1e-6, "월광 처단: 한 방 12(예전 처단 12 + 다섯 번째마다 40)")
 	near(Caster.profile("rv_kill", 0).w, 36, 1e-6, "암살: 여섯 번 x 3 + 마무리 18")
 	near(Caster.profile("rp_judge", 0).w, 27, 1e-6, "단죄: 9 x 3")
 	near(Caster.profile("mn_divide", 0).w, 40, 1e-6, "월광 대참: 22 + 18")
@@ -311,17 +317,18 @@ do
 		expect(ok, "모은 뒤의 구간")
 		return lv
 	end
+	local per1 = Kitset.skill("ax_crescent").segs[1].per -- 사냥기의 한 단계(0.2초 — 2026-10-28)
 	eq(charged(0, false), 0, "톡 누르면 모으지 않은 것")
-	eq(charged(0.42, false), 1, "0.4초 = 한 단계")
-	eq(charged(0.82, false), 2, "0.8초 = 두 단계")
-	eq(charged(0.95, false), 2, "더 눌러도 두 단계까지")
+	eq(charged(per1 + 0.02, false), 1, "한 단계의 시간 = 한 단계")
+	eq(charged(per1 * 2 + 0.02, false), 2, "두 배 = 두 단계")
+	eq(charged(per1 * 2 + 0.12, false), 2, "더 눌러도 두 단계까지")
 	eq(charged(0, true), 2, "만월: 모으지 않아도 끝까지 모은 것으로")
 	-- 힘 모으기를 배우지 않았으면 모이지 않는다
 	local plain = hero("axion", { ax_crescent = 20 })
 	local per, levels = Caster.chargeOf(plain, {})
 	eq(levels, 0, "배우지 않으면 0단계")
 	near(per, COMBAT.castRule.charge, 1e-6, "한 단계가 모이는 시간")
-	-- 단계마다의 피해: 1 + 단계 x 그 레벨의 bonus(마스터 55%)
+	-- 모은 한 방: 모은 시간만큼(쓰는 시간 + 단계 x per) ÷ 쓰는 시간 x (1 + 단계 x 그 레벨의 bonus — 마스터 12%) — 2026-10-28 사용자 "시간을 생각해서 dps 계산을해서"
 	local function sum(lv: number): number
 		local h = hero("axion", { ax_crescent = 20, ax_charge = 10 })
 		local _, _, c, tick = dry(h)
@@ -333,8 +340,22 @@ do
 		return total(c:actor(h))
 	end
 	local zero = sum(0)
-	near(sum(1) / zero, 1 + core.bonus[2], 0.06, "한 단계: 피해 +55%(마스터)")
-	near(sum(2) / zero, 1 + 2 * core.bonus[2], 0.06, "두 단계: 피해 +110%")
+	local T = Caster.profile("ax_crescent", 0).time
+	for n = 1, 2 do
+		local want = (1 + n * core.bonus[2]) * (T + n * per1) / T
+		near(sum(n) / zero, want, 0.06 * want, ("%d단계: 모은 시간만큼 · 단계마다 초당 피해 +12%%(마스터)"):format(n))
+	end
+	-- 2~4차의 모든 모으는 기술: 끝까지(4단계 — 만근) 모은 한 방의 초당 피해가 톡톡 친 것의 1 + 4 x bonus배
+	local h4 = hero("axion", { ax_charge = 10, ax_charge2 = 10, ax_echo4 = 1 })
+	for _, id in { "ax_crescent", "ax_rend", "ax_whirl", "ax_wheel", "ax_moonfall", "ax_execute" } do
+		h4.skills[id] = 30
+		local s1 = Kitset.skill(id).segs[1]
+		local p = Caster.profile(id, 0)
+		local mul = Kit.chargeMul(h4, 4, p.time, s1.per)
+		near(mul * p.time / (p.time + 4 * s1.per), 1 + 4 * core.bonus[2], 1e-9, "끝까지 모은 초당 피해 = 1 + 4 x bonus배 " .. id)
+		expect(s1.per == (if COMBAT.cast[id].type == "mob" then 0.2 else 0.3), "한 단계: 사냥기 0.2초 · 보스기 0.3초 " .. id)
+		expect(s1.walk ~= nil and s1.walk > 0 and s1.turn == true, "모으는 동안 걷고 돌아본다 " .. id)
+	end
 end
 
 -- ---- 6) 졸개에 걸리는 것: 갈라짐(받는 피해 +) · 넘어뜨리기 · 바인드 ----
@@ -587,32 +608,40 @@ do
 	near(vent(50) / hot, 13 / 23, 0.05, "열기 50이면 가득일 때의 57%")
 	near(vent(0) / hot, 3 / 23, 0.05, "열기 0이면 13%")
 
-	-- 공명 폭발: 수정이 있으면 수정마다 터진다 — 금이 가고, 한 번 더 터지면 사라진다
+	-- 공명 폭발(2026-10-26 고침 — 사용자 "무니 3차 만들어봐"): 내 둘레를 직접 친다(10 — 맞으면 수정이 맺힌다) + 맺혀 있는 수정마다 터진다(6) — 수정은 깨지지 않는다
 	local m = hero("mooni", { mn_burst = 20, mn_reson = 10 })
 	local room, foe, cm, tickM = dry(m)
+	local p = Caster.profile("mn_burst", 0)
+	local function burstOnce(): number
+		local before = cm:actor(m).out
+		local n0 = #before.hits
+		cm:dryCast(m, "mn_burst", 0, tickM)
+		local out = cm:actor(m).out
+		local sum = 0
+		for i, e in out.hits do
+			if e.mob == foe.id and (out ~= before or i > n0) then -- (이번에 쓴 것만)
+				sum += e.dmg
+			end
+		end
+		return sum
+	end
+	local design = Hero.powerRaw(m) * CAST.mn_burst.rate * p.time * RULES.dmgScale * 1.5 -- (사냥기가 졸개에게 +50%)
+	near(burstOnce(), design, 0.12, "수정이 없어도 설계의 피해(100%) — 내 둘레를 직접 친다")
 	room:addCrystal(m, X + 10, Y, {})
 	room:addCrystal(m, X + 40, Y, {})
 	eq(#room.crystals, 2, "수정 둘")
-	cm:dryCast(m, "mn_burst", 0, tickM)
-	local first = 0
-	for _, e in cm:actor(m).out.hits do
-		if e.mob == foe.id then
-			first += e.dmg
-		end
-	end
-	expect(room.crystals[1].cracked and room.crystals[2].cracked, "터진 수정에 금이 간다")
-	eq(#room.crystals, 2, "한 번 터져서는 사라지지 않는다")
-	local p = Caster.profile("mn_burst", 0)
-	near(first, Hero.powerRaw(m) * CAST.mn_burst.rate * p.time * RULES.dmgScale * 1.5, 0.12, "수정 둘이 터지면 설계의 피해(100%)")
-	cm:dryCast(m, "mn_burst", 0, tickM)
-	eq(#room.crystals, 0, "금 간 수정이 한 번 더 터지면 사라진다")
+	near(burstOnce(), design * 2.2, 0.12, "곁의 수정 둘이 함께 터지면 220%(10 + 6 + 6)")
+	eq(#room.crystals, 2, "터져도 수정은 남는다")
+	expect(not room.crystals[1].cracked and not room.crystals[2].cracked, "금도 가지 않는다")
+	burstOnce()
+	eq(#room.crystals, 2, "몇 번을 터뜨려도 남는다")
 	local gone = 0
 	for _, e in cm.events do
 		if e.type == "crystalGone" then
 			gone += 1
 		end
 	end
-	eq(gone, 2, "사라진 수정을 알린다")
+	eq(gone, 0, "사라진 수정이 없다")
 
 	-- 표식(리븐): 표식을 남기는 타만 남긴다 · 암살의 마무리는 표식을 태우고 그만큼 세다 · 연막 순보는 표식을 터뜨린다
 	local v = hero("riven", { rv_kill = 30, rv_step = 10, rv_mark = 10 })
@@ -641,20 +670,25 @@ do
 	cv:dryCast(v, "rv_step", 0, tickV)
 	eq(#cv:actor(v).out.hits - before, 1, "표식이 없으면 베는 타만")
 
-	-- 사출기: 2~4차의 도끼질에도 메아리 도끼가 따라 나간다(1차와 같은 셈 — 세 번째 타마다)
-	local e = hero("axion", { ax_rend = 20, ax_echo = 10 })
+	-- 사출기: 2~4차의 도끼질에도 메아리 도끼가 따라 나간다 — 1차와 같은 셈(2026-10-28 리마스터: 끝까지 모아 친 한 방에만)
+	local e = hero("axion", { ax_rend = 20, ax_echo = 10, ax_charge = 10 })
 	e.kit.on = true
 	local _, _, ce, tickE = dry(e)
-	for _ = 1, 3 do
-		ce:dryCast(e, "ax_rend", 0, tickE)
-	end
-	local echoes = 0
-	for _, x in ce:actor(e).out.hits do
-		if x.proc == "echo" then
-			echoes += 1
+	local function echoesOf(lv: number): number
+		local before = #ce:actor(e).out.hits
+		ce:dryCast(e, "ax_rend", lv, tickE)
+		drain(ce, tickE)
+		local n, hits = 0, ce:actor(e).out.hits
+		for i = before + 1, #hits do
+			if hits[i].proc == "echo" then
+				n += 1
+			end
 		end
+		return n
 	end
-	eq(echoes, 2, "여섯 타에 메아리 도끼 둘(세 번째 타마다)")
+	eq(echoesOf(0), 0, "모으지 않은 쪼개기에는 없다")
+	eq(echoesOf(Kit.chargeLevels(e) - 1), 0, "덜 모은 쪼개기에도 없다")
+	eq(echoesOf(Kit.chargeLevels(e)), 1, "끝까지 모아 친 쪼개기에 하나(붙어 있는 적 하나)")
 	-- 열기: 2~4차의 주먹에도 오른다
 	local s = hero("salamander", { sl_blast = 20, sl_heat = 10 })
 	local _, _, cs, tickS = dry(s)
@@ -951,8 +985,8 @@ do
 			eq(#c:actor(h).out.hits, 0, id .. "는 피해가 없다")
 		end
 	end
-	-- 새 보스기: 붙어 있는 적에게 작열권 두 번 · 회전 내려치기 세 번
-	for _, case in { { "salamander", "sl_blast", 2 }, { "axion", "ax_wheel", 3 } } do
+	-- 새 보스기: 붙어 있는 적에게 작열권 두 번 · 천근 내려치기 한 방(2026-10-28 액시온 리마스터 — 예전 회전 내려치기 세 번)
+	for _, case in { { "salamander", "sl_blast", 2 }, { "axion", "ax_wheel", 1 } } do
 		local h = hero(case[1], { [case[2]] = 20 })
 		local _, _, c, tick = dry(h)
 		c:dryCast(h, case[2], 0, tick)
@@ -985,6 +1019,58 @@ do
 		expect(hit[1] and hit[2], "화염 해일: 공중에서 쓰면 그 높이(40도트 위)의 적이 맞는다")
 		expect(not hit[3], "화염 해일: 40도트 아래 땅의 적은 맞지 않는다(그 높이에서 나간다)")
 		expect(Kitset.skill("sl_tide").segs[1].float == true, "쓰는 동안 그 자리에 떠 있다(float)")
+		-- 선딜(2026-10-27 사용자 "샐래맨더 4차 화염해일 선딜 좀 줄이자"): 해일이 나가는 장(7)까지 0.39초 → 0.2초 아래
+		local s1 = Kitset.skill("sl_tide").segs[1]
+		local pre = (7 - (s1.from or 0)) / s1.fps
+		expect(pre <= 0.25, ("화염 해일: 선딜 %.2f초(0.25초 아래 — 처음 0.39초)"):format(pre))
+		-- 후딜(2026-10-27 사용자 "4차 사냥기도 마찬가지"): 해일이 나간 장(7)부터 끝까지 0.3초 안
+		local tsegs = Kitset.skill("sl_tide").segs
+		local post = (tsegs[1].to - 7) / tsegs[1].fps
+		for i = 2, #tsegs do
+			post += (tsegs[i].to - tsegs[i].from + 1) / tsegs[i].fps
+		end
+		expect(post <= 0.42, ("화염 해일: 후딜 %.2f초(0.42초 안)"):format(post))
+		-- 한 번 쓰는 시간(2026-10-28 사용자 "공속이 너무 빨라졌어 원래 이전보다는 빨라야하는게 맞는데 지금은 너무빨라"): 처음 1.0초보다 빠르고 · 0.45초보다는 느리게
+		local total = 0
+		for _, sg in tsegs do
+			total += (sg.to - (sg.from or 0) + 1) / sg.fps
+		end
+		expect(total > 0.55 and total < 0.8, ("화염 해일: 한 번 %.2f초(0.55 ~ 0.8초 — 처음 1.0초 · 너무 빨랐던 0.45초 사이)"):format(total))
+	end
+	-- 불덩이 던지기(2026-10-27 사용자 "곡사로 던지는게아니라 메이플스토리에 플레임 위자드처럼 직사로 던지고 던지고 던지고 받고받고받고 …"):
+	--  셋이 손 높이로 곧게 나갔다가 손으로 돌아온다 — 길 위(60도트)의 적은 셋 x 가는 길 · 오는 길 = 여섯 번 · 땅에서 40 위의 적은 맞지 않는다(포물선이 아니다) · 200 너머는 닿지 않는다
+	do
+		local P = Caster.profile("sl_meteor", 0)
+		eq(P.hits, 6, "불덩이 던지기: 길 위의 적이 여섯 번 맞는다(셋 x 가는 길 · 오는 길)")
+		-- 후딜(2026-10-27 사용자 "3차 불덩이 날릴때 날리고 후 경직이 너무심해"): 셋째를 던진 뒤 0.2초 안에 풀린다(불덩이는 그 뒤에 돌아와 잡힌다)
+		local segs = Kitset.skill("sl_meteor").segs
+		local after = 0
+		for i, sg in segs do
+			if i == 3 then
+				after += (sg.to - 12 + 1) / sg.fps -- 셋째의 던지는 장(12)부터
+			elseif i > 3 then
+				after += (sg.to - sg.from + 1) / sg.fps
+			end
+		end
+		expect(after <= 0.2, ("불덩이 던지기: 셋째를 던진 뒤 %.2f초에 풀린다(0.2초 안)"):format(after))
+		expect(P.time <= 0.65, ("불덩이 던지기: 한 번 %.2f초(던지기 셋 + 짧게 거두기)"):format(P.time))
+		local h = hero("salamander", { sl_meteor = 20 })
+		local room, first, c, tick = dry(h)
+		room.mobs = {}
+		for i, d in { { 60, 0 }, { 120, 0 }, { 200, 0 }, { 60, -40 } } do
+			local m = table.clone(first)
+			m.id, m.x, m.homeX, m.goal, m.y = i, X + d[1], X + d[1], X + d[1], Y + d[2]
+			room.mobs[i] = m
+		end
+		c:dryCast(h, "sl_meteor", 0, tick)
+		drain(c, tick)
+		local hit = {}
+		for _, e in c:actor(h).out.hits do
+			hit[e.mob] = true
+		end
+		expect(hit[1] and hit[2], "불덩이 던지기: 앞 60 · 120도트의 적이 맞는다(꿰뚫는다)")
+		expect(not hit[3], "불덩이 던지기: 200도트의 적에는 닿지 않는다(140도트 날아갔다 돌아온다)")
+		expect(not hit[4], "불덩이 던지기: 40도트 위의 적은 맞지 않는다(손 높이로 곧게)")
 	end
 	-- 몰아치기: 범위 ±56(전에는 ±40) — 앞 50도트의 적도 맞는다
 	do

@@ -37,6 +37,29 @@ do
 	local a1, a2, a3 = Rank.levelScore(M, 0, 1, F.c7932577222_1), Rank.levelScore(M, 0, 1, F.c9233200460_1), Rank.levelScore(M, 0, 1, F.c2995182643_1)
 	expect(a1 > a2 and a2 > a3, "찾은 차례: 강타 > 0NJ4 > 여왕")
 	eq(a1, 150965886, "강타의 점수(실제 순위판에 적은 값)")
+	-- 2026-10-29 사용자: "여왕 캐릭터 랭킹 계속 내려가는거 작업해 원래 랭킹으로 보이게" — 옛 서버가 덮은 옛 점수(만렙 = 150,000,000)를 판을 읽을 때 올린다(Rank.fixMax)
+	local raised = {}
+	local function raise(key, score)
+		table.insert(raised, { key, score })
+	end
+	local QUEEN = "c2995182643_1"
+	local rows = {
+		{ key = "c111_1", score = Rank.levelScore(M, 0, 1, F[QUEEN] + 86400) }, -- 하루 뒤에 만렙
+		{ key = "c222_1", score = Rank.levelScore(M, 0, 1, F[QUEEN] + 3600) }, -- 한 시간 뒤에 만렙
+		{ key = QUEEN, score = M * 1000000 }, -- 옛 점수
+	}
+	table.sort(rows, function(x, y) return x.score > y.score end)
+	eq(rows[3].key, QUEEN, "고치기 전: 여왕이 뒤에 오른 두 사람보다 아래")
+	Rank.fixMax(rows, raise, false)
+	eq(rows[1].key, QUEEN, "고친 뒤: 먼저 오른 여왕이 위")
+	eq(rows[1].score, a3, "여왕의 점수 = 찾아 둔 오른 때의 점수")
+	eq(#raised, 1, "저장소에는 낮았던 그 줄만 올린다")
+	eq(raised[1] and raised[1][1], QUEEN, "올린 열쇠")
+	raised = {}
+	Rank.fixMax(rows, raise, false)
+	eq(#raised, 0, "이미 맞으면 다시 쓰지 않는다")
+	Rank.fixMax({}, raise, true)
+	eq(#raised, 3, "서버가 처음 읽을 때는 판에 안 보이는 셋도 올려 본다(저장소는 있는 줄만 · 낮을 때만 올린다)")
 end
 
 local handlers, sent = {}, {}
@@ -75,6 +98,7 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	claimName = function(key, id) names[key] = id; return true end,
 	freeName = function(key) names[key] = nil end,
 	rankSet = function(board, key, score) ranks[board][key] = score end,
+	rankRaise = function(board, key, score) if ranks[board][key] and ranks[board][key] < score then ranks[board][key] = score end end,
 	rankRemove = function(board, key) ranks[board][key] = nil end,
 	rankTop = function(board, n)
 		local rows = {}

@@ -3,6 +3,7 @@ local N = req("ReplicatedStorage/shared/lune/config/numbers")
 local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
 COMBAT.rules.critChance = 0 -- 치명타는 따로 본다(22_lune_passives.luau의 치명타 검사) — 이 파일은 치명타 없이 피해를 그대로 잰다
 local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
+local Room = req("ReplicatedStorage/shared/lune/sim/room") -- (사냥터인가 — 잠수 방지 날파리의 자리)
 local packets = req("ReplicatedStorage/shared/lune/net/packets")
 local RULES = COMBAT.rules
 local TICK = 1 / 20
@@ -49,6 +50,7 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 		end
 	end,
 	rankSet = function(board, key, score) rankDisk[board] = rankDisk[board] or {}; rankDisk[board][key] = score end,
+	rankRaise = function(board, key, score) local d = rankDisk[board]; if d and d[key] and d[key] < score then d[key] = score end end,
 	rankRemove = function(board, key) if rankDisk[board] then rankDisk[board][key] = nil end end,
 	rankTop = function(board, n)
 		local rows = {}
@@ -332,12 +334,16 @@ end
 local trip = handlers.Travel(p1, gate.to)
 expect(trip ~= nil and trip.scene == gate.to, "문으로 다음 맵(마을 어귀)에 간다")
 eq(s1.scene, gate.to, "서버가 아는 장면이 바뀐다")
-eq(#trip.room.mobs, #SCENES.scenes[gate.to].mobs, "그 맵의 졸개 목록을 받는다")
+-- 졸개 목록 = 장면의 졸개 + 사냥터면 잠수 방지 날파리의 자리(2026-10-28 — 목록 끝)
+local function mobsOf(key: string): number
+	return #SCENES.scenes[key].mobs + (if Room.huntRoom(SCENES.scenes[key]) then COMBAT.afk.slots else 0)
+end
+eq(#trip.room.mobs, mobsOf(gate.to), "그 맵의 졸개 목록을 받는다")
 eq(handlers.Travel(p1, "hunt"), nil, "들어온 문 앞에서는 건너편 문으로 못 간다")
 trip = goTo(p1, "hunt")
 expect(trip ~= nil and trip.scene == "hunt", "마을 어귀를 지나 사냥터에 간다")
 eq(s1.scene, "hunt", "사냥터에 왔다")
-eq(#trip.room.mobs, #SCENES.scenes.hunt.mobs, "사냥터의 졸개 목록을 받는다")
+eq(#trip.room.mobs, mobsOf("hunt"), "사냥터의 졸개 목록을 받는다")
 local back = SCENES.scenes.hunt.portals[1]
 eq(trip.x, back.x, "마을로 가는 문 앞에 선다")
 
@@ -375,7 +381,7 @@ run(1)
 local snaps = got("Snap", p1)
 expect(#snaps >= 8 and #snaps <= 12, "1초에 열 번쯤 온다 " .. #snaps)
 eq(snaps[1].args[1], "hunt", "어느 장면의 것인지")
-eq(#snaps[1].args[2], #SCENES.scenes.hunt.mobs, "졸개 수만큼")
+eq(#snaps[1].args[2], mobsOf("hunt"), "졸개 수만큼")
 
 -- ---- 4) 기술 ----
 local room = World.room("hunt")
@@ -398,31 +404,29 @@ local slam = COMBAT.skills.ax_slam
 local combo = COMBAT.skills.ax_combo
 table.clear(sent)
 local hp0 = foe.hp
+-- 도끼 내려찍기(2026-10-28 액시온 리마스터 — 예전 삼단 베기): 첫 구간에서 도끼를 젖혀 모으고(키를 떼면) 둘째 구간에서 한 번 내려찍는다
 handlers.Skill(p1, "ax_combo", 1, s1.hero.x, s1.hero.y, 1)
 eq(#got("Hits"), 0, "누르자마자 맞지는 않는다")
+run(combo.segs[1].time + 0.3)
+eq(#got("Hits"), 0, "모으는 동안에는 맞지 않는다")
+handlers.Skill(p1, "ax_combo", 2, s1.hero.x, s1.hero.y, 1)
 run(combo.hits[1].at + 0.06)
 local hits = got("Hits", p1)
-expect(#hits == 1, "맞는 때가 되면 맞는다")
+expect(#hits == 1, "떼면 내려찍어 맞는다")
 eq(hits[1].args[1], p1.UserId, "누가 쳤는지")
 expect(foe.hp < hp0, "졸개의 체력이 준다")
--- 이어 누르기: 둘째 타는 첫 타 도중에만 이어진다
+eq(#combo.hits, 1, "도끼 내려찍기는 한 방")
+-- 모으는 구간 없이 둘째 구간만은 쓸 수 없다 · 첫 구간이 끝나고 한참 뒤에는 이어지지 않는다
 table.clear(sent)
-handlers.Skill(p1, "ax_combo", 3, s1.hero.x, s1.hero.y, 1)
-run(0.6)
-eq(#got("Hits"), 0, "둘째 타를 건너뛰고 셋째 타를 쓸 수는 없다")
 run(1)
 handlers.Skill(p1, "ax_combo", 2, s1.hero.x, s1.hero.y, 1)
 run(0.6)
-eq(#got("Hits"), 0, "첫 타가 끝나고 한참 뒤에는 이어지지 않는다")
--- 제대로: 1 → 2 → 3
-walkTo(foe.x - 20, foe.y)
+eq(#got("Hits"), 0, "모으지 않고 내려찍는 구간만 쓸 수는 없다")
 handlers.Skill(p1, "ax_combo", 1, s1.hero.x, s1.hero.y, 1)
-run(combo.segs[1].time * 0.8)
+run(combo.segs[1].time + 3)
 handlers.Skill(p1, "ax_combo", 2, s1.hero.x, s1.hero.y, 1)
-run(combo.segs[2].time * 0.8)
-handlers.Skill(p1, "ax_combo", 3, s1.hero.x, s1.hero.y, 1)
-run(combo.segs[3].time + 0.1)
-expect(#got("Hits") >= 2, "이어 누르면 세 타가 차례로 나간다 " .. #got("Hits"))
+run(0.6)
+eq(#got("Hits"), 0, "모으는 구간이 끝나고 한참 뒤에는 이어지지 않는다")
 -- 기술 도중에 다른 기술을 시작할 수 없다
 table.clear(sent)
 walkTo(foe.x - 20, foe.y)
@@ -509,10 +513,23 @@ run(1.1)
 handlers.Potion(p1)
 expect(s1.hero.hp > 1 and HeroSim.potions(s1.hero) == pots - 1, "물약을 마신다")
 expect(#got("Bag", p1) >= 1, "물약을 마시면 가방이 다시 온다(소비 탭의 수가 준다)")
+local cdNote = nil
+for _, e in got("ItemDone", p1) do
+	if typeof(e.args[1]) == "table" and e.args[1].action == "potion" then
+		cdNote = e.args[1]
+	end
+end
+expect(cdNote ~= nil and cdNote.ok and cdNote.wait == 3, "마시면 다시 마시기까지(3초)를 화면에 알린다 — 물약 칸에 남은 시간이 덮인다")
 handlers.Potion(p1)
 eq(HeroSim.potions(s1.hero), pots - 1, "바로 또 마시지는 못한다")
 -- 퀵슬롯의 칸에 놓인 바로 그 물약을 쓴다(이름표를 보낸다) · 없는 것 · 아직 못 쓰는 것은 까닭이 온다
-run(1.1)
+local POTION_CD = req("ReplicatedStorage/shared/lune/config/numbers").data.BODY.cooldown.field -- (다시 마시기까지 — 2026-10-27 1초 → 3초)
+expect(POTION_CD == 3, "물약은 3초 뒤에 다시 마신다(2026-10-27 사용자 \"포션 너프하고 3초 쿨타임\")")
+run(POTION_CD - 0.5)
+s1.hero.hp = 1
+handlers.Potion(p1, "potion1")
+eq(HeroSim.potions(s1.hero), pots - 1, "3초가 지나기 전에는 또 마시지 못한다")
+run(0.6)
 s1.hero.hp = 1
 handlers.Potion(p1, "potion1")
 eq(HeroSim.potions(s1.hero), pots - 2, "이름표로 고른 물약을 마신다")
@@ -1432,7 +1449,8 @@ do
 	expect(Buffs.has(hb, "ax_breath"), "전투 호흡이 걸렸다")
 	local selfs = got("Self", pb)
 	expect(#selfs >= 1 and selfs[#selfs].args[1].buffs.list[1].id == "ax_breath", "걸린 버프가 내 상태로 온다")
-	expect(math.abs(selfs[#selfs].args[1].haste - 1.25) < 1e-6, "공격 속도 +25%가 내 상태로 온다")
+	eq(selfs[#selfs].args[1].haste, 1, "전투 호흡은 공격 속도를 올리지 않는다(2026-10-28 액시온 리마스터)")
+	expect(math.abs(selfs[#selfs].args[1].chargeCut - 0.25) < 1e-6, "힘이 모이는 시간 −25%가 내 상태로 온다(화면이 그만큼 빨리 모인 단계를 띄운다)")
 	expect(#got("Act", po) == 1 and got("Act", po)[1].args[2] == "ax_breath", "방의 다른 사람에게 걸리는 순간이 간다")
 	expect(#got("Buffs", po) == 1 and got("Buffs", po)[1].args[2][1].id == "ax_breath", "방의 다른 사람에게 걸린 버프가 간다")
 	eq(#got("Buffs", pb), 0, "나에게는 Buffs가 오지 않는다(내 상태로 온다)")
@@ -1448,39 +1466,29 @@ do
 	handlers.Skill(pb, "ax_fullmoon", 1, hb.x, hb.y, 1)
 	eq(Buffs.has(hb, "ax_fullmoon"), false, "다시 쓰기 중에는 걸리지 않는다")
 	eq(#got("Act", po), 0, "걸리지 않았으면 알리지 않는다")
-	-- 공격 속도: 전투 호흡 동안 타격이 그만큼 빨리 맞는다
+	-- 전투 호흡(2026-10-28 리마스터): 힘이 모이는 시간 −25% — 0.75배의 시간만 눌러도 끝까지 모인다(서버가 센 단계 = 방의 다른 사람에게 가는 Act의 일곱째 값)
+	local Kit = req("ReplicatedStorage/shared/lune/sim/kit")
 	goTo(pb, "hunt")
-	local roomB = World.room("hunt")
-	local foe = roomB.mobs[1]
-	local function firstHitAfter()
-		for i, m in roomB.mobs do
-			m.state, m.t, m.a, m.b = "idle", 0, 0, 4000
-			m.hp, m.maxHp = 1e12, 1e12
-			m.x, m.y = hb.x + 1200 + i * 30, hb.y
-		end
-		foe.x = hb.x + 20
+	goTo(po, "hunt")
+	local function levelAfter(hold: number): number
 		hb.hp, hb.alive, hb.invuln = hb.maxHp, true, 30
 		run(2)
-		foe.x, foe.state = hb.x + 20, "idle"
-		-- 대지 강타의 내려찍기: 구간이 시작된 뒤 0.167초에 맞는다(공격 속도 +25%면 0.133초 — 서버의 한 걸음 0.05초로도 갈린다)
 		handlers.Skill(pb, "ax_slam", 1, hb.x, hb.y, 1)
-		run(COMBAT.skills.ax_slam.segs[1].time)
+		run(COMBAT.skills.ax_slam.segs[1].time + hold)
 		table.clear(sent)
 		handlers.Skill(pb, "ax_slam", 2, hb.x, hb.y, 1)
-		local t = 0
-		while #got("Hits", pb) == 0 and t < 2 do
-			World.tick(TICK)
-			t += TICK
-		end
+		local acts = got("Act", po)
 		run(1.5)
-		return t
+		return if #acts > 0 then acts[#acts].args[7] else -1
 	end
 	table.clear(hb.buffs) -- 앞에서 건 전투 호흡이 아직 남아 있다 — 버프가 없을 때부터 잰다
-	local slow = firstHitAfter()
+	local levels = Kit.chargeLevels(hb)
+	local short = Kit.chargeTime(hb, "ax_slam") * 0.75 + 0.03
+	local slow = levelAfter(short)
+	expect(slow >= 0 and slow < levels, ("버프가 없으면 그 시간에는 끝까지 모이지 않는다(%d / %d)"):format(slow, levels))
 	handlers.Skill(pb, "ax_breath", 1, hb.x, hb.y, 1)
 	expect(Buffs.has(hb, "ax_breath"), "전투 호흡을 다시 건다")
-	local fast = firstHitAfter()
-	expect(fast < slow - 0.01, ("전투 호흡 동안 타격이 더 빨리 맞는다 %.2f → %.2f"):format(slow, fast))
+	eq(levelAfter(short), levels, "전투 호흡 동안에는 0.75배의 시간에 끝까지 모인다")
 	World.removePlayer(pb)
 	World.removePlayer(po)
 end
@@ -1530,7 +1538,7 @@ do
 	run(1)
 	place()
 	table.clear(sent)
-	-- 쪼개기: 두 구간(같은 동작 두 번)이 차례로 온다 — 구간마다 한 타
+	-- 쪼개기(2026-10-28 액시온 리마스터): 첫 구간에서 모으고(키를 떼면) 둘째 구간에서 한 번 쪼갠다 — 한 방
 	local segs = Kitset.skill("ax_rend").segs
 	local T1 = Caster.segTime("axion", segs[1])
 	handlers.Skill(pc, "ax_rend", 2, hc.x, hc.y, 1)
@@ -1540,18 +1548,17 @@ do
 	expect(#got("Act", pw) == 1 and got("Act", pw)[1].args[2] == "ax_rend" and got("Act", pw)[1].args[3] == 1, "방의 다른 사람에게 그 구간이 간다")
 	handlers.Skill(pc, "ax_slam", 1, hc.x, hc.y, 1)
 	run(T1)
-	eq(#got("Hits", pc), 1, "첫 구간의 한 타(그동안 1차 기술은 못 쓴다)")
+	eq(#got("Hits", pc), 0, "모으는 구간에는 타가 없다(그동안 1차 기술은 못 쓴다)")
 	handlers.Skill(pc, "ax_rend", 2, hc.x, hc.y, 1)
-	run(T1 + 0.2)
-	eq(#got("Hits", pc), 2, "둘째 구간의 한 타")
+	run(Caster.segTime("axion", segs[2]) + 0.2)
+	eq(#got("Hits", pc), 1, "둘째 구간의 한 방")
 	eq(#got("Act", pw), 2, "둘째 구간도 방에 알린다")
 	near(foe.rend, 5, 0.1, "갈라짐이 걸렸다")
-	-- 피해: 두 타의 합 = 설계의 피해(보스기는 보스가 아니면 보정이 없다 · 둘째 타는 갈라진 적이라 +20%)
+	-- 피해: 한 방 = 설계의 피해(보스기는 보스가 아니면 보정이 없다 · 모으지 않고 바로 뗐다)
 	local p = Caster.profile("ax_rend", 0)
-	local a, b = got("Hits", pc)[1].args[2][1].dmg, got("Hits", pc)[2].args[2][1].dmg
+	local a = got("Hits", pc)[1].args[2][1].dmg
 	local unit = Hero.powerRaw(hc) * COMBAT.cast.ax_rend.rate * p.time * COMBAT.rules.dmgScale / p.w
-	near(a, unit * 6, 0.11, "첫 타 = 몫 6")
-	near(b, unit * 8 * 1.2, 0.11, "둘째 타 = 몫 8 x 갈라짐")
+	near(a, unit * 10, 0.11, "한 방 = 몫 10")
 	-- 다시 쓰기: 달빛 기둥(60초)
 	run(1)
 	place()
@@ -1699,20 +1706,50 @@ do
 		return n, sum
 	end
 	local n0, d0 = many(12)
-	eq(n0, 2, "끝까지 모은 대지 강타: 가운데 타 + 가시")
-	-- 충격파
+	eq(n0, 1, "끝까지 모은 대지 강타: 붙어 있는 적에게 한 방(2026-10-28 액시온 리마스터 — 예전 가운데 0.7 + 가시 0.3 두 숫자)")
+	expect(foe.stun <= 0, "충격파가 없으면 넘어뜨리지 않는다")
+	-- 충격파(2026-10-28 리마스터): 한 번 더 치지 않고 그 한 방이 세진다 · 보통 적을 넘어뜨린다 · 가시가 양옆 wide도트까지
+	local SHOCK = COMBAT.passive.ax_shock.fx
 	hp.skills.ax_shock = 10
 	local n1, d1 = many(12)
-	eq(n1, 3, "충격파: 땅을 따라 한 번 더")
-	expect(math.abs(d1 / d0 - (1 + COMBAT.passive.ax_shock.fx.shock)) < 0.06, ("충격파의 피해 = 그 타의 40%% (%.2f)"):format(d1 / d0))
+	eq(n1, 1, "충격파: 한 번 더 치지 않는다")
+	expect(math.abs(d1 / d0 - (1 + SHOCK.shock)) < 0.06, ("충격파: 그 한 방의 피해 +40%% (%.2f)"):format(d1 / d0))
+	slam(full)
+	expect(foe.stun > 0, "충격파: 맞은 보통 적이 넘어진다")
+	-- 멀리 선 적(보통 가시가 닿는 곳 — 84 + 모은 거리 20 — 밖, wide 안)
+	local function farHits(hold: number): number
+		place()
+		run(1.5)
+		place()
+		foe.x = hp.x + SHOCK.wide - 10
+		table.clear(sent)
+		castSlam(pp, hp.x, hp.y, 1, hold)
+		run(1.6)
+		local n = 0
+		for _, e in got("Hits", pp) do
+			for _, h in e.args[2] do
+				if h.mob == foe.id and not h.proc then
+					n += 1
+				end
+			end
+		end
+		return n
+	end
+	eq(farHits(full), 1, "충격파: 끝까지 모으면 양옆 150도트 가까이 선 적도 맞는다")
+	hp.skills.ax_shock = nil
+	eq(farHits(full), 0, "충격파가 없으면 거기까지 닿지 않는다")
+	hp.skills.ax_shock = 10
 	local nTap = slam(0)
-	eq(nTap, 2, "모으지 않은 강타에는 충격파가 없다")
+	eq(nTap, 1, "모으지 않은 강타도 한 방")
+	eq(farHits(0), 0, "모으지 않은 강타에는 충격파가 없다")
 	hp.skills.ax_shock = nil
 	-- 넘치는 힘: 끝까지 모은 강타를 맞힌 직후(3초 안)의 강타는 모으지 않아도 2단계다
 	local _, tap = slam(0)
 	hp.skills.ax_charge3 = 10
 	slam(full)
 	expect(hp.pass.surge > room.time, "넘치는 힘이 켜졌다")
+	local selfs = got("Self", pp)
+	expect(#selfs > 0 and (selfs[#selfs].args[1].surge or 0) > 2, "넘치는 힘이 켜지면 화면에 남은 시간을 알린다(화면이 2단계에서 모으기 시작한다)")
 	place()
 	table.clear(sent)
 	castSlam(pp, hp.x, hp.y, 1, 0)
@@ -1725,10 +1762,32 @@ do
 			end
 		end
 	end
-	local _, mul = Kit.chargeAt(hp, 2)
-	mul = Kit.chargeAt(hp, 2)
+	local mul = Kit.chargeAt(hp, 2, "ax_slam") -- 2단계로 친 대지 강타(모은 시간만큼 + 단계마다 초당 피해 — 2026-10-28)
 	expect(math.abs(surged / tap - mul) < 0.15 * mul, ("모으지 않아도 2단계의 피해가 나간다 (%.2f, 기대 %.2f)"):format(surged / tap, mul))
 	expect(hp.pass.surge < room.time, "한 번 쓰면 사라진다")
+	-- 2단계에서 「시작」한다(2026-10-28 사용자 "넘치는힘 패시브가 적용되는게 맞아?" — 전에는 「적어도 2단계」라 누르고 있으면 0단계부터 다시 셌다):
+	--  4단계(깊은 호흡 · 만근)면 두 단계만 더 모아도 끝까지 — 그 한 방은 4단계의 피해이고, 넘치는 힘을 다시 켜지 않는다
+	hp.skills.ax_charge2, hp.skills.ax_echo4 = 10, 1
+	eq(Kit.chargeLevels(hp), 4, "4단계")
+	local per = COMBAT.kit.axion.core.per.ax_slam
+	slam(Kit.chargeTime(hp, "ax_slam") + 0.05)
+	expect(hp.pass.surge > room.time, "4단계까지 모아 맞혀 넘치는 힘이 켜졌다")
+	place()
+	table.clear(sent)
+	castSlam(pp, hp.x, hp.y, 1, per * 2 + 0.05)
+	run(1.6)
+	local held = 0
+	for _, e in got("Hits", pp) do
+		for _, h in e.args[2] do
+			if h.mob == foe.id and not h.proc then
+				held += h.dmg
+			end
+		end
+	end
+	local mul4 = Kit.chargeAt(hp, 4, "ax_slam")
+	expect(math.abs(held / tap - mul4) < 0.15 * mul4, ("넘치는 힘: 두 단계만 더 모아도 4단계의 피해 (%.2f, 기대 %.2f)"):format(held / tap, mul4))
+	expect(hp.pass.surge < room.time, "넘치는 힘으로 끝까지 간 한 방은 넘치는 힘을 다시 켜지 않는다")
+	hp.skills.ax_charge2, hp.skills.ax_echo4 = nil, nil
 	-- 꺼지지 않는 불(살라맨더): 폭주가 끝나면 열기가 50에서 시작한다
 	World.guest = function()
 		return "salamander", 120
@@ -2075,6 +2134,63 @@ do
 	local inn = handlers.Chars(pr, "enter", sel.chars[1].id)
 	expect(inn.self ~= nil and inn.name == "다시지음", "새 이름으로 들어간다")
 	World.removePlayer(pr)
+end
+
+-- ---- 운영자 사칭(2026-10-29 사용자: "운영자 사칭할수 있는 닉네임들은 다 … 이미 생성된경우 닉네임 변경할수있도록 안내해주고 사용 못하게 해야한다") ----
+--  새로 짓지 못한다(까닭: 운영자로 보일 수 있는 이름) · 이미 있는 캐릭터는 들어갈 때 이름을 비우고 알린다 · 관리자 계정은 그대로 · 순위판에서도 뺀다
+do
+	local Account = req("ReplicatedStorage/shared/lune/sim/account")
+	local AdminS = req("ServerScriptService/server/lune/modules/admin")
+	local Rank = req("ReplicatedStorage/shared/lune/sim/rank")
+	local pr = person({ UserId = 1502, Name = "faker" })
+	rawReady(pr)
+	for _, n in { "운영자", "운a영자", "어드민", "dolupa95", "D0LUPA", "ADM1N", "게임마스터", "제작진", "GM달빛" } do
+		local res = handlers.Chars(pr, "check", n)
+		expect(res and res.ok == false and res.why == Account.TEXT.staff, "운영자로 보일 수 있는 이름은 지을 수 없다 — " .. n)
+	end
+	eq(handlers.Chars(pr, "create", "개발자님", "axion").ok, false, "만들 때도 막는다")
+	expect(handlers.Chars(pr, "create", "착한사칭", "axion").ok, "멀쩡한 이름의 캐릭터")
+	World.removePlayer(pr)
+	-- 이미 있는 캐릭터의 이름이 운영자처럼 보인다고 치자(예전 규칙으로 지은 이름)
+	disk[1502].chars[1].name = "dolupa95"
+	nameBook["dolupa95"] = 1502
+	local sel = rawReady(pr).select
+	local out = handlers.Chars(pr, "enter", sel.chars[1].id)
+	expect(out ~= nil and out.ok == false and out.self == nil, "운영자처럼 보이는 이름으로는 들어가지 못한다")
+	eq(out.why, Account.TEXT.staffGone, "운영자로 보일 수 있는 이름이라 새로 지으라고 알린다")
+	eq(out.select.chars[1].name, "", "이름이 비워졌다(고르기 화면에 「이름 짓기」로 남는다)")
+	eq(nameBook["dolupa95"], nil, "그 이름은 장부에서 빠졌다")
+	eq(handlers.Chars(pr, "name", sel.chars[1].id, "운영팀").ok, false, "다시 운영자 이름으로는 못 짓는다")
+	eq(handlers.Chars(pr, "name", sel.chars[1].id, "새이름둘").ok, true, "새 이름을 짓는다")
+	local inn = handlers.Chars(pr, "enter", sel.chars[1].id)
+	expect(inn.self ~= nil and inn.name == "새이름둘", "새 이름으로 들어간다(레벨 · 물건은 그대로)")
+	World.removePlayer(pr)
+	-- 관리자 계정: 운영자 이름을 짓고, 그 이름으로 들어간다
+	local adminId = next(AdminS.IDS)
+	local pa = person({ UserId = adminId, Name = "admin" })
+	rawReady(pa)
+	local made = handlers.Chars(pa, "create", "운영자", "mooni")
+	expect(made and made.ok, "관리자 계정은 「운영자」를 짓는다")
+	local ain = handlers.Chars(pa, "enter", made.id)
+	expect(ain and ain.self ~= nil and ain.name == "운영자", "관리자의 「운영자」는 그대로 들어간다")
+	World.removePlayer(pa)
+	-- 순위판: 이미 올라간 운영자 같은 이름의 줄은 뺀다
+	rankDisk.level = rankDisk.level or {}
+	rankDisk.level[Rank.charKey(1503, 1)] = Rank.levelScore(140, 0, 100)
+	rankInfo[Rank.charKey(1503, 1)] = { name = "관리자님", class = "axion" }
+	local pv = person({ UserId = 1504, Name = "viewer" })
+	rawReady(pv)
+	local mv = handlers.Chars(pv, "create", "구경꾼하나", "axion")
+	handlers.Chars(pv, "enter", mv.id)
+	run(Rank.REFRESH + 1)
+	local seen = false
+	for _, row in handlers.Rank(pv).level do
+		if row.name == "관리자님" then
+			seen = true
+		end
+	end
+	eq(seen, false, "순위판에서 운영자처럼 보이는 이름의 줄은 뺀다")
+	World.removePlayer(pv)
 end
 
 -- ---- 계정이 생기기 전의 저장(캐릭터 하나)은 첫 캐릭터가 된다 — 이름을 지어야 들어간다. 예전 저장은 그대로 둔다 ----
@@ -2776,13 +2892,14 @@ do
 	-- ㅅ) 1차 연속기: 다음 구간은 앞 구간이 끝나기 0.15초 전부터 받는다(앞당겨 보내 빨라지지 않게)
 	run(3)
 	h2.buffs = {}
+	-- (2026-10-28 액시온 리마스터: 도끼 내려찍기의 앞 구간 = 모으는 구간 약 0.21초)
+	local T = COMBAT.skills.ax_combo.segs[1].time
 	handlers.Skill(pg, "ax_combo", 1, h2.x, h2.y, 1)
-	run(0.15)
 	handlers.Skill(pg, "ax_combo", 2, h2.x, h2.y, 1)
-	eq(sg.skill.seg, 1, "앞 구간(0.4초)의 0.15초에 온 다음 구간은 받지 않는다")
-	run(0.15)
+	eq(sg.skill.seg, 1, ("앞 구간(%.2f초)이 막 시작했을 때 온 다음 구간은 받지 않는다"):format(T))
+	run(T - 0.05)
 	handlers.Skill(pg, "ax_combo", 2, h2.x, h2.y, 1)
-	eq(sg.skill.seg, 2, "끝날 즈음(0.3초)에 온 것은 받는다")
+	eq(sg.skill.seg, 2, "끝날 즈음에 온 것은 받는다")
 	run(3)
 	-- ㅇ) 맵에 들어와 화면이 열리면 먼저 와 있던 사람의 버프 모습을 받는다(버프는 바뀔 때만 보내 새로 온 사람에게는 보이지 않았다)
 	do

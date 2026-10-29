@@ -141,59 +141,45 @@ do
 	local room, h, a = arena("axion", { ax_echo = 10 })
 	eq(Kit.toggle(h), true, "배운 사출기를 켠다")
 	expect(Kit.firing(h) and Kit.isToggle(h, "ax_echo") and not Kit.isToggle(h, "rv_star"), "켜졌다")
-	-- 바로 앞의 적 하나를 서른 번 치면 메아리 도끼가 꼭 열 번(세 번째 타마다) — 그 타 피해의 60%
-	local echoes = 0
-	for i = 1, 30 do
-		local out = strike(room, h, "ax_combo", 1, nil)
+	-- 메아리 도끼(2026-10-28 리마스터 — 고르심 「다 모은 한 방에만」): 끝까지 모아 친 한 방이 맞은 적마다 하나 · 그 타 피해의 share배(1). 모으지 않은 타 · 덜 모은 타에는 없다
+	local levels = Kit.chargeLevels(h)
+	local fullOpts = { mul = 1, reach = 0, level = levels }
+	for _ = 1, 6 do
+		eq(#procs(strike(room, h, "ax_combo", 1, nil), "echo"), 0, "모으지 않은 타에는 떨어지지 않는다")
+	end
+	eq(#procs(strike(room, h, "ax_combo", 1, { mul = 1, reach = 0, level = levels - 1 }), "echo"), 0, "덜 모은 타에도 떨어지지 않는다")
+	for _ = 1, 5 do
+		local out = strike(room, h, "ax_combo", 1, fullOpts)
 		local main, list = mains(out), procs(out, "echo")
-		eq(#main, 1, "한 마리가 맞는다")
-		eq(#list, if i % tg.every == 0 then 1 else 0, ("도끼질 %d번째"):format(i))
-		if #list == 1 then
-			echoes += 1
+		eq(#main, 1, "모아 친 한 방은 한 숫자")
+		eq(#list, 1, "끝까지 모아 친 한 방에 하나")
+		if #list == 1 and #main == 1 then
 			eq(list[1].mob, a.id, "그 적에게 떨어진다")
-			eq(list[1].dmg, math.max(1, math.floor(main[1].dmg * tg.share + 0.5)), "그 타 피해의 60%")
+			eq(list[1].dmg, math.max(1, math.floor(main[1].dmg * tg.share + 0.5)), "그 타 피해만큼(share 1)")
 			expect(list[1].sy < a.y - 30 and math.abs(list[1].sx - a.x) <= 4, "머리 위에서 떨어진다(맞고 조금 밀린 그 자리)")
 		end
 	end
-	eq(echoes, 10, "서른 타에 열 번")
 	eq(Kit.toggle(h), false, "끈다")
-	for _ = 1, 9 do
-		eq(#procs(strike(room, h, "ax_combo", 1, nil), "echo"), 0, "꺼 두면 나가지 않는다")
+	for _ = 1, 3 do
+		eq(#procs(strike(room, h, "ax_combo", 1, fullOpts), "echo"), 0, "꺼 두면 나가지 않는다")
 	end
-	-- 레벨 1이면 40%의 세기(60% x 0.4 = 24%)
+	-- 레벨 1이면 그 타의 FLOOR배(스킬 레벨의 세기)
 	local room1, h1 = arena("axion", { ax_echo = 1 })
 	Kit.toggle(h1)
-	local got = nil
-	for _ = 1, 3 do
-		local out = strike(room1, h1, "ax_combo", 1, nil)
-		if #procs(out, "echo") == 1 then
-			got = { mains(out)[1].dmg, procs(out, "echo")[1].dmg }
-		end
-	end
-	expect(got ~= nil and got[2] == math.max(1, math.floor(got[1] * tg.share * FLOOR + 0.5)), "레벨 1의 메아리 도끼는 그 타의 24%")
-	-- 메아리 도끼로 쓰러뜨려도 잡은 것이다(경험치 · 떨어지는 것)
+	local out1 = strike(room1, h1, "ax_combo", 1, fullOpts)
+	local e1 = procs(out1, "echo")[1]
+	expect(e1 ~= nil and e1.dmg == math.max(1, math.floor(mains(out1)[1].dmg * tg.share * FLOOR + 0.5)), "레벨 1의 메아리 도끼는 그 타의 FLOOR배")
+	-- 메아리 도끼로 쓰러뜨려도 잡은 것이다(경험치 · 떨어지는 것) — 흩어짐 없이 재어 그 타 · 도끼의 피해를 정해 둔다(도끼가 그 타의 0.2배라 흩어짐 ±10%면 갈리지 않는다)
+	local spread = COMBAT.rules.spread
+	COMBAT.rules.spread = 0
 	local roomK, hK, aK = arena("axion", { ax_echo = 10 })
 	Kit.toggle(hK)
-	hK.kit.n = 2 -- 다음 타가 세 번째
 	local xp0 = hK.xp + hK.level * 1e9
-	local trial = strike(roomK, hK, "ax_combo", 1, nil)
-	expect(#procs(trial, "echo") == 1, "세 번째 타에 떨어진다")
-	hK.kit.n = 2
-	aK.hp = mains(trial)[1].dmg * 3 -- 제 타로는 안 쓰러지고 메아리 도끼로 쓰러지게
-	local outK = nil
-	for _ = 1, 20 do
-		hK.kit.n = 2
-		aK.hp = 1e12
-		local probe = strike(roomK, hK, "ax_combo", 1, nil)
-		aK.hp = procs(probe, "echo")[1].dmg -- 메아리 도끼 한 방이면 쓰러진다
-		hK.kit.n = 2
-		outK = strike(roomK, hK, "ax_combo", 1, nil)
-		if #outK.kills == 1 then
-			break
-		end
-		aK.state, aK.t = "idle", 0
-	end
-	expect(outK ~= nil and #outK.kills == 1 and outK.kills[1].mob == aK.id, "메아리 도끼가 쓰러뜨린 것도 잡은 것으로 친다")
+	local probe = strike(roomK, hK, "ax_combo", 1, fullOpts)
+	aK.hp = math.floor(mains(probe)[1].dmg * (1 + tg.share / 2)) -- 제 타로는 안 쓰러지고 메아리 도끼(그 타의 share배)로 쓰러지게
+	local outK = strike(roomK, hK, "ax_combo", 1, fullOpts)
+	COMBAT.rules.spread = spread
+	expect(outK ~= nil and #outK.kills == 1 and outK.kills[1].mob == aK.id and #procs(outK, "echo") == 1, "메아리 도끼가 쓰러뜨린 것도 잡은 것으로 친다")
 	expect(hK.xp + hK.level * 1e9 > xp0, "경험치를 받는다")
 
 	-- 힘 모으기
@@ -203,24 +189,46 @@ do
 	expect(lv0 == 0 and m0 == 1 and r0 == 0 and Kit.chargeTime(hc, "ax_slam") == 0, "배우지 않았으면 모이지 않는다")
 	hc.skills.ax_charge = 10
 	eq(Kit.chargeTime(hc, "ax_slam"), core.per.ax_slam * core.levels, "대지 강타를 끝까지 모으는 시간")
-	eq(Kit.chargeTime(hc, "ax_combo"), core.per.ax_combo * core.levels, "삼단 베기 셋째 타를 끝까지 모으는 시간")
+	eq(Kit.chargeTime(hc, "ax_combo"), core.per.ax_combo * core.levels, "도끼 내려찍기를 끝까지 모으는 시간")
 	eq(Kit.chargeTime(hc, "ax_dash"), 0, "돌진은 모을 수 없다")
-	for _, c in { { 0, 0 }, { 0.29, 0 }, { 0.3, 1 }, { 0.59, 1 }, { 0.6, 2 }, { 9, 2 }, { -1, 0 } } do
+	-- 모은 한 방 = 모으지 않은 한 방 x (쓰는 시간 + 단계 x per) ÷ 쓰는 시간 x (1 + 단계 x bonus) — 끝까지 모으면 초당 피해가 1 + 단계 x bonus배(2026-10-28 사용자 "시간을 생각해서 dps 계산을해서")
+	local function timeOf(id)
+		local t = 0
+		for _, sg in COMBAT.skills[id].segs do
+			t += sg.time
+		end
+		return t
+	end
+	local per, T = core.per.ax_slam, timeOf("ax_slam")
+	for _, c in { { 0, 0 }, { per - 0.01, 0 }, { per, 1 }, { per * 2 - 0.01, 1 }, { per * 2, 2 }, { 9, 2 }, { -1, 0 } } do
 		local lv, mul, reach = Kit.charge(hc, "ax_slam", c[1])
 		eq(lv, c[2], ("대지 강타를 %.2f초 모으면 %d단계"):format(c[1], c[2]))
-		near(mul, 1 + c[2] * core.bonus[2], 1e-9, "단계마다 피해 +55%(마스터)")
+		near(mul, (1 + c[2] * core.bonus[2]) * (T + c[2] * per) / T, 1e-9, "모은 시간만큼 · 단계마다 초당 피해 +12%(마스터)")
+		near(mul * T / (T + c[2] * per), 1 + c[2] * core.bonus[2], 1e-9, "그 단계로 치면 초당 피해가 1 + 단계 x bonus배")
 		eq(reach, c[2] * core.reach, "단계마다 닿는 거리 +10")
 	end
-	eq((Kit.charge(hc, "ax_combo", 0.2)), 1, "삼단 베기 셋째 타는 0.2초에 한 단계")
+	eq((Kit.charge(hc, "ax_combo", core.per.ax_combo)), 1, "도끼 내려찍기는 per초에 한 단계")
+	expect(core.per.ax_slam < core.per.ax_combo, "사냥기(대지 강타)가 보스기(도끼 내려찍기)보다 빨리 모인다")
 	hc.skills.ax_charge = 1
-	near(select(2, Kit.charge(hc, "ax_slam", 0.6)), 1 + 2 * core.bonus[1], 1e-9, "레벨 1이면 단계마다 +36%")
+	near(select(2, Kit.charge(hc, "ax_slam", per * 2)), (1 + 2 * core.bonus[1]) * (T + 2 * per) / T, 1e-9, "레벨 1이면 단계마다 초당 피해 +8%")
+	-- 끝까지 모은 한 방이 그 시간 동안 톡톡 친 것보다 세다(어느 레벨이든)
+	for _, lv in { 1, 5, 10 } do
+		hc.skills.ax_charge = lv
+		for _, id in { "ax_slam", "ax_combo" } do
+			local n, mul = Kit.charge(hc, id, 9)
+			local t = timeOf(id)
+			expect(n == 2 and mul / (t + n * core.per[id]) > 1.1 / t, ("끝까지 모은 %s의 초당 피해가 톡톡 친 것의 1.1배를 넘는다 Lv.%d"):format(id, lv))
+		end
+	end
+	hc.skills.ax_charge = 1
 	-- 모아 친 타: 피해가 그 배수만큼, 닿는 거리가 그만큼 는다(같은 씨앗의 방 둘로 견준다 — 흩어짐이 같다)
 	local roomA, hA, aA = arena("axion", { ax_charge = 10 }, 11)
 	local roomB, hB, aB = arena("axion", { ax_charge = 10 }, 11)
 	local _, mul2, reach2 = Kit.charge(hA, "ax_slam", 0.6)
 	local plain = strike(roomA, hA, "ax_slam", 1, nil)
 	local charged = strike(roomB, hB, "ax_slam", 1, { mul = mul2, reach = reach2 })
-	near(charged.hits[1].dmg / plain.hits[1].dmg, mul2, 0.01, "끝까지 모아 치면 피해가 2.1배")
+	-- 피해는 정수로 반올림된다: 비율의 허용 = 두 타의 반올림 몫(0.5씩)만큼(2026-10-28 — 방어구의 공격력이 붙어 보통 타가 57(실제 57.4) · 모아 친 타 121이 되어 0.01을 넘었다)
+	near(charged.hits[1].dmg / plain.hits[1].dmg, mul2, math.max(0.01, (1 + mul2) * 0.5 / plain.hits[1].dmg), "끝까지 모아 치면 피해가 그 배수만큼")
 	expect(charged.hits[1].big == true, "모아 친 타는 센 타로 뜬다")
 	local slamBox = COMBAT.skills.ax_slam.hits[1].box
 	aA.x, aB.x = X + slamBox[2] + 12, X + slamBox[2] + 12 -- 보통은 닿지 않는 자리(졸개의 몸 반폭 6을 넘어서)
@@ -616,45 +624,44 @@ do
 		end
 		return n, sum, list
 	end
-	-- 액시온: 겹 메아리(둘째 도끼) · 울리는 메아리(둘레로 번진다) · 달 그림자 도끼(두 번째 타마다 · 더 세게)
+	-- 액시온(2026-10-28 리마스터 — 모두 끝까지 모아 친 한 방에만): 무거운 메아리(도끼의 피해 +) · 울리는 메아리(둘레로 번진다) · 만근(한 단계 더 · 더 세게)
 	do
 		local room, h, a, b = arena("axion", { ax_echo = 10, ax_echo2 = 10, ax_echo3 = 10 })
 		h.level = 120
 		h.kit.on = true
-		b.x = a.x + 10 -- 옆에 붙은 졸개(번지는 범위 안)
-		local echo, splash, main = 0, 0, 0
-		local first, second = 0, 0
-		for i = 1, 3 do
-			local out = strike(room, h, "ax_combo", 1)
-			local n, _, list = count(out, "echo")
-			echo += n
-			splash += (count(out, "splash"))
-			for _, e in out.hits do
-				if not e.proc and e.mob == a.id then
-					main = e.dmg
-				end
-			end
-			for _, e in list do
-				if e.i == 0 then
-					first = e.dmg
-				else
-					second = e.dmg
-				end
-				eq(e.up, 3, "배운 강화를 같이 알린다(하나 더 + 번짐)")
+		b.x = a.x + 10 -- 옆에 붙은 졸개(번지는 범위 안 · 내려찍기에도 맞는다)
+		local out = strike(room, h, "ax_combo", 1, { mul = 1, reach = 0, level = Kit.chargeLevels(h) })
+		local n, _, list = count(out, "echo")
+		eq(n, #mains(out), "맞은 적마다 도끼 하나")
+		local mainA, echoA = nil, nil
+		for _, e in out.hits do
+			if not e.proc and e.mob == a.id then
+				mainA = e.dmg
 			end
 		end
-		expect(echo >= 2 and first > 0 and second > 0, "겹 메아리: 도끼가 둘 떨어진다 " .. echo)
-		near(second / first, UP.axion.two.share, 0.05, "둘째 도끼는 첫 도끼의 절반")
-		expect(splash >= 1, "울리는 메아리: 옆의 졸개에게 번진다 " .. splash)
-		-- 달 그림자 도끼: 두 번째 타마다
+		for _, e in list do
+			if e.mob == a.id then
+				echoA = e.dmg
+			end
+			eq(e.up, 3, "배운 강화를 같이 알린다(무거운 메아리 + 번짐)")
+		end
+		expect(mainA ~= nil and echoA ~= nil, "그 적에게 떨어진다")
+		if mainA and echoA then
+			near(echoA / mainA, KIT.axion.toggle.share * (1 + UP.axion.two.share), 0.02, "무거운 메아리: 도끼의 피해 +50%")
+		end
+		expect((count(out, "splash")) >= 1, "울리는 메아리: 옆의 졸개에게 번진다")
+		-- 만근: 힘 모으기 한 단계 더 · 도끼 더 세게
 		local room2, h2 = arena("axion", { ax_echo = 10, ax_echo4 = 10 })
 		h2.level = 120
 		h2.kit.on = true
-		local n2 = 0
-		for _ = 1, 6 do
-			n2 += (count(strike(room2, h2, "ax_combo", 1), "echo"))
+		eq(Kit.chargeLevels(h2), KIT.axion.core.levels + UP.axion.fast.levels, "만근: 힘 모으기 한 단계 더")
+		eq((count(strike(room2, h2, "ax_combo", 1, { mul = 1, reach = 0, level = KIT.axion.core.levels }), "echo")), 0, "만근이면 그 전의 끝 단계로는 모자란다")
+		local out2 = strike(room2, h2, "ax_combo", 1, { mul = 1, reach = 0, level = Kit.chargeLevels(h2) })
+		local m2, e2 = mains(out2)[1], select(3, count(out2, "echo"))[1]
+		expect(m2 ~= nil and e2 ~= nil, "만근: 끝까지 모으면 떨어진다")
+		if m2 and e2 then
+			near(e2.dmg / m2.dmg, KIT.axion.toggle.share * (1 + UP.axion.fast.more), 0.02, "만근: 도끼의 데미지 +30%")
 		end
-		expect(n2 >= 3, "달 그림자 도끼: 여섯 타에 세 번(두 번째 타마다) " .. n2)
 	end
 	-- 리븐: 쌍표창 · 되돌아오는 표창 · 피의 표창(확률이 70%까지)
 	do

@@ -176,7 +176,11 @@ for _, kind in kinds do
 			end
 			if p.dash and clips.run then
 				c, f, stand = BossFx.body("dash", p, 0.1, 0.1, clips, anim, nil)
-				expect(c == "run" and stand == false, ("%s %s: 내달릴 때는 걷는 그림을 돌린다"):format(kind, p.id))
+				if anim.loops and anim.loops[p.clip] then -- 제 동작에 되풀이하는 장이 있는 내달리기(2026-10-28 불씨 도둑 두목의 굴러 박치기 = 공 두 장)
+					expect(c == p.clip and stand == false, ("%s %s: 내달릴 때는 그 동작의 되풀이 장을 돌린다"):format(kind, p.id))
+				else
+					expect(c == "run" and stand == false, ("%s %s: 내달릴 때는 걷는 그림을 돌린다"):format(kind, p.id))
+				end
 			end
 		end
 		expect(played >= 1 or anim.attack == nil, kind .. ": 공격 그림이 있으면 그것을 쓰는 패턴이 있다")
@@ -299,7 +303,7 @@ end
 
 -- ---- 3-1) 그림을 빌려 쓰는 몬스터의 겉모습(2026-10-11 — 사용자: "정예검병 이런 그냥 검병이랑 같은 몬스터 디자인을 돌려쓰는 경우에 … 주위에 화려한 이펙트라던가 좀 구분되어지게") ----
 for kind, def in COMBAT.mobs do
-	if def.sprite ~= kind then
+	if def.sprite ~= kind and not def.decoyOf then -- (가짜 두목 — 2026-10-28 불씨 도둑 두목의 연막 분신 — 은 진짜와 똑같아야 한다: 진짜는 발밑의 불티로 가린다)
 		expect(def.look ~= nil and (def.look.tint ~= nil or def.look.aura ~= nil), kind .. ": 그림을 빌려 쓰면 가르는 겉모습이 있다")
 	end
 end

@@ -33,7 +33,7 @@ end
 local Titles = require(ReplicatedStorage.shared.lune.sim.titles)
 function Others.setTitle(tag, id: any)
 	local t = Titles.def(id)
-	Ui.tagTitle(tag, if t then t.name else "", if t then Ui.COLOR[t.color] or Ui.COLOR.gold else nil)
+	Ui.tagTitle(tag, if t then t.name else "", if t then Titles.tint(t, Ui.COLOR) else nil)
 end
 
 function Others.new(heroLayer: Frame, tagLayer: Frame, myId: any, ladders: any, scene: any)
@@ -101,6 +101,7 @@ function Others:setWho(roster)
 				o.tag:SetText(Others.tagText(w.level, w.name))
 				Ui.tagLead(o.tag, Others.levelText(w.level))
 			end
+			o.dskin = w.dskin or nil -- 그 사람의 데미지 스킨(2026-10-29 — 그 사람이 때린 숫자의 모습: boot의 Hits)
 			if o.title ~= (w.title or false) then
 				o.title = w.title or false
 				Others.setTitle(o.tag, o.title) -- 그 사람이 단 칭호(2026-10-26)

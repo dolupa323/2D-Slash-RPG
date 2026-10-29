@@ -158,6 +158,9 @@ local function makeG(self, a)
 		pose = function()
 			return a.pose
 		end,
+		riding = function() -- 탈것을 탄 동안(boot · othersView가 안장 위에 작게 그리는 배를 넣는다 — 리븐의 그림자 분신이 따로 걷는다: 2026-10-26)
+			return a.rideSize ~= nil
+		end,
 		cam = function()
 			return { x = self.view.camX, y = self.view.camY }
 		end,
@@ -321,6 +324,12 @@ local function makeG(self, a)
 	end
 	-- 몸의 한 색 실루엣을 덧그린다(분신 · 굳은 몸의 윤곽 · 사신의 그림자 · 망령): 그 동작의 f째 장(0부터)을 (x, y)에. o = { color, alpha } — 그리는 동안(draw)에만 부른다.
 	--  캐릭터들의 층 맨 뒤에 놓인다(몸 뒤). o.scale = 크기(거신)
+	-- 그 동작의 장 수(내 캐릭터 그림의 — 없으면 1)
+	function g.frames(clip: string): number
+		local char = CHARS.chars[a.who]
+		local c = char and char.clips[clip]
+		return if c then math.max(1, #c.frames) else 1
+	end
 	function g.sprite(clip: string, f: number, x: number, y: number, dir: number, o)
 		self.spriteN += 1
 		local sp = self.sprites[self.spriteN]
@@ -377,11 +386,12 @@ local function rgb(c: number): Color3
 	return Color3.fromRGB(bit32.rshift(c, 16), bit32.band(bit32.rshift(c, 8), 255), bit32.band(c, 255))
 end
 function Cast:look(a, body, clip: string, frame: number, x: number, y: number, dir: number, fade: number?)
-	local sc = (a.scale or 1) * (a.rideSize or 1) -- rideSize = 탄 동안 줄여 그리는 배(boot — rideView가 돌려준 것)
+	local kit, g = a.kit, a.g
+	-- rideSize = 탄 동안 줄여 그리는 배(boot — rideView가 돌려준 것) · grow = 힘을 모은 단계마다 커지는 몫(액시온 — 2026-10-28 리마스터 · 그리기만)
+	local sc = (a.scale or 1) * (a.rideSize or 1) * (1 + (if kit and kit.grow then kit.grow * (a.charge or 0) else 0))
 	local alpha = max(fade or 0, 1 - (a.alpha or 1))
 	body:set(clip, frame, x, y, dir, sc)
 	body.label.ImageTransparency = alpha
-	local kit, g = a.kit, a.g
 	local glow = if kit and kit.heroGlow then kit.heroGlow(g) else nil
 	local tint = if kit and kit.heroTint then kit.heroTint(g) else nil
 	local sil = a.sil
@@ -450,6 +460,8 @@ function Cast:start(a, id: string, seg: number, lv: number?)
 	end
 	local clip = CHARS.chars[a.who].clips[s.clip]
 	a.skill = { def = def, i = seg, s = s, t = 0, lv = lv or 0, fired = {}, acc = 0, last = s.to or (if clip then #clip.frames - 1 else 0) }
+	a.charge = lv or 0 -- 모은 단계: 모아 친 구간 동안 커진 몸(액시온 — 다른 사람의 것은 서버가 Act로 알려 준 단계 · 2026-10-28)
+	a.chargeP = nil -- 모으는 게이지(내 캐릭터만 — 모으는 구간 동안 boot가 채운다)
 	if s.start then
 		s.start(a.g)
 	end
@@ -505,11 +517,16 @@ function Cast:setBuffs(a, list)
 	end
 end
 
--- 힘이 한 단계 모였다(시험 탭: 단계가 오를 때마다 고리가 오므라든다)
-function Cast:chargeUp(a, lv: number)
+-- 힘이 한 단계 모였다(시험 탭: 단계가 오를 때마다 고리가 오므라든다). full = 키를 누르고 있어 끝까지 모였다(만월로 바로 찬 것은 아니다):
+--  화면이 살짝 흔들리고 게이지가 잠깐 흰색으로 깜빡인 채 남는다(2026-10-28 사용자 "차징 풀차징시 살짝 흔들림이 있게" — 1점 · 0.15초 · 0.3초, 제가 정한 값)
+function Cast:chargeUp(a, lv: number, full: boolean?)
 	a.charge = lv
 	self.fx.ring(a.x, a.y - 8, 26 + lv * 8, 4, a.tone, { squash = 1, back = false, life = 0.25 })
 	self.fx.shards(a.x, a.y - 8, 4 + lv * 2, a.tone, { speed = 40, up = 60, kind = "dot", grav = -60, life = 0.4 })
+	if full then
+		a.g.shake(1, 0.15)
+		a.gaugeFull = 0.3
+	end
 end
 
 -- 레벨이 올랐다(2026-10-18 — 메이플스토리처럼 캐릭터 둘레로 빛이 솟는다. 전에는 머리 위의 글씨와 소리뿐이었다): 큰 기운 · 발밑의 넓은 고리 · 위로 흩어지는 점(직업 색)
@@ -681,6 +698,9 @@ function Cast:update(dt: number)
 	end
 	for _, a in self.actors do
 		local g = a.g
+		if a.gaugeFull then
+			a.gaugeFull = if a.gaugeFull > dt then a.gaugeFull - dt else nil
+		end
 		for _, b in a.buffs do
 			b.t = max(0.01, b.t - dt) -- 끝나는 것은 서버가 알린다(그때까지는 걸려 있는 모습이다)
 		end
@@ -722,6 +742,8 @@ function Cast:update(dt: number)
 				end
 				if a.skill == sk then
 					a.skill = nil
+					a.charge = 0
+					a.chargeP = nil
 				end
 			end
 		end
@@ -841,12 +863,20 @@ function Cast:draw()
 			end
 		end
 	end
-	-- 모은 단계(머리 위의 점)
+	-- 모으는 게이지(내 캐릭터 — 2026-10-28 사용자 "점으로 1,2,3 단계로 하는게아니라 게이지로 차오르는게 보이게"): 머리 위에 20 x 4점 —
+	--  어두운 테두리 안에 모은 만큼 밝은 색이 차오른다(단계로 칸을 나누지 않는다). 끝까지 차면 흰색으로 깜빡이며 잠깐 남는다(gaugeFull — 위 chargeUp)
 	for _, a in self.actors do
-		if a.charge > 0 then
-			front:style(a.tone.l)
-			for i = 0, a.charge - 1 do
-				front:rect(R(a.x) - a.charge * 2 + i * 4, R(a.y) - 28 * a.scale, 2, 2)
+		local p = if a.gaugeFull then 1 else a.chargeP
+		if p then
+			local sc = (a.scale or 1) * (1 + (if a.kit and a.kit.grow then a.kit.grow * a.charge else 0)) -- 커진 몸의 머리 위
+			local x, y = R(a.x) - 10, R(a.y) - R(20 * sc) - 4 -- 머리(몸 키 17점쯤) 위로 7 ~ 9점(공방 시험 탭의 그림으로 맞춘 자리)
+			front:alpha(1)
+			front:style(a.tone.d)
+			front:rect(x, y, 20, 4)
+			local w = floor(18 * math.clamp(p, 0, 1) + 0.5)
+			if w > 0 then
+				front:style(if p >= 1 and floor(self.clock * 12) % 2 == 0 then a.tone.w else a.tone.l)
+				front:rect(x + 1, y + 1, w, 2)
 			end
 		end
 	end

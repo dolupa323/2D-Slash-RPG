@@ -33,7 +33,7 @@ local BENCH = { shroom = 2, bigshroom = 5, piglet = 12, goat = 15, bat = 16, tor
 -- ---- 1) 자료의 짜임 ----
 local newKinds = 0
 for kind, m in COMBAT.mobs do
-	if m.bare and not m.story then -- 스토리 보스(bare이지만 졸개가 아니다)는 33_lune_boss.luau가 본다
+	if m.bare and not m.story and not m.afk and not m.gim then -- 스토리 보스(bare이지만 졸개가 아니다)는 33_lune_boss.luau가 본다 · 잠수 방지 날파리(맵의 몬스터가 아니다)는 107_lune_afk_fly.luau · 보스의 기믹 물건(불씨 폭탄 · 가짜 두목 — 치지 않는다 · gim)은 110_lune_thiefboss.luau
 		newKinds += 1
 		local char = CHARS.chars[m.sprite]
 		expect(char ~= nil, "새 몬스터의 그림 " .. kind)
@@ -111,7 +111,7 @@ do
 	end
 end
 for kind, m in COMBAT.mobs do
-	if m.bare and not m.story then
+	if m.bare and not m.story and not m.afk and not m.gim then
 		expect((placed[kind] ~= nil) ~= (BENCH[kind] ~= nil), "새 몬스터는 놓였거나 쉰다(둘 다는 아니다) " .. kind)
 	end
 end

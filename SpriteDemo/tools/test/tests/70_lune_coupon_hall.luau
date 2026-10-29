@@ -240,6 +240,7 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	end,
 	freeName = function(key) names[key] = nil end,
 	rankSet = function() end,
+	rankRaise = function() end,
 	rankRemove = function() end,
 	rankTop = function() return {} end,
 	rankInfoSet = function() end,

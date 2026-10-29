@@ -34,7 +34,8 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	nameOwner = function(key) return names[key] end,
 	claimName = function(key, id) names[key] = id; return true end,
 	freeName = function(key) names[key] = nil end,
-	rankSet = function() end, rankRemove = function() end, rankTop = function() return {} end,
+	rankSet = function() end,
+	rankRaise = function() end, rankRemove = function() end, rankTop = function() return {} end,
 	rankInfoSet = function() end, rankInfoGet = function() return nil end, rankInfoRemove = function() end,
 	isOffline = function() return false end,
 	marketRead = function() return true, nil end,
@@ -93,6 +94,8 @@ if foe then
 			break
 		end
 		handlers.Skill(pa, "ax_combo", 1, a.hero.x, a.hero.y, 1)
+		run(0.25) -- 도끼 내려찍기(2026-10-28 액시온 리마스터): 모으는 구간 뒤에 내려찍는 구간을 보낸다
+		handlers.Skill(pa, "ax_combo", 2, a.hero.x, a.hero.y, 1)
 		run(0.8)
 	end
 	expect(foe.hp <= 0 or foe.state == "dead" or foe.state == "gone", "A가 졸개를 잡았다")

@@ -114,7 +114,24 @@ end
 local sfxAt: { [string]: number } = {}
 function Music.sfx(key: string, whole: boolean?): boolean
 	local def = MUSIC.sfx and MUSIC.sfx[key]
-	if not def or def.id == "" or gain("sfx") <= 0 then
+	if not def or gain("sfx") <= 0 then
+		return false
+	end
+	-- 셋을 돌려 내는 소리(2026-10-28 보스의 소리 — vars): 올린 것 가운데 하나를 무작위로(같은 소리가 되풀이되지 않게) · 크기는 그것마다
+	local id, volume = def.id, def.volume
+	if def.vars then
+		local got = {}
+		for _, v in def.vars do
+			if v.id ~= "" then
+				table.insert(got, v)
+			end
+		end
+		if #got > 0 then
+			local v = got[math.random(1, #got)]
+			id, volume = v.id, v.volume
+		end
+	end
+	if id == "" then
 		return false
 	end
 	local now = os.clock()
@@ -125,8 +142,8 @@ function Music.sfx(key: string, whole: boolean?): boolean
 	ensure()
 	local sound = Instance.new("Sound")
 	sound.Name = "Sfx_" .. key
-	sound.SoundId = def.id
-	sound.Volume = def.volume * gain("sfx")
+	sound.SoundId = id
+	sound.Volume = volume * gain("sfx")
 	if def.upto and not whole then
 		-- 앞에서부터 upto초까지만 튼다(데미지 소리 — 사용자 2026-10-14: "이 음성파일의 절반 만 재생합니다")
 		sound.PlaybackRegionsEnabled = true

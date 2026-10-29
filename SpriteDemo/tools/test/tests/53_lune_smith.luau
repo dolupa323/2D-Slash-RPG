@@ -286,7 +286,7 @@ expect(#sent >= 1 and sent[1][2] == "craft", "「제작」은 레시피를 보�
 -- ---- 6) 강화 줄의 글이 칸에 든다(단계 · 별 · 파괴 방지) ----
 local widest = 0
 for _, stage in { 1, 10, 20, 30, 60, 100, 150, 180 } do
-	for _, slot in { "weapon", "hat" } do
+	for _, slot in { "weapon", "hat", "ring" } do -- (장신구 — 2026-10-28 방어구 · 장신구에도 공격력이 붙어 옵션 줄이 길어졌다)
 		for star = 0, 22 do
 			local it = Items.make(slot, stage, 5, "axion")
 			it.star = star

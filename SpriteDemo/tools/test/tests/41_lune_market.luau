@@ -63,7 +63,7 @@ do
 	for _, g in Items.data.GOODS do
 		if g.quest and not quest then
 			quest = g
-		elseif g.tab == "etc" and not g.quest and not mat then
+		elseif g.tab == "etc" and not g.quest and g.kind ~= "event" and not mat then -- (기간 이벤트의 물건 — 호박 사탕 — 은 올릴 수 없다: 113_lune_halloween)
 			mat = g
 		end
 	end
@@ -418,6 +418,7 @@ local function fakeStore()
 		end,
 		freeName = function(key) names[key] = nil end,
 		rankSet = function() end,
+		rankRaise = function() end,
 		rankRemove = function() end,
 		rankTop = function() return {} end,
 		rankInfoSet = function() end,
@@ -723,9 +724,11 @@ do
 	r = sv.h.Market(pa, "settle", potId, "collect")
 	expect(r.ok == true and ha.money == money0 + 190 and sa.acct.market.list[potId].got == 4 and boards.u.list[1].l == 6 and table.find(log, "update:u") == nil, "판매 중인 채로 대금만 받는다(장부는 고치지 않는다 — 받은 수는 계정에 적는다)")
 	expect(sv.h.Market(pa, "settle", potId, "collect").why == WHY.nothing and ha.money == money0 + 190, "받을 것이 없으면 다시 받지 못한다")
+	eq(sa.acct.ach.c.sold, 1, "업적 「첫 장사」: 판매 중에 대금을 받아도 센다")
 	table.clear(log)
 	r = sv.h.Market(pa, "settle", hatId, "collect")
 	expect(r.ok == true and ha.money == money0 + 190 + 950 + DEP and r.used == 1 and string.find(r.msg, "950", 1, true) ~= nil, "다 팔린 것: 대금 950과 보증금을 받는다")
+	eq(sa.acct.ach.c.sold, 2, "업적 「첫 장사」: 다 팔린 것의 대금을 받아도 센다(2026-10-26 — 전에는 세지 않아 「물건 10개 팔았는데 깨지지 않는다」)")
 	iSave, iUpdate = table.find(log, "save:9101"), table.find(log, "update:a_hat")
 	expect(iSave ~= nil and iUpdate ~= nil and iSave < iUpdate and #boards.a_hat.list == 0 and saved(9101).sales == 1, "계정을 저장한 뒤에 장부의 줄을 지운다")
 	expect(sv.h.Market(pa, "settle", hatId, "collect").why == WHY.gone and ha.money == money0 + 190 + 950 + DEP, "두 번 받지 못한다")

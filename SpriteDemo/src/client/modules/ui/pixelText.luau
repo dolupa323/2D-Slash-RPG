@@ -53,7 +53,16 @@ end
 -- 깨진 UTF-8(반쪽 글자)은 「?」로 바꾼다 — 글자를 셀 때(utf8.codes) 오류가 나지 않게.
 --  2026-10-21 퍼블리시한 게임의 오류 보고: 「pixelText:55: invalid UTF-8 code」 554번. 빈칸을 지우는 패턴 %s는 바이트로 고르고 그 컴퓨터의 언어 설정을 따라,
 --  한글의 가운데 바이트(0x85 · 0xA0)를 빈칸으로 보아 지울 수 있다 → 반쪽 글자. 그래서 빈칸은 [ \t\r\n]로만 지우고(아래 fitLine · 이름 칸들), 들어오는 글은 여기서 한 번 더 고친다
+-- 글을 바꾸는 것(언어 — 2026-10-27 「달의 계승자」의 영문: shared/lune/lang.luau의 Lang.t). 없으면 그대로. 재기 · 줄바꿈 · 맞추기 · 그리기가 모두 clean을 지난다
+local translator: ((string) -> string)? = nil
+function exports.SetTranslator(fn: ((string) -> string)?)
+	translator = fn
+end
+
 local function clean(text: string): string
+	if translator then
+		text = translator(text)
+	end
 	if utf8.len(text) then
 		return text
 	end
@@ -172,6 +181,16 @@ end
 
 local Label = {}
 Label.__index = Label
+local live = setmetatable({}, { __mode = "k" }) -- 그려 둔 글들(언어를 바꾸면 모두 다시 그린다 — RefreshAll)
+
+-- 그려 둔 글을 모두 다시 그린다(언어가 바뀌었다 — 2026-10-27)
+function exports.RefreshAll()
+	for label in live do
+		if label.Frame and label.Frame.Parent then
+			label:_render()
+		end
+	end
+end
 
 -- 칸 제한(MaxWidth · MaxLines)이 있으면 그 안에 들어가게 고친 글
 function Label:_fitted(text: string): string
@@ -188,7 +207,7 @@ function Label:_render()
 	table.clear(self._glyphs)
 	local font = self._font
 	local pages = pagesOf[self._fontKey] or (townIds.FONT and townIds.FONT[self._fontKey]) or {}
-	local shown = self:_fitted(self._text)
+	local shown = self:_fitted(clean(self._text)) -- (clean = 언어 · 깨진 글자 — 칸 제한이 없는 글도 지난다)
 	local width, height = exports.Measure(shown, self._fontKey)
 	local lineH = self._line or font.line -- 줄 간격(Line을 주면 그 값 — 말풍선처럼 줄 사이를 넓게 쓸 때)
 	if self._line then
@@ -281,6 +300,7 @@ function Label:SetShadow(color: Color3?)
 end
 
 function Label:Destroy()
+	live[self] = nil
 	self.Frame:Destroy()
 end
 
@@ -308,6 +328,7 @@ function exports.new(parent: Instance, props)
 		_line = props.Line, -- 줄 간격(안 주면 글꼴의 것)
 		_glyphs = {},
 	}, Label)
+	live[self] = true
 	self:_render()
 	return self
 end

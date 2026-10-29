@@ -72,6 +72,12 @@ Common.flame = { up = 70, kind = "petal", grav = 60, life = 0.7 }
 -- 캐릭터에 붙여 그리는 막대(살라맨더의 열기 …)의 자리: 발밑에서 이만큼 아래(게임의 도트). 발밑 2~9점에는 이름표가 떠 있다 — 그 바로 아래에 놓는다
 --  (사용자 2026-10-11: "캐릭터 아래에 게이지 보여주는 스킬들이있는데 이게 닉네임이랑 겹쳐서 가려버리는 문제가있습니다." 이름표는 움직이지 않는다 — 막대를 옮긴다)
 Common.GAUGE_DOWN = 10
+-- 칭호를 단 사람(g.titled — 화면이 그 사람의 이름표에 칭호가 있으면 단다): 이름표 아래의 칭호 줄 밑으로 내린다(2026-10-28 사용자 "살라같은 게이지 캐릭터들 칭호에 게이지 겹치는문제 해결하고").
+--  GAUGE_TITLED = 칭호 줄의 아래 끝(게임의 도트) — 화면(client boot)이 이름표 · 칭호의 높이(화면 틀의 점)를 지금의 배율로 도트로 바꿔 장마다 넣는다(18은 처음 값)
+Common.GAUGE_TITLED = 18
+function Common.gaugeDown(g): number
+	return if g.titled then math.max(Common.GAUGE_DOWN, Common.GAUGE_TITLED) else Common.GAUGE_DOWN
+end
 
 -- 점에서 선분까지의 거리(빛줄기 판정)
 function Common.distSeg(px: number, py: number, x0: number, y0: number, x1: number, y1: number): number

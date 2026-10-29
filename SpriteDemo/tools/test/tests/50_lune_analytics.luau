@@ -30,7 +30,8 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	nameOwner = function(key) return names[key] end,
 	claimName = function(key, id) names[key] = id; return true end,
 	freeName = function(key) names[key] = nil end,
-	rankSet = function() end, rankRemove = function() end, rankTop = function() return {} end,
+	rankSet = function() end,
+	rankRaise = function() end, rankRemove = function() end, rankTop = function() return {} end,
 	rankInfoSet = function() end, rankInfoGet = function() return nil end, rankInfoRemove = function() end,
 	isOffline = function() return false end,
 })

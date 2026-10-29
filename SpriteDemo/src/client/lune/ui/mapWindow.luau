@@ -7,7 +7,7 @@
 --   ② 내가 있는 곳: 민트 고리와 그 위의 화살표, 민트 이름표 ③ 퀘스트를 받을 곳 「!」 · 돌려줄 곳 「?」 ④ 내 레벨에 맞는 사냥터: 풀빛 고리와 풀빛 이름표
 --   ⑤ 지금 가야 할 곳까지의 길: 표시 사이를 잇는 금빛 점줄 ⑥ 다른 지역(은달 항구): 그 도시가 그려진 자리의 민트 표시 — 그리로 가는 포탈이 있는 장소(수비대 야영지)에서 민트 점줄로 잇는다
 --  오른쪽: 고른 장소의 이름 · 갈래 · 레벨 · 다른 지역으로 가는 포탈 · 몬스터 · 주민, 내 레벨의 사냥터, 가는 길(글).
---  그림이 있는 지역만 보여 준다(그림이 없는 지역은 탭도 없다 — 도표로 때우지 않는다). 이동하는 기능은 없다(보기만 한다).
+--  그림이 있는 지역만 보여 준다(그림이 없는 지역은 탭도 없다 — 도표로 때우지 않는다). 이동하는 기능은 없다(보기만 한다 — 마을 사이는 정류장의 역마차 마부에게서: 2026-10-26).
 --  셈은 shared/lune/ui/worldmap.luau, 자리는 data/worldmap.generated.luau의 art(공방 js/lune/design/journey.js의 WORLDART).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune

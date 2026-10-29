@@ -52,7 +52,7 @@ end
 -- 띄운다. spec = {
 --   owner = 띄운 창("shop" · "bag" · "store") · kind = 하는 일(WORDS.ask의 이름표) · icon = 그림의 이름 · name = 이름
 --   hi = 고를 수 있는 가장 많은 수(1 이상) · n = 처음 수(없으면 CountPick.first) · each = 하나의 값(살 때 — 합계) · money = 가진 달돈(살 때)
---   gainEach = 하나를 팔 때 받는 달돈(팔 때) · onYes = function(n) 확인했을 때 · onNo = function() 취소했을 때(없어도 된다) }
+--   gainEach = 하나를 팔 때 받는 달돈(팔 때) · gainDust = function(n) 분해하면 받는 달가루(물약 · 귀환 주문서 — 2026-10-27) · onYes = function(n) 확인했을 때 · onNo = function() 취소했을 때(없어도 된다) }
 function CountBox.open(spec)
 	CountBox.hide()
 	local words = WORDS.ask[spec.kind]
@@ -144,6 +144,12 @@ function CountBox.open(spec)
 			ok = ok and not short
 		elseif spec.gainEach then
 			sum:set(Format.fill(KW.gain, { n = Format.comma(spec.gainEach * (n or 0)) }))
+		elseif spec.gainDust then
+			-- 분해(물약 · 귀환 주문서 — 2026-10-27): 받을 달가루 · 0이면 분해하지 않는다(작은 물약은 14개부터)
+			local d = spec.gainDust(n or 0)
+			sum:set(Format.fill(KW.gainDust, { n = Format.comma(d) }))
+			sum:color(if d >= 1 then C.accent else C.red)
+			ok = ok and d >= 1
 		else
 			sum:set("")
 		end

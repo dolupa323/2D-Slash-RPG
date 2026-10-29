@@ -157,7 +157,9 @@ function CashWindow.rows(view, tab: number)
 		--  꺼내기 · 넣기 · 타기 · 내리기는 가방의 캐시 탭 · 퀵슬롯 · N 키에서)
 		local isPet, isMount = string.sub(id, 1, 4) == "pet_", string.sub(id, 1, 6) == "mount_"
 		local on = if isPet then (view and view.petOut == id) elseif isMount then (view ~= nil and view.riding == true and view.mount == id) else false
-		local state = if v.own then "own" elseif not v.ready then "soon" elseif full then "full" else "buy"
+		-- 한정 판매(2026-10-29 황금 골렘): 남은 수를 띄우고, 다 팔렸으면 「품절」(구매 단추가 꺼진다)
+		local soldOut = p.stock and not v.own and typeof(v.left) == "number" and v.left <= 0
+		local state = if v.own then "own" elseif not v.ready then "soon" elseif soldOut then "soldOut" elseif full then "full" else "buy"
 		table.insert(out, {
 			id = id,
 			icon = p.icon,
@@ -168,8 +170,10 @@ function CashWindow.rows(view, tab: number)
 			price = Format.fill(W.price, { n = v.robux or p.robux }), -- 서버가 읽은 로블록스의 실제 값(없으면 설계의 값)
 			state = state,
 			on = on == true,
-			count = if lim and not ((isPet or isMount) and v.own) then Format.fill(if lim.per == "week" then W.week else W.once, { n = bought, max = lim.n }) else nil,
-			full = full,
+			count = if p.stock and not v.own then Format.fill(W.stockLeft, { n = if typeof(v.left) == "number" then v.left else p.stock, max = p.stock })
+				elseif lim and not ((isPet or isMount) and v.own) then Format.fill(if lim.per == "week" then W.week else W.once, { n = bought, max = lim.n })
+				else nil,
+			full = full or soldOut == true,
 		})
 	end
 	return out
@@ -603,10 +607,10 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 					ru.count:set(r.count or "")
 					ru.count:color(if r.full then C.red else C.accent)
 					ru.price:set(r.price)
-					ru.price:color(if r.state == "soon" then C.dim else C.gold)
+					ru.price:color(if r.state == "soon" or r.state == "soldOut" then C.dim else C.gold)
 					ru.own:show(r.state == "own")
 					ru.btn.frame.Visible = r.state ~= "own"
-					ru.btn:setText(if r.state == "soon" then W.soon else W.buy)
+					ru.btn:setText(if r.state == "soon" then W.soon elseif r.state == "soldOut" then W.soldOut else W.buy)
 					ru.btn:setEnabled(r.state == "buy")
 					ru.act = if r.state == "buy" then { id = r.id } else nil
 				end

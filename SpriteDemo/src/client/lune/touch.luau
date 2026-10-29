@@ -26,11 +26,13 @@ local VIEW_W, VIEW_H = G.VIEW_W, G.VIEW_H -- 게임 화면(도트)
 
 local C = Ui.COLOR
 local PIC = 24 -- 그림 한 장(화면 틀의 점)
+local STICK = { walk = 0.35, ud = 0.55 } -- 조이스틱: 반지름의 몇 배를 밀어야 걷는가 · 아래(하단 점프) · 위(사다리)(2026-10-27 — 전에는 0.2 · 0.42)
 local HOLD_FIRST, HOLD_NEXT = 0.3, 0.12 -- 공격 스킬을 누르고 있을 때: 처음 다시 누르기까지 · 그 뒤의 간격(초)
 local DRAG = Quick.DATA.drag -- 이만큼 움직이면 끌기로 본다(화면 틀의 점)
-local ACT_WORDS = { pickup = "줍기", portal = "들어가기", npc = "말 걸기", spot = "살펴보기", vista = "둘러보기" } -- spot = 맵에 놓인 것 앞(퀘스트의 자리) · vista = 경관의 자리(성의 테라스 — 2026-10-18)
+local ACT_WORDS = { pickup = "줍기", portal = "들어가기", npc = "말 걸기", spot = "살펴보기", vista = "둘러보기", chest = "상자 열기" } -- spot = 맵에 놓인 것 앞(퀘스트의 자리) · vista = 경관의 자리(성의 테라스 — 2026-10-18) · chest = 보상의 방의 상자(2026-10-28)
 
 local Touch = {}
+Touch.STICK = STICK -- (시험이 본다)
 Touch.on = false
 Touch.arranging = false
 
@@ -140,7 +142,7 @@ local function paintSlot(b)
 	else
 		b.count:show(false)
 	end
-	local cd = if what and not Quick.item(what) then state.cds[what] else nil
+	local cd = if what and (not Quick.item(what) or Quick.isPotion(what)) then state.cds[what] else nil -- (물약도 다시 마시기까지 — 2026-10-27 3초)
 	local remain = if cd then cd.remain else 0
 	b.veil.Visible = remain > 0
 	if remain > 0 then
@@ -545,12 +547,13 @@ local function makePad(t)
 		end
 		local s = Stage.uiScale
 		knob.Position = UDim2.new(0.5, v.X / s, 0.5, v.Y / s)
-		set("left", v.X < -radius * 0.2)
-		set("right", v.X > radius * 0.2)
-		set("down", v.Y > radius * 0.42) -- 아래로 민 채 「점프」를 누르면 발판에서 내려온다(하단 점프 — sim/physics.luau)
+		-- 걷기 시작하는 만큼(2026-10-27 사용자 "모바일에서 버튼 민감도가 너무 높다는데" — 반지름의 20% → 35%: 엄지를 얹거나 조금 흔들려도 걷지 않게 · 아래 · 위 42% → 55%. 값은 제가 정한 것)
+		set("left", v.X < -radius * STICK.walk)
+		set("right", v.X > radius * STICK.walk)
+		set("down", v.Y > radius * STICK.ud) -- 아래로 민 채 「점프」를 누르면 발판에서 내려온다(하단 점프 — sim/physics.luau)
 		-- 위로 밀면 사다리만 오른다("climb" — 문 · 주민은 그대로 상호작용 단추: 사용자 2026-10-08 「위로 미는 것은 아무 일도 없다」).
 		--  2026-10-17: 사다리를 넣으며 폰의 오르기를 빠뜨렸었다(조이스틱으로는 사다리를 탈 수 없었다)
-		set("climb", v.Y < -radius * 0.42)
+		set("climb", v.Y < -radius * STICK.ud)
 	end
 	pad.stop = function()
 		pad.finger = nil
@@ -578,7 +581,20 @@ local function build()
 	table.clear(slotButtons)
 	pad = nil
 	K_NOW = Layout.touchK(Stage.scale, UI.touch) -- 폰 1 · 큰 화면은 1보다 작게
-	for _, t in UI.touch do
+	-- 예전 배치(2026-10-28 — 게임 설정 창 「폰 단추 배치」 · data/ui.generated.luau의 touchOld): 그 칸들만 10-27 전의 자리로
+	local old = {}
+	if Touch.legacy and UI.touchOld then
+		for _, o in UI.touchOld.slots do
+			old[o.slot] = o
+		end
+	end
+	for _, t0 in UI.touch do
+		local t = t0
+		local o = t0.slot and old[t0.slot]
+		if o then
+			t = table.clone(t0)
+			t.x, t.y = o.x, o.y
+		end
 		if t.kind == "pad" then
 			makePad(t)
 		elseif t.slot then
@@ -597,6 +613,18 @@ local function build()
 end
 
 -- ---------- 밖에서 알려 주는 것 ----------
+-- 폰 단추 배치(2026-10-28): true = 예전 배치(상호작용 단추가 조이스틱 바로 옆) — 바뀌면 단추를 다시 짓는다
+Touch.legacy = false
+function Touch.setLegacy(on: boolean)
+	on = on == true
+	if Touch.legacy == on then
+		return
+	end
+	Touch.legacy = on
+	if root then
+		build()
+	end
+end
 -- 칸들에 놓인 것(PC의 퀵슬롯과 같은 열두 칸)
 -- 단추 하나의 틀(튜토리얼의 꿈이 그 단추를 반짝이게 한다 — 2026-10-14): name = "pad"(조이스틱) · "jump" · "interact" · "menu" · "slot"(arg = 칸 번호)
 function Touch.frameOf(name: string, arg: number?): GuiObject?

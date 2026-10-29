@@ -38,6 +38,8 @@ function BossView.init(root: Frame)
 	BossView.pat = Ui.text(box, "", 0, B.patY, B.w, { font = "body", color = PINK, align = "center", outline = true })
 	-- 주간 보스의 방(2026-10-24): 이름 줄의 오른쪽 끝에 「노말 · 14:59」(난이도의 색 · 남은 시간). 그 밖의 방에서는 비어 있다
 	BossView.week = Ui.text(box, "", 0, Layout.WEEKLY.timeY, B.w, { align = "right", color = C.dim, outline = true })
+	-- 데스 카운트(2026-10-27): 같은 줄의 왼쪽 끝에 「데스 카운트 5」(내 것 — 1이 남으면 빨갛게). 그 밖의 방에서는 비어 있다
+	BossView.lives = Ui.text(box, "", 0, Layout.WEEKLY.timeY, B.w, { align = "left", color = C.dim, outline = true })
 	BossView.shownName, BossView.shownHp, BossView.shownPat = nil, nil, nil
 end
 
@@ -49,6 +51,20 @@ function BossView.setWeekly(view)
 	if BossView.week and not view then
 		BossView.week:set("")
 	end
+	BossView.shownLives = nil
+	if BossView.lives and not view then
+		BossView.lives:set("")
+	end
+end
+-- 내 남은 데스 카운트(주간 보스의 방에서 싸우는 동안만 — 아니면 nil). 쓰러졌을 때의 상자(boot.luau)도 이것을 본다
+function BossView.livesLeft(): number?
+	local v = BossView.weekly
+	if not v or v.state ~= "fight" or not v.livesMax then
+		return nil
+	end
+	local lp = game:GetService("Players").LocalPlayer
+	local n = if lp and v.lives then v.lives[tostring(lp.UserId)] else nil
+	return if n then n else v.livesMax
 end
 local function weekText(): string?
 	local v = BossView.weekly
@@ -68,15 +84,25 @@ end
 
 -- mobs = 그 장면의 졸개 그림(mobsView) · cast = 기술의 이펙트를 돌리는 것(cast.fx = 이펙트 한 벌 · 화면 흔들기) · effects = 장면의 효과(잔상) · scene = 장면 자료(bosses의 range = 내달리기의 끝)
 --  hooks = { push(x, dist) } — 보스가 포효할 때 부른다(x = 보스의 자리 · dist = 밀어내는 거리): 내 캐릭터가 가까이 있으면 밀려난다(boot.luau)
+--   · sfx(이름) — 보스의 소리(2026-10-28 — 사용자: "모든 보스가 소리가없어서 심심해"): 치는 순간(패턴의 sfx) · 표시된 자리가 터질 때(spots.sfx) · 포효 · 벽에 부딪침 · 쓰러짐
+--     이름은 공방 design/bosses.js의 BOSS_SFX · 소리 파일은 design/music.js의 boss_*
 --          music(곡의 이름표 또는 nil) — 보스가 나타나 그 곡으로 바꿀 때 · 쓰러지거나 사라져 맵의 곡으로 돌아갈 때(nil)
+-- 보스의 소리 하나(hooks.sfx가 없으면 조용하다 — 시험)
+function BossView:sound(k: string?)
+	if k and self.hooks.sfx then
+		self.hooks.sfx(k)
+	end
+end
+
 function BossView.new(mobs, cast, effects, scene, hooks)
 	local self = setmetatable({ cast = cast, effects = effects, list = {}, hooks = hooks or {}, spots = {} }, BossView)
 	-- 이펙트 한 벌: 예고(맞을 자리 · 느낌표)는 기술의 이펙트와 같은 판(cast.fx)에 그리고, 패턴의 이펙트 그림(스프라이트)은 장면의 효과(effects:play)가 튼다
 	self.fx = setmetatable({
 		sprite = function(who: string, clip: string, x: number, y: number, dir: number, opts)
 			if effects and effects.play then
-				effects:play(who, clip, x, y, dir, opts)
+				return effects:play(who, clip, x, y, dir, opts)
 			end
+			return nil
 		end,
 	}, { __index = cast.fx })
 	self.roomLo, self.roomHi = BossPat.bounds(scene) -- 표시된 자리들이 놓이는 범위(서버와 같다)
@@ -131,23 +157,23 @@ function BossView:update(dt: number)
 			b.x = m.toX
 			self.fx.add(p.tell + (if p.leap then p.leap.time else 0) + 0.5, function(ctx)
 				if m.state == "tell" and m.pat == pat then
-					BossFx.tell(ctx, m.x, y, m.dir, p, math.clamp((m.tNow or 0) / p.tell, 0, 1), b.a, b.b, top, m.aim)
+					BossFx.tell(ctx, m.x, y, m.dir, p, math.clamp((m.tNow or 0) / p.tell, 0, 1), b.a, b.b, top, m.aim, S.mark)
 				elseif p.leap and m.state == "act" and m.pat == pat and (m.tNow or 0) < p.leap.time then
-					BossFx.tell(ctx, b.leapX or m.x, y, b.leapDir or m.dir, p, 1, b.a, b.b, nil, m.aim)
+					BossFx.tell(ctx, b.leapX or m.x, y, b.leapDir or m.dir, p, 1, b.a, b.b, nil, m.aim, S.mark)
 				end
 			end, { back = true })
 			if p.spots then
 				-- 표시된 자리들(불씨 뿌리기 · 봉화 불기둥): 지금 정해진다 — 예고가 끝나면(자리마다 더 기다린 뒤) 솟는다. 자리는 서버와 같은 식으로 센다
 				local fromX, fromY = nil, nil
-				if p.spots.aim ~= "grid" then
+				if p.spots.aim ~= "grid" and S.mark == nil then -- (제 표시가 있는 보스는 불씨가 날아오지 않는다 — 그림자 사수의 조준경 · 타락한 부단장의 떨어지는 종이)
 					fromX, fromY = m.toX - m.dir * 10, y - m.def.body[2] - 16 -- 등의 화로에서 불씨가 날아온다
 				end
-				for _, sp in BossPat.spots(p, m.aim or m.toX, self.roomLo, self.roomHi) do
+				for _, sp in BossPat.spots(p, m.aim or m.toX, self.roomLo, self.roomHi, m.toX or m.x, m.dir) do -- (from · dir = 폭탄 깔기의 줄 — 보스의 자리와 보는 쪽)
 					local spot = { m = m, who = who, pat = pat, x = sp[1], at = now, T = p.tell + sp[2], def = p.spots, live = true, armed = false }
 					table.insert(self.spots, spot)
 					self.fx.add(spot.T + 0.1, function(ctx)
 						if spot.live then
-							BossFx.spot(ctx, spot.x, y, spot.def.r, spot.def.up, (os.clock() - spot.at) / spot.T, fromX, fromY)
+							BossFx.spot(ctx, spot.x, y, spot.def.r, spot.def.up, (os.clock() - spot.at) / spot.T, fromX, fromY, S.mark, spot.def.aim == "grid")
 						end
 					end, { back = true })
 				end
@@ -161,6 +187,7 @@ function BossView:update(dt: number)
 			else
 				-- 친다: 그 순간의 이펙트(화면이 흔들린다) · 물결(화면이 조금 늦게 알았으면 그만큼 간 자리에서 시작한다)
 				BossFx.strike(self.fx, who, p, x, y, m.dir, self.shake)
+				self:sound(p.sfx)
 				for _, spot in self.spots do
 					if spot.m == m and spot.pat == pat then
 						spot.armed = true -- 예고가 끝까지 갔다: 표시된 자리는 이제 보스가 무엇을 하든 제 때에 솟는다
@@ -177,9 +204,11 @@ function BossView:update(dt: number)
 		elseif b.state == "dash" and m.state ~= "dash" and m.state ~= "gone" and m.state ~= "dead" then
 			-- 내달리기가 끝났다(벽에 닿았다)
 			BossFx.crash(self.fx, who, b.dashP, m.toX, y, m.dir, self.shake)
+			self:sound("boss_slam")
 		elseif m.state == "roar" and b.state ~= "roar" then
 			-- 체력 구간의 포효: 큰 고리와 긴 흔들림 — 가까이 있는 내 캐릭터는 밀려난다
 			BossFx.roar(self.fx, who, S, m.toX, y, self.shake)
+			self:sound("boss_roar")
 			if self.hooks.push and S.phase then
 				self.hooks.push(m.toX, S.phase.push)
 			end
@@ -190,6 +219,7 @@ function BossView:update(dt: number)
 			-- 도약: 내려앉았다 — 그 자리에서 친다
 			b.leapPat = nil
 			BossFx.strike(self.fx, who, p, m.toX, y, m.dir, self.shake)
+			self:sound(p.sfx)
 			if p.wave then
 				for _, w in BossPat.waves(p, m.dir) do
 					BossFx.wave(self.fx, who, m.toX + m.dir * p.wave.at, y, w[1], p.wave, (m.tNow or 0) - p.leap.time - w[2], self.lo, self.hi)
@@ -217,6 +247,9 @@ function BossView:update(dt: number)
 				BossView.box:SetAttribute("Chain", if S.patterns[m.chain or 0] then S.patterns[m.chain].id else "")
 			end
 		end
+		if m.state == "dead" and b.state ~= "dead" and b.state ~= nil then
+			self:sound("boss_down") -- 쓰러졌다
+		end
 		b.state, b.pat = m.state, pat
 		if m.state ~= "gone" and m.state ~= "dead" then
 			shown = m
@@ -237,6 +270,7 @@ function BossView:update(dt: number)
 			spot.live = false
 			table.remove(self.spots, i)
 			BossFx.blast(self.fx, spot.who, spot.x, m.info.y, spot.def, self.shake)
+			self:sound(spot.def.sfx)
 		end
 	end
 	-- 보스의 곡: 보스가 나타나 있는 동안은 그 보스의 곡을(없으면 그 맵의 곡 그대로), 쓰러지거나 사라지면 맵의 곡으로 — 바뀔 때만 알린다(boot.luau가 튼다)
@@ -281,6 +315,13 @@ function BossView:update(dt: number)
 			else
 				BossView.week:color(Color3.fromRGB(47, 127, 168))
 			end
+		end
+		local left = BossView.livesLeft()
+		if BossView.lives and BossView.shownLives ~= left then
+			BossView.shownLives = left
+			local W = require(ReplicatedStorage.shared.lune.sim.weekly).DATA
+			BossView.lives:set(if left then (string.gsub(W.words.lives, "{n}", tostring(left))) else "")
+			BossView.lives:color(if left and left <= 1 then C.red else C.dim)
 		end
 		BossView.barFx:step(dt)
 	else

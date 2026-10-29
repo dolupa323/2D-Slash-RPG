@@ -199,7 +199,7 @@ end
 function Buffs.view(h, now: number)
 	local list, cds = {}, {}
 	for id, b in h.buffs do
-		table.insert(list, { id = id, t = b.t, dur = b.dur, n = b.n, x = b.x, y = b.y })
+		table.insert(list, { id = id, t = b.t, dur = b.dur, n = b.n, x = b.x, y = b.y, pow = b.pow }) -- pow = 세기(보스 기믹의 버프는 겹친 수 — 화면의 버프 칸이 적는다)
 	end
 	table.sort(list, function(a, b)
 		return a.n < b.n

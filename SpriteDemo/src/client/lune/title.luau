@@ -50,7 +50,7 @@ local function nameField(parent: Instance, x: number, y: number, w: number, h: n
 	box.Font = Enum.Font.SourceSans
 	box.TextSize = 12
 	box.TextColor3 = C.text
-	box.PlaceholderText = placeholder
+	box.PlaceholderText = require(game:GetService("ReplicatedStorage").shared.lune.lang).t(placeholder) -- (영문 — 2026-10-27)
 	box.PlaceholderColor3 = C.off
 	box.TextXAlignment = Enum.TextXAlignment.Left
 	box.ClearTextOnFocus = false
@@ -105,8 +105,11 @@ function Title.run(select, io)
 	ridge.Position = UDim2.fromOffset(0, T.ridge.y)
 	ridge.ZIndex = 5
 	local actors = Stage.group(root, "Actors", 6)
-	local logo = Stage.image(root, "Logo", ASSETS[T.img.logo] or "", T.logo.w, T.logo.h)
-	logo.Position = UDim2.fromOffset(math.floor((G.VIEW_W - T.logo.w) / 2), T.logo.y)
+	-- 제목 글씨: 영문 화면이면 영문 그림(2026-10-27 — 「Heir of the Moon」 · 공방 tools/build_lune_title.mjs의 logo_en)
+	local en = require(ReplicatedStorage.shared.lune.lang).code == "en" and T.img.logoEn ~= nil and T.logoEn ~= nil
+	local LG = if en then T.logoEn else T.logo
+	local logo = Stage.image(root, "Logo", ASSETS[if en then T.img.logoEn else T.img.logo] or "", LG.w, LG.h)
+	logo.Position = UDim2.fromOffset(math.floor((G.VIEW_W - LG.w) / 2), LG.y)
 	logo.ZIndex = 7
 	logo.ImageTransparency = 1
 

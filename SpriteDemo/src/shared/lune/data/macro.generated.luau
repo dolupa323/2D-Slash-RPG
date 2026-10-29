@@ -10,6 +10,7 @@ return {
 		high = { 180, 300 },
 	},
 	afterPass = 900,
+	after = 3,
 	suspect = {
 		minGap = 1,
 		min = 30,

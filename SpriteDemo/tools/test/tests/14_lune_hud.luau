@@ -343,7 +343,7 @@ do
 		expect(t.act ~= "chat", "폰의 「채팅」 단추는 없다(Roblox의 채팅 단추로 연다)")
 	end
 	local CU = UI.chatUi
-	expect(CU.tabs == true and CU.party.channel == "파티", "채널 탭이 켜져 있다 — 「파티」 채널에 쓸 수 있다")
+	expect(CU.tabs == true and CU.party.channel == "파티 · Party", "채널 탭이 켜져 있다 — 「파티」 채널에 쓸 수 있다")
 	expect(CU.window.alpha >= 0 and CU.window.alpha <= 1 and CU.window.width > 0 and CU.window.height > 0, "Roblox 채팅 창에 거는 값이 말이 된다")
 	for _, hex in { CU.window.back, CU.window.text, CU.window.dim, CU.nameColor, CU.party.color } do
 		expect(hex:match("^#%x%x%x%x%x%x$") ~= nil, "색은 #rrggbb " .. hex)

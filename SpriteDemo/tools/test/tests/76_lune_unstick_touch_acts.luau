@@ -125,7 +125,8 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	nameOwner = function(key) return names[key] end,
 	claimName = function(key, id) names[key] = id; return true end,
 	freeName = function(key) names[key] = nil end,
-	rankSet = function() end, rankRemove = function() end, rankTop = function() return {} end,
+	rankSet = function() end,
+	rankRaise = function() end, rankRemove = function() end, rankTop = function() return {} end,
 	rankInfoSet = function() end, rankInfoGet = function() return nil end, rankInfoRemove = function() end,
 	isOffline = function() return false end,
 	marketRead = function() return true, nil end,
@@ -224,7 +225,25 @@ do
 		end
 	end
 	expect(spot[13] and spot[13].x == 340 and spot[13].y == 116, "칸 13의 단추 = 전의 점프 단추 자리(사냥기 위)")
-	expect(spot[14] and spot[14].x == 82 and spot[14].y == 140, "칸 14의 단추 = 전의 상호작용 단추 자리(조이스틱 오른쪽)")
+	-- 2026-10-27 사용자 "모바일에서 조이스틱 바로 옆에 버튼 다른곳으로 옮겨 조이스틱 주변에는 아무것도 없어야해" — 칸 14(처음에는 상호작용)는 오른쪽 단추 무리의 맨 아래로
+	expect(spot[14] and spot[14].x >= 200, "칸 14의 단추(처음에는 상호작용)는 오른쪽 단추 무리에 있다")
+	local padT = nil
+	for _, t in UI.touch do
+		if t.kind == "pad" then
+			padT = t
+		end
+	end
+	local near = 0
+	for _, t in UI.touch do
+		if t.kind ~= "pad" and t.kind ~= "hud" and padT then
+			local gx = math.max(0, math.max(padT.x - (t.x + t.w), t.x - (padT.x + padT.w)))
+			local gy = math.max(0, math.max(padT.y - (t.y + t.h), t.y - (padT.y + padT.h)))
+			if gx < 40 and gy < 40 then
+				near += 1
+			end
+		end
+	end
+	eq(near, 0, "조이스틱 둘레 40점 안에는 단추가 없다")
 	for class, c in CLASSES.classes do
 		local start = Quick.touchStart(c.skills)
 		expect(start[13] == J and start[14] == I, class .. ": 새 캐릭터의 폰 배치에 점프 · 상호작용")

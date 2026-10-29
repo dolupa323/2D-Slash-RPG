@@ -10,6 +10,7 @@ return {
 		{ id = "pet_lantern", name = "초롱 달토끼" },
 		{ id = "pet_scarf", name = "목도리 달토끼" },
 		{ id = "pet_crow", name = "아기 재까마귀", free = "coupon", line = "쿠폰으로 받은 펫 — 떨어진 것을 대신 줍는다" },
+		{ id = "pet_bat_hw", name = "아기 호박박쥐", free = "event", line = "달빛 할로윈의 펫 — 떨어진 것을 대신 줍는다" },
 	},
 	mounts = {
 		{
@@ -60,6 +61,22 @@ return {
 		{
 			id = "mount_golem",
 			name = "이끼 골렘",
+			speed = 0.6,
+			seat = { dx = -3, dy = -67 },
+			bob = {
+				idle = { 0, 0, 0, 0 },
+				run = { 0, 0, 0, 0 },
+				jump = { 0 },
+			},
+			bobx = {
+				idle = { 0, 0, 0, 0 },
+				run = { 0, 0, 0, 0 },
+				jump = { 0 },
+			},
+		},
+		{
+			id = "mount_golem_gold",
+			name = "황금 골렘",
 			speed = 0.6,
 			seat = { dx = -3, dy = -67 },
 			bob = {
@@ -125,6 +142,24 @@ return {
 			},
 		},
 		{
+			id = "mount_wolf_hw",
+			name = "호박불 늑대",
+			free = "event",
+			line = "달빛 할로윈의 탈것 — 로벅스 탈것보다 조금 느리다",
+			speed = 1.2,
+			seat = { dx = -1, dy = -16 },
+			bob = {
+				idle = { 1, 1, 1, 1 },
+				run = { 0, 0, 0, 0, 0, 0 },
+				jump = { 0 },
+			},
+			bobx = {
+				idle = { 0, 0, 0, 0 },
+				run = { -4, -4, -4, -4, -4, -4 },
+				jump = { -4 },
+			},
+		},
+		{
 			id = "mount_book",
 			name = "떠도는 책",
 			free = "coupon",
@@ -152,7 +187,8 @@ return {
 		reach = 96,
 		slack = 32,
 		every = 0.3,
-		windup = 0.2,
+		windup = 0.06,
+		stepUp = 17,
 		warpX = 384,
 		warpY = 72,
 		stuck = 1.2,

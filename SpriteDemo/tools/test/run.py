@@ -40,6 +40,10 @@ def bundle():
         parts.append('PLAY_XP = 1')
     # LUNE_PLAY_NODODGE=1: the virtual player does NOT dodge story-boss attacks (it stands and hits) - measures whether the bosses can be beaten without dodging
     parts.append('PLAY_NODODGE = %s' % ('true' if os.environ.get('LUNE_PLAY_NODODGE') else 'false'))
+    # LUNE_RAID=1: tests/104_lune_raid_dps.luau measures the 4-player max DPS against the weekly boss for real (about 2 minutes); unset = it only checks the recorded numbers against the boss HP
+    parts.append('RAID_FULL = %s' % ('true' if os.environ.get('LUNE_RAID') else 'false'))
+    # LUNE_LANG_SWEEP=1: every dot-font text is translated to English while the tests run; finish() lists what could not be translated (mock.luau)
+    parts.append('LANG_SWEEP = %s; SWEEP_MISSING = {}; SWEEP_TEST = ""' % ('true' if os.environ.get('LUNE_LANG_SWEEP') else 'false'))
     count = 0
     for folder, mount in MOUNTS:
         base = os.path.join(SRC, folder)

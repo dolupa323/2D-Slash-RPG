@@ -4,6 +4,8 @@
 --    순위 · 이름 · 값을 돌에 판 글처럼 그린다: 어두운 글 + 한 점 아래의 밝은 테두리(새긴 홈에 빛이 걸린 모양). 들어설 때 서버에서 받고(Net "Rank") 30초마다 다시 받는다.
 --  줄 수 = 비석 면의 높이에 들어가는 만큼(가장 많이 Rank.TOP). 이름은 폭을 넘으면 …로 줄인다.
 --  2026-10-21: 명예의 전당의 비석을 넓혔고(면 81~82 x 60점 — 사용자 "닉네임 한글자부터 ... 처리 되버립니다"), 대영주의 성의 왼쪽 벽에 같은 순위 판 셋을 걸었다(scene의 npcs[].board · pad).
+--  2026-10-29 사용자 제보 "랭킹판 글씨가 캐릭터앞에있는판정이네요": 전에는 글을 화면 틀의 글씨 층(이름표의 층 — 맵 전체보다 위)에 적어 캐릭터가 판 앞에 서도 글이 캐릭터를 덮었다.
+--   → 맵의 층 안에 적는다: 방 그림(장면의 Layer — z 1~) 위 · 맵 틀(World — z 10: 주민 · 캐릭터 · 이펙트)보다 아래. 글은 그대로 화면 틀의 고운 격자로 그린다(층에 1/ratio 배율).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local Net = require(lune.net.net)
@@ -19,11 +21,13 @@ local PAD = 3 -- 비석 면 안쪽 여백(화면 틀의 점)
 local REFRESH = 30 -- 다시 받는 사이(초)
 
 local HallStones = {}
+HallStones.Z = 9 -- 장면 틀 안의 차례: 방 그림(Layer1~ — z 1~) 위 · 맵 틀(World — z 10)보다 아래
 HallStones.fetch = function()
 	return Net.Invoke("Rank")
 end
 
 local layer: Frame? = nil
+local fine: UIScale? = nil -- 맵의 도트 배율 안에서 화면 틀의 점으로 그리게 줄이는 배율(1/ratio)
 local stones = {} -- { board, face, rows = { { no, name, value } } }
 local boards = nil
 local nextFetch = 0
@@ -39,6 +43,7 @@ local function engraved(parent: Instance, align: string?, width: number)
 end
 
 -- 그 장면에 들어섰다: 비석 면이 있는 비석마다 글을 만든다(없으면 아무것도 하지 않는다)
+--  parent = 그 장면의 틀(sceneView의 root — 카메라를 따라 밀리지 않는다: 실내의 방 그림처럼 화면에 붙어 있다)
 function HallStones.enter(scene, parent: Instance)
 	HallStones.leave()
 	local list = {}
@@ -51,7 +56,10 @@ function HallStones.enter(scene, parent: Instance)
 		return
 	end
 	gen += 1
-	layer = Stage.group(parent, "HallStones", 5)
+	layer = Stage.group(parent, "HallStones", HallStones.Z)
+	local scale = Instance.new("UIScale")
+	scale.Parent = layer
+	fine = scale
 	for _, n in list do
 		-- board = 새길 순위판(대영주의 성의 판처럼 이름표가 hall_가 아니면 board로 — 2026-10-21) · pad = 면 안쪽 여백(얇은 판은 1)
 		local st = { board = n.board or string.match(n.id, "^hall_(%a+)$") or "level", face = n.face, pad = n.pad or PAD, rows = {} }
@@ -74,6 +82,7 @@ function HallStones.leave()
 		layer:Destroy()
 		layer = nil
 	end
+	fine = nil
 	stones = {}
 	boards = nil
 end
@@ -100,6 +109,10 @@ function HallStones.update()
 		return
 	end
 	placedKey = key
+	if fine then
+		fine.Scale = 1 / Stage.ratio -- 맵의 층(도트 배율) 안에서 글은 화면 틀의 점으로
+	end
+	layer.Size = UDim2.fromOffset(Stage.uiW, Stage.uiH)
 	for _, st in stones do
 		-- face = 방 그림의 자리(실내의 방 그림은 화면에 붙은 층이다 — 카메라를 따라가지 않는다): 화면의 점 = 그림의 점. 세계의 자리로 바꾸려면 카메라를 더한다
 		local cx, cy = Overlay.camX, Overlay.camY

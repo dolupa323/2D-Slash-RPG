@@ -9,6 +9,8 @@
 --   pass = 달빛 패스(끝나는 때 · 달빛 · 받은 칸 — sim/pass.luau, 2026-10-20)
 --   pets · mounts = 산 펫 · 탈것 { [이름] = true } · petOut = 꺼내 둔 펫(없으면 false — 계정의 모든 캐릭터가 같이) · mount = 고른 탈것(탄 동안인지는 서버의 그 사람의 것 — s.riding)
 --   wskins = 산 캐시 무기 { [이름] = true } · wskin = 장착한 것(없으면 false — 계정의 모든 캐릭터의 무기 · 2026-10-23 design/wskin.js)
+--   dskins = 가진 데미지 스킨 { [이름] = true } · dskin = 장착한 것(없으면 false — 내가 때린 숫자의 모습 · 2026-10-29 할로윈 · design/event.js의 dskins)
+--   ev = 기간 이벤트의 상점에서 산 수 { ["<이벤트>:<해>:<물건>"] = 수 }(한도가 있는 것 — 할로윈의 달가루 상자 · 2026-10-29)
 --  [제안] 값 · 수 · 한도는 모두 설계의 제안이다.
 local lune = script.Parent.Parent
 local D = require(lune.data["bm.generated"])
@@ -36,6 +38,13 @@ for _, q in require(lune.data["dye.generated"]).skins do
 	WSKIN[q.id] = q
 end
 Cash.WSKIN = WSKIN
+local DSKIN = {} -- 데미지 스킨의 이름표(기간 이벤트의 것 — event.generated의 dskins · 2026-10-29)
+for _, e in require(lune.data["event.generated"]).list do
+	for _, q in e.dskins or {} do
+		DSKIN[q.id] = q
+	end
+end
+Cash.DSKIN = DSKIN
 for _, p in D.products do
 	PRODUCT[p.id] = p
 	if typeof(p.rid) == "number" and p.rid > 0 then
@@ -43,13 +52,14 @@ for _, p in D.products do
 	end
 end
 Cash.PRODUCTS = D.products
+Cash.WORDS = D.shop.words
 
 local function whole(v: any, lo: number, hi: number): boolean
 	return typeof(v) == "number" and v == v and v % 1 == 0 and v >= lo and v <= hi
 end
 
 function Cash.new()
-	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petOut = false, mount = false, coupons = {}, wskins = {}, wskin = false } -- coupons = 이 계정이 쓴 쿠폰 { [번호] = 쓴 때 }(2026-10-21)
+	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petOut = false, mount = false, coupons = {}, wskins = {}, wskin = false, dskins = {}, dskin = false, ev = {} } -- coupons = 이 계정이 쓴 쿠폰 { [번호] = 쓴 때 }(2026-10-21)
 end
 
 function Cash.product(key: any)
@@ -144,6 +154,16 @@ end
 
 -- 산 것을 준다(결제 하나 = 한 번). 같은 결제 번호를 두 번 받으면 주지 않는다(false, "dup").
 --  준 것: 보관함의 아이템 · 계정의 칸. 구매 창을 띄운 뒤에 한도를 넘었더라도 돈을 받은 것은 반드시 준다(한도는 띄우기 전에 본다).
+-- 이 결제를 이미 주었는가(로블록스가 같은 결제를 다시 보낼 수 있다 — 한정 판매의 수를 두 번 세지 않게 · 2026-10-29)
+function Cash.granted(c, receiptId: string): boolean
+	for _, r in (c and c.rec) or {} do
+		if r == receiptId then
+			return true
+		end
+	end
+	return false
+end
+
 function Cash.grant(acct, key: string, receiptId: string, now: number, baseChars: number?, live: number?): (boolean, string?)
 	local c = acct.bm
 	local p = PRODUCT[key]
@@ -160,7 +180,7 @@ function Cash.grant(acct, key: string, receiptId: string, now: number, baseChars
 		addBox(c, "bm_money_" .. band, 1)
 	elseif key == "dust" then
 		addBox(c, "bm_dust_" .. band, 1)
-	elseif key == "bagx" or key == "storex" or key == "rename" or key == "exp" or key == "dyepoint" or key == "dyerobe" then -- (염색약 — 2026-10-22)
+	elseif key == "bagx" or key == "storex" or key == "rename" or key == "exp" or key == "drop" or key == "dyepoint" or key == "dyerobe" then -- (염색약 — 2026-10-22 · 드롭률 쿠폰 — 2026-10-27)
 		addBox(c, "bm_" .. key, 1)
 	elseif key == "charx" then
 		c.slots = math.min(c.slots + 1, D.rules.charCap - (baseChars or 6))
@@ -256,6 +276,13 @@ function Cash.use(h, acct, def): (boolean?, string?)
 		end
 		h.expLeft = (h.expLeft or 0) + R.exp.add
 		return true, ("사냥 경험치 %s배 — %d분 남음"):format(tostring(R.exp.mul), math.ceil(h.expLeft / 60))
+	elseif def.kind == "bmDrop" then
+		-- 드롭률 쿠폰(2026-10-27 — 경험치 쿠폰과 같은 꼴): 30분 · 겹쳐 쓰면 늘고 3시간까지
+		if (h.dropLeft or 0) + R.drop.add > R.drop.cap then
+			return nil, ("더 쌓을 수 없다(%d시간까지)"):format(R.drop.cap // 3600)
+		end
+		h.dropLeft = (h.dropLeft or 0) + R.drop.add
+		return true, ("장비 · 재료 %s배 — %d분 남음"):format(tostring(R.drop.mul), math.ceil(h.dropLeft / 60))
 	end
 	return nil, "쓸 수 없는 아이템이다"
 end
@@ -290,6 +317,18 @@ function Cash.ownList(set): { string }
 	return out
 end
 -- 가진 캐시 무기의 이름표들(상품의 차례)
+-- 가진 데미지 스킨의 목록(정해진 차례 — 2026-10-29)
+function Cash.dskinList(set): { string }
+	local out = {}
+	for _, e in require(lune.data["event.generated"]).list do
+		for _, q in e.dskins or {} do
+			if set[q.id] then
+				table.insert(out, q.id)
+			end
+		end
+	end
+	return out
+end
 function Cash.skinList(set): { string }
 	local out = {}
 	for _, q in require(lune.data["dye.generated"]).skins do
@@ -323,6 +362,18 @@ function Cash.setWskin(acct, id: any): (boolean?, string?)
 	c.wskin = id
 	return true
 end
+-- 데미지 스킨을 장착한다(이름표) · 해제한다(false) → true / nil · 까닭(2026-10-29 — 사용자 "데미지스킨은 캐시탭에서 꼈다 뺏다 할수있어야하고")
+function Cash.setDskin(acct, id: any): (boolean?, string?)
+	local c = acct.bm
+	if id == false then
+		c.dskin = false
+		return true
+	elseif typeof(id) ~= "string" or not c.dskins[id] then
+		return nil, "가진 데미지 스킨이 아니다"
+	end
+	c.dskin = id
+	return true
+end
 -- 탈 것을 고른다 → true / nil · 까닭(타고 내리는 것은 서버의 그 사람 — s.riding)
 function Cash.setMount(acct, id: any): (boolean?, string?)
 	local c = acct.bm
@@ -342,9 +393,10 @@ end
 function Cash.expMul(h): number
 	return 1 + (if (h.expLeft or 0) > 0 then D.rules.exp.mul - 1 else 0) + (h.passXp or 0)
 end
--- 장비 · 재료 · 귀한 물건이 나올 확률의 배율(영구 게임 패스 h.passDrop — 드롭률 1.25배 패스 = 0.25). 달돈 · 달가루 · 퀘스트 물건에는 붙지 않는다(sim/room.luau의 lootFor)
+-- 장비 · 재료 · 귀한 물건이 나올 확률의 배율: 드롭률 쿠폰(30분 1.5배 — 2026-10-27)과 영구 게임 패스(h.passDrop — 드롭률 1.25배 패스 = 0.25)를 더한다(둘 다면 1.75배).
+--  달돈 · 달가루 · 퀘스트 물건에는 붙지 않는다(sim/room.luau의 lootFor). 주간 보스의 이름 붙은 장비에는 파티에서 가장 높은 사람의 이 배율이 붙는다(sim/weekly.luau의 roll — 2026-10-27)
 function Cash.dropMul(h): number
-	return 1 + (h.passDrop or 0)
+	return 1 + (if (h.dropLeft or 0) > 0 then D.rules.drop.mul - 1 else 0) + (h.passDrop or 0)
 end
 -- 영구 게임 패스의 효과를 더한다: owned = { [상품] = true } → 경험치 · 드롭에 더할 몫(상품의 effect — 공방 bm.js)
 function Cash.passEffect(owned: any): (number, number)
@@ -378,7 +430,12 @@ function Cash.pack(c)
 		table.insert(wskins, k)
 	end
 	table.sort(wskins)
-	return { box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petOut = c.petOut, mount = c.mount, coupons = table.clone(c.coupons), wskins = wskins, wskin = c.wskin }
+	local dskins = {}
+	for k in c.dskins do
+		table.insert(dskins, k)
+	end
+	table.sort(dskins)
+	return { dskins = dskins, dskin = c.dskin, ev = table.clone(c.ev), box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petOut = c.petOut, mount = c.mount, coupons = table.clone(c.coupons), wskins = wskins, wskin = c.wskin }
 end
 
 -- 꼴이 이상한 것은 버린다(없는 아이템 · 이상한 수). 생기기 전의 저장 = 빈 것
@@ -414,7 +471,7 @@ function Cash.unpack(data: any, baseChars: number?)
 	c.slots = if whole(data.slots, 0, D.rules.charCap - (baseChars or 6)) then data.slots else 0
 	c.store = if whole(data.store, 0, D.rules.storeSteps) then data.store else 0
 	c.pass = Pass.unpack(data.pass)
-	for _, pair in { { "pets", PET }, { "mounts", MOUNT }, { "wskins", WSKIN } } do
+	for _, pair in { { "pets", PET }, { "mounts", MOUNT }, { "wskins", WSKIN }, { "dskins", DSKIN } } do
 		if typeof(data[pair[1]]) == "table" then
 			for _, k in data[pair[1]] do
 				if typeof(k) == "string" and pair[2][k] then
@@ -426,6 +483,16 @@ function Cash.unpack(data: any, baseChars: number?)
 	c.petOut = if typeof(data.petOut) == "string" and c.pets[data.petOut] then data.petOut else false
 	c.mount = if typeof(data.mount) == "string" and c.mounts[data.mount] then data.mount else false
 	c.wskin = if typeof(data.wskin) == "string" and c.wskins[data.wskin] then data.wskin else false
+	c.dskin = if typeof(data.dskin) == "string" and c.dskins[data.dskin] then data.dskin else false
+	if typeof(data.ev) == "table" then
+		local n = 0
+		for k, v in data.ev do
+			if typeof(k) == "string" and #k <= 60 and whole(v, 0, 1e6) and n < 100 then
+				c.ev[k] = v
+				n += 1
+			end
+		end
+	end
 	if typeof(data.coupons) == "table" then
 		local n = 0
 		for code, at in data.coupons do
@@ -486,18 +553,19 @@ function Cash.ready(p): boolean
 end
 
 -- 상점 창에 보내는 것: 상품마다 살 수 있나(ready) · 산 수(주간이면 이번 주) · 패스를 가졌나 · 보관함 · 주머니 · 상자의 레벨대(band)
-function Cash.view(acct, now: number, owned: any?, live: number?, prices: any?)
+--  stocks = 한정 판매의 남은 수 { [상품] = n }(서버가 세계 기록에서 읽은 것 — 2026-10-29) → 줄의 left(모르면 nil)
+function Cash.view(acct, now: number, owned: any?, live: number?, prices: any?, stocks: any?)
 	local c = acct.bm
 	local list = {}
 	for _, p in D.products do
 		local robux = if typeof(prices) == "table" and typeof(prices[p.id]) == "number" then prices[p.id] else p.robux -- 로블록스의 실제 값(대시보드에서 바꾸면 그 값) · 못 읽었으면 설계의 값
-		table.insert(list, { id = p.id, ready = Cash.ready(p), bought = Cash.bought(c, p.id, now), own = (owned ~= nil and owned[p.id] == true) or c.pets[p.id] == true or c.mounts[p.id] == true or c.wskins[p.id] == true, robux = robux }) -- own = 게임 패스를 가졌다 · 펫 · 탈것을 샀다
+		table.insert(list, { id = p.id, ready = Cash.ready(p), bought = Cash.bought(c, p.id, now), own = (owned ~= nil and owned[p.id] == true) or c.pets[p.id] == true or c.mounts[p.id] == true or c.wskins[p.id] == true, robux = robux, left = if p.stock and typeof(stocks) == "table" and typeof(stocks[p.id]) == "number" then stocks[p.id] else nil }) -- own = 게임 패스를 가졌다 · 펫 · 탈것을 샀다 · left = 한정 판매의 남은 수
 	end
 	local box = {}
 	for _, e in c.box do
 		table.insert(box, { id = e.id, n = e.n })
 	end
-	return { list = list, box = box, band = Cash.bandOf(Cash.topLevel(acct, live)), slots = c.slots, store = c.store, pass = Pass.view(c.pass, now), pets = Cash.ownList(c.pets), mounts = Cash.ownList(c.mounts), petOut = c.petOut, mount = c.mount, wskins = Cash.skinList(c.wskins), wskin = c.wskin }
+	return { list = list, box = box, band = Cash.bandOf(Cash.topLevel(acct, live)), slots = c.slots, store = c.store, pass = Pass.view(c.pass, now), pets = Cash.ownList(c.pets), mounts = Cash.ownList(c.mounts), petOut = c.petOut, mount = c.mount, wskins = Cash.skinList(c.wskins), wskin = c.wskin, dskins = Cash.dskinList(c.dskins), dskin = c.dskin, ev = table.clone(c.ev) }
 end
 
 -- 확인용(테스트): 상품 표가 아이템 표와 맞는가
@@ -511,7 +579,7 @@ function Cash.check(): { string }
 			end
 		end
 	end
-	for _, id in { "bm_bagx", "bm_storex", "bm_rename", "bm_exp", "bm_dyepoint", "bm_dyerobe" } do
+	for _, id in { "bm_bagx", "bm_storex", "bm_rename", "bm_exp", "bm_drop", "bm_dyepoint", "bm_dyerobe" } do
 		local g = Items.goods(id)
 		if not g or not g.paid then
 			table.insert(bad, id)

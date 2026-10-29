@@ -131,6 +131,43 @@ end
 local over = Cash.use(h2, acct, Items.goods("bm_exp"))
 expect(not over, "3시간을 넘게 쌓지 않는다")
 expect(h2.expLeft <= Cash.RULES.exp.cap, "3시간 안")
+-- 드롭률 쿠폰(2026-10-27 사용자: "달빛상점에 경험치 쿠폰같이 드롭률 쿠폰도똑같이 살수있게 만들자") — 경험치 쿠폰과 같은 꼴 · 드롭률 패스와 더한다
+eq(Cash.dropMul(h2), 1, "드롭률 쿠폰 없이는 1배")
+expect(Cash.use(h2, acct, Items.goods("bm_drop")), "드롭률 쿠폰")
+eq(h2.dropLeft, Cash.RULES.drop.add, "드롭률 쿠폰 30분")
+eq(Cash.dropMul(h2), Cash.RULES.drop.mul, "드롭률 1.5배")
+h2.passDrop = 0.25
+eq(Cash.dropMul(h2), Cash.RULES.drop.mul + 0.25, "드롭률 패스와 함께면 더해서 1.75배")
+h2.passDrop = nil
+Hero.tick(h2, 60)
+eq(h2.dropLeft, Cash.RULES.drop.add - 60, "드롭률 쿠폰도 게임 안에 있는 동안 줄어든다")
+for _ = 1, 5 do
+	Cash.use(h2, acct, Items.goods("bm_drop"))
+end
+expect(not Cash.use(h2, acct, Items.goods("bm_drop")), "드롭률 쿠폰도 3시간을 넘게 쌓지 않는다")
+local dropProduct = nil
+for _, pr in req("ReplicatedStorage/shared/lune/data/bm.generated").products do
+	if pr.id == "drop" then
+		dropProduct = pr
+	end
+end
+expect(dropProduct ~= nil and dropProduct.robux == 49 and dropProduct.trade == true and dropProduct.built == true, "달빛 상점에 드롭률 쿠폰(49 로벅스 · 거래됨)")
+expect(dropProduct ~= nil and dropProduct.rid == 3722962958 and Cash.byRid(3722962958) == "drop", "대시보드의 상품 번호(3722962958 — 사용자 10-27) → 드롭률 쿠폰")
+do -- 사면(결제 처리) 보관함에 드롭률 쿠폰 한 장
+	local a2 = Account.new()
+	expect(Cash.grant(a2, "drop", "rDrop1", NOW, Account.MAX), "드롭률 쿠폰을 산다")
+	local n = 0
+	for _, e in a2.bm.box do
+		if e.id == "bm_drop" then
+			n += e.n
+		end
+	end
+	eq(n, 1, "보관함에 드롭률 쿠폰 한 장(받기 → 가방 → 쓰기는 경험치 쿠폰과 같다)")
+end
+-- 달가루 상자 = 한 시간 반치(2026-10-27 사용자 "로벅스로 구매하는 달가루의 효율이 조금더 좋게")
+eq(req("ReplicatedStorage/shared/lune/data/bm.generated").rules.dustHours, 1.5, "달가루 상자 = 가장 높은 캐릭터의 한 시간 반 사냥치")
+local box50 = Items.goods("bm_dust_50")
+eq(box50 and box50.amount, 2970, "Lv.50 달가루 상자 2,970(한 시간치 1,980의 1.5배)")
 
 -- ⑥ 저장(JSON을 거쳐)
 acct.chars[1].hero = Hero.pack(h2)
@@ -145,6 +182,7 @@ local hb = Hero.unpack(1, back.chars[1].hero)
 eq(hb.bagPaid, h2.bagPaid, "가방 확장")
 eq(Bag.size(hb), Bag.size(h2), "가방 칸 수")
 eq(hb.expLeft, h2.expLeft, "쿠폰 남은 시간")
+eq(hb.dropLeft, h2.dropLeft, "드롭률 쿠폰 남은 시간도 저장된다")
 -- 이상한 저장은 버린다
 local bad = Cash.unpack({ box = { { id = "없는것", n = 1 }, { id = "bm_exp", n = -3 } }, slots = 99, store = 99, wc = { money = "x" } }, Account.MAX)
 eq(#bad.box, 0, "없는 아이템 · 이상한 수는 버린다")

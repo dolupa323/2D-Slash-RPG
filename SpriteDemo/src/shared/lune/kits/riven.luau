@@ -451,6 +451,26 @@ riven = {
 		g.hero.alpha = if g.has("rv_slip") then 0.75 elseif riven.inSmoke(g) then 0.6 else 1
 	end,
 	drawBack = function(_ctx, g) -- 그림자 분신: 내 모습 그대로의 민트색 실루엣이 뒤따른다
+		-- 탈것을 탄 동안(2026-10-26 사용자 "리븐 캐릭터가 탈것을 탔을때 그림자 분신이 엄청나게 이상하게 나온다 … 리븐 그림자를 완전 별도 캐릭터처럼 따로 움직이게"):
+		--  전에는 분신이 안장 위의 내 모습(서기)을 땅에서 그대로 따라 그려, 나는 탈것에 올라가 있는데 분신은 땅에 선 채 남았다.
+		--  이제는 분신이 따로 걷는 그림자가 된다 — 탈것 뒤를 제 발로 뒤따라 달리고(늦게 따라붙는다) · 멈추면 선다. 내리면 다시 내 모습을 그대로 따른다
+		if g.has("rv_clone") and g.riding then
+			local s, now = g.s, g.clock
+			local dt = min(0.1, now - (s.shadeT or now))
+			s.shadeT = now
+			s.shadeX = s.shadeX or {}
+			for i = 0, if g.sk("rv_clone2") > 0 then 1 else 0 do
+				local want = g.x - g.dir * (26 + i * 14)
+				local was = s.shadeX[i] or want
+				local x = was + (want - was) * min(1, dt * (5 - i))
+				s.shadeX[i] = x
+				local moving = abs(x - was) > dt * 6
+				local clip = if moving then "run" else "idle"
+				g.sprite(clip, floor(now * 10) % g.frames(clip), x, g.y, if moving then (if want > was then 1 else -1) else g.dir, { color = if i ~= 0 then 0x1fa89c else 0x3effd7, alpha = 0.5 - i * 0.15 })
+			end
+			return
+		end
+		g.s.shadeX = nil
 		if g.has("rv_clone") and g.pose then
 			for i = 0, if g.sk("rv_clone2") > 0 then 1 else 0 do
 				g.sprite(g.pose.clip, g.pose.f, g.x - g.dir * (13 + i * 11), g.y, g.dir, { color = if i ~= 0 then 0x1fa89c else 0x3effd7, alpha = 0.5 - i * 0.15 })

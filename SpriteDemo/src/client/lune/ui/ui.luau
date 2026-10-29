@@ -372,7 +372,7 @@ function Ui.field(parent: Instance, x: number, y: number, w: number, h: number, 
 	box.Font = Enum.Font.SourceSans
 	box.TextSize = 12
 	box.TextColor3 = C.text
-	box.PlaceholderText = placeholder
+	box.PlaceholderText = require(game:GetService("ReplicatedStorage").shared.lune.lang).t(placeholder) -- (영문 — 2026-10-27)
 	box.PlaceholderColor3 = C.off
 	box.TextXAlignment = Enum.TextXAlignment.Left
 	box.ClearTextOnFocus = false

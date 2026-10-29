@@ -64,6 +64,7 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	nameOwner = function(key) return names[key] end,
 	claimName = function(key, id) names[key] = id; return true end,
 	freeName = function(key) names[key] = nil end,
+	rankRaise = function() end,
 	rankSet = function()
 		if slow > 0 then
 			task.wait(slow)
@@ -249,6 +250,12 @@ do
 		end
 		if c.nums == nil then
 			c.nums = true
+		end
+		if c.lang == nil then
+			c.lang = "auto" -- 언어(2026-10-27 영문): 보내지 않았으면 자동
+		end
+		if c.touch == nil then
+			c.touch = "new" -- 폰 단추 배치(2026-10-28): 보내지 않았으면 새 배치
 		end
 		return c
 	end

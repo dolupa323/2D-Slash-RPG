@@ -75,7 +75,7 @@ function V.sub(it, me, worn: any): (string, string)
 	end
 	-- 머리: 「★5 · 공격력 +73」(무기) · 「★2 · 올스탯 +9」(방어구 — 방어력은 상세 판에) — 2026-10-15 스펙(그 전에는 「전투력 +n」)
 	local o = Items.options(it).total
-	local head = if o.atk then ("%s %s"):format(IW.atk, Format.short(o.atk)) else ("%s %s"):format(IW.stat, Format.short(o.stat or 0)) -- 줄이 좁아 「+」 없이
+	local head = if it.slot == "weapon" then ("%s %s"):format(IW.atk, Format.short(o.atk or 0)) else ("%s %s"):format(IW.stat, Format.short(o.stat or 0)) -- 줄이 좁아 「+」 없이
 	if it.star > 0 then
 		head = ("★%d %s"):format(it.star, head)
 	end

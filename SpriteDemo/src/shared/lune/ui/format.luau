@@ -15,6 +15,18 @@ function F.short(n: number): string
 		end
 		return s .. unit
 	end
+	-- 영문 화면(2026-10-27 — shared/lune/lang.luau): 만 · 억 대신 K · M · B(천 · 백만 · 십억 — 1.2만 → 12K). 서버는 늘 한국어
+	local lang = script.Parent.Parent:FindFirstChild("lang")
+	if lang and require(lang :: any).code == "en" then
+		if n >= 1e9 then
+			return one(n / 1e9, "B")
+		elseif n >= 1e6 then
+			return one(n / 1e6, "M")
+		elseif n >= 1e4 then
+			return one(n / 1e3, "K")
+		end
+		return tostring(math.floor(n + 0.5))
+	end
 	if n >= 1e8 then
 		return one(n / 1e8, "억")
 	elseif n >= 1e4 then

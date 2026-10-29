@@ -149,6 +149,77 @@ for _, m in SCENES.scenes.dream.mobs or {} do
 	end
 end
 expect(#r1.kinds >= 9, "1지역의 몬스터 종류 " .. #r1.kinds)
+-- 깰 수 있는가(2026-10-26 사용자 "지금 업적중에 안깨지는거 다 확인해라"): 잡을 종류는 언제든 다시 갈 수 있는 바깥 맵(실내 · 파티마다 따로 들어가는 퀘스트 방이 아닌)에 나온다
+--  (전에는 지하실 in_cellar — 한 번뿐인 이야기 방 — 에만 나오는 수련 인형 · 정예 창병이 들어 있어 그 방을 지난 사람은 「고개의 짐승 도감」을 깰 수 없었다)
+for _, kind in r1.kinds do
+	local open = false
+	for _, sc in SCENES.scenes do
+		if sc.region == "r1" and not sc.indoor and not sc.inst then
+			for _, m in sc.mobs or {} do
+				open = open or m.kind == kind
+			end
+		end
+	end
+	expect(open, "잡을 종류가 언제든 갈 수 있는 바깥 맵에 나온다 " .. kind)
+end
+eq(table.find(r1.kinds, "dummy"), nil, "수련 인형은 도감에 넣지 않는다")
+eq(table.find(r1.kinds, "espearman"), nil, "1지역에서는 지하실에만 나오는 정예 창병은 넣지 않는다")
+-- 들를 맵은 모두 문으로 이어져 있다(마을에서 걸어서 닿는다)
+do
+	local reach, todo = { town = true }, { "town" }
+	while #todo > 0 do
+		local key = table.remove(todo)
+		for _, p in SCENES.scenes[key].portals or {} do
+			local to = p.to and (SCENES.base(p.to) or p.to)
+			if to and SCENES.scenes[to] and not reach[to] then
+				reach[to] = true
+				table.insert(todo, to)
+			end
+		end
+	end
+	for _, key in r1.maps do
+		expect(reach[key] == true, "들를 맵에 마을에서 걸어서 닿는다 " .. key)
+	end
+end
+-- 퀘스트 · 숨은 이야기 · 달조각 · 캐릭터 칸: 업적이 바라는 만큼 게임에 있다
+local QuestsMod = req("ReplicatedStorage/shared/lune/sim/quests")
+local Bond = req("ReplicatedStorage/shared/lune/sim/bond")
+local AccountMod = req("ReplicatedStorage/shared/lune/sim/account")
+local function count(t)
+	local n = 0
+	for _ in t do
+		n += 1
+	end
+	return n
+end
+for _, def in ACH.list do
+	local g = def.goal
+	if g.kind == "quest" then
+		local found = nil
+		for _, q in QuestsMod.list do
+			if q.id == g.id then
+				found = q
+			end
+		end
+		expect(found ~= nil and found.playable, "업적의 퀘스트가 있고 할 수 있다 " .. def.id .. " " .. g.id)
+	elseif g.kind == "line" then
+		for _, q in QuestsMod.list do
+			if q.line and q.region == g.region then
+				expect(q.playable, "업적의 이야기 줄 퀘스트를 할 수 있다 " .. q.id)
+			end
+		end
+	elseif g.kind == "count" and g.key == "story" then
+		expect(count(Bond.DATA.stories) >= g.n, "숨은 이야기가 업적만큼 있다 " .. def.id)
+	elseif g.kind == "count" and g.key == "shard" then
+		expect(count(Bond.DATA.shards) >= g.n, "달조각이 업적만큼 있다 " .. def.id)
+	elseif g.kind == "classes" then
+		expect(AccountMod.MAX >= g.n, "캐릭터 칸이 업적의 직업 수만큼 있다 " .. def.id)
+	end
+end
+for _, x in Bond.DATA.shards do
+	local sc = SCENES.scenes[x.scene]
+	expect(sc ~= nil and not sc.inst and x.scene ~= "dream", "달조각은 언제든 갈 수 있는 맵에 있다 " .. tostring(x.scene))
+end
 
 -- ---- 4) 업적: 단계 · 셈 · 받기 ----
 local a = Achieve.new()
@@ -270,7 +341,8 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	nameOwner = function(key) return names[key] end,
 	claimName = function(key, id) names[key] = id; return true end,
 	freeName = function(key) names[key] = nil end,
-	rankSet = function() end, rankRemove = function() end, rankTop = function() return {} end,
+	rankSet = function() end,
+	rankRaise = function() end, rankRemove = function() end, rankTop = function() return {} end,
 	rankInfoSet = function() end, rankInfoGet = function() return nil end, rankInfoRemove = function() end,
 	isOffline = function() return false end,
 })

@@ -69,8 +69,9 @@ end
 
 -- 피해 숫자. (x, y) = 숫자들의 가운데 · 윗줄이 처음 뜨는 자리. big = 센 타격(처음 잠깐 두 점 더 높이 뜬다)
 --  시험 탭처럼 좌우로 조금씩 흩어져 뜬다(겹쳐도 밀어 올리지 않는다).
-function Effects:number(value: number, x: number, y: number, color: Color3, big: boolean?)
-	local num = Kit.dmg(self.layer, tostring(math.max(0, math.floor(value + 0.5))), color)
+--  skin = 때린 사람의 데미지 스킨(UI 키트의 숫자판 이름 — 2026-10-29 · 없으면 보통의 흰 숫자 · 크리티컬 = big)
+function Effects:number(value: number, x: number, y: number, color: Color3, big: boolean?, skin: string?)
+	local num = Kit.dmg(self.layer, tostring(math.max(0, math.floor(value + 0.5))), color, skin, big)
 	num.frame.ZIndex = 11
 	table.insert(self.floats, {
 		frame = num.frame,
@@ -92,7 +93,7 @@ function Effects:addSprite(who: string, clip: string, x: number, y: number, dir:
 end
 
 -- 캐릭터 판의 동작 하나를 그 동작의 빠르기로 튼다(보스 패턴의 이펙트 그림 — shared/lune/bossfx.luau). 공방 시험 탭의 fx.sprite와 같은 셈
---  opts: delay 늦게(음수면 그만큼 이미 흐른 데서) · back 몸들의 뒤(캐릭터들의 층 맨 아래) · loop 돌려 트는 시간(초 — 없으면 한 번 튼다) · vx 가는 빠르기(점/초)
+--  opts: delay 늦게(음수면 그만큼 이미 흐른 데서) · back 몸들의 뒤(캐릭터들의 층 맨 아래) · loop 돌려 트는 시간(초 — 없으면 한 번 튼다) · vx 가는 빠르기(점/초) · drop · dropT 처음에 위에서 내려오는 점 · 초
 --        lo · hi 그 밖에서는 보이지 않는다(방의 벽) · fade 끝에서 사라지는 몫(0~1)
 function Effects:play(who: string, clip: string, x: number, y: number, dir: number, opts)
 	opts = opts or {}
@@ -103,7 +104,7 @@ function Effects:play(who: string, clip: string, x: number, y: number, dir: numb
 		return
 	end
 	sprite.label.Name = "BossFx"
-	table.insert(self.sprites, {
+	local rec = {
 		sprite = sprite,
 		clip = clip,
 		x = x,
@@ -114,10 +115,14 @@ function Effects:play(who: string, clip: string, x: number, y: number, dir: numb
 		fps = c.fps,
 		loop = opts.loop ~= nil,
 		vx = opts.vx or 0,
+		drop = opts.drop or 0, -- 처음 dropT초 동안 drop점 위에서 내려온다(쇠뇌 높이에서 무릎 높이로 내리꽂히는 화살 — 2026-10-27)
+		dropT = opts.dropT or 0,
 		lo = opts.lo,
 		hi = opts.hi,
 		fade = opts.fade or 0,
-	})
+	}
+	table.insert(self.sprites, rec)
+	return rec -- (일찍 끝내려면 rec.t = rec.life — 2026-10-28 불씨 도둑 두목의 바닥 불씨: 주우면 사라진다)
 end
 
 -- 잔상: 그 캐릭터의 그 장을 한 색 실루엣으로 남긴다. 처음의 불투명도에서 곧게 옅어져 사라진다(시험 탭의 ghost)
@@ -256,8 +261,13 @@ function Effects:addDrop(d)
 	end
 	frame.Name = "Drop" .. d.id
 	frame.ZIndex = 7
+	-- 보상의 방의 상자에서 튀어나온다(2026-10-28 — 서버가 fromX · fromY · delay · popT를 붙인다): delay초 뒤 from에서 (x, y)로 포물선을 그리며 떨어진다 · 그 전에는 보이지 않는다
+	local pop = if typeof(d.fromX) == "number" and typeof(d.fromY) == "number" then { x0 = d.fromX, y0 = d.fromY, delay = d.delay or 0, dur = d.popT or 0.7, t = 0 } else nil
+	if pop then
+		frame.Visible = false
+	end
 	-- 달돈은 빙글 돈다(spin — 부품 dropCoin1~4를 차례로: 앞 → 비스듬히 → 옆 → 비스듬히). 주화라는 것이 한눈에 보인다
-	self.drops[d.id] = { frame = frame, x = d.x, y = d.y, w = w, h = h, amount = d.amount, kind = d.kind, item = d.item, name = d.name, phase = d.id * 0.7, spin = d.kind ~= "dust" and d.kind ~= "gear" and d.kind ~= "quest" and d.kind ~= "goods" }
+	self.drops[d.id] = { frame = frame, x = d.x, y = d.y, w = w, h = h, amount = d.amount, kind = d.kind, item = d.item, name = d.name, phase = d.id * 0.7, pop = pop, nopet = d.nopet == true, spin = d.kind ~= "dust" and d.kind ~= "gear" and d.kind ~= "quest" and d.kind ~= "goods" }
 end
 
 -- 펫이 주웠다: 그것이 (x, y)로 빨려 든다(2026-10-21 사용자 "펫의 줍기판정이 살짝 자석처럼 되어야합니다" — 그림만. 줍는 것은 서버)
@@ -329,7 +339,8 @@ function Effects:update(now: number, dt: number)
 			if (sp.lo and x < sp.lo) or (sp.hi and x > sp.hi) then
 				sp.sprite.label.Visible = false -- 방의 벽 밖
 			else
-				sp.sprite:set(sp.clip, if sp.loop then f % n + 1 else math.min(n, f + 1), x, sp.y, sp.dir)
+				local y = sp.y - (if (sp.drop or 0) > 0 and (sp.dropT or 0) > 0 then sp.drop * math.max(0, 1 - sp.t / sp.dropT) else 0)
+				sp.sprite:set(sp.clip, if sp.loop then f % n + 1 else math.min(n, f + 1), x, y, sp.dir)
 				if sp.fade and sp.fade > 0 then
 					local k = sp.t / sp.life
 					sp.sprite.label.ImageTransparency = if k > 1 - sp.fade then 1 - math.max(0, (1 - k) / sp.fade) else 0
@@ -397,6 +408,19 @@ function Effects:update(now: number, dt: number)
 	for _, d in self.drops do
 		local bob = math.floor(math.sin(now * 4 + d.phase) * 1.5 + 0.5)
 		local dx, dy = d.x, d.y
+		if d.pop then
+			local pp = d.pop
+			pp.t += dt
+			local k = (pp.t - pp.delay) / pp.dur
+			if k >= 1 then
+				d.pop = nil
+			else
+				d.frame.Visible = k > 0
+				k = math.max(0, k)
+				local arc = 34 + math.abs(d.x - pp.x0) * 0.35 -- 멀리 가는 것일수록 높이 뜬다
+				dx, dy, bob = pp.x0 + (d.x - pp.x0) * k, pp.y0 + (d.y - pp.y0) * k - arc * 4 * k * (1 - k), 0
+			end
+		end
 		if d.pull then
 			d.pull.t += dt
 			if d.pull.t > 1 then

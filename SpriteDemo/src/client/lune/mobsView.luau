@@ -70,6 +70,8 @@ function MobsView.new(layer: Frame, room, tagLayer: Frame)
 			x = 0,
 			fromX = 0,
 			toX = 0,
+			fromY = nil :: number?, -- 높이를 따라 그리는 몬스터(잠수 방지 날파리 — 서버가 열셋째에 높이를 보낸다): 앞 높이 · 새 높이
+			toY = nil :: number?,
 			at = 0,
 			dir = 1,
 			state = "gone",
@@ -193,6 +195,10 @@ function MobsView:apply(list, now: number)
 		local m = self.mobs[row[1]]
 		if m then
 			m.fromX = if m.state == "gone" then row[2] else m.x
+			if row[13] then
+				m.fromY = if m.state == "gone" or not m.toY then row[13] else m.info.y
+				m.toY = row[13]
+			end
 			m.toX, m.dir, m.at = row[2], row[3], now
 			m.state, m.t, m.hp = row[4], row[5], row[6]
 			m.pat = row[9] or 0
@@ -262,6 +268,9 @@ function MobsView:update(now: number)
 	for _, m in self.mobs do
 		local k = math.clamp((now - m.at) / LERP, 0, 1)
 		m.x = m.fromX + (m.toX - m.fromX) * k
+		if m.toY then
+			m.info.y = m.fromY + (m.toY - m.fromY) * k -- 하늘을 나는 날파리: 높이도 이어 그린다(이름표 · 체력 띠 · 피해 숫자가 info.y를 본다)
+		end
 		local t = m.t + (now - m.at)
 		local char = m.sprite.char
 		local clip, frame = "idle", 1
@@ -314,7 +323,7 @@ function MobsView:update(now: number)
 		elseif m.state == "spawn" then
 			clip = "spawn"
 			frame = math.min(#char.clips.spawn.frames, math.floor(t * char.clips.spawn.fps) + 1)
-		elseif m.state == "atk" then
+		elseif m.state == "atk" and char.clips.atk then -- (치지 않는 졸개 — 불씨 폭탄 · 가짜 두목 — 에는 그 그림이 없다: 아래의 대기 그림)
 			clip = "atk"
 			frame = math.min(#char.clips.atk.frames, math.floor(t * m.def.atk.fps) + 1)
 		elseif m.state == "hit" then

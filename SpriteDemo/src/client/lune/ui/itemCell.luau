@@ -47,6 +47,10 @@ end
 -- 그 아이템의 아이콘 이름
 function ItemCell.icon(it): string
 	if it.ride then
+		if it.kind == "dskin" then
+			local q = require(game:GetService("ReplicatedStorage").shared.lune.sim.event).dskin(it.ride)
+			return if q then q.icon else it.ride -- 데미지 스킨(2026-10-29): 그 스킨의 아이콘
+		end
 		return if it.kind == "wskin" then it.ride else "ride_" .. it.ride -- 펫 · 탈것(가방의 캐시 탭 — 2026-10-21) · 캐시 무기는 제 이름의 아이콘(2026-10-23)
 	end
 	if it.item then

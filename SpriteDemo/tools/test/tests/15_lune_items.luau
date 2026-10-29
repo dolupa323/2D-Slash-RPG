@@ -792,7 +792,7 @@ do
 			expect(width(ask) <= L.detailInner(), ("묻는 글 %s(폭 %d)이 판의 속(%d)에 들어간다"):format(ask, width(ask), L.detailInner()))
 			expect(widthBody(pair[2]) <= two - 6, "하는 단추의 글 " .. pair[2])
 		end
-		eq(kinds, 8, "수를 고르는 일: 사기(2026-10-21 수량 창) · 버리기 · 맡기기 · 찾기 · 팔기 · 나누기 · 장비 팔기 · 분해(2026-10-18 — 분해도 한 번 묻는다)")
+		eq(kinds, 9, "수를 고르는 일: 사기(2026-10-21 수량 창) · 버리기 · 맡기기 · 찾기 · 팔기 · 나누기 · 장비 팔기 · 분해(2026-10-18 — 분해도 한 번 묻는다) · 물약 · 귀환 주문서 분해(2026-10-27)")
 		expect(widthBody(WD.askNo) <= two - 6, "그만두는 단추의 글")
 		expect(widthBody(WD.sort) <= L.STORE.sortW - 6, "창고의 정렬 단추의 글")
 		expect(width(WD.shopHint) <= SHOP.w - SHOP.hintX, "상점의 안내 글(끌어다 놓으면 판다)이 달돈 · 달가루의 오른쪽에 들어간다")
@@ -1781,4 +1781,32 @@ do
 
 	-- (강화 창은 2026-10-15에 대장장이 창으로 다시 지었다 — 화면 검사는 53_lune_smith.luau)
 	ItemCell.new = realNew
+end
+
+-- ---- 패치 전에 가진 장비에도 공격력(2026-10-28 사용자: "원래 ㅇ이던 장비들도 공격력추가 일괄 적용 되어야하는거알지 패치후에도") ----
+--  장비는 저장할 때 부위 · 단계 · 성능 · 별 · 직업 · 실패 수 · 부서짐 · 이름표만 적고 옵션 숫자는 적지 않는다 — 불러올 때마다 지금의 식으로 셈한다.
+--  그래서 패치 전의 저장(이름표가 없는 일곱 칸 · 이름표가 있는 여덟 칸)을 그대로 불러도 방어구 · 장신구에 공격력이 붙고, 낀 것의 합(스펙)에도 든다. 경매장의 장부도 같은 꼴
+do
+	local Market = req("ReplicatedStorage/shared/lune/sim/market")
+	local old = Hero.new(9901, "axion")
+	Hero.setLevel(old, 70, Hero.jobAt(70))
+	local saved = {
+		gear = { { "hat", 70, 3, 5, "", 0, 0 }, { "ring", 40, 3, 0, "", 0, 0 } }, -- (가방: 보통 Lv.70 모자 5성 · 보통 Lv.40 반지)
+		equip = { { "weapon", 70, 3, 0, "axion", 0, 0 }, { "suit", 70, 3, 0, "", 0, 0 }, { "neck", 70, 3, 10, "", 0, 0 }, { "eye", 70, 5, 5, "", 0, 0, "archer_eye" } },
+		use = {}, etc = {}, dust = 0,
+	}
+	Bag.unpack(old, saved)
+	local function atkOf(it)
+		return Items.options(it).total.atk
+	end
+	eq(atkOf(old.gear[1]), 3, "가방의 옛 모자(Lv.70 보통 5성)에 공격력 3(2 x 1.3)")
+	eq(atkOf(old.gear[2]), 1, "가방의 옛 반지(Lv.40 보통)에 공격력 1")
+	eq(atkOf(old.equip.suit), 2, "낀 옛 옷(Lv.70 보통)에 공격력 2")
+	eq(atkOf(old.equip.neck), 2, "낀 옛 목걸이(Lv.70 보통 10성)에 공격력 2(1 x 1.6)")
+	eq(atkOf(old.equip.eye), 3, "낀 흑수정 마안(5성)에 공격력 3(2 x 1.3)")
+	local want = atkOf(old.equip.weapon) + 2 + 2 + 3
+	eq(Hero.spec(old).atk, want, "낀 것의 공격력 합(스펙)에 방어구 · 장신구의 공격력이 든다")
+	local row = Market.pack(old.equip.suit)
+	eq(#row, 7, "경매장 장부의 꼴에도 옵션 숫자는 없다")
+	eq(atkOf(Market.unpack(row)), 2, "경매장에 올라 있던 옛 옷도 공격력 2")
 end

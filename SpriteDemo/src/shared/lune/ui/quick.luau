@@ -22,6 +22,11 @@ Q.OLD_POTION = "potion" -- 예전 저장의 물약 칸(물약이 한 가지였�
 function Q.item(what: any)
 	return if typeof(what) == "string" then GOODS[what] else nil
 end
+-- 물약인가(다시 마시기까지가 칸에 덮인다 — 2026-10-27 3초)
+function Q.isPotion(what: any): boolean
+	local g = Q.item(what)
+	return g ~= nil and g.kind == "potion"
+end
 
 -- 칸에 놓인 것이 펫 · 탈것이면 "pet" · "mount"(2026-10-21 사용자: 가방의 캐시 탭에서 꺼내기 · 타기 — 퀵슬롯에 놓으면 그 키로 꺼내고 넣고 타고 내린다)
 function Q.ride(what: any): string?

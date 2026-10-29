@@ -24,6 +24,39 @@ Rank.MAX_FIX = {
 	c2995182643_1 = 1792834566, -- 여왕 2026-10-24 09:36:06 UTC
 }
 
+-- 찾아 둔 오른 때(MAX_FIX)의 점수가 순위판에 옛 점수로 낮게 적혀 있으면 올린다(2026-10-29 사용자: "여왕 캐릭터 랭킹 계속 내려가는거 작업해 원래 랭킹으로 보이게").
+--  까닭: 10-24에 고친 점수를 옛 서버(오른 때를 모르는 코드 — 만렙 = 150,000,000점 하나)가 그 캐릭터가 할 때 다시 옛 점수로 덮었다 → 그 뒤에 만렙이 된 사람들이 모두 위로 올라가
+--   여왕이 판에서 계속 내려갔다. 전에는 그 캐릭터가 새 서버에 들어와야만 고쳐졌다. 이제 서버가 판을 읽을 때(60초마다) 고친다 —
+--  rows = 판에서 읽은 줄 { key, score }(높은 차례 — 고친 뒤 다시 줄 세운다) · raise(key, score) = 저장소에 올려 적기(있는 줄만 · 더 낮을 때만) · all = 판에 안 보이는 것도 올려 본다(서버가 처음 읽을 때)
+function Rank.fixMax(rows, raise, all: boolean?)
+	local changed = false
+	for key, at in Rank.MAX_FIX do
+		local want = Rank.levelScore(N.MAX_LEVEL, 0, 1, at)
+		local row = nil
+		for _, r in rows do
+			if r.key == key then
+				row = r
+				break
+			end
+		end
+		if row and row.score < want then
+			row.score = want
+			changed = true
+			raise(key, want)
+		elseif not row and all then
+			raise(key, want)
+		end
+	end
+	if changed then
+		table.sort(rows, function(a, b)
+			if a.score ~= b.score then
+				return a.score > b.score
+			end
+			return a.key < b.key
+		end)
+	end
+end
+
 -- 레벨 순위의 점수: 레벨이 먼저, 그다음 그 레벨에서 모은 경험치의 비율. 만렙이면 오른 때(maxAt — 먼저 오른 쪽이 위)
 function Rank.levelScore(level: number, xp: number, need: number, maxAt: number?): number
 	if level >= N.MAX_LEVEL then

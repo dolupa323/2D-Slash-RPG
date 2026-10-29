@@ -75,7 +75,7 @@ function ForgeWindow.gainText(it): string
 	local after = Items.options(nextIt).total
 	local W2 = D.WORDS
 	local parts = {}
-	for _, k in { "atk", "stat", "def" } do
+	for _, k in ItemInfo.ORDER do
 		if now[k] ~= nil then
 			local d = after[k] - now[k]
 			table.insert(parts, ("%s %s → %s%s"):format(W2[k], Format.short(now[k]), Format.short(after[k]), if d > 0 and k == "atk" then (" (+%s)"):format(Format.short(d)) else ""))

@@ -537,7 +537,7 @@ do
 	local half = hero("axion", { ax_charge = 10, ax_charge3 = 10, ax_slam = 20 })
 	room:skillHit(half, COMBAT.skills.ax_slam.hits[1], half.x, half.y, 1, 1, nil, "mob", "ax_slam", { mul = 1.5, reach = 10, level = 1 })
 	expect(half.pass.surge < room.time, "끝까지 모으지 않은 강타로는 켜지지 않는다")
-	local m2, r2 = Kit.chargeAt(s, 2)
+	local m2, r2 = Kit.chargeAt(s, 2, "ax_slam")
 	near(m2, mul, 1e-6, "그 단계의 피해 배수")
 	near(r2, reach, 1e-6, "그 단계의 더 닿는 거리")
 end

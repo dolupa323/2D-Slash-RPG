@@ -31,6 +31,7 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	claimName = function(key, id) book[key] = id; return true end,
 	freeName = function(key) book[key] = nil end,
 	rankSet = function(board, key, score) rankDisk[board] = rankDisk[board] or {}; rankDisk[board][key] = score end,
+	rankRaise = function(board, key, score) local d = rankDisk[board]; if d and d[key] and d[key] < score then d[key] = score end end,
 	rankRemove = function(board, key) if rankDisk[board] then rankDisk[board][key] = nil end end,
 	rankTop = function() return {} end,
 	rankInfoSet = function(key, info) rankInfo[key] = info end,
@@ -285,7 +286,7 @@ do
 			return t
 		end,
 		text = function(_, text, _, _, width)
-			local item = { value = text, width = width }
+			local item = { value = text, width = width, label = { Frame = frame("Text") } }
 			function item.set(_, v) item.value = v end
 			function item.color() end
 			function item.show() end
@@ -298,14 +299,18 @@ do
 			local f = frame("Field")
 			f.Text = ""
 			f.FocusLost = { Connect = function() end }
+			function f:GetPropertyChangedSignal() return { Connect = function() end } end -- (정지 탭이 적은 닉네임을 기억한다 — 2026-10-26)
 			return f
 		end,
 		button = function(_, text, x, y, w, onClick, opts)
 			local font = if opts and opts.font then opts.font elseif opts and opts.h and opts.h < 26 then "small" else "body"
-			table.insert(buttons, { text = text, x = x, w = w, font = font, click = onClick })
-			return { frame = frame("Button") }
+			local entry = { text = text, x = x, y = y, w = w, font = font, click = onClick }
+			table.insert(buttons, entry)
+			return { frame = frame("Button"), setText = function(_, v) entry.text = v end }
 		end,
 	})
+	local refreshed = 0
+	MOCK("Client/modules/ui/pixelText", { RefreshAll = function() refreshed += 1 end }) -- 언어를 바꾸면 그려 둔 글을 다시 그린다(viewOpts.applyLang)
 	local AdminWindow = req("Client/lune/ui/adminWindow")
 	local w, hgt = AdminWindow.size()
 	expect(w + 36 <= 768 and hgt + 64 <= 432, "관리 창이 스마트폰의 화면 틀(768x432)에 들어간다")
@@ -362,6 +367,7 @@ do
 			for _, b in buttons do
 				expect(pixelText.Measure(b.text, b.font) <= b.w - 6, ("단추의 글이 단추에 들어간다 「%s」(%d / %d)"):format(b.text, pixelText.Measure(b.text, b.font), b.w - 6))
 				expect(b.x >= 0 and b.x + b.w <= w, ("단추가 창 안이다 「%s」(%d ~ %d)"):format(b.text, b.x, b.x + b.w))
+				expect(b.y >= 0 and b.y + 22 <= hgt - 52, ("단추가 창의 속 안이다(위아래) 「%s」(%d)"):format(b.text, b.y))
 			end
 			-- 그려진 단추를 차례로 모두 누른다(누르면 다시 그려지는 단추도 있어 이름으로 다시 찾는다)
 			local names = {}
@@ -381,10 +387,56 @@ do
 		view.destroy()
 		return calls, answered
 	end
+	-- 언어 단추(2026-10-27 사용자: "관리탭에서 영문, 한글 바꿀수있게"): 아래 줄 오른쪽 · 누르면 한국어 ↔ English · 게임 설정의 「언어」와 같은 값을 계정에 저장
+	do
+		local Lang = req("ReplicatedStorage/shared/lune/lang")
+		local ViewOpts = req("Client/lune/viewOpts")
+		Lang.set("ko")
+		ViewOpts.lang = "auto"
+		local saves = 0
+		table.clear(buttons)
+		local view = AdminWindow.build(frame("Body"), { me = function() return nil end, admin = function() return nil end, saveSound = function() saves += 1 end }, w, hgt)
+		local lang = nil
+		for _, b in buttons do
+			if b.text == "English" then
+				lang = b
+			end
+		end
+		expect(lang ~= nil and lang.x + lang.w == w and lang.y >= hgt - 20, "아래 줄 오른쪽에 「English」 단추")
+		if lang then
+			expect(pixelText.Measure("English", lang.font) <= lang.w - 6 and pixelText.Measure("한국어", lang.font) <= lang.w - 6, "언어 단추의 글이 단추에 들어간다")
+			lang.click()
+			expect(ViewOpts.lang == "en" and Lang.code == "en" and saves == 1 and refreshed >= 1, "누르면 영문 · 계정에 저장 · 그려 둔 글을 다시 그린다")
+			eq(lang.text, "한국어", "영문일 때 단추는 「한국어」")
+			lang.click()
+			expect(ViewOpts.lang == "ko" and Lang.code == "ko" and saves == 2, "다시 누르면 한국어")
+			eq(lang.text, "English", "한국어일 때 단추는 「English」")
+		end
+		view.destroy()
+		-- 영문일 때 탭 줄(이름 + 사이 16)이 창 폭에 들어간다
+		Lang.set("en")
+		local total = 0
+		for i, t in AdminWindow.TABS do
+			total += pixelText.Measure(Lang.t(t.name), "small") + (if i > 1 then 16 else 0)
+		end
+		expect(total <= w, ("영문 탭 줄이 창 폭에 들어간다(%d / %d)"):format(total, w))
+		Lang.set("ko")
+		ViewOpts.lang = "auto"
+	end
 	-- 관리자: 누른 만큼 서버가 대답한다
 	local calls, answered = run(pAdmin, true)
 	expect(showCalls == #AdminWindow.BOSS_SHOW and shown == AdminWindow.BOSS_SHOW[#AdminWindow.BOSS_SHOW], ("「보스 크기」의 단추마다 그림의 크기를 바꾼다(%d번 · 마지막 %d%%)"):format(showCalls, shown))
 	expect(calls >= 40 and answered == calls, ("관리자가 누른 단추는 모두 서버가 대답한다(%d번 가운데 %d번)"):format(calls, answered))
+	-- 영문(관리 창의 언어 단추 — 2026-10-27): 글을 영문으로 바꿔 재고 그리는 게임과 같이 — 모든 탭의 단추 글이 단추에, 단추가 창 안에 든다
+	do
+		local Lang = req("ReplicatedStorage/shared/lune/lang")
+		Lang.set("en")
+		pixelText.SetTranslator(Lang.t)
+		local c2, a2 = run(pAdmin, true)
+		expect(c2 >= 40 and a2 == c2, ("영문으로도 단추가 모두 서버까지 간다(%d번 가운데 %d번)"):format(c2, a2))
+		pixelText.SetTranslator(nil)
+		Lang.set("ko")
+	end
 	-- 관리자가 아닌 사람이 이 창을 억지로 띄워 모든 단추를 눌러도: 서버는 하나도 듣지 않고, 그 사람은 그대로다
 	local was = snap(hu, sUser)
 	calls, answered = run(pUser, false)

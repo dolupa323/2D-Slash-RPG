@@ -64,7 +64,7 @@ for _, m in RIDE.mounts do
 	-- ④ 질주 여섯 장 · 장마다 영웅 앞에 다시 그리는 등
 	local c = CHARS.chars[m.id]
 	-- (거대 탈것 「이끼 골렘」은 질주가 아니라 느린 걷기 네 장 — 2026-10-22 · 시험 80)
-	local runN = if m.id == "mount_golem" then 4 else 6
+	local runN = if string.find(m.id, "^mount_golem") then 4 else 6 -- (거대 탈것: 이끼 골렘 · 황금 골렘(같은 그림 — 2026-10-29)은 느린 걷기 네 장)
 	eq(#c.clips.run.frames, runN, m.id .. (if runN == 6 then ": 달리기 = 질주 여섯 장" else ": 달리기 = 느린 걷기 네 장"))
 	eq(#c.clips.run_front.frames, runN, m.id .. ": 장마다 등(_front)")
 	eq(#m.bob.run, runN, m.id .. ": 장마다 영웅의 높이")
@@ -78,7 +78,7 @@ for _, m in RIDE.mounts do
 		sum += v
 	end
 	local mean = sum / #m.bobx.run
-	if m.id == "mount_wolf" or m.id == "mount_boar" then
+	if string.find(m.id, "^mount_wolf") or string.find(m.id, "^mount_boar") then -- (호박불 늑대 = 달빛 늑대의 그림 그대로 — 2026-10-29)
 		expect(mean <= -2, ("%s: 달리는 동안 영웅이 어깨를 따라 뒤로(평균 %.1f점)"):format(m.id, mean))
 	else
 		expect(math.abs(mean) <= 1, ("%s: 사슴은 그대로(평균 %.1f점)"):format(m.id, mean))

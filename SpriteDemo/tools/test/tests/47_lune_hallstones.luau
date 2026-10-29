@@ -16,8 +16,10 @@ end
 local texts = {}
 MOCK("Client/lune/stage", {
 	uiW = 960, uiH = 540, ratio = 2.5,
-	group = function(parent, name)
-		return frame(name)
+	group = function(parent, name, z)
+		local f = frame(name)
+		f.z, f.parent = z, parent
+		return f
 	end,
 })
 MOCK("Client/lune/overlay", { camX = 0, camY = 26, x = function(v) return math.floor((v - 0) * 2.5 + 0.5) end, y = function(v) return math.floor((v - 26) * 2.5 + 0.5) end })
@@ -72,9 +74,18 @@ end
 Stones.fetch = function()
 	return { robux = { rows[1] }, power = rows, level = rows }
 end
-local root = frame("Over")
+local root = frame("Scene_in_hall") -- 장면의 틀(sceneView의 root)
 Stones.enter(hall, root)
 local mine = #texts
+-- 2026-10-29 사용자 제보 "랭킹판 글씨가 캐릭터앞에있는판정이네요": 글의 층은 장면 틀 안 · 방 그림(z 1)보다 위 · 맵 틀(World z 10 — 캐릭터)보다 아래
+local stoneLayer
+for _, m in made do
+	if m.Name == "HallStones" then
+		stoneLayer = m
+	end
+end
+expect(stoneLayer ~= nil and stoneLayer.parent == root, "순위 글의 층은 장면의 틀 안에 있다(화면 틀의 글씨 층이 아니다)")
+expect(stoneLayer ~= nil and stoneLayer.z > #hall.layers and stoneLayer.z < 10, ("방 그림(%d) 위 · 캐릭터의 맵 틀(10) 아래 — %s"):format(#hall.layers, tostring(stoneLayer and stoneLayer.z)))
 eq(mine, 3 * 10 * 3, "비석마다 열 줄 x (순위 · 이름 · 값)")
 for _, t in texts do
 	expect(t.shadow ~= nil, "글은 새긴 모양(밝은 테두리)이다")
@@ -82,6 +93,13 @@ end
 Stones.update() -- 순위를 받으러 간다(task.spawn — 가짜 시계)
 -- (가짜 task.spawn은 바로 돈다)
 Stones.update()
+local fineScale
+for _, c in CREATED do
+	if c.ClassName == "UIScale" and c.Parent == stoneLayer then
+		fineScale = c
+	end
+end
+expect(fineScale ~= nil and math.abs(fineScale.Scale - 1 / 2.5) < 1e-9, "맵의 도트 배율 안에서 글은 화면 틀의 점으로(1/ratio)")
 -- 순위가 들어온 줄은 비석 면 안에 있다
 local function faceOf(id)
 	for _, n in hall.npcs do

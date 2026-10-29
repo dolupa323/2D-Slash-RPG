@@ -688,6 +688,7 @@ do
 		claimName = function(key, id) names[key] = id; return true end,
 		freeName = function(key) names[key] = nil end,
 		rankSet = function() end,
+		rankRaise = function() end,
 		rankRemove = function() end,
 		rankTop = function() return {} end,
 		rankInfoSet = function() end,

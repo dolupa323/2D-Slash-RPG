@@ -30,7 +30,7 @@ end
 -- 소리 설정 { music = 배경 음악의 크기, sfx = 효과음의 크기(0~steps칸 — 한 칸 10%), on = 모두 켰는가 }. 계정의 것이다(캐릭터를 바꿔도 같다)
 --  사용자 2026-10-13: "소리조절 있어야합니다."
 function Account.soundDefault()
-	return { music = SOUND.start, sfx = SOUND.start, on = true, fx = true, nums = true } -- fx · nums = 화면 설정(다른 사람의 스킬 효과 · 피해 숫자 — 2026-10-18)
+	return { music = SOUND.start, sfx = SOUND.start, on = true, fx = true, nums = true, lang = "auto", touch = "new" } -- fx · nums = 화면 설정(다른 사람의 스킬 효과 · 피해 숫자 — 2026-10-18) · lang = 언어("auto" 로블록스의 언어 설정을 따른다 · "ko" · "en" — 2026-10-27)
 end
 -- 받은 것 · 저장된 것의 꼴을 본다: 맞으면 새 표, 아니면 nil
 function Account.cleanSound(v: any)
@@ -41,7 +41,15 @@ function Account.cleanSound(v: any)
 	if (v.fx ~= nil and typeof(v.fx) ~= "boolean") or (v.nums ~= nil and typeof(v.nums) ~= "boolean") then
 		return nil
 	end
-	return { music = v.music, sfx = v.sfx, on = v.on, fx = v.fx ~= false, nums = v.nums ~= false }
+	-- 언어(2026-10-27): "auto" · "ko" · "en"(없으면 — 그 전의 저장 — "auto" · 그 밖의 값은 받지 않는다)
+	if v.lang ~= nil and v.lang ~= "auto" and v.lang ~= "ko" and v.lang ~= "en" then
+		return nil
+	end
+	-- 폰 단추 배치(2026-10-28): "new" · "old"(없으면 — 그 전의 저장 — "new" · 그 밖의 값은 받지 않는다)
+	if v.touch ~= nil and v.touch ~= "new" and v.touch ~= "old" then
+		return nil
+	end
+	return { music = v.music, sfx = v.sfx, on = v.on, fx = v.fx ~= false, nums = v.nums ~= false, lang = v.lang or "auto", touch = v.touch or "new" }
 end
 function Account.setSound(acct, v: any): boolean
 	local sound = Account.cleanSound(v)
@@ -220,21 +228,69 @@ local function mask(s: string, word: string): string
 	return table.concat(out)
 end
 
--- 지을 수 없는 말이 들었는가(바른 UTF-8의 글이어야 한다 — Account.nameOk가 먼저 본다)
-function Account.nameBanned(name: string): boolean
+-- 운영자 사칭(2026-10-29 사용자: "운영자 사칭할수 있는 닉네임들은 다 … dolupa, dolupa95, 운영자, 제작자, 개발자, 어드민 기타등등 운영자를 사칭할수있는 모든 경우의수 걸리게"):
+--  공방 tools/build_lune_names.mjs의 staff()와 같은 셈(고칠 때는 둘을 같이 — 이름들 NAMES.check로 맞춰 본다).
+--  영문 덩어리 전체(gm · mod · dev …) · 들어 있는 말(reserved) · 한글만 뽑아 소리의 뼈대로(staffKo — 운a영자 · 재작자 · 쥐엠) ·
+--  영문만 뽑아 닮은 글자를 같게 보고(숫자 → 글자 · l → i · rn → m · vv → w) 같은 글자를 늘인 것까지(staffEn — ADM1N · admln · aadmiin · D0LUPA)
+local function confOf(s: string): string
+	return (string.gsub((string.gsub((string.gsub(s, "l", "i")), "rn", "m")), "vv", "w"))
+end
+local STAFF_KO, STAFF_EN = table.create(#NAMES.staffKo), table.create(#NAMES.staffEn)
+for i, w in NAMES.staffKo do
+	STAFF_KO[i] = skeleton(shorten(codesOf(w)))
+end
+for i, w in NAMES.staffEn do
+	STAFF_EN[i] = runsOf(confOf(leetOf(w)))
+end
+function Account.nameStaff(name: string): boolean
 	local key0 = Account.nameKey(name)
-	-- 운영하는 사람 · 게임인 척: 영문 덩어리 전체(GM달빛 · gm) · 들어 있는 말(숫자를 끼우거나 숫자로 바꿔 적은 것 포함)
 	for seg in string.gmatch(key0, "%a+") do
 		if RESWHOLE[seg] then
 			return true
 		end
 	end
-	local bare0, leet0 = string.gsub(key0, "%d", ""), leetOf(key0)
+	local key = key0
+	for _, a in NAMES.allow do
+		key = mask(key, a) -- 멀쩡한 말(badminton …)은 먼저 가려 놓는다
+	end
+	local bare0, leet0 = string.gsub(key, "%d", ""), leetOf(key)
 	for _, w in NAMES.reserved do
-		if string.find(key0, w, 1, true) or string.find(bare0, w, 1, true) or string.find(leet0, w, 1, true) then
+		if string.find(key, w, 1, true) or string.find(bare0, w, 1, true) or string.find(leet0, w, 1, true) then
 			return true
 		end
 	end
+	local hangCodes = {}
+	for _, code in utf8.codes(key) do
+		if code == 1 or isHangul(code) then
+			table.insert(hangCodes, code)
+		end
+	end
+	if #hangCodes > 0 then
+		local sk1, sk2 = skeleton(hangCodes), skeleton(shorten(hangCodes))
+		for _, w in STAFF_KO do
+			if hasAligned(sk1, w) or hasAligned(sk2, w) then
+				return true
+			end
+		end
+	end
+	local lat = confOf((string.gsub(leetOf(key), "[^%l%c]", "")))
+	if lat ~= "" then
+		local r = runsOf(lat)
+		for _, w in STAFF_EN do
+			if runsHave(r, w) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- 지을 수 없는 말이 들었는가(바른 UTF-8의 글이어야 한다 — Account.nameOk가 먼저 본다). staffOk = 운영자 사칭은 보지 않는다(관리자 계정의 캐릭터 — 2026-10-29)
+function Account.nameBanned(name: string, staffOk: boolean?): boolean
+	if not staffOk and Account.nameStaff(name) then
+		return true
+	end
+	local key0 = Account.nameKey(name)
 	local key = key0
 	for _, a in NAMES.allow do
 		key = mask(key, a)
@@ -296,7 +352,7 @@ end
 
 -- 이름의 꼴을 본다. 돌려주는 것: 되는가, 안 되는 까닭(화면에 그대로 적는 글)
 --  차례: 글인가 → 너무 긴 글이 아닌가 → 쓸 수 있는 글자뿐인가(완성된 한글 · 영문 · 숫자) → 숫자만은 아닌가 → 길이 → 지을 수 없는 말
-function Account.nameOk(name: any): (boolean, string?)
+function Account.nameOk(name: any, staffOk: boolean?): (boolean, string?)
 	local TEXT = NAMES.text
 	if typeof(name) ~= "string" or name == "" then
 		return false, TEXT.empty
@@ -328,7 +384,10 @@ function Account.nameOk(name: any): (boolean, string?)
 	elseif letters == 0 and not NAMES.digitsOnly then
 		return false, TEXT.digits
 	end
-	if Account.nameBanned(name) then
+	if not staffOk and Account.nameStaff(name) then
+		return false, TEXT.staff -- 운영자 사칭(2026-10-29)
+	end
+	if Account.nameBanned(name, true) then
 		return false, TEXT.banned
 	end
 	return true, nil

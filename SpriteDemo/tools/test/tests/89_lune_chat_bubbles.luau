@@ -17,7 +17,8 @@ local function textItem()
 	end
 	return it
 end
-MOCK("Client/lune/stage", { uiW = 960, uiH = 540, group = function(_, name) return frame(name) end })
+local groupZ = {}
+MOCK("Client/lune/stage", { uiW = 960, uiH = 540, group = function(_, name, z) groupZ[name] = z return frame(name) end })
 MOCK("Client/lune/overlay", { root = frame("Overlay"), x = function(v) return v end, y = function(v) return v end })
 MOCK("Client/lune/ui/ui", {
 	COLOR = setmetatable({}, { __index = function() return Color3.fromRGB(1, 2, 3) end }),
@@ -31,6 +32,8 @@ MOCK("Client/modules/ui/pixelText", { Fit = function(t) return t end, Measure = 
 local Bubbles = req("Client/lune/chatBubbles")
 Bubbles.init()
 expect(received ~= nil, "Roblox 채팅의 받은 글(MessageReceived)에 걸었다")
+-- 2026-10-29: 장면(퀘스트 연출)이 세계를 덮는 층(CineLook 54 · CineLow 55 — cineView.luau)보다 아래(전에는 55로 같아 덮개 위로 비칠 수 있었다)
+expect(groupZ.ChatBubbles ~= nil and groupZ.ChatBubbles < 54, "채팅 말풍선은 장면의 덮개 아래 — " .. tostring(groupZ.ChatBubbles))
 
 local where = { [1] = { 100, 200 }, [2] = { 300, 200 } } -- 이 맵에 있는 사람(1 = 나 · 2 = 다른 사람)
 Bubbles.where = function(id)

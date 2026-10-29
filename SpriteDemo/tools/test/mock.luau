@@ -195,6 +195,18 @@ local function requireMock(target)
 	if not fn then error("모듈 없음: " .. tostring(path), 2) end
 	local result = fn(node(path), game, requireMock, task, osMock, typeofMock, Vector2, Random, Color3, UDim2, Enum, Instance, warnMock, quietPrint, node("Workspace"), function() return clock.now end)
 	LOADED[path] = result
+	-- LUNE_LANG_SWEEP=1(2026-10-27 영문): 도트 글씨가 그리는 글을 모두 영문으로 바꿔 보고, 못 바꾼 글을 모은다(finish가 적는다)
+	if LANG_SWEEP and path == "Client/ui/pixelText" then
+		local Lang = requireMock("ReplicatedStorage/shared/lune/lang")
+		Lang.set("en")
+		result.SetTranslator(function(text)
+			local out = Lang.t(text)
+			for k in Lang.missing do
+				SWEEP_MISSING[k] = SWEEP_MISSING[k] or SWEEP_TEST
+			end
+			return out
+		end)
+	end
 	return result
 end
 req = requireMock
@@ -217,6 +229,7 @@ function eq(a, b, msg)
 end
 function runTest(name, fn)
 	current = name
+	SWEEP_TEST = name
 	RESET()
 	local before, beforeFailed = total, failed
 	local ok, err = pcall(fn)
@@ -227,5 +240,16 @@ function runTest(name, fn)
 	print(("[%s] 검사 %d개, 실패 %d개"):format(name, total - before, failed - beforeFailed))
 end
 function finish()
+	if LANG_SWEEP then
+		local list = {}
+		for k, where in SWEEP_MISSING do
+			table.insert(list, where .. " | " .. k)
+		end
+		table.sort(list)
+		print(("== 영문으로 못 바꾼 글 %d개 =="):format(#list))
+		for _, line in list do
+			print("  MISS " .. (string.gsub(line, "\n", "\\n")))
+		end
+	end
 	print(("== 전체 검사 %d개, 실패 %d개 =="):format(total, failed))
 end

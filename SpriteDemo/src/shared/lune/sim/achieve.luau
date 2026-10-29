@@ -35,7 +35,9 @@ local function regionOf(r: string)
 				table.insert(maps, key)
 				mapSet[key] = true
 			end
-			for _, m in sc.mobs or {} do
+			-- 몬스터의 종류는 언제든 다시 갈 수 있는 바깥 맵의 것만(2026-10-26 사용자 "지금 업적중에 안깨지는거 다 확인해라": 전에는 실내 · 파티마다 따로 들어가는 퀘스트 방의 것도 들어가,
+			--  초승 고개에서는 지하실(in_cellar — 한 번뿐인 이야기 방)에만 나오는 수련 인형(dummy) · 정예 창병(espearman)을 잡아야 해서 그 방을 지난 사람은 깰 수 없었다)
+			for _, m in (if sc.indoor or sc.inst then {} else sc.mobs or {}) do
 				if not kindSet[m.kind] then
 					kindSet[m.kind] = true
 					table.insert(kinds, m.kind)

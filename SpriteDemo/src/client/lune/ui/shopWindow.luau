@@ -48,7 +48,18 @@ ShopWindow.TITLE = { merchant = "잡화 상인 반달", store = WORDS.storeName 
 ShopWindow.BACK_HEAD = "되사기 — 이번 접속에 판 것(판 값 그대로)" -- 2026-10-18
 ShopWindow.BACK_BUY = "되사기"
 
+-- 기간 이벤트의 상점(2026-10-29 — sim/event.luau · 할로윈의 호박 마녀): arg = "event:<이벤트의 이름표>"
+local function eventOf(arg: string)
+	local id = string.match(arg or "", "^event:(.+)$")
+	return if id then require(lune.sim.event).def(id) else nil
+end
+ShopWindow.eventOf = eventOf
+
 function ShopWindow.title(arg: string): string
+	local e = eventOf(arg)
+	if e then
+		return e.words.shopTitle
+	end
 	return ShopWindow.TITLE[arg] or "상점"
 end
 
@@ -435,9 +446,104 @@ end
 
 -- (제작은 2026-10-15에 대장장이 창으로 옮겼다 — ui/forgeWindow.luau. 대장장이의 상점은 없앴다: 사용자 "상점 없어야함 제작, 강화만 하는곳임")
 
+-- 기간 이벤트의 상점(2026-10-29 사용자: "할로윈 이벤트 상점 ui 처럼해 지금 할로한테 말걸어서 뭐사는거 엄청나게 불편하게되있잖아"):
+--  잡화 상인의 창과 같은 짜임 — 물건마다 한 줄([그림] 이름 · [사탕] 값 · 「구매」) · 가진 것은 「보유」 · 한도가 있는 것은 「산 수/한도」(다 사면 「다 샀다」) · 아래에 가진 사탕 · 언제까지.
+--  사는 것은 서버(EventTrade — 기간 · 마녀 곁 · 사탕 · 한도 · 가방을 다시 본다). 한 번 누르면 하나
+local function buildEvent(body: Frame, ctx, w: number, h: number, e)
+	local Event = require(lune.sim.event)
+	local EW = e.words
+	local view = {}
+	local bx = w - ShopWindow.BUY_W
+	local list = Ui.scroll(body, 0, 0, w, MAX_ROWS * ROW, #e.shop * ROW, 3)
+	local rows = {}
+	local busy = false
+	if ctx.cashFetch then
+		ctx.cashFetch() -- 가진 탈것 · 펫 · 스킨 · 산 수(계정의 것)
+	end
+	for i, item in e.shop do
+		local y = (i - 1) * ROW
+		local cell = Ui.slot(list, 0, y + 1, IC)
+		cell.frame.Name = "Icon"
+		local icon = Ui.smallIcon(cell.frame, e.candy.id, 3, 3)
+		local name = Ui.text(list, "", TX, y + 7, ShopWindow.NAME_W, { font = "body" })
+		local candy = Ui.smallIcon(list, e.candy.id, bx - 8 - ShopWindow.PRICE_W - 19, y + 4)
+		local price = Ui.text(list, "", bx - 8 - ShopWindow.PRICE_W, y + 8, ShopWindow.PRICE_W, { align = "right", color = C.gold })
+		local one = Ui.button(list, EW.buy, bx, y, ShopWindow.BUY_W, function()
+			if busy or not ctx.eventBuy then
+				return
+			end
+			busy = true
+			task.spawn(function()
+				ctx.eventBuy(e.id, item.id)
+				busy = false
+			end)
+		end)
+		one.frame.Name = "Buy"
+		local state = Ui.text(list, "", bx, y + 8, ShopWindow.BUY_W, { align = "center", color = C.green })
+		local count = Ui.text(list, "", TX + ShopWindow.NAME_W, y + 8, bx - 8 - ShopWindow.PRICE_W - 22 - TX - ShopWindow.NAME_W, { align = "right", color = C.dim })
+		rows[i] = { item = item, icon = icon, name = name, price = price, one = one, state = state, count = count }
+	end
+	local fy = h - 28
+	Ui.line(body, 0, fy - 6, w)
+	local purse = BagWindow.purse(body, e.candy.id, -3, fy, 90)
+	local a, b = Event.span(e)
+	Ui.text(body, Format.fill(EW.till, { to = b }), SHOP.hintX, fy + 4, w - SHOP.hintX, { align = "right", color = C.dim })
+	local _ = a
+
+	-- 이 계정 · 캐릭터가 그것을 가졌나(화면의 것으로 — 서버가 다시 본다): 가졌다 · 산 수 · 한도
+	local function ownedIn(item, me, v): (boolean, number, number?)
+		local function has(listOf, id)
+			return listOf ~= nil and table.find(listOf, id) ~= nil
+		end
+		local k = item.kind
+		if k == "mount" then
+			return v ~= nil and has(v.mounts, item.ride), 0, nil
+		elseif k == "pet" then
+			return v ~= nil and has(v.pets, item.ride), 0, nil
+		elseif k == "dskin" then
+			return v ~= nil and has(v.dskins, item.dskin), 0, nil
+		elseif k == "title" then
+			return me.titles ~= nil and table.find(me.titles, item.title) ~= nil, 0, nil
+		elseif item.limit then
+			local n = (v and v.ev and v.ev[Event.countKey(e, item)]) or 0
+			return n >= item.limit, n, item.limit
+		end
+		return false, 0, nil
+	end
+
+	function view.refresh()
+		local bag, me = ctx.bag(), ctx.me()
+		if not bag or not me then
+			return
+		end
+		local v = ctx.cash and ctx.cash()
+		local have = Bag.countIn(bag, e.candy.id)
+		local band = (v and v.band) or 1
+		for _, row in rows do
+			local item = row.item
+			local owned, n, lim = ownedIn(item, me, v)
+			Ui.setWorldIcon(row.icon, Event.icon(e, item, me.level))
+			row.name:set(Event.what(e, item, me.level, band))
+			row.name:color(if owned then C.dim else C.text)
+			row.price:set(Format.short(item.cost))
+			row.count:set(if lim then Format.fill(EW.count, { n = n, max = lim }) else "")
+			row.one.frame.Visible = not owned
+			row.one:setEnabled(have >= item.cost)
+			row.state:set(if owned then (if lim then EW.soldOut else EW.own) else "")
+		end
+		purse:set(Format.short(have))
+	end
+	function view.destroy() end
+	return view
+end
+
 function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 	if arg == "store" then
 		return buildStore(body, ctx, w)
+	end
+	local ev = eventOf(arg)
+	if ev then
+		return buildEvent(body, ctx, w, h, ev)
 	end
 	local view = {}
 	local ui = ctx.ui

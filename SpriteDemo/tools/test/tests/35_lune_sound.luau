@@ -42,22 +42,30 @@ expect(S.btn >= 22 and S.seg + S.gap >= 12, "손가락으로도 누를 만한 �
 
 -- ---- 2) 계정의 소리 설정 ----
 local acct = Account.new()
-expect(same(acct.sound, { music = S.start, sfx = S.start, on = true, fx = true, nums = true }), "새 계정은 처음 크기 · 모두 켬 · 화면도 모두 켜짐")
+expect(same(acct.sound, { music = S.start, sfx = S.start, on = true, fx = true, nums = true, lang = "auto", touch = "new" }), "새 계정은 처음 크기 · 모두 켬 · 화면도 모두 켜짐")
 -- 화면(2026-10-18 — fx · nums): 받으면 언제나 실린다(없으면 켜짐)
-expect(Account.setSound(acct, { music = 3, sfx = 0, on = false }) == true and same(acct.sound, { music = 3, sfx = 0, on = false, fx = true, nums = true }), "설정을 받는다(화면은 없으면 켜짐)")
+expect(Account.setSound(acct, { music = 3, sfx = 0, on = false }) == true and same(acct.sound, { music = 3, sfx = 0, on = false, fx = true, nums = true, lang = "auto", touch = "new" }), "설정을 받는다(화면은 없으면 켜짐)")
 expect(Account.setSound(acct, { music = 3, sfx = 0, on = false, fx = false, nums = true }) == true and acct.sound.fx == false and acct.sound.nums == true, "화면 설정도 받는다")
 local given = { music = 5, sfx = 5, on = true, extra = "x" }
 expect(Account.setSound(acct, given) and acct.sound ~= given and acct.sound.extra == nil, "받은 표를 그대로 쥐지 않는다(다른 것이 딸려 오지 않는다)")
 for _, bad in { "x", 3, { music = 5 }, { music = 5, sfx = 5, on = "true" }, { music = S.steps + 1, sfx = 0, on = true }, { music = 0, sfx = -1, on = true }, { music = 2.5, sfx = 1, on = true }, { music = 5, sfx = 5, on = true, fx = "no" }, { music = 5, sfx = 5, on = true, nums = 0 } } do
-	expect(Account.setSound(acct, bad) == false and same(acct.sound, { music = 5, sfx = 5, on = true, fx = true, nums = true }), "말이 안 되는 설정은 받지 않는다")
+	expect(Account.setSound(acct, bad) == false and same(acct.sound, { music = 5, sfx = 5, on = true, fx = true, nums = true, lang = "auto", touch = "new" }), "말이 안 되는 설정은 받지 않는다")
 end
+-- 언어(2026-10-27 영문): 자동 · 한국어 · English만 받는다
+expect(Account.setSound(acct, { music = 5, sfx = 5, on = true, lang = "en" }) == true and acct.sound.lang == "en", "언어 English를 받는다")
+expect(Account.setSound(acct, { music = 5, sfx = 5, on = true, lang = "jp" }) == false and acct.sound.lang == "en", "모르는 언어는 받지 않는다")
+expect(Account.setSound(acct, { music = 5, sfx = 5, on = true }) == true and acct.sound.lang == "auto", "언어가 없으면 자동")
+-- 폰 단추 배치(2026-10-28 사용자 "모바일 ui … 이전 구조가 더 익숙한 사람들은 전버전으로도 쓸수있게 설정창에서 바꿀수있게"): "new" · "old" · 없으면 "new" · 모르는 값은 받지 않는다
+expect(Account.setSound(acct, { music = 5, sfx = 5, on = true, touch = "old" }) == true and acct.sound.touch == "old", "예전 배치를 받는다")
+expect(Account.setSound(acct, { music = 5, sfx = 5, on = true, touch = "left" }) == false and acct.sound.touch == "old", "모르는 배치는 받지 않는다")
+expect(Account.setSound(acct, { music = 5, sfx = 5, on = true }) == true and acct.sound.touch == "new", "배치가 없으면 새 배치")
 local back = Account.unpack(Account.pack(acct))
 expect(back ~= nil and same(back.sound, acct.sound), "싸고 풀어도 그대로다")
 local raw = Account.pack(acct)
 raw.sound = nil
-expect(same(Account.unpack(raw).sound, { music = S.start, sfx = S.start, on = true, fx = true, nums = true }), "설정이 없던 저장은 처음 크기")
+expect(same(Account.unpack(raw).sound, { music = S.start, sfx = S.start, on = true, fx = true, nums = true, lang = "auto", touch = "new" }), "설정이 없던 저장은 처음 크기")
 raw.sound = { music = 99, sfx = 1, on = true }
-expect(same(Account.unpack(raw).sound, { music = S.start, sfx = S.start, on = true, fx = true, nums = true }), "망가진 설정도 처음 크기")
+expect(same(Account.unpack(raw).sound, { music = S.start, sfx = S.start, on = true, fx = true, nums = true, lang = "auto", touch = "new" }), "망가진 설정도 처음 크기")
 expect(same(Account.view(acct).sound, acct.sound), "캐릭터 고르기 화면이 받는 것에 소리 설정이 있다")
 
 -- ---- 3) 크기의 셈(client/lune/music.luau) ----
@@ -113,12 +121,32 @@ do
 	end
 	eq(MUSIC.tracks.boss, nil, "보스의 곡은 하나(lair) — 망루의 부관 · 정찰대장이 같은 방")
 	eq(MUSIC.scene.dream, "dream", "튜토리얼 꿈은 제 곡")
-	-- 배경 음악의 크기: 처음(0.5배 기준)의 4분의 1 — 처음에 가장 컸던 field_a(1.03)가 0.26(사용자: "줄이세요" → "여기서 다시 절반으로")
-	expect(MUSIC.tracks.field_a.volume <= 0.26, "배경 음악을 줄였다")
+	-- 배경 음악의 크기: 2026-10-14 "줄이세요" → "여기서 다시 절반으로"(field_a 1.03 → 0.26) → 2026-10-28 "데미지에비해 나머지소리가 너무작아 다른 마을배경음들도 마찬가지":
+	--  이제 곡마다 잰 크기를 같은 목표(데미지보다 9dB 작게)로 맞춘다 — 조용한 곡(field_a −35dB)은 크게 · 큰 곡(field_b · dark −16dB)은 작게. 그 어느 것도 1을 넘지 않는다
+	--  2026-10-29 "다른 효과음에 비해 브금이 거의안들려" → 목표를 효과음보다 1dB 작게(−32dB): 아주 조용한 곡(field_a −35dB)은 1을 넘는다 — 로블록스의 Sound.Volume은 10까지 받는다(공방 volOf는 4에서 막는다)
+	expect(MUSIC.tracks.field_a.volume > MUSIC.tracks.field_b.volume * 5 and MUSIC.tracks.field_a.volume <= 4, "배경 음악은 곡마다 잰 크기로 맞춘다(조용한 곡을 더 크게)")
+	for k, t in MUSIC.tracks do
+		expect(t.volume > 0 and t.volume <= 4, "배경 음악의 크기 " .. k)
+	end
+	expect(MUSIC.tracks.town.volume > 0.5, "마을 곡이 데미지 소리 밑에 묻히지 않는다(효과음보다 1dB 작게)")
+	for k, t in MUSIC.sfx do
+		expect(t.volume > 0 and t.volume <= 1, "효과음의 크기 " .. k)
+	end
+	expect(math.abs(MUSIC.sfx.damage.volume - 0.05) < 0.005, "데미지 소리는 사용자가 맞춘 크기 그대로(기준)")
+	-- 보스의 소리(2026-10-28 밤 — Sonniss GDC 2024에서 고른 셋을 사용자가 듣고 "다좋아 다 적용해봐"): 여덟 자리마다 셋 · 모두 올린 번호가 있다
+	for _, k in { "boss_swing", "boss_slam", "boss_shot", "boss_boom", "boss_roar", "boss_down", "boss_glass", "boss_smoke" } do
+		local d = MUSIC.sfx[k]
+		expect(d and d.vars and #d.vars == 3, "보스의 소리 " .. k .. ": 셋을 돌려 낸다")
+		for i, v in (d and d.vars) or {} do
+			expect(string.match(v.id, "^rbxassetid://%d+$") ~= nil and v.volume > 0 and v.volume <= 1, ("보스의 소리 %s의 %d번: 올린 번호 · 크기"):format(k, i))
+		end
+	end
 end
 
 -- ---- 4) 소리 설정 창을 화면 없이 지어 본다 ----
 do
+	local refreshed = 0
+	MOCK("Client/modules/ui/pixelText", { RefreshAll = function() refreshed += 1 end }) -- 언어가 바뀌면 그려 둔 글을 다시 그린다(viewOpts.applyLang)
 	local made = {}
 	local function frame(name: string?)
 		return { Name = name or "Frame", Visible = true }
@@ -284,4 +312,17 @@ do
 	ViewOpts.import({ music = 1, sfx = 1, on = true, nums = false })
 	expect(ViewOpts.fx == true and ViewOpts.nums == false, "저장된 것을 얹는다(없는 값은 켜짐)")
 	ViewOpts.import({ music = 1, sfx = 1, on = true })
+	-- 폰 단추 배치(2026-10-28): 「새 배치」 · 「예전 배치」 — 처음은 새 배치 · 누르면 바뀌고 저장 · 저장하는 표에 실린다 · 제목과 한 줄(창이 폰에 들어간다)
+	view.refresh()
+	local P = S.touch
+	local newB, oldB = of("button", P.choices[1][2])[1], of("button", P.choices[2][2])[1]
+	expect(newB ~= nil and oldB ~= nil and newB.main == true and oldB.main == false and ViewOpts.touch == "new", "폰 단추 배치: 처음은 새 배치")
+	expect(newB.y == oldB.y and of("text", P.head)[1] ~= nil and math.abs(of("text", P.head)[1].y - newB.y) <= 8, "제목과 단추가 한 줄")
+	local s0 = saved
+	oldB.click()
+	expect(ViewOpts.touch == "old" and saved == s0 + 1 and oldB.main == true and newB.main == false, "「예전 배치」를 누르면 바뀌고 저장한다")
+	local packed2 = ViewOpts.into(Music.export())
+	expect(packed2.touch == "old" and Account.setSound(Account.new(), packed2), "저장하는 표에 폰 단추 배치가 실리고 서버가 받는다")
+	ViewOpts.import({ music = 1, sfx = 1, on = true })
+	eq(ViewOpts.touch, "new", "저장된 것에 없으면 새 배치")
 end

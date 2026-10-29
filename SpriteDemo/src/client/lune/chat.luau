@@ -75,7 +75,7 @@ function Chat.prefix(charName: any, party: boolean): string?
 	if typeof(charName) ~= "string" or charName == "" then
 		return nil
 	end
-	local head = if party then ("<font color='%s'>%s</font> "):format(K.party.color, plain(K.party.tag)) else ""
+	local head = if party then ("<font color='%s'>%s</font> "):format(K.party.color, plain(require(game:GetService("ReplicatedStorage").shared.lune.lang).t(K.party.tag))) else "" -- (꼬리표는 영문으로 — 이름은 그대로)
 	return ("%s<font color='%s'>%s:</font>"):format(head, if party then K.party.color else K.nameColor, plain(charName))
 end
 
@@ -94,7 +94,7 @@ function Chat.note(text: string)
 			local channels = TextChatService:WaitForChild("TextChannels", 5)
 			local channel = channels and (channels:FindFirstChild("RBXSystem") or channels:FindFirstChild("RBXGeneral"))
 			if channel then
-				(channel :: any):DisplaySystemMessage(text)
+				(channel :: any):DisplaySystemMessage(require(game:GetService("ReplicatedStorage").shared.lune.lang).t(text)) -- (영문 — 2026-10-27)
 			end
 		end)
 	end)

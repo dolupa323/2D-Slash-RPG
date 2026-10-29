@@ -54,6 +54,9 @@ end
 function N.armorDef(stage: number): number -- 방어구의 기본 방어력(보통)
 	return SPEC.armor.def0 + SPEC.armor.def1 * stage
 end
+function N.armorAtk(stage: number): number -- 방어구의 기본 공격력(보통 — 장신구는 SPEC.acc.atk배 · 2026-10-28)
+	return SPEC.armor.atk0 + SPEC.armor.atk1 * stage
+end
 -- 별 n개가 기본 옵션에 붙인 %(kind = "weapon" | "armor" — 장신구도 방어구의 셈): 1~15성은 별마다 star[1], 16성부터 star[2]
 function N.starPct(kind: string, star: number): number
 	local pcts = if kind == "weapon" then SPEC.star.weapon else SPEC.star.armor
@@ -63,7 +66,7 @@ end
 function N.statAtk(main: number, sub: number, atk: number): number
 	return (SPEC.main * main + SPEC.sub * sub) * atk / 100
 end
--- 그 레벨의 기준 스탯 공격력: 같은 레벨 보통 무기 + 방어구 넷(별 없음) · 찍은 점수를 다 주스탯에
+-- 그 레벨의 기준 스탯 공격력: 같은 레벨 보통 무기 + 방어구 넷(별 없음) · 찍은 점수를 다 주스탯에 — 몬스터 체력의 기준이라 방어구의 공격력(2026-10-28)은 넣지 않는다
 function N.refAttack(L: number): number
 	local all = 4 * N.armorStat(L)
 	return N.statAtk(STATS.base + STATS.perLevel * (L - 1) + all, STATS.base + all, N.weaponAtk(L))

@@ -524,7 +524,7 @@ do
 			end
 			if step.type == "gather" then
 				seen += 1
-				expect(hint:find(mob.name, 1, true) ~= nil and hint:find("잡으면", 1, true) ~= nil, "무엇을 잡아야 하는지 적는다: " .. hint)
+				expect(hint:find(mob.name, 1, true) ~= nil and hint:find("에게서 떨어진다", 1, true) ~= nil, "무엇을 잡아야 하는지 적는다: " .. hint) -- (「…을 잡으면」 → 「…에게서 떨어진다」: 2026-10-27 영문 — 조사를 고르지 않는 말)
 				expect(Q9.trackText(step, 0):find(mob.name, 1, true) ~= nil, "알리미에도 졸개의 이름이 있다: " .. Q9.trackText(step, 0))
 				expect(small(Q9.trackText(step, step.n)) <= UI.hud.quest.w, "알리미의 줄이 칸 안: " .. Q9.trackText(step, step.n))
 			end

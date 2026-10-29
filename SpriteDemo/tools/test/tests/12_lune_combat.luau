@@ -16,12 +16,14 @@ local function dressRef(h)
 	end
 end
 -- 그 레벨의 본보기 차림(보통 · 별 없음)의 스탯 공격력 — 장비의 옵션을 부위마다 반올림한 그대로
-local function refRounded(L: number): number
+--  (2026-10-28부터 방어구 넷의 공격력도 — 적어도 1씩. 몬스터 체력의 기준 N.refAttack에는 넣지 않으므로, 반올림이 그 기준과 가까운지는 방어구의 공격력 없이 본다)
+local function refRounded(L: number, noArmorAtk: boolean?): number
 	local a = math.floor(N.armorStat(L) + 0.5)
-	return N.statAtk(4 + 5 * (L - 1) + 4 * a, 4 + 4 * a, math.floor(N.weaponAtk(L) + 0.5))
+	local armorAtk = if noArmorAtk then 0 else 4 * math.max(1, math.floor(N.armorAtk(L) + 0.5))
+	return N.statAtk(4 + 5 * (L - 1) + 4 * a, 4 + 4 * a, math.floor(N.weaponAtk(L) + 0.5) + armorAtk)
 end
 local function nearRef(power: number, L: number): boolean
-	return power == math.floor(refRounded(L) + 0.5) and math.abs(refRounded(L) - N.refAttack(L)) / N.refAttack(L) < 0.15
+	return power == math.floor(refRounded(L) + 0.5) and math.abs(refRounded(L, true) - N.refAttack(L)) / N.refAttack(L) < 0.15
 end
 local startPower = {}
 for _, c in Items.data.checks.startPower do
@@ -70,6 +72,11 @@ for kind, m in COMBAT.mobs do
 	if m.story then
 		-- 스토리 보스(33_lune_boss.luau): 지금은 대기 그림뿐이다(동작 그림은 사용자가 만든다) — 졸개의 공격(atk)은 쓰지 않는다
 		expect(CHARS.chars[m.sprite].clips.idle ~= nil, "보스의 대기 그림 " .. kind)
+		continue
+	end
+	if m.gim then
+		-- 보스의 기믹 물건(불씨 도둑 두목의 불씨 폭탄 · 가짜 두목 — 치지 않는다): 110_lune_thiefboss.luau가 본다
+		expect(CHARS.chars[m.sprite] ~= nil, "기믹 물건의 그림 " .. kind)
 		continue
 	end
 	local clip = CHARS.chars[COMBAT.mobs[kind].sprite].clips.atk
@@ -312,7 +319,8 @@ local function soloRoom(kind, seed)
 	return r, r.mobs[1]
 end
 local room = Room.new("hunt", scene, Random.new(7))
-eq(#room.mobs, #scene.mobs, "졸개 수")
+local FLIES = if Room.huntRoom(scene) then COMBAT.afk.slots else 0 -- 잠수 방지 날파리의 자리(2026-10-28 — 목록 끝 · 처음에는 없다)
+eq(#room.mobs, #scene.mobs + FLIES, "졸개 수(+ 날파리의 자리)")
 local function run(heroes, seconds)
 	local all = {}
 	for _ = 1, math.floor(seconds / DT + 0.5) do
@@ -329,6 +337,10 @@ end
 run({}, 12)
 local moved = 0
 for _, mob in room.mobs do
+	if mob.afk then
+		expect(mob.state == "gone" and mob.away, "날파리는 보내기 전까지 없다")
+		continue
+	end
 	expect(mob.x >= mob.a - 0.01 and mob.x <= mob.b + 0.01, "범위를 벗어나지 않는다 " .. mob.kind)
 	expect(mob.state == "idle" or mob.state == "run", "어슬렁 상태 " .. mob.state)
 	if math.abs(mob.x - mob.homeX) > 0.5 then

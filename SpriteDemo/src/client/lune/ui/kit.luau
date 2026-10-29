@@ -109,7 +109,47 @@ end
 -- 피해 숫자: 공방 「횡스크롤 시험」 탭의 3x5 점 숫자 그대로(dino-workshop/js/lune/fx.js의 num — 사용자 2026-10-07:
 --  "데미지 폰트는 이전 횡스크롤 시험 탭에서 실제 플레이할때의 데미지 출력이랑 동일해야합니다").
 --  속에는 색을 입히고, 위 · 아래 · 옆 한 점의 테두리는 늘 같은 어두운 색이다. 틀의 왼쪽 위가 테두리의 왼쪽 위 — width = 글자 수 x 4 + 1.
-function Kit.dmg(parent: Instance, text: string, color: Color3)
+-- skin = 데미지 스킨의 숫자판(UI 키트의 부품 이름 — 2026-10-29 할로윈의 dmg_halloween · 없으면 보통의 흰 숫자). 스킨의 판은 색이 들어 있다:
+--  줄 0 = 보통의 속 · 줄 1 = 크리티컬의 속(crit) · 줄 2 = 테두리 · mark = 숫자 앞의 작은 그림. 색을 입히지 않는다(사라질 때의 흐린 색만 — item:color)
+function Kit.dmg(parent: Instance, text: string, color: Color3, skin: string?, crit: boolean?)
+	local sk = skin and PARTS[skin]
+	if sk and sk.rows == 3 then
+		local frame = Kit.group(parent, 0, 0, 1, sk.ch)
+		frame.Name = "Dmg"
+		local fills = {}
+		local x0 = 0
+		if sk.mark then
+			local m = image(frame, "mark", 0, math.floor((sk.ch - sk.mark[4]) / 2), sk.mark[3], sk.mark[4])
+			m.ImageRectOffset = Vector2.new(sk.x + sk.mark[1], sk.y + sk.mark[2])
+			m.ImageRectSize = Vector2.new(sk.mark[3], sk.mark[4])
+			table.insert(fills, m)
+			x0 = sk.mark[3] + 1
+		end
+		local n = 0
+		for i = 1, #text do
+			local d = tonumber(text:sub(i, i))
+			if d then
+				local line = image(frame, "line", x0 + n * sk.adv, 0, sk.cw, sk.ch)
+				line.ImageRectOffset = Vector2.new(sk.x + d * sk.cw, sk.y + 2 * sk.ch)
+				line.ImageRectSize = Vector2.new(sk.cw, sk.ch)
+				local fill = image(frame, "fill", x0 + n * sk.adv, 0, sk.cw, sk.ch)
+				fill.ImageRectOffset = Vector2.new(sk.x + d * sk.cw, sk.y + (if crit then sk.ch else 0))
+				fill.ImageRectSize = Vector2.new(sk.cw, sk.ch)
+				fill.ZIndex = 2
+				table.insert(fills, fill)
+				n += 1
+			end
+		end
+		local width = x0 + n * sk.adv + 1
+		frame.Size = UDim2.fromOffset(width, sk.ch)
+		local item = { frame = frame, width = width, height = sk.ch }
+		function item.color(_, tint: Color3)
+			for _, g in fills do
+				g.ImageColor3 = tint
+			end
+		end
+		return item
+	end
 	local sheet = PARTS.dmg
 	local frame = Kit.group(parent, 0, 0, 1, sheet.ch)
 	frame.Name = "Dmg"

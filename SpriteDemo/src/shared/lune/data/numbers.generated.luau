@@ -37,8 +37,8 @@ return {
 		main = 4,
 		sub = 1,
 		weapon = { atk0 = 20, atk1 = 1.5 },
-		armor = { stat0 = 3, stat1 = 0.5, def0 = 5, def1 = 1 },
-		acc = { stat = 0.5 },
+		armor = { stat0 = 3, stat1 = 0.5, def0 = 5, def1 = 1, atk0 = 0.5, atk1 = 0.025 },
+		acc = { stat = 0.5, atk = 0.5 },
 		star = {
 			weapon = { 4, 9 },
 			armor = { 6, 12 },
@@ -76,7 +76,7 @@ return {
 			{ name = "큰 달빛 물약", lv = 60, heal = 70, price = 230 },
 			{ name = "맑은 달빛 물약", lv = 100, heal = 100, price = 510 },
 		},
-		cooldown = { field = 1, boss = 5 },
+		cooldown = { field = 3, boss = 5 },
 		death = { free = 10, cut = 80, min = 5, max = 30, charm = "달빛 부적", lives = 5 },
 	},
 	SP = {

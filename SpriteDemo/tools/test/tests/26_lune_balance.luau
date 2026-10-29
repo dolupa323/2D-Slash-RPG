@@ -35,6 +35,7 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	claimName = function(key, id) book[key] = id; return true end,
 	freeName = function(key) book[key] = nil end,
 	rankSet = function(board, key, score) rankDisk[board] = rankDisk[board] or {}; rankDisk[board][key] = score end,
+	rankRaise = function(board, key, score) local d = rankDisk[board]; if d and d[key] and d[key] < score then d[key] = score end end,
 	rankRemove = function(board, key) if rankDisk[board] then rankDisk[board][key] = nil end end,
 	rankTop = function(board, n)
 		local rows = {}
@@ -128,6 +129,8 @@ local function hunt(p, sceneKey: string, kind: string, n: number)
 		return nil
 	end
 	local room = World.room(s.scene) -- (파티마다 따로 들어가는 장면이면 그 방)
+	-- 직업마다 같은 씨앗의 무작위 수로 잰다(2026-10-28 — 같은 방을 차례로 쓰므로 앞 직업이 굴린 수만큼 뒤 직업의 피해 흩어짐이 달라졌다: 액시온의 타 수가 바뀌자 리븐 · 살라맨더의 Lv.3 값이 흔들렸다)
+	room.rng = Random.new(2600)
 	local id, sk = mobSkill(h.class)
 	-- 사냥기가 닿는 자리: 몬스터의 왼쪽에 서서 오른쪽을 본다(상자의 앞쪽 끝에서 조금 안쪽)
 	local reach = 0
