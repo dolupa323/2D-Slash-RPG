@@ -30,7 +30,7 @@ end
 -- 소리 설정 { music = 배경 음악의 크기, sfx = 효과음의 크기(0~steps칸 — 한 칸 10%), on = 모두 켰는가 }. 계정의 것이다(캐릭터를 바꿔도 같다)
 --  사용자 2026-10-13: "소리조절 있어야합니다."
 function Account.soundDefault()
-	return { music = SOUND.start, sfx = SOUND.start, on = true, fx = true, nums = true, lang = "auto", touch = "new" } -- fx · nums = 화면 설정(다른 사람의 스킬 효과 · 피해 숫자 — 2026-10-18) · lang = 언어("auto" 로블록스의 언어 설정을 따른다 · "ko" · "en" — 2026-10-27)
+	return { music = SOUND.start, sfx = SOUND.start, on = true, fx = true, nums = true, myNums = true, lang = "auto", touch = "new" } -- fx · nums = 화면 설정(다른 사람의 스킬 효과 · 피해 숫자 — 2026-10-18) · lang = 언어("auto" 로블록스의 언어 설정을 따른다 · "ko" · "en" — 2026-10-27)
 end
 -- 받은 것 · 저장된 것의 꼴을 본다: 맞으면 새 표, 아니면 nil
 function Account.cleanSound(v: any)
@@ -38,7 +38,7 @@ function Account.cleanSound(v: any)
 		return nil
 	end
 	-- 화면(2026-10-18 — 설정 창의 「화면」): fx = 다른 사람의 스킬 효과 · nums = 다른 사람의 피해 숫자를 보일지. 없으면(그 전의 저장) 켜짐 · 참거짓이 아니면 받지 않는다
-	if (v.fx ~= nil and typeof(v.fx) ~= "boolean") or (v.nums ~= nil and typeof(v.nums) ~= "boolean") then
+	if (v.fx ~= nil and typeof(v.fx) ~= "boolean") or (v.nums ~= nil and typeof(v.nums) ~= "boolean") or (v.myNums ~= nil and typeof(v.myNums) ~= "boolean") then -- myNums = 내가 때린 피해 숫자(2026-10-30)
 		return nil
 	end
 	-- 언어(2026-10-27): "auto" · "ko" · "en"(없으면 — 그 전의 저장 — "auto" · 그 밖의 값은 받지 않는다)
@@ -49,7 +49,7 @@ function Account.cleanSound(v: any)
 	if v.touch ~= nil and v.touch ~= "new" and v.touch ~= "old" then
 		return nil
 	end
-	return { music = v.music, sfx = v.sfx, on = v.on, fx = v.fx ~= false, nums = v.nums ~= false, lang = v.lang or "auto", touch = v.touch or "new" }
+	return { music = v.music, sfx = v.sfx, on = v.on, fx = v.fx ~= false, nums = v.nums ~= false, myNums = v.myNums ~= false, lang = v.lang or "auto", touch = v.touch or "new" }
 end
 function Account.setSound(acct, v: any): boolean
 	local sound = Account.cleanSound(v)

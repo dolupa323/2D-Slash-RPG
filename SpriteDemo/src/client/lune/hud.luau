@@ -247,8 +247,9 @@ function Hud.setSlots(list)
 		slot.wait:set("")
 		slot.shown = nil
 		local n = if slot.item and Hud.countOf then Hud.countOf(slot.item) else 0
-		slot.count:set(if slot.item then tostring(n) else "")
-		slot.count:color(if slot.item and n == 0 then C.red else C.text)
+		local mark = Quick.seqMark(what) -- 시퀀스의 칸: 구석에 「S1」 · 「B1」(2026-10-30)
+		slot.count:set(if slot.item then tostring(n) elseif mark then mark else "")
+		slot.count:color(if slot.item and n == 0 then C.red elseif mark then C.accent else C.text)
 		if slot.id then
 			Hud.byId[slot.id] = slot
 		elseif slot.item and Quick.isPotion(slot.item) then

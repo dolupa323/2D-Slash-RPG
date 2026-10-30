@@ -35,9 +35,10 @@ expect(acct.bm.pets.pet_crow == true and acct.bm.petOut == "pet_crow", "꺼내 �
 local ok2, why2 = Cash.redeem(acct, def, 1001)
 expect(not ok2 and why2 == "이미 쓴 쿠폰이다", "한 계정에 한 번")
 local acct2 = Account.new()
-acct2.bm.pets.pet_silver, acct2.bm.petOut = true, "pet_silver"
+acct2.bm.pets.pet_silver, acct2.bm.petsOut, acct2.bm.petOut = true, { "pet_silver" }, "pet_silver" -- (꺼내 둔 펫들 = petsOut — 2026-10-30 펫 셋)
 expect(Cash.redeem(acct2, def, 1000), "다른 계정은 또 쓴다")
 eq(acct2.bm.petOut, "pet_silver", "꺼내 둔 펫은 그대로")
+eq(#acct2.bm.petsOut, 1, "꺼내 둔 펫이 있으면 쿠폰 펫은 더 꺼내지 않는다(자리가 남아도 — 가방에서 꺼낸다)")
 expect(not Cash.redeem(Account.new(), { code = "LATE", pet = "pet_crow", till = 500 }, 1000), "기간이 지났다")
 expect(not Cash.redeem(Account.new(), { code = "SOON", pet = "pet_crow", from = 2000 }, 1000), "아직 아니다")
 local back = Cash.unpack(Cash.pack(acct.bm), Account.MAX)

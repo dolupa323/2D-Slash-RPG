@@ -93,7 +93,7 @@ function Others:setWho(roster)
 				o.tag.Frame.Visible = false
 				self.list[w.id] = o
 			end
-			o.rv:setPet(w.pet)
+			o.rv:setPets(if typeof(w.pets) == "table" then w.pets elseif w.pet then { w.pet } else {}) -- 꺼내 둔 펫들(셋까지 — 2026-10-30)
 			o.rv:setRide(w.ride)
 			o.sprite:setLook({ point = w.look and w.look.point, robe = w.look and w.look.robe, skin = w.wskin or nil }) -- 그 사람의 무기 · 로브 색(염색 — 2026-10-22) · 캐시 무기(2026-10-23)
 			if o.name ~= w.name or o.level ~= w.level then

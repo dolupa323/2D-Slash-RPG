@@ -332,7 +332,7 @@ do
 			end
 		end
 	end
-	expect(n >= 6, "설치 · 소환이 여섯이 넘는다 " .. n)
+	expect(n >= 5, "설치 · 소환이 다섯이 넘는다(2026-10-30 연막탄이 월영 비수 — 쓰는 스킬 — 가 되어 하나 줄었다) " .. n)
 
 	-- 방 하나: 졸개를 멀리 치워 두고 하나만 곁에 세운다
 	local function arena(class, skills)
@@ -426,19 +426,8 @@ do
 		expect(out.crystals ~= nil and #out.crystals == 1 and #room.crystals == 1, "달 수정 하나")
 		near(room.crystals[1].x, h.x + PLACED.mn_plant.ahead, 0.01, "발 앞에 선다")
 	end
-	-- 연막탄(설치 — 버프): 안에 있으면 졸개가 놓치고, 주는 피해가 는다
-	do
-		local room, h, a = arena("riven", { rv_smoke = 10 })
-		expect(Buffs.is("rv_smoke") and not Buffs.instant("rv_smoke"), "연막탄은 쓰는 동작이 있는 버프다")
-		Buffs.give(h, "rv_smoke", 1, h.x, h.y)
-		expect(Buffs.stealth(h), "연막 안: 적이 나를 놓친다")
-		near(Buffs.dmg(h), 1.2, 1e-6, "연막 안: 주는 피해 +20%")
-		a.x = h.x + 20
-		eq(room:findTarget(a, { [h.id] = h }), nil, "졸개가 연막 안의 사람을 못 찾는다")
-		h.x += 100
-		eq(Buffs.stealth(h), false, "연막 밖으로 나오면 보인다")
-		expect(room:findTarget(a, { [h.id] = h }) ~= nil or math.abs(a.x - h.x) > a.def.see, "밖에서는 다시 찾는다")
-	end
+	-- (연막탄 — 설치 · 연막 안의 버프 — 은 2026-10-30 리븐 리마스터에서 「월영 비수」(2~4차의 쓰는 스킬 — 시험 21)가 되었다: 설치 · 버프의 자료에 없다)
+	expect(PLACED.rv_smoke == nil and not Buffs.is("rv_smoke"), "월영 비수는 설치 · 버프가 아니다(쓰는 스킬)")
 	-- 퀵슬롯에 놓을 수 있다
 	expect(Hero.canSlot(hero("reaper", { rp_ghost = 1 }), "rp_ghost"), "배운 소환은 퀵슬롯에 놓는다")
 	eq(Hero.canSlot(hero("reaper"), "rp_ghost"), false, "배우지 않은 소환은 못 놓는다")

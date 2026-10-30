@@ -249,13 +249,33 @@ end
 do
 	local room = World.room(s.scene)
 	local function far(id, petId)
-		s.acct.bm.petOut = petId
-		s.petT = 0
+		s.acct.bm.pets[petId] = true
+		s.acct.bm.petsOut, s.acct.bm.petOut = { petId }, petId -- (꺼내 둔 펫들 — 2026-10-30)
+		s.petT = nil
 		room.drops[id] = { id = id, kind = "money", amount = 1, x = s.hero.x + 200, y = s.hero.y, owner = s.hero.id, born = room.time }
 		handlers.PetPick(p, id)
 		return room.drops[id] == nil
 	end
 	expect(far(990001, "pet_silver"), "서버: 로벅스 펫은 영웅에게서 200점 떨어진 것도 받는다")
 	expect(not far(990002, "pet_crow"), "서버: 쿠폰 펫은 200점 떨어진 것을 받지 않는다")
+	-- 펫 셋(2026-10-30): 둘째 칸(slot)의 펫으로 줍는다 · 펫마다 간격을 따로 센다(첫째가 막 주웠어도 둘째는 바로 줍는다) · 그 칸의 펫의 종류로 거리를 본다
+	s.acct.bm.pets.pet_silver, s.acct.bm.pets.pet_crow = true, true
+	s.acct.bm.petsOut, s.acct.bm.petOut = { "pet_crow", "pet_silver" }, "pet_crow"
+	s.petT = nil
+	local function drop(id, dx)
+		room.drops[id] = { id = id, kind = "money", amount = 1, x = s.hero.x + dx, y = s.hero.y, owner = s.hero.id, born = room.time }
+	end
+	drop(990003, 20)
+	handlers.PetPick(p, 990003, 1)
+	expect(room.drops[990003] == nil, "서버: 첫째 펫(쿠폰 펫)이 가까운 것을 줍는다")
+	drop(990004, 200)
+	handlers.PetPick(p, 990004, 2)
+	expect(room.drops[990004] == nil, "서버: 바로 이어 둘째 펫(로벅스 펫)이 먼 것을 줍는다 — 펫마다 간격 · 그 펫의 거리")
+	drop(990005, 20)
+	handlers.PetPick(p, 990005, 1)
+	expect(room.drops[990005] ~= nil, "서버: 첫째 펫은 아직 간격 안(곧바로 또 줍지 못한다)")
+	drop(990006, 20)
+	handlers.PetPick(p, 990006, 3)
+	expect(room.drops[990006] ~= nil, "서버: 꺼내 두지 않은 셋째 칸은 줍지 못한다")
 end
 World.removePlayer(p)

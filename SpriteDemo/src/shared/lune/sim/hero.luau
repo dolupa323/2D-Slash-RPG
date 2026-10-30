@@ -17,6 +17,7 @@ local Kit = require(script.Parent.kit) -- 1차의 온오프 사출기 · 핵심 
 local Buffs = require(script.Parent.buffs) -- 2~4차의 버프
 local Passives = require(script.Parent.passives) -- 2~4차의 패시브
 local Quick = require(script.Parent.Parent.ui.quick)
+local Seq = require(script.Parent.sequence) -- 시퀀스(2026-10-30 — 스킬 창의 「시퀀스」 단추로 여는 창 · 퀵슬롯의 seq_<번호> · bseq_<번호>)
 local RIDEIDS = {} -- 펫 · 탈것의 이름표(퀵슬롯에 놓을 수 있다 — 2026-10-21)
 do
 	local RIDE = require(script.Parent.Parent.data["ride.generated"])
@@ -245,6 +246,7 @@ function Hero.new(id: any, class: string)
 		slots = Quick.start(CLASSES.classes[class].skills), -- 퀵슬롯: 칸마다 스킬 · 소비 아이템의 이름표 · false(빈 칸) — shared/lune/ui/quick.luau
 		-- 스마트폰의 단추 배치: 같은 열두 칸이지만 PC의 것과 따로 둔다 — PC에서는 손에 익은 키(E · D …)에, 폰에서는 큰 단추에 놓고 싶은 것이 서로 다르다(2026-10-08).
 		--  한쪽에서 바꿔도 다른 쪽은 그대로다. 처음 차림은 같다(물약 · 사냥기 · 보스기 · 이동기)
+		seqs = Seq.new(), -- 시퀀스 { skill = { { 스킬, … } × 10 }, buff = { … × 5 } }(2026-10-30 — sim/sequence.luau)
 		tslots = Quick.touchStart(CLASSES.classes[class].skills), -- 스마트폰의 단추 배치: 단추가 없는 칸 1의 물약은 칸 5로(ui/quick.luau의 touchFix)
 		money = 0,
 		forged = false, -- 강화를 해 본 적이 있는가(첫 강화는 달가루 없이 반드시 붙는다 — sim/bag.luau의 Bag.enhance)
@@ -690,7 +692,7 @@ end
 -- 방(맵)마다 시계가 따로다(방의 time은 0에서 시작해 사람이 있을 때만 흐르고, 토벌 방은 들 때마다 새로 짓는다).
 --  캐릭터에 적힌 방의 시각들을 새 방의 시계로 옮긴다 — delta = 새 방의 시각 − 옛 방의 시각(서버 world.luau의 place가 부른다 · 2026-10-18 검토:
 --  옛 방의 시계가 앞서 있으면 리퍼의 도깨비불 · 무니의 수정 조각 · 리븐의 독이 새 방의 시계가 따라잡을 때까지 멈췄고, 거꾸로면 살라맨더의 연속이 끝나지 않았다)
-local CLOCK_PASS = { "streakAt", "pressAt", "surge", "rekindle", "venom" }
+local CLOCK_PASS = { "streakAt", "pressAt", "surge", "rekindle", "venom", "link" } -- link = 리븐의 연계(그림자 일격 — 2026-10-30)
 function Hero.shiftClock(h, delta: number)
 	if delta == 0 or delta ~= delta then
 		return
@@ -835,6 +837,9 @@ end
 
 -- 퀵슬롯에 놓아도 되는 스킬인가: 이 직업이 키로 쓰는 기술(싸움 수치가 있는 것)이고 배운 것
 function Hero.canSlot(h, id: string): boolean
+	if Seq.of(id) then
+		return true -- 시퀀스(2026-10-30 — 비어 있어도 놓아 둘 수 있다: 누르면 넣어 둔 것을 차례대로)
+	end
 	if RIDEIDS[id] then
 		return true -- 펫 · 탈것(2026-10-21 — 칸의 키로 꺼내고 타기. 가진 것인지는 쓸 때 서버가 본다: Cash.setPet · setMount)
 	end
@@ -876,6 +881,20 @@ function Hero.setSlots(h, list: any, touch: boolean?): boolean
 	return true
 end
 
+-- 시퀀스 하나를 바꾼다(kind = "skill" · "buff" · k = 번호 · list = 넣은 것들 — 넣을 수 없는 것 · 겹친 것은 빠지고 SIZE까지) — 서버 "Sequence"(2026-10-30)
+function Hero.setSeq(h, kind: any, k: any, list: any): boolean
+	if typeof(kind) ~= "string" or not Seq.N[kind] or typeof(k) ~= "number" or k ~= math.floor(k) or k < 1 or k > Seq.N[kind] then
+		return false
+	end
+	local one = Seq.cleanOne(h, kind, list)
+	if not one then
+		return false
+	end
+	h.seqs = h.seqs or Seq.new()
+	h.seqs[kind][k] = one
+	return true
+end
+
 function Hero.setKeys(h, map: any): boolean
 	local keys = cleanKeys(map)
 	if not keys then
@@ -902,6 +921,7 @@ function Hero.pack(h)
 		keys = table.clone(h.keys),
 		slots = table.clone(h.slots),
 		tslots = table.clone(h.tslots),
+		seqs = Seq.copy(h.seqs), -- 시퀀스(2026-10-30)
 		kitOn = h.kit.on, -- 온오프 사출기를 켜 두었는가(다시 들어와도 그대로다)
 		money = h.money,
 		forged = h.forged == true,
@@ -1076,6 +1096,7 @@ function Hero.unpack(id: any, data: any)
 		end
 		return out
 	end
+	h.seqs = Seq.clean(h, data.seqs) -- 시퀀스(2026-10-30 — 배운 스킬을 읽은 뒤: 배우지 않은 것은 빠진다 · 그 전의 저장 = 빈 것)
 	if data.slots ~= nil then
 		Hero.setSlots(h, salvage(Quick.renew(data.slots, myPotion)))
 	end
@@ -1153,6 +1174,7 @@ function Hero.view(h)
 		keys = h.keys,
 		slots = h.slots,
 		tslots = h.tslots,
+		seqs = h.seqs, -- 시퀀스(2026-10-30 — 시퀀스 창 · 퀵슬롯에서 쓴다)
 		kit = Kit.view(h), -- 사출기를 켰는가 · 영혼 · 열기(화면의 버프 자리 · 칸의 켜진 표시)
 		run = (Kit.move(h)), -- 걸음의 배수(날랜 몸 · 뜨거운 피) — 화면이 그 빠르기로 걷는다
 		jump = select(2, Kit.move(h)), -- 뛰는 힘의 배수

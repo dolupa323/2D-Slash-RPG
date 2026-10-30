@@ -90,7 +90,7 @@ do
 			end
 		end
 	end
-	eq(seen, 50, "2~4차의 쓰는 스킬 50개(소생까지 · 이동기는 세지 않는다 — 2026-10-24 무니 4차 달빛 낙하 · 리븐 그림자 창 · 천지 가르기(연쇄 순보는 이동기로 빠짐) · 2026-10-25 액시온 월광 균열 · 리퍼 백귀야행 · 살라맨더 화룡 승천 · 리퍼 망자의 손(망령 돌진은 이동기로 빠짐))")
+	eq(seen, 51, "2~4차의 쓰는 스킬 51개(2026-10-30 리븐 월영 비수 — 전에는 설치 연막탄 · 소생까지 · 이동기는 세지 않는다 — 2026-10-24 무니 4차 달빛 낙하 · 리븐 그림자 창 · 천지 가르기(연쇄 순보는 이동기로 빠짐) · 2026-10-25 액시온 월광 균열 · 리퍼 백귀야행 · 살라맨더 화룡 승천 · 리퍼 망자의 손(망령 돌진은 이동기로 빠짐))")
 	expect(Hero.ready("mn_revive") and CAST.mn_revive.heal.revive > 0, "소생이 게임에 들어와 있다")
 	-- 차수의 배수: 앞 차수의 1.4배씩 — 2차 1.4 · 3차 1.96 · 4차 2.744(사냥기는 x0.7)
 	near(CAST.ax_rend.rate, N.data.POWER.dps * 1.4, 1e-3, "2차 보스기의 초당 피해")
@@ -155,7 +155,7 @@ do
 		eq(#p.errors, 0, "묶음의 코드가 오류 없이 돈다 " .. id .. (if p.errors[1] then " — " .. p.errors[1] else ""))
 		local skill = Kitset.skill(id)
 		if skill.instant then
-			eq(p.time, 0, "바로 나가는 스킬은 쓰는 시간이 0 " .. id)
+			eq(p.time, def.time or 0, "바로 나가는 스킬은 쓰는 시간이 0(따로 정한 것 — 리븐 섬영 0.4: 2026-10-31 동작이 없는 기술이 되었다 — 은 그 값) " .. id)
 		else
 			expect(p.time > 0.2 and p.time < 3, ("쓰는 시간이 말이 된다 %s %.2f"):format(id, p.time))
 		end
@@ -489,7 +489,7 @@ do
 	eq(foe4.bindKind, "crystal", "수정에 가둔다")
 end
 
--- ---- 7) 순간이동: 서버도 그 자리로 옮겨 적는다(연막 순보 — 가까운 적의 뒤) ----
+-- ---- 7) 순간이동: 서버도 그 자리로 옮겨 적는다(섬영 — 가까운 적의 뒤 · 2026-10-31 동작이 없는 기술: 누른 순간 옮기고 0.03초 뒤 벤다) ----
 do
 	local room = Room.new("hunt", SCENES.scenes.hunt, Random.new(41))
 	local h = hero("riven", { rv_step = 10 })
@@ -503,23 +503,24 @@ do
 	local foe = room.mobs[1]
 	foe.x = 150
 	room.caster.dry = true
-	room.caster:dryCast(h, "rv_step", 0, function()
+	local function tickR()
 		room.time += SUB
 		room.caster:sub(SUB)
-	end)
-	near(h.x, foe.x + 20, 6, "연막 순보: 적의 뒤로 옮겨졌다")
+	end
+	room.caster:dryCast(h, "rv_step", 0, tickR)
+	for _ = 1, 10 do -- (동작이 없는 기술은 dryCast가 곧바로 돌아온다 — 0.03초 뒤의 베기까지 흘린다)
+		tickR()
+	end
+	near(h.x, foe.x + 18, 6, "섬영: 적의 뒤로 옮겨졌다")
 	eq(h.dir, -1, "적 쪽을 돌아본다")
 	local hits = room.caster:actor(h).out.hits
 	expect(#hits >= 1 and hits[1].mob == foe.id, "옮겨진 자리에서 벤다")
-	-- 적이 없으면 앞으로 80
+	-- 적이 없으면 앞으로 100(2026-10-31 — 전에는 80)
 	local lone = hero("riven", { rv_step = 10 })
 	lone.x, lone.y = 300, 176
 	foe.x = 3000
-	room.caster:dryCast(lone, "rv_step", 0, function()
-		room.time += SUB
-		room.caster:sub(SUB)
-	end)
-	near(lone.x, 380, 1, "적이 없으면 앞으로 80")
+	room.caster:dryCast(lone, "rv_step", 0, tickR)
+	near(lone.x, 400, 1, "적이 없으면 앞으로 100")
 end
 
 -- ---- 8) 회복(달빛 치유): 나와 가까운 파티원의 체력을 되돌린다 ----
@@ -657,17 +658,19 @@ do
 		end
 	end
 	eq(marked, 3, "여섯 번 가운데 세 번이 표식을 남긴다")
-	-- 연막 순보: 표식이 있으면 터뜨린다(타가 하나 더)
+	-- 섬영(전에는 연막 순보): 표식이 있으면 터뜨린다(타가 하나 더)
 	roomV:mark(v, foeV, { hits = { { mob = foeV.id } } })
 	local before = #cv:actor(v).out.hits
 	v.x, v.dir = X, 1
 	cv:dryCast(v, "rv_step", 0, tickV)
+	drain(cv, tickV) -- (동작이 없는 기술 — 0.03초 뒤의 베기까지)
 	eq(#cv:actor(v).out.hits - before, 2, "베는 타 + 표식이 터지는 타")
 	expect(foeV.marks[v.id] == nil, "표식이 사라졌다")
 	roomV.time += 20
 	before = #cv:actor(v).out.hits
 	v.x, v.dir, foeV.x = X, 1, X + 14
 	cv:dryCast(v, "rv_step", 0, tickV)
+	drain(cv, tickV)
 	eq(#cv:actor(v).out.hits - before, 1, "표식이 없으면 베는 타만")
 
 	-- 사출기: 2~4차의 도끼질에도 메아리 도끼가 따라 나간다 — 1차와 같은 셈(2026-10-28 리마스터: 끝까지 모아 친 한 방에만)
@@ -801,46 +804,68 @@ do
 		near(h.x - x0, case[2], 1, ("연쇄 순보 Lv.%d: 앞으로 %d도트"):format(case[1], case[2]))
 		eq(#c:actor(h).out.hits, 0, "연쇄 순보는 피해가 없다")
 	end
-	-- 그림자 창: 앞 130도트까지 · 제 층의 적만 맞고 표식 — 위층(32 · 48도트 위) · 뒤 · 앞 180도트는 안 맞는다(2026-10-24 사용자 "그림자창 범위 너무 넓어 3차스킬인데 조정하고" — 전에는 앞 190 · 위 72도트까지)
+	-- 섬광 연참(2026-10-30 리븐 리마스터 — 전에는 그림자 창): 앞 150도트 안 · 같은 층의 적 다섯까지 사이를 순간이동하며 벤다(표식이 있는 적부터) · 끝난 자리에 선다
 	do
 		local h = hero("riven", { rv_lance = 20, rv_mark = 10 })
 		local room, first, c, tick = dry(h)
 		room.mobs = {}
-		for i, d in { { 30, 0 }, { 120, 0 }, { 180, 0 }, { 100, -48 }, { -40, 0 }, { 260, 0 }, { 100, -32 } } do
+		for i, d in { { 30, 0 }, { 120, 0 }, { 180, 0 }, { 100, -80 }, { -40, 0 }, { 60, 0 }, { 90, 0 }, { 140, 0 } } do
 			local m = table.clone(first)
 			m.id, m.x, m.homeX, m.goal, m.y = i, X + d[1], X + d[1], X + d[1], Y + d[2]
 			room.mobs[i] = m
 		end
+		room:mark(h, room.mobs[8], { hits = {} }) -- 표식이 있는 적(앞 140)이 먼저
 		c:dryCast(h, "rv_lance", 0, tick)
 		drain(c, tick)
-		local hit = {}
+		local hit, order = {}, {}
 		for _, e in c:actor(h).out.hits do
+			if not hit[e.mob] then
+				table.insert(order, e.mob)
+			end
 			hit[e.mob] = true
 		end
-		expect(hit[1] and hit[2], "그림자 창: 앞 30 · 120도트의 적")
-		expect(not hit[3], "그림자 창: 앞 180도트의 적은 안 맞는다(130도트까지)")
-		expect(not hit[4] and not hit[7], "그림자 창: 위층(32 · 48도트 위)의 적은 안 맞는다")
-		expect(not hit[5] and not hit[6], "그림자 창: 뒤 40 · 앞 260도트의 적은 안 맞는다")
+		local n = 0
+		for _ in hit do
+			n += 1
+		end
+		eq(n, 5, "섬광 연참: 다섯 마리까지")
+		eq(order[1], 8, "섬광 연참: 표식이 있는 적부터")
+		expect(hit[1] and hit[6] and hit[7] and hit[2], "섬광 연참: 그다음 가까운 차례(앞 30 · 60 · 90 · 120)")
+		expect(not hit[3], "섬광 연참: 다섯이 넘으면 먼 것(앞 180)은 안 맞는다")
+		expect(not hit[4], "섬광 연참: 다른 층(80도트 위)은 안 맞는다")
+		expect(not hit[5], "섬광 연참: 뒤의 적은 안 맞는다")
+		expect(math.abs(h.x - room.mobs[2].x) <= 30, ("섬광 연참: 마지막 적 곁에 선다(나 %.0f · 적 %.0f)"):format(h.x, room.mobs[2].x))
 	end
-	-- 그림자 창: 맞는 띠 = 창이 그려진 높이부터 바닥까지(2026-10-26 사용자 "그림자창 y축 범위가 이펙트랑 일치안해서") — 30점 떠 있는 적(맨 위 창의 그림 y-32 ~ y-22가 몸을 지난다)도 맞는다
+	-- 월영 비수(2026-10-30 — 전에는 연막탄): 처음 = 꽂기(다시 쓰기를 지운다 · 피해 없음) → 다시 = 비수 자리로 순간이동하며 길의 적을 벤다 · 다시 쓰기 그대로
 	do
-		local h = hero("riven", { rv_lance = 20 })
+		local h = hero("riven", { rv_smoke = 10, rv_mark = 10 })
 		local room, first, c, tick = dry(h)
 		room.mobs = {}
-		for i, d in { { 60, 0, 30 }, { 90, 0, 0 }, { 120, -32, 0 } } do
-			local m = table.clone(first)
-			m.id, m.x, m.homeX, m.goal, m.y, m.alt = i, X + d[1], X + d[1], X + d[1], Y + d[2], d[3]
-			room.mobs[i] = m
+		local m = table.clone(first)
+		m.id, m.x, m.homeX, m.goal, m.y = 1, X + 60, X + 60, X + 60, Y
+		room.mobs[1] = m
+		local x0 = h.x
+		h.cds.rv_smoke = room.time + 10
+		c:dryCast(h, "rv_smoke", 0, tick)
+		for _ = 1, 30 do -- (drain은 쓰지 않는다 — 꽂힌 비수(날아가는 것과 같은 꼴 · 10초)가 사라질 때까지 돌린다)
+			tick()
 		end
-		c:dryCast(h, "rv_lance", 0, tick)
+		eq(h.cds.rv_smoke, nil, "월영 비수: 꽂은 동안은 다시 쓰기가 돌지 않는다")
+		eq(#c:actor(h).out.hits, 0, "월영 비수: 꽂기는 피해가 없다")
+		h.x = X + 120 -- 적을 건너 앞으로 갔다
+		c:actor(h).out = { hits = {}, kills = {} }
+		h.cds.rv_smoke = room.time + 10
+		c:dryCast(h, "rv_smoke", 0, tick)
 		drain(c, tick)
-		local n = {}
+		near(h.x, x0, 1, "월영 비수: 다시 누르면 비수 자리로 돌아온다")
+		local cut = false
 		for _, e in c:actor(h).out.hits do
-			n[e.mob] = (n[e.mob] or 0) + 1
+			if e.mob == 1 then
+				cut = true
+			end
 		end
-		expect((n[1] or 0) >= 1, "그림자 창: 30점 떠 있는 적도 맞는다(맨 위 창이 몸을 지난다)")
-		eq(n[2], 4, "그림자 창: 땅의 적은 창 넷에 모두 맞는다")
-		expect(n[3] == nil, "그림자 창: 위층(32점 위)은 여전히 안 맞는다")
+		expect(cut, "월영 비수: 돌아오는 길의 적을 벤다")
+		expect(h.cds.rv_smoke ~= nil, "월영 비수: 돌아온 뒤부터 다시 쓰기가 돈다")
 	end
 	-- 천지 가르기: 가르는 순간 맵의 모든 적(멀리 · 뒤 · 다른 층)이 한꺼번에
 	do

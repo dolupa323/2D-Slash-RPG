@@ -201,11 +201,15 @@ end
 -- 치명타(사용자 2026-10-08: "치명타 확률과 치명타 터지는건 만들겁니다"): 모든 직업의 기술 타가 확률로 치명타가 된다.
 --  돌려주는 것: 확률(%) · 피해의 배수 · 반드시 치명타인가(리븐의 흘리기 — 피한 직후. 쓰면 사라진다). marked = 그 적에게 내 표식이 있는가(리븐)
 --   확률 = 기본(RULES.critChance) + 패시브(창 숙련) + 표식이 있는 적이면 표식의 것 · 배수 = 기본(RULES.critMul) + 패시브(달인) + 표식이 있는 적이면 급소
-function Passives.crit(h, marked: boolean?): (number, number, boolean)
+--   now = 방의 시간(있으면 — 리븐의 연계: 순간이동한 뒤 그 시간 안이면 크리티컬 데미지 + · 2026-10-30 그림자 일격)
+function Passives.crit(h, marked: boolean?, now: number?): (number, number, boolean)
 	local chance, mul = RULES.critChance + sum(h, "crit"), RULES.critMul + sum(h, "critMul")
 	if marked and h.class == "riven" then
 		chance += COMBAT.kit.riven.core.crit * Kit.scale(h, "core")
 		mul += sum(h, "markCritMul")
+	end
+	if now and h.class == "riven" and h.pass and (h.pass.link or -1) > now then
+		mul += sum(h, "linkCritMul")
 	end
 	return chance, mul, h.pass ~= nil and h.pass.sure == true
 end

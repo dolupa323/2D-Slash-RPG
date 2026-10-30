@@ -320,7 +320,7 @@ do
 	expect(again.alive, "다른 사람은 제 것으로 버틴다")
 end
 
--- ---- 5) 리븐: 표식 치명타(확률 · 피해) · 깊은 표식(셋까지) · 스미는 독 · 쌍영 ----
+-- ---- 5) 리븐: 표식 치명타(확률 · 피해) · 깊은 표식(셋까지) · 표식 공명(전에는 스미는 독) · 쌍영 ----
 do
 	-- 치명타(사용자 2026-10-08: "치명타 확률과 치명타 터지는건 만들겁니다"): 모든 직업의 기술 타가 기본 5%로, 1.5배
 	local core = COMBAT.kit.riven.core
@@ -338,10 +338,17 @@ do
 	near(chance, BASE + PASS.rv_mastery.fx.crit, 1e-6, "창 숙련: 치명타 확률 +10%p(표식이 없어도)")
 	chance, mul = Passives.crit(hero("riven", { rv_mark = 10, rv_back = 10 }), true)
 	near(chance, BASE + core.crit, 1e-6, "표식이 있는 적에게 치명타 확률 +30%p")
-	near(mul, MUL + PASS.rv_back.fx.markCritMul, 1e-6, "급소: 표식이 있는 적에게 치명타 피해 +30%p")
+	eq(mul, MUL, "그림자 일격(2026-10-30 — 전에는 급소): 순간이동하지 않았으면 치명타 피해 그대로")
+	-- 그림자 일격: 순간이동한 뒤 linkTime초(caster g.teleport가 h.pass.link에 적는다) 동안 치명타 피해 +
+	local linked = hero("riven", { rv_mark = 10, rv_back = 10 })
+	linked.pass.link = 10 + PASS.rv_back.fx.linkTime
+	chance, mul = Passives.crit(linked, false, 10)
+	near(mul, MUL + PASS.rv_back.fx.linkCritMul, 1e-6, "그림자 일격: 순간이동한 뒤 1초 안이면 치명타 피해 +30%p(표식이 없어도)")
+	chance, mul = Passives.crit(linked, false, 10 + PASS.rv_back.fx.linkTime + 0.01)
+	eq(mul, MUL, "그림자 일격: 1초가 지나면 그대로")
 	chance, mul = Passives.crit(hero("riven", { rv_mark = 10, rv_back = 10 }), false)
 	eq(chance, BASE, "표식이 없으면 기본 확률")
-	eq(mul, MUL, "급소는 표식이 있는 적에게만")
+	eq(mul, MUL, "그림자 일격은 연계(순간이동한 뒤)에만")
 	chance = Passives.crit(hero("axion", { rv_mastery = 10 }), false)
 	eq(chance, BASE, "남의 직업의 패시브는 듣지 않는다")
 	-- 방에서: 치명타가 그 확률로 터지고 그 배수로 들어간다(marked = 표식을 달아 두고 친다)
@@ -382,7 +389,7 @@ do
 	near(rate0, (BASE + core.crit) / 100, 0.08, "표식이 있는 적에게 35%")
 	near(rate1, (BASE + core.crit + PASS.rv_mastery.fx.crit) / 100, 0.08, "창 숙련까지 45%")
 	near(mul0, MUL, 0.03, "치명타 = 1.5배")
-	near(mul1, MUL + PASS.rv_back.fx.markCritMul, 0.03, "급소: 1.8배")
+	near(mul1, MUL, 0.03, "순간이동하지 않은 1차 보스기의 치명타 = 1.5배(그림자 일격은 연계에만 — 2026-10-30)")
 	-- 2~4차의 스킬도 같은 확률로 터진다
 	do
 		local h = hero("reaper", { rp_judge = 20 })
@@ -466,44 +473,23 @@ do
 		return sum
 	end
 	near(finisher(3) / finisher(0), (18 + 3 * 8) / 18, 0.06, "암살의 마무리: 표식 셋이면 18 → 42")
-	-- 스미는 독: 표식이 있는 적은 초마다 독 — 표식 하나마다 초당 피해의 10%
-	local v = hero("riven", { rv_mark = 10, rv_venom = 10, rv_mark2 = 10 })
-	v.dmgBoost = 50 -- (2026-10-15: 새 스펙에서 피해 숫자가 작아 반올림이 커서 키워 잰다)
-	local room2, foe2 = arena(58, v)
-	local function poison(n: number): number
-		foe2.marks, foe2.markN = { [v.id] = room2.time + 99 }, { [v.id] = n }
-		local sum, ticks = 0, 0
-		for _ = 1, 100 do
+	-- (스미는 독 — 표식이 있는 적에게 초마다 독 — 은 2026-10-30 리븐 리마스터에서 「표식 공명」이 되었다: 독은 없다 · 공명은 묶음 kits/riven.luau의 burst — 시험 111)
+	expect(PASS.rv_venom.fx.venom == nil and PASS.rv_venom.fx.reson > 0 and PASS.rv_venom.fx.resonShare > 0, "표식 공명: 독이 아니라 둘레의 표식이 함께 터진다")
+	do
+		local v = hero("riven", { rv_mark = 10, rv_venom = 10, rv_mark2 = 10 })
+		local room2, foe2 = arena(58, v)
+		foe2.marks, foe2.markN = { [v.id] = room2.time + 99 }, { [v.id] = 3 }
+		local quiet = 0
+		for _ = 1, 60 do
 			for _, e in room2:step({ [v.id] = v }, 0.05) do
 				if e.type == "kit" then
-					for _, x in e.result.hits do
-						if x.proc == "venom" then
-							sum += x.dmg
-							ticks += 1
-						end
-					end
+					quiet += 1
 				end
 			end
 			foe2.state = "idle"
 		end
-		near(ticks, 5, 0.21, "5초에 다섯 번쯤")
-		return sum / ticks
+		eq(quiet, 0, "표식이 있어도 독은 들지 않는다")
 	end
-	v.x = 100
-	foe2.x = 6000
-	local one = poison(1)
-	near(one, Hero.powerRaw(v) * N.data.POWER.dps * PASS.rv_venom.fx.venom * RULES.dmgScale * 1.5, 0.02, "표식 하나: 초당 피해의 10%")
-	near(poison(3) / one, 3, 0.02, "표식 셋이면 세 배")
-	foe2.marks = nil
-	local quiet = 0
-	for _ = 1, 60 do
-		for _, e in room2:step({ [v.id] = v }, 0.05) do
-			if e.type == "kit" then
-				quiet += 1
-			end
-		end
-	end
-	eq(quiet, 0, "표식이 없으면 독도 없다")
 	-- 쌍영: 둘째 분신 — 분신의 몫이 1.5배
 	local c1 = hero("riven", { rv_clone = 15 })
 	local c2 = hero("riven", { rv_clone = 15, rv_clone2 = 10 })

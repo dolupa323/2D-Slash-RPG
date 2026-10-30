@@ -198,8 +198,28 @@ end
 --  층이 있는 맵(scene.tall): 선 층의 발밑이 화면의 Kit.GROUND에 오게 부드럽게 따라간다 — 땅을 딛고 있을 때의 높이만 따르고(뛸 때마다 출렁이지 않게),
 --   화면 밖으로 나가려 하면 바로 따라간다. 공방 시험 탭(luneTab.js의 followCam)과 같은 식이다.
 -- camOverride = 장면(퀘스트 연출 — cineView.luau)이 카메라를 옮겨 둔 가로 자리(없으면 캐릭터) · npcOver = 장면이 옮긴 주민 { [id] = { x, dir, hidden, walk } }
+-- 가로: 늘 캐릭터를 그대로 따라가되, 한 번에 크게 옮겨지면(순간이동 — 리븐의 섬영 · 무영 섬 …) 그 사이만 부드럽게 따라붙는다
+--  (2026-10-31 사용자 "캐릭터가 순간적으로 이동할때도 이동하는건 보여주되, 카메라가 동일속도로 정확하게 따라갈 필요는없어" — 전에는 순간이동마다 화면이 툭툭 끊겨 흔들리는 것처럼 보였다).
+--  CAM_JUMP도트보다 벌어지면 따라붙기 시작해 초당 CAM_RATE의 빠르기로 좁힌다 · 캐릭터는 화면 끝에서 CAM_EDGE도트 안으로는 늘 들어온다 · 400도트 넘게(장면 · 문)는 곧바로. 숫자는 제가 정한 것
+local CAM_JUMP, CAM_RATE, CAM_EDGE = 24, 12, 28
 function SceneView:update(heroX: number, heroY: number, clock: number, grounded: boolean?)
-	local cx = round(math.clamp((self.camOverride or heroX) - G.VIEW_W / 2, 0, math.max(0, self.width - G.VIEW_W)))
+	local want = self.camOverride or heroX
+	local cdt = if self.camClock then math.clamp(clock - self.camClock, 0, 0.1) else 0
+	self.camClock = clock
+	if not self.camXf or math.abs(want - self.camXf) > 400 or self.camOverride then
+		self.camXf, self.camLag = want, false
+	elseif self.camLag or math.abs(want - self.camXf) > CAM_JUMP then
+		self.camLag = true
+		self.camXf += (want - self.camXf) * math.min(1, cdt * CAM_RATE)
+		local lim = G.VIEW_W / 2 - CAM_EDGE
+		self.camXf = math.clamp(self.camXf, want - lim, want + lim)
+		if math.abs(want - self.camXf) < 1.5 then
+			self.camXf, self.camLag = want, false
+		end
+	else
+		self.camXf = want
+	end
+	local cx = round(math.clamp(self.camXf - G.VIEW_W / 2, 0, math.max(0, self.width - G.VIEW_W)))
 	local cy = G.GROUND_Y - Kit.GROUND
 	if self.scene.tall then
 		local top = math.max(0, self.height - Kit.GROUND - (G.GROUND_Y - Kit.GROUND)) -- 카메라가 내려갈 수 있는 끝

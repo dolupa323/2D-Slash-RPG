@@ -251,6 +251,9 @@ do
 		if c.nums == nil then
 			c.nums = true
 		end
+		if c.myNums == nil then
+			c.myNums = true -- 내 피해 숫자(2026-10-30): 보내지 않았으면 켜짐
+		end
 		if c.lang == nil then
 			c.lang = "auto" -- 언어(2026-10-27 영문): 보내지 않았으면 자동
 		end

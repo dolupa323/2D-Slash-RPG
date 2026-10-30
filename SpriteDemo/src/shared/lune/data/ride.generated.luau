@@ -180,6 +180,7 @@ return {
 	},
 	pet = {
 		behind = 64,
+		gap = 26,
 		base = 40,
 		per = 2,
 		max = 160,

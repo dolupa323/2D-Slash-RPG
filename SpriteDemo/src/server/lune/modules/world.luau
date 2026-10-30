@@ -187,7 +187,7 @@ local function roster(key: string)
 	for _, s in inRoom(key) do
 		-- pet = 꺼내 둔 펫 · ride = 탄 탈것(2026-10-20 — 다른 사람의 화면도 같이 그린다)
 		local bm = s.acct and s.acct.bm
-		table.insert(list, { id = s.hero.id, name = s.name, class = s.hero.class, level = s.hero.level, pet = bm and bm.petOut or false, ride = if s.riding and bm then bm.mount else false, look = s.hero.look, wskin = bm and bm.wskin or false, dskin = bm and bm.dskin or false, title = s.hero.title or false }) -- dskin = 장착한 데미지 스킨(2026-10-29 — 그 사람이 때린 숫자의 모습) -- look = 무기 · 로브 색(염색 — 2026-10-22) · wskin = 장착한 캐시 무기(2026-10-23) · title = 단 칭호(2026-10-26)
+		table.insert(list, { id = s.hero.id, name = s.name, class = s.hero.class, level = s.hero.level, pet = bm and bm.petOut or false, pets = if bm then Cash.petsOut(bm) else {}, ride = if s.riding and bm then bm.mount else false, look = s.hero.look, wskin = bm and bm.wskin or false, dskin = bm and bm.dskin or false, title = s.hero.title or false }) -- dskin = 장착한 데미지 스킨(2026-10-29 — 그 사람이 때린 숫자의 모습) -- look = 무기 · 로브 색(염색 — 2026-10-22) · wskin = 장착한 캐시 무기(2026-10-23) · title = 단 칭호(2026-10-26)
 	end
 	return list
 end
@@ -1805,8 +1805,8 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 			if (hero.cds[id] or 0) > now then
 				return
 			end
-			if s.skill and now < s.skill.free - 0.1 then
-				return -- 1차의 기술을 쓰는 중이다
+			if s.skill and now < s.skill.free - 0.1 and not (require(lune.kitset).skill(id) or {}).anytime then
+				return -- 1차의 기술을 쓰는 중이다(다른 동작 중에도 쓰는 것 — 리븐의 섬영 — 은 받는다: 2026-10-31)
 			end
 		end
 		local was = hero.dir
@@ -2050,17 +2050,24 @@ end
 --  화면의 펫이 떨어진 것까지 달려가 닿으면 PetPick(번호)이 온다(client/lune/rideView.luau). 받는 것: 펫을 꺼내 두었고 · 살아 있고 · 펫이 하나 주운 지 every초가 지났고 ·
 --  그것이 영웅에게서 reach + slack점 안(펫이 달려가는 동안 영웅이 움직인 만큼) — 주인 · 가방은 Z 키로 줍는 것과 같다(Room:pickup)
 local PETRULE = Cash.RIDE.pet
-local function onPetPick(player, dropId: number)
+--  slot = 꺼내 둔 펫의 차례(1 ~ Cash.PET_MAX — 2026-10-30 펫 셋: 펫마다 따로 간격을 센다 · 그 펫의 종류로 빨아들이기를 정한다 · 없으면 1)
+local function onPetPick(player, dropId: number, slot: any)
 	local s = sessions[player]
 	if not (s and s.hero and s.hero.alive and s.acct and s.acct.bm.petOut) or s.guest then
 		return
 	end
-	if (s.petT or 0) > World.now then
+	local k = if typeof(slot) == "number" and slot == math.floor(slot) and slot >= 1 and slot <= Cash.PET_MAX then slot else 1
+	local petId = Cash.petsOut(s.acct.bm)[k]
+	if not petId then
 		return
 	end
-	local q = Cash.PET[s.acct.bm.petOut]
+	s.petT = if typeof(s.petT) == "table" then s.petT else {}
+	if (s.petT[k] or 0) > World.now then
+		return
+	end
+	local q = Cash.PET[petId]
 	local every = if q and not q.free and PETRULE.suck then PETRULE.suck.every else PETRULE.every -- 로벅스 펫은 빨아들인다(더 자주 — 2026-10-22)
-	s.petT = World.now + every * 0.8 -- 화면이 every초마다 보낸다(조금 일찍 와도 받는다 — 프레임의 어긋남)
+	s.petT[k] = World.now + every * 0.8 -- 화면이 every초마다 보낸다(조금 일찍 와도 받는다 — 프레임의 어긋남)
 	local sucks = q and not q.free and PETRULE.suck
 	pickupDrop(s, dropId, if sucks and PETRULE.suck.reach then PETRULE.suck.reach else PETRULE.reach + PETRULE.slack) -- 로벅스 펫은 더 먼 것까지(10-22 「범위 더크게」)
 end
@@ -4806,8 +4813,8 @@ local function onCash(player, a: any, b: any)
 		view.why = if moved > 0 then nil elseif left > 0 then "가방에 자리가 없다" else "받을 것이 없다"
 		return view
 	elseif a == "pet" then
-		-- 펫을 꺼낸다(이름표) · 넣는다(false) — 계정의 모든 캐릭터가 같이(2026-10-20)
-		local ok, why = Cash.setPet(s.acct, b)
+		-- 펫을 꺼낸다 · 넣는다(이름표 — 꺼내 둔 것이면 넣고 아니면 꺼낸다: 셋까지 · 2026-10-30) · 모두 넣는다(false) — 계정의 모든 캐릭터가 같이(2026-10-20)
+		local ok, why = Cash.setPet(s.acct, b, if typeof(b) == "string" then table.find(Cash.petsOut(s.acct.bm), b) == nil else nil)
 		if ok then
 			s.dirty = true
 			saveSoon(s)
@@ -4967,6 +4974,14 @@ function World.start()
 		end
 	end)
 	-- 칭호를 단다 · 뗀다(능력치 창의 「칭호」 줄 — ""이면 뗀다). 가진 것만 — 방 사람들의 이름표에도 바로
+	-- 시퀀스 하나를 바꾼다(2026-10-30 — 시퀀스 창): 가지("skill" · "buff") · 번호 · 넣은 것들(Hero.setSeq가 거른다) → 내 상태(Self)로 돌려준다
+	Net.OnServer("Sequence", function(player, kind, k, list)
+		local s = sessions[player]
+		if s and s.hero and not s.guest and Hero.setSeq(s.hero, kind, k, list) then
+			s.dirty = true
+			sendSelf(s)
+		end
+	end)
 	Net.OnServer("Title", function(player, id)
 		local s = sessions[player]
 		if s and s.hero and require(lune.sim.titles).wear(s.hero, id) then
@@ -5216,7 +5231,7 @@ function World.start()
 			c.mounts[item.ride] = true
 		elseif item.kind == "pet" then
 			c.pets[item.ride] = true
-			c.petOut = c.petOut or item.ride
+			Cash.petAuto(c, item.ride)
 			who = true
 		elseif item.kind == "dskin" then
 			c.dskins[item.dskin] = true

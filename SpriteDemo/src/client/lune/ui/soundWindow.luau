@@ -18,7 +18,7 @@ function SoundWindow.size(): (number, number)
 	local V = S.view
 	local G = S.lang
 	local P = S.touch
-	return S.w, #S.rows * S.row + S.muteY + Ui.M.button + V.gap + V.headH + #V.rows * S.row + Ui.M.small + G.gap + G.headH + S.row + Ui.M.small -- (언어 — 2026-10-27)
+	return S.w, #S.rows * S.row + S.muteY + Ui.M.button + V.gap + V.headH + #V.rows * (V.rowH or S.row) + Ui.M.small + G.gap + G.headH + S.row + Ui.M.small -- (언어 — 2026-10-27 · 화면의 줄 높이 rowH — 2026-10-30 「내 피해 숫자」를 더하며 34 → 28: 폰 틀 432에 들게)
 		+ P.gap + P.rowH + Ui.M.small -- (폰 단추 배치 — 2026-10-28: 제목과 단추가 한 줄)
 end
 
@@ -84,7 +84,7 @@ function SoundWindow.build(body: Frame, ctx, w: number, _h: number)
 	local toggles = {}
 	for j, def in V.rows do
 		local key, name = def[1], def[2]
-		local y = vy + V.headH + (j - 1) * S.row
+		local y = vy + V.headH + (j - 1) * (V.rowH or S.row)
 		Ui.text(body, name, 0, y + math.floor((S.btn - Ui.M.body) / 2), w - V.btnW - 8, { font = "body" })
 		toggles[key] = Ui.button(body, V.on, w - V.btnW, y, V.btnW, function()
 			if ViewOpts.toggle(key) then
@@ -93,10 +93,10 @@ function SoundWindow.build(body: Frame, ctx, w: number, _h: number)
 			end
 		end, { h = S.btn })
 	end
-	Ui.text(body, V.note, 0, vy + V.headH + #V.rows * S.row, w, { color = C.dim })
+	Ui.text(body, V.note, 0, vy + V.headH + #V.rows * (V.rowH or S.row), w, { color = C.dim })
 	-- 언어(2026-10-27 — 공방 paintSound와 같은 모양): 줄 위에 「언어」 · 자동 / 한국어 / English(고른 것이 강조) · 안내. 고르면 바로 화면의 글이 바뀌고 계정에 저장된다
 	local G = S.lang
-	local gy = vy + V.headH + #V.rows * S.row + Ui.M.small + G.gap
+	local gy = vy + V.headH + #V.rows * (V.rowH or S.row) + Ui.M.small + G.gap
 	Ui.box(body, 0, gy, w, 1, C.line)
 	Ui.text(body, G.head, 0, gy + 6, w, { color = C.dim })
 	local langs = {}

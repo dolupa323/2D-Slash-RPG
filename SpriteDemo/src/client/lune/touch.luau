@@ -26,13 +26,29 @@ local VIEW_W, VIEW_H = G.VIEW_W, G.VIEW_H -- 게임 화면(도트)
 
 local C = Ui.COLOR
 local PIC = 24 -- 그림 한 장(화면 틀의 점)
-local STICK = { walk = 0.35, ud = 0.55 } -- 조이스틱: 반지름의 몇 배를 밀어야 걷는가 · 아래(하단 점프) · 위(사다리)(2026-10-27 — 전에는 0.2 · 0.42)
+-- 조이스틱(2026-10-30 사용자 "모바일 이동시 아래로 내려가기 위해 컨트롤러를 내리면 캐릭터가 멈춘다는데 … 원래 판정으로 만들어야해"):
+--  walk = 반지름의 몇 배를 밀어야 움직이는가(엄지를 얹거나 조금 흔들려도 걷지 않게 — 10-27 「민감도가 너무 높다」의 0.35는 그대로) ·
+--  side = 수평에서 몇 도 안이면 좌우로 걷는가 · ud = 수평에서 몇 도 넘게 기울면 아래(하단 점프) · 위(사다리)인가 — 둘이 겹쳐 「걸으면서 아래」가 된다(10-27 전의 판정과 같은 각도)
+--  10-27에는 좌우 · 위아래를 반지름의 0.35 · 0.55배의 거리로 따로 재서, 손잡이를 끝까지(반지름의 0.62) 민 채 대각선 아래(수평에서 약 56~62°)로 두면 좌우도 아래도 꺼져 멈췄다
+local STICK = { walk = 0.35, side = 70, ud = 40 }
 local HOLD_FIRST, HOLD_NEXT = 0.3, 0.12 -- 공격 스킬을 누르고 있을 때: 처음 다시 누르기까지 · 그 뒤의 간격(초)
 local DRAG = Quick.DATA.drag -- 이만큼 움직이면 끌기로 본다(화면 틀의 점)
 local ACT_WORDS = { pickup = "줍기", portal = "들어가기", npc = "말 걸기", spot = "살펴보기", vista = "둘러보기", chest = "상자 열기" } -- spot = 맵에 놓인 것 앞(퀘스트의 자리) · vista = 경관의 자리(성의 테라스 — 2026-10-18) · chest = 보상의 방의 상자(2026-10-28)
 
 local Touch = {}
 Touch.STICK = STICK -- (시험이 본다)
+
+-- 조이스틱을 민 만큼(vx · vy — 아래가 +) · 반지름 → 왼쪽 · 오른쪽 · 아래 · 위
+function Touch.dirs(vx: number, vy: number, radius: number): (boolean, boolean, boolean, boolean)
+	local mag = math.sqrt(vx * vx + vy * vy)
+	if mag < radius * STICK.walk then
+		return false, false, false, false
+	end
+	local deg = math.deg(math.atan2(math.abs(vy), math.abs(vx))) -- 수평에서 기운 각도(0 ~ 90)
+	local side = deg <= STICK.side
+	local ud = deg >= STICK.ud
+	return side and vx < 0, side and vx > 0, ud and vy > 0, ud and vy < 0
+end
 Touch.on = false
 Touch.arranging = false
 
@@ -138,6 +154,10 @@ local function paintSlot(b)
 		local n = if Hud.countOf then Hud.countOf(what) else 0
 		b.count:set(tostring(n)) -- 소비 아이템: 가방에 든 수
 		b.count:color(if n == 0 then Ui.COLOR.red else Ui.COLOR.text) -- 다 쓰면 붉은 0(2026-10-18)
+		b.count:show(true)
+	elseif Quick.seqMark(what) then
+		b.count:set(Quick.seqMark(what) :: string) -- 시퀀스의 단추: 구석에 「S1」 · 「B1」(2026-10-30)
+		b.count:color(Ui.COLOR.accent)
 		b.count:show(true)
 	else
 		b.count:show(false)
@@ -548,12 +568,13 @@ local function makePad(t)
 		local s = Stage.uiScale
 		knob.Position = UDim2.new(0.5, v.X / s, 0.5, v.Y / s)
 		-- 걷기 시작하는 만큼(2026-10-27 사용자 "모바일에서 버튼 민감도가 너무 높다는데" — 반지름의 20% → 35%: 엄지를 얹거나 조금 흔들려도 걷지 않게 · 아래 · 위 42% → 55%. 값은 제가 정한 것)
-		set("left", v.X < -radius * STICK.walk)
-		set("right", v.X > radius * STICK.walk)
-		set("down", v.Y > radius * STICK.ud) -- 아래로 민 채 「점프」를 누르면 발판에서 내려온다(하단 점프 — sim/physics.luau)
+		local left, right, down, up = Touch.dirs(v.X, v.Y, radius)
+		set("left", left)
+		set("right", right)
+		set("down", down) -- 아래로 민 채 「점프」를 누르면 발판에서 내려온다(하단 점프 — sim/physics.luau) · 걸으면서도 된다(대각선 아래)
 		-- 위로 밀면 사다리만 오른다("climb" — 문 · 주민은 그대로 상호작용 단추: 사용자 2026-10-08 「위로 미는 것은 아무 일도 없다」).
 		--  2026-10-17: 사다리를 넣으며 폰의 오르기를 빠뜨렸었다(조이스틱으로는 사다리를 탈 수 없었다)
-		set("climb", v.Y < -radius * STICK.ud)
+		set("climb", up)
 	end
 	pad.stop = function()
 		pad.finger = nil

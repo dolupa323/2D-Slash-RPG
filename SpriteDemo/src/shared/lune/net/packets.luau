@@ -77,6 +77,7 @@ local packets = {
 	-- 유료 상품의 창(2026-10-20): "view" · "buy"(상품) · "take"(보관함의 줄) · "rename"(새 이름) — 산 것은 로블록스의 ProcessReceipt가 준다(server/lune/modules/cash.luau)
 	Cash = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 3, Burst = 6 } },
 	-- 매크로 확인(2026-10-23): "answer"(문제의 번호, 고른 칸 셋) · "again"(보상 멈춤에서 다시 확인) → { result = pass · wrong · fail · bad, check?, stopped, retryIn } (server modules/macroGuard.luau)
+	Sequence = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } }, -- 시퀀스 하나를 바꾼다(가지 "skill" · "buff", 번호, 넣은 것들 — 2026-10-30 · sim/sequence.luau)
 	Macro = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 3, Burst = 6 } },
 	-- 소리 설정을 저장한다 { music = 0~10, sfx = 0~10, on = 켰는가 } — 꼴은 서버가 다시 본다(계정에 저장 — sim/account.luau의 setSound)
 	Sound = { Kind = "Event", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 12 } },
@@ -100,7 +101,7 @@ local packets = {
 	-- 떨어진 것을 줍는다(물건 번호)
 	Pickup = { Kind = "Event", Direction = "ClientToServer", Args = { t.number }, RateLimit = { PerSecond = 10, Burst = 15 } },
 	-- 내 펫이 떨어진 것에 닿았다(물건 번호 — 2026-10-20). 서버가 펫을 꺼내 두었는지 · 영웅에게서 가까운지 · 주인을 확인하고 줍는다(펫은 0.3초에 하나)
-	PetPick = { Kind = "Event", Direction = "ClientToServer", Args = { t.number }, RateLimit = { PerSecond = 10, Burst = 15 } }, -- (6 · 8 → 10 · 15 — 로벅스 펫은 0.15초마다 빨아들인다: 2026-10-22)
+	PetPick = { Kind = "Event", Direction = "ClientToServer", Args = { t.number, t.any }, RateLimit = { PerSecond = 24, Burst = 36 } }, -- (6 · 8 → 10 · 15 — 로벅스 펫은 0.15초마다 빨아들인다: 2026-10-22 · 둘째 = 펫의 차례 · 펫 셋이라 24 · 36: 2026-10-30)
 	-- 확인용(Studio에서만 듣는다): "xp" 경험치를 준다 · "money" 달돈을 준다 · "hp" 체력을 정한다 · "reset" 캐릭터를 지운다(직업 고르기부터 다시)
 	Debug = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number }, RateLimit = { PerSecond = 5, Burst = 5 } },
 	-- 관리자의 시험용 명령(하는 일, 값 셋). 서버가 보낸 사람의 계정 번호로 관리자인지 올 때마다 다시 가린다 — 관리자가 아니면 아무 일도 하지 않고 nil(server/lune/modules/admin.luau)

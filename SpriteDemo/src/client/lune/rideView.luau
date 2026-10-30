@@ -17,6 +17,8 @@
 --   2026-10-28 사용자 "무료펫 상하 단차를 조금더 수월하게 움직이게하자 지금 언덕을 잘 못넘어" → 한 칸(stepUp점) 턱은 계단처럼 걸어 오른다 · 더 높은 턱의 웅크림 windup 0.2 → 0.06초
 --    · 로벅스 펫(design/ride.js에서 free가 없는 펫): 펫 몸 둘레 suck.r점 원 안의 것을 높이 · 턱과 상관없이 suck.every초마다 빨아들인다 — 펫의 종류로 정해진다(이미 산 사람도 같다)
 --      같은 날 "로벅스 펫 빨아들이기 범위 더크게" → suck.r 80 → 160 · 서버가 받는 영웅과의 거리 suck.reach 256
+--  펫 셋(2026-10-30 사용자 "펫 현재 한마리만 낄수있는데 3마리까지 낄수있게해줘"): 첫째는 이 판 · 둘째 · 셋째는 따로 된 판(extra — 같은 셈 · 영웅 뒤로 gap점씩 더 · 줍는 간격도 따로)
+--   onPick(번호, x, y, slot) — slot = 꺼내 둔 펫의 차례(서버가 펫마다 간격을 센다 · world.luau onPetPick)
 --  탈것: 탄 동안 영웅의 발밑에 탈것을 그리고, 영웅은 서기 모습으로 앉는 자리(seat)에 · 탈것의 등(<동작>_front)을 영웅 앞에 다시 그린다(다리가 몸에 묻혀 앉은 것으로 보인다).
 --   사다리 위 · 기술을 쓰는 동안은 탈것을 감춘다(사용자 10-20 「탈것은 사다리에서 감추기 좋습니다」) — 영웅은 제 동작 그대로.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -51,6 +53,7 @@ function RideView.new(layer: Instance, z: number, scene: any)
 	return setmetatable({
 		layer = layer, z = z, scene = scene, petId = nil, pet = nil, rideId = nil, mount = nil, front = nil,
 		body = nil, acc = 0, pdir = 1, goal = nil, tried = {}, nextPick = 0, windT = nil, prog = nil, warps = 0,
+		slot = 1, behind = P.behind, extra = {}, -- slot = 꺼내 둔 펫의 차례 · behind = 영웅 뒤로 서는 거리 · extra = 둘째 · 셋째 펫의 판
 	}, RideView)
 end
 
@@ -66,6 +69,27 @@ function RideView:setPet(id: any)
 	self.petId, self.body = id, nil
 	if id then
 		self.pet = Sprite.new(self.layer, id, self.z - 1)
+	end
+end
+
+-- 꺼내 둔 펫들(차례대로 — 셋까지): 첫째 = 이 판 · 둘째부터 = 따로 된 판(영웅 뒤로 gap점씩 더 떨어져 선다)
+function RideView:setPets(list: any)
+	list = if typeof(list) == "table" then list else {}
+	self:setPet(list[1])
+	for k = 2, math.max(#list, 3) do -- (셋까지 — 남은 판은 걷는다)
+		local id = list[k]
+		local e = self.extra[k]
+		if id then
+			if not e then
+				e = RideView.new(self.layer, self.z, self.scene)
+				e.slot, e.behind = k, P.behind + (P.gap or 26) * (k - 1)
+				self.extra[k] = e
+			end
+			e:setPet(id)
+		elseif e then
+			e:destroy()
+			self.extra[k] = nil
+		end
 	end
 end
 
@@ -123,8 +147,9 @@ local function spotOK(scene, hx: number, hy: number, x: number): boolean
 	return not Physics.solidBox(scene, x, hy)
 end
 -- 펫이 설 자리: 영웅의 뒤(side 쪽) behind점 → 그 반 → 반대쪽 behind점 → 그 반 가운데 설 수 있는 첫 곳 · 없으면 영웅의 자리(벽 곁 · 좁은 발판 — 그 자리가 벽 속이면 벽 앞에서 뛰기만 했다)
-local function spotFor(scene, hx: number, hy: number, side: number): number
-	for _, off in { side * P.behind, side * P.behind / 2, -side * P.behind, -side * P.behind / 2 } do
+local function spotFor(scene, hx: number, hy: number, side: number, behind: number?): number
+	local bh = behind or P.behind
+	for _, off in { side * bh, side * bh / 2, -side * bh, -side * bh / 2 } do
 		if spotOK(scene, hx, hy, hx + off) then
 			return hx + off
 		end
@@ -138,7 +163,7 @@ function RideView:warp(x: number, y: number, dir: number)
 	local b = self.body or { x = x, y = y, vx = 0, vy = 0, ground = false, air = 0 }
 	self.body = b
 	local gy = groundBelow(scene, x, y, 240) or y -- 영웅의 발밑 땅(사다리 · 공중이면 그 아래)
-	local gx = spotFor(scene, x, gy, -dir)
+	local gx = spotFor(scene, x, gy, -dir, self.behind)
 	if Physics.solidBox(scene, gx, gy) then
 		gx, gy = x, y -- 그 자리가 막힌 칸이면 영웅이 선 자리(영웅의 발밑은 늘 비어 있다)
 	end
@@ -148,7 +173,7 @@ function RideView:warp(x: number, y: number, dir: number)
 end
 
 -- 펫의 한 걸음(1/60초). hero = { x, y, dir, moving, air }
-function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, number, number) -> ())?)
+function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, number, number, number) -> ())?)
 	local scene, b = self.scene, self.body
 	-- 순간 이동: 영웅이 땅에 서 있을 때 멀면(사다리 · 공중에서는 기다린다 — 영웅의 발밑 땅이 아직 정해지지 않았다)
 	if not hero.air and (math.abs(hero.x - b.x) > P.warpX or math.abs(hero.y - b.y) > P.warpY) then
@@ -180,7 +205,7 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 	else
 		local side = if hero.moving then -hero.dir elseif b.x < hero.x then -1 else 1
 		-- 영웅이 달리는 동안은 늘 영웅의 뒤(2026-10-21 — 뒤에 설 땅이 없으면 영웅의 앞으로 갈 곳이 바뀌어 곧게 달리는데도 펫이 앞뒤로 튀었다) · 서 있으면 설 수 있는 곳
-		tx = if hero.air or hero.moving then hero.x + side * P.behind else spotFor(scene, hero.x, hero.y, side)
+		tx = if hero.air or hero.moving then hero.x + side * self.behind else spotFor(scene, hero.x, hero.y, side, self.behind)
 		speed = math.min(P.max, P.base + P.per * math.abs(tx - b.x))
 	end
 	local d = tx - b.x
@@ -232,7 +257,7 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 		end
 	end
 	-- 하단 점프: 영웅이 아래에 있고 펫이 얇은 발판 위면(영웅 쪽으로 가까울 때)
-	if b.ground and ((heroBelow and math.abs(hero.x - b.x) <= P.behind + 24) or (goalDown and math.abs(goal.x - b.x) <= (P.hop or 0))) and Physics.onPlatform(scene, b) then
+	if b.ground and ((heroBelow and math.abs(hero.x - b.x) <= self.behind + 24) or (goalDown and math.abs(goal.x - b.x) <= (P.hop or 0))) and Physics.onPlatform(scene, b) then
 		input.down, input.jump = true, true
 	elseif wantJump then
 		if not self.windT then
@@ -264,7 +289,7 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 		if self.goal then
 			self.tried[self.goal] = now + 3 -- 막혀 못 가는 것: 3초 동안 빼고 영웅에게 돌아간다
 			self.goal = nil
-		elseif not hero.air and math.abs(hero.x - b.x) > P.behind then
+		elseif not hero.air and math.abs(hero.x - b.x) > self.behind then
 			self:warp(hero.x, hero.y, hero.dir) -- 지형에 걸려 영웅에게 가지 못한다(영웅이 바로 위의 발판 · behind점 안이면 기다린다 — 메이플의 일반 펫)
 			return
 		end
@@ -295,7 +320,7 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 				self.goal = nil
 			end
 			self.nextPick = now + (if suck then P.suck.every else P.every)
-			onPick(pick, b.x, cy)
+			onPick(pick, b.x, cy, self.slot)
 		end
 	end
 end
@@ -304,7 +329,10 @@ end
 --  drops = 땅에 떨어진 것들({ [번호] = { x, y } } — effects.luau의 drops) · onPick(번호) = 펫이 닿았다(내 펫만 — 남의 펫은 nil: 따라다니기만)
 --  돌려주는 것: 탄 동안 영웅을 그릴 자리(x, y) · 크기(서기 그림을 줄여 그리는 배 — ride.generated의 riderSize를 화면 화소에 맞춘 것) — 그 밖에는 nil(영웅은 제자리에 제 동작으로)
 --   2026-10-21 사용자 "캐릭터가 탑승한모습이 자연스럽지않아요" · "탑승할때 플레이어도 idle 재생하면될듯 그 위치에서" → 탄 동안 영웅은 서기 그림 그대로 작게 · 안장 자리의 등 위에(장마다 잰 높이)
-function RideView:update(now: number, dt: number, x: number, y: number, dir: number, moving: boolean, air: boolean, hide: boolean, drops: any?, onPick: ((number, number, number) -> ())?): (number?, number?, number?)
+function RideView:update(now: number, dt: number, x: number, y: number, dir: number, moving: boolean, air: boolean, hide: boolean, drops: any?, onPick: ((number, number, number, number) -> ())?): (number?, number?, number?)
+	for _, e in self.extra do
+		e:update(now, dt, x, y, dir, moving, air, hide, drops, onPick) -- 둘째 · 셋째 펫(탈것이 없는 판 — 펫만)
+	end
 	if self.pet and self.scene then
 		if not self.body then
 			self:warp(x, y, dir) -- 처음 · 펫을 꺼낸 때: 영웅의 뒤
@@ -345,6 +373,10 @@ function RideView:update(now: number, dt: number, x: number, y: number, dir: num
 end
 
 function RideView:destroy()
+	for k, e in self.extra do
+		e:destroy()
+		self.extra[k] = nil
+	end
 	self:setPet(nil)
 	self:setRide(nil)
 end

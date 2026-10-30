@@ -381,10 +381,32 @@ expect(Cash.grant(racct, "pet_silver", "pet-2", T0, Account.MAX), "다른 펫도
 eq(racct.bm.petOut, "pet_lantern", "둘째는 꺼내 둔 것을 바꾸지 않는다")
 local cp, whyPet = Cash.canBuy(racct, "pet_silver", T0, 0, Account.MAX)
 expect(not cp, "같은 펫은 한 번 — " .. tostring(whyPet))
-expect(Cash.setPet(racct, "pet_silver"), "꺼낼 펫을 바꾼다")
-eq(racct.bm.petOut, "pet_silver", "은빛 달토끼")
+-- 펫 셋까지(2026-10-30 사용자 "펫 현재 한마리만 낄수있는데 3마리까지 낄수있게해줘"): 꺼내면 꺼내 둔 펫들에 더한다(전에는 바꿨다) · 첫째가 petOut
+expect(Cash.setPet(racct, "pet_silver"), "둘째 펫을 꺼낸다")
+expect(table.concat(Cash.petsOut(racct.bm), ",") == "pet_lantern,pet_silver" and racct.bm.petOut == "pet_lantern", "꺼내 둔 펫 둘(꺼낸 차례) · 첫째는 그대로")
 expect(not Cash.setPet(racct, "pet_scarf"), "가지지 않은 펫은 꺼낼 수 없다")
-expect(Cash.setPet(racct, false) and racct.bm.petOut == false, "넣는다")
+do -- 셋 · 넷째 · 저장(따로 된 계정 — 아래 「가진 것」의 수를 바꾸지 않게)
+	local pacct = Account.new()
+	Account.add(pacct, "펫셋", "riven", Hero.pack(Hero.new(1, "riven")), T0)
+	for k, id in { "pet_lantern", "pet_silver", "pet_scarf", "pet_crow" } do
+		pacct.bm.pets[id] = true
+		if k == 1 then
+			Cash.petAuto(pacct.bm, id)
+		end
+	end
+	expect(Cash.setPet(pacct, "pet_silver") and Cash.setPet(pacct, "pet_scarf") and #Cash.petsOut(pacct.bm) == 3, "셋까지 꺼낸다")
+	local okFull, whyFull = Cash.setPet(pacct, "pet_crow")
+	expect(not okFull and whyFull == Cash.PET_FULL and #Cash.petsOut(pacct.bm) == 3, "넷째는 꺼낼 수 없다 — " .. tostring(whyFull))
+	local backPets = Cash.unpack(json(Cash.pack(pacct.bm)), Account.MAX)
+	expect(backPets and table.concat(Cash.petsOut(backPets), ",") == "pet_lantern,pet_silver,pet_scarf" and backPets.petOut == "pet_lantern", "저장 → 읽기: 꺼내 둔 펫 셋이 그대로")
+	local oldSave = Cash.pack(pacct.bm)
+	oldSave.petsOut = nil
+	oldSave.petOut = "pet_silver"
+	local backOld = Cash.unpack(json(oldSave), Account.MAX)
+	expect(backOld and table.concat(Cash.petsOut(backOld), ",") == "pet_silver" and backOld.petOut == "pet_silver", "그 전의 저장(펫 하나)은 그 하나가 꺼내 둔 펫")
+end
+expect(Cash.setPet(racct, "pet_lantern", false) and racct.bm.petOut == "pet_silver" and #Cash.petsOut(racct.bm) == 1, "그 펫만 넣는다 → 첫째가 바뀐다")
+expect(Cash.setPet(racct, false) and racct.bm.petOut == false and #Cash.petsOut(racct.bm) == 0, "모두 넣는다")
 expect(Cash.grant(racct, "mount_deer", "mount-1", T0, Account.MAX), "탈것을 샀다")
 eq(racct.bm.mount, "mount_deer", "고른 탈것")
 expect(not Cash.setMount(racct, "mount_wolf"), "가지지 않은 탈것은 고를 수 없다")

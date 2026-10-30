@@ -476,3 +476,30 @@ do
 	eq(#applied, n0, "상호작용이 놓인 단추는 「비우기」가 안 된다")
 	Touch.arrange(false)
 end
+
+-- ⑤ 조이스틱의 판정(2026-10-30 사용자 "모바일 이동시 아래로 내려가기 위해 컨트롤러를 내리면 캐릭터가 멈춘다는데 … 원래 판정으로 만들어야해"):
+--  엄지를 조금 얹은 것은 움직이지 않고(10-27 「민감도가 너무 높다」) · 끝까지 민 채 대각선 아래로 내려도 그쪽으로 걸으면서 「아래」가 켜진다(10-27 전의 각도)
+do
+	local Touch = req("Client/lune/touch")
+	local R = 100
+	local function at(deg: number, k: number) -- 수평에서 아래로 deg도(왼쪽으로) · 반지름의 k배
+		local a = math.rad(deg)
+		return Touch.dirs(-math.cos(a) * R * k, math.sin(a) * R * k, R)
+	end
+	local l, r, d, u = at(0, 0.2)
+	expect(not l and not r and not d and not u, "조금 얹은 것(반지름의 0.2)은 움직이지 않는다")
+	l, r, d, u = at(0, 0.62)
+	expect(l and not r and not d and not u, "왼쪽으로 끝까지 = 왼쪽")
+	for deg = 0, 90, 2 do
+		l, r, d, u = at(deg, 0.62)
+		expect(l or d, ("끝까지 민 채 수평에서 아래로 %d° — 왼쪽이든 아래든 하나는 켜진다(멈추지 않는다)"):format(deg))
+	end
+	l, r, d = at(55, 0.62)
+	expect(l and d, "대각선 아래(55°) = 왼쪽으로 걸으면서 아래(하단 점프를 할 수 있다)")
+	l, r, d = at(60, 0.62)
+	expect(l and d, "더 아래(60° — 10-27 판정에서 멈추던 자리)도 걸으면서 아래")
+	l, r, d = at(90, 0.62)
+	expect(not l and not r and d, "곧게 아래 = 아래만(제자리)")
+	local _, r2, _, u2 = Touch.dirs(40, -60, R)
+	expect(r2 and u2, "오른쪽 위 대각선 = 오른쪽 + 위(사다리)")
+end

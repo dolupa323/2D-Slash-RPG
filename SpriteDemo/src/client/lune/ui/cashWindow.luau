@@ -156,7 +156,7 @@ function CashWindow.rows(view, tab: number)
 		-- 가진 펫 · 탈것: 「보유」만(2026-10-21 사용자 "펫을 넣고 빼는거, 라이딩을 타는거 이런게 달빛상점에 들어가서 하는게 아닙니다. 달빛상점은 구매를 하는곳이에요" —
 		--  꺼내기 · 넣기 · 타기 · 내리기는 가방의 캐시 탭 · 퀵슬롯 · N 키에서)
 		local isPet, isMount = string.sub(id, 1, 4) == "pet_", string.sub(id, 1, 6) == "mount_"
-		local on = if isPet then (view and view.petOut == id) elseif isMount then (view ~= nil and view.riding == true and view.mount == id) else false
+		local on = if isPet then (view ~= nil and table.find(view.petsOut or { view.petOut }, id) ~= nil) elseif isMount then (view ~= nil and view.riding == true and view.mount == id) else false
 		-- 한정 판매(2026-10-29 황금 골렘): 남은 수를 띄우고, 다 팔렸으면 「품절」(구매 단추가 꺼진다)
 		local soldOut = p.stock and not v.own and typeof(v.left) == "number" and v.left <= 0
 		local state = if v.own then "own" elseif not v.ready then "soon" elseif soldOut then "soldOut" elseif full then "full" else "buy"

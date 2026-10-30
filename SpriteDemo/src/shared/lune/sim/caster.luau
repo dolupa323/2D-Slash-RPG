@@ -301,7 +301,7 @@ function Caster:strike(a, m, w: number, o, landed): boolean
 	local mul, crit = Passives.vs(hero, m, { skill = ctx.id, charge = ctx.lv, now = room.time }), false
 	-- 치명타: 모든 직업의 기술 타가 확률로(1차와 같은 셈 — sim/room.luau의 skillHit). 흘리기 = 피한 뒤의 첫 베기는 반드시
 	-- 여러 줄로 쪼개지는 타는 줄마다 따로 굴린다(sim/room.luau의 Room:strike의 crit — 흘리기의 반드시 크리티컬은 그 베기의 줄 모두)
-	local critChance, critMul, sure = Passives.crit(hero, room:marksOf(hero, m) > 0)
+	local critChance, critMul, sure = Passives.crit(hero, room:marksOf(hero, m) > 0, room.time)
 	local perLine = not o.proc and (ctx.lines or 1) > 1 and not sure
 	if sure or (not perLine and critChance > 0 and room.rng:NextNumber(0, 100) < critChance) then
 		crit = true
@@ -533,8 +533,16 @@ local function makeG(self, a)
 		end
 		moved()
 		hero.x = x
+		-- 그림자 일격(리븐 2차 패시브 — 2026-10-30 리마스터): 순간이동한 뒤 linkTime초 = 연계(크리티컬 데미지 + · 표식 + — Passives.crit · Room:kitAfter)
+		if hero.class == "riven" and hero.pass then
+			local lk = Passives.get(hero, "linkTime")
+			if lk then
+				hero.pass.link = room.time + lk.linkTime
+			end
+		end
 		return true
 	end
+	function g.shade(_clip, _f, _x, _y, _dir, _color) end -- 잔상(화면만)
 	function g.drag(m, x: number)
 		if not m.def.boss and aliveMob(m) then
 			m.x = math.clamp(x, m.a, m.b)
@@ -751,7 +759,8 @@ function Caster:begin(hero, id: string, seg: number, mates, info): (boolean, num
 	local a = self:actor(hero)
 	local cur = a.skill
 	if skill.instant then
-		if seg ~= 1 or (cur and self:busy(hero)) then
+		-- anytime = 다른 스킬을 쓰는 중에도 쓴다(리븐의 섬영 — 2026-10-31 사용자 "섬영 거의 그냥 쉽게 쓸수있어야해": 하던 동작은 새 자리에서 이어 간다)
+		if seg ~= 1 or (cur and self:busy(hero) and not skill.anytime) then
 			return false, nil
 		end
 		self:run(a, self:context(a, id, 0, mates), skill.cast, a.g)

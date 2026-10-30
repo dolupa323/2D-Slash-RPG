@@ -7,7 +7,7 @@
 --   week · wc = 이번 주(한국 시각 월요일 0시부터)와 그 주에 산 수(상품 이름표 → 수) · once = 계정에 한 번(첫걸음 묶음)
 --   slots = 사서 늘린 캐릭터 칸 · store = 확장권으로 늘린 창고(번) — 가방의 것은 캐릭터마다(h.bagPaid · sim/bag.luau)
 --   pass = 달빛 패스(끝나는 때 · 달빛 · 받은 칸 — sim/pass.luau, 2026-10-20)
---   pets · mounts = 산 펫 · 탈것 { [이름] = true } · petOut = 꺼내 둔 펫(없으면 false — 계정의 모든 캐릭터가 같이) · mount = 고른 탈것(탄 동안인지는 서버의 그 사람의 것 — s.riding)
+--   pets · mounts = 산 펫 · 탈것 { [이름] = true } · petsOut = 꺼내 둔 펫들(꺼낸 차례 · Cash.PET_MAX까지 — 2026-10-30) · petOut = 그 첫째(없으면 false — 그 전의 저장 · 코드가 보는 것 · 늘 맞춘다 · 계정의 모든 캐릭터가 같이) · mount = 고른 탈것(탄 동안인지는 서버의 그 사람의 것 — s.riding)
 --   wskins = 산 캐시 무기 { [이름] = true } · wskin = 장착한 것(없으면 false — 계정의 모든 캐릭터의 무기 · 2026-10-23 design/wskin.js)
 --   dskins = 가진 데미지 스킨 { [이름] = true } · dskin = 장착한 것(없으면 false — 내가 때린 숫자의 모습 · 2026-10-29 할로윈 · design/event.js의 dskins)
 --   ev = 기간 이벤트의 상점에서 산 수 { ["<이벤트>:<해>:<물건>"] = 수 }(한도가 있는 것 — 할로윈의 달가루 상자 · 2026-10-29)
@@ -58,8 +58,39 @@ local function whole(v: any, lo: number, hi: number): boolean
 	return typeof(v) == "number" and v == v and v % 1 == 0 and v >= lo and v <= hi
 end
 
+-- 한꺼번에 꺼내 둘 수 있는 펫의 수(2026-10-30 사용자: "펫 현재 한마리만 낄수있는데 3마리까지 낄수있게해줘" — 메이플의 멀티펫처럼 셋이 따로 따라다니며 따로 줍는다)
+Cash.PET_MAX = 3
+-- 꺼내 둔 펫들(꺼낸 차례) — 그 전의 저장(petOut 하나)이면 그것 하나
+function Cash.petsOut(c): { string }
+	if typeof(c.petsOut) == "table" then
+		return c.petsOut
+	end
+	return if typeof(c.petOut) == "string" then { c.petOut } else {}
+end
+local function syncPets(c)
+	c.petsOut = Cash.petsOut(c)
+	c.petOut = c.petsOut[1] or false
+end
+-- 새로 얻은 펫(산 것 · 쿠폰 · 이벤트): 꺼내 둔 펫이 하나도 없으면 바로 꺼낸다(그 전과 같다)
+function Cash.petAuto(c, id: string)
+	syncPets(c)
+	if #c.petsOut == 0 then
+		table.insert(c.petsOut, id)
+	end
+	syncPets(c)
+end
+-- 그 펫을 넣는다(없어진 펫 — 쿠폰 기록 지우기)
+function Cash.petRemove(c, id: string)
+	syncPets(c)
+	local at = table.find(c.petsOut, id)
+	if at then
+		table.remove(c.petsOut, at)
+	end
+	syncPets(c)
+end
+
 function Cash.new()
-	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petOut = false, mount = false, coupons = {}, wskins = {}, wskin = false, dskins = {}, dskin = false, ev = {} } -- coupons = 이 계정이 쓴 쿠폰 { [번호] = 쓴 때 }(2026-10-21)
+	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petsOut = {}, petOut = false, mount = false, coupons = {}, wskins = {}, wskin = false, dskins = {}, dskin = false, ev = {} } -- coupons = 이 계정이 쓴 쿠폰 { [번호] = 쓴 때 }(2026-10-21)
 end
 
 function Cash.product(key: any)
@@ -190,7 +221,7 @@ function Cash.grant(acct, key: string, receiptId: string, now: number, baseChars
 		addBox(c, "bm_dust_" .. band, 1)
 	elseif PET[key] then
 		c.pets[key] = true -- 펫: 산 계정에 바로(꺼내 둔 것이 없으면 바로 꺼낸다)
-		c.petOut = c.petOut or key
+		Cash.petAuto(c, key)
 	elseif MOUNT[key] then
 		c.mounts[key] = true -- 탈것: 산 계정에 바로(고른 것이 없으면 그것을 고른다)
 		c.mount = c.mount or key
@@ -338,16 +369,30 @@ function Cash.skinList(set): { string }
 	end
 	return out
 end
--- 펫을 꺼낸다(id) · 넣는다(false) → true / nil · 까닭
-function Cash.setPet(acct, id: any): (boolean?, string?)
+-- 펫을 꺼낸다(id · on이 false가 아니면 — 꺼내 둔 펫들에 더한다: PET_MAX까지) · 그 펫을 넣는다(id, false) · 모두 넣는다(false) → true / nil · 까닭
+--  2026-10-30 셋까지(사용자 "펫 … 3마리까지 낄수있게해줘") — 그 전에는 꺼내면 있던 것과 바꿨다
+Cash.PET_FULL = "펫은 셋까지 꺼내 둘 수 있다"
+function Cash.setPet(acct, id: any, on: any?): (boolean?, string?)
 	local c = acct.bm
+	syncPets(c)
 	if id == false then
-		c.petOut = false
-		return true
+		table.clear(c.petsOut)
 	elseif typeof(id) ~= "string" or not c.pets[id] then
 		return nil, "가진 펫이 아니다"
+	else
+		local at = table.find(c.petsOut, id)
+		if on == false then
+			if at then
+				table.remove(c.petsOut, at)
+			end
+		elseif not at then
+			if #c.petsOut >= Cash.PET_MAX then
+				return nil, Cash.PET_FULL
+			end
+			table.insert(c.petsOut, id)
+		end
 	end
-	c.petOut = id
+	syncPets(c)
 	return true
 end
 -- 캐시 무기를 장착한다(이름표) · 해제한다(false) → true / nil · 까닭
@@ -435,7 +480,7 @@ function Cash.pack(c)
 		table.insert(dskins, k)
 	end
 	table.sort(dskins)
-	return { dskins = dskins, dskin = c.dskin, ev = table.clone(c.ev), box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petOut = c.petOut, mount = c.mount, coupons = table.clone(c.coupons), wskins = wskins, wskin = c.wskin }
+	return { dskins = dskins, dskin = c.dskin, ev = table.clone(c.ev), box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petsOut = table.clone(Cash.petsOut(c)), petOut = c.petOut, mount = c.mount, coupons = table.clone(c.coupons), wskins = wskins, wskin = c.wskin }
 end
 
 -- 꼴이 이상한 것은 버린다(없는 아이템 · 이상한 수). 생기기 전의 저장 = 빈 것
@@ -480,7 +525,14 @@ function Cash.unpack(data: any, baseChars: number?)
 			end
 		end
 	end
-	c.petOut = if typeof(data.petOut) == "string" and c.pets[data.petOut] then data.petOut else false
+	-- 꺼내 둔 펫들(2026-10-30 — 가진 것 · 겹치지 않게 · PET_MAX까지) · 그 전의 저장은 petOut 하나
+	c.petsOut = {}
+	for _, k in (if typeof(data.petsOut) == "table" then data.petsOut else { data.petOut }) do
+		if typeof(k) == "string" and c.pets[k] and not table.find(c.petsOut, k) and #c.petsOut < Cash.PET_MAX then
+			table.insert(c.petsOut, k)
+		end
+	end
+	syncPets(c)
 	c.mount = if typeof(data.mount) == "string" and c.mounts[data.mount] then data.mount else false
 	c.wskin = if typeof(data.wskin) == "string" and c.wskins[data.wskin] then data.wskin else false
 	c.dskin = if typeof(data.dskin) == "string" and c.dskins[data.dskin] then data.dskin else false
@@ -536,7 +588,7 @@ function Cash.redeem(acct, def, now: number): (boolean, any)
 	end
 	if def.pet then
 		c.pets[def.pet] = true -- 펫: 계정에 바로(꺼내 둔 것이 없으면 바로 꺼낸다 — 산 펫과 같다)
-		c.petOut = c.petOut or def.pet
+		Cash.petAuto(c, def.pet)
 	end
 	if def.mount then
 		c.mounts[def.mount] = true -- 탈것(2026-10-21 쿠폰 탈것 「떠도는 책」): 계정에 바로(고른 것이 없으면 그것을 고른다 — 산 탈것과 같다)
@@ -565,7 +617,7 @@ function Cash.view(acct, now: number, owned: any?, live: number?, prices: any?, 
 	for _, e in c.box do
 		table.insert(box, { id = e.id, n = e.n })
 	end
-	return { list = list, box = box, band = Cash.bandOf(Cash.topLevel(acct, live)), slots = c.slots, store = c.store, pass = Pass.view(c.pass, now), pets = Cash.ownList(c.pets), mounts = Cash.ownList(c.mounts), petOut = c.petOut, mount = c.mount, wskins = Cash.skinList(c.wskins), wskin = c.wskin, dskins = Cash.dskinList(c.dskins), dskin = c.dskin, ev = table.clone(c.ev) }
+	return { list = list, box = box, band = Cash.bandOf(Cash.topLevel(acct, live)), slots = c.slots, store = c.store, pass = Pass.view(c.pass, now), pets = Cash.ownList(c.pets), mounts = Cash.ownList(c.mounts), petsOut = table.clone(Cash.petsOut(c)), petOut = c.petOut, mount = c.mount, wskins = Cash.skinList(c.wskins), wskin = c.wskin, dskins = Cash.dskinList(c.dskins), dskin = c.dskin, ev = table.clone(c.ev) }
 end
 
 -- 확인용(테스트): 상품 표가 아이템 표와 맞는가

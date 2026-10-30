@@ -111,9 +111,9 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		if not v then
 			return out
 		end
-		local myPet, myRide = ctx.myPet and ctx.myPet(), ctx.myRide and ctx.myRide()
+		local myPets, myRide = ctx.myPets and ctx.myPets(), ctx.myRide and ctx.myRide()
 		for _, id in v.pets or {} do
-			table.insert(out, { ride = id, kind = "pet", on = (myPet or v.petOut) == id })
+			table.insert(out, { ride = id, kind = "pet", on = table.find(myPets or v.petsOut or { v.petOut }, id) ~= nil }) -- 꺼내 둔 펫들(셋까지 — 2026-10-30)
 		end
 		for _, id in v.mounts or {} do
 			table.insert(out, { ride = id, kind = "mount", on = myRide == id })

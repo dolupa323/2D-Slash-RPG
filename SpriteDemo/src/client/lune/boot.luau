@@ -207,6 +207,7 @@ local state = {
 	sentY = -1,
 	sentDir = 0,
 }
+state.Seq = require(lune.sim.sequence) -- 시퀀스(2026-10-30 — 메이플 「시퀀스」: 스킬 창의 「시퀀스」 단추로 여는 창 · 퀵슬롯의 seq_ · bseq_)
 Boot.state = state
 
 -- 그림을 불러온다. only = 이름이 이 글들 가운데 하나로 시작하는 것만(없으면 모두) · notify(끝난 수, 모두) = 한 장이 끝날 때마다(로딩 화면의 띠)
@@ -279,11 +280,11 @@ local function crystalGone(id: number)
 end
 
 -- 내 펫이 떨어진 것에 닿았다(2026-10-20 — rideView.luau): 서버가 펫을 꺼내 두었는지 · 영웅에게서 가까운지 · 주인을 확인하고 줍는다(world.luau의 onPetPick)
-local function petPick(id: number, x: number?, y: number?)
+local function petPick(id: number, x: number?, y: number?, slot: number?)
 	if x and y and state.fx then
 		state.fx:pull(id, x, y) -- 펫 쪽으로 빨려 든다(자석 — 2026-10-21)
 	end
-	Net.FireServer("PetPick", id)
+	Net.FireServer("PetPick", id, slot or 1) -- slot = 꺼내 둔 펫의 차례(펫 셋 — 2026-10-30: 서버가 펫마다 간격을 센다)
 end
 
 -- 펫 꺼내기 · 넣기와 탈것 타기 · 내리기(2026-10-21 사용자: "펫을 넣고 빼는거, 라이딩을 타는거 이런게 달빛상점에 들어가서 하는게 아닙니다" —
@@ -357,7 +358,7 @@ state.toggleDskin = function(id: string)
 end
 state.togglePet = function(id: string)
 	once(function()
-		cashInvoke("pet", if state.myPet == id then false else id)
+		cashInvoke("pet", id) -- 꺼내 둔 펫이면 넣고 아니면 꺼낸다(셋까지 — 서버가 정한다 · 2026-10-30)
 	end)
 end
 -- id = 그 탈것(타고 있는 것이면 내린다) · nil = 고른 탈것으로 타거나 내린다(N 키)
@@ -461,17 +462,19 @@ local function enterScene(key: string, x: number, y: number, room)
 	for _, w in (room and room.who) or {} do
 		if state.myId ~= nil and w.id == state.myId then
 			state.myPet, state.myRide = w.pet or nil, w.ride or nil
+			state.myPets = if typeof(w.pets) == "table" then w.pets elseif w.pet then { w.pet } else {} -- 꺼내 둔 펫들(셋까지 — 2026-10-30)
 			state.mySkin = w.wskin or nil -- 장착한 캐시 무기(계정의 것 — 2026-10-23)
 			state.myDskin = w.dskin or nil -- 장착한 데미지 스킨(2026-10-29)
 		end
 	end
 	state.sprite:setLook(state.lookOf(state.me and state.me.look)) -- 무기 · 로브 색(염색 — 2026-10-22) · 캐시 무기(2026-10-23)
 	state.ride = RideView.new(state.view.heroLayer, 1, scene) -- 내 펫 · 탈것(영웅의 ZIndex 1 — 탈것 · 펫은 그 뒤, 탈것의 등은 그 앞 · 펫은 이 맵의 땅 위를 걷는다)
-	state.ride:setPet(state.myPet)
+	state.ride:setPets(state.myPets or {})
 	state.ride:setRide(state.myRide)
 	state.mobs = MobsView.new(state.view.mobLayer, room, state.over)
 	RiftView.enter(room.rift) -- 토벌의 방이면 위 가운데의 판(아니면 숨긴다)
 	BossView.setWeekly(room.weekly) -- 주간 보스의 방이면 보스 체력 바 위에 난이도 · 남은 시간(아니면 숨긴다 — 2026-10-24)
+	state.bossRoom = room.weekly ~= nil -- 보스 전투에서는 버프 시퀀스를 쓸 수 없다(메이플 — 2026-10-30)
 	if not Voyage.onShip(key) then
 		VoyageView.stop() -- 배에서 내렸다
 	end
@@ -1285,10 +1288,43 @@ local function step()
 					state.toggleRide(what) -- 탈것: 탄다 · 내린다
 				elseif what and Quick.act(what) then
 					-- 점프 · 상호작용(폰의 칸 단추 — touch.luau가 바로 뛰기 · 상호작용을 누른다 · 2026-10-21): 여기서는 할 일이 없다
+				elseif what and state.Seq.of(what) then
+					state.runSeq(what) -- 시퀀스(2026-10-30): 넣어 둔 것을 앞 칸부터 차례대로(아래 「시퀀스를 쓰는 중」)
 				elseif what then
 					trySkill(what, from[1] .. i) -- 그 칸의 키(힘을 모을 때 누르고 있는지 본다)
 				end
 			end
+		end
+	end
+	-- 시퀀스를 쓰는 중(2026-10-30 — sim/sequence.luau · 메이플): 앞 칸부터 하나씩 그 스킬의 키를 누른 것처럼 — 걸렸으면 ok초(0.12) · 안 걸렸으면(대기 중 · 못 쓰는 것) fail초(0.03) 뒤 다음.
+	--  버프 아이템(쿠폰)은 가방에 있고 그 효과가 아직 걸려 있지 않을 때만 쓴다(덮어쓰지 않는다 — 메이플) · item초 뒤 다음. 쓰러지면 멈춘다(메이플)
+	local sr = state.seqRun
+	if sr and state.dead then
+		state.seqRun = nil
+	elseif sr and state.clock >= sr.t then
+		local SD = state.Seq.DATA
+		local id = sr.list[sr.i]
+		local wait = SD.fail
+		if id and state.Seq.ITEM[id] then
+			local goods = Items.goods(id)
+			local left = if goods and goods.kind == "bmExp" then (state.expLeft or 0) - (state.now - (state.expAt or state.now))
+				elseif goods and goods.kind == "bmDrop" then (state.dropLeft or 0) - (state.now - (state.dropAt or state.now))
+				else 0
+			if goods and left <= 0 and Bag.countIn(state.bag, id) > 0 then
+				state.sendPotion(id)
+				wait = SD.item
+			end
+		elseif id then
+			local before = state.cds[id]
+			trySkill(id)
+			if state.cds[id] ~= before then
+				wait = SD.ok
+			end
+		end
+		sr.i += 1
+		sr.t = state.clock + wait
+		if sr.i > #sr.list then
+			state.seqRun = nil
 		end
 	end
 	if Input.take("potion") then
@@ -1755,6 +1791,19 @@ local function draw(dt: number)
 			Touch.setCooldown(id, (state.cds[id] or 0) - state.clock, def.cd)
 		end
 	end
+	-- 스킬 시퀀스의 칸(2026-10-30 — 메이플): 넣은 스킬 가운데 다시 쓰기까지 가장 오래 남은 것(버프 시퀀스의 칸에는 보이지 않는다)
+	for k, list in (state.me and state.me.seqs and state.me.seqs.skill) or {} do
+		local remain, total = 0, 0
+		for _, id in list do
+			local r = (state.cds[id] or 0) - state.clock
+			if r > remain then
+				local def = Buffs.data[id] or COMBAT.placed[id]
+				remain, total = r, math.max(def and def.cd or 0, r)
+			end
+		end
+		Hud.setCooldown(state.Seq.id("skill", k), remain, total)
+		Touch.setCooldown(state.Seq.id("skill", k), remain, total)
+	end
 	-- 물약 칸: 다시 마시기까지(물약은 모두 같은 시계 — 서버가 마셨다고 알린 때부터)
 	for _, g in Items.data.GOODS do
 		if g.kind == "potion" then
@@ -1884,9 +1933,19 @@ Hud.slotTipOf = function(what: string)
 	end
 	if Quick.ride(what) then
 		local prod = CashWindow.product(what)
-		local on = if Quick.ride(what) == "pet" then state.myPet == what else state.myRide == what
+		local on = if Quick.ride(what) == "pet" then table.find(state.myPets or {}, what) ~= nil else state.myRide == what
 		local W = CashWindow.WORDS
 		return { kind = "main", title = if prod then prod.name else what, tag = if on then (if Quick.ride(what) == "pet" then W.petOutTag else W.rideTag) else "", lines = { if prod then prod.line or "" else "" } }
+	end
+	local seqKind, seqK = state.Seq.of(what)
+	if seqKind and seqK then
+		-- 시퀀스의 칸(2026-10-30): 「스킬 시퀀스 1」 + 넣어 둔 차례대로 이름(비었으면 넣는 곳 안내)
+		local names = {}
+		for _, id in (state.me and state.me.seqs and state.me.seqs[seqKind][seqK]) or {} do
+			local g = Items.goods(id)
+			table.insert(names, if g then g.name elseif skillInfo[id] then skillInfo[id].name else id)
+		end
+		return { kind = "sub", title = state.Seq.name(seqKind, seqK), tag = "", lines = { if #names > 0 then table.concat(names, " → ") else state.Seq.DATA.empty } }
 	end
 	local sk = skillInfo[what]
 	if not sk then
@@ -1982,10 +2041,23 @@ local function listen()
 		elseif state.onJob and me.slots and me.skills then
 			-- 스킬을 되돌렸다(초기화): 서버가 칸에서 배우지 않은 스킬을 뺐다 — 화면의 칸도 서버의 것으로(2026-10-18 검토: 사라진 스킬이 칸에 남아 다음 고치기가 한 번 튕겼다)
 			for _, what in state.slots or {} do
-				if what and not Quick.item(what) and not Quick.ride(what) and (me.skills[what] or 0) <= 0 then -- (펫 · 탈것은 스킬이 아니다 — 2026-10-21)
+				if what and not Quick.item(what) and not Quick.ride(what) and not state.Seq.of(what) and (me.skills[what] or 0) <= 0 then -- (펫 · 탈것 · 시퀀스는 스킬이 아니다 — 2026-10-21 · 10-30)
 					state.onJob(me)
 					break
 				end
+			end
+		end
+		-- 시퀀스가 바뀌었다(2026-10-30): 시퀀스가 놓인 칸의 그림(첫 칸)을 다시 그린다
+		local seqKey = ""
+		for _, kind in state.Seq.KINDS do
+			for k, list in (me.seqs and me.seqs[kind]) or {} do
+				seqKey ..= kind .. k .. ":" .. table.concat(list, ",") .. ";"
+			end
+		end
+		if seqKey ~= state.seqKey then
+			state.seqKey = seqKey
+			if state.onJob and me.slots then
+				state.onJob(me)
 			end
 		end
 		Hud.setLocked(skillsLocked()) -- 스킬 칸의 잠금은 내 상태가 올 때마다 맞춘다(레벨이 먼저 오르는 경우에도 풀린다)
@@ -2061,7 +2133,7 @@ local function listen()
 					--  크리티컬은 줄마다 따로 굴린다(h.crits[몇째 줄] — 서버의 Room:strike). crits가 없으면 그 타 전체가 크리티컬인가(h.crit — 흘리기 · 쪼개지 않은 타)
 					local crit = if h.crits then h.crits[line] == true else h.crit == true
 					local mine = by == state.myId
-					if mine or ViewOpts.nums then -- 다른 사람의 피해 숫자는 설정의 「화면」에서 끌 수 있다(2026-10-18)
+					if (mine and ViewOpts.myNums) or (not mine and ViewOpts.nums) then -- 다른 사람의 피해 숫자(2026-10-18) · 내 피해 숫자(2026-10-30)는 설정의 「화면」에서 끌 수 있다
 						state.fx:number(lines[line], m.x, m.info.y - MobsView.topOf(m) - LINES.rise * (line - 1), if crit then Effects.BIG[tone] else Effects.DEAL, crit, dpart)
 					end
 					-- 타격감(공방 combat.js의 hit): 몬스터가 하얗게 번쩍이며 때린 쪽의 반대로 조금 밀리고, 맞은 자리에 불꽃과 파편이 튄다.
@@ -2274,15 +2346,17 @@ local function listen()
 		-- 내 펫 · 탈것(서버가 정한 것 — 펫을 꺼냈다 · 탔다 · 기술을 써서 내렸다)
 		for _, w in roster do
 			if w.id == state.myId then
-				local changed = state.myPet ~= (w.pet or nil) or state.myRide ~= (w.ride or nil) or state.mySkin ~= (w.wskin or nil)
+				local pets = if typeof(w.pets) == "table" then w.pets elseif w.pet then { w.pet } else {} -- 꺼내 둔 펫들(셋까지 — 2026-10-30)
+				local changed = table.concat(state.myPets or {}, ",") ~= table.concat(pets, ",") or state.myRide ~= (w.ride or nil) or state.mySkin ~= (w.wskin or nil)
 				state.myPet, state.myRide = w.pet or nil, w.ride or nil
+				state.myPets = pets
 				state.mySkin = w.wskin or nil -- 장착한 캐시 무기(2026-10-23)
 				state.myDskin = w.dskin or nil -- 장착한 데미지 스킨(2026-10-29)
 				if state.sprite then
 					state.sprite:setLook(state.lookOf(state.me and state.me.look))
 				end
 				if state.ride then
-					state.ride:setPet(state.myPet)
+					state.ride:setPets(state.myPets)
 					state.ride:setRide(state.myRide)
 				end
 				if changed and state.me then
@@ -3392,6 +3466,9 @@ function Boot.start()
 		end,
 		-- 그 스킬을 퀵슬롯에 놓을 수 있는가: ok · passive(늘 켜져 있는 것) · unlearned(아직 안 배웠다) · later(게임에 아직 없다). kind = 스킬의 갈래
 		state = function(id: string, kind: string?): string
+			if state.Seq.of(id) then
+				return "ok" -- 시퀀스(2026-10-30): 비어 있어도 칸에 놓는다
+			end
 			local def = COMBAT.skills[id]
 			if def and def.who == state.who then
 				return if state.me and (state.me.skills[id] or 0) > 0 then "ok" else "unlearned"
@@ -3425,6 +3502,7 @@ function Boot.start()
 	QuickEdit.init(quickHooks)
 	Windows.register("stat", StatWindow)
 	Windows.register("skill", SkillWindow)
+	Windows.register("seq", require(script.Parent.ui.seqWindow)) -- 시퀀스(스킬 창의 「시퀀스」 단추 — 2026-10-30 · 메이플)
 	Windows.register("keys", KeysWindow)
 	Windows.register("sound", SoundWindow)
 	Windows.register("daily", DailyWindow) -- 일일 의뢰(마을의 의뢰 게시판 앞에서 ↑)
@@ -3448,6 +3526,9 @@ function Boot.start()
 		end
 		wctx.myPet = function()
 			return state.myPet
+		end
+		wctx.myPets = function() -- 꺼내 둔 펫들(셋까지 — 2026-10-30)
+			return state.myPets or {}
 		end
 		wctx.myRide = function()
 			return state.myRide
@@ -3478,6 +3559,9 @@ function Boot.start()
 		end,
 		myPet = function()
 			return state.myPet
+		end,
+		myPets = function()
+			return state.myPets or {}
 		end,
 		myRide = function()
 			return state.myRide
@@ -3641,6 +3725,25 @@ function Boot.start()
 	MapName.init(Hud.root)
 	GainLog.init(Hud.root)
 	-- 전직해서 칸이 바뀌었다(서버가 윗차수의 사냥기 · 보스기를 앞 차수의 자리에 넣었다)
+	-- 시퀀스(2026-10-30 — 스킬 창의 「시퀀스」 단추로 여는 창 · sim/sequence.luau): 칸의 그림 = 넣어 둔 첫 칸 · 누르면 넣어 둔 것을 차례대로(위 「시퀀스를 쓰는 중」)
+	Quick.seqFirst = function(kind: string, k: number): string?
+		local list = state.me and state.me.seqs and state.me.seqs[kind] and state.me.seqs[kind][k]
+		return list and list[1]
+	end
+	state.runSeq = function(what: string)
+		local kind, k = state.Seq.of(what)
+		local list = kind and k and state.me and state.me.seqs and state.me.seqs[kind][k]
+		local say = if not list or #list == 0 then state.Seq.DATA.empty elseif kind == "buff" and state.bossRoom then state.Seq.DATA.boss else nil
+		if say then
+			if state.fx and state.body then
+				state.fx:float(say, state.body.x, state.body.y - 46, Effects.MINT, 1.6) -- (빈 시퀀스 — 시퀀스 창에서 넣는다 · 보스 전투의 버프 시퀀스)
+			end
+			return
+		end
+		if not state.seqRun and list then
+			state.seqRun = { list = table.clone(list), i = 1, t = state.clock }
+		end
+	end
 	state.onJob = function(me)
 		state.slots = me.slots or state.slots
 		state.touchSlots = me.tslots or state.touchSlots
@@ -4073,6 +4176,14 @@ function Boot.start()
 					local placedDef = COMBAT.placed[sk.id]
 					if not COMBAT.skills[sk.id] and ((Buffs.is(sk.id) and Buffs.learned(kitHero(), sk.id)) or ((placedDef ~= nil or COMBAT.cast[sk.id] ~= nil) and (state.me.skills[sk.id] or 0) > 0)) then
 						table.insert(list, { what = sk.id, name = sk.name })
+					end
+				end
+			end
+			-- 시퀀스(2026-10-30 — 시퀀스 창에서 짠 것: 넣어 둔 것이 있는 시퀀스만)
+			for _, kind in state.Seq.KINDS do
+				for k, slist in (state.me and state.me.seqs and state.me.seqs[kind]) or {} do
+					if #slist > 0 then
+						table.insert(list, { what = state.Seq.id(kind, k), name = state.Seq.name(kind, k) })
 					end
 				end
 			end

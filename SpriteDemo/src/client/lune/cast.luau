@@ -322,6 +322,13 @@ local function makeG(self, a)
 			self.effects:ghost(a.who, p.clip, p.f + 1, a.x, a.y, a.dir, Color3.fromRGB(bit32.rshift(color or a.tone.n, 16), bit32.band(bit32.rshift(color or a.tone.n, 8), 255), bit32.band(color or a.tone.n, 255)))
 		end
 	end
+	-- 잔상을 아무 자리에(리븐의 잔영 베기 — 2026-10-30): 그 동작의 f째 장(0부터)을 (x, y)에 한 색으로 남긴다(잔상처럼 옅어진다)
+	function g.shade(clip: string, f: number, x: number, y: number, dir: number, color: number?)
+		if self.effects then
+			local c = color or a.tone.n
+			self.effects:ghost(a.who, clip, f + 1, x, y, dir, Color3.fromRGB(bit32.rshift(c, 16), bit32.band(bit32.rshift(c, 8), 255), bit32.band(c, 255)))
+		end
+	end
 	-- 몸의 한 색 실루엣을 덧그린다(분신 · 굳은 몸의 윤곽 · 사신의 그림자 · 망령): 그 동작의 f째 장(0부터)을 (x, y)에. o = { color, alpha } — 그리는 동안(draw)에만 부른다.
 	--  캐릭터들의 층 맨 뒤에 놓인다(몸 뒤). o.scale = 크기(거신)
 	-- 그 동작의 장 수(내 캐릭터 그림의 — 없으면 1)
@@ -816,7 +823,6 @@ function Cast:update(dt: number)
 	self.fx.update(dt)
 end
 
-local STACK_MARK = Fx.TONE.mint.n
 
 function Cast:draw()
 	local view = self.view
@@ -899,7 +905,7 @@ function Cast:draw()
 		local top, mx = R(m.y - m.h) - 13 * sc, R(m.x)
 		if kit then
 			if kit.drawMarks then
-				kit.drawMarks(front, own.g, m, sc, true)
+				kit.drawMarks(front, own.g, m, sc, true, top) -- (top = 머리 위 — 리븐의 표식이 쓴다 · 2026-10-30)
 			end
 			if m.bind > 0 and kit.drawBind then
 				kit.drawBind(front, own.g, m, sc, true) -- 앞쪽 반
@@ -912,12 +918,7 @@ function Cast:draw()
 				front:rect(R(mx + cos(a) * 6), R(top - 3 + sin(a) * 2), 1, 1)
 			end
 		end
-		for i = 0, m.mark - 1 do -- 표식
-			local bx, by = mx - (m.mark - 1) * 3 + i * 6, R(top - 9 + sin(self.clock * 6 + i) * 1.5)
-			front:style(STACK_MARK)
-			front:rect(bx - 1, by, 3, 1)
-			front:rect(bx, by - 1, 1, 3)
-		end
+		-- (표식은 리븐 묶음의 drawMarks가 그린다 — 머리 위 민트 초승달 · 2026-10-30. 전에는 여기서 작은 + 셋)
 	end
 	for i = self.spriteN + 1, #self.sprites do
 		self.sprites[i].label.Visible = false

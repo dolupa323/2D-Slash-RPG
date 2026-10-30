@@ -1941,7 +1941,7 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 			local mul = hit.mul * (scale or 1) * boost * share * Passives.vs(hero, mob, info)
 			-- 치명타: 모든 직업의 기술 타가 확률로(기본 + 패시브 + 리븐의 표식이 있는 적). 흘리기 = 피한 뒤의 첫 베기는 반드시
 			-- 여러 줄로 쪼개지는 기술의 제 타는 줄마다 따로 굴린다(아래 strike의 crit — 흘리기의 반드시 크리티컬은 그 베기의 줄 모두)
-			local critChance, critMul = Passives.crit(hero, self:marksOf(hero, mob) > 0)
+			local critChance, critMul = Passives.crit(hero, self:marksOf(hero, mob) > 0, self.time)
 			local perLine = not tag and lines > 1 and not sure
 			local crit = sure or (not perLine and critChance > 0 and self.rng:NextNumber(0, 100) < critChance)
 			if crit then
@@ -2034,11 +2034,15 @@ function Room:kitAfter(hero, landed, x: number, y: number, sweep, power: number,
 			out.heal = (out.heal or 0) + heal
 		end
 	elseif class == "riven" then
-		-- 표식: 베기에 맞은 적에게
+		-- 표식: 베기에 맞은 적에게. 연계(그림자 일격 — 순간이동한 뒤 그 시간 안: caster g.teleport)면 하나 더(2026-10-30)
 		if Kit.level(hero, "core") > 0 and (not opts or opts.mark) then
+			local link = hero.pass ~= nil and (hero.pass.link or -1) > self.time and Passives.get(hero, "linkMark") ~= nil
 			for _, l in landed do
 				if not l.dead then
 					self:mark(hero, l.mob, out)
+					if link then
+						self:mark(hero, l.mob, out)
+					end
 				end
 			end
 		end

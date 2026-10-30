@@ -257,8 +257,8 @@ end
 PLAY_FULL = nil
 PLAY_XP = 1
 PLAY_NODODGE = false
-RAID_FULL = false
-RAID_LV = nil
+RAID_FULL = true
+RAID_LV = { normal = 98, hard = 118 }
 LANG_SWEEP = false; SWEEP_MISSING = {}; SWEEP_TEST = ""
 MODULES['ReplicatedStorage/shared/config/balance'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 게임 규칙 수치(밸런스)의 "단 하나의 출처". 서버와 클라이언트가 같은 값을 각자 하드코딩하면 한쪽만
@@ -7213,7 +7213,7 @@ end
 MODULES['ReplicatedStorage/shared/lune/data/assets.generated'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 자동 생성 파일 — 직접 고치지 말 것(dino-workshop/tools/export_lune_game.mjs).
 -- 그림 파일 이름 → 로블록스 에셋 id. 비어 있으면 아직 올리지 않았거나 그림이 바뀐 것이다(tools/write_lune_ids.mjs).
-return { ["chars_1.png"] = "rbxassetid://109752346993505", ["chars_2.png"] = "rbxassetid://138116740649390", ["chars_3.png"] = "rbxassetid://90284003660570", ["chars_4.png"] = "rbxassetid://136818621306691", ["chars_5.png"] = "rbxassetid://129980125991853", ["chars_6.png"] = "rbxassetid://140314438481457", ["chars_mask_1.png"] = "rbxassetid://116662615343312", ["chars_mask_2.png"] = "rbxassetid://85853531333660", ["chars_mask_3.png"] = "rbxassetid://119136333282377", ["chars_mask_4.png"] = "rbxassetid://110413330900610", ["chars_mask_5.png"] = "rbxassetid://111728512783323", ["chars_mask_6.png"] = "rbxassetid://129433121248806", ["dye_body.png"] = "rbxassetid://112828849522258", ["dye_p_gold.png"] = "rbxassetid://88495036923449", ["dye_p_flame.png"] = "rbxassetid://137681254954031", ["dye_p_violet.png"] = "rbxassetid://93966095955442", ["dye_p_sky.png"] = "rbxassetid://71015167556773", ["dye_p_leaf.png"] = "rbxassetid://121733401543210", ["dye_p_silver.png"] = "rbxassetid://126401709770258", ["wskin_gold.png"] = "rbxassetid://101837606984689", ["wskin_lava.png"] = "rbxassetid://123514909475111", ["wskin_frost.png"] = "rbxassetid://135285067458503", ["wskin_shadow.png"] = "rbxassetid://127141196512966", ["sky.png"] = "rbxassetid://132220205436830", ["far.png"] = "rbxassetid://70389067240845", ["near_hunt.png"] = "rbxassetid://72094974796206", ["ground_hunt_1.png"] = "rbxassetid://124122137516265", ["props_hunt.png"] = "rbxassetid://126214212380510", ["near_town.png"] = "rbxassetid://135098639271756", ["ground_town_1.png"] = "rbxassetid://125524698830662", ["props_town.png"] = "rbxassetid://136592239384770", ["villagers.png"] = "rbxassetid://138913758219069", ["back_in_dojo.png"] = "rbxassetid://123526558736053", ["back_in_storage.png"] = "rbxassetid://136086571022108", ["back_in_store.png"] = "rbxassetid://104786944273081", ["back_in_elder.png"] = "rbxassetid://108350436672963", ["back_in_forge.png"] = "rbxassetid://74669737693063", ["back_in_hall.png"] = "rbxassetid://112774948694614", ["back_in_shrine.png"] = "rbxassetid://113277212188271", ["back_in_cellar.png"] = "rbxassetid://128001628966145", ["ground_r1a1_1.png"] = "rbxassetid://83422870736818", ["props_r1a1.png"] = "rbxassetid://92002234447597", ["ground_dream_1.png"] = "rbxassetid://86568380381663", ["ground_r1af_1.png"] = "rbxassetid://103216651480847", ["ground_r1a3_1.png"] = "rbxassetid://124425202970650", ["ground_r1a4_1.png"] = "rbxassetid://119900898562100", ["far_r1b1.png"] = "rbxassetid://135605898532339", ["near_r1b1.png"] = "rbxassetid://100112472273007", ["ground_r1b1_1.png"] = "rbxassetid://131538873933480", ["ground_r1b2_1.png"] = "rbxassetid://125436913697859", ["props_r1b2.png"] = "rbxassetid://83042854732492", ["ground_r1bv_1.png"] = "rbxassetid://136234171407413", ["far_r1b3.png"] = "rbxassetid://118137839897783", ["near_r1b3.png"] = "rbxassetid://78384160036601", ["ground_r1b3_1.png"] = "rbxassetid://128714839542604", ["far_r1cc.png"] = "rbxassetid://126898606308718", ["near_r1cc.png"] = "rbxassetid://111427056380401", ["ground_r1cc_1.png"] = "rbxassetid://140563003927168", ["wall_r1c1.png"] = "rbxassetid://97274081468167", ["ground_r1c1_1.png"] = "rbxassetid://135881037967181", ["ground_r1c2_1.png"] = "rbxassetid://105408422281804", ["ground_r1c3_1.png"] = "rbxassetid://135881037967181", ["far_r2a1.png"] = "rbxassetid://71001089643339", ["near_r2a1.png"] = "rbxassetid://108372695232877", ["ground_r2a1_1.png"] = "rbxassetid://97783772162382", ["props_r2a1.png"] = "rbxassetid://70810097220170", ["ground_r2a2_1.png"] = "rbxassetid://127167083533193", ["ground_r2af_1.png"] = "rbxassetid://119700029947186", ["ground_r2a3_1.png"] = "rbxassetid://96467128886126", ["ground_r2a4_1.png"] = "rbxassetid://91945530040703", ["far_r2b1.png"] = "rbxassetid://105088993635856", ["near_r2b1.png"] = "rbxassetid://129053830092616", ["ground_r2b1_1.png"] = "rbxassetid://85390131222251", ["ground_r2b2_1.png"] = "rbxassetid://76022564274420", ["ground_r2b3_1.png"] = "rbxassetid://129600416411291", ["ground_r2bs_1.png"] = "rbxassetid://74893044822636", ["ground_r2b4_1.png"] = "rbxassetid://132464048359953", ["ground_r2c1_1.png"] = "rbxassetid://128991620683760", ["props_r2c1.png"] = "rbxassetid://105448190402763", ["wall_r2c2.png"] = "rbxassetid://103202435470997", ["ground_r2c2_1.png"] = "rbxassetid://73281231351055", ["ground_r2c3_1.png"] = "rbxassetid://132180829815320", ["far_ct.png"] = "rbxassetid://97327830237568", ["near_ct.png"] = "rbxassetid://123959722179055", ["ground_ct_1.png"] = "rbxassetid://76598854780556", ["ground_ct_2.png"] = "rbxassetid://75898659253993", ["ground_ct_3.png"] = "rbxassetid://122444051043555", ["props_ct.png"] = "rbxassetid://125791453951151", ["ladder.png"] = "rbxassetid://97882390366255", ["far_port.png"] = "rbxassetid://123435927909095", ["near_port.png"] = "rbxassetid://109231585638799", ["ground_port_1.png"] = "rbxassetid://96286569225918", ["ground_port_2.png"] = "rbxassetid://93446056838006", ["props_port.png"] = "rbxassetid://112093951611968", ["wall_r3a1.png"] = "rbxassetid://129110072342137", ["ground_r3a1_1.png"] = "rbxassetid://87088338783793", ["ground_r3a2_1.png"] = "rbxassetid://110586607494872", ["ground_r3ah_1.png"] = "rbxassetid://104190957152391", ["ground_r3a3_1.png"] = "rbxassetid://121121631436780", ["ground_r3a4_1.png"] = "rbxassetid://78659249870034", ["ground_r3b1_1.png"] = "rbxassetid://128556194381664", ["ground_r3b2_1.png"] = "rbxassetid://72136610127139", ["wall_r3t.png"] = "rbxassetid://83371466762190", ["ground_r3t_1.png"] = "rbxassetid://109803440895253", ["ground_r3c1_1.png"] = "rbxassetid://107949167237091", ["ground_r3c2_1.png"] = "rbxassetid://90516991888429", ["ground_r3cs_1.png"] = "rbxassetid://71960457769945", ["ground_r3c3_1.png"] = "rbxassetid://135669932767298", ["far_r3d1.png"] = "rbxassetid://114699110116551", ["near_r3d1.png"] = "rbxassetid://137859042761236", ["ground_r3d1_1.png"] = "rbxassetid://131514299450626", ["props_r3d1.png"] = "rbxassetid://101664768791520", ["ground_r3d2_1.png"] = "rbxassetid://94076994673843", ["ground_r3d3_1.png"] = "rbxassetid://89817150928070", ["far_r4a1.png"] = "rbxassetid://98546761697916", ["near_r4a1.png"] = "rbxassetid://86561589617474", ["ground_r4a1_1.png"] = "rbxassetid://108280608888790", ["props_r4a1.png"] = "rbxassetid://100270543281385", ["ground_r4a2_1.png"] = "rbxassetid://85486681117642", ["ground_r4a3_1.png"] = "rbxassetid://96575068202180", ["ground_r4a4_1.png"] = "rbxassetid://136066894609962", ["wall_r4b1.png"] = "rbxassetid://98532234413640", ["ground_r4b1_1.png"] = "rbxassetid://88887931673327", ["ground_r4b2_1.png"] = "rbxassetid://79877230107216", ["wall_r4b3.png"] = "rbxassetid://107012347372334", ["ground_r4b3_1.png"] = "rbxassetid://83501151151882", ["ground_r4bh_1.png"] = "rbxassetid://102429194534326", ["ground_r4b4_1.png"] = "rbxassetid://106845009391566", ["wall_r4c1.png"] = "rbxassetid://71375264584180", ["ground_r4c1_1.png"] = "rbxassetid://91599845869889", ["wall_r4c2.png"] = "rbxassetid://88127748464340", ["ground_r4c2_1.png"] = "rbxassetid://129647369434522", ["props_r4c2.png"] = "rbxassetid://101973755163507", ["ground_r4ch_1.png"] = "rbxassetid://124784973350172", ["ground_r4c3_1.png"] = "rbxassetid://123743019321609", ["wall_r4d1.png"] = "rbxassetid://123616397829506", ["ground_r4d1_1.png"] = "rbxassetid://72127690724163", ["ground_r4d2_1.png"] = "rbxassetid://131406388678943", ["far_seat.png"] = "rbxassetid://120679010601692", ["near_seat.png"] = "rbxassetid://100563375056858", ["ground_seat_1.png"] = "rbxassetid://95415409535077", ["props_seat.png"] = "rbxassetid://96016914881930", ["ground_sea1_1.png"] = "rbxassetid://116609311030052", ["ground_sea2_1.png"] = "rbxassetid://93028389629730", ["ground_r3b3_1.png"] = "rbxassetid://103749580294335", ["ground_r3b5_1.png"] = "rbxassetid://96138875389062", ["ground_r3b4_1.png"] = "rbxassetid://122662700242947", ["ground_r4d3_1.png"] = "rbxassetid://80335588821204", ["ground_r4e1_1.png"] = "rbxassetid://71537759534162", ["wall_sea5.png"] = "rbxassetid://121989276042041", ["ground_sea5_1.png"] = "rbxassetid://120770918735711", ["ground_sea6_1.png"] = "rbxassetid://82216607848324", ["ground_r1c4_1.png"] = "rbxassetid://98020574553503", ["ground_r2b5_1.png"] = "rbxassetid://105288065839384", ["ground_wkbox_1.png"] = "rbxassetid://91338045795001", ["ground_r2c4_1.png"] = "rbxassetid://115753437369109", ["ground_r2c5_1.png"] = "rbxassetid://80549291242645", ["ground_r3d4_1.png"] = "rbxassetid://118468232445975", ["ground_r4d4_1.png"] = "rbxassetid://117778839393938", ["ground_sea8_1.png"] = "rbxassetid://100524578086246", ["ground_r4es_1.png"] = "rbxassetid://125574607301148", ["ground_r1bl_1.png"] = "rbxassetid://102105250491349", ["ground_r2bl_1.png"] = "rbxassetid://94977117622940", ["ground_r2cl_1.png"] = "rbxassetid://120682725194519", ["ground_r3al_1.png"] = "rbxassetid://84627906941424", ["ground_r3cl_1.png"] = "rbxassetid://81455567612452", ["ground_r4bl_1.png"] = "rbxassetid://103887471752415", ["ground_r4cl_1.png"] = "rbxassetid://133911299211715", ["ground_r4dl_1.png"] = "rbxassetid://78653230925094", ["ground_r1bh_1.png"] = "rbxassetid://115812173236187", ["ground_r2ah_1.png"] = "rbxassetid://118410034190596", ["ground_r2bh_1.png"] = "rbxassetid://132009986769568", ["ground_r3bh_1.png"] = "rbxassetid://88949438100971", ["ground_r4ah_1.png"] = "rbxassetid://92032601099726", ["ground_r4dh_1.png"] = "rbxassetid://139731007351262", ["ground_sea3_1.png"] = "rbxassetid://73022952797720", ["ground_seaf_1.png"] = "rbxassetid://136179698367792", ["ground_sea4_1.png"] = "rbxassetid://133488858131653", ["ground_sea7_1.png"] = "rbxassetid://124740971075210", ["ground_dg1_1.png"] = "rbxassetid://102570354131734", ["ground_dg2_1.png"] = "rbxassetid://101634884884276", ["back_ct_store.png"] = "rbxassetid://126366947246540", ["back_ct_smith.png"] = "rbxassetid://136337303330969", ["back_ct_storage.png"] = "rbxassetid://134573437628573", ["back_ct_auction.png"] = "rbxassetid://111002919148565", ["back_ct_office.png"] = "rbxassetid://130229467844565", ["back_ct_harbor.png"] = "rbxassetid://96974337406579", ["back_ct_inn.png"] = "rbxassetid://110896398622871", ["back_ct_fisher.png"] = "rbxassetid://128557373754841", ["back_ct_stable.png"] = "rbxassetid://110252516764726", ["back_ct_spice.png"] = "rbxassetid://117260792010676", ["back_ct_guardpost.png"] = "rbxassetid://77243987648482", ["back_ct_musician.png"] = "rbxassetid://117717247885748", ["back_ct_flower.png"] = "rbxassetid://111657630555738", ["back_ct_oldhouse.png"] = "rbxassetid://98177958007897", ["back_ct_scribe.png"] = "rbxassetid://91218960586498", ["back_ct_maid.png"] = "rbxassetid://129403102377941", ["back_ct_castle.png"] = "rbxassetid://83503122707807", ["back_ct_terrace.png"] = "rbxassetid://82185564261733", ["vista_ct_terrace.png"] = "rbxassetid://72001134778535", ["back_ct_tower.png"] = "rbxassetid://111423026181041", ["sea_ship_out.png"] = "rbxassetid://80754181448263", ["ship_ship_out.png"] = "rbxassetid://92462106500365", ["sea_ship_home.png"] = "rbxassetid://126176094324469", ["ship_ship_home.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_out.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_out.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_home.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_home.png"] = "rbxassetid://102557987604449", ["sea_air_out.png"] = "rbxassetid://112775081132374", ["ship_air_out.png"] = "rbxassetid://108949678734397", ["sea_air_home.png"] = "rbxassetid://112775081132374", ["ship_air_home.png"] = "rbxassetid://108949678734397", ["worldmap_r1.png"] = "rbxassetid://102843140318075", ["worldmap_city.png"] = "rbxassetid://122109754685398", ["worldmap_r2.png"] = "rbxassetid://100140236436154", ["worldmap_sea.png"] = "rbxassetid://92576107471427", ["worldmap_r3.png"] = "rbxassetid://139284205415304", ["worldmap_r4.png"] = "rbxassetid://140105596121121", ["ui_kit.png"] = "rbxassetid://136730783611893", ["font_small_1.png"] = "rbxassetid://105450659975716", ["font_small_2.png"] = "rbxassetid://107436252829336", ["font_small_o_1.png"] = "rbxassetid://97414893618224", ["font_small_o_2.png"] = "rbxassetid://103679168006398", ["font_body_o_1.png"] = "rbxassetid://111645782980424", ["font_body_o_2.png"] = "rbxassetid://83949705319808", ["font_body_o_3.png"] = "rbxassetid://122937040402111", ["portal.png"] = "rbxassetid://73946472428073", ["title_sky.png"] = "rbxassetid://127573656029589", ["title_clouds.png"] = "rbxassetid://89882326454014", ["title_ridge.png"] = "rbxassetid://129071355183212", ["title_logo.png"] = "rbxassetid://114259324331432", ["title_logo_en.png"] = "rbxassetid://137720983643436", ["cine_mural_axion.png"] = "rbxassetid://75681092154576", ["cine_mural_riven.png"] = "rbxassetid://99331828874405", ["cine_mural_reaper.png"] = "rbxassetid://76473369861673", ["cine_mural_mooni.png"] = "rbxassetid://112784522891949", ["cine_mural_salamander.png"] = "rbxassetid://106361966737710", ["shop_bg.png"] = "rbxassetid://108894476720705" }
+return { ["chars_1.png"] = "rbxassetid://109752346993505", ["chars_2.png"] = "rbxassetid://138116740649390", ["chars_3.png"] = "rbxassetid://90284003660570", ["chars_4.png"] = "rbxassetid://136818621306691", ["chars_5.png"] = "rbxassetid://129980125991853", ["chars_6.png"] = "rbxassetid://140314438481457", ["chars_mask_1.png"] = "rbxassetid://116662615343312", ["chars_mask_2.png"] = "rbxassetid://85853531333660", ["chars_mask_3.png"] = "rbxassetid://119136333282377", ["chars_mask_4.png"] = "rbxassetid://110413330900610", ["chars_mask_5.png"] = "rbxassetid://111728512783323", ["chars_mask_6.png"] = "rbxassetid://129433121248806", ["dye_body.png"] = "rbxassetid://112828849522258", ["dye_p_gold.png"] = "rbxassetid://88495036923449", ["dye_p_flame.png"] = "rbxassetid://137681254954031", ["dye_p_violet.png"] = "rbxassetid://93966095955442", ["dye_p_sky.png"] = "rbxassetid://71015167556773", ["dye_p_leaf.png"] = "rbxassetid://121733401543210", ["dye_p_silver.png"] = "rbxassetid://126401709770258", ["wskin_gold.png"] = "rbxassetid://101837606984689", ["wskin_lava.png"] = "rbxassetid://123514909475111", ["wskin_frost.png"] = "rbxassetid://135285067458503", ["wskin_shadow.png"] = "rbxassetid://127141196512966", ["sky.png"] = "rbxassetid://132220205436830", ["far.png"] = "rbxassetid://70389067240845", ["near_hunt.png"] = "rbxassetid://72094974796206", ["ground_hunt_1.png"] = "rbxassetid://124122137516265", ["props_hunt.png"] = "rbxassetid://126214212380510", ["near_town.png"] = "rbxassetid://135098639271756", ["ground_town_1.png"] = "rbxassetid://125524698830662", ["props_town.png"] = "rbxassetid://136592239384770", ["villagers.png"] = "rbxassetid://138913758219069", ["back_in_dojo.png"] = "rbxassetid://123526558736053", ["back_in_storage.png"] = "rbxassetid://136086571022108", ["back_in_store.png"] = "rbxassetid://104786944273081", ["back_in_elder.png"] = "rbxassetid://108350436672963", ["back_in_forge.png"] = "rbxassetid://74669737693063", ["back_in_hall.png"] = "rbxassetid://112774948694614", ["back_in_shrine.png"] = "rbxassetid://113277212188271", ["back_in_cellar.png"] = "rbxassetid://128001628966145", ["ground_r1a1_1.png"] = "rbxassetid://83422870736818", ["props_r1a1.png"] = "rbxassetid://92002234447597", ["ground_dream_1.png"] = "rbxassetid://86568380381663", ["ground_r1af_1.png"] = "rbxassetid://103216651480847", ["ground_r1a3_1.png"] = "rbxassetid://124425202970650", ["ground_r1a4_1.png"] = "rbxassetid://119900898562100", ["far_r1b1.png"] = "rbxassetid://135605898532339", ["near_r1b1.png"] = "rbxassetid://100112472273007", ["ground_r1b1_1.png"] = "rbxassetid://131538873933480", ["ground_r1b2_1.png"] = "rbxassetid://125436913697859", ["props_r1b2.png"] = "rbxassetid://83042854732492", ["ground_r1bv_1.png"] = "rbxassetid://136234171407413", ["far_r1b3.png"] = "rbxassetid://118137839897783", ["near_r1b3.png"] = "rbxassetid://78384160036601", ["ground_r1b3_1.png"] = "rbxassetid://128714839542604", ["far_r1cc.png"] = "rbxassetid://126898606308718", ["near_r1cc.png"] = "rbxassetid://111427056380401", ["ground_r1cc_1.png"] = "rbxassetid://140563003927168", ["wall_r1c1.png"] = "rbxassetid://97274081468167", ["ground_r1c1_1.png"] = "rbxassetid://135881037967181", ["ground_r1c2_1.png"] = "rbxassetid://105408422281804", ["ground_r1c3_1.png"] = "rbxassetid://135881037967181", ["far_r2a1.png"] = "rbxassetid://71001089643339", ["near_r2a1.png"] = "rbxassetid://108372695232877", ["ground_r2a1_1.png"] = "rbxassetid://97783772162382", ["props_r2a1.png"] = "rbxassetid://70810097220170", ["ground_r2a2_1.png"] = "rbxassetid://127167083533193", ["ground_r2af_1.png"] = "rbxassetid://119700029947186", ["ground_r2a3_1.png"] = "rbxassetid://96467128886126", ["ground_r2a4_1.png"] = "rbxassetid://91945530040703", ["far_r2b1.png"] = "rbxassetid://105088993635856", ["near_r2b1.png"] = "rbxassetid://129053830092616", ["ground_r2b1_1.png"] = "rbxassetid://85390131222251", ["ground_r2b2_1.png"] = "rbxassetid://76022564274420", ["ground_r2b3_1.png"] = "rbxassetid://129600416411291", ["ground_r2bs_1.png"] = "rbxassetid://74893044822636", ["ground_r2b4_1.png"] = "rbxassetid://132464048359953", ["ground_r2c1_1.png"] = "rbxassetid://128991620683760", ["props_r2c1.png"] = "rbxassetid://105448190402763", ["wall_r2c2.png"] = "rbxassetid://103202435470997", ["ground_r2c2_1.png"] = "rbxassetid://73281231351055", ["ground_r2c3_1.png"] = "rbxassetid://132180829815320", ["far_ct.png"] = "rbxassetid://97327830237568", ["near_ct.png"] = "rbxassetid://123959722179055", ["ground_ct_1.png"] = "rbxassetid://76598854780556", ["ground_ct_2.png"] = "rbxassetid://75898659253993", ["ground_ct_3.png"] = "rbxassetid://122444051043555", ["props_ct.png"] = "rbxassetid://125791453951151", ["ladder.png"] = "rbxassetid://97882390366255", ["far_port.png"] = "rbxassetid://123435927909095", ["near_port.png"] = "rbxassetid://109231585638799", ["ground_port_1.png"] = "rbxassetid://96286569225918", ["ground_port_2.png"] = "rbxassetid://93446056838006", ["props_port.png"] = "rbxassetid://112093951611968", ["wall_r3a1.png"] = "rbxassetid://129110072342137", ["ground_r3a1_1.png"] = "rbxassetid://87088338783793", ["ground_r3a2_1.png"] = "rbxassetid://110586607494872", ["ground_r3ah_1.png"] = "rbxassetid://104190957152391", ["ground_r3a3_1.png"] = "rbxassetid://121121631436780", ["ground_r3a4_1.png"] = "rbxassetid://78659249870034", ["ground_r3b1_1.png"] = "rbxassetid://128556194381664", ["ground_r3b2_1.png"] = "rbxassetid://72136610127139", ["wall_r3t.png"] = "rbxassetid://83371466762190", ["ground_r3t_1.png"] = "rbxassetid://109803440895253", ["ground_r3c1_1.png"] = "rbxassetid://107949167237091", ["ground_r3c2_1.png"] = "rbxassetid://90516991888429", ["ground_r3cs_1.png"] = "rbxassetid://71960457769945", ["ground_r3c3_1.png"] = "rbxassetid://135669932767298", ["far_r3d1.png"] = "rbxassetid://114699110116551", ["near_r3d1.png"] = "rbxassetid://137859042761236", ["ground_r3d1_1.png"] = "rbxassetid://131514299450626", ["props_r3d1.png"] = "rbxassetid://101664768791520", ["ground_r3d2_1.png"] = "rbxassetid://94076994673843", ["ground_r3d3_1.png"] = "rbxassetid://89817150928070", ["far_r4a1.png"] = "rbxassetid://98546761697916", ["near_r4a1.png"] = "rbxassetid://86561589617474", ["ground_r4a1_1.png"] = "rbxassetid://108280608888790", ["props_r4a1.png"] = "rbxassetid://100270543281385", ["ground_r4a2_1.png"] = "rbxassetid://85486681117642", ["ground_r4a3_1.png"] = "rbxassetid://96575068202180", ["ground_r4a4_1.png"] = "rbxassetid://136066894609962", ["wall_r4b1.png"] = "rbxassetid://98532234413640", ["ground_r4b1_1.png"] = "rbxassetid://88887931673327", ["ground_r4b2_1.png"] = "rbxassetid://79877230107216", ["wall_r4b3.png"] = "rbxassetid://107012347372334", ["ground_r4b3_1.png"] = "rbxassetid://83501151151882", ["ground_r4bh_1.png"] = "rbxassetid://102429194534326", ["ground_r4b4_1.png"] = "rbxassetid://106845009391566", ["wall_r4c1.png"] = "rbxassetid://71375264584180", ["ground_r4c1_1.png"] = "rbxassetid://91599845869889", ["wall_r4c2.png"] = "rbxassetid://88127748464340", ["ground_r4c2_1.png"] = "rbxassetid://129647369434522", ["props_r4c2.png"] = "rbxassetid://101973755163507", ["ground_r4ch_1.png"] = "rbxassetid://124784973350172", ["ground_r4c3_1.png"] = "rbxassetid://123743019321609", ["wall_r4d1.png"] = "rbxassetid://123616397829506", ["ground_r4d1_1.png"] = "rbxassetid://72127690724163", ["ground_r4d2_1.png"] = "rbxassetid://131406388678943", ["far_seat.png"] = "rbxassetid://120679010601692", ["near_seat.png"] = "rbxassetid://100563375056858", ["ground_seat_1.png"] = "rbxassetid://95415409535077", ["props_seat.png"] = "rbxassetid://96016914881930", ["ground_sea1_1.png"] = "rbxassetid://116609311030052", ["ground_sea2_1.png"] = "rbxassetid://93028389629730", ["ground_r3b3_1.png"] = "rbxassetid://103749580294335", ["ground_r3b5_1.png"] = "rbxassetid://96138875389062", ["ground_r3b4_1.png"] = "rbxassetid://122662700242947", ["ground_r4d3_1.png"] = "rbxassetid://80335588821204", ["ground_r4e1_1.png"] = "rbxassetid://71537759534162", ["wall_sea5.png"] = "rbxassetid://121989276042041", ["ground_sea5_1.png"] = "rbxassetid://120770918735711", ["ground_sea6_1.png"] = "rbxassetid://82216607848324", ["ground_r1c4_1.png"] = "rbxassetid://98020574553503", ["ground_r2b5_1.png"] = "rbxassetid://105288065839384", ["ground_wkbox_1.png"] = "rbxassetid://91338045795001", ["ground_r2c4_1.png"] = "rbxassetid://115753437369109", ["ground_r2c5_1.png"] = "rbxassetid://80549291242645", ["ground_r3d4_1.png"] = "rbxassetid://118468232445975", ["ground_r4d4_1.png"] = "rbxassetid://117778839393938", ["ground_sea8_1.png"] = "rbxassetid://100524578086246", ["ground_r4es_1.png"] = "rbxassetid://125574607301148", ["ground_r1bl_1.png"] = "rbxassetid://102105250491349", ["ground_r2bl_1.png"] = "rbxassetid://94977117622940", ["ground_r2cl_1.png"] = "rbxassetid://120682725194519", ["ground_r3al_1.png"] = "rbxassetid://84627906941424", ["ground_r3cl_1.png"] = "rbxassetid://81455567612452", ["ground_r4bl_1.png"] = "rbxassetid://103887471752415", ["ground_r4cl_1.png"] = "rbxassetid://133911299211715", ["ground_r4dl_1.png"] = "rbxassetid://78653230925094", ["ground_r1bh_1.png"] = "rbxassetid://115812173236187", ["ground_r2ah_1.png"] = "rbxassetid://118410034190596", ["ground_r2bh_1.png"] = "rbxassetid://132009986769568", ["ground_r3bh_1.png"] = "rbxassetid://88949438100971", ["ground_r4ah_1.png"] = "rbxassetid://92032601099726", ["ground_r4dh_1.png"] = "rbxassetid://139731007351262", ["ground_sea3_1.png"] = "rbxassetid://73022952797720", ["ground_seaf_1.png"] = "rbxassetid://136179698367792", ["ground_sea4_1.png"] = "rbxassetid://133488858131653", ["ground_sea7_1.png"] = "rbxassetid://124740971075210", ["ground_dg1_1.png"] = "rbxassetid://102570354131734", ["ground_dg2_1.png"] = "rbxassetid://101634884884276", ["back_ct_store.png"] = "rbxassetid://126366947246540", ["back_ct_smith.png"] = "rbxassetid://136337303330969", ["back_ct_storage.png"] = "rbxassetid://134573437628573", ["back_ct_auction.png"] = "rbxassetid://111002919148565", ["back_ct_office.png"] = "rbxassetid://130229467844565", ["back_ct_harbor.png"] = "rbxassetid://96974337406579", ["back_ct_inn.png"] = "rbxassetid://110896398622871", ["back_ct_fisher.png"] = "rbxassetid://128557373754841", ["back_ct_stable.png"] = "rbxassetid://110252516764726", ["back_ct_spice.png"] = "rbxassetid://117260792010676", ["back_ct_guardpost.png"] = "rbxassetid://77243987648482", ["back_ct_musician.png"] = "rbxassetid://117717247885748", ["back_ct_flower.png"] = "rbxassetid://111657630555738", ["back_ct_oldhouse.png"] = "rbxassetid://98177958007897", ["back_ct_scribe.png"] = "rbxassetid://91218960586498", ["back_ct_maid.png"] = "rbxassetid://129403102377941", ["back_ct_castle.png"] = "rbxassetid://83503122707807", ["back_ct_terrace.png"] = "rbxassetid://82185564261733", ["vista_ct_terrace.png"] = "rbxassetid://72001134778535", ["back_ct_tower.png"] = "rbxassetid://111423026181041", ["sea_ship_out.png"] = "rbxassetid://80754181448263", ["ship_ship_out.png"] = "rbxassetid://92462106500365", ["sea_ship_home.png"] = "rbxassetid://126176094324469", ["ship_ship_home.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_out.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_out.png"] = "rbxassetid://102557987604449", ["sea_ship_sea_home.png"] = "rbxassetid://126176094324469", ["ship_ship_sea_home.png"] = "rbxassetid://102557987604449", ["sea_air_out.png"] = "rbxassetid://112775081132374", ["ship_air_out.png"] = "rbxassetid://108949678734397", ["sea_air_home.png"] = "rbxassetid://112775081132374", ["ship_air_home.png"] = "rbxassetid://108949678734397", ["worldmap_r1.png"] = "rbxassetid://102843140318075", ["worldmap_city.png"] = "rbxassetid://122109754685398", ["worldmap_r2.png"] = "rbxassetid://100140236436154", ["worldmap_sea.png"] = "rbxassetid://92576107471427", ["worldmap_r3.png"] = "rbxassetid://139284205415304", ["worldmap_r4.png"] = "rbxassetid://140105596121121", ["ui_kit.png"] = "rbxassetid://83956965434168", ["font_small_1.png"] = "rbxassetid://105450659975716", ["font_small_2.png"] = "rbxassetid://107436252829336", ["font_small_o_1.png"] = "rbxassetid://97414893618224", ["font_small_o_2.png"] = "rbxassetid://103679168006398", ["font_body_o_1.png"] = "rbxassetid://111645782980424", ["font_body_o_2.png"] = "rbxassetid://83949705319808", ["font_body_o_3.png"] = "rbxassetid://122937040402111", ["portal.png"] = "rbxassetid://73946472428073", ["title_sky.png"] = "rbxassetid://127573656029589", ["title_clouds.png"] = "rbxassetid://89882326454014", ["title_ridge.png"] = "rbxassetid://129071355183212", ["title_logo.png"] = "rbxassetid://114259324331432", ["title_logo_en.png"] = "rbxassetid://137720983643436", ["cine_mural_axion.png"] = "rbxassetid://75681092154576", ["cine_mural_riven.png"] = "rbxassetid://99331828874405", ["cine_mural_reaper.png"] = "rbxassetid://76473369861673", ["cine_mural_mooni.png"] = "rbxassetid://112784522891949", ["cine_mural_salamander.png"] = "rbxassetid://106361966737710", ["shop_bg.png"] = "rbxassetid://108894476720705" }
 
 end
 MODULES['ReplicatedStorage/shared/lune/data/attend.generated'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
@@ -16143,71 +16143,71 @@ return {
 			name = "리틀 리븐",
 			weapon = "창",
 			tone = "mint",
-			role = "빠른 연타 · 순간이동 · 표식을 쌓아 한꺼번에 터뜨린다",
+			role = "표식을 남기고 그 표식으로 순간이동하며 베어 낸다 — 날렵하고 스킬이 이어진다",
 			old = "창의 용사",
 			skills = {
-				{ id = "rv_fan", name = "창날 부채", ["type"] = "mob", max = 20, text = "앞으로 창바람 세 갈래를 부채꼴로 날린다." },
+				{ id = "rv_fan", name = "초승 베기", ["type"] = "mob", max = 20, text = "앞을 넓게 초승달 모양으로 베고 맞은 적 모두에게 표식을 남긴다. 벤 자리에 남은 칼자국이 곧 부서진다." },
 				{ id = "rv_double", name = "이중 베기", ["type"] = "boss", max = 20, text = "제자리에서 두 번 베며 표식을 남긴다." },
 				{ id = "rv_dash", name = "순보", ["type"] = "move", max = 5, text = "가장 빠르고 짧은 대쉬 — 눈 깜짝할 새 한 걸음, 연달아 쓰기 좋다. 이동만 한다." },
-				{ id = "rv_mark", name = "표식", ["type"] = "core", max = 10, text = "베기에 맞은 적에게 표식 1(8초). 표식이 있는 적에게 크리티컬 확률 +." },
+				{ id = "rv_mark", name = "표식", ["type"] = "core", max = 10, text = "베기에 맞은 적에게 표식 1(8초). 순간이동 기술은 표식이 있는 적에게 날아간다. 표식이 있는 적에게 크리티컬 확률 +." },
 				{ id = "rv_nimble", name = "날랜 몸", ["type"] = "passive", max = 10, text = "걸음 · 뛰는 높이 +, 회피 +." },
-				{ id = "rv_star", name = "그림자 표창", ["type"] = "toggle", max = 10, text = "켜 두면 베기가 맞을 때 40% 확률로 그림자 표창이 가까운 적에게 날아가 표식을 남긴다." },
+				{ id = "rv_star", name = "잔영 베기", ["type"] = "toggle", max = 10, text = "켜 두면 베기가 맞을 때 40% 확률로 내 잔영이 가까운 적의 등 뒤에 나타나 한 번 베고 표식을 남긴다." },
 			},
 			tiers = {
 				{
 					job = 1,
 					lv = 1,
 					skills = {
-						{ id = "rv_fan", name = "창날 부채", ["type"] = "mob", max = 20, text = "앞으로 창바람 세 갈래를 부채꼴로 날린다." },
+						{ id = "rv_fan", name = "초승 베기", ["type"] = "mob", max = 20, text = "앞을 넓게 초승달 모양으로 베고 맞은 적 모두에게 표식을 남긴다. 벤 자리에 남은 칼자국이 곧 부서진다." },
 						{ id = "rv_double", name = "이중 베기", ["type"] = "boss", max = 20, text = "제자리에서 두 번 베며 표식을 남긴다." },
 						{ id = "rv_dash", name = "순보", ["type"] = "move", max = 5, text = "가장 빠르고 짧은 대쉬 — 눈 깜짝할 새 한 걸음, 연달아 쓰기 좋다. 이동만 한다." },
-						{ id = "rv_mark", name = "표식", ["type"] = "core", max = 10, text = "베기에 맞은 적에게 표식 1(8초). 표식이 있는 적에게 크리티컬 확률 +." },
+						{ id = "rv_mark", name = "표식", ["type"] = "core", max = 10, text = "베기에 맞은 적에게 표식 1(8초). 순간이동 기술은 표식이 있는 적에게 날아간다. 표식이 있는 적에게 크리티컬 확률 +." },
 						{ id = "rv_nimble", name = "날랜 몸", ["type"] = "passive", max = 10, text = "걸음 · 뛰는 높이 +, 회피 +." },
-						{ id = "rv_star", name = "그림자 표창", ["type"] = "toggle", max = 10, text = "켜 두면 베기가 맞을 때 40% 확률로 그림자 표창이 가까운 적에게 날아가 표식을 남긴다.", needs = "rv_mark" },
+						{ id = "rv_star", name = "잔영 베기", ["type"] = "toggle", max = 10, text = "켜 두면 베기가 맞을 때 40% 확률로 내 잔영이 가까운 적의 등 뒤에 나타나 한 번 베고 표식을 남긴다.", needs = "rv_mark" },
 					},
 				},
 				{
 					job = 2,
 					lv = 30,
 					skills = {
-						{ id = "rv_gale", name = "질풍 일섬", ["type"] = "mob", max = 20, text = "앞으로 꿰뚫고 지나가며 길 위의 적을 모두 벤다. 두 번까지 이어 쓸 수 있고 공중에서도 된다.", replaces = "rv_fan" },
-						{ id = "rv_cross", name = "교차 베기", ["type"] = "boss", max = 20, text = "제자리에서 적 하나를 X자로 긋는다. 등 뒤에서 치면 데미지 +.", replaces = "rv_double" },
-						{ id = "rv_step", name = "연막 순보", ["type"] = "attack", max = 10, text = "연기 속으로 사라졌다가 가까운 적 뒤에 나타나 벤다. 화면의 표식을 모두 터뜨린다. 다시 쓰기 3초.", needs = "rv_mark", cd = 3 },
-						{ id = "rv_star2", name = "쌍표창", ["type"] = "passive", max = 10, text = "그림자 표창이 둘씩 날아간다.", needs = "rv_star" },
+						{ id = "rv_gale", name = "질풍 일섬", ["type"] = "mob", max = 20, text = "누르는 순간 앞으로 꿰뚫고 내달려 지나온 길의 적을 한 번에 모두 벤다. 공중에서도 된다.", replaces = "rv_fan" },
+						{ id = "rv_cross", name = "배후 교차", ["type"] = "boss", max = 20, text = "가까운 적의 등 뒤로 순간이동해 X자로 긋는다(늘 등 뒤에서 친다). 가까이에 적이 없으면 제자리에서 긋는다.", replaces = "rv_double" },
+						{ id = "rv_step", name = "섬영", ["type"] = "attack", max = 10, text = "누르는 순간 표식이 있는 가장 가까운 적(260도트 안 · 앞뒤 모두)에게 순간이동해 베고 그 표식을 터뜨린다 — 다른 스킬을 쓰는 중에도 쓴다. 표식을 터뜨리면 다시 쓰기가 바로 돌아온다(같은 적은 3초에 한 번) — 표식에서 표식으로 이어 뛴다. 표식이 없으면 가까운 적(220도트 안)에게. 다시 쓰기 3초.", needs = "rv_mark", cd = 3 },
+						{ id = "rv_star2", name = "겹 잔영", ["type"] = "passive", max = 10, text = "잔영 베기의 잔영이 둘 — 맞은 적의 등 뒤에도 하나가 나타나 벤다.", needs = "rv_star" },
 						{ id = "rv_quick", name = "가벼운 손", ["type"] = "buff", max = 10, text = "60초 동안 공격 속도가 한 단계 빨라진다. 끝나기 전에 다시 건다.", dur = 60 },
 						{ id = "rv_mastery", name = "창 숙련", ["type"] = "passive", max = 10, text = "최종 데미지 +, 공격력 +, 크리티컬 확률 +." },
-						{ id = "rv_back", name = "급소", ["type"] = "passive", max = 10, text = "표식이 있는 적을 등 뒤에서 치면 표식이 하나 더 남고 크리티컬 데미지 +.", needs = "rv_mark" },
+						{ id = "rv_back", name = "그림자 일격", ["type"] = "passive", max = 10, text = "순간이동한 뒤 1초 동안의 공격은 연계기 — 크리티컬 데미지 +, 맞힌 적에게 표식 하나 더.", needs = "rv_mark" },
 					},
 				},
 				{
 					job = 3,
 					lv = 60,
 					skills = {
-						{ id = "rv_lance", name = "그림자 창", ["type"] = "mob", max = 20, text = "그림자 창 넷이 앞으로 꿰뚫고 지나간다. 맞은 적에게 표식을 남긴다.", replaces = "rv_gale" },
+						{ id = "rv_lance", name = "섬광 연참", ["type"] = "mob", max = 20, text = "앞 150도트 안의 적 다섯까지 사이를 순간이동하며 차례로 벤다(표식이 있는 적부터). 끝난 자리에 선다. 맞은 적에게 표식을 남긴다.", replaces = "rv_gale" },
 						{ id = "rv_chain", name = "연쇄 순보", ["type"] = "move", max = 5, text = "연기와 잔상을 남기며 앞으로 순간이동을 세 번 잇는다(레벨이 오를수록 멀리). 공중에서도 된다. 다시 쓰기 5초.", cd = 5 },
-						{ id = "rv_flurry", name = "난도질", ["type"] = "boss", max = 20, text = "누르고 있는 동안 제자리에서 아주 빠르게 벤다(1초에 8번). 네 번마다 표식 1.", replaces = "rv_cross" },
+						{ id = "rv_flurry", name = "잔영 난무", ["type"] = "boss", max = 20, text = "누르고 있는 동안 제자리에서 아주 빠르게 벤다(1초에 8번) — 내 잔영이 적의 등 뒤 · 머리 위에 번갈아 나타나 함께 벤다. 네 번마다 표식 1.", replaces = "rv_cross" },
 						{ id = "rv_clone", name = "그림자 분신", ["type"] = "buff", max = 10, text = "60초 동안 분신이 뒤따르며 내 베기를 반 박자 늦게 따라 한다(피해 40%). 분신의 베기도 표식을 남긴다.", dur = 60 },
-						{ id = "rv_smoke", name = "연막탄", ["type"] = "install", max = 10, text = "8초 동안 연막을 깐다. 연막 안의 나는 적 눈에 띄지 않고 크리티컬 데미지 +. 다시 쓰기 30초.", dur = 8, cd = 30 },
+						{ id = "rv_smoke", name = "월영 비수", ["type"] = "attack", max = 10, text = "발밑에 표식 비수를 꽂는다(10초). 한 번 더 누르면 비수 자리로 순간이동하며 지나간 길의 적을 모두 베고 표식을 남긴다. 다시 쓰기 10초(돌아온 뒤부터).", dur = 10, cd = 10 },
 						{ id = "rv_slip", name = "그림자 숨기", ["type"] = "guard", max = 5, text = "3초 동안 그림자가 되어 모든 공격이 나를 지나간다. 다시 쓰기 120초.", dur = 3, cd = 120 },
 						{ id = "rv_mark2", name = "깊은 표식", ["type"] = "passive", max = 10, text = "표식이 3까지 겹친다. 터질 때 표식 수만큼 세다.", needs = "rv_mark" },
-						{ id = "rv_venom", name = "스미는 독", ["type"] = "passive", max = 10, text = "표식이 있는 적은 초마다 독 피해를 받는다. 표식 수만큼 세다.", needs = "rv_mark" },
-						{ id = "rv_star3", name = "되돌아오는 표창", ["type"] = "passive", max = 10, text = "표창이 적을 맞힌 뒤 가까운 다른 적에게 한 번 튕긴다.", needs = "rv_star2" },
+						{ id = "rv_venom", name = "표식 공명", ["type"] = "passive", max = 10, text = "표식이 터질 때 둘레(90도트)의 다른 표식이 민트 번개로 이어져 함께 터진다(그 표식 수만큼 · 절반의 세기).", needs = "rv_mark" },
+						{ id = "rv_star3", name = "잔영 연격", ["type"] = "passive", max = 10, text = "잔영이 벤 뒤 가까운 다른 적의 등 뒤로 한 번 더 순간이동해 벤다.", needs = "rv_star2" },
 					},
 				},
 				{
 					job = 4,
 					lv = 100,
 					skills = {
-						{ id = "rv_phantom", name = "무영참", ["type"] = "mob", max = 30, text = "누르는 순간 앞 넓은 범위에 보이지 않는 창질 여섯 번이 한꺼번에 그어진다. 쓰고 바로 움직일 수 있다.", replaces = "rv_lance" },
-						{ id = "rv_kill", name = "암살", ["type"] = "boss", max = 30, text = "누르면 여섯 번 찌르고, 한 번 더 누르면 마무리 일격. 표식이 가득한 적에게는 마무리가 훨씬 세다.", replaces = "rv_flurry" },
-						{ id = "rv_star4", name = "피의 표창", ["type"] = "passive", max = 10, text = "표창이 날아갈 확률 70%. 표식이 가득한 적에게 닿으면 터지며 데미지 +.", needs = "rv_star3" },
-						{ id = "rv_eclipse", name = "월식", ["type"] = "burst", max = 10, text = "20초 동안 화면이 어두워지고 모든 베기가 표식 2, 최종 데미지 +. 다시 쓰기 120초.", dur = 20, cd = 120 },
+						{ id = "rv_phantom", name = "무영 섬", ["type"] = "mob", max = 30, text = "앞 240도트 안의 적 사이를 번개처럼 여섯 번 오가며 긋고 제자리로 돌아온다 — 허공에 남은 칼자국이 한꺼번에 터진다. 쓰고 바로 움직일 수 있다.", replaces = "rv_lance" },
+						{ id = "rv_kill", name = "암살 연계", ["type"] = "boss", max = 30, text = "누르면 적의 등 뒤로 순간이동해 여섯 번 찌르고, 한 번 더 누르면 머리 위에서 내리꽂는 마무리. 표식이 가득한 적에게는 마무리가 훨씬 세다.", replaces = "rv_flurry" },
+						{ id = "rv_star4", name = "잔영 폭발", ["type"] = "passive", max = 10, text = "잔영이 나올 확률 70%. 표식이 있는 적을 벨 때 터지며 데미지 +.", needs = "rv_star3" },
+						{ id = "rv_eclipse", name = "월식", ["type"] = "burst", max = 10, text = "20초 동안 화면이 어두워지고 모든 베기가 표식 2, 최종 데미지 +, 섬영을 다시 쓰기 없이 이어 쓴다. 다시 쓰기 120초.", dur = 20, cd = 120 },
 						{ id = "rv_cleave", name = "천지 가르기", ["type"] = "attack", max = 10, text = "그림자처럼 좌우로 내달리며 화면을 베어 낸다. 맵의 모든 적이 그 순간 한꺼번에 맞고 표식이 남는다. 다시 쓰기 12초.", cd = 12 },
 						{ id = "rv_shadow", name = "그림자 난무", ["type"] = "nuke", max = 20, text = "모습을 감추고 화면을 다섯 번 긋고 X자로 마무리한다. 표식을 모두 터뜨린다. 다시 쓰기 60초.", cd = 60 },
 						{ id = "rv_execute", name = "종결", ["type"] = "attack", max = 15, text = "표식이 가득한 적 하나에게 순간이동해 표식을 모두 태우는 큰 한 방. 다시 쓰기 20초 — 그 적이 쓰러지면 바로 다시 쓴다.", needs = "rv_mark2", cd = 20 },
-						{ id = "rv_clone2", name = "쌍영", ["type"] = "passive", max = 10, text = "분신이 둘. 연막 순보 · 종결 때 분신도 같이 순간이동해 벤다.", needs = "rv_clone" },
+						{ id = "rv_clone2", name = "쌍영", ["type"] = "passive", max = 10, text = "분신이 둘. 섬영 · 종결 때 분신도 같이 순간이동해 벤다.", needs = "rv_clone" },
 						{ id = "rv_expert", name = "창 달인", ["type"] = "passive", max = 10, text = "최종 데미지 +, 공격력 +, 크리티컬 데미지 +.", needs = "rv_mastery" },
-						{ id = "rv_intent", name = "살의", ["type"] = "passive", max = 10, text = "최종 데미지 +. 질풍 일섬 · 그림자 창의 피해가 크게 오른다(옛 사냥기를 계속 쓴다)." },
+						{ id = "rv_intent", name = "살의", ["type"] = "passive", max = 10, text = "최종 데미지 +. 질풍 일섬 · 섬광 연참의 피해가 크게 오른다(옛 사냥기를 계속 쓴다)." },
 						{ id = "rv_feint", name = "흘리기", ["type"] = "passive", max = 10, text = "회피 +. 공격을 피하면 다음 베기가 반드시 크리티컬이고 표식을 하나 더 남긴다.", needs = "rv_mark" },
 						{ id = "c_hero", name = "달의 용사", ["type"] = "party", max = 10, text = "60초 동안 파티 모두의 기본 능력치 +15%. 끝나기 전에 다시 건다.", dur = 60 },
 						{ id = "c_will", name = "용사의 의지", ["type"] = "guard", max = 5, text = "걸려 있는 상태 이상을 모두 풀고 3초 동안 걸리지 않는다. 다시 쓰기 300초.", dur = 3, cd = 300 },
@@ -18402,7 +18402,7 @@ return {
 			shots = {  },
 		},
 		rv_fan = {
-			name = "창날 부채",
+			name = "초승 베기",
 			who = "riven",
 			job = 1,
 			["type"] = "mob",
@@ -18735,23 +18735,6 @@ return {
 			hits = {  },
 			shots = {  },
 		},
-		rv_smoke = {
-			name = "연막탄",
-			who = "riven",
-			job = 3,
-			["type"] = "install",
-			key = "C",
-			max = 10,
-			time = 0.3333,
-			cd = 30,
-			speed = nil,
-			dist = nil,
-			segs = {
-				{ clip = "cast", from = 0, to = 5, fps = 18, time = 0.3333, next = false, walk = 0, turn = false, charge = false },
-			},
-			hits = {  },
-			shots = {  },
-		},
 		mn_plant = {
 			name = "수정 심기",
 			who = "mooni",
@@ -18846,7 +18829,7 @@ return {
 		ax_echo = { "끝까지 모아 친 한 방에 맞은 적을 한 번 더 벤다 — 그 타 피해의 14%", "끝까지 모아 친 한 방에 맞은 적을 한 번 더 벤다 — 그 타 피해의 14.7%", "끝까지 모아 친 한 방에 맞은 적을 한 번 더 벤다 — 그 타 피해의 15.3%", "끝까지 모아 친 한 방에 맞은 적을 한 번 더 벤다 — 그 타 피해의 16%", "끝까지 모아 친 한 방에 맞은 적을 한 번 더 벤다 — 그 타 피해의 16.7%", "끝까지 모아 친 한 방에 맞은 적을 한 번 더 벤다 — 그 타 피해의 17.3%", "끝까지 모아 친 한 방에 맞은 적을 한 번 더 벤다 — 그 타 피해의 18%", "끝까지 모아 친 한 방에 맞은 적을 한 번 더 벤다 — 그 타 피해의 18.7%", "끝까지 모아 친 한 방에 맞은 적을 한 번 더 벤다 — 그 타 피해의 19.3%", "끝까지 모아 친 한 방에 맞은 적을 한 번 더 벤다 — 그 타 피해의 20%" },
 		ax_charge = { "2단계까지 · 모은 시간만큼 세지고 단계마다 초당 데미지 +8% · 닿는 거리 +10", "2단계까지 · 모은 시간만큼 세지고 단계마다 초당 데미지 +8.4% · 닿는 거리 +10", "2단계까지 · 모은 시간만큼 세지고 단계마다 초당 데미지 +8.9% · 닿는 거리 +10", "2단계까지 · 모은 시간만큼 세지고 단계마다 초당 데미지 +9.3% · 닿는 거리 +10", "2단계까지 · 모은 시간만큼 세지고 단계마다 초당 데미지 +9.8% · 닿는 거리 +10", "2단계까지 · 모은 시간만큼 세지고 단계마다 초당 데미지 +10.2% · 닿는 거리 +10", "2단계까지 · 모은 시간만큼 세지고 단계마다 초당 데미지 +10.7% · 닿는 거리 +10", "2단계까지 · 모은 시간만큼 세지고 단계마다 초당 데미지 +11.1% · 닿는 거리 +10", "2단계까지 · 모은 시간만큼 세지고 단계마다 초당 데미지 +11.6% · 닿는 거리 +10", "2단계까지 · 모은 시간만큼 세지고 단계마다 초당 데미지 +12% · 닿는 거리 +10" },
 		ax_grit = { "최대 체력 +14%", "최대 체력 +14.7%", "최대 체력 +15.3%", "최대 체력 +16%", "최대 체력 +16.7%", "최대 체력 +17.3%", "최대 체력 +18%", "최대 체력 +18.7%", "최대 체력 +19.3%", "최대 체력 +20%" },
-		rv_star = { "베기가 맞으면 40% 확률로 표창 — 그 타 피해의 31.5%, 표식을 남긴다", "베기가 맞으면 40% 확률로 표창 — 그 타 피해의 33%, 표식을 남긴다", "베기가 맞으면 40% 확률로 표창 — 그 타 피해의 34.5%, 표식을 남긴다", "베기가 맞으면 40% 확률로 표창 — 그 타 피해의 36%, 표식을 남긴다", "베기가 맞으면 40% 확률로 표창 — 그 타 피해의 37.5%, 표식을 남긴다", "베기가 맞으면 40% 확률로 표창 — 그 타 피해의 39%, 표식을 남긴다", "베기가 맞으면 40% 확률로 표창 — 그 타 피해의 40.5%, 표식을 남긴다", "베기가 맞으면 40% 확률로 표창 — 그 타 피해의 42%, 표식을 남긴다", "베기가 맞으면 40% 확률로 표창 — 그 타 피해의 43.5%, 표식을 남긴다", "베기가 맞으면 40% 확률로 표창 — 그 타 피해의 45%, 표식을 남긴다" },
+		rv_star = { "베기가 맞으면 40% 확률로 잔영이 벤다 — 그 타 피해의 31.5%, 표식을 남긴다", "베기가 맞으면 40% 확률로 잔영이 벤다 — 그 타 피해의 33%, 표식을 남긴다", "베기가 맞으면 40% 확률로 잔영이 벤다 — 그 타 피해의 34.5%, 표식을 남긴다", "베기가 맞으면 40% 확률로 잔영이 벤다 — 그 타 피해의 36%, 표식을 남긴다", "베기가 맞으면 40% 확률로 잔영이 벤다 — 그 타 피해의 37.5%, 표식을 남긴다", "베기가 맞으면 40% 확률로 잔영이 벤다 — 그 타 피해의 39%, 표식을 남긴다", "베기가 맞으면 40% 확률로 잔영이 벤다 — 그 타 피해의 40.5%, 표식을 남긴다", "베기가 맞으면 40% 확률로 잔영이 벤다 — 그 타 피해의 42%, 표식을 남긴다", "베기가 맞으면 40% 확률로 잔영이 벤다 — 그 타 피해의 43.5%, 표식을 남긴다", "베기가 맞으면 40% 확률로 잔영이 벤다 — 그 타 피해의 45%, 표식을 남긴다" },
 		rv_mark = { "표식 8초 · 표식이 있는 적에게 크리티컬 확률 +21%(크리티컬는 피해 1.5배)", "표식 8초 · 표식이 있는 적에게 크리티컬 확률 +22%(크리티컬는 피해 1.5배)", "표식 8초 · 표식이 있는 적에게 크리티컬 확률 +23%(크리티컬는 피해 1.5배)", "표식 8초 · 표식이 있는 적에게 크리티컬 확률 +24%(크리티컬는 피해 1.5배)", "표식 8초 · 표식이 있는 적에게 크리티컬 확률 +25%(크리티컬는 피해 1.5배)", "표식 8초 · 표식이 있는 적에게 크리티컬 확률 +26%(크리티컬는 피해 1.5배)", "표식 8초 · 표식이 있는 적에게 크리티컬 확률 +27%(크리티컬는 피해 1.5배)", "표식 8초 · 표식이 있는 적에게 크리티컬 확률 +28%(크리티컬는 피해 1.5배)", "표식 8초 · 표식이 있는 적에게 크리티컬 확률 +29%(크리티컬는 피해 1.5배)", "표식 8초 · 표식이 있는 적에게 크리티컬 확률 +30%(크리티컬는 피해 1.5배)" },
 		rv_nimble = { "걸음 +7% · 뛰는 힘 +3.5% · 회피 7%", "걸음 +7.3% · 뛰는 힘 +3.7% · 회피 7.3%", "걸음 +7.7% · 뛰는 힘 +3.8% · 회피 7.7%", "걸음 +8% · 뛰는 힘 +4% · 회피 8%", "걸음 +8.3% · 뛰는 힘 +4.2% · 회피 8.3%", "걸음 +8.7% · 뛰는 힘 +4.3% · 회피 8.7%", "걸음 +9% · 뛰는 힘 +4.5% · 회피 9%", "걸음 +9.3% · 뛰는 힘 +4.7% · 회피 9.3%", "걸음 +9.7% · 뛰는 힘 +4.8% · 회피 9.7%", "걸음 +10% · 뛰는 힘 +5% · 회피 10%" },
 		rp_wisp = { "낫질이 맞으면 2초에 한 번 도깨비불 — 초당 피해의 12.6%", "낫질이 맞으면 2초에 한 번 도깨비불 — 초당 피해의 13.2%", "낫질이 맞으면 2초에 한 번 도깨비불 — 초당 피해의 13.8%", "낫질이 맞으면 2초에 한 번 도깨비불 — 초당 피해의 14.4%", "낫질이 맞으면 2초에 한 번 도깨비불 — 초당 피해의 15%", "낫질이 맞으면 2초에 한 번 도깨비불 — 초당 피해의 15.6%", "낫질이 맞으면 2초에 한 번 도깨비불 — 초당 피해의 16.2%", "낫질이 맞으면 2초에 한 번 도깨비불 — 초당 피해의 16.8%", "낫질이 맞으면 2초에 한 번 도깨비불 — 초당 피해의 17.4%", "낫질이 맞으면 2초에 한 번 도깨비불 — 초당 피해의 18%" },
@@ -18889,7 +18872,6 @@ return {
 		mn_sanct = { "데미지 +21% · 받는 피해 -14% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +21.5% · 받는 피해 -14.3% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +21.9% · 받는 피해 -14.6% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +22.4% · 받는 피해 -14.9% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +22.9% · 받는 피해 -15.3% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +23.4% · 받는 피해 -15.6% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +23.8% · 받는 피해 -15.9% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +24.3% · 받는 피해 -16.2% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +24.8% · 받는 피해 -16.5% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +25.3% · 받는 피해 -16.8% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +25.7% · 받는 피해 -17.2% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +26.2% · 받는 피해 -17.5% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +26.7% · 받는 피해 -17.8% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +27.2% · 받는 피해 -18.1% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +27.6% · 받는 피해 -18.4% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +28.1% · 받는 피해 -18.7% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +28.6% · 받는 피해 -19.1% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +29.1% · 받는 피해 -19.4% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +29.5% · 받는 피해 -19.7% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초", "데미지 +30% · 받는 피해 -20% · 원 안의 나와 파티원 — 20초 · 다시 쓰기 120초" },
 		sl_overheat = { "데미지 +21% — 20초 · 다시 쓰기 120초", "데미지 +21.5% — 20초 · 다시 쓰기 120초", "데미지 +21.9% — 20초 · 다시 쓰기 120초", "데미지 +22.4% — 20초 · 다시 쓰기 120초", "데미지 +22.9% — 20초 · 다시 쓰기 120초", "데미지 +23.4% — 20초 · 다시 쓰기 120초", "데미지 +23.8% — 20초 · 다시 쓰기 120초", "데미지 +24.3% — 20초 · 다시 쓰기 120초", "데미지 +24.8% — 20초 · 다시 쓰기 120초", "데미지 +25.3% — 20초 · 다시 쓰기 120초", "데미지 +25.7% — 20초 · 다시 쓰기 120초", "데미지 +26.2% — 20초 · 다시 쓰기 120초", "데미지 +26.7% — 20초 · 다시 쓰기 120초", "데미지 +27.2% — 20초 · 다시 쓰기 120초", "데미지 +27.6% — 20초 · 다시 쓰기 120초", "데미지 +28.1% — 20초 · 다시 쓰기 120초", "데미지 +28.6% — 20초 · 다시 쓰기 120초", "데미지 +29.1% — 20초 · 다시 쓰기 120초", "데미지 +29.5% — 20초 · 다시 쓰기 120초", "데미지 +30% — 20초 · 다시 쓰기 120초" },
 		rv_clone = { "분신이 따라 벤다 — 그 타 피해의 28% — 60초", "분신이 따라 벤다 — 그 타 피해의 29.3% — 60초", "분신이 따라 벤다 — 그 타 피해의 30.7% — 60초", "분신이 따라 벤다 — 그 타 피해의 32% — 60초", "분신이 따라 벤다 — 그 타 피해의 33.3% — 60초", "분신이 따라 벤다 — 그 타 피해의 34.7% — 60초", "분신이 따라 벤다 — 그 타 피해의 36% — 60초", "분신이 따라 벤다 — 그 타 피해의 37.3% — 60초", "분신이 따라 벤다 — 그 타 피해의 38.7% — 60초", "분신이 따라 벤다 — 그 타 피해의 40% — 60초" },
-		rv_smoke = { "안에서 데미지 +14%", "안에서 데미지 +14.7%", "안에서 데미지 +15.3%", "안에서 데미지 +16%", "안에서 데미지 +16.7%", "안에서 데미지 +17.3%", "안에서 데미지 +18%", "안에서 데미지 +18.7%", "안에서 데미지 +19.3%", "안에서 데미지 +20%" },
 		c_hero = { "데미지 +3.5% · 같은 맵의 파티원에게도 — 60초", "데미지 +3.7% · 같은 맵의 파티원에게도 — 60초", "데미지 +3.8% · 같은 맵의 파티원에게도 — 60초", "데미지 +4% · 같은 맵의 파티원에게도 — 60초", "데미지 +4.2% · 같은 맵의 파티원에게도 — 60초", "데미지 +4.3% · 같은 맵의 파티원에게도 — 60초", "데미지 +4.5% · 같은 맵의 파티원에게도 — 60초", "데미지 +4.7% · 같은 맵의 파티원에게도 — 60초", "데미지 +4.8% · 같은 맵의 파티원에게도 — 60초", "데미지 +5% · 같은 맵의 파티원에게도 — 60초" },
 		mn_plant = { "발 앞에 달 수정 하나", "발 앞에 달 수정 하나", "발 앞에 달 수정 하나", "발 앞에 달 수정 하나", "발 앞에 달 수정 하나", "발 앞에 달 수정 하나", "발 앞에 달 수정 하나", "발 앞에 달 수정 하나", "발 앞에 달 수정 하나", "발 앞에 달 수정 하나" },
 		sl_furnace = { "0.5초마다 초당 피해의 21% · 곁에서는 열기 +5/초", "0.5초마다 초당 피해의 22% · 곁에서는 열기 +5/초", "0.5초마다 초당 피해의 23% · 곁에서는 열기 +5/초", "0.5초마다 초당 피해의 24% · 곁에서는 열기 +5/초", "0.5초마다 초당 피해의 25% · 곁에서는 열기 +5/초", "0.5초마다 초당 피해의 26% · 곁에서는 열기 +5/초", "0.5초마다 초당 피해의 27% · 곁에서는 열기 +5/초", "0.5초마다 초당 피해의 28% · 곁에서는 열기 +5/초", "0.5초마다 초당 피해의 29% · 곁에서는 열기 +5/초", "0.5초마다 초당 피해의 30% · 곁에서는 열기 +5/초" },
@@ -18900,9 +18882,9 @@ return {
 		ax_echo2 = { "메아리 도끼의 데미지 +35%", "메아리 도끼의 데미지 +36.7%", "메아리 도끼의 데미지 +38.3%", "메아리 도끼의 데미지 +40%", "메아리 도끼의 데미지 +41.7%", "메아리 도끼의 데미지 +43.3%", "메아리 도끼의 데미지 +45%", "메아리 도끼의 데미지 +46.7%", "메아리 도끼의 데미지 +48.3%", "메아리 도끼의 데미지 +50%" },
 		ax_echo3 = { "벤 자리 둘레의 다른 적에게 도끼 피해의 28%", "벤 자리 둘레의 다른 적에게 도끼 피해의 29.3%", "벤 자리 둘레의 다른 적에게 도끼 피해의 30.7%", "벤 자리 둘레의 다른 적에게 도끼 피해의 32%", "벤 자리 둘레의 다른 적에게 도끼 피해의 33.3%", "벤 자리 둘레의 다른 적에게 도끼 피해의 34.7%", "벤 자리 둘레의 다른 적에게 도끼 피해의 36%", "벤 자리 둘레의 다른 적에게 도끼 피해의 37.3%", "벤 자리 둘레의 다른 적에게 도끼 피해의 38.7%", "벤 자리 둘레의 다른 적에게 도끼 피해의 40%" },
 		ax_echo4 = { "힘 모으기 4단계까지 · 메아리 도끼가 더 크고 데미지 +21%", "힘 모으기 4단계까지 · 메아리 도끼가 더 크고 데미지 +22%", "힘 모으기 4단계까지 · 메아리 도끼가 더 크고 데미지 +23%", "힘 모으기 4단계까지 · 메아리 도끼가 더 크고 데미지 +24%", "힘 모으기 4단계까지 · 메아리 도끼가 더 크고 데미지 +25%", "힘 모으기 4단계까지 · 메아리 도끼가 더 크고 데미지 +26%", "힘 모으기 4단계까지 · 메아리 도끼가 더 크고 데미지 +27%", "힘 모으기 4단계까지 · 메아리 도끼가 더 크고 데미지 +28%", "힘 모으기 4단계까지 · 메아리 도끼가 더 크고 데미지 +29%", "힘 모으기 4단계까지 · 메아리 도끼가 더 크고 데미지 +30%" },
-		rv_star2 = { "맞은 적에게도 표창 하나 — 첫 표창 피해의 35%", "맞은 적에게도 표창 하나 — 첫 표창 피해의 36.7%", "맞은 적에게도 표창 하나 — 첫 표창 피해의 38.3%", "맞은 적에게도 표창 하나 — 첫 표창 피해의 40%", "맞은 적에게도 표창 하나 — 첫 표창 피해의 41.7%", "맞은 적에게도 표창 하나 — 첫 표창 피해의 43.3%", "맞은 적에게도 표창 하나 — 첫 표창 피해의 45%", "맞은 적에게도 표창 하나 — 첫 표창 피해의 46.7%", "맞은 적에게도 표창 하나 — 첫 표창 피해의 48.3%", "맞은 적에게도 표창 하나 — 첫 표창 피해의 50%" },
-		rv_star3 = { "맞힌 뒤 가까운 다른 적에게 한 번 튕긴다 — 표창 피해의 35%", "맞힌 뒤 가까운 다른 적에게 한 번 튕긴다 — 표창 피해의 36.7%", "맞힌 뒤 가까운 다른 적에게 한 번 튕긴다 — 표창 피해의 38.3%", "맞힌 뒤 가까운 다른 적에게 한 번 튕긴다 — 표창 피해의 40%", "맞힌 뒤 가까운 다른 적에게 한 번 튕긴다 — 표창 피해의 41.7%", "맞힌 뒤 가까운 다른 적에게 한 번 튕긴다 — 표창 피해의 43.3%", "맞힌 뒤 가까운 다른 적에게 한 번 튕긴다 — 표창 피해의 45%", "맞힌 뒤 가까운 다른 적에게 한 번 튕긴다 — 표창 피해의 46.7%", "맞힌 뒤 가까운 다른 적에게 한 번 튕긴다 — 표창 피해의 48.3%", "맞힌 뒤 가까운 다른 적에게 한 번 튕긴다 — 표창 피해의 50%" },
-		rv_star4 = { "표창이 날아갈 확률 61% · 표식이 있는 적에게 데미지 +35%", "표창이 날아갈 확률 62% · 표식이 있는 적에게 데미지 +36.7%", "표창이 날아갈 확률 63% · 표식이 있는 적에게 데미지 +38.3%", "표창이 날아갈 확률 64% · 표식이 있는 적에게 데미지 +40%", "표창이 날아갈 확률 65% · 표식이 있는 적에게 데미지 +41.7%", "표창이 날아갈 확률 66% · 표식이 있는 적에게 데미지 +43.3%", "표창이 날아갈 확률 67% · 표식이 있는 적에게 데미지 +45%", "표창이 날아갈 확률 68% · 표식이 있는 적에게 데미지 +46.7%", "표창이 날아갈 확률 69% · 표식이 있는 적에게 데미지 +48.3%", "표창이 날아갈 확률 70% · 표식이 있는 적에게 데미지 +50%" },
+		rv_star2 = { "맞은 적의 등 뒤에도 잔영 하나 — 첫 잔영 피해의 35%", "맞은 적의 등 뒤에도 잔영 하나 — 첫 잔영 피해의 36.7%", "맞은 적의 등 뒤에도 잔영 하나 — 첫 잔영 피해의 38.3%", "맞은 적의 등 뒤에도 잔영 하나 — 첫 잔영 피해의 40%", "맞은 적의 등 뒤에도 잔영 하나 — 첫 잔영 피해의 41.7%", "맞은 적의 등 뒤에도 잔영 하나 — 첫 잔영 피해의 43.3%", "맞은 적의 등 뒤에도 잔영 하나 — 첫 잔영 피해의 45%", "맞은 적의 등 뒤에도 잔영 하나 — 첫 잔영 피해의 46.7%", "맞은 적의 등 뒤에도 잔영 하나 — 첫 잔영 피해의 48.3%", "맞은 적의 등 뒤에도 잔영 하나 — 첫 잔영 피해의 50%" },
+		rv_star3 = { "벤 뒤 가까운 다른 적에게 한 번 더 — 잔영 피해의 35%", "벤 뒤 가까운 다른 적에게 한 번 더 — 잔영 피해의 36.7%", "벤 뒤 가까운 다른 적에게 한 번 더 — 잔영 피해의 38.3%", "벤 뒤 가까운 다른 적에게 한 번 더 — 잔영 피해의 40%", "벤 뒤 가까운 다른 적에게 한 번 더 — 잔영 피해의 41.7%", "벤 뒤 가까운 다른 적에게 한 번 더 — 잔영 피해의 43.3%", "벤 뒤 가까운 다른 적에게 한 번 더 — 잔영 피해의 45%", "벤 뒤 가까운 다른 적에게 한 번 더 — 잔영 피해의 46.7%", "벤 뒤 가까운 다른 적에게 한 번 더 — 잔영 피해의 48.3%", "벤 뒤 가까운 다른 적에게 한 번 더 — 잔영 피해의 50%" },
+		rv_star4 = { "잔영이 나올 확률 61% · 표식이 있는 적에게 데미지 +35%", "잔영이 나올 확률 62% · 표식이 있는 적에게 데미지 +36.7%", "잔영이 나올 확률 63% · 표식이 있는 적에게 데미지 +38.3%", "잔영이 나올 확률 64% · 표식이 있는 적에게 데미지 +40%", "잔영이 나올 확률 65% · 표식이 있는 적에게 데미지 +41.7%", "잔영이 나올 확률 66% · 표식이 있는 적에게 데미지 +43.3%", "잔영이 나올 확률 67% · 표식이 있는 적에게 데미지 +45%", "잔영이 나올 확률 68% · 표식이 있는 적에게 데미지 +46.7%", "잔영이 나올 확률 69% · 표식이 있는 적에게 데미지 +48.3%", "잔영이 나올 확률 70% · 표식이 있는 적에게 데미지 +50%" },
 		rp_wisp2 = { "영혼 둘마다 도깨비불이 하나 더(4발까지) — 첫 불 피해의 35%씩", "영혼 둘마다 도깨비불이 하나 더(4발까지) — 첫 불 피해의 36.7%씩", "영혼 둘마다 도깨비불이 하나 더(4발까지) — 첫 불 피해의 38.3%씩", "영혼 둘마다 도깨비불이 하나 더(4발까지) — 첫 불 피해의 40%씩", "영혼 둘마다 도깨비불이 하나 더(4발까지) — 첫 불 피해의 41.7%씩", "영혼 둘마다 도깨비불이 하나 더(4발까지) — 첫 불 피해의 43.3%씩", "영혼 둘마다 도깨비불이 하나 더(4발까지) — 첫 불 피해의 45%씩", "영혼 둘마다 도깨비불이 하나 더(4발까지) — 첫 불 피해의 46.7%씩", "영혼 둘마다 도깨비불이 하나 더(4발까지) — 첫 불 피해의 48.3%씩", "영혼 둘마다 도깨비불이 하나 더(4발까지) — 첫 불 피해의 50%씩" },
 		rp_wisp3 = { "맞은 적에게 붙어 3초 동안 초마다 도깨비불 피해의 10.5%", "맞은 적에게 붙어 3초 동안 초마다 도깨비불 피해의 11%", "맞은 적에게 붙어 3초 동안 초마다 도깨비불 피해의 11.5%", "맞은 적에게 붙어 3초 동안 초마다 도깨비불 피해의 12%", "맞은 적에게 붙어 3초 동안 초마다 도깨비불 피해의 12.5%", "맞은 적에게 붙어 3초 동안 초마다 도깨비불 피해의 13%", "맞은 적에게 붙어 3초 동안 초마다 도깨비불 피해의 13.5%", "맞은 적에게 붙어 3초 동안 초마다 도깨비불 피해의 14%", "맞은 적에게 붙어 3초 동안 초마다 도깨비불 피해의 14.5%", "맞은 적에게 붙어 3초 동안 초마다 도깨비불 피해의 15%" },
 		rp_wisp4 = { "1.3초에 한 번 날아간다 · 도깨비불의 데미지 +35%", "1.27초에 한 번 날아간다 · 도깨비불의 데미지 +36.7%", "1.23초에 한 번 날아간다 · 도깨비불의 데미지 +38.3%", "1.2초에 한 번 날아간다 · 도깨비불의 데미지 +40%", "1.17초에 한 번 날아간다 · 도깨비불의 데미지 +41.7%", "1.13초에 한 번 날아간다 · 도깨비불의 데미지 +43.3%", "1.1초에 한 번 날아간다 · 도깨비불의 데미지 +45%", "1.07초에 한 번 날아간다 · 도깨비불의 데미지 +46.7%", "1.03초에 한 번 날아간다 · 도깨비불의 데미지 +48.3%", "1초에 한 번 날아간다 · 도깨비불의 데미지 +50%" },
@@ -18925,12 +18907,12 @@ return {
 		ax_crush = { "최종 데미지 +7% · 초승달 가르기 · 대지 분쇄의 데미지 +21%", "최종 데미지 +7.3% · 초승달 가르기 · 대지 분쇄의 데미지 +22%", "최종 데미지 +7.7% · 초승달 가르기 · 대지 분쇄의 데미지 +23%", "최종 데미지 +8% · 초승달 가르기 · 대지 분쇄의 데미지 +24%", "최종 데미지 +8.3% · 초승달 가르기 · 대지 분쇄의 데미지 +25%", "최종 데미지 +8.7% · 초승달 가르기 · 대지 분쇄의 데미지 +26%", "최종 데미지 +9% · 초승달 가르기 · 대지 분쇄의 데미지 +27%", "최종 데미지 +9.3% · 초승달 가르기 · 대지 분쇄의 데미지 +28%", "최종 데미지 +9.7% · 초승달 가르기 · 대지 분쇄의 데미지 +29%", "최종 데미지 +10% · 초승달 가르기 · 대지 분쇄의 데미지 +30%" },
 		ax_charge3 = { "끝까지 모은 강타를 맞히면 3초 동안 다음 강타가 2단계에서 시작", "끝까지 모은 강타를 맞히면 3초 동안 다음 강타가 2단계에서 시작", "끝까지 모은 강타를 맞히면 3초 동안 다음 강타가 2단계에서 시작", "끝까지 모은 강타를 맞히면 3초 동안 다음 강타가 2단계에서 시작", "끝까지 모은 강타를 맞히면 3초 동안 다음 강타가 2단계에서 시작", "끝까지 모은 강타를 맞히면 3초 동안 다음 강타가 2단계에서 시작", "끝까지 모은 강타를 맞히면 3초 동안 다음 강타가 2단계에서 시작", "끝까지 모은 강타를 맞히면 3초 동안 다음 강타가 2단계에서 시작", "끝까지 모은 강타를 맞히면 3초 동안 다음 강타가 2단계에서 시작", "끝까지 모은 강타를 맞히면 3초 동안 다음 강타가 2단계에서 시작" },
 		rv_mastery = { "최종 데미지 +2.1% · 공격력 +2.1% · 크리티컬 확률 +7%", "최종 데미지 +2.2% · 공격력 +2.2% · 크리티컬 확률 +7.3%", "최종 데미지 +2.3% · 공격력 +2.3% · 크리티컬 확률 +7.7%", "최종 데미지 +2.4% · 공격력 +2.4% · 크리티컬 확률 +8%", "최종 데미지 +2.5% · 공격력 +2.5% · 크리티컬 확률 +8.3%", "최종 데미지 +2.6% · 공격력 +2.6% · 크리티컬 확률 +8.7%", "최종 데미지 +2.7% · 공격력 +2.7% · 크리티컬 확률 +9%", "최종 데미지 +2.8% · 공격력 +2.8% · 크리티컬 확률 +9.3%", "최종 데미지 +2.9% · 공격력 +2.9% · 크리티컬 확률 +9.7%", "최종 데미지 +3% · 공격력 +3% · 크리티컬 확률 +10%" },
-		rv_back = { "표식이 있는 적에게 크리티컬 데미지 +21%", "표식이 있는 적에게 크리티컬 데미지 +22%", "표식이 있는 적에게 크리티컬 데미지 +23%", "표식이 있는 적에게 크리티컬 데미지 +24%", "표식이 있는 적에게 크리티컬 데미지 +25%", "표식이 있는 적에게 크리티컬 데미지 +26%", "표식이 있는 적에게 크리티컬 데미지 +27%", "표식이 있는 적에게 크리티컬 데미지 +28%", "표식이 있는 적에게 크리티컬 데미지 +29%", "표식이 있는 적에게 크리티컬 데미지 +30%" },
+		rv_back = { "순간이동한 뒤 1초 동안(연계) 크리티컬 데미지 +21% · 표식 +1", "순간이동한 뒤 1초 동안(연계) 크리티컬 데미지 +22% · 표식 +1", "순간이동한 뒤 1초 동안(연계) 크리티컬 데미지 +23% · 표식 +1", "순간이동한 뒤 1초 동안(연계) 크리티컬 데미지 +24% · 표식 +1", "순간이동한 뒤 1초 동안(연계) 크리티컬 데미지 +25% · 표식 +1", "순간이동한 뒤 1초 동안(연계) 크리티컬 데미지 +26% · 표식 +1", "순간이동한 뒤 1초 동안(연계) 크리티컬 데미지 +27% · 표식 +1", "순간이동한 뒤 1초 동안(연계) 크리티컬 데미지 +28% · 표식 +1", "순간이동한 뒤 1초 동안(연계) 크리티컬 데미지 +29% · 표식 +1", "순간이동한 뒤 1초 동안(연계) 크리티컬 데미지 +30% · 표식 +1" },
 		rv_mark2 = { "표식이 3까지 겹친다", "표식이 3까지 겹친다", "표식이 3까지 겹친다", "표식이 3까지 겹친다", "표식이 3까지 겹친다", "표식이 3까지 겹친다", "표식이 3까지 겹친다", "표식이 3까지 겹친다", "표식이 3까지 겹친다", "표식이 3까지 겹친다" },
-		rv_venom = { "표식 하나마다 초마다 초당 피해의 7%", "표식 하나마다 초마다 초당 피해의 7.3%", "표식 하나마다 초마다 초당 피해의 7.7%", "표식 하나마다 초마다 초당 피해의 8%", "표식 하나마다 초마다 초당 피해의 8.3%", "표식 하나마다 초마다 초당 피해의 8.7%", "표식 하나마다 초마다 초당 피해의 9%", "표식 하나마다 초마다 초당 피해의 9.3%", "표식 하나마다 초마다 초당 피해의 9.7%", "표식 하나마다 초마다 초당 피해의 10%" },
+		rv_venom = { "표식이 터지면 둘레 90도트의 다른 표식도 함께 터진다 — 그 세기의 35%", "표식이 터지면 둘레 90도트의 다른 표식도 함께 터진다 — 그 세기의 36.7%", "표식이 터지면 둘레 90도트의 다른 표식도 함께 터진다 — 그 세기의 38.3%", "표식이 터지면 둘레 90도트의 다른 표식도 함께 터진다 — 그 세기의 40%", "표식이 터지면 둘레 90도트의 다른 표식도 함께 터진다 — 그 세기의 41.7%", "표식이 터지면 둘레 90도트의 다른 표식도 함께 터진다 — 그 세기의 43.3%", "표식이 터지면 둘레 90도트의 다른 표식도 함께 터진다 — 그 세기의 45%", "표식이 터지면 둘레 90도트의 다른 표식도 함께 터진다 — 그 세기의 46.7%", "표식이 터지면 둘레 90도트의 다른 표식도 함께 터진다 — 그 세기의 48.3%", "표식이 터지면 둘레 90도트의 다른 표식도 함께 터진다 — 그 세기의 50%" },
 		rv_clone2 = { "둘째 분신 — 첫 분신 피해의 35%", "둘째 분신 — 첫 분신 피해의 36.7%", "둘째 분신 — 첫 분신 피해의 38.3%", "둘째 분신 — 첫 분신 피해의 40%", "둘째 분신 — 첫 분신 피해의 41.7%", "둘째 분신 — 첫 분신 피해의 43.3%", "둘째 분신 — 첫 분신 피해의 45%", "둘째 분신 — 첫 분신 피해의 46.7%", "둘째 분신 — 첫 분신 피해의 48.3%", "둘째 분신 — 첫 분신 피해의 50%" },
 		rv_expert = { "최종 데미지 +2.8% · 공격력 +2.8% · 크리티컬 데미지 +14%", "최종 데미지 +2.9% · 공격력 +2.9% · 크리티컬 데미지 +14.7%", "최종 데미지 +3.1% · 공격력 +3.1% · 크리티컬 데미지 +15.3%", "최종 데미지 +3.2% · 공격력 +3.2% · 크리티컬 데미지 +16%", "최종 데미지 +3.3% · 공격력 +3.3% · 크리티컬 데미지 +16.7%", "최종 데미지 +3.5% · 공격력 +3.5% · 크리티컬 데미지 +17.3%", "최종 데미지 +3.6% · 공격력 +3.6% · 크리티컬 데미지 +18%", "최종 데미지 +3.7% · 공격력 +3.7% · 크리티컬 데미지 +18.7%", "최종 데미지 +3.9% · 공격력 +3.9% · 크리티컬 데미지 +19.3%", "최종 데미지 +4% · 공격력 +4% · 크리티컬 데미지 +20%" },
-		rv_intent = { "최종 데미지 +7% · 질풍 일섬 · 그림자 창의 데미지 +21%", "최종 데미지 +7.3% · 질풍 일섬 · 그림자 창의 데미지 +22%", "최종 데미지 +7.7% · 질풍 일섬 · 그림자 창의 데미지 +23%", "최종 데미지 +8% · 질풍 일섬 · 그림자 창의 데미지 +24%", "최종 데미지 +8.3% · 질풍 일섬 · 그림자 창의 데미지 +25%", "최종 데미지 +8.7% · 질풍 일섬 · 그림자 창의 데미지 +26%", "최종 데미지 +9% · 질풍 일섬 · 그림자 창의 데미지 +27%", "최종 데미지 +9.3% · 질풍 일섬 · 그림자 창의 데미지 +28%", "최종 데미지 +9.7% · 질풍 일섬 · 그림자 창의 데미지 +29%", "최종 데미지 +10% · 질풍 일섬 · 그림자 창의 데미지 +30%" },
+		rv_intent = { "최종 데미지 +7% · 질풍 일섬 · 섬광 연참의 데미지 +21%", "최종 데미지 +7.3% · 질풍 일섬 · 섬광 연참의 데미지 +22%", "최종 데미지 +7.7% · 질풍 일섬 · 섬광 연참의 데미지 +23%", "최종 데미지 +8% · 질풍 일섬 · 섬광 연참의 데미지 +24%", "최종 데미지 +8.3% · 질풍 일섬 · 섬광 연참의 데미지 +25%", "최종 데미지 +8.7% · 질풍 일섬 · 섬광 연참의 데미지 +26%", "최종 데미지 +9% · 질풍 일섬 · 섬광 연참의 데미지 +27%", "최종 데미지 +9.3% · 질풍 일섬 · 섬광 연참의 데미지 +28%", "최종 데미지 +9.7% · 질풍 일섬 · 섬광 연참의 데미지 +29%", "최종 데미지 +10% · 질풍 일섬 · 섬광 연참의 데미지 +30%" },
 		rv_feint = { "회피 +7% · 피하면 다음 베기가 반드시 크리티컬", "회피 +7.3% · 피하면 다음 베기가 반드시 크리티컬", "회피 +7.7% · 피하면 다음 베기가 반드시 크리티컬", "회피 +8% · 피하면 다음 베기가 반드시 크리티컬", "회피 +8.3% · 피하면 다음 베기가 반드시 크리티컬", "회피 +8.7% · 피하면 다음 베기가 반드시 크리티컬", "회피 +9% · 피하면 다음 베기가 반드시 크리티컬", "회피 +9.3% · 피하면 다음 베기가 반드시 크리티컬", "회피 +9.7% · 피하면 다음 베기가 반드시 크리티컬", "회피 +10% · 피하면 다음 베기가 반드시 크리티컬" },
 		rp_mastery = { "최종 데미지 +2.1% · 공격력 +2.1% · 기술이 닿는 거리 +7%", "최종 데미지 +2.2% · 공격력 +2.2% · 기술이 닿는 거리 +7.3%", "최종 데미지 +2.3% · 공격력 +2.3% · 기술이 닿는 거리 +7.7%", "최종 데미지 +2.4% · 공격력 +2.4% · 기술이 닿는 거리 +8%", "최종 데미지 +2.5% · 공격력 +2.5% · 기술이 닿는 거리 +8.3%", "최종 데미지 +2.6% · 공격력 +2.6% · 기술이 닿는 거리 +8.7%", "최종 데미지 +2.7% · 공격력 +2.7% · 기술이 닿는 거리 +9%", "최종 데미지 +2.8% · 공격력 +2.8% · 기술이 닿는 거리 +9.3%", "최종 데미지 +2.9% · 공격력 +2.9% · 기술이 닿는 거리 +9.7%", "최종 데미지 +3% · 공격력 +3% · 기술이 닿는 거리 +10%" },
 		rp_pact = { "잃은 체력만큼 공격력 +(가장 많이 14%)", "잃은 체력만큼 공격력 +(가장 많이 14.7%)", "잃은 체력만큼 공격력 +(가장 많이 15.3%)", "잃은 체력만큼 공격력 +(가장 많이 16%)", "잃은 체력만큼 공격력 +(가장 많이 16.7%)", "잃은 체력만큼 공격력 +(가장 많이 17.3%)", "잃은 체력만큼 공격력 +(가장 많이 18%)", "잃은 체력만큼 공격력 +(가장 많이 18.7%)", "잃은 체력만큼 공격력 +(가장 많이 19.3%)", "잃은 체력만큼 공격력 +(가장 많이 20%)" },
@@ -19208,16 +19190,6 @@ return {
 			fx = { echo = 0.4, after = 0.25 },
 			cast = "instant",
 		},
-		rv_smoke = {
-			who = "riven",
-			job = 3,
-			["type"] = "install",
-			max = 10,
-			dur = 8,
-			cd = 30,
-			fx = { dmg = 0.2, near = 40, stealth = true },
-			cast = "seg",
-		},
 		c_hero = {
 			who = "all",
 			job = 4,
@@ -19281,7 +19253,6 @@ return {
 		},
 	},
 	placed = {
-		rv_smoke = { who = "riven", job = 3, ["type"] = "install", max = 10, life = 8, cd = 30, kind = "field", ahead = 0, frame = 2, buff = true, mul = 0, at = 0.1111, cast = "seg" },
 		mn_plant = { who = "mooni", job = 2, ["type"] = "install", max = 10, life = 20, cd = 6, kind = "crystal", ahead = 14, frame = 11, mul = 0, at = 0.55, cast = "seg" },
 		sl_furnace = { who = "salamander", job = 3, ["type"] = "install", max = 10, life = 10, cd = 30, kind = "field", ahead = 18, w = 50, h = 30, tick = 0.5, rate = 0.3, heat = 5, near = 60, mul = 1.02, at = 0, cast = "instant" },
 		rp_gate = { who = "reaper", job = 4, ["type"] = "install", max = 15, life = 10, cd = 60, kind = "field", ahead = 52, frame = 5, w = 70, h = 40, tick = 0.5, rate = 0.4, pull = 46, reach = 120, souls = 2, near = 70, mul = 1.36, at = 0.3571, cast = "seg" },
@@ -19301,12 +19272,13 @@ return {
 		ax_pillars = { who = "axion", job = 4, ["type"] = "nuke", max = 10, cd = 60, rate = 9.3296, cdTime = 12 },
 		ax_crack = { who = "axion", job = 4, ["type"] = "attack", max = 10, cd = 12, rate = 6.5307, cdTime = 2.4 },
 		ax_quake = { who = "axion", job = 4, ["type"] = "attack", max = 15, cd = 15, rate = 6.5307, cdTime = 3 },
-		rv_gale = { who = "riven", job = 2, ["type"] = "mob", max = 20, cd = 0.5, rate = 3.332, cdTime = 0 },
+		rv_gale = { who = "riven", job = 2, ["type"] = "mob", max = 20, cd = 0, rate = 3.332, cdTime = 0 },
 		rv_cross = { who = "riven", job = 2, ["type"] = "boss", max = 20, cd = 0, rate = 4.76, cdTime = 0 },
-		rv_step = { who = "riven", job = 2, ["type"] = "attack", max = 10, cd = 3, rate = 3.332, cdTime = 0.6 },
+		rv_step = { who = "riven", job = 2, ["type"] = "attack", max = 10, cd = 3, rate = 3.332, cdTime = 0.6, time = 0.4 },
 		rv_lance = { who = "riven", job = 3, ["type"] = "mob", max = 20, cd = 0, rate = 4.6648, cdTime = 0 },
 		rv_chain = { who = "riven", job = 3, ["type"] = "move", max = 5, cd = 5, rate = 0, cdTime = 1 },
 		rv_flurry = { who = "riven", job = 3, ["type"] = "boss", max = 20, cd = 0, rate = 6.664, cdTime = 0 },
+		rv_smoke = { who = "riven", job = 3, ["type"] = "attack", max = 10, cd = 10, rate = 4.6648, cdTime = 2 },
 		rv_phantom = { who = "riven", job = 4, ["type"] = "mob", max = 30, cd = 0, rate = 6.5307, cdTime = 0 },
 		rv_kill = { who = "riven", job = 4, ["type"] = "boss", max = 30, cd = 0, rate = 9.3296, cdTime = 0 },
 		rv_cleave = { who = "riven", job = 4, ["type"] = "attack", max = 10, cd = 12, rate = 6.5307, cdTime = 2.4 },
@@ -19427,7 +19399,7 @@ return {
 			who = "riven",
 			job = 2,
 			max = 10,
-			fx = { markCritMul = 0.3 },
+			fx = { linkTime = 1, linkCritMul = 0.3, linkMark = 1 },
 		},
 		rv_mark2 = {
 			who = "riven",
@@ -19439,7 +19411,7 @@ return {
 			who = "riven",
 			job = 3,
 			max = 10,
-			fx = { venom = 0.1 },
+			fx = { reson = 90, resonShare = 0.5 },
 		},
 		rv_clone2 = {
 			who = "riven",
@@ -19610,7 +19582,7 @@ return {
 			},
 		},
 	},
-	ready = { ax_slam = true, ax_combo = true, ax_dash = true, rv_fan = true, rv_double = true, rv_dash = true, rp_double = true, rp_hook = true, rp_dash = true, mn_spin = true, mn_thrust = true, mn_dash = true, sl_beam = true, sl_punch = true, sl_roll = true, rv_smoke = true, mn_plant = true, rp_gate = true, ax_echo = true, ax_charge = true, ax_grit = true, rv_star = true, rv_mark = true, rv_nimble = true, rp_wisp = true, rp_soul = true, rp_drain = true, mn_shard = true, mn_reson = true, mn_oath = true, sl_ember = true, sl_heat = true, sl_blood = true, sl_furnace = true, rp_ghost = true, mn_guard = true, sl_sun = true, ax_crescent = true, ax_rend = true, ax_whirl = true, ax_wheel = true, ax_leap = true, ax_pulse = true, ax_moonfall = true, ax_execute = true, ax_pillars = true, ax_crack = true, ax_quake = true, rv_gale = true, rv_cross = true, rv_step = true, rv_lance = true, rv_chain = true, rv_flurry = true, rv_phantom = true, rv_kill = true, rv_cleave = true, rv_shadow = true, rv_execute = true, rp_throw = true, rp_ambush = true, rp_reap = true, rp_hands = true, rp_drag = true, rp_judge = true, rp_harvest = true, rp_behead = true, rp_advent = true, rp_parade = true, rp_chains = true, mn_wave = true, mn_smash = true, mn_heal = true, mn_burst = true, mn_ray = true, mn_arc = true, mn_divide = true, mn_range = true, mn_fall = true, mn_prison = true, mn_revive = true, sl_slam = true, sl_blast = true, sl_rush = true, sl_vent = true, sl_meteor = true, sl_barrage = true, sl_tide = true, sl_king = true, sl_dragon = true, sl_wyrm = true, ax_mastery = true, ax_shock = true, ax_stance = true, ax_charge2 = true, ax_weight = true, ax_expert = true, ax_crush = true, ax_charge3 = true, rv_mastery = true, rv_back = true, rv_mark2 = true, rv_venom = true, rv_clone2 = true, rv_expert = true, rv_intent = true, rv_feint = true, rp_mastery = true, rp_pact = true, rp_soul2 = true, rp_drain2 = true, rp_expert = true, rp_ghost2 = true, rp_touch = true, mn_mastery = true, mn_grove = true, mn_edge = true, mn_expert = true, mn_guard2 = true, mn_astral = true, sl_mastery = true, sl_tough = true, sl_heat2 = true, sl_press = true, sl_expert = true, sl_embers = true, sl_rekindle = true, sl_reign = true, ax_breath = true, rv_quick = true, rp_chill = true, mn_tide = true, sl_tempo = true, ax_roar = true, rp_ward = true, mn_bless = true, sl_warm = true, ax_brace = true, rv_slip = true, rp_fade = true, sl_cross = true, mn_wall = true, ax_fullmoon = true, ax_titan = true, rv_eclipse = true, rp_form = true, mn_sanct = true, sl_overheat = true, rv_clone = true, c_hero = true, thief_ember = true, ax_echo2 = true, ax_echo3 = true, ax_echo4 = true, rv_star2 = true, rv_star3 = true, rv_star4 = true, rp_wisp2 = true, rp_wisp3 = true, rp_wisp4 = true, mn_shard2 = true, mn_shard3 = true, mn_shard4 = true, sl_ember2 = true, sl_ember3 = true, sl_ember4 = true },
+	ready = { ax_slam = true, ax_combo = true, ax_dash = true, rv_fan = true, rv_double = true, rv_dash = true, rp_double = true, rp_hook = true, rp_dash = true, mn_spin = true, mn_thrust = true, mn_dash = true, sl_beam = true, sl_punch = true, sl_roll = true, mn_plant = true, rp_gate = true, ax_echo = true, ax_charge = true, ax_grit = true, rv_star = true, rv_mark = true, rv_nimble = true, rp_wisp = true, rp_soul = true, rp_drain = true, mn_shard = true, mn_reson = true, mn_oath = true, sl_ember = true, sl_heat = true, sl_blood = true, sl_furnace = true, rp_ghost = true, mn_guard = true, sl_sun = true, ax_crescent = true, ax_rend = true, ax_whirl = true, ax_wheel = true, ax_leap = true, ax_pulse = true, ax_moonfall = true, ax_execute = true, ax_pillars = true, ax_crack = true, ax_quake = true, rv_gale = true, rv_cross = true, rv_step = true, rv_lance = true, rv_chain = true, rv_flurry = true, rv_smoke = true, rv_phantom = true, rv_kill = true, rv_cleave = true, rv_shadow = true, rv_execute = true, rp_throw = true, rp_ambush = true, rp_reap = true, rp_hands = true, rp_drag = true, rp_judge = true, rp_harvest = true, rp_behead = true, rp_advent = true, rp_parade = true, rp_chains = true, mn_wave = true, mn_smash = true, mn_heal = true, mn_burst = true, mn_ray = true, mn_arc = true, mn_divide = true, mn_range = true, mn_fall = true, mn_prison = true, mn_revive = true, sl_slam = true, sl_blast = true, sl_rush = true, sl_vent = true, sl_meteor = true, sl_barrage = true, sl_tide = true, sl_king = true, sl_dragon = true, sl_wyrm = true, ax_mastery = true, ax_shock = true, ax_stance = true, ax_charge2 = true, ax_weight = true, ax_expert = true, ax_crush = true, ax_charge3 = true, rv_mastery = true, rv_back = true, rv_mark2 = true, rv_venom = true, rv_clone2 = true, rv_expert = true, rv_intent = true, rv_feint = true, rp_mastery = true, rp_pact = true, rp_soul2 = true, rp_drain2 = true, rp_expert = true, rp_ghost2 = true, rp_touch = true, mn_mastery = true, mn_grove = true, mn_edge = true, mn_expert = true, mn_guard2 = true, mn_astral = true, sl_mastery = true, sl_tough = true, sl_heat2 = true, sl_press = true, sl_expert = true, sl_embers = true, sl_rekindle = true, sl_reign = true, ax_breath = true, rv_quick = true, rp_chill = true, mn_tide = true, sl_tempo = true, ax_roar = true, rp_ward = true, mn_bless = true, sl_warm = true, ax_brace = true, rv_slip = true, rp_fade = true, sl_cross = true, mn_wall = true, ax_fullmoon = true, ax_titan = true, rv_eclipse = true, rp_form = true, mn_sanct = true, sl_overheat = true, rv_clone = true, c_hero = true, thief_ember = true, ax_echo2 = true, ax_echo3 = true, ax_echo4 = true, rv_star2 = true, rv_star3 = true, rv_star4 = true, rp_wisp2 = true, rp_wisp3 = true, rp_wisp4 = true, mn_shard2 = true, mn_shard3 = true, mn_shard4 = true, sl_ember2 = true, sl_ember3 = true, sl_ember4 = true },
 	moveCast = {
 		rv_chain = {
 			steps = 3,
@@ -24888,7 +24860,7 @@ return {
 				skill_ax_slam = { 144, 120 },
 				skill_ax_combo = { 168, 120 },
 				skill_ax_dash = { 192, 120 },
-				skill_rv_fan = { 216, 120 },
+				skill_rv_fan = { 0, 576 },
 				skill_rv_double = { 0, 144 },
 				skill_rv_dash = { 24, 144 },
 				skill_rp_double = { 48, 144 },
@@ -24939,191 +24911,191 @@ return {
 				skill_ax_charge3 = { 168, 240 },
 				skill_rv_mark = { 192, 240 },
 				skill_rv_nimble = { 216, 240 },
-				skill_rv_star = { 0, 264 },
-				skill_rv_gale = { 24, 264 },
-				skill_rv_cross = { 48, 264 },
-				skill_rv_step = { 72, 264 },
-				skill_rv_star2 = { 96, 264 },
-				skill_rv_quick = { 120, 264 },
-				skill_rv_mastery = { 144, 264 },
-				skill_rv_back = { 168, 264 },
-				old_rv_chain = { 192, 264 },
-				skill_rv_flurry = { 216, 264 },
-				skill_rv_clone = { 0, 288 },
-				skill_rv_smoke = { 24, 288 },
-				skill_rv_slip = { 48, 288 },
-				skill_rv_mark2 = { 72, 288 },
-				skill_rv_venom = { 96, 288 },
-				skill_rv_star3 = { 120, 288 },
-				skill_rv_phantom = { 144, 288 },
-				skill_rv_kill = { 168, 288 },
-				skill_rv_star4 = { 192, 288 },
-				skill_rv_eclipse = { 216, 288 },
-				skill_rv_shadow = { 0, 312 },
-				skill_rv_execute = { 24, 312 },
-				skill_rv_clone2 = { 48, 312 },
-				skill_rv_expert = { 72, 312 },
-				skill_rv_intent = { 96, 312 },
-				skill_rv_feint = { 120, 312 },
-				skill_rp_soul = { 144, 312 },
-				skill_rp_drain = { 168, 312 },
-				skill_rp_wisp = { 192, 312 },
-				skill_rp_throw = { 216, 312 },
-				skill_rp_ambush = { 0, 336 },
-				skill_rp_reap = { 24, 336 },
-				skill_rp_wisp2 = { 48, 336 },
-				skill_rp_chill = { 72, 336 },
-				skill_rp_mastery = { 96, 336 },
-				skill_rp_pact = { 120, 336 },
-				old_rp_drag = { 144, 336 },
-				skill_rp_judge = { 168, 336 },
-				skill_rp_ghost = { 192, 336 },
-				skill_rp_ward = { 216, 336 },
-				skill_rp_fade = { 0, 360 },
-				skill_rp_soul2 = { 24, 360 },
-				skill_rp_drain2 = { 48, 360 },
-				skill_rp_wisp3 = { 72, 360 },
-				skill_rp_harvest = { 96, 360 },
-				skill_rp_behead = { 120, 360 },
-				skill_rp_wisp4 = { 144, 360 },
-				skill_rp_form = { 168, 360 },
-				skill_rp_advent = { 192, 360 },
-				skill_rp_chains = { 216, 360 },
-				skill_rp_gate = { 0, 384 },
-				skill_rp_expert = { 24, 384 },
-				skill_rp_ghost2 = { 48, 384 },
-				skill_rp_touch = { 72, 384 },
-				skill_mn_reson = { 96, 384 },
-				skill_mn_oath = { 120, 384 },
-				skill_mn_shard = { 144, 384 },
-				skill_mn_wave = { 168, 384 },
-				skill_mn_smash = { 192, 384 },
-				skill_mn_plant = { 216, 384 },
-				skill_mn_shard2 = { 0, 408 },
-				skill_mn_tide = { 24, 408 },
-				skill_mn_heal = { 48, 408 },
-				skill_mn_mastery = { 72, 408 },
-				skill_mn_burst = { 96, 408 },
-				skill_mn_ray = { 120, 408 },
-				skill_mn_guard = { 144, 408 },
-				skill_mn_bless = { 168, 408 },
-				skill_mn_wall = { 192, 408 },
-				skill_mn_grove = { 216, 408 },
-				skill_mn_shard3 = { 0, 432 },
-				skill_mn_edge = { 24, 432 },
-				skill_mn_arc = { 48, 432 },
-				skill_mn_divide = { 72, 432 },
-				skill_mn_shard4 = { 96, 432 },
-				skill_mn_sanct = { 120, 432 },
-				skill_mn_range = { 144, 432 },
-				skill_mn_prison = { 168, 432 },
-				skill_mn_revive = { 192, 432 },
-				skill_mn_expert = { 216, 432 },
-				skill_mn_guard2 = { 0, 456 },
-				skill_mn_astral = { 24, 456 },
-				skill_sl_heat = { 48, 456 },
-				skill_sl_blood = { 72, 456 },
-				skill_sl_ember = { 96, 456 },
-				skill_sl_slam = { 120, 456 },
-				old_sl_rush = { 144, 456 },
-				skill_sl_ember2 = { 168, 456 },
-				skill_sl_tempo = { 192, 456 },
-				skill_sl_vent = { 216, 456 },
-				skill_sl_mastery = { 0, 480 },
-				skill_sl_tough = { 24, 480 },
-				skill_sl_meteor = { 48, 480 },
-				skill_sl_barrage = { 72, 480 },
-				skill_sl_furnace = { 96, 480 },
-				skill_sl_warm = { 120, 480 },
-				skill_sl_cross = { 144, 480 },
-				skill_sl_heat2 = { 168, 480 },
-				skill_sl_press = { 192, 480 },
-				skill_sl_ember3 = { 216, 480 },
-				skill_sl_tide = { 0, 504 },
-				skill_sl_king = { 24, 504 },
-				skill_sl_ember4 = { 48, 504 },
-				skill_sl_overheat = { 72, 504 },
-				skill_sl_sun = { 96, 504 },
-				skill_sl_dragon = { 120, 504 },
-				skill_sl_expert = { 144, 504 },
-				skill_sl_embers = { 168, 504 },
-				skill_sl_rekindle = { 192, 504 },
-				skill_sl_reign = { 216, 504 },
-				skill_c_hero = { 0, 528 },
-				skill_c_will = { 24, 528 },
-				st_stun = { 48, 528 },
-				st_bind = { 72, 528 },
-				st_slow = { 96, 528 },
-				st_burn = { 120, 528 },
-				st_poison = { 144, 528 },
-				st_shield = { 168, 528 },
-				st_invincible = { 192, 528 },
-				st_revive = { 216, 528 },
-				menu_map = { 96, 600 },
-				menu_boss = { 24, 552 },
-				menu_note = { 48, 552 },
-				menu_guild = { 72, 552 },
-				menu_auction = { 96, 552 },
-				menu_forge = { 120, 552 },
-				menu_shop = { 144, 552 },
-				menu_store = { 168, 552 },
-				menu_mail = { 192, 552 },
-				menu_trade = { 216, 552 },
-				skill_mn_fall = { 0, 576 },
-				skill_rv_chain = { 24, 576 },
-				skill_rv_lance = { 48, 576 },
-				old_rv_cleave = { 72, 576 },
-				skill_ax_crack = { 96, 576 },
-				skill_rp_parade = { 120, 576 },
-				skill_sl_wyrm = { 144, 576 },
-				skill_rv_cleave = { 168, 576 },
-				skill_rp_drag = { 192, 576 },
-				skill_sl_blast = { 216, 576 },
-				skill_sl_rush = { 0, 600 },
-				skill_ax_wheel = { 24, 600 },
-				skill_ax_leap = { 48, 600 },
-				w_spear = { 72, 600 },
-				bm_money = { 120, 600 },
-				bm_dust = { 144, 600 },
-				bm_bagx = { 168, 600 },
-				bm_storex = { 192, 600 },
-				bm_charx = { 216, 600 },
-				bm_rename = { 0, 624 },
-				bm_exp = { 24, 624 },
-				bm_dmgskin = { 48, 624 },
-				bm_tagskin = { 72, 624 },
-				bm_petskin = { 96, 624 },
-				bm_mount = { 120, 624 },
-				bm_starter = { 144, 624 },
-				bm_tele = { 168, 624 },
-				bm_pass = { 192, 624 },
-				bm_passxp = { 216, 624 },
-				bm_passdrop = { 0, 648 },
-				bm_dyepoint = { 24, 648 },
-				bm_dyerobe = { 48, 648 },
-				wskin_gold = { 72, 648 },
-				wskin_lava = { 96, 648 },
-				wskin_frost = { 120, 648 },
-				wskin_shadow = { 144, 648 },
-				ride_pet_silver = { 168, 648 },
-				ride_pet_lantern = { 192, 648 },
-				ride_pet_scarf = { 216, 648 },
-				ride_pet_crow = { 0, 672 },
-				ride_mount_wolf = { 24, 672 },
-				ride_mount_deer = { 48, 672 },
-				ride_mount_deer_gold = { 72, 672 },
-				ride_mount_deer_silver = { 96, 672 },
-				ride_mount_deer_bronze = { 120, 672 },
-				ride_mount_boar = { 144, 672 },
-				ride_mount_book = { 168, 672 },
-				ride_mount_golem = { 192, 672 },
-				ride_mount_golem_gold = { 216, 672 },
-				ride_mount_wolf_hw = { 0, 696 },
-				ride_pet_bat_hw = { 24, 696 },
-				skill_rp_hands = { 48, 696 },
-				bm_drop = { 72, 696 },
-				etc_candy = { 96, 696 },
-				dskin_halloween = { 120, 696 },
+				skill_rv_gale = { 0, 264 },
+				skill_rv_quick = { 24, 264 },
+				skill_rv_mastery = { 48, 264 },
+				old_rv_chain = { 72, 264 },
+				skill_rv_clone = { 96, 264 },
+				skill_rv_slip = { 120, 264 },
+				skill_rv_mark2 = { 144, 264 },
+				skill_rv_eclipse = { 168, 264 },
+				skill_rv_shadow = { 192, 264 },
+				skill_rv_execute = { 216, 264 },
+				skill_rv_clone2 = { 0, 288 },
+				skill_rv_expert = { 24, 288 },
+				skill_rv_intent = { 48, 288 },
+				skill_rv_feint = { 72, 288 },
+				skill_rp_soul = { 96, 288 },
+				skill_rp_drain = { 120, 288 },
+				skill_rp_wisp = { 144, 288 },
+				skill_rp_throw = { 168, 288 },
+				skill_rp_ambush = { 192, 288 },
+				skill_rp_reap = { 216, 288 },
+				skill_rp_wisp2 = { 0, 312 },
+				skill_rp_chill = { 24, 312 },
+				skill_rp_mastery = { 48, 312 },
+				skill_rp_pact = { 72, 312 },
+				old_rp_drag = { 96, 312 },
+				skill_rp_judge = { 120, 312 },
+				skill_rp_ghost = { 144, 312 },
+				skill_rp_ward = { 168, 312 },
+				skill_rp_fade = { 192, 312 },
+				skill_rp_soul2 = { 216, 312 },
+				skill_rp_drain2 = { 0, 336 },
+				skill_rp_wisp3 = { 24, 336 },
+				skill_rp_harvest = { 48, 336 },
+				skill_rp_behead = { 72, 336 },
+				skill_rp_wisp4 = { 96, 336 },
+				skill_rp_form = { 120, 336 },
+				skill_rp_advent = { 144, 336 },
+				skill_rp_chains = { 168, 336 },
+				skill_rp_gate = { 192, 336 },
+				skill_rp_expert = { 216, 336 },
+				skill_rp_ghost2 = { 0, 360 },
+				skill_rp_touch = { 24, 360 },
+				skill_mn_reson = { 48, 360 },
+				skill_mn_oath = { 72, 360 },
+				skill_mn_shard = { 96, 360 },
+				skill_mn_wave = { 120, 360 },
+				skill_mn_smash = { 144, 360 },
+				skill_mn_plant = { 168, 360 },
+				skill_mn_shard2 = { 192, 360 },
+				skill_mn_tide = { 216, 360 },
+				skill_mn_heal = { 0, 384 },
+				skill_mn_mastery = { 24, 384 },
+				skill_mn_burst = { 48, 384 },
+				skill_mn_ray = { 72, 384 },
+				skill_mn_guard = { 96, 384 },
+				skill_mn_bless = { 120, 384 },
+				skill_mn_wall = { 144, 384 },
+				skill_mn_grove = { 168, 384 },
+				skill_mn_shard3 = { 192, 384 },
+				skill_mn_edge = { 216, 384 },
+				skill_mn_arc = { 0, 408 },
+				skill_mn_divide = { 24, 408 },
+				skill_mn_shard4 = { 48, 408 },
+				skill_mn_sanct = { 72, 408 },
+				skill_mn_range = { 96, 408 },
+				skill_mn_prison = { 120, 408 },
+				skill_mn_revive = { 144, 408 },
+				skill_mn_expert = { 168, 408 },
+				skill_mn_guard2 = { 192, 408 },
+				skill_mn_astral = { 216, 408 },
+				skill_sl_heat = { 0, 432 },
+				skill_sl_blood = { 24, 432 },
+				skill_sl_ember = { 48, 432 },
+				skill_sl_slam = { 72, 432 },
+				old_sl_rush = { 96, 432 },
+				skill_sl_ember2 = { 120, 432 },
+				skill_sl_tempo = { 144, 432 },
+				skill_sl_vent = { 168, 432 },
+				skill_sl_mastery = { 192, 432 },
+				skill_sl_tough = { 216, 432 },
+				skill_sl_meteor = { 0, 456 },
+				skill_sl_barrage = { 24, 456 },
+				skill_sl_furnace = { 48, 456 },
+				skill_sl_warm = { 72, 456 },
+				skill_sl_cross = { 96, 456 },
+				skill_sl_heat2 = { 120, 456 },
+				skill_sl_press = { 144, 456 },
+				skill_sl_ember3 = { 168, 456 },
+				skill_sl_tide = { 192, 456 },
+				skill_sl_king = { 216, 456 },
+				skill_sl_ember4 = { 0, 480 },
+				skill_sl_overheat = { 24, 480 },
+				skill_sl_sun = { 48, 480 },
+				skill_sl_dragon = { 72, 480 },
+				skill_sl_expert = { 96, 480 },
+				skill_sl_embers = { 120, 480 },
+				skill_sl_rekindle = { 144, 480 },
+				skill_sl_reign = { 168, 480 },
+				skill_c_hero = { 192, 480 },
+				skill_c_will = { 216, 480 },
+				st_stun = { 0, 504 },
+				st_bind = { 24, 504 },
+				st_slow = { 48, 504 },
+				st_burn = { 72, 504 },
+				st_poison = { 96, 504 },
+				st_shield = { 120, 504 },
+				st_invincible = { 144, 504 },
+				st_revive = { 168, 504 },
+				menu_map = { 120, 600 },
+				menu_boss = { 216, 504 },
+				menu_note = { 0, 528 },
+				menu_guild = { 24, 528 },
+				menu_auction = { 48, 528 },
+				menu_forge = { 72, 528 },
+				menu_shop = { 96, 528 },
+				menu_store = { 120, 528 },
+				menu_mail = { 144, 528 },
+				menu_trade = { 168, 528 },
+				skill_mn_fall = { 192, 528 },
+				skill_rv_chain = { 216, 528 },
+				old_rv_cleave = { 0, 552 },
+				skill_ax_crack = { 24, 552 },
+				skill_rp_parade = { 48, 552 },
+				skill_sl_wyrm = { 72, 552 },
+				skill_rv_cleave = { 96, 552 },
+				skill_rp_drag = { 120, 552 },
+				skill_sl_blast = { 144, 552 },
+				skill_sl_rush = { 168, 552 },
+				skill_ax_wheel = { 192, 552 },
+				skill_ax_leap = { 216, 552 },
+				skill_rv_star = { 24, 576 },
+				skill_rv_cross = { 48, 576 },
+				skill_rv_step = { 72, 576 },
+				skill_rv_star2 = { 96, 576 },
+				skill_rv_back = { 120, 576 },
+				skill_rv_lance = { 144, 576 },
+				skill_rv_flurry = { 168, 576 },
+				skill_rv_smoke = { 192, 576 },
+				skill_rv_venom = { 216, 576 },
+				skill_rv_star3 = { 0, 600 },
+				skill_rv_phantom = { 24, 600 },
+				skill_rv_kill = { 48, 600 },
+				skill_rv_star4 = { 72, 600 },
+				w_spear = { 96, 600 },
+				bm_money = { 144, 600 },
+				bm_dust = { 168, 600 },
+				bm_bagx = { 192, 600 },
+				bm_storex = { 216, 600 },
+				bm_charx = { 0, 624 },
+				bm_rename = { 24, 624 },
+				bm_exp = { 48, 624 },
+				bm_dmgskin = { 72, 624 },
+				bm_tagskin = { 96, 624 },
+				bm_petskin = { 120, 624 },
+				bm_mount = { 144, 624 },
+				bm_starter = { 168, 624 },
+				bm_tele = { 192, 624 },
+				bm_pass = { 216, 624 },
+				bm_passxp = { 0, 648 },
+				bm_passdrop = { 24, 648 },
+				bm_dyepoint = { 48, 648 },
+				bm_dyerobe = { 72, 648 },
+				wskin_gold = { 96, 648 },
+				wskin_lava = { 120, 648 },
+				wskin_frost = { 144, 648 },
+				wskin_shadow = { 168, 648 },
+				ride_pet_silver = { 192, 648 },
+				ride_pet_lantern = { 216, 648 },
+				ride_pet_scarf = { 0, 672 },
+				ride_pet_crow = { 24, 672 },
+				ride_mount_wolf = { 48, 672 },
+				ride_mount_deer = { 72, 672 },
+				ride_mount_deer_gold = { 96, 672 },
+				ride_mount_deer_silver = { 120, 672 },
+				ride_mount_deer_bronze = { 144, 672 },
+				ride_mount_boar = { 168, 672 },
+				ride_mount_book = { 192, 672 },
+				ride_mount_golem = { 216, 672 },
+				ride_mount_golem_gold = { 0, 696 },
+				ride_mount_wolf_hw = { 24, 696 },
+				ride_pet_bat_hw = { 48, 696 },
+				skill_rp_hands = { 72, 696 },
+				bm_drop = { 96, 696 },
+				etc_candy = { 120, 696 },
+				dskin_halloween = { 144, 696 },
 			},
 			size = 24,
 		},
@@ -29221,6 +29193,76 @@ return {
 		["거래 불가 — 로블록스 정책(로벅스로 산 아이템)"] = "Not tradeable — Roblox policy (bought with Robux)",
 		["쓰면 #분 동안 사냥 경험치 #배(접속 시간만 센다)."] = "Gives # min of #× hunting EXP (online time only).",
 		["쓰면 #분 동안 드롭률 #배(접속 시간만 센다)."] = "Gives # min of #× drop rate (online time only).",
+		["내 피해 숫자"] = "My damage numbers",
+		["펫은 셋까지 꺼내 둘 수 있다"] = "You can have up to 3 pets out",
+		["버프를 단추 하나로 — 앞 칸부터 차례대로 쓴다"] = "Buffs on one key — used in order from the first slot",
+		["매크로 {n}"] = "Macro {1}",
+		["넣을 스킬 — 누르면 고른 매크로에 넣는다"] = "Skills to add — tap to put in the chosen macro",
+		["넣을 스킬이 없다(버프를 배우면 생긴다)"] = "No skills to add (learn buffs first)",
+		["빈 매크로 — 스킬 창 「매크로」 탭에서 버프를 넣는다"] = "Empty macro — add buffs in the Skills window Macro tab",
+		["매크로 아이콘을 퀵슬롯에 끌어 놓는다 · 칸을 누르면 뺀다"] = "Drag the macro icon to a quick slot · tap a slot to remove",
+		["매크로 하나에 여섯까지"] = "Up to 6 per macro",
+		["버프 매크로"] = "Buff Macro",
+		["누르면 바로 걸리는 버프와 바로 놓이는 소환을 한 매크로에 여섯까지 넣는다. 퀵슬롯의 그 칸을 누르면 앞 칸부터 차례대로 쓴다(대기 중인 것은 건너뛴다)."] = "Put up to 6 instant buffs and instant summons in one macro. Press its quick slot to use them in order from the first slot (skills on cooldown are skipped).",
+		["버프 매크로 {n}"] = "Buff Macro {1}",
+		["시퀀스"] = "Sequence",
+		["한 번 누르면 넣은 스킬을 차례대로 빠르게 쓴다"] = "One press uses the added skills quickly, in order",
+		["한 번 누르면 버프 아이템 · 공용 버프를 차례대로 쓴다"] = "One press uses buff items · shared buffs in order",
+		["스킬 시퀀스 {n}"] = "Skill Sequence {1}",
+		["버프 시퀀스 {n}"] = "Buff Sequence {1}",
+		["넣을 스킬 — 누르면 끝에 더한다"] = "Skills to add — tap to add to the end",
+		["넣을 것 — 누르면 끝에 더한다"] = "Things to add — tap to add to the end",
+		["넣을 것이 없다"] = "Nothing to add",
+		["빈 시퀀스 — 스킬 창의 「시퀀스」에서 넣는다"] = "Empty sequence — fill it from 'Sequence' in the Skills window",
+		["한 시퀀스에 {max}개까지"] = "Up to {1} per sequence",
+		["시퀀스 아이콘을 퀵슬롯에 끌어 놓는다 · 칸을 누르면 뺀다"] = "Drag a sequence icon to a quick slot · tap a slot to remove",
+		["보스 전투에서는 버프 시퀀스를 쓸 수 없다"] = "Buff sequences can't be used in boss fights",
+		["스킬에 마우스를 올리면(폰은 누르면) 무슨 스킬인지 여기에 보인다"] = "Hover over a skill (tap on phone) to see what it is here",
+		["비어 있다 — 아래의 넣을 것을 누르면 들어간다"] = "Empty — tap something below to add it",
+		["버프 아이템"] = "Buff item",
+		["표식을 남기고 그 표식으로 순간이동하며 베어 낸다 — 날렵하고 스킬이 이어진다"] = "Leaves Marks, then teleports to them and cuts — swift, with chained skills",
+		["초승 베기"] = "Crescent Cut",
+		["앞을 넓게 초승달 모양으로 베고 맞은 적 모두에게 표식을 남긴다. 벤 자리에 남은 칼자국이 곧 부서진다."] = "Cuts a wide crescent in front and Marks every enemy hit. The slash left in the air shatters a moment later.",
+		["베기에 맞은 적에게 표식 #(#초). 순간이동 기술은 표식이 있는 적에게 날아간다. 표식이 있는 적에게 크리티컬 확률 +."] = "Enemies hit by your slashes get # Mark (# s). Teleport skills fly to marked enemies. +Crit rate on marked enemies.",
+		["잔영 베기"] = "Afterimage Cut",
+		["켜 두면 베기가 맞을 때 #% 확률로 내 잔영이 가까운 적의 등 뒤에 나타나 한 번 베고 표식을 남긴다."] = "While on, each hit has a #% chance to make your afterimage appear behind a nearby enemy, cut once and leave a Mark.",
+		["배후 교차"] = "Behind Cross",
+		["가까운 적의 등 뒤로 순간이동해 X자로 긋는다(늘 등 뒤에서 친다). 가까이에 적이 없으면 제자리에서 긋는다."] = "Teleports behind the nearest enemy and slashes an X (always from behind). With no enemy nearby, slashes in place.",
+		["섬영"] = "Flash Shadow",
+		["표식이 있는 가장 가까운 적에게 순간이동해 베고 그 표식을 터뜨린다. 표식을 터뜨리면 다시 쓰기가 바로 돌아온다(같은 적은 #초에 한 번) — 표식에서 표식으로 이어 뛴다. 표식이 없으면 가까운 적에게. 다시 쓰기 #초."] = "Teleports to the nearest marked enemy, cuts and bursts its Mark. Bursting a Mark resets the cooldown at once (same enemy once per # s) — hop from Mark to Mark. Without Marks, goes to a nearby enemy. Cooldown # s.",
+		["겹 잔영"] = "Twin Afterimage",
+		["잔영 베기의 잔영이 둘 — 맞은 적의 등 뒤에도 하나가 나타나 벤다."] = "Two afterimages — another one appears behind the enemy you hit and cuts.",
+		["그림자 일격"] = "Shadow Strike",
+		["순간이동한 뒤 #초 동안의 공격은 연계기 — 크리티컬 데미지 +, 맞힌 적에게 표식 하나 더."] = "Attacks within # s after a teleport are Links — +Crit damage and one more Mark on enemies hit.",
+		["잔영 연격"] = "Afterimage Chain",
+		["잔영이 벤 뒤 가까운 다른 적의 등 뒤로 한 번 더 순간이동해 벤다."] = "After cutting, the afterimage teleports behind another nearby enemy and cuts once more.",
+		["잔영 폭발"] = "Afterimage Burst",
+		["잔영이 나올 확률 #%. 표식이 있는 적을 벨 때 터지며 데미지 +."] = "Afterimage chance #%. Bursts with +damage when it cuts a marked enemy.",
+		["베기가 맞으면 #% 확률로 잔영이 벤다 — 그 타 피해의 #%, 표식을 남긴다"] = "Hits have a #% chance for an afterimage cut — #% of that hit, leaves a Mark",
+		["맞은 적의 등 뒤에도 잔영 하나 — 첫 잔영 피해의 #%"] = "One more afterimage behind the enemy hit — #% of the first one",
+		["벤 뒤 가까운 다른 적에게 한 번 더 — 잔영 피해의 #%"] = "Then once more on another nearby enemy — #% of the afterimage",
+		["잔영이 나올 확률 #% · 표식이 있는 적에게 데미지 +#%"] = "Afterimage chance #% · +#% damage on marked enemies",
+		["순간이동한 뒤 #초 동안(연계) 크리티컬 데미지 +#% · 표식 +#"] = "For # s after a teleport (Link): +#% crit damage · +# Mark",
+		["섬광 연참"] = "Flash Rend",
+		["앞 #도트 안의 적 다섯까지 사이를 순간이동하며 차례로 벤다(표식이 있는 적부터). 끝난 자리에 선다. 맞은 적에게 표식을 남긴다."] = "Teleports between up to # enemies within # dots ahead, cutting each in turn (marked ones first). Stays where it ends. Marks enemies hit.",
+		["잔영 난무"] = "Afterimage Frenzy",
+		["누르고 있는 동안 제자리에서 아주 빠르게 벤다(#초에 #번) — 내 잔영이 적의 등 뒤 · 머리 위에 번갈아 나타나 함께 벤다. 네 번마다 표식 #."] = "Hold to slash very fast in place (# per second) — your afterimages take turns appearing behind and above the enemy to cut with you. # Mark every # hits.",
+		["월영 비수"] = "Moonshadow Dagger",
+		["발밑에 표식 비수를 꽂는다(#초). 한 번 더 누르면 비수 자리로 순간이동하며 지나간 길의 적을 모두 베고 표식을 남긴다. 다시 쓰기 #초(돌아온 뒤부터)."] = "Plants a Mark dagger at your feet (# s). Press again to teleport back to it, cutting and Marking every enemy on the way. Cooldown # s (after returning).",
+		["표식 공명"] = "Mark Resonance",
+		["표식이 터질 때 둘레(#도트)의 다른 표식이 민트 번개로 이어져 함께 터진다(그 표식 수만큼 · 절반의 세기)."] = "When a Mark bursts, other Marks within # dots link by mint lightning and burst too (by their count · half strength).",
+		["무영 섬"] = "Shadowless Flash",
+		["앞의 적 사이를 번개처럼 여섯 번 오가며 긋고 제자리로 돌아온다 — 허공에 남은 칼자국이 한꺼번에 터진다. 쓰고 바로 움직일 수 있다."] = "Darts between enemies ahead six times like lightning, then returns — the slashes left in the air burst all at once. You can move right after.",
+		["암살 연계"] = "Assassin Chain",
+		["누르면 적의 등 뒤로 순간이동해 여섯 번 찌르고, 한 번 더 누르면 머리 위에서 내리꽂는 마무리. 표식이 가득한 적에게는 마무리가 훨씬 세다."] = "Press: teleport behind the enemy and stab six times. Press again: a finisher plunging down from above. Far stronger on an enemy with full Marks.",
+		["#초 동안 화면이 어두워지고 모든 베기가 표식 #, 최종 데미지 +, 섬영을 다시 쓰기 없이 이어 쓴다. 다시 쓰기 #초."] = "For # s the screen darkens: every slash leaves # Marks, +final damage, and Flash Shadow has no cooldown. Cooldown # s.",
+		["분신이 둘. 섬영 · 종결 때 분신도 같이 순간이동해 벤다."] = "Two clones. On Flash Shadow and Finale, the clones teleport and cut too.",
+		["최종 데미지 +. 질풍 일섬 · 섬광 연참의 피해가 크게 오른다(옛 사냥기를 계속 쓴다)."] = "+Final damage. Gale Flash and Flash Rend deal much more (keep using old mobbing skills).",
+		["표식이 터지면 둘레 #도트의 다른 표식도 함께 터진다 — 그 세기의 #%"] = "When a Mark bursts, Marks within # dots burst too — #% of its strength",
+		["최종 데미지 +#% · 질풍 일섬 · 섬광 연참의 데미지 +#%"] = "+#% final damage · +#% damage for Gale Flash · Flash Rend",
+		["누르는 순간 앞으로 꿰뚫고 내달려 지나온 길의 적을 한 번에 모두 벤다. 공중에서도 된다."] = "Dashes forward the moment you press it and cuts every enemy on the path in one slash. Works in the air too.",
+		["누르는 순간 표식이 있는 가장 가까운 적(#도트 안 · 앞뒤 모두)에게 순간이동해 베고 그 표식을 터뜨린다 — 다른 스킬을 쓰는 중에도 쓴다. 표식을 터뜨리면 다시 쓰기가 바로 돌아온다(같은 적은 #초에 한 번) — 표식에서 표식으로 이어 뛴다. 표식이 없으면 가까운 적(#도트 안)에게. 다시 쓰기 #초."] = "Instantly teleports to the nearest marked enemy (within # dots, front or back), cuts and bursts its Mark — usable even while another skill is playing. Bursting a Mark resets the cooldown at once (same enemy once per # s) — hop from Mark to Mark. Without Marks, goes to a nearby enemy (within # dots). Cooldown # s.",
+		["앞 #도트 안의 적 사이를 번개처럼 여섯 번 오가며 긋고 제자리로 돌아온다 — 허공에 남은 칼자국이 한꺼번에 터진다. 쓰고 바로 움직일 수 있다."] = "Darts six times like lightning between enemies within # dots ahead, then returns — the slashes left in the air burst all at once. You can move right after.",
 	},
 }
 
@@ -32405,6 +32447,7 @@ return {
 	},
 	pet = {
 		behind = 64,
+		gap = 26,
 		base = 40,
 		per = 2,
 		max = 160,
@@ -54516,6 +54559,7 @@ return {
 		{ id = "equip", name = "장비", key = "U", from = 2, menu = false, need = false },
 		{ id = "stat", name = "능력치", key = "P", from = 2, menu = false, need = false },
 		{ id = "skill", name = "스킬", key = "K", from = 2, menu = false, need = false },
+		{ id = "seq", name = "시퀀스", key = false, from = 2, menu = false, need = false },
 		{ id = "quest", name = "퀘스트", key = "J", from = 1, menu = false, need = false },
 		{ id = "map", name = "월드맵", key = "M", from = 1, menu = false, need = false },
 		{ id = "boss", name = "보스 수첩", key = "H", from = 10, menu = false, need = false },
@@ -54679,9 +54723,11 @@ return {
 				head = "화면",
 				headH = 20,
 				btnW = 64,
+				rowH = 28,
 				rows = {
 					{ "fx", "다른 사람의 스킬 효과" },
 					{ "nums", "다른 사람의 피해 숫자" },
+					{ "myNums", "내 피해 숫자" },
 				},
 				on = "켜짐",
 				off = "꺼짐",
@@ -54999,6 +55045,42 @@ return {
 		auto = "추천대로 찍기",
 		replaces = "앞 차수의 「{name}」 자리에 들어간다",
 		bonus = { mob = "일반 몬스터에게 데미지 +{pct}%", boss = "보스에게 데미지 +{pct}%" },
+		seq = {
+			kinds = {
+				skill = { n = 10, size = 15 },
+				buff = { n = 5, size = 15 },
+			},
+			ok = 0.12,
+			fail = 0.03,
+			item = "버프 아이템",
+			items = { "bm_exp", "bm_drop" },
+			w = 352,
+			h = 352,
+			tabW = 44,
+			tabGap = 6,
+			chip = 30,
+			chipGap = 4,
+			cellGap = 4,
+			per = 8,
+			openW = 60,
+			y = { head = 24, chips = 44, num = 76, sel = 92, cells = 116, pick = 190, cands = 206, info = 278 },
+			title = "시퀀스",
+			open = "시퀀스",
+			tabs = { skill = "스킬", buff = "버프" },
+			head = { skill = "한 번 누르면 넣은 스킬을 차례대로 빠르게 쓴다", buff = "한 번 누르면 버프 아이템 · 공용 버프를 차례대로 쓴다" },
+			name = { skill = "스킬 시퀀스 {n}", buff = "버프 시퀀스 {n}" },
+			count = "{n} / {max}",
+			pick = { skill = "넣을 스킬 — 누르면 끝에 더한다", buff = "넣을 것 — 누르면 끝에 더한다" },
+			none = { skill = "넣을 스킬이 없다(버프를 배우면 생긴다)", buff = "넣을 것이 없다" },
+			empty = "빈 시퀀스 — 스킬 창의 「시퀀스」에서 넣는다",
+			full = "한 시퀀스에 {max}개까지",
+			clear = "비우기",
+			hint = "시퀀스 아이콘을 퀵슬롯에 끌어 놓는다 · 칸을 누르면 뺀다",
+			info = "스킬에 마우스를 올리면(폰은 누르면) 무슨 스킬인지 여기에 보인다",
+			blank = "비어 있다 — 아래의 넣을 것을 누르면 들어간다",
+			boss = "보스 전투에서는 버프 시퀀스를 쓸 수 없다",
+			mark = { skill = "S{n}", buff = "B{n}" },
+		},
 		now = "지금 Lv.{lv}",
 		next = "다음 Lv.{lv}",
 		needs = "「{name}」부터 배워야 한다",
@@ -59396,7 +59478,9 @@ return reaper
 
 end
 MODULES['ReplicatedStorage/shared/lune/kits/riven'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
--- 리틀 리븐 — 창. 핵심 장치: 표식(베기에 맞은 적에게 쌓이고, 순보 계열이 터뜨린다 · 표식 있는 적은 초마다 독).
+-- 리틀 리븐 — 창. 핵심 장치: 표식(베기에 맞은 적에게 쌓인다). 2026-10-30 리마스터(사용자: "표식을 남겨서 순간이동과 빠른이동을하면서 공격하고 이런 캐릭터인데 날렵하고 베어내고, 스킬이 연계되고 화려한 방식으로"):
+--  표식 → 순간이동(섬영 · 배후 교차 …)이 표식으로 날아가 베며 터뜨린다 → 터뜨리면 섬영이 바로 돌아와 다음 표식으로(같은 적 3초) → 순간이동 직후 1초는 연계(그림자 일격 — 서버 caster g.teleport · Passives.crit · Room:kitAfter).
+--  순간이동의 그림(blink): 떠난 자리에 잔상 · 민트 결정 연기, 지나간 길에 가는 빛줄기, 나타난 자리에 세모 조각. 잔영 베기(사출기) = 적 등 뒤에 나타나 베는 내 잔영(procs.star)
 --  공방 시험 탭의 dino-workshop/js/lune/kits/riven.js를 줄마다 옮긴 것. 시험판은 4차까지 다 배운 모습이라 스킬 레벨로 갈리는 곳에만 g.sk(스킬)을 덧붙였다(설계 jobs.js의 글대로):
 --   표식 1(1차) → 3까지 겹친다(깊은 표식) · 스미는 독(3차 패시브)
 --   그림자 표창: 40%로 하나(1차) → 둘(쌍표창) → 맞힌 뒤 한 번 튕긴다(되돌아오는 표창) → 70% · 표식이 가득한 적에게 터진다(피의 표창)
@@ -59406,7 +59490,7 @@ MODULES['ReplicatedStorage/shared/lune/kits/riven'] = function(script, game, req
 local Fx = require(script.Parent.Parent.fx)
 local Common = require(script.Parent.common)
 local COMBAT = require(script.Parent.Parent.data["combat.generated"]) -- 연쇄 순보의 레벨마다의 거리(moveCast — 2026-10-24)
-local poly, disc, starPts, line, crescentPts = Fx.poly, Fx.disc, Fx.starPts, Fx.line, Fx.crescentPts
+local poly, disc, line, crescentPts = Fx.poly, Fx.disc, Fx.line, Fx.crescentPts
 local dash, buff = Common.dash, Common.buff
 local floor, sin, cos, min, max, abs, ceil = math.floor, math.sin, math.cos, math.min, math.max, math.abs, math.ceil
 local R = Fx.R -- 반올림(그림의 점 자리)
@@ -59421,10 +59505,41 @@ local function mark(g, m, n: number?)
 	m.mark = min(cap, m.mark + (n or 1) * (if g.has("rv_eclipse") then 2 else 1))
 	m.markT = 8
 end
-local function burst(g, m)
-	g.fx.cut(m.x, m.y - m.h - 8, 34, 40, g.tone)
-	g.fx.cut(m.x, m.y - m.h - 8, 34, -40, g.tone, { delay = 0.05 })
-	g.fx.shards(m.x, m.y - m.h - 8, 6, g.tone, { kind = "mix" })
+local RAD = math.pi / 180
+-- 섬영이 찾는 거리(2026-10-31 사용자 "섬영 판정이 너무 안좋아 어느정도 자동추적이랑 좀 멀어도 바로 인식되면서 순간적으로 이동이 되어야해" — 170 · 130 → 260 · 220, 위아래 60 → 72):
+--  STEP_RANGE = 표식이 있는 적(앞뒤) · STEP_NEAR = 표식이 없을 때 가까운 적(뒤는 60도트 더 먼 것으로) · STEP_DY = 위아래 · STEP_LOCK = 같은 적을 다시 터뜨려 다시 쓰기를 되돌릴 수 있기까지(초) — 제가 정한 것
+local STEP_RANGE, STEP_NEAR, STEP_DY, STEP_LOCK = 260, 220, 72, 3
+-- 표식이 터진다: 머리 위 초승달 표식이 부풀며 하얗게 → X자 칼자국 · 세모 조각.
+--  표식 공명(3차 패시브 — 2026-10-30 리마스터 · 전에는 스미는 독): 둘레 reson도트의 다른 표식이 민트 번개로 이어져 함께 터진다(그 표식 수 x 4 x resonShare — 공방 combat.js PASSIVE.rv_venom).
+--  chain = false면 잇지 않는다(화면의 표식을 모두 터뜨릴 때 · 이어 터진 것)
+local RESON = COMBAT.passive and COMBAT.passive.rv_venom and COMBAT.passive.rv_venom.fx or { reson = 90, resonShare = 0.5 }
+local function burst(g, m, chain: boolean?)
+	local x, y, tone = m.x, m.y - m.h - 8, g.tone
+	if chain ~= false and g.sk("rv_venom") > 0 then
+		for _, n in g.mobs() do
+			if n ~= m and (n.mark or 0) > 0 and abs(n.x - m.x) <= RESON.reson and abs(n.y - m.y) <= 60 then
+				local k = n.mark
+				n.mark = 0
+				g.fx.bolt(x, y, n.x, n.y - n.h - 8, tone, { jag = 4, life = 0.2 })
+				g.after(0.06, function()
+					if n.dead >= 0 then
+						return
+					end
+					g.hurt(n, max(1, R(4 * k * RESON.resonShare)), { proc = true })
+					burst(g, n, false)
+				end)
+			end
+		end
+	end
+	g.fx.add(0.22, function(ctx, k)
+		ctx:alpha(1 - k)
+		poly(ctx, crescentPts(x, y, 5 + 12 * k, 3 + 2 * (1 - k), 60, 300, 1), if k < 0.4 then tone.w else tone.l)
+		ctx:alpha(1)
+	end)
+	g.fx.cut(x, y, 40, 40, tone, { th = 4 })
+	g.fx.cut(x, y, 40, -40, tone, { th = 4, delay = 0.05 })
+	g.fx.pop(x, y, tone, { r = 7 })
+	g.fx.shards(x, y, 8, tone, { kind = "tri", speed = 90 })
 end
 -- 화면의 표식을 모두 터뜨린다(표식 수만큼 세다)
 local function detonate(g, per: number?)
@@ -59433,78 +59548,330 @@ local function detonate(g, per: number?)
 			local k = m.mark
 			m.mark = 0
 			g.hurt(m, (per or 4) * k, { lift = 120 })
-			burst(g, m)
+			burst(g, m, false)
 		end
 	end
 end
--- 그림자 표창(사출기 — 1차에 배우고 2~4차 패시브가 강화한다): 표창이 날아가 표식을 남긴다. hop = 맞힌 뒤 다른 적에게 한 번 튕긴다. 표식이 가득한 적에게는 터진다
---  o.land = 닿은 순간에 부를 것(화면이 그 타의 피해 숫자를 이때 띄운다)
-local function star(g, from, t, hop: boolean?, o)
-	if not t then
+-- 민트 결정 연기(리븐의 special 동작에 그려진 연기와 같은 결): 둥근 덩이들이 둥글게 부풀며 흩어지고 가운데가 하얗게 빛났다가 사라진다
+local function puff(g, x: number, y: number, s: number?)
+	local sz, tone = s or 1, g.tone
+	g.fx.add(0.34, function(ctx, k)
+		ctx:alpha(min(1, 2 * (1 - k)))
+		for i = 0, 7 do
+			local a = math.pi * (i + 0.5) / 8
+			local d = (5 + 13 * k) * sz
+			local r = max(1, R((4 - 3 * k) * sz * (if i % 2 == 1 then 0.8 else 1)))
+			disc(ctx, x + cos(a) * d * 1.3, y - 3 - sin(a) * d, r, if i % 3 == 0 then tone.l else tone.n)
+		end
+		disc(ctx, x, y - 4 - 6 * k * sz, max(1, R((5 - 4 * k) * sz)), tone.w)
+		ctx:alpha(1)
+	end)
+	g.fx.shards(x, y - 8, R(4 * sz), tone, { kind = "tri", speed = 50, up = 40, life = 0.35 })
+end
+-- 순간이동: 떠난 자리에 잔상 · 결정 연기, 지나간 길에 가는 빛줄기 · 속도선, 나타난 자리에 세모 조각(벽이면 옮기지 않는다 → false)
+local function blink(g, x: number): boolean
+	local x0, y = g.x, g.y
+	g.ghost()
+	puff(g, x0, y)
+	if not g.teleport(x) then
+		return false
+	end
+	local len, mid = abs(g.x - x0), (x0 + g.x) / 2
+	if len > 8 then
+		g.fx.cut(mid, y - 9, len, 0, g.tone, { th = 2, life = 0.18 })
+		g.fx.streaks(mid, y - 6, 4, if g.x > x0 then 1 else -1, g.tone, { w = len })
+	end
+	g.fx.shards(g.x, y - 8, 4, g.tone, { kind = "tri", speed = 40, up = 30, life = 0.3 })
+	return true
+end
+-- 잔영 베기(사출기 — 2026-10-30 리마스터 · 전에는 그림자 표창): 적 t의 등 뒤(fromX의 반대쪽)에 내 잔영이 나타나 사선으로 벤다. 피해 · 표식은 서버(Room:kitAfter)가 정하고
+--  화면은 그림만 — land = 벤 순간(피해 숫자). 잔영 = 내 베는 동작(slash 3~6장)을 민트 실루엣으로 0.035초마다. 공방 riven.js의 shade와 같은 그림
+local function shade(g, t, fromX: number, land)
+	if not t or t.dead >= 0 then
+		if land then
+			land()
+		end
 		return
 	end
-	local tone = g.tone
-	g.shot({
-		x = from.x or g.x,
-		y = from.y or (g.y - 12),
-		target = t,
-		speed = 280,
-		curl = 70,
-		draw = function(ctx, p)
-			poly(ctx, starPts(p.x, p.y, 5, p.t * 22), tone.n)
-			poly(ctx, starPts(p.x, p.y, 2.5, p.t * 22), tone.w)
-		end,
-		onReach = function(p)
-			local full = t.mark >= 3 and g.sk("rv_star4") > 0
-			g.hurt(t, if full then 5 else 2, { proc = true })
-			mark(g, t)
-			g.fx.pop(p.x, p.y, tone)
-			if full then
-				g.fx.shards(p.x, p.y, 5, tone, { kind = "tri", speed = 80 })
-			end
-			if o and o.land then
-				o.land()
-			end
-			if hop then
-				star(g, { x = p.x, y = p.y }, g.nearest(120, { from = t.x, ["not"] = t }), false)
-			end
-		end,
-	})
+	local side = if t.x >= fromX then 1 else -1
+	local x, tone = t.x + side * (if t.boss then 26 else 14), g.tone
+	puff(g, x, t.y, 0.6)
+	for i = 0, 3 do
+		g.after(i * 0.035, function()
+			g.shade("slash", 3 + i, x, t.y, -side, tone.n)
+		end)
+	end
+	g.after(0.08, function()
+		g.fx.cut(t.x, t.y - t.h - 10, 34, side * 42, tone, { th = 3, life = 0.18 })
+		g.fx.cut(t.x, t.y - t.h - 10, 22, -side * 30, tone, { th = 2, life = 0.14, delay = 0.03 })
+		g.fx.pop(t.x, t.y - t.h - 10, tone)
+		if (t.mark or 0) >= 3 and g.sk("rv_star4") > 0 then
+			g.fx.shards(t.x, t.y - t.h - 10, 6, tone, { kind = "tri", speed = 80 }) -- 잔영 폭발(표식이 가득한 적)
+		end
+		if land then
+			land()
+		end
+	end)
 end
-
-local lance, chainSteps, cleaveRush -- (아래 도우미 — 스킬 표보다 먼저 이름만)
--- 그림자 창(3차 사냥기 — 2026-10-24 사용자 "사냥기는 새로 설계해서 넣어"): 그림자 창 넷이 높이를 조금씩 달리해(땅 · 위로 6 · 12 · 18도트) 앞 130도트까지 차례로 꿰뚫고 지나간다.
---  창마다 그 높이의 띠(앞 10 ~ 130 · 위 10 아래 6도트)에 든 적을 한 번씩 · 맞은 적에게 표식. 그림: 어두운 자루 · 민트 잎날 · 뒤에 남는 꼬리 · 끝에서 작은 섬광
---  범위를 줄였다(2026-10-24 사용자 "그림자창 범위 너무 넓어 3차스킬인데 조정하고"): 앞 190 → 130도트 · 높이 72 → 18도트(제 층만 — 위층의 적은 맞지 않는다). 4차 무영참(앞 4 ~ 164 · 높이 46)보다 좁다. 숫자는 제가 정한 것
-local LANES = { 0, 6, 12, 18 }
-local LANCE_REACH = 130
-function lance(g)
-	local x, y, dir, tone = g.x, g.y, g.dir, g.tone
-	for i, up in LANES do
-		local ly, delay = y - up, (i - 1) * 0.06
-		g.after(delay, function()
-			g.fx.add(0.26, function(ctx, k)
-				local u = min(1, k / 0.55)
-				local hx, tx, yy = x + dir * (10 + (LANCE_REACH - 10) * u), x + dir * (10 + (LANCE_REACH - 10) * max(0, u - 0.4)), R(ly - 9)
-				ctx:alpha(if k < 0.55 then 1 else (1 - k) / 0.45)
-				line(ctx, tx, yy, hx, yy, tone.n, 1) -- 꼬리
-				line(ctx, hx - dir * 46, yy - 1, hx - dir * 13, yy - 1, tone.d, 3) -- 자루
-				poly(ctx, { { hx + dir * 5, yy }, { hx - dir * 9, yy - 5 }, { hx - dir * 16, yy }, { hx - dir * 9, yy + 5 } }, tone.n) -- 잎날
-				poly(ctx, { { hx + dir * 2, yy }, { hx - dir * 9, yy - 2 }, { hx - dir * 13, yy }, { hx - dir * 9, yy + 2 } }, tone.w)
-				ctx:alpha(1)
-			end)
+-- 초승 베기(1차 사냥기 — 2026-10-30 리마스터 · 전에는 창바람 세 갈래): 앞을 크게 휘감는 초승달 칼날(밖 · 안 두 겹) → 벤 자리에 남은 가는 초승달 칼자국이 0.12초 뒤 하얗게 빛나고 세모 조각으로 부서진다.
+--  닿는 곳은 그대로(앞 88 · 위 44도트 — 서버는 공방 design/combat.js SKILLS.rv_fan의 hits)
+local function crescent(g)
+	local tone, dir, cx, cy = g.tone, g.dir, g.fwd(30), g.y - 12
+	g.fx.slash(cx, cy, dir, 44, -25, 55, tone, { thick = 12, life = 0.22 })
+	g.fx.slash(cx - dir * 6, cy, dir, 32, -15, 45, tone, { thick = 6, life = 0.18 })
+	g.fx.streaks(g.fwd(36), g.y - 4, 4, -dir, tone, { w = 60, h = 24 })
+	g.after(0.12, function()
+		g.fx.add(0.16, function(ctx, k)
+			poly(ctx, crescentPts(cx, cy, 42, 2.5 * (1 - k) + 1, -20, 50, dir), if k < 0.4 then tone.w else tone.l)
 		end)
-		-- 맞는 띠 = 그 창이 그려진 높이(잎날의 위끝 = 창 높이 + 13점)부터 바닥(발밑 + 6점)까지 — 창이 몸을 지나가는 적은 모두 맞는다
-		--  (2026-10-26 사용자: "그림자창 y축 범위가 이펙트랑 일치안해서 그런듯함" — 전에는 창 높이의 위 10 · 아래 6점이라 그림보다 6점 낮았고 맨 위 창의 그림(32점)에 닿지 않았다. 위층(32점 위)은 그대로 안 맞는다)
-		g.after(delay + 0.08, function()
-			g.hitAt(x + dir * (LANCE_REACH + 10) / 2, y, (LANCE_REACH - 10) / 2, up + 13, 4, { mark = true, stop = 0.03 })
-		end)
-		g.after(delay + 0.15, function()
-			g.fx.shards(x + dir * LANCE_REACH, ly - 9, 3, tone, { kind = "bar", speed = 60, up = 10, life = 0.25 })
+		for _, a in { -12, 15, 42 } do
+			g.fx.shards(cx + dir * cos(a * RAD) * 42, cy - sin(a * RAD) * 42, 3, tone, { kind = "tri", speed = 70, up = 30, life = 0.35, dir = dir })
+		end
+	end)
+end
+-- 배후 교차(2차 보스기 — 2026-10-30 리마스터 · 전에는 제자리 X자): 앞 70도트 안의 가장 가까운 적의 등 뒤로 순간이동해 돌아서서 X자로 긋는다. 없으면 제자리
+local function behind(g)
+	local m = g.nearest(70, { front = true })
+	local side = g.dir
+	if m and blink(g, m.x + side * (if m.boss then 30 else 18)) then
+		g.face(-side)
+	end
+	g.s.cx = if m then m.x else g.fwd(26)
+end
+-- 섬영(2차 — 2026-10-30 리마스터 · 전에는 연막 순보: 화면의 표식을 모두 터뜨렸다): 표식이 있는 가장 가까운 적(STEP_RANGE 안 · 같은 층 · 그 적을 STEP_LOCK초 안에 터뜨린 적이 없는 것)에게
+--  순간이동해 등 뒤에서 X자로 벤다. 그 적의 표식을 터뜨리면(표식 수만큼 세다) 섬영의 다시 쓰기가 바로 돌아온다(서버 g.resetCd → 화면의 다시 쓰기도 지운다) → 다음 표식으로.
+--  표식이 없으면 앞 130 안의 가까운 적에게 · 그것도 없으면 앞으로 80
+local function flash(g)
+	g.s.lock = g.s.lock or {}
+	local lock, t, bd = g.s.lock, nil, STEP_RANGE
+	for _, m in g.mobs() do
+		if (m.mark or 0) > 0 and abs(m.y - g.y) <= STEP_DY and (lock[m] or -1) <= g.clock then
+			local d = abs(m.x - g.x)
+			if d <= bd then
+				bd, t = d, m
+			end
+		end
+	end
+	g.s.marked = t
+	if not t then -- 표식이 없으면 가까운 적(앞을 먼저 — 뒤는 60도트 더 먼 것으로 친다)
+		local bs = STEP_NEAR
+		for _, m in g.mobs() do
+			if abs(m.y - g.y) <= STEP_DY then
+				local d = abs(m.x - g.x)
+				local sc = d + (if (m.x - g.x) * g.dir < -8 then 60 else 0)
+				if d <= STEP_NEAR and sc <= bs then
+					bs, t = sc, m
+				end
+			end
+		end
+	end
+	g.s.st = t
+	if t then
+		local side = if t.x > g.x then 1 elseif t.x < g.x then -1 else g.dir
+		if blink(g, t.x + side * (if t.boss then 30 else 18)) then
+			g.face(-side)
+		else
+			g.face(side)
+		end
+	else
+		blink(g, g.fwd(100))
+	end
+end
+local function flashHit(g)
+	local t, tone = g.s.st, g.tone
+	local cx = if t then t.x else g.fwd(20)
+	g.fx.cut(cx, g.y - 9, 66, 30, tone, { th = 4 })
+	g.fx.cut(cx, g.y - 9, 66, -30, tone, { th = 4, delay = 0.04 })
+	if t and t.dead < 0 then
+		g.hitAt(t.x, t.y, 26, 28, 4, { stop = 0.05 }) -- 맞는 곳 = 그 적의 자리 둘레(2026-10-31 — 내 자리 · 보는 쪽과 상관없이: 옮겨 간 뒤 0.03초 사이에 움직여도 맞는다)
+	else
+		g.hit(-10, 40, 28, 4, 4, { stop = 0.05 })
+	end
+	if t and t == g.s.marked and t.dead < 0 and (t.mark or 0) > 0 then
+		local k = t.mark
+		t.mark = 0
+		g.hurt(t, 4 * k, { lift = 80 })
+		burst(g, t)
+		g.s.lock[t] = g.clock + STEP_LOCK
+		for m, till in g.s.lock do -- 지난 것은 치운다(쓰러진 적이 남지 않게)
+			if till <= g.clock then
+				g.s.lock[m] = nil
+			end
+		end
+		g.resetCd("rv_step")
+	end
+	if g.has("rv_eclipse") then
+		g.resetCd("rv_step") -- 월식(4차 극딜 버프): 섬영을 다시 쓰기 없이 이어 쓴다
+	end
+end
+-- 섬광 연참(3차 사냥기 — 2026-10-30 리마스터 · 전에는 그림자 창 넷): 앞 RUSH_REACH도트 안 · 같은 층의 적 RUSH_N마리까지(표식이 있는 적부터 · 그다음 가까운 차례)에게 RUSH_STEP초마다 순간이동해
+--  등 뒤(지나온 쪽의 반대)에 나타나 몸을 사선으로 가른다 · 표식. 적이 없으면 앞으로 90 순간이동하며 그 길을 벤다. 끝난 자리에 선다 — 숫자는 제가 정한 것
+local RUSH_N, RUSH_REACH, RUSH_STEP = 5, 150, 0.06
+local function flashRush(g)
+	local dir, x0 = g.dir, g.x
+	local list = {}
+	for _, m in g.mobs() do
+		if abs(m.y - g.y) <= 60 and (m.x - x0) * dir > -8 and abs(m.x - x0) <= RUSH_REACH then
+			table.insert(list, m)
+		end
+	end
+	table.sort(list, function(a, b)
+		local am, bm = (a.mark or 0) > 0, (b.mark or 0) > 0
+		if am ~= bm then
+			return am
+		end
+		return abs(a.x - x0) < abs(b.x - x0)
+	end)
+	if #list == 0 then
+		local from = g.x
+		blink(g, g.fwd(90))
+		local mid, len = (from + g.x) / 2, abs(g.x - from)
+		g.fx.cut(mid, g.y - 10, len + 20, 0, g.tone, { th = 4, life = 0.22 })
+		g.hitAt(mid, g.y, len / 2 + 10, 26, 4, { mark = true })
+		return
+	end
+	for i = 1, min(RUSH_N, #list) do
+		local m = list[i]
+		g.after((i - 1) * RUSH_STEP, function()
+			if m.dead >= 0 then
+				return
+			end
+			local side = if m.x >= g.x then 1 else -1
+			if blink(g, m.x + side * (if m.boss then 26 else 14)) then
+				g.face(-side)
+			end
+			local y = m.y - m.h - 10
+			g.fx.cut(m.x, y, 42, side * (if i % 2 == 0 then -50 else 50), g.tone, { th = 4, life = 0.22 })
+			g.fx.pop(m.x, y, g.tone, { r = 5 })
+			g.hurt(m, 4, { mark = true, stop = 0.03 })
 		end)
 	end
 end
+-- 월영 비수(3차 — 2026-10-30 리마스터 · 전에는 연막탄): 처음 누르면 발밑에 표식 비수를 꽂는다(DAGGER_LIFE초 — 그동안은 다시 쓰기가 돌지 않는다: 꽂은 순간 서버가 다시 쓰기를 지운다).
+--  비수가 있을 때 누르면 비수 자리로 순간이동하며 지나간 길의 적을 모두 베고 표식 — 그때부터 다시 쓰기. 비수가 사라지거나 DAGGER_FAR도트보다 멀면 새로 꽂는다
+local DAGGER_LIFE, DAGGER_FAR = 10, 400
+local function drawDagger(tone)
+	return function(ctx, p) -- 땅에 꽂힌 비수: 땅에 번진 빛 두 줄 · 민트 날(끝이 땅에 들어간다) · 코등이 · 어두운 손잡이 · 머리 · 위에 뜬 초승달 표식
+		local k = min(1, p.t * 6)
+		local x, gy = R(p.x), R(p.y)
+		local y = R(p.y - (1 - k) * 12)
+		ctx:alpha(min(1, (p.life - p.t) * 2))
+		ctx:style(tone.n)
+		ctx:rect(x - 6, gy, 13, 1)
+		ctx:style(tone.l)
+		ctx:rect(x - 3, gy, 7, 1)
+		poly(ctx, { { x - 2, y - 8 }, { x + 3, y - 8 }, { x + 1, y }, { x, y } }, tone.l)
+		line(ctx, x, y - 8, x, y - 1, tone.w)
+		ctx:style(tone.n)
+		ctx:rect(x - 4, y - 10, 9, 2)
+		ctx:style(0x2a3340)
+		ctx:rect(x - 1, y - 15, 3, 5)
+		ctx:style(tone.l)
+		ctx:rect(x - 1, y - 17, 3, 2)
+		local my = R(y - 25 + sin(p.t * 4) * 1.5)
+		poly(ctx, crescentPts(x + 1, my, 4, 2.6, 70, 290, 1), tone.n)
+		poly(ctx, crescentPts(x + 1, my, 4, 1, 110, 250, 1), tone.l)
+		ctx:alpha(1)
+	end
+end
+local function dagger(g)
+	local d, tone = g.s.dagger, g.tone
+	if d and d.t < d.life and abs(d.x - g.x) <= DAGGER_FAR then -- 돌아오기
+		local from = g.x
+		d.t = d.life
+		g.s.dagger = nil
+		if blink(g, d.x) then
+			local mid, len = (from + g.x) / 2, abs(g.x - from)
+			g.fx.cut(mid, g.y - 10, len + 20, 0, tone, { th = 5, life = 0.26 })
+			g.fx.streaks(mid, g.y - 4, 8, if g.x > from then 1 elseif g.x < from then -1 else g.dir, tone, { w = len })
+			g.hitAt(mid, g.y, len / 2 + 12, 30, 6, { mark = true, stop = 0.05 })
+		end
+		g.fx.shards(d.x, g.y - 6, 10, tone, { kind = "tri", speed = 90 })
+		g.fx.pop(d.x, g.y - 8, tone, { r = 8 })
+		g.shake(2, 0.12)
+		return
+	end
+	if d then
+		d.t = d.life -- (멀리 두고 온 것은 사라진다)
+	end
+	g.s.dagger = g.shot({ x = g.x, y = g.y, life = DAGGER_LIFE, draw = drawDagger(tone) })
+	g.fx.shards(g.x, g.y - 4, 5, tone, { kind = "tri", speed = 50, up = 30, life = 0.3 })
+	g.resetCd("rv_smoke") -- 꽂은 동안은 다시 쓰기가 돌지 않는다(돌아올 때 돈다)
+end
+-- 무영 섬(4차 사냥기 — 2026-10-30 리마스터 · 전에는 보이지 않는 창질 여섯): 앞 164도트 안의 적 사이를(없으면 허공의 자리를) PH_STEP초마다 여섯 번 오가며 긋고 처음 자리로 돌아온다.
+--  그은 자리마다 칼자국이 허공에 남았다가 한꺼번에 하얗게 빛나며 세모 조각으로 부서진다 — 그 순간 앞이 맞는다(판정은 전과 같다: 앞 84 둘레 80 · 위 46 · 세 번). 자주 쓰는 사냥기라 흔들림은 없다
+--  2026-10-31 사용자 "무영섬은 너무 범위가 작고": 찾는 곳 앞 164 → 240도트 · 위아래 60 → 72 · 맞는 곳 앞 4~164 · 위 46 → 앞 0~248 · 위 60(PH_REACH)
+local PH_N, PH_STEP, PH_REACH = 6, 0.04, 248
+local function phantom(g)
+	local x0, y, dir, tone, cx = g.x, g.y, g.dir, g.tone, g.fwd(PH_REACH / 2)
+	local foes, cuts = {}, {}
+	for _, m in g.mobs() do
+		if abs(m.y - y) <= 72 and (m.x - x0) * dir > -8 and abs(m.x - x0) <= PH_REACH - 8 then
+			table.insert(foes, m)
+		end
+	end
+	for i = 0, PH_N - 1 do
+		local m = if #foes > 0 then foes[i % #foes + 1] else nil
+		local side = if i % 2 == 1 then -1 else 1
+		local tx = if m then m.x + side * 12 else cx + (g.rnd() - 0.5) * 180
+		local ty = (if m then m.y - m.h - 10 else y - 14) + (g.rnd() - 0.5) * 10
+		local ang = side * (30 + g.rnd() * 40)
+		table.insert(cuts, { tx, ty, ang })
+		g.after(i * PH_STEP, function()
+			g.ghost()
+			g.teleport(tx)
+			g.face(side * dir)
+			g.fx.cut(tx, ty, 54, ang, tone, { th = 3, life = 0.42 })
+		end)
+	end
+	g.after(PH_N * PH_STEP, function()
+		g.ghost()
+		g.teleport(x0)
+		g.face(dir)
+	end)
+	g.after(PH_N * PH_STEP + 0.12, function()
+		for _, c in cuts do
+			g.fx.cut(c[1], c[2], 66, c[3], tone, { th = 5, life = 0.2 })
+			g.fx.shards(c[1], c[2], 4, tone, { kind = "tri", speed = 80, life = 0.35 })
+		end
+	end)
+	for _, t in { 0, 0.05, 0.1 } do
+		g.after(PH_N * PH_STEP + 0.12 + t, function()
+			g.hitAt(cx, y, PH_REACH / 2, 60, 4, { mark = t == 0 })
+		end)
+	end
+end
+-- 암살 연계(4차 보스기 — 2026-10-30 리마스터): 누르면 앞 80 안의 가장 가까운 적의 등 뒤로 순간이동해 돌아서서 여섯 번 찌른다 → 한 번 더 누르면 머리 위에서 떨어지는 잔영과 함께 세로로 내리꽂는다
+local function killStart(g)
+	local m = g.nearest(80, { front = true })
+	local side = g.dir
+	if m and blink(g, m.x + side * (if m.boss then 30 else 16)) then
+		g.face(-side)
+	end
+end
+local function killDive(g)
+	local tx, ty = g.fwd(24), g.y
+	for i = 0, 3 do
+		g.after(i * 0.03, function()
+			g.shade("slash", 5 + i, tx - g.dir * 6, ty - 40 + i * 12, g.dir, g.tone.n)
+		end)
+	end
+end
+-- 표식의 그림(머리 위 — 화면 cast.luau가 top을 준다): 표식 하나마다 민트 초승달 하나 — 위아래로 살짝 흔들리고, 가득하면(셋) 하얗게 빛난다. 전에는 작은 + 셋
+local function drawMarks(ctx, g, m, _sc, front, top)
+	if not front or (m.mark or 0) <= 0 or not top then
+		return
+	end
+	local n, tone = m.mark, g.tone
+	local full = n >= 3
+	for i = 0, n - 1 do
+		local x, y = m.x - (n - 1) * 4 + i * 8, R(top - 20 + sin(g.clock * 5 + i * 1.3) * 1.5) -- (체력 띠 위)
+		poly(ctx, crescentPts(x + 1, y, 4, 2.6, 70, 290, 1), if full then tone.l else tone.n)
+		poly(ctx, crescentPts(x + 1, y, 4, 1, 110, 250, 1), if full then tone.w else tone.l)
+	end
+end
 
+local chainSteps, cleaveRush -- (아래 도우미 — 스킬 표보다 먼저 이름만)
 -- 연쇄 순보(3차 이동기 — 2026-10-24 사용자 "리븐 3차스킬 연쇄순보는 쿨타임 5초 이동기로 재설계 … 마스터레벨 5짜리 이동기"): 피해는 없다.
 --  앞으로 순간이동을 steps번 잇는다 — 순간이동마다 잔상 · 속도선 · 작은 연기. 거리(모두 합친 것)는 스킬 레벨마다(공방 combat.js의 MOVECAST → moveCast.dist)
 function chainSteps(g)
@@ -59567,11 +59934,8 @@ function cleaveRush(g)
 end
 
 local skills = {
-	{ id = "rv_fan", key = "Q", shot = 0.4, segs = { { clip = "slash", fps = 20, ev = { [5] = function(g) -- 부채꼴로 퍼지는 가는 벤 자국 세 줄
-		for _, a in { 16, 0, -16 } do
-			g.fx.cut(g.fwd(44), g.y - 10 - a * 0.7, 80, a * g.dir, g.tone, { th = 2, life = 0.22 })
-		end
-		g.fx.streaks(g.fwd(40), g.y, 5, -g.dir, g.tone, { w = 70, h = 30 })
+	{ id = "rv_fan", key = "Q", shot = 0.4, segs = { { clip = "slash", fps = 20, ev = { [5] = function(g) -- 초승 베기(위 crescent)
+		crescent(g)
 		g.hit(0, 88, 44, 6, 3, { mark = true })
 	end } } } },
 	{ id = "rv_double", key = "A", shot = 0.5, segs = { { clip = "dslash", fps = 22, ev = { -- 제자리에서 두 번 벤다
@@ -59588,100 +59952,78 @@ local skills = {
 			g.hit(-4, 48, 24, 4, 3, { kb = 80, mark = true })
 		end,
 	} } } },
-	{ id = "rv_gale", key = "W", air = true, cd = 0.5, shot = 0.52, segs = { { clip = "slash", fps = 20, float = true, trail = true, start = function(g)
+	-- 질풍 일섬(2026-10-31 사용자 "질풍일섬이 너무 뻑뻑하고, 두번이 아니라 일회성 베기로 가고 판정좀더 좋아야할거같아"): 다시 쓰기 0.5초(이어 쓰기) → 없음 · 누르는 순간 내달려(0.14초 · 84도트 — 전에는 3장째부터 0.2초 · 68)
+	--  내달리기가 끝나는 순간 한 번에 벤다(전에는 그 뒤 0.2초 늦게) · 맞는 곳: 지나온 길의 앞뒤 20도트 더 · 위 34(전에는 앞뒤 15 · 위 26) · 동작 26장/초(전에는 20)
+	{ id = "rv_gale", key = "W", air = true, shot = 0.42, segs = { { clip = "slash", fps = 26, float = true, trail = true, start = function(g)
 		g.s.from = g.x
-	end, ev = {
-		[3] = function(g)
-			g.move(340, 0.2)
-		end,
-		[5] = function(g)
-			g.after(0.2, function()
-				local mid, len = (g.s.from + g.x) / 2, abs(g.x - g.s.from) + 30
-				g.fx.cut(mid, g.y - 8, len, 0, g.tone, { th = 4, life = 0.26 })
-				g.fx.streaks(mid, g.y - 2, 8, -g.dir, g.tone, { w = len })
-				g.hitAt(mid, g.y, len / 2, 26, 4, { mark = true, stop = 0.04 })
-			end)
-		end,
-	} } } },
-	{ id = "rv_cross", key = "S", shot = 0.52, segs = { { clip = "dslash", fps = 22, ev = { -- 적 몸 위에서 교차하는 벤 자국 둘(제자리 — 물러나지 않는다)
+		g.move(600, 0.14)
+		g.after(0.14, function()
+			local mid, len = (g.s.from + g.x) / 2, abs(g.x - g.s.from) + 40
+			g.fx.cut(mid, g.y - 10, len, 0, g.tone, { th = 5, life = 0.24 })
+			g.fx.cut(mid, g.y - 12, len * 0.7, g.dir * 6, g.tone, { th = 2, life = 0.18, delay = 0.03 })
+			g.fx.streaks(mid, g.y - 2, 8, -g.dir, g.tone, { w = len })
+			g.fx.shards(g.x, g.y - 10, 4, g.tone, { kind = "tri", speed = 70, dir = g.dir })
+			g.hitAt(mid, g.y, len / 2, 34, 4, { mark = true, stop = 0.03 })
+		end)
+	end } } },
+	{ id = "rv_cross", key = "S", shot = 0.52, segs = { { clip = "dslash", fps = 22, start = behind, ev = { -- 배후 교차(위 behind): 등 뒤로 순간이동해 돌아서서 X자
 		[4] = function(g)
-			local m = g.nearest(54, { front = true })
-			g.s.cx = if m then m.x else g.fwd(26)
-			g.fx.cut(g.s.cx, g.y - 9, 34, 45, g.tone, { th = 4 })
-			g.hit(0, 54, 30, 4, 5, { mark = true })
+			g.fx.cut(g.s.cx, g.y - 9, 38, 45, g.tone, { th = 4 })
+			g.hit(-10, 54, 30, 4, 5, { mark = true })
 		end,
 		[10] = function(g)
-			g.fx.cut(g.s.cx, g.y - 9, 34, -45, g.tone, { th = 4 })
-			g.hit(0, 54, 30, 4, 6, { mark = true, stop = 0.04 })
+			g.fx.cut(g.s.cx, g.y - 9, 38, -45, g.tone, { th = 4 })
+			g.fx.pop(g.s.cx, g.y - 9, g.tone, { r = 7 })
+			g.hit(-10, 54, 30, 4, 6, { mark = true, stop = 0.04 })
 		end,
 	} } } },
-	{ id = "rv_step", key = "Z", shot = 0.42, segs = {
-		{ clip = "smokeout", from = 0, to = 6, fps = 26, float = true },
-		{ clip = "smokein", fps = 22, float = true, start = function(g)
-			local m = g.nearest(130)
-			if m then
-				g.teleport(m.x + g.dir * 20)
-				g.face(-g.dir)
-			else
-				g.teleport(g.fwd(80))
-			end
-			g.fx.streaks(g.x, g.y - 4, 6, g.dir, g.tone)
-		end, ev = { [2] = function(g)
-			g.fx.cut(g.x, g.y - 9, 70, 30, g.tone, { th = 4 })
-			g.fx.cut(g.x, g.y - 9, 70, -30, g.tone, { th = 4, delay = 0.04 })
-			g.hit(-36, 36, 28, 4, 4, { stop = 0.05 })
-			detonate(g)
-		end } },
-	} },
+	-- 섬영(위 flash · flashHit — 2026-10-31 사용자 "섬영 거의 그냥 쉽게 쓸수있어야해 지금 너무 선딜, 후딜이 길어"): 동작이 없는 기술(instant) — 누르는 순간 옮겨 가고 0.03초 뒤 벤다.
+	--  anytime = 다른 스킬을 쓰는 중에도 쓴다(서버 caster:begin · world의 1차 기술 중 막기가 이것은 받는다 — 하던 동작은 새 자리에서 이어 간다)
+	{ id = "rv_step", key = "Z", instant = true, anytime = true, shot = 0.2, cast = function(g)
+		flash(g)
+		g.after(0.03, function()
+			flashHit(g)
+		end)
+	end },
 	buff("rv_quick", "1"),
-	{ id = "rv_lance", key = "E", shot = 0.5, segs = { { clip = "slash", fps = 20, ev = { [4] = function(g)
-		lance(g)
-	end } } } },
+	{ id = "rv_lance", key = "E", shot = 0.5, segs = { { clip = "slash", fps = 20, ev = { [3] = flashRush } } } }, -- 섬광 연참(위 flashRush)
 	{ id = "rv_chain", key = "V", air = true, shot = 0.35, segs = { -- 연쇄 순보(이동기): 연기 속으로 사라졌다가 앞으로 순간이동을 세 번 잇는다
 		{ clip = "smokeout", from = 0, to = 5, fps = 30, float = true },
 		{ clip = "smokein", fps = 26, float = true, start = chainSteps },
 	} },
 	{ id = "rv_flurry", key = "D", shot = 0.8, holdFor = 2, segs = {
-		{ clip = "dslash", from = 0, to = 10, loopFrom = 4, fps = 40, hold = true, max = 3, min = 0.3, every = { 0.125, function(g) -- 앞에 겹겹이 쌓이는 짧은 벤 자국
+		{ clip = "dslash", from = 0, to = 10, loopFrom = 4, fps = 40, hold = true, max = 3, min = 0.3, every = { 0.125, function(g) -- 잔영 난무(2026-10-30 리마스터): 앞에 겹겹이 쌓이는 짧은 벤 자국 + 적 둘레(등 뒤 · 머리 위 · 비스듬히 위)에 번갈아 나타나 베는 잔영
 			g.s.n += 1
 			g.fx.cut(g.fwd(18 + g.rnd() * 16), g.y - 5 - g.rnd() * 13, 14 + g.rnd() * 12, (g.rnd() - 0.5) * 130, g.tone, { life = 0.12, th = 2 })
 			g.hit(0, 46, 26, 4, 2, { mark = g.s.n % 4 == 0 })
+			local t = g.nearest(60, { front = true })
+			if t then
+				local spot = ({ { 14, 0 }, { -2, -24 }, { 10, -14 } })[g.s.n % 3 + 1]
+				local x, y = t.x + g.dir * spot[1], t.y + spot[2]
+				local face = if spot[1] > 0 then -g.dir else g.dir
+				for i = 0, 2 do
+					g.after(i * 0.03, function()
+						g.shade("dslash", 4 + i * 2, x, y, face, g.tone.n)
+					end)
+				end
+				g.fx.cut(t.x, t.y - t.h - 8 - g.rnd() * 10, 22 + g.rnd() * 10, (g.rnd() - 0.5) * 140, g.tone, { life = 0.12, th = 2 })
+			end
 		end } },
 		{ clip = "dslash", from = 11, fps = 24 }, -- 떼면 동작을 끝까지 마무리한다
 	} },
 	buff("rv_clone", "2", function(g)
 		g.ghost()
 	end),
-	{ id = "rv_smoke", key = "C", shot = 0.6, segs = { { clip = "cast", fps = 18, ev = { [2] = function(g) -- 바닥에 깔려 일렁이는 둥근 연기 덩이
-		local SMOKE = { 0x2f3742, 0x393e46, 0x47546a }
-		g.s.smoke = g.shot({ x = g.x, y = g.y, life = 8, draw = function(ctx, p)
-			local k = min(1, p.t * 4, (p.life - p.t) * 2)
-			ctx:alpha(0.8 * k)
-			for i = 0, 8 do
-				disc(ctx, p.x + (i - 4) * 9 + sin(p.t * 2 + i) * 3, p.y - 7 - (i % 3) * 5 + cos(p.t * 1.6 + i * 2) * 2, 7 + (i % 3) * 2, SMOKE[i % 3 + 1])
-			end
-			ctx:alpha(1)
-		end })
-	end } } } },
+	{ id = "rv_smoke", key = "C", shot = 0.4, segs = { { clip = "cast", fps = 18, ev = { [2] = dagger } } } }, -- 월영 비수(위 dagger): 꽂기 → 한 번 더 누르면 돌아오기
 	{ id = "rv_slip", key = "5", instant = true, shot = 0.3, cast = function(g)
 		g.buff("rv_slip")
 		g.fx.streaks(g.x, g.y - 4, 8, g.dir, g.tone)
 		g.fx.ring(g.x, g.y, 18, 4, g.tone, { life = 0.25 })
 	end },
-	{ id = "rv_phantom", key = "R", shot = 0.3, segs = { { clip = "slash", fps = 26, walk = 1, ev = { [5] = function(g) -- 허공에 제각각 기운 벤 자국 여섯이 한꺼번에
-		local cx, cy = g.fwd(84), g.y - 14
-		for i = 0, 5 do
-			g.fx.cut(cx + (g.rnd() - 0.5) * 120, cy + (g.rnd() - 0.5) * 34, 50 + g.rnd() * 34, g.rnd() * 180, g.tone, { life = 0.22, th = 3, delay = i * 0.012 })
-		end
-		for _, t in { 0, 0.05, 0.1 } do
-			g.after(t, function()
-				g.hitAt(cx, g.y, 80, 46, 4, { mark = t == 0 })
-			end)
-		end
-	end } } } },
+	{ id = "rv_phantom", key = "R", shot = 0.3, segs = { { clip = "slash", fps = 26, walk = 1, ev = { [5] = phantom } } } }, -- 무영 섬(위 phantom)
 }
 
--- 암살: 여섯 번 찌르고, 한 번 더 누르면 마무리 일격
+-- 암살 연계: 적의 등 뒤로 순간이동해 여섯 번 찌르고(killStart), 한 번 더 누르면 머리 위에서 내리꽂는 마무리(killDive)
 do
 	local ev = {}
 	for i, f in { 2, 3, 4, 5, 6, 7 } do
@@ -59692,8 +60034,8 @@ do
 		end
 	end
 	table.insert(skills, { id = "rv_kill", key = "F", shot = 0.86, segs = {
-		{ clip = "dslash", fps = 30, ev = ev },
-		{ clip = "slash", fps = 20, needPress = true, ev = { [5] = function(g) -- 마무리: 세로 큰 벤 자국 — 표식이 많을수록 세다
+		{ clip = "dslash", fps = 30, start = killStart, ev = ev },
+		{ clip = "slash", fps = 20, needPress = true, start = killDive, ev = { [5] = function(g) -- 마무리: 머리 위에서 떨어지는 잔영 → 세로 큰 벤 자국 — 표식이 많을수록 세다
 			g.fx.cut(g.fwd(24), g.y - 22, 96, 88, g.tone, { th = 6, life = 0.3 })
 			g.shake(1, 0.1)
 			for _, m in g.hit(0, 52, 60, 4, 0, {}) do
@@ -59768,7 +60110,7 @@ table.insert(skills, {
 		t = t or g.boss()
 		g.s.ex = t
 		if t then
-			g.teleport(t.x - g.dir * 12)
+			blink(g, t.x - g.dir * 12)
 		end
 	end, ev = { [2] = function(g) -- 표식이 한 점으로 빨려 들었다가 세로로 터진다
 		local m = g.s.ex
@@ -59800,17 +60142,13 @@ riven = {
 	toggle = "rv_star",
 	icons = { c_hero = "moon", rv_star = "star", rv_quick = "haste", rv_clone = "twin", rv_slip = "shield", rv_eclipse = "eclipse" },
 	init = function(g)
-		g.s = { venom = 0, n = 0, smoke = nil }
+		g.s = { n = 0, dagger = nil, lock = {}, link = -1, lx = nil, lf = 0 }
 	end,
 	haste = function(g)
 		return if g.has("rv_quick") then 1.25 else 1
 	end,
 	mult = function(g)
-		return 1 + (if g.has("rv_eclipse") then 0.3 else 0) + (if riven.inSmoke(g) then 0.2 else 0) + (if g.has("c_hero") then 0.05 else 0)
-	end,
-	inSmoke = function(g)
-		local s = g.s.smoke
-		return s ~= nil and s.t < s.life and abs(s.x - g.x) < 40
+		return 1 + (if g.has("rv_eclipse") then 0.3 else 0) + (if g.has("c_hero") then 0.05 else 0)
 	end,
 	dim = function(g)
 		return if g.has("rv_eclipse") then 0.42 else 0
@@ -59832,21 +60170,22 @@ riven = {
 			end
 		end
 	end,
+	drawMarks = drawMarks,
 	tick = function(g, dt)
-		g.s.venom += dt
-		if g.s.venom >= 1 then -- 스미는 독
-			g.s.venom = 0
-			if g.sk("rv_venom") > 0 then
-				for _, m in g.mobs() do
-					if m.mark > 0 then
-						g.hurt(m, m.mark, { proc = true, quiet = true })
-						g.fx.shards(m.x, m.y - m.h - 6, 1, g.tone, { kind = "dot", up = 30, speed = 10, life = 0.5 })
-					end
-				end
+		-- 연계(그림자 일격): 순간이동(한 번에 30도트 넘게 옮겨졌다)한 뒤 1초 — 몸에서 민트 빛 알갱이가 흩날린다(그림만 — 크리티컬 데미지 · 표식 +는 서버)
+		if g.s.lx and abs(g.x - g.s.lx) > 30 and g.sk("rv_back") > 0 then
+			g.s.link = g.clock + 1
+		end
+		g.s.lx = g.x
+		if g.clock < (g.s.link or -1) then
+			g.s.lf = (g.s.lf or 0) - dt
+			if g.s.lf <= 0 then
+				g.s.lf = 0.05
+				g.fx.shards(g.x - g.dir * 4, g.y - 6 - g.rnd() * 14, 1, g.tone, { kind = "dot", up = 10, speed = 8, life = 0.3, grav = -20 })
 			end
 		end
 		g.hero.sil = if g.has("rv_slip") then 0x14665f else nil
-		g.hero.alpha = if g.has("rv_slip") then 0.75 elseif riven.inSmoke(g) then 0.6 else 1
+		g.hero.alpha = if g.has("rv_slip") then 0.75 else 1
 	end,
 	drawBack = function(_ctx, g) -- 그림자 분신: 내 모습 그대로의 민트색 실루엣이 뒤따른다
 		-- 탈것을 탄 동안(2026-10-26 사용자 "리븐 캐릭터가 탈것을 탔을때 그림자 분신이 엄청나게 이상하게 나온다 … 리븐 그림자를 완전 별도 캐릭터처럼 따로 움직이게"):
@@ -59877,9 +60216,9 @@ riven = {
 	end,
 	-- 서버가 정해 화면에 알리는 것(g.call)
 	calls = {
-		-- 표창 하나: low = 내 손에서(둘째 표창) · 아니면 몸에서. 튕기는 것은 되돌아오는 표창을 배웠을 때
+		-- 잔영 하나(서버가 정한 것 — 그림만): low = 맞은 적(겹 잔영) · 아니면 가까운 다른 적
 		star = function(g, t, low)
-			star(g, if low then { x = g.x, y = g.y - 6 } else {}, t, g.sk("rv_star3") > 0)
+			shade(g, t, if low then g.x - g.dir * 40 else g.x)
 		end,
 		clone = function(g, m, dmg, marks)
 			g.after(0.15, function()
@@ -59896,13 +60235,13 @@ riven = {
 	},
 	-- 지금의 서버(1차 — sim/kit.luau)가 알리는 따로 나가는 타. o = { sx, sy(날아오는 자리) · land(닿은 순간에 부를 것) }
 	procs = {
-		-- o.hop = 앞의 표창이 맞힌 뒤 튕겨 온 것(조금 늦게 떠난다)
+		-- 잔영 베기(2026-10-30 리마스터 — 전에는 표창): 적 등 뒤(o.sx — 서버가 정한 떠나는 자리의 반대쪽)에 잔영이 나타나 벤다. o.hop = 앞의 잔영이 벤 뒤 다음 적으로(잔영 연격 — 조금 늦게)
 		star = function(g, m, o)
 			local function go()
-				star(g, { x = o.sx, y = o.sy }, m, false, o)
+				shade(g, m, o.sx or g.x, o.land)
 			end
 			if o.hop then
-				g.after(0.3, go)
+				g.after(0.16, go)
 			else
 				go()
 			end
@@ -61444,6 +61783,7 @@ local packets = {
 	-- 유료 상품의 창(2026-10-20): "view" · "buy"(상품) · "take"(보관함의 줄) · "rename"(새 이름) — 산 것은 로블록스의 ProcessReceipt가 준다(server/lune/modules/cash.luau)
 	Cash = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 3, Burst = 6 } },
 	-- 매크로 확인(2026-10-23): "answer"(문제의 번호, 고른 칸 셋) · "again"(보상 멈춤에서 다시 확인) → { result = pass · wrong · fail · bad, check?, stopped, retryIn } (server modules/macroGuard.luau)
+	Sequence = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } }, -- 시퀀스 하나를 바꾼다(가지 "skill" · "buff", 번호, 넣은 것들 — 2026-10-30 · sim/sequence.luau)
 	Macro = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 3, Burst = 6 } },
 	-- 소리 설정을 저장한다 { music = 0~10, sfx = 0~10, on = 켰는가 } — 꼴은 서버가 다시 본다(계정에 저장 — sim/account.luau의 setSound)
 	Sound = { Kind = "Event", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 12 } },
@@ -61467,7 +61807,7 @@ local packets = {
 	-- 떨어진 것을 줍는다(물건 번호)
 	Pickup = { Kind = "Event", Direction = "ClientToServer", Args = { t.number }, RateLimit = { PerSecond = 10, Burst = 15 } },
 	-- 내 펫이 떨어진 것에 닿았다(물건 번호 — 2026-10-20). 서버가 펫을 꺼내 두었는지 · 영웅에게서 가까운지 · 주인을 확인하고 줍는다(펫은 0.3초에 하나)
-	PetPick = { Kind = "Event", Direction = "ClientToServer", Args = { t.number }, RateLimit = { PerSecond = 10, Burst = 15 } }, -- (6 · 8 → 10 · 15 — 로벅스 펫은 0.15초마다 빨아들인다: 2026-10-22)
+	PetPick = { Kind = "Event", Direction = "ClientToServer", Args = { t.number, t.any }, RateLimit = { PerSecond = 24, Burst = 36 } }, -- (6 · 8 → 10 · 15 — 로벅스 펫은 0.15초마다 빨아들인다: 2026-10-22 · 둘째 = 펫의 차례 · 펫 셋이라 24 · 36: 2026-10-30)
 	-- 확인용(Studio에서만 듣는다): "xp" 경험치를 준다 · "money" 달돈을 준다 · "hp" 체력을 정한다 · "reset" 캐릭터를 지운다(직업 고르기부터 다시)
 	Debug = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number }, RateLimit = { PerSecond = 5, Burst = 5 } },
 	-- 관리자의 시험용 명령(하는 일, 값 셋). 서버가 보낸 사람의 계정 번호로 관리자인지 올 때마다 다시 가린다 — 관리자가 아니면 아무 일도 하지 않고 nil(server/lune/modules/admin.luau)
@@ -61562,7 +61902,7 @@ end
 -- 소리 설정 { music = 배경 음악의 크기, sfx = 효과음의 크기(0~steps칸 — 한 칸 10%), on = 모두 켰는가 }. 계정의 것이다(캐릭터를 바꿔도 같다)
 --  사용자 2026-10-13: "소리조절 있어야합니다."
 function Account.soundDefault()
-	return { music = SOUND.start, sfx = SOUND.start, on = true, fx = true, nums = true, lang = "auto", touch = "new" } -- fx · nums = 화면 설정(다른 사람의 스킬 효과 · 피해 숫자 — 2026-10-18) · lang = 언어("auto" 로블록스의 언어 설정을 따른다 · "ko" · "en" — 2026-10-27)
+	return { music = SOUND.start, sfx = SOUND.start, on = true, fx = true, nums = true, myNums = true, lang = "auto", touch = "new" } -- fx · nums = 화면 설정(다른 사람의 스킬 효과 · 피해 숫자 — 2026-10-18) · lang = 언어("auto" 로블록스의 언어 설정을 따른다 · "ko" · "en" — 2026-10-27)
 end
 -- 받은 것 · 저장된 것의 꼴을 본다: 맞으면 새 표, 아니면 nil
 function Account.cleanSound(v: any)
@@ -61570,7 +61910,7 @@ function Account.cleanSound(v: any)
 		return nil
 	end
 	-- 화면(2026-10-18 — 설정 창의 「화면」): fx = 다른 사람의 스킬 효과 · nums = 다른 사람의 피해 숫자를 보일지. 없으면(그 전의 저장) 켜짐 · 참거짓이 아니면 받지 않는다
-	if (v.fx ~= nil and typeof(v.fx) ~= "boolean") or (v.nums ~= nil and typeof(v.nums) ~= "boolean") then
+	if (v.fx ~= nil and typeof(v.fx) ~= "boolean") or (v.nums ~= nil and typeof(v.nums) ~= "boolean") or (v.myNums ~= nil and typeof(v.myNums) ~= "boolean") then -- myNums = 내가 때린 피해 숫자(2026-10-30)
 		return nil
 	end
 	-- 언어(2026-10-27): "auto" · "ko" · "en"(없으면 — 그 전의 저장 — "auto" · 그 밖의 값은 받지 않는다)
@@ -61581,7 +61921,7 @@ function Account.cleanSound(v: any)
 	if v.touch ~= nil and v.touch ~= "new" and v.touch ~= "old" then
 		return nil
 	end
-	return { music = v.music, sfx = v.sfx, on = v.on, fx = v.fx ~= false, nums = v.nums ~= false, lang = v.lang or "auto", touch = v.touch or "new" }
+	return { music = v.music, sfx = v.sfx, on = v.on, fx = v.fx ~= false, nums = v.nums ~= false, myNums = v.myNums ~= false, lang = v.lang or "auto", touch = v.touch or "new" }
 end
 function Account.setSound(acct, v: any): boolean
 	local sound = Account.cleanSound(v)
@@ -64196,7 +64536,7 @@ MODULES['ReplicatedStorage/shared/lune/sim/cash'] = function(script, game, requi
 --   week · wc = 이번 주(한국 시각 월요일 0시부터)와 그 주에 산 수(상품 이름표 → 수) · once = 계정에 한 번(첫걸음 묶음)
 --   slots = 사서 늘린 캐릭터 칸 · store = 확장권으로 늘린 창고(번) — 가방의 것은 캐릭터마다(h.bagPaid · sim/bag.luau)
 --   pass = 달빛 패스(끝나는 때 · 달빛 · 받은 칸 — sim/pass.luau, 2026-10-20)
---   pets · mounts = 산 펫 · 탈것 { [이름] = true } · petOut = 꺼내 둔 펫(없으면 false — 계정의 모든 캐릭터가 같이) · mount = 고른 탈것(탄 동안인지는 서버의 그 사람의 것 — s.riding)
+--   pets · mounts = 산 펫 · 탈것 { [이름] = true } · petsOut = 꺼내 둔 펫들(꺼낸 차례 · Cash.PET_MAX까지 — 2026-10-30) · petOut = 그 첫째(없으면 false — 그 전의 저장 · 코드가 보는 것 · 늘 맞춘다 · 계정의 모든 캐릭터가 같이) · mount = 고른 탈것(탄 동안인지는 서버의 그 사람의 것 — s.riding)
 --   wskins = 산 캐시 무기 { [이름] = true } · wskin = 장착한 것(없으면 false — 계정의 모든 캐릭터의 무기 · 2026-10-23 design/wskin.js)
 --   dskins = 가진 데미지 스킨 { [이름] = true } · dskin = 장착한 것(없으면 false — 내가 때린 숫자의 모습 · 2026-10-29 할로윈 · design/event.js의 dskins)
 --   ev = 기간 이벤트의 상점에서 산 수 { ["<이벤트>:<해>:<물건>"] = 수 }(한도가 있는 것 — 할로윈의 달가루 상자 · 2026-10-29)
@@ -64247,8 +64587,39 @@ local function whole(v: any, lo: number, hi: number): boolean
 	return typeof(v) == "number" and v == v and v % 1 == 0 and v >= lo and v <= hi
 end
 
+-- 한꺼번에 꺼내 둘 수 있는 펫의 수(2026-10-30 사용자: "펫 현재 한마리만 낄수있는데 3마리까지 낄수있게해줘" — 메이플의 멀티펫처럼 셋이 따로 따라다니며 따로 줍는다)
+Cash.PET_MAX = 3
+-- 꺼내 둔 펫들(꺼낸 차례) — 그 전의 저장(petOut 하나)이면 그것 하나
+function Cash.petsOut(c): { string }
+	if typeof(c.petsOut) == "table" then
+		return c.petsOut
+	end
+	return if typeof(c.petOut) == "string" then { c.petOut } else {}
+end
+local function syncPets(c)
+	c.petsOut = Cash.petsOut(c)
+	c.petOut = c.petsOut[1] or false
+end
+-- 새로 얻은 펫(산 것 · 쿠폰 · 이벤트): 꺼내 둔 펫이 하나도 없으면 바로 꺼낸다(그 전과 같다)
+function Cash.petAuto(c, id: string)
+	syncPets(c)
+	if #c.petsOut == 0 then
+		table.insert(c.petsOut, id)
+	end
+	syncPets(c)
+end
+-- 그 펫을 넣는다(없어진 펫 — 쿠폰 기록 지우기)
+function Cash.petRemove(c, id: string)
+	syncPets(c)
+	local at = table.find(c.petsOut, id)
+	if at then
+		table.remove(c.petsOut, at)
+	end
+	syncPets(c)
+end
+
 function Cash.new()
-	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petOut = false, mount = false, coupons = {}, wskins = {}, wskin = false, dskins = {}, dskin = false, ev = {} } -- coupons = 이 계정이 쓴 쿠폰 { [번호] = 쓴 때 }(2026-10-21)
+	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petsOut = {}, petOut = false, mount = false, coupons = {}, wskins = {}, wskin = false, dskins = {}, dskin = false, ev = {} } -- coupons = 이 계정이 쓴 쿠폰 { [번호] = 쓴 때 }(2026-10-21)
 end
 
 function Cash.product(key: any)
@@ -64379,7 +64750,7 @@ function Cash.grant(acct, key: string, receiptId: string, now: number, baseChars
 		addBox(c, "bm_dust_" .. band, 1)
 	elseif PET[key] then
 		c.pets[key] = true -- 펫: 산 계정에 바로(꺼내 둔 것이 없으면 바로 꺼낸다)
-		c.petOut = c.petOut or key
+		Cash.petAuto(c, key)
 	elseif MOUNT[key] then
 		c.mounts[key] = true -- 탈것: 산 계정에 바로(고른 것이 없으면 그것을 고른다)
 		c.mount = c.mount or key
@@ -64527,16 +64898,30 @@ function Cash.skinList(set): { string }
 	end
 	return out
 end
--- 펫을 꺼낸다(id) · 넣는다(false) → true / nil · 까닭
-function Cash.setPet(acct, id: any): (boolean?, string?)
+-- 펫을 꺼낸다(id · on이 false가 아니면 — 꺼내 둔 펫들에 더한다: PET_MAX까지) · 그 펫을 넣는다(id, false) · 모두 넣는다(false) → true / nil · 까닭
+--  2026-10-30 셋까지(사용자 "펫 … 3마리까지 낄수있게해줘") — 그 전에는 꺼내면 있던 것과 바꿨다
+Cash.PET_FULL = "펫은 셋까지 꺼내 둘 수 있다"
+function Cash.setPet(acct, id: any, on: any?): (boolean?, string?)
 	local c = acct.bm
+	syncPets(c)
 	if id == false then
-		c.petOut = false
-		return true
+		table.clear(c.petsOut)
 	elseif typeof(id) ~= "string" or not c.pets[id] then
 		return nil, "가진 펫이 아니다"
+	else
+		local at = table.find(c.petsOut, id)
+		if on == false then
+			if at then
+				table.remove(c.petsOut, at)
+			end
+		elseif not at then
+			if #c.petsOut >= Cash.PET_MAX then
+				return nil, Cash.PET_FULL
+			end
+			table.insert(c.petsOut, id)
+		end
 	end
-	c.petOut = id
+	syncPets(c)
 	return true
 end
 -- 캐시 무기를 장착한다(이름표) · 해제한다(false) → true / nil · 까닭
@@ -64624,7 +65009,7 @@ function Cash.pack(c)
 		table.insert(dskins, k)
 	end
 	table.sort(dskins)
-	return { dskins = dskins, dskin = c.dskin, ev = table.clone(c.ev), box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petOut = c.petOut, mount = c.mount, coupons = table.clone(c.coupons), wskins = wskins, wskin = c.wskin }
+	return { dskins = dskins, dskin = c.dskin, ev = table.clone(c.ev), box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petsOut = table.clone(Cash.petsOut(c)), petOut = c.petOut, mount = c.mount, coupons = table.clone(c.coupons), wskins = wskins, wskin = c.wskin }
 end
 
 -- 꼴이 이상한 것은 버린다(없는 아이템 · 이상한 수). 생기기 전의 저장 = 빈 것
@@ -64669,7 +65054,14 @@ function Cash.unpack(data: any, baseChars: number?)
 			end
 		end
 	end
-	c.petOut = if typeof(data.petOut) == "string" and c.pets[data.petOut] then data.petOut else false
+	-- 꺼내 둔 펫들(2026-10-30 — 가진 것 · 겹치지 않게 · PET_MAX까지) · 그 전의 저장은 petOut 하나
+	c.petsOut = {}
+	for _, k in (if typeof(data.petsOut) == "table" then data.petsOut else { data.petOut }) do
+		if typeof(k) == "string" and c.pets[k] and not table.find(c.petsOut, k) and #c.petsOut < Cash.PET_MAX then
+			table.insert(c.petsOut, k)
+		end
+	end
+	syncPets(c)
 	c.mount = if typeof(data.mount) == "string" and c.mounts[data.mount] then data.mount else false
 	c.wskin = if typeof(data.wskin) == "string" and c.wskins[data.wskin] then data.wskin else false
 	c.dskin = if typeof(data.dskin) == "string" and c.dskins[data.dskin] then data.dskin else false
@@ -64725,7 +65117,7 @@ function Cash.redeem(acct, def, now: number): (boolean, any)
 	end
 	if def.pet then
 		c.pets[def.pet] = true -- 펫: 계정에 바로(꺼내 둔 것이 없으면 바로 꺼낸다 — 산 펫과 같다)
-		c.petOut = c.petOut or def.pet
+		Cash.petAuto(c, def.pet)
 	end
 	if def.mount then
 		c.mounts[def.mount] = true -- 탈것(2026-10-21 쿠폰 탈것 「떠도는 책」): 계정에 바로(고른 것이 없으면 그것을 고른다 — 산 탈것과 같다)
@@ -64754,7 +65146,7 @@ function Cash.view(acct, now: number, owned: any?, live: number?, prices: any?, 
 	for _, e in c.box do
 		table.insert(box, { id = e.id, n = e.n })
 	end
-	return { list = list, box = box, band = Cash.bandOf(Cash.topLevel(acct, live)), slots = c.slots, store = c.store, pass = Pass.view(c.pass, now), pets = Cash.ownList(c.pets), mounts = Cash.ownList(c.mounts), petOut = c.petOut, mount = c.mount, wskins = Cash.skinList(c.wskins), wskin = c.wskin, dskins = Cash.dskinList(c.dskins), dskin = c.dskin, ev = table.clone(c.ev) }
+	return { list = list, box = box, band = Cash.bandOf(Cash.topLevel(acct, live)), slots = c.slots, store = c.store, pass = Pass.view(c.pass, now), pets = Cash.ownList(c.pets), mounts = Cash.ownList(c.mounts), petsOut = table.clone(Cash.petsOut(c)), petOut = c.petOut, mount = c.mount, wskins = Cash.skinList(c.wskins), wskin = c.wskin, dskins = Cash.dskinList(c.dskins), dskin = c.dskin, ev = table.clone(c.ev) }
 end
 
 -- 확인용(테스트): 상품 표가 아이템 표와 맞는가
@@ -65084,7 +65476,7 @@ function Caster:strike(a, m, w: number, o, landed): boolean
 	local mul, crit = Passives.vs(hero, m, { skill = ctx.id, charge = ctx.lv, now = room.time }), false
 	-- 치명타: 모든 직업의 기술 타가 확률로(1차와 같은 셈 — sim/room.luau의 skillHit). 흘리기 = 피한 뒤의 첫 베기는 반드시
 	-- 여러 줄로 쪼개지는 타는 줄마다 따로 굴린다(sim/room.luau의 Room:strike의 crit — 흘리기의 반드시 크리티컬은 그 베기의 줄 모두)
-	local critChance, critMul, sure = Passives.crit(hero, room:marksOf(hero, m) > 0)
+	local critChance, critMul, sure = Passives.crit(hero, room:marksOf(hero, m) > 0, room.time)
 	local perLine = not o.proc and (ctx.lines or 1) > 1 and not sure
 	if sure or (not perLine and critChance > 0 and room.rng:NextNumber(0, 100) < critChance) then
 		crit = true
@@ -65316,8 +65708,16 @@ local function makeG(self, a)
 		end
 		moved()
 		hero.x = x
+		-- 그림자 일격(리븐 2차 패시브 — 2026-10-30 리마스터): 순간이동한 뒤 linkTime초 = 연계(크리티컬 데미지 + · 표식 + — Passives.crit · Room:kitAfter)
+		if hero.class == "riven" and hero.pass then
+			local lk = Passives.get(hero, "linkTime")
+			if lk then
+				hero.pass.link = room.time + lk.linkTime
+			end
+		end
 		return true
 	end
+	function g.shade(_clip, _f, _x, _y, _dir, _color) end -- 잔상(화면만)
 	function g.drag(m, x: number)
 		if not m.def.boss and aliveMob(m) then
 			m.x = math.clamp(x, m.a, m.b)
@@ -65534,7 +65934,8 @@ function Caster:begin(hero, id: string, seg: number, mates, info): (boolean, num
 	local a = self:actor(hero)
 	local cur = a.skill
 	if skill.instant then
-		if seg ~= 1 or (cur and self:busy(hero)) then
+		-- anytime = 다른 스킬을 쓰는 중에도 쓴다(리븐의 섬영 — 2026-10-31 사용자 "섬영 거의 그냥 쉽게 쓸수있어야해": 하던 동작은 새 자리에서 이어 간다)
+		if seg ~= 1 or (cur and self:busy(hero) and not skill.anytime) then
 			return false, nil
 		end
 		self:run(a, self:context(a, id, 0, mates), skill.cast, a.g)
@@ -66684,6 +67085,7 @@ local Kit = require(script.Parent.kit) -- 1차의 온오프 사출기 · 핵심 
 local Buffs = require(script.Parent.buffs) -- 2~4차의 버프
 local Passives = require(script.Parent.passives) -- 2~4차의 패시브
 local Quick = require(script.Parent.Parent.ui.quick)
+local Seq = require(script.Parent.sequence) -- 시퀀스(2026-10-30 — 스킬 창의 「시퀀스」 단추로 여는 창 · 퀵슬롯의 seq_<번호> · bseq_<번호>)
 local RIDEIDS = {} -- 펫 · 탈것의 이름표(퀵슬롯에 놓을 수 있다 — 2026-10-21)
 do
 	local RIDE = require(script.Parent.Parent.data["ride.generated"])
@@ -66912,6 +67314,7 @@ function Hero.new(id: any, class: string)
 		slots = Quick.start(CLASSES.classes[class].skills), -- 퀵슬롯: 칸마다 스킬 · 소비 아이템의 이름표 · false(빈 칸) — shared/lune/ui/quick.luau
 		-- 스마트폰의 단추 배치: 같은 열두 칸이지만 PC의 것과 따로 둔다 — PC에서는 손에 익은 키(E · D …)에, 폰에서는 큰 단추에 놓고 싶은 것이 서로 다르다(2026-10-08).
 		--  한쪽에서 바꿔도 다른 쪽은 그대로다. 처음 차림은 같다(물약 · 사냥기 · 보스기 · 이동기)
+		seqs = Seq.new(), -- 시퀀스 { skill = { { 스킬, … } × 10 }, buff = { … × 5 } }(2026-10-30 — sim/sequence.luau)
 		tslots = Quick.touchStart(CLASSES.classes[class].skills), -- 스마트폰의 단추 배치: 단추가 없는 칸 1의 물약은 칸 5로(ui/quick.luau의 touchFix)
 		money = 0,
 		forged = false, -- 강화를 해 본 적이 있는가(첫 강화는 달가루 없이 반드시 붙는다 — sim/bag.luau의 Bag.enhance)
@@ -67357,7 +67760,7 @@ end
 -- 방(맵)마다 시계가 따로다(방의 time은 0에서 시작해 사람이 있을 때만 흐르고, 토벌 방은 들 때마다 새로 짓는다).
 --  캐릭터에 적힌 방의 시각들을 새 방의 시계로 옮긴다 — delta = 새 방의 시각 − 옛 방의 시각(서버 world.luau의 place가 부른다 · 2026-10-18 검토:
 --  옛 방의 시계가 앞서 있으면 리퍼의 도깨비불 · 무니의 수정 조각 · 리븐의 독이 새 방의 시계가 따라잡을 때까지 멈췄고, 거꾸로면 살라맨더의 연속이 끝나지 않았다)
-local CLOCK_PASS = { "streakAt", "pressAt", "surge", "rekindle", "venom" }
+local CLOCK_PASS = { "streakAt", "pressAt", "surge", "rekindle", "venom", "link" } -- link = 리븐의 연계(그림자 일격 — 2026-10-30)
 function Hero.shiftClock(h, delta: number)
 	if delta == 0 or delta ~= delta then
 		return
@@ -67502,6 +67905,9 @@ end
 
 -- 퀵슬롯에 놓아도 되는 스킬인가: 이 직업이 키로 쓰는 기술(싸움 수치가 있는 것)이고 배운 것
 function Hero.canSlot(h, id: string): boolean
+	if Seq.of(id) then
+		return true -- 시퀀스(2026-10-30 — 비어 있어도 놓아 둘 수 있다: 누르면 넣어 둔 것을 차례대로)
+	end
 	if RIDEIDS[id] then
 		return true -- 펫 · 탈것(2026-10-21 — 칸의 키로 꺼내고 타기. 가진 것인지는 쓸 때 서버가 본다: Cash.setPet · setMount)
 	end
@@ -67543,6 +67949,20 @@ function Hero.setSlots(h, list: any, touch: boolean?): boolean
 	return true
 end
 
+-- 시퀀스 하나를 바꾼다(kind = "skill" · "buff" · k = 번호 · list = 넣은 것들 — 넣을 수 없는 것 · 겹친 것은 빠지고 SIZE까지) — 서버 "Sequence"(2026-10-30)
+function Hero.setSeq(h, kind: any, k: any, list: any): boolean
+	if typeof(kind) ~= "string" or not Seq.N[kind] or typeof(k) ~= "number" or k ~= math.floor(k) or k < 1 or k > Seq.N[kind] then
+		return false
+	end
+	local one = Seq.cleanOne(h, kind, list)
+	if not one then
+		return false
+	end
+	h.seqs = h.seqs or Seq.new()
+	h.seqs[kind][k] = one
+	return true
+end
+
 function Hero.setKeys(h, map: any): boolean
 	local keys = cleanKeys(map)
 	if not keys then
@@ -67569,6 +67989,7 @@ function Hero.pack(h)
 		keys = table.clone(h.keys),
 		slots = table.clone(h.slots),
 		tslots = table.clone(h.tslots),
+		seqs = Seq.copy(h.seqs), -- 시퀀스(2026-10-30)
 		kitOn = h.kit.on, -- 온오프 사출기를 켜 두었는가(다시 들어와도 그대로다)
 		money = h.money,
 		forged = h.forged == true,
@@ -67743,6 +68164,7 @@ function Hero.unpack(id: any, data: any)
 		end
 		return out
 	end
+	h.seqs = Seq.clean(h, data.seqs) -- 시퀀스(2026-10-30 — 배운 스킬을 읽은 뒤: 배우지 않은 것은 빠진다 · 그 전의 저장 = 빈 것)
 	if data.slots ~= nil then
 		Hero.setSlots(h, salvage(Quick.renew(data.slots, myPotion)))
 	end
@@ -67820,6 +68242,7 @@ function Hero.view(h)
 		keys = h.keys,
 		slots = h.slots,
 		tslots = h.tslots,
+		seqs = h.seqs, -- 시퀀스(2026-10-30 — 시퀀스 창 · 퀵슬롯에서 쓴다)
 		kit = Kit.view(h), -- 사출기를 켰는가 · 영혼 · 열기(화면의 버프 자리 · 칸의 켜진 표시)
 		run = (Kit.move(h)), -- 걸음의 배수(날랜 몸 · 뜨거운 피) — 화면이 그 빠르기로 걷는다
 		jump = select(2, Kit.move(h)), -- 뛰는 힘의 배수
@@ -70181,11 +70604,15 @@ end
 -- 치명타(사용자 2026-10-08: "치명타 확률과 치명타 터지는건 만들겁니다"): 모든 직업의 기술 타가 확률로 치명타가 된다.
 --  돌려주는 것: 확률(%) · 피해의 배수 · 반드시 치명타인가(리븐의 흘리기 — 피한 직후. 쓰면 사라진다). marked = 그 적에게 내 표식이 있는가(리븐)
 --   확률 = 기본(RULES.critChance) + 패시브(창 숙련) + 표식이 있는 적이면 표식의 것 · 배수 = 기본(RULES.critMul) + 패시브(달인) + 표식이 있는 적이면 급소
-function Passives.crit(h, marked: boolean?): (number, number, boolean)
+--   now = 방의 시간(있으면 — 리븐의 연계: 순간이동한 뒤 그 시간 안이면 크리티컬 데미지 + · 2026-10-30 그림자 일격)
+function Passives.crit(h, marked: boolean?, now: number?): (number, number, boolean)
 	local chance, mul = RULES.critChance + sum(h, "crit"), RULES.critMul + sum(h, "critMul")
 	if marked and h.class == "riven" then
 		chance += COMBAT.kit.riven.core.crit * Kit.scale(h, "core")
 		mul += sum(h, "markCritMul")
+	end
+	if now and h.class == "riven" and h.pass and (h.pass.link or -1) > now then
+		mul += sum(h, "linkCritMul")
 	end
 	return chance, mul, h.pass ~= nil and h.pass.sure == true
 end
@@ -73884,7 +74311,7 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 			local mul = hit.mul * (scale or 1) * boost * share * Passives.vs(hero, mob, info)
 			-- 치명타: 모든 직업의 기술 타가 확률로(기본 + 패시브 + 리븐의 표식이 있는 적). 흘리기 = 피한 뒤의 첫 베기는 반드시
 			-- 여러 줄로 쪼개지는 기술의 제 타는 줄마다 따로 굴린다(아래 strike의 crit — 흘리기의 반드시 크리티컬은 그 베기의 줄 모두)
-			local critChance, critMul = Passives.crit(hero, self:marksOf(hero, mob) > 0)
+			local critChance, critMul = Passives.crit(hero, self:marksOf(hero, mob) > 0, self.time)
 			local perLine = not tag and lines > 1 and not sure
 			local crit = sure or (not perLine and critChance > 0 and self.rng:NextNumber(0, 100) < critChance)
 			if crit then
@@ -73977,11 +74404,15 @@ function Room:kitAfter(hero, landed, x: number, y: number, sweep, power: number,
 			out.heal = (out.heal or 0) + heal
 		end
 	elseif class == "riven" then
-		-- 표식: 베기에 맞은 적에게
+		-- 표식: 베기에 맞은 적에게. 연계(그림자 일격 — 순간이동한 뒤 그 시간 안: caster g.teleport)면 하나 더(2026-10-30)
 		if Kit.level(hero, "core") > 0 and (not opts or opts.mark) then
+			local link = hero.pass ~= nil and (hero.pass.link or -1) > self.time and Passives.get(hero, "linkMark") ~= nil
 			for _, l in landed do
 				if not l.dead then
 					self:mark(hero, l.mob, out)
+					if link then
+						self:mark(hero, l.mob, out)
+					end
 				end
 			end
 		end
@@ -74420,6 +74851,170 @@ function Room:describe(heroId: any?)
 end
 
 return Room
+
+end
+MODULES['ReplicatedStorage/shared/lune/sim/sequence'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
+-- 시퀀스(2026-10-30 사용자: "버프를 한버튼에 배치해서 한 버튼만 눌러서 버프를 사용할수있는 시퀀스 기능을 만들어줘 메이플에 이미 있는 기능이야 참고해서 만들어"
+--  → "버프 매크로가 아니라고 내가 시퀀스라고 말했잖아"). 메이플스토리 「시퀀스」(스킬 시퀀스 2024-12-19 · 버프 시퀀스 2025-06-19 — 공방 design/ui.js의 SKILLWORDS.seq에 출처)를 따른다.
+--  두 가지(kind): "skill" = 스킬 시퀀스(배운 「누르면 바로 걸리는 버프」 · 「바로 놓이는 설치 · 소환」) · "buff" = 버프 시퀀스(버프 아이템 — 경험치 · 드롭률 쿠폰 — 과 공용 버프)
+--  캐릭터마다 저장 = h.seqs { skill = { { 이름표, … } × N.skill }, buff = { … × N.buff } } · 바꾸기 = 서버 "Sequence"(kind, 번호, 목록 — Hero.setSeq)
+--  퀵슬롯의 이름표 = seq_<번호>(스킬) · bseq_<번호>(버프) — sim/hero.luau Hero.canSlot. 쓰기 = 화면(client boot.luau runSeq): 앞 칸부터 — 됐으면 ok초 · 안 됐으면 fail초 · 아이템은 item초 뒤 다음
+--  (같은 폴더의 macro.luau는 「매크로 확인」(매크로 사용자 잡기)의 셈이다 · 다른 것)
+local root = script.Parent.Parent
+local UI = require(root.data["ui.generated"])
+local COMBAT = require(root.data["combat.generated"])
+local CLASSES = require(root.data["classes.generated"])
+local Buffs = require(script.Parent.buffs)
+
+local Seq = {}
+Seq.DATA = UI.skillWords.seq
+Seq.KINDS = { "skill", "buff" }
+Seq.N = { skill = Seq.DATA.kinds.skill.n, buff = Seq.DATA.kinds.buff.n }
+Seq.SIZE = { skill = Seq.DATA.kinds.skill.size, buff = Seq.DATA.kinds.buff.size }
+local ITEM = {} -- 버프 시퀀스에 넣는 아이템
+for _, id in Seq.DATA.items do
+	ITEM[id] = true
+end
+Seq.ITEM = ITEM
+
+-- 퀵슬롯의 이름표
+function Seq.id(kind: string, k: number): string
+	return (if kind == "buff" then "bseq_" else "seq_") .. k
+end
+-- 퀵슬롯에 놓인 것이 시퀀스면 그 가지 · 번호
+function Seq.of(what: any): (string?, number?)
+	if typeof(what) ~= "string" then
+		return nil, nil
+	end
+	local b = tonumber(string.match(what, "^bseq_(%d+)$"))
+	if b and b >= 1 and b <= Seq.N.buff then
+		return "buff", b
+	end
+	local k = tonumber(string.match(what, "^seq_(%d+)$"))
+	if k and k >= 1 and k <= Seq.N.skill then
+		return "skill", k
+	end
+	return nil, nil
+end
+-- 이름(「스킬 시퀀스 1」)
+function Seq.name(kind: string, k: number): string
+	return (string.gsub(Seq.DATA.name[kind] or "", "{n}", tostring(k)))
+end
+
+function Seq.new()
+	local out = {}
+	for _, kind in Seq.KINDS do
+		out[kind] = {}
+		for k = 1, Seq.N[kind] do
+			out[kind][k] = {}
+		end
+	end
+	return out
+end
+
+-- 그 시퀀스에 넣을 수 있는가
+--  스킬: 배운 「누르면 바로 걸리는 버프」(공용 포함) · 배운 「바로 놓이는 설치 · 소환」(쓰는 동작이 있는 것 — 연막탄 — 은 아니다)
+--  버프: 버프 아이템(가지지 않아도 넣어 둔다 — 메이플의 버프 매니저처럼) · 배운 공용 버프
+function Seq.can(h, kind: string, id: any): boolean
+	if typeof(id) ~= "string" then
+		return false
+	end
+	if kind == "buff" then
+		if ITEM[id] then
+			return true
+		end
+		return Buffs.instant(id) and Buffs.data[id].who == "all" and Buffs.learned(h, id)
+	end
+	if kind ~= "skill" then
+		return false
+	end
+	if Buffs.instant(id) then
+		return Buffs.learned(h, id)
+	end
+	local placed = COMBAT.placed[id]
+	return placed ~= nil and placed.cast == "instant" and not Buffs.is(id) and placed.who == h.class and (h.skills[id] or 0) > 0
+end
+
+-- 넣을 수 있는 것들(스킬 창의 차례 — 차수마다 · 그 안의 차례 — 다음에 나머지 버프 · 버프는 아이템이 먼저)
+function Seq.candidates(h, kind: string): { string }
+	local out, seen = {}, {}
+	local function add(id: string)
+		if not seen[id] and Seq.can(h, kind, id) then
+			seen[id] = true
+			table.insert(out, id)
+		end
+	end
+	if kind == "buff" then
+		for _, id in Seq.DATA.items do
+			add(id)
+		end
+	end
+	local cls = CLASSES.classes[h.class]
+	for _, t in (cls and cls.tiers) or {} do
+		for _, sk in t.skills do
+			add(sk.id)
+		end
+	end
+	local rest = {}
+	for id in Buffs.data do
+		if not seen[id] and Seq.can(h, kind, id) then
+			table.insert(rest, id)
+		end
+	end
+	table.sort(rest)
+	for _, id in rest do
+		add(id)
+	end
+	return out
+end
+
+-- 시퀀스 하나(받은 목록)를 거른다: 꼴이 틀리면 nil · 넣을 수 없는 것 · 겹친 것은 뺀다 · SIZE까지
+function Seq.cleanOne(h, kind: string, list: any): { string }?
+	local size = Seq.SIZE[kind]
+	if not size or typeof(list) ~= "table" or #list > size * 2 then
+		return nil
+	end
+	local out, seen = {}, {}
+	for _, id in list do
+		if typeof(id) ~= "string" or #id > 40 then
+			return nil
+		end
+		if not seen[id] and Seq.can(h, kind, id) and #out < size then
+			seen[id] = true
+			table.insert(out, id)
+		end
+	end
+	return out
+end
+
+-- 저장된 시퀀스들을 읽는다(없으면 · 꼴이 틀리면 빈 것 — 배우지 않은 스킬은 빠진다)
+function Seq.clean(h, data: any)
+	local out = Seq.new()
+	if typeof(data) == "table" then
+		for _, kind in Seq.KINDS do
+			local got = data[kind]
+			if typeof(got) == "table" then
+				for k = 1, Seq.N[kind] do
+					out[kind][k] = Seq.cleanOne(h, kind, got[k]) or {}
+				end
+			end
+		end
+	end
+	return out
+end
+
+-- 저장할 꼴(깊은 복사)
+function Seq.copy(seqs)
+	local out = Seq.new()
+	for _, kind in Seq.KINDS do
+		for k = 1, Seq.N[kind] do
+			out[kind][k] = table.clone((seqs and seqs[kind] and seqs[kind][k]) or {})
+		end
+	end
+	return out
+end
+
+return Seq
 
 end
 MODULES['ReplicatedStorage/shared/lune/sim/thiefgim'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
@@ -77884,6 +78479,7 @@ Q.DATA = UI.quick
 Q.N = UI.quick.n -- 칸의 수
 Q.COLS = UI.quick.cols -- 한 줄
 Q.START_POTION = UI.quick.potion -- 새 캐릭터의 첫 칸에 놓이는 물약(작은 달빛 물약)
+Q.seqFirst = nil :: ((string, number) -> string?)? -- 시퀀스의 첫 칸(가지 · 번호 → 이름표 — 화면이 넣어 준다 · 2026-10-30)
 Q.OLD_POTION = "potion" -- 예전 저장의 물약 칸(물약이 한 가지였을 때의 이름표) — Q.renew가 지금의 이름표로 바꾼다
 
 -- 칸에 놓인 것이 소비 아이템이면 그 자료(스킬이면 nil)
@@ -77897,6 +78493,17 @@ function Q.isPotion(what: any): boolean
 end
 
 -- 칸에 놓인 것이 펫 · 탈것이면 "pet" · "mount"(2026-10-21 사용자: 가방의 캐시 탭에서 꺼내기 · 타기 — 퀵슬롯에 놓으면 그 키로 꺼내고 넣고 타고 내린다)
+-- 시퀀스의 칸이면 그 구석에 적는 글 「S1」(스킬 시퀀스) · 「B1」(버프 시퀀스)(2026-10-30 — 스킬과 헷갈리지 않게) · 아니면 nil
+function Q.seqMark(what: any): string?
+	if typeof(what) ~= "string" then
+		return nil
+	end
+	local b = string.match(what, "^bseq_(%d+)$")
+	local k = string.match(what, "^seq_(%d+)$")
+	local M = UI.skillWords.seq.mark
+	return if b then (string.gsub(M.buff, "{n}", b)) elseif k then (string.gsub(M.skill, "{n}", k)) else nil
+end
+
 function Q.ride(what: any): string?
 	if typeof(what) ~= "string" then
 		return nil
@@ -77929,6 +78536,13 @@ function Q.pic(what: string): string?
 	end
 	if Q.ride(what) then
 		return "ride_" .. what -- 펫 · 탈것의 그림(달빛 상점의 것과 같다)
+	end
+	-- 시퀀스(2026-10-30 — sim/sequence.luau): 넣어 둔 첫 칸의 그림 · 비었으면 스킬 창의 그림. seqFirst(가지, 번호) = 그 시퀀스의 첫 칸(화면 boot가 넣어 준다)
+	local b = tonumber(string.match(what, "^bseq_(%d+)$"))
+	local k = tonumber(string.match(what, "^seq_(%d+)$"))
+	if b or k then
+		local first = Q.seqFirst and Q.seqFirst(if b then "buff" else "skill", (b or k) :: number)
+		return if first and not string.match(first, "seq_") then (Q.pic(first) or "menu_skill") else "menu_skill"
 	end
 	return "skill_" .. what
 end
@@ -80339,7 +80953,7 @@ function CashServer.syncCoupons(acct): boolean
 		local def = Coupons.find(code)
 		if def and def.pet and Cash.PET[def.pet] and not c.pets[def.pet] then
 			c.pets[def.pet] = true
-			c.petOut = c.petOut or def.pet
+			Cash.petAuto(c, def.pet)
 			changed = true
 		end
 		if def and def.mount and Cash.MOUNT[def.mount] and not c.mounts[def.mount] then -- 쿠폰 탈것도 같이(2026-10-21)
@@ -80427,9 +81041,7 @@ function CashServer.resetCoupons(acct): (number, number)
 		if def and def.free then
 			c.pets[id] = nil
 			pets += 1
-			if c.petOut == id then
-				c.petOut = false
-			end
+			Cash.petRemove(c, id) -- (꺼내 둔 펫들에서도 — 2026-10-30)
 		end
 	end
 	for id in c.mounts do
@@ -82600,7 +83212,7 @@ local function roster(key: string)
 	for _, s in inRoom(key) do
 		-- pet = 꺼내 둔 펫 · ride = 탄 탈것(2026-10-20 — 다른 사람의 화면도 같이 그린다)
 		local bm = s.acct and s.acct.bm
-		table.insert(list, { id = s.hero.id, name = s.name, class = s.hero.class, level = s.hero.level, pet = bm and bm.petOut or false, ride = if s.riding and bm then bm.mount else false, look = s.hero.look, wskin = bm and bm.wskin or false, dskin = bm and bm.dskin or false, title = s.hero.title or false }) -- dskin = 장착한 데미지 스킨(2026-10-29 — 그 사람이 때린 숫자의 모습) -- look = 무기 · 로브 색(염색 — 2026-10-22) · wskin = 장착한 캐시 무기(2026-10-23) · title = 단 칭호(2026-10-26)
+		table.insert(list, { id = s.hero.id, name = s.name, class = s.hero.class, level = s.hero.level, pet = bm and bm.petOut or false, pets = if bm then Cash.petsOut(bm) else {}, ride = if s.riding and bm then bm.mount else false, look = s.hero.look, wskin = bm and bm.wskin or false, dskin = bm and bm.dskin or false, title = s.hero.title or false }) -- dskin = 장착한 데미지 스킨(2026-10-29 — 그 사람이 때린 숫자의 모습) -- look = 무기 · 로브 색(염색 — 2026-10-22) · wskin = 장착한 캐시 무기(2026-10-23) · title = 단 칭호(2026-10-26)
 	end
 	return list
 end
@@ -84218,8 +84830,8 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 			if (hero.cds[id] or 0) > now then
 				return
 			end
-			if s.skill and now < s.skill.free - 0.1 then
-				return -- 1차의 기술을 쓰는 중이다
+			if s.skill and now < s.skill.free - 0.1 and not (require(lune.kitset).skill(id) or {}).anytime then
+				return -- 1차의 기술을 쓰는 중이다(다른 동작 중에도 쓰는 것 — 리븐의 섬영 — 은 받는다: 2026-10-31)
 			end
 		end
 		local was = hero.dir
@@ -84463,17 +85075,24 @@ end
 --  화면의 펫이 떨어진 것까지 달려가 닿으면 PetPick(번호)이 온다(client/lune/rideView.luau). 받는 것: 펫을 꺼내 두었고 · 살아 있고 · 펫이 하나 주운 지 every초가 지났고 ·
 --  그것이 영웅에게서 reach + slack점 안(펫이 달려가는 동안 영웅이 움직인 만큼) — 주인 · 가방은 Z 키로 줍는 것과 같다(Room:pickup)
 local PETRULE = Cash.RIDE.pet
-local function onPetPick(player, dropId: number)
+--  slot = 꺼내 둔 펫의 차례(1 ~ Cash.PET_MAX — 2026-10-30 펫 셋: 펫마다 따로 간격을 센다 · 그 펫의 종류로 빨아들이기를 정한다 · 없으면 1)
+local function onPetPick(player, dropId: number, slot: any)
 	local s = sessions[player]
 	if not (s and s.hero and s.hero.alive and s.acct and s.acct.bm.petOut) or s.guest then
 		return
 	end
-	if (s.petT or 0) > World.now then
+	local k = if typeof(slot) == "number" and slot == math.floor(slot) and slot >= 1 and slot <= Cash.PET_MAX then slot else 1
+	local petId = Cash.petsOut(s.acct.bm)[k]
+	if not petId then
 		return
 	end
-	local q = Cash.PET[s.acct.bm.petOut]
+	s.petT = if typeof(s.petT) == "table" then s.petT else {}
+	if (s.petT[k] or 0) > World.now then
+		return
+	end
+	local q = Cash.PET[petId]
 	local every = if q and not q.free and PETRULE.suck then PETRULE.suck.every else PETRULE.every -- 로벅스 펫은 빨아들인다(더 자주 — 2026-10-22)
-	s.petT = World.now + every * 0.8 -- 화면이 every초마다 보낸다(조금 일찍 와도 받는다 — 프레임의 어긋남)
+	s.petT[k] = World.now + every * 0.8 -- 화면이 every초마다 보낸다(조금 일찍 와도 받는다 — 프레임의 어긋남)
 	local sucks = q and not q.free and PETRULE.suck
 	pickupDrop(s, dropId, if sucks and PETRULE.suck.reach then PETRULE.suck.reach else PETRULE.reach + PETRULE.slack) -- 로벅스 펫은 더 먼 것까지(10-22 「범위 더크게」)
 end
@@ -87219,8 +87838,8 @@ local function onCash(player, a: any, b: any)
 		view.why = if moved > 0 then nil elseif left > 0 then "가방에 자리가 없다" else "받을 것이 없다"
 		return view
 	elseif a == "pet" then
-		-- 펫을 꺼낸다(이름표) · 넣는다(false) — 계정의 모든 캐릭터가 같이(2026-10-20)
-		local ok, why = Cash.setPet(s.acct, b)
+		-- 펫을 꺼낸다 · 넣는다(이름표 — 꺼내 둔 것이면 넣고 아니면 꺼낸다: 셋까지 · 2026-10-30) · 모두 넣는다(false) — 계정의 모든 캐릭터가 같이(2026-10-20)
+		local ok, why = Cash.setPet(s.acct, b, if typeof(b) == "string" then table.find(Cash.petsOut(s.acct.bm), b) == nil else nil)
 		if ok then
 			s.dirty = true
 			saveSoon(s)
@@ -87380,6 +87999,14 @@ function World.start()
 		end
 	end)
 	-- 칭호를 단다 · 뗀다(능력치 창의 「칭호」 줄 — ""이면 뗀다). 가진 것만 — 방 사람들의 이름표에도 바로
+	-- 시퀀스 하나를 바꾼다(2026-10-30 — 시퀀스 창): 가지("skill" · "buff") · 번호 · 넣은 것들(Hero.setSeq가 거른다) → 내 상태(Self)로 돌려준다
+	Net.OnServer("Sequence", function(player, kind, k, list)
+		local s = sessions[player]
+		if s and s.hero and not s.guest and Hero.setSeq(s.hero, kind, k, list) then
+			s.dirty = true
+			sendSelf(s)
+		end
+	end)
 	Net.OnServer("Title", function(player, id)
 		local s = sessions[player]
 		if s and s.hero and require(lune.sim.titles).wear(s.hero, id) then
@@ -87629,7 +88256,7 @@ function World.start()
 			c.mounts[item.ride] = true
 		elseif item.kind == "pet" then
 			c.pets[item.ride] = true
-			c.petOut = c.petOut or item.ride
+			Cash.petAuto(c, item.ride)
 			who = true
 		elseif item.kind == "dskin" then
 			c.dskins[item.dskin] = true
@@ -92597,6 +93224,7 @@ local state = {
 	sentY = -1,
 	sentDir = 0,
 }
+state.Seq = require(lune.sim.sequence) -- 시퀀스(2026-10-30 — 메이플 「시퀀스」: 스킬 창의 「시퀀스」 단추로 여는 창 · 퀵슬롯의 seq_ · bseq_)
 Boot.state = state
 
 -- 그림을 불러온다. only = 이름이 이 글들 가운데 하나로 시작하는 것만(없으면 모두) · notify(끝난 수, 모두) = 한 장이 끝날 때마다(로딩 화면의 띠)
@@ -92669,11 +93297,11 @@ local function crystalGone(id: number)
 end
 
 -- 내 펫이 떨어진 것에 닿았다(2026-10-20 — rideView.luau): 서버가 펫을 꺼내 두었는지 · 영웅에게서 가까운지 · 주인을 확인하고 줍는다(world.luau의 onPetPick)
-local function petPick(id: number, x: number?, y: number?)
+local function petPick(id: number, x: number?, y: number?, slot: number?)
 	if x and y and state.fx then
 		state.fx:pull(id, x, y) -- 펫 쪽으로 빨려 든다(자석 — 2026-10-21)
 	end
-	Net.FireServer("PetPick", id)
+	Net.FireServer("PetPick", id, slot or 1) -- slot = 꺼내 둔 펫의 차례(펫 셋 — 2026-10-30: 서버가 펫마다 간격을 센다)
 end
 
 -- 펫 꺼내기 · 넣기와 탈것 타기 · 내리기(2026-10-21 사용자: "펫을 넣고 빼는거, 라이딩을 타는거 이런게 달빛상점에 들어가서 하는게 아닙니다" —
@@ -92747,7 +93375,7 @@ state.toggleDskin = function(id: string)
 end
 state.togglePet = function(id: string)
 	once(function()
-		cashInvoke("pet", if state.myPet == id then false else id)
+		cashInvoke("pet", id) -- 꺼내 둔 펫이면 넣고 아니면 꺼낸다(셋까지 — 서버가 정한다 · 2026-10-30)
 	end)
 end
 -- id = 그 탈것(타고 있는 것이면 내린다) · nil = 고른 탈것으로 타거나 내린다(N 키)
@@ -92851,17 +93479,19 @@ local function enterScene(key: string, x: number, y: number, room)
 	for _, w in (room and room.who) or {} do
 		if state.myId ~= nil and w.id == state.myId then
 			state.myPet, state.myRide = w.pet or nil, w.ride or nil
+			state.myPets = if typeof(w.pets) == "table" then w.pets elseif w.pet then { w.pet } else {} -- 꺼내 둔 펫들(셋까지 — 2026-10-30)
 			state.mySkin = w.wskin or nil -- 장착한 캐시 무기(계정의 것 — 2026-10-23)
 			state.myDskin = w.dskin or nil -- 장착한 데미지 스킨(2026-10-29)
 		end
 	end
 	state.sprite:setLook(state.lookOf(state.me and state.me.look)) -- 무기 · 로브 색(염색 — 2026-10-22) · 캐시 무기(2026-10-23)
 	state.ride = RideView.new(state.view.heroLayer, 1, scene) -- 내 펫 · 탈것(영웅의 ZIndex 1 — 탈것 · 펫은 그 뒤, 탈것의 등은 그 앞 · 펫은 이 맵의 땅 위를 걷는다)
-	state.ride:setPet(state.myPet)
+	state.ride:setPets(state.myPets or {})
 	state.ride:setRide(state.myRide)
 	state.mobs = MobsView.new(state.view.mobLayer, room, state.over)
 	RiftView.enter(room.rift) -- 토벌의 방이면 위 가운데의 판(아니면 숨긴다)
 	BossView.setWeekly(room.weekly) -- 주간 보스의 방이면 보스 체력 바 위에 난이도 · 남은 시간(아니면 숨긴다 — 2026-10-24)
+	state.bossRoom = room.weekly ~= nil -- 보스 전투에서는 버프 시퀀스를 쓸 수 없다(메이플 — 2026-10-30)
 	if not Voyage.onShip(key) then
 		VoyageView.stop() -- 배에서 내렸다
 	end
@@ -93675,10 +94305,43 @@ local function step()
 					state.toggleRide(what) -- 탈것: 탄다 · 내린다
 				elseif what and Quick.act(what) then
 					-- 점프 · 상호작용(폰의 칸 단추 — touch.luau가 바로 뛰기 · 상호작용을 누른다 · 2026-10-21): 여기서는 할 일이 없다
+				elseif what and state.Seq.of(what) then
+					state.runSeq(what) -- 시퀀스(2026-10-30): 넣어 둔 것을 앞 칸부터 차례대로(아래 「시퀀스를 쓰는 중」)
 				elseif what then
 					trySkill(what, from[1] .. i) -- 그 칸의 키(힘을 모을 때 누르고 있는지 본다)
 				end
 			end
+		end
+	end
+	-- 시퀀스를 쓰는 중(2026-10-30 — sim/sequence.luau · 메이플): 앞 칸부터 하나씩 그 스킬의 키를 누른 것처럼 — 걸렸으면 ok초(0.12) · 안 걸렸으면(대기 중 · 못 쓰는 것) fail초(0.03) 뒤 다음.
+	--  버프 아이템(쿠폰)은 가방에 있고 그 효과가 아직 걸려 있지 않을 때만 쓴다(덮어쓰지 않는다 — 메이플) · item초 뒤 다음. 쓰러지면 멈춘다(메이플)
+	local sr = state.seqRun
+	if sr and state.dead then
+		state.seqRun = nil
+	elseif sr and state.clock >= sr.t then
+		local SD = state.Seq.DATA
+		local id = sr.list[sr.i]
+		local wait = SD.fail
+		if id and state.Seq.ITEM[id] then
+			local goods = Items.goods(id)
+			local left = if goods and goods.kind == "bmExp" then (state.expLeft or 0) - (state.now - (state.expAt or state.now))
+				elseif goods and goods.kind == "bmDrop" then (state.dropLeft or 0) - (state.now - (state.dropAt or state.now))
+				else 0
+			if goods and left <= 0 and Bag.countIn(state.bag, id) > 0 then
+				state.sendPotion(id)
+				wait = SD.item
+			end
+		elseif id then
+			local before = state.cds[id]
+			trySkill(id)
+			if state.cds[id] ~= before then
+				wait = SD.ok
+			end
+		end
+		sr.i += 1
+		sr.t = state.clock + wait
+		if sr.i > #sr.list then
+			state.seqRun = nil
 		end
 	end
 	if Input.take("potion") then
@@ -94145,6 +94808,19 @@ local function draw(dt: number)
 			Touch.setCooldown(id, (state.cds[id] or 0) - state.clock, def.cd)
 		end
 	end
+	-- 스킬 시퀀스의 칸(2026-10-30 — 메이플): 넣은 스킬 가운데 다시 쓰기까지 가장 오래 남은 것(버프 시퀀스의 칸에는 보이지 않는다)
+	for k, list in (state.me and state.me.seqs and state.me.seqs.skill) or {} do
+		local remain, total = 0, 0
+		for _, id in list do
+			local r = (state.cds[id] or 0) - state.clock
+			if r > remain then
+				local def = Buffs.data[id] or COMBAT.placed[id]
+				remain, total = r, math.max(def and def.cd or 0, r)
+			end
+		end
+		Hud.setCooldown(state.Seq.id("skill", k), remain, total)
+		Touch.setCooldown(state.Seq.id("skill", k), remain, total)
+	end
 	-- 물약 칸: 다시 마시기까지(물약은 모두 같은 시계 — 서버가 마셨다고 알린 때부터)
 	for _, g in Items.data.GOODS do
 		if g.kind == "potion" then
@@ -94274,9 +94950,19 @@ Hud.slotTipOf = function(what: string)
 	end
 	if Quick.ride(what) then
 		local prod = CashWindow.product(what)
-		local on = if Quick.ride(what) == "pet" then state.myPet == what else state.myRide == what
+		local on = if Quick.ride(what) == "pet" then table.find(state.myPets or {}, what) ~= nil else state.myRide == what
 		local W = CashWindow.WORDS
 		return { kind = "main", title = if prod then prod.name else what, tag = if on then (if Quick.ride(what) == "pet" then W.petOutTag else W.rideTag) else "", lines = { if prod then prod.line or "" else "" } }
+	end
+	local seqKind, seqK = state.Seq.of(what)
+	if seqKind and seqK then
+		-- 시퀀스의 칸(2026-10-30): 「스킬 시퀀스 1」 + 넣어 둔 차례대로 이름(비었으면 넣는 곳 안내)
+		local names = {}
+		for _, id in (state.me and state.me.seqs and state.me.seqs[seqKind][seqK]) or {} do
+			local g = Items.goods(id)
+			table.insert(names, if g then g.name elseif skillInfo[id] then skillInfo[id].name else id)
+		end
+		return { kind = "sub", title = state.Seq.name(seqKind, seqK), tag = "", lines = { if #names > 0 then table.concat(names, " → ") else state.Seq.DATA.empty } }
 	end
 	local sk = skillInfo[what]
 	if not sk then
@@ -94372,10 +95058,23 @@ local function listen()
 		elseif state.onJob and me.slots and me.skills then
 			-- 스킬을 되돌렸다(초기화): 서버가 칸에서 배우지 않은 스킬을 뺐다 — 화면의 칸도 서버의 것으로(2026-10-18 검토: 사라진 스킬이 칸에 남아 다음 고치기가 한 번 튕겼다)
 			for _, what in state.slots or {} do
-				if what and not Quick.item(what) and not Quick.ride(what) and (me.skills[what] or 0) <= 0 then -- (펫 · 탈것은 스킬이 아니다 — 2026-10-21)
+				if what and not Quick.item(what) and not Quick.ride(what) and not state.Seq.of(what) and (me.skills[what] or 0) <= 0 then -- (펫 · 탈것 · 시퀀스는 스킬이 아니다 — 2026-10-21 · 10-30)
 					state.onJob(me)
 					break
 				end
+			end
+		end
+		-- 시퀀스가 바뀌었다(2026-10-30): 시퀀스가 놓인 칸의 그림(첫 칸)을 다시 그린다
+		local seqKey = ""
+		for _, kind in state.Seq.KINDS do
+			for k, list in (me.seqs and me.seqs[kind]) or {} do
+				seqKey ..= kind .. k .. ":" .. table.concat(list, ",") .. ";"
+			end
+		end
+		if seqKey ~= state.seqKey then
+			state.seqKey = seqKey
+			if state.onJob and me.slots then
+				state.onJob(me)
 			end
 		end
 		Hud.setLocked(skillsLocked()) -- 스킬 칸의 잠금은 내 상태가 올 때마다 맞춘다(레벨이 먼저 오르는 경우에도 풀린다)
@@ -94451,7 +95150,7 @@ local function listen()
 					--  크리티컬은 줄마다 따로 굴린다(h.crits[몇째 줄] — 서버의 Room:strike). crits가 없으면 그 타 전체가 크리티컬인가(h.crit — 흘리기 · 쪼개지 않은 타)
 					local crit = if h.crits then h.crits[line] == true else h.crit == true
 					local mine = by == state.myId
-					if mine or ViewOpts.nums then -- 다른 사람의 피해 숫자는 설정의 「화면」에서 끌 수 있다(2026-10-18)
+					if (mine and ViewOpts.myNums) or (not mine and ViewOpts.nums) then -- 다른 사람의 피해 숫자(2026-10-18) · 내 피해 숫자(2026-10-30)는 설정의 「화면」에서 끌 수 있다
 						state.fx:number(lines[line], m.x, m.info.y - MobsView.topOf(m) - LINES.rise * (line - 1), if crit then Effects.BIG[tone] else Effects.DEAL, crit, dpart)
 					end
 					-- 타격감(공방 combat.js의 hit): 몬스터가 하얗게 번쩍이며 때린 쪽의 반대로 조금 밀리고, 맞은 자리에 불꽃과 파편이 튄다.
@@ -94664,15 +95363,17 @@ local function listen()
 		-- 내 펫 · 탈것(서버가 정한 것 — 펫을 꺼냈다 · 탔다 · 기술을 써서 내렸다)
 		for _, w in roster do
 			if w.id == state.myId then
-				local changed = state.myPet ~= (w.pet or nil) or state.myRide ~= (w.ride or nil) or state.mySkin ~= (w.wskin or nil)
+				local pets = if typeof(w.pets) == "table" then w.pets elseif w.pet then { w.pet } else {} -- 꺼내 둔 펫들(셋까지 — 2026-10-30)
+				local changed = table.concat(state.myPets or {}, ",") ~= table.concat(pets, ",") or state.myRide ~= (w.ride or nil) or state.mySkin ~= (w.wskin or nil)
 				state.myPet, state.myRide = w.pet or nil, w.ride or nil
+				state.myPets = pets
 				state.mySkin = w.wskin or nil -- 장착한 캐시 무기(2026-10-23)
 				state.myDskin = w.dskin or nil -- 장착한 데미지 스킨(2026-10-29)
 				if state.sprite then
 					state.sprite:setLook(state.lookOf(state.me and state.me.look))
 				end
 				if state.ride then
-					state.ride:setPet(state.myPet)
+					state.ride:setPets(state.myPets)
 					state.ride:setRide(state.myRide)
 				end
 				if changed and state.me then
@@ -95782,6 +96483,9 @@ function Boot.start()
 		end,
 		-- 그 스킬을 퀵슬롯에 놓을 수 있는가: ok · passive(늘 켜져 있는 것) · unlearned(아직 안 배웠다) · later(게임에 아직 없다). kind = 스킬의 갈래
 		state = function(id: string, kind: string?): string
+			if state.Seq.of(id) then
+				return "ok" -- 시퀀스(2026-10-30): 비어 있어도 칸에 놓는다
+			end
 			local def = COMBAT.skills[id]
 			if def and def.who == state.who then
 				return if state.me and (state.me.skills[id] or 0) > 0 then "ok" else "unlearned"
@@ -95815,6 +96519,7 @@ function Boot.start()
 	QuickEdit.init(quickHooks)
 	Windows.register("stat", StatWindow)
 	Windows.register("skill", SkillWindow)
+	Windows.register("seq", require(script.Parent.ui.seqWindow)) -- 시퀀스(스킬 창의 「시퀀스」 단추 — 2026-10-30 · 메이플)
 	Windows.register("keys", KeysWindow)
 	Windows.register("sound", SoundWindow)
 	Windows.register("daily", DailyWindow) -- 일일 의뢰(마을의 의뢰 게시판 앞에서 ↑)
@@ -95838,6 +96543,9 @@ function Boot.start()
 		end
 		wctx.myPet = function()
 			return state.myPet
+		end
+		wctx.myPets = function() -- 꺼내 둔 펫들(셋까지 — 2026-10-30)
+			return state.myPets or {}
 		end
 		wctx.myRide = function()
 			return state.myRide
@@ -95868,6 +96576,9 @@ function Boot.start()
 		end,
 		myPet = function()
 			return state.myPet
+		end,
+		myPets = function()
+			return state.myPets or {}
 		end,
 		myRide = function()
 			return state.myRide
@@ -96031,6 +96742,25 @@ function Boot.start()
 	MapName.init(Hud.root)
 	GainLog.init(Hud.root)
 	-- 전직해서 칸이 바뀌었다(서버가 윗차수의 사냥기 · 보스기를 앞 차수의 자리에 넣었다)
+	-- 시퀀스(2026-10-30 — 스킬 창의 「시퀀스」 단추로 여는 창 · sim/sequence.luau): 칸의 그림 = 넣어 둔 첫 칸 · 누르면 넣어 둔 것을 차례대로(위 「시퀀스를 쓰는 중」)
+	Quick.seqFirst = function(kind: string, k: number): string?
+		local list = state.me and state.me.seqs and state.me.seqs[kind] and state.me.seqs[kind][k]
+		return list and list[1]
+	end
+	state.runSeq = function(what: string)
+		local kind, k = state.Seq.of(what)
+		local list = kind and k and state.me and state.me.seqs and state.me.seqs[kind][k]
+		local say = if not list or #list == 0 then state.Seq.DATA.empty elseif kind == "buff" and state.bossRoom then state.Seq.DATA.boss else nil
+		if say then
+			if state.fx and state.body then
+				state.fx:float(say, state.body.x, state.body.y - 46, Effects.MINT, 1.6) -- (빈 시퀀스 — 시퀀스 창에서 넣는다 · 보스 전투의 버프 시퀀스)
+			end
+			return
+		end
+		if not state.seqRun and list then
+			state.seqRun = { list = table.clone(list), i = 1, t = state.clock }
+		end
+	end
 	state.onJob = function(me)
 		state.slots = me.slots or state.slots
 		state.touchSlots = me.tslots or state.touchSlots
@@ -96463,6 +97193,14 @@ function Boot.start()
 					local placedDef = COMBAT.placed[sk.id]
 					if not COMBAT.skills[sk.id] and ((Buffs.is(sk.id) and Buffs.learned(kitHero(), sk.id)) or ((placedDef ~= nil or COMBAT.cast[sk.id] ~= nil) and (state.me.skills[sk.id] or 0) > 0)) then
 						table.insert(list, { what = sk.id, name = sk.name })
+					end
+				end
+			end
+			-- 시퀀스(2026-10-30 — 시퀀스 창에서 짠 것: 넣어 둔 것이 있는 시퀀스만)
+			for _, kind in state.Seq.KINDS do
+				for k, slist in (state.me and state.me.seqs and state.me.seqs[kind]) or {} do
+					if #slist > 0 then
+						table.insert(list, { what = state.Seq.id(kind, k), name = state.Seq.name(kind, k) })
 					end
 				end
 			end
@@ -98052,6 +98790,13 @@ local function makeG(self, a)
 			self.effects:ghost(a.who, p.clip, p.f + 1, a.x, a.y, a.dir, Color3.fromRGB(bit32.rshift(color or a.tone.n, 16), bit32.band(bit32.rshift(color or a.tone.n, 8), 255), bit32.band(color or a.tone.n, 255)))
 		end
 	end
+	-- 잔상을 아무 자리에(리븐의 잔영 베기 — 2026-10-30): 그 동작의 f째 장(0부터)을 (x, y)에 한 색으로 남긴다(잔상처럼 옅어진다)
+	function g.shade(clip: string, f: number, x: number, y: number, dir: number, color: number?)
+		if self.effects then
+			local c = color or a.tone.n
+			self.effects:ghost(a.who, clip, f + 1, x, y, dir, Color3.fromRGB(bit32.rshift(c, 16), bit32.band(bit32.rshift(c, 8), 255), bit32.band(c, 255)))
+		end
+	end
 	-- 몸의 한 색 실루엣을 덧그린다(분신 · 굳은 몸의 윤곽 · 사신의 그림자 · 망령): 그 동작의 f째 장(0부터)을 (x, y)에. o = { color, alpha } — 그리는 동안(draw)에만 부른다.
 	--  캐릭터들의 층 맨 뒤에 놓인다(몸 뒤). o.scale = 크기(거신)
 	-- 그 동작의 장 수(내 캐릭터 그림의 — 없으면 1)
@@ -98546,7 +99291,6 @@ function Cast:update(dt: number)
 	self.fx.update(dt)
 end
 
-local STACK_MARK = Fx.TONE.mint.n
 
 function Cast:draw()
 	local view = self.view
@@ -98629,7 +99373,7 @@ function Cast:draw()
 		local top, mx = R(m.y - m.h) - 13 * sc, R(m.x)
 		if kit then
 			if kit.drawMarks then
-				kit.drawMarks(front, own.g, m, sc, true)
+				kit.drawMarks(front, own.g, m, sc, true, top) -- (top = 머리 위 — 리븐의 표식이 쓴다 · 2026-10-30)
 			end
 			if m.bind > 0 and kit.drawBind then
 				kit.drawBind(front, own.g, m, sc, true) -- 앞쪽 반
@@ -98642,12 +99386,7 @@ function Cast:draw()
 				front:rect(R(mx + cos(a) * 6), R(top - 3 + sin(a) * 2), 1, 1)
 			end
 		end
-		for i = 0, m.mark - 1 do -- 표식
-			local bx, by = mx - (m.mark - 1) * 3 + i * 6, R(top - 9 + sin(self.clock * 6 + i) * 1.5)
-			front:style(STACK_MARK)
-			front:rect(bx - 1, by, 3, 1)
-			front:rect(bx, by - 1, 1, 3)
-		end
+		-- (표식은 리븐 묶음의 drawMarks가 그린다 — 머리 위 민트 초승달 · 2026-10-30. 전에는 여기서 작은 + 셋)
 	end
 	for i = self.spriteN + 1, #self.sprites do
 		self.sprites[i].label.Visible = false
@@ -101309,8 +102048,9 @@ function Hud.setSlots(list)
 		slot.wait:set("")
 		slot.shown = nil
 		local n = if slot.item and Hud.countOf then Hud.countOf(slot.item) else 0
-		slot.count:set(if slot.item then tostring(n) else "")
-		slot.count:color(if slot.item and n == 0 then C.red else C.text)
+		local mark = Quick.seqMark(what) -- 시퀀스의 칸: 구석에 「S1」 · 「B1」(2026-10-30)
+		slot.count:set(if slot.item then tostring(n) elseif mark then mark else "")
+		slot.count:color(if slot.item and n == 0 then C.red elseif mark then C.accent else C.text)
 		if slot.id then
 			Hud.byId[slot.id] = slot
 		elseif slot.item and Quick.isPotion(slot.item) then
@@ -103018,7 +103758,7 @@ function Others:setWho(roster)
 				o.tag.Frame.Visible = false
 				self.list[w.id] = o
 			end
-			o.rv:setPet(w.pet)
+			o.rv:setPets(if typeof(w.pets) == "table" then w.pets elseif w.pet then { w.pet } else {}) -- 꺼내 둔 펫들(셋까지 — 2026-10-30)
 			o.rv:setRide(w.ride)
 			o.sprite:setLook({ point = w.look and w.look.point, robe = w.look and w.look.robe, skin = w.wskin or nil }) -- 그 사람의 무기 · 로브 색(염색 — 2026-10-22) · 캐시 무기(2026-10-23)
 			if o.name ~= w.name or o.level ~= w.level then
@@ -103666,6 +104406,8 @@ MODULES['Client/lune/rideView'] = function(script, game, require, task, os, type
 --   2026-10-28 사용자 "무료펫 상하 단차를 조금더 수월하게 움직이게하자 지금 언덕을 잘 못넘어" → 한 칸(stepUp점) 턱은 계단처럼 걸어 오른다 · 더 높은 턱의 웅크림 windup 0.2 → 0.06초
 --    · 로벅스 펫(design/ride.js에서 free가 없는 펫): 펫 몸 둘레 suck.r점 원 안의 것을 높이 · 턱과 상관없이 suck.every초마다 빨아들인다 — 펫의 종류로 정해진다(이미 산 사람도 같다)
 --      같은 날 "로벅스 펫 빨아들이기 범위 더크게" → suck.r 80 → 160 · 서버가 받는 영웅과의 거리 suck.reach 256
+--  펫 셋(2026-10-30 사용자 "펫 현재 한마리만 낄수있는데 3마리까지 낄수있게해줘"): 첫째는 이 판 · 둘째 · 셋째는 따로 된 판(extra — 같은 셈 · 영웅 뒤로 gap점씩 더 · 줍는 간격도 따로)
+--   onPick(번호, x, y, slot) — slot = 꺼내 둔 펫의 차례(서버가 펫마다 간격을 센다 · world.luau onPetPick)
 --  탈것: 탄 동안 영웅의 발밑에 탈것을 그리고, 영웅은 서기 모습으로 앉는 자리(seat)에 · 탈것의 등(<동작>_front)을 영웅 앞에 다시 그린다(다리가 몸에 묻혀 앉은 것으로 보인다).
 --   사다리 위 · 기술을 쓰는 동안은 탈것을 감춘다(사용자 10-20 「탈것은 사다리에서 감추기 좋습니다」) — 영웅은 제 동작 그대로.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -103700,6 +104442,7 @@ function RideView.new(layer: Instance, z: number, scene: any)
 	return setmetatable({
 		layer = layer, z = z, scene = scene, petId = nil, pet = nil, rideId = nil, mount = nil, front = nil,
 		body = nil, acc = 0, pdir = 1, goal = nil, tried = {}, nextPick = 0, windT = nil, prog = nil, warps = 0,
+		slot = 1, behind = P.behind, extra = {}, -- slot = 꺼내 둔 펫의 차례 · behind = 영웅 뒤로 서는 거리 · extra = 둘째 · 셋째 펫의 판
 	}, RideView)
 end
 
@@ -103715,6 +104458,27 @@ function RideView:setPet(id: any)
 	self.petId, self.body = id, nil
 	if id then
 		self.pet = Sprite.new(self.layer, id, self.z - 1)
+	end
+end
+
+-- 꺼내 둔 펫들(차례대로 — 셋까지): 첫째 = 이 판 · 둘째부터 = 따로 된 판(영웅 뒤로 gap점씩 더 떨어져 선다)
+function RideView:setPets(list: any)
+	list = if typeof(list) == "table" then list else {}
+	self:setPet(list[1])
+	for k = 2, math.max(#list, 3) do -- (셋까지 — 남은 판은 걷는다)
+		local id = list[k]
+		local e = self.extra[k]
+		if id then
+			if not e then
+				e = RideView.new(self.layer, self.z, self.scene)
+				e.slot, e.behind = k, P.behind + (P.gap or 26) * (k - 1)
+				self.extra[k] = e
+			end
+			e:setPet(id)
+		elseif e then
+			e:destroy()
+			self.extra[k] = nil
+		end
 	end
 end
 
@@ -103772,8 +104536,9 @@ local function spotOK(scene, hx: number, hy: number, x: number): boolean
 	return not Physics.solidBox(scene, x, hy)
 end
 -- 펫이 설 자리: 영웅의 뒤(side 쪽) behind점 → 그 반 → 반대쪽 behind점 → 그 반 가운데 설 수 있는 첫 곳 · 없으면 영웅의 자리(벽 곁 · 좁은 발판 — 그 자리가 벽 속이면 벽 앞에서 뛰기만 했다)
-local function spotFor(scene, hx: number, hy: number, side: number): number
-	for _, off in { side * P.behind, side * P.behind / 2, -side * P.behind, -side * P.behind / 2 } do
+local function spotFor(scene, hx: number, hy: number, side: number, behind: number?): number
+	local bh = behind or P.behind
+	for _, off in { side * bh, side * bh / 2, -side * bh, -side * bh / 2 } do
 		if spotOK(scene, hx, hy, hx + off) then
 			return hx + off
 		end
@@ -103787,7 +104552,7 @@ function RideView:warp(x: number, y: number, dir: number)
 	local b = self.body or { x = x, y = y, vx = 0, vy = 0, ground = false, air = 0 }
 	self.body = b
 	local gy = groundBelow(scene, x, y, 240) or y -- 영웅의 발밑 땅(사다리 · 공중이면 그 아래)
-	local gx = spotFor(scene, x, gy, -dir)
+	local gx = spotFor(scene, x, gy, -dir, self.behind)
 	if Physics.solidBox(scene, gx, gy) then
 		gx, gy = x, y -- 그 자리가 막힌 칸이면 영웅이 선 자리(영웅의 발밑은 늘 비어 있다)
 	end
@@ -103797,7 +104562,7 @@ function RideView:warp(x: number, y: number, dir: number)
 end
 
 -- 펫의 한 걸음(1/60초). hero = { x, y, dir, moving, air }
-function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, number, number) -> ())?)
+function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, number, number, number) -> ())?)
 	local scene, b = self.scene, self.body
 	-- 순간 이동: 영웅이 땅에 서 있을 때 멀면(사다리 · 공중에서는 기다린다 — 영웅의 발밑 땅이 아직 정해지지 않았다)
 	if not hero.air and (math.abs(hero.x - b.x) > P.warpX or math.abs(hero.y - b.y) > P.warpY) then
@@ -103829,7 +104594,7 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 	else
 		local side = if hero.moving then -hero.dir elseif b.x < hero.x then -1 else 1
 		-- 영웅이 달리는 동안은 늘 영웅의 뒤(2026-10-21 — 뒤에 설 땅이 없으면 영웅의 앞으로 갈 곳이 바뀌어 곧게 달리는데도 펫이 앞뒤로 튀었다) · 서 있으면 설 수 있는 곳
-		tx = if hero.air or hero.moving then hero.x + side * P.behind else spotFor(scene, hero.x, hero.y, side)
+		tx = if hero.air or hero.moving then hero.x + side * self.behind else spotFor(scene, hero.x, hero.y, side, self.behind)
 		speed = math.min(P.max, P.base + P.per * math.abs(tx - b.x))
 	end
 	local d = tx - b.x
@@ -103881,7 +104646,7 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 		end
 	end
 	-- 하단 점프: 영웅이 아래에 있고 펫이 얇은 발판 위면(영웅 쪽으로 가까울 때)
-	if b.ground and ((heroBelow and math.abs(hero.x - b.x) <= P.behind + 24) or (goalDown and math.abs(goal.x - b.x) <= (P.hop or 0))) and Physics.onPlatform(scene, b) then
+	if b.ground and ((heroBelow and math.abs(hero.x - b.x) <= self.behind + 24) or (goalDown and math.abs(goal.x - b.x) <= (P.hop or 0))) and Physics.onPlatform(scene, b) then
 		input.down, input.jump = true, true
 	elseif wantJump then
 		if not self.windT then
@@ -103913,7 +104678,7 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 		if self.goal then
 			self.tried[self.goal] = now + 3 -- 막혀 못 가는 것: 3초 동안 빼고 영웅에게 돌아간다
 			self.goal = nil
-		elseif not hero.air and math.abs(hero.x - b.x) > P.behind then
+		elseif not hero.air and math.abs(hero.x - b.x) > self.behind then
 			self:warp(hero.x, hero.y, hero.dir) -- 지형에 걸려 영웅에게 가지 못한다(영웅이 바로 위의 발판 · behind점 안이면 기다린다 — 메이플의 일반 펫)
 			return
 		end
@@ -103944,7 +104709,7 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 				self.goal = nil
 			end
 			self.nextPick = now + (if suck then P.suck.every else P.every)
-			onPick(pick, b.x, cy)
+			onPick(pick, b.x, cy, self.slot)
 		end
 	end
 end
@@ -103953,7 +104718,10 @@ end
 --  drops = 땅에 떨어진 것들({ [번호] = { x, y } } — effects.luau의 drops) · onPick(번호) = 펫이 닿았다(내 펫만 — 남의 펫은 nil: 따라다니기만)
 --  돌려주는 것: 탄 동안 영웅을 그릴 자리(x, y) · 크기(서기 그림을 줄여 그리는 배 — ride.generated의 riderSize를 화면 화소에 맞춘 것) — 그 밖에는 nil(영웅은 제자리에 제 동작으로)
 --   2026-10-21 사용자 "캐릭터가 탑승한모습이 자연스럽지않아요" · "탑승할때 플레이어도 idle 재생하면될듯 그 위치에서" → 탄 동안 영웅은 서기 그림 그대로 작게 · 안장 자리의 등 위에(장마다 잰 높이)
-function RideView:update(now: number, dt: number, x: number, y: number, dir: number, moving: boolean, air: boolean, hide: boolean, drops: any?, onPick: ((number, number, number) -> ())?): (number?, number?, number?)
+function RideView:update(now: number, dt: number, x: number, y: number, dir: number, moving: boolean, air: boolean, hide: boolean, drops: any?, onPick: ((number, number, number, number) -> ())?): (number?, number?, number?)
+	for _, e in self.extra do
+		e:update(now, dt, x, y, dir, moving, air, hide, drops, onPick) -- 둘째 · 셋째 펫(탈것이 없는 판 — 펫만)
+	end
 	if self.pet and self.scene then
 		if not self.body then
 			self:warp(x, y, dir) -- 처음 · 펫을 꺼낸 때: 영웅의 뒤
@@ -103994,6 +104762,10 @@ function RideView:update(now: number, dt: number, x: number, y: number, dir: num
 end
 
 function RideView:destroy()
+	for k, e in self.extra do
+		e:destroy()
+		self.extra[k] = nil
+	end
 	self:setPet(nil)
 	self:setRide(nil)
 end
@@ -104404,8 +105176,28 @@ end
 --  층이 있는 맵(scene.tall): 선 층의 발밑이 화면의 Kit.GROUND에 오게 부드럽게 따라간다 — 땅을 딛고 있을 때의 높이만 따르고(뛸 때마다 출렁이지 않게),
 --   화면 밖으로 나가려 하면 바로 따라간다. 공방 시험 탭(luneTab.js의 followCam)과 같은 식이다.
 -- camOverride = 장면(퀘스트 연출 — cineView.luau)이 카메라를 옮겨 둔 가로 자리(없으면 캐릭터) · npcOver = 장면이 옮긴 주민 { [id] = { x, dir, hidden, walk } }
+-- 가로: 늘 캐릭터를 그대로 따라가되, 한 번에 크게 옮겨지면(순간이동 — 리븐의 섬영 · 무영 섬 …) 그 사이만 부드럽게 따라붙는다
+--  (2026-10-31 사용자 "캐릭터가 순간적으로 이동할때도 이동하는건 보여주되, 카메라가 동일속도로 정확하게 따라갈 필요는없어" — 전에는 순간이동마다 화면이 툭툭 끊겨 흔들리는 것처럼 보였다).
+--  CAM_JUMP도트보다 벌어지면 따라붙기 시작해 초당 CAM_RATE의 빠르기로 좁힌다 · 캐릭터는 화면 끝에서 CAM_EDGE도트 안으로는 늘 들어온다 · 400도트 넘게(장면 · 문)는 곧바로. 숫자는 제가 정한 것
+local CAM_JUMP, CAM_RATE, CAM_EDGE = 24, 12, 28
 function SceneView:update(heroX: number, heroY: number, clock: number, grounded: boolean?)
-	local cx = round(math.clamp((self.camOverride or heroX) - G.VIEW_W / 2, 0, math.max(0, self.width - G.VIEW_W)))
+	local want = self.camOverride or heroX
+	local cdt = if self.camClock then math.clamp(clock - self.camClock, 0, 0.1) else 0
+	self.camClock = clock
+	if not self.camXf or math.abs(want - self.camXf) > 400 or self.camOverride then
+		self.camXf, self.camLag = want, false
+	elseif self.camLag or math.abs(want - self.camXf) > CAM_JUMP then
+		self.camLag = true
+		self.camXf += (want - self.camXf) * math.min(1, cdt * CAM_RATE)
+		local lim = G.VIEW_W / 2 - CAM_EDGE
+		self.camXf = math.clamp(self.camXf, want - lim, want + lim)
+		if math.abs(want - self.camXf) < 1.5 then
+			self.camXf, self.camLag = want, false
+		end
+	else
+		self.camXf = want
+	end
+	local cx = round(math.clamp(self.camXf - G.VIEW_W / 2, 0, math.max(0, self.width - G.VIEW_W)))
 	local cy = G.GROUND_Y - Kit.GROUND
 	if self.scene.tall then
 		local top = math.max(0, self.height - Kit.GROUND - (G.GROUND_Y - Kit.GROUND)) -- 카메라가 내려갈 수 있는 끝
@@ -106351,13 +107143,29 @@ local VIEW_W, VIEW_H = G.VIEW_W, G.VIEW_H -- 게임 화면(도트)
 
 local C = Ui.COLOR
 local PIC = 24 -- 그림 한 장(화면 틀의 점)
-local STICK = { walk = 0.35, ud = 0.55 } -- 조이스틱: 반지름의 몇 배를 밀어야 걷는가 · 아래(하단 점프) · 위(사다리)(2026-10-27 — 전에는 0.2 · 0.42)
+-- 조이스틱(2026-10-30 사용자 "모바일 이동시 아래로 내려가기 위해 컨트롤러를 내리면 캐릭터가 멈춘다는데 … 원래 판정으로 만들어야해"):
+--  walk = 반지름의 몇 배를 밀어야 움직이는가(엄지를 얹거나 조금 흔들려도 걷지 않게 — 10-27 「민감도가 너무 높다」의 0.35는 그대로) ·
+--  side = 수평에서 몇 도 안이면 좌우로 걷는가 · ud = 수평에서 몇 도 넘게 기울면 아래(하단 점프) · 위(사다리)인가 — 둘이 겹쳐 「걸으면서 아래」가 된다(10-27 전의 판정과 같은 각도)
+--  10-27에는 좌우 · 위아래를 반지름의 0.35 · 0.55배의 거리로 따로 재서, 손잡이를 끝까지(반지름의 0.62) 민 채 대각선 아래(수평에서 약 56~62°)로 두면 좌우도 아래도 꺼져 멈췄다
+local STICK = { walk = 0.35, side = 70, ud = 40 }
 local HOLD_FIRST, HOLD_NEXT = 0.3, 0.12 -- 공격 스킬을 누르고 있을 때: 처음 다시 누르기까지 · 그 뒤의 간격(초)
 local DRAG = Quick.DATA.drag -- 이만큼 움직이면 끌기로 본다(화면 틀의 점)
 local ACT_WORDS = { pickup = "줍기", portal = "들어가기", npc = "말 걸기", spot = "살펴보기", vista = "둘러보기", chest = "상자 열기" } -- spot = 맵에 놓인 것 앞(퀘스트의 자리) · vista = 경관의 자리(성의 테라스 — 2026-10-18) · chest = 보상의 방의 상자(2026-10-28)
 
 local Touch = {}
 Touch.STICK = STICK -- (시험이 본다)
+
+-- 조이스틱을 민 만큼(vx · vy — 아래가 +) · 반지름 → 왼쪽 · 오른쪽 · 아래 · 위
+function Touch.dirs(vx: number, vy: number, radius: number): (boolean, boolean, boolean, boolean)
+	local mag = math.sqrt(vx * vx + vy * vy)
+	if mag < radius * STICK.walk then
+		return false, false, false, false
+	end
+	local deg = math.deg(math.atan2(math.abs(vy), math.abs(vx))) -- 수평에서 기운 각도(0 ~ 90)
+	local side = deg <= STICK.side
+	local ud = deg >= STICK.ud
+	return side and vx < 0, side and vx > 0, ud and vy > 0, ud and vy < 0
+end
 Touch.on = false
 Touch.arranging = false
 
@@ -106463,6 +107271,10 @@ local function paintSlot(b)
 		local n = if Hud.countOf then Hud.countOf(what) else 0
 		b.count:set(tostring(n)) -- 소비 아이템: 가방에 든 수
 		b.count:color(if n == 0 then Ui.COLOR.red else Ui.COLOR.text) -- 다 쓰면 붉은 0(2026-10-18)
+		b.count:show(true)
+	elseif Quick.seqMark(what) then
+		b.count:set(Quick.seqMark(what) :: string) -- 시퀀스의 단추: 구석에 「S1」 · 「B1」(2026-10-30)
+		b.count:color(Ui.COLOR.accent)
 		b.count:show(true)
 	else
 		b.count:show(false)
@@ -106873,12 +107685,13 @@ local function makePad(t)
 		local s = Stage.uiScale
 		knob.Position = UDim2.new(0.5, v.X / s, 0.5, v.Y / s)
 		-- 걷기 시작하는 만큼(2026-10-27 사용자 "모바일에서 버튼 민감도가 너무 높다는데" — 반지름의 20% → 35%: 엄지를 얹거나 조금 흔들려도 걷지 않게 · 아래 · 위 42% → 55%. 값은 제가 정한 것)
-		set("left", v.X < -radius * STICK.walk)
-		set("right", v.X > radius * STICK.walk)
-		set("down", v.Y > radius * STICK.ud) -- 아래로 민 채 「점프」를 누르면 발판에서 내려온다(하단 점프 — sim/physics.luau)
+		local left, right, down, up = Touch.dirs(v.X, v.Y, radius)
+		set("left", left)
+		set("right", right)
+		set("down", down) -- 아래로 민 채 「점프」를 누르면 발판에서 내려온다(하단 점프 — sim/physics.luau) · 걸으면서도 된다(대각선 아래)
 		-- 위로 밀면 사다리만 오른다("climb" — 문 · 주민은 그대로 상호작용 단추: 사용자 2026-10-08 「위로 미는 것은 아무 일도 없다」).
 		--  2026-10-17: 사다리를 넣으며 폰의 오르기를 빠뜨렸었다(조이스틱으로는 사다리를 탈 수 없었다)
-		set("climb", v.Y < -radius * STICK.ud)
+		set("climb", up)
 	end
 	pad.stop = function()
 		pad.finger = nil
@@ -109271,9 +110084,9 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		if not v then
 			return out
 		end
-		local myPet, myRide = ctx.myPet and ctx.myPet(), ctx.myRide and ctx.myRide()
+		local myPets, myRide = ctx.myPets and ctx.myPets(), ctx.myRide and ctx.myRide()
 		for _, id in v.pets or {} do
-			table.insert(out, { ride = id, kind = "pet", on = (myPet or v.petOut) == id })
+			table.insert(out, { ride = id, kind = "pet", on = table.find(myPets or v.petsOut or { v.petOut }, id) ~= nil }) -- 꺼내 둔 펫들(셋까지 — 2026-10-30)
 		end
 		for _, id in v.mounts or {} do
 			table.insert(out, { ride = id, kind = "mount", on = myRide == id })
@@ -110195,7 +111008,7 @@ function CashWindow.rows(view, tab: number)
 		-- 가진 펫 · 탈것: 「보유」만(2026-10-21 사용자 "펫을 넣고 빼는거, 라이딩을 타는거 이런게 달빛상점에 들어가서 하는게 아닙니다. 달빛상점은 구매를 하는곳이에요" —
 		--  꺼내기 · 넣기 · 타기 · 내리기는 가방의 캐시 탭 · 퀵슬롯 · N 키에서)
 		local isPet, isMount = string.sub(id, 1, 4) == "pet_", string.sub(id, 1, 6) == "mount_"
-		local on = if isPet then (view and view.petOut == id) elseif isMount then (view ~= nil and view.riding == true and view.mount == id) else false
+		local on = if isPet then (view ~= nil and table.find(view.petsOut or { view.petOut }, id) ~= nil) elseif isMount then (view ~= nil and view.riding == true and view.mount == id) else false
 		-- 한정 판매(2026-10-29 황금 골렘): 남은 수를 띄우고, 다 팔렸으면 「품절」(구매 단추가 꺼진다)
 		local soldOut = p.stock and not v.own and typeof(v.left) == "number" and v.left <= 0
 		local state = if v.own then "own" elseif not v.ready then "soon" elseif soldOut then "soldOut" elseif full then "full" else "buy"
@@ -114339,6 +115152,325 @@ end
 return RiftWindow
 
 end
+MODULES['Client/lune/ui/seqWindow'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
+-- 시퀀스 창(2026-10-30 사용자: "버프를 한버튼에 배치해서 한 버튼만 눌러서 버프를 사용할수있는 시퀀스 기능 … 메이플에 이미 있는 기능" → "버프 매크로가 아니라고 내가 시퀀스라고 말했잖아").
+--  메이플스토리 「시퀀스」처럼: 스킬 창의 「시퀀스」 단추로 연다 · 탭 「스킬」 · 「버프」 · 시퀀스 아이콘 줄(스킬 10 · 버프 5 — 누르면 고르고 퀵슬롯이 반짝인다 · 끌어서 퀵슬롯에) ·
+--  고른 시퀀스의 칸(앞 칸부터 쓰는 차례 — 누르면 뺀다) · 「비우기」 · 넣을 것(누르면 끝에 더한다). 바꾸면 서버에 "Sequence"(가지, 번호, 목록) — 서버가 거르고 내 상태(Self)로 돌려준다.
+--  설명 칸(2026-10-30 사용자: "넣을스킬에 누르거나 하면 무슨스킬인지 보여야해 아이콘만보면 무슨스킬인지 알수가 없어"): 넣을 것 · 칸 · 시퀀스 아이콘에 마우스를 올리면 그것의 이름 · 갈래 · 설명이
+--   창 아래의 설명 칸에 뜬다(폰은 마우스가 없으니 마지막으로 누른 것 — 마우스를 떼면 그것으로 돌아간다).
+--  공방의 횡스크롤 시험 탭(js/lune/ui/paint.js의 paintSeq)과 같은 그림이다. 글 · 수는 UI.skillWords.seq · 셈은 sim/sequence.luau · 쓰기는 boot.luau runSeq
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local lune = ReplicatedStorage.shared.lune
+local UI = require(lune.data["ui.generated"])
+local CLASSES = require(lune.data["classes.generated"])
+local Items = require(lune.sim.items)
+local Format = require(lune.ui.format)
+local Seq = require(lune.sim.sequence)
+local Quick = require(lune.ui.quick)
+local Ui = require(script.Parent.ui)
+
+local C = Ui.COLOR
+local SQ = Seq.DATA
+local QWORDS = UI.quick.words
+local SLOT = SQ.chip -- 칸 하나(그림 24 + 둘레)
+local STEP = SLOT + SQ.chipGap
+local CELL_STEP = SLOT + SQ.cellGap
+local Y = SQ.y -- 줄마다의 높이(공방 paintSeq와 같다 — design/ui.js SKILLWORDS.seq.y)
+local H = SQ.h
+local SKILL = {} -- [스킬] = 설계의 한 줄(이름 · 갈래 · 설명) — 다섯 직업의 차수마다의 스킬(공용 포함)
+for _, c in CLASSES.classes do
+	for _, tier in c.tiers or {} do
+		for _, sk in tier.skills or {} do
+			SKILL[sk.id] = sk
+		end
+	end
+end
+
+local SeqWindow = {}
+
+function SeqWindow.size(): (number, number)
+	return SQ.w, H
+end
+
+local function picker(parent: Instance, x: number, y: number, w: number, h: number, name: string, onClick: () -> (), onPress: ((InputObject) -> ())?, onHover: ((boolean) -> ())?): TextButton
+	local hit = Instance.new("TextButton")
+	hit.Name = name
+	hit.Text = ""
+	hit.BackgroundTransparency = 1
+	hit.Position = UDim2.fromOffset(x, y)
+	hit.Size = UDim2.fromOffset(w, h)
+	hit.ZIndex = 4
+	hit.Parent = parent
+	hit.Activated:Connect(onClick)
+	if onPress then
+		hit.InputBegan:Connect(onPress)
+	end
+	if onHover then
+		hit.MouseEnter:Connect(function()
+			onHover(true)
+		end)
+		hit.MouseLeave:Connect(function()
+			onHover(false)
+		end)
+	end
+	return hit
+end
+
+-- 넣은 것의 그림(아이템이면 그 아이템의 그림 · 스킬이면 스킬의 그림)
+local function picOf(id: string): string
+	return Quick.pic(id) or ("skill_" .. id)
+end
+
+function SeqWindow.build(body: Frame, ctx, w: number, h: number)
+	local kind = "skill"
+	local sel = { skill = 1, buff = 1 }
+	local last = nil
+	local full = false
+	local hover, tapped = nil, nil -- 설명 칸에 보일 것: 이름표(스킬 · 아이템) 또는 "chip:번호"(시퀀스) — 마우스가 올라간 것이 먼저, 없으면 마지막으로 누른 것
+	local view = {}
+	local function hoverOf(what: string): (boolean) -> ()
+		return function(on: boolean)
+			hover = if on then what else (if hover == what then nil else hover)
+			view.paintInfo()
+		end
+	end
+
+	local function listOf(me, kd: string, k: number): { string }
+		return (me and me.seqs and me.seqs[kd] and me.seqs[kd][k]) or {}
+	end
+	local function send(k: number, list: { string })
+		ctx.send("Sequence", kind, k, list)
+	end
+
+	-- 탭: 「스킬」 · 「버프」(고른 것은 민트 글씨에 밑줄 — 스킬 창의 차수 탭과 같다)
+	local tabs = {}
+	for i, kd in Seq.KINDS do
+		local x = (i - 1) * (SQ.tabW + SQ.tabGap)
+		local label = Ui.text(body, SQ.tabs[kd], x, 0, SQ.tabW, { font = "body", align = "center", color = C.dim })
+		local under = Ui.box(body, x, 15, SQ.tabW, 2, C.accent)
+		picker(body, x, -4, SQ.tabW, 24, "Tab_" .. kd, function()
+			if kind ~= kd then
+				kind, full, hover, tapped = kd, false, nil, nil
+				ctx.quick.pick(nil)
+				view.paint()
+			end
+		end)
+		tabs[kd] = { label = label, under = under }
+	end
+	local head = Ui.text(body, "", 0, Y.head, w, { color = C.dim })
+
+	-- 시퀀스 아이콘 줄: 누르면 고르고 퀵슬롯이 반짝인다(한 번 더 누르면 그만둔다) · 끌면 퀵슬롯에(스킬 창의 스킬과 같다)
+	local chips = {}
+	for k = 1, math.max(Seq.N.skill, Seq.N.buff) do
+		local x = (k - 1) * STEP
+		local slot = Ui.slot(body, x, Y.chips, SLOT)
+		local pic = Ui.pic(body, nil, x + 3, Y.chips + 3)
+		pic.ZIndex = 2
+		local num = Ui.text(body, tostring(k), x, Y.num, SLOT, { align = "center", color = C.dim })
+		local hit = picker(body, x, Y.chips, SLOT, SLOT, "Chip" .. k, function()
+			local id = Seq.id(kind, k)
+			sel[kind], full, tapped = k, false, "chip:" .. k
+			ctx.quick.pick(if ctx.quick.picked() == id then nil else id)
+			view.paint()
+		end, function(input: InputObject)
+			ctx.quick.press(Seq.id(kind, k), nil, input)
+		end, hoverOf("chip:" .. k))
+		chips[k] = { slot = slot, pic = pic, num = num, hit = hit }
+	end
+
+	-- 고른 시퀀스: 이름 · 넣은 수 · 「비우기」 · 칸(앞 칸부터 쓰는 차례 — 누르면 뺀다)
+	local name = Ui.text(body, "", 0, Y.sel, w - 140, { font = "body", color = C.accent })
+	local count = Ui.text(body, "", w - 140, Y.sel + 2, 70, { color = C.dim, align = "right" })
+	local clear = Ui.button(body, SQ.clear, w - 60, Y.sel - 2, 60, function()
+		if #listOf(last, kind, sel[kind]) > 0 then
+			full = false
+			send(sel[kind], {})
+		end
+	end, { h = 20, font = "small" })
+	clear.frame.Name = "Clear"
+	local cells = {}
+	for j = 1, math.max(Seq.SIZE.skill, Seq.SIZE.buff) do
+		local x = ((j - 1) % SQ.per) * CELL_STEP
+		local y = Y.cells + math.floor((j - 1) / SQ.per) * CELL_STEP
+		local slot = Ui.slot(body, x, y, SLOT)
+		local pic = Ui.pic(body, nil, x + 3, y + 3)
+		pic.ZIndex = 2
+		local hit = picker(body, x, y, SLOT, SLOT, "Cell" .. j, function()
+			local list = listOf(last, kind, sel[kind])
+			if list[j] then
+				local next = table.clone(list)
+				table.remove(next, j)
+				full, tapped = false, list[j]
+				view.paintInfo()
+				send(sel[kind], next)
+			end
+		end, nil, function(on: boolean)
+			local id = listOf(last, kind, sel[kind])[j]
+			hover = if on and id then id else nil
+			view.paintInfo()
+		end)
+		cells[j] = { slot = slot, pic = pic, hit = hit }
+	end
+
+	-- 넣을 것: 누르면 끝에 더한다(이미 든 것은 그대로 · 다 찼으면 알린다)
+	local pickLabel = Ui.text(body, "", 0, Y.pick, w, { color = C.dim })
+	local note = Ui.text(body, "", 0, Y.cands, w, { color = C.off }) -- 넣을 것이 없을 때
+	-- 설명 칸: 이름(금빛) · 갈래(오른쪽) · 설명 두 줄
+	Ui.box(body, 0, Y.info - 6, w, 1, C.line)
+	local infoName = Ui.text(body, "", 0, Y.info, w - 100, { font = "body", color = C.gold })
+	local infoTag = Ui.text(body, "", w - 100, Y.info + 2, 100, { color = C.dim, align = "right" })
+	local infoText = Ui.text(body, "", 0, Y.info + 18, w, { color = C.text, lines = 2, line = Ui.M.smallLine })
+	local quickAt = Ui.text(body, "", 0, h - Ui.M.small - 18, w, { color = C.dim })
+	Ui.text(body, SQ.hint, 0, h - Ui.M.small - 2, w, { color = C.dim })
+	local cands, candIds = {}, {}
+	local function candCell(i: number)
+		if cands[i] then
+			return cands[i]
+		end
+		local x = ((i - 1) % SQ.per) * CELL_STEP
+		local y = Y.cands + math.floor((i - 1) / SQ.per) * CELL_STEP
+		local slot = Ui.slot(body, x, y, SLOT)
+		local pic = Ui.pic(body, nil, x + 3, y + 3)
+		pic.ZIndex = 2
+		picker(body, x, y, SLOT, SLOT, "Cand" .. i, function()
+			local id = candIds[i]
+			if not id or not last then
+				return
+			end
+			tapped = id
+			view.paintInfo() -- (설명은 바로 — 칸은 서버가 돌려준 내 상태로 다시 그린다)
+			local list = listOf(last, kind, sel[kind])
+			if table.find(list, id) then
+				return
+			end
+			if #list >= Seq.SIZE[kind] then
+				full = true
+				view.paint()
+				return
+			end
+			local next = table.clone(list)
+			table.insert(next, id)
+			send(sel[kind], next)
+		end, nil, function(on: boolean)
+			hover = if on and candIds[i] then candIds[i] else nil
+			view.paintInfo()
+		end)
+		cands[i] = { slot = slot, pic = pic }
+		return cands[i]
+	end
+
+	-- 설명 칸: 다 찼다는 알림(빨강) → 마우스가 올라간 것 → 마지막으로 누른 것 → 안내(흐림)
+	function view.paintInfo()
+		local me = last
+		local what = hover or tapped
+		local title, tag, text, tone = "", "", SQ.info, C.dim
+		if full then
+			text, tone = Format.fill(SQ.full, { max = Seq.SIZE[kind] }), C.red
+		elseif what and string.sub(what, 1, 5) == "chip:" then
+			local k = tonumber(string.sub(what, 6)) :: number
+			local list = listOf(me, kind, k)
+			local names = {}
+			for _, id in list do
+				local g = Items.goods(id)
+				table.insert(names, if g then g.name elseif SKILL[id] then SKILL[id].name else id)
+			end
+			title, tag = Seq.name(kind, k), Format.fill(SQ.count, { n = #list, max = Seq.SIZE[kind] })
+			text, tone = if #names > 0 then table.concat(names, " → ") else SQ.blank, if #names > 0 then C.text else C.dim
+		elseif what then
+			local g = Items.goods(what)
+			local sk = SKILL[what]
+			if g then
+				title, tag, text, tone = g.name, SQ.item, g.text or "", C.text
+			elseif sk then
+				local lv = me and me.skills and me.skills[what] or 0
+				local typeName = CLASSES.types and CLASSES.types[sk.type] or ""
+				title, tag, text, tone = sk.name, if lv > 0 then ("%s · Lv.%d"):format(typeName, lv) else typeName, sk.text or "", C.text
+			end
+		end
+		infoName:set(title)
+		infoTag:set(tag)
+		infoText:set(text)
+		infoText:color(tone)
+	end
+
+	function view.paint()
+		local me = last
+		if not me then
+			return
+		end
+		for kd, t in tabs do
+			t.label:color(if kd == kind then C.accent else C.dim)
+			t.under.Visible = kd == kind
+		end
+		head:set(SQ.head[kind])
+		local n, size, k = Seq.N[kind], Seq.SIZE[kind], sel[kind]
+		for i, c in chips do
+			local on = i <= n
+			c.slot.frame.Visible = on
+			c.hit.Visible = on
+			c.num:show(on)
+			if on then
+				local list = listOf(me, kind, i)
+				Ui.setPic(c.pic, if list[1] then picOf(list[1]) else "menu_skill")
+				c.slot:setOn(i == k)
+				c.num:color(if i == k then C.accent else C.dim)
+			else
+				c.pic.Visible = false
+			end
+		end
+		local list = listOf(me, kind, k)
+		name:set(Seq.name(kind, k))
+		count:set(Format.fill(SQ.count, { n = #list, max = size }))
+		for j, c in cells do
+			local on = j <= size
+			c.slot.frame.Visible = on
+			c.hit.Visible = on
+			if on then
+				Ui.setPic(c.pic, if list[j] then picOf(list[j]) else nil)
+			else
+				c.pic.Visible = false
+			end
+		end
+		local ids = Seq.candidates({ class = me.class, skills = me.skills }, kind)
+		pickLabel:set(SQ.pick[kind])
+		for i = 1, math.max(#ids, #cands) do
+			local id = ids[i]
+			if id then
+				local cc = candCell(i)
+				candIds[i] = id
+				cc.slot.frame.Visible = true
+				Ui.setPic(cc.pic, picOf(id))
+				cc.slot:setOn(table.find(list, id) ~= nil)
+			elseif cands[i] then
+				candIds[i] = nil
+				cands[i].slot.frame.Visible = false
+				cands[i].pic.Visible = false
+			end
+		end
+		note:set(if #ids == 0 then SQ.none[kind] else "")
+		view.paintInfo()
+		local q = ctx.quick.info(Seq.id(kind, k))
+		local armed = ctx.quick.picked() == Seq.id(kind, k)
+		quickAt:set(if armed then QWORDS.armed elseif q.key then Format.fill(QWORDS.at, { key = q.key }) else QWORDS.none)
+		quickAt:color(if armed then C.accent elseif q.key then C.gold else C.dim)
+	end
+
+	function view.refresh(me)
+		last = me
+		view.paint()
+	end
+
+	function view.destroy()
+		ctx.quick.pick(nil)
+	end
+
+	view.refresh(ctx.me())
+	return view
+end
+
+return SeqWindow
+
+end
 MODULES['Client/lune/ui/shopWindow'] = function(script, game, require, task, os, typeof, Vector2, Random, Color3, UDim2, Enum, Instance, warn, print, workspace, tick)
 -- 상점 · 창고 창 — 주민에게 말을 걸면 가방과 나란히 뜬다(공방 「기본 · UI」 탭). arg = 누구의 것인가:
 --   "merchant" 잡화 상인(물약 · 귀환 주문서 · Lv.1 방어구 · 달가루) · "store" 창고지기(맡겨 둔 것). 대장장이는 상점이 없다(2026-10-15 — 제작 · 강화는 ui/forgeWindow.luau)
@@ -115046,6 +116178,7 @@ local BONUS = COMBAT.rules.targetBonus -- 사냥기 · 보스기가 맞는 상�
 local SkillDamage = require(lune.ui.skillDamage) -- 그 레벨의 효과 글: 사출기 · 장치 · 패시브 · 버프의 효과와 공격 스킬의 % 피해(사용자 2026-10-13: "스킬 퍼뎀같은거 스킬 창에 설명에 나와있어야해  메이플처럼")
 local READY = COMBAT.ready -- 게임에 들어와 있는 스킬. 여기에 없는 스킬은 + 단추가 꺼져 있고 「아직 준비 중」이라고 적힌다(서버도 찍어 주지 않는다 — sim/hero.luau의 skillUp)
 local TYPES = CLASSES.types
+local SQ = UI.skillWords.seq -- 시퀀스(2026-10-30 — 설명 칸 오른쪽 위의 「시퀀스」 단추로 시퀀스 창을 연다)
 
 local SkillWindow = { wide = true }
 
@@ -115100,6 +116233,12 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 		ctx.send("SkillAuto")
 	end, { main = true, h = 22, font = "small" })
 	SkillWindow.autoFrame = auto.frame -- 튜토리얼(꿈)의 「스킬 찍기」 미션에서 반짝인다(2026-10-14)
+	-- 시퀀스(2026-10-30 — 메이플: 스킬 창의 「시퀀스」 단추로 시퀀스 창을 연다): 오른쪽 설명 칸의 오른쪽 위(스킬 이름 줄의 끝 — 가장 긴 이름 「되돌아오는 표창」도 닿지 않는다).
+	--  메이플은 창의 오른쪽 아래 — 우리 창의 오른쪽 아래는 퀵슬롯 안내 두 줄 · 탭 줄의 오른쪽 끝은 「스킬 포인트」의 자리라 여기에 두었다(제가 정한 것)
+	local seqBtn = Ui.button(body, SQ.open, listW + S.gap + S.detailW - SQ.openW, 0, SQ.openW, function()
+		require(script.Parent.windows).open("seq")
+	end, { h = 20, font = "small" })
+	seqBtn.frame.Name = "SeqOpen"
 	-- 스킬 초기화: 공짜 · 몇 번이든(2026-10-21 사용자: "스텟, 스킬 초기화 완전무료로 풀겠습니다" — 전에는 전직할 때마다 한 번이라 남아 있을 때만 보였다) — 탭의 오른쪽에 늘 보인다.
 	--  잘못 누르지 않게 두 번 눌러야 한다(「정말 초기화?」 — 3초 안에)
 	local RESET_X, RESET_W = (S.tabW + S.tabGap) * 4 + 8, 96
@@ -115219,12 +116358,12 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 			return
 		end
 		local job = SkillWindow.jobOf(me)
-		local tier = tiers[tab]
-		local locked = tier.job > job
 		for i, t in tabs do
 			t.label:color(if i == tab then C.accent elseif t.job > job then C.off else C.dim)
 			t.under.Visible = i == tab
 		end
+		local tier = tiers[tab]
+		local locked = tier.job > job
 		-- 스킬 포인트는 차수마다 따로다(받은 SP는 그때의 차수 스킬에만 쓴다) — 보고 있는 탭의 것을 적는다
 		local pool = if me.sps then me.sps[tier.job] or 0 else me.sp
 		points:set(Format.fill(WORDS.points, { n = pool }))
@@ -115340,7 +116479,7 @@ function SoundWindow.size(): (number, number)
 	local V = S.view
 	local G = S.lang
 	local P = S.touch
-	return S.w, #S.rows * S.row + S.muteY + Ui.M.button + V.gap + V.headH + #V.rows * S.row + Ui.M.small + G.gap + G.headH + S.row + Ui.M.small -- (언어 — 2026-10-27)
+	return S.w, #S.rows * S.row + S.muteY + Ui.M.button + V.gap + V.headH + #V.rows * (V.rowH or S.row) + Ui.M.small + G.gap + G.headH + S.row + Ui.M.small -- (언어 — 2026-10-27 · 화면의 줄 높이 rowH — 2026-10-30 「내 피해 숫자」를 더하며 34 → 28: 폰 틀 432에 들게)
 		+ P.gap + P.rowH + Ui.M.small -- (폰 단추 배치 — 2026-10-28: 제목과 단추가 한 줄)
 end
 
@@ -115406,7 +116545,7 @@ function SoundWindow.build(body: Frame, ctx, w: number, _h: number)
 	local toggles = {}
 	for j, def in V.rows do
 		local key, name = def[1], def[2]
-		local y = vy + V.headH + (j - 1) * S.row
+		local y = vy + V.headH + (j - 1) * (V.rowH or S.row)
 		Ui.text(body, name, 0, y + math.floor((S.btn - Ui.M.body) / 2), w - V.btnW - 8, { font = "body" })
 		toggles[key] = Ui.button(body, V.on, w - V.btnW, y, V.btnW, function()
 			if ViewOpts.toggle(key) then
@@ -115415,10 +116554,10 @@ function SoundWindow.build(body: Frame, ctx, w: number, _h: number)
 			end
 		end, { h = S.btn })
 	end
-	Ui.text(body, V.note, 0, vy + V.headH + #V.rows * S.row, w, { color = C.dim })
+	Ui.text(body, V.note, 0, vy + V.headH + #V.rows * (V.rowH or S.row), w, { color = C.dim })
 	-- 언어(2026-10-27 — 공방 paintSound와 같은 모양): 줄 위에 「언어」 · 자동 / 한국어 / English(고른 것이 강조) · 안내. 고르면 바로 화면의 글이 바뀌고 계정에 저장된다
 	local G = S.lang
-	local gy = vy + V.headH + #V.rows * S.row + Ui.M.small + G.gap
+	local gy = vy + V.headH + #V.rows * (V.rowH or S.row) + Ui.M.small + G.gap
 	Ui.box(body, 0, gy, w, 1, C.line)
 	Ui.text(body, G.head, 0, gy + 6, w, { color = C.dim })
 	local langs = {}
@@ -117397,13 +118536,14 @@ MODULES['Client/lune/viewOpts'] = function(script, game, require, task, os, type
 -- 화면 설정(2026-10-18 — 메뉴 → 「설정」의 「화면」 두 줄 · 공방 ui.js의 UILAYOUT.sound.view): 다른 사람의 스킬 효과(fx) · 다른 사람의 피해 숫자(nums)를 보일지.
 --  메이플 · 로스트아크의 「다른 캐릭터의 스킬 이펙트」처럼 — 사람이 많은 맵에서 폰이 버거울 때 끈다. 내 것은 늘 보인다. 몸의 움직임 · 몬스터의 맞는 모습 · 설치 · 소환은 그대로.
 --  소리 설정과 함께 계정에 저장된다(shared/lune/sim/account.luau의 sound.fx · sound.nums — 없으면 켜짐 · sound.lang — 언어, 2026-10-27)
-local ViewOpts = { fx = true, nums = true, lang = "auto", touch = "new" } -- lang = 언어(2026-10-27 — "auto" · "ko" · "en": shared/lune/lang.luau) · touch = 폰 단추 배치(2026-10-28 — "new" · "old")
+local ViewOpts = { fx = true, nums = true, myNums = true, lang = "auto", touch = "new" } -- myNums = 내가 때린 피해 숫자(2026-10-30 사용자 "자기 자신의 데미지 표기도 설정에서 끄기 켜기 할수있게") -- lang = 언어(2026-10-27 — "auto" · "ko" · "en": shared/lune/lang.luau) · touch = 폰 단추 배치(2026-10-28 — "new" · "old")
 
 -- 저장된 설정을 얹는다(서버가 준 계정의 sound)
 function ViewOpts.import(sound: any)
 	if typeof(sound) == "table" then
 		ViewOpts.fx = sound.fx ~= false
 		ViewOpts.nums = sound.nums ~= false
+		ViewOpts.myNums = sound.myNums ~= false
 		ViewOpts.lang = if sound.lang == "ko" or sound.lang == "en" then sound.lang else "auto"
 		ViewOpts.touch = if sound.touch == "old" then "old" else "new"
 	end
@@ -117435,12 +118575,12 @@ end
 
 -- 저장할 꼴에 얹는다(소리 설정의 표에 fx · nums를 더한다)
 function ViewOpts.into(t)
-	t.fx, t.nums, t.lang, t.touch = ViewOpts.fx, ViewOpts.nums, ViewOpts.lang, ViewOpts.touch
+	t.fx, t.nums, t.myNums, t.lang, t.touch = ViewOpts.fx, ViewOpts.nums, ViewOpts.myNums, ViewOpts.lang, ViewOpts.touch
 	return t
 end
 
 function ViewOpts.toggle(key: string): boolean
-	if key ~= "fx" and key ~= "nums" then
+	if key ~= "fx" and key ~= "nums" and key ~= "myNums" then
 		return false
 	end
 	ViewOpts[key] = not ViewOpts[key]
@@ -117781,2820 +118921,513 @@ end
 return WeaponFx
 
 end
-runTest('100_lune_lang_cover', function()
--- 「달의 계승자」 — 영문이 빠짐없이 덮는가(2026-10-27 사용자 "한국어유저가 아닌 유저들이 들어왔을때 모든게 영문번역 되어야해 서비스제공이 누락사안없이").
---  게임의 데이터(data/*.generated — 스킬 · 아이템 · 퀘스트 · 대사 · 맵 · 화면 글 …)에 든 한국어 글을 모두 훑어, 실제 사전(lang_en.generated)으로 영문이 나오는지 본다.
---  코드에 적힌 글은 공방의 규칙 검사(tools/check_lune_design.mjs — tools/lang_keys.mjs가 코드를 훑는다)가 본다. 닉네임 금지어 목록(names)은 화면에 나오지 않아 뺀다.
-local Lang = req("ReplicatedStorage/shared/lune/lang")
-Lang.set("en")
-local MODULES = { "achieve", "attend", "bm", "chars", "cine", "city", "classes", "combat", "daily", "dye", "items", "macro", "numbers", "quests", "ride", "scenes", "title", "ui", "worldmap" }
-local seen, count = {}, 0
-local function walk(v)
-	if typeof(v) == "string" then
-		if Lang.hasHangul(v) then
-			count += 1
-			Lang.t(v)
-		end
-	elseif typeof(v) == "table" and not seen[v] then
-		seen[v] = true
-		for _, x in v do
-			walk(x)
-		end
+runTest('104_lune_raid_dps', function()
+-- 「달의 계승자」 — 주간 보스(레이드)의 설계 DPS: 4인 파티가 딜 손실 없이 낼 수 있는 초당 피해를 진짜 서버의 셈으로 잰다(2026-10-27).
+--  사용자: "설계를 4인 레이드로 잡았으면 그 레이드 시간이 15분이면 그 레벨에 맞는 전직 차수 스킬 dps 랑 평균 장비 수준 계산하고 4인파티 버프 중첩같은거 계산해서
+--   4인이 낼수있는 dps 를 뽑아두고 15분 레이드라면 최대 출력 dps 일때 즉, 딜로스 없이 뽑을수 있는 dps 일때 12분정도 여유클이 나오고 15분이면 3분 여유가 있으면
+--   조금 딜로스있는 파티도 클리어가 되는구조로 짜야하는거야"
+--  재는 법(설계의 셈은 공방 js/lune/design/weekboss.js의 RAIDDPS — 기준을 바꾸면 거기와 여기를 같이 고친다):
+--   · 캐릭터 = 그 난이도의 입장 레벨(노말 Lv.50 = 2차 · 하드 Lv.70 = 3차) · 능력치와 스킬 포인트는 게임의 「추천대로 찍기」(Hero.autoStat · autoSkill)
+--   · 장비 = 그 레벨의 사냥 장비(무기 + 방어구 넷) · 성능 「보통」 · 별은 RAIDDPS.gear의 것(설계 numbers.js LOADOUTS의 본보기 차림)
+--   · 돌리기 = 딜 손실이 없는 손: 사출기 켜기 · 버프는 끊기지 않게 다시 걸기 · 설치 · 소환 · 따로 쓰는 공격기는 다시 쓰기가 돌면 바로 · 남는 시간은 가장 센 보스기.
+--     기술의 구간은 화면이 하듯 보낸다(서버가 빈 방에서 재 보는 Caster:dryCast의 법 그대로 — 모으는 기술은 끝까지 모으고, 누르고 있는 기술은 짧게 · 길게 둘 다 재서 센 쪽).
+--     보스는 사람을 치지 못하게 막고(맞아서 끊기는 손실이 없다) 사람은 기술마다 보스에게 붙어 선다(움직이는 손실이 없다).
+--     보스의 체력은 재는 동안 51%로 붙잡아 둔다(싸움 내내의 평균 50% 근처 · 절반의 변신이 일어나지 않게)
+--   · 파티 = 서로 다른 직업 넷(다섯 직업이라 다섯 벌) — 파티 버프(무니의 달의 숨결 = 같은 맵 모두의 공격 속도 · 액시온의 달의 함성 …)가 겹친다
+--  늘 보는 것: 기록해 둔 측정값(weekboss.js RAIDDPS.measured)으로 지금의 체력이면 몇 초에 깨는가(첫 보스의 체력은 사용자의 수 — 2026-10-27). 진짜로 재는 것은 LUNE_RAID=1일 때만(2분쯤):
+--   LUNE_RAID=1 python tools/test/run.py 104_lune_raid_dps → [RAID] 줄 · 맨 아래의 검사: 가장 약한 직업 조합도 최대 출력이면 제한 시간 안에 깬다.
+local N = req("ReplicatedStorage/shared/lune/config/numbers")
+local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
+local CLASSES = req("ReplicatedStorage/shared/lune/data/classes.generated")
+local Kitset = req("ReplicatedStorage/shared/lune/kitset")
+local TICK = 1 / 60
+
+local handlers = {}
+MOCK("ReplicatedStorage/shared/lune/net/net", {
+	FireClient = function() end,
+	OnServer = function(name, fn)
+		handlers[name] = fn
+	end,
+})
+local function signal()
+	return { Connect = function() end }
+end
+SERVICE("Players", { PlayerAdded = signal(), PlayerRemoving = signal(), GetPlayers = function() return {} end })
+SERVICE("RunService", { Heartbeat = signal() })
+SERVICE("MessagingService", { PublishAsync = function() end, SubscribeAsync = function() end })
+SERVICE("TextService", { FilterStringAsync = function(_, text) return { GetNonChatStringForBroadcastAsync = function() return text end } end })
+local disk, names = {}, {}
+MOCK("ServerScriptService/server/lune/modules/store", {
+	lock = function() return true end,
+	unlock = function() end,
+	loadAccount = function(id) return disk[id] end,
+	saveAccount = function(id, data) disk[id] = data; return true end,
+	loadOld = function() return nil end,
+	nameOwner = function(key) return names[key] end,
+	claimName = function(key, id) names[key] = id; return true end,
+	freeName = function(key) names[key] = nil end,
+	rankSet = function() end,
+	rankRaise = function() end, rankRemove = function() end, rankTop = function() return {} end,
+	rankInfoSet = function() end, rankInfoGet = function() return nil end, rankInfoRemove = function() end,
+	isOffline = function() return false end,
+	marketRead = function() return true, nil end,
+	marketUpdate = function(_, fn) return true, nil, nil, fn(nil) end,
+})
+local World = req("ServerScriptService/server/lune/modules/world")
+local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
+local Items = req("ReplicatedStorage/shared/lune/sim/items")
+local Kit = req("ReplicatedStorage/shared/lune/sim/kit")
+local Buffs = req("ReplicatedStorage/shared/lune/sim/buffs")
+local Caster = req("ReplicatedStorage/shared/lune/sim/caster")
+local Weekly = req("ReplicatedStorage/shared/lune/sim/weekly")
+World.start()
+
+local B = Weekly.boss("shadowarcher")
+if RAID_LV then
+	-- (LUNE_RAID_LV — 새 보스의 체력을 볼 때: 그 입장 레벨 + 2의 보스로 · 재는 동안 쓰러지지 않게 체력을 아주 크게 — 2026-10-29 용암 거인)
+	for _, mode in { "normal", "hard" } do
+		local m = table.clone(B[mode])
+		m.lv, m.hp = RAID_LV[mode] + 2, 1e6
+		B[mode] = m
+		local wk = COMBAT.mobs[B.id].story.week -- (방의 보스는 이 표에서 레벨 · 체력을 읽는다 — sim/room.luau)
+		local w2 = table.clone(wk[mode])
+		w2.lv, w2.hp = m.lv, m.hp
+		wk[mode] = w2
 	end
 end
-for _, name in MODULES do
-	walk(req("ReplicatedStorage/shared/lune/data/" .. name .. ".generated"))
-end
-local miss = {}
-for s in Lang.missing do
-	table.insert(miss, s)
-end
-table.sort(miss)
-expect(count > 3000, ("훑은 한국어 글 %d개"):format(count))
-expect(#miss == 0, ("영문이 나오지 않는 데이터의 글 %d개(데이터의 한국어 글 %d개 가운데): %s"):format(#miss, count, table.concat(miss, " | ", 1, math.min(#miss, 12))))
-Lang.set("ko")
+local RAID = Weekly.DATA.raid -- 설계의 기준(weekboss.js RAIDDPS)
+expect(RAID ~= nil, "설계의 기준(RAIDDPS)이 게임에 들어와 있다")
 
-end)
-runTest('41_lune_market', function()
--- 「달의 계승자」 — 경매장(메이플 옥션 방식).
---  사용자 2026-10-06: "경매장으로 전부 거래가능하게 할겁니다" · 2026-10-13: "경매장 부터 진행합시다.  알아서 조사하고 판단하고 해서  경매장 구현 해보세요"
---  **사용자 2026-10-13(처음 만든 것을 보고): "메이플 식 경매장을 말하는거긴합니다."** — 메뉴에서 어디서나 연다 · 구매 / 판매 / 완료 / 시세 · 개당 가격과 낱개 구매 · 보증금 · 완료에서 수령 / 대금 수령 / 반환 / 재등록 / 모두 받기.
---  셈(shared/lune/sim/market.luau) · 저장소의 장부(server/lune/modules/store.luau) · 서버의 흐름(world.luau의 onMarket) · 창의 글과 폭(shared/lune/ui/auctionView.luau) · 창(client/lune/ui/auctionWindow.luau)을 화면 없이 돌려 본다.
---  가장 무겁게 보는 것: 물건과 달돈이 복사되지도 사라지지도 않는가 — 여럿이 같이 살 때 · 저장소가 답하지 않을 때 · 저장하지 못했을 때 · 처리하는 도중에 나갈 때 · 서버가 바뀔 때.
-
--- DataStore가 하는 일의 흉내(차례로 놓인 표는 배열로, 그 밖의 표는 이름표가 글자인 표로 — 읽을 때마다 새 표가 온다)
-local function json(v)
-	if typeof(v) ~= "table" then
-		return v
-	end
-	local n = 0
-	for _ in v do
-		n += 1
-	end
-	local array = n > 0 and #v == n
-	local out = {}
-	for k, x in v do
-		out[if array then k else tostring(k)] = json(x)
-	end
-	return out
+-- 기록해 둔 측정값(RAIDDPS.measured의 평균)으로 지금의 체력이면 최대 출력 4인 파티가 몇 초에 깨는가를 적는다 — 늘 본다.
+--  2026-10-27 사용자: "625118에다가 하드는 더높게 해서 만들어 이거 첫보스니까 패턴은 악랄하게 피는 적게" — 첫 보스의 체력은 사용자의 수라 12분에 맞추지 않는다(견주는 값만 적는다).
+--  진짜로 재는 것은 LUNE_RAID=1일 때만(2분쯤 걸린다)
+local FIT = COMBAT.rules.dmgScale * (1 + COMBAT.rules.targetBonus / 100)
+for _, mode in { "normal", "hard" } do
+	local m0 = B[mode]
+	expect((RAID.avg[mode] or 0) > 0, mode .. ": 4인 최대 출력이 기록돼 있다")
+	local hp = N.mobHp(m0.lv) * m0.hp * FIT
+	print(("[RAID] %s 체력 %d(%s배) — 기록한 4인 최대 출력(초당 %d)이면 %.0f초 · %d분이 되는 배수 = %.0f"):format(
+		mode, math.floor(hp + 0.5), tostring(m0.hp), RAID.avg[mode], hp / RAID.avg[mode], RAID.target / 60, RAID.avg[mode] * RAID.target / (N.mobHp(m0.lv) * FIT)))
 end
-local function same(a, b): boolean
-	if typeof(a) ~= "table" or typeof(b) ~= "table" then
-		return a == b
-	end
-	for k, v in a do
-		if not same(v, b[k]) then
-			return false
-		end
-	end
-	for k in b do
-		if a[k] == nil then
-			return false
-		end
-	end
-	return true
+expect(B.hard.hp * N.mobHp(B.hard.lv) > B.normal.hp * N.mobHp(B.normal.lv), "하드의 체력이 노말보다 많다")
+if not RAID_FULL then
+	print("[RAID] 재는 것은 건너뜀(LUNE_RAID=1이면 4인 최대 출력을 진짜로 잰다 — 2분쯤)")
+	return
 end
 
--- ================= 1) 셈: 물건의 꼴 · 장부를 바꾸는 법 · 맡긴 것과 견주기 =================
-do
-	local Market = req("ReplicatedStorage/shared/lune/sim/market")
-	local Items = req("ReplicatedStorage/shared/lune/sim/items")
-	local Account = req("ReplicatedStorage/shared/lune/sim/account")
-	local Format = req("ReplicatedStorage/shared/lune/ui/format")
-	local M, WHY = Market.DATA, Market.WHY
-	local NOW = 1700000000
-	local H = 3600
-	-- 메이플 옥션의 숫자
-	eq(M.fee, 5, "수수료 5%")
-	eq(M.slots, 10, "한 계정이 열 건까지")
-	expect(#M.hours == 2 and M.hours[1] == 24 and M.hours[2] == 48, "기간은 24 · 48시간")
-	expect(M.keepDays == 365 and Market.KEEP == 365 * 86400, "끝난 거래는 1년 보관")
-	expect(M.deposit >= 1 and M.holdMax >= M.slots and M.cap >= 50 and M.show >= 20 and M.show <= M.cap and M.priceMax >= 1e8 and M.logMax >= 20 and M.lastBuys >= 2, "보증금 · 받지 않은 구매품 · 분류의 크기 · 보여 주는 수 · 값의 위 · 시세")
-	eq(table.concat(Market.WORDS.tabs, "/"), "구매/판매/완료/시세", "탭 넷(메이플 옥션)")
-
-	-- 물건의 꼴
-	local hat = Items.make("hat", 10, 4)
-	hat.star, hat.id = 3, 77
-	local axe = Items.make("weapon", 10, 3, "axion")
-	local potion = Items.potionFor(1)
-	local quest, mat
-	for _, g in Items.data.GOODS do
-		if g.quest and not quest then
-			quest = g
-		elseif g.tab == "etc" and not g.quest and g.kind ~= "event" and not mat then -- (기간 이벤트의 물건 — 호박 사탕 — 은 올릴 수 없다: 113_lune_halloween)
-			mat = g
-		end
+-- ---------- 캐릭터 ----------
+local uid = 10400
+local function make(class: string, level: number, star)
+	uid += 1
+	local name = "레이드" .. uid
+	local p = { UserId = uid, Name = name, DisplayName = name, attrs = {}, SetAttribute = function(self, k, v) self.attrs[k] = v end, Kick = function() end }
+	handlers.Ready(p)
+	local made = handlers.Chars(p, "create", name, class)
+	handlers.Chars(p, "enter", made.id)
+	World.wake(p)
+	local s = World.session(p)
+	local h = s.hero
+	Hero.setLevel(h, level, Hero.jobAt(level))
+	Hero.autoStat(h)
+	Hero.autoSkill(h)
+	h.quests[B.quest] = { done = true, c = {} }
+	local stage = Items.stageOf(level)
+	for _, slot in Items.data.GEAR do
+		local it = Items.make(slot, stage, Items.data.NORMAL, class)
+		it.star = if slot == "weapon" then star.weapon else star.armor
+		h.equip[slot] = it
 	end
-	expect(potion ~= nil and quest ~= nil and mat ~= nil, "물약 · 퀘스트의 물건 · 재료가 있다")
-	local rowHat = Market.pack(hat)
-	local back = Market.unpack(rowHat)
-	expect(back.slot == "hat" and back.stage == 10 and back.q == 4 and back.star == 3 and back.broken == false and back.id == nil, "장비는 성능 · 별까지 그대로 오간다(가방의 번호는 떼고)")
-	local rowPot = Market.pack({ item = potion.id, n = 10 })
-	expect(same(Market.unpack(rowPot), { item = potion.id, n = 10 }), "묶음은 이름표와 수")
-	expect(Market.unpack({ g = "없는것", n = 1 }) == nil and Market.unpack({ g = potion.id, n = 0 }) == nil and Market.unpack({ g = potion.id, n = potion.stack + 1 }) == nil and Market.unpack({ g = potion.id, n = 1.5 }) == nil, "없는 물건 · 0개 · 한 묶음을 넘는 수 · 소수는 받지 않는다")
-	expect(Market.unpack({ "hat", 10, 99, 0, "", 0, 0 }) == nil and Market.unpack({ "weapon", 10, 3, 0, "nobody", 0, 0 }) == nil and Market.unpack("x") == nil and Market.unpack(nil) == nil, "꼴이 틀린 장비는 받지 않는다")
-	expect(Market.units(rowHat) == 1 and Market.units(rowPot) == 10, "수: 장비는 하나 · 묶음은 그 수")
-	local three = Market.withUnits(rowPot, 3)
-	expect(three.g == potion.id and three.n == 3 and rowPot.n == 10 and Market.withUnits(rowHat, 5) ~= rowHat and same(Market.withUnits(rowHat, 5), rowHat), "같은 물건을 n개로(받은 것은 고치지 않는다 · 장비는 그대로)")
-	expect(Market.sellable(hat) == true and Market.sellable({ item = potion.id, n = 3 }) == true and Market.sellable({ item = mat.id, n = 1 }) == true, "장비 · 소비 · 기타 아이템을 올린다")
-	local ok1, why1 = Market.sellable({ item = quest.id, n = 1 })
-	expect(ok1 == nil and why1 == WHY.quest, "퀘스트의 물건은 못 올린다")
-	local brokenHat = Items.make("hat", 10, 3)
-	brokenHat.broken = true
-	local ok2, why2 = Market.sellable(brokenHat)
-	expect(ok2 == nil and why2 == WHY.item, "부서진 장비는 못 올린다")
-	-- 장부의 이름
-	eq(Market.boardOf(rowHat), "a_hat", "방어구는 부위마다")
-	eq(Market.boardOf(Market.pack(axe)), "w_axion", "무기는 직업마다")
-	eq(Market.boardOf(rowPot), "u", "소비")
-	eq(Market.boardOf({ g = mat.id, n = 1 }), "e", "기타")
-	eq(#Market.boards(), 11, "장부는 열하나(무기 다섯 · 방어구 넷 · 소비 · 기타)")
-	for _, key in Market.boards() do
-		expect(Market.isBoard(key), "있는 장부 " .. key)
-	end
-	for _, key in { "w_nobody", "a_weapon", "a_", "x", "b_u", "w_axion/../u", "", 3, false } do
-		expect(not Market.isBoard(key), "없는 장부 " .. tostring(key))
-	end
-	local cats = Market.cats()
-	eq(#cats, 7, "분류 일곱(무기 · 모자 · 옷 · 장갑 · 신발 · 소비 · 기타)")
-	for _, c in cats do
-		expect(Market.isBoard(Market.catBoard(c.id, "riven")), "분류의 장부 " .. c.id)
-	end
-	-- 값
-	eq(Market.fee(100), 5, "100의 수수료 5")
-	eq(Market.payout(100), 95, "100에 팔면 95를 받는다")
-	eq(Market.fee(19), 0, "수수료는 내림(19 → 0)")
-	expect(Market.priceOk(1) and Market.priceOk(M.priceMax) and not Market.priceOk(0) and not Market.priceOk(-5) and not Market.priceOk(M.priceMax + 1) and not Market.priceOk(1.5) and not Market.priceOk("100") and not Market.priceOk(0 / 0), "값은 1부터 위까지의 정수")
-	expect(Market.hoursOk(24) and Market.hoursOk(48) and not Market.hoursOk(12) and not Market.hoursOk("24"), "기간은 정해진 것만")
-	eq(Format.comma(0), "0", "쉼표: 0")
-	eq(Format.comma(1000), "1,000", "쉼표: 1,000")
-	eq(Format.comma(999999999), "999,999,999", "쉼표: 가장 큰 값")
-
-	-- 올리기
-	local e1 = Market.entry("5_1_1", 5, "판매자", rowPot, 50, 24, NOW)
-	expect(e1.e == NOW + 24 * H and e1.u == 5 and e1.p == 50 and e1.l == 10 and e1.c == nil, "새 줄: 값은 개당 · 남은 수 = 올린 수 · 끝나는 때 = 올린 때 + 기간")
-	eq(Market.entry("5_1_9", 5, "판매자", rowHat, 1000, 48, NOW).l, 1, "장비의 남은 수는 하나")
-	local d1, w1 = Market.txList(nil, e1, NOW)
-	expect(w1 == nil and #d1.list == 1 and d1.v == Market.VERSION and #d1.log == 0, "빈 장부에 올린다")
-	eq(#Market.txList(json(d1), e1, NOW).list, 1, "같은 줄을 다시 올려도 하나다(저장소가 다시 불렀을 때)")
-	local full = { v = 2, list = {} }
-	for i = 1, M.cap do
-		table.insert(full.list, Market.entry("9_1_" .. i, 9, "많이", rowPot, 10, 24, NOW))
-	end
-	local dFull, wFull = Market.txList(full, e1, NOW)
-	expect(dFull == nil and wFull == WHY.full, "판매 중인 줄이 가득 찬 분류에는 못 올린다")
-	local dOld = Market.txList(full, Market.entry("5_1_2", 5, "판매자", rowHat, 1, 24, NOW + 25 * H), NOW + 25 * H)
-	expect(dOld ~= nil and #dOld.list == M.cap + 1, "기간이 끝난 줄은 자리를 차지하지 않는다")
-
-	-- 사기: 낱개로 · 남은 수만큼만 · 받은 장부는 고치지 않는다
-	local doc = json(d1)
-	local before = json(doc)
-	local d2, w2, got2 = Market.txBuy(doc, "5_1_1", 6, 3, 50, NOW + 60, "k1")
-	expect(same(doc, before), "받은 장부를 고치지 않는다(저장소가 다시 불러도 같은 답)")
-	expect(w2 == nil and got2 ~= nil and d2.list[1].l == 7 and d2.list[1].it.n == 10 and #d2.list[1].b == 1 and d2.list[1].b[1].u == 6 and d2.list[1].b[1].q == 3, "셋을 샀다: 남은 수 7(올린 수는 그대로)")
-	expect(#d2.log == 1 and d2.log[1].it.n == 3 and d2.log[1].p == 50 and d2.log[1].t == NOW + 60, "거래가 시세에 남는다(팔린 수 · 개당 값 · 때)")
-	local d2b, w2b, got2b = Market.txBuy(json(d2), "5_1_1", 6, 3, 50, NOW + 60, "k1")
-	expect(d2b == nil and w2b == nil and got2b ~= nil and got2b.l == 7, "같은 구매가 다시 불리면 한 번만 친다(답이 늦어 다시 불렸을 때 — 두 번 팔리지 않는다)")
-	local d3 = Market.txBuy(json(d2), "5_1_1", 6, 3, 50, NOW + 61, "k2")
-	eq(d3.list[1].l, 4, "새 구매(다른 표)는 또 팔린다")
-	expect(select(2, Market.txBuy(json(d2), "5_1_1", 7, 8, 50, NOW + 61, "k3")) == WHY.count, "남은 수보다 많이는 못 산다")
-	expect(select(2, Market.txBuy(json(d2), "5_1_1", 7, 0, 50, NOW + 61, "k3")) == WHY.count and select(2, Market.txBuy(json(d2), "5_1_1", 7, 1.5, 50, NOW + 61, "k3")) == WHY.count, "0개 · 소수는 못 산다")
-	local d4 = Market.txBuy(json(d2), "5_1_1", 7, 7, 50, NOW + 62, "k4")
-	expect(d4.list[1].l == 0 and Market.stateOf(d4.list[1], NOW + 62) == "soldout" and #d4.log == 2, "남은 것을 다 사면 다 팔린 줄이 된다")
-	expect(select(2, Market.txBuy(json(d4), "5_1_1", 8, 1, 50, NOW + 63, "k5")) == WHY.gone, "다 팔린 줄은 못 산다")
-	expect(select(2, Market.txBuy(json(d1), "5_1_1", 5, 1, 50, NOW, "k6")) == WHY.mine, "내가 올린 것은 못 산다")
-	expect(select(2, Market.txBuy(json(d1), "5_1_1", 6, 1, 49, NOW, "k6")) == WHY.changed, "본 값과 다르면 사지 않는다")
-	expect(select(2, Market.txBuy(json(d1), "5_1_1", 6, 1, 50, NOW + 24 * H, "k6")) == WHY.expired, "기간이 끝난 줄은 못 산다")
-	expect(select(2, Market.txBuy(json(d1), "없는줄", 6, 1, 50, NOW, "k6")) == WHY.gone and select(2, Market.txBuy(nil, "5_1_1", 6, 1, 50, NOW, "k6")) == WHY.gone, "없는 줄")
-	local gearDoc = Market.txList(nil, Market.entry("5_1_9", 5, "판매자", rowHat, 1000, 24, NOW), NOW)
-	expect(select(2, Market.txBuy(json(gearDoc), "5_1_9", 6, 2, 1000, NOW, "g1")) == WHY.count, "장비는 하나뿐이다")
-	local gearSold = Market.txBuy(json(gearDoc), "5_1_9", 6, 1, 1000, NOW, "g1")
-	expect(gearSold.list[1].l == 0 and gearSold.log[1].it[1] == "hat" and gearSold.log[1].it[3] == 4, "장비를 샀다(시세에 성능까지 남는다)")
-	-- 줄마다 기억하는 최근 구매는 몇 건뿐이다(오래된 표는 잊는다 — 다시 부르는 것은 몇 초 안의 일이다)
-	local many = Market.txList(nil, Market.entry("5_1_3", 5, "판매자", { g = potion.id, n = 20 }, 5, 24, NOW), NOW)
-	for i = 1, M.lastBuys + 3 do
-		many = Market.txBuy(json(many), "5_1_3", 6, 1, 5, NOW + i, "m" .. i)
-	end
-	expect(#many.list[1].b == M.lastBuys and many.list[1].l == 20 - (M.lastBuys + 3), "최근 구매는 정해진 수만 남긴다")
-	expect(Market.boughtBy(many, "5_1_3", 6, "m" .. (M.lastBuys + 3)) ~= nil and Market.boughtBy(many, "5_1_3", 6, "m1") == nil and Market.boughtBy(many, "5_1_3", 7, "m" .. (M.lastBuys + 3)) == nil, "그 사람의 그 구매가 적혔는가")
-	-- 시세의 기록: 정해진 수 · 날 수까지만
-	local busyDoc = Market.txList(nil, Market.entry("5_1_4", 5, "판매자", { g = potion.id, n = potion.stack }, 5, 48, NOW), NOW)
-	busyDoc.log = {}
-	for i = 1, M.logMax + 5 do
-		table.insert(busyDoc.log, { it = { g = potion.id, n = 1 }, p = i, t = NOW })
-	end
-	local trimmed = Market.txBuy(busyDoc, "5_1_4", 6, 1, 5, NOW + 1, "z1")
-	expect(#trimmed.log == M.logMax and trimmed.log[#trimmed.log].p == 5 and trimmed.log[1].p == 7, "시세는 최근 것만 남긴다(오래된 것부터 버린다)")
-	eq(#Market.fresh(trimmed, NOW + Market.LOG_KEEP + 5).log, 0, "오래된 거래는 시세에서 빠진다")
-	local trades = Market.trades(d4, NOW + 100)
-	expect(#trades == 2 and trades[1].it.n == 7 and trades[2].it.n == 3 and trades[1].p == 50, "시세: 새것부터")
-	expect(#Market.trades(trimmed, NOW + 2) == M.show, "시세도 보여 주는 수까지만")
-	eq(#Market.trades(nil, NOW), 0, "빈 장부의 시세")
-
-	-- 닫기(취소 · 반환 · 재등록의 첫걸음) · 지우기
-	local c1, r1, l1 = Market.txClose(json(d2), "5_1_1", 5, NOW + 70)
-	expect(r1 == "closed" and l1 == 7 and c1.list[1].c == 1 and c1.list[1].l == 7 and Market.stateOf(c1.list[1], NOW + 70) == "ended", "닫는다: 남은 수가 굳는다")
-	local c1b, r1b, l1b = Market.txClose(json(c1), "5_1_1", 5, NOW + 71)
-	expect(c1b == nil and r1b == "closed" and l1b == 7, "다시 닫아도 같은 답(고치지 않는다)")
-	expect(select(2, Market.txBuy(json(c1), "5_1_1", 6, 1, 50, NOW + 72, "k9")) == WHY.gone, "닫힌 줄은 팔리지 않는다")
-	expect(select(2, Market.txClose(json(d2), "5_1_1", 8, NOW)) == "none" and select(2, Market.txClose(nil, "5_1_1", 5, NOW)) == "none", "남의 줄 · 없는 줄은 닫지 못한다")
-	local s1, sr1 = Market.txSettle(json(c1), "5_1_1", 5, NOW)
-	expect(sr1 == "ok" and #s1.list == 0 and #s1.log == 1, "줄을 지운다(시세의 기록은 남는다)")
-	expect(select(2, Market.txSettle(json(c1), "5_1_1", 8, NOW)) == "none" and select(2, Market.txSettle(json(s1), "5_1_1", 5, NOW)) == "none", "남의 줄 · 없는 줄은 지우지 않는다")
-	local p1, pn = Market.txPurge({ v = 2, list = { Market.entry("0_1_1", 0, "시험", rowHat, 5, 24, NOW), Market.entry("3_1_1", 3, "남", rowHat, 5, 24, NOW) } }, 0, NOW)
-	expect(pn == 1 and #p1.list == 1 and p1.list[1].u == 3 and Market.txPurge(p1, 0, NOW) == nil, "그 사람의 줄만 치운다")
-
-	-- 목록: 판매 중인 것만, 싼 것부터 — 남은 수로 보인다
-	local list = { v = 2, list = {
-		Market.entry("1_1_1", 1, "가", rowHat, 500, 24, NOW),
-		Market.entry("2_1_1", 2, "나", rowPot, 100, 24, NOW + 5),
-		Market.entry("3_1_1", 3, "다", rowPot, 100, 24, NOW),
-		Market.entry("4_1_1", 4, "라", rowHat, 50, 24, NOW - 30 * H), -- 기간이 끝났다
-		Market.entry("6_1_1", 6, "마", rowHat, 60, 24, NOW), -- 닫혔다
-	} }
-	list.list[1].l = 0 -- 다 팔렸다
-	list.list[2].l = 4 -- 여섯이 팔렸다
-	list.list[5].c = 1
-	local rows = Market.rows(list, NOW + 10, 3)
-	expect(#rows == 2 and rows[1].id == "3_1_1" and rows[2].id == "2_1_1" and rows[1].mine == true and rows[2].mine == false and rows[1].sn == "다", "판매 중인 것만 · 값이 같으면 먼저 올린 것부터 · 내 것 표시")
-	expect(rows[2].l == 4 and rows[2].it.n == 4 and rows[1].it.n == 10 and list.list[2].it.n == 10, "남은 수로 보인다(장부의 줄은 그대로)")
-	local big = { v = 2, list = {} }
-	for i = 1, M.show + 15 do
-		table.insert(big.list, Market.entry("7_1_" .. i, 7, "큰손", rowPot, 1000 - i, 24, NOW))
-	end
-	local shown = Market.rows(big, NOW, nil)
-	expect(#shown == M.show and shown[1].p == 1000 - (M.show + 15), "보여 주는 수까지만(싼 것부터)")
-	eq(#Market.rows(nil, NOW, 1), 0, "빈 장부")
-	eq(#Market.rows({ v = 2, list = { "깨진 줄", { id = 3 }, { id = "x", e = NOW + 9, u = 1, p = 1, t = NOW }, Market.entry("8_1_1", 8, "x", { g = "없는것", n = 1 }, 5, 24, NOW) } }, NOW, 1), 0, "꼴이 깨진 줄은 보이지 않는다")
-	local olds = { v = 2, list = { Market.entry("1_1_1", 1, "가", rowHat, 500, 24, NOW), Market.entry("1_1_2", 1, "가", rowHat, 500, 24, NOW - Market.KEEP - 25 * H) } }
-	eq(#Market.fresh(olds, NOW).list, 1, "기간이 끝나고 보관 기간도 지난 줄은 장부에서 빠진다")
-
-	-- 맡긴 것과 견주기: 팔린 수 = 올린 수 − 남은 수 · 받을 대금 = 아직 받지 않은 수의 값
-	local handle = { b = "u", it = rowPot, p = 50, t = NOW, e = NOW + 24 * H, got = 0, d = M.deposit }
-	local function look(entry, at)
-		local r = Market.resolve(handle, entry, at)
-		return r, Market.amount(handle, r)
-	end
-	local r, am = look(d1.list[1], NOW + 10)
-	expect(r.state == "selling" and r.n == 10 and r.left == 10 and r.sold == 0 and r.due == 0 and am.pay == 0 and am.deposit == 0, "아직 안 팔렸다")
-	r, am = look(d2.list[1], NOW + 70)
-	expect(r.state == "selling" and r.left == 7 and r.sold == 3 and r.due == 3 and am.gross == 150 and am.fee == 7 and am.pay == 143 and am.deposit == 0, "셋이 팔렸다: 150에서 수수료 7을 떼고 143(보증금은 아직)")
-	handle.got = 3
-	r, am = look(d2.list[1], NOW + 70)
-	expect(r.due == 0 and am.pay == 0, "받은 것은 다시 받지 않는다")
-	r, am = look(d4.list[1], NOW + 70)
-	expect(r.state == "soldout" and r.left == 0 and r.due == 7 and am.gross == 350 and am.pay == 350 - 17 and am.deposit == M.deposit, "다 팔렸다: 남은 일곱의 대금과 보증금")
-	r, am = look(d2.list[1], NOW + 25 * H)
-	expect(r.state == "ended" and r.left == 7 and r.due == 0 and am.deposit == 0, "기간이 끝났다: 남은 일곱을 돌려받는다 — 보증금은 돌려받지 못한다")
-	r, am = look(c1.list[1], NOW + 80)
-	expect(r.state == "ended" and r.left == 7, "닫힌 줄도 끝난 것이다")
-	handle.got = 0
-	r, am = look(nil, NOW + 10)
-	expect(r.state == "back" and r.left == 10 and r.due == 0 and am.deposit == M.deposit, "줄이 없다 = 장부에 오르지 못했다: 물건과 보증금이 돌아온다")
-	eq(look(nil, NOW + 24 * H + Market.KEEP).state, "void", "보관 기간이 지났다")
-	eq(Market.resolve({ hold = true, it = rowHat, p = 0, t = NOW, e = NOW }, nil, NOW + 999 * 86400).state, "hold", "산 것(낙찰)은 사라지지 않는다")
-	expect(Market.entryIn(d1, "5_1_1", 5, NOW) ~= nil and Market.entryIn(d1, "5_1_1", 6, NOW) == nil and Market.entryIn(nil, "5_1_1", 5, NOW) == nil, "내 줄만 찾는다")
-	expect(Market.entryIn(d4, "5_1_1", 5, NOW + 24 * H + Market.KEEP - 1) ~= nil and Market.entryIn(d4, "5_1_1", 5, NOW + 24 * H + Market.KEEP) == nil, "보관 기간이 지난 줄은 없는 것으로 본다(팔린 것의 대금도 그때까지)")
-
-	-- 계정의 「맡긴 것」: 저장하고 읽기
-	local book = Market.newBook()
-	local id1 = Market.nextId(book, 5, NOW)
-	local t1, t2 = Market.nextToken(book, NOW), Market.nextToken(book, NOW)
-	expect(string.find(id1, "^5_") ~= nil and t1 ~= t2 and Market.nextToken(Market.newBook(), NOW + 1) ~= Market.nextToken(Market.newBook(), NOW + 2), "번호는 겹치지 않는다(차례가 되돌아가도 때가 다르다)")
-	book.list[id1] = { b = "u", it = rowPot, p = 50, t = NOW, e = NOW + 24 * H, got = 3, d = M.deposit }
-	book.list["h_" .. t1] = { hold = true, it = rowHat, p = 1000, t = NOW, e = NOW }
-	expect(Market.count(book) == 1 and Market.holds(book) == 1, "판매한 수 · 받지 않은 구매품의 수는 따로 센다")
-	local again = Market.unpackBook(json(Market.packBook(book)))
-	expect(again.seq == book.seq and same(again.list[id1], book.list[id1]) and again.list["h_" .. t1].hold == true and same(again.list["h_" .. t1].it, rowHat) and again.list["h_" .. t1].p == 1000, "저장했다 읽어도 같다(받은 수 · 보증금까지)")
-	local dirty = json(Market.packBook(book))
-	table.insert(dirty.list, { id = "bad1", b = "nowhere", it = rowHat, p = 5, t = 1, e = 2, hold = false })
-	table.insert(dirty.list, { id = "bad2", b = "u", it = { g = "없는것", n = 1 }, p = 5, t = 1, e = 2, hold = false })
-	table.insert(dirty.list, { id = "old1", b = "a_hat", it = rowHat, p = 5, t = 1, e = 2, hold = false }) -- 받은 수 · 보증금이 없던 꼴
-	table.insert(dirty.list, { id = "odd1", b = "u", it = rowPot, p = 5, t = 1, e = 2, got = 99, d = -4, hold = false })
-	table.insert(dirty.list, "깨진 줄")
-	local cleaned = Market.unpackBook(dirty)
-	expect(Market.count(cleaned) == 3 and cleaned.list.old1.got == 0 and cleaned.list.old1.d == 0 and cleaned.list.odd1.got == 0 and cleaned.list.odd1.d == 0, "꼴이 틀린 것은 읽지 않는다 · 말이 안 되는 수는 0으로")
-	eq(Market.count(Market.unpackBook(nil)), 0, "경매장이 생기기 전의 저장 = 맡긴 것 없음")
-	local acct = Account.new()
-	expect(acct.market ~= nil and Market.count(acct.market) == 0, "새 계정의 맡긴 것은 비어 있다")
-	acct.market = book
-	local packed = json(Account.pack(acct))
-	local acct2 = Account.unpack(packed)
-	expect(acct2 ~= nil and Market.count(acct2.market) == 1 and Market.holds(acct2.market) == 1, "계정과 함께 저장되고 읽힌다")
-	packed.market = nil
-	expect(Market.count(Account.unpack(packed).market) == 0, "맡긴 것이 없던 예전 저장도 읽힌다")
-end
-
--- ================= 2) 저장소의 장부(가짜 DataStore 위에서) =================
-do
-	RESET()
-	local data = {}
-	local failing = 0 -- 앞으로 이만큼의 호출이 오류를 낸다
-	local fake = {
-		GetAsync = function(_, key)
-			if failing > 0 then
-				failing -= 1
-				error("저장소 오류")
-			end
-			return json(data[key])
-		end,
-		SetAsync = function(_, key, value)
-			data[key] = json(value)
-		end,
-		UpdateAsync = function(_, key, fn)
-			if failing > 0 then
-				failing -= 1
-				error("저장소 오류")
-			end
-			local value = fn(json(data[key]))
-			if value ~= nil then
-				data[key] = json(value)
-			end
-		end,
-	}
-	local names = {}
-	SERVICE("DataStoreService", {
-		GetDataStore = function(_, name)
-			names[name] = true
-			return fake
-		end,
-		GetOrderedDataStore = function()
-			return fake
-		end,
-	})
-	local Store = req("ServerScriptService/server/lune/modules/store")
-	local ok, doc = Store.marketRead("u")
-	expect(ok == true and doc == nil and names.LuneMarket_v2 == true and names.LuneMarket_v1 == nil, "빈 장부를 읽는다(LuneMarket_v2 — 처음 만든 꼴의 장부는 쓰지 않는다)")
-	local wrote, a, b, after = Store.marketUpdate("u", function(old)
-		expect(old == nil, "처음에는 문서가 없다")
-		return { v = 2, list = { { id = "x" } } }, "가", "나"
-	end)
-	expect(wrote == true and a == "가" and b == "나" and after.list[1].id == "x" and data.b_u ~= nil and data.b_u.list[1].id == "x", "새 문서를 쓰고 결과 둘과 바꾼 뒤의 문서를 돌려준다(열쇠 b_<분류>)")
-	wrote, a, b, after = Store.marketUpdate("u", function(old)
-		return nil, "그대로", old.list[1].id
-	end)
-	expect(wrote == true and a == "그대로" and b == "x" and after.list[1].id == "x" and #data.b_u.list == 1, "nil을 돌려주면 쓰지 않는다(읽은 문서를 그대로 돌려준다)")
-	failing = 2
-	local done, res = false, nil
-	task.spawn(function()
-		res = { Store.marketUpdate("u", function(old)
-			table.insert(old.list, { id = "y" })
-			return old, "됨"
-		end) }
-		done = true
-	end)
-	advance(10)
-	expect(done and res[1] == true and res[2] == "됨" and #data.b_u.list == 2, "두 번 실패해도 세 번째에 쓴다")
-	failing = 99
-	done = false
-	task.spawn(function()
-		res = { Store.marketUpdate("u", function(old)
-			return old, "?"
-		end) }
-		done = true
-	end)
-	advance(10)
-	expect(done and res[1] == false, "끝내 못 쓰면 false")
-	done = false
-	task.spawn(function()
-		res = { Store.marketRead("u") }
-		done = true
-	end)
-	advance(10)
-	expect(done and res[1] == false, "끝내 못 읽으면 false")
-	failing = 0
-	expect(Store.isOffline() == false, "장부가 잠깐 안 된다고 저장소 전체를 메모리로 돌리지 않는다")
-	ok, doc = Store.marketRead("u")
-	expect(ok and #doc.list == 2, "다시 되면 저장소의 것을 읽는다")
-	-- 저장소를 못 쓰는 곳(Studio — API 접근이 꺼져 있다): 메모리에 둔다
-	RESET()
-	SERVICE("DataStoreService", {
-		GetDataStore = function()
-			error("API 접근이 꺼져 있다")
-		end,
-		GetOrderedDataStore = function()
-			error("API 접근이 꺼져 있다")
-		end,
-	})
-	SERVICE("RunService", { IsStudio = function() return true end, Heartbeat = { Connect = function() end } }) -- Studio다(메모리 모드는 Studio에서만 — 2026-10-18)
-	local Off = req("ServerScriptService/server/lune/modules/store")
-	local w2, a2, _, after2 = Off.marketUpdate("e", function(old)
-		return { v = 2, list = { { id = "m" } } }, old == nil
-	end)
-	local ok2, doc2 = Off.marketRead("e")
-	expect(w2 == true and a2 == true and after2.list[1].id == "m" and ok2 == true and doc2.list[1].id == "m" and Off.isOffline() == true, "저장소가 없으면 그 서버의 메모리에서 올리고 읽는다")
-	-- 라이브 서버(Studio가 아니다): 저장소를 못 열거나 못 읽어도 메모리 모드로 넘어가지 않는다 — 계정은 「읽지 못했다」로 알리고(빈 계정으로 다루지 않게) · 장부 · 이름 장부는 실패로 답한다(2026-10-18 검토)
-	RESET()
-	SERVICE("DataStoreService", {
-		GetDataStore = function()
-			error("잠깐 답하지 않는다")
-		end,
-		GetOrderedDataStore = function()
-			error("잠깐 답하지 않는다")
-		end,
-	})
-	SERVICE("RunService", { IsStudio = function() return false end, Heartbeat = { Connect = function() end } })
-	local Live = req("ServerScriptService/server/lune/modules/store")
-	local acct, failed = Live.loadAccount(55)
-	expect(acct == nil and failed == true, "라이브: 계정을 읽지 못하면 「읽지 못했다」(빈 계정이 아니다)")
-	local _, oldFailed = Live.loadOld(55)
-	expect(oldFailed == true, "라이브: 예전 저장도 「읽지 못했다」")
-	expect(Live.saveAccount(55, { v = 1 }) == false, "라이브: 저장하지 못했다고 답한다")
-	expect(Live.marketUpdate("e", function() return { v = 1 } end) == false and (Live.marketRead("e")) == false, "라이브: 장부는 이 서버만의 메모리로 가지 않는다")
-	expect(Live.nameOwner("달지기") == false and Live.claimName("달지기", 55) == nil, "라이브: 이름 장부를 못 쓰면 이름을 지을 수 없다")
-	expect(Live.isOffline() == false, "라이브: 서버 전체가 메모리 모드로 넘어가지 않는다")
-end
-
--- ================= 3) 서버의 흐름 =================
---  저장소는 가짜(계정 · 장부를 표에 둔다 — 서버를 새로 띄워도 남는다). 느리게 하거나(slow) 실패하게(fail) 할 수 있다.
-local disk, boards = {}, {}
-local names = {}
-local fail = { save = false, update = false :: any, read = false }
-local slow = 0
-local log = {}
-local function fakeStore()
-	return {
-		lock = function() return true end,
-		unlock = function() end,
-		loadAccount = function(id) return json(disk[id]) end,
-		saveAccount = function(id, value)
-			table.insert(log, "save:" .. id)
-			if fail.save then
-				return false
-			end
-			disk[id] = json(value)
-			return true
-		end,
-		loadOld = function() return nil end,
-		nameOwner = function(key) return names[key] end,
-		claimName = function(key, id)
-			if names[key] ~= nil and names[key] ~= id then
-				return false
-			end
-			names[key] = id
-			return true
-		end,
-		freeName = function(key) names[key] = nil end,
-		rankSet = function() end,
-		rankRaise = function() end,
-		rankRemove = function() end,
-		rankTop = function() return {} end,
-		rankInfoSet = function() end,
-		rankInfoGet = function() return nil end,
-		rankInfoRemove = function() end,
-		isOffline = function() return false end,
-		marketRead = function(key)
-			table.insert(log, "read:" .. key)
-			if slow > 0 then
-				task.wait(slow)
-			end
-			if fail.read then
-				return false, nil
-			end
-			return true, json(boards[key])
-		end,
-		-- fail.update: "before" = 쓰지 못했다 · "after" = 썼는데 답이 오지 않았다
-		marketUpdate = function(key, fn)
-			table.insert(log, "update:" .. key)
-			if slow > 0 then
-				task.wait(slow)
-			end
-			if fail.update == "before" then
-				return false, nil, nil, nil
-			end
-			local new, a, b = fn(json(boards[key]))
-			if new ~= nil then
-				boards[key] = json(new)
-			end
-			if fail.update == "after" then
-				return false, nil, nil, nil
-			end
-			return true, a, b, json(boards[key])
-		end,
-	}
-end
--- 서버 하나를 띄운다(앞의 서버는 그대로 꺼진 것 — 저장하지 않은 것은 사라진다). 시계는 이어 간다
-local function server()
-	local keep = clock.now
-	RESET()
-	clock.now = keep
-	local handlers = {}
-	local fired, published = {}, {} -- 보낸 것 · 다른 서버에 알린 것(「팔림」 — 2026-10-18)
-	MOCK("ReplicatedStorage/shared/lune/net/net", {
-		FireClient = function(name, player, ...)
-			table.insert(fired, { name = name, player = player, args = { ... } })
-		end,
-		OnServer = function(name, fn)
-			handlers[name] = fn
-		end,
-	})
-	SERVICE("MessagingService", { PublishAsync = function(_, topic, data) table.insert(published, { topic = topic, data = data }) end, SubscribeAsync = function() end })
-	local function signal()
-		return { Connect = function() end }
-	end
-	SERVICE("Players", { PlayerAdded = signal(), PlayerRemoving = signal(), GetPlayers = function() return {} end })
-	SERVICE("RunService", { Heartbeat = signal() })
-	SERVICE("TextService", { FilterStringAsync = function(_, text) return { GetNonChatStringForBroadcastAsync = function() return text end } end })
-	MOCK("ServerScriptService/server/lune/modules/store", fakeStore())
-	local sv = {
-		World = req("ServerScriptService/server/lune/modules/world"),
-		h = handlers,
-		fired = fired,
-		published = published,
-		Market = req("ReplicatedStorage/shared/lune/sim/market"),
-		Bag = req("ReplicatedStorage/shared/lune/sim/bag"),
-		Items = req("ReplicatedStorage/shared/lune/sim/items"),
-		SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated"),
-		packets = req("ReplicatedStorage/shared/lune/net/packets"),
-	}
-	sv.World.start()
-	return sv
-end
--- 들어온다(캐릭터가 없으면 만든다) → 사람, 그 자리. 경매장은 어디서나 쓴다 — 들어온 자리(사당 안) 그대로 둔다
-local function enter(sv, id: number, name: string, class: string)
-	local p = { UserId = id, Name = "user" .. id, DisplayName = "user" .. id, attrs = {} }
-	p.SetAttribute = function(self, k, v) self.attrs[k] = v end
-	p.Kick = function() end
-	local r = sv.h.Ready(p)
-	local cid = r and r.select and r.select.chars[1] and r.select.chars[1].id
-	if not cid then
-		local made = sv.h.Chars(p, "create", name, class)
-		expect(made ~= nil and made.ok == true, "캐릭터를 만든다 " .. name .. " " .. tostring(made and made.why))
-		cid = made.id
-	end
-	expect(sv.h.Chars(p, "enter", cid) ~= nil, "캐릭터로 들어간다 " .. name)
-	local s = sv.World.session(p)
-	s.scene = "town" -- 경매장은 마을에서만(2026-10-21) — 새 캐릭터는 꿈(튜토리얼)에서 시작하므로 초승달 마을에 세운다
+	Hero.recalc(h)
+	h.hp = h.maxHp
 	return p, s
 end
--- 가방을 비우고 달돈을 정한다
-local function reset(sv, h, money: number)
-	for i = 1, sv.Bag.size(h) do
-		h.gear[i], h.use[i], h.etc[i] = false, false, false
+
+-- ---------- 스킬의 갈래 ----------
+--  instant = 누르면 바로(사출기 · 버프 · 바로 놓이는 설치/소환) · cast = 2~4차의 쓰는 스킬 · first = 1차의 길로 쓰는 것(동작이 있는 설치)
+local function kindOf(h, id: string): string?
+	if Kit.isToggle(h, id) then
+		return "toggle"
+	elseif Buffs.instant(id) then
+		return "buff"
+	elseif COMBAT.placed[id] and COMBAT.placed[id].cast == "instant" then
+		return "place"
+	elseif COMBAT.cast[id] then
+		return "cast"
+	elseif COMBAT.skills[id] then
+		return "first"
 	end
-	h.money = money
+	return nil
 end
--- 그 계정의 저장된 것에서: 달돈 · 판매한 수 · 받지 않은 구매품의 수 · 가방의 장비 수
-local function saved(id: number)
-	local a = disk[id]
-	local hero = a and a.chars[1] and a.chars[1].hero
-	local gear, sales, holds = 0, 0, 0
-	for _, it in (hero and hero.bag and hero.bag.gear) or {} do
-		if it then
-			gear += 1
+
+-- 그 캐릭터가 보스에게 쓰는 것들: 버프 · 사출기 · 설치 · 소환 · 다시 쓰기가 있는 공격기 + 남는 시간을 채우는 보스기 하나
+local function kitOf(h)
+	local plan = { buffs = {}, places = {}, firsts = {}, attacks = {}, filler = nil, toggle = nil }
+	local bestJob = -1
+	for id, lv in h.skills do
+		if lv < 1 then
+			continue
+		end
+		local k = kindOf(h, id)
+		if k == "toggle" then
+			plan.toggle = id
+		elseif k == "buff" then
+			table.insert(plan.buffs, id)
+		elseif k == "place" then
+			table.insert(plan.places, id)
+		elseif k == "first" then
+			local def = COMBAT.skills[id]
+			if def.type == "install" then
+				table.insert(plan.firsts, id)
+			elseif def.type == "boss" and def.job > bestJob then
+				bestJob, plan.filler = def.job, id
+			end
+		elseif k == "cast" then
+			local def = COMBAT.cast[id]
+			if def.type == "boss" and def.job > bestJob then
+				bestJob, plan.filler = def.job, id
+			elseif (def.type == "attack" or def.type == "nuke") and def.cd > 0 then
+				table.insert(plan.attacks, id)
+			end
 		end
 	end
-	for _, r in (a and a.market and a.market.list) or {} do
-		if r.hold then
-			holds += 1
+	for _, list in { plan.buffs, plan.places, plan.firsts, plan.attacks } do
+		table.sort(list)
+	end
+	return plan
+end
+
+-- ---------- 방 ----------
+local function bossIn(key: string)
+	local room = World.room(key)
+	for _, m in room.bosses do
+		if m.kind == B.id then
+			return m, room
+		end
+	end
+	return nil, room
+end
+
+-- ---------- 한 사람의 손(딜 손실이 없는) ----------
+--  hold = 누르고 있는 구간을 얼마나: "min"(가장 짧게) · "max"(가장 길게)
+local Hand = {}
+Hand.__index = Hand
+function Hand.new(p, s, hold: string)
+	local self = setmetatable({ p = p, s = s, h = s.hero, plan = kitOf(s.hero), hold = hold, act = nil, last = {}, uses = {} }, Hand)
+	return self
+end
+function Hand:stand(m, at: number)
+	local s, h = self.s, self.h
+	s.trust, s.stale = true, nil
+	h.x, h.y, h.dir = m.x - at, m.y, 1
+end
+function Hand:send(id: string, seg: number)
+	handlers.Skill(self.p, id, seg, self.h.x, self.h.y, 1)
+end
+function Hand:count(id: string)
+	self.uses[id] = (self.uses[id] or 0) + 1
+end
+-- 바로 쓰는 것들(시간을 쓰지 않는다): 사출기 · 버프 · 바로 놓이는 설치/소환
+function Hand:instants(m, now: number)
+	local h, plan = self.h, self.plan
+	if plan.toggle and not h.kit.on then
+		self:stand(m, 14)
+		self:send(plan.toggle, 1)
+	end
+	for _, id in plan.buffs do
+		local b = h.buffs[id]
+		-- 끝나기 2초 전에 다시 건다(파티원이 걸어 준 같은 버프가 있어도 내 것으로 — 지속은 같다)
+		if (not b or b.t < 2) and (h.cds[id] or 0) <= now then
+			self:stand(m, 14)
+			self:send(id, 1)
+			self:count(id)
+		end
+	end
+	for _, id in plan.places do
+		local def = COMBAT.placed[id]
+		local dur = def.dur or 0
+		-- 따라다니는 것(하나만 — 다시 쓰면 새것)은 지속이 다 됐을 때 · 놓는 것은 다시 쓰기가 돌면 바로
+		local again = if def.kind == "follow" then (now - (self.last[id] or -1e9)) >= math.max(dur - 1, 1) else true
+		if again and (h.cds[id] or 0) <= now and (not def.cost or h.kit.souls >= def.cost) then
+			self:stand(m, 14)
+			local before = h.cds[id]
+			self:send(id, 1)
+			if h.cds[id] ~= before or def.cd == 0 then
+				self.last[id] = now
+				self:count(id)
+			end
+		end
+	end
+end
+-- 시간을 쓰는 다음 일을 고른다: 동작이 있는 설치 → 다시 쓰기가 돈 공격기 → 보스기
+function Hand:pick(now: number): string?
+	local h, s = self.h, self.s
+	for _, id in self.plan.firsts do
+		if not (s.cds and s.cds[id] and now < s.cds[id]) then
+			return id
+		end
+	end
+	for _, id in self.plan.attacks do
+		if (h.cds[id] or 0) <= now then
+			return id
+		end
+	end
+	return self.plan.filler
+end
+-- 한 걸음: 하던 것을 잇거나, 끝났으면 다음 것을 시작한다
+function Hand:step(m, room, now: number)
+	local h = self.h
+	h.hp, h.alive, h.invuln, h.inCheck = h.maxHp, true, 1, nil
+	self:instants(m, now)
+	local act = self.act
+	if act and act.kind == "first" then
+		if now >= self.s.skill.free then
+			self.act = nil
+		end
+	elseif act and act.kind == "cast" then
+		local a = room.caster.actors[h]
+		local sk = a and a.skill
+		if act.wait then
+			-- 「때까지」 구간이 있는 스킬(뛰어올라 떨어질 때까지): 서버는 끝을 모른다 — 빈 방에서 잰 한 번의 시간만큼은 쓴다(정직한 화면)
+			if now - act.t0 >= act.wait then
+				self.act = nil
+			end
+		elseif not sk or sk.id ~= act.id then
+			self.act = nil
 		else
-			sales += 1
-		end
-	end
-	return { money = hero and hero.money, sales = sales, holds = holds, gear = gear }
-end
--- 내 것에서 그 번호의 줄 · 그 조건의 첫 줄
-local function mineOf(r, pred)
-	for _, m in (r and r.mine) or {} do
-		if pred(m) then
-			return m
-		end
-	end
-	return nil
-end
-
-do
-	local sv = server()
-	local Market, Bag, Items = sv.Market, sv.Bag, sv.Items
-	local M, WHY, WORDS = Market.DATA, Market.WHY, Market.WORDS
-	local DEP = M.deposit
-	expect(sv.packets.Market ~= nil and sv.packets.Market.Kind == "Function" and sv.packets.Market.Direction == "ClientToServer" and sv.packets.Market.RateLimit.PerSecond <= 5, "경매장의 패킷(보내는 빠르기의 한도가 있다)")
-	expect(sv.h.Market ~= nil, "서버가 받는다")
-	-- 경매사 「금송」도 그대로 서 있다(말을 걸면 같은 창이 열린다)
-	local there = false
-	for _, n in sv.SCENES.scenes[M.scene].npcs do
-		there = there or (n.id == M.npc and Items.data.NPCDO[n.id] == "auction")
-	end
-	expect(there, "경매사가 은달 항구에 서 있다")
-
-	local pa, sa = enter(sv, 9101, "경매판매", "axion")
-	local pb, sb = enter(sv, 9102, "경매구매", "riven")
-	local pc, sc = enter(sv, 9103, "경매늦은", "mooni")
-	local ha, hb, hc = sa.hero, sb.hero, sc.hero
-	local potion = Items.potionFor(1)
-	local other = Items.potionFor(30) -- 다른 소비 아이템(가방을 채울 때 쓴다)
-	local quest
-	for _, g in Items.data.GOODS do
-		if g.quest and not quest then
-			quest = g
-		end
-	end
-	expect(other ~= nil and other.id ~= potion.id, "다른 물약이 있다")
-	reset(sv, ha, 500)
-	reset(sv, hb, 5000)
-	reset(sv, hc, 5000)
-	local hat = Items.make("hat", 10, 4)
-	hat.star = 3
-	local slotHat = Bag.add(ha, hat)
-	expect(Bag.give(ha, potion.id, 20) == true and Bag.give(ha, quest.id, 1) == true, "팔 것을 넣는다")
-	local slotPot, slotQuest
-	for i = 1, Bag.size(ha) do
-		if ha.use[i] and ha.use[i].item == potion.id then
-			slotPot = i
-		end
-		if ha[quest.tab][i] and ha[quest.tab][i].item == quest.id then
-			slotQuest = i
-		end
-	end
-
-	-- ---- (가) 마을이면 어디서나 쓴다 · 막는 것들 ----
-	--  2026-10-21 사용자 "경매장도 마을에서만 갈수있어야하구요": 새 캐릭터가 처음 서는 꿈(dream)은 마을이 아니다 → 셋 다 초승달 마을에 세운다
-	sa.scene = "r1a1"
-	expect(sv.h.Market(pa, "mine").why == WHY.town, "마을 밖(사냥터)에서는 쓰지 못한다")
-	sa.scene = "dream"
-	expect(sv.h.Market(pa, "mine").why == WHY.town, "꿈(튜토리얼)에서도 쓰지 못한다")
-	for _, s in { sa, sb, sc } do
-		s.scene = "town"
-	end
-	sa.shop = 1
-	expect(sv.h.Market(pa, "mine").why == WHY.town, "달빛 상점 안에서는 쓰지 못한다")
-	sa.shop = nil
-	expect(sa.scene ~= M.scene, "(경매사가 없는 맵에 서 있다)")
-	local r = sv.h.Market(pa, "mine")
-	expect(r.ok == true and #r.mine == 0 and r.used == 0 and r.max == M.slots, "경매사 앞이 아니어도 마을이면 쓴다(메뉴에서 여는 창 — 메이플 옥션 방식)")
-	sa.guest = true
-	expect(sv.h.Market(pa, "mine").why == WHY.guest, "확인용 캐릭터는 쓰지 못한다")
-	sa.guest = nil
-	ha.alive = false
-	expect(sv.h.Market(pa, "mine").why == WHY.dead, "쓰러진 채로는 쓰지 못한다")
-	ha.alive = true
-	expect(sv.h.Market(pa, "fly").ok == false and sv.h.Market(pa, "browse", "w_nobody").ok == false and sv.h.Market(pa, "browse", 3).ok == false, "모르는 일 · 없는 장부")
-	for _, bad in { { 0, 24 }, { -5, 24 }, { 1.5, 24 }, { "100", 24 }, { M.priceMax + 1, 24 }, { 100, 12 }, { 100 }, "x" } do
-		r = sv.h.Market(pa, "list", "gear", slotHat, 1, bad)
-		expect(r.ok == false and r.why == WHY.price and ha.gear[slotHat] ~= false and ha.money == 500, "값 · 기간이 틀리면 올리지 않는다")
-	end
-	expect(sv.h.Market(pa, "list", "gear", slotHat, 1, nil).why == WHY.price, "값이 없으면 올리지 않는다")
-	expect(sv.h.Market(pa, "list", "gear", 2, 1, { 100, 24 }).why == WHY.item and sv.h.Market(pa, "list", "gear", 999, 1, { 100, 24 }).why == WHY.item and sv.h.Market(pa, "list", "store", 1, 1, { 100, 24 }).why == WHY.item and sv.h.Market(pa, "list", "equip", "hat", 1, { 100, 24 }).why == WHY.item, "빈 칸 · 없는 칸 · 가방이 아닌 곳")
-	expect(sv.h.Market(pa, "list", "use", slotPot, 21, { 100, 24 }).why == WHY.item and sv.h.Market(pa, "list", "use", slotPot, 0, { 100, 24 }).why == WHY.item and sv.h.Market(pa, "list", "use", slotPot, 2.5, { 100, 24 }).why == WHY.item, "가진 것보다 많이 · 0개 · 소수")
-	r = sv.h.Market(pa, "list", quest.tab, slotQuest, 1, { 100, 24 })
-	expect(r.ok == false and r.why == WHY.quest and Bag.count(ha, quest.id) == 1, "퀘스트의 물건은 못 올린다")
-	ha.money = DEP - 1
-	r = sv.h.Market(pa, "list", "gear", slotHat, 1, { 1000, 24 })
-	expect(r.ok == false and r.why == WHY.deposit and ha.gear[slotHat] ~= false and ha.money == DEP - 1, "보증금이 모자라면 올리지 못한다")
-	ha.money = 500
-	eq(next(boards), nil, "아무것도 올라가지 않았다")
-	eq(Market.count(sa.acct.market), 0, "맡긴 것도 없다")
-
-	-- ---- (나) 올린다: 가방에서 빠지고 보증금을 낸다 · 계정을 먼저 저장한 뒤 장부에 적는다 ----
-	table.clear(log)
-	r = sv.h.Market(pa, "list", "gear", slotHat, 1, { 1000, 24 })
-	expect(r.ok == true and r.used == 1 and typeof(r.msg) == "string" and #r.mine == 1 and r.mine[1].state == "selling" and r.mine[1].p == 1000 and r.mine[1].n == 1 and r.mine[1].left == 1, "장비를 올린다")
-	local hatId = r.mine[1].id
-	expect(ha.gear[slotHat] == false and ha.money == 500 - DEP, "가방에서 빠지고 보증금을 냈다")
-	local iSave, iUpdate = table.find(log, "save:9101"), table.find(log, "update:a_hat")
-	expect(iSave ~= nil and iUpdate ~= nil and iSave < iUpdate, "계정을 먼저 저장하고 그 뒤에 장부에 적는다")
-	expect(saved(9101).sales == 1 and saved(9101).gear == 0 and saved(9101).money == 500 - DEP, "저장된 계정: 맡긴 것 하나 · 가방에는 없다 · 보증금이 빠졌다")
-	local e = boards.a_hat.list[1]
-	expect(#boards.a_hat.list == 1 and e.id == hatId and e.u == 9101 and e.sn == "경매판매" and e.p == 1000 and e.l == 1 and e.e - e.t == 24 * 3600 and e.it[1] == "hat" and e.it[3] == 4 and e.it[4] == 3, "장부의 줄: 판 사람 · 값 · 남은 수 · 기간 · 물건(성능 · 별 그대로)")
-	r = sv.h.Market(pa, "list", "use", slotPot, 10, { 50, 48 })
-	expect(r.ok == true and r.used == 2 and Bag.count(ha, potion.id) == 10 and ha.money == 500 - DEP * 2, "묶음에서 열 개를 개당 50에 올린다(48시간)")
-	local potEntry = boards.u.list[1]
-	local potId = potEntry.id
-	expect(potEntry.it.g == potion.id and potEntry.it.n == 10 and potEntry.l == 10 and potEntry.p == 50 and potEntry.e - potEntry.t == 48 * 3600, "장부의 줄: 열 개 · 개당 50")
-	-- ---- (다) 구경: 목록과 시세가 함께 온다 ----
-	r = sv.h.Market(pb, "browse", "u")
-	expect(r.ok == true and r.board == "u" and #r.rows == 1 and r.rows[1].id == potId and r.rows[1].mine == false and r.rows[1].sn == "경매판매" and r.rows[1].p == 50 and r.rows[1].l == 10 and r.rows[1].it.n == 10 and #r.trades == 0, "사는 사람이 본다(시세는 아직 비었다)")
-	expect(sv.h.Market(pa, "browse", "u").rows[1].mine == true, "판 사람에게는 내 것으로 보인다")
-	table.clear(log)
-	sv.h.Market(pb, "browse", "a_suit")
-	sv.h.Market(pc, "browse", "a_suit")
-	sv.h.Market(pb, "browse", "a_suit", true)
-	local reads = 0
-	for _, l in log do
-		if l == "read:a_suit" then
-			reads += 1
-		end
-	end
-	eq(reads, 1, "같은 분류를 잇달아 보면(새로 고침까지) 한 번만 읽는다")
-	advance(M.cache + 1)
-	sv.h.Market(pb, "browse", "a_suit")
-	expect(table.find(log, "read:a_suit", 2) ~= nil, "시간이 지나면 다시 읽는다")
-
-	-- ---- (라) 산다: 낱개로 · 산 것은 「완료」에 「낙찰」로 들어온다 ----
-	hb.money = 149
-	r = sv.h.Market(pb, "buy", "u", potId, 3, 50)
-	expect(r.ok == false and r.why == WHY.money and hb.money == 149, "달돈이 모자라면 못 산다")
-	hb.money = 5000
-	expect(sv.h.Market(pb, "buy", "u", potId, 11, 50).why == WHY.count and hb.money == 5000, "남은 수보다 많이는 못 산다")
-	expect(sv.h.Market(pb, "buy", "u", potId, 3, 49).why == WHY.changed and hb.money == 5000, "본 값과 다르면 사지 않는다(달돈은 그대로)")
-	expect(sv.h.Market(pa, "buy", "u", potId, 1, 50).why == WHY.mine, "내가 올린 것은 못 산다")
-	expect(sv.h.Market(pb, "buy", "u", "없는줄", 1, 50).why == WHY.gone and sv.h.Market(pb, "buy", "nowhere", potId, 1, 50).why == WHY.gone and sv.h.Market(pb, "buy", "u", potId, 0, 50).why == WHY.gone and sv.h.Market(pb, "buy", "u", potId, 1.5, 50).why == WHY.gone and sv.h.Market(pb, "buy", "u", potId, 1, "쉰").why == WHY.gone, "없는 줄 · 없는 장부 · 0개 · 소수 · 값이 아닌 것")
-	table.clear(log)
-	table.clear(sv.fired)
-	r = sv.h.Market(pb, "buy", "u", potId, 3, 50)
-	expect(r.ok == true and hb.money == 4850 and boards.u.list[1].l == 7 and r.rows[1].l == 7 and r.rows[1].it.n == 7, "셋을 샀다: 150을 치르고 장부에는 일곱이 남았다")
-	-- 「팔림」(2026-10-18): 판 사람이 같은 서버에 있으면 그 사람에게 바로 — 다른 서버에는 알리지 않는다
-	local soldMsg = nil
-	for _, f in sv.fired do
-		if f.name == "Sold" then
-			soldMsg = f
-		end
-	end
-	expect(soldMsg ~= nil and soldMsg.player == pa and soldMsg.args[1].n == 3 and type(soldMsg.args[1].name) == "string", "판 사람에게 「팔림」(셋)")
-	expect(#sv.published == 0, "같은 서버면 다른 서버에 알리지 않는다")
-	expect(Bag.count(hb, potion.id) == 0 and Market.holds(sb.acct.market) == 1 and Market.count(sb.acct.market) == 0, "산 것은 가방이 아니라 「완료」에 들어온다(판매한 수로는 세지 않는다)")
-	local won = mineOf(r, function(m) return m.state == "hold" end)
-	expect(won ~= nil and won.it.g == potion.id and won.it.n == 3 and won.p == 150, "「완료」의 「낙찰」: 물약 셋 · 치른 값 150")
-	expect(#r.trades == 1 and r.trades[1].it.n == 3 and r.trades[1].p == 50, "시세에 남는다")
-	expect(table.find(log, "save:9102") ~= nil and saved(9102).money == 4850 and saved(9102).holds == 1, "산 사람의 계정을 바로 저장한다")
-	-- 수령
-	for i = 1, Bag.size(hb) do
-		hb.use[i] = { item = other.id, n = 1 }
-	end
-	expect(sv.h.Market(pb, "settle", won.id, "take").why == WHY.bag and Market.holds(sb.acct.market) == 1, "가방이 가득 차 있으면 수령하지 못한다(그대로 보관된다)")
-	reset(sv, hb, 4850)
-	r = sv.h.Market(pb, "settle", won.id, "take")
-	expect(r.ok == true and Bag.count(hb, potion.id) == 3 and Market.holds(sb.acct.market) == 0 and #r.mine == 0, "「수령」: 가방으로 들어온다")
-	expect(sv.h.Market(pb, "settle", won.id, "take").why == WHY.gone and Bag.count(hb, potion.id) == 3, "두 번 수령하지 못한다")
-	-- 장비를 산다
-	r = sv.h.Market(pb, "buy", "a_hat", hatId, 1, 1000)
-	expect(r.ok == true and hb.money == 3850 and Bag.used(hb, "gear") == 0 and #r.rows == 0 and boards.a_hat.list[1].l == 0, "모자를 샀다: 목록에서 사라진다")
-	won = mineOf(r, function(m) return m.state == "hold" end)
-	r = sv.h.Market(pb, "settle", won.id, "take")
-	local gotHat = hb.gear[1]
-	expect(r.ok == true and gotHat and gotHat.slot == "hat" and gotHat.stage == 10 and gotHat.q == 4 and gotHat.star == 3 and typeof(gotHat.id) == "number", "수령한 것은 올린 그것이다(성능 · 별) — 가방의 새 번호가 붙는다")
-	r = sv.h.Market(pc, "buy", "a_hat", hatId, 1, 1000)
-	expect(r.ok == false and r.why == WHY.gone and hc.money == 5000, "늦은 사람은 못 산다(달돈은 그대로)")
-	-- 받지 않은 구매품이 너무 많으면 더 사지 못한다
-	local keepMax = M.holdMax
-	M.holdMax = 1
-	expect(sv.h.Market(pc, "buy", "u", potId, 1, 50).ok == true and sv.h.Market(pc, "buy", "u", potId, 1, 50).why == WHY.hold and hc.money == 4950 and boards.u.list[1].l == 6, "「완료」가 가득 차면 더 사지 못한다")
-	M.holdMax = keepMax
-
-	-- ---- (마) 대금 수령: 판매 중인 채로 팔린 만큼 · 다 팔린 것은 보증금까지 ----
-	r = sv.h.Market(pa, "mine")
-	local mHat = mineOf(r, function(m) return m.id == hatId end)
-	local mPot = mineOf(r, function(m) return m.id == potId end)
-	expect(mHat.state == "soldout" and mHat.due == 1 and mHat.pay == 950 and mHat.deposit == DEP, "모자: 다 팔렸다 — 받을 대금 950과 보증금")
-	expect(mPot.state == "selling" and mPot.left == 6 and mPot.sold == 4 and mPot.due == 4 and mPot.pay == 190 and mPot.deposit == 0, "물약: 넷이 팔렸다 — 받을 대금 190(200에서 수수료 10)")
-	local money0 = ha.money
-	table.clear(log)
-	r = sv.h.Market(pa, "settle", potId, "collect")
-	expect(r.ok == true and ha.money == money0 + 190 and sa.acct.market.list[potId].got == 4 and boards.u.list[1].l == 6 and table.find(log, "update:u") == nil, "판매 중인 채로 대금만 받는다(장부는 고치지 않는다 — 받은 수는 계정에 적는다)")
-	expect(sv.h.Market(pa, "settle", potId, "collect").why == WHY.nothing and ha.money == money0 + 190, "받을 것이 없으면 다시 받지 못한다")
-	eq(sa.acct.ach.c.sold, 1, "업적 「첫 장사」: 판매 중에 대금을 받아도 센다")
-	table.clear(log)
-	r = sv.h.Market(pa, "settle", hatId, "collect")
-	expect(r.ok == true and ha.money == money0 + 190 + 950 + DEP and r.used == 1 and string.find(r.msg, "950", 1, true) ~= nil, "다 팔린 것: 대금 950과 보증금을 받는다")
-	eq(sa.acct.ach.c.sold, 2, "업적 「첫 장사」: 다 팔린 것의 대금을 받아도 센다(2026-10-26 — 전에는 세지 않아 「물건 10개 팔았는데 깨지지 않는다」)")
-	iSave, iUpdate = table.find(log, "save:9101"), table.find(log, "update:a_hat")
-	expect(iSave ~= nil and iUpdate ~= nil and iSave < iUpdate and #boards.a_hat.list == 0 and saved(9101).sales == 1, "계정을 저장한 뒤에 장부의 줄을 지운다")
-	expect(sv.h.Market(pa, "settle", hatId, "collect").why == WHY.gone and ha.money == money0 + 190 + 950 + DEP, "두 번 받지 못한다")
-	-- ---- (바) 판매 취소: 남은 것이 돌아온다 — 보증금은 돌려받지 못한다 ----
-	money0 = ha.money
-	r = sv.h.Market(pa, "settle", potId, "back")
-	expect(r.ok == true and Bag.count(ha, potion.id) == 16 and #boards.u.list == 0 and r.used == 0 and ha.money == money0, "취소: 남은 여섯이 돌아온다(대금은 이미 받았다 · 보증금은 없다)")
-	expect(sv.h.Market(pa, "settle", potId, "back").why == WHY.gone and Bag.count(ha, potion.id) == 16, "두 번 돌려받지 못한다")
-	expect(sv.h.Market(pa, "settle", "남의줄", "back").why == WHY.gone and sv.h.Market(pa, "settle", 5, "back").why == WHY.gone, "없는 번호")
-	-- 팔린 것의 대금을 받지 않은 채 취소하면: 남은 것과 대금을 함께 받는다
-	reset(sv, ha, 1000)
-	Bag.give(ha, potion.id, 10)
-	r = sv.h.Market(pa, "list", "use", 1, 10, { 20, 24 })
-	local mixId = r.mine[1].id
-	reset(sv, hb, 1000)
-	expect(sv.h.Market(pb, "buy", "u", mixId, 4, 20).ok == true, "넷이 팔린다")
-	money0 = ha.money
-	r = sv.h.Market(pa, "settle", mixId, "back")
-	expect(r.ok == true and Bag.count(ha, potion.id) == 6 and ha.money == money0 + 76 and #boards.u.list == 0, "취소: 남은 여섯과 팔린 넷의 대금 76(80에서 수수료 4)을 받는다 — 보증금은 없다")
-	expect(sv.h.Market(pa, "settle", mixId, "x").why == WHY.gone, "끝난 것은 없다")
-	-- 모르는 일
-	r = sv.h.Market(pa, "list", "use", 1, 1, { 20, 24 })
-	expect(sv.h.Market(pa, "settle", r.mine[1].id, "뭔가").why == WHY.item and Market.count(sa.acct.market) == 1, "모르는 일은 하지 않는다")
-	sv.h.Market(pa, "settle", r.mine[1].id, "back")
-
-	-- ---- (사) 기간이 끝났다(미판매): 반환 · 재등록 ----
-	reset(sv, ha, 1000)
-	local s2 = Bag.add(ha, Items.make("suit", 10, 3))
-	r = sv.h.Market(pa, "list", "gear", s2, 1, { 700, 24 })
-	local suitId = r.mine[1].id
-	expect(sv.h.Market(pa, "settle", suitId, "relist").why == WHY.gone, "판매 중인 것은 재등록하지 않는다")
-	advance(25 * 3600)
-	eq(#sv.h.Market(pb, "browse", "a_suit").rows, 0, "기간이 끝난 것은 목록에 없다")
-	r = sv.h.Market(pb, "buy", "a_suit", suitId, 1, 700)
-	expect(r.ok == false and r.why == WHY.gone and hb.money == 1000 - 80, "기간이 끝난 것은 못 산다")
-	r = sv.h.Market(pa, "mine")
-	expect(r.mine[1].state == "ended" and r.mine[1].left == 1 and r.mine[1].pay == 0 and r.mine[1].deposit == 0, "「미판매」로 보인다(보증금은 돌아오지 않는다)")
-	for i = 1, Bag.size(ha) do
-		ha.gear[i] = Items.make("glove", 1, 3)
-	end
-	expect(sv.h.Market(pa, "settle", suitId, "back").why == WHY.bag and boards.a_suit.list[1].c == nil, "가방이 가득 차면 반환받지 못한다(장부도 그대로)")
-	reset(sv, ha, DEP - 1)
-	expect(sv.h.Market(pa, "settle", suitId, "relist").why == WHY.deposit and boards.a_suit.list[1].c == nil, "보증금이 모자라면 재등록하지 못한다")
-	ha.money = DEP + 5
-	r = sv.h.Market(pa, "settle", suitId, "relist")
-	expect(r.ok == true and ha.money == 5 and Bag.used(ha, "gear") == 0 and r.used == 1 and sa.acct.market.list[suitId] == nil, "재등록: 보증금을 다시 내고 같은 값으로 다시 올라간다")
-	local again = r.mine[1]
-	local newEntry = boards.a_suit.list[1]
-	expect(#boards.a_suit.list == 1 and again.id ~= suitId and again.state == "selling" and newEntry.id == again.id and newEntry.p == 700 and newEntry.l == 1 and newEntry.e - newEntry.t == 24 * 3600, "새 줄: 같은 값 · 같은 기간(옛 줄은 지워졌다)")
-	eq(#sv.h.Market(pb, "browse", "a_suit", true).rows, 1, "다시 목록에 보인다")
-	advance(25 * 3600)
-	reset(sv, ha, 0)
-	r = sv.h.Market(pa, "settle", again.id, "back")
-	expect(r.ok == true and Bag.used(ha, "gear") == 1 and ha.gear[1].slot == "suit" and #boards.a_suit.list == 0 and ha.money == 0, "반환: 물건이 돌아온다(보증금은 없다)")
-
-	-- ---- (아) 열 건까지(받지 않은 구매품은 세지 않는다) ----
-	reset(sv, ha, DEP * 20)
-	Bag.give(ha, potion.id, 30)
-	for i = 1, M.slots do
-		expect(sv.h.Market(pa, "list", "use", 1, 1, { 10 + i, 24 }).ok == true, "올린다 " .. i)
-	end
-	r = sv.h.Market(pa, "list", "use", 1, 1, { 5, 24 })
-	expect(r.ok == false and r.why == WHY.slots and r.used == M.slots and Bag.count(ha, potion.id) == 30 - M.slots, "열한 번째는 못 올린다")
-	r = sv.h.Market(pb, "browse", "u", true)
-	expect(#r.rows == M.slots and r.rows[1].p == 11 and r.rows[M.slots].p == 10 + M.slots, "싼 것부터 늘어선다")
-	local cheap = r.rows[1]
-	-- 올려 둔 것 하나를 내리고 다섯 개짜리 묶음을 올린다(같이 사 보는 데 쓴다)
-	sv.h.Market(pa, "settle", r.rows[M.slots].id, "back")
-	r = sv.h.Market(pa, "list", "use", 1, 5, { 7, 24 })
-	expect(r.ok == true, "다섯 개를 개당 7에 올린다 " .. tostring(r.why))
-	local fiveId = mineOf(r, function(m) return m.p == 7 end).id
-
-	-- ---- (자) 두 사람이 같은 묶음을 같이 산다(저장소가 느리다): 남은 수만큼만 팔린다 ----
-	slow = 1
-	reset(sv, hb, 1000)
-	reset(sv, hc, 1000)
-	local rb, rc
-	task.spawn(function()
-		rb = sv.h.Market(pb, "buy", "u", fiveId, 4, 7)
-	end)
-	task.spawn(function()
-		rc = sv.h.Market(pc, "buy", "u", fiveId, 3, 7)
-	end)
-	expect(sv.h.Market(pb, "mine").why == WHY.busy, "처리하는 동안에는 또 누르지 못한다")
-	advance(10)
-	expect(rb ~= nil and rc ~= nil and (rb.ok ~= rc.ok), "넷과 셋을 같이 사면(다섯뿐이다) 한 사람만 산다")
-	local winner, loser, wq = if rb.ok then hb else hc, if rb.ok then hc else hb, if rb.ok then 4 else 3
-	expect(winner.money == 1000 - 7 * wq and loser.money == 1000 and (if rb.ok then rc else rb).why == WHY.count, "산 사람만 치른다 — 못 산 사람의 달돈은 그대로(「남은 수보다 많다」)")
-	eq(Market.entryById(boards.u, fiveId).l, 5 - wq, "장부에는 남은 수만큼만 남았다")
-	expect(sv.h.Market(pb, "mine").ok == true, "끝나면 다시 쓸 수 있다")
-	-- ---- (차) 사는 도중에 나간다: 산 것이 「완료」에 적힌 뒤에 저장하고 나간다 ----
-	reset(sv, hc, 1000)
-	local rl
-	task.spawn(function()
-		rl = sv.h.Market(pc, "buy", "u", cheap.id, 1, cheap.p)
-	end)
-	local left = false
-	task.spawn(function()
-		sv.World.removePlayer(pc)
-		left = true
-	end)
-	expect(not left, "경매장의 일이 끝나기를 기다린다")
-	advance(20)
-	slow = 0
-	expect(left and rl ~= nil and rl.ok == true, "일이 끝난 뒤에 나간다")
-	expect(saved(9103).money == 1000 - cheap.p and saved(9103).holds >= 1, "저장된 계정: 값을 치렀고 산 것이 「완료」에 있다(사라지지 않았다)")
-
-	-- ---- (카) 모두 받기 ----
-	--  판 사람: 다 팔린 것 하나(cheap) · 일부가 팔린 것 하나(five) · 안 팔린 채 판매 중인 것들. 산 사람(pb): 낙찰 하나.
-	advance(3)
-	r = sv.h.Market(pa, "mine", true)
-	local soldout = mineOf(r, function(m) return m.id == cheap.id end)
-	local partial = mineOf(r, function(m) return m.id == fiveId end)
-	expect(soldout.state == "soldout" and partial.state == "selling" and partial.due == wq, "다 팔린 것 하나 · 일부가 팔린 것 하나")
-	money0 = ha.money
-	local usedBefore = r.used
-	r = sv.h.Market(pa, "all")
-	local payAll = Market.payout(cheap.p) + DEP + Market.payout(7 * wq)
-	expect(r.ok == true and ha.money == money0 + payAll and r.used == usedBefore - 1 and string.find(r.msg, "2", 1, true) ~= nil, "모두 받기: 다 팔린 것의 대금과 보증금 · 일부 팔린 것의 대금(판매 중인 것은 그대로 둔다)")
-	expect(sa.acct.market.list[fiveId] ~= nil and sa.acct.market.list[fiveId].got == wq and Market.entryById(boards.u, fiveId) ~= nil, "일부 팔린 것은 계속 판매 중이다")
-	r = sv.h.Market(pa, "all")
-	expect(r.ok == false and r.why == WORDS.allNone and ha.money == money0 + payAll, "받을 것이 없으면 그렇게 알린다(두 번 받지 않는다)")
-	-- 산 사람: 낙찰을 모두 받는다 — 가방이 가득 차면 남는다
-	local holdsB = Market.holds(sb.acct.market)
-	expect(holdsB >= 1, "산 사람의 「완료」에 낙찰이 있다")
-	for i = 1, Bag.size(hb) do
-		hb.use[i] = { item = other.id, n = 1 }
-	end
-	r = sv.h.Market(pb, "all")
-	expect(r.ok == false and r.why == WHY.bag and Market.holds(sb.acct.market) == holdsB, "가방이 가득 차면 받지 못한다")
-	reset(sv, hb, hb.money)
-	r = sv.h.Market(pb, "all")
-	expect(r.ok == true and Market.holds(sb.acct.market) == 0 and Bag.count(hb, potion.id) >= 1, "자리가 나면 모두 받는다")
-
-	-- ---- (타) 저장하지 못했다 · 저장소가 답하지 않는다 ----
-	--  (먼저 올려 둔 것을 모두 내린다)
-	r = sv.h.Market(pa, "mine", true)
-	for _, m in r.mine do
-		sv.h.Market(pa, "settle", m.id, "back")
-	end
-	eq(Market.count(sa.acct.market), 0, "모두 내렸다")
-	reset(sv, ha, 1000)
-	local s3 = Bag.add(ha, Items.make("glove", 10, 5))
-	-- 계정을 저장하지 못하면 올리지 않는다(가방으로 되돌리고 보증금도 돌려준다 — 장부에는 손대지 않는다)
-	fail.save = true
-	table.clear(log)
-	r = sv.h.Market(pa, "list", "gear", s3, 1, { 400, 24 })
-	fail.save = false
-	expect(r.ok == false and r.why == WHY.save and Bag.used(ha, "gear") == 1 and ha.money == 1000 and Market.count(sa.acct.market) == 0 and table.find(log, "update:a_glove") == nil and boards.a_glove == nil, "저장하지 못하면 올리지 않는다")
-	-- 장부에 쓰지 못했고(적히지 않았다) 답도 없다: 맡긴 채로 둔다 → 「완료」에서 돌려받는다(보증금도). 물건은 하나뿐이다
-	fail.update = "before"
-	r = sv.h.Market(pa, "list", "gear", 1, 1, { 400, 24 })
-	fail.update = false
-	expect(r.ok == false and r.why == WORDS.unsure and Bag.used(ha, "gear") == 0 and ha.money == 1000 - DEP and Market.count(sa.acct.market) == 1 and boards.a_glove == nil, "적혔는지 모르면 되돌리지 않는다(둘이 될 수 있다) — 맡긴 채로 둔다")
-	local stuck = r.mine[1]
-	expect(stuck ~= nil and stuck.state == "back" and stuck.left == 1 and stuck.deposit == DEP, "장부에 줄이 없으니 돌려받을 것으로 보인다(보증금도)")
-	r = sv.h.Market(pa, "settle", stuck.id, "back")
-	expect(r.ok == true and Bag.used(ha, "gear") == 1 and ha.gear[1].q == 5 and ha.money == 1000 and Market.count(sa.acct.market) == 0, "반환하면 그 물건과 보증금이 돌아온다(하나뿐이다)")
-	-- 장부에 적혔는데 답이 없다: 맡긴 채로 둔다 → 판매 중으로 보이고, 팔리면 대금을 받는다. 물건은 하나뿐이다
-	fail.update = "after"
-	r = sv.h.Market(pa, "list", "gear", 1, 1, { 400, 24 })
-	fail.update = false
-	expect(r.ok == false and r.why == WORDS.unsure and Bag.used(ha, "gear") == 0 and #boards.a_glove.list == 1, "적혔는데 답이 없었다: 가방으로 되돌리지 않는다")
-	local gloveId = boards.a_glove.list[1].id
-	r = sv.h.Market(pa, "mine", true)
-	expect(mineOf(r, function(m) return m.id == gloveId end).state == "selling", "판매 중으로 보인다")
-	-- 살 때 적혔는데 답이 없다: 다시 읽어 이 구매가 적혀 있으면 산 것이다(달돈을 돌려받고 물건도 사라지는 일이 없다)
-	reset(sv, hb, 1000)
-	fail.update = "after"
-	r = sv.h.Market(pb, "buy", "a_glove", gloveId, 1, 400)
-	fail.update = false
-	expect(r.ok == true and hb.money == 600 and Market.holds(sb.acct.market) == 1 and boards.a_glove.list[1].l == 0, "적혔는데 답이 없어도, 다시 읽어 내가 산 것이면 받는다(한 번만 팔렸다)")
-	-- 살 때 쓰지 못했다(적히지 않았다): 달돈을 돌려준다 · 줄은 그대로
-	reset(sv, ha, 1000)
-	local s4 = Bag.add(ha, Items.make("shoes", 10, 3))
-	r = sv.h.Market(pa, "list", "gear", s4, 1, { 250, 24 })
-	expect(r.ok == true, "신발을 올린다 " .. tostring(r.why))
-	local shoesId = boards.a_shoes.list[1].id
-	local holdsNow = Market.holds(sb.acct.market)
-	fail.update = "before"
-	r = sv.h.Market(pb, "buy", "a_shoes", shoesId, 1, 250)
-	fail.update = false
-	expect(r.ok == false and r.why == WHY.off and hb.money == 600 and Market.holds(sb.acct.market) == holdsNow and boards.a_shoes.list[1].l == 1, "쓰지 못했으면 달돈을 돌려준다 · 줄은 판매 중 그대로")
-	-- 취소할 때 답이 없다: 아무것도 주지 않는다(맡긴 것은 그대로 — 다음에 다시 견준다)
-	fail.update = "before"
-	r = sv.h.Market(pa, "settle", shoesId, "back")
-	fail.update = false
-	expect(r.ok == false and r.why == WHY.off and Bag.used(ha, "gear") == 0 and sa.acct.market.list[shoesId] ~= nil, "취소가 안 됐으면 물건을 주지 않는다")
-	fail.read = true
-	advance(M.cache + 1)
-	expect(sv.h.Market(pb, "browse", "a_shoes").why == WHY.off, "장부를 읽지 못하면 그렇게 알린다")
-	r = sv.h.Market(pa, "mine", true)
-	expect(r.ok == true and #r.mine >= 1, "읽지 못해도 내 것은 보인다(그대로 둔다)")
-	fail.read = false
-	-- 처리하다 오류가 나도 다음에 쓸 수 있다(busy가 풀린다)
-	local keepRows = Market.rows
-	Market.rows = function()
-		error("일부러 낸 오류")
-	end
-	r = sv.h.Market(pb, "browse", "a_shoes", true)
-	Market.rows = keepRows
-	expect(r.ok == false and r.why == WHY.off and sb.marketBusy == nil, "오류가 나도 막힌 채로 남지 않는다")
-	expect(sv.h.Market(pb, "browse", "a_shoes").ok == true, "다음에는 된다")
-	-- 다 팔린 것의 대금을 받을 때 계정을 저장하지 못했다 → 그 뒤의 저장이 됐다: 대금은 한 번만 받는다(장부에 남은 줄은 보관 기간이 지나면 지워진다)
-	reset(sv, ha, 1000)
-	Bag.give(ha, potion.id, 6)
-	r = sv.h.Market(pa, "list", "use", 1, 3, { 200, 24 })
-	expect(r.ok == true, "물약 셋을 개당 200에 올린다 " .. tostring(r.why))
-	local lateId = mineOf(r, function(m) return m.p == 200 end).id
-	reset(sv, hb, 1000)
-	expect(sv.h.Market(pb, "buy", "u", lateId, 3, 200).ok == true, "다 팔린다")
-	money0 = ha.money
-	fail.save = true
-	r = sv.h.Market(pa, "settle", lateId, "collect")
-	fail.save = false
-	expect(r.ok == true and ha.money == money0 + 570 + DEP and Market.entryById(boards.u, lateId) ~= nil, "저장하지 못했어도 대금은 받는다 — 장부의 줄은 남긴다")
-	expect(sv.h.Market(pa, "list", "use", 1, 1, { 77, 24 }).ok == true and saved(9101).money == money0 + 570, "그 뒤의 저장이 됐다(대금이 저장됐다)")
-	r = sv.h.Market(pa, "settle", lateId, "collect")
-	expect(r.ok == false and r.why == WHY.gone and ha.money == money0 + 570, "남은 줄로 다시 받지 못한다")
-	-- 다 팔린 장갑의 대금을 받을 때 계정을 저장하지 못했다 → 서버가 그대로 꺼진다: 장부의 줄을 지우지 않았으니 다음에 받는다(한 번만). 판 사람이 이 서버에서 하는 마지막 일이다
-	local moneyDisk = saved(9101).money
-	fail.save = true
-	r = sv.h.Market(pa, "settle", gloveId, "collect")
-	fail.save = false
-	expect(r.ok == true and #boards.a_glove.list == 1 and boards.a_glove.list[1].l == 0, "저장하지 못했으면 장부의 줄을 남긴다")
-	expect(saved(9101).money == moneyDisk and saved(9101).sales >= 2, "저장된 계정은 받기 전 그대로다(대금 없음 · 맡긴 것 있음)")
-
-	-- ---- (파) 서버가 바뀐다: 올린 서버 · 산 서버 · 받는 서버가 달라도 된다 ----
-	--  지금: 신발(250)이 판매 중, 장갑은 다 팔렸다(대금은 저장하지 못한 채 — 저장된 계정에는 맡긴 것이 남아 있다).
-	sv.World.removePlayer(pb) -- 산 사람은 저장하고 나간다
-	local sv2 = server() -- 판 사람의 서버는 그대로 꺼졌다(저장하지 않은 것은 사라진다)
-	local pb2, sb2 = enter(sv2, 9102, "경매구매", "riven")
-	local hb2 = sb2.hero
-	local moneyB = hb2.money
-	r = sv2.h.Market(pb2, "browse", "a_shoes")
-	expect(r.ok == true and #r.rows == 1 and r.rows[1].id == shoesId, "다른 서버에서도 올린 것이 보인다")
-	r = sv2.h.Market(pb2, "buy", "a_shoes", shoesId, 1, 250)
-	expect(r.ok == true and hb2.money == moneyB - 250, "다른 서버에서 산다")
-	local pub = sv2.published[#sv2.published]
-	expect(pub ~= nil and pub.topic == "LuneSold" and pub.data.n == 1 and type(pub.data.u) == "number" and pub.data.u ~= pb2.UserId, "판 사람이 이 서버에 없으면 다른 서버들에 「팔림」을 알린다(MessagingService)")
-	local holdShoes = mineOf(r, function(m) return m.state == "hold" and m.it[1] == "shoes" end)
-	expect(holdShoes ~= nil, "「완료」에 신발이 있다")
-	sv2.World.removePlayer(pb2)
-	local sv3 = server()
-	local pb3, sb3 = enter(sv3, 9102, "경매구매", "riven")
-	for i = 1, sv3.Bag.size(sb3.hero) do
-		sb3.hero.gear[i] = false
-	end
-	r = sv3.h.Market(pb3, "settle", holdShoes.id, "take")
-	expect(r.ok == true and sv3.Bag.used(sb3.hero, "gear") == 1 and sb3.hero.gear[1].slot == "shoes", "또 다른 서버에서 수령한다")
-	local pa3, sa3 = enter(sv3, 9101, "경매판매", "axion")
-	local ha3 = sa3.hero
-	money0 = ha3.money
-	eq(money0, moneyDisk, "판 사람의 달돈은 저장된 그대로다(받기 전)")
-	r = sv3.h.Market(pa3, "mine")
-	local mShoes = mineOf(r, function(m) return m.id == shoesId end)
-	local mGlove = mineOf(r, function(m) return m.id == gloveId end)
-	expect(mShoes ~= nil and mShoes.state == "soldout" and mShoes.pay == sv3.Market.payout(250), "판 사람이 다시 들어오면 「판매 완료」로 보인다")
-	expect(mGlove ~= nil and mGlove.state == "soldout" and mGlove.pay == sv3.Market.payout(400), "저장하지 못한 채 꺼졌던 장갑의 대금도 그대로 남아 있다 — 사라지지 않았다")
-	r = sv3.h.Market(pa3, "settle", shoesId, "collect")
-	expect(r.ok == true and ha3.money == money0 + sv3.Market.payout(250) + DEP, "다른 서버에서 대금과 보증금을 받는다")
-	r = sv3.h.Market(pa3, "settle", gloveId, "collect")
-	expect(r.ok == true and ha3.money == money0 + sv3.Market.payout(250) + sv3.Market.payout(400) + DEP * 2, "장갑의 대금도 한 번 받는다")
-	expect(sv3.h.Market(pa3, "settle", gloveId, "collect").ok == false and sv3.h.Market(pa3, "settle", shoesId, "collect").ok == false, "두 번은 받지 못한다")
-	expect(#boards.a_shoes.list == 0 and #boards.a_glove.list == 0, "받은 줄은 장부에서 지워진다")
-	-- 일부만 팔린 묶음: 판 서버 · 산 서버가 달라도 팔린 만큼만 받는다
-	for i = 1, sv3.Bag.size(ha3) do
-		ha3.use[i] = false
-	end
-	sv3.Bag.give(ha3, potion.id, 10)
-	r = sv3.h.Market(pa3, "mine", true)
-	for _, m in r.mine do
-		sv3.h.Market(pa3, "settle", m.id, "back")
-	end
-	for i = 1, sv3.Bag.size(ha3) do
-		ha3.use[i] = false
-	end
-	sv3.Bag.give(ha3, potion.id, 10)
-	ha3.money = 1000
-	r = sv3.h.Market(pa3, "list", "use", 1, 10, { 30, 48 })
-	local tenId = r.mine[1].id
-	sb3.hero.money = 1000
-	expect(sv3.h.Market(pb3, "buy", "u", tenId, 4, 30).ok == true, "넷이 팔린다")
-	sv3.World.removePlayer(pa3)
-	sv3.World.removePlayer(pb3)
-	local sv4 = server()
-	local pa4, sa4 = enter(sv4, 9101, "경매판매", "axion")
-	local ha4 = sa4.hero
-	money0 = ha4.money
-	r = sv4.h.Market(pa4, "settle", tenId, "collect")
-	expect(r.ok == true and ha4.money == money0 + sv4.Market.payout(120) and sa4.acct.market.list[tenId].got == 4, "다른 서버에서 팔린 넷의 대금을 받는다")
-	sv4.World.removePlayer(pa4) -- 받은 수(got)가 저장된다
-	local sv5 = server()
-	local pa5, sa5 = enter(sv5, 9101, "경매판매", "axion")
-	local pb5, sb5 = enter(sv5, 9102, "경매구매", "riven")
-	local ha5 = sa5.hero
-	expect(sv5.h.Market(pa5, "settle", tenId, "collect").why == sv5.Market.WHY.nothing, "받은 것은 서버가 바뀌어도 다시 받지 못한다")
-	sb5.hero.money = 1000
-	expect(sv5.h.Market(pb5, "buy", "u", tenId, 6, 30).ok == true, "남은 여섯이 팔린다")
-	money0 = ha5.money
-	r = sv5.h.Market(pa5, "settle", tenId, "collect")
-	expect(r.ok == true and ha5.money == money0 + sv5.Market.payout(180) + DEP and sa5.acct.market.list[tenId] == nil, "다 팔리면 남은 여섯의 대금과 보증금을 받는다")
-	-- 올리다가 서버가 꺼졌다(계정은 저장했고 장부에는 아직 적지 못했다): 다음에 들어와 돌려받는다(보증금도)
-	for i = 1, sv5.Bag.size(ha5) do
-		ha5.gear[i] = false
-	end
-	ha5.money = 1000
-	local s5 = sv5.Bag.add(ha5, sv5.Items.make("hat", 20, 5))
-	fail.update = "before"
-	r = sv5.h.Market(pa5, "list", "gear", s5, 1, { 9000, 48 })
-	fail.update = false
-	expect(r.ok == false, "장부에 적지 못한 채")
-	local sv6 = server() -- 그대로 꺼졌다
-	local pa6, sa6 = enter(sv6, 9101, "경매판매", "axion")
-	local ha6 = sa6.hero
-	expect(sv6.Bag.used(ha6, "gear") == 0 and ha6.money == 1000 - DEP, "가방에는 없다(맡겼다) · 보증금이 빠져 있다")
-	r = sv6.h.Market(pa6, "mine")
-	local lost = mineOf(r, function(m) return m.it[1] == "hat" and m.it[2] == 20 end)
-	expect(lost ~= nil and lost.state == "back", "맡긴 것으로 남아 있다 — 돌려받을 것으로 보인다")
-	r = sv6.h.Market(pa6, "settle", lost.id, "back")
-	expect(r.ok == true and sv6.Bag.used(ha6, "gear") == 1 and ha6.gear[1].stage == 20 and ha6.gear[1].q == 5 and ha6.money == 1000, "반환하면 물건과 보증금이 돌아온다 — 사라지지 않았다")
-	-- 줄을 닫았는데(취소) 계정을 저장하지 못한 채 서버가 꺼졌다: 닫힌 줄과 맡긴 것이 남아 다음에 한 번만 돌려받는다
-	r = sv6.h.Market(pa6, "list", "gear", 1, 1, { 9000, 24 })
-	local closeId = r.mine[1].id
-	expect(r.ok == true and saved(9101).sales == 1 and saved(9101).gear == 0, "다시 올린다(저장됐다)")
-	fail.save = true
-	r = sv6.h.Market(pa6, "settle", closeId, "back")
-	fail.save = false
-	expect(r.ok == true and sv6.Bag.used(ha6, "gear") == 1 and boards.a_hat.list[1].c == 1 and saved(9101).gear == 0 and saved(9101).sales == 1, "취소했지만 저장하지 못했다: 장부의 줄은 닫힌 채 남는다(저장된 계정에는 맡긴 것이 그대로)")
-	local sv7 = server() -- 그대로 꺼졌다
-	local pa7, sa7 = enter(sv7, 9101, "경매판매", "axion")
-	local ha7 = sa7.hero
-	eq(sv7.Bag.used(ha7, "gear"), 0, "가방에는 없다(저장되지 못했다)")
-	r = sv7.h.Market(pa7, "mine")
-	expect(r.mine[1].id == closeId and r.mine[1].state == "ended" and r.mine[1].left == 1, "닫힌 줄이 「미판매」로 보인다")
-	local pb7, sb7 = enter(sv7, 9102, "경매구매", "riven")
-	sb7.hero.money = 99999
-	expect(sv7.h.Market(pb7, "buy", "a_hat", closeId, 1, 9000).why == sv7.Market.WHY.gone, "닫힌 줄은 아무도 못 산다")
-	r = sv7.h.Market(pa7, "settle", closeId, "back")
-	expect(r.ok == true and sv7.Bag.used(ha7, "gear") == 1 and #boards.a_hat.list == 0 and saved(9101).gear == 1 and saved(9101).sales == 0, "다시 반환하면 한 번만 돌아온다")
-	expect(sv7.h.Market(pa7, "settle", closeId, "back").why == sv7.Market.WHY.gone and sv7.Bag.used(ha7, "gear") == 1, "두 번은 없다")
-	-- 보관 기간이 지나면 사라진다
-	ha7.money = 1000
-	r = sv7.h.Market(pa7, "list", "gear", 1, 1, { 9000, 24 })
-	expect(r.ok == true, "다시 올린다")
-	advance(24 * 3600 + sv7.Market.KEEP + 10)
-	r = sv7.h.Market(pa7, "mine", true)
-	expect(#r.mine == 0 and r.used == 0, "보관 기간(1년)이 지난 것은 사라진다")
-	-- 다른 캐릭터로 바꿔 들어가도 맡긴 것은 계정의 것이다
-	sv7.Bag.give(ha7, potion.id, 2)
-	r = sv7.h.Market(pa7, "list", "use", 1, 2, { 9, 24 })
-	expect(r.ok == true and r.used == 1, "하나를 올려 둔다")
-	sv7.h.Chars(pa7, "leave")
-	local made = sv7.h.Chars(pa7, "create", "경매둘째", "reaper")
-	expect(made ~= nil and made.ok == true and sv7.h.Chars(pa7, "enter", made.id) ~= nil, "둘째 캐릭터")
-	eq(sv7.h.Market(pa7, "mine").used, 1, "같은 계정의 다른 캐릭터에게도 같은 것이 보인다")
-end
-
--- ================= 4) 창에 적는 글 · 폭 =================
-do
-	RESET()
-	local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
-	local UI = req("ReplicatedStorage/shared/lune/data/ui.generated")
-	local CLASSES = req("ReplicatedStorage/shared/lune/data/classes.generated")
-	local L = req("ReplicatedStorage/shared/lune/ui/layout")
-	local Market = req("ReplicatedStorage/shared/lune/sim/market")
-	local Items = req("ReplicatedStorage/shared/lune/sim/items")
-	local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
-	local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
-	local View = req("ReplicatedStorage/shared/lune/ui/auctionView")
-	local Format = req("ReplicatedStorage/shared/lune/ui/format")
-	local pixelText = req("Client/ui/pixelText")
-	pixelText.Register("small", KIT.font.small, {})
-	pixelText.Register("body", KIT.font.body, {})
-	local function width(text: string, font: string?): number
-		return (pixelText.Measure(text, font or "small"))
-	end
-	local S, M, W = L.AUCTION, Market.DATA, Market.WORDS
-	local NOW = 1700000000
-	-- 창: 공방에 있고, 메뉴 · 키로 어디서나 연다(메이플 옥션 방식) · 레벨의 문턱이 없다 · 가장 작은 화면 틀에 들어간다
-	local win
-	local keys = {}
-	for _, w in UI.windows do
-		if w.id == "auction" then
-			win = w
-		end
-		if w.key then
-			keys[w.key] = (keys[w.key] or 0) + 1
-		end
-	end
-	expect(win ~= nil and typeof(win.key) == "string" and win.from == 1 and win.name == W.title and keys[win.key] == 1, "경매장 창: 여는 키가 있고(다른 창과 겹치지 않는다) 레벨의 문턱이 없다")
-	expect(S.w + L.WIN.pad * 2 <= UI.grid.min.w - L.WIN.edge * 2 and S.h + L.WIN.head + L.WIN.foot + L.WIN.top <= UI.grid.min.h, "가장 작은 화면 틀(스마트폰)에 들어간다")
-	-- 단추에 「~다」로 끝나는 말을 쓰지 않는다(사용자 2026-10-13)
-	for _, word in { W.buy, W.sell, W.register, W.back, W.cancel, W.collect, W.take, W.giveBack, W.relist, W.all, W.refresh, W.sortPrice, W.sortTime } do
-		expect(typeof(word) == "string" and string.sub(word, -3) ~= "다", "단추의 글 " .. tostring(word))
-	end
-	-- 탭 · 분류 · 단추의 글이 제 칸에 든다
-	local tabsW = 0
-	for _, t in W.tabs do
-		tabsW += width(t) + 16
-	end
-	expect(#W.tabs == 4 and #View.TABS == 4 and tabsW <= S.w - S.purseW - 8 - S.slotsW, "탭 넷이 지갑 · 판매한 수와 겹치지 않는다")
-	expect(width(View.slots(M.slots, M.slots)) <= S.slotsW, "「판매 10 / 10」")
-	expect(width("999.9억") <= S.purseW - 21, "지갑의 달돈")
-	local cats = View.cats()
-	for _, c in cats do
-		expect(width(c.name) <= S.catW - 6, "분류의 이름 " .. c.name)
-	end
-	expect(#cats * (S.catW + S.catGap) + S.classW <= S.w - S.refreshW - 4, "분류 단추 · 직업 단추 · 새로 고침이 한 줄에 든다")
-	for _, id in CLASSES.order do
-		expect(width(View.className(id)) <= S.classW - 6, "직업의 이름 " .. View.className(id))
-	end
-	local class = CLASSES.order[1]
-	local seenClass = {}
-	for _ = 1, #CLASSES.order do
-		seenClass[class] = true
-		class = View.nextClass(class)
-	end
-	expect(class == CLASSES.order[1] and seenClass.salamander and seenClass.mooni, "직업 단추는 다섯 직업을 돈다")
-	expect(width(W.refresh) <= S.refreshW - 6, "새로 고침")
-	for _, mode in View.SORTS do
-		expect(width(View.sortName(mode)) <= S.sortW - 6, "차례 단추 " .. View.sortName(mode))
-	end
-	expect(S.searchW + 8 + S.sortW + 8 + width(Format.fill(W.rows, { n = M.show })) <= S.w, "찾는 칸 · 차례 단추 · 「60건」이 한 줄에 든다")
-	for _, word in { W.buy, W.cancel, W.collect, W.take, W.giveBack, W.relist, W.selling } do
-		expect(width(word) <= S.btnW - 6, "줄의 단추 " .. word)
-	end
-	expect(width(W.buy) <= S.askW - 6 and width(W.cancel) <= S.askW - 6, "묻는 줄의 단추")
-	expect(width(W.sell) <= S.sellW - 6 and width(W.back) <= S.backW - 6 and width(W.all) <= S.allW - 6, "「판매 등록」 · 「목록」 · 「모두 받기」")
-	expect(width(W.register, "body") <= S.registerW - 6, "「등록」")
-	for _, hrs in M.hours do
-		expect(width(Format.fill(W.hours, { n = hrs })) <= S.hourW - 6, "기간의 단추")
-	end
-	local formW = S.w - S.formX - S.labelW
-	expect(#M.hours * (S.hourW + 6) <= formW, "기간의 단추들이 양식에 든다")
-	for _, label in { W.count, W.price, W.unitPrice, W.period, Format.fill(W.fee, { pct = M.fee }), W.deposit, W.get } do
-		expect(width(label) <= S.labelW - 4, "양식의 이름표 " .. label)
-	end
-	expect(S.qtyField + 6 + S.ofW <= formW and S.priceField + 6 + 18 <= formW, "수량을 적는 칸과 「/ 20개」 · 값을 적는 칸과 달돈 그림이 양식에 든다")
-	expect(width(View.of(9999)) <= S.ofW and width(W.count) <= S.qtyLabelW, "「/ 9999개」 · 「수량」이 제 칸에 든다")
-	expect(width(Format.comma(M.priceMax)) <= S.priceW and width(W.unit) <= S.priceW, "가장 큰 값 · 「개당」이 값의 칸에 든다")
-	expect(width(Format.fill(W.total, { n = Format.comma(M.priceMax * 999) })) <= formW, "합계")
-	expect(width(Format.fill(W.left, { n = 48 })) <= S.leftW and width(Format.fill(W.leftMin, { n = 59 })) <= S.leftW, "남은 시간")
-	expect(width(Format.fill(W.agoMin, { n = 59 })) <= S.leftW and width(Format.fill(W.agoHour, { n = 23 })) <= S.leftW and width(Format.fill(W.agoDay, { n = M.logDays })) <= S.leftW, "언제 거래됐나")
-	expect(width("가나다라마바") <= S.sellerW and width("시험 판매자") <= S.sellerW, "판매자의 이름(여섯 글자)")
-	local depositNote = Format.fill(W.depositNote, { n = Format.comma(M.deposit) })
-	expect(width(depositNote) <= S.w and width(depositNote) <= (S.w - S.formX) * 2, "보증금의 알림(판매 탭 아래 한 줄 · 양식 아래 두 줄)")
-	expect(width(Format.fill(W.keep, { n = M.keepDays })) <= S.w - S.allW - 8, "보관 기간의 알림이 「모두 받기」와 겹치지 않는다")
-	for key, text in W.why do
-		expect(width(text) <= S.w, "까닭의 글 " .. key)
-	end
-	for _, text in { W.empty, W.sellEmpty, W.doneEmpty, W.logEmpty, W.wait, W.lost, W.kept, W.unsure, W.allNone, Format.fill(W.allDone, { n = 110 }), Format.fill(W.allPart, { n = 110 }) } do
-		expect(width(text) <= S.w, "알림의 글 " .. text)
-	end
-	expect(width(W.pick) <= S.listW - S.backW - 8 and width(W.none) <= S.listW - S.backW - 8, "등록 화면의 머리글이 「목록」과 겹치지 않는다")
-	-- 줄의 폭: 구매 = [그림] 이름 · 판매자 · 남은 시간 · [달돈] 값 · 단추
-	local cw = S.w - S.bar - 2
-	local nameW = cw - S.btnW - 8 - S.priceW - 19 - 6 - S.leftW - 6 - S.sellerW - 6 - (S.icon + 6)
-	expect(nameW >= 180, "구매 줄의 이름 칸 " .. nameW)
-	local me = { level = 30, class = "axion" }
-	local longest, longestSub, longName = 0, 0, ""
-	for _, slot in Items.data.GEAR do
-		for _, stage in { 1, 10, 20, 30, 150 } do
-			for q = 1, #Items.data.QUALITY do
-				local it = Items.make(slot, stage, q, "salamander")
-				it.star = math.min(22, Items.starCap(stage))
-				if width(View.name(it)) > longest then
-					longest, longName = width(View.name(it)), View.name(it)
-				end
-				for _, viewer in { me, { level = 1, class = "axion" }, { level = 150, class = "salamander" } } do
-					longestSub = math.max(longestSub, width((View.sub(it, viewer, nil))))
-					local worn = Items.make(slot, stage, 5, "salamander")
-					worn.star = it.star
-					longestSub = math.max(longestSub, width((View.sub(it, viewer, worn))))
-				end
-			end
-		end
-	end
-	expect(longest <= nameW, ("장비의 이름이 줄에 든다 %d / %d"):format(longest, nameW))
-	expect(longestSub <= nameW, ("이름 아래의 한 줄이 줄에 든다 %d / %d"):format(longestSub, nameW))
-	local bagRowW = S.listW - S.bar - 2 - (S.icon + 6)
-	expect(longest <= bagRowW and longestSub <= bagRowW, "등록 화면의 왼쪽 목록에도 든다")
-	local stackLong, bareLong = 0, ""
-	for _, g in Items.data.GOODS do
-		stackLong = math.max(stackLong, width(View.name({ item = g.id, n = g.stack })))
-		if width(g.name) > width(bareLong) then
-			bareLong = g.name
-		end
-	end
-	expect(stackLong <= nameW and stackLong <= bagRowW, "묶음의 이름이 줄에 든다 " .. stackLong)
-	-- 묻는 줄: 장비는 넓게, 묶음은 수를 고치는 단추의 왼쪽에
-	local yesX = S.w - S.askW * 2 - 6
-	local gearAsk = Format.fill(W.ask, { name = longName, price = Format.comma(M.priceMax) })
-	expect(width(gearAsk) <= yesX - 8, ("살 때 묻는 글(장비) %d / %d"):format(width(gearAsk), yesX - 8))
-	local stackAsk = Format.fill(W.askSum, { name = bareLong, price = Format.comma(9999999 * 999) })
-	local qtyLabelX = yesX - 8 - S.ofW - 4 - S.qtyField - 4 - S.qtyLabelW
-	expect(width(stackAsk) <= qtyLabelX - 8, ("살 때 묻는 글(묶음 — 가장 긴 이름 · 합계 9,999,999 x 999) %d / %d"):format(width(stackAsk), qtyLabelX - 8))
-	expect(width(View.stock(9999)) <= nameW, "「남은 수량 9999개」가 줄에 든다")
-	-- 판매 · 완료의 줄
-	local sellNameW = cw - S.btnW - 8 - S.priceW - 19 - 8 - (S.icon + 6)
-	local doneNameW = cw - S.btnW * 2 - 4 - 8 - S.priceW - 19 - 8 - (S.icon + 6)
-	expect(longest <= doneNameW and stackLong <= doneNameW and doneNameW >= 200, "완료 줄의 이름 칸(단추 둘 옆) " .. doneNameW)
-	expect(width(Format.fill(W.left, { n = 48 }) .. " · " .. Format.fill(W.remain, { n = 999, max = 999 })) <= sellNameW, "판매 중인 줄의 아래 글")
-	expect(width(W.unsold .. " · " .. Format.fill(W.units, { n = 999 }) .. " · " .. Format.fill(W.soldN, { n = 999 })) <= doneNameW and width(W.sold .. " · " .. Format.fill(W.soldN, { n = 999 })) <= doneNameW, "완료 줄의 아래 글")
-	-- 알림(이름이 들어가는 것): 가장 긴 이름으로
-	for _, text in { Format.fill(W.listed, { name = longName }), Format.fill(W.bought, { name = longName }), Format.fill(W.returned, { name = longName }), Format.fill(W.taken, { name = longName }), Format.fill(W.relisted, { name = longName }),
-		Format.fill(W.paid, { n = Format.comma(M.priceMax), fee = Format.comma(M.priceMax) }) .. Format.fill(W.paidDeposit, { n = Format.comma(M.deposit) }) } do
-		expect(width(text) <= S.w, ("알림이 한 줄에 든다 %d — %s"):format(width(text), text))
-	end
-	-- 글
-	local hat = Items.make("hat", 10, 4)
-	hat.star = 3
-	eq(View.name(hat), Items.name(hat), "장비의 이름: 이름만(2026-10-15 — 별은 아래 줄의 ★와 상세 판의 이름 위)")
-	eq(View.tone(hat), "tier3", "장비의 이름 색 = 성능 단")
-	local potion = Items.potionFor(1)
-	eq(View.name({ item = potion.id, n = 5 }), potion.name .. " x5", "묶음의 이름: 이름 x수")
-	eq(View.bare({ item = potion.id, n = 5 }), potion.name, "수를 뺀 이름")
-	expect(View.isStack({ item = potion.id, n = 1 }) and not View.isStack(hat), "묶음인가")
-	local subUp, toneUp = View.sub(hat, me, nil)
-	expect(string.find(subUp, "★3", 1, true) == 1 and string.find(subUp, Items.data.WORDS.stat, 1, true) ~= nil and string.find(subUp, Items.data.WORDS.power, 1, true) ~= nil and toneUp == "accent", "쓸 수 있는 장비: 별 · 옵션 · 장착하면 오르는 전투력")
-	eq(select(2, View.sub(hat, me, Items.make("hat", 20, 5))), "dim", "지금 것보다 못하면 흐리게")
-	local subLv, toneLv = View.sub(Items.make("hat", 40, 3), me, nil)
-	expect(toneLv == "red" and string.find(subLv, "40", 1, true) ~= nil, "레벨이 모자란 장비")
-	local subJob, toneJob = View.sub(Items.make("weapon", 10, 3, "riven"), me, nil)
-	expect(toneJob == "red" and subJob == Items.data.WORDS.otherJob, "다른 직업의 무기")
-	eq(View.left(NOW + 24 * 3600, NOW), Format.fill(W.left, { n = 24 }), "남은 시간: 24시간")
-	eq(View.left(NOW + 3599, NOW), Format.fill(W.leftMin, { n = 60 }), "한 시간이 안 되면 분으로")
-	eq(View.left(NOW, NOW), "", "끝났으면 빈 글")
-	eq(View.ago(NOW - 20, NOW), Format.fill(W.agoMin, { n = 1 }), "방금 = 1분 전")
-	eq(View.ago(NOW - 59 * 60, NOW), Format.fill(W.agoMin, { n = 59 }), "59분 전")
-	eq(View.ago(NOW - 3 * 3600, NOW), Format.fill(W.agoHour, { n = 3 }), "3시간 전")
-	eq(View.ago(NOW - 50 * 3600, NOW), Format.fill(W.agoDay, { n = 2 }), "2일 전")
-	-- 차례
-	local rows = { { id = "a", p = 10, e = NOW + 900, it = Market.pack(hat) }, { id = "b", p = 20, e = NOW + 100, it = { g = potion.id, n = 3 } }, { id = "c", p = 30, e = NOW + 500, it = { g = potion.id, n = 1 } } }
-	local byTime = View.sort(rows, "time")
-	expect(byTime[1].id == "b" and byTime[2].id == "c" and byTime[3].id == "a" and rows[1].id == "a" and View.sort(rows, "price")[1].id == "a", "남은 시간 순 = 곧 끝나는 것부터(받은 표는 그대로) · 가격 순 = 받은 그대로")
-	expect(View.nextSort("price") == "time" and View.nextSort("time") == "price" and View.sortName("price") == W.sortPrice and View.sortName("time") == W.sortTime, "차례 단추")
-	-- 이름으로 찾기
-	eq(#View.filter(rows, ""), 3, "빈 글이면 모두")
-	eq(#View.filter(rows, potion.name), 2, "이름으로 찾는다")
-	eq(#View.filter(rows, "lv.10"), 1, "영문은 대소문자를 가리지 않는다")
-	eq(#View.filter(rows, "%d+"), 0, "글자 그대로 찾는다(무늬가 아니다)")
-	-- 살 때
-	local stackRow = { id = "b", p = 50, l = 7, it = { g = potion.id, n = 7 } }
-	expect(View.askMax(stackRow, 1000) == 7 and View.askMax(stackRow, 120) == 2 and View.askMax(stackRow, 0) == 1 and View.askMax({ p = 5, it = Market.pack(hat) }, 1000) == 1, "살 수 있는 가장 큰 수: 남은 수 · 내 달돈으로")
-	eq(View.ask(stackRow, 3), Format.fill(W.askSum, { name = potion.name, price = "150" }), "묶음을 살 때 묻는 글: 합친 값(수량은 옆의 칸에 적는다)")
-	eq(View.ask(stackRow, nil), Format.fill(W.askSum, { name = potion.name, price = "0" }), "수량 칸이 비었으면 합계 0")
-	-- 수량을 적는 칸(사용자 2026-10-13: "경매장  수량도 입력하는걸로 처리하는방향으로 해주세요")
-	do
-		local text, n = View.count("3", 7)
-		expect(text == "3" and n == 3, "적은 수 그대로")
-		text, n = View.count("12", 7)
-		expect(text == "7" and n == 7, "올라온 수를 넘으면 그 수로")
-		text, n = View.count("0a05x", 7)
-		expect(text == "5" and n == 5, "숫자만 · 앞의 0은 뗀다")
-		text, n = View.count("", 7)
-		expect(text == "" and n == nil, "비었으면 수가 없다")
-		text, n = View.count("000", 7)
-		expect(text == "" and n == nil, "0은 수가 아니다")
-		eq(View.stock(10), Format.fill(W.stock, { n = 10 }), "「남은 수량 10개」")
-		eq(View.of(10), Format.fill(W.of, { n = 10 }), "「/ 10개」")
-		-- 구매 목록의 줄: 묶음은 이름(수는 빼고)과 올라온 수 · 장비는 이름 +별과 전투력
-		local name, sub, tone = View.rowText({ item = potion.id, n = 10 }, me, nil)
-		expect(name == potion.name and sub == View.stock(10) and tone == "text", "묶음의 줄: 이름과 「남은 수량 10개」(사용자: \"수량이 몇개가 올라와있는지도 보여야\")")
-		name, sub = View.rowText(hat, me, nil)
-		expect(name == View.name(hat) and string.find(sub, "★", 1, true) ~= nil and string.find(sub, Items.data.WORDS.stat, 1, true) ~= nil, "장비의 줄: 이름과 별 · 옵션")
-		-- 올라온 것을 눌렀을 때의 상세(사용자: "경매장에서 올라온거 눌러서 상세 볼수있어야합니다. 어떤아이템인지")
-		local info = View.info(hat, me, nil)
-		expect(info.name == View.name(hat) and #info.rows >= 4 and info.tone == "tier3", "장비의 상세: 이름 · 요구 레벨 · 성능 · 별 · 전투력 …")
-		info = View.info({ item = potion.id, n = 10 }, me, nil)
-		expect(info.name == potion.name and info.rows[1][1] == W.count and info.rows[1][2] == Format.fill(W.units, { n = 10 }) and #info.notes >= 1, "묶음의 상세: 올라온 수량 · 효과 · 설명")
-	end
-	eq(View.ask({ p = 1200, it = Market.pack(hat) }, 1), Format.fill(W.ask, { name = View.name(hat), price = "1,200" }), "장비를 살 때 묻는 글")
-	-- 값을 적는 칸 · 양식
-	eq(View.digits("12a3"), "123", "숫자만")
-	eq(View.digits("00120"), "120", "앞의 0은 뗀다")
-	eq(#View.digits("123456789012345"), #tostring(M.priceMax), "자릿수를 넘지 않는다")
-	local f = View.form(10, "50", 24, 1000)
-	expect(f.ok and f.price == 50 and f.total == 500 and f.fee == 25 and f.pay == 475 and f.deposit == M.deposit and f.short == false, "양식: 개당 50 x 10 = 합계 500 → 수수료 25 · 받는 금액 475 · 보증금")
-	expect(View.form(1, "1000", 24, M.deposit - 1).ok == false and View.form(1, "1000", 24, M.deposit - 1).short == true, "보증금이 모자라면 「등록」이 눌리지 않는다")
-	expect(View.form(1, "", 24, 1000).ok == false and View.form(1, "0", 24, 1000).ok == false and View.form(1, "100", 12, 1000).ok == false, "빈 값 · 0 · 틀린 기간이면 「등록」이 눌리지 않는다")
-	-- 가방에서 올릴 수 있는 것: 퀘스트의 물건 · 부서진 장비는 빠진다
-	local h = Hero.new(1, "axion")
-	for i = 1, Bag.size(h) do
-		h.gear[i], h.use[i], h.etc[i] = false, false, false
-	end
-	local quest
-	for _, g in Items.data.GOODS do
-		if g.quest and not quest then
-			quest = g
-		end
-	end
-	local broken = Items.make("suit", 10, 3)
-	broken.broken = true
-	Bag.add(h, hat)
-	Bag.add(h, broken)
-	Bag.give(h, potion.id, 7)
-	Bag.give(h, quest.id, 1)
-	local list = View.sellables(Bag.view(h))
-	expect(#list == 2 and list[1].tab == "gear" and list[1].it.slot == "hat" and list[2].tab == "use" and list[2].it.n == 7, "올릴 수 있는 것만 — 탭의 차례대로")
-	eq(#View.sellables(nil), 0, "가방이 아직 없으면 빈 목록")
-	-- 내 것 나누기: 판매 탭(판매 중인 것) · 완료 탭(받을 것)
-	local rowHat, rowPot = Market.pack(hat), { g = potion.id, n = 10 }
-	local mine = {
-		{ id = "s1", it = rowPot, p = 50, t = NOW, e = NOW + 47 * 3600, state = "selling", n = 10, left = 7, sold = 3, due = 3, pay = 143, deposit = 0 },
-		{ id = "s2", it = rowHat, p = 1000, t = NOW, e = NOW + 3 * 3600, state = "selling", n = 1, left = 1, sold = 0, due = 0, pay = 0, deposit = 0 },
-		{ id = "s3", it = rowHat, p = 1000, t = NOW, e = NOW, state = "soldout", n = 1, left = 0, sold = 1, due = 1, pay = 950, deposit = 100 },
-		{ id = "s4", it = rowPot, p = 50, t = NOW, e = NOW, state = "ended", n = 10, left = 6, sold = 4, due = 4, pay = 190, deposit = 0 },
-		{ id = "s5", it = rowHat, p = 1000, t = NOW, e = NOW, state = "back", n = 1, left = 1, sold = 0, due = 0, pay = 0, deposit = 100 },
-		{ id = "h1", it = { g = potion.id, n = 3 }, p = 150, t = NOW, e = NOW, state = "hold", n = 3, left = 0, sold = 0, due = 0, pay = 0, deposit = 0 },
-	}
-	local selling = View.sellingRows(mine)
-	expect(#selling == 2 and selling[1].id == "s1" and selling[2].id == "s2", "판매 탭: 판매 중인 것만")
-	eq(View.sellNote(mine[1], NOW), Format.fill(W.left, { n = 47 }) .. " · " .. Format.fill(W.remain, { n = 7, max = 10 }), "묶음: 남은 시간 · 「7 / 10개 남음」")
-	eq(View.sellNote(mine[2], NOW), Format.fill(W.left, { n = 3 }), "장비: 남은 시간만")
-	local done = View.doneRows(mine)
-	eq(#done, 5, "완료 탭: 대금을 받을 것(판매 중인 것도) · 다 팔린 것 · 미판매 둘 · 낙찰 — 안 팔린 판매 중인 것은 없다")
-	local byId = {}
-	for _, d in done do
-		byId[d.row.id] = d
-	end
-	expect(byId.s1.kind == "sold" and byId.s1.amount == 143 and #byId.s1.buttons == 1 and byId.s1.buttons[1].what == "collect" and byId.s1.buttons[1].text == W.collect and byId.s1.it.n == 3, "일부 팔린 것: 「판매 완료 · 3개 판매」 — 대금 143 · 「대금 수령」")
-	expect(byId.s3.kind == "sold" and byId.s3.amount == 1050 and byId.s3.text == W.sold and byId.s3.buttons[1].main == true, "다 팔린 것: 대금과 보증금을 합쳐 1,050")
-	expect(byId.s4.kind == "unsold" and byId.s4.amount == 190 and #byId.s4.buttons == 2 and byId.s4.buttons[1].what == "back" and byId.s4.buttons[2].what == "relist" and byId.s4.it.n == 6 and string.find(byId.s4.text, W.unsold, 1, true) ~= nil, "미판매: 남은 여섯 — 「반환」 「재등록」(팔린 넷의 대금 190도 함께)")
-	expect(byId.s5.kind == "unsold" and byId.s5.amount == 100 and #byId.s5.buttons == 2, "장부에 오르지 못한 것: 「미판매」 — 보증금이 돌아온다")
-	expect(byId.h1.kind == "won" and byId.h1.text == W.won and byId.h1.amount == nil and byId.h1.buttons[1].what == "take" and byId.h1.buttons[1].text == W.take, "낙찰: 「수령」")
-	eq(#View.doneRows(nil), 0, "아직 받은 것이 없으면 빈 목록")
-	eq(View.tradeSub({ item = potion.id, n = 3 }), Format.fill(W.units, { n = 3 }), "시세의 아래 글: 묶음은 수")
-	eq(View.tradeSub(hat), "", "장비는 빈 글")
-end
-
--- ================= 5) 창을 화면 없이 눌러 본다 — 가짜 화면 부품 위의 진짜 창(client/lune/ui/auctionWindow.luau) · 진짜 서버 =================
---  부품(Ui)만 가짜다: 무엇이 놓였는지 · 보이는지 · 눌리는지를 적어 두고, 놓이는 글이 제 폭에 드는지 그때그때 잰다. 단추를 누르면 창의 코드가 서버의 onMarket을 그대로 부른다.
-do
-	table.clear(disk)
-	table.clear(boards)
-	table.clear(names)
-	table.clear(log)
-	fail.save, fail.update, fail.read = false, false, false
-	slow = 0
-	local sv = server()
-	local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
-	local L = req("ReplicatedStorage/shared/lune/ui/layout")
-	local Format = req("ReplicatedStorage/shared/lune/ui/format")
-	local View = req("ReplicatedStorage/shared/lune/ui/auctionView")
-	local pixelText = req("Client/ui/pixelText")
-	pixelText.Register("small", KIT.font.small, {})
-	pixelText.Register("body", KIT.font.body, {})
-	local Market, Bag, Items = sv.Market, sv.Bag, sv.Items
-	local W, WHY, M, S = Market.WORDS, Market.WHY, Market.DATA, L.AUCTION
-	local DEP = M.deposit
-
-	-- ---- 가짜 부품 ----
-	local all, overflow = {}, {}
-	local function node(kind: string, parent: any)
-		local o = { kind = kind, parent = parent, children = {}, Visible = true, alive = true }
-		function o.GetChildren(self)
-			return table.clone(self.children)
-		end
-		function o.Destroy(self)
-			self.alive = false
-			if self.parent then
-				local i = table.find(self.parent.children, self)
-				if i then
-					table.remove(self.parent.children, i)
-				end
-			end
-		end
-		if parent then
-			table.insert(parent.children, o)
-		end
-		table.insert(all, o)
-		return o
-	end
-	local function fits(o)
-		local w = (pixelText.Measure(o.text, o.font))
-		if o.text ~= "" and w > o.width * o.lines then
-			table.insert(overflow, ("%s (%d > %d)"):format(o.text, w, o.width * o.lines))
-		end
-	end
-	local Ui = { COLOR = setmetatable({}, { __index = function(_, k) return k end }), M = KIT.ui.metric }
-	function Ui.group(parent, _x, _y, _w, _h, name)
-		local o = node("group", parent)
-		o.Name = name
-		return o
-	end
-	function Ui.line(parent)
-		return node("line", parent)
-	end
-	function Ui.scroll(parent, _x, _y, _w, h, contentH)
-		local o = node("scroll", parent)
-		o.h, o.contentH = h, contentH
-		return o
-	end
-	function Ui.slot(parent)
-		local o = node("slot", parent)
-		return { frame = o, setOn = function(_, on) o.on = on end }
-	end
-	function Ui.smallIcon(parent, name)
-		local o = node("icon", parent)
-		o.icon = name
-		return o
-	end
-	function Ui.setWorldIcon(label, name)
-		label.icon = name
-		label.Visible = name ~= nil
-	end
-	function Ui.text(parent, text, _x, _y, width, opts)
-		opts = opts or {}
-		local o = node("text", parent)
-		o.text, o.width, o.font, o.lines, o.tone = text, width, opts.font or "small", opts.lines or 1, opts.color
-		fits(o)
-		local item = { node = o }
-		function item.set(_, value)
-			o.text = value
-			fits(o)
-		end
-		function item.color(_, c)
-			o.tone = c
-		end
-		function item.show(_, on)
-			o.Visible = on
-		end
-		function item.move() end
-		return item
-	end
-	function Ui.button(parent, text, _x, _y, w, onClick, opts)
-		opts = opts or {}
-		local o = node("button", parent)
-		local h = opts.h or Ui.M.button
-		o.text, o.width, o.font, o.lines = text, w - 6, opts.font or (if h >= Ui.M.button then "body" else "small"), 1
-		o.enabled, o.main, o.onClick = true, opts.main == true, onClick
-		fits(o)
-		local item = { frame = o }
-		function item.setEnabled(_, on)
-			o.enabled = on
-		end
-		function item.setText(_, value)
-			o.text = value
-			fits(o)
-		end
-		function item.setMain(_, on)
-			o.main = on
-		end
-		return item
-	end
-	function Ui.tab(parent, text, _x, _y, onClick)
-		local o = node("tab", parent)
-		o.text, o.onClick, o.enabled = text, onClick, true
-		return { frame = o, width = (pixelText.Measure(text, "small")), setOn = function(_, on) o.on = on end }
-	end
-	function Ui.hit(parent)
-		local o = node("hit", parent)
-		o.enabled = true
-		o.Activated = { Connect = function(_, fn) o.onClick = fn end }
-		return o
-	end
-	function Ui.field(parent, _x, _y, _w, _h, placeholder)
-		local o = node("field", parent)
-		o.Text, o.placeholder = "", placeholder
-		function o.GetPropertyChangedSignal(_self, _name)
-			return { Connect = function(_, fn) o.changed = fn end }
-		end
-		return o
-	end
-	MOCK("Client/lune/ui/ui", Ui)
-	-- 아이템 상세 판(창 옆의 작은 판)도 가짜: 무엇을 띄웠는지만 적어 둔다
-	local detail = { owner = nil :: any, spec = nil :: any, shows = 0 }
-	MOCK("Client/lune/ui/itemDetail", {
-		show = function(owner, spec)
-			if detail.spec == nil or detail.spec.key ~= spec.key then
-				detail.shows += 1
-			end
-			detail.owner, detail.spec = owner, spec
-		end,
-		hide = function(owner)
-			if owner == nil or detail.owner == owner then
-				detail.owner, detail.spec = nil, nil
-			end
-		end,
-	})
-	local AuctionWindow = req("Client/lune/ui/auctionWindow")
-	expect(AuctionWindow.wide == true, "넓은 창(혼자 뜬다)")
-	local bw, bh = AuctionWindow.size()
-	expect(bw == S.w and bh == S.h, "창의 크기는 공방의 치수")
-
-	-- 그 창(root) 안에서 지금 보이는 것 가운데 n번째
-	local function shown(o, root): boolean
-		local under, at = false, o
-		while at do
-			if not at.alive or at.Visible == false then
-				return false
-			end
-			under = under or at == root
-			at = at.parent
-		end
-		return under
-	end
-	local function find(root, kind: string, text: string?, nth: number?)
-		local k = 0
-		for _, o in all do
-			if o.kind == kind and (text == nil or o.text == text) and shown(o, root) then
-				k += 1
-				if k == (nth or 1) then
-					return o
-				end
-			end
-		end
-		return nil
-	end
-	local function count(root, kind: string, text: string?): number
-		local k = 0
-		for _, o in all do
-			if o.kind == kind and (text == nil or o.text == text) and shown(o, root) then
-				k += 1
-			end
-		end
-		return k
-	end
-	local function press(root, kind: string, text: string?, nth: number?)
-		local o = find(root, kind, text, nth)
-		expect(o ~= nil and o.enabled ~= false, ("눌린다: %s 「%s」"):format(kind, tostring(text)))
-		if o and o.enabled ~= false then
-			o.onClick()
-		end
-	end
-	-- 그 글(의 일부)이 보이는가
-	local function has(root, text: string): boolean
-		for _, o in all do
-			if o.kind == "text" and shown(o, root) and string.find(o.text, text, 1, true) then
-				return true
-			end
-		end
-		return false
-	end
-	-- 입력 칸에 적는다(Roblox처럼: 글이 바뀔 때마다 알린다 — 듣는 쪽이 글을 고치면 또 알린다)
-	local function typeIn(box, text: string)
-		box.Text = text
-		for _ = 1, 4 do
-			local before = box.Text
-			box.changed()
-			if box.Text == before then
-				break
-			end
-		end
-	end
-
-	local pa, sa = enter(sv, 9201, "창판매자", "axion")
-	local pb, sb = enter(sv, 9202, "창구매자", "riven")
-	local ha, hb = sa.hero, sb.hero
-	reset(sv, ha, 500)
-	reset(sv, hb, 5000)
-	local potion = Items.potionFor(1)
-	local quest
-	for _, g in Items.data.GOODS do
-		if g.quest and not quest then
-			quest = g
-		end
-	end
-	local hat = Items.make("hat", 10, 4)
-	hat.star = 3
-	Bag.add(ha, hat)
-	Bag.give(ha, potion.id, 20)
-	Bag.give(ha, quest.id, 1)
-	local hatName = View.name(hat)
-	local function open(p, s)
-		local body = node("body", nil)
-		local ctx = {
-			me = function()
-				return { level = s.hero.level, class = s.hero.class, money = s.hero.money }
-			end,
-			bag = function()
-				return Bag.view(s.hero)
-			end,
-			market = function(action, a, b, c, d)
-				return sv.h.Market(p, action, a, b, c, d)
-			end,
-		}
-		return body, AuctionWindow.build(body, ctx, S.w, S.h), ctx
-	end
-
-	-- ---- 판 사람: 연다 → 판매 탭 → 「판매 등록」 ----
-	table.clear(log)
-	local wa, va, ca = open(pa, sa)
-	expect(count(wa, "tab") == 4 and find(wa, "tab", W.tabs[1]).on == true and find(wa, "tab", W.tabs[3]) ~= nil and find(wa, "tab", W.tabs[4]) ~= nil, "탭 넷(구매 · 판매 · 완료 · 시세) — 처음은 「구매」")
-	expect(table.find(log, "read:w_axion") ~= nil, "열자마자 내 직업의 무기 목록을 묻는다")
-	expect(has(wa, W.empty) and has(wa, View.slots(0, M.slots)) and has(wa, Format.fill(W.rows, { n = 0 })), "빈 목록 · 「판매 0 / 10」 · 「0건」")
-	expect(count(wa, "button", W.buy) == 0 and find(wa, "button", W.cancel) == nil and find(wa, "button", W.sortPrice) ~= nil, "살 것이 없으면 「구매」도, 묻는 줄도 없다 · 차례 단추가 보인다")
-	press(wa, "tab", W.tabs[2])
-	expect(find(wa, "tab", W.tabs[2]).on == true and has(wa, W.sellEmpty) and find(wa, "button", W.sell) ~= nil and find(wa, "button", "무기") == nil and count(wa, "field") == 0, "판매 탭: 「판매 중인 물건이 없다」와 「판매 등록」(분류 · 찾는 칸은 없다)")
-	expect(has(wa, Format.fill(W.depositNote, { n = Format.comma(DEP) })), "보증금의 알림이 보인다")
-	press(wa, "button", W.sell)
-	expect(has(wa, W.pick) and count(wa, "hit") == 2 and find(wa, "button", W.back) ~= nil and find(wa, "button", W.sell) == nil, "등록 화면: 올릴 수 있는 것 둘(모자 · 물약 — 퀘스트의 물건은 없다) · 「목록」")
-	expect(find(wa, "button", W.register).enabled == false and count(wa, "field") == 1 and count(wa, "button", "-10") == 0, "고르기 전에는 「등록」이 눌리지 않는다 · 수량 칸도 없다(수를 고치는 단추는 이제 없다)")
-	press(wa, "hit", nil, 1)
-	expect(has(wa, hatName) and find(wa, "text", W.price) ~= nil and find(wa, "text", W.unitPrice) == nil and count(wa, "field") == 1, "모자를 골랐다: 이름표는 「가격」 — 수량 칸은 없다")
-	local price = find(wa, "field")
-	expect(price ~= nil and price.placeholder == "0", "값을 적는 칸")
-	typeIn(price, "1,0a00")
-	eq(price.Text, "1000", "숫자만 남는다")
-	expect(find(wa, "text", "950") ~= nil and find(wa, "text", "50") ~= nil and find(wa, "text", Format.comma(DEP)) ~= nil, "수수료 50 · 보증금 · 받는 금액 950이 보인다")
-	expect(find(wa, "button", Format.fill(W.hours, { n = 24 })).main == true and find(wa, "button", Format.fill(W.hours, { n = 48 })).main == false, "기간은 24시간부터")
-	press(wa, "button", W.register)
-	expect(boards.a_hat ~= nil and #boards.a_hat.list == 1 and boards.a_hat.list[1].p == 1000 and Bag.used(ha, "gear") == 0 and ha.money == 500 - DEP, "서버에 올라갔다(보증금을 냈다)")
-	expect(has(wa, View.slots(1, M.slots)) and has(wa, Format.fill(W.listed, { name = Market.nameOf(boards.a_hat.list[1].it) })), "「판매 1 / 10」 · 올렸다는 알림")
-	expect(find(wa, "button", W.sell) ~= nil and count(wa, "button", W.cancel) == 1 and has(wa, hatName) and find(wa, "text", "1,000") ~= nil and find(wa, "text", tostring(500 - DEP)) ~= nil, "판매 중인 목록으로 돌아온다: 모자와 「취소」 · 지갑이 줄었다")
-	-- 묶음: 개당 가격 · 수를 고른다 · 48시간
-	press(wa, "button", W.sell)
-	expect(count(wa, "hit") == 1 and price.Text == "" and find(wa, "button", W.register).enabled == false, "등록 화면: 남은 것은 물약 — 양식은 비어 있다")
-	press(wa, "hit", nil, 1)
-	local qty = find(wa, "field", nil, 1) -- 수량을 적는 칸(값의 칸보다 위에 지어졌다)
-	expect(count(wa, "field") == 2 and qty ~= price and qty.Text == "20" and find(wa, "text", View.of(20)) ~= nil and find(wa, "text", W.unitPrice) ~= nil and find(wa, "text", W.price) == nil, "물약: 수량 칸에 그 묶음 전부(20) · 「/ 20개」 · 이름표는 「개당 가격」")
-	typeIn(qty, "35")
-	eq(qty.Text, "20", "가진 수를 넘게 적으면 가진 수로")
-	typeIn(qty, "")
-	typeIn(price, "50")
-	expect(find(wa, "button", W.register).enabled == false, "수량 칸이 비어 있으면 「등록」이 눌리지 않는다")
-	typeIn(qty, "1x0")
-	expect(qty.Text == "10" and has(wa, potion.name .. " x10") and find(wa, "button", W.register).enabled == true, "열 개(숫자만 남는다)")
-	expect(has(wa, Format.fill(W.total, { n = "500" })) and find(wa, "text", "475") ~= nil and find(wa, "text", "25") ~= nil, "개당 50 x 10: 「합계 500」 · 수수료 25 · 받는 금액 475")
-	press(wa, "button", Format.fill(W.hours, { n = 48 }))
-	expect(find(wa, "button", Format.fill(W.hours, { n = 48 })).main == true, "48시간을 골랐다")
-	press(wa, "button", W.register)
-	expect(boards.u ~= nil and boards.u.list[1].it.n == 10 and boards.u.list[1].p == 50 and boards.u.list[1].l == 10 and boards.u.list[1].e - boards.u.list[1].t == 48 * 3600 and Bag.count(ha, potion.id) == 10 and ha.money == 500 - DEP * 2, "물약 열 개를 개당 50에 48시간 올렸다")
-	expect(has(wa, View.slots(2, M.slots)) and count(wa, "button", W.cancel) == 2 and has(wa, Format.fill(W.remain, { n = 10, max = 10 })) and find(wa, "text", W.unit) ~= nil, "판매 중 둘: 묶음은 「10 / 10개 남음」과 「개당」")
-	-- 보증금이 모자라면 「등록」이 눌리지 않는다
-	local keepMoney = ha.money
-	ha.money = DEP - 1
-	press(wa, "button", W.sell)
-	press(wa, "hit", nil, 1)
-	typeIn(price, "9")
-	expect(find(wa, "button", W.register).enabled == false and find(wa, "text", Format.comma(DEP)).tone == "red", "보증금이 모자라면 눌리지 않는다(보증금이 빨갛게 보인다)")
-	ha.money = keepMoney
-	va.refresh()
-	expect(find(wa, "button", W.register).enabled == true and find(wa, "text", Format.comma(DEP)).tone == "dim", "달돈이 되면 눌린다")
-	typeIn(price, "")
-	press(wa, "button", W.back)
-	expect(find(wa, "button", W.sell) ~= nil and count(wa, "button", W.cancel) == 2, "「목록」: 판매 중인 것들로 돌아온다")
-	-- 내가 올린 것은 구매 탭에서 단추 대신 「판매 중」
-	press(wa, "tab", W.tabs[1])
-	press(wa, "button", "모자")
-	expect(has(wa, hatName) and count(wa, "button", W.buy) == 0 and find(wa, "text", W.selling) ~= nil, "내가 올린 것에는 「구매」가 없다")
-
-	-- ---- 사는 사람 ----
-	table.clear(log)
-	local wb, vb = open(pb, sb)
-	expect(table.find(log, "read:w_riven") ~= nil and has(wb, W.empty), "사는 사람의 창: 제 직업의 무기부터")
-	press(wb, "button", "무기")
-	expect(find(wb, "button", View.className("riven")) ~= nil, "무기 분류에서는 직업 단추가 보인다")
-	press(wb, "button", View.className("riven"))
-	expect(find(wb, "button", View.className(View.nextClass("riven"))) ~= nil and table.find(log, "read:w_" .. View.nextClass("riven")) ~= nil, "직업 단추를 누르면 다음 직업의 무기를 묻는다")
-	press(wb, "button", "모자")
-	expect(find(wb, "button", View.className(View.nextClass("riven"))) == nil, "다른 분류에서는 직업 단추가 없다")
-	expect(has(wb, hatName) and has(wb, "창판매자") and find(wb, "text", "1,000") ~= nil and count(wb, "button", W.buy) == 1 and has(wb, Format.fill(W.rows, { n = 1 })) and find(wb, "text", W.unit) == nil, "모자 분류: 이름 · 판매자 · 값 · 「구매」(장비에는 「개당」이 없다)")
-	expect(find(wb, "button", "모자").main == true and find(wb, "button", "무기").main == false, "고른 분류가 밝다")
-	hb.money = 10
-	vb.refresh()
-	expect(find(wb, "button", W.buy).enabled == false, "달돈이 모자라면 「구매」가 눌리지 않는다")
-	hb.money = 5000
-	vb.refresh()
-	expect(find(wb, "button", W.buy).enabled == true, "달돈이 되면 눌린다")
-	local search = find(wb, "field")
-	typeIn(search, "없는이름")
-	expect(has(wb, W.empty) and has(wb, Format.fill(W.rows, { n = 0 })) and count(wb, "button", W.buy) == 0, "찾는 이름이 없으면 빈 목록")
-	typeIn(search, "")
-	-- 줄을 누르면 그 물건의 상세가 뜬다(사용자 2026-10-13: "경매장에서 올라온거 눌러서 상세 볼수있어야합니다. 어떤아이템인지") — 한 번 더 누르면 닫힌다
-	eq(detail.spec, nil, "누르기 전에는 상세가 없다")
-	press(wb, "hit", nil, 1)
-	expect(detail.owner == "auction" and detail.spec ~= nil and detail.spec.info.name == hatName and detail.spec.item.slot == "hat" and detail.spec.item.star == 3 and #detail.spec.info.rows >= 4, "모자의 줄을 누르면 상세: 이름 · 성능 · 별 · 전투력")
-	expect(count(wb, "button", W.buy) == 1 and hb.money == 5000, "상세를 본다고 사지는 않는다")
-	press(wb, "hit", nil, 1)
-	eq(detail.spec, nil, "한 번 더 누르면 닫힌다")
-	press(wb, "hit", nil, 1)
-	detail.spec.onClose()
-	eq(detail.spec, nil, "상세 판의 ×로도 닫힌다")
-	press(wb, "hit", nil, 1)
-	press(wb, "tab", W.tabs[3])
-	eq(detail.spec, nil, "다른 탭으로 가면 닫힌다")
-	press(wb, "tab", W.tabs[1])
-	-- 장비를 산다: 한 번 더 묻는다(수량 칸은 없다) → 「완료」에 「낙찰」
-	press(wb, "button", W.buy)
-	expect(has(wb, Format.fill(W.ask, { name = hatName, price = "1,000" })) and count(wb, "button", W.buy) == 2 and find(wb, "button", W.cancel) ~= nil and count(wb, "field") == 1, "「…에 구매할까요?」와 「구매 · 취소」(수량 칸은 없다 — 보이는 칸은 찾는 칸뿐)")
-	press(wb, "button", W.cancel)
-	expect(count(wb, "button", W.buy) == 1 and find(wb, "button", W.cancel) == nil and hb.money == 5000, "「취소」하면 묻는 줄이 사라진다")
-	press(wb, "button", W.buy)
-	press(wb, "button", W.buy, 1) -- 묻는 줄의 「구매」(줄의 단추보다 먼저 지어졌다)
-	expect(hb.money == 4000 and Bag.used(hb, "gear") == 0 and has(wb, W.empty) and has(wb, Format.fill(W.bought, { name = Market.nameOf(Market.pack(hat)) })) and find(wb, "text", "4000") ~= nil, "샀다: 달돈이 빠졌다 · 목록에서 사라진다 · 「완료에서 수령」 알림(아직 가방에는 없다)")
-	press(wb, "tab", W.tabs[3])
-	expect(find(wb, "tab", W.tabs[3]).on == true and has(wb, hatName) and find(wb, "text", W.won) ~= nil and count(wb, "button", W.take) == 1 and find(wb, "button", W.take).main == true and find(wb, "button", "모자") == nil, "완료 탭: 모자가 「낙찰」 — 「수령」")
-	press(wb, "button", W.take)
-	expect(Bag.used(hb, "gear") == 1 and hb.gear[1].star == 3 and hb.gear[1].q == 4 and has(wb, W.doneEmpty) and has(wb, Format.fill(W.taken, { name = Market.nameOf(Market.pack(hat)) })) and find(wb, "button", W.all).enabled == false, "수령: 모자가 가방에 들어왔다 · 「받을 것이 없다」")
-	-- 묶음을 낱개로 산다
-	press(wb, "tab", W.tabs[1])
-	press(wb, "button", "소비")
-	expect(find(wb, "text", potion.name) ~= nil and find(wb, "text", View.stock(10)) ~= nil and find(wb, "text", "50") ~= nil and find(wb, "text", W.unit) ~= nil, "소비 분류: 물약 — 「남은 수량 10개」 · 개당 50(사용자: \"수량이 몇개가 올라와있는지도 보여야\")")
-	press(wb, "hit", nil, 1)
-	expect(detail.spec ~= nil and detail.spec.info.name == potion.name and detail.spec.info.rows[1][2] == Format.fill(W.units, { n = 10 }), "물약의 줄을 누르면 상세: 올라온 수량 10개 · 효과")
-	press(wb, "hit", nil, 1)
-	press(wb, "button", W.buy)
-	local buyQty = find(wb, "field", nil, 1) -- 묻는 줄의 수량 칸(찾는 칸보다 먼저 지어졌다)
-	expect(buyQty ~= search and buyQty.placeholder == "1", "수량 칸이다")
-	expect(count(wb, "field") == 2 and buyQty.Text == "1" and find(wb, "text", View.of(10)) ~= nil and find(wb, "text", W.count) ~= nil and has(wb, Format.fill(W.askSum, { name = potion.name, price = "50" })) and count(wb, "button", "+1") == 0, "묶음: 수량을 적는 칸 — 처음은 하나 · 「/ 10개」 · 합계 50")
-	typeIn(buyQty, "25")
-	expect(buyQty.Text == "10" and has(wb, Format.fill(W.askSum, { name = potion.name, price = "500" })), "올라온 수(10)를 넘게 적으면 그 수로 — 합계 500")
-	typeIn(buyQty, "")
-	expect(find(wb, "button", W.buy, 1).enabled == false and has(wb, Format.fill(W.askSum, { name = potion.name, price = "0" })), "수량 칸이 비어 있으면 「구매」가 눌리지 않는다")
-	typeIn(buyQty, "3")
-	expect(has(wb, Format.fill(W.askSum, { name = potion.name, price = "150" })) and find(wb, "button", W.buy, 1).enabled == true, "셋 — 합계 150")
-	hb.money = 120
-	vb.refresh()
-	expect(find(wb, "button", W.buy, 1).enabled == false, "달돈이 모자라면 「구매」가 눌리지 않는다")
-	hb.money = 4000
-	vb.refresh()
-	press(wb, "button", W.buy, 1)
-	expect(hb.money == 3850 and boards.u.list[1].l == 7 and find(wb, "text", View.stock(7)) ~= nil and Bag.count(hb, potion.id) == 0, "셋을 샀다: 목록에는 「남은 수량 7개」가 남는다")
-	-- 시세
-	press(wb, "tab", W.tabs[4])
-	expect(find(wb, "tab", W.tabs[4]).on == true and has(wb, potion.name) and has(wb, Format.fill(W.units, { n = 3 })) and has(wb, Format.fill(W.agoMin, { n = 1 })) and find(wb, "text", "50") ~= nil and count(wb, "button", W.buy) == 0 and find(wb, "button", W.sortPrice) == nil and find(wb, "button", "소비") ~= nil, "시세 탭: 물약 3개 · 개당 50 · 1분 전(분류 단추는 그대로 · 차례 단추와 「구매」는 없다)")
-	press(wb, "button", "모자")
-	expect(has(wb, Market.nameOf(Market.pack(hat))) or has(wb, View.bare(hat)), "모자 분류의 시세: 방금 팔린 모자")
-	press(wb, "button", "옷")
-	expect(has(wb, W.logEmpty), "거래가 없던 분류: 「최근 거래가 없다」")
-	-- 완료: 모두 받기
-	press(wb, "tab", W.tabs[3])
-	expect(count(wb, "button", W.take) == 1 and has(wb, potion.name .. " x3") and find(wb, "button", W.all).enabled == true, "완료 탭: 물약 x3이 「낙찰」")
-	press(wb, "button", W.all)
-	expect(Bag.count(hb, potion.id) == 3 and has(wb, W.doneEmpty) and has(wb, Format.fill(W.allDone, { n = 1 })), "「모두 받기」: 물약 셋이 가방에 들어왔다")
-
-	-- ---- 판 사람: 완료에서 대금 수령 · 판매 취소 ----
-	press(wa, "tab", W.tabs[3])
-	expect(count(wa, "button", W.collect) == 2 and find(wa, "text", W.sold) ~= nil and has(wa, W.sold .. " · " .. Format.fill(W.soldN, { n = 3 })) and find(wa, "text", Format.comma(950 + DEP)) ~= nil and find(wa, "text", "143") ~= nil, "완료 탭: 모자 「판매 완료」(대금 + 보증금) · 물약 「판매 완료 · 3개 판매」(143)")
-	local before = ha.money
-	press(wa, "button", W.collect, 1)
-	expect(ha.money > before and count(wa, "button", W.collect) == 1, "하나를 받았다: 줄이 사라진다")
-	press(wa, "button", W.all)
-	expect(ha.money == before + 950 + DEP + 143 and has(wa, W.doneEmpty) and has(wa, View.slots(1, M.slots)), "「모두 받기」: 모자의 대금 950과 보증금 · 물약 셋의 대금 143 — 물약은 계속 판매 중")
-	press(wa, "tab", W.tabs[2])
-	expect(count(wa, "button", W.cancel) == 1 and has(wa, Format.fill(W.remain, { n = 7, max = 10 })), "판매 탭: 물약 「7 / 10개 남음」")
-	press(wa, "button", W.cancel)
-	expect(Bag.count(ha, potion.id) == 17 and has(wa, W.sellEmpty) and has(wa, View.slots(0, M.slots)), "취소: 남은 일곱이 돌아온다 · 「판매 중인 물건이 없다」")
-	-- ---- 미판매: 반환 · 재등록 ----
-	local suit = Items.make("suit", 10, 3)
-	Bag.add(ha, suit)
-	press(wa, "button", W.sell)
-	eq(count(wa, "hit"), 2, "등록 화면: 가방의 새 장비가 목록에 생긴다")
-	press(wa, "hit", nil, 1)
-	typeIn(price, "700")
-	expect(find(wa, "button", Format.fill(W.hours, { n = 48 })).main == true, "기간은 앞에서 고른 것(48시간)이 남아 있다")
-	press(wa, "button", Format.fill(W.hours, { n = 24 }))
-	press(wa, "button", W.register)
-	expect(#boards.a_suit.list == 1 and count(wa, "button", W.cancel) == 1, "옷을 올렸다")
-	advance(25 * 3600)
-	press(wa, "tab", W.tabs[3])
-	expect(find(wa, "text", W.unsold) ~= nil and count(wa, "button", W.giveBack) == 1 and count(wa, "button", W.relist) == 1 and count(wa, "button", W.collect) == 0, "기간이 끝났다: 「미판매」 — 「반환」 「재등록」")
-	before = ha.money
-	press(wa, "button", W.relist)
-	expect(ha.money == before - DEP and has(wa, W.doneEmpty) and has(wa, Format.fill(W.relisted, { name = View.name(suit) })) and #boards.a_suit.list == 1 and boards.a_suit.list[1].c == nil, "재등록: 보증금을 다시 내고 다시 올라갔다")
-	press(wa, "tab", W.tabs[2])
-	expect(count(wa, "button", W.cancel) == 1 and has(wa, View.name(suit)), "판매 탭에 다시 판매 중으로 보인다")
-	advance(25 * 3600)
-	press(wa, "tab", W.tabs[3])
-	press(wa, "button", W.giveBack)
-	expect(Bag.used(ha, "gear") == 1 and has(wa, W.doneEmpty) and #boards.a_suit.list == 0, "반환: 옷이 가방으로 돌아왔다")
-
-	-- ---- 서버의 답이 늦다: 기다리는 동안 「처리 중…」 · 단추가 눌리지 않는다 ----
-	local real = ca.market
-	ca.market = function(...)
-		task.wait(1)
-		return real(...)
-	end
-	press(wa, "tab", W.tabs[1])
-	expect(has(wa, W.wait) and find(wa, "button", W.refresh).enabled == false and find(wa, "button", "모자").enabled == false, "기다리는 동안 「처리 중…」 — 단추가 꺼진다")
-	advance(2)
-	expect(not has(wa, W.wait) and find(wa, "button", W.refresh).enabled == true, "답이 오면 다시 눌린다")
-	-- 차례 단추
-	press(wa, "button", W.sortPrice)
-	expect(find(wa, "button", W.sortTime) ~= nil and find(wa, "button", W.sortPrice) == nil, "차례 단추: 「남은 시간 순」으로 바뀐다")
-	-- 답이 없다(보내는 빠르기의 한도 · 오류)
-	ca.market = function()
-		return nil
-	end
-	press(wa, "button", W.refresh)
-	expect(has(wa, WHY.off) and find(wa, "button", W.refresh).enabled == true, "답이 없으면 그렇게 알리고 막히지 않는다")
-	-- 답을 기다리는 사이에 창이 닫혔다: 탈이 없다
-	ca.market = function(...)
-		task.wait(1)
-		return real(...)
-	end
-	press(wa, "button", W.refresh)
-	va.destroy()
-	advance(2)
-	vb.destroy()
-	-- 로벅스로 산 아이템을 거래할 수 없는 계정(로블록스 정책 IsPaidItemTradingAllowed = false — 2026-10-30 사용자 "경험치, 드롭률 쿠폰 경매장 등록 안된다는데?" → "알림안뜨는데"):
-	--  판매 목록의 그 줄에 「거래 불가 — 로블록스 정책」 · 골라도 「등록」이 눌리지 않는다(전에는 등록을 눌러야 창 맨 아래 줄에만 떴다) · 정책이 막지 않는 계정은 그대로 올린다
-	do
-		Bag.give(sa.hero, "bm_exp", 2)
-		sa.policy = { IsPaidItemTradingAllowed = false }
-		local wl, vl = open(pa, sa)
-		press(wl, "tab", W.tabs[2])
-		press(wl, "button", W.sell)
-		expect(has(wl, W.paidLock), "막힌 계정: 판매 목록의 경험치 쿠폰 줄에 「" .. W.paidLock .. "」")
-		local nth = 0
-		for i = 1, count(wl, "hit") do
-			nth = i
-		end
-		press(wl, "hit", nil, nth)
-		expect(find(wl, "button", W.register).enabled == false, "막힌 계정: 쿠폰을 골라도 「등록」이 눌리지 않는다")
-		vl.destroy()
-		sa.policy = { IsPaidItemTradingAllowed = true }
-		local wo, vo = open(pa, sa)
-		press(wo, "tab", W.tabs[2])
-		press(wo, "button", W.sell)
-		expect(not has(wo, W.paidLock), "정책이 막지 않는 계정: 표시 없음")
-		vo.destroy()
-		sa.policy = nil
-	end
-	eq(#overflow, 0, "칸을 넘는 글이 없다: " .. table.concat(overflow, " / "))
-	eq(#warnings, 0, "경고가 없다: " .. table.concat(warnings, " / "))
-end
-
--- ================= 6) 관리자의 시험 물건(메뉴 → 관리 → 아이템 → 「경매장 시험」) =================
---  혼자서도 사는 쪽을 해 볼 수 있게 「시험 판매자」의 물건을 올리고 치운다. 물건을 만들어 내는 일이라 관리자만 된다(서버가 계정 번호로 가린다).
-do
-	table.clear(disk)
-	table.clear(boards)
-	table.clear(names)
-	fail.save, fail.update, fail.read = false, false, false
-	slow = 0
-	local sv = server()
-	local Market, Bag = sv.Market, sv.Bag
-	local Admin = req("ServerScriptService/server/lune/modules/admin")
-	local adminId = next(Admin.IDS)
-	local pu, su = enter(sv, 9301, "보통사람", "mooni")
-	local pm, sm = enter(sv, adminId, "관리하는이", "riven")
-	expect(sv.h.Admin(pu, "market", "fill") == nil and next(boards) == nil, "관리자가 아니면 아무 일도 일어나지 않는다(대답도 없다)")
-	local r = sv.h.Admin(pm, "market", "fill")
-	expect(r ~= nil and r.ok == true, "관리자는 시험 물건을 올린다 " .. tostring(r and r.msg))
-	local total, weaponBoard = 0, "w_" .. sm.hero.class
-	for _, doc in boards do
-		for _, e in doc.list do
-			total += 1
-			expect(e.u == 0 and e.sn == "시험 판매자" and Market.unpack(e.it) ~= nil and e.l == Market.units(e.it), "시험 판매자의 줄(판 사람의 번호 0)")
-		end
-	end
-	expect(total == 3 and boards[weaponBoard] ~= nil and boards.a_hat ~= nil and boards.u ~= nil, "셋: 관리자의 직업의 무기 · 모자 · 물약")
-	expect(sv.h.Admin(pm, "market", "뭔가").ok == false, "모르는 일")
-	-- 누구나 그 물건을 산다(산 것은 「완료」에 들어온다)
-	reset(sv, su.hero, 5000)
-	local rows = sv.h.Market(pu, "browse", "a_hat").rows
-	expect(#rows == 1 and rows[1].sn == "시험 판매자" and rows[1].mine == false, "경매장에 보인다")
-	r = sv.h.Market(pu, "buy", "a_hat", rows[1].id, 1, rows[1].p)
-	expect(r.ok == true and su.hero.money == 5000 - rows[1].p and Market.holds(su.acct.market) == 1, "산다")
-	expect(sv.h.Market(pu, "all").ok == true and Bag.used(su.hero, "gear") == 1, "수령한다")
-	-- 치운다: 팔린 것까지 모두
-	expect(sv.h.Admin(pu, "market", "clear") == nil and #boards.u.list == 1, "관리자가 아니면 치우지도 못한다")
-	r = sv.h.Admin(pm, "market", "clear")
-	expect(r.ok == true and string.find(r.msg, "3", 1, true) ~= nil, "치운다 " .. tostring(r.msg))
-	for key, doc in boards do
-		eq(#doc.list, 0, "장부가 비었다 " .. key)
-	end
-	eq(#sv.h.Market(pu, "browse", "u", true).rows, 0, "목록에서도 사라진다")
-	-- 남이 올린 것은 치워지지 않는다
-	r = sv.h.Market(pu, "list", "gear", 1, 1, { 123, 24 })
-	expect(r.ok == true, "산 것을 되판다 " .. tostring(r.why))
-	sv.h.Admin(pm, "market", "clear")
-	eq(#boards.a_hat.list, 1, "다른 사람의 물건은 그대로다")
-end
-
-end)
-runTest('61_lune_cash', function()
--- 「달의 계승자」 — 유료 상품(로벅스 — 2026-10-20). 사용자: "1. 스타포스 관련은 판매하지않는다 2. 달가루, 달돈 계정당 수량 제한해서 판다 3. … 경매장에서 거래가능 …"
---  · "경험치 쿠폰 판매해도 됩니다. 꾸밈탈것 만들어도 됩니다. 만들어 봅시다"
---  ① 상품 표 ↔ 아이템 표 ② 결제 하나 = 한 번(같은 결제 번호는 두 번 주지 않는다) ③ 주간 수 · 계정에 한 번 ④ 보관함 → 가방 ⑤ 쓰기(주머니 · 상자 · 확장권 · 쿠폰)
---  ⑥ 저장(DataStore처럼 JSON을 한 번 거쳐) ⑦ 사서 늘린 캐릭터 칸 ⑧ 서버의 결제 처리(저장 실패 → 되돌리고 「아직」 · 이미 준 결제 → 「줬다」)
-local Cash = req("ReplicatedStorage/shared/lune/sim/cash")
-local Account = req("ReplicatedStorage/shared/lune/sim/account")
-local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
-local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
-local Items = req("ReplicatedStorage/shared/lune/sim/items")
-local BM = req("ReplicatedStorage/shared/lune/data/bm.generated")
-
-local function json(v)
-	if typeof(v) ~= "table" then
-		return v
-	end
-	local n = 0
-	for _ in v do
-		n += 1
-	end
-	local array = n > 0 and #v == n
-	local out = {}
-	for k, x in v do
-		out[if array then k else tostring(k)] = json(x)
-	end
-	return out
-end
-
--- ① 표가 맞는가
-eq(#Cash.check(), 0, "유료 아이템이 아이템 표에 다 있다(주머니 · 상자 16레벨대 · 확장권 · 이름 · 쿠폰)")
-for _, p in BM.products do
-	expect(not string.find(p.name, "스타포스") and not string.find(p.name, "강화"), "스타포스 · 강화 상품이 없다(결정 1): " .. p.name)
-	-- (재화 상품의 수량 제한 — 결정 2 — 은 2026-10-22 사용자 "달빛상점에서 달가루 상자, 달돈주머니 구매 제한 푼다"로 뺐다: 아래 ③)
-	if p.trade then
-		eq(p.kind, "product", "거래되는 것은 아이템으로 받는 상품뿐(결정 3): " .. p.id)
-	end
-end
-for _, b in BM.bands do
-	expect(Items.goods("bm_money_" .. b).sell >= 1, "상인에게 팔 때 1달돈 이상(못 파는 것은 퀘스트 물건뿐)")
-end
-
--- 계정 하나 · 캐릭터 하나(Lv.37)
-local NOW = 1792800000 -- 어느 날
-local acct = Account.new()
-local h = Hero.new(1, "axion")
-h.level = 37
-Account.add(acct, "달빛", "axion", Hero.pack(h), NOW)
-eq(Cash.topLevel(acct), 37, "계정의 가장 높은 레벨")
-eq(Cash.bandOf(37), 30, "레벨대 = 10 단위로 내림")
-eq(Cash.bandOf(5), 1, "1~9 = Lv.1")
-eq(Cash.bandOf(150), 150, "끝 레벨")
-
--- ② 결제 하나 = 한 번
-local ok = Cash.grant(acct, "money", "r1", NOW, Account.MAX)
-expect(ok, "달돈 주머니를 준다")
-eq(acct.bm.box[1].id, "bm_money_30", "레벨대의 주머니가 보관함에")
-local again, why = Cash.grant(acct, "money", "r1", NOW, Account.MAX)
-expect(not again and why == "dup", "같은 결제 번호는 두 번 주지 않는다")
-eq(acct.bm.box[1].n, 1, "보관함의 수는 그대로")
-
--- ③ 주머니 · 상자는 한 주 제한 없이 산다(2026-10-22 사용자 "달빛상점에서 달가루 상자, 달돈주머니 구매 제한 푼다" — 전에는 한 주에 3번)
-Cash.grant(acct, "money", "r2", NOW, Account.MAX)
-Cash.grant(acct, "money", "r3", NOW, Account.MAX)
-local can = Cash.canBuy(acct, "money", NOW, 0, Account.MAX)
-expect(can, "세 번 산 주에도 또 산다")
-can = Cash.canBuy(acct, "money", NOW, 5, Account.MAX)
-expect(can, "구매 창이 여럿 떠 있어도 막지 않는다")
-expect(Cash.canBuy(acct, "dust", NOW, 9, Account.MAX), "달가루 상자도 제한 없이")
-expect(Cash.product("money").limit == false and Cash.product("dust").limit == false, "주머니 · 상자에는 횟수 제한이 없다")
--- (주 번호의 셈은 남아 있다 — 다시 제한을 두는 상품을 위해)
-eq(Cash.weekOf(NOW + 7 * 86400) - Cash.weekOf(NOW), 1, "주 번호가 하나 오른다")
--- 한국 시각 월요일 0시에 바뀐다: 일요일 23:59(한국) → 월요일 0:00(한국)
-local mon = 4 * 86400 - 9 * 3600 + 52 * 7 * 86400 -- 어느 월요일 0시(한국)
-eq(Cash.weekOf(mon) - Cash.weekOf(mon - 60), 1, "한국 시각 월요일 0시에 새 주")
-eq(Cash.weekOf(mon + 6 * 86400) - Cash.weekOf(mon), 0, "그 주의 일요일까지 같은 주")
--- 계정에 한 번(첫걸음 묶음)
-expect(Cash.grant(acct, "starter", "s1", NOW, Account.MAX), "첫걸음 묶음")
-expect(not Cash.canBuy(acct, "starter", NOW, 0, Account.MAX), "첫걸음 묶음은 계정에 한 번")
--- 준비 중(번호 · 그림이 없는 것)은 주지 않는다
-expect(not Cash.grant(acct, "mount", "m1", NOW, Account.MAX), "탈것은 아직 준비 중(그림)")
-
--- ④ 보관함 → 가방
-local h2 = Hero.unpack(1, acct.chars[1].hero)
-local before = Bag.count(h2, "bm_money_30")
-local moved, left = Cash.take(h2, acct.bm)
-expect(moved >= 4, "보관함을 모두 받는다(주머니 3 + 묶음)")
-eq(left, 0, "보관함이 비었다")
-eq(Bag.count(h2, "bm_money_30") - before, 4, "주머니 넷(산 셋 + 묶음 하나)")
-eq(Bag.count(h2, "bm_bagx"), 1, "묶음의 가방 확장권")
--- 가방이 가득 차면 남는다
-Cash.grant(acct, "exp", "e1", NOW, Account.MAX)
-local full = Hero.unpack(1, acct.chars[1].hero)
-for i = 1, Bag.size(full) do
-	full.use[i] = { item = "potion1", n = 200 }
-end
-moved, left = Cash.take(full, acct.bm)
-eq(moved, 0, "가방에 자리가 없으면 옮기지 않는다")
-eq(left, 1, "보관함에 그대로 남는다")
-
--- ⑤ 쓰기
-local money0 = h2.money
-local def = Items.goods("bm_money_30")
-expect(Cash.use(h2, acct, def), "달돈 주머니를 쓴다")
-eq(h2.money - money0, def.amount, "든 만큼 달돈이 는다")
-local dust0 = h2.dust
-expect(Cash.use(h2, acct, Items.goods("bm_dust_60")), "달가루 상자")
-eq(h2.dust - dust0, Items.goods("bm_dust_60").amount, "든 만큼 달가루가 는다")
-local size0 = Bag.size(h2)
-expect(Cash.use(h2, acct, Items.goods("bm_bagx")), "가방 확장권")
-eq(Bag.size(h2) - size0, 4, "세 탭이 함께 4칸")
-eq(#h2.gear, Bag.size(h2), "장비 탭도 칸이 늘었다")
-for _ = 2, Cash.RULES.bagSteps do
-	Cash.use(h2, acct, Items.goods("bm_bagx"))
-end
-local more, whyBag = Cash.use(h2, acct, Items.goods("bm_bagx"))
-expect(not more and string.find(whyBag, "더 늘릴 수 없다"), "가방 확장권은 넷까지")
-local store0 = Account.storeExtra(acct)
-expect(Cash.use(h2, acct, Items.goods("bm_storex")), "창고 확장권")
-eq(Account.storeExtra(acct) - store0, Cash.RULES.storeStep, "창고가 한 장의 칸만큼")
--- 경험치 쿠폰
-eq(Cash.expMul(h2), 1, "쿠폰 없이는 1배")
-local xp0 = Hero.killXp(h2, 37, 1)
-expect(Cash.use(h2, acct, Items.goods("bm_exp")), "경험치 쿠폰")
-eq(h2.expLeft, Cash.RULES.exp.add, "30분")
-local xp1 = Hero.killXp(h2, 37, 1)
-expect(math.abs(xp1 - xp0 * Cash.RULES.exp.mul) <= 1, ("사냥 경험치 1.5배(%d → %d)"):format(xp0, xp1))
-Hero.tick(h2, 60)
-eq(h2.expLeft, Cash.RULES.exp.add - 60, "게임 안에 있는 동안 줄어든다")
-for _ = 1, 5 do
-	Cash.use(h2, acct, Items.goods("bm_exp"))
-end
-local over = Cash.use(h2, acct, Items.goods("bm_exp"))
-expect(not over, "3시간을 넘게 쌓지 않는다")
-expect(h2.expLeft <= Cash.RULES.exp.cap, "3시간 안")
--- 드롭률 쿠폰(2026-10-27 사용자: "달빛상점에 경험치 쿠폰같이 드롭률 쿠폰도똑같이 살수있게 만들자") — 경험치 쿠폰과 같은 꼴 · 드롭률 패스와 더한다
-eq(Cash.dropMul(h2), 1, "드롭률 쿠폰 없이는 1배")
-expect(Cash.use(h2, acct, Items.goods("bm_drop")), "드롭률 쿠폰")
-eq(h2.dropLeft, Cash.RULES.drop.add, "드롭률 쿠폰 30분")
-eq(Cash.dropMul(h2), Cash.RULES.drop.mul, "드롭률 1.5배")
-h2.passDrop = 0.25
-eq(Cash.dropMul(h2), Cash.RULES.drop.mul + 0.25, "드롭률 패스와 함께면 더해서 1.75배")
-h2.passDrop = nil
-Hero.tick(h2, 60)
-eq(h2.dropLeft, Cash.RULES.drop.add - 60, "드롭률 쿠폰도 게임 안에 있는 동안 줄어든다")
-for _ = 1, 5 do
-	Cash.use(h2, acct, Items.goods("bm_drop"))
-end
-expect(not Cash.use(h2, acct, Items.goods("bm_drop")), "드롭률 쿠폰도 3시간을 넘게 쌓지 않는다")
-local dropProduct = nil
-for _, pr in req("ReplicatedStorage/shared/lune/data/bm.generated").products do
-	if pr.id == "drop" then
-		dropProduct = pr
-	end
-end
-expect(dropProduct ~= nil and dropProduct.robux == 49 and dropProduct.trade == true and dropProduct.built == true, "달빛 상점에 드롭률 쿠폰(49 로벅스 · 거래됨)")
-expect(dropProduct ~= nil and dropProduct.rid == 3722962958 and Cash.byRid(3722962958) == "drop", "대시보드의 상품 번호(3722962958 — 사용자 10-27) → 드롭률 쿠폰")
-do -- 사면(결제 처리) 보관함에 드롭률 쿠폰 한 장
-	local a2 = Account.new()
-	expect(Cash.grant(a2, "drop", "rDrop1", NOW, Account.MAX), "드롭률 쿠폰을 산다")
-	local n = 0
-	for _, e in a2.bm.box do
-		if e.id == "bm_drop" then
-			n += e.n
-		end
-	end
-	eq(n, 1, "보관함에 드롭률 쿠폰 한 장(받기 → 가방 → 쓰기는 경험치 쿠폰과 같다)")
-end
-do -- 경매장에 올릴 수 있다(2026-10-30 사용자: "드롭률 쿠폰이랑 경험치쿠폰 로벅스로 사는거 경매장에 올릴수 있게해줘"): 사면 보관함 → 받기로 가방 → 경매장의 「판매」 목록
-	local Market = req("ReplicatedStorage/shared/lune/sim/market")
-	local View = req("ReplicatedStorage/shared/lune/ui/auctionView")
-	local a3 = Account.new()
-	local h3 = Hero.new(3, "riven")
-	expect(Cash.grant(a3, "exp", "rExp9", NOW, Account.MAX) and Cash.grant(a3, "drop", "rDrop9", NOW, Account.MAX), "경험치 · 드롭률 쿠폰을 산다")
-	local moved = Cash.take(h3, a3.bm)
-	eq(moved, 2, "보관함 → 가방(둘)")
-	local bagView = Bag.view(h3)
-	for _, id in { "bm_exp", "bm_drop" } do
-		local listed = false
-		for _, e in View.sellables(bagView) do
-			if e.it.item == id then
-				listed = Market.sellable(e.it) == true
-			end
-		end
-		expect(listed, Items.goods(id).name .. ": 경매장 「판매」 목록에 든다(올릴 수 있다)")
-	end
-end
--- 달가루 상자 = 한 시간 반치(2026-10-27 사용자 "로벅스로 구매하는 달가루의 효율이 조금더 좋게")
-eq(req("ReplicatedStorage/shared/lune/data/bm.generated").rules.dustHours, 1.5, "달가루 상자 = 가장 높은 캐릭터의 한 시간 반 사냥치")
-local box50 = Items.goods("bm_dust_50")
-eq(box50 and box50.amount, 2970, "Lv.50 달가루 상자 2,970(한 시간치 1,980의 1.5배)")
-
--- ⑥ 저장(JSON을 거쳐)
-acct.chars[1].hero = Hero.pack(h2)
-local back = Account.unpack(json(Account.pack(acct)))
-expect(back, "계정을 다시 읽는다")
-eq(back.bm.store, acct.bm.store, "창고 확장")
-eq(#back.bm.rec, #acct.bm.rec, "처리한 결제 번호")
-eq(back.bm.wc.money, nil, "제한 없는 상품은 주간 수를 세지 않는다")
-eq(back.bm.once.starter, 1, "계정에 한 번")
-eq(#back.bm.box, 1, "보관함(쿠폰 하나)")
-local hb = Hero.unpack(1, back.chars[1].hero)
-eq(hb.bagPaid, h2.bagPaid, "가방 확장")
-eq(Bag.size(hb), Bag.size(h2), "가방 칸 수")
-eq(hb.expLeft, h2.expLeft, "쿠폰 남은 시간")
-eq(hb.dropLeft, h2.dropLeft, "드롭률 쿠폰 남은 시간도 저장된다")
--- 이상한 저장은 버린다
-local bad = Cash.unpack({ box = { { id = "없는것", n = 1 }, { id = "bm_exp", n = -3 } }, slots = 99, store = 99, wc = { money = "x" } }, Account.MAX)
-eq(#bad.box, 0, "없는 아이템 · 이상한 수는 버린다")
-eq(bad.slots, 0, "캐릭터 칸이 너무 크면 0")
-eq(bad.store, 0, "창고 확장이 너무 크면 0")
-
--- ⑦ 사서 늘린 캐릭터 칸: 일곱 번째 캐릭터가 「읽지 못한 것」으로 빠지지 않는다
-local big = Account.new()
-for i = 1, Account.MAX do
-	Account.add(big, "c" .. i, "riven", Hero.pack(Hero.new(i, "riven")), NOW)
-end
-expect(Account.full(big), "처음 칸이 다 찼다")
-expect(Cash.grant(big, "charx", "c1", NOW, Account.MAX), "캐릭터 칸 +1")
-expect(not Account.full(big), "한 칸 더")
-Account.add(big, "c7", "mooni", Hero.pack(Hero.new(7, "mooni")), NOW)
-local big2 = Account.unpack(json(Account.pack(big)))
-eq(#big2.chars, Account.MAX + 1, "다시 읽어도 일곱 캐릭터")
-eq(#big2.broken, 0, "빠진 캐릭터가 없다")
-eq(Account.view(big2).max, Account.MAX + 1, "고르기 화면의 칸 수")
-local capped = Account.new()
-for i = 1, Cash.RULES.charCap - Account.MAX do
-	Cash.grant(capped, "charx", "k" .. i, NOW, Account.MAX)
-end
-local cc, whyChar = Cash.canBuy(capped, "charx", NOW, 0, Account.MAX)
-expect(not cc and string.find(whyChar, "캐릭터 칸"), "캐릭터 칸은 12까지")
-
--- ⑧ 서버의 결제 처리(가짜 세계)
-local CashServer = req("ServerScriptService/server/lune/modules/cash")
-local saveOk, saves, told = true, 0, {}
-local sess = { player = { UserId = 77 }, acct = Account.new(), loaded = true }
-Account.add(sess.acct, "결제", "salamander", Hero.pack(Hero.new(1, "salamander")), NOW)
-CashServer.start({
-	sessionOf = function(uid)
-		return if uid == 77 then sess else nil
-	end,
-	saveNow = function()
-		saves += 1
-		return saveOk
-	end,
-	afterSpent = function() end,
-	notify = function(_, key)
-		table.insert(told, key)
-	end,
-	now = function()
-		return NOW
-	end,
-})
-local GRANTED, LATER = Enum.ProductPurchaseDecision.PurchaseGranted, Enum.ProductPurchaseDecision.NotProcessedYet
-eq(CashServer.processReceipt({ PlayerId = 77, PurchaseId = "p1", CurrencySpent = 49 }, "dust"), GRANTED, "산 것을 주고 저장 → 줬다")
-eq(sess.acct.bm.box[1].id, "bm_dust_1", "보관함에 달가루 상자")
-eq(sess.acct.spent, 49, "쓴 로벅스(후원 판)")
-eq(told[1], "dust", "화면에 알린다")
-eq(CashServer.processReceipt({ PlayerId = 77, PurchaseId = "p1", CurrencySpent = 49 }, "dust"), GRANTED, "같은 결제가 다시 오면 → 줬다(두 번 주지 않음)")
-eq(sess.acct.bm.box[1].n, 1, "상자는 하나 그대로")
-eq(sess.acct.spent, 49, "쓴 로벅스도 그대로")
-saveOk = false
-eq(CashServer.processReceipt({ PlayerId = 77, PurchaseId = "p2", CurrencySpent = 49 }, "dust"), LATER, "저장에 실패하면 → 아직(로블록스가 다시 보낸다)")
-eq(sess.acct.bm.box[1].n, 1, "준 것을 되돌렸다")
-eq(sess.acct.spent, 49, "쓴 로벅스도 되돌렸다")
-eq(Cash.bought(sess.acct.bm, "dust", NOW), 0, "제한 없는 상품은 주간 수를 세지 않는다")
-saveOk = true
-eq(CashServer.processReceipt({ PlayerId = 77, PurchaseId = "p2", CurrencySpent = 49 }, "dust"), GRANTED, "다시 오면 이번에는 준다")
-eq(sess.acct.bm.box[1].n, 2, "상자 둘")
-eq(CashServer.processReceipt({ PlayerId = 99, PurchaseId = "p3", CurrencySpent = 49 }, "dust"), LATER, "이 서버에 없는 사람 → 아직")
-sess.loaded = false
-eq(CashServer.processReceipt({ PlayerId = 77, PurchaseId = "p4", CurrencySpent = 49 }, "dust"), LATER, "계정을 다 읽기 전 → 아직")
-sess.loaded = true
-eq(CashServer.processReceipt({ PlayerId = 77, ProductId = 123456789, PurchaseId = "p5" }), LATER, "모르는 상품 번호 → 아직(주지 않는다)")
-local okP, whyP = CashServer.prompt(sess, "tele")
-expect(not okP and whyP == "판매 준비 중", "번호가 없거나 게임에 아직 없는 상품(순간이동의 돌)은 구매 창을 띄우지 않는다")
-local _, whyM = CashServer.prompt(sess, "money")
-expect(whyM ~= "판매 준비 중", "대시보드 번호가 있고 만들어 둔 상품(달돈 주머니)은 한도를 보는 데까지 간다 — " .. tostring(whyM))
-local priced = Cash.view(sess.acct, NOW, nil, nil, { money = 77 })
-local moneyRow
-for _, v in priced.list do
-	if v.id == "money" then
-		moneyRow = v
-	end
-end
-eq(moneyRow.robux, 77, "화면의 값 = 로블록스에서 읽은 실제 값")
-eq(Cash.view(sess.acct, NOW).list[1].robux, BM.products[1].robux, "못 읽었으면 설계의 값")
-
--- ⑨ 달빛 패스(2026-10-20 — 사용자: "달빛패스에 자동줍기는 아니에요" · "달빛 패스도 개발자 상품에 등록해야해요" · "달빛패스에 시즌이라는 개념이 필요가 없잖아")
---  산 때부터 30일 · 그동안만 달빛이 쌓인다 · 하루 상한 · 칸마다 보상 · 경매장 칸 · 끝난 뒤에 다시 산다(받지 않은 칸은 먼저 보관함) · 저장
-local Pass = req("ReplicatedStorage/shared/lune/sim/pass")
-local PD = Pass.DATA
-local T0 = 1792411200 -- 2026-10-19 03:00 (세계 표준시) = 한국 12:00
-local pacct = Account.new()
-Account.add(pacct, "패스", "riven", Hero.pack(Hero.new(1, "riven")), T0)
-local ps = pacct.bm.pass
-eq(Cash.passAdd(pacct, "daily", T0), 0, "패스가 없으면 달빛이 쌓이지 않는다")
-expect(not Pass.active(ps, T0) and Cash.marketPlus(pacct, T0) == 0, "패스가 없으면 경매장 칸 그대로")
-expect(Cash.canBuy(pacct, "pass", T0, 0, Account.MAX), "처음에는 살 수 있다")
-expect(Cash.grant(pacct, "pass", "pass-1", T0, Account.MAX), "패스를 샀다(개발자 상품 — 결제 하나)")
-expect(Pass.active(ps, T0), "산 때부터")
-eq(Pass.left(ps, T0), PD.days, "30일 남음")
-eq(Pass.left(ps, T0 + 29 * 86400 + 1), 1, "마지막 날 = 1일")
-expect(not Pass.active(ps, T0 + PD.days * 86400), "30일 뒤에 끝난다")
-eq(Cash.marketPlus(pacct, T0), PD.auctionPlus, "경매장 칸 +5")
-local can, whyPass = Cash.canBuy(pacct, "pass", T0, 0, Account.MAX)
-expect(not can and string.find(whyPass, "30일 남았다", 1, true) ~= nil, "패스가 있는 동안은 다시 못 산다 — " .. tostring(whyPass))
-eq(Cash.passAdd(pacct, "daily", T0), PD.gain.daily, "일일 의뢰 하나 = 달빛 3")
-eq(Cash.passAdd(pacct, "attend", T0), PD.gain.attend, "출석 = 2")
-eq(Cash.passAdd(pacct, "rift", T0), PD.gain.rift, "토벌 = 3")
-eq(Cash.passAdd(pacct, "kill", T0, PD.killEach - 1), 0, "99마리는 아직")
-eq(Cash.passAdd(pacct, "kill", T0, 1), PD.gain.kill, "100마리째 = 2")
-eq(Cash.passAdd(pacct, "daily", T0), PD.dayCap - 10, "하루 상한 12까지만")
-eq(Cash.passAdd(pacct, "daily", T0), 0, "오늘은 더 없다")
-eq(Cash.passAdd(pacct, "daily", T0 + 86400), PD.gain.daily, "다음 날(한국 0시가 지나) 다시")
-for d = 2, 9 do
-	Cash.passAdd(pacct, "daily", T0 + d * 86400)
-	Cash.passAdd(pacct, "daily", T0 + d * 86400)
-	Cash.passAdd(pacct, "rift", T0 + d * 86400)
-	Cash.passAdd(pacct, "attend", T0 + d * 86400)
-end
-local T9 = T0 + 9 * 86400
-eq(ps.pts, 15 + 8 * 11, "여드레 더 = 하루 11")
-eq(Pass.reached(ps), 10, "10칸")
-eq(#Pass.ready(ps), 10, "연 10칸을 받을 수 있다")
-eq(Cash.passClaim(pacct, T9, 1, 1), 10, "10칸의 보상을 보관함에")
-eq(#Pass.ready(ps), 0, "다시 받을 것은 없다")
-local hasPotion, hasMoney = false, false
-for _, e in pacct.bm.box do
-	if e.id == "potion1" then
-		hasPotion = true
-	elseif e.id == "bm_money_1" then
-		hasMoney = true
-	end
-end
-expect(hasPotion, "물약 = 받는 캐릭터의 레벨(1)의 물약")
-expect(hasMoney, "10칸의 달돈 주머니 = 레벨대 1")
-for d = 10, 12 do
-	Cash.passAdd(pacct, "daily", T0 + d * 86400)
-	Cash.passAdd(pacct, "daily", T0 + d * 86400)
-	Cash.passAdd(pacct, "rift", T0 + d * 86400)
-	Cash.passAdd(pacct, "attend", T0 + d * 86400)
-end
-eq(Pass.reached(ps), 13, "13칸(11 · 12 · 13은 아직 안 받음)")
--- 저장(JSON을 거쳐)
-local savedPass = Cash.unpack(json(Cash.pack(pacct.bm)), Account.MAX)
-eq(savedPass.pass.pts, ps.pts, "달빛을 저장")
-eq(savedPass.pass.ends, ps.ends, "끝나는 때를 저장")
-expect(savedPass.pass.p[10] and not savedPass.pass.p[11], "받은 칸을 저장")
--- 30일이 지난 뒤
-local TEND = T0 + PD.days * 86400 + 60
-eq(Cash.passAdd(pacct, "daily", TEND), 0, "끝난 뒤에는 달빛이 쌓이지 않는다")
-eq(Cash.marketPlus(pacct, TEND), 0, "끝난 뒤에는 경매장 칸 그대로")
-eq(Pass.view(ps, TEND).ended, true, "화면: 끝났다")
-eq(#Pass.ready(ps), 3, "끝난 뒤에도 연 칸(11~13)은 받을 수 있다")
-local function boxItems()
-	local n = 0
-	for _, e in pacct.bm.box do
-		n += e.n
-	end
-	return n
-end
-local boxN = boxItems()
-expect(Cash.canBuy(pacct, "pass", TEND, 0, Account.MAX), "끝난 뒤에는 다시 살 수 있다")
-expect(Cash.grant(pacct, "pass", "pass-2", TEND, Account.MAX), "다시 샀다")
-eq(boxItems() - boxN, PD.paid[11][2] + PD.paid[12][2] + PD.paid[13][2], "받지 않은 11~13칸은 먼저 보관함에(물약 10 · 경험치 쿠폰 1 · 귀환 주문서 2)")
-eq(ps.pts, 0, "새 30일 = 달빛 0")
-eq(#Pass.ready(ps), 0, "새 패스의 칸은 아직 닫혀 있다")
-eq(Pass.left(ps, TEND), PD.days, "새 30일")
--- 패스가 있는데 결제가 또 왔다(구매 창을 띄운 뒤 다른 곳에서 산 경우) — 받은 돈은 반드시: 끝나는 때만 30일 늘린다
-local ends = ps.ends
-expect(Cash.grant(pacct, "pass", "pass-3", TEND + 10, Account.MAX), "겹친 결제도 준다")
-eq(ps.ends, ends + PD.days * 86400, "끝나는 때 +30일")
-eq(Pass.unpack({ pts = -5, p = { 99, "x", 3 }, ends = "a" }).pts, 0, "이상한 값은 버린다")
-
--- ⑩ 펫 · 탈것(2026-10-20 — 사용자: "펫은 종류 다르게 별도상품으로 … 같은기능을가진 별도의 펫으로 판매" · "탈것은 사다리에서 감추기 좋습니다")
-local racct = Account.new()
-Account.add(racct, "펫주인", "mooni", Hero.pack(Hero.new(1, "mooni")), T0)
-expect(Cash.grant(racct, "pet_lantern", "pet-1", T0, Account.MAX), "펫을 샀다")
-expect(racct.bm.pets.pet_lantern, "계정에 들어왔다")
-eq(racct.bm.petOut, "pet_lantern", "꺼내 둔 것이 없었으면 바로 꺼낸다")
-expect(Cash.grant(racct, "pet_silver", "pet-2", T0, Account.MAX), "다른 펫도 따로 산다")
-eq(racct.bm.petOut, "pet_lantern", "둘째는 꺼내 둔 것을 바꾸지 않는다")
-local cp, whyPet = Cash.canBuy(racct, "pet_silver", T0, 0, Account.MAX)
-expect(not cp, "같은 펫은 한 번 — " .. tostring(whyPet))
-expect(Cash.setPet(racct, "pet_silver"), "꺼낼 펫을 바꾼다")
-eq(racct.bm.petOut, "pet_silver", "은빛 달토끼")
-expect(not Cash.setPet(racct, "pet_scarf"), "가지지 않은 펫은 꺼낼 수 없다")
-expect(Cash.setPet(racct, false) and racct.bm.petOut == false, "넣는다")
-expect(Cash.grant(racct, "mount_deer", "mount-1", T0, Account.MAX), "탈것을 샀다")
-eq(racct.bm.mount, "mount_deer", "고른 탈것")
-expect(not Cash.setMount(racct, "mount_wolf"), "가지지 않은 탈것은 고를 수 없다")
-local rv = Cash.view(racct, T0)
-local ownCount = 0
-for _, v in rv.list do
-	if v.own then
-		ownCount += 1
-	end
-end
-eq(ownCount, 3, "화면: 가진 것 셋(펫 둘 · 탈것 하나)")
-eq(#rv.pets, 2, "화면: 가진 펫")
-local rsaved = Cash.unpack(json(Cash.pack(racct.bm)), Account.MAX)
-expect(rsaved.pets.pet_lantern and rsaved.pets.pet_silver and rsaved.mounts.mount_deer, "가진 펫 · 탈것을 저장")
-eq(rsaved.mount, "mount_deer", "고른 탈것을 저장")
-eq(Cash.unpack({ pets = { "pet_x", 3 }, petOut = "pet_silver" }, Account.MAX).petOut, false, "없는 펫 · 가지지 않은 펫은 버린다")
-
-end)
-runTest('62_lune_cash_ui', function()
--- 「달의 계승자」 — 달빛 상점 창을 화면 없이 돌려 본다(client/lune/ui/cashWindow.luau — 2026-10-20).
---  모양은 공방 시험 탭의 paintCash(?lunedemo=cash)와 같다. 보는 것:
---   창이 스마트폰의 화면 틀에 들어간다 · 탭 다섯 · 상품 번호가 없으면 모두 「준비 중」 · 번호가 있어도 게임에 아직 없는 상품(펫 · 순간이동 · 꾸밈 · 패스)은 「준비 중」 ·
---   재화 탭 = 지금 사면 드는 양(가장 높은 캐릭터의 레벨대) · 주간 횟수를 다 쓰면 꺼진 「구매」와 빨간 「이번 주 3/3」 · 「구매」가 서버에 묻는다 ·
---   보관함 = 받을 것의 수(탭 옆) · 「받기」 · 「모두 받기」 · 패스 탭 · 이름 바꾸기(주문서가 없으면 꺼짐 · 「변경」이 서버에 묻는다)
-local BM = req("ReplicatedStorage/shared/lune/data/bm.generated")
-local Layout = req("ReplicatedStorage/shared/lune/ui/layout")
-local Cash = req("ReplicatedStorage/shared/lune/sim/cash")
-local Account = req("ReplicatedStorage/shared/lune/sim/account")
-local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
-local Items = req("ReplicatedStorage/shared/lune/sim/items")
-
-local function frame(name)
-	local f = { Name = name, Visible = true, children = {} }
-	function f:Destroy() end
-	return f
-end
-local texts, buttons, tabs, scrolls, fields, pics, previews = {}, {}, {}, {}, {}, {}, {}
-local function text(_, value, x, y, width, opts)
-	local t = { value = value, x = x, y = y, width = width, shown = true, opts = opts or {}, tint = (opts or {}).color }
-	function t.set(_, v)
-		t.value = v
-	end
-	function t.color(_, c)
-		t.tint = c
-	end
-	function t.move(_, nx, ny)
-		t.x, t.y = nx, ny
-	end
-	function t.show(_, on)
-		t.shown = on
-	end
-	table.insert(texts, t)
-	return t
-end
-local COLOR = setmetatable({}, { __index = function(_, k) return k end }) -- 색 = 그 이름
-MOCK("Client/lune/ui/ui", {
-	COLOR = COLOR,
-	M = { small = 10, smallLine = 14, body = 12, button = 26 },
-	measure = function(t) return #t * 3 end,
-	text = text,
-	group = function(_, x, y, w, h, name)
-		local f = frame(name)
-		f.x, f.y = x, y
-		if name == "Preview" then
-			table.insert(previews, f) -- 펫 · 탈것 줄의 미리보기 자리(2026-10-21)
-		end
-		return f
-	end,
-	slot = function() return { frame = frame("Slot"), setOn = function() end } end,
-	pic = function(_, name)
-		local f = frame("Pic")
-		f.pic = name
-		table.insert(pics, f)
-		return f
-	end,
-	setPic = function(label, name)
-		label.pic = name
-	end,
-	line = function() return frame("Line") end,
-	box = function(_, x, y, w, h, color)
-		local f = frame("Box")
-		f.BackgroundColor3 = color
-		return f
-	end,
-	smallIcon = function(_, name)
-		local f = frame("Icon")
-		f.icon = name
-		f.ImageTransparency = 0
-		return f
-	end,
-	setWorldIcon = function(label, name)
-		label.icon = name
-	end,
-	hit = function(parent)
-		local h = { Activated = { Connect = function(_, fn) parent.click = fn end }, MouseEnter = { Connect = function(_, fn) parent.hover = fn end } }
-		return h
-	end,
-	bar = function()
-		local b = { frame = frame("Bar"), ratio = 0 }
-		function b.set(_, r)
-			b.ratio = r
-		end
-		return b
-	end,
-	field = function(_, x, y, w, h, placeholder)
-		local f = { Text = "", PlaceholderText = placeholder }
-		table.insert(fields, f)
-		return f
-	end,
-	button = function(_, label, x, y, w, fn, opts)
-		local b = { frame = frame("Button"), label = label, click = fn, enabled = true, x = x, y = y, w = w, opts = opts }
-		function b.setEnabled(_, on)
-			b.enabled = on
-		end
-		function b.setText(_, v)
-			b.label = v
-		end
-		function b.setMain(_, on)
-			b.main = on
-		end
-		table.insert(buttons, b)
-		return b
-	end,
-	tab = function(_, label, x, y, fn)
-		local t = { frame = frame("Tab"), label = label, click = fn, width = #label * 3, on = false, x = x }
-		function t.setOn(_, on)
-			t.on = on
-		end
-		table.insert(tabs, t)
-		return t
-	end,
-	scroll = function(_, x, y, w, h, contentH, barW)
-		local s = frame("Scroll")
-		s.CanvasSize = UDim2.fromOffset(0, contentH)
-		s.CanvasPosition = Vector2.new(0, 0)
-		s.ScrollingEnabled = true
-		s.ScrollBarThickness = barW
-		table.insert(scrolls, s)
-		return s
-	end,
-})
-local function textOf(v)
-	for _, t in texts do
-		if t.value == v and t.shown then
-			return t
-		end
-	end
-	return nil
-end
-local function buttonsNamed(label)
-	local out = {}
-	for _, b in buttons do
-		if b.label == label and b.frame.Visible then
-			table.insert(out, b)
-		end
-	end
-	return out
-end
-local W = BM.shop.words
-
-local CashWindow = req("Client/lune/ui/cashWindow")
-local cw, ch = CashWindow.size()
-eq(cw, Layout.CASH.w, "창의 폭 = 공방의 칸")
-expect(ch + 44 + 14 + 16 <= 432, ("스마트폰의 화면 틀(432)에 들어간다 — %d"):format(ch + 74))
-local rw, rh = CashWindow.size("rename")
-expect(rh < ch, "이름 바꾸기는 작은 창")
-eq(CashWindow.title("rename"), W.renameTitle, "이름 바꾸기의 제목")
-eq(CashWindow.title(nil), BM.shop.title, "상점의 제목")
-
--- 서버가 보내는 것(진짜 셈 — sim/cash.luau의 Cash.view): Lv.34 캐릭터가 있는 계정
-local NOW = 1760900000
-local acct = Account.new()
-local hero = Hero.new(1, "riven")
-hero.level = 34
-Account.add(acct, "상점손님", "riven", Hero.pack(hero), NOW)
-local view = Cash.view(acct, NOW, nil)
-eq(view.band, 30, "가장 높은 캐릭터 Lv.34 → 주머니 · 상자는 Lv.30")
-eq(Cash.view(acct, NOW, nil, 41).band, 40, "지금 놀고 있는 캐릭터가 저장 전에 Lv.41이 되었으면 → Lv.40")
-for _, v in view.list do
-	local p = Cash.product(v.id)
-	local hasId = typeof(p.rid) == "number" and p.rid > 0
-	eq(v.ready, hasId and p.built == true, "대시보드 번호가 있고 게임에 만들어 둔 것만 살 수 있다 " .. v.id)
-end
--- 상품 번호를 넣은 뒤(대시보드에서 만든 뒤): 만들어 둔 것만 살 수 있다
-local saved = {}
-for i, p in BM.products do
-	saved[i] = p.rid
-	p.rid = 1000 + i
-end
-view = Cash.view(acct, NOW, nil)
-for _, v in view.list do
-	local p = Cash.product(v.id)
-	eq(v.ready, p.built == true, "번호가 있어도 게임에 만들어 둔 것만 살 수 있다 " .. v.id)
-end
-local calls = {}
-local bag = { use = { { item = "bm_rename", n = 0 } }, gear = {}, etc = {} }
-local ctx = {
-	cash = function() return view end,
-	bag = function() return bag end,
-	cashDo = function(action, a)
-		table.insert(calls, { action, a })
-		if action == "take" then
-			if a then
-				table.remove(view.box, a)
+			local seg = sk.s
+			local over
+			if seg.loop then
+				over = sk.t >= seg.dur
+			elseif seg.hold then
+				local want = if self.hold == "max" then (seg.max or 3) else math.max(seg.min or 0.15, 0)
+				over = sk.t >= want - 1e-6
+			elseif seg.charge then
+				local per, levels = (seg.per or COMBAT.castRule.charge), Kit.chargeLevels(h)
+				over = sk.t >= Caster.segTime(h.class, seg) + per * levels + 0.02
+			elseif seg.till then
+				over = true
 			else
-				view.box = {}
+				over = sk.t >= sk.need
 			end
-			return { ok = true, list = view.list, box = view.box }
-		elseif action == "rename" then
-			return { ok = true, name = a }
-		end
-		return { ok = true }
-	end,
-}
-view.box = { { id = "bm_exp", n = 2 }, { id = "bm_money_30", n = 1 } }
-local body = frame("Body")
-local cv = CashWindow.build(body, ctx, cw, ch)
-eq(#tabs, #BM.shop.tabs, "탭 다섯")
--- 탭의 차례(이름표 → 번호 — 2026-10-21: 「펫」 탭을 더하고 「패스」 탭을 껐다)
-local T = {}
-for i, t in BM.shop.tabs do
-	T[t[1]] = i
-end
-expect(tabs[1].on, "처음은 편의 탭")
-expect(textOf(W.head) ~= nil, "안내 한 줄")
-expect(textOf("3") ~= nil, "보관함 옆에 받을 것의 수(경험치 쿠폰 2 + 주머니 1)")
--- 편의 탭: 첫 줄 = 첫걸음 묶음
-local rows = CashWindow.rows(view, 1)
-eq(#rows, #BM.shop.rows.conv, "편의 탭의 상품 수")
-eq(rows[1].id, "starter", "첫 줄 = 첫걸음 묶음")
-eq(rows[1].state, "buy", "만들어 둔 상품은 「구매」")
-eq(rows[1].count, "산 수 0/1", "계정에 한 번 — 산 수")
-local tele
-for _, r in rows do
-	if r.id == "tele" then
-		tele = r
-	end
-end
-eq(tele and tele.state, "soon", "순간이동의 돌(아직 없음)은 번호가 있어도 「준비 중」")
-expect(#buttonsNamed(W.soon) >= 1, "화면에 「준비 중」 단추")
--- 「구매」 → 서버에 묻는다
-local buy = buttonsNamed(W.buy)[1]
-expect(buy ~= nil and buy.enabled, "「구매」가 켜져 있다")
-buy.click()
-eq(calls[1][1], "buy", "서버에 구매를 묻는다")
-eq(calls[1][2], "starter", "그 상품")
-expect(textOf(W.asked) ~= nil, "구매 창을 띄웠다는 알림")
--- 재화 탭: 드는 양 · 주간 횟수
-acct.bm.week = Cash.weekOf(NOW)
-acct.bm.wc = { dust = 3 }
-local box = view.box
-view = Cash.view(acct, NOW, nil)
-view.box = box
-tabs[T.money].click()
-expect(tabs[T.money].on and not tabs[1].on, "재화 탭")
-local money = Items.goods("bm_money_30")
-expect(textOf(("지금 사면 달돈 %s(Lv.30)"):format(req("ReplicatedStorage/shared/lune/ui/format").comma(money.amount))) ~= nil, "지금 사면 드는 달돈(Lv.30)")
-local cr = CashWindow.rows(view, T.money)
-eq(cr[2].id, "dust", "둘째 줄 = 달가루 상자")
--- 2026-10-22 사용자 "달빛상점에서 달가루 상자, 달돈주머니 구매 제한 푼다" — 이번 주에 셋을 샀어도 「구매」(전에는 꺼지고 빨간 「이번 주 3/3」)
-eq(cr[2].state, "buy", "이번 주에 셋을 샀어도 또 산다")
-expect(textOf("이번 주 3/3") == nil, "「이번 주 n/3」 줄이 없다")
-local offBuy = 0
-for _, b in buttonsNamed(W.buy) do
-	if not b.enabled then
-		offBuy += 1
-	end
-end
-eq(offBuy, 0, "재화 탭의 「구매」가 모두 켜져 있다")
--- 보관함: 받기 · 모두 받기
-tabs[T.box].click()
-local takes = buttonsNamed(W.take)
-eq(#takes, 2, "보관함의 줄마다 「받기」")
-expect(textOf("x2") ~= nil, "경험치 쿠폰 x2")
-expect(textOf(("쓰면 달돈 %s"):format(req("ReplicatedStorage/shared/lune/ui/format").comma(money.amount))) ~= nil, "주머니에 든 양")
-takes[1].click()
-eq(calls[#calls][1], "take", "서버에 받기를 묻는다")
-eq(calls[#calls][2], 1, "첫 줄")
-expect(textOf("2개를 가방에 넣었다") ~= nil, "받은 수의 알림")
-local all = buttonsNamed(W.takeAll)[1]
-expect(all and all.enabled, "남은 것이 있으면 「모두 받기」")
-all.click()
-eq(calls[#calls][2], nil, "모두 받기 = 줄 없이")
-expect(not all.enabled, "다 받으면 꺼진다")
-expect(textOf(W.boxEmpty) ~= nil, "빈 보관함")
--- 패스 탭: 2026-10-21 사용자 "달빛패스 일딴 비활성화해" — 탭이 없다(다시 켜면 아래가 돈다)
-if not T.pass then
-	expect(#tabs == #BM.shop.tabs and tabs[#tabs].label ~= "패스", "「패스」 탭이 없다")
-else
-	-- 패스 탭(달빛 패스 — 개발자 상품 · 산 때부터 30일 · 칸 30): 남은 날 · 달빛 · 칸 · 「보상 받기」
-	view.pass = { active = false, ended = false, left = 0, pts = 0, today = 0, reached = 0, p = {}, ready = 0 }
-	tabs[T.pass].click()
-	eq(scrolls[1].Visible, false, "패스 탭에는 상품 목록이 없다")
-	expect(textOf(BM.pass.words.off) ~= nil, "산 적이 없으면 「사면 30일 동안 달빛이 쌓인다」")
-	local buyPass, claim
-	for _, b in buttons do
-		if b.frame.Name == "PassBuy" then
-			buyPass = b
-		elseif b.frame.Name == "PassClaim" then
-			claim = b
-		end
-	end
-	expect(buyPass and buyPass.enabled and buyPass.label == W.buy, "번호가 있으면 「구매」")
-	expect(claim and not claim.enabled, "받을 칸이 없으면 「보상 받기」 꺼짐")
-	view.pass = { active = true, ended = false, left = 18, pts = 125, today = 8, reached = 12, p = { 1, 2, 3 }, ready = 9 }
-	cv.refresh()
-	expect(textOf("패스 18일 남음") ~= nil, "남은 날")
-	expect(textOf("달빛 125 · 오늘 8/12") ~= nil, "달빛 · 오늘")
-	expect(textOf("12/30칸") ~= nil, "연 칸")
-	expect(textOf(W.own) ~= nil and not buyPass.frame.Visible, "패스가 있는 동안 = 「보유」 · 「구매」 없음")
-	local cells = CashWindow.passCells(view.pass)
-	eq(#cells, 30, "칸 서른")
-	expect(cells[4].ready and not cells[3].ready and not cells[13].ready, "연 칸(4~12)만 · 받은 칸(1~3)은 아니다 · 13칸은 아직")
-	expect(claim.enabled, "받을 칸이 있으면 「보상 받기」")
-	claim.click()
-	eq(calls[#calls][1], "pass", "서버에 패스 보상을 묻는다")
-	eq(CashWindow.passCellText(cells[10]), "10칸 — 달돈 주머니 1", "칸의 보상 글")
-	view.pass = { active = false, ended = true, left = 0, pts = 300, today = 0, reached = 30, p = {}, ready = 30 }
-	cv.refresh()
-	expect(textOf(BM.pass.words.ended) ~= nil, "끝난 뒤 = 「패스가 끝났다 — 다시 사면 새 30일」")
-	expect(buyPass.frame.Visible and buyPass.enabled, "끝난 뒤에는 다시 「구매」")
-end
-for i, p in BM.products do
-	p.rid = saved[i]
-end
-
--- 가진 펫 · 탈것(2026-10-21 사용자 "펫을 넣고 빼는거, 라이딩을 타는거 이런게 달빛상점에 들어가서 하는게 아닙니다. 달빛상점은 구매를 하는곳이에요"):
---  줄에는 「보유」만 — 「꺼내기 · 넣기 · 타기 · 내리기」 단추는 상점에 없다(가방의 캐시 탭 · 퀵슬롯 · N 키)
-view.list = Cash.view(acct, NOW, nil).list
-for _, v in view.list do
-	if v.id == "pet_scarf" or v.id == "mount_boar" then
-		v.own = true
-	end
-end
-view.petOut, view.mount, view.riding = "pet_scarf", "mount_boar", true
-local conv = CashWindow.rows(view, T.pet) -- 펫은 「펫」 탭(2026-10-21)
-local scarf
-for _, r in conv do
-	if r.id == "pet_scarf" then
-		scarf = r
-	end
-end
-eq(scarf.state, "own", "가진 펫의 줄 = 「보유」")
-eq(scarf.use, nil, "가진 펫의 줄에 꺼내기 · 넣기가 없다")
-eq(scarf.count, nil, "가진 펫의 줄에 「산 수 1/1」을 적지 않는다")
-local boar
-for _, r in CashWindow.rows(view, T.look) do
-	if r.id == "mount_boar" then
-		boar = r
-	end
-end
-eq(boar.state, "own", "가진 탈것의 줄 = 「보유」")
-tabs[T.look].click()
-for _, word in { W.petOn, W.petOff, W.rideOn, W.rideOff } do
-	eq(#buttonsNamed(word), 0, "상점에 「" .. word .. "」 단추가 없다")
-end
-
--- 달빛 상점의 공간(2026-10-21): 펫 · 탈것의 줄을 누르면(PC는 올려 두면) 미리보기에 — 그 밖의 줄은 아무것도 하지 않는다
-local seen = {}
-ctx.cashPreview = function(id)
-	table.insert(seen, id)
-end
-expect(#previews >= 1, "줄마다 미리보기 자리가 있다")
-previews[1].click() -- 꾸밈 탭의 첫 줄(탈것)
-previews[1].hover()
-eq(seen[1], CashWindow.rows(view, T.look)[1].id, "꾸밈 탭 첫 줄을 누르면 그 탈것을 미리보기에")
-eq(#seen, 2, "올려 두어도 미리보기에(PC)")
-tabs[T.money].click() -- 재화 탭: 펫 · 탈것이 아니다
-previews[1].click()
-eq(#seen, 2, "재화 줄은 미리보기에 보내지 않는다")
-tabs[T.pet].click() -- 펫 탭(2026-10-21 — 펫은 편의가 아니라 제 탭에)
-previews[1].click()
-eq(seen[#seen], BM.shop.rows.pet[1], "펫 탭의 첫 줄을 누르면 그 펫을 미리보기에")
-tabs[T.look].click()
-eq(CashWindow.product("pet_silver").name, BM.products[(function()
-	for i, p in BM.products do
-		if p.id == "pet_silver" then
-			return i
-		end
-	end
-	return 1
-end)()].name, "상품을 이름표로 찾는다(퀵슬롯의 설명 · 가방의 캐시 탭)")
-
--- 이름 바꾸기(가방에서 주문서를 쓴 때)
-table.clear(texts)
-table.clear(buttons)
-local rv = CashWindow.build(frame("Body2"), ctx, rw, rh, "rename")
-local go = buttonsNamed(W.renameGo)[1]
-expect(go ~= nil and not go.enabled, "주문서가 없으면 「변경」이 꺼진다")
-expect(textOf("가진 주문서 0장") ~= nil, "가진 주문서 수")
-bag.use[1].n = 1
-fields[#fields].Text = "새이름"
-rv.refresh()
-expect(go.enabled, "주문서가 있고 이름을 적으면 켜진다")
-go.click()
-eq(calls[#calls][1], "rename", "서버에 이름 바꾸기를 묻는다")
-eq(calls[#calls][2], "새이름", "적은 이름")
-expect(textOf("이름이 「새이름」이 되었다") ~= nil, "바뀐 이름의 알림")
-eq(fields[#fields].Text, "", "칸을 비운다")
-
--- 한정 판매(2026-10-29 사용자: "거인 라이딩 황금으로 해서 한정 20개 판매로 해서 판매하고 다팔리면 안파는식으로"): 꾸밈 탭의 황금 골렘 줄 = 「한정 20개 · 남은 n개」 · 다 팔리면 「품절」(구매가 꺼진다)
-do
-	local W = BM.shop.words
-	local function golemRow(left)
-		local v = Cash.view(acct, NOW, nil, nil, nil, { mount_golem_gold = left })
-		for _, e in v.list do
-			if e.id == "mount_golem_gold" then
-				e.ready = true -- (대시보드 번호가 들어간 뒤의 모습)
+			if over then
+				local def = Kitset.skill(act.id)
+				if def.segs[sk.i + 1] then
+					self:send(act.id, sk.i + 1)
+				elseif act.till then
+					act.wait = Caster.profile(act.id, 0).time / Buffs.haste(h)
+				else
+					self.act = nil
+				end
 			end
 		end
-		for _, r in CashWindow.rows(v, T.look) do
-			if r.id == "mount_golem_gold" then
-				return r
-			end
-		end
-		return nil
 	end
-	local r7 = golemRow(7)
-	expect(r7 ~= nil and r7.state == "buy", "남은 것이 있으면 「구매」")
-	eq(r7 and r7.count, (W.stockLeft:gsub("{max}", "20"):gsub("{n}", "7")), "남은 수를 띄운다")
-	local r0 = golemRow(0)
-	eq(r0 and r0.state, "soldOut", "다 팔리면 「품절」")
-	expect(r0 and r0.full == true, "남은 수는 빨간 글")
-	expect(W.soldOut == "품절", "품절의 글")
+	if self.act then
+		return
+	end
+	local id = self:pick(now)
+	if not id then
+		return
+	end
+	local k = kindOf(h, id)
+	if k == "first" then
+		self:stand(m, 14)
+		local before = self.s.skill
+		self:send(id, 1)
+		if self.s.skill ~= before then
+			self.act = { kind = "first", id = id }
+			self:count(id)
+		end
+	else
+		local def = COMBAT.cast[id]
+		self:stand(m, def.at or 14)
+		self:send(id, 1)
+		local a = room.caster.actors[h]
+		if a and a.skill and a.skill.id == id and a.skill.i == 1 then
+			local till = false
+			for _, sg in Kitset.skill(id).segs or {} do
+				if sg.till then
+					till = true
+				end
+			end
+			self.act = { kind = "cast", id = id, t0 = now, till = till }
+			self:count(id)
+		elseif Kitset.skill(id).instant then
+			self:count(id)
+		end
+	end
 end
 
-end)
-runTest('99_lune_lang', function()
--- 「달의 계승자」 — 영문(2026-10-27 사용자 "한국어유저가 아닌 유저들이 들어왔을때 모든게 영문번역 되어야해 서비스제공이 누락사안없이").
---  ① 바꾸는 셈(shared/lune/lang.luau): 사전 · 숫자 자리(#) · 틀(%s · {이름}) · 이은 글 · 앞뒤의 괄호 · 바꾸지 않는 글 · 못 바꾼 것을 적는다 · 한국어면 그대로 · 언어 고르기
---  ② 실제 사전(data/lang_en.generated.luau)이 게임의 한국어 글을 빠짐없이 덮는가: 공방 tools/lang_keys.mjs가 뽑은 열쇠(lang/keys.json)를 시험이 다시 뽑지 않고 — 게임의 코드 · 데이터를 여기서 훑는다
-MOCK("ReplicatedStorage/shared/lune/data/lang_en.generated", { words = {
-	["받는 피해 -#% · 같은 맵의 파티원에게도 — #초"] = "Damage taken -#% · also party on the same map — #s",
-	["초승달 마을"] = "Crescent Village",
-	["%s — 영구 정지했다"] = "{1} — permanently banned",
-	["{name}에 닿았다"] = "Arrived at {1}",
-	["{name}까지 달돈 {n}이네. 가겠나?"] = "{1} costs {2} Moon Coins. Shall we go?",
-	["Lv.# · %s"] = "Lv.# · {1}",
-	["정류장"] = "Station",
-	["#번째 · #마리"] = "#2 mobs · #1st", -- (번호 붙은 숫자 자리)
-	["역마차"] = "Stagecoach",
-	["자동"] = "Auto",
-	["큰 도끼"] = "Greataxe",
-	["빼어난"] = "Superb",
-	["큰"] = "Big",
-	["주민: "] = "NPCs: ",
-	[" (부서짐)"] = " (Broken)",
-	["레벨 업! Lv."] = "Level Up! Lv.",
-	["달래"] = "Dallae",
-	["샛별"] = "Saetbyeol",
-	["{name} {n}마리"] = "{1} ×{2}",
-	["{weapon} {name}!"] = "{2}'s {1}!",
-} })
-local Lang = req("ReplicatedStorage/shared/lune/lang")
-eq(Lang.t("초승달 마을"), "초승달 마을", "한국어면 그대로")
-Lang.set("en")
-eq(Lang.t("초승달 마을"), "Crescent Village", "사전")
-eq(Lang.t("받는 피해 -10.5% · 같은 맵의 파티원에게도 — 60초"), "Damage taken -10.5% · also party on the same map — 60s", "숫자 자리(#)에 그 숫자를 차례로")
-eq(Lang.t("3번째 · 12마리"), "12 mobs · 3st", "#2 · #1 = 번째 숫자")
-eq(Lang.t("클라 — 영구 정지했다"), "클라 — permanently banned", "틀(%s): 채운 값(이름)은 그대로 · 나머지는 영문")
-eq(Lang.t("초승달 마을에 닿았다"), "Arrived at Crescent Village", "틀({name}): 채운 값도 바꾼다")
-eq(Lang.t("초승달 마을까지 달돈 130이네. 가겠나?"), "Crescent Village costs 130 Moon Coins. Shall we go?", "틀의 자리 둘")
-eq(Lang.t("Lv.30 · 초승달 마을"), "Lv.30 · Crescent Village", "틀 + 숫자")
-eq(Lang.t("초승달 마을 · 정류장"), "Crescent Village · Station", "이은 글: 조각마다")
-eq(Lang.t("「역마차」"), "「Stagecoach」", "앞뒤의 꺾쇠를 떼고 찾아 다시 붙인다")
-eq(Lang.t("(정류장)"), "(Station)", "괄호")
-eq(Lang.t("한국어"), "한국어", "언어 이름은 그대로(설정 창)")
-eq(Lang.t("English 123"), "English 123", "한글이 없으면 그대로")
-local miss = "번역이 없는 글"
-eq(Lang.t(miss), miss, "못 바꾸면 그대로")
-expect(Lang.missing[miss] == true, "못 바꾼 것을 적는다")
-eq(Lang.pick("ko-kr", nil), "ko", "로블록스의 언어가 한국어면 한국어")
-eq(Lang.pick("en-us", nil), "en", "그 밖이면 영문")
-eq(Lang.pick("ja-jp", "auto"), "en", "자동")
-eq(Lang.pick("en-us", "ko"), "ko", "설정 창에서 고른 것이 먼저")
-eq(Lang.t("빼어난 Lv.20 큰 도끼"), "Superb Lv.20 Greataxe", "빈칸으로 이은 이름: 가장 긴 낱말 묶음부터(「큰 도끼」를 쪼개지 않는다)")
-eq(Lang.t("주민: 달래 · 샛별"), "NPCs: Dallae · Saetbyeol", "앞 조각(「주민: 」) + 나머지")
-eq(Lang.t("빼어난 Lv.20 큰 도끼 (부서짐)"), "Superb Lv.20 Greataxe (Broken)", "나머지 + 뒤 조각(「 (부서짐)」)")
-eq(Lang.t("레벨 업! Lv.31"), "Level Up! Lv.31", "앞 조각 + 숫자")
-Lang.missing["클라"] = nil
-eq(Lang.t("클라 — 영구 정지했다"), "클라 — permanently banned", "틀에 채운 사람 이름은 그대로")
-eq(Lang.missing["클라"], nil, "채운 사람 이름은 못 바꾼 것으로 적지 않는다")
-eq(Lang.t("빼어난 큰 도끼 8마리"), "Superb Greataxe ×8", "숫자 자리({n})는 숫자만 — 이름 자리가 「빼어난 큰 도끼」 모두를 잡는다(「포자 ×주머니 8」이 되지 않게)")
-eq(Lang.t("큰 도끼 달래!"), "Dallae's Greataxe!", "짧게 잡아 못 바꾸면(「큰」 · 「도끼 달래」) 길게 잡아 다시")
-local Format = req("ReplicatedStorage/shared/lune/ui/format")
-eq(Format.short(12000), "12K", "영문의 큰 수: 1.2만 → 12K")
-eq(Format.short(1500000), "1.5M", "150만 → 1.5M")
-eq(Format.short(950), "950", "작은 수는 그대로")
-Lang.set("ko")
-eq(Lang.t("초승달 마을"), "초승달 마을", "다시 한국어로")
-eq(Format.short(12000), "1.2만", "한국어는 만 · 억")
+-- ---------- 한 판: 들어가서 warm초 뒤부터 secs초 동안 보스에게 들어간 피해 ----------
+local function fight(classes: { string }, mode: string, holds: { [string]: string }?, secs: number, warm: number)
+	local m0 = B[mode]
+	local level = (RAID_LV and RAID_LV[mode]) or m0.need -- (LUNE_RAID_LV — 새 보스의 체력을 볼 때 그 입장 레벨로: 2026-10-29)
+	local star = RAID.gear[mode]
+	local ps, hands = {}, {}
+	for i, class in classes do
+		local p, s = make(class, level, star)
+		World.jump(p, B.door.scene)
+		s.hero.x, s.hero.y = B.door.x, s.hero.y
+		ps[i] = { p = p, s = s }
+	end
+	if #ps > 1 then
+		for i = 2, #ps do
+			handlers.Party(ps[1].p, "invite", ps[i].p.UserId)
+			handlers.Party(ps[i].p, "accept")
+		end
+	end
+	local lead = ps[1]
+	lead.s.trust, lead.s.stale = true, nil
+	lead.s.hero.x = B.door.x
+	local r = handlers.Week(lead.p, "enter", B.id, mode, #ps > 1)
+	assert(r and r.ok, "들어가지 못했다: " .. tostring(r and r.why))
+	local key = lead.s.scene
+	for _, e in ps do
+		assert(e.s.scene == key, "파티원이 같은 방에 들지 못했다")
+		table.insert(hands, Hand.new(e.p, e.s, (holds and holds[e.s.hero.class]) or "min"))
+	end
+	local dealt, t = 0, 0
+	local by = {} -- 혼자일 때: 그 걸음에 쓰고 있던 기술마다 들어간 피해(늦게 터지는 것 · 사출기도 그때의 기술에 붙는다 — 대강의 몫)
+	local total = warm + secs
+	local m, room = bossIn(key)
+	assert(m, "보스가 없다")
+	while t < total do
+		m, room = bossIn(key)
+		local now = World.now
+		if m and m.state ~= "spawn" then
+			for _, hand in hands do
+				hand:step(m, room, now)
+			end
+		end
+		for _, hand in hands do
+			hand.h.inCine = true -- 보스가 사람을 치지 못한다(맞아서 끊기는 손실 없음 — 기술을 쓸 때 서버가 false로 돌린다)
+		end
+		World.tick(TICK)
+		t += TICK
+		m = bossIn(key)
+		if m then
+			local hold = math.floor(m.maxHp * 0.51)
+			if t > warm then
+				local d = math.max(0, hold - m.hp)
+				dealt += d
+				if #hands == 1 then
+					local id = hands[1].act and hands[1].act.id or "-"
+					by[id] = (by[id] or 0) + d
+				end
+			end
+			m.hp = hold
+		end
+	end
+	local out = { dps = dealt / secs, maxHp = m and m.maxHp or 0, heroes = {}, by = by, total = dealt }
+	for i, e in ps do
+		local h = e.s.hero
+		out.heroes[i] = { class = h.class, power = Hero.power(h), uses = hands[i].uses, filler = hands[i].plan.filler }
+		out.skills = table.clone(h.skills)
+	end
+	for _, e in ps do
+		World.removePlayer(e.p)
+	end
+	return out
+end
+
+local function usesText(u)
+	local list = {}
+	for id, n in u do
+		table.insert(list, ("%s %d"):format(id, n))
+	end
+	table.sort(list)
+	return table.concat(list, " · ")
+end
+
+-- ---------- 재기 ----------
+local SECS, WARM = RAID.secs, RAID.warm
+local result = {}
+for _, mode in { "normal", "hard" } do
+	local m0 = B[mode]
+	result[mode] = { solo = {}, party = {} }
+	-- 혼자(제 버프만): 누르고 있는 기술은 짧게 · 길게 둘 다 재서 센 쪽을 파티에서 쓴다
+	local holds = {}
+	for _, class in CLASSES.order do
+		local best = nil
+		for _, hold in { "min", "max" } do
+			local r = fight({ class }, mode, { [class] = hold }, SECS, WARM)
+			if not best or r.dps > best.dps then
+				best = r
+				best.hold = hold
+			end
+			if hold == "min" then
+				-- 누르고 있는 구간이 없는 직업은 한 번만 잰다
+				local has = false
+				for _, id in { r.heroes[1].filler } do
+					for _, sg in (Kitset.skill(id) or {}).segs or {} do
+						if sg.hold then
+							has = true
+						end
+					end
+				end
+				if not has then
+					break
+				end
+			end
+		end
+		holds[class] = best.hold
+		result[mode].solo[class] = best
+		local h = best.heroes[1]
+		print(("[RAID] %s Lv.%d 혼자 %-10s | 초당 %7.0f | 전투력 %d | 보스기 %s(누르기 %s) | %s"):format(mode, (RAID_LV and RAID_LV[mode]) or m0.need, class, best.dps, h.power, tostring(h.filler), best.hold, usesText(h.uses)))
+		-- 보스기 한 번에 들어간 피해 ÷ 설계의 한 번(전투력 x rate x (쓰는 시간 + 다시 쓰기 몫) x 스킬 레벨의 세기 x 보스기 1.5) — 1을 크게 넘으면 설계보다 세다
+		local f = h.filler
+		local def = f and COMBAT.cast[f]
+		if def then
+			local lv = best.skills[f] or 0
+			local scale = COMBAT.castRule.floor + (1 - COMBAT.castRule.floor) * (if def.max > 1 then (lv - 1) / (def.max - 1) else 1)
+			local one = h.power * def.rate * (Caster.profile(f, 0).time + def.cdTime) * scale * (1 + COMBAT.rules.targetBonus / 100)
+			local per = (best.by[f] or 0) / math.max(1, h.uses[f] or 0)
+			local parts = {}
+			for id, d in best.by do
+				table.insert(parts, ("%s %.0f%%"):format(id, d / math.max(1, best.total) * 100))
+			end
+			table.sort(parts)
+			print(("[RAID]    %s Lv.%d/%d · 한 번 %.2f초(빈 방) · 한 번의 피해 %.0f = 설계의 %.2f배 | 몫: %s"):format(f, lv, def.max, Caster.profile(f, 0).time, per, per / one, table.concat(parts, " · ")))
+		end
+	end
+	-- 파티: 서로 다른 직업 넷(다섯 벌)
+	for skip = 1, #CLASSES.order do
+		local four = {}
+		for i, class in CLASSES.order do
+			if i ~= skip then
+				table.insert(four, class)
+			end
+		end
+		local r = fight(four, mode, holds, SECS, WARM)
+		local solo = 0
+		for _, class in four do
+			solo += result[mode].solo[class].dps
+		end
+		r.buffGain = r.dps / solo
+		r.without = CLASSES.order[skip]
+		table.insert(result[mode].party, r)
+		print(("[RAID] %s Lv.%d 파티(%s 빼고) | 초당 %7.0f | 혼자 넷의 합 %7.0f | 파티 버프로 x%.3f | 보스 체력 %d → %.1f분"):format(
+			mode, (RAID_LV and RAID_LV[mode]) or m0.need, CLASSES.order[skip], r.dps, solo, r.buffGain, r.maxHp, r.maxHp / r.dps / 60))
+	end
+	local sum, lo, hi = 0, math.huge, 0
+	for _, r in result[mode].party do
+		sum += r.dps
+		lo, hi = math.min(lo, r.dps), math.max(hi, r.dps)
+	end
+	local avg = sum / #result[mode].party
+	result[mode].avg, result[mode].lo, result[mode].hi = avg, lo, hi
+	local hp = result[mode].party[1].maxHp
+	local mul = avg * RAID.target / (N.mobHp(m0.lv) * COMBAT.rules.dmgScale * (1 + COMBAT.rules.targetBonus / 100))
+	print(("[RAID] %s 파티 평균 초당 %.0f(가장 약한 파티 %.0f · 가장 센 파티 %.0f) | 지금 체력 %d → 평균 %.1f분 · 약한 파티 %.1f분 | %d초에 맞추는 체력 배수 hp = %.2f"):format(
+		mode, avg, lo, hi, hp, hp / avg / 60, hp / lo / 60, RAID.target, mul))
+end
+
+-- ---------- 검사: 가장 약한 직업 조합도 최대 출력이면 제한 시간 안에 깬다 ----------
+for _, mode in { "normal", "hard" } do
+	local r = result[mode]
+	local hp = r.party[1].maxHp
+	local loMin = hp / r.lo / 60
+	expect(RAID_LV ~= nil or loMin * 60 <= Weekly.DATA.time, ("%s: 가장 약한 직업 조합도 최대 출력이면 제한 시간 안에 깬다(%.1f분 ≤ %d분)"):format(mode, loMin, Weekly.DATA.time / 60))
+end
 
 end)
 finish()

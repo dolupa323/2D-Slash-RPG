@@ -160,7 +160,7 @@ function CashServer.syncCoupons(acct): boolean
 		local def = Coupons.find(code)
 		if def and def.pet and Cash.PET[def.pet] and not c.pets[def.pet] then
 			c.pets[def.pet] = true
-			c.petOut = c.petOut or def.pet
+			Cash.petAuto(c, def.pet)
 			changed = true
 		end
 		if def and def.mount and Cash.MOUNT[def.mount] and not c.mounts[def.mount] then -- 쿠폰 탈것도 같이(2026-10-21)
@@ -248,9 +248,7 @@ function CashServer.resetCoupons(acct): (number, number)
 		if def and def.free then
 			c.pets[id] = nil
 			pets += 1
-			if c.petOut == id then
-				c.petOut = false
-			end
+			Cash.petRemove(c, id) -- (꺼내 둔 펫들에서도 — 2026-10-30)
 		end
 	end
 	for id in c.mounts do

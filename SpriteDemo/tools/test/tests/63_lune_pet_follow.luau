@@ -238,3 +238,23 @@ expect(math.abs(last.x - (500 - P.behind)) <= 2, "⑬ 남의 펫은 줍지 않�
 
 -- ⑭ 어느 때에도 막힌 칸 안에 있지 않았다
 expect(not last.inWall, "⑭ 펫이 땅 · 벽을 뚫고 지나가지 않는다")
+
+-- ⑮ 펫 셋(2026-10-30 사용자 "펫 현재 한마리만 낄수있는데 3마리까지 낄수있게해줘"): 둘째 · 셋째는 따로 된 판 · 영웅 뒤로 gap점씩 더 · 줍는 것도 펫마다(차례 slot을 서버에 알린다)
+do
+	local three = RideView.new({}, 1, scene)
+	three:setPets({ "pet_silver", "pet_lantern", "pet_scarf" })
+	expect(three.petId == "pet_silver" and three.extra[2] and three.extra[2].petId == "pet_lantern" and three.extra[3] and three.extra[3].petId == "pet_scarf", "⑮ 펫 셋: 첫째는 이 판 · 둘째 · 셋째는 따로 된 판")
+	eq(three.extra[3].behind - three.extra[2].behind, P.gap, "⑮ 셋째는 둘째보다 gap점 더 뒤")
+	three:update(now, DT, 300, GROUND, 1, false, false, false, nil, nil)
+	run(three, 2, 300, GROUND, 1, false, false)
+	expect(math.abs(three.extra[3].body.x - (300 - P.behind - 2 * P.gap)) <= 2, ("⑮ 셋째는 영웅 뒤 %d점(실제 %d)"):format(P.behind + 2 * P.gap, 300 - three.extra[3].body.x))
+	local slots = {}
+	local far = { [21] = { x = 300 - P.behind - 2 * P.gap - 6, y = GROUND } } -- 셋째 펫 곁
+	run(three, 1, 300, GROUND, 1, false, false, far, function(id, _, _, slot)
+		slots[id] = slot
+	end)
+	expect(slots[21] ~= nil, "⑮ 펫 셋 가운데 누군가 줍는다(차례 " .. tostring(slots[21]) .. ")")
+	three:setPets({ "pet_silver" })
+	expect(three.extra[2] == nil and three.extra[3] == nil, "⑮ 하나로 줄이면 둘째 · 셋째 판이 걷힌다")
+	three:destroy()
+end

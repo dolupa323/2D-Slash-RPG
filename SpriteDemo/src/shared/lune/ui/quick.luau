@@ -16,6 +16,7 @@ Q.DATA = UI.quick
 Q.N = UI.quick.n -- 칸의 수
 Q.COLS = UI.quick.cols -- 한 줄
 Q.START_POTION = UI.quick.potion -- 새 캐릭터의 첫 칸에 놓이는 물약(작은 달빛 물약)
+Q.seqFirst = nil :: ((string, number) -> string?)? -- 시퀀스의 첫 칸(가지 · 번호 → 이름표 — 화면이 넣어 준다 · 2026-10-30)
 Q.OLD_POTION = "potion" -- 예전 저장의 물약 칸(물약이 한 가지였을 때의 이름표) — Q.renew가 지금의 이름표로 바꾼다
 
 -- 칸에 놓인 것이 소비 아이템이면 그 자료(스킬이면 nil)
@@ -29,6 +30,17 @@ function Q.isPotion(what: any): boolean
 end
 
 -- 칸에 놓인 것이 펫 · 탈것이면 "pet" · "mount"(2026-10-21 사용자: 가방의 캐시 탭에서 꺼내기 · 타기 — 퀵슬롯에 놓으면 그 키로 꺼내고 넣고 타고 내린다)
+-- 시퀀스의 칸이면 그 구석에 적는 글 「S1」(스킬 시퀀스) · 「B1」(버프 시퀀스)(2026-10-30 — 스킬과 헷갈리지 않게) · 아니면 nil
+function Q.seqMark(what: any): string?
+	if typeof(what) ~= "string" then
+		return nil
+	end
+	local b = string.match(what, "^bseq_(%d+)$")
+	local k = string.match(what, "^seq_(%d+)$")
+	local M = UI.skillWords.seq.mark
+	return if b then (string.gsub(M.buff, "{n}", b)) elseif k then (string.gsub(M.skill, "{n}", k)) else nil
+end
+
 function Q.ride(what: any): string?
 	if typeof(what) ~= "string" then
 		return nil
@@ -61,6 +73,13 @@ function Q.pic(what: string): string?
 	end
 	if Q.ride(what) then
 		return "ride_" .. what -- 펫 · 탈것의 그림(달빛 상점의 것과 같다)
+	end
+	-- 시퀀스(2026-10-30 — sim/sequence.luau): 넣어 둔 첫 칸의 그림 · 비었으면 스킬 창의 그림. seqFirst(가지, 번호) = 그 시퀀스의 첫 칸(화면 boot가 넣어 준다)
+	local b = tonumber(string.match(what, "^bseq_(%d+)$"))
+	local k = tonumber(string.match(what, "^seq_(%d+)$"))
+	if b or k then
+		local first = Q.seqFirst and Q.seqFirst(if b then "buff" else "skill", (b or k) :: number)
+		return if first and not string.match(first, "seq_") then (Q.pic(first) or "menu_skill") else "menu_skill"
 	end
 	return "skill_" .. what
 end

@@ -21,6 +21,7 @@ local BONUS = COMBAT.rules.targetBonus -- 사냥기 · 보스기가 맞는 상�
 local SkillDamage = require(lune.ui.skillDamage) -- 그 레벨의 효과 글: 사출기 · 장치 · 패시브 · 버프의 효과와 공격 스킬의 % 피해(사용자 2026-10-13: "스킬 퍼뎀같은거 스킬 창에 설명에 나와있어야해  메이플처럼")
 local READY = COMBAT.ready -- 게임에 들어와 있는 스킬. 여기에 없는 스킬은 + 단추가 꺼져 있고 「아직 준비 중」이라고 적힌다(서버도 찍어 주지 않는다 — sim/hero.luau의 skillUp)
 local TYPES = CLASSES.types
+local SQ = UI.skillWords.seq -- 시퀀스(2026-10-30 — 설명 칸 오른쪽 위의 「시퀀스」 단추로 시퀀스 창을 연다)
 
 local SkillWindow = { wide = true }
 
@@ -75,6 +76,12 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 		ctx.send("SkillAuto")
 	end, { main = true, h = 22, font = "small" })
 	SkillWindow.autoFrame = auto.frame -- 튜토리얼(꿈)의 「스킬 찍기」 미션에서 반짝인다(2026-10-14)
+	-- 시퀀스(2026-10-30 — 메이플: 스킬 창의 「시퀀스」 단추로 시퀀스 창을 연다): 오른쪽 설명 칸의 오른쪽 위(스킬 이름 줄의 끝 — 가장 긴 이름 「되돌아오는 표창」도 닿지 않는다).
+	--  메이플은 창의 오른쪽 아래 — 우리 창의 오른쪽 아래는 퀵슬롯 안내 두 줄 · 탭 줄의 오른쪽 끝은 「스킬 포인트」의 자리라 여기에 두었다(제가 정한 것)
+	local seqBtn = Ui.button(body, SQ.open, listW + S.gap + S.detailW - SQ.openW, 0, SQ.openW, function()
+		require(script.Parent.windows).open("seq")
+	end, { h = 20, font = "small" })
+	seqBtn.frame.Name = "SeqOpen"
 	-- 스킬 초기화: 공짜 · 몇 번이든(2026-10-21 사용자: "스텟, 스킬 초기화 완전무료로 풀겠습니다" — 전에는 전직할 때마다 한 번이라 남아 있을 때만 보였다) — 탭의 오른쪽에 늘 보인다.
 	--  잘못 누르지 않게 두 번 눌러야 한다(「정말 초기화?」 — 3초 안에)
 	local RESET_X, RESET_W = (S.tabW + S.tabGap) * 4 + 8, 96
@@ -194,12 +201,12 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 			return
 		end
 		local job = SkillWindow.jobOf(me)
-		local tier = tiers[tab]
-		local locked = tier.job > job
 		for i, t in tabs do
 			t.label:color(if i == tab then C.accent elseif t.job > job then C.off else C.dim)
 			t.under.Visible = i == tab
 		end
+		local tier = tiers[tab]
+		local locked = tier.job > job
 		-- 스킬 포인트는 차수마다 따로다(받은 SP는 그때의 차수 스킬에만 쓴다) — 보고 있는 탭의 것을 적는다
 		local pool = if me.sps then me.sps[tier.job] or 0 else me.sp
 		points:set(Format.fill(WORDS.points, { n = pool }))
