@@ -696,6 +696,23 @@ function Touch.refresh()
 	paintAll()
 end
 
+-- 강화된 스킬이 빛난다(2026-11-04 — 살라맨더: 열기가 가득하면 사냥기 · 보스기의 칸 단추 · PC의 hud.luau Hud.setGlow와 같다): 테두리가 직업의 색으로 숨 쉬듯(k 0 ~ 1). 장마다 boot가 부른다
+function Touch.setGlow(on: boolean, color: Color3, k: number)
+	local GL = Quick.DATA.glow
+	for _, b in slotButtons do
+		local what = b.t.slot and state.slots[b.t.slot]
+		local lit = on and what ~= nil and what ~= false and Hud.glowable ~= nil and Hud.glowable(what) and not Touch.arranging
+		if lit then
+			b.glowing = true
+			b.stroke.Color = color
+			b.stroke.Transparency = 1 - (GL.edgeA[1] + (GL.edgeA[2] - GL.edgeA[1]) * k)
+		elseif b.glowing then
+			b.glowing = false
+			paintButton(b)
+		end
+	end
+end
+
 -- 놓을 것의 목록이 바뀌었다(가진 펫 · 탈것을 서버에서 받았다 — 2026-10-21): 배치 중이면 고른 칸 그대로 목록만 다시
 function Touch.rechoose()
 	if Touch.arranging then

@@ -107,9 +107,13 @@ function Passives.finalMul(h): number
 	end
 	return mul
 end
--- 공격력에 늘 곱하는 것: 공격력% · 최종 데미지 · 피의 계약(잃은 체력만큼) — 피해의 셈이 쓴다(= (1 + 공격력%) x 최종 데미지의 배수)
+-- 공격력에 늘 곱하는 것: 공격력% · 최종 데미지 · 피의 계약(잃은 체력만큼) · 사신의 낫날(리퍼가 사신화 동안 — 2026-11-01) — 피해의 셈이 쓴다(= (1 + 공격력%) x 최종 데미지의 배수)
 function Passives.atk(h): number
 	local mul = (1 + sum(h, "atk")) * (1 + sum(h, "final"))
+	local formFinal = sum(h, "formFinal")
+	if formFinal > 0 and Kit.formed(h) then
+		mul *= 1 + formFinal
+	end
 	local pact = sum(h, "pact")
 	if pact > 0 and h.maxHp > 0 then
 		mul *= 1 + pact * math.clamp(1 - h.hp / h.maxHp, 0, 1)

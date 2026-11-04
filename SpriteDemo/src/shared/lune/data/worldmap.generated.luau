@@ -550,7 +550,7 @@ return {
 					kind = "climb",
 					x = 0.906,
 					y = 0.5727,
-					scenes = { "r3d1", "r3d2", "r3d3" },
+					scenes = { "r3d1", "r3d2", "r3d3", "r3d5", "r3d6", "r3d7" },
 				},
 				{
 					id = "r3d4",
@@ -1028,6 +1028,9 @@ return {
 		r3d1 = { region = "r3", node = "r3d" },
 		r3d2 = { region = "r3", node = "r3d" },
 		r3d3 = { region = "r3", node = "r3d" },
+		r3d5 = { region = "r3", node = "r3d" },
+		r3d6 = { region = "r3", node = "r3d" },
+		r3d7 = { region = "r3", node = "r3d" },
 		r3d4 = { region = "r3", node = "r3d4" },
 		r4a1 = { region = "r4", node = "r4a1" },
 		r4a2 = { region = "r4", node = "r4a2" },

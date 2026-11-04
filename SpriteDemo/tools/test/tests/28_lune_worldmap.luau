@@ -239,7 +239,7 @@ do
 	local uses = {}
 	for _, def in QD.list do
 		for i, step in def.steps do
-			if step.type == "use" then
+			if step.type == "use" and def.playable ~= false then -- (받을 수 없는 퀘스트는 뺀다 — 2026-11-05: 퍼블리시하지 않는 용암 거인의 보스 퀘스트 「다시 깨어난 분화구」)
 				table.insert(uses, { def = def, i = i, step = step })
 			end
 		end

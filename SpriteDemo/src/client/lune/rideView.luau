@@ -358,11 +358,13 @@ function RideView:update(now: number, dt: number, x: number, y: number, dir: num
 	if not show then
 		self.mount.label.Visible = false
 		self.front.label.Visible = false
+		self.shownClip, self.shownF = nil, nil
 		return nil, nil
 	end
 	local m = MOUNT[self.rideId]
 	local clip = if air then "jump" elseif moving then "run" else "idle"
 	local f = Sprite.frameAt(self.mount.char, clip, now, clip == "jump")
+	self.shownClip, self.shownF = clip, f -- 지금 그린 동작 · 장(탄 채 대쉬의 잔상이 이 모습을 남긴다 — effects.luau의 rideTrail)
 	self.mount:set(clip, f, x, y, dir)
 	self.front:set(clip .. "_front", f, x, y, dir)
 	local bob = (m.bob[clip] and m.bob[clip][f]) or 0

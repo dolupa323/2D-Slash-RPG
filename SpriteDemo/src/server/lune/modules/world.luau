@@ -187,7 +187,8 @@ local function roster(key: string)
 	for _, s in inRoom(key) do
 		-- pet = 꺼내 둔 펫 · ride = 탄 탈것(2026-10-20 — 다른 사람의 화면도 같이 그린다)
 		local bm = s.acct and s.acct.bm
-		table.insert(list, { id = s.hero.id, name = s.name, class = s.hero.class, level = s.hero.level, pet = bm and bm.petOut or false, pets = if bm then Cash.petsOut(bm) else {}, ride = if s.riding and bm then bm.mount else false, look = s.hero.look, wskin = bm and bm.wskin or false, dskin = bm and bm.dskin or false, title = s.hero.title or false }) -- dskin = 장착한 데미지 스킨(2026-10-29 — 그 사람이 때린 숫자의 모습) -- look = 무기 · 로브 색(염색 — 2026-10-22) · wskin = 장착한 캐시 무기(2026-10-23) · title = 단 칭호(2026-10-26)
+		table.insert(list, { id = s.hero.id, name = s.name, class = s.hero.class, level = s.hero.level, pet = bm and bm.petOut or false, pets = if bm then Cash.petsOut(bm) else {}, ride = if s.riding and bm then bm.mount else false, look = s.hero.look, wskin = Cash.heroWskin(s.acct, s.hero), -- wskin = 그 캐릭터가 낀 캐시 무기(2026-11-03 — 전에는 계정의 것)
+			 dskin = bm and bm.dskin or false, title = s.hero.title or false }) -- dskin = 장착한 데미지 스킨(2026-10-29 — 그 사람이 때린 숫자의 모습) -- look = 무기 · 로브 색(염색 — 2026-10-22) · wskin = 장착한 캐시 무기(2026-10-23) · title = 단 칭호(2026-10-26)
 	end
 	return list
 end
@@ -225,6 +226,7 @@ local function selfView(s)
 	view.chargeCut = Kit.chargeCut(s.hero) -- 힘이 모이는 시간을 줄이는 몫(액시온 「전투 호흡」 — 2026-10-28)
 	local here = s.scene and rooms[s.scene] -- (방을 새로 짓지 않는다 — 옮기는 중이면 없다)
 	view.surge = if here and s.hero.pass then math.max(0, s.hero.pass.surge - here.time) else 0 -- 넘치는 힘의 남은 초(화면이 2단계에서 모으기 시작한다 — 2026-10-28)
+	view.rekindle = if here and s.hero.pass then math.max(0, s.hero.pass.rekindle - here.time) else 0 -- 재점화가 다시 버틸 수 있을 때까지의 초(살라맨더 — 버프 줄에 · 2026-11-03 사용자 "재사용 쿨 알수가 없어서 버프처럼 위에 보여야하고")
 	view.titles, view.title = require(lune.sim.titles).owned(s.hero), s.hero.title or false -- 가진 칭호 · 단 칭호(능력치 창 · 내 이름표 — 2026-10-26)
 	if s.acct then
 		view.attReady = Attend.ready(s.acct.att) -- 받을 출석 칸 · 업적 보상의 수(「메뉴」 단추의 점 — 2026-10-15)
@@ -719,6 +721,9 @@ end
 -- 파티에서 뺀다: 남은 파티원들을 돌려주고, 이 사람이 보낸 초대를 받은 사람들의 초대 상자를 닫는다(2026-10-18 검토: 30초 동안 남아 「받기」를 누르면 「받은 초대가 없다」)
 local function partyLeave(uid: number)
 	local left, _, cleared = Party.leave(book, uid)
+	if World.finderLeft then
+		World.finderLeft(uid, left) -- 파티 찾기(2026-11-05): 그 사람의 신청 · 방(방장이었으면 닫힌다)을 맞추고 남은 사람들에게 알린다
+	end
 	for _, to in cleared or {} do
 		local ts = byUser[to]
 		if ts then
@@ -1468,7 +1473,7 @@ local function onTravel(player, to: string)
 			for _, back in dest.portals do
 				if back.to == SCENES.base(s.scene) then -- (따로 된 방에서 나왔으면 그 장면의 문으로)
 					x, y = back.x, back.y
-				elseif back.weekly and require(lune.sim.weekly).boss(back.weekly) and require(lune.sim.weekly).boss(back.weekly).room == SCENES.base(s.scene) then -- (지역 이름의 한도 — 여기서 부른다)
+				elseif back.weekly and require(lune.sim.weekly).boss(back.weekly) and require(lune.sim.weekly).isRoomOf(require(lune.sim.weekly).boss(back.weekly), SCENES.base(s.scene)) then -- (지역 이름의 한도 — 여기서 부른다 · 방이 여럿인 보스는 그 가운데 어느 방이든)
 					x, y = back.x - 30, back.y -- 보스 방에서 걸어 나왔다: 그 보스의 문 앞(2026-10-27 — 그림자 능선 꼭대기의 무너진 아치. 전에는 그 맵의 처음 자리로 떨어졌다)
 				end
 			end
@@ -1598,7 +1603,7 @@ local function applyResult(cur, key: string, result)
 					local pid = Items.potionFor(1).id
 					local g = Items.goods(pid)
 					if g then
-						local d = roomOf(key):addDrop({ kind = "goods", goods = pid, amount = 1, name = g.name, icon = g.icon }, kill.x + 10, kill.y, gs.hero.id)
+						local d = roomOf(key):addDrop({ kind = "goods", goods = pid, amount = 1, name = g.name, icon = g.icon }, roomOf(key):onFloor(kill.x + 10, kill.x, kill.y), kill.y, gs.hero.id)
 						fire("DropAdd", gs.player, Room.dropView(d))
 					end
 				end
@@ -1630,7 +1635,7 @@ local function applyResult(cur, key: string, result)
 				end
 				-- 모으는 물건은 사람마다 따로 굴려 그 사람의 것으로 땅에 떨어진다(그 사람에게만 보인다) — 주워야 숫자가 오른다
 				for n, q in Quests.drops(gs.hero.quests, kill.kind, key, questRng) do
-					local d = roomOf(key):addDrop({ kind = "quest", amount = 1, quest = q.quest, step = q.step, name = q.name, icon = q.icon, goods = q.goods }, kill.x - n * 9, kill.y, gs.hero.id)
+					local d = roomOf(key):addDrop({ kind = "quest", amount = 1, quest = q.quest, step = q.step, name = q.name, icon = q.icon, goods = q.goods }, roomOf(key):onFloor(kill.x - n * 9, kill.x, kill.y), kill.y, gs.hero.id) -- (그 몬스터가 선 발판 안 — 벽 속 · 허공에 떨어지지 않게 · 2026-11-03)
 					fire("DropAdd", gs.player, Room.dropView(d))
 				end
 			end
@@ -1700,7 +1705,7 @@ local function fallenIn(key: string, hero, reach: number)
 end
 
 -- 기술: 구간(seg)마다 한 번씩 온다. 첫 구간은 앞 기술이 끝난 뒤에만, 이어지는 구간은 앞 구간 도중이나 끝난 직후에만 받는다.
-local function onSkill(player, id: string, seg: number, x: number, y: number, dir: number)
+local function onSkill(player, id: string, seg: number, x: number, y: number, dir: number, hot: boolean?) -- hot = 화면이 그 판을 살라맨더의 강화판으로 그렸는가(2026-11-04 — sim/kit.luau Kit.empower)
 	local s = sessions[player]
 	if s and s.hero then
 		arrived(s) -- 기술을 쓴다 = 화면이 열렸다(옮긴 뒤의 긴 보호를 끝낸다)
@@ -1824,7 +1829,7 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 		-- 쓴 자리: 서버가 아는 자리와 크게 다르지 않으면 화면이 말한 자리를 받아 적는다(이동 몫 안에서) — 받아 주지 않는 기술이면 되돌린다(2026-10-18 검토)
 		local ox, oy, ob = hero.x, hero.y, s.moveBudget
 		skillPlace(s, x, y)
-		local ok, lv = roomOf(key).caster:begin(hero, id, seg, matesIn(key, hero), { fallen = fallen })
+		local ok, lv, enh = roomOf(key).caster:begin(hero, id, seg, matesIn(key, hero), { fallen = fallen, hot = if typeof(hot) == "boolean" then hot else nil })
 		if not ok then
 			hero.dir = was
 			hero.x, hero.y, s.moveBudget = ox, oy, ob
@@ -1835,13 +1840,16 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 		if Caster.MOVERS[id] then
 			hero.warpAt = now
 		end
-		if seg == 1 and castDef.cd > 0 then
+		if seg == 1 and castDef.cd > 0 and not Kit.noCd(hero, castDef.type) then -- (사신 각성: 리퍼가 사신으로 변해 있는 동안 사냥기 · 공격기의 다시 쓰기가 없다 — 2026-10-31)
 			hero.cds[id] = now + castDef.cd
 		end
 		for _, other in inRoom(key) do
 			if other ~= s then
-				fire("Act", other.player, hero.id, id, seg, hero.x, hero.y, dir, lv or 0)
+				fire("Act", other.player, hero.id, id, seg, hero.x, hero.y, dir, lv or 0, enh == true) -- (enh = 강화판 — 그 사람들의 화면도 강화판을 그린다)
 			end
+		end
+		if enh then
+			sendSelf(s) -- 열기를 모두 썼다(퀵슬롯의 빛이 꺼진다)
 		end
 		return
 	end
@@ -1868,8 +1876,10 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 	--  일찍 받은 만큼이 쌓여 기술이 빨라지지 않게(2026-10-18 검토: 1차 연속기를 앞당겨 보내 1.7배쯤 빨랐다)
 	local start = now
 	if seg == 1 then
-		if last and now < last.free - 0.1 then
-			return -- 앞 기술이 아직 안 끝났다
+		-- 앞 기술이 아직 안 끝났다(0.35초 앞까지는 받는다 — 시각은 앞 기술이 끝난 때로 적으니 빨라지지 않는다. 2026-11-03 액시온 제보: 끝까지 모아 친 뒤 키를 누른 채 이어 쓰면
+		--  다음 판의 알림이 네트워크가 흔들려 0.1초 넘게 빨리 닿을 때 그 판을 통째로 버려, 화면은 모아 친 그림을 그렸지만 피해가 없었다 — 전에는 0.1초)
+		if last and now < last.free - 0.35 then
+			return
 		end
 		if last and last.free > now then
 			start = last.free
@@ -1888,13 +1898,14 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 		local prevTime = prev.time / haste
 		-- 화면은 앞 구간이 끝난 뒤에 다음 구간을 보낸다(boot) — 끝나기 0.15초 전부터 받는다(전에는 next를 앞 구간의 40%부터 받아 연속기를 앞당길 수 있었다)
 		local from = prevTime - 0.15
-		if elapsed < from or elapsed > prevTime + hold + 0.4 then
+		-- 끝까지 모으는 시간 뒤 1.0초까지 받는다(전에는 0.4 — 화면의 「전투 호흡」 몫이 한 박자 낡았거나 네트워크가 흔들리면 그보다 늦게 와 버려졌다 · 2026-11-03 · 모은 단계는 끝까지를 넘지 않는다)
+		if elapsed < from or elapsed > prevTime + hold + 1.0 then
 			return
 		end
 		start = math.max(now, last.at + prevTime)
 		if prev.charge then
 			-- 모은 단계는 서버가 흐른 시간으로 셈한다(화면이 말한 단계를 믿지 않는다). 만월 동안에는 모으지 않아도 끝까지 모은 것으로 친다
-			local held = if Buffs.full(s.hero) then hold else elapsed - prevTime
+			local held = if Buffs.full(s.hero) then hold else math.min(elapsed - prevTime, hold)
 			-- 넘치는 힘(액시온 4차): 끝까지 모은 강타를 맞힌 직후(3초)의 강타는 2단계에서 모으기 시작한다 — 톡 치면 2단계, 두 단계만 더 모으면 끝까지(한 번 쓰면 사라진다).
 			--  2026-10-28 사용자 "넘치는힘 패시브가 적용되는게 맞아?": 전에는 「적어도 2단계」였다 — 누르고 있으면 0단계부터 다시 세어 아무 이득이 없었다(끝까지 모으면 저절로 나가는 액시온은 늘 누르고 있다)
 			local surge = Passives.get(s.hero, "surge")
@@ -1911,6 +1922,15 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 		return -- 저절로 이어지는 구간은 서버가 잇는다(화면이 보낼 일이 없다)
 	end
 	local hero = s.hero
+	-- 살라맨더의 강화판(2026-11-04 — 열기가 가득 찬 채 쓴 1차의 사냥기 · 보스기): 열기를 모두 쓰고 그 판의 모든 타가 그 배수만큼 세다(sim/kit.luau Kit.empower — 그 판의 타는 열기를 채우지 않는다)
+	--  강화판의 범위(design/combat.js의 core.enh.first — 화염 광선: 앞으로 182 더 · 위로 3배). charged는 그 판에 하나다(살라맨더의 열기는 한 판에 한 번 오른다 — room.luau kitAfter의 cast)
+	local enh = if seg == 1 then Kit.empower(hero, def.type, if typeof(hot) == "boolean" then hot else nil) else nil
+	if enh then
+		local far = COMBAT.kit.salamander.core.enh.first[id]
+		charged = { mul = enh, reach = if far then far.reach else 0, tall = if far then far.up else 1, level = 0, enh = true }
+		sendSelf(s)
+	end
+	charged = charged or { mul = 1, reach = 0, level = 0 }
 	-- 쓴 자리: 서버가 아는 자리와 크게 다르지 않으면 클라이언트가 말한 자리를 받아 적는다(판정은 맞는 순간의 자리로 한다 · 이동 몫 안에서)
 	skillPlace(s, x, y)
 	hero.dir = dir
@@ -1935,7 +1955,7 @@ local function onSkill(player, id: string, seg: number, x: number, y: number, di
 	-- 방의 다른 사람들에게: 이 사람이 이 기술의 이 구간을 쓴다(그 사람들의 화면에서 동작이 나온다)
 	for _, other in inRoom(key) do
 		if other ~= s then
-			fire("Act", other.player, hero.id, id, seg, hero.x, hero.y, dir, if charged then charged.level else 0)
+			fire("Act", other.player, hero.id, id, seg, hero.x, hero.y, dir, if charged then charged.level else 0, enh ~= nil)
 		end
 	end
 	-- 쓰는 동작이 있는 설치(연막탄 · 수정 심기 · 저승문): 그 동작의 그 장에서 놓인다(연막탄은 그 자리에 버프가 걸린다)
@@ -2093,6 +2113,21 @@ local function onItem(player, action: string, a: any, b: any, c: any, d: any)
 	end
 	local h = s.hero
 	local ok, why, result = nil, nil, nil
+	-- 파는 사람 앞: 잡화 상인 · 열린 기간 이벤트의 상인(할로윈의 호박 마녀 할로 — 2026-10-31 사용자 "할로의 상점 ui 에서 아이템 판매가 안되는 문제가 있어":
+	--  할로 곁에서 연 상점 창도 가방에 「판매」가 뜨는데 서버는 잡화 상인 곁만 받아 「파는 사람 앞이 아니다」였다)
+	local function nearSeller(): boolean
+		if nearNpc(s, "shop") then
+			return true
+		end
+		for _, e in require(lune.sim.event).active() do
+			for _, n in SCENES.scenes[s.scene].npcs or {} do
+				if n.id == e.npc and math.abs(n.x - h.x) <= NPC_REACH and math.abs(n.y - h.y) <= 40 then
+					return true
+				end
+			end
+		end
+		return false
+	end
 	if action == "equip" then
 		ok, why = Bag.equip(h, a)
 	elseif action == "unequip" then
@@ -2127,7 +2162,7 @@ local function onItem(player, action: string, a: any, b: any, c: any, d: any)
 		ok, why = Bag.split(h, a, b, c, d) -- 탭 · 칸 · 덜어 낼 수 · 놓을 칸(안 주면 첫 빈 칸)
 	elseif action == "sell" then
 		-- 상점에 판다: 어느 상점(잡화 상인 · 대장장이) 앞에서나. 탭 · 칸 · 팔 수
-		if not nearNpc(s, "shop") then -- 잡화 상인만 사 준다(2026-10-15 — 대장장이는 상점이 없다: 제작 · 강화만)
+		if not nearSeller() then -- 잡화 상인만 사 준다(2026-10-15 — 대장장이는 상점이 없다: 제작 · 강화만)
 			why = "파는 사람 앞이 아니다"
 		else
 			result, why = Bag.sell(h, a, b, c)
@@ -2135,7 +2170,7 @@ local function onItem(player, action: string, a: any, b: any, c: any, d: any)
 		end
 	elseif action == "sellMany" then
 		-- 여러 개 판매(2026-10-23): a = 장비 번호들 · 잡화 상인 앞에서만(한 칸 팔기와 같다)
-		if not nearNpc(s, "shop") then
+		if not nearSeller() then
 			why = "파는 사람 앞이 아니다"
 		else
 			result, why = Bag.sellMany(h, a)
@@ -2143,7 +2178,7 @@ local function onItem(player, action: string, a: any, b: any, c: any, d: any)
 		end
 	elseif action == "buyback" then
 		-- 되산다(2026-10-18): 잡화 상인 앞에서 · a = 되사기 목록의 차례
-		if not nearNpc(s, "shop") then
+		if not nearSeller() then
 			why = "파는 사람 앞이 아니다"
 		else
 			ok, why = Bag.buyBack(h, a)
@@ -4316,6 +4351,39 @@ function World.toBox(room, here)
 	local wk = room.weekly
 	return World.openBoxFor(here, wk.boss, wk.mode, wk.who or {}, wk.mul, wk.test)
 end
+-- 방이 여럿인 보스(2026-11-04 용암 거인 — 첫 굴 r3d5 → 둘째 굴 r3d6 → 분화구 r3d7): 손이 굴 밖으로 다 빠져나가면(sim/lavagim.luau의 room.lavaNext) 방의 모두를 다음 방(같은 번호 — r3d6#wn12)으로.
+--  흐른 시간 · 사람마다 남은 데스 카운트 · 거인의 체력은 그대로 이어진다(사용자 "제한시간이랑 데스카운트는 세방이 합쳐서 하나야 당연한거야").
+--  쓰러져 있던 사람은 일으켜서 데려간다(moveTo — 데스 카운트는 쓰지 않는다: 제가 정한 것). 떠난 방은 끝(state "moved" — 보스가 다시 서지 않고 실패로도 세지 않는다 · 아무도 없으니 곧 닫힌다)
+function World.toStage(room, here, key: string)
+	local nx = room.lavaNext
+	room.lavaNext = nil
+	local Weekly = require(lune.sim.weekly)
+	local wk = room.weekly
+	local b = wk and Weekly.boss(wk.boss)
+	local nextRoom = b and b.rooms and b.rooms[nx.ph]
+	if not nextRoom then
+		return
+	end
+	local nkey = Weekly.stageKey(key, nextRoom)
+	local nroom = roomOf(nkey)
+	local w2 = nroom.weekly
+	if w2 then
+		w2.t, w2.lives, w2.time, w2.changed = wk.t, table.clone(wk.lives or {}), wk.time, true
+	end
+	for _, mob in nroom.bosses or {} do
+		if mob.kind == wk.boss then
+			mob.startHp = nx.hp -- 앞 방에서 깎은 그대로(그 부위의 위 끝 — 넘친 피해는 버렸다)
+		end
+	end
+	wk.state = "moved"
+	local sc = SCENES.scenes[nkey]
+	for i, s in here do
+		moveTo(s, nkey, sc.spawn.x + (i - 1) * 12, sc.spawn.y)
+	end
+	if w2 then
+		toRoom(nkey, "WeekView", Weekly.roomView(nroom))
+	end
+end
 -- 사람들(list)을 새 보상의 방으로(관리 「보상의 방」도 이 길로 — 격파를 적지 않고 나 혼자)
 function World.openBoxFor(here, bossId: string, mode: string, who, mul: number?, test: number?)
 	local Weekly = require(lune.sim.weekly)
@@ -4471,6 +4539,9 @@ function World.tick(dt: number)
 					end
 				end)
 			end
+			if not isBot(s.player) then
+				CashServer.giftTick(s) -- 달빛 상점의 선물(2026-10-31): 들어온 뒤 한 번 · 보냈다는 소식이 오면 한 번 — 계정에 넣는다
+			end
 			CashServer.maxGift(s) -- 레벨 순위 1위 선물(백금 사슴 — 2026-10-25): 처음 만렙(세계 기록)의 캐릭터로 있으면 계정에 넣는다 — 한 사람만(이미 있으면 아무것도 하지 않는다)
 			-- 칭호(2026-10-26 — server/lune/modules/titles.luau): 처음 만렙 · 만렙 열 사람의 기록에 있는 캐릭터면 준다(받았으면 알림 · 이름표). 기록에 적는 것은 만렙 최초 달성과 같은 사람만
 			local gotTitles, lostTitles = require(script.Parent.titles).grant(s, require(script.Parent.firstMax).get(), s.cid ~= nil and s.name ~= "" and not s.guest and not isBot(s.player) and not Admin.is(s.player) and not World.studio and not Store.isOffline(), World.now, Admin.is(s.player)) -- (운영자 칭호 = 관리자 계정만 — 2026-10-26)
@@ -4498,13 +4569,11 @@ function World.tick(dt: number)
 		if s.hero then
 			local ended = Buffs.tick(s.hero, dt)
 			if #ended > 0 then
-				-- 꺼지지 않는 불(살라맨더 4차): 폭주가 끝나도 열기가 남는다
+				-- 폭주가 끝나면 가득 고정이던 열기가 다 타 버린다(0) · 꺼지지 않는 불(살라맨더 4차)이면 50에서 시작한다(2026-11-03 리마스터 — 서버가 폭주 동안 열기를 가득으로 고정하고 열기 폭발이 그 열기를 쓴다)
 				if table.find(ended, "sl_overheat") and s.hero.pass then
 					local keep = Passives.get(s.hero, "keep")
-					if keep then
-						s.hero.kit.heat = math.max(s.hero.kit.heat, keep.keep)
-						s.hero.kit.heatT = 0
-					end
+					s.hero.kit.heat = if keep then keep.keep else 0
+					s.hero.kit.heatT = 0
 					s.hero.pass.extended = 0
 				end
 				sendSelf(s)
@@ -4618,6 +4687,9 @@ function World.tick(dt: number)
 						sendSelf(hs)
 						sendBuffs(hs)
 					end
+				elseif e.type == "rekindle" then
+					-- 재점화(살라맨더)가 쓰러질 피해를 버텼다(2026-11-03): 방의 모두에게 그 자리 → 분홍 불기둥 · 내 버프 줄에는 다시 버틸 수 있을 때까지(selfView의 rekindle)
+					toRoom(key, "Rekindle", e.hero, e.x, e.y)
 				elseif e.type == "dodge" then
 					local s = byId[e.hero]
 					if s then
@@ -4687,6 +4759,9 @@ function World.tick(dt: number)
 							fire("WeekPay", s.player, { boss = wk.boss, mode = wk.mode, first = first, view = Weekly.view(s.hero.rift, now) })
 						end
 					end
+				end
+				if room.lavaNext then
+					World.toStage(room, here, key) -- 방이 여럿인 보스: 다음 방으로(2026-11-04 용암 거인)
 				end
 				if Weekly.toBox(room) then
 					wk.boxAt = nil -- 한 번만
@@ -4759,9 +4834,10 @@ local function onCash(player, a: any, b: any)
 	local now = os.time()
 	if a == "view" then
 		CashServer.recheck(s) -- 상점을 열 때 가지지 않았던 패스를 다시 묻는다(게임 밖에서 산 것 — 2026-10-24 · 30초에 한 번까지)
-		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks())
+		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks(), s.hero)
 		view.ok = true
 		view.riding = s.riding == true
+		view.giftLock = CashServer.giftLocked(s) or nil -- 로블록스 정책으로 선물을 보낼 수 없는 계정(2026-10-31 — 상점 창이 「선물하기」에 미리 적는다)
 		return view
 	elseif a == "enter" then
 		-- 달빛 상점에 들어간다(2026-10-21): 마을에서만 · 살아 있을 때. 들어가 있는 동안 맵에서 빠진다(inRoom) — 다른 사람에게 사라졌다고 알린다
@@ -4780,9 +4856,10 @@ local function onCash(player, a: any, b: any)
 			end
 			sendWho(s.scene)
 		end
-		local view = Cash.view(s.acct, now, s.passes, s.hero.level, CashServer.prices(), CashServer.stocks())
+		local view = Cash.view(s.acct, now, s.passes, s.hero.level, CashServer.prices(), CashServer.stocks(), s.hero)
 		view.ok = true
 		view.riding = s.riding == true
+		view.giftLock = CashServer.giftLocked(s) or nil
 		return view
 	elseif a == "leave" then
 		-- 나온다: 들어간 자리로 다시(맵의 그림 · 몬스터 · 사람을 처음부터 받는다 — moveTo가 Revive로 그 장면을 보낸다)
@@ -4798,6 +4875,14 @@ local function onCash(player, a: any, b: any)
 		end
 		local ok, why = CashServer.prompt(s, b)
 		return { ok = ok, why = why }
+	elseif a == "gift" then
+		-- 선물하기(2026-10-31 — server/lune/modules/cash.luau CashServer.gift): { id = 상품, to = 받는 사람의 닉네임 } → 선물의 구매 창
+		if not s.shop then
+			return { ok = false, why = "달빛 상점 안에서 산다" }
+		end
+		local t = if typeof(b) == "table" then b else {}
+		local ok, why, to = CashServer.gift(s, t.id, t.to)
+		return { ok = ok, why = why, to = to }
 	elseif a == "take" then
 		if not s.hero then
 			return { ok = false, why = "캐릭터로 들어간 뒤에 받는다" }
@@ -4808,7 +4893,7 @@ local function onCash(player, a: any, b: any)
 			sendBag(s)
 			saveSoon(s)
 		end
-		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks())
+		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks(), s.hero)
 		view.ok = moved > 0
 		view.why = if moved > 0 then nil elseif left > 0 then "가방에 자리가 없다" else "받을 것이 없다"
 		return view
@@ -4822,12 +4907,12 @@ local function onCash(player, a: any, b: any)
 				sendWho(s.scene)
 			end
 		end
-		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks())
+		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks(), s.hero)
 		view.ok, view.why = ok == true, why
 		return view
 	elseif a == "wskin" then
-		-- 캐시 무기를 장착한다(이름표) · 해제한다(false) — 계정의 모든 캐릭터의 무기(2026-10-23) → 방 사람들의 화면에도(Who)
-		local ok, why = Cash.setWskin(s.acct, b)
+		-- 캐시 무기를 장착한다(이름표) · 해제한다(false) — 지금 캐릭터의 무기(2026-11-03 사용자 "무기스킨 캐릭마다 낄수있게" — 전에는 계정의 모든 캐릭터) → 방 사람들의 화면에도(Who)
+		local ok, why = Cash.setWskin(s.acct, b, s.hero)
 		if ok then
 			s.dirty = true
 			saveSoon(s)
@@ -4835,7 +4920,7 @@ local function onCash(player, a: any, b: any)
 				sendWho(s.scene)
 			end
 		end
-		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks())
+		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks(), s.hero)
 		view.ok, view.why = ok == true, why
 		return view
 	elseif a == "dskin" then
@@ -4848,7 +4933,7 @@ local function onCash(player, a: any, b: any)
 				sendWho(s.scene)
 			end
 		end
-		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks())
+		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks(), s.hero)
 		view.ok, view.why = ok == true, why
 		return view
 	elseif a == "ride" then
@@ -4867,7 +4952,7 @@ local function onCash(player, a: any, b: any)
 		if s.scene then
 			sendWho(s.scene)
 		end
-		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks())
+		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks(), s.hero)
 		view.ok, view.why, view.riding = ok == true, why, s.riding == true
 		return view
 	elseif a == "pass" then
@@ -4880,7 +4965,7 @@ local function onCash(player, a: any, b: any)
 			s.dirty = true
 			saveSoon(s)
 		end
-		local view = Cash.view(s.acct, now, s.passes, s.hero.level, CashServer.prices(), CashServer.stocks())
+		local view = Cash.view(s.acct, now, s.passes, s.hero.level, CashServer.prices(), CashServer.stocks(), s.hero)
 		view.ok = got > 0
 		view.got = got
 		view.why = if got > 0 then nil else "받을 보상이 없다"
@@ -4971,6 +5056,7 @@ function World.start()
 		local t = byUser[uid]
 		if t then
 			t.giftKey = nil
+			t.bmGiftDone = nil -- (달빛 상점의 선물 상자도 — 2026-10-31)
 		end
 	end)
 	-- 칭호를 단다 · 뗀다(능력치 창의 「칭호」 줄 — ""이면 뗀다). 가진 것만 — 방 사람들의 이름표에도 바로
@@ -5018,6 +5104,42 @@ function World.start()
 	Net.OnServer("Potion", Analytics.wrap("Potion", onPotion, World.session))
 	Net.OnServer("Chars", onChars)
 	Net.OnServer("Rank", onRank)
+	-- 스케줄러 창(2026-11-03 — 메뉴 → 「스케줄러」 · 메이플 스케줄러처럼): 이 캐릭터의 일일 · 주간 할 일(보기만 — sim/schedule.luau가 셈한다 · 저장을 바꾸지 않는다)
+	Net.OnServer("Schedule", function(player)
+		local s = sessions[player]
+		if not s or not s.hero then
+			return nil
+		end
+		return require(lune.sim.schedule).view(s.hero, s.acct, os.time())
+	end)
+	-- 탄 채 대쉬(2026-11-03 사용자 "탈것 타고 대쉬하면 탈것 내려지거든? 그게아니라 탈것대쉬가 나가야하는거야"): 기술이 아니라서 내리지 않는다. 대쉬가 있는 탈것(ride.generated의 dash)을
+	--  탄 동안 · 그 다시 쓰기(조금 너그럽게) 밖이면 같은 방의 다른 사람들에게 알린다(그 화면에 탈것의 잔상). 움직임은 Move가 나른다 — 서버의 이동 몫(1초에 300점)이 그대로 막는다
+	Net.OnServer("RideDash", function(player, x, y, dir)
+		local s = sessions[player]
+		local bm = s and s.acct and s.acct.bm
+		if not s or not s.hero or not s.riding or not bm or typeof(bm.mount) ~= "string" then
+			return
+		end
+		local d = nil
+		for _, m in require(lune.data["ride.generated"]).mounts do
+			if m.id == bm.mount then
+				d = m.dash
+			end
+		end
+		if not d or World.now - (s.rideDashAt or -99) < d.cd - 0.15 then
+			return
+		end
+		s.rideDashAt = World.now
+		local h = s.hero
+		if x ~= x or y ~= y or math.abs(x - h.x) > 120 or math.abs(y - h.y) > 120 then
+			x, y = h.x, h.y -- (화면이 말한 자리가 서버가 아는 자리에서 멀거나 수가 아니면 서버의 자리로)
+		end
+		for _, o in inRoom(s.scene) do
+			if o ~= s then
+				fire("RideDashed", o.player, h.id, x, y, if dir < 0 then -1 else 1)
+			end
+		end
+	end)
 	Net.OnServer("Debug", onDebug)
 	Net.OnServer("Admin", onAdmin)
 	Net.OnServer("Keys", onKeys)
@@ -5065,6 +5187,8 @@ function World.start()
 		local b = Weekly.boss(id)
 		if not b or (mode ~= "normal" and mode ~= "hard") then
 			return reply(nil, "모르는 보스다")
+		elseif b.dev and not Admin.is(player) then
+			return reply(nil, Weekly.DATA.words.closed) -- 퍼블리시하지 않는 보스(2026-11-04 용암 거인 — 관리자만 들어가 본다)
 		elseif s.scene ~= b.door.scene or math.abs(s.hero.x - b.door.x) > 60 then
 			return reply(nil, "보스의 문 앞에서 들어갈 수 있다")
 		end
@@ -5084,6 +5208,12 @@ function World.start()
 				return reply(nil, Weekly.DATA.words.partyNone)
 			end
 		end
+		World.enterWeekly(going, b, mode)
+		return reply(true)
+	end), World.session))
+	-- 그 사람들을 그 보스의 새 방(<방>#wn번호)으로(문 앞의 「입장」 · 파티 찾기의 「출발」 — 2026-11-05 떼어 냄)
+	function World.enterWeekly(going, b, mode: string): string
+		local Weekly = require(lune.sim.weekly) -- (지역 이름의 한도 — 여기서 부른다)
 		weekSerial += 1
 		local key = Weekly.key(b, mode, weekSerial)
 		local room = roomOf(key)
@@ -5093,7 +5223,249 @@ function World.start()
 			Analytics.custom(ms, "WeeklyEnter", 1, b.id .. "_" .. mode)
 		end
 		toRoom(key, "WeekView", Weekly.roomView(room))
-		return reply(true)
+		return key
+	end
+	-- 파티 찾기(2026-11-05 — 사용자 "파티 보스라서 파티구하고 방만들고 막 이런 UI도 있어야해 파티를 구해서 가는거라서" · 고르심: 같은 서버만 · 방장이 수락 · 방장 출발 → 바로 보스 방).
+	--  셈 = sim/finder.luau · 창 = client/lune/ui/finderWindow.luau. 방의 사람 = 방장의 파티(수락하면 여기서 그 사람을 방장의 파티에 넣는다 — Party.invite → accept).
+	--  action: "view" · "make"(보스, 난이도, 조건 단계) · "apply"(방장) · "withdraw" · "accept" · "deny"(사람) · "ready"(켜기) · "start" · "leave"(방장 = 방을 닫는다 · 파티원 = 파티를 나간다).
+	--  바뀌면 그 방의 사람 · 신청한 사람 · 상대에게 새 화면(FinderView)을 보낸다. 대답 = 부른 사람의 화면 { ok, why, rooms, mine, bosses, max, steps }
+	World.finderBook = require(lune.sim.finder).new()
+	function World.finderParty()
+		return {
+			members = function(uid)
+				return Party.members(book, uid)
+			end,
+			leader = function(uid)
+				local p = Party.of(book, uid)
+				return if p then p.leader else uid
+			end,
+		}
+	end
+	function World.finderView(s, why: string?)
+		local Finder, Weekly = require(lune.sim.finder), require(lune.sim.weekly)
+		local fb, P = World.finderBook, World.finderParty()
+		local me = s.player.UserId
+		local now = os.time()
+		local function who(uid)
+			local t = byUser[uid]
+			if t and t.hero then
+				return { name = t.name, lv = t.hero.level, power = Hero.power(t.hero) }
+			end
+			return { name = "?", lv = 0, power = 0 }
+		end
+		local rooms = {}
+		for _, r in Finder.list(fb, P) do
+			local bb = Weekly.boss(r.boss)
+			table.insert(rooms, { id = r.leader, boss = if bb then bb.name else r.boss, mode = r.mode, lv = r.minLv, n = r.n, leader = who(r.leader).name, mine = r.leader == P.leader(me), applied = fb.app[me] == r.leader })
+		end
+		local mine = nil
+		local r = Finder.roomOf(fb, P, me)
+		if r then
+			local bb = Weekly.boss(r.boss)
+			local members, apps = {}, {}
+			for _, uid in P.members(r.leader) do
+				local w = who(uid)
+				table.insert(members, { id = uid, name = w.name, lv = w.lv, leader = uid == r.leader, ready = uid == r.leader or r.ready[uid] == true })
+			end
+			if r.leader == me then
+				for _, uid in r.apps do
+					local w = who(uid)
+					table.insert(apps, { id = uid, name = w.name, lv = w.lv, power = w.power })
+				end
+			end
+			mine = { boss = if bb then bb.name else r.boss, mode = r.mode, lv = r.minLv, lead = r.leader == me, ready = r.ready[me] == true, members = members, apps = apps }
+		end
+		local bosses = {}
+		for _, bb in Weekly.DATA.bosses do
+			if not bb.dev or Admin.is(s.player) then
+				local modes = {}
+				for _, m in Weekly.MODES do
+					if bb[m] and not Weekly.canEnter(s.hero, bb, m, now) then
+						table.insert(modes, m)
+					end
+				end
+				if #modes > 0 then
+					table.insert(bosses, { id = bb.id, name = bb.name, modes = modes, need = { normal = bb.normal.need, hard = if bb.hard then bb.hard.need else nil } })
+				end
+			end
+		end
+		return { ok = why == nil, why = why, rooms = rooms, mine = mine, bosses = bosses, max = Finder.MAX, steps = Finder.LV_STEPS }
+	end
+	-- 그 사람들에게 새 화면을 보낸다(부른 사람은 대답으로 받는다)
+	function World.finderPush(ids, except: number?)
+		local seen = {}
+		for _, uid in ids do
+			local t = byUser[uid]
+			if uid ~= except and not seen[uid] and t and t.hero then
+				seen[uid] = true
+				fire("FinderView", t.player, World.finderView(t))
+			end
+		end
+	end
+	-- 그 방에 걸린 사람들(파티원 · 신청한 사람)
+	local function finderAll(r): { number }
+		local P = World.finderParty()
+		local ids = table.clone(P.members(r.leader))
+		for _, uid in r.apps do
+			table.insert(ids, uid)
+		end
+		return ids
+	end
+	-- 파티에서 빠졌다(나가기 · 접속을 끊음 — partyLeave): 그 사람의 신청을 거두고 · 방장이었으면 방을 닫고 · 남은 사람들에게 알린다
+	function World.finderLeft(uid: number, left)
+		local Finder = require(lune.sim.finder)
+		local fb, P = World.finderBook, World.finderParty()
+		local touched = table.clone(left or {})
+		Finder.withdraw(fb, uid)
+		local own = fb.rooms[uid]
+		if own then
+			for _, id in finderAll(own) do
+				table.insert(touched, id)
+			end
+			Finder.close(fb, uid)
+		end
+		for _, r in Finder.sweep(fb, P) do
+			for _, id in r.apps do
+				table.insert(touched, id)
+			end
+		end
+		World.finderPush(touched, uid)
+	end
+	Net.OnServer("Finder", Analytics.wrap("Finder", outside(function(player, action: any, a: any, b2: any, c: any)
+		local Finder, Weekly = require(lune.sim.finder), require(lune.sim.weekly)
+		local s = sessions[player]
+		if not s or not s.hero or typeof(action) ~= "string" then
+			return nil
+		end
+		local me = player.UserId
+		local fb, P = World.finderBook, World.finderParty()
+		local now = os.time()
+		local why = nil
+		local before = Finder.roomOf(fb, P, me)
+		local touched = if before then finderAll(before) else {}
+		if fb.app[me] and fb.rooms[fb.app[me]] then
+			for _, id in finderAll(fb.rooms[fb.app[me]]) do
+				table.insert(touched, id)
+			end
+		end
+		if action == "make" then
+			local bb = Weekly.boss(a)
+			if not bb or (bb.dev and not Admin.is(player)) then
+				why = "모르는 보스다"
+			elseif b2 ~= "normal" and not (b2 == "hard" and bb.hard) then
+				why = "모르는 난이도다"
+			elseif typeof(c) ~= "number" or Finder.LV_STEPS[c] == nil then
+				why = "모르는 조건이다"
+			else
+				why = Weekly.canEnter(s.hero, bb, b2, now)
+				if not why then
+					local _, w2 = Finder.make(fb, P, me, bb.id, b2, bb[b2].need + Finder.LV_STEPS[c])
+					why = w2
+				end
+			end
+		elseif action == "apply" then
+			local r = typeof(a) == "number" and fb.rooms[a] or nil
+			local bb = r and Weekly.boss(r.boss)
+			if not r or not bb then
+				why = "없는 방이다"
+			else
+				why = Weekly.canEnter(s.hero, bb, r.mode, now)
+				if not why then
+					local _, w2 = Finder.apply(fb, P, me, a, s.hero.level)
+					why = w2
+					if not why then
+						for _, id in finderAll(r) do
+							table.insert(touched, id)
+						end
+					end
+				end
+			end
+		elseif action == "withdraw" then
+			Finder.withdraw(fb, me)
+		elseif action == "accept" then
+			local t = typeof(a) == "number" and byUser[a] or nil
+			local r, w2 = Finder.accept(fb, P, me, a)
+			if not r then
+				why = w2
+			elseif not t or not t.hero then
+				why = "그 사람이 이 서버에 없다"
+			else
+				local ok, w3 = Party.invite(book, me, a, World.now)
+				if not ok then
+					why = w3
+				else
+					local party, w4 = Party.accept(book, a, World.now)
+					if not party then
+						why = w4
+					else
+						sendParty(party.members)
+						table.insert(touched, a)
+					end
+				end
+			end
+		elseif action == "deny" then
+			local _, w2 = Finder.deny(fb, me, a)
+			why = w2
+			if typeof(a) == "number" then
+				table.insert(touched, a)
+			end
+		elseif action == "ready" then
+			local _, w2 = Finder.setReady(fb, P, me, a == true)
+			why = w2
+		elseif action == "leave" then
+			if fb.rooms[me] then
+				Finder.close(fb, me)
+			elseif before then
+				local left = partyLeave(me) -- (그 안에서 World.finderLeft가 남은 사람들에게 알린다)
+				sendParty(left)
+				sendParty({ me })
+			end
+		elseif action == "start" then
+			local r, members = Finder.check(fb, P, me)
+			if not r then
+				why = members
+			else
+				local bb = Weekly.boss(r.boss)
+				local going = {}
+				for _, uid in members do
+					local ms = byUser[uid]
+					if not ms or not ms.hero then
+						why = "파티원이 이 서버에 없다"
+						break
+					elseif ms.hero.inCine or not ms.hero.alive then
+						why = ("%s — 지금은 출발할 수 없다"):format(ms.name)
+						break
+					end
+					local w5 = bb and Weekly.canEnter(ms.hero, bb, r.mode, now)
+					if w5 or not bb then
+						why = ("%s — %s"):format(ms.name, w5 or "모르는 보스다")
+						break
+					end
+					table.insert(going, ms)
+				end
+				if not why then
+					Finder.close(fb, me)
+					World.enterWeekly(going, bb, r.mode)
+				end
+			end
+		elseif action ~= "view" then
+			return nil
+		end
+		for _, cr in Finder.sweep(fb, P) do
+			for _, id in cr.apps do
+				table.insert(touched, id)
+			end
+		end
+		local after = Finder.roomOf(fb, P, me)
+		if after then
+			for _, id in finderAll(after) do
+				table.insert(touched, id)
+			end
+		end
+		if action ~= "view" then
+			World.finderPush(touched, me)
+		end
+		return World.finderView(s, why)
 	end), World.session))
 	Net.OnServer("Sail", Analytics.wrap("Sail", onSail, World.session))
 	Net.OnServer("Market", Analytics.wrap("Market", onMarket, World.session))
@@ -5122,6 +5494,16 @@ function World.start()
 			pcall(Store.rankSet, "robux", key, s.acct.spent, false)
 			rankCache = nil
 		end,
+		-- 선물(2026-10-31): 보낸 사람에게 「보냈다」 · 받은 사람에게 「누가 보낸 선물」(CashGot의 셋째 값) — 산 펫 · 탈것을 바로 꺼냈으면 방 사람들의 화면에도
+		giftSent = function(s, key, to)
+			fire("CashGot", s.player, key, { to = to })
+		end,
+		giftGot = function(s, key, from)
+			fire("CashGot", s.player, key, { from = from })
+			if (Cash.PET[key] or Cash.MOUNT[key]) and s.scene then
+				sendWho(s.scene)
+			end
+		end,
 		notify = function(s, key)
 			fire("CashGot", s.player, key)
 			if Cash.product(key) and Cash.product(key).kind == "pass" and s.hero then
@@ -5142,6 +5524,12 @@ function World.start()
 	Net.OnServer("StatAdd", onStatAdd)
 	Net.OnServer("StatAuto", onStatAuto)
 	Net.OnServer("SkillUp", onSkillUp)
+	Net.OnServer("SkillDown", function(player, id) -- 스킬 레벨을 하나 내린다(2026-10-31 — 스킬 창의 「−」 · Hero.skillDown이 거른다)
+		local s = sessions[player]
+		if s and s.hero and typeof(id) == "string" and Hero.skillDown(s.hero, id) then
+			sendSelf(s)
+		end
+	end)
 	Net.OnServer("SkillAuto", onSkillAuto)
 	Net.OnServer("SkillReset", onSkillReset)
 	-- 능력치 초기화: 찍은 능력치(힘 · 민첩 · 지능 · 운 · 체력)를 모두 되돌려 받는다 — 공짜 · 몇 번이든(2026-10-21 사용자: "스텟, 스킬 초기화 완전무료로 풀겠습니다")
@@ -5202,7 +5590,7 @@ function World.start()
 		local have = Bag.count(h, e.candy.id)
 		local owned = Event.owned(e, item, h, c)
 		if owned then
-			return { ok = false, msg = if item.limit then W.soldOut else W.once }
+			return { ok = false, msg = if item.per == "day" then W.dayFull elseif item.limit then W.soldOut else W.once } -- (하루 한도 — 2026-10-31)
 		elseif have < item.cost then
 			return { ok = false, msg = Format.fill(W.short, { have = have, n = item.cost }) }
 		end
@@ -5246,8 +5634,7 @@ function World.start()
 			item.big = pick.big
 		end
 		if item.limit then
-			local key = Event.countKey(e, item)
-			c.ev[key] = (c.ev[key] or 0) + 1
+			Event.addCount(c, e, item) -- (하루 한도면 오늘의 수 — 2026-10-31)
 		end
 		s.dirty = true
 		saveSoon(s)
@@ -5257,7 +5644,7 @@ function World.start()
 			sendWho(s.scene)
 		end
 		Analytics.custom(s, "EventTrade", item.cost, e.id .. ":" .. item.id)
-		return { ok = true, msg = if item.kind == "dust" then what else Format.fill(W.bought, { what = what }), big = item.big, view = Cash.view(s.acct, World.now, s.passes, h.level, CashServer.prices(), CashServer.stocks()) }
+		return { ok = true, msg = if item.kind == "dust" then what else Format.fill(W.bought, { what = what }), big = item.big, view = Cash.view(s.acct, World.now, s.passes, h.level, CashServer.prices(), CashServer.stocks(), s.hero) }
 	end, World.session))
 	Net.OnServer("Coupon", function(player, text) -- 쿠폰(2026-10-21 — 셈은 CashServer.coupon)
 		return CashServer.coupon(sessions[player], text)

@@ -95,7 +95,7 @@ function BossView:sound(k: string?)
 end
 
 function BossView.new(mobs, cast, effects, scene, hooks)
-	local self = setmetatable({ cast = cast, effects = effects, list = {}, hooks = hooks or {}, spots = {} }, BossView)
+	local self = setmetatable({ cast = cast, effects = effects, list = {}, hooks = hooks or {}, spots = {}, mobs = mobs }, BossView) -- mobs = 화면의 몬스터(기믹의 졸개 — 용암 거인의 혹 · 심장의 자리와 체력)
 	-- 이펙트 한 벌: 예고(맞을 자리 · 느낌표)는 기술의 이펙트와 같은 판(cast.fx)에 그리고, 패턴의 이펙트 그림(스프라이트)은 장면의 효과(effects:play)가 튼다
 	self.fx = setmetatable({
 		sprite = function(who: string, clip: string, x: number, y: number, dir: number, opts)
@@ -287,9 +287,24 @@ function BossView:update(dt: number)
 	end
 	box.Visible = shown ~= nil
 	if shown then
-		if BossView.shownName ~= shown.info.name then
-			BossView.shownName = shown.info.name
-			BossView.name:set(shown.info.name)
+		-- 부위가 있는 보스(용암 거인 — 2026-11-04): 이름 옆에 지금 부위 · 바는 그 부위의 체력(남은 체력으로 페이즈를 안다 — 서버 sim/lavagim.luau의 partOf와 같은 셈)
+		local barHp, barMax, nameText = shown.hp, shown.info.maxHp, shown.info.name
+		local parts = shown.def.story.gimmick and shown.def.story.gimmick.parts
+		if parts then
+			local lo, hi, acc = 0, 1, 0
+			for i = #parts, 1, -1 do
+				local share = parts[i].share
+				if shown.hp > shown.info.maxHp * acc then -- (아래 부위부터 — 남은 체력이 그 부위의 아래 끝보다 많으면 그 위 부위)
+					lo, hi = acc, acc + share
+					nameText = shown.info.name .. " · " .. parts[i].name
+				end
+				acc += share
+			end
+			barHp, barMax = math.max(0, shown.hp - shown.info.maxHp * lo), shown.info.maxHp * (hi - lo)
+		end
+		if BossView.shownName ~= nameText then
+			BossView.shownName = nameText
+			BossView.name:set(nameText)
 		end
 		if BossView.shownMob ~= shown then
 			BossView.shownMob = shown -- 다른 보스 · 다시 나타난 보스: 효과 없이 그대로 놓는다
@@ -298,8 +313,11 @@ function BossView:update(dt: number)
 		end
 		if BossView.shownHp ~= shown.hp then
 			BossView.shownHp = shown.hp
-			BossView.barFx:set(math.max(0, shown.hp) / shown.info.maxHp, math.max(0, shown.hp))
-			BossView.hpText:set(BossView.hpLabel(shown.hp, shown.info.maxHp, Layout.BOSS.w - Layout.BOSS.pad * 2, Ui.measure))
+			BossView.barFx:set(math.max(0, barHp) / barMax, math.max(0, barHp))
+			BossView.hpText:set(BossView.hpLabel(math.floor(barHp + 0.5), math.floor(barMax + 0.5), Layout.BOSS.w - Layout.BOSS.pad * 2, Ui.measure))
+		end
+		if self.note and self.note ~= "" then
+			shownPat = self.note -- 보스의 기믹이 알리는 글(용암 거인의 「대분화까지 n초」 — lavaView가 쓴다)이 패턴의 이름보다 앞선다
 		end
 		if BossView.shownPat ~= shownPat then
 			BossView.shownPat = shownPat

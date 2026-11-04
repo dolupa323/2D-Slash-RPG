@@ -63,11 +63,21 @@ function ShopWindow.title(arg: string): string
 	return ShopWindow.TITLE[arg] or "상점"
 end
 
+-- 목록에 보이는 줄 수: MAX_ROWS까지 · 화면 틀이 낮으면(폰 · 패드) 창이 화면 안에 들도록 줄인다(목록은 스크롤한다).
+--  2026-10-31 사용자 "할로의 상점 ui 가 하단에 잘려서 호박개수랑 이런거 안보여 모바일에서" — 전에는 늘 열 줄이라 창의 아래(사탕 수 · 기간)가 화면 밖으로 나갔다
+function ShopWindow.rows(): number
+	if typeof(Stage.uiH) ~= "number" or not Ui.WIN then
+		return MAX_ROWS -- (화면 틀을 아직 모른다)
+	end
+	local free = Stage.uiH - Layout.WIN.top - Ui.WIN.head - Ui.WIN.foot - 32 - 6
+	return math.clamp(math.floor(free / ROW), 4, MAX_ROWS)
+end
+
 function ShopWindow.size(arg: string): (number, number)
 	if arg == "store" then
 		return Layout.storeBody(Stage.ratio, D.BAG.storeBase)
 	end
-	return W, MAX_ROWS * ROW + 32 -- (2026-10-15: 대장장이의 단추 줄을 뺐다 — 상점은 잡화 상인뿐)
+	return W, ShopWindow.rows() * ROW + 32 -- (2026-10-15: 대장장이의 단추 줄을 뺐다 — 상점은 잡화 상인뿐)
 end
 
 local function stockOf(npc: string)
@@ -454,7 +464,7 @@ local function buildEvent(body: Frame, ctx, w: number, h: number, e)
 	local EW = e.words
 	local view = {}
 	local bx = w - ShopWindow.BUY_W
-	local list = Ui.scroll(body, 0, 0, w, MAX_ROWS * ROW, #e.shop * ROW, 3)
+	local list = Ui.scroll(body, 0, 0, w, h - 32, #e.shop * ROW, 3)
 	local rows = {}
 	local busy = false
 	if ctx.cashFetch then
@@ -526,10 +536,10 @@ local function buildEvent(body: Frame, ctx, w: number, h: number, e)
 			row.name:set(Event.what(e, item, me.level, band))
 			row.name:color(if owned then C.dim else C.text)
 			row.price:set(Format.short(item.cost))
-			row.count:set(if lim then Format.fill(EW.count, { n = n, max = lim }) else "")
+			row.count:set(if lim then Format.fill(if item.per == "day" then EW.dayCount else EW.count, { n = n, max = lim }) else "") -- 하루 한도는 「오늘 n/3」(2026-10-31)
 			row.one.frame.Visible = not owned
 			row.one:setEnabled(have >= item.cost)
-			row.state:set(if owned then (if lim then EW.soldOut else EW.own) else "")
+			row.state:set(if owned then (if item.per == "day" then EW.dayOut elseif lim then EW.soldOut else EW.own) else "")
 		end
 		purse:set(Format.short(have))
 	end
@@ -555,7 +565,7 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 	local bx = w - ShopWindow.BUY_W
 	-- 물건이 창의 줄(MAX_ROWS)보다 많으면 목록이 스크롤한다(2026-10-18 — 달빛 부적 · 능력치 초기화 주문서로 열둘이 됐다. 창은 스마트폰의 화면 틀에 들어가야 한다)
 	local stocks = stockOf(arg)
-	local list = Ui.scroll(body, 0, 0, w, MAX_ROWS * ROW, #stocks * ROW, 3)
+	local list = Ui.scroll(body, 0, 0, w, h - 32, #stocks * ROW, 3)
 	for i, stock in stocks do
 		local y = (i - 1) * ROW
 		local many = stock.max > 1
@@ -664,7 +674,7 @@ function ShopWindow.build(body: Frame, ctx, w: number, h: number, arg: string)
 				b.buy:setEnabled(me.money >= e.price)
 			end
 		end
-		list.CanvasSize = UDim2.fromOffset(0, math.max(MAX_ROWS * ROW, #stocks * ROW + (if #sold > 0 then ROW * (#sold + 1) else 0)))
+		list.CanvasSize = UDim2.fromOffset(0, math.max(h - 32, #stocks * ROW + (if #sold > 0 then ROW * (#sold + 1) else 0)))
 		list.ScrollingEnabled = #stocks + (if #sold > 0 then #sold + 1 else 0) > MAX_ROWS
 		money:set(Format.short(me.money))
 		dust:set(Format.short(bag.dust))

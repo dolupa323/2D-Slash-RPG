@@ -120,7 +120,7 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 
 	-- 스킬 칸들(cols x rows)을 미리 만들어 두고, 탭에 따라 채운다
 	local cells = {}
-	local nameW = S.colW - S.slot - 8 - S.plusW - 4
+	local nameW = S.colW - S.slot - 8 - S.plusW * 2 - 8 -- (「−」 · 「+」 둘 — 2026-10-31: 칸이 162 → 192로 넓어져 이름의 폭은 그대로)
 	for i = 1, S.cols * S.rows do
 		local holder = Ui.group(body, ((i - 1) % S.cols) * (S.colW + S.colGap), S.top + math.floor((i - 1) / S.cols) * S.row, S.colW, S.row, "Skill" .. i)
 		local cell = Ui.slot(holder, 0, 0, S.slot)
@@ -136,8 +136,18 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 				view.paint()
 			end
 		end)
+		-- 「−」(2026-10-31 사용자 "스킬포인트 초기화 했을때 + 옆에 - 버튼도 만들어서 좀 편의있게 스킬 찍을수있게"): 하나 내린다 — 포인트는 그 차수로(서버 Hero.skillDown)
+		-- (글자는 보통의 "-" — 글꼴에 「−」(U+2212)가 없어 「?」로 보였다, 2026-11-01 사용자 "스킬 -버튼이 왜 ?로 표기되는지?" · 수량 창 · 소리 창과 같다)
+		local minus = Ui.button(holder, "-", S.colW - S.plusW * 2 - 4, 2, S.plusW, function()
+			local sk = tiers and tiers[tab].skills[i]
+			if sk then
+				selected = i
+				ctx.send("SkillDown", sk.id)
+				view.paint()
+			end
+		end)
 		-- 칸을 누르면 오른쪽에 설명이 나오고, 퀵슬롯에 놓을 수 있는 스킬이면 칸들이 반짝인다(한 번 더 누르면 그만둔다). 누른 채 움직이면 끌기
-		picker(holder, 0, 0, S.colW - S.plusW - 4, S.slot, "Pick", function()
+		picker(holder, 0, 0, S.colW - S.plusW * 2 - 8, S.slot, "Pick", function()
 			local sk = tiers and tiers[tab].skills[i]
 			if sk then
 				selected = i
@@ -150,7 +160,7 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 				ctx.quick.press(sk.id, nil, input)
 			end
 		end)
-		cells[i] = { holder = holder, cell = cell, pic = pic, name = name, level = level, plus = plus }
+		cells[i] = { holder = holder, cell = cell, pic = pic, name = name, level = level, plus = plus, minus = minus }
 	end
 
 	-- 오른쪽: 고른 스킬의 그림 · 이름 · 갈래와 레벨 · 설명 · (앞 차수의 기술을 잇는 것이면) 그 기술의 이름
@@ -184,6 +194,11 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 			local label = Ui.text(holder, WORDS.tabs[t.job] or tostring(t.job), 0, 0, S.tabW, { font = "body", align = "center", color = C.dim })
 			local under = Ui.box(holder, 0, 15, S.tabW, 2, C.accent)
 			under.Visible = false
+			-- 노란 점(2026-10-31 사용자 "메뉴에 노란점 떠있어서 눌러서 들어가면 세부ui에서는 노란점 표시가 없어서"): 이 차수에 찍을 포인트가 남았다 — 메뉴 단추의 점과 같은 그림
+			local dot = Ui.box(holder, S.tabW - 6, -3, 6, 6, C.ink)
+			Ui.box(dot, 1, 1, 4, 4, C.gold)
+			dot.ZIndex = 9
+			dot.Visible = false
 			picker(holder, 0, -4, S.tabW, 24, "Hit", function()
 				if tab ~= i then
 					tab, selected = i, 1
@@ -191,7 +206,7 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 					view.paint()
 				end
 			end)
-			tabs[i] = { label = label, under = under, job = t.job }
+			tabs[i] = { label = label, under = under, job = t.job, dot = dot }
 		end
 	end
 
@@ -204,6 +219,9 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 		for i, t in tabs do
 			t.label:color(if i == tab then C.accent elseif t.job > job then C.off else C.dim)
 			t.under.Visible = i == tab
+			if t.dot then
+				t.dot.Visible = t.job <= job and (if me.sps then (me.sps[t.job] or 0) else me.sp) > 0 -- 찍을 포인트가 남은 차수
+			end
 		end
 		local tier = tiers[tab]
 		local locked = tier.job > job
@@ -225,6 +243,7 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 				c.level:set(("%d / %d"):format(lv, sk.max))
 				c.level:color(if lv >= sk.max then C.accent else C.dim)
 				c.plus:setEnabled(not locked and pool > 0 and lv < sk.max and READY[sk.id] == true and (not sk.needs or not READY[sk.needs] or (me.skills[sk.needs] or 0) > 0))
+				c.minus:setEnabled(me.class ~= nil and require(lune.sim.hero).canSkillDown(me.class, job, me.skills, sk.id)) -- 내릴 수 있는가(처음 주는 레벨 · 먼저 배워야 하는 스킬 — 서버와 같은 셈)
 			end
 		end
 		local sk = tier.skills[selected]

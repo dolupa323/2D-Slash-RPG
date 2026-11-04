@@ -33,8 +33,15 @@ function WeeklyWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 	Ui.line(body, 0, S.lineY, w)
 	local half = math.floor((w - S.modeGap) / 2)
 	local modeBtn = {}
+	local only = not b.hard -- 난이도가 하나뿐인 보스(용암 거인 — 2026-11-04): 노말 단추 하나를 가득
+	if only then
+		WeeklyWindow.mode = "normal"
+	end
 	for i, mode in Weekly.MODES do
-		local btn = Ui.button(body, WD.modes[mode].name, if i == 1 then 0 else half + S.modeGap, S.modeY, if i == 1 then half else w - half - S.modeGap, function()
+		if only and mode ~= "normal" then
+			continue
+		end
+		local btn = Ui.button(body, WD.modes[mode].name, if i == 1 then 0 else half + S.modeGap, S.modeY, if only then w elseif i == 1 then half else w - half - S.modeGap, function()
 			WeeklyWindow.mode = mode
 			view.refresh()
 		end)
@@ -82,7 +89,7 @@ function WeeklyWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 		for k, btn in modeBtn do
 			btn:setMain(k == mode)
 		end
-		info:set(Format.fill(W.modeLine, { need = m.need, lv = m.lv }) .. " · " .. Format.fill(W.time, { m = math.floor(WD.time / 60) }))
+		info:set(Format.fill(W.modeLine, { need = m.need, lv = m.lv }) .. " · " .. Format.fill(W.time, { m = math.floor((b.time or WD.time) / 60) })) -- (그 보스만의 제한 시간 — 용암 거인 20분)
 		local lines, itemAt = Weekly.payLines(b, mode)
 		for i, t in lines do
 			payRows[i]:set(t)

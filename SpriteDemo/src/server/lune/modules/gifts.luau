@@ -41,6 +41,13 @@ function Gifts.send(uid: number, name: string, id: string, n: number, now: numbe
 	return true, told
 end
 
+-- 모든 서버에 「그 계정의 상자를 열어 보라」고만 알린다(달빛 상점의 선물 — 2026-10-31 · server/lune/modules/cash.luau). 알렸는가
+function Gifts.ping(uid: number): boolean
+	return (pcall(function()
+		MessagingService:PublishAsync(Gifts.TOPIC, { uid = uid })
+	end))
+end
+
 -- 그 캐릭터의 선물을 꺼내 가방에 넣는다. give(id, n) → 넣은 수 · 돌려주는 것: { { id, n } … }(넣은 것 — 알림에 쓴다) · 남겨 둔 것이 있는가
 function Gifts.take(uid: number, name: string, give: (string, number) -> number, now: number): ({ any }, boolean)
 	if not Store.giftTake then

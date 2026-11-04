@@ -158,6 +158,9 @@ local function makeG(self, a)
 		pose = function()
 			return a.pose
 		end,
+		wskin = function() -- 장착한 캐시 무기(살라맨더의 가득 찬 열기 불꽃 갓이 그 재질의 색 — 2026-11-04)
+			return a.wskin
+		end,
 		riding = function() -- 탈것을 탄 동안(boot · othersView가 안장 위에 작게 그리는 배를 넣는다 — 리븐의 그림자 분신이 따로 걷는다: 2026-10-26)
 			return a.rideSize ~= nil
 		end,
@@ -250,7 +253,12 @@ local function makeG(self, a)
 		self.timers[#self.timers + 1] = { t = d, fn = fn }
 	end
 	function g.shot(o)
-		local p = { t = 0, acc = 0, hitSet = {}, dir = a.dir, who = a.who, w = 0, h = 0, dmg = 0, life = 1 }
+		-- 그림만 띄우는 것(sprite = 캐릭터 판의 동작 — 화염 광선의 광선 · 2026-11-04 4차로 옮기며): 판정 없이 그 자리에 그 그림을 튼다(1차의 기술 자료 shots와 같은 길 — effects.luau)
+		if o.sprite then
+			self.effects:addSprite(a.who, o.sprite, o.x, o.y, o.dir or a.dir, o.life or 0.4, o.fps or 14)
+			return o
+		end
+		local p = { t = 0, acc = 0, hitSet = {}, dir = a.dir, who = a.who, w = 0, h = 0, dmg = 0, life = 1, owner = a } -- owner = 쏜 사람(맵을 떠나면 함께 걷는다 — Cast:drop)
 		for k, v in o do
 			p[k] = v
 		end
@@ -275,11 +283,14 @@ local function makeG(self, a)
 		end
 	end
 	-- 순간이동: 내 몸은 바로 옮긴다(서버도 같은 스킬을 돌려 그 자리로 옮겨 적는다 — 어긋나면 서버가 Warp로 바로잡는다). 옮긴 자리를 이어지는 이펙트가 바로 읽는다
-	function g.teleport(x: number): boolean
+	function g.teleport(x: number, y: number?): boolean -- y = 그 높이로(없으면 지금 높이 — 2026-10-31 무영 섬)
 		if a.own and self.control then
-			local nx = self.control.teleport(x)
+			local nx = self.control.teleport(x, y)
 			if nx then
 				a.x = nx
+				if y then
+					a.y = y
+				end
 				return true
 			end
 			return false
@@ -382,6 +393,15 @@ function Cast:drop(id: any)
 			sp:destroy()
 		end
 	end
+	-- 그 사람이 남긴 날아가는 것 · 놓인 것(무니의 수정 수호령 · 리븐의 월영 비수 …)도 걷는다(2026-10-31 사용자 "무니 포탈타고 맵 이동할때 수정 수호령 잔상이남아":
+	--  전에는 사람만 걷어 수호령(60초)이 떠난 자리에 남아 계속 그려졌다)
+	if a then
+		for i = #self.shots, 1, -1 do
+			if self.shots[i].owner == a then
+				table.remove(self.shots, i)
+			end
+		end
+	end
 	self.actors[id] = nil
 end
 
@@ -441,8 +461,8 @@ function Cast:look(a, body, clip: string, frame: number, x: number, y: number, d
 	end
 end
 
--- 그 기술의 그 구간이 시작됐다. lv = 모은 단계
-function Cast:start(a, id: string, seg: number, lv: number?)
+-- 그 기술의 그 구간이 시작됐다. lv = 모은 단계 · hot = 살라맨더의 강화판으로 쓴 판인가(첫 구간에서만 — 내 것은 boot의 enhOf · 남의 것은 서버의 Act가 알린다)
+function Cast:start(a, id: string, seg: number, lv: number?, hot: boolean?)
 	local def = a.kit and a.kit.byId[id]
 	local s = def and def.segs and def.segs[seg]
 	if not s then
@@ -469,6 +489,13 @@ function Cast:start(a, id: string, seg: number, lv: number?)
 	a.skill = { def = def, i = seg, s = s, t = 0, lv = lv or 0, fired = {}, acc = 0, last = s.to or (if clip then #clip.frames - 1 else 0) }
 	a.charge = lv or 0 -- 모은 단계: 모아 친 구간 동안 커진 몸(액시온 — 다른 사람의 것은 서버가 Act로 알려 준 단계 · 2026-10-28)
 	a.chargeP = nil -- 모으는 게이지(내 캐릭터만 — 모으는 구간 동안 boot가 채운다)
+	-- 살라맨더의 강화판(2026-11-04): 그 판의 첫 구간에서 정한다 — 묶음은 g.s.enh를 보고 그 기술의 더 큰 모습으로 그리고 · empower = 열기를 모두 쓰는 그림
+	if seg == 1 and a.kit and a.kit.empower then
+		a.g.s.enh = hot == true
+		if hot then
+			a.kit.empower(a.g)
+		end
+	end
 	if s.start then
 		s.start(a.g)
 	end
@@ -586,6 +613,14 @@ function Cast:proc(a, kind: string, m, sx: number, sy: number, land: () -> (), e
 	end
 	fn(a.g, m, { sx = sx, sy = sy, land = land, i = e and e.i, n = e and e.n, hop = e and e.hop })
 	return true
+end
+
+-- 그 사람이 적을 쓰러뜨렸다(서버의 Hits — 2026-10-31 리퍼 리마스터: kits/reaper.luau의 onKillFx = 넋 · 피가 빨려 든다). 그 직업의 그림이 없으면 아무것도 하지 않는다
+function Cast:killed(a, m)
+	local fn = a and a.kit and a.kit.onKillFx
+	if fn then
+		fn(a.g, m)
+	end
 end
 
 -- 화면 가르기(리븐 4차 천지 가르기 — 2026-10-24 사용자 "모니터 잘린다음에잘려야지 선만긋고 흔들리면어떡해"):

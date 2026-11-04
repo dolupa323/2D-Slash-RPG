@@ -19,6 +19,9 @@ local byId, byRoom = {}, {}
 for _, b in W.bosses do
 	byId[b.id] = b
 	byRoom[b.room] = b
+	for _, r in b.rooms or {} do -- 방이 여럿인 보스(2026-11-04 용암 거인 — 첫 굴 · 둘째 굴 · 분화구): 어느 방이든 그 보스의 방
+		byRoom[r] = b
+	end
 end
 
 function Weekly.boss(id: any)
@@ -43,6 +46,15 @@ end
 -- 방 이름을 짓는다
 function Weekly.key(b, mode: string, serial: number): string
 	return b.room .. "#w" .. (if mode == "hard" then "h" else "n") .. serial
+end
+-- 그 장면(바탕 이름)이 그 보스의 방인가(방이 여럿인 보스는 그 가운데 하나)
+function Weekly.isRoomOf(b, base: string): boolean
+	return byRoom[base] == b
+end
+-- 같은 싸움의 다음 방 이름: "r3d5#wn12" → "r3d6#wn12"(번호 · 난이도는 그대로 — 2026-11-04 용암 거인의 방 셋)
+function Weekly.stageKey(key: string, room: string): string
+	local tail = string.match(key, "#w[nh]%d+$")
+	return room .. (tail or "")
 end
 
 -- 이번 주에 그 보스를 격파했는가(했으면 그 난이도)
@@ -175,7 +187,7 @@ end
 -- 방을 열 때: 주간의 방이면 room.weekly = { mode, boss = 보스의 이름표, t(흐른 시간), state = "fight" | "clear" | "fail", backAt }
 --  lives = 사람마다 남은 데스 카운트(키 = 캐릭터 번호의 글 — 화면에 그대로 보낸다. 없으면 W.lives)
 function Weekly.start(room, mode: string, b)
-	room.weekly = { mode = mode, boss = b.id, t = 0, state = "fight", backAt = nil, changed = true, lives = {} }
+	room.weekly = { mode = mode, boss = b.id, t = 0, state = "fight", backAt = nil, changed = true, lives = {}, time = b.time or W.time } -- time = 그 보스의 제한 시간(용암 거인 20분 — 2026-11-04 · 없으면 모두의 것)
 end
 
 -- 데스 카운트(2026-10-27 사용자: "보스 데스카운트는 사람마다 개인 데스카운트 5야 / 무니 소생같은건 데스카운트 소모안하고 살아나는거고")
@@ -199,7 +211,7 @@ end
 function Weekly.step(room, dt: number)
 	local wk = room.weekly
 	wk.t += dt
-	if wk.state == "fight" and wk.t >= W.time then
+	if wk.state == "fight" and wk.t >= (wk.time or W.time) then
 		wk.state, wk.backAt, wk.changed = "fail", wk.t + W.failBack, true
 	end
 end
@@ -412,7 +424,7 @@ function Weekly.roomView(room)
 		boss = wk.boss,
 		mode = wk.mode,
 		state = wk.state,
-		left = math.max(0, W.time - wk.t),
+		left = math.max(0, (wk.time or W.time) - wk.t),
 		back = if wk.backAt then math.max(0, wk.backAt - wk.t) else nil,
 		box = if wk.boxAt then math.max(0, wk.boxAt - wk.t) else nil, -- 격파한 뒤 보상의 방으로 가기까지(초 — 2026-10-28)
 		lives = table.clone(wk.lives or {}),

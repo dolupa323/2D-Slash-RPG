@@ -824,6 +824,131 @@ function BossFx.bombSigil(ctx, x: number, y: number, k: number)
 	bomb(ctx, R(x), R(y), 5, blinkOf(k))
 end
 
+-- ---- 용암 거인의 예고(2026-11-04 — mark "lava" · 다른 보스와 다른 꼴: 사용자 2026-10-27 "다른보슨데"). 맞는 자리는 앞의 보스들처럼 점선 테두리로 정확히(field · edges) ----
+-- 주먹이 칠 곳: 바닥에 지그재그로 금이 가며(k만큼 거인 쪽에서 바깥으로) 분홍으로 빛나고, 금에서 김 줄기가 오른다 · 위에는 내려올 주먹의 그림자(넓어진다)
+function BossFx.lavaCrack(ctx, lo: number, hi: number, y: number, up: number, dir: number, k: number)
+	lo, hi, y, k = R(lo), R(hi), R(y), math.clamp(k, 0, 1)
+	field(ctx, lo, hi, y, up, k)
+	local blink = blinkOf(k)
+	local len = R((hi - lo) * min(1, k * 1.25))
+	local base = if dir > 0 then lo else hi
+	for i = 0, len - 1 do
+		local x = base + dir * i
+		local zig = (floor(i / 5) % 2 == 0) and (i % 5) or (5 - i % 5)
+		ctx:style(SLATE)
+		ctx:rect(x, y - 2 - zig, 1, 3)
+		ctx:style(if blink then T.w elseif i > len - 6 then T.l else T.n)
+		ctx:rect(x, y - 1 - zig, 1, 1)
+		if i % 9 == 4 and up > 30 then -- 김 줄기(금에서 위로 — 깜박이며 오른다)
+			local h = 4 + (floor(k * 20 + i) % 6)
+			ctx:alpha(0.55)
+			ctx:style(T.l)
+			ctx:rect(x, y - 3 - zig - h, 1, h)
+			ctx:alpha(1)
+		end
+	end
+	if up > 30 then
+		-- 내려올 주먹의 그림자: 맞는 자리의 위 끝에 가로로 넓어지는 어두운 덩이
+		local w = R((hi - lo) * 0.5 * k)
+		if w > 2 then
+			local cx = R((lo + hi) / 2)
+			ctx:alpha(0.35 + 0.3 * k)
+			ctx:style(SLATE)
+			ctx:rect(cx - w, y - up - 4, w * 2, 4)
+			ctx:alpha(1)
+		end
+	end
+end
+-- 손바닥 · 그러쥐기(낮은 띠): 바닥을 따라 흐르는 용암 물결(봉우리들이 dir 쪽으로 흐른다)
+function BossFx.lavaSmear(ctx, lo: number, hi: number, y: number, up: number, dir: number, k: number)
+	lo, hi, y, k = R(lo), R(hi), R(y), math.clamp(k, 0, 1)
+	field(ctx, lo, hi, y, up, k)
+	local blink, shift = blinkOf(k), R(k * 60) * dir
+	for x = lo, hi - 1 do
+		local w = (x - lo - shift) % 14
+		local h = if w < 4 then w elseif w < 8 then 8 - w else 0
+		if h > 0 then
+			ctx:style(SLATE)
+			ctx:rect(x, y - 3 - h, 1, 1)
+			ctx:style(if blink then T.w else T.l)
+			ctx:rect(x, y - 2 - h, 1, h)
+		end
+	end
+end
+-- 끓는 숨: 그 높이(발이 바닥에서 blo ~ bhi)의 띠 — 옅은 칠 · 위아래 점선 · 흐르는 아지랑이 물결(거인 쪽에서 바깥으로)
+function BossFx.lavaBand(ctx, lo: number, hi: number, y: number, blo: number, bhi: number, dir: number, k: number)
+	lo, hi, y, k = R(lo), R(hi), R(y), math.clamp(k, 0, 1)
+	field(ctx, lo, hi, y, bhi, k, blo)
+	local blink, shift = blinkOf(k), R(k * 120) * dir
+	local cy = y - R((blo + bhi) / 2)
+	for x = lo, hi - 1, 2 do
+		local wv = R(math.sin((x - shift) / 6) * 3)
+		ctx:style(if blink then T.w else T.l)
+		ctx:rect(x, cy + wv, 2, 1)
+		ctx:alpha(0.5)
+		ctx:rect(x, cy + wv - 6, 1, 1)
+		ctx:rect(x, cy + wv + 6, 1, 1)
+		ctx:alpha(1)
+	end
+end
+-- 떨어지는 곳(화산탄 · 튕긴 방울 · 바위): 바닥의 끓는 거품 원(테두리 + 오르는 거품) · 하늘에서 내려오는 마그마 덩이(k = 1에 닿는다)
+function BossFx.bubbleMark(ctx, x: number, y: number, r: number, up: number, k: number)
+	x, y, k = R(x), R(y), math.clamp(k, 0, 1)
+	local blink = blinkOf(k)
+	edges(ctx, x, y, r, up)
+	ctx:alpha(0.2 + 0.15 * k)
+	ctx:style(T.n)
+	ctx:rect(x - r, y - up, r * 2, up)
+	ctx:alpha(1)
+	ctx:style(if blink then T.w else T.n)
+	ellipse(ctx, x, y - 2, r, 2)
+	ctx:rect(x - r, y - 1, r * 2, 2)
+	for i = 0, 2 do -- 거품
+		local bx = x - r + 4 + ((i * 7 + floor(k * 12)) % max(1, r * 2 - 6))
+		local by = y - 3 - (floor(k * 30) + i * 3) % 6
+		ctx:style(T.l)
+		ctx:rect(bx, by, 2, 2)
+	end
+	local my = R(y - up - 46 + (up + 46 - 8) * k)
+	ctx:style(SLATE)
+	ctx:rect(x - 4, my - 4, 9, 9)
+	ctx:style(T.n)
+	ctx:rect(x - 3, my - 3, 7, 7)
+	ctx:style(if blink then T.w else T.l)
+	ctx:rect(x - 2, my - 2, 3, 3)
+end
+-- 솟는 곳(용암 기둥 · 그루터기 분수): 바닥의 줄 + 위로 흔들리며 차오르는 아지랑이 기둥(맞는 높이 up까지)
+function BossFx.heatColumn(ctx, x: number, y: number, r: number, up: number, k: number)
+	x, y, k = R(x), R(y), math.clamp(k, 0, 1)
+	local blink = blinkOf(k)
+	edges(ctx, x, y, r, up)
+	ctx:style(if blink then T.w else T.n)
+	ctx:rect(x - r, y - 2, r * 2, 3)
+	local h = R(up * k)
+	for j = 0, h - 1, 2 do
+		local wv = R(math.sin((j + k * 40) / 5) * 2)
+		ctx:alpha(0.25 + 0.35 * (1 - j / max(1, up)))
+		ctx:style(T.l)
+		ctx:rect(x - r + 2 + wv, y - 3 - j, 1, 1)
+		ctx:rect(x + r - 3 + wv, y - 3 - j, 1, 1)
+		ctx:rect(x + wv, y - 3 - j, 1, 1)
+	end
+	ctx:alpha(1)
+end
+-- 머리 위(분홍 「!」 대신): 떨어지는 용암 방울
+function BossFx.magmaSigil(ctx, x: number, y: number, k: number)
+	x, y = R(x), R(y)
+	local blink = blinkOf(k)
+	ctx:style(SLATE)
+	ctx:rect(x - 3, y - 7, 7, 7)
+	ctx:rect(x - 1, y - 10, 3, 3)
+	ctx:style(if blink then T.w else T.n)
+	ctx:rect(x - 2, y - 6, 5, 5)
+	ctx:rect(x, y - 9, 1, 3)
+	ctx:style(T.w)
+	ctx:rect(x - 1, y - 5, 1, 1)
+end
+
 -- ---- 새 패턴의 예고(2026-10-12 밤 — 공방 design/bosses.js의 STORYBOSS_NEXT) ----
 -- 표시된 자리(불씨 뿌리기 · 봉화 불기둥): 바닥의 굵은 줄(가로 2r) + 그 위로 차오르는 옅은 기둥(k = 0 → 1 — 다 차면 솟는다) · 끝이 가까우면 깜박인다.
 --  fromX · fromY = 불씨가 날아오는 곳(보스의 화로 — 있으면 포물선을 그리며 날아와 k = 1에 그 자리에 닿는다)
@@ -842,6 +967,14 @@ function BossFx.spot(ctx, x: number, y: number, r: number, up: number, k: number
 			BossFx.emberMark(ctx, x, y, r, up, k)
 		else
 			BossFx.pageMark(ctx, x, y, r, up, k)
+		end
+		return
+	end
+	if mark == "lava" then -- 용암 거인(2026-11-04): 솟는 것(바닥에서 하늘까지 — up 150 넘게)은 아지랑이 기둥 · 떨어지는 것은 끓는 거품 원 + 마그마 덩이
+		if up >= 150 then
+			BossFx.heatColumn(ctx, x, y, r, up, k)
+		else
+			BossFx.bubbleMark(ctx, x, y, r, up, k)
 		end
 		return
 	end
@@ -1084,8 +1217,47 @@ function BossFx.body(state: string, p, t: number, now: number, clips, anim, tail
 	if state == "run" and clips.run then
 		return loop("run", 1)
 	end
+	-- 기믹이 정한 상태(용암 거인 — 2026-11-04: grab 쥐고 있다 · boil 끓어오르는 분화구 · shift 부위가 부서진다 · sink · under · rise 못 속으로 · 못뿐 · 솟음)는
+	--  같은 이름의 동작을 한 번 틀고 끝 장에서 멈춘다(loop가 있으면 그 구간을 되풀이)
+	if state ~= "idle" and state ~= "tell" and state ~= "act" and state ~= "dash" and state ~= "roar" and clips[state] then
+		return hold(state)
+	end
 	local clip, frame = loop("idle", 1)
 	return clip, frame, state == "tell" or state == "act" or state == "dash"
+end
+
+-- 부위가 있는 보스(용암 거인 — 2026-11-04)의 페이즈: 남은 체력으로(서버 sim/lavagim.luau의 partOf와 같은 셈 — 부위의 아래 끝과 같으면 다음 부위)
+function BossFx.phaseOf(hp: number, maxHp: number, parts): number
+	local acc = 0
+	local ph = #parts
+	for i = #parts, 1, -1 do
+		if hp > maxHp * acc then
+			ph = i
+		end
+		acc += parts[i].share
+	end
+	return ph
+end
+-- 페이즈마다 그림이 다른 동작(idle → idle2 · stagger → stagger3 …): 그 페이즈의 이름이 있으면 그것. phaseClips = body에 넘길 동작 묶음(같은 이름으로 그 페이즈의 것을 찾는다)
+local phaseCache = setmetatable({}, { __mode = "k" })
+function BossFx.phaseName(clips, name: string, ph: number): string
+	if ph > 1 and clips[name .. ph] then
+		return name .. ph
+	end
+	return name
+end
+function BossFx.phaseClips(clips, ph: number)
+	local byPh = phaseCache[clips]
+	if not byPh then
+		byPh = {}
+		phaseCache[clips] = byPh
+	end
+	if not byPh[ph] then
+		byPh[ph] = setmetatable({}, { __index = function(_, k)
+			return clips[BossFx.phaseName(clips, k, ph)]
+		end })
+	end
+	return byPh[ph]
 end
 
 -- 쓰러진 보스의 몸 — 쓰러지는 동작 그림(death)이 있을 때. 없으면 nil(부르는 쪽이 전처럼 선 채로 사라지게 한다). 시험 탭 bossfx.js의 fall과 같은 셈.
@@ -1108,7 +1280,20 @@ function BossFx.tell(ctx, x: number, y: number, dir: number, p, k: number, a: nu
 	local archer = mark == "archer" -- 그림자 사수의 저격수 표시(2026-10-27 — 위 aimLine · crosshair)
 	local knight = mark == "knight" -- 타락한 부단장의 대검 기사 표시(2026-10-28 — 위 swordBand · fallingSword · crescentBand · hornRings · plungeMark · crescentLane · swordSigil)
 	local thief = mark == "thief" -- 불씨 도둑 두목의 도둑 표시(2026-10-28 — 위 hookBand · sackRing · fuseRoom · hookLine · rollLane · bombSigil)
-	if p.zone and thief then -- 패턴의 동작(clip)마다 다른 꼴
+	local lava = mark == "lava" -- 용암 거인(2026-11-04 — 위 lavaCrack · lavaSmear · lavaBand · bubbleMark · heatColumn · magmaSigil)
+	if p.band and lava then -- 끓는 숨: 그쪽 낮은 발판 높이의 띠(방 끝까지)
+		local x0 = x + dir * p.band.from
+		local x1 = math.clamp(x + dir * p.band.to, a - 20, b + 20)
+		BossFx.lavaBand(ctx, min(x0, x1), max(x0, x1), y, p.band.lo, p.band.hi, dir, k)
+	end
+	if p.zone and lava then -- 높은 자리(주먹)는 금 · 낮은 띠(손바닥 · 그러쥐기)는 흐르는 물결
+		local x0, x1 = x + dir * p.zone.from, x + dir * p.zone.to
+		if p.zone.up >= 30 then
+			BossFx.lavaCrack(ctx, min(x0, x1), max(x0, x1), y, p.zone.up, dir, k)
+		else
+			BossFx.lavaSmear(ctx, min(x0, x1), max(x0, x1), y, p.zone.up, if p.pull then -dir else dir, k)
+		end
+	elseif p.zone and thief then -- 패턴의 동작(clip)마다 다른 꼴
 		local x0, x1 = x + dir * p.zone.from, x + dir * p.zone.to
 		local lo, hi = min(x0, x1), max(x0, x1)
 		if p.bigjar then
@@ -1157,6 +1342,8 @@ function BossFx.tell(ctx, x: number, y: number, dir: number, p, k: number, a: nu
 		local x1 = math.clamp(x0 + dir * p.wave.range, a - 20, b + 20)
 		if archer then
 			BossFx.aimLine(ctx, min(x0, x1), max(x0, x1), y, p.wave.fly or 0, p.wave.lift or 0, p.wave.up, dir, k)
+		elseif lava then
+			BossFx.lavaSmear(ctx, min(x0, x1), max(x0, x1), y, p.wave.up, dir, k) -- 땅울림이 갈 길(용암 거인)
 		elseif knight then
 			BossFx.crescentLane(ctx, min(x0, x1), max(x0, x1), y, p.wave.fly or 0, p.wave.lift or 0, p.wave.up, dir, k)
 		else
@@ -1188,6 +1375,8 @@ function BossFx.tell(ctx, x: number, y: number, dir: number, p, k: number, a: nu
 			BossFx.swordSigil(ctx, x, y - top - 6, k)
 		elseif thief then
 			BossFx.bombSigil(ctx, x, y - top - 6, k)
+		elseif lava then
+			BossFx.magmaSigil(ctx, x, y - top - 6, k)
 		else
 			BossFx.alert(ctx, x, y - top - 6, k)
 		end

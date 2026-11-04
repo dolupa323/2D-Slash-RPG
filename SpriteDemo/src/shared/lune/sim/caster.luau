@@ -31,6 +31,11 @@ local EARLY = 0.15 -- 화면의 시계가 이만큼 앞서 있어도 받는다(�
 -- 모으는 구간의 「뗐다」를 서버가 그 구간을 닫은 뒤에도 기다리는 시간(초 — 보통 구간은 0.2). 끝까지 모으면 서버는 GRACE 뒤에 구간을 닫는데,
 --  화면이 멈칫하면(한 화면에 STEP 5걸음까지만 따라잡는다 — boot.luau) · 네트워크가 흔들리면 화면의 「뗐다」가 그보다 늦게 온다(2026-10-29 제보 — 아래 begin)
 local LATE_CHARGE = 1.0
+-- 모아 친 한 방(모으는 구간 바로 다음의 마지막 구간) 뒤의 다음 스킬은 이만큼 일찍 와도 받는다(초 — 남은 타는 그 자리에서 터뜨린다 · 보통은 EARLY).
+--  2026-11-03 사용자 제보(액시온: 전투 호흡을 건 채 초승달 가르기 · 다른 기술을 끝까지 모아 쓰면 이펙트는 나가는데 피해가 없다): 키를 누른 채 이어 쓰면 화면은 한 방이 끝나자마자
+--  다음 판을 시작하는데, 「뗐다」가 늦게 닿았거나 다음 판의 알림이 빨리 닿아 서버의 한 방이 0.15초 넘게 남아 있으면 다음 판의 첫 구간을 버렸다 — 그 판의 「뗐다」도 버려져
+--  화면은 끝까지 모아 친 그림을 그렸지만 피해가 없었다(조사: 여섯 기술 모두 0.2초 일찍이면 0마리 · 0.12초면 그대로). 모아 친 한 방에만 넓힌다(다른 기술은 앞당겨 빨라지지 않게 그대로)
+local CHAIN_CHARGED = 0.35
 local BIG_W = 12 -- 센 타격으로 치는 몫(시험 탭: 12 넘는 피해는 직업의 밝은 색으로 뜬다)
 local PULL = 1 / 3.9 -- 시험 탭의 끌어당기는 빠르기(도트/초 — 0.02^t로 줄어든다)를 옮겨지는 거리로 바꾼다(1 / ln 50)
 local TRIALS = 10 -- 재 볼 때 쓰는 횟수(다섯 번째마다 터지는 것 같은 것까지 고르게 든다)
@@ -276,9 +281,13 @@ function Caster:strike(a, m, w: number, o, landed): boolean
 	local hero, room, ctx = a.hero, self.room, a.ctx
 	-- 끌어당기기 · 넘어뜨리기: 보통 적만(묶인 적은 빼고)
 	if not m.def.boss and (m.bind or 0) <= 0 then
-		if o.pull then
+		if o.gather and not m.afk and not m.gim and not m.gimAdd and not (room.scene and room.scene.dojo) then
+			-- 끌어 모으기(그림자 흡혈): 지형과 상관없이 리퍼의 발밑 코앞으로(온 쪽에 8 ~ 16점 — 겹쳐 서지 않게) · room.luau Room:gatherMob
+			local side = if m.x > hero.x then 1 else -1
+			room:gatherMob(m, hero.x + side * (8 + (m.id % 5) * 2), room:groundUnder(hero.x, hero.y), hero.x)
+		elseif o.pull then
 			local toward = if m.x > hero.x then -1 else 1
-			m.x = math.clamp(m.x + toward * min(o.pull * PULL, max(0, abs(m.x - hero.x) - 10)), m.a, m.b)
+			room:pullMob(m, m.x + toward * min(o.pull * PULL, max(0, abs(m.x - hero.x) - 10))) -- (제 발판 끝까지 — 활동 구간 밖이면 구간을 넓힌다 · room.luau Room:pullMob)
 		end
 		if o.stun then
 			m.stun = max(m.stun or 0, o.stun)
@@ -310,7 +319,7 @@ function Caster:strike(a, m, w: number, o, landed): boolean
 			hero.pass.sure = false
 		end
 	end
-	local dmg = max(1, floor(power * ctx.unit * w * roll * RULES.dmgScale * fit * mul + 0.5))
+	local dmg = max(1, floor(power * ctx.unit * w * roll * RULES.dmgScale * fit * mul * (ctx.enh or 1) + 0.5)) -- (ctx.enh = 살라맨더의 강화판의 배수 — begin)
 	local extra = {}
 	if w >= BIG_W or crit then
 		extra.big = true
@@ -346,7 +355,7 @@ function Caster:follow(a, landed, o)
 	end
 	local hero, room = a.hero, self.room
 	local power = Hero.powerRaw(hero) * Kit.attack(hero) * Buffs.dmg(hero) * Passives.atk(hero)
-	room:kitAfter(hero, landed, hero.x, hero.y, nil, power, a.ctx.mates, a.out, { mark = o.mark == true, charge = a.ctx.lv or 0 }) -- charge = 모은 단계(액시온의 메아리 도끼는 끝까지 모은 타에만 — 2026-10-28)
+	room:kitAfter(hero, landed, hero.x, hero.y, nil, power, a.ctx.mates, a.out, { mark = o.mark == true, charge = a.ctx.lv or 0, id = a.ctx.id, enh = a.ctx.enh ~= nil, cast = a.ctx }) -- id = 그 기술(리퍼의 영혼 수확) · enh = 살라맨더의 강화판(열기를 채우지 않는다 — 2026-11-04) · cast = 그 판(열기는 한 판에 한 번) · charge = 모은 단계(액시온의 메아리 도끼는 끝까지 모은 타에만 — 2026-10-28)
 	if o.mark and hero.class == "riven" then
 		for _, l in landed do
 			local m = l.mob
@@ -360,7 +369,7 @@ function Caster:follow(a, landed, o)
 end
 
 function Caster:box(a, x0: number, x1: number, y0: number, y1: number, cx: number, w: number, o)
-	local list = self.room:mobsInBox(x0, x1, y0, y1, cx)
+	local list = self.room:mobsInBox(x0, x1, y0, y1, cx, o.targets) -- (o.targets = 그 타가 맞히는 수 — 없으면 한 타에 8마리)
 	local landed = {}
 	for _, m in list do
 		self:strike(a, m, w, o, landed)
@@ -523,16 +532,20 @@ local function makeG(self, a)
 	function g.face(d: number)
 		hero.dir = d
 	end
-	function g.teleport(x: number): boolean
+	-- y = 그 높이로(높은 땅 위에 내린다 — 리븐 무영 섬 · 2026-10-31) · 없으면 지금 높이
+	function g.teleport(x: number, y: number?): boolean
 		local scene = room.scene
 		if scene then
 			x = math.clamp(x, 8, scene.w * G.TILE - 8)
-			if Physics.solidBox(scene, x, hero.y) then
+			if Physics.solidBox(scene, x, y or hero.y) then
 				return false
 			end
 		end
 		moved()
 		hero.x = x
+		if y then
+			hero.y = y
+		end
 		-- 그림자 일격(리븐 2차 패시브 — 2026-10-30 리마스터): 순간이동한 뒤 linkTime초 = 연계(크리티컬 데미지 + · 표식 + — Passives.crit · Room:kitAfter)
 		if hero.class == "riven" and hero.pass then
 			local lk = Passives.get(hero, "linkTime")
@@ -625,16 +638,16 @@ local function makeG(self, a)
 	return g
 end
 
--- 묶음의 g.s 가운데 캐릭터 · 방의 것: 영혼 · 열기(sim/kit.luau의 h.kit) · 달 수정(방의 crystals)
+-- 묶음의 g.s 가운데 캐릭터 · 방의 것: 사신 게이지(리퍼 — 2026-10-31 그 전 영혼) · 열기(sim/kit.luau의 h.kit) · 달 수정(방의 crystals)
 local function bridge(self, a)
 	local hero, room, s = a.hero, self.room, a.g.s
-	rawset(s, "souls", nil)
+	rawset(s, "gauge", nil)
 	rawset(s, "heat", nil)
 	rawset(s, "cr", nil)
 	setmetatable(s, {
 		__index = function(_, key)
-			if key == "souls" then
-				return hero.kit.souls
+			if key == "gauge" then
+				return hero.kit.gauge
 			elseif key == "heat" then
 				return hero.kit.heat
 			elseif key == "cr" then
@@ -650,9 +663,9 @@ local function bridge(self, a)
 			return nil
 		end,
 		__newindex = function(t, key, value)
-			if key == "souls" then
-				if hero.kit.souls ~= value then
-					hero.kit.souls, hero.kit.soulT = value, 0
+			if key == "gauge" then
+				if hero.kit.gauge ~= value then
+					hero.kit.gauge = value
 					a.out.kit = true
 				end
 			elseif key == "heat" then
@@ -774,7 +787,8 @@ function Caster:begin(hero, id: string, seg: number, mates, info): (boolean, num
 	local surged = false -- 모으지 않고 얻은 단계(넘치는 힘) — 이 타로는 넘치는 힘이 다시 켜지지 않는다
 	if seg == 1 then
 		if cur then
-			if self:busy(hero) then
+			local charged = cur.i > 1 and cur.def.segs[cur.i - 1].charge and cur.def.segs[cur.i + 1] == nil and not cur.done -- 모아 친 한 방(마지막 구간)
+			if self:busy(hero) and not (charged and cur.t >= cur.need - CHAIN_CHARGED) then
 				return false, nil
 			end
 			endSkill(self, a)
@@ -792,6 +806,13 @@ function Caster:begin(hero, id: string, seg: number, mates, info): (boolean, num
 		end
 		ctx = self:context(a, id, 0, mates)
 		ctx.fallen = info and info.fallen
+		-- 살라맨더의 강화판(2026-11-04 — 열기가 가득 찬 채 쓴 사냥기 · 보스기): 열기를 모두 쓰고 그 판의 모든 타가 ctx.enh배(Kit.empower · info.hot = 화면이 강화판으로 그렸는가).
+		--  묶음(kits/salamander.luau)은 g.s.enh를 보고 그 기술의 더 큰 모습으로(범위도) 친다
+		ctx.enh = Kit.empower(hero, ctx.kind, info and info.hot)
+		rawset(a.g.s, "enh", ctx.enh ~= nil)
+		if ctx.enh then
+			a.out.kit = true
+		end
 	else
 		local prev = skill.segs[seg - 1]
 		local held = nil -- 앞 구간(모으는 구간)에서 흐른 시간 — 서버의 시계
@@ -834,7 +855,7 @@ function Caster:begin(hero, id: string, seg: number, mates, info): (boolean, num
 	if s.start then
 		self:run(a, ctx, s.start, a.g)
 	end
-	return true, lv
+	return true, lv, if seg == 1 then ctx.enh ~= nil else nil -- (셋째 = 강화판으로 시작했는가 — 방의 다른 사람들에게 알린다)
 end
 
 -- ---------- 한 걸음 ----------

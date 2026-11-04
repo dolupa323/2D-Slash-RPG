@@ -144,6 +144,43 @@ function Ctx:blit(src, sx: number, sy: number, w: number, h: number, x: number, 
 	self.a, self.r, self.g, self.b, self.packed = keepA, keepR, keepG, keepB, keepP
 end
 
+-- 그림의 한 조각을 돌려 찍는다(2026-11-03 리퍼 사슬낫 — 사용자 "낫의 날은 천천히 돌아가고"): 가장 가까운 점을 읽는다(점이 뭉개지지 않는다).
+--  자르는 네모 (sx, sy, w, h) · (x, y) = 기준점(게임 세계의 좌표) · (px, py) = 조각 안의 기준점 · ang = 돌리는 각(라디안 · 화면에서 시계 방향) ·
+--  flip = 기준점에서 좌우로 뒤집은 뒤 돌린다 · mul = 불투명도의 배수. 공방 kits/reaper.js의 blitRot과 같은 셈
+function Ctx:blitRot(src, sx: number, sy: number, w: number, h: number, x: number, y: number, px: number, py: number, ang: number, flip: boolean?, mul: number?)
+	local keepA, keepR, keepG, keepB, keepP = self.a, self.r, self.g, self.b, self.packed
+	local base = keepA * (mul or 1)
+	if base <= 0 then
+		return
+	end
+	local data, sw = src.buf, src.w
+	local c, s = math.cos(ang), math.sin(ang)
+	local r = math.ceil(math.sqrt(math.max(px, w - px) ^ 2 + math.max(py, h - py) ^ 2)) + 1
+	local bx, by = math.floor(x + 0.5), math.floor(y + 0.5)
+	for dy = -r, r do
+		for dx = -r, r do
+			local lx = dx * c + dy * s
+			local ly = -dx * s + dy * c
+			if flip then
+				lx = -lx
+			end
+			local ix, iy = math.floor(px + lx + 0.5), math.floor(py + ly + 0.5)
+			if ix >= 0 and iy >= 0 and ix < w and iy < h then
+				local at = ((sy + iy) * sw + sx + ix) * 4
+				local sa = buffer.readu8(data, at + 3)
+				if sa >= 128 then
+					local cr, cg, cb = buffer.readu8(data, at), buffer.readu8(data, at + 1), buffer.readu8(data, at + 2)
+					self.r, self.g, self.b = cr, cg, cb
+					self.packed = cr + cg * 256 + cb * 65536 + 255 * 16777216
+					self.a = math.floor(sa * base / 255 + 0.5)
+					self:rect(bx + dx, by + dy, 1, 1)
+				end
+			end
+		end
+	end
+	self.a, self.r, self.g, self.b, self.packed = keepA, keepR, keepG, keepB, keepP
+end
+
 -- 한 장을 시작한다: 지난 장을 지우고 카메라를 받는다
 function Ctx:begin(camX: number, camY: number)
 	if self.used then

@@ -129,7 +129,21 @@ function Hud.init()
 		ready.Name = "Ready"
 		ready.ZIndex = 4
 		ready.Visible = false
-		local slot = { frame = cell.frame, cell = cell, back = cell.frame:FindFirstChild("uSlot") :: ImageLabel, pic = pic, veil = veil, ready = ready, readyT = 0, pad = pad, what = false :: any, id = nil :: string?, shown = nil :: string?, keyName = "" }
+		-- 강화된 스킬의 빛(2026-11-04 — 살라맨더: 열기가 가득하면 사냥기 · 보스기): 그림 위의 흰 빛 + 칸 테두리 네 변(직업의 색 · edge점) — Hud.step이 숨 쉬듯 밝기를 바꾼다(공방 ui/paint.js와 같다)
+		local GL = Quick.DATA.glow
+		local light = Ui.box(cell.frame, pad, pad, PIC, PIC, Color3.new(1, 1, 1), 1)
+		light.Name = "Glow"
+		light.ZIndex = 4
+		light.Visible = false
+		local edges = {}
+		for _, r in { { 0, 0, SLOT, GL.edge }, { 0, SLOT - GL.edge, SLOT, GL.edge }, { 0, GL.edge, GL.edge, SLOT - 2 * GL.edge }, { SLOT - GL.edge, GL.edge, GL.edge, SLOT - 2 * GL.edge } } do
+			local e = Ui.box(cell.frame, r[1], r[2], r[3], r[4], C.accent)
+			e.Name = "GlowEdge"
+			e.ZIndex = 5
+			e.Visible = false
+			table.insert(edges, e)
+		end
+		local slot = { frame = cell.frame, cell = cell, back = cell.frame:FindFirstChild("uSlot") :: ImageLabel, pic = pic, veil = veil, ready = ready, readyT = 0, pad = pad, what = false :: any, id = nil :: string?, shown = nil :: string?, keyName = "", light = light, edges = edges, glow = false }
 		-- 퀵슬롯은 자리가 늘 같다(여섯 x 두 줄 — 칸마다 키 하나)
 		local px, py = Layout.slotPlace(i, COLS * ROWS, Stage.uiW)
 		cell.frame.Position = UDim2.fromOffset(px, py)
@@ -711,6 +725,28 @@ function Hud.drawHp()
 	end
 end
 
+-- 강화된 스킬의 칸이 빛난다(2026-11-04 사용자 "강화된 스킬들은 퀵슬롯에서 빛나는거야" — 살라맨더: 열기가 가득하면 사냥기 · 보스기). 장마다 boot가 부른다.
+--  on = 빛나는 때인가 · color = 직업의 색(0xRRGGBB). 빛나는 칸 = 놓인 것이 Hud.glowable(boot가 넣는다)인 칸. 숨(glowK 0 ~ 1)은 Hud.step이 흘린다 — 폰의 칸 단추도 이 값을 쓴다(touch.luau)
+Hud.glowOn, Hud.glowColor, Hud.glowK, Hud.glowT = false, C.accent, 0, 0
+Hud.glowable = nil :: ((string) -> boolean)?
+function Hud.setGlow(on: boolean, color: number)
+	if on then
+		Hud.glowColor = Color3.fromRGB(bit32.band(bit32.rshift(color, 16), 255), bit32.band(bit32.rshift(color, 8), 255), bit32.band(color, 255))
+	end
+	Hud.glowOn = on
+	for _, slot in Hud.slots or {} do
+		local lit = on and slot.what ~= false and Hud.glowable ~= nil and Hud.glowable(slot.what)
+		if lit ~= slot.glow then
+			slot.glow = lit
+			slot.light.Visible = lit
+			for _, e in slot.edges do
+				e.Visible = lit
+				e.BackgroundColor3 = Hud.glowColor
+			end
+		end
+	end
+end
+
 -- 장마다(boot의 그리는 고리가 부른다): 체력 바의 효과를 흘려보낸다
 Hud.READY_T = 0.3 -- 다시 쓰기가 끝난 칸이 하얗게 번쩍이는 시간(초)
 function Hud.step(dt: number)
@@ -719,11 +755,20 @@ function Hud.step(dt: number)
 		HpFx.step(st, dt)
 		Hud.drawHp()
 	end
+	local GL = Quick.DATA.glow
+	Hud.glowT += dt
+	Hud.glowK = 0.5 + 0.5 * math.sin(Hud.glowT * GL.speed)
 	for _, slot in Hud.slots or {} do
 		if slot.readyT > 0 then
 			slot.readyT = math.max(0, slot.readyT - dt)
 			slot.ready.Visible = slot.readyT > 0
 			slot.ready.BackgroundTransparency = 1 - 0.6 * slot.readyT / Hud.READY_T
+		end
+		if slot.glow then -- 강화된 스킬: 숨 쉬듯(Hud.setGlow)
+			slot.light.BackgroundTransparency = 1 - (GL.light[1] + (GL.light[2] - GL.light[1]) * Hud.glowK)
+			for _, e in slot.edges do
+				e.BackgroundTransparency = 1 - (GL.edgeA[1] + (GL.edgeA[2] - GL.edgeA[1]) * Hud.glowK)
+			end
 		end
 	end
 end

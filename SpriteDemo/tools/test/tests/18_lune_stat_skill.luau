@@ -275,7 +275,7 @@ do
 			expect(def ~= nil and def.who == class and def.type == QD.start[k], ("%d째 칸은 %s %s"):format(k, QD.start[k], class))
 		end
 		for k = 5, Quick.N do
-			eq(h.slots[k], false, "나머지는 빈 칸 " .. class)
+			eq(h.slots[k], if k == 6 and class == "reaper" then "rp_form" else false, "나머지는 빈 칸(리퍼는 여섯째 칸에 사신화 — 2026-10-31 게이지 직업 · 다섯째 칸은 폰에서 물약이 가는 자리) " .. class)
 		end
 		-- 자리를 바꾸는 것은 받는다
 		local moved = Quick.place(h.slots, h.slots[2], 7)

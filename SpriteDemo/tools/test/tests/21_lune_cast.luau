@@ -90,7 +90,7 @@ do
 			end
 		end
 	end
-	eq(seen, 51, "2~4차의 쓰는 스킬 51개(2026-10-30 리븐 월영 비수 — 전에는 설치 연막탄 · 소생까지 · 이동기는 세지 않는다 — 2026-10-24 무니 4차 달빛 낙하 · 리븐 그림자 창 · 천지 가르기(연쇄 순보는 이동기로 빠짐) · 2026-10-25 액시온 월광 균열 · 리퍼 백귀야행 · 살라맨더 화룡 승천 · 리퍼 망자의 손(망령 돌진은 이동기로 빠짐))")
+	eq(seen, 50, "2~4차의 쓰는 스킬 50개(2026-11-04 살라맨더의 큰 한 방 셋 — 열 방출 · 용광로 주먹 · 작은 태양 — 을 패시브로 · 2026-11-03 살라맨더 화로 · 작은 태양 → 큰 한 방 · 2026-10-30 리븐 월영 비수 — 전에는 설치 연막탄 · 소생까지 · 이동기는 세지 않는다 — 2026-10-24 무니 4차 달빛 낙하 · 리븐 그림자 창 · 천지 가르기(연쇄 순보는 이동기로 빠짐) · 2026-10-25 액시온 월광 균열 · 리퍼 백귀야행 · 살라맨더 화룡 승천 · 리퍼 망자의 손(망령 돌진은 이동기로 빠짐))")
 	expect(Hero.ready("mn_revive") and CAST.mn_revive.heal.revive > 0, "소생이 게임에 들어와 있다")
 	-- 차수의 배수: 앞 차수의 1.4배씩 — 2차 1.4 · 3차 1.96 · 4차 2.744(사냥기는 x0.7)
 	near(CAST.ax_rend.rate, N.data.POWER.dps * 1.4, 1e-3, "2차 보스기의 초당 피해")
@@ -167,7 +167,9 @@ do
 	end
 	-- 따로 정한 것
 	eq(Caster.profile("mn_burst", 0).w, 10, "공명 폭발: 내 둘레를 직접 치는 타(10)가 기준 — 수정은 덤(2026-10-26)")
-	eq(Caster.profile("sl_vent", 0).w, 23, "열 방출: 열기가 가득일 때가 기준")
+	for _, id in { "sl_vent", "sl_furnace", "sl_sun" } do
+		expect(CAST[id] == nil, id .. ": 큰 한 방은 뺐다 — 열기 폭발을 키우는 패시브(2026-11-04)")
+	end
 	-- 몇 가지는 값을 못 박아 둔다(묶음의 값이 바뀌면 알게)
 	near(Caster.profile("ax_rend", 0).w, 10, 1e-6, "쪼개기: 모아 쪼개는 한 방 10(2026-10-28 액시온 리마스터 — 예전 두 번 6 + 8)")
 	near(Caster.profile("ax_execute", 0).w, 12, 1e-6, "월광 처단: 한 방 12(예전 처단 12 + 다섯 번째마다 40)")
@@ -190,9 +192,6 @@ do
 		for _ = 1, 10 do
 			h.x, h.y, h.dir = X, Y, 1
 			foe.x, foe.stun, foe.bind, foe.bindImm = X + (def.at or 14), 0, 0, 0
-			if id == "sl_vent" then
-				h.kit.heat = 0 -- 열기가 없을 때(기준의 3 / 23)
-			end
 			c:dryCast(h, id, 0, tick)
 		end
 		drain(c, tick)
@@ -567,47 +566,28 @@ end
 
 -- ---- 9) 직업의 장치와 맞물린다: 영혼(리퍼) · 열기(살라맨더) · 수정(무니) · 표식(리븐) · 사출기 ----
 do
-	-- 영혼 수확: 맞힌 적이 있으면 영혼 1(캐릭터의 영혼이 오른다)
+	-- 영혼 수확: 맞히면 사신 게이지가 크게 찬다(2026-10-31 게이지 직업 — 그 전: 영혼 1)
 	local r = hero("reaper", { rp_reap = 10, rp_soul = 10 })
+	r.job = 2
 	local _, _, c, tick = dry(r)
 	c:dryCast(r, "rp_reap", 0, tick)
-	eq(r.kit.souls, 1, "영혼 수확: 영혼 1")
+	local GA = COMBAT.kit.reaper.core.gauge
+	expect(math.abs((r.kit.gauge or 0) - GA.reap * GA.job[2]) < 1e-6, ("영혼 수확: 사신 게이지 +%.1f(%s)"):format(GA.reap * GA.job[2], tostring(r.kit.gauge)))
 	expect(c:actor(r).out.kit, "장치의 모습이 바뀌었다고 알린다")
-	-- 참수: 영혼이 있으면 타마다 하나씩 태워 그림자 낫이 한 번 더
+	-- 참수: 사신화 중이면 타마다 그림자 낫이 한 번 더(2026-10-31 — 그 전: 영혼을 하나씩 태워) · 사신화의 그림자 낫(맞을 때마다)도 붙는다
 	local b = hero("reaper", { rp_behead = 30, rp_soul = 10 })
 	local _, _, cb, tickB = dry(b)
 	cb:dryCast(b, "rp_behead", 0, tickB)
 	drain(cb, tickB)
 	local plain = #cb:actor(b).out.hits
 	eq(plain, 3, "참수: 세 번")
-	b.kit.souls = 3
+	req("ReplicatedStorage/shared/lune/sim/buffs").give(b, "rp_form", 1, b.x, b.y)
 	cb:dryCast(b, "rp_behead", 0, tickB)
 	drain(cb, tickB)
-	eq(#cb:actor(b).out.hits - plain, 6, "영혼이 있으면 타마다 그림자 낫이 한 번 더")
-	eq(b.kit.souls, 0, "영혼 셋을 태웠다")
+	local extra = #cb:actor(b).out.hits - plain
+	expect(extra >= 9, ("사신화: 세 번 + 타마다 참수의 그림자 낫 + 맞을 때마다 그림자 낫(%d)"):format(extra))
 
-	-- 열 방출: 열기만큼 세고, 열기는 0이 된다
-	local function vent(heat: number): number
-		local s = hero("salamander", { sl_vent = 10, sl_heat = 10 })
-		s.kit.heat = heat
-		local _, foeS, cs, tickS = dry(s)
-		local sum = 0
-		for _ = 1, 40 do
-			s.kit.heat = heat
-			foeS.x = X + 14 -- 미는 타라 조금씩 밀린다(제자리에 다시 세운다)
-			cs:dryCast(s, "sl_vent", 0, tickS)
-			eq(s.kit.heat, 0, "열 방출: 열기가 0이 된다")
-		end
-		for _, e in cs:actor(s).out.hits do
-			if not e.proc then
-				sum += e.dmg
-			end
-		end
-		return sum
-	end
-	local hot = vent(100)
-	near(vent(50) / hot, 13 / 23, 0.05, "열기 50이면 가득일 때의 57%")
-	near(vent(0) / hot, 3 / 23, 0.05, "열기 0이면 13%")
+	-- (큰 한 방 셋의 검사는 뺐다 — 2026-11-04 살라맨더 리마스터 둘째 판: 열기 폭발은 19_lune_kit)
 
 	-- 공명 폭발(2026-10-26 고침 — 사용자 "무니 3차 만들어봐"): 내 둘레를 직접 친다(10 — 맞으면 수정이 맺힌다) + 맺혀 있는 수정마다 터진다(6) — 수정은 깨지지 않는다
 	local m = hero("mooni", { mn_burst = 20, mn_reson = 10 })
@@ -697,7 +677,8 @@ do
 	local _, _, cs, tickS = dry(s)
 	cs:dryCast(s, "sl_blast", 0, tickS)
 	drain(cs, tickS)
-	near(s.kit.heat, 20, 1e-6, "작열권 두 타(2026-10-25 — 불꽃 돌진은 이동기가 됐다): 열기 +20")
+	local hc = COMBAT.kit.salamander.core
+	near(s.kit.heat, hc.gain, 1e-6, "작열권 두 타 = 한 판: 열기 + gain 한 번(2026-11-04 사용자 \"게이지도 3타정도 치면 4번째 공격이 강화공격으로\" — 그 전: 타마다)")
 	expect(Kit.level(s, "core") > 0, "열기를 배웠다")
 end
 
@@ -959,13 +940,15 @@ do
 		near(h.x - x0, case[2], 1, ("망령 돌진 Lv.%d: 앞으로 %d도트"):format(case[1], case[2]))
 		eq(#c:actor(h).out.hits, 0, "망령 돌진은 피해가 없다")
 	end
-	-- 망자의 손: 앞 130도트까지 제 층만 — 뒤 · 앞 180 · 위층(32 · 48도트 위)은 안 맞는다
+	-- 그림자 흡혈(2026-11-03 사용자 "던져서 붙잡고끌러온다는 개념이 강한구조야" — 사슬낫): 한 번 친다 — 양옆 196도트 · 위 64도트까지 · 12마리까지(다른 기술은 한 타에 8마리) ·
+	--  맞은 적은 리퍼 곁으로 끌려온다. 앞 · 뒤 240 · 위 90은 안 맞는다
 	local h = hero("reaper", { rp_hands = 20 })
 	local room, first, c, tick = dry(h)
 	room.mobs = {}
-	for i, d in { { 30, 0 }, { 70, 0 }, { 120, 0 }, { 180, 0 }, { -40, 0 }, { 70, -32 }, { 70, -48 } } do
+	for i, d in { { 30, 0 }, { 120, 0 }, { 185, 0 }, { 240, 0 }, { -150, 0 }, { 70, -48 }, { 70, -90 }, { -240, 0 } } do
 		local m = table.clone(first)
 		m.id, m.x, m.homeX, m.goal, m.y = i, X + d[1], X + d[1], X + d[1], Y + d[2]
+		m.a, m.b = X - 400, X + 400
 		room.mobs[i] = m
 	end
 	c:dryCast(h, "rp_hands", 0, tick)
@@ -974,10 +957,40 @@ do
 	for _, e in c:actor(h).out.hits do
 		hit[e.mob] = true
 	end
-	expect(hit[1] and hit[2] and hit[3], "망자의 손: 앞 30 · 70 · 120도트의 적")
-	expect(not hit[4], "망자의 손: 앞 180도트의 적은 안 맞는다")
-	expect(not hit[5], "망자의 손: 뒤의 적은 안 맞는다")
-	expect(not hit[6] and not hit[7], "망자의 손: 위층(32 · 48도트 위)의 적은 안 맞는다")
+	expect(hit[1] and hit[2] and hit[3], "그림자 흡혈: 앞 30 · 120 · 185도트의 적")
+	expect(hit[5], "그림자 흡혈: 뒤 150도트의 적도 맞는다(양옆으로 펼쳐진다)")
+	expect(hit[6], "그림자 흡혈: 위 48도트의 적도 맞는다")
+	expect(not hit[4] and not hit[8], "그림자 흡혈: 앞 · 뒤 240도트의 적은 안 맞는다")
+	expect(not hit[7], "그림자 흡혈: 위 90도트의 적은 안 맞는다")
+	expect(math.abs(room.mobs[3].x - X) <= 20, ("그림자 흡혈: 앞 185도트의 적이 리퍼 곁으로 끌려왔다(%.0f)"):format(room.mobs[3].x - X))
+	expect(math.abs(room.mobs[5].x - X) <= 20, ("그림자 흡혈: 뒤 150도트의 적도 리퍼 곁으로 끌려왔다(%.0f)"):format(room.mobs[5].x - X))
+	local n = 0
+	for _, e in c:actor(h).out.hits do
+		if e.mob == 1 then
+			n += 1
+		end
+	end
+	eq(n, 1, "그림자 흡혈: 한 번 친다(단타)")
+	-- 12마리까지(한 타에 8마리라는 보통의 제한보다 많다): 맞는 곳 안에 열넷을 세우면 가까운 열둘이 맞는다
+	room.mobs = {}
+	for i = 1, 14 do
+		local m = table.clone(first)
+		local d = 10 + i * 13
+		m.id, m.x, m.homeX, m.goal, m.y = i, X + d, X + d, X + d, Y
+		room.mobs[i] = m
+	end
+	c:actor(h).out = { hits = {}, kills = {} }
+	c:dryCast(h, "rp_hands", 0, tick)
+	drain(c, tick)
+	local seen = {}
+	for _, e in c:actor(h).out.hits do
+		seen[e.mob] = true
+	end
+	local got = 0
+	for _ in seen do
+		got += 1
+	end
+	eq(got, 12, "그림자 흡혈: 12마리까지 맞는다")
 end
 
 -- ---- 살라맨더 · 액시온(2026-10-25 사용자 "샐래맨더도 불꽃돌진 일반이동기로 쿨타임달고 보스기 추가 · 불덩이 던지기 선딜 줄이고 · 4차 화염해일 점프해서 쓸수있게 ·
@@ -1024,13 +1037,15 @@ do
 		end
 		expect(n >= case[3], ("%s: 붙어 있는 적이 %d번 넘게 맞는다(%d — 타수 나누기 포함)"):format(case[2], case[3], n))
 	end
-	-- 화염 해일: 공중(땅 40도트 위)에서 쓰면 그 높이에서 나간다(2026-10-25 사용자 "점프한 위치에서 해일이 나가야지") — 그 높이의 적이 맞고 40도트 아래 땅의 적은 맞지 않는다 · 쓰는 동안 떠 있다
+	-- 화염 해일: 공중(땅 40도트 위)에서 쓰면 그 높이에서 나간다(2026-10-25 사용자 "점프한 위치에서 해일이 나가야지") — 그 높이의 적이 맞는다 · 쓰는 동안 떠 있다.
+	--  2026-11-04 2차 사냥기로 옮기며 다른 직업의 2차 사냥기에 맞췄다(사용자 "2차 사냥기 화염해일의 범위가 너무 넓잖아 … 평균 2차 사냥기 밸류에 맞춰야지"): 양쪽 90점씩 · 위 30 · 아래 10 —
+	--   60 · 80도트 옆(같은 높이)은 맞고, 140도트 옆 · 40 아래 땅 · 40 위는 맞지 않는다
 	do
-		local h = hero("salamander", { sl_tide = 30 })
+		local h = hero("salamander", { sl_tide = 20 }) -- (2026-11-04 2차 사냥기 — 마스터 20)
 		local room, first, c, tick = dry(h)
 		h.y = Y - 40
 		room.mobs = {}
-		for i, d in { { 60, -40 }, { 140, -40 }, { 60, 0 } } do
+		for i, d in { { 60, -40 }, { 80, -40 }, { 60, 0 }, { 140, -40 }, { 60, -80 } } do
 			local m = table.clone(first)
 			m.id, m.x, m.homeX, m.goal, m.y = i, X + d[1], X + d[1], X + d[1], Y + d[2]
 			room.mobs[i] = m
@@ -1042,7 +1057,7 @@ do
 			hit[e.mob] = true
 		end
 		expect(hit[1] and hit[2], "화염 해일: 공중에서 쓰면 그 높이(40도트 위)의 적이 맞는다")
-		expect(not hit[3], "화염 해일: 40도트 아래 땅의 적은 맞지 않는다(그 높이에서 나간다)")
+		expect(not hit[3] and not hit[4] and not hit[5], "화염 해일: 40 아래 땅(그 높이에서 나간다) · 140도트 옆 · 40 위의 적은 맞지 않는다")
 		expect(Kitset.skill("sl_tide").segs[1].float == true, "쓰는 동안 그 자리에 떠 있다(float)")
 		-- 선딜(2026-10-27 사용자 "샐래맨더 4차 화염해일 선딜 좀 줄이자"): 해일이 나가는 장(7)까지 0.39초 → 0.2초 아래
 		local s1 = Kitset.skill("sl_tide").segs[1]
@@ -1062,11 +1077,16 @@ do
 		end
 		expect(total > 0.55 and total < 0.8, ("화염 해일: 한 번 %.2f초(0.55 ~ 0.8초 — 처음 1.0초 · 너무 빨랐던 0.45초 사이)"):format(total))
 	end
-	-- 불덩이 던지기(2026-10-27 사용자 "곡사로 던지는게아니라 메이플스토리에 플레임 위자드처럼 직사로 던지고 던지고 던지고 받고받고받고 …"):
-	--  셋이 손 높이로 곧게 나갔다가 손으로 돌아온다 — 길 위(60도트)의 적은 셋 x 가는 길 · 오는 길 = 여섯 번 · 땅에서 40 위의 적은 맞지 않는다(포물선이 아니다) · 200 너머는 닿지 않는다
+	-- 불덩이 던지기(2026-10-27 사용자 "곡사로 던지는게아니라 메이플스토리에 플레임 위자드처럼 직사로 던지고 던지고 던지고 받고받고받고 …"): 셋이 손 높이로 곧게 나갔다가 손으로 돌아온다.
+	--  2026-11-04 1차 사냥기로 옮겼다(사용자 "1차 사냥기를 불덩이 던지기") — 1차의 판정은 상자(COMBAT.skills · 서버 world.luau): 불덩이마다 한 번(셋) · 앞 148까지 · 위 20까지(땅에서 40 위의 적은 맞지 않는다) · 200 너머는 닿지 않는다
 	do
-		local P = Caster.profile("sl_meteor", 0)
-		eq(P.hits, 6, "불덩이 던지기: 길 위의 적이 여섯 번 맞는다(셋 x 가는 길 · 오는 길)")
+		local def = COMBAT.skills.sl_meteor
+		expect(def ~= nil and def.job == 1 and def.type == "mob" and COMBAT.cast.sl_meteor == nil, "불덩이 던지기 = 1차 사냥기(쓰는 스킬이 아니다)")
+		eq(#def.hits, 3, "불덩이 던지기: 불덩이마다 한 번(셋)")
+		for _, hit in def.hits do
+			expect(hit.box[2] >= 120 and hit.box[2] < 200 and hit.box[3] < 40, "불덩이 던지기: 앞 120 · 140쯤까지 · 200은 닿지 않고 · 40 위는 닿지 않는다")
+		end
+		expect(def.hits[3].mul > def.hits[1].mul, "셋째(마무리)가 조금 세다")
 		-- 후딜(2026-10-27 사용자 "3차 불덩이 날릴때 날리고 후 경직이 너무심해"): 셋째를 던진 뒤 0.2초 안에 풀린다(불덩이는 그 뒤에 돌아와 잡힌다)
 		local segs = Kitset.skill("sl_meteor").segs
 		local after = 0
@@ -1078,24 +1098,25 @@ do
 			end
 		end
 		expect(after <= 0.2, ("불덩이 던지기: 셋째를 던진 뒤 %.2f초에 풀린다(0.2초 안)"):format(after))
-		expect(P.time <= 0.65, ("불덩이 던지기: 한 번 %.2f초(던지기 셋 + 짧게 거두기)"):format(P.time))
-		local h = hero("salamander", { sl_meteor = 20 })
-		local room, first, c, tick = dry(h)
-		room.mobs = {}
-		for i, d in { { 60, 0 }, { 120, 0 }, { 200, 0 }, { 60, -40 } } do
-			local m = table.clone(first)
+		expect(def.time <= 0.65, ("불덩이 던지기: 한 번 %.2f초(던지기 셋 + 짧게 거두기)"):format(def.time))
+		-- 화염 광선(2026-11-04 4차 사냥기 — 쓰는 스킬): 화면 끝까지(앞 300도트의 적도 맞는다)
+		expect(COMBAT.cast.sl_beam ~= nil and COMBAT.cast.sl_beam.job == 4 and COMBAT.skills.sl_beam == nil, "화염 광선 = 4차 사냥기(쓰는 스킬)")
+		local hb = hero("salamander", { sl_beam = 30 })
+		local roomB, firstB, cb, tickB = dry(hb)
+		roomB.mobs = {}
+		for i, d in { { 60, 0 }, { 300, 0 }, { 420, 0 }, { 150, 26 }, { 150, 56 } } do
+			local m = table.clone(firstB)
 			m.id, m.x, m.homeX, m.goal, m.y = i, X + d[1], X + d[1], X + d[1], Y + d[2]
-			room.mobs[i] = m
+			roomB.mobs[i] = m
 		end
-		c:dryCast(h, "sl_meteor", 0, tick)
-		drain(c, tick)
-		local hit = {}
-		for _, e in c:actor(h).out.hits do
-			hit[e.mob] = true
+		cb:dryCast(hb, "sl_beam", 0, tickB)
+		drain(cb, tickB)
+		local hitB = {}
+		for _, e in cb:actor(hb).out.hits do
+			hitB[e.mob] = true
 		end
-		expect(hit[1] and hit[2], "불덩이 던지기: 앞 60 · 120도트의 적이 맞는다(꿰뚫는다)")
-		expect(not hit[3], "불덩이 던지기: 200도트의 적에는 닿지 않는다(140도트 날아갔다 돌아온다)")
-		expect(not hit[4], "불덩이 던지기: 40도트 위의 적은 맞지 않는다(손 높이로 곧게)")
+		expect(hitB[1] and hitB[2] and not hitB[3], "화염 광선: 앞 60 · 300도트의 적이 맞고 420도트는 닿지 않는다(364까지)")
+		expect(hitB[4] and not hitB[5], "화염 광선: 발밑 26 아래의 적도 맞고(아래로 34까지 — 2026-11-04 사용자 \"하단판정이 더 후하게\") 56 아래는 맞지 않는다")
 	end
 	-- 몰아치기: 범위 ±56(전에는 ±40) — 앞 50도트의 적도 맞는다
 	do
@@ -1107,3 +1128,61 @@ do
 	end
 end
 
+
+do -- 살라맨더의 가득 찬 열기 — 불꽃 갓(2026-11-04 사용자 "좀더 멋지고 간략하게 수정하고 캐쉬 무기의 색깔에 영향받게해줘"): 머리 자리를 따라 · 캐시 무기의 색 · 왼쪽을 보면 뒤집힌다 · 쓰러짐 · 탈것 위에서는 없다
+	local SALA = req("ReplicatedStorage/shared/lune/kits/salamander")
+	local HEADS = req("ReplicatedStorage/shared/lune/data/salaHeads.generated")
+	local function crest(o)
+		local rects, cur = {}, nil
+		local ctx = {}
+		function ctx:style(c)
+			cur = c
+		end
+		function ctx:rect(x, y, w, hh)
+			table.insert(rects, { x = x, y = y, w = w, c = cur })
+		end
+		local g = { s = { fullOn = o.full ~= false }, pose = o.pose or { clip = "idle", f = 0 }, wskin = o.wskin, riding = o.riding or false, hero = { scale = 1 }, x = 100, y = 100, dir = o.dir or 1, clock = 0, tone = {}, has = function()
+			return false
+		end }
+		SALA.drawBack(ctx, g)
+		return rects
+	end
+	local right, left = crest({}), crest({ dir = -1 })
+	expect(#right > 40, "불꽃 갓: 가득 차면 머리 위에 그린다 " .. #right)
+	local top, minX = math.huge, math.huge
+	for _, r in right do
+		top, minX = math.min(top, r.y), math.min(minX, r.x)
+	end
+	local hx, hy = HEADS.idle[1][1], HEADS.idle[1][2]
+	eq(top, 100 + hy - 9, "불꽃 갓: 가면 위 9점에서 솟는다(대기 첫 장)")
+	eq(minX, 100 + hx - 2, "불꽃 갓: 가면 왼쪽 2점 뒤부터")
+	local mirror = {}
+	for _, r in left do
+		mirror[(2 * 100 - r.x - 1) .. "," .. r.y .. "," .. r.c] = true
+	end
+	local same = 0
+	for _, r in right do
+		same += if mirror[r.x .. "," .. r.y .. "," .. r.c] then 1 else 0
+	end
+	eq(same, #right, "불꽃 갓: 왼쪽을 보면 발밑에서 뒤집힌다")
+	local PINK = { [0xb11fa5] = true, [0xff3e9f] = true, [0xff7ea2] = true, [0xffd6e6] = true }
+	local GOLD = { [0x6b4210] = true, [0xb8801e] = true, [0xf2c040] = true, [0xfff2a8] = true }
+	local okPink, okGold, gold = 0, 0, crest({ wskin = "wskin_gold" })
+	for _, r in right do
+		okPink += if PINK[r.c] then 1 else 0
+	end
+	for _, r in gold do
+		okGold += if GOLD[r.c] then 1 else 0
+	end
+	eq(okPink, #right, "불꽃 갓: 캐시 무기가 없으면 직업의 분홍")
+	eq(okGold, #gold, "불꽃 갓: 황금 무기를 장착하면 황금의 네 색")
+	local run = crest({ pose = { clip = "run", f = 2 } })
+	local runTop = math.huge
+	for _, r in run do
+		runTop = math.min(runTop, r.y)
+	end
+	eq(runTop, 100 + HEADS.run[3][2] - 9, "불꽃 갓: 달리기의 장마다 머리를 따라간다")
+	eq(#crest({ pose = { clip = "death", f = 3 } }), 0, "불꽃 갓: 쓰러지는 동안은 없다")
+	eq(#crest({ riding = true }), 0, "불꽃 갓: 탈것 위에서는 없다")
+	eq(#crest({ full = false }), 0, "불꽃 갓: 가득 차지 않으면 없다")
+end

@@ -143,6 +143,7 @@ function AuctionWindow.build(body: Frame, ctx, w: number, h: number)
 
 	-- ---------- 위: 탭 · 판매한 수 · 지갑 ----------
 	local tabs = {}
+	local doneDot: Frame? = nil -- 「완료」 탭의 노란 점(2026-10-31)
 	local pages = {}
 	local header -- 구매 · 시세가 같이 쓰는 머리(분류 · 찾기)
 	local function showPages()
@@ -156,6 +157,9 @@ function AuctionWindow.build(body: Frame, ctx, w: number, h: number)
 			return
 		end
 		tab, ask = id, nil
+		if id == "done" and ctx.auctionSeen then
+			ctx.auctionSeen()
+		end
 		showPages()
 		if not busy then
 			note = ""
@@ -175,6 +179,12 @@ function AuctionWindow.build(body: Frame, ctx, w: number, h: number)
 		tabs[i] = Ui.tab(body, W.tabs[i], tx, 0, function()
 			setTab(id)
 		end)
+		if id == "done" then -- 노란 점(2026-10-31): 팔린 것이 생겼다 — 이 탭을 열면 꺼진다(메뉴 단추 「경매」의 점과 같은 까닭 · 같은 그림)
+			doneDot = Ui.box(tabs[i].frame, tabs[i].width + 1, -2, 6, 6, C.ink)
+			Ui.box(doneDot, 1, 1, 4, 4, C.gold)
+			doneDot.ZIndex = 9
+			doneDot.Visible = false
+		end
 		tx += tabs[i].width + 16
 	end
 	Ui.smallIcon(body, "coin", w - S.purseW, -3)
@@ -655,6 +665,9 @@ function AuctionWindow.build(body: Frame, ctx, w: number, h: number)
 		local me = ctx.me()
 		for i, id in View.TABS do
 			tabs[i]:setOn(id == tab)
+		end
+		if doneDot then
+			doneDot.Visible = tab ~= "done" and ctx.auctionSold ~= nil and ctx.auctionSold()
 		end
 		money:set(if me then Format.short(me.money) else "")
 		slots:set(View.slots(used, max))

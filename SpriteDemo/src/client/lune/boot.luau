@@ -249,12 +249,38 @@ local function syncKit()
 		return
 	end
 	local s = a.g.s
-	if s.souls ~= nil then
-		s.souls = kit.souls
+	if s.gauge ~= nil then
+		s.gauge = kit.gauge or 0 -- 리퍼의 사신 게이지(2026-10-31 — 그 전 영혼)
 	end
-	if s.heat ~= nil then
+	-- (살라맨더: 강화판을 쓴 직후 0.5초 동안은 그 전에 떠난 「가득」을 받지 않는다 — 퀵슬롯의 빛 · 휘날리는 불이 다시 켜졌다 꺼지지 않게 · 2026-11-04)
+	if s.heat ~= nil and not (s.enhAt and a.g.clock - s.enhAt < 0.5 and kit.heat >= 100) then
 		s.heat = kit.heat
 	end
+end
+-- 살라맨더의 강화판(2026-11-04 사용자 "게이지를 가득채우면 … 사냥기, 보스기 가 강화되고 … 그 스킬을 사용하면 열기가 모두 소모되면서 원래스킬이아니라 더 강력한 스킬이 나가는거라고"):
+--  이 판을 강화판으로 쓰는가 — 첫 구간 · 사냥기 · 보스기 · 묶음의 ready(열기가 가득 · 폭주). 서버에 함께 보낸다(sim/kit.luau Kit.empower: 화면이 강화판으로 그리지 않은 판은 강화하지 않는다)
+state.enhOf = function(id: string, seg: number): boolean?
+	local a = state.actor
+	local def = COMBAT.skills[id] or COMBAT.cast[id]
+	if seg ~= 1 or not a or not a.kit or not a.kit.ready or not def or (def.type ~= "mob" and def.type ~= "boss") then
+		return nil
+	end
+	return a.kit.ready(a.g) == true
+end
+-- 내가 사신으로 변해 있는가(리퍼의 사신화 — 2026-10-31: 사신 각성이 있으면 그동안 사냥기 · 공격기의 다시 쓰기가 없다 · sim/kit.luau Kit.noCd와 같은 셈)
+state.formOn = function(): boolean
+	local passed = state.now - (state.buffAt or state.now)
+	for _, b in state.buffs or {} do
+		if b.id == KitSim.FORM and b.t - passed > 0 then
+			return true
+		end
+	end
+	return false
+end
+-- 지금 이 갈래(typ)의 기술에 다시 쓰기가 없는가(사신 각성 — 사신화 동안 사냥기 · 공격기). 1차(startSeg)와 2~4차(CAST)가 함께 쓴다 —
+--  2026-11-01 사용자 "사신화하면 광역기 쿨타임 준다면서 안주는데?": 2~4차의 길은 이 셈 없이 다시 쓰기를 걸어, 서버는 풀어 줘도 화면이 백귀야행을 막았다
+state.noCd = function(typ: any): boolean
+	return state.who == "reaper" and state.me ~= nil and (state.me.skills.rp_awaken or 0) > 0 and (typ == "mob" or typ == "attack") and state.formOn()
 end
 
 -- 달 수정(무니)이 섰다 · 사라졌다: 그 수정의 주인(무니)의 묶음이 그린다. c = { id, owner, x, y, life }
@@ -361,6 +387,29 @@ state.togglePet = function(id: string)
 		cashInvoke("pet", id) -- 꺼내 둔 펫이면 넣고 아니면 꺼낸다(셋까지 — 서버가 정한다 · 2026-10-30)
 	end)
 end
+-- 탄 채 대쉬(2026-11-03 사용자 "다른 로벅스 라이딩과 랭킹보상으로 지급된 라이딩에 대쉬 기능을 추가해 할로윈늑대는 대쉬 없고 … 지금은 탈것 타고 대쉬하면 탈것 내려지거든?
+--  그게아니라 탈것대쉬가 나가야하는거야"): 대쉬가 있는 탈것(ride.generated의 dash — 공방 design/ride.js)을 탄 채 직업의 대쉬 키(1차 대쉬)를 누르면 기술을 보내지 않고
+--  (서버가 내리지 않는다) 탈것이 보는 쪽으로 내달린다 — 지나간 자리에 탈것 · 탄 영웅의 잔상이 연달아(사용자 "샤샤샥처럼 그 탈것의 그림자가 연속적으로" — 처음의 줄무늬는 뺐다) ·
+--  같은 방 사람에게도(RideDash → RideDashed). 탄 채 대쉬로 받았으면 true(다시 쓰기 동안도 —
+--  그때 내리지 않는다) · 대쉬가 없는 탈것(할로윈 늑대 · 쿠폰의 떠도는 책)이면 false → 전처럼 내리고 그 직업의 대쉬
+state.rideDashTry = function(): boolean
+	local body = state.body
+	if not (state.ride and state.ride:riding()) or not body or body.climb ~= nil or state.skill or state.dead or state.busy then
+		return false
+	end
+	local m = RideView.MOUNT[state.ride.rideId]
+	local d = m and m.dash
+	if not d then
+		return false
+	end
+	if (state.cds.rideDash or 0) > state.clock then
+		return true
+	end
+	state.cds.rideDash = state.clock + d.cd
+	state.rideDash = { v = state.dir * d.speed, t = d.dist / d.speed } -- (내달리는 동안 탈것의 잔상 — 아래 그리는 곳의 rideTrail)
+	Net.FireServer("RideDash", body.x, body.y, state.dir)
+	return true
+end
 -- id = 그 탈것(타고 있는 것이면 내린다) · nil = 고른 탈것으로 타거나 내린다(N 키)
 state.toggleRide = function(id: string?)
 	once(function()
@@ -411,6 +460,7 @@ local function enterScene(key: string, x: number, y: number, room)
 	ChatBubbles.hush() -- 사람들의 채팅 말풍선도
 	DpsMeter.show(scene.dojo == true) -- 개인 연무장이면 피해 측정 판(나가면 지운다)
 	HallStones.leave()
+	require(script.Parent.rankStatues).leave() -- 마을의 랭킹 석상(2026-11-03)
 	-- 이전 장면의 것을 치운다. 하나를 치우다 오류가 나도 나머지를 마저 치우고 새 장면을 그린다 — 치우기는 이 함수의 맨 앞이라, 여기서 멈추면 새 장면이 통째로 안 그려진다
 	--  (2026-10-13: 이펙트를 치우다 난 오류 하나로 문을 지난 뒤의 화면이 깨졌다 — 캐릭터와 몬스터가 없고 이전 맵이 남았다). 오류는 출력 창에 알린다
 	local function clear(what: string, thing: any, method: string)
@@ -439,6 +489,7 @@ local function enterScene(key: string, x: number, y: number, room)
 	state.over = Overlay.layer("Scene", 10)
 	state.view = SceneView.new(Stage.view, key, scene, state.over)
 	HallStones.enter(scene, state.view.root) -- 명예의 전당이면 비석 면에 순위를 새긴다(맵의 층 — 캐릭터 뒤: 2026-10-29 제보)
+	require(script.Parent.rankStatues).enter(state.view) -- 마을의 랭킹 석상(2026-11-03 — 레벨 순위 1 · 2 · 3위를 받침대 위에 돌빛으로)
 	state.body = P.newBody(scene)
 	state.body.x, state.body.y = x, y
 	P.unstick(scene, state.body) -- 들어선 자리가 땅 속이면 꺼낸다(2026-10-21)
@@ -554,13 +605,16 @@ local function enterScene(key: string, x: number, y: number, room)
 		face = function(d: number)
 			state.dir = d
 		end,
-		teleport = function(tx: number): number?
+		teleport = function(tx: number, ty: number?): number? -- ty = 그 높이로(높은 땅 위에 내린다 — 2026-10-31 리븐 무영 섬)
 			local sceneNow = SCENES.scenes[state.sceneKey]
 			tx = math.clamp(tx, 8, sceneNow.w * 16 - 8)
-			if P.solidBox(sceneNow, tx, state.body.y) then
+			if P.solidBox(sceneNow, tx, ty or state.body.y) then
 				return nil
 			end
 			state.body.x = tx
+			if ty then
+				state.body.y, state.body.vy = ty, 0
+			end
 			state.reportT = REPORT -- 옮긴 자리를 바로 알린다
 			return tx
 		end,
@@ -622,13 +676,15 @@ end
 local function startSeg(id: string, seg: number, lv: number?)
 	local def = COMBAT.skills[id]
 	local sk = { id = id, def = def, seg = seg, t = 0, queued = false, vx = nil :: number?, move = 0, shown = {} }
-	if seg == 1 and def.cd > 0 then
+	local hot = state.enhOf(id, seg) -- (살라맨더의 강화판 — 서버에 함께 보내고 그 판을 강화판으로 그린다)
+	-- (사신 각성 — 리퍼가 사신으로 변해 있는 동안 사냥기 · 공격기의 다시 쓰기가 없다 · 서버 world.luau와 같다 · 2026-10-31)
+	if seg == 1 and def.cd > 0 and not state.noCd(def.type) then
 		state.cds[id] = state.clock + def.cd
 	end
 	-- 첫 구간과, 한 번 더 눌러 잇는 구간 · 힘을 모으는 구간의 다음 구간만 서버에 알린다(저절로 이어지는 구간은 서버가 알아서 잇는다).
 	--  힘을 모으는 구간의 다음 = 키를 뗀 때(또는 끝까지 모인 때) 나간다 — 서버가 그 사이의 시간으로 모은 단계를 셈한다
 	if seg == 1 or def.segs[seg].next or def.segs[seg - 1].charge then
-		Net.FireServer("Skill", id, seg, state.body.x, state.body.y, state.dir)
+		Net.FireServer("Skill", id, seg, state.body.x, state.body.y, state.dir, hot)
 	end
 	if def.type == "move" then
 		sk.vx = state.dir * def.speed
@@ -639,7 +695,7 @@ local function startSeg(id: string, seg: number, lv: number?)
 		-- 그 구간의 이펙트(휘두른 자국 · 고리 · 파편 …). lv = 모은 단계
 		local a = state.actor
 		a.x, a.y, a.dir = state.body.x, state.body.y, state.dir
-		state.cast:start(a, id, seg, lv or 0)
+		state.cast:start(a, id, seg, lv or 0, hot)
 	end
 	state.skill = sk
 end
@@ -677,10 +733,11 @@ local function startKit(id: string, seg: number, lv: number?)
 	sk.lv = lv or sk.lv
 	sk.last = kitLast(sk.s)
 	state.skill = sk
-	Net.FireServer("Skill", id, seg, body.x, body.y, state.dir)
+	local hot = state.enhOf(id, seg) -- (살라맨더의 강화판 — 서버에 함께 보내고 그 판을 강화판으로 그린다)
+	Net.FireServer("Skill", id, seg, body.x, body.y, state.dir, hot)
 	local a = state.actor
 	a.x, a.y, a.dir, a.ground, a.vx, a.vy = body.x, body.y, state.dir, body.ground, body.vx or 0, body.vy or 0
-	state.cast:start(a, id, seg, sk.lv)
+	state.cast:start(a, id, seg, sk.lv, hot)
 end
 
 local function stepKit()
@@ -864,6 +921,13 @@ local function trySkill(id: string, action: string?)
 		if state.dead or state.busy or not state.me or not Buffs.learned(kitHero(), id) or (state.cds[id] or 0) > state.clock then
 			return
 		end
+		-- 사신화(리퍼 — 2026-10-31 게이지 직업): 사신 게이지가 가득할 때만(서버의 Buffs.hooks와 같다) · 변해 있는 동안은 다시 걸지 않는다
+		if id == KitSim.FORM and ((state.me.kit and state.me.kit.gauge or 0) < KitSim.gaugeMax() or state.formOn()) then
+			if state.fx and not state.formOn() then
+				state.fx:float(UI_DATA.buffTip.gaugeNeed, state.body.x, state.body.y - 46, Effects.MINT, 1.4)
+			end
+			return
+		end
 		state.cds[id] = state.clock + math.max(Buffs.data[id].cd, 0.5)
 		local a = state.actor
 		a.x, a.y, a.dir = state.body.x, state.body.y, state.dir
@@ -893,8 +957,15 @@ local function trySkill(id: string, action: string?)
 		end
 		local a = state.actor
 		a.x, a.y, a.dir = state.body.x, state.body.y, state.dir
+		-- 쓸 수 있는 때(묶음의 can — 리븐의 처형 같은 것): 동작이 없는 것도 여기서 본다 · cantTip = 그때 머리 위에 띄울 글(buffTip의 이름 — 2026-11-03 살라맨더의 큰 한 방이 처음 썼고 11-04 그 스킬을 뺐다)
+		if kdef.can and not kdef.can(a.g) then
+			if kdef.cantTip and state.fx and UI_DATA.buffTip[kdef.cantTip] then
+				state.fx:float(UI_DATA.buffTip[kdef.cantTip], state.body.x, state.body.y - 46, Effects.PINK, 1.2)
+			end
+			return
+		end
 		if kdef.instant then
-			-- 쓰는 동작이 없는 것(열 방출): 다른 동작 중에도 바로 나간다
+			-- 쓰는 동작이 없는 것(버프 · 리퍼의 사신화 같은 것): 다른 동작 중에도 바로 나간다
 			state.cds[id] = state.clock + math.max(castDef.cd, 0.5)
 			state.cast:instant(a, id)
 			Net.FireServer("Skill", id, 1, state.body.x, state.body.y, state.dir)
@@ -903,9 +974,6 @@ local function trySkill(id: string, action: string?)
 		-- 뛰는 중에도 쓰는 것: 사냥기 · 보스기(묶음이 따로 정한 것은 그대로). 땅에서 쓰는 기술은 땅에서만
 		local airOk = if kdef.air ~= nil then kdef.air else (castDef.type == "mob" or castDef.type == "boss")
 		if not state.body.ground and (not airOk or kdef.ground) then
-			return
-		end
-		if kdef.can and not kdef.can(a.g) then
 			return
 		end
 		-- 소생: 닿는 거리 안에 쓰러진 파티원이 있을 때만 써진다
@@ -921,7 +989,7 @@ local function trySkill(id: string, action: string?)
 				return
 			end
 		end
-		if castDef.cd > 0 then
+		if castDef.cd > 0 and not state.noCd(castDef.type) then -- (사신 각성 — 서버 world.luau Kit.noCd와 같다)
 			state.cds[id] = state.clock + castDef.cd
 		end
 		startKit(id, 1, 0)
@@ -931,6 +999,9 @@ local function trySkill(id: string, action: string?)
 	local def = COMBAT.skills[id]
 	if not def or def.who ~= state.who or state.dead or state.busy then
 		return
+	end
+	if def.type == "move" and state.rideDashTry() then
+		return -- 탄 채 대쉬(내리지 않는다 — 위 state.rideDashTry)
 	end
 	local sk = state.skill
 	if sk then
@@ -1372,6 +1443,8 @@ local function step()
 			if sk.imp.t <= 1e-9 then
 				sk.imp = nil
 			end
+		elseif s.still then
+			vx = 0 -- still 구간: 걷기 · 뛰던 기세로 옆으로 가지 않는다(움직임은 기술의 순간이동만 — 리븐 무영 섬 · 2026-10-31 사용자 "점프하고 쓰면 훨씬 멀리간다던지")
 		elseif sk.air and not s.walk then
 			vx = sk.avx
 		end
@@ -1412,6 +1485,18 @@ local function step()
 		if state.ride and state.ride:riding() and body.climb == nil then
 			local m = RideView.MOUNT[state.ride.rideId]
 			input.speed = (m and m.speed) or RIDE_DATA.mountSpeed or 1
+			-- 탄 채 대쉬(2026-11-03 — state.rideDashTry): 보는 쪽으로 내달린다 · 그동안 떨어지지 않는다(직업 대쉬와 같다)
+			local rd = state.rideDash
+			if rd then
+				local use = math.min(STEP, rd.t)
+				input = { mx = 0, vx = rd.v * use / STEP, float = true, down = false }
+				rd.t -= use
+				if rd.t <= 1e-9 then
+					state.rideDash = nil
+				end
+			end
+		else
+			state.rideDash = nil -- (내렸다 · 사다리)
 		end
 		if input.jump and input.down and body.ground and P.onPlatform(scene, body) then
 			TutView.dropped = true -- 튜토리얼: 얇은 발판을 내려왔다(↓ + 뛰기)
@@ -1429,6 +1514,14 @@ local function step()
 	end
 	local airWas = body.air or 0
 	P.step(scene, body, input, STEP)
+	if state.held then -- 용암 거인에게 잡혔다(2026-11-04 — lavaView의 hold): 쥔 주먹의 자리에 묶이고 쓰던 기술은 끊긴다(놓이거나 시간이 다 되면 풀린다)
+		if os.clock() < state.held.till then
+			body.x, body.y, body.vx, body.vy = state.held.x, state.held.y, 0, 0
+			state.skill = nil
+		else
+			state.held = nil
+		end
+	end
 	-- 막힌 칸 안에 끼었으면 바로 가장 가까운 빈 자리로 꺼낸다(위가 먼저 — sim/physics.luau의 freeSpot). 사다리를 탄 동안은 보지 않는다
 	--  사용자 2026-10-21(폰): "대쉬하다가 맵을뚫고 낑기는 현상" — 끼면 걷기 · 뛰기 · 대쉬가 다 막혔다
 	if body.climb == nil and P.unstick(scene, body) then
@@ -1619,6 +1712,11 @@ local function draw(dt: number)
 			if not held then
 				poseClip, poseFrame = "idle", Sprite.frameAt(char, "idle", state.now, false)
 			end
+			-- 탄 채 대쉬(state.rideDashTry)로 내달리는 동안: 탈것 + 탄 영웅의 잔상이 연달아(직업 대쉬의 잔상과 같은 때 · 색)
+			local rdm = state.rideDash and RideView.MOUNT[state.ride.rideId]
+			if rdm and rdm.dash and state.fx and state.ride.shownClip then
+				state.fx:rideTrail(state.rideDash, dt, rdm.dash, state.ride.rideId, state.ride.shownClip, state.ride.shownF, body.x, body.y, state.who, Sprite.frameAt(char, "idle", state.now, false), rx, ry, rs, state.dir, CLASSES.classes[state.who].tone)
+			end
 		end
 	end
 	cast:look(me, state.sprite, poseClip, poseFrame, hx, hy, state.dir, alpha)
@@ -1647,6 +1745,7 @@ local function draw(dt: number)
 		local clip = if state.clip == "skill" then "idle" else state.clip
 		me.pose = { clip = clip, f = Sprite.frameAt(char, clip, state.clipT, clip == "jump") - 1 }
 	end
+	me.wskin = state.mySkin -- 장착한 캐시 무기(살라맨더의 불꽃 갓 색 — 2026-11-04)
 	state.view.shakeX, state.view.shakeY = cast.sx, cast.sy
 	-- 퀘스트 연출(장면): 맵에 들어섰을 때의 장면을 줄 세우고, 줄의 맨 앞을 튼다. 도는 동안은 카메라 · 주민의 자리 · 내 캐릭터가 보는 쪽이 장면의 것
 	if state.cineScene ~= state.sceneKey and not state.busy and not Curtain.covered() and state.quests then
@@ -1684,6 +1783,7 @@ local function draw(dt: number)
 	end
 	state.view:update(body.x, body.y, state.now, body.ground)
 	HallStones.update()
+	require(script.Parent.rankStatues).update()
 	-- 스마트폰의 상호작용 단추가 지금 할 일: 떨어진 물건 → 문 → 주민의 차례로 가까운 것
 	if Touch.on then
 		Touch.setAct(if state.dead then nil elseif state.fx and state.fx:dropNear(body.x, body.y, RULES.pickup) then "pickup" elseif require(script.Parent.boxView).near(body.x, body.y) then "chest" elseif state.view:portalNear(body.x, body.y) or state.view:warpNear(body.x, body.y) then "portal" elseif nearSpot(body.x, body.y) then "spot" elseif state.view:npcNear(body.x, body.y) then "npc" elseif SCENES.scenes[state.sceneKey].vista and SCENES.scenes[state.sceneKey].vista.x and math.abs(body.x - SCENES.scenes[state.sceneKey].vista.x) <= 40 then "vista" else nil)
@@ -1714,6 +1814,7 @@ local function draw(dt: number)
 			-- 그 사람의 몸에도 버프가 입히는 모습을 그린다(분신 · 윤곽은 그 사람의 지금 동작을 따라 그린다). 비석이 선 사람은 몸을 그리지 않는다
 			if o.clip and not o.fallen then
 				a.pose = { clip = o.clip, f = o.frame - 1 }
+				a.wskin = o.wskin -- (그 사람의 캐시 무기 — 불꽃 갓의 색)
 				a.rideSize = o.rideSize -- 탄 사람은 안장 위에 작게(othersView가 그린 자리 · 크기 그대로 — 전에는 o.x · o.y로 다시 그려 탄 사람이 땅으로 내려갔다)
 				cast:look(a, o.sprite, o.clip, o.frame, o.hx or o.x, o.hy or o.y, o.dir, 0)
 			end
@@ -1811,6 +1912,9 @@ local function draw(dt: number)
 			Touch.setCooldown(g.id, (state.potionUntil or 0) - state.clock, state.potionCd or 0)
 		end
 	end
+	-- 강화된 스킬이 빛난다(2026-11-04 사용자 "강화된 스킬들은 퀵슬롯에서 빛나는거야" — 살라맨더: 열기가 가득하면 사냥기 · 보스기의 칸 · 묶음의 ready · 폰은 칸 단추의 테두리)
+	Hud.setGlow(state.actor ~= nil and state.actor.kit ~= nil and state.actor.kit.ready ~= nil and state.actor.kit.ready(state.actor.g) == true, Cast.tone(CLASSES.classes[state.who].tone).n)
+	Touch.setGlow(Hud.glowOn, Hud.glowColor, Hud.glowK)
 	paintBuffs()
 	if not state.skill or state.dead then
 		clearPips()
@@ -1986,6 +2090,16 @@ paintBuffs = function()
 	-- 열기(살라맨더): 발밑의 막대(직업 묶음이 그린다)는 이름표에 가려 잘 보이지 않는다 — 버프 자리에 값을 같이 적는다(달아오르면 노랑)
 	if state.who == "salamander" and me.kit.heat > 0 then
 		table.insert(list, { pic = "skill_" .. k.core.id, text = tostring(me.kit.heat), hot = me.kit.hot, tip = { kind = "sub", title = nameOf(k.core.id), tag = "", lines = { Format.fill(BUFFTIP.heat, { n = me.kit.heat }), effectOf(k.core.id) } } })
+	end
+	-- 재점화(살라맨더 — 2026-11-03 사용자 "재점화가 써지고 나서 재사용 쿨 알수가 없어서 버프처럼 위에 보여야하고"): 버틴 뒤 다시 버틸 수 있을 때까지 그 스킬 그림 · 남은 시간
+	local rk = (me.rekindle or 0) - (state.now - (state.buffAt or state.now))
+	if rk > 0 and BUFFTIP.rekindle then
+		table.insert(list, { pic = "skill_sl_rekindle", text = if rk >= 60 then Format.fill(BUFFTIP.min, { m = math.ceil(rk / 60) }) else tostring(math.ceil(rk)), tip = { kind = "sub", title = nameOf("sl_rekindle"), tag = "", lines = { BUFFTIP.rekindle, leftText(rk) } } })
+	end
+	-- 사신 게이지(리퍼 — 2026-10-31 게이지 직업): 버프 자리에 값(가득하면 노랑 — 사신화를 쓸 수 있다)
+	if state.who == "reaper" and me.kit and (me.kit.gauge or 0) > 0 and not state.formOn() then
+		local full = me.kit.gauge >= KitSim.gaugeMax()
+		table.insert(list, { pic = "skill_" .. k.core.id, text = tostring(me.kit.gauge), hot = full, tip = { kind = "sub", title = nameOf(k.core.id), tag = "", lines = { Format.fill(BUFFTIP.gauge, { n = me.kit.gauge, max = KitSim.gaugeMax() }), if full then BUFFTIP.gaugeFull else effectOf(k.core.id) } } })
 	end
 	-- 약해짐(쓰러진 벌칙 — 경험치 · 물건을 덜 얻는다): 해골 그림 · 1분이 넘으면 「N분」, 그 아래는 초(2026-10-18 — 전에는 보이지 않아 왜 덜 얻는지 알 수 없었다)
 	local weak = (state.weakLeft or 0) - (state.now - (state.weakAt or state.now))
@@ -2165,6 +2279,10 @@ local function listen()
 				end, h)) then
 					land(1)
 				end
+				-- 쓰러뜨린 사람의 직업 그림(리퍼: 넋 · 피가 빨려 든다 — 2026-10-31 · 되찾는 체력은 서버가 처치 때 준다)
+				if h.dead and (by == state.myId or ViewOpts.fx) then
+					state.cast:killed(actorOf(by), m)
+				end
 				-- 둘째 줄부터: stagger초 사이로 하나씩(그 사이에 장면이 바뀌었으면 띄우지 않는다)
 				if #lines > 1 then
 					local mobsNow = state.mobs
@@ -2197,6 +2315,28 @@ local function listen()
 			crystalAdd(c)
 		end
 	end)
+	-- 재점화(살라맨더 4차 — 2026-11-03 사용자 "체력만 차니까 써졌는지도 구분할수가 없어서 사용되었을때 극적인 이펙트가 있어야해"): 그 자리에 분홍 불기둥(pixelfx로 만든 그림 —
+	--  공방 vendor/pixelfx/src/fx/lune/sl-rekindle.js · 캐릭터 그림판 pfx_sl_rekindle) — 방의 모두가 본다. 나면 화면이 크게 흔들리고 잠깐 반전 · 머리 위에 「재점화」
+	Net.OnClient("Rekindle", function(id, x, y)
+		if not state.fx or typeof(x) ~= "number" or typeof(y) ~= "number" then
+			return
+		end
+		state.fx:play("pfx_sl_rekindle", "play", x, y, 1, {})
+		if state.myId ~= nil and id == state.myId and state.cast then
+			state.cast.shakeA, state.cast.shakeT = math.max(state.cast.shakeA or 0, 3), math.max(state.cast.shakeT or 0, 0.45)
+			state.cast.invertT = 0.08
+			state.fx:float(BUFFTIP.rekindleFloat, x, y - 34, Effects.PINK, 1.2)
+		end
+	end)
+	-- 같은 방의 누가 탄 채 대쉬를 썼다(2026-11-03): 그 사람이 내달리는 동안(그 탈것의 거리 ÷ 빠르기) 탈것 · 탄 영웅의 잔상(othersView가 그린다 — 내 것과 같은 그림)
+	Net.OnClient("RideDashed", function(id, _x, _y, _dir)
+		local o = state.others and state.others.list[id]
+		local m = o and o.rv and o.rv.rideId and RideView.MOUNT[o.rv.rideId] -- (그 사람이 탄 탈것 — othersView의 rv)
+		local d = (m and m.dash) or RIDE_DATA.mountDash
+		if o then
+			o.rideDashTo = state.now + d.dist / d.speed + 0.1 -- (자리가 조금 늦게 따라오는 만큼 0.1초 더)
+		end
+	end)
 	-- 피했다(리븐의 날랜 몸)
 	Net.OnClient("Dodge", function()
 		if state.fx then
@@ -2207,6 +2347,42 @@ local function listen()
 	-- 보스의 기믹(2026-10-28 셋째 보스전 「불씨 도둑 두목」 — 서버 sim/thiefgim.luau): 폭탄 · 단지 · 되찾은 불씨 · 연막 · 갈고리를 그린다(thiefView.luau — 한도라 여기서 부른다)
 	Net.OnClient("Gim", function(e)
 		if not state.boss or not state.cast or typeof(e) ~= "table" then
+			return
+		end
+		-- 넷째 보스전 「용암 거인」(2026-11-04 — sim/lavagim.luau): 혹 · 끓는 바닥 · 움켜쥐기 · 사람마다의 자리 · 심장(lavaView.luau)
+		local lead = state.boss.list[1]
+		local LG = lead and lead.m.def.story and lead.m.def.story.gimmick
+		if LG and LG.mod == "lava" then
+			local LV = require(script.Parent.lavaView)
+			if not state.lava or state.lava.bv ~= state.boss then
+				state.lava = LV.new(state.boss, {
+					me = state.myId,
+					words = LG.words,
+					float = function(text: string, x: number, y: number)
+						if text ~= "" then
+							state.fx:float(text, x, y, Effects.PINK, 1.4)
+						end
+					end,
+					dim = function(a: number, t: number)
+						local c = state.cast
+						c.dimA, c.dimT, c.dimLife = a, t, t
+					end,
+					heroPos = function(id)
+						if id == state.myId and state.body then
+							return state.body.x, state.body.y
+						end
+						local o = state.others and state.others.list[id]
+						if o then
+							return o.x, o.y
+						end
+						return nil, nil
+					end,
+					hold = function(x: number?, y: number?, t: number?) -- 쥔 주먹의 자리에 묶인다(아래 걸음에서 — 놓이면 nil)
+						state.held = if x then { x = x, y = y, till = os.clock() + (t or 4) } else nil
+					end,
+				})
+			end
+			LV.event(state.lava, e)
 			return
 		end
 		local TV = require(script.Parent.thiefView)
@@ -2393,7 +2569,7 @@ local function listen()
 			state.cast:setBuffs(state.cast:actor(id, o.class, false), list)
 		end
 	end)
-	Net.OnClient("Act", function(id, skillId, seg, x, y, dir, lv)
+	Net.OnClient("Act", function(id, skillId, seg, x, y, dir, lv, hot) -- hot = 살라맨더의 강화판으로 쓴 판(2026-11-04)
 		-- 다른 사람이 버프를 건다 · 설치 · 소환을 놓는다(바로 놓이는 것): 그 순간의 이펙트
 		if Buffs.instant(skillId) or (COMBAT.placed[skillId] and COMBAT.placed[skillId].cast == "instant") then
 			local o = state.others and state.others.list[id]
@@ -2422,7 +2598,7 @@ local function listen()
 			if o and def and def.type ~= "move" and state.cast and ViewOpts.fx then
 				local a = state.cast:actor(id, o.class, false)
 				a.x, a.y, a.dir = x, y, dir
-				state.cast:start(a, skillId, seg, lv or 0)
+				state.cast:start(a, skillId, seg, lv or 0, hot == true)
 			end
 		end
 	end)
@@ -2438,6 +2614,14 @@ local function listen()
 	end)
 	Net.OnClient("PartyAsk", function(ask)
 		PartyHud.ask(ask)
+	end)
+	-- 파티 찾기(2026-11-05): 내 방이 바뀌었다(신청 · 수락 · 거절 · 준비 · 닫힘 — 서버가 먼저 보낸다)
+	Net.OnClient("FinderView", function(v)
+		if typeof(v) == "table" then
+			v.why = nil
+			state.finder = v
+			Windows.refresh(state.me)
+		end
 	end)
 	-- 퀘스트: 바뀐 상태. doneId = 방금 끝낸 퀘스트
 	Net.OnClient("Quests", function(book, doneId)
@@ -2601,12 +2785,14 @@ local function listen()
 		pcall(Guide.banner, Rank.FIRST_TITLE, text, 10)
 		Chat.note(("[%s] %s"):format(Rank.FIRST_TITLE, text))
 		HallStones.soon()
+		require(script.Parent.rankStatues).soon()
 	end)
 	Net.OnClient("Sold", function(e)
 		if typeof(e) ~= "table" then
 			return
 		end
 		GainLog.add("note", Format.fill(Market.WORDS.soldNote, { name = tostring(e.name), n = tonumber(e.n) or 1 }), Ui.COLOR.gold)
+		state.auctionSold = true -- 경매장 창의 「완료」 탭에 노란 점(그 탭을 열 때까지 — 2026-10-31)
 		if not Windows.isOpen("auction") then
 			Hud.markMenu("auction", true)
 			phoneMark()
@@ -2677,6 +2863,11 @@ function Boot.start()
 	-- 퀵슬롯 · 스마트폰 단추에 놓인 소비 아이템의 숫자 = 가방에 든 그 아이템의 수
 	Hud.countOf = function(id: string): number
 		return Bag.countIn(state.bag, id)
+	end
+	-- 퀵슬롯에서 빛날 수 있는 칸(강화판이 있는 사냥기 · 보스기 — 2026-11-04)
+	Hud.glowable = function(id: string): boolean
+		local def = COMBAT.skills[id] or COMBAT.cast[id]
+		return def ~= nil and (def.type == "mob" or def.type == "boss")
 	end
 	Hud.init()
 	listen()
@@ -2831,15 +3022,33 @@ function Boot.start()
 		local holder = Stage.place(Stage.ui, "More", r.at, r.x + r.w - w, r.y - h - 6, w, h)
 		holder.ZIndex = 160
 		local panel = Ui.panel(holder, 0, 0, w, h)
+		-- 노란 점(2026-10-31 사용자 "메뉴에 노란점 떠있어서 눌러서 들어가면 세부ui에서는 노란점 표시가 없어서 가시성이 안좋아"): 받을 · 찍을 것이 있는 줄의 오른쪽 위
+		--  (메뉴 단추의 점이 켜지는 까닭과 같다 — 출석 · 업적 받을 것 · 모험의 서 · 가방이 가득 참 · 경매장에서 팔림 · 찍을 능력치 · 스킬 포인트)
+		local me = state.me
+		local dotOn = {
+			attend = me ~= nil and (me.attReady or 0) > 0,
+			achieve = me ~= nil and (me.achReady or 0) > 0,
+			tome = state.bond ~= nil and Bond.ready(state.bond),
+			bag = Hud.marks.bag == true,
+			auction = Hud.marks.auction == true,
+			stat = Hud.marks.stat == true,
+			skill = Hud.marks.skill == true,
+		}
 		for i, item in items do
-			Ui.button(panel, item.name, 8, 8 + (i - 1) * rowH, w - 16, function()
+			local btn = Ui.button(panel, item.name, 8, 8 + (i - 1) * rowH, w - 16, function()
 				closeMore()
 				if item.id == "@chars" then
 					state.toSelect()
 				else
 					Windows.toggle(item.id)
 				end
-			end, { h = 24 }).frame.Name = "More_" .. item.id
+			end, { h = 24 })
+			btn.frame.Name = "More_" .. item.id
+			if dotOn[item.id] then
+				local dot = Ui.box(btn.frame, w - 16 - 7, 1, 6, 6, Ui.COLOR.ink)
+				Ui.box(dot, 1, 1, 4, 4, Ui.COLOR.gold)
+				dot.ZIndex = (btn.frame.ZIndex or 1) + 3
+			end
 		end
 		morePanel = holder
 	end
@@ -3198,6 +3407,13 @@ function Boot.start()
 			Net.FireServer(name, ...)
 		end,
 		-- 기간 이벤트의 상점에서 하나를 산다(2026-10-29 — 서버 EventTrade): 알림을 머리 위에 · 계정의 상점 상태(가진 탈것 · 펫 · 스킨 · 산 수)를 새로
+		-- 경매장의 「완료」 탭 노란 점(2026-10-31 사용자 "세부ui에서는 노란점 표시가 없어서"): 팔린 것이 생겼다 · 그 탭을 열었다
+		auctionSold = function(): boolean
+			return state.auctionSold == true
+		end,
+		auctionSeen = function()
+			state.auctionSold = false
+		end,
 		eventBuy = function(evId: string, itemId: string)
 			local ok, res = pcall(Net.Invoke, "EventTrade", evId, itemId)
 			if ok and res then
@@ -3327,6 +3543,42 @@ function Boot.start()
 		-- 주간 보스(2026-10-24): 서버의 마지막 대답 { ok, why, view = { done, reset } } · 묻기 / 들어가기
 		week = function()
 			return state.week
+		end,
+		-- 스케줄러(2026-11-03 — 메뉴 → 「스케줄러」): 서버의 마지막 대답 { daily, weekly, dayLeft, weekLeft }(sim/schedule.luau) · 묻기(창을 열 때 · 탭을 바꿀 때 — 대답이 오면 창을 다시 그린다)
+		schedule = function()
+			return state.schedule
+		end,
+		scheduleFetch = function()
+			task.spawn(function()
+				local ok, res = pcall(Net.Invoke, "Schedule")
+				if ok and typeof(res) == "table" then
+					state.schedule = res
+					Windows.refresh(state.me)
+				end
+			end)
+		end,
+		-- 파티 찾기(2026-11-05 — 메뉴 → 「파티 찾기」): 서버의 마지막 대답 { ok, why, rooms, mine, bosses, max, steps }(world.luau의 "Finder" · sim/finder.luau) · 묻기 · 하기
+		finder = function()
+			return state.finder
+		end,
+		finderFetch = function()
+			task.spawn(function()
+				local ok, res = pcall(Net.Invoke, "Finder", "view", nil, nil, nil)
+				if ok and typeof(res) == "table" then
+					res.why = if state.finder then state.finder.why else nil -- (물어본 대답은 까닭이 없다 — 앞의 까닭을 잠깐 남긴다)
+					state.finder = res
+					Windows.refresh(state.me)
+				end
+			end)
+		end,
+		finderDo = function(action: string, a: any, b: any, c: any)
+			task.spawn(function()
+				local ok, res = pcall(Net.Invoke, "Finder", action, a, b, c)
+				if ok and typeof(res) == "table" then
+					state.finder = res
+					Windows.refresh(state.me)
+				end
+			end)
 		end,
 		weekDo = function(action: string, id: any, mode: any, party: boolean?)
 			local ok, res = pcall(Net.Invoke, "Week", action, id, mode, party == true)
@@ -3509,6 +3761,8 @@ function Boot.start()
 	Windows.register("attend", AttendWindow) -- 출석(메뉴 → 「출석」 · 그날 처음 들어오면 한 번)
 	Windows.register("achieve", AchieveWindow) -- 업적(메뉴 → 「업적」)
 	Windows.register("coupon", CouponWindow) -- 쿠폰(메뉴 → 「쿠폰」 — 2026-10-21)
+	Windows.register("finder", require(script.Parent.ui.finderWindow)) -- 파티 찾기(메뉴 → 「파티 찾기」 — 2026-11-05 · 같은 서버의 보스 파티 모집)
+	Windows.register("schedule", require(script.Parent.ui.scheduleWindow)) -- 스케줄러(메뉴 → 「스케줄러」 — 2026-11-03 · 메이플 스케줄러처럼 일일 · 주간 할 일)
 	Windows.register("cash", CashWindow) -- 달빛 상점의 판(창으로는 이름 바꾸기 칸 · 염색만 — 가방에서 주문서 · 염색약을 쓰면. 상점은 들어가는 공간: cashShop.luau)
 	CashWindow.ctx = Windows.context() -- (염색 창의 제목이 내 직업을 본다 — 살라맨더는 「머리 색」)
 	-- 가방의 캐시 탭(2026-10-21): 펫 꺼내기 · 넣기 · 탈것 타기 · 내리기 · 지금 꺼낸 것 · 상품의 이름(창 ctx에 더한다)
@@ -4057,9 +4311,17 @@ function Boot.start()
 		state.setBond(view, note)
 	end)
 	-- 로벅스로 산 것이 보관함에 들어왔다(서버의 ProcessReceipt가 저장까지 마친 뒤 — 2026-10-20): 가운데 위 알림 · 상점 창을 고쳐 그린다
-	Net.OnClient("CashGot", function(key)
+	Net.OnClient("CashGot", function(key, gift)
 		local p = CashWindow.product(key) -- 상점에서 팔지 않는 펫 · 탈것(쿠폰 · 만렙 축하 선물)도 이름이 있다(2026-10-25 — 전에는 상품 목록에서만 찾아 알림이 뜨지 않았다)
-		if p and (p.free == "max" or p.free == "max2" or p.free == "max3") then
+		if p and typeof(gift) == "table" and (typeof(gift.to) == "string" or typeof(gift.from) == "string") then
+			-- 선물(2026-10-31 — 달빛 상점의 「선물하기」): 보낸 사람 = 「선물을 보냈다」 · 받은 사람 = 「선물이 왔다 — 누가 보낸 무엇」
+			local W = CashWindow.WORDS
+			if typeof(gift.to) == "string" then
+				Guide.banner(W.giftSentHead, Format.fill(W.giftSent, { name = p.name, to = gift.to }), 4)
+			else
+				Guide.banner(W.giftGotHead, Format.fill(W.giftGot, { name = p.name, from = gift.from }), 5)
+			end
+		elseif p and (p.free == "max" or p.free == "max2" or p.free == "max3") then
 			local W = CashWindow.WORDS
 			local head = if p.free == "max2" then W.giftMax2 elseif p.free == "max3" then W.giftMax3 else W.giftMax
 			Guide.banner(head or CashWindow.TITLE, Format.fill(W.gotOwn, { name = p.name }), 4) -- 레벨 순위 1 · 2 · 3위 선물(백금 · 실버 · 동색 사슴 — 2026-10-26)

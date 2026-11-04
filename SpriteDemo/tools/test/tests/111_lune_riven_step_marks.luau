@@ -133,7 +133,7 @@ do
 	eq(h2.cds.rv_step, nil, "월식: 섬영을 다시 쓰기 없이 이어 쓴다")
 end
 
--- ⑤ 암살 연계: 등 뒤로 순간이동해 돌아선다 · 무영 섬: 오간 뒤 처음 자리로 돌아온다
+-- ⑤ 암살 연계: 등 뒤로 순간이동해 돌아선다 · 무영 섬: 앞으로 내달려 적을 지나간 곳에서 멈춘다(2026-10-31 사용자 "왔다 갔다 하는거아니고 그냥 지나가면서 베는형식으로")
 do
 	for _, id in { "rv_kill", "rv_phantom" } do
 		local room, h, foe = setup(false)
@@ -149,10 +149,74 @@ do
 		if id == "rv_kill" then
 			expect(h.x > foe.x and h.dir == -1, ("암살 연계: 적의 등 뒤로 순간이동해 돌아섰다(나 %.0f · 적 %.0f)"):format(h.x, foe.x))
 		else
-			expect(math.abs(h.x - X) < 1, ("무영 섬: 처음 자리로 돌아왔다(%.0f)"):format(h.x))
+			expect(h.x > foe.x + 20 and h.dir == 1, ("무영 섬: 적을 지나간 곳에서 앞을 본 채 멈췄다(나 %.0f · 적 %.0f)"):format(h.x, foe.x))
+			-- 늘 앞 200도트를 네 번(50씩)에 — 이 맵은 x 300 ~ 390이 두 칸 높은 땅(벽)인데 넘어간다(2026-10-31 사용자 "벽을 넘어야지")
+			expect(math.abs(h.x - (X + 200)) < 1, ("무영 섬: 높은 땅(벽)을 넘어 앞 200(%.0f)"):format(h.x - X))
 			expect(foe.hp < 1e12, "무영 섬: 앞의 적이 맞았다")
 		end
 	end
+end
+
+-- ⑤-2 무영 섬의 거리는 늘 같다(2026-10-31 사용자: "리븐 왜 이동거리가 매번 판정이달라 ? 몬스터가 바로앞에있으면 돌진을 안한다던지 점프하고 쓰면 훨씬 멀리간다던지"):
+--  적이 바로 앞이든 멀리든 · 적이 없든 · 공중이든 앞 200도트(벽이 없는 곳에서) · 동작 중에는 걷기 · 뛰던 기세로 옆으로 가지 않는다(still)
+do
+	local Physics = req("ReplicatedStorage/shared/lune/sim/physics")
+	local sc = SCENES.scenes.hunt
+	local open = nil
+	for x0 = 24, sc.w * 16 - 240, 8 do
+		local ok = true
+		for k = 0, 4 do
+			if Physics.solidBox(sc, x0 + k * 50, Y) or Physics.solidBox(sc, x0 + k * 50, Y - 40) then
+				ok = false
+			end
+		end
+		if ok then
+			open = x0
+			break
+		end
+	end
+	expect(open ~= nil, "사냥터에 벽 없는 200도트가 있다")
+	local ends = {}
+	for _, case in { { "적이 바로 앞", 16, 0 }, { "적이 멀리", 170, 0 }, { "적이 없다", nil, 0 }, { "공중에서", 16, 40 } } do
+		local room, h, foe = setup(false)
+		h.skills.rv_phantom = 20
+		Hero.recalc(h)
+		h.x, h.y = open, Y - case[3]
+		if case[2] then
+			foe.x, foe.y = open + case[2], Y
+		else
+			foe.state = "gone"
+		end
+		local c = room.caster
+		c:actor(h).out = { hits = {}, kills = {} }
+		expect(c:begin(h, "rv_phantom", 1, nil), "무영 섬 — " .. case[1])
+		for _ = 1, 40 do
+			room.time += SUB
+			c:sub(SUB)
+		end
+		ends[case[1]] = h.x - open
+		expect(math.abs(h.x - (open + 200)) < 1, ("무영 섬 — %s: 앞 200도트(%.0f)"):format(case[1], h.x - open))
+	end
+	-- 내릴 자리가 높은 땅 안이면 그 위에 선다(x 300 ~ 390 = 두 칸 높은 땅 — 윗면 y 144): 150에서 쓰면 350 · 144
+	do
+		local room, h, foe = setup(false)
+		h.skills.rv_phantom = 20
+		Hero.recalc(h)
+		h.x, h.y = 150, Y
+		foe.state = "gone"
+		local c = room.caster
+		c:actor(h).out = { hits = {}, kills = {} }
+		expect(c:begin(h, "rv_phantom", 1, nil), "무영 섬 — 높은 땅 안으로")
+		for _ = 1, 40 do
+			room.time += SUB
+			c:sub(SUB)
+		end
+		expect(math.abs(h.x - 350) < 1 and math.abs(h.y - (Y - 32)) < 1, ("무영 섬: 높은 땅 위에 섰다(x %.0f · y %.0f)"):format(h.x, h.y))
+		expect(not Physics.solidBox(sc, h.x, h.y), "땅 속에 끼지 않았다")
+	end
+	local Kitset2 = req("ReplicatedStorage/shared/lune/kitset")
+	local seg = Kitset2.skill("rv_phantom").segs[1]
+	expect(seg.still == true and not seg.walk, "동작 중에는 걷기 · 뛰던 기세로 옆으로 가지 않는다(still)")
 end
 
 -- ⑥ 섬영은 다른 스킬을 쓰는 중에도 쓴다(2026-10-31 사용자 "섬영 거의 그냥 쉽게 쓸수있어야해 지금 너무 선딜, 후딜이 길어" — 동작이 없는 기술 · anytime)

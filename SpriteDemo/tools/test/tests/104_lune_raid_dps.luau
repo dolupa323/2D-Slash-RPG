@@ -14,6 +14,16 @@
 --   LUNE_RAID=1 python tools/test/run.py 104_lune_raid_dps → [RAID] 줄 · 맨 아래의 검사: 가장 약한 직업 조합도 최대 출력이면 제한 시간 안에 깬다.
 local N = req("ReplicatedStorage/shared/lune/config/numbers")
 local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
+if RAID_ENH then -- (LUNE_RAID_ENH — 살라맨더 강화판의 x에 곱한다: 그 몫을 따로 잴 때 · 0이면 패시브의 enh도 0 · 2026-11-04)
+	local x = COMBAT.kit.salamander.core.enh.x
+	for i, v in x do
+		x[i] = v * RAID_ENH
+	end
+	for _, id in { "sl_vent", "sl_furnace", "sl_sun" } do
+		local fx = COMBAT.passive[id].fx
+		fx.enh = (fx.enh or 0) * RAID_ENH
+	end
+end
 local CLASSES = req("ReplicatedStorage/shared/lune/data/classes.generated")
 local Kitset = req("ReplicatedStorage/shared/lune/kitset")
 local TICK = 1 / 60
@@ -63,7 +73,7 @@ if RAID_LV then
 	-- (LUNE_RAID_LV — 새 보스의 체력을 볼 때: 그 입장 레벨 + 2의 보스로 · 재는 동안 쓰러지지 않게 체력을 아주 크게 — 2026-10-29 용암 거인)
 	for _, mode in { "normal", "hard" } do
 		local m = table.clone(B[mode])
-		m.lv, m.hp = RAID_LV[mode] + 2, 1e6
+		m.lv, m.hp = RAID_BOSSLV or (RAID_LV[mode] + 2), 1e6 -- (LUNE_RAID_BOSSLV — 그 레벨의 보스로: 2026-11-03 Lv.150 용암 거인)
 		B[mode] = m
 		local wk = COMBAT.mobs[B.id].story.week -- (방의 보스는 이 표에서 레벨 · 체력을 읽는다 — sim/room.luau)
 		local w2 = table.clone(wk[mode])
@@ -85,7 +95,7 @@ for _, mode in { "normal", "hard" } do
 	print(("[RAID] %s 체력 %d(%s배) — 기록한 4인 최대 출력(초당 %d)이면 %.0f초 · %d분이 되는 배수 = %.0f"):format(
 		mode, math.floor(hp + 0.5), tostring(m0.hp), RAID.avg[mode], hp / RAID.avg[mode], RAID.target / 60, RAID.avg[mode] * RAID.target / (N.mobHp(m0.lv) * FIT)))
 end
-expect(B.hard.hp * N.mobHp(B.hard.lv) > B.normal.hp * N.mobHp(B.normal.lv), "하드의 체력이 노말보다 많다")
+expect(RAID_LV ~= nil or B.hard.hp * N.mobHp(B.hard.lv) > B.normal.hp * N.mobHp(B.normal.lv), "하드의 체력이 노말보다 많다(LUNE_RAID_LV로 잴 때는 둘 다 같은 체력이라 보지 않는다)")
 if not RAID_FULL then
 	print("[RAID] 재는 것은 건너뜀(LUNE_RAID=1이면 4인 최대 출력을 진짜로 잰다 — 2분쯤)")
 	return
@@ -106,6 +116,16 @@ local function make(class: string, level: number, star)
 	Hero.setLevel(h, level, Hero.jobAt(level))
 	Hero.autoStat(h)
 	Hero.autoSkill(h)
+	if RAID_MAXSKILL then
+		-- (LUNE_RAID_MAXSKILL — 「스킬 전부 찍었다」: 그 차수까지의 모든 스킬을 마스터로 · 2026-11-03 사용자 "스킬 전부 찍었다는 가정하에")
+		for _, t in CLASSES.classes[h.class].tiers do
+			if t.job <= h.job then
+				for _, sk in t.skills do
+					h.skills[sk.id] = sk.max
+				end
+			end
+		end
+	end
 	h.quests[B.quest] = { done = true, c = {} }
 	local stage = Items.stageOf(level)
 	for _, slot in Items.data.GEAR do
@@ -222,7 +242,7 @@ function Hand:instants(m, now: number)
 		local def = COMBAT.placed[id]
 		local dur = def.dur or 0
 		-- 따라다니는 것(하나만 — 다시 쓰면 새것)은 지속이 다 됐을 때 · 놓는 것은 다시 쓰기가 돌면 바로
-		local again = if def.kind == "follow" then (now - (self.last[id] or -1e9)) >= math.max(dur - 1, 1) else true
+		local again = if def.kind == "follow" or def.kind == "roam" then (now - (self.last[id] or -1e9)) >= math.max(dur - 1, 1) else true
 		if again and (h.cds[id] or 0) <= now and (not def.cost or h.kit.souls >= def.cost) then
 			self:stand(m, 14)
 			local before = h.cds[id]
@@ -268,9 +288,18 @@ function Hand:step(m, room, now: number)
 				self.act = nil
 			end
 		elseif not sk or sk.id ~= act.id then
-			self.act = nil
+			-- 모으는 구간을 서버가 끝까지 모아 먼저 닫았다(전투 호흡 등으로 빨리 모인다): 화면이 하듯 「뗐다」 = 다음 구간을 보낸다 — 서버는 닫힌 구간의 시간으로 단계를 센다
+			--  (2026-11-03: 전에는 여기서 기술을 버려 액시온의 모으는 보스기 「월광 처단」이 한 번도 내리치지 못하고 피해 0으로 잡혔다 — 10-29 용암 거인 때의 「액시온은 실제보다 낮다」의 까닭)
+			if act.charge and a and a.last and a.last.id == act.id and a.last.i == act.charge then
+				local nextSeg = act.charge + 1
+				act.charge = nil
+				self:send(act.id, nextSeg)
+			else
+				self.act = nil
+			end
 		else
 			local seg = sk.s
+			act.charge = if seg.charge then sk.i else nil
 			local over
 			if seg.loop then
 				over = sk.t >= seg.dur
@@ -278,7 +307,7 @@ function Hand:step(m, room, now: number)
 				local want = if self.hold == "max" then (seg.max or 3) else math.max(seg.min or 0.15, 0)
 				over = sk.t >= want - 1e-6
 			elseif seg.charge then
-				local per, levels = (seg.per or COMBAT.castRule.charge), Kit.chargeLevels(h)
+				local per, levels = Caster.chargeOf(h, seg) -- (서버와 같은 셈 — 전투 호흡이면 한 단계가 빨리 모인다 · 2026-11-03)
 				over = sk.t >= Caster.segTime(h.class, seg) + per * levels + 0.02
 			elseif seg.till then
 				over = true
@@ -337,7 +366,7 @@ end
 local function fight(classes: { string }, mode: string, holds: { [string]: string }?, secs: number, warm: number)
 	local m0 = B[mode]
 	local level = (RAID_LV and RAID_LV[mode]) or m0.need -- (LUNE_RAID_LV — 새 보스의 체력을 볼 때 그 입장 레벨로: 2026-10-29)
-	local star = RAID.gear[mode]
+	local star = RAID_STAR or RAID.gear[mode] -- (LUNE_RAID_STAR — 무기 · 방어구의 별: 2026-11-03)
 	local ps, hands = {}, {}
 	for i, class in classes do
 		local p, s = make(class, level, star)
@@ -423,6 +452,9 @@ for _, mode in { "normal", "hard" } do
 	-- 혼자(제 버프만): 누르고 있는 기술은 짧게 · 길게 둘 다 재서 센 쪽을 파티에서 쓴다
 	local holds = {}
 	for _, class in CLASSES.order do
+		if RAID_ONLY and class ~= RAID_ONLY then
+			continue -- (LUNE_RAID_ONLY — 그 직업 혼자만: 2026-11-04)
+		end
 		local best = nil
 		for _, hold in { "min", "max" } do
 			local r = fight({ class }, mode, { [class] = hold }, SECS, WARM)
@@ -465,6 +497,9 @@ for _, mode in { "normal", "hard" } do
 			print(("[RAID]    %s Lv.%d/%d · 한 번 %.2f초(빈 방) · 한 번의 피해 %.0f = 설계의 %.2f배 | 몫: %s"):format(f, lv, def.max, Caster.profile(f, 0).time, per, per / one, table.concat(parts, " · ")))
 		end
 	end
+	if RAID_ONLY then
+		continue -- (그 직업 혼자만 — 파티 · 검사는 건너뛴다)
+	end
 	-- 파티: 서로 다른 직업 넷(다섯 벌)
 	for skip = 1, #CLASSES.order do
 		local four = {}
@@ -499,6 +534,9 @@ end
 
 -- ---------- 검사: 가장 약한 직업 조합도 최대 출력이면 제한 시간 안에 깬다 ----------
 for _, mode in { "normal", "hard" } do
+	if RAID_ONLY then
+		break
+	end
 	local r = result[mode]
 	local hp = r.party[1].maxHp
 	local loMin = hp / r.lo / 60

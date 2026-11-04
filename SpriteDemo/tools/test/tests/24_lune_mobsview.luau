@@ -230,7 +230,12 @@ for _, kind in kinds do
 		m = boss("run", 0, 0)
 		expect(m.sprite.label.Visible == true and m.px == 300, kind .. ": 걷는 모습이 그려진다")
 		m = boss("spawn", 0, 0)
-		expect(m.sprite.label.ImageTransparency > 0.9, kind .. ": 나타날 때 처음에는 안 보인다")
+		if def.story.fixed and clips.spawn then
+			-- 들어서는 동작 그림이 있는 보스(2026-11-04 용암 거인 — 손이 굴 끝에서 밀고 들어온다 · 몸통이 바닥 아래에서 솟는다): 흐려지지 않고 그 그림의 첫 장부터
+			expect(m.sprite.label.Visible == true and m.sprite.label.ImageTransparency < 0.1, kind .. ": 나타날 때 들어서는 동작을 첫 장부터 또렷하게")
+		else
+			expect(m.sprite.label.ImageTransparency > 0.9, kind .. ": 나타날 때 처음에는 안 보인다")
+		end
 		m = boss("dead", (def.story.fall or 0.8) + 0.05, 0) -- 쓰러지는 동작 그림이 있는 보스는 그 그림이 다 보인 뒤에(story.fall초), 없는 보스는 0.45초에 걸쳐 사라진다
 		expect(m.sprite.label.Visible == false, kind .. ": 쓰러지면 사라진다")
 		m = boss("gone", 0, 0)

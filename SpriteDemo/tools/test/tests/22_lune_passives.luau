@@ -88,7 +88,7 @@ do
 			end
 		end
 	end
-	eq(seen, 37, "2~4차의 패시브 37개")
+	eq(seen, 42, "2~4차의 패시브 42개(2026-11-04 살라맨더의 큰 한 방 셋 → 열기 폭발을 키우는 폭열 · 용광로 심장 · 백열 · 2026-10-31 리퍼 4차 「사신 각성」 · 2026-11-01 리퍼 3차 「깊은 흡수」 → 「넋 베기」 · 「죽음의 가호」(파티 버프) → 「사신의 낫날」)")
 	-- 남은 것은 둘뿐이다
 	local left = {}
 	for class, c in CLASSES.classes do
@@ -197,13 +197,14 @@ do
 	near(Passives.vs(mo, farM, { now = 0 }), 1 + PASS.mn_mastery.fx.far, 1e-6, "대검 끝에 맞으면 +15%")
 	farM.x = mo.x + 20
 	eq(Passives.vs(mo, farM, { now = 0 }), 1, "가까이에서는 붙지 않는다")
-	-- 피의 계약: 잃은 체력만큼 공격력 +(가장 많이 20%)
-	local p = hero("reaper", { rp_pact = 10 })
-	eq(Passives.atk(p), 1, "체력이 가득이면 그대로")
-	p.hp = p.maxHp / 2
-	near(Passives.atk(p), 1 + PASS.rp_pact.fx.pact * 0.5, 1e-6, "체력이 반이면 +10%")
+	-- 수확의 계약(2026-10-31 — 그 전: 피의 계약 · 잃은 체력만큼 공격력 + · 사용자 "체력적으면 공증은 빼"): 체력과 상관없이 공격력은 그대로 · 사신 게이지가 더 빨리 찬다
+	local p = hero("reaper", { rp_pact = 10, rp_soul = 10 })
 	p.hp = 1
-	near(Passives.atk(p), 1 + PASS.rp_pact.fx.pact, 0.001, "거의 없으면 +20%")
+	eq(Passives.atk(p), 1, "체력이 적어도 공격력은 그대로")
+	local q = hero("reaper", { rp_soul = 10 })
+	Kit.gainGauge(p, "hit")
+	Kit.gainGauge(q, "hit")
+	near(p.kit.gauge / q.kit.gauge, 1 + PASS.rp_pact.fx.gauge, 1e-6, "수확의 계약: 게이지 +20%")
 	-- 주먹 숙련: 2초 안에 이어 맞힐 때마다 +4%(세 번까지) · 몰아붙이기: 같은 적을 이어 때릴 때마다 +3%(다섯 번까지)
 	local s = hero("salamander", { sl_mastery = 10, sl_press = 10 })
 	local sf, pf = PASS.sl_mastery.fx, PASS.sl_press.fx
@@ -310,6 +311,13 @@ do
 	expect(k.alive, "재점화: 쓰러질 피해를 버틴다")
 	near(k.hp, math.floor(k.maxHp * PASS.sl_rekindle.fx.rekindle + 0.5), 1e-6, "최대 체력의 30%로")
 	eq(k.kit.heat, 0, "열기를 모두 태웠다")
+	local told = nil
+	for _, e in events do
+		if e.type == "rekindle" then
+			told = e
+		end
+	end
+	expect(told ~= nil and told.hero == k.id and told.x == k.x and told.y == k.y, "재점화: 방에 알린다(그 자리 — 화면이 분홍 불기둥을 띄운다 · 2026-11-03)")
 	k.hp, k.invuln = 1, 0
 	room3:hurtHero({}, k, mob3, 1000)
 	eq(k.alive, false, "300초 안에는 다시 버티지 못한다")
@@ -528,21 +536,23 @@ do
 	near(r2, reach, 1e-6, "그 단계의 더 닿는 거리")
 end
 
--- ---- 7) 리퍼: 낫 숙련 · 영혼 주머니(닿는 거리 · 영혼 8) · 깊은 흡수 · 망령 군단 ----
+-- ---- 7) 리퍼: 낫 숙련 · 사신의 그릇 · 사신 각성(사신화의 시간 · 다시 쓰기 없음) · 깊은 흡수 · 망령 군단 ----
 do
 	local r = hero("reaper", { rp_mastery = 10, rp_soul = 10 })
 	near(Passives.reach(r), 1 + PASS.rp_mastery.fx.reach, 1e-6, "낫 숙련: 닿는 거리 +10%")
-	eq(Kit.soulMax(r), COMBAT.kit.reaper.core.max, "영혼 다섯까지")
+	local FORM = COMBAT.kit.reaper.core.form
+	r.job = 4
+	near(Kit.formTime(r), FORM.dur[4], 1e-6, "사신화 4차 = " .. FORM.dur[4] .. "초")
 	r.skills.rp_soul2 = 10
-	eq(Kit.soulMax(r), 8, "영혼 주머니: 여덟까지")
-	r.kit.souls = 4
-	near(Passives.reach(r), 1 + PASS.rp_mastery.fx.reach, 1e-6, "영혼이 넷이면 그대로")
-	r.kit.souls = 5
-	near(Passives.reach(r), 1 + PASS.rp_mastery.fx.reach + PASS.rp_soul2.fx.reach, 1e-6, "영혼 다섯부터 닿는 거리 +15%")
-	for _ = 1, 10 do
-		Kit.gainSoul(r)
-	end
-	eq(r.kit.souls, 8, "영혼이 여덟까지 모인다")
+	near(Kit.formTime(r), FORM.dur[4] + PASS.rp_soul2.fx.formTime, 1e-6, "사신의 그릇: +3초")
+	r.skills.rp_awaken = 15
+	near(Kit.formTime(r), FORM.dur[4] + PASS.rp_soul2.fx.formTime + PASS.rp_awaken.fx.formTime, 1e-6, "사신 각성: +5초")
+	expect(not Kit.noCd(r, "attack"), "사신화가 아니면 다시 쓰기가 있다")
+	req("ReplicatedStorage/shared/lune/sim/buffs").give(r, "rp_form", 1, r.x, r.y)
+	expect(Kit.noCd(r, "attack") and Kit.noCd(r, "mob"), "사신 각성: 사신화 동안 공격기 · 사냥기의 다시 쓰기가 없다(광역 난사)")
+	expect(not Kit.noCd(r, "nuke") and not Kit.noCd(r, "bind"), "큰 기술 · 바인드는 그대로")
+	r.skills.rp_awaken = nil
+	expect(not Kit.noCd(r, "attack"), "사신 각성이 없으면 다시 쓰기가 있다")
 	-- 닿는 거리: 보통은 닿지 않는 자리의 적이 맞는다
 	local plain = hero("reaper", { rp_double = 20 })
 	local long = hero("reaper", { rp_double = 20, rp_mastery = 10 })
@@ -552,20 +562,33 @@ do
 	eq(#room:skillHit(plain, hit, plain.x, plain.y, 1, 1, nil, "mob", "rp_double").hits, 0, "보통 때는 닿지 않는 거리")
 	foe.state = "idle"
 	eq(#room:skillHit(long, hit, long.x, long.y, 1, 1, nil, "mob", "rp_double").hits, 1, "낫 숙련을 배우면 닿는다")
-	-- 깊은 흡수: 되찾는 체력 +50% · 영혼이 가득하면 두 배
-	local function drained(skills, souls: number): number
+	-- 깊은 흡수: 되찾는 체력 + · 사신화 중이면 그 배(2026-10-31 — 생기 흡수는 쓰러뜨릴 때: 한 대에 쓰러지는 적으로 잰다)
+	local function drained(skills, formed: boolean): number
 		local h = hero("reaper", skills)
-		h.kit.souls = souls
+		if formed then
+			req("ReplicatedStorage/shared/lune/sim/buffs").give(h, "rp_form", 1, h.x, h.y)
+		end
 		h.hp = 1
 		local rm, f = arena(61, h)
 		f.x = h.x + 20
+		f.hp = 1
 		local out = rm:skillHit(h, hit, h.x, h.y, 1, 1, nil, "mob", "rp_double")
 		return out.heal or 0
 	end
-	local base = drained({ rp_double = 20, rp_drain = 10 }, 0)
+	local base = drained({ rp_double = 20, rp_drain = 10 }, false)
 	expect(base > 0, "생기 흡수")
-	near(drained({ rp_double = 20, rp_drain = 10, rp_drain2 = 10 }, 0) / base, 1 + PASS.rp_drain2.fx.drain, 0.01, "깊은 흡수: +50%")
-	near(drained({ rp_double = 20, rp_drain = 10, rp_drain2 = 10, rp_soul = 10 }, 5) / base, (1 + PASS.rp_drain2.fx.drain) * PASS.rp_drain2.fx.fullMul, 0.01, "영혼이 가득하면 두 배")
+	near(drained({ rp_double = 20, rp_drain = 10, rp_soul = 10 }, true) / base, 1, 0.01, "사신화 중이어도 같다(깊은 흡수를 뺐다 — 2026-11-01)")
+	expect(PASS.rp_drain2 == nil, "깊은 흡수는 없다(딜 패시브 「넋 베기」가 되었다)")
+	-- 사신의 낫날(3차 — 2026-11-01): 사신화 동안만 최종 데미지 +
+	local e = hero("reaper", { rp_soul = 10, rp_edge = 10 })
+	local e0 = Passives.atk(e)
+	req("ReplicatedStorage/shared/lune/sim/buffs").give(e, "rp_form", 1, e.x, e.y)
+	near(Passives.atk(e) / e0, 1 + PASS.rp_edge.fx.formFinal, 1e-6, "사신의 낫날: 사신화 동안 최종 데미지 +25%")
+	-- 넋 베기(3차 — 2026-11-01): 크리티컬 확률 · 크리티컬 데미지 +
+	local c0, m0 = Passives.crit(hero("reaper", {}))
+	local c1, m1 = Passives.crit(hero("reaper", { rp_cleave = 10 }))
+	near(c1 - c0, PASS.rp_cleave.fx.crit, 1e-6, "넋 베기: 크리티컬 확률 +10%")
+	near(m1 - m0, PASS.rp_cleave.fx.critMul, 1e-6, "넋 베기: 크리티컬 데미지 +15%")
 	-- 망령 군단: 망령을 셋까지 부린다
 	local g = hero("reaper", { rp_ghost = 15, rp_soul = 10 })
 	local room2 = arena(62, g)
@@ -673,7 +696,7 @@ do
 	-- 천천히 식는다
 	local function cooled(h): number
 		h.kit.heat, h.kit.heatT = 80, 0
-		for _ = 1, 100 do
+		for _ = 1, 200 do -- 10초(식기 시작 6초 — 2026-11-03 리마스터 · 그 전 3초)
 			Kit.tick(h, 0.05)
 		end
 		return 80 - h.kit.heat

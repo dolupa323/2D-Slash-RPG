@@ -817,10 +817,12 @@ local function giftClean(old)
 	return list
 end
 -- fn(list) → 바꿀 것인가, 돌려줄 것. 돌려주는 것: 해냈는가(저장소에 닿지 못했으면 nil), fn이 돌려준 것
-local function giftUpdate(userId: number, fn): (boolean?, any)
-	local name = "gift_" .. tostring(userId)
+--  prefix · clean = 다른 상자(달빛 상점의 선물 bmgift_ — 아래)
+local function giftUpdate(userId: number, fn, prefix: string?, clean: ((any) -> { any })?): (boolean?, any)
+	local name = (prefix or "gift_") .. tostring(userId)
+	local tidy = clean or giftClean
 	if offline then
-		local list = giftClean(memory.world[name])
+		local list = tidy(memory.world[name])
 		local write, out = fn(list)
 		if write then
 			memory.world[name] = list
@@ -834,7 +836,7 @@ local function giftUpdate(userId: number, fn): (boolean?, any)
 	local out = nil
 	local ok, err = try(function()
 		ds:UpdateAsync(name, function(old)
-			local list = giftClean(old)
+			local list = tidy(old)
 			local write, o = fn(list)
 			out = o
 			return if write then list else nil
@@ -844,7 +846,7 @@ local function giftUpdate(userId: number, fn): (boolean?, any)
 		warn(("[lune] 선물 상자(%s)를 적지 못했다: %s"):format(tostring(userId), tostring(err)))
 		if studio() then
 			offline = true
-			return giftUpdate(userId, fn)
+			return giftUpdate(userId, fn, prefix, clean)
 		end
 		return nil, nil
 	end
@@ -872,6 +874,51 @@ function Store.giftTake(userId: number, name: string): (boolean?, { any })
 		return #mine > 0, mine
 	end)
 	return ok, got or {}
+end
+
+-- 달빛 상점의 선물(2026-10-31 — server/lune/modules/cash.luau): 열쇠 bmgift_<받는 계정 번호> = { { k = 상품, rid = 결제 번호, from = 보낸 캐릭터의 이름, to = 받는 사람의 닉네임, at } … }.
+--  돈을 낸 것이라 넘쳐도 버리지 않는다(보내기 전에 수를 본다 — bm.generated의 rules.gift.max) · 같은 결제 번호는 한 번만 넣는다(로블록스가 같은 결제를 다시 보내도).
+--  받는 쪽: 그 계정이 있는 서버가 읽어(bmGiftList) 계정에 넣고 저장한 뒤에 지운다(bmGiftRemove) — 넣은 결제 번호는 계정에 남아 두 번 넣지 않는다
+local function bmGiftClean(old)
+	local list = {}
+	if typeof(old) == "table" then
+		for _, g in old do
+			if typeof(g) == "table" and typeof(g.k) == "string" and typeof(g.rid) == "string" and #g.rid <= 80 then
+				table.insert(list, { k = g.k, rid = g.rid, from = if typeof(g.from) == "string" then g.from else "", to = if typeof(g.to) == "string" then g.to else "", at = if typeof(g.at) == "number" then g.at else 0 })
+			end
+		end
+	end
+	return list
+end
+function Store.bmGiftAdd(userId: number, gift): boolean?
+	return (giftUpdate(userId, function(list)
+		for _, g in list do
+			if g.rid == gift.rid then
+				return false, true -- (이미 넣었다)
+			end
+		end
+		table.insert(list, { k = gift.k, rid = gift.rid, from = gift.from or "", to = gift.to or "", at = gift.at or os.time() })
+		return true, true
+	end, "bmgift_", bmGiftClean))
+end
+-- 아직 받지 않은 선물 → 해냈는가, 목록
+function Store.bmGiftList(userId: number): (boolean?, { any })
+	local ok, got = giftUpdate(userId, function(list)
+		return false, list
+	end, "bmgift_", bmGiftClean)
+	return ok, got or {}
+end
+-- 받은 선물을 지운다(rids = { [결제 번호] = true })
+function Store.bmGiftRemove(userId: number, rids): boolean?
+	return (giftUpdate(userId, function(list)
+		local n = #list
+		for i = n, 1, -1 do
+			if rids[list[i].rid] then
+				table.remove(list, i)
+			end
+		end
+		return #list ~= n, true
+	end, "bmgift_", bmGiftClean))
 end
 
 function Store.isOffline(): boolean

@@ -86,6 +86,8 @@ local held: { [string]: boolean } = {}
 local pressed: { [string]: boolean } = {} -- 누른 순간(한 번 읽으면 지워진다)
 local byKey: { [string]: boolean } = {} -- 키보드로 누른 하는 일(아래 Input.poll이 뗄 수 있는 것 — 폰 단추로 누른 것은 건드리지 않는다)
 local wasDown: { [string]: boolean } = {} -- 지난 장면에 그 키가 눌려 있었는가(Input.poll)
+local imeFresh = 0 -- 무슨 키인지 모르는 글쇠가 방금 눌렸다(남은 장면 수 — Input.poll은 이때만 IsKeyDown으로 누른다)
+local wasBlocked = false -- 지난 장면에 게임의 키를 받지 않고 있었는가(채팅 · 메뉴 — 바뀌는 장면에 키보드로 누른 것을 모두 뗀다)
 
 function Input.press(action: string)
 	if not held[action] then
@@ -128,6 +130,26 @@ local function actionOf(key: Enum.KeyCode): string?
 	return nil
 end
 
+-- 한글 입력기가 받아 가는 키(글자 A ~ Z · Space): 한글 상태에서 이 키의 뗀 소식이 사라지거나 「모르는 글쇠」로 온다(아래 Input.poll)
+local IME_KEYS: { [any]: boolean } = { [Enum.KeyCode.Space] = true }
+for c = string.byte("A"), string.byte("Z") do
+	IME_KEYS[(Enum.KeyCode :: any)[string.char(c)]] = true
+end
+local function imeKey(key: Enum.KeyCode): boolean
+	return IME_KEYS[key] == true
+end
+
+-- 키보드로 누른 것을 뗀다(only가 있으면 그 키로 누른 것만 — 폰 단추로 누른 것은 건드리지 않는다)
+local function dropKeys(only: ((Enum.KeyCode) -> boolean)?)
+	for action in byKey do
+		local key = Input.BIND[action]
+		if not only or (key ~= nil and only(key)) then
+			byKey[action] = nil
+			held[action] = nil
+		end
+	end
+end
+
 -- Roblox 채팅의 입력줄에 글을 치는 중인가(boot가 chat.luau의 Chat.focused를 넣는다). 그 입력줄은 Roblox의 화면이라 GetFocusedTextBox로는 보이지 않는다 —
 --  이것을 보지 않으면 채팅에 친 글자(Q · W · A …)가 스킬로 나간다(2026-10-13: 채팅을 Roblox의 기본 채팅으로 바꿨다. Enter로 열던 우리 채팅 판은 없다)
 Input.typing = nil :: (() -> boolean)?
@@ -150,6 +172,8 @@ function Input.init()
 		end
 		if input.KeyCode.Value == 0 then
 			Input.imeAt = os.clock() -- 무슨 키인지 모르는 글쇠(한글 입력 상태로 보인다 — 아래 Input.poll)
+			imeFresh = 2
+			dropKeys(imeKey) -- 한글 상태에서 글자를 또 눌렀다 — 앞서 글자 · Space로 누른 것은 뗀 소식이 사라졌을 수 있다(2026-10-31)
 			return
 		end
 		local action = actionOf(input.KeyCode)
@@ -160,6 +184,10 @@ function Input.init()
 	end)
 	UserInputService.InputEnded:Connect(function(input)
 		if input.UserInputType ~= Enum.UserInputType.Keyboard then
+			return
+		end
+		if input.KeyCode.Value == 0 then
+			dropKeys(imeKey) -- 한글 입력기가 뗀 소식을 「모르는 글쇠」로 바꿔 보냈다 — 어느 키인지 모르니 글자 · Space로 누른 것을 모두 뗀다(2026-10-31)
 			return
 		end
 		local action = actionOf(input.KeyCode)
@@ -188,6 +216,13 @@ end
 --   글을 치는 중 · 캐릭터 고르기 · 키 설정 · Roblox 메뉴가 열린 동안에는 누르지 않는다. 그동안 눌려 있던 키는 뗐다가 다시 눌러야 먹는다)
 --  ② 무슨 키인지 모르는 글쇠(KeyCode 0 — Unknown · None)가 오고 그 장면에 묶인 키가 하나도 눌려 있지 않으면 한 번으로 센다 → 3초 안에 두 번이면 Input.onIme(boot가 큰 알림 「한글 입력 상태」)를 부른다(1분에 한 번).
 --  IsKeyDown이 한글 상태에서 맞게 나오는지 · 한글 상태의 글쇠가 KeyCode 0으로 오는지는 이 컴퓨터에서 확인하지 못했다(Studio에서는 이 버그가 나지 않는다고 한다) — 맞지 않으면 둘 다 아무 일도 하지 않는다
+-- 고침(2026-10-31 사용자: "한글 채팅 치고나서 방향이 무슨 입력이 있는것처럼 막 움직이는 버그가 있어 영문으로 채팅 다시 치면 잘 동작하고"):
+--  한글 상태에서는 Roblox가 글자 키의 뗀 소식을 놓쳐 IsKeyDown이 영문으로 그 키를 다시 누를 때까지 눌린 채로 남는다(DevForum 2025-09-30 「Microsoft Korean input shows extra
+--  English key character at the beginning」: 한글 단어의 첫 키가 영문 키로 들어간다 — 추정: 첫 누름은 영문 키로 오고 뗌은 입력기가 가져간다). ①은 IsKeyDown을 믿었으므로 그 키가 계속 눌려
+--  스킬(섬영 · 질풍 일섬처럼 몸이 움직이는 것)이 저절로 나가고, 눌린 채인 것이 깜빡이면 그때마다 새로 눌렀다. 그래서
+--  ③ IsKeyDown으로 누르는 것은 무슨 키인지 모르는 글쇠가 방금 눌린 장면(그 장면과 다음 장면)에만 — 누른 소식 없이 IsKeyDown만 바뀐 것은 누르지 않는다
+--  ④ 모르는 글쇠가 오면(누름이든 뗌이든) 글자 · Space로 누른 것을 모두 뗀다(뗀 소식이 모르는 글쇠로 바뀌어 왔거나 사라졌다) — 방향키 · Ctrl · Shift로 누른 것은 그대로
+--  ⑤ 채팅 · 메뉴를 열거나 닫는 장면에 키보드로 누르고 있던 것을 모두 뗀다(채팅을 한 번 열고 닫으면 눌린 채로 남은 키가 풀린다)
 Input.onIme = nil :: (() -> ())?
 Input.IME_WORDS = { head = "한글 입력 상태", line = "글자 키가 먹지 않으면 한/영 키를 눌러 영문으로 바꿔 주세요" } -- 큰 알림의 제목 · 아랫줄(제가 정한 글)
 Input.imeAt = nil :: number?
@@ -204,12 +239,18 @@ end
 
 function Input.poll(now: number)
 	local blocked = Input.blocked()
+	if blocked ~= wasBlocked then
+		wasBlocked = blocked
+		dropKeys(nil) -- 채팅 · 메뉴를 열거나 닫는 장면: 키보드로 누르고 있던 것을 모두 뗀다(눌린 채로 남은 키가 채팅 뒤로 이어지지 않게)
+	end
+	local fresh = imeFresh > 0
+	imeFresh = math.max(imeFresh - 1, 0)
 	local anyDown = false
 	for action, key in Input.BIND do
 		local down = Input.isDown(key)
 		if down then
 			anyDown = true
-			if not wasDown[action] and not held[action] and not blocked then
+			if fresh and not wasDown[action] and not held[action] and not blocked then
 				Input.press(action)
 				byKey[action] = true
 			end

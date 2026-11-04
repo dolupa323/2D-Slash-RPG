@@ -1480,6 +1480,9 @@ do
 		o.text, o.onClick, o.enabled = text, onClick, true
 		return { frame = o, width = (pixelText.Measure(text, "small")), setOn = function(_, on) o.on = on end }
 	end
+	function Ui.box(parent) -- (「완료」 탭의 노란 점 — 2026-10-31)
+		return node("box", parent)
+	end
 	function Ui.hit(parent)
 		local o = node("hit", parent)
 		o.enabled = true

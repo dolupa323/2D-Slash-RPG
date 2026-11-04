@@ -214,7 +214,9 @@ for _, m in RIDE.mounts do
 		bookM = m
 	end
 end
-expect(hwM ~= nil and typeof(hwM.speed) == "number" and hwM.speed < RIDE.mountSpeed and hwM.speed > (bookM and bookM.speed or 1), ("호박불 늑대 = 로벅스 탈것(%.1f배)보다 조금 느리고 걷기보다 빠르다(%s배)"):format(RIDE.mountSpeed, tostring(hwM and hwM.speed)))
+-- (2026-11-03 사용자 "할로윈 늑대 라이딩을 다른 로벅스 라이딩이랑 동일한 이동속도로 상향" · "할로윈늑대는 대쉬 없고" — 전에는 1.2배로 로벅스 탈것보다 조금 느렸다)
+expect(hwM ~= nil and hwM.speed == nil and bookM ~= nil and RIDE.mountSpeed > bookM.speed, ("호박불 늑대 = 로벅스 탈것과 같은 빠르기(따로 적지 않음 → %.1f배)"):format(RIDE.mountSpeed))
+expect(hwM ~= nil and hwM.dash == nil, "호박불 늑대는 탄 채 대쉬가 없다")
 local CHARS = req("ReplicatedStorage/shared/lune/data/chars.generated")
 local bc, cc = CHARS.chars.pet_bat_hw, CHARS.chars.pet_crow
 expect(bc ~= nil and cc ~= nil and bc.size == cc.size and bc.clips.idle ~= nil, "재까마귀처럼 몬스터의 서기 그림을 펫의 배율로(" .. tostring(bc and bc.size) .. ")")
@@ -281,10 +283,28 @@ for k = 1, di.limit do
 	expect(r and string.find(r.msg, Format.comma(got), 1, true) ~= nil, "알림에 받은 양 — " .. tostring(r and r.msg))
 end
 expect(s.hero.dust > d0, "달가루가 들어왔다(" .. (s.hero.dust - d0) .. ")")
+-- 하루 3개(2026-10-31 사용자: "달가루 상자 무제한은 좀 그렇고 일일제한 3개로 이벤트기간 동안 푸는걸로")
+eq(di.limit, 3, "하루 3개")
+eq(di.per, "day", "하루마다 센다")
 local over = handlers.EventTrade(p, "halloween", "dust")
-expect(over and not over.ok and over.msg == E.words.soldOut, "한도를 다 쓰면 「다 샀다」")
-eq(c.ev[Event.countKey(E, di)], di.limit, "산 수가 계정에 적힌다")
-expect(string.find(Event.countKey(E, di), "2026", 1, true) ~= nil, "올해의 할로윈으로 센다 — " .. Event.countKey(E, di))
+expect(over and not over.ok and over.msg == E.words.dayFull, "그날 3개를 다 사면 「오늘은 다 샀다 — 한국 시각 0시에 다시」 — " .. tostring(over and over.msg))
+local today = Event.countKey(E, di)
+eq(c.ev[today], di.limit, "산 수가 계정에 적힌다")
+expect(string.find(today, "2026", 1, true) ~= nil, "올해의 할로윈으로 센다 — " .. today)
+local d24 = os.date("!*t", t24 + 7200 + E.tz * 3600)
+expect(string.sub(today, -5) == (":%02d%02d"):format(d24.month, d24.day), "열쇠 끝에 한국 시각의 날짜 — " .. today)
+Event.clock = function()
+	return t24 + 7200 + 86400 -- 다음 날
+end
+eq(Event.owned(E, di, s.hero, c), false, "다음 날에는 다시 산다")
+Bag.give(s.hero, E.candy.id, di.cost)
+local nextDay = handlers.EventTrade(p, "halloween", "dust")
+expect(nextDay and nextDay.ok, "다음 날 하나 더 — " .. tostring(nextDay and nextDay.msg))
+eq(c.ev[Event.countKey(E, di)], 1, "다음 날의 수 1")
+eq(c.ev[today], nil, "지난 날의 수는 지운다(장부가 쌓이지 않게)")
+Event.clock = function()
+	return t24 + 7200
+end
 -- 칭호
 Bag.give(s.hero, E.candy.id, 100)
 local r3 = handlers.EventTrade(p, "halloween", "title")

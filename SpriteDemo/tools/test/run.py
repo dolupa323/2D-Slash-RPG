@@ -45,6 +45,15 @@ def bundle():
     # LUNE_RAID_LV=98,118: measure at these entry levels (normal,hard) instead of the weekly boss's own — sizing a new boss's HP (2026-10-29 용암 거인)
     rl = os.environ.get('LUNE_RAID_LV', '')
     parts.append('RAID_LV = %s' % (('{ normal = %d, hard = %d }' % tuple(int(x) for x in rl.split(',')[:2])) if rl else 'nil'))
+    # LUNE_RAID_STAR=17,5: weapon/armor stars for the measured heroes (instead of RAIDDPS.gear) · LUNE_RAID_MAXSKILL=1: every skill of the hero's jobs at its max ·
+    #   LUNE_RAID_BOSSLV=150: the boss level while measuring (instead of entry + 2) — sizing the Lv.150 lava giant (2026-11-03)
+    rs = os.environ.get('LUNE_RAID_STAR', '')
+    parts.append('RAID_STAR = %s' % (('{ weapon = %d, armor = %d }' % tuple(int(x) for x in rs.split(',')[:2])) if rs else 'nil'))
+    parts.append('RAID_MAXSKILL = %s' % ('true' if os.environ.get('LUNE_RAID_MAXSKILL') else 'false'))
+    parts.append('RAID_BOSSLV = %s' % (str(int(os.environ['LUNE_RAID_BOSSLV'])) if os.environ.get('LUNE_RAID_BOSSLV') else 'nil'))
+    # LUNE_RAID_ONLY=salamander: only that class, alone (no parties, no checks) · LUNE_RAID_ENH=0.5: the salamander empowered skill's x times this (0 = off) — tuning one class quickly (2026-11-04)
+    parts.append('RAID_ONLY = %s' % (('"%s"' % os.environ['LUNE_RAID_ONLY']) if os.environ.get('LUNE_RAID_ONLY') else 'nil'))
+    parts.append('RAID_ENH = %s' % (repr(float(os.environ['LUNE_RAID_ENH'])) if os.environ.get('LUNE_RAID_ENH') else 'nil'))
     # LUNE_LANG_SWEEP=1: every dot-font text is translated to English while the tests run; finish() lists what could not be translated (mock.luau)
     parts.append('LANG_SWEEP = %s; SWEEP_MISSING = {}; SWEEP_TEST = ""' % ('true' if os.environ.get('LUNE_LANG_SWEEP') else 'false'))
     count = 0
@@ -112,6 +121,60 @@ def lint_windows():
     print(f'[창 등록] 등록 {n}곳, 공방 목록에 없는 창 {bad}개')
     return bad
 
+def lint_packets():
+    """「달의 계승자」의 화면 코드가 서버에 보내는 것(Net.FireServer · Net.Invoke("이름", …))의 인자 수가 패킷 정의(shared/lune/net/packets.luau의 Args)와 맞는지 본다.
+    서버의 net.luau는 정의보다 많은 인자 · 모자란 인자(t.any가 아닌 자리)를 「형식에 맞지 않아 버려졌다」로 조용히 버린다 — 2026-11-04 Skill에 여섯째(살라맨더의 강화판)를 더하고
+    정의를 고치지 않아 모든 기술이 버려졌다(사용자 "공격자체가 고장났는데"). 시험은 핸들러를 바로 불러 그 검사를 지나지 않았다."""
+    import re
+    def args_of(text, i):  # text[i] == '(' 또는 '{' — 맨 바깥의 쉼표로 나눈 조각들과 끝난 자리
+        close = {'(': ')', '{': '}', '[': ']'}
+        stack, parts, cur, j = [text[i]], [], '', i + 1
+        while j < len(text) and stack:
+            c = text[j]
+            if c in (chr(34), chr(39), chr(96)):  # 따옴표 " ' ` 안은 건너뛴다
+                k = j + 1
+                while k < len(text) and text[k] != c:
+                    k += 2 if text[k] == chr(92) else 1
+                cur += text[j:k + 1]; j = k + 1; continue
+            if text.startswith('--', j):
+                k = text.find(NL, j); j = len(text) if k < 0 else k; continue
+            if c in close:
+                stack.append(c)
+            elif c in ')}]':
+                stack.pop()
+                if not stack:
+                    break
+            elif c == ',' and len(stack) == 1:
+                parts.append(cur.strip()); cur = ''; j += 1; continue
+            cur += c; j += 1
+        if cur.strip():
+            parts.append(cur.strip())
+        return parts, j
+    src = open(os.path.join(SRC, 'shared', 'lune', 'net', 'packets.luau'), encoding='utf-8').read()
+    defs = {}
+    for m in re.finditer(r'^	(\w+) = \{', src, re.M):
+        body, _ = args_of(src, m.end() - 1)
+        for part in body:
+            if part.startswith('Args = {'):
+                defs[m.group(1)] = args_of(part, part.index('{'))[0]
+    bad, n = 0, 0
+    for f in glob.glob(os.path.join(SRC, 'client', 'lune', '**', '*.luau'), recursive=True):
+        text = open(f, encoding='utf-8').read()
+        for m in re.finditer(r'Net\.(FireServer|Invoke)\(\s*"(\w+)"', text):
+            name = m.group(2)
+            if name not in defs:
+                continue
+            parts, _ = args_of(text, text.index('(', m.start()))
+            got, want = parts[1:], defs[name]
+            n += 1
+            line = text.count(NL, 0, m.start()) + 1
+            if got and got[-1] == '...':
+                continue
+            if len(got) > len(want) or any(a != 't.any' for a in want[len(got):]):
+                bad += 1; print(f'  인자 수가 패킷 정의와 다르다 {name}: 보냄 {len(got)} · 정의 {len(want)} ({os.path.relpath(f, SRC)}:{line}) — shared/lune/net/packets.luau의 Args를 고칠 것')
+    print(f'[패킷 인자] 보내는 곳 {n}곳, 정의와 다른 곳 {bad}개')
+    return bad
+
 def lint_render_step():
     """「달의 계승자」의 화면 코드(src/client/lune)는 화면을 RunService.RenderStepped 이벤트(PreRender 포함)에서 고치면 안 된다 — RunService:BindToRenderStep으로 고친다.
     그 이벤트는 Roblox가 그 장의 틀 크기를 셈한 뒤에 불려서, 그림의 자리(ImageRect)는 이번 장에 · 틀의 크기(Size)는 다음 장에 적용된다.
@@ -157,6 +220,7 @@ if __name__ == '__main__':
     bad += lint_globals()
     bad += lint_render_step()
     bad += lint_windows()
+    bad += lint_packets()
     mods, tests = bundle()
     print(f'[묶음] 모듈 {mods}개 · 테스트 파일 {tests}개')
     r = subprocess.run([LUAU, OUT], capture_output=True, text=True, encoding='utf-8', errors='replace')

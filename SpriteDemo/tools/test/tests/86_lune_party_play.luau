@@ -298,24 +298,13 @@ do
 	expect(selfHaste ~= nil and selfHaste > 1, "mn_tide: 받은 파티원의 화면에도 빨라진 값이 간다(" .. tostring(selfHaste) .. ")")
 	clear(a.hero)
 	clear(b.hero)
-	-- 죽음의 가호(리퍼): 받은 파티원이 쓰러질 피해를 한 번 버틴다
-	local pr, r = join(8604, "파티리퍼", "reaper")
-	handlers.Party(pa, "invite", 8604)
-	handlers.Party(pr, "accept")
-	run(0.5)
-	stand(pr, r, 320, b.hero.y)
+	-- (죽음의 가호 — 리퍼 · 파티원이 쓰러질 피해를 한 번 버틴다 — 는 2026-11-01 사용자 "죽음의 가호 , 깊은흡수 이런 이상한 부활스킬 삭제하고 다른 딜 패시브로 바꿔"로 뺐다)
+	--  아래의 소생을 보려고 파티원 하나를 쓰러뜨린다
 	stand(pa, a, 300, b.hero.y)
-	castBuff(pr, r, "rp_ward")
-	expect(Buffs.has(a.hero, "rp_ward"), "죽음의 가호가 파티원에게 걸렸다")
 	a.hero.invuln, a.hero.alive = 0, true
 	a.hero.hp = 1
 	room:hurtHero({}, a.hero, mob, 50)
-	expect(a.hero.alive and a.hero.hp >= 1, "죽음의 가호: 받은 파티원이 쓰러질 피해를 버텼다")
-	expect(not Buffs.has(a.hero, "rp_ward"), "죽음의 가호: 한 번 버티면 사라진다")
-	a.hero.invuln = 0
-	a.hero.hp = 1
-	room:hurtHero({}, a.hero, mob, 50)
-	expect(not a.hero.alive, "죽음의 가호가 없으면 쓰러진다")
+	expect(not a.hero.alive, "파티원이 쓰러졌다(소생을 보려고)")
 	-- 소생(무니 4차): 쓰러진 파티원을 일으킨다
 	b.hero.skills.mn_revive = 5
 	b.hero.cds.mn_revive = nil
@@ -324,7 +313,6 @@ do
 	handlers.Skill(pb, "mn_revive", 1, b.hero.x, b.hero.y, 1)
 	run(1.5)
 	expect(a.hero.alive, "소생: 쓰러진 파티원이 일어났다")
-	World.removePlayer(pr)
 	-- 달빛 치유: 수정 둘레에서도(설명 "수정이 있으면 수정 둘레에서도 치유가 인다") — 무니에게서 멀어도 내 수정 곁이면
 	a.hero.alive, a.hero.invuln = true, 0
 	stand(pb, b, 100, b.hero.y)

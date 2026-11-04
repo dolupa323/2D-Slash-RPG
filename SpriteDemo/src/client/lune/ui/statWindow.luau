@@ -27,6 +27,11 @@ end
 
 function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 	local points = Ui.text(body, "", 0, 0, w, { color = C.gold })
+	-- 노란 점(2026-10-31 사용자 "메뉴에 노란점 떠있어서 눌러서 들어가면 세부ui에서는 노란점 표시가 없어서 가시성이 안좋아"): 찍을 점수가 남았다 — 「남은 점수 n」 바로 뒤 · 메뉴 단추의 점과 같은 그림
+	local pointsDot = Ui.box(body, 0, 2, 6, 6, C.ink)
+	Ui.box(pointsDot, 1, 1, 4, 4, C.gold)
+	pointsDot.ZIndex = 9
+	pointsDot.Visible = false
 	local rows = {}
 	local last = nil -- 마지막으로 받은 내 상태
 	local tip = nil -- 떠 있는 설명 판 { frame, id }
@@ -167,6 +172,8 @@ function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 		last = me
 		local pair = STATS.classes[me.class]
 		points:set(("남은 점수 %d"):format(me.ap))
+		pointsDot.Visible = me.ap > 0
+		pointsDot.Position = UDim2.fromOffset((points:size()) + 4, 2)
 		for _, id in STATS.order do
 			local row = rows[id]
 			local used = id == "hp" or id == pair[1] or id == pair[2]

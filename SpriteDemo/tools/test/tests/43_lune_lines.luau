@@ -232,9 +232,6 @@ do
 		for _ = 1, 10 do
 			h.x, h.y, h.dir = X, Y, 1
 			foe.x, foe.stun, foe.bind, foe.bindImm, foe.hp = X + (def.at or 14), 0, 0, 0, foe.maxHp
-			if id == "sl_vent" then
-				h.kit.heat = 0
-			end
 			c:dryCast(h, id, 0, tick)
 		end
 		local guard = 0

@@ -196,8 +196,11 @@ function MobsView:apply(list, now: number)
 		if m then
 			m.fromX = if m.state == "gone" then row[2] else m.x
 			if row[13] then
+				m.baseY = m.baseY or m.info.y -- 제 발판의 높이(그림자 흡혈에 끌려갔다가 다시 나타나면 이 높이로)
 				m.fromY = if m.state == "gone" or not m.toY then row[13] else m.info.y
 				m.toY = row[13]
+			elseif m.toY then -- 다른 높이로 끌려갔던 졸개가 처음 자리에 다시 나타났다(서버가 높이를 보내지 않는다): 제 발판의 높이로
+				m.info.y, m.fromY, m.toY = m.baseY or m.info.y, nil, nil
 			end
 			m.toX, m.dir, m.at = row[2], row[3], now
 			m.state, m.t, m.hp = row[4], row[5], row[6]
@@ -293,7 +296,7 @@ function MobsView:update(now: number)
 			frame = Sprite.frameAt(char, "idle", now + m.info.id * 0.3, false)
 			fade = math.clamp(t / FADE, 0, 1)
 			show = fade < 1
-		elseif bare and m.state == "spawn" then
+		elseif bare and m.state == "spawn" and not (m.def.story and m.def.story.fixed and char.clips.spawn) then -- (용암 거인은 들어서는 동작 그림이 있다 — 손이 밀고 들어온다: 아래 스토리 보스의 길로)
 			frame = Sprite.frameAt(char, "idle", now + m.info.id * 0.3, false)
 			fade = 1 - math.clamp(t / FADE, 0, 1)
 		elseif m.def.story then
@@ -310,7 +313,11 @@ function MobsView:update(now: number)
 				m.tail = nil
 			end
 			local stand
-			clip, frame, stand = BossFx.body(m.state, p, t, now, char.clips, S.anim, m.tail)
+			local ph = if S.gimmick and S.gimmick.parts then BossFx.phaseOf(m.hp, m.info.maxHp, S.gimmick.parts) else nil -- 부위가 있는 보스(용암 거인): 페이즈마다 그림이 다르다
+			clip, frame, stand = BossFx.body(m.state, p, t, now, if ph then BossFx.phaseClips(char.clips, ph) else char.clips, S.anim, m.tail)
+			if ph then
+				clip = BossFx.phaseName(char.clips, clip, ph)
+			end
 			if stand then
 				poseX, poseY = BossFx.pose(m.state, p, t)
 			end
@@ -348,6 +355,7 @@ function MobsView:update(now: number)
 		px += m.dir * poseX
 		local py = m.info.y - m.alt - poseY - math.floor((m.jump or 0) + 0.5)
 		m.px = px
+		local face = if m.def.story and m.def.story.fixed then 1 else m.dir -- 걷지도 돌아보지도 않는 보스(용암 거인)는 그림을 뒤집지 않는다(패턴마다 dir만 바뀐다)
 		if m.under then
 			-- 터진 장부터(atk.frame 다음)는 서 있는 몸을 밑에 그린다
 			if show and m.state == "atk" and clip == "atk" and frame > m.def.atk.frame then
@@ -358,7 +366,7 @@ function MobsView:update(now: number)
 		end
 		MobsView.drawLook(m, show and m.state ~= "dead" and m.state ~= "spawn", clip, frame, now)
 		if show then
-			m.sprite:set(clip, frame, px, py, m.dir)
+			m.sprite:set(clip, frame, px, py, face)
 			if bare then
 				m.sprite.label.ImageTransparency = fade
 			end
@@ -367,7 +375,7 @@ function MobsView:update(now: number)
 		end
 		if m.white then
 			if show and flash then
-				m.white:set(clip, frame, px, py, m.dir)
+				m.white:set(clip, frame, px, py, face)
 			else
 				m.white.label.Visible = false
 			end
@@ -378,7 +386,7 @@ function MobsView:update(now: number)
 			local see = if on then 1 - (0.35 + 0.45 * math.abs(math.sin(t * (6 + 14 * t / p.tell)))) else 1
 			for i, sp in m.warn do
 				if on then
-					sp:set(clip, frame, px + GLOW_AT[i][1], py + GLOW_AT[i][2], m.dir)
+					sp:set(clip, frame, px + GLOW_AT[i][1], py + GLOW_AT[i][2], face)
 					sp.label.ImageTransparency = see
 				else
 					sp.label.Visible = false

@@ -11,6 +11,8 @@
 --   wskins = 산 캐시 무기 { [이름] = true } · wskin = 장착한 것(없으면 false — 계정의 모든 캐릭터의 무기 · 2026-10-23 design/wskin.js)
 --   dskins = 가진 데미지 스킨 { [이름] = true } · dskin = 장착한 것(없으면 false — 내가 때린 숫자의 모습 · 2026-10-29 할로윈 · design/event.js의 dskins)
 --   ev = 기간 이벤트의 상점에서 산 수 { ["<이벤트>:<해>:<물건>"] = 수 }(한도가 있는 것 — 할로윈의 달가루 상자 · 2026-10-29)
+--   gift = 띄운 선물의 구매 창 { k = 상품, uid = 받는 계정, to = 받는 사람의 닉네임, at = 띄운 때 }(없으면 false — 결제가 오면 그 사람에게 · 2026-10-31 선물하기)
+--   lock = 로블록스 정책에서 유료 아이템을 거래할 수 없는 계정이다(들어올 때 서버가 적는다 — 남이 이 계정에 선물할 때 본다)
 --  [제안] 값 · 수 · 한도는 모두 설계의 제안이다.
 local lune = script.Parent.Parent
 local D = require(lune.data["bm.generated"])
@@ -90,7 +92,7 @@ function Cash.petRemove(c, id: string)
 end
 
 function Cash.new()
-	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petsOut = {}, petOut = false, mount = false, coupons = {}, wskins = {}, wskin = false, dskins = {}, dskin = false, ev = {} } -- coupons = 이 계정이 쓴 쿠폰 { [번호] = 쓴 때 }(2026-10-21)
+	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petsOut = {}, petOut = false, mount = false, coupons = {}, wskins = {}, wskin = false, dskins = {}, dskin = false, ev = {}, gift = false, lock = false } -- coupons = 이 계정이 쓴 쿠폰 { [번호] = 쓴 때 }(2026-10-21)
 end
 
 function Cash.product(key: any)
@@ -195,6 +197,20 @@ function Cash.granted(c, receiptId: string): boolean
 	return false
 end
 
+-- 처리한 결제 번호로 적는다(최근 REC_KEEP개 — 선물로 보낸 결제는 산 사람의 계정에 번호만 남는다)
+function Cash.note(c, receiptId: string)
+	table.insert(c.rec, receiptId)
+	while #c.rec > Cash.REC_KEEP do
+		table.remove(c.rec, 1)
+	end
+end
+
+-- 선물할 수 있는 상품인가(2026-10-31 선물하기): 로블록스 개발자 상품만 — 게임 패스 · 구독은 로블록스가 남에게 사 주지 못하게 한다
+function Cash.giftable(key: any): boolean
+	local p = Cash.product(key)
+	return p ~= nil and p.kind == "product" and Cash.ready(p)
+end
+
 function Cash.grant(acct, key: string, receiptId: string, now: number, baseChars: number?, live: number?): (boolean, string?)
 	local c = acct.bm
 	local p = PRODUCT[key]
@@ -251,10 +267,7 @@ function Cash.grant(acct, key: string, receiptId: string, now: number, baseChars
 			c.once[key] = (c.once[key] or 0) + 1
 		end
 	end
-	table.insert(c.rec, receiptId)
-	while #c.rec > Cash.REC_KEEP do
-		table.remove(c.rec, 1)
-	end
+	Cash.note(c, receiptId)
 	return true
 end
 
@@ -395,17 +408,33 @@ function Cash.setPet(acct, id: any, on: any?): (boolean?, string?)
 	syncPets(c)
 	return true
 end
--- 캐시 무기를 장착한다(이름표) · 해제한다(false) → true / nil · 까닭
-function Cash.setWskin(acct, id: any): (boolean?, string?)
+-- 캐시 무기를 장착한다(이름표) · 해제한다(false) → true / nil · 까닭. hero = 그 캐릭터에(2026-11-03 사용자 "무기스킨 캐릭마다 낄수있게해달라고하네 지금은 하나끼면 전캐릭 다 적용되잖아
+--  캐릭터 각각 뭐껴놨으면 그걸로 되야되는거지" — 가진 것은 계정의 것 · 낀 것은 캐릭터마다). hero가 없으면 계정의 것(이 캐릭터별이 생기기 전의 낀 것 — 아직 정하지 않은 캐릭터가 한 번 이어받는다)
+function Cash.setWskin(acct, id: any, hero: any?): (boolean?, string?)
 	local c = acct.bm
-	if id == false then
-		c.wskin = false
-		return true
-	elseif typeof(id) ~= "string" or not c.wskins[id] then
+	if id ~= false and (typeof(id) ~= "string" or not c.wskins[id]) then
 		return nil, "가진 캐시 무기가 아니다"
 	end
-	c.wskin = id
+	if hero then
+		hero.wskin = id
+	else
+		c.wskin = id
+	end
 	return true
+end
+-- 그 캐릭터가 낀 캐시 무기(이름표 · 없으면 false): 아직 정하지 않은 캐릭터(이것이 생기기 전에 만든 것)는 계정에 껴 두었던 것을 한 번 이어받는다 · 가진 것이 아니면 뺀다
+function Cash.heroWskin(acct, hero): string | false
+	local c = acct and acct.bm
+	if not hero then
+		return false
+	end
+	if hero.wskin == nil then
+		hero.wskin = if c and typeof(c.wskin) == "string" and c.wskins[c.wskin] then c.wskin else false
+	end
+	if typeof(hero.wskin) == "string" and not (c and c.wskins[hero.wskin]) then
+		hero.wskin = false
+	end
+	return hero.wskin
 end
 -- 데미지 스킨을 장착한다(이름표) · 해제한다(false) → true / nil · 까닭(2026-10-29 — 사용자 "데미지스킨은 캐시탭에서 꼈다 뺏다 할수있어야하고")
 function Cash.setDskin(acct, id: any): (boolean?, string?)
@@ -480,7 +509,7 @@ function Cash.pack(c)
 		table.insert(dskins, k)
 	end
 	table.sort(dskins)
-	return { dskins = dskins, dskin = c.dskin, ev = table.clone(c.ev), box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petsOut = table.clone(Cash.petsOut(c)), petOut = c.petOut, mount = c.mount, coupons = table.clone(c.coupons), wskins = wskins, wskin = c.wskin }
+	return { dskins = dskins, dskin = c.dskin, ev = table.clone(c.ev), box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petsOut = table.clone(Cash.petsOut(c)), petOut = c.petOut, mount = c.mount, coupons = table.clone(c.coupons), wskins = wskins, wskin = c.wskin, gift = if c.gift then table.clone(c.gift) else false, lock = c.lock == true }
 end
 
 -- 꼴이 이상한 것은 버린다(없는 아이템 · 이상한 수). 생기기 전의 저장 = 빈 것
@@ -545,6 +574,11 @@ function Cash.unpack(data: any, baseChars: number?)
 			end
 		end
 	end
+	local g = data.gift
+	if typeof(g) == "table" and PRODUCT[g.k] and whole(g.uid, 1, 1e15) and typeof(g.to) == "string" and #g.to <= 60 and whole(g.at, 0, 1e10) then
+		c.gift = { k = g.k, uid = g.uid, to = g.to, at = g.at }
+	end
+	c.lock = data.lock == true
 	if typeof(data.coupons) == "table" then
 		local n = 0
 		for code, at in data.coupons do
@@ -606,7 +640,7 @@ end
 
 -- 상점 창에 보내는 것: 상품마다 살 수 있나(ready) · 산 수(주간이면 이번 주) · 패스를 가졌나 · 보관함 · 주머니 · 상자의 레벨대(band)
 --  stocks = 한정 판매의 남은 수 { [상품] = n }(서버가 세계 기록에서 읽은 것 — 2026-10-29) → 줄의 left(모르면 nil)
-function Cash.view(acct, now: number, owned: any?, live: number?, prices: any?, stocks: any?)
+function Cash.view(acct, now: number, owned: any?, live: number?, prices: any?, stocks: any?, hero: any?) -- hero = 지금 캐릭터(낀 캐시 무기 — 2026-11-03)
 	local c = acct.bm
 	local list = {}
 	for _, p in D.products do
@@ -617,7 +651,7 @@ function Cash.view(acct, now: number, owned: any?, live: number?, prices: any?, 
 	for _, e in c.box do
 		table.insert(box, { id = e.id, n = e.n })
 	end
-	return { list = list, box = box, band = Cash.bandOf(Cash.topLevel(acct, live)), slots = c.slots, store = c.store, pass = Pass.view(c.pass, now), pets = Cash.ownList(c.pets), mounts = Cash.ownList(c.mounts), petsOut = table.clone(Cash.petsOut(c)), petOut = c.petOut, mount = c.mount, wskins = Cash.skinList(c.wskins), wskin = c.wskin, dskins = Cash.dskinList(c.dskins), dskin = c.dskin, ev = table.clone(c.ev) }
+	return { list = list, box = box, band = Cash.bandOf(Cash.topLevel(acct, live)), slots = c.slots, store = c.store, pass = Pass.view(c.pass, now), pets = Cash.ownList(c.pets), mounts = Cash.ownList(c.mounts), petsOut = table.clone(Cash.petsOut(c)), petOut = c.petOut, mount = c.mount, wskins = Cash.skinList(c.wskins), wskin = if hero then Cash.heroWskin(acct, hero) else c.wskin, dskins = Cash.dskinList(c.dskins), dskin = c.dskin, ev = table.clone(c.ev) }
 end
 
 -- 확인용(테스트): 상품 표가 아이템 표와 맞는가

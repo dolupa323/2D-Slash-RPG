@@ -281,6 +281,7 @@ function Hero.new(id: any, class: string)
 	h.played = 0 -- 이 캐릭터로 논 시간(초 · 저장한다 — 서버가 센다. 로블록스 분석의 LevelUp 값 · 2026-10-15)
 	h.maxAt = nil -- 만렙에 오른 때(os.time — 저장한다). 레벨 순위에서 만렙끼리는 먼저 오른 사람이 위(2026-10-24 사용자: "만렙이면 찍은 순서대로 제일먼저찍은사람이 1위 여야하는데" — sim/rank.luau)
 	h.look = {} -- 무기 · 로브 색(염색약 — sim/dye.luau · 2026-10-22): { point = 색?, robe = 색? } · 없으면 원래 색
+	h.wskin = false -- 낀 캐시 무기(캐릭터마다 · 저장한다 — 2026-11-03 사용자 "무기스킨 캐릭마다 낄수있게": 전에는 계정에 하나라 모든 캐릭터에 같이 적용됐다 · 가진 것은 계정의 것 — sim/cash.luau)
 	h.titles = {} -- 가진 칭호 { [id] = true }(sim/titles.luau — 2026-10-26 · 저장한다)
 	h.title = nil -- 이름표 아래에 단 칭호(없으면 nil)
 	Quests.start(h.quests, h.level) -- (저절로 받는 퀘스트는 이제 없다 — 첫 퀘스트도 사제에게 말을 걸어 받는다)
@@ -352,6 +353,45 @@ function Hero.skillUp(h, id: string): boolean
 	if Kit.skill(id) then
 		Hero.recalc(h) -- 패시브가 최대 체력을 바꾼다(묵직한 몸)
 	end
+	return true
+end
+
+-- 스킬 레벨을 하나 내린다(2026-10-31 사용자 "스킬포인트 초기화 했을때 + 옆에 - 버튼도 만들어서 좀 편의있게 스킬 찍을수있게 해줘") — 포인트는 그 차수로 돌아온다.
+--  처음부터 주는 레벨(grants) 아래로는 못 내린다 · 다른 배운 스킬이 먼저 배워야 하는 스킬(needs)이면 1 아래로 못 내린다 · 0이 되면 퀵슬롯에서 뺀다(초기화와 같다)
+--  canSkillDown은 화면도 쓴다(내 상태의 class · job · skills로 — 「−」 단추를 켜고 끈다)
+function Hero.canSkillDown(class: string, job: number, skills, id: string): boolean
+	local all = ALL[class]
+	local e = all and all[id]
+	local lv = (skills and skills[id]) or 0
+	if not e or lv < 1 or lv <= (grants(class, job)[id] or 0) then
+		return false
+	end
+	if lv == 1 then
+		for other, oe in all do
+			if oe.def.needs == id and ((skills and skills[other]) or 0) > 0 then
+				return false
+			end
+		end
+	end
+	return true
+end
+function Hero.skillDown(h, id: string): boolean
+	if not Hero.canSkillDown(h.class, h.job, h.skills, id) then
+		return false
+	end
+	local lv = Hero.skillLevel(h, id) - 1
+	h.skills[id] = if lv > 0 then lv else nil
+	h.sp += 1
+	if lv < 1 then
+		for _, slots in { h.slots, h.tslots } do
+			for i, sid in slots do
+				if sid == id then
+					slots[i] = false
+				end
+			end
+		end
+	end
+	Hero.recalc(h) -- 패시브가 최대 체력 · 공격력을 바꾼다
 	return true
 end
 
@@ -941,6 +981,7 @@ function Hero.pack(h)
 		played = math.floor(h.played or 0),
 		maxAt = h.maxAt, -- 만렙에 오른 때(2026-10-24)
 		look = Dye.clean(h.look), -- 무기 · 로브 색(2026-10-22)
+		wskin = h.wskin, -- 낀 캐시 무기(2026-11-03 — 아직 정하지 않았으면 nil: 서버가 계정에 껴 두었던 것으로 한 번 채운다 · Cash.heroWskin)
 		titles = Titles.owned(h), -- 가진 칭호(2026-10-26)
 		title = h.title or false, -- 단 칭호
 	}
@@ -999,6 +1040,7 @@ function Hero.unpack(id: any, data: any)
 	h.played = if whole(data.played, 0, 1e10) then data.played else 0 -- (이것이 생기기 전의 저장 = 0부터 센다)
 	h.maxAt = if whole(data.maxAt, 1, 1e11) and h.level >= N.MAX_LEVEL then data.maxAt else nil -- 만렙에 오른 때(이것이 생기기 전에 만렙이 된 캐릭터 = 없음 — 서버가 처음 본 때로 채운다: world.luau pushRank)
 	h.look = Dye.clean(data.look) -- 무기 · 로브 색(이것이 생기기 전의 저장 · 모르는 색 = 원래 색)
+	h.wskin = if typeof(data.wskin) == "string" or data.wskin == false then data.wskin else nil -- 낀 캐시 무기(이것이 생기기 전의 저장 = nil — 서버가 계정에 껴 두었던 것으로 한 번 채운다)
 	Titles.unpack(h, data.titles, data.title) -- 칭호(이것이 생기기 전의 저장 = 없음 — 서버가 세계 기록을 보고 준다)
 	Quests.jobsDone(h.quests, h.job) -- 이미 닿은 차수의 전직 퀘스트는 끝낸 것으로(다시 받지 않게)
 	autoJobs(h)

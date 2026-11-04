@@ -172,13 +172,18 @@ for _, class in CLASSES.order do
 		if table.find(CLASSES.skillRule.start, sk.type) then
 			started += 1
 			eq(Hero.skillLevel(fresh, sk.id), 1, ("처음부터 주는 기술 %s"):format(sk.id))
-			expect(COMBAT.skills[sk.id] ~= nil and COMBAT.skills[sk.id].who == class, "그 기술의 싸움 수치 " .. sk.id)
-			eq(COMBAT.skills[sk.id].max, sk.max, "마스터 레벨이 설계와 같다 " .. sk.id)
+			if sk.type == "form" then
+				-- 변신(리퍼의 사신화 — 2026-10-31 게이지 직업: 1차부터 · 버프로 건다)
+				expect(COMBAT.buffs[sk.id] ~= nil and COMBAT.buffs[sk.id].who == class and COMBAT.buffs[sk.id].max == sk.max, "변신의 버프 수치 " .. sk.id)
+			else
+				expect(COMBAT.skills[sk.id] ~= nil and COMBAT.skills[sk.id].who == class, "그 기술의 싸움 수치 " .. sk.id)
+				eq(COMBAT.skills[sk.id].max, sk.max, "마스터 레벨이 설계와 같다 " .. sk.id)
+			end
 		else
 			eq(Hero.skillLevel(fresh, sk.id), 0, "나머지는 배우지 않은 채로 " .. sk.id)
 		end
 	end
-	eq(started, 3, "사냥기 · 보스기 · 이동기 " .. class)
+	eq(started, if class == "reaper" then 4 else 3, "사냥기 · 보스기 · 이동기(리퍼는 사신화까지) " .. class)
 	eq(math.floor(Hero.attackBase(fresh) * 1.025 + 0.5), startPower[class], "Lv.1의 전투력(처음 차림) " .. class)
 end
 -- 스킬 레벨의 세기: 공방의 식과 같다

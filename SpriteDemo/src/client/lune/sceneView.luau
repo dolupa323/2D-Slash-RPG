@@ -18,6 +18,7 @@ local Kit = require(script.Parent.ui.kit)
 local Event = require(ReplicatedStorage.shared.lune.sim.event) -- 기간 이벤트의 주민(2026-10-29)
 local Ui = require(script.Parent.ui.ui)
 local Overlay = require(script.Parent.overlay)
+local Layout = require(lune.ui.layout) -- 이름표 한 줄의 높이(랭킹 석상의 tagRow — 2026-11-03)
 
 local C = Ui.COLOR
 
@@ -142,7 +143,8 @@ function SceneView.new(view: Frame, key: string, scene, tagLayer: Frame)
 	end
 	for _, npc in self.npcs do
 		local n = npc.def
-		npc.tag = tag(("%s %s"):format(n.role, n.name), n.x, n.y, SceneView.TAG_DOWN, C.gold)
+		-- tagRow = 이름표를 몇 줄 아래로(마을의 랭킹 석상 2위 — 곁의 1위와 30점 떨어져 이름표가 겹치면 하나가 숨는다 · 2026-11-03)
+		npc.tag = tag(("%s %s"):format(n.role, n.name), n.x, n.y, SceneView.TAG_DOWN + (if typeof(n.tagRow) == "number" then n.tagRow * Layout.TAG.h else 0), C.gold)
 		-- 퀘스트 표시: 머리 위의 ! (받을 수 있다) · ? (돌려줄 수 있다) — 게임 세계의 그림(굵은 도트)
 		npc.mark = Kit.part(self.topLayer, SceneView.MARK["!"], 0, 0) -- 자리는 update가 잡는다(! 와 ? 의 폭이 다르다)
 		npc.mark.Visible = false

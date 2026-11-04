@@ -126,13 +126,13 @@ function Effects:play(who: string, clip: string, x: number, y: number, dir: numb
 end
 
 -- 잔상: 그 캐릭터의 그 장을 한 색 실루엣으로 남긴다. 처음의 불투명도에서 곧게 옅어져 사라진다(시험 탭의 ghost)
-function Effects:ghost(who: string, clip: string, frame: number, x: number, y: number, dir: number, color: Color3)
+function Effects:ghost(who: string, clip: string, frame: number, x: number, y: number, dir: number, color: Color3, scale: number?, life: number?, alpha: number?)
 	local sprite = Sprite.new(self.heroLayer, who, 0, true)
 	sprite.label.Name = "Ghost"
 	sprite.label.ImageColor3 = color
-	sprite.label.ImageTransparency = 1 - GHOST.alpha
-	sprite:set(clip, frame, x, y, dir)
-	table.insert(self.ghosts, { sprite = sprite, t = 0 })
+	sprite.label.ImageTransparency = 1 - (alpha or GHOST.alpha)
+	sprite:set(clip, frame, x, y, dir, scale) -- scale = 탄 영웅의 크기 · life · alpha = 탄 채 대쉬의 잔상(아래 rideTrail — 없으면 직업 대쉬의 것)
+	table.insert(self.ghosts, { sprite = sprite, t = 0, life = life or GHOST.life, alpha = alpha or GHOST.alpha })
 end
 
 -- 대쉬를 하는 동안 every초마다 잔상을 남긴다. o = 그 사람의 상태(o.ghostT에 시간을 쌓는다). 남겼으면 true
@@ -144,6 +144,20 @@ function Effects:trail(o, dt: number, who: string, clip: string, frame: number, 
 	o.ghostT = 0
 	self:ghost(who, clip, frame, x, y, dir, Effects.TONE[tone].n)
 	return true
+end
+
+-- 탄 채 대쉬의 잔상(2026-11-03 사용자 "탈것대쉬는 이펙트가 샤샤샥처럼 그 탈것의 그림자가 연속적으로 나오는 형태로"): d = 그 탈것의 dash(ride.generated — every초마다 ·
+--  life초 동안 alpha에서 옅어진다) — 그 순간의 탈것(mount의 clip · f 장 — 발밑 x, y)과 그 위에 탄 영웅(서기 hf 장 — 안장 자리 rx, ry · 크기 rs)을 직업 색 한 색으로 남긴다.
+--  직업 대쉬의 잔상(0.035초마다)보다 성기게 — 탈것이 커서 촘촘하면 한 덩어리로 번진다. o = 그 사람의 상태(o.ghostT) · 탈것이 먼저(뒤) · 영웅이 그 앞
+function Effects:rideTrail(o, dt: number, d, mount: string, clip: string, f: number, x: number, y: number, who: string, hf: number, rx: number, ry: number, rs: number?, dir: number, tone: string)
+	o.ghostT = (o.ghostT or 0) + dt
+	if o.ghostT <= d.every then
+		return
+	end
+	o.ghostT = 0
+	local color = Effects.TONE[tone].n
+	self:ghost(mount, clip, f, x, y, dir, color, nil, d.life, d.alpha)
+	self:ghost(who, "idle", hf, rx, ry, dir, color, rs, d.life, d.alpha)
 end
 
 -- 속도선: 대쉬를 시작할 때 한 번. (x, y) = 발밑 · speed = 대쉬의 속도(점/초 — 빠를수록 줄이 많고 길다) · tone = 직업 색의 이름(시험 탭의 streaks)
@@ -351,11 +365,11 @@ function Effects:update(now: number, dt: number)
 	for i = #self.ghosts, 1, -1 do
 		local g = self.ghosts[i]
 		g.t += dt
-		if g.t > GHOST.life then
+		if g.t > g.life then
 			g.sprite:destroy()
 			table.remove(self.ghosts, i)
 		else
-			g.sprite.label.ImageTransparency = 1 - GHOST.alpha * (1 - g.t / GHOST.life)
+			g.sprite.label.ImageTransparency = 1 - g.alpha * (1 - g.t / g.life)
 		end
 	end
 	for i = #self.lines, 1, -1 do

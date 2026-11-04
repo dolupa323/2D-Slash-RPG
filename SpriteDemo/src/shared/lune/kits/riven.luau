@@ -318,45 +318,97 @@ local function dagger(g)
 	g.fx.shards(g.x, g.y - 4, 5, tone, { kind = "tri", speed = 50, up = 30, life = 0.3 })
 	g.resetCd("rv_smoke") -- 꽂은 동안은 다시 쓰기가 돌지 않는다(돌아올 때 돈다)
 end
--- 무영 섬(4차 사냥기 — 2026-10-30 리마스터 · 전에는 보이지 않는 창질 여섯): 앞 164도트 안의 적 사이를(없으면 허공의 자리를) PH_STEP초마다 여섯 번 오가며 긋고 처음 자리로 돌아온다.
---  그은 자리마다 칼자국이 허공에 남았다가 한꺼번에 하얗게 빛나며 세모 조각으로 부서진다 — 그 순간 앞이 맞는다(판정은 전과 같다: 앞 84 둘레 80 · 위 46 · 세 번). 자주 쓰는 사냥기라 흔들림은 없다
---  2026-10-31 사용자 "무영섬은 너무 범위가 작고": 찾는 곳 앞 164 → 240도트 · 위아래 60 → 72 · 맞는 곳 앞 4~164 · 위 46 → 앞 0~248 · 위 60(PH_REACH)
-local PH_N, PH_STEP, PH_REACH = 6, 0.04, 248
-local function phantom(g)
-	local x0, y, dir, tone, cx = g.x, g.y, g.dir, g.tone, g.fwd(PH_REACH / 2)
-	local foes, cuts = {}, {}
-	for _, m in g.mobs() do
-		if abs(m.y - y) <= 72 and (m.x - x0) * dir > -8 and abs(m.x - x0) <= PH_REACH - 8 then
-			table.insert(foes, m)
+-- 무영 섬(4차 사냥기): 앞으로 내달려 지나가며 벤다(2026-10-31 사용자: "리븐 4차 사냥기 왔다 갔다 하는거아니고 그냥 지나가면서 베는형식으로" —
+--  그 전: 적 사이를 여섯 번 오가며 긋고 처음 자리로 돌아왔다). PH_HOPS번의 짧은 순간이동(PH_STEP초마다 · 떠난 자리마다 잔상 · 지나간 길에 속도선)으로
+--  늘 앞으로 PH_DIST도트를 내달린다(벽을 넘는다 — 아래 landAt) — 지나가는 적마다 그 순간 칼자국 · 멈춘 뒤 PH_POP초에 칼자국이 한꺼번에 하얗게 빛나며
+--  세모 조각으로 부서지고 지나온 길과 그 앞이 세 번 맞는다(맞는 곳 · 피해는 그대로: 앞 0~248 · 위 60 — 멈춘 곳보다 앞의 적도 그때 칼자국). 자주 쓰는 사냥기라 흔들림은 없다.
+--  같은 날 사용자 "리븐 왜 이동거리가 매번 판정이달라 ? 몬스터가 바로앞에있으면 돌진을 안한다던지 점프하고 쓰면 훨씬 멀리간다던지":
+--   전에는 가장 먼 적 + 28도트(120 ~ 248)라 적의 자리마다 달랐고, 쓰는 동안 걷기 · 점프의 기세로 더 밀려 갔다 → 거리는 늘 같다 · 동작 중에는 옆으로 움직이지 않는다(still — 공중이면 그 높이에서 내달린 뒤 곧게 떨어진다).
+--  이어서 사용자 "벽을 넘어야지"(그 전: 벽 바로 앞에서 멈췄다): 순간이동마다 내릴 자리가 지금 높이에서 막혔으면 한 칸(16)씩 PH_CLIMB도트까지 올라가 본다
+--   (높은 땅 · 턱이면 그 위에 선다) · 그래도 막혔으면 그 자리는 건너뛰고 다음 자리로(벽을 지나간다) — 마지막 자리마저 막혔으면 처음 자리 쪽으로 4도트씩 당겨 가장 가까운 빈자리.
+--  거리 · 순간이동 수 · 때 · 올라가는 높이는 제가 정한 것
+local PH_HOPS, PH_STEP, PH_REACH, PH_DIST, PH_POP, PH_CLIMB = 4, 0.045, 248, 200, 0.08, 48
+-- 그 x에 내린다: 높이 hy에서 막혔으면 칸의 윗면마다 PH_CLIMB도트까지 올려 본다 → 내린 높이(못 내렸으면 nil)
+local function landAt(g, x: number, hy: number): number?
+	if g.teleport(x, hy) then
+		return hy
+	end
+	local base = floor(hy / 16) * 16
+	for k = 1, PH_CLIMB // 16 do
+		if g.teleport(x, base - k * 16) then
+			return base - k * 16
 		end
 	end
-	for i = 0, PH_N - 1 do
-		local m = if #foes > 0 then foes[i % #foes + 1] else nil
-		local side = if i % 2 == 1 then -1 else 1
-		local tx = if m then m.x + side * 12 else cx + (g.rnd() - 0.5) * 180
-		local ty = (if m then m.y - m.h - 10 else y - 14) + (g.rnd() - 0.5) * 10
-		local ang = side * (30 + g.rnd() * 40)
+	return nil
+end
+local function phantom(g)
+	local x0, y, dir, tone, cx = g.x, g.y, g.dir, g.tone, g.fwd(PH_REACH / 2)
+	local foes = {}
+	for _, m in g.mobs() do
+		local off = (m.x - x0) * dir
+		if abs(m.y - y) <= 72 and off > -8 and off <= PH_REACH - 8 then
+			table.insert(foes, { m = m, off = off })
+		end
+	end
+	table.sort(foes, function(a, b)
+		return a.off < b.off
+	end)
+	local dist = PH_DIST
+	local cuts, nextFoe, hy = {}, 1, y -- hy = 지금 서 있는 높이(높은 땅에 올라섰으면 그 높이)
+	local function cutFoe(k: number)
+		local m = foes[k].m
+		local ang = (if k % 2 == 1 then 1 else -1) * (30 + g.rnd() * 30)
+		local tx, ty = m.x, m.y - m.h - 10 + (g.rnd() - 0.5) * 8
 		table.insert(cuts, { tx, ty, ang })
-		g.after(i * PH_STEP, function()
+		g.fx.cut(tx, ty, 54, ang, tone, { th = 3, life = 0.4 })
+	end
+	puff(g, x0, y, 0.8)
+	for i = 1, PH_HOPS do
+		g.after((i - 1) * PH_STEP, function()
+			local from = g.x
 			g.ghost()
-			g.teleport(tx)
-			g.face(side * dir)
-			g.fx.cut(tx, ty, 54, ang, tone, { th = 3, life = 0.42 })
+			local want = x0 + dir * dist * i / PH_HOPS
+			local ny = landAt(g, want, hy)
+			if ny then
+				hy = ny
+			elseif i == PH_HOPS then
+				local back = want - dir * 4 -- 마지막 자리마저 막혔다: 처음 자리 쪽으로 당겨 가장 가까운 빈자리
+				while (back - from) * dir > 0 and not g.teleport(back, hy) do
+					back -= dir * 4
+				end
+			end -- (가운데 자리가 막혔으면 건너뛴다 — 다음 자리가 벽 너머)
+			g.face(dir)
+			local to = g.x
+			if abs(to - from) > 4 then
+				g.fx.streaks((from + to) / 2, y - 6, 3, dir, tone, { w = abs(to - from) })
+			end
+			-- 이번에 지나간 적마다 칼자국(적이 없으면 지나간 길의 허공에)
+			local passed = (to - x0) * dir
+			while nextFoe <= #foes and foes[nextFoe].off <= passed + 6 do
+				cutFoe(nextFoe)
+				nextFoe += 1
+			end
+			if #foes == 0 and abs(to - from) > 4 then
+				local ang = (if i % 2 == 1 then 1 else -1) * (30 + g.rnd() * 30)
+				local tx, ty = (from + to) / 2, y - 14 + (g.rnd() - 0.5) * 10
+				table.insert(cuts, { tx, ty, ang })
+				g.fx.cut(tx, ty, 54, ang, tone, { th = 3, life = 0.4 })
+			end
 		end)
 	end
-	g.after(PH_N * PH_STEP, function()
-		g.ghost()
-		g.teleport(x0)
-		g.face(dir)
-	end)
-	g.after(PH_N * PH_STEP + 0.12, function()
+	local pop = (PH_HOPS - 1) * PH_STEP + PH_POP
+	g.after(pop, function()
+		while nextFoe <= #foes do -- (멈춘 곳보다 앞의 적 — 맞는 곳 안)
+			cutFoe(nextFoe)
+			nextFoe += 1
+		end
 		for _, c in cuts do
 			g.fx.cut(c[1], c[2], 66, c[3], tone, { th = 5, life = 0.2 })
 			g.fx.shards(c[1], c[2], 4, tone, { kind = "tri", speed = 80, life = 0.35 })
 		end
 	end)
 	for _, t in { 0, 0.05, 0.1 } do
-		g.after(PH_N * PH_STEP + 0.12 + t, function()
+		g.after(pop + t, function()
 			g.hitAt(cx, y, PH_REACH / 2, 60, 4, { mark = t == 0 })
 		end)
 	end
@@ -540,7 +592,7 @@ local skills = {
 		g.fx.streaks(g.x, g.y - 4, 8, g.dir, g.tone)
 		g.fx.ring(g.x, g.y, 18, 4, g.tone, { life = 0.25 })
 	end },
-	{ id = "rv_phantom", key = "R", shot = 0.3, segs = { { clip = "slash", fps = 26, walk = 1, ev = { [5] = phantom } } } }, -- 무영 섬(위 phantom)
+	{ id = "rv_phantom", key = "R", shot = 0.3, segs = { { clip = "slash", fps = 26, still = true, ev = { [5] = phantom } } } }, -- 무영 섬(위 phantom — still = 동작 중에는 걷기 · 점프의 기세로 옆으로 가지 않는다 · 2026-10-31)
 }
 
 -- 암살 연계: 적의 등 뒤로 순간이동해 여섯 번 찌르고(killStart), 한 번 더 누르면 머리 위에서 내리꽂는 마무리(killDive)

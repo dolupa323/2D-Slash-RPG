@@ -154,11 +154,8 @@ do
 	expect(Buffs.guard(a), "버티기: 피해를 받지 않는다")
 	Buffs.tick(a, 3.1)
 	eq(Buffs.guard(a), false, "3초 뒤에 풀린다")
-	local r = hero("reaper", { rp_ward = 10 })
-	eq(Buffs.ward(r), false, "가호가 없으면 못 버틴다")
-	Buffs.cast(r, "rp_ward", 0)
-	expect(Buffs.ward(r), "죽음의 가호: 한 번 버틴다")
-	eq(Buffs.ward(r), false, "한 번뿐이다")
+	-- (죽음의 가호 — 리퍼 3차 · 쓰러질 피해를 한 번 버틴다 — 는 2026-11-01 사용자 "죽음의 가호 , 깊은흡수 이런 이상한 부활스킬 삭제하고 다른 딜 패시브로 바꿔"로 뺐다: 「사신의 낫날」)
+	expect(not Buffs.is("rp_ward"), "죽음의 가호는 버프가 아니다(뺐다)")
 end
 
 -- ---- 4) 방에서: 주는 피해가 그만큼 는다 · 생존기 동안 맞지 않는다 · 쓰러질 피해를 버틴다 ----
@@ -198,21 +195,10 @@ do
 	room:hurtHero(events, h, mob, 1)
 	eq(#events, 0, "버티기 동안에는 맞지 않는다")
 	eq(h.hp, h.maxHp, "체력 그대로")
-	local r = hero("reaper", { rp_ward = 10 })
-	Buffs.cast(r, "rp_ward", 0)
+	local r = hero("reaper", {})
 	r.hp, r.invuln = 1, 0
-	events = {}
-	room:hurtHero(events, r, mob, 1000)
-	expect(r.alive, "죽음의 가호: 쓰러질 피해를 버틴다")
-	local ward = false
-	for _, e in events do
-		ward = ward or e.type == "ward"
-	end
-	expect(ward, "버텼다고 알린다")
-	eq(Buffs.has(r, "rp_ward"), false, "가호는 사라진다")
-	r.invuln = 0
 	room:hurtHero({}, r, mob, 1000)
-	eq(r.alive, false, "두 번째는 쓰러진다")
+	eq(r.alive, false, "쓰러질 피해를 버티는 버프가 없다(죽음의 가호를 뺐다 — 2026-11-01)")
 end
 
 -- ---- 4-2) 거신: 도끼질이 더 멀리 닿는다 · 그림자 분신: 조금 뒤에 따라 벤다 ----
@@ -332,7 +318,7 @@ do
 			end
 		end
 	end
-	expect(n >= 5, "설치 · 소환이 다섯이 넘는다(2026-10-30 연막탄이 월영 비수 — 쓰는 스킬 — 가 되어 하나 줄었다) " .. n)
+	expect(n >= 4, "설치 · 소환이 넷이 넘는다(2026-10-30 연막탄이 월영 비수 — 쓰는 스킬 — 가 되어 하나 · 2026-11-03 살라맨더 화로 · 작은 태양이 큰 한 방이 되어 둘 줄었다) " .. n)
 
 	-- 방 하나: 졸개를 멀리 치워 두고 하나만 곁에 세운다
 	local function arena(class, skills)
@@ -367,25 +353,8 @@ do
 		return hits, sum
 	end
 
-	-- 화로(설치): 곁의 적을 0.5초마다 태우고, 곁에 있으면 열기가 오른다. 10초 뒤에 사라진다
-	do
-		local room, h, a = arena("salamander", { sl_furnace = 10, sl_heat = 10 })
-		local out = { hits = {}, kills = {} }
-		local p = room:place(h, "sl_furnace", 1, out)
-		expect(p ~= nil and math.abs(p.x - (h.x + PLACED.sl_furnace.ahead)) < 1, "화로는 내 앞에 놓인다")
-		a.x = p.x + 10
-		local hits, sum = run(room, h, 2, function()
-			a.x, a.state = p.x + 10, "idle"
-		end)
-		eq(hits, 4, "2초에 네 번 태운다(0.5초마다)")
-		-- 초당 피해의 30%(마스터): 2초면 전투력 x 초당 피해 x 0.3 x 2(쓰임의 보정 · 숫자의 배율은 그대로 붙는다)
-		local want = Hero.powerRaw(h) * N.data.POWER.dps * PLACED.sl_furnace.rate * 2 * COMBAT.rules.dmgScale * (1 + COMBAT.rules.targetBonus / 100)
-		near(sum, want, 0.08, "화로의 피해: 초당 피해의 30%")
-		expect(h.kit.heat > 5, "화로 곁에서는 열기가 오른다 " .. h.kit.heat)
-		run(room, h, 8.2)
-		eq(#room.placed, 0, "10초 뒤에 사라진다")
-	end
-	-- 저승문(설치): 끌어당기고 태우고, 곁에서 쓰러진 적은 영혼 2
+	-- (화로(설치)의 검사는 뺐다 — 2026-11-03 살라맨더 리마스터: 화로가 3차의 큰 한 방 「용광로 주먹」 → 2026-11-04 열기 폭발을 키우는 패시브 「용광로 심장」 · 열기 폭발의 검사는 19_lune_kit)
+	-- 저승문(설치): 끌어당기고 태우고, 곁에서 쓰러진 적은 사신 게이지를 두 배로(2026-10-31 — 그 전: 영혼 2)
 	do
 		local room, h, a, b = arena("reaper", { rp_gate = 15, rp_soul = 10 })
 		local p = room:place(h, "rp_gate", 1, { hits = {}, kills = {} })
@@ -393,27 +362,52 @@ do
 		local x0 = a.x
 		run(room, h, 1)
 		expect(a.x < x0 - 20, ("저승문이 끌어당긴다 %d → %d"):format(x0, a.x))
-		-- 문 곁에서 쓰러뜨리면 영혼 2
+		-- 문 곁에서 쓰러뜨리면 사신 게이지가 처치 두 번어치
 		b.x, b.hp, b.maxHp = p.x + 5, 1, 1
-		local souls = h.kit.souls
+		local g0 = h.kit.gauge
 		local out = { hits = {}, kills = {} }
 		room:strike(h, b, 10, h.x, nil, out)
-		eq(h.kit.souls, souls + PLACED.rp_gate.souls, "문 곁에서 쓰러진 적은 영혼 2")
+		local GA = COMBAT.kit.reaper.core.gauge
+		expect(math.abs(h.kit.gauge - (g0 + GA.kill * GA.job[1] * PLACED.rp_gate.souls)) < 1e-6, ("문 곁에서 쓰러진 적은 게이지 두 배(%s)"):format(tostring(h.kit.gauge)))
 	end
-	-- 망령(소환): 따라다니며 1.6초마다 가까운 적을 친다. 다시 부르면 하나만 남는다
+	-- 망령(소환 — 2026-11-01 사용자 "망령소환하면 망령이 캐릭터를 쫓아다니는게 아니라 자율적으로 돌아다니면서 공격해야지"): 스스로 떠돌며 둘레의 적에게 날아가 1.6초마다 벤다.
+	--  다시 부르면 하나만 남는다(망령 군단이 없으면)
 	do
+		local G = PLACED.rp_ghost
+		eq(G.kind, "roam", "망령은 떠돈다(따라다니지 않는다)")
 		local room, h, a = arena("reaper", { rp_ghost = 15, rp_soul = 10 })
 		room:place(h, "rp_ghost", 1, { hits = {}, kills = {} })
 		room:place(h, "rp_ghost", 1, { hits = {}, kills = {} })
 		eq(#room.placed, 1, "같은 소환은 하나만 둔다")
+		near(room.placed[1].x, h.x - h.dir * G.back, 0.01, "등 뒤에서 나온다")
 		a.x = h.x + 30
 		local hits = run(room, h, 3.4, function()
 			a.x, a.state = h.x + 30, "idle"
 		end)
 		eq(hits, 2, "3.4초에 두 번 친다(1.6초마다)")
+		-- 주인에게서 먼 적(앞 130 — 그 전의 닿는 거리 70 밖)에게도 스스로 날아가 벤다
+		local p = room.placed[1]
+		p.x, p.y = h.x, h.y
+		p.next = room.time
+		a.x = h.x + 130
+		hits = run(room, h, 2.5, function()
+			a.x, a.state = h.x + 130, "idle"
+		end)
+		expect(hits >= 1, ("멀리 있는 적에게 날아가 친다(%d타)"):format(hits))
+		expect(math.abs(p.x - a.x) <= G.range, ("그 적 곁에 가 있다(망령 %.1f · 적 %.1f)"):format(p.x, a.x))
+		-- 둘레에 적이 없으면 주인 둘레를 떠돈다 · 주인이 멀리 가면(leash 밖) 날아서 돌아온다(그 자리로 순간이동하지 않는다)
+		a.x = h.x + 3000
 		h.x += 300
 		run(room, h, 0.1)
-		near(room.placed[1].x, h.x - h.dir * PLACED.rp_ghost.back, 0.01, "망령은 따라다닌다")
+		expect(math.abs(p.x - (h.x - h.dir * G.back)) > 50, "주인이 멀어져도 그 자리에 바로 붙지 않는다(날아온다)")
+		run(room, h, 5)
+		expect(math.abs(p.x - h.x) <= G.wander + 2, ("주인 둘레(±%d)로 돌아와 떠돈다(%.1f)"):format(G.wander, p.x - h.x))
+		-- 망령 군단: 셋까지
+		h.skills.rp_ghost2 = 10
+		for _ = 1, 4 do
+			room:place(h, "rp_ghost", 1, { hits = {}, kills = {} })
+		end
+		eq(#room.placed, 3, "망령 군단: 셋까지(넘치면 먼저 부른 것이 사라진다)")
 		-- 주인이 방에 없으면 사라진다
 		room:step({}, 1 / 20)
 		eq(#room.placed, 0, "주인이 방을 떠나면 사라진다")

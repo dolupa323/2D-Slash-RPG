@@ -96,6 +96,7 @@ function Others:setWho(roster)
 			o.rv:setPets(if typeof(w.pets) == "table" then w.pets elseif w.pet then { w.pet } else {}) -- 꺼내 둔 펫들(셋까지 — 2026-10-30)
 			o.rv:setRide(w.ride)
 			o.sprite:setLook({ point = w.look and w.look.point, robe = w.look and w.look.robe, skin = w.wskin or nil }) -- 그 사람의 무기 · 로브 색(염색 — 2026-10-22) · 캐시 무기(2026-10-23)
+			o.wskin = w.wskin or nil -- (살라맨더의 가득 찬 열기 불꽃 갓도 이 색 — 2026-11-04)
 			if o.name ~= w.name or o.level ~= w.level then
 				o.name, o.level = w.name, w.level
 				o.tag:SetText(Others.tagText(w.level, w.name))
@@ -253,6 +254,11 @@ function Others:update(now: number, party)
 		if rx then
 			hx, hy = rx, ry
 			clip, frame = "idle", Sprite.frameAt(char, "idle", now + (id % 7) * 0.3, false)
+			-- 탄 채 대쉬로 내달리는 동안(boot의 RideDashed가 o.rideDashTo를 둔다 — 2026-11-03): 탈것 · 탄 영웅의 잔상이 연달아(내 것과 같다 — effects.luau rideTrail)
+			local rdm = o.rideDashTo and now < o.rideDashTo and RideView.MOUNT[o.rv.rideId]
+			if rdm and rdm.dash and self.fx and o.rv.shownClip and CLASSES.classes[o.class] then
+				self.fx:rideTrail(o, dt, rdm.dash, o.rv.rideId, o.rv.shownClip, o.rv.shownF, o.x, o.y, o.class, frame, rx, ry, rs, o.dir, CLASSES.classes[o.class].tone)
+			end
 		end
 		o.rideSize = rs -- 탄 동안 작게(boot가 버프의 모습을 입힐 때도 — cast.luau의 look)
 		o.hx, o.hy = hx, hy -- 몸을 그린 자리(탄 동안은 안장 위 — boot가 버프의 모습을 이 자리에 입힌다)

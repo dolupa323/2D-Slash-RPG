@@ -23,8 +23,11 @@ end
 MOCK("Client/lune/stage", { ratio = 2.5, uiScale = 2 })
 MOCK("Client/lune/ui/ui", {
 	COLOR = any,
+	box = function() -- (가득 찬 탭의 노란 점 — 2026-10-31)
+		return frame("Box")
+	end,
 	tab = function(parent, name, x, y, fn)
-		local t = { width = 40, click = fn, name = name }
+		local t = { width = 40, click = fn, name = name, frame = frame("Tab") }
 		function t.setOn() end
 		table.insert(madeTabs, t)
 		return t

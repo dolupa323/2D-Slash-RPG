@@ -342,35 +342,60 @@ do
 	expect(dodged > 60 and dodged < 140 and dodged + hurt == 1000, ("열 번에 한 번 피한다 — %d / 1000"):format(dodged))
 end
 
--- ---- 5) 리퍼: 영혼 · 도깨비불 · 생기 흡수 ----
+-- ---- 5) 리퍼: 사신 게이지 · 사신화 · 혼불 · 생기 흡수 ----
 do
 	local core, tg, pas = KIT.reaper.core, KIT.reaper.toggle, KIT.reaper.passive
-	local room, h, a = arena("reaper", { rp_soul = 10 })
-	-- 쓰러뜨리면 영혼 하나(다섯까지). 영혼 하나마다 공격력 +3%
-	for i = 1, core.max + 2 do
-		a.state, a.t, a.hp = "idle", 0, 1
-		local out = strike(room, h, "rp_hook", 2, nil)
-		eq(#out.kills, 1, "쓰러뜨린다")
-		eq(h.kit.souls, math.min(core.max, i), ("영혼 %d"):format(i))
-		expect((out.kit == true) == (i <= core.max), "늘었을 때만 화면에 알린다")
-	end
-	near(Kit.attack(h), 1 + core.max * core.each / 100, 1e-9, "영혼 다섯이면 공격력 +15%")
-	eq(Kit.view(h).souls, core.max, "화면에 영혼의 수가 간다")
-	-- 피해에 들어간다(같은 씨앗의 방 둘)
+	local Buffs = req("ReplicatedStorage/shared/lune/sim/buffs")
+	local G = core.gauge
+	-- 사신 게이지(2026-10-31 사용자: "게이지 직업으로 설계하자 메이플 루미너스 처럼 사신화가 1차부터 있고 사신 게이지가 있어 …"):
+	--  낫 기술이 맞으면 hit · 쓰러뜨리면 kill(차수의 배수 — 전직할수록 빨리) · 가득하면 멈춘다 · 공격력은 오르지 않는다 · 저절로 줄지 않는다
+	local room, h, a, b0 = arena("reaper", { rp_soul = 10 })
+	b0.x = 1430
+	h.job = 1
+	local out = strike(room, h, "rp_hook", 2, nil)
+	near(h.kit.gauge, G.hit * G.job[1], 1e-6, "맞히면 +hit(1차)")
+	expect(out.kit == true, "화면에 알린다")
+	a.state, a.t, a.hp = "idle", 0, 1
+	local g0 = h.kit.gauge
+	strike(room, h, "rp_hook", 2, nil)
+	near(h.kit.gauge, g0 + (G.hit + G.kill) * G.job[1], 1e-6, "쓰러뜨리면 +kill이 더")
+	h.job = 4
+	a.state, a.t, a.hp = "idle", 0, 1e12
+	local g1 = h.kit.gauge
+	strike(room, h, "rp_hook", 2, nil)
+	near(h.kit.gauge - g1, G.hit * G.job[4], 1e-6, "4차는 그 배수만큼 빨리 찬다")
+	expect(G.job[1] < G.job[2] and G.job[2] < G.job[3] and G.job[3] < G.job[4], "전직할수록 빨리")
+	h.kit.gauge = G.max - 0.5
+	strike(room, h, "rp_hook", 2, nil)
+	eq(h.kit.gauge, G.max, "가득하면 멈춘다")
+	eq(Kit.view(h).gauge, G.max, "화면에 게이지가 간다")
+	near(Kit.attack(h), 1, 1e-9, "게이지는 공격력을 올리지 않는다(세지는 것은 사신화)")
+	Kit.tick(h, 999)
+	eq(h.kit.gauge, G.max, "저절로 줄지 않는다")
+	-- 사신화: 1차부터 처음부터 준다 · 게이지가 가득할 때만 · 쓰면 게이지가 빈다 · 시간은 차수마다
+	eq(Hero.skillLevel(Hero.new(9, "reaper"), "rp_form"), 1, "사신화는 1차부터(처음부터 준다)")
+	expect(Kit.formReady(h), "가득하면 사신화를 쓸 수 있다")
+	local pow = Buffs.cast(h, "rp_form", 0)
+	expect(pow ~= nil and Kit.formed(h), "사신으로 변한다")
+	eq(h.kit.gauge, 0, "게이지가 빈다")
+	near(h.buffs.rp_form.t, core.form.dur[4], 1e-6, "4차 = " .. core.form.dur[4] .. "초")
+	expect(not Kit.gainGauge(h, "hit"), "사신화 동안에는 차지 않는다")
+	local outF = strike(room, h, "rp_hook", 2, nil)
+	expect(#procs(outF, "shade") >= 1, "사신화: 맞을 때마다 그림자 낫")
+	expect(math.abs(procs(outF, "shade")[1].dmg / mains(outF)[1].dmg - core.form.shade) < 0.05, "그림자 낫 = 그 타 피해의 절반")
+	h.buffs.rp_form = nil
+	h.kit.gauge = 50
+	eq(Buffs.cast(h, "rp_form", 0), nil, "게이지가 덜 차면 사신화를 못 쓴다")
+	local h1 = Hero.new(8, "reaper")
+	h1.kit.gauge = G.max
+	Buffs.cast(h1, "rp_form", 0)
+	near(h1.buffs.rp_form.t, core.form.dur[1], 1e-6, "1차 = " .. core.form.dur[1] .. "초")
+	-- 피해에 들어간다(같은 씨앗의 방 둘): 사신화 = 피해 +40%
 	local roomA, hA = arena("reaper", { rp_soul = 10 }, 21)
 	local roomB, hB = arena("reaper", { rp_soul = 10 }, 21)
-	hB.kit.souls = core.max
-	near(strike(roomB, hB, "rp_hook", 2, nil).hits[1].dmg / strike(roomA, hA, "rp_hook", 2, nil).hits[1].dmg, 1.15, 0.01, "영혼 다섯이면 피해 +15%")
-	-- 30초마다 하나씩 흩어진다(얻으면 다시 센다)
-	local changed = Kit.tick(h, core.decay - 1)
-	expect(not changed and h.kit.souls == core.max, "아직 흩어지지 않는다")
-	changed = Kit.tick(h, 1)
-	expect(changed and h.kit.souls == core.max - 1, "30초가 지나면 하나가 흩어진다")
-	Kit.tick(h, core.decay - 1)
-	expect(Kit.gainSoul(h) and h.kit.souls == core.max and h.kit.soulT == 0, "얻으면 시간을 다시 센다")
-	hA.skills.rp_soul = 1
-	hA.kit.souls = 2
-	near(Kit.attack(hA), 1 + 2 * core.each / 100 * FLOOR, 1e-9, "레벨 1이면 하나마다 +1.2%")
+	hB.kit.gauge = G.max
+	Buffs.cast(hB, "rp_form", 0)
+	near(mains(strike(roomB, hB, "rp_hook", 2, nil))[1].dmg / mains(strike(roomA, hA, "rp_hook", 2, nil))[1].dmg, 1.4, 0.02, "사신화: 피해 +40%")
 
 	-- 도깨비불: 2초에 한 번, 맞은 적에게 — 초당 피해의 18%(한 번에 0.36초 치)
 	local roomW, hW, aW = arena("reaper", { rp_wisp = 10 })
@@ -387,18 +412,19 @@ do
 	roomW.time += 0.1
 	eq(#procs(strike(roomW, hW, "rp_double", 1, nil), "wisp"), 1, "2초가 지나면 다시 난다")
 
-	-- 생기 흡수: 낫 기술의 한 타가 맞을 때마다 최대 체력의 1.5%(몇 마리가 맞든 한 번 · 가득하면 없다)
+	-- 생기 흡수(2026-10-31 사용자: "피흡도 처치시 흡혈로 해서 보스전에서는 흡혈효율이 좋지않은데 사냥에서는 흡혈 잘되게"): 맞히기만 해서는 되찾지 않는다 · 쓰러뜨릴 때마다 최대 체력의 kill%
 	local roomD, hD, aD, bD = arena("reaper", { rp_drain = 10 })
 	bD.x = X + 30 -- 둘이 같이 맞는다
-	eq(strike(roomD, hD, "rp_double", 1, nil).heal, nil, "체력이 가득하면 되찾을 것이 없다")
 	hD.hp = math.floor(hD.maxHp / 2)
 	local hp0 = hD.hp
 	local outD = strike(roomD, hD, "rp_double", 1, nil)
 	eq(#mains(outD), 2, "둘이 맞는다")
-	local healWant = math.max(1, math.floor(hD.maxHp * pas.heal / 100 + 0.5))
-	expect(outD.heal == healWant and hD.hp == hp0 + healWant, ("한 타에 한 번, 최대 체력의 1.5%% — %s"):format(tostring(outD.heal)))
-	aD.x, bD.x = 1400, 1430
-	eq(strike(roomD, hD, "rp_double", 1, nil).heal, nil, "못 맞히면 되찾지 못한다")
+	eq(outD.heal, nil, "맞히기만 해서는 되찾지 않는다(보스전에서는 흡혈이 거의 없다)")
+	eq(hD.hp, hp0, "체력 그대로")
+	aD.hp, bD.hp = 1, 1 -- 한 대에 쓰러진다
+	local outK = strike(roomD, hD, "rp_double", 1, nil)
+	local healWant = math.max(1, math.floor(hD.maxHp * pas.kill / 100 + 0.5))
+	expect(#outK.kills == 2 and outK.heal == healWant * 2 and hD.hp == hp0 + healWant * 2, ("둘을 쓰러뜨리면 둘만큼 — 한 마리에 최대 체력의 %d%% (%s)"):format(pas.kill, tostring(outK.heal)))
 end
 
 -- ---- 6) 무니: 수정 공명 · 수정 조각 · 지키는 마음 ----
@@ -514,27 +540,29 @@ end
 do
 	local core, tg, pas = KIT.salamander.core, KIT.salamander.toggle, KIT.salamander.passive
 	local room, h, a = arena("salamander", { sl_heat = 10 })
-	-- 주먹의 한 타가 맞을 때마다 열기 +10, 50부터 달아오름: 맞힐 때마다 불꽃이 한 번 더(그 타의 20%)
-	for i = 1, 12 do
+	-- 판을 나누지 않고 친 타(opts 없이)는 맞을 때마다 열기 + gain(2026-11-04 — 게임의 판은 한 번: 아래), 50부터 달아오름: 맞힐 때마다 불꽃이 한 번 더(그 타의 20%)
+	local each = core.gain
+	local hits = math.ceil(core.max / each) + 1
+	for i = 1, hits do
 		local out = strike(room, h, "sl_punch", 1, nil)
-		eq(h.kit.heat, math.min(core.max, i * core.gain), ("열기 %d"):format(i))
+		near(h.kit.heat, math.min(core.max, i * each), 1e-6, ("열기 %d"):format(i))
 		expect(out.kit == true, "열기가 올랐다고 알린다")
 		local flames = procs(out, "flame")
-		if i * core.gain >= core.hot then
+		if i * each >= core.hot then
 			expect(#flames == 1 and flames[1].mob == a.id and flames[1].dmg == math.max(1, math.floor(mains(out)[1].dmg * core.share + 0.5)), ("달아오르면 불꽃이 한 번 더 %d"):format(i))
 		else
 			eq(#flames, 0, ("아직 달아오르지 않았다 %d"):format(i))
 		end
 	end
 	expect(Kit.hot(h) and Kit.view(h).hot == true and Kit.view(h).heat == core.max, "달아올랐다")
-	-- 3초 동안 못 맞히면 초마다 25씩 식는다
+	-- cool초(6) 동안 못 맞히면 초마다 decay(15)씩 식는다(2026-11-03 — 그 전 3초 · 25)
 	local changed = Kit.tick(h, core.cool - 0.5)
-	expect(not changed and h.kit.heat == core.max, "3초 전에는 식지 않는다")
+	expect(not changed and h.kit.heat == core.max, "식기 시작하는 때 전에는 식지 않는다")
 	Kit.tick(h, 0.5)
 	Kit.tick(h, 1)
-	near(h.kit.heat, core.max - core.decay, 1e-6, "3초가 지나면 초마다 25씩 식는다")
+	near(h.kit.heat, core.max - core.decay, 1e-6, "그 뒤로는 초마다 decay씩 식는다")
 	local flipped = false
-	for _ = 1, 40 do
+	for _ = 1, 100 do
 		local c = Kit.tick(h, 0.1)
 		flipped = flipped or (c and not Kit.hot(h))
 	end
@@ -545,6 +573,89 @@ do
 	local heat0 = h.kit.heat
 	strike(room, h, "sl_punch", 1, nil)
 	eq(h.kit.heat, heat0, "못 맞히면 오르지 않는다")
+	-- 한 판에 한 번(2026-11-04 사용자 "게이지도 3타정도 치면 4번째 공격이 강화공격으로"): 같은 판(opts)의 둘째 타는 열기를 채우지 않는다 · 세 판이면 가득 · 차수와 상관없다
+	a.x = X + 14
+	local job0 = h.job
+	h.job, h.kit.heat = 4, 0
+	for i = 1, 3 do
+		local cast = { mul = 1, reach = 0, level = 0 }
+		strike(room, h, "sl_punch", 1, cast)
+		strike(room, h, "sl_punch", 2, cast)
+		near(h.kit.heat, math.min(core.max, i * core.gain), 1e-6, ("한 판에 한 번 — %d판"):format(i))
+	end
+	eq(h.kit.heat, core.max, "세 판이면 가득(넷째가 강화판)")
+	-- 폭주 동안은 서버의 열기도 가득한 채 고정(2026-11-03 — 열기 폭발이 서버의 열기를 쓴다)
+	h.buffs.sl_overheat = { t = 20, dur = 20 }
+	h.kit.heat = 10
+	Kit.tick(h, 0.1)
+	eq(h.kit.heat, core.max, "폭주 동안 열기 가득")
+	h.buffs.sl_overheat = nil
+	h.job, h.kit.heat = job0, 0
+
+	-- 강화판(2026-11-04 사용자 "게이지를 가득채우면 불길에 휩싸이면서 사냥기, 보스기 가 강화되고 강화된 스킬들은 퀵슬롯에서 빛나는거야 그리고 그 스킬을 사용하면 열기가 모두 소모되면서
+	--  원래스킬이아니라 더 강력한 스킬이 나가는거라고"): 열기가 가득(폭주면 늘) 찬 채 쓴 사냥기 · 보스기의 판 = Kit.empower — 열기를 모두 쓰고(용광로 심장이면 enhAfter에서) 그 판의 모든 타 x (1 + x[차수] x 열기의 세기 + 패시브의 enh).
+	--  화면이 그리지 않은 판(want false) · 사냥기도 보스기도 아닌 것 · 덜 찬 열기는 강화하지 않는다(열기 그대로). 강화판의 타는 열기를 채우지 않는다(kitAfter의 opts.enh)
+	do
+		local enh = core.enh
+		local roomB, hB, aB, bB = arena("salamander", { sl_heat = 10 })
+		hB.kit.heat = core.max - 1
+		eq(Kit.empower(hB, "boss", nil), nil, "덜 찼으면 강화판이 아니다")
+		eq(hB.kit.heat, core.max - 1, "열기 그대로")
+		hB.kit.heat = core.max
+		eq(Kit.empower(hB, "boss", false), nil, "화면이 강화판으로 그리지 않은 판은 강화하지 않는다")
+		eq(Kit.empower(hB, "attack", nil), nil, "공격기(화룡 승천)는 강화판이 없다")
+		eq(Kit.empower(hB, "nuke", true), nil, "큰 기술(화산권)은 강화판이 없다")
+		eq(hB.kit.heat, core.max, "그동안 열기는 가득한 채")
+		local mul = Kit.empower(hB, "mob", true)
+		near(mul or 0, 1 + enh.x[1] * Kit.scale(hB, "core"), 1e-9, "1차 사냥기의 강화판 = 1 + x[1] x 열기의 세기")
+		eq(hB.kit.heat, 0, "열기를 모두 썼다")
+		-- 1차의 판(skillHit의 opts): 같은 타가 그 배수만큼 세고, 열기를 채우지 않는다
+		hB.kit.heat = 0
+		local base = mains(strike(roomB, hB, "sl_punch", 1, nil))[1].dmg
+		local heat1 = hB.kit.heat
+		hB.kit.heat = 0
+		local boosted = mains(strike(roomB, hB, "sl_punch", 1, { mul = mul, reach = 0, level = 0, enh = true }))[1].dmg
+		near(boosted / base, mul, RULES.spread / 50 + 0.02, "강화판의 타 = 보통 타 x 배수")
+		expect(heat1 > 0 and hB.kit.heat == 0, "보통 타는 열기를 채우고 강화판의 타는 채우지 않는다")
+		-- 1차 강화판의 범위(core.enh.first): 불덩이 던지기(2026-11-04 1차 사냥기)는 앞으로 60 더 · 위로 3배 — 보통 판이 못 닿는 자리(앞 180 · 위 40)의 적이 맞는다
+		local far = enh.first.sl_meteor
+		local keepX, keepY, keepB = aB.x, aB.y, bB.x
+		aB.x, aB.y, bB.x = hB.x + 180, hB.y - 40, hB.x + 1200
+		eq(#mains(strike(roomB, hB, "sl_meteor", 1, nil)), 0, "보통 불덩이 던지기는 앞 180 · 위 40에 닿지 않는다")
+		expect(#mains(strike(roomB, hB, "sl_meteor", 1, { mul = 1, reach = far.reach, tall = far.up, level = 0, enh = true })) == 1, "강화판 불덩이 던지기는 닿는다")
+		aB.x, aB.y, bB.x = keepX, keepY, keepB
+		-- 4차 · 패시브(폭열 · 용광로 심장 · 백열 — 다 마스터): 배수 + 셋의 enh · 쓴 뒤 열기 enhAfter
+		local P = COMBAT.passive
+		hB.skills.sl_vent, hB.skills.sl_furnace, hB.skills.sl_sun = 10, 10, 15
+		hB.job = 4
+		Hero.recalc(hB)
+		hB.kit.heat = core.max
+		mul = Kit.empower(hB, "boss", nil)
+		near(mul or 0, 1 + enh.x[4] * Kit.scale(hB, "core") + P.sl_vent.fx.enh + P.sl_furnace.fx.enh + P.sl_sun.fx.enh, 1e-9, "4차의 강화판 = 1 + x[4] x 열기의 세기 + 폭열 + 용광로 심장 + 백열")
+		eq(hB.kit.heat, P.sl_furnace.fx.enhAfter, "용광로 심장: 쓴 뒤 열기 " .. P.sl_furnace.fx.enhAfter .. "에서")
+		-- 폭주: 열기가 가득한 채 — 쓸 때마다 강화판 · 열기는 그대로
+		hB.buffs.sl_overheat = { t = 20, dur = 20, pow = 1 }
+		hB.kit.heat = 10
+		expect(Kit.empower(hB, "mob", nil) ~= nil and Kit.empower(hB, "boss", nil) ~= nil, "폭주 동안은 덜 찼어도 늘 강화판")
+		eq(hB.kit.heat, 10, "폭주 동안은 열기를 쓰지 않는다(Kit.tick이 가득으로 고정한다)")
+		hB.buffs.sl_overheat = nil
+		-- 다른 직업은 강화판이 없다
+		local _, hR = arena("reaper", {})
+		eq(Kit.empower(hR, "boss", true), nil, "리퍼는 강화판이 없다")
+		-- 2~4차의 판(Caster:begin): 가득 찬 채 시작하면 ctx.enh · g.s.enh · 열기를 쓴다 / 화면이 false면 그대로
+		local Caster = req("ReplicatedStorage/shared/lune/sim/caster")
+		local roomC, hC = arena("salamander", { sl_heat = 10, sl_slam = 20 })
+		hC.job = 2
+		hC.kit.heat = core.max
+		local cast = Caster.new(roomC)
+		local ok, _, began = cast:begin(hC, "sl_slam", 1, nil, { hot = false })
+		expect(ok and began == false and hC.kit.heat == core.max, "화면이 그리지 않은 판: 보통으로 · 열기 그대로")
+		cast:drop(hC)
+		ok, _, began = cast:begin(hC, "sl_slam", 1, nil, { hot = true })
+		local act = cast.actors[hC]
+		expect(ok and began == true and act.skill.ctx.enh ~= nil and rawget(act.g.s, "enh") == true and hC.kit.heat == 0, "가득 찬 채 시작한 화염 강타 = 강화판(ctx.enh · g.s.enh) · 열기를 썼다")
+		near(act.skill.ctx.enh, 1 + enh.x[2] * Kit.scale(hC, "core"), 1e-9, "2차의 배수")
+	end
 
 	-- 불티: 주먹이 맞을 때마다 가까운 다른 적(없으면 그 적)에게 — 그 타 피해의 18%
 	local roomE, hE, aE, bE = arena("salamander", { sl_ember = 10 })
@@ -687,15 +798,15 @@ do
 		near(stars / casts, 2, 0.05, "쌍표창: 나갈 때마다 둘")
 		expect(hops >= casts, "되돌아오는 표창: 튕긴다 " .. hops)
 	end
-	-- 리퍼: 떼도깨비불(영혼 둘마다 하나 더) · 붙는 불(초마다 태운다) · 원혼(더 자주)
+	-- 리퍼: 떼혼불(사신 게이지 34마다 하나 더 · 사신화 동안 넷 — 2026-10-31 게이지 직업 · 그 전: 영혼 둘마다) · 붙는 불(초마다 태운다) · 원혼(더 자주)
 	do
 		local room, h, a = arena("reaper", { rp_wisp = 10, rp_soul = 10, rp_wisp2 = 10, rp_wisp3 = 10 })
 		h.level = 120
 		h.kit.on = true
-		h.kit.souls = 4
+		h.kit.gauge = 70
 		local out = strike(room, h, "rp_double", 1)
 		local n = count(out, "wisp")
-		eq(n, 3, "떼도깨비불: 영혼 넷이면 세 발")
+		eq(n, 3, "떼혼불: 게이지 70이면 세 발")
 		-- 붙는 불: 1 · 2 · 3초 뒤에 한 번씩 더 탄다(방의 한 걸음이 알린다)
 		local burns = 0
 		for _ = 1, 3 * 20 + 4 do

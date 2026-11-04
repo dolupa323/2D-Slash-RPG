@@ -305,9 +305,13 @@ function Title.run(select, io)
 		picked = math.clamp(picked, 1, #chars)
 		header(b, TXT.select, TXT.selectHint)
 		local slots = {}
+		-- 칸 사이: 칸이 많으면 화면(384도트)에 다 들도록 좁힌다 · 좁으면 이름을 한 칸 걸러 한 줄 아래로(겹치지 않게)
+		--  (2026-10-31 사용자 "캐릭터칸 + 를 구매하고 … 캐릭터가 9개가 되는데 현재 캐릭터를 7개 까지 밖에 볼수없어" — 전에는 늘 54도트라 아홉이면 양 끝 둘이 화면 밖이었다)
+		local gap = math.min(T.slots.gap, math.floor((G.VIEW_W - 24) / math.max(1, max)))
+		local stagger = gap < T.slots.gap - 4
 		for i = 1, max do
 			local c = chars[i]
-			local x = G.VIEW_W / 2 + (i - (max + 1) / 2) * T.slots.gap
+			local x = G.VIEW_W / 2 + (i - (max + 1) / 2) * gap
 			local slot = { x = x, char = c }
 			if c then
 				slot.sprite = Sprite.new(a, c.class, 2)
@@ -353,16 +357,17 @@ function Title.run(select, io)
 			createButton:setEnabled(#chars < max)
 		end
 		local function place()
-			for _, s in slots do
+			for i, s in slots do
 				local cx, gy = toUi(s.x, GROUND)
-				s.name.Frame.Position = UDim2.fromOffset(cx - math.floor(s.name.Width / 2), gy + 7)
+				local down = if stagger and i % 2 == 0 then (Ui.TAG_H + 3) * 2 + 2 else 0 -- (좁으면 한 칸 걸러 이름 두 줄을 아래로)
+				s.name.Frame.Position = UDim2.fromOffset(cx - math.floor(s.name.Width / 2), gy + 7 + down)
 				if s.sub then
-					s.sub.Frame.Position = UDim2.fromOffset(cx - math.floor(s.sub.Width / 2), gy + 7 + Ui.TAG_H + 3)
+					s.sub.Frame.Position = UDim2.fromOffset(cx - math.floor(s.sub.Width / 2), gy + 7 + Ui.TAG_H + 3 + down)
 				end
 				if s.hit then
-					local w, h = toUi(T.slots.gap, 44)
+					local w, h = toUi(gap, 44)
 					s.hit.Position = UDim2.fromOffset(cx - math.floor(w / 2), gy - h)
-					s.hit.Size = UDim2.fromOffset(w, h + 34)
+					s.hit.Size = UDim2.fromOffset(w, h + 34 + down)
 				end
 			end
 		end

@@ -42,11 +42,16 @@ function Buffs.init(h)
 	h.buffs, h.cds, h.buffN = {}, {}, 0
 end
 
+-- 버프마다 따로 정한 조건 · 시간 · 건 뒤의 일(리퍼의 사신화 — sim/kit.luau가 넣는다: { can(h) · dur(h) · cast(h) })
+Buffs.hooks = Buffs.hooks or {}
+
 -- 버프 하나를 얹는다(이미 있으면 새로 건 것으로 바뀐다 — 맨 뒤로 간다). pow = 세기 · (x, y) = 건 자리
 function Buffs.give(h, id: string, pow: number, x: number, y: number)
 	local def = BUFF[id]
+	local hook = Buffs.hooks[id]
+	local dur = if hook and hook.dur then hook.dur(h) else def.dur
 	h.buffN += 1
-	h.buffs[id] = { t = def.dur, dur = def.dur, pow = pow, n = h.buffN, x = x, y = y }
+	h.buffs[id] = { t = dur, dur = dur, pow = pow, n = h.buffN, x = x, y = y }
 end
 
 -- 건다: 배웠고 다시 쓰기가 끝났으면. now = 서버의 시간. 걸었으면 그 세기를 돌려준다(못 걸었으면 nil)
@@ -54,12 +59,19 @@ function Buffs.cast(h, id: string, now: number): number?
 	if not Buffs.learned(h, id) or (h.cds[id] or 0) > now then
 		return nil
 	end
+	local hook = Buffs.hooks[id]
+	if hook and hook.can and not hook.can(h) then
+		return nil -- (사신화: 사신 게이지가 가득하지 않다)
+	end
 	local def = BUFF[id]
 	if def.cd > 0 then
 		h.cds[id] = now + def.cd
 	end
 	local pow = scaleOf(h.skills[id], def.max)
 	Buffs.give(h, id, pow, h.x, h.y)
+	if hook and hook.cast then
+		hook.cast(h)
+	end
 	return pow
 end
 

@@ -281,3 +281,74 @@ do
 	local okFar = late(3)
 	expect(not okFar, "아주 늦은(3초) 「뗐다」는 받지 않는다")
 end
+
+-- ---- 7) 끝까지 모아 친 뒤 키를 누른 채 이어 쓰기(2026-11-03 사용자 제보: 전투 호흡을 건 채 초승달 가르기나 다른 스킬을 끝까지 모아 쓰면 이펙트는 나가는데 딜이 안 들어간다) ----
+--  화면은 한 방이 끝나자마자 다음 판을 시작한다 — 네트워크가 흔들려 다음 판의 알림이 서버의 한 방보다 0.2 ~ 0.35초 일찍 닿아도 그 판을 받아 피해가 들어간다(전에는 0.15초 넘게 이르면 버려 0마리).
+--  모아 친 한 방에만 넓혔다: 다른 기술(리븐 배후 교차)은 그대로 0.15초 넘게 이르면 받지 않는다(앞당겨 빨라지지 않게)
+do
+	local function chain(id: string, early: number): (boolean, number?, number)
+		local room = Room.new("hunt", SCENES.scenes.hunt, Random.new(1))
+		local h = hero({ ax_crescent = 20, ax_rend = 20, ax_execute = 30, ax_charge = 10, ax_charge2 = 10, ax_echo4 = 1, ax_breath = 10 })
+		h.buffs = { ax_breath = { pow = 1, t = 60 } }
+		h.x, h.y, h.dir = 400, 176, 1
+		for i, m in room.mobs do
+			m.state, m.t, m.a, m.b = "idle", 0, 0, 9000
+			m.hp, m.maxHp = 1e12, 1e12
+			m.x, m.y = 430 + (i % 4) * 25, 176
+		end
+		local c = room.caster
+		local sk = Kitset.skill(id)
+		local per, levels = Caster.chargeOf(h, sk.segs[1])
+		local full = Caster.segTime("axion", sk.segs[1]) + per * levels
+		local strike = 0
+		for k = 2, #sk.segs do
+			strike += Caster.segTime("axion", sk.segs[k])
+		end
+		local function run(t: number)
+			for _ = 1, math.floor(t / SUB + 0.5) do
+				room.time += SUB
+				c:sub(SUB)
+			end
+		end
+		c:begin(h, id, 1, nil)
+		run(full)
+		c:begin(h, id, 2, nil)
+		run(strike - early)
+		local snap = {}
+		for i, m in room.mobs do
+			snap[i] = m.hp
+		end
+		local okA = c:begin(h, id, 1, nil)
+		run(full)
+		local _, lv = c:begin(h, id, 2, nil)
+		run(2)
+		local hurt = 0
+		for i, m in room.mobs do
+			if m.hp < snap[i] then
+				hurt += 1
+			end
+		end
+		return okA, lv, hurt
+	end
+	for _, id in { "ax_crescent", "ax_rend", "ax_execute" } do
+		for _, early in { 0, 0.2, 0.3 } do
+			local ok, lv, hurt = chain(id, early)
+			expect(ok and lv == 4 and hurt > 0, ("%s: 다음 판이 %.1f초 일찍 와도 끝까지 모은 한 방이 맞는다(%s · %s단계 · %d마리)"):format(id, early, tostring(ok), tostring(lv), hurt))
+		end
+	end
+	-- 다른 기술은 그대로: 리븐 배후 교차가 0.3초 남았는데 다음 판이 오면 받지 않는다
+	local room = Room.new("hunt", SCENES.scenes.hunt, Random.new(1))
+	local r = Hero.new(2, "riven")
+	r.level, r.job, r.skills = 60, 2, { rv_cross = 20 }
+	Hero.recalc(r)
+	r.hp = r.maxHp
+	r.x, r.y, r.dir = 400, 176, 1
+	local c = room.caster
+	expect(c:begin(r, "rv_cross", 1, nil), "리븐 배후 교차")
+	local need = Caster.segTime("riven", Kitset.skill("rv_cross").segs[1])
+	for _ = 1, math.floor((need - 0.3) / SUB + 0.5) do
+		room.time += SUB
+		c:sub(SUB)
+	end
+	expect(not c:begin(r, "rv_cross", 1, nil), "모으지 않은 기술은 0.3초 이르면 받지 않는다(빨라지지 않게)")
+end

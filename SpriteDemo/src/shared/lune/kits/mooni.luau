@@ -128,11 +128,15 @@ local function shards(g, from)
 	end
 end
 
-local function wave(g, x: number, dir: number, first: boolean) -- 달빛 파도: 바닥을 따라 굴러가는 물결 — 수정을 지나면 한 번 더 인다
+-- y = 파도가 구르는 높이(없으면 무니의 높이 — 첫 파도). 수정을 지날 때 이는 둘째 파도는 그 수정의 높이에서 — 같은 층(높이 차 WAVE_FLOOR 안)의 수정만 지난 것으로 친다
+--  (2026-11-03 제보 「파도 스킬이 점프하면서 쓰면 위 아래 y좌표를 따라오면서 여러개 나오듯이 보이는 버그」: 전에는 둘째 파도를 그때의 무니 높이(g.y)에서 일으켜, 첫 파도가 구르는 동안
+--   무니가 뛰면 공중 여러 높이에 파도가 생겼다 · 다른 층의 수정도 가로만 맞으면 지난 것으로 쳤다) · 공방 kits/mooni.js와 같다
+local WAVE_FLOOR = 20
+local function wave(g, x: number, dir: number, first: boolean, y: number?) -- 달빛 파도: 바닥을 따라 굴러가는 물결 — 수정을 지나면 한 번 더 인다
 	local tone = g.tone
 	g.shot({
 		x = x,
-		y = g.y,
+		y = y or g.y,
 		vx = dir * 170,
 		life = 0.9,
 		w = 18,
@@ -143,11 +147,11 @@ local function wave(g, x: number, dir: number, first: boolean) -- 달빛 파도:
 		passed = {},
 		update = function(p)
 			for _, c in crystals(g) do
-				if not p.passed[c] and abs(c.x - p.x) < 8 then
+				if not p.passed[c] and abs(c.x - p.x) < 8 and abs(c.y - p.y) <= WAVE_FLOOR then
 					p.passed[c] = true
 					g.fx.hex(c.x, c.y - 6, 3, 14, tone, { squash = 1, back = false })
 					if first then
-						wave(g, c.x + dir * 6, dir, false)
+						wave(g, c.x + dir * 6, dir, false, c.y)
 					end
 				end
 			end

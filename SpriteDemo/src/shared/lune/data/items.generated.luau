@@ -793,6 +793,7 @@ return {
 	UNIQUES = {
 		{ id = "archer_eye", slot = "eye", stage = 70, q = 5, atk = 2, boss = "shadowarcher", name = "흑수정 마안", text = "그림자 사수의 분홍 고리 눈이 깃든 검은 수정 외알. 들여다보면 능선 너머의 것까지 한 점으로 보인다." },
 		{ id = "vice_pauldron", slot = "shoulder", stage = 80, q = 5, atk = 2, boss = "fallenknight", name = "검은 맹세 견장", text = "타락한 부단장이 스무 해 동안 어깨에 달았던 수정 기사단의 견장. 검게 물든 맹세가 아직 식지 않아, 민트빛 불씨가 가장자리에서 일렁인다." },
+		{ id = "lava_ring", slot = "ring", stage = 150, q = 5, atk = 2, boss = "lavagiant", name = "식은 심장의 반지", text = "용암 거인의 심장이 식으며 남긴 검은 돌 조각을 끼운 반지. 손가락에 끼우면 아직도 희미하게 뛴다." },
 		{ id = "thief_belt", slot = "belt", stage = 90, q = 5, atk = 2, boss = "thiefboss", name = "잿불 도적의 허리띠", text = "불씨 도둑 두목이 훔친 불씨 단지를 매달고 다니던 가죽 허리띠. 그을린 고리마다 꺼지지 않은 잿불이 숨어 있다." },
 	},
 	checks = {

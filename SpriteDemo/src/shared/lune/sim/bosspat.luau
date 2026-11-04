@@ -26,6 +26,9 @@ end
 function BossPat.spots(p, aim: number, lo: number, hi: number, from: number?, dir: number?): { { number } }
 	local sp = p.spots
 	local list = {}
+	if sp.aim == "each" or sp.aim == "far" or sp.aim == "rand" then
+		return list -- 사람마다 · 가장 먼 사람 · 방 곳곳(용암 거인 — 2026-11-04): 서버의 sim/lavagim.luau가 고르고 화면에 Gim "spots"로 보낸다
+	end
 	if sp.aim == "row" then
 		for i = 0, sp.n - 1 do
 			local x = (from or aim) + (dir or 1) * (sp.start + i * sp.gap)

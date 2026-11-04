@@ -4,6 +4,7 @@
 --  riderSize = 탄 동안 영웅을 그리는 크기(서기 그림 그대로 줄여서 — 화면 화소에 맞춰 Sprite.sizeOn) · bobx = 동작의 장마다 영웅을 옮기는 가로 점(어깨를 따라 — 오른쪽을 볼 때 · 안장은 <동작>_front에 그려져 있다)
 --  seat · bob · bobx는 탈것 그림의 점 — 탈것은 chars.generated의 size배로 그리므로 영웅의 자리도 그 배(rideView) · mountSpeed = 탄 동안 달리기 배수(탈것에 speed가 있으면 그것 — 쿠폰 탈것 1)
 --  free · line = 상점에서 팔지 않는 펫 · 탈것(쿠폰으로만 받는다 — 2026-10-21) · 가방의 설명 한 줄
+--  dash = 탄 채 대쉬(speed 점/초 · dist 점 · cd 초 — 없으면 대쉬 키에 내린다 · 2026-11-03) · mountDash = 그 기본값
 return {
 	pets = {
 		{ id = "pet_silver", name = "은빛 달토끼" },
@@ -16,6 +17,7 @@ return {
 		{
 			id = "mount_wolf",
 			name = "달빛 늑대",
+			dash = { speed = 360, dist = 120, cd = 0.8, every = 0.075, life = 0.36, alpha = 0.45 },
 			seat = { dx = -1, dy = -16 },
 			bob = {
 				idle = { 1, 1, 1, 1 },
@@ -31,6 +33,7 @@ return {
 		{
 			id = "mount_deer",
 			name = "수정 사슴",
+			dash = { speed = 360, dist = 120, cd = 0.8, every = 0.075, life = 0.36, alpha = 0.45 },
 			seat = { dx = -3, dy = -14 },
 			bob = {
 				idle = { 1, 1, 1, 1 },
@@ -46,6 +49,7 @@ return {
 		{
 			id = "mount_boar",
 			name = "쇠 멧돼지",
+			dash = { speed = 360, dist = 120, cd = 0.8, every = 0.075, life = 0.36, alpha = 0.45 },
 			seat = { dx = -3, dy = -16 },
 			bob = {
 				idle = { 1, 1, 1, 1 },
@@ -62,6 +66,7 @@ return {
 			id = "mount_golem",
 			name = "이끼 골렘",
 			speed = 0.6,
+			dash = { speed = 260, dist = 104, cd = 0.8, every = 0.12, life = 0.36, alpha = 0.45 },
 			seat = { dx = -3, dy = -67 },
 			bob = {
 				idle = { 0, 0, 0, 0 },
@@ -78,6 +83,7 @@ return {
 			id = "mount_golem_gold",
 			name = "황금 골렘",
 			speed = 0.6,
+			dash = { speed = 260, dist = 104, cd = 0.8, every = 0.12, life = 0.36, alpha = 0.45 },
 			seat = { dx = -3, dy = -67 },
 			bob = {
 				idle = { 0, 0, 0, 0 },
@@ -94,7 +100,8 @@ return {
 			id = "mount_deer_gold",
 			name = "백금 사슴",
 			free = "max",
-			line = "레벨 순위 1위(처음 Lv.150) 한 사람만의 선물 — 수정 사슴과 같은 빠르기",
+			line = "레벨 순위 1위(처음 Lv.150) 한 사람만의 선물 — 수정 사슴과 같은 빠르기 · 탄 채 대쉬",
+			dash = { speed = 360, dist = 120, cd = 0.8, every = 0.075, life = 0.36, alpha = 0.45 },
 			seat = { dx = -3, dy = -14 },
 			bob = {
 				idle = { 1, 1, 1, 1 },
@@ -111,7 +118,8 @@ return {
 			id = "mount_deer_silver",
 			name = "실버 사슴",
 			free = "max2",
-			line = "레벨 순위 2위(두 번째 Lv.150) 한 사람만의 선물 — 수정 사슴과 같은 빠르기",
+			line = "레벨 순위 2위(두 번째 Lv.150) 한 사람만의 선물 — 수정 사슴과 같은 빠르기 · 탄 채 대쉬",
+			dash = { speed = 360, dist = 120, cd = 0.8, every = 0.075, life = 0.36, alpha = 0.45 },
 			seat = { dx = -3, dy = -14 },
 			bob = {
 				idle = { 1, 1, 1, 1 },
@@ -128,7 +136,8 @@ return {
 			id = "mount_deer_bronze",
 			name = "동색 사슴",
 			free = "max3",
-			line = "레벨 순위 3위(세 번째 Lv.150) 한 사람만의 선물 — 수정 사슴과 같은 빠르기",
+			line = "레벨 순위 3위(세 번째 Lv.150) 한 사람만의 선물 — 수정 사슴과 같은 빠르기 · 탄 채 대쉬",
+			dash = { speed = 360, dist = 120, cd = 0.8, every = 0.075, life = 0.36, alpha = 0.45 },
 			seat = { dx = -3, dy = -14 },
 			bob = {
 				idle = { 1, 1, 1, 1 },
@@ -145,8 +154,7 @@ return {
 			id = "mount_wolf_hw",
 			name = "호박불 늑대",
 			free = "event",
-			line = "달빛 할로윈의 탈것 — 로벅스 탈것보다 조금 느리다",
-			speed = 1.2,
+			line = "달빛 할로윈의 탈것 — 로벅스 탈것과 같은 빠르기(탄 채 대쉬는 없다)",
 			seat = { dx = -1, dy = -16 },
 			bob = {
 				idle = { 1, 1, 1, 1 },
@@ -201,4 +209,5 @@ return {
 	},
 	riderSize = 1,
 	mountSpeed = 1.3,
+	mountDash = { speed = 360, dist = 120, cd = 0.8, every = 0.075, life = 0.36, alpha = 0.45 },
 }

@@ -9,6 +9,7 @@ local Items = require(script.Parent.items)
 local Bag = require(script.Parent.bag)
 local Party = require(script.Parent.party)
 local Physics = require(script.Parent.physics)
+local TILE = require(script.Parent.Parent.config.game).TILE -- 장면 칸 한 변(16점 — 끌어당길 때 발판의 끝을 찾는다)
 local Kit = require(script.Parent.kit)
 local Buffs = require(script.Parent.buffs)
 local Caster = require(script.Parent.caster) -- 2~4차의 쓰는 스킬(직업 묶음의 그 스킬을 방이 돌린다)
@@ -20,6 +21,11 @@ local Rift = require(script.Parent.rift) -- 수정 틈 토벌(물결로 몰려�
 local Weekly = require(script.Parent.weekly) -- 주간 보스(노말 · 하드 — 2026-10-24): 방 이름 <방>#wn번호 · #wh번호
 local Cash = require(script.Parent.cash) -- 드롭률 1.25배 패스(영구 게임 패스 — 2026-10-22)
 local Gim = require(script.Parent.thiefgim) -- 보스의 기믹(셋째 보스전 「불씨 도둑 두목」 — 2026-10-28: 되받아치기 · 단지 · 연막 분신 · 갈고리 · 큰 불단지)
+local LavaGim = require(script.Parent.lavagim) -- 넷째 보스전 「용암 거인」(2026-11-04: 부위 · 마그마 혹 · 끓어오르는 분화구 · 움켜쥐기 · 심장)
+-- 그 보스(또는 그 보스의 졸개)의 기믹 모듈: gimmick.mod로 고른다(없으면 불씨 도둑 두목의 것)
+local function gimOf(mob)
+	return if mob.gimMod == "lava" then LavaGim else Gim
+end
 local Event = require(script.Parent.event) -- 기간 이벤트(2026-10-29 — 할로윈의 호박 사탕)
 local RULES = COMBAT.rules
 local FE = COMBAT.fieldElite -- 사냥터 정예(2026-10-18 — 공방 combat.js FIELD_ELITE)
@@ -164,6 +170,7 @@ function Room.new(key: string, scene, rng)
 			id = #self.mobs + 1, kind = def.kind, def = kind, lv = lv, homeX = def.x, y = def.y, a = def.range[1], b = def.range[2], x = def.x, dir = -1,
 			state = "gone", t = 0, hp = maxHp, maxHp = maxHp, cd = 0, wait = 0, goal = def.x, target = nil :: any, aggro = 0, struck = false, respawn = math.huge,
 			boss = true, away = true, pat = 0, rest = 0, used = {}, adds = {},
+			stage = def.stage, -- 방이 여럿인 보스의 몇째 방(2026-11-04 용암 거인 — 그 부위부터 선다: sim/lavagim.luau)
 		}
 		table.insert(self.mobs, boss)
 		self.bosses = self.bosses or {}
@@ -186,7 +193,7 @@ function Room.new(key: string, scene, rng)
 			end
 		end
 		if kind.story.gimmick then
-			Gim.init(self, boss) -- 기믹의 자리(폭탄 · 가짜 두목 — 처음에는 없다)
+			(if kind.story.gimmick.mod == "lava" then LavaGim else Gim).init(self, boss) -- 기믹의 자리(폭탄 · 가짜 두목 · 마그마 혹 · 심장 — 처음에는 없다)
 		end
 	end
 	-- 잠수 방지 날파리(2026-10-28 사용자: "사냥터에서 잠수방지 몬스터 나오게해 몬스터는 hp1인데 날아다니면서 날파리로 유저를 쫓아와서 계속 툭툭쳐"):
@@ -272,8 +279,8 @@ function Room:hurtHero(events, h, mob, mul: number, kill: boolean?)
 		end
 		return
 	end
-	if mob.gim then
-		mul *= Gim.hitMul(self, mob) -- 갈고리로 털어 간 버프의 힘(불씨 도둑 두목)
+	if mob.gim or mob.lava then
+		mul *= gimOf(mob).hitMul(self, mob) -- 갈고리로 털어 간 버프의 힘(불씨 도둑 두목)
 	end
 	-- 리븐의 날랜 몸: 확률로 피한다(맞을 수 있을 때만 굴린다 — 피한 뒤에도 맞은 뒤처럼 잠깐은 다시 맞지 않는다)
 	local dodge = Kit.dodge(h) + Passives.dodge(h) -- 흘리기(4차): 회피 +
@@ -321,6 +328,7 @@ function Room:hurtHero(events, h, mob, mul: number, kill: boolean?)
 			local lost = math.max(0, h.hp - left)
 			h.hp, h.invuln = left, RULES.invuln
 			table.insert(events, { type = "self", hero = h.id })
+			table.insert(events, { type = "rekindle", hero = h.id, x = h.x, y = h.y }) -- 방의 모두가 그 자리의 불기둥을 본다(2026-11-03 사용자 "써졌는지도 구분할수가 없어서 사용되었을때 극적인 이펙트가 있어야해")
 			table.insert(events, { type = "hurt", hero = h.id, dmg = lost, hp = h.hp, from = mob.x, dead = false })
 			return
 		end
@@ -370,6 +378,7 @@ function Room:stepMob(mob, heroes, dt: number, events)
 		mob.respawn -= dt
 		if mob.respawn <= 0 then
 			mob.state, mob.t, mob.x, mob.hp, mob.target, mob.cd = "spawn", 0, mob.homeX, mob.maxHp, nil, 0
+			self:unpull(mob) -- 끌려가 넓어진 활동 구간 · 옮겨진 높이는 다시 나타나면 처음대로(Room:pullMob · Room:gatherMob)
 			mob.marks = nil
 			mob.bind, mob.bindImm, mob.stun, mob.rend, mob.cracks = 0, 0, 0, 0, 0
 		end
@@ -773,7 +782,7 @@ function Room:stepPresence(heroes)
 			if mob.kind == wk.boss and wk.state == "fight" and not mob.fought and next(heroes) ~= nil then
 				mob.fought = true
 				mob.away = false
-				mob.state, mob.t, mob.x, mob.hp, mob.dir, mob.target = "spawn", 0, mob.homeX, mob.maxHp, -1, nil
+				mob.state, mob.t, mob.x, mob.hp, mob.dir, mob.target = "spawn", 0, mob.homeX, mob.startHp or mob.maxHp, -1, nil -- startHp = 앞 방에서 넘어온 체력(용암 거인의 둘째 · 마지막 방)
 				mob.pat, mob.rest, mob.used = 0, 0, {}
 				mob.raged, mob.lastPat, mob.chain, mob.chainPat, mob.quick, mob.aim, mob.alt = false, 0, nil, 0, 1, 0, 0
 			elseif (mob.kind ~= wk.boss or wk.state == "fail") and not mob.away and mob.state ~= "dead" then
@@ -850,6 +859,7 @@ function Room:bossStrike(mob, p, heroes, events)
 				out += 1
 				add.away = false
 				add.state, add.t, add.x, add.hp, add.target, add.cd, add.aggro = "spawn", 0, add.homeX, add.maxHp, nil, 0, 0
+				self:unpull(add) -- (그림자 흡혈에 끌려갔던 졸개 — 처음 높이로)
 				add.dir = if add.homeX < mob.x then 1 else -1
 				add.goal, add.wait = mob.x, 0
 				add.bind, add.bindImm, add.stun, add.rend, add.cracks, add.marks = 0, 0, 0, 0, 0, nil
@@ -858,6 +868,8 @@ function Room:bossStrike(mob, p, heroes, events)
 	end
 	if mob.gim then
 		Gim.strike(self, mob, p, heroes, events) -- 폭탄 던지기 · 갈고리 · 연막 · 큰 불단지
+	elseif mob.lava then
+		LavaGim.strike(self, mob, p, heroes, events) -- 움켜쥐기 · 그러쥐기 · 끓는 숨 · 구르는 바위(용암 거인)
 	end
 end
 
@@ -865,6 +877,9 @@ end
 function Room:bossCan(mob, p, dist: number): boolean
 	local ok = not p.only and (not p.from or mob.hp <= mob.maxHp * p.from) and (not p.every or self.time - (mob.used[p.id] or -math.huge) >= p.every)
 		and (not p.reach or dist <= p.reach) and (not p.far or dist >= p.far)
+	if ok and mob.lava then
+		ok = LavaGim.can(self, mob, p) -- 페이즈 · 부위 체력의 몫 · 끓는 동안 · 그쪽 팔에 사람이 있는가(용암 거인)
+	end
 	if ok and p.summon then
 		ok = false
 		for _, add in mob.adds do
@@ -927,7 +942,9 @@ function Room:bossBegin(mob, i: number, quick: number?, target)
 	mob.state, mob.t, mob.pat, mob.quick = "tell", 0, i, quick or 1
 	mob.landed, mob.alt = false, 0
 	mob.slide = if quick then mob.chainStep or 0 else 0
-	if target then
+	if S.fixed then
+		mob.dir = p.side or mob.dir -- 걷지도 돌아보지도 않는 보스(용암 거인): 패턴이 쪽을 정한다(왼팔 · 오른팔)
+	elseif target then
 		local dx = target.x - mob.x
 		if dx ~= 0 then
 			mob.dir = sign(dx)
@@ -939,8 +956,15 @@ function Room:bossBegin(mob, i: number, quick: number?, target)
 		self.blasts = self.blasts or {}
 		local lo, hi = BossPat.bounds(self.scene)
 		local tell = BossPat.tell(p, mob.quick)
-		for _, sp in BossPat.spots(p, mob.aim, lo, hi, mob.x, mob.dir) do
-			table.insert(self.blasts, { mob = mob, x = sp[1], y = mob.y, t = tell + sp[2], def = p.spots, mul = p.mul })
+		local own = if mob.lava then LavaGim.spots(self, mob, p, lo, hi) else nil -- 사람마다 · 가장 먼 사람 · 방 곳곳(용암 거인 — 화면에도 그 자리를 보낸다)
+		for _, sp in own or BossPat.spots(p, mob.aim, lo, hi, mob.x, mob.dir) do
+			-- 사람마다의 자리(용암 거인)는 그 사람의 발판 높이에서 터진다(바닥에서 하늘까지 솟는 기둥 — up 150 넘게 — 은 바닥에서)
+			local y = if sp[3] and p.spots.up < 150 then sp[3] else mob.y
+			table.insert(self.blasts, { mob = mob, x = sp[1], y = y, t = tell + sp[2], def = p.spots, mul = p.mul })
+		end
+		if own then
+			self.gimQ = self.gimQ or {}
+			table.insert(self.gimQ, { type = "gim", k = "spots", mob = mob.id, pat = i, list = own })
 		end
 	end
 	return p
@@ -990,7 +1014,7 @@ function Room:stepBoss(mob, heroes, dt: number, events)
 		end
 		return
 	elseif mob.state == "spawn" then
-		if mob.t >= SPAWN_TIME then
+		if mob.t >= (if mob.lava then LavaGim.spawnTime(mob) else SPAWN_TIME) then -- (용암 거인: 손이 굴 끝에서 밀고 들어오는 · 몸통이 솟는 시간 — 그동안 맞지 않는다)
 			mob.state, mob.t, mob.rest = "idle", 0, S.pause
 		end
 		return
@@ -998,6 +1022,9 @@ function Room:stepBoss(mob, heroes, dt: number, events)
 	-- 기믹(휘청 · 다시 채우기 · 연막 분신): 그것이 이끄는 걸음은 여기서 끝(바인드는 기믹 동작 중에도 걸린다 — sim/thiefgim.luau)
 	if mob.gim and Gim.boss(self, mob, heroes, dt, events) then
 		return
+	end
+	if mob.lava and LavaGim.boss(self, mob, heroes, dt, events) then
+		return -- 용암 거인: 페이즈 · 혹 · 분화구 · 움켜쥐기 · 심장 · 걷지 않고 고르기(sim/lavagim.luau)
 	end
 	-- 묶였거나 넘어져 있다: 하던 것을 그만두고 선다(풀리면 잠깐 뒤에 다시 고른다). 예고하던 중이면 표시해 둔 자리도 거둔다. 뛰어오른 중이면 그 자리에 내려선다
 	if (mob.bind or 0) > 0 or (mob.stun or 0) > 0 then
@@ -1313,6 +1340,9 @@ function Room:step(heroes, dt: number)
 	if self.embers then
 		Gim.tick(self, heroes, dt, events)
 	end
+	if self.lavaBoss then
+		LavaGim.tick(self, heroes, dt, events) -- 마그마 혹 · 심장(용암 거인)
+	end
 	if self.gimQ and #self.gimQ > 0 then
 		for _, e in self.gimQ do
 			table.insert(events, e)
@@ -1413,23 +1443,129 @@ function Room:step(heroes, dt: number)
 end
 
 -- 상자(x0~x1, y0~y1)에 걸리는 살아 있는 졸개들(가까운 것부터, RULES.maxTargets마리까지)
-function Room:mobsInBox(x0: number, x1: number, y0: number, y1: number, cx: number)
+-- cap = 몇 마리까지(없으면 RULES.maxTargets — 한 타에 8마리). 기술이 따로 정한 수가 있으면 그 수(묶음의 g.hit 옵션 targets — 2026-11-01 리퍼 그림자 흡혈 12)
+function Room:mobsInBox(x0: number, x1: number, y0: number, y1: number, cx: number, cap: number?)
 	local list = {}
 	for _, mob in self.mobs do
 		if mob.state ~= "dead" and mob.state ~= "gone" and mob.state ~= "spawn" then
-			local hw, up, hh = bodyOf(mob)
-			if mob.x + hw >= x0 and mob.x - hw <= x1 and mob.y - up >= y0 and mob.y - up - hh <= y1 then
-				table.insert(list, mob)
+			local hb = mob.hitBox
+			if hb then
+				-- 맞는 곳이 따로 정해진 보스(용암 거인 — 지금 페이즈의 부위): 발밑에서 [왼 · 오른 x, 아래 · 위 높이]
+				if mob.x + hb[1] <= x1 and mob.x + hb[2] >= x0 and mob.y - hb[3] >= y0 and mob.y - hb[4] <= y1 then
+					table.insert(list, mob)
+				end
+			elseif hb ~= false then -- (false = 지금은 맞지 않는다 — 부위가 바뀌는 중 · 못 속)
+				local hw, up, hh = bodyOf(mob)
+				if mob.x + hw >= x0 and mob.x - hw <= x1 and mob.y - up >= y0 and mob.y - up - hh <= y1 then
+					table.insert(list, mob)
+				end
 			end
 		end
 	end
 	table.sort(list, function(p, q)
 		return math.abs(p.x - cx) < math.abs(q.x - cx)
 	end)
-	for i = #list, RULES.maxTargets + 1, -1 do
+	for i = #list, (cap or RULES.maxTargets) + 1, -1 do
 		list[i] = nil
 	end
 	return list
+end
+
+-- 끌어당기기(2026-11-03 사용자 "몬스터가 안끌려오는데? 플레이어 코앞까지 끌려와야하는거야"): 졸개를 x로 옮긴다 — 활동 구간(a ~ b) 안에서만이 아니라 그 졸개가 선 발판의 끝까지
+--  (벽 · 낭떠러지 앞 — 그 전에는 활동 구간 안에서만 움직여, 구간이 좁은 졸개(22점)는 거의 끌려오지 않았다). 구간 밖으로 끌려가면 구간을 그 자리까지 넓힌다
+--  (넓히지 않으면 다음 걸음에 구간 끝으로 되돌아간다 · 다시 나타나면 처음 구간으로 — 위 respawn).
+-- 높이 y(발밑)에서 x가 선 발판의 양 끝(도트 — 끝에서 6점 안쪽). 그 자리가 발판 위가 아니면 nil
+local function floorSpan(scene, x: number, y: number): (number?, number?)
+	local ty = math.floor(y / TILE + 0.5) -- 발밑의 칸(그 위에 선다)
+	local function walk(tx: number): boolean
+		local under, at = Physics.cell(scene, tx, ty), Physics.cell(scene, tx, ty - 1)
+		return (under == "#" or under == "=") and at ~= "#"
+	end
+	local tx = math.floor(x / TILE)
+	if not walk(tx) then
+		return nil, nil
+	end
+	local l, r = tx, tx
+	while l > 0 and walk(l - 1) do
+		l -= 1
+	end
+	while r < scene.w - 1 and walk(r + 1) do
+		r += 1
+	end
+	return l * TILE + 6, (r + 1) * TILE - 6
+end
+function Room:footSpan(mob): (number, number)
+	if mob.span then
+		return mob.span[1], mob.span[2]
+	end
+	local scene = self.scene
+	local lo, hi = mob.a, mob.b
+	if scene and scene.rows and not mob.def.fly then
+		local l, r = floorSpan(scene, mob.homeX, mob.y)
+		if l and r then
+			lo, hi = math.min(lo, l), math.max(hi, r)
+		end
+	end
+	mob.span = { lo, hi }
+	return lo, hi
+end
+-- 끌어 모으기(2026-11-03 사용자 "아직도 플레이어 위치까지 몬스터가 안끌려와 보스는 끌려오면 안되는거고 일반몬스터는 지형상관없이 쫙 끌려와야하는건데"): 그림자 흡혈은
+--  졸개를 지형과 상관없이 리퍼의 발밑 (x, y)로 옮긴다 — 다른 높이의 발판 · 벽 · 턱 · 낭떠러지 너머에서도(그 전에는 제 발판의 끝까지만 움직여, 진짜 사냥터 69곳에서
+--  리퍼가 졸개 곁에 서서 쓰면 범위 안의 513마리 가운데 162마리가 오지 못했다). 높이도 옮긴다(화면에 높이를 보낸다 — snapshot의 열셋째) ·
+--  옮긴 자리의 발판 끝까지가 새 활동 구간(그 발판에서 벗어나 허공을 걷지 않게) · 다시 나타나면 처음 자리 · 높이 · 구간으로(Room:unpull)
+--  from = 리퍼가 선 가로 자리: 발판은 리퍼의 발밑에서 찾는다(2026-11-03 사용자 "3차스킬로 당겨서 처치했을 때 지형 안쪽으로 아이템이 떨어져서 못주워" — 그 전에는 옮길 자리
+--  (리퍼 곁 8 ~ 16점)에서 찾아, 리퍼가 발판 끝 · 벽 곁에 서면 그 자리가 벽 속 · 허공이라 발판을 못 찾고 그대로 두었다: 진짜 사냥터 57곳 조사 2,799마리 가운데 232마리가 벽 속 · 허공에 섰다)
+function Room:gatherMob(mob, x: number, y: number, from: number?)
+	mob.a0, mob.b0, mob.y0 = mob.a0 or mob.a, mob.b0 or mob.b, mob.y0 or mob.y
+	local lo, hi = x - 80, x + 80
+	local scene = self.scene
+	if scene and scene.rows and not mob.def.fly then
+		local l, r = floorSpan(scene, from or x, y)
+		if not l and from then
+			l, r = floorSpan(scene, x, y)
+		end
+		if l and r then
+			lo, hi = l, r
+		elseif from then
+			lo, hi = from, from -- (리퍼의 발밑에도 옮길 자리에도 발판이 없으면 리퍼의 자리 그대로)
+		end
+	end
+	x = math.clamp(x, lo, hi)
+	mob.x, mob.y, mob.goal = x, y, x
+	mob.a, mob.b, mob.span = lo, hi, { lo, hi }
+end
+-- 끌려간 졸개를 처음 자리의 높이 · 활동 구간으로(다시 나타날 때)
+function Room:unpull(mob)
+	if mob.a0 then
+		mob.a, mob.b, mob.a0, mob.b0 = mob.a0, mob.b0, nil, nil
+	end
+	if mob.y0 then
+		mob.y, mob.y0, mob.span = mob.y0, nil, nil
+	end
+end
+-- (x, y)의 발밑 높이: 그 자리부터 아래로 처음 디딜 발판의 윗면(공중에 떠 있으면 그 아래의 발판) · 없으면 y 그대로
+function Room:groundUnder(x: number, y: number): number
+	local scene = self.scene
+	if not (scene and scene.rows) then
+		return y
+	end
+	local tx = math.floor(x / TILE)
+	for ty = math.max(0, math.ceil(y / TILE - 0.01)), scene.h - 1 do
+		local under = Physics.cell(scene, tx, ty)
+		if (under == "#" or under == "=") and Physics.cell(scene, tx, ty - 1) ~= "#" then
+			return ty * TILE
+		end
+	end
+	return y
+end
+function Room:pullMob(mob, x: number)
+	local lo, hi = self:footSpan(mob)
+	x = math.clamp(x, lo, hi)
+	if x < mob.a or x > mob.b then
+		mob.a0, mob.b0 = mob.a0 or mob.a, mob.b0 or mob.b
+		mob.a, mob.b = math.min(mob.a, x), math.max(mob.b, x)
+	end
+	mob.x = x
 end
 
 -- 졸개가 맞는다. 쓰러졌으면 true.
@@ -1445,6 +1581,9 @@ function Room:damageMob(mob, dmg: number, fromX: number, byId: any): boolean
 	if mob.gim then
 		self.gimQ = self.gimQ or {}
 		dmg = Gim.dmgIn(self, mob, dmg, self.gimQ) -- 남은 불씨 단지마다 덜 받고 · 휘청이면 더 받는다 · 연막 동안 진짜를 맞힌 수
+	elseif mob.lava then
+		self.gimQ = self.gimQ or {}
+		dmg = LavaGim.dmgIn(self, mob, dmg, self.gimQ) -- 지금 부위의 아래 끝까지만 · 휘청 · 심장을 깬 뒤 더 · 맞지 않는 때 0(용암 거인)
 	end
 	local took = math.min(dmg, mob.hp)
 	mob.hp = math.max(0, mob.hp - dmg)
@@ -1500,12 +1639,19 @@ end
 --  돌려주는 것: 쓰러졌는가 · 실제로 넣은 피해
 function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, lines: number?, crit): (boolean, number)
 	-- 기믹의 졸개(불씨 폭탄 · 가짜 두목 — 체력 1): 맞으면 되날아가거나 그을음으로 터진다 · 경험치 · 물건 · 숫자 없음(sim/thiefgim.luau)
-	if mob.gimAdd then
+	if mob.gimAdd and not mob.hpAdd then
 		if not mob.away then
 			self.gimQ = self.gimQ or {}
 			Gim.addHit(self, hero, mob, self.gimQ)
 		end
 		return true, 0
+	end
+	-- 체력이 있는 기믹의 졸개(마그마 혹 · 용암 심장 — 용암 거인)는 보통의 졸개처럼 맞는다(부른 졸개라 경험치 · 물건이 없다) · 맞지 않는 때의 거인은 직접 맞히는 것도 막는다
+	if mob.gimAdd and mob.away then
+		return false, 0
+	end
+	if mob.lava and LavaGim.immune(self, mob) then
+		return false, 0
 	end
 	-- 갈라짐(액시온의 쪼개기)이 걸린 적은 누구에게 맞든 더 아프다
 	if (mob.rend or 0) > 0 then
@@ -1553,10 +1699,8 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 			table.insert(out.kills, { mob = mob.id, kind = mob.kind, x = mob.x, y = mob.y, xp = 0, ups = 0, gains = {}, credit = {}, loot = {} })
 			return dead, dmg
 		end
-		-- 리퍼의 영혼: 쓰러뜨리면 하나
-		if Kit.gainSoul(hero) then
-			out.kit = true
-		end
+		-- 리퍼: 생기 흡수 · 사신 게이지(Room:reaperKill — 2026-10-31 게이지 직업)
+		self:reaperKill(hero, mob, dmg, mates, out, extra)
 		-- 꺼지지 않는 불(살라맨더 4차): 폭주 중에 쓰러뜨리면 폭주가 늘어난다
 		local burst = hero.buffs.sl_overheat
 		if burst and hero.pass then
@@ -1569,11 +1713,11 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 				out.buffs = true
 			end
 		end
-		-- 저승문 곁에서 쓰러진 적은 영혼을 더 준다
+		-- 저승문 곁에서 쓰러진 적은 사신 게이지를 더 채운다(그 수만큼의 처치 — 2026-10-31: 그 전 영혼)
 		for _, p in self.placed or {} do
 			if p.owner == hero and p.def.souls and math.abs(p.x - mob.x) <= p.def.near then
-				for _ = 2, p.def.souls do
-					Kit.gainSoul(hero)
+				if Kit.gainGauge(hero, "kill", p.def.souls - 1) then
+					out.kit = true
 				end
 			end
 		end
@@ -1719,11 +1863,34 @@ function Room:proc(hero, mob, dmg: number, kind: string, sx: number, sy: number,
 	self:strike(hero, mob, math.max(1, math.floor(dmg + 0.5)), hero.x, mates, out, extra)
 end
 
+-- 리퍼가 적을 쓰러뜨렸다(2026-10-31 리퍼 리마스터 — 공방 design/combat.js KIT1.reaper):
+--  ① 생기 흡수(사용자: "피흡도 처치시 흡혈로 해서 보스전에서는 흡혈효율이 좋지않은데 사냥에서는 흡혈 잘되게"): 쓰러뜨릴 때마다 최대 체력의 passive.kill% —
+--   맞히기만 해서는 되찾지 않는다(그 전: 한 타가 맞을 때마다 0.5%). 2026-11-01 사용자 "처치시로 바꿔서 피흡량 좀 올려도된다" → 2% → 4% · 깊은 흡수(3차)는 딜 패시브(넋 베기)가 되어 뺐다
+--  ② 사신 게이지(2026-10-31 게이지 직업): 쓰러뜨릴 때마다 차오른다(Kit.gainGauge "kill" — 사신화 동안에는 차지 않는다). (낮의 「사신의 일격」은 뺐다)
+function Room:reaperKill(hero, mob, dmg: number, mates, out, extra)
+	if hero.class ~= "reaper" then
+		return
+	end
+	local kit = KIT.reaper
+	local s = Kit.scale(hero, "passive")
+	if s > 0 and hero.alive and hero.hp < hero.maxHp then
+		local heal = math.min(hero.maxHp - hero.hp, math.max(1, math.floor(hero.maxHp * kit.passive.kill / 100 * s + 0.5)))
+		hero.hp += heal
+		out.heal = (out.heal or 0) + heal
+	end
+	if Kit.gainGauge(hero, "kill") then
+		out.kit = true
+	end
+end
+
 -- 설치 · 소환(COMBAT.placed — 공방 design/combat.js의 PLACED)을 놓는다. pow = 세기(그 스킬 레벨의 배수). 달 수정을 심는 것은 out에 적힌다(Crystal로 알린다).
 --  놓인 것 = { skill, def, owner(그 사람), x, y, till(사라지는 때), next(다음에 치는 때), pow } — 따라다니는 것은 같은 것을 하나만 둔다(다시 쓰면 새것으로 바뀐다)
 function Room:place(hero, id: string, pow: number, out)
 	local def = PLACED[id]
 	local x, y = hero.x + hero.dir * (def.ahead or 0), hero.y
+	if def.kind == "roam" then -- 떠도는 것(리퍼의 망령 — 2026-11-01)은 주인 등 뒤에서 나온다
+		x = hero.x - hero.dir * (def.back or 0)
+	end
 	if def.kind == "crystal" then
 		self:addCrystal(hero, x, y, out)
 		return nil
@@ -1732,8 +1899,8 @@ function Room:place(hero, id: string, pow: number, out)
 		return nil -- 버프만 거는 것(연막탄)
 	end
 	self.placed = self.placed or {}
-	if def.kind == "follow" then
-		-- 따라다니는 것은 같은 것을 하나만 둔다 — 망령 군단 · 수호령 각성(4차)을 배웠으면 그 수까지(넘치면 먼저 부른 것이 사라진다)
+	if def.kind == "follow" or def.kind == "roam" then
+		-- 따라다니는 것 · 떠도는 것은 같은 것을 하나만 둔다 — 망령 군단 · 수호령 각성(4차)을 배웠으면 그 수까지(넘치면 먼저 부른 것이 사라진다)
 		local keep = if id == "rp_ghost" then Passives.count(hero, "ghosts", 1) elseif id == "mn_guard" then Passives.count(hero, "guards", 1) else 1
 		local have = 0
 		for i = #self.placed, 1, -1 do
@@ -1767,6 +1934,8 @@ function Room:stepPlaced(heroes, dt: number, events)
 		end
 		if def.kind == "follow" then
 			p.x, p.y = hero.x - hero.dir * def.back, hero.y
+		elseif def.kind == "roam" then
+			self:roam(p, hero, dt)
 		end
 		local result = nil
 		local power = Hero.powerRaw(hero) * Kit.attack(hero) * Buffs.dmg(hero) * Passives.atk(hero)
@@ -1789,10 +1958,11 @@ function Room:stepPlaced(heroes, dt: number, events)
 				healed = true
 			end
 		end
-		if not healed and self.time >= p.next and (def.tick or def.every) then
+		local roamAt = if def.kind == "roam" and self.time >= p.next then self:nearestMob(p.x, p.y, def.range, nil) else nil
+		if not healed and self.time >= p.next and (def.tick or def.every) and (def.kind ~= "roam" or roamAt ~= nil) then
 			local gap = def.tick or def.every
-			p.next += gap
-			local targets = if def.tick then self:mobsInBox(p.x - def.w / 2, p.x + def.w / 2, p.y - def.h, p.y + 6, p.x) else { self:nearestMob(p.x, p.y, def.range, nil) }
+			p.next = if def.kind == "roam" then self.time + gap else p.next + gap -- (떠도는 것은 닿는 적이 있을 때만 친다 — 닿자마자 치고 그때부터 다시 센다)
+			local targets = if def.tick then self:mobsInBox(p.x - def.w / 2, p.x + def.w / 2, p.y - def.h, p.y + 6, p.x) elseif roamAt then { roamAt } else { self:nearestMob(p.x, p.y, def.range, nil) }
 			for _, mob in targets do
 				result = result or { hits = {}, kills = {} }
 				local roll = 1 + self.rng:NextNumber(-RULES.spread, RULES.spread) / 100
@@ -1803,7 +1973,7 @@ function Room:stepPlaced(heroes, dt: number, events)
 			for _, mob in self.mobs do
 				local dx = p.x - mob.x
 				if alive(mob) and not mob.def.boss and math.abs(dx) < def.reach and math.abs(dx) > 4 and math.abs(mob.y - p.y) <= 60 then
-					mob.x = math.clamp(mob.x + sign(dx) * def.pull * dt, mob.a, mob.b)
+					self:pullMob(mob, mob.x + sign(dx) * def.pull * dt)
 				end
 			end
 		end
@@ -1818,6 +1988,34 @@ function Room:stepPlaced(heroes, dt: number, events)
 		if result then
 			table.insert(events, { type = "kit", hero = hero.id, result = result })
 		end
+	end
+end
+
+-- 떠도는 것의 한 걸음(리퍼의 망령 — 2026-11-01 사용자 "망령소환하면 망령이 캐릭터를 쫓아다니는게 아니라 자율적으로 돌아다니면서 공격해야지" · 공방 design/combat.js PLACED.rp_ghost):
+--  주인에게서 leash보다 멀어졌으면 주인 등 뒤로 돌아온다 · 아니면 sight 안의 가장 가까운 적에게 날아간다(그 적 앞 range의 0.6 — 높이도 따라간다) ·
+--  적이 없으면 주인 둘레 ±wander의 한 곳(roamEvery초마다 고른다)으로 떠돈다. 빠르기 = 초당 speed도트. 화면(kits/reaper.luau의 roamGhost)이 같은 셈으로 그린다
+function Room:roam(p, hero, dt: number)
+	local def = p.def
+	local tx, ty
+	if math.abs(p.x - hero.x) > def.leash or math.abs(p.y - hero.y) > def.leash then
+		tx, ty = hero.x - hero.dir * def.back, hero.y
+	else
+		local m = self:nearestMob(p.x, p.y, def.sight, nil)
+		if m then
+			tx, ty = m.x - (if m.x >= p.x then 1 else -1) * def.range * 0.6, m.y
+		else
+			if not p.wx or self.time >= (p.wanderAt or 0) then
+				p.wx, p.wanderAt = hero.x + self.rng:NextNumber(-def.wander, def.wander), self.time + def.roamEvery
+			end
+			tx, ty = p.wx, hero.y
+		end
+	end
+	local dx, dy = tx - p.x, ty - p.y
+	local d = math.sqrt(dx * dx + dy * dy)
+	if d > 1 then
+		local k = math.min(1, def.speed * dt / d)
+		p.x += dx * k
+		p.y += dy * k
 	end
 end
 
@@ -1907,11 +2105,13 @@ end
 --				 kit(장치의 모습이 바뀌었다) · heal(되찾은 체력) · crystals · crystalGone(생긴 · 사라진 수정) }
 --  kind = 그 기술의 갈래: 사냥기("mob")는 일반 몬스터에게, 보스기("boss")는 보스에게 피해가 targetBonus% 더 뜬다 — 맞지 않는 상대에게는 그 보정이 없다(체력은 보정만큼 크다)
 --   (사용자 2026-10-07: "보스기는 보스 공격시 추가데미지, 사냥기는 일반 몹 공격시 추가 데미지 … 지금 그냥 보스기로 사냥하는게 더빠른현상이 생깁니다")
---  skillId = 그 기술(1차의 사출기 · 장치가 따라붙는 기술이면 맞힌 뒤에 그것들이 나간다 — sim/kit.luau) · opts = { mul 피해의 배수, reach 더 닿는 거리 }(힘 모으기)
+--  skillId = 그 기술(1차의 사출기 · 장치가 따라붙는 기술이면 맞힌 뒤에 그것들이 나간다 — sim/kit.luau) · opts = { mul 피해의 배수, reach 더 닿는 거리 }(힘 모으기) · opts.enh = 살라맨더의 강화판(열기를 채우지 않는다) ·
+--   opts.tall = 위로 몇 배 닿는가 · opts는 그 판에 하나(살라맨더의 열기는 한 판에 한 번 오른다)
 function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: number?, mates, kind: string?, skillId: string?, opts)
 	local box = hit.box
 	local reach = if opts then opts.reach or 0 else 0
 	local boost = if opts then opts.mul or 1 else 1
+	local tall = if opts then opts.tall or 1 else 1 -- 위로 몇 배 닿는가(살라맨더의 1차 강화판 — 2026-11-04)
 	-- 반올림하지 않은 전투력으로 셈한다(능력치 1점도 피해에 들어간다). 리퍼의 영혼은 공격력에 곱한다
 	local power = Hero.powerRaw(hero) * Kit.attack(hero) * Buffs.dmg(hero) * Passives.atk(hero) -- 버프(달의 함성 · 만월 · 월식 …) · 패시브(숙련 · 달인 · 최종 피해)는 주는 피해에 곱한다
 	local info = { skill = skillId, charge = if opts then opts.level or 0 else 0, now = self.time }
@@ -1925,7 +2125,7 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 	local function sweep(cx: number, cy: number, share: number, tag)
 		local xa, xb = cx + dir * box[1] * big, cx + dir * (box[2] + reach) * big
 		local x0, x1 = math.min(xa, xb), math.max(xa, xb)
-		for _, mob in self:mobsInBox(x0, x1, cy - box[3] * big, cy + box[4], cx) do
+		for _, mob in self:mobsInBox(x0, x1, cy - box[3] * big * tall, cy + box[4], cx) do
 			local roll = 1 + self.rng:NextNumber(-RULES.spread, RULES.spread) / 100
 			-- 가운데 타에 이미 맞은 적은 빼는 타(hit.except = 그 범위): 한 적이 같은 것을 두 번 맞지 않는다
 			if hit.except then
@@ -1959,9 +2159,9 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 			if not tag then
 				Passives.onHit(hero, mob, self.time) -- 이어 맞힌 수 · 이어 때린 수(살라맨더의 주먹 숙련 · 몰아붙이기)
 				if not dead and (hit.pull or 0) > 0 then
-					-- 끌어온다: 쓴 사람 쪽으로(제 범위 안에서만)
+					-- 끌어온다: 쓴 사람 쪽으로(제 발판 끝까지 — Room:pullMob)
 					local toward = if mob.x > x then -1 else 1
-					mob.x = math.clamp(mob.x + toward * math.min(hit.pull, math.max(0, math.abs(mob.x - x) - 10)), mob.a, mob.b)
+					self:pullMob(mob, mob.x + toward * math.min(hit.pull, math.max(0, math.abs(mob.x - x) - 10)))
 				end
 				if not dead and (hit.stun or 0) > 0 and not mob.def.boss and (mob.bind or 0) <= 0 then
 					mob.stun = math.max(mob.stun or 0, hit.stun) -- 넘어뜨린다: 보통 적만(충격파 — 끝까지 모아 친 대지 강타 · 2026-10-28)
@@ -1983,7 +2183,7 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 		end
 	end
 	if follows then
-		self:kitAfter(hero, landed, x, y, sweep, power, mates, out, { mark = true, charge = if opts then opts.level or 0 else 0 }) -- (mark = true: 그 전처럼 opts 없이 부른 것과 같다 — 리븐의 표식)
+		self:kitAfter(hero, landed, x, y, sweep, power, mates, out, { mark = true, charge = if opts then opts.level or 0 else 0, id = skillId, enh = opts ~= nil and opts.enh == true, cast = opts }) -- (mark = true: 그 전처럼 opts 없이 부른 것과 같다 — 리븐의 표식 · id = 그 기술 — 리퍼의 영혼 수확 · enh = 살라맨더의 강화판 · cast = 그 판(열기는 한 판에 한 번))
 		-- 그림자 분신(리븐의 버프): 분신이 내 베기를 조금 뒤에 따라 벤다 — 맞은 적마다 그 타 피해의 일부. 표식을 남기는 베기였으면 분신의 것도 남긴다
 		local share, after = Buffs.echo(hero)
 		if share > 0 and #landed > 0 then
@@ -2023,15 +2223,19 @@ function Room:kitAfter(hero, landed, x: number, y: number, sweep, power: number,
 	end
 	local first = landed[1].mob
 	if class == "reaper" then
-		-- 생기 흡수: 낫 기술의 한 타가 맞을 때마다(몇 마리가 맞든 한 번)
-		local s = Kit.scale(hero, "passive")
-		if s > 0 and hero.alive and hero.hp < hero.maxHp then
-			-- 깊은 흡수(3차): 되찾는 체력 + · 영혼이 가득하면 그 배
-			local deep, deepS = Passives.get(hero, "drain")
-			local more = if deep then (1 + deep.drain * deepS) * (if hero.kit.souls >= Kit.soulMax(hero) then deep.fullMul else 1) else 1
-			local heal = math.min(hero.maxHp - hero.hp, math.max(1, math.floor(hero.maxHp * kit.passive.heal / 100 * s * more + 0.5)))
-			hero.hp += heal
-			out.heal = (out.heal or 0) + heal
+		-- (생기 흡수는 맞힐 때가 아니라 쓰러뜨릴 때 — Room:reaperKill · 2026-10-31 사용자 "피흡도 처치시 흡혈로 해서 보스전에서는 흡혈효율이 좋지않은데 사냥에서는 흡혈 잘되게")
+		-- 사신 게이지(2026-10-31 게이지 직업): 낫 기술이 맞으면(한 번 쓸 때 한 번) · 영혼 수확은 크게
+		if Kit.gainGauge(hero, if opts and opts.id == "rp_reap" then "reap" else "hit") then
+			out.kit = true
+		end
+		-- 사신화: 맞을 때마다 그림자 낫이 따라 벤다 — 그 타 피해의 form.shade(화면은 kits/reaper.luau의 procs.shade)
+		if Kit.formed(hero) then
+			local share = kit.core.form.shade
+			for _, l in landed do
+				if not l.dead and alive(l.mob) then
+					self:proc(hero, l.mob, l.dmg * share, "shade", l.mob.x, l.mob.y - 16, mates, out)
+				end
+			end
 		end
 	elseif class == "riven" then
 		-- 표식: 베기에 맞은 적에게. 연계(그림자 일격 — 순간이동한 뒤 그 시간 안: caster g.teleport)면 하나 더(2026-10-30)
@@ -2066,9 +2270,11 @@ function Room:kitAfter(hero, landed, x: number, y: number, sweep, power: number,
 			end
 		end
 	elseif class == "salamander" and Kit.level(hero, "core") > 0 then
-		-- 열기가 오르고, 달아올라 있으면 맞은 적마다 불꽃이 한 번 더
+		-- 열기가 오르고, 달아올라 있으면 맞은 적마다 불꽃이 한 번 더.
+		--  강화판(2026-11-04 — 열기가 가득 찬 채 쓴 사냥기 · 보스기: 그 판을 시작할 때 열기를 모두 썼다 · sim/kit.luau Kit.empower · opts.enh)의 타는 열기를 채우지 않는다
 		out.kit = true
-		if Kit.gainHeat(hero) then
+		local hot = if opts and opts.enh then Kit.hot(hero) else Kit.gainHeat(hero, opts and opts.cast) -- (cast = 그 판 — 열기는 한 판에 한 번)
+		if hot then
 			local share = kit.core.share * Kit.scale(hero, "core")
 			for _, l in landed do
 				if alive(l.mob) then
@@ -2183,7 +2389,7 @@ function Room:kitAfter(hero, landed, x: number, y: number, sweep, power: number,
 			end)
 			if #list > 0 then
 				st.at = now
-				local n = if twoS > 0 then math.min(two.max, 1 + math.floor(st.souls / 2)) else 1
+				local n = if twoS > 0 then math.min(two.max, 1 + (if Kit.formed(hero) then two.max else math.floor((st.gauge or 0) / 34))) else 1 -- 떼혼불: 게이지 34마다 하나 더 · 사신화 동안 가득(2026-10-31)
 				for i = 0, n - 1 do
 					local target = list[i % #list + 1]
 					if alive(target) then
@@ -2251,6 +2457,24 @@ function Room:kitAfter(hero, landed, x: number, y: number, sweep, power: number,
 	end
 end
 
+-- 떨어지는 것의 가로 자리: n째(0 = 졸개 자리)는 졸개 자리에서 좌우로 번갈아 9점씩(+9 · -9 · +18 · -18 …) · 졸개가 선 발판을 넘지 않게
+--  (2026-11-03 사용자 "3차스킬로 당겨서 처치했을 때 지형 안쪽으로 아이템이 떨어져서 못주워" — 그 전에는 오른쪽으로만 9 · 18 · 27 …점: 발판 끝 너머의 벽 속 · 허공에 떨어져
+--   줍지 못했다 — 진짜 사냥터 57곳 조사: 모으지 않은 졸개도 떨어지는 자리 2,715곳 가운데 566곳 · 그림자 흡혈로 모은 졸개는 13,995곳 가운데 3,289곳)
+function Room:dropX(mob, n: number): number
+	return self:onFloor(mob.x + (if n == 0 then 0 elseif n % 2 == 1 then (n + 1) / 2 * 9 else -n / 2 * 9), mob.x, mob.y)
+end
+-- x를 (fromX, y)에 선 것의 발판 안으로(발판이 없으면 — 나는 졸개 · 허공 — x 그대로). 떨어지는 것이 벽 속 · 허공에 놓이지 않게(server world.luau의 퀘스트 물건도)
+function Room:onFloor(x: number, fromX: number, y: number): number
+	local scene = self.scene
+	if scene and scene.rows then
+		local l, r = floorSpan(scene, fromX, y)
+		if l and r then
+			return math.clamp(x, l, r)
+		end
+	end
+	return x
+end
+
 -- 잡은 졸개가 떨어뜨리는 달돈(열에 여섯). 장비와 달가루는 lootFor.
 function Room:dropFor(hero, mob)
 	local base
@@ -2266,7 +2490,7 @@ function Room:dropFor(hero, mob)
 	if hero.weak > 0 then
 		amount *= 1 - N.data.BODY.death.cut / 100
 	end
-	local drop = { id = self.nextId, kind = "money", amount = math.max(1, math.floor(amount + 0.5)), x = mob.x, y = mob.y, owner = hero.id, born = self.time }
+	local drop = { id = self.nextId, kind = "money", amount = math.max(1, math.floor(amount + 0.5)), x = self:dropX(mob, 0), y = mob.y, owner = hero.id, born = self.time }
 	self.nextId += 1
 	self.drops[drop.id] = drop
 	return drop
@@ -2284,17 +2508,17 @@ function Room:lootFor(hero, mob)
 	local dropMul = mul * Cash.dropMul(hero) -- 드롭률 1.25배 패스(2026-10-22): 장비 · 재료 · 귀한 물건만 — 달가루(강화 재료)는 그대로(mul)
 	local item = Items.rollDrop(lootRng, mob.lv, hero.class, dropMul)
 	if item then
-		table.insert(out, self:addDrop({ kind = "gear", item = item, amount = 1 }, mob.x + (#out + 1) * 9, mob.y, hero.id))
+		table.insert(out, self:addDrop({ kind = "gear", item = item, amount = 1 }, self:dropX(mob, #out + 1), mob.y, hero.id))
 	end
 	local dust = Items.rollDust(lootRng, mob.lv, mul)
 	if dust then
-		table.insert(out, self:addDrop({ kind = "dust", amount = dust }, mob.x + (#out + 1) * 9, mob.y, hero.id))
+		table.insert(out, self:addDrop({ kind = "dust", amount = dust }, self:dropX(mob, #out + 1), mob.y, hero.id))
 	end
 	-- 재료(그 레벨대의 광석 · 가죽)와 낮은 확률의 귀한 것(물약 · 귀환 주문서): 가방에 들어가는 아이템이 제 그림 그대로 떨어진다(kind = "goods")
 	local function goods(id: string)
 		local g = Items.goods(id)
 		if g then
-			table.insert(out, self:addDrop({ kind = "goods", goods = id, amount = 1, name = g.name, icon = g.icon }, mob.x + (#out + 1) * 9, mob.y, hero.id))
+			table.insert(out, self:addDrop({ kind = "goods", goods = id, amount = 1, name = g.name, icon = g.icon }, self:dropX(mob, #out + 1), mob.y, hero.id))
 		end
 	end
 	for _, id in Items.rollMats(lootRng, mob.lv, dropMul) do
@@ -2337,7 +2561,8 @@ function Room:eliteCount()
 	-- 나오는 자리는 따로 굴린다(졸개의 움직임 · 드롭의 난수 차례를 바꾸지 않게). 씨앗 = 장면 이름 전부 + 그때의 시각(2026-10-18 검토: 이름의 길이만 써서 서버가 뜰 때마다 같은 차례였다)
 	self.eliteRng = self.eliteRng or Random.new(((self.keySeed or 0) + os.time() + 7) % 2147483629)
 	local at = spots[self.eliteRng:NextInteger(1, #spots)]
-	slot.homeX, slot.y, slot.a, slot.b, slot.x, slot.goal, slot.dir = at.homeX, at.y, at.a, at.b, at.homeX, at.homeX, at.dir
+	slot.homeX, slot.y, slot.a, slot.b, slot.x, slot.goal, slot.dir = at.homeX, at.y0 or at.y, at.a0 or at.a, at.b0 or at.b, at.homeX, at.homeX, at.dir -- (그 졸개가 끌려가 있으면 처음 자리의 것)
+	slot.a0, slot.b0, slot.y0, slot.span = nil, nil, nil, nil
 	slot.away, slot.state, slot.t, slot.hp, slot.target, slot.cd, slot.aggro, slot.struck = false, "spawn", 0, slot.maxHp, nil, 0, 0, false
 	slot.marks = nil
 	slot.bind, slot.bindImm, slot.stun, slot.rend, slot.cracks = 0, 0, 0, 0, 0
@@ -2446,8 +2671,8 @@ function Room:snapshot()
 		-- 아홉째 = 스토리 보스가 지금 하는 패턴의 차례(없으면 0): 화면이 예고와 이펙트를 그린다
 		-- 열째 = 겨눈 자리(도약이 내려앉을 데 · 불씨가 떨어질 데 — 없으면 0) · 열한째 = 연속기의 차례(0이면 연속기가 아니다) · 열두째 = 지금 패턴이 그 연속기의 quick배로 빠른가(1 — 연속기의 둘째부터)
 		list[i] = { mob.id, math.floor(mob.x * 10 + 0.5) / 10, mob.dir, mob.state, math.floor(mob.t * 100 + 0.5) / 100, mob.hp, math.floor((mob.bind or 0) * 10 + 0.5) / 10, math.floor((mob.stun or 0) * 10 + 0.5) / 10, mob.pat or 0, math.floor((mob.aim or 0) + 0.5), mob.chainPat or 0, if (mob.quick or 1) ~= 1 then 1 else 0 }
-		if mob.afk then
-			list[i][13] = math.floor(mob.y * 10 + 0.5) / 10 -- 열셋째 = 높이(잠수 방지 날파리는 하늘을 난다 — 다른 몬스터는 제 발판의 높이 그대로라 보내지 않는다)
+		if mob.afk or mob.y0 then
+			list[i][13] = math.floor(mob.y * 10 + 0.5) / 10 -- 열셋째 = 높이(잠수 방지 날파리는 하늘을 난다 · 그림자 흡혈에 다른 높이로 끌려간 졸개 — 다른 몬스터는 제 발판의 높이 그대로라 보내지 않는다)
 		end
 	end
 	return list

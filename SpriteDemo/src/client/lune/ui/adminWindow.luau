@@ -40,7 +40,7 @@ AdminWindow.XP = { 1, 2, 5, 10, 50, 100 } -- 경험치 배율(서버가 같은 �
 AdminWindow.DMG = { 1, 5, 20, 100 } -- 피해 배율
 AdminWindow.BOSS_SHOW = { 100, 75, 60, 50, 40 } -- 보스의 그림 크기 미리보기(서 있는 그림의 몇 %)
 AdminWindow.LEVELS = { 10, 20, 30, 60, 100, 150 } -- 바로 가는 레벨
-AdminWindow.STAGES = { 1, 10, 20, 30, 60, 100 } -- 한 벌을 받는 장비의 단계
+AdminWindow.STAGES = { 1, 10, 20, 30, 60, 100, 120, 140 } -- 한 벌을 받는 장비의 단계(120 · 140 — 2026-11-04 사용자 "100레벨장비까지밖에 못받는데?": 게임의 장비는 140단계까지)
 AdminWindow.RARE = { 0, 25, 100 } -- 주간 보스의 이름 붙은 장비 확률(%) — 0 = 설계의 값(2026-10-27 사용자 "나는 이런 희귀아이템 확률조절해서 테스트할수있게해줘")
 AdminWindow.rare = 1 -- 지금 고른 것(RARE의 차례 — 서버의 세션에만 걸린다: 다시 들어오면 설계의 값)
 AdminWindow.CANDY_ME = { 100, 1000, 5000 } -- 이벤트 탭: 나에게 주는 사탕의 수
@@ -227,9 +227,10 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 			})
 			-- 문으로 들어가는 보스전(2026-10-27 그림자 사수): 보스 퀘스트를 끝낸 것으로 · 레벨 · 이번 주 기록을 지우고 그 보스의 문 앞으로
 			y = row(p, y, "보스전", {
-				{ text = "그림자 사수", id = "wkshadow", w = 76, on = function() ask("week", "shadowarcher") end },
-				{ text = "부단장", id = "wkvice", w = 56, on = function() ask("week", "fallenknight") end }, -- 2026-10-28
-				{ text = "도둑 두목", id = "wkthief", w = 70, on = function() ask("week", "thiefboss") end }, -- 2026-10-28 셋째(기믹 보스) — 셋이 한 줄에 들도록 폭은 글자에 맞춘다(넓으면 줄이 넘어 창 밖으로 나간다)
+				{ text = "사수", id = "wkshadow", w = 40, on = function() ask("week", "shadowarcher") end },
+				{ text = "부단장", id = "wkvice", w = 52, on = function() ask("week", "fallenknight") end }, -- 2026-10-28
+				{ text = "두목", id = "wkthief", w = 40, on = function() ask("week", "thiefboss") end }, -- 2026-10-28 셋째(기믹 보스) — 셋이 한 줄에 들도록 폭은 글자에 맞춘다(넓으면 줄이 넘어 창 밖으로 나간다)
+				{ text = "용암", id = "wklava", w = 40, on = function() ask("week", "lavagiant") end }, -- 2026-11-04 넷째(용암 거인 · Lv.150) — 넷이 한 줄에 들도록 넷 모두 짧게(사수 · 부단장 · 두목 · 용암)
 			})
 			Ui.text(p, "레벨 · 차수를 바꾸면 능력치와 스킬을 다시 찍는다.", 0, y + 4, w, { color = C.off })
 		elseif tab == "item" then
@@ -251,7 +252,8 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 					view.draw()
 				end },
 				{ text = ("별 %d"):format(star), id = "star", w = 56, on = function()
-					star = if star >= 20 then 0 else star + 5
+					-- 0 → 5 → 10 → 15 → 20 → 22(가장 높은 별 — 2026-11-04 사용자 "나 장비 22성 만들수있게 해줘") → 0
+					star = if star >= 22 then 0 elseif star >= 20 then 22 else star + 5
 					view.draw()
 				end },
 			})

@@ -264,6 +264,65 @@ all.click()
 eq(calls[#calls][2], nil, "모두 받기 = 줄 없이")
 expect(not all.enabled, "다 받으면 꺼진다")
 expect(textOf(W.boxEmpty) ~= nil, "빈 보관함")
+-- 선물하기(2026-10-31 사용자 "달빛상점에 모든 품목을 아이템 선물을 할수있게 해줘"): 「선물하기」 → 줄의 단추가 「선물」(영구 패스 = 「선물 불가」) →
+--  「선물」 → 목록 자리에 닉네임 칸 → 「보내기」 → 서버에 gift { id, to } → 목록으로 · 「구매 창을 띄웠다 — 결제가 끝나면 「받는이」에게 간다」
+do
+	tabs[1].click()
+	local function named(name)
+		for _, b in buttons do
+			if b.frame.Name == name then
+				return b
+			end
+		end
+		return nil
+	end
+	local gm, go, backB = named("GiftMode"), named("GiftGo"), named("GiftBack")
+	expect(gm and gm.label == W.giftMode, "안내 줄 오른쪽에 「선물하기」")
+	expect(backB and not backB.frame.Visible, "처음에는 「돌아가기」가 없다")
+	gm.click()
+	expect(gm.label == W.giftBack, "누르면 「구매하기」로 바뀐다")
+	expect(textOf(W.giftHead) ~= nil, "안내 줄 = 선물할 상품의 「선물」을 누른다")
+	local byId = {}
+	for _, r in CashWindow.rows(view, 1, true) do
+		byId[r.id] = r
+	end
+	eq(byId.starter.state, "gift", "첫걸음 묶음 = 「선물」")
+	eq(byId.xp125 and byId.xp125.state, "noGift", "경험치 1.25배 패스 = 「선물 불가」(게임 패스)")
+	eq(byId.starter.count, nil, "선물할 때는 내가 산 수를 적지 않는다(받는 사람의 것은 서버가 본다)")
+	expect(#buttonsNamed(W.giftNo) >= 1, "화면에 「선물 불가」")
+	local giftB = buttonsNamed(W.gift)[1]
+	expect(giftB and giftB.enabled, "「선물」이 켜져 있다")
+	local before = #calls
+	giftB.click()
+	eq(#calls, before, "「선물」은 서버에 묻지 않고 닉네임 칸을 띄운다")
+	expect(scrolls[1].Visible == false and backB.frame.Visible, "목록 자리에 닉네임 칸 · 아래 「돌아가기」")
+	expect(textOf(W.giftText) ~= nil, "받는 사람이 접속하면 들어간다는 안내")
+	local toField
+	for _, f in fields do
+		if f.Name == "GiftTo" then
+			toField = f
+		end
+	end
+	expect(toField ~= nil and toField.PlaceholderText == W.giftPh, "받는 사람의 닉네임 칸")
+	go.click()
+	eq(#calls, before, "닉네임이 비었으면 묻지 않는다")
+	expect(textOf(W.giftNeedName) ~= nil, "「받는 사람의 닉네임을 적어 주세요」")
+	toField.Text = "받는이"
+	go.click()
+	eq(calls[#calls][1], "gift", "서버에 선물을 묻는다")
+	expect(typeof(calls[#calls][2]) == "table" and calls[#calls][2].id == "starter" and calls[#calls][2].to == "받는이", "그 상품 · 그 닉네임")
+	expect(scrolls[1].Visible and not backB.frame.Visible, "보내면 목록으로")
+	expect(textOf(req("ReplicatedStorage/shared/lune/ui/format").fill(W.giftAsked, { to = "받는이" })) ~= nil, "「구매 창을 띄웠다 — 결제가 끝나면 「받는이」에게 간다」")
+	-- 로블록스 정책으로 막힌 계정: 줄이 모두 「선물 불가」
+	view.giftLock = true
+	cv.refresh()
+	for _, r in CashWindow.rows(view, 1, true) do
+		eq(r.state, "noGift", "막힌 계정은 모두 「선물 불가」 " .. r.id)
+	end
+	view.giftLock = nil
+	gm.click()
+	expect(gm.label == W.giftMode and textOf(W.head) ~= nil, "다시 누르면 「구매」로")
+end
 -- 패스 탭: 2026-10-21 사용자 "달빛패스 일딴 비활성화해" — 탭이 없다(다시 켜면 아래가 돈다)
 if not T.pass then
 	expect(#tabs == #BM.shop.tabs and tabs[#tabs].label ~= "패스", "「패스」 탭이 없다")

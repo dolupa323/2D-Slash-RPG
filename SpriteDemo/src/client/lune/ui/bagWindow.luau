@@ -153,6 +153,12 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 				redraw()
 			end
 		end)
+		-- 노란 점(2026-10-31 사용자 "세부ui에서는 노란점 표시가 없어서"): 이 탭이 가득 찼다 — 메뉴 단추(가방)의 점과 같은 까닭 · 같은 그림
+		local dot = Ui.box(tabs[i].frame, tabs[i].width + 1, -2, 6, 6, C.ink)
+		Ui.box(dot, 1, 1, 4, 4, C.gold)
+		dot.ZIndex = 9
+		dot.Visible = false
+		tabs[i].dot = dot
 		tx += tabs[i].width + 16
 	end
 	local count = Ui.text(body, "", w - BAG.countW, 0, BAG.countW, { align = "right", color = C.dim }) -- 찬 칸 / 가방의 칸
@@ -800,8 +806,12 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		if not bag or not me then
 			return
 		end
+		local full = Bag.fullTabs(bag)
 		for i, button in tabs do
 			button:setOn(i == tab)
+			if button.dot then
+				button.dot.Visible = table.find(full, KEYS[i]) ~= nil -- 가득 찬 탭
+			end
 		end
 		if key() == "cash" then
 			-- 캐시 탭: 가진 펫 · 탈것만(정렬 · 늘리기 없음). 비었으면 안내

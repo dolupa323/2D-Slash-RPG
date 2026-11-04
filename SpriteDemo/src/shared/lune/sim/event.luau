@@ -54,8 +54,28 @@ local function season(e, now: number?): number
 	local md = d.month * 100 + d.day
 	return if md < e.from[1] * 100 + e.from[2] then d.year - 1 else d.year
 end
+-- 산 수를 세는 열쇠: 「<이벤트>:<해>:<물건>」 · 하루 한도(per = "day")면 끝에 한국 시각의 날짜 「:<월><일>」(2026-10-31 사용자: "달가루 상자 무제한은 좀 그렇고 일일제한 3개로 이벤트기간 동안 푸는걸로")
 function Event.countKey(e, item, now: number?): string
-	return ("%s:%d:%s"):format(e.id, season(e, now), item.id)
+	local key = ("%s:%d:%s"):format(e.id, season(e, now), item.id)
+	if item.per == "day" then
+		local d = os.date("!*t", math.floor(now or Event.clock()) + e.tz * 3600)
+		key ..= (":%02d%02d"):format(d.month, d.day)
+	end
+	return key
+end
+
+-- 산 수를 하나 더한다(c = 계정의 유료 상품 장부 acct.bm). 하루 한도면 지난 날의 수는 지운다(장부가 날마다 쌓이지 않게)
+function Event.addCount(c, e, item, now: number?)
+	local key = Event.countKey(e, item, now)
+	if item.per == "day" then
+		local head = ("%s:%d:%s:"):format(e.id, season(e, now), item.id)
+		for k in c.ev do
+			if k ~= key and string.sub(k, 1, #head) == head then
+				c.ev[k] = nil
+			end
+		end
+	end
+	c.ev[key] = (c.ev[key] or 0) + 1
 end
 
 -- 기간의 글: 「10월 24일」 · 「11월 7일」

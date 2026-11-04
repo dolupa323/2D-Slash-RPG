@@ -145,7 +145,7 @@ return {
 			rid = 3720335800,
 			built = true,
 			icon = "ride_mount_wolf",
-			line = "타는 동안 달리기 30% 빠르게",
+			line = "타는 동안 달리기 30% 빠르게 · 탄 채 대쉬",
 			effect = false,
 		},
 		{
@@ -160,7 +160,7 @@ return {
 			rid = 3720335849,
 			built = true,
 			icon = "ride_mount_deer",
-			line = "타는 동안 달리기 30% 빠르게",
+			line = "타는 동안 달리기 30% 빠르게 · 탄 채 대쉬",
 			effect = false,
 		},
 		{
@@ -175,7 +175,7 @@ return {
 			rid = 3720335894,
 			built = true,
 			icon = "ride_mount_boar",
-			line = "타는 동안 달리기 30% 빠르게",
+			line = "타는 동안 달리기 30% 빠르게 · 탄 채 대쉬",
 			effect = false,
 		},
 		{
@@ -190,7 +190,7 @@ return {
 			rid = 3721137277,
 			built = true,
 			icon = "ride_mount_golem",
-			line = "거대하고 느릿느릿 — 걸음은 느려진다",
+			line = "거대하고 느릿느릿 · 탄 채 대쉬",
 			effect = false,
 		},
 		{
@@ -205,7 +205,7 @@ return {
 			rid = 3723518753,
 			built = true,
 			icon = "ride_mount_golem_gold",
-			line = "거대하고 느릿느릿 — 걸음은 느려진다",
+			line = "거대하고 느릿느릿 · 탄 채 대쉬",
 			effect = false,
 		},
 		{
@@ -323,6 +323,7 @@ return {
 		drop = { mul = 1.5, add = 1800, cap = 10800 },
 		dustHours = 1.5,
 		week = { offset = 9, start = "mon" },
+		gift = { policy = true, max = 100 },
 	},
 	bands = { 1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150 },
 	pass = {
@@ -391,7 +392,7 @@ return {
 			money = { "money", "dust" },
 			look = { "mount_wolf", "mount_deer", "mount_boar", "mount_golem", "mount_golem_gold", "wskin_gold", "wskin_lava", "wskin_frost", "wskin_shadow", "dmgskin", "tagskin" },
 		},
-		words = { head = "로벅스로 산 것은 「보관함」에 들어온다", price = "{n} 로벅스", passPrice = "{n} 로벅스 · {days}일", buy = "구매", soon = "준비 중", own = "보유", subscribe = "구독", soldOut = "품절", stockLeft = "한정 {max}개 · 남은 {n}개", week = "이번 주 {n}/{max}", once = "산 수 {n}/{max}", trade = "거래 가능", account = "계정", nowMoney = "지금 사면 달돈 {n}(Lv.{band})", nowDust = "지금 사면 달가루 {n}(Lv.{band})", boxMoney = "쓰면 달돈 {n}", boxDust = "쓰면 달가루 {n}", take = "받기", takeAll = "모두 받기", boxEmpty = "보관함이 비었다", boxHint = "받으면 가방의 「소비」 탭으로 간다", asked = "구매 창을 띄웠다 — 결제가 끝나면 보관함에", got = "「{name}」 — 보관함에 들어왔다", gotSlot = "캐릭터 칸이 하나 늘었다", gotPass = "달빛 패스 — 오늘부터 30일", gotOwn = "「{name}」 — 계정에 들어왔다", giftMax = "레벨 순위 1위 선물", giftMax2 = "레벨 순위 2위 선물", giftMax3 = "레벨 순위 3위 선물", petOn = "꺼내기", petOff = "넣기", rideOn = "타기", rideOff = "내리기", skinOn = "장착", skinOff = "해제", skinKind = "무기 꾸밈", skinTag = "장착 중", skinHint = "계정의 모든 캐릭터의 무기가 이 모습이 된다 · 능력치는 그대로", dskinKind = "데미지 스킨", dskinHint = "내가 때린 숫자가 이 모습이 된다 — 같은 맵의 사람에게도 보인다", bagTab = "캐시", bagEmpty = "가진 펫 · 탈것이 없다", petKind = "펫", mountKind = "탈것", petOutTag = "꺼내 둠", rideTag = "타는 중", bagHint = "퀵슬롯에 놓으면 그 키로 꺼내고 넣는다", rideHint = "퀵슬롯에 놓으면 그 키로 타고 내린다(N 키도)", taken = "{n}개를 가방에 넣었다", full = "가방에 자리가 없다", renameTitle = "이름 바꾸기", renameText = "새 이름을 적는다 — 규칙은 처음 만들 때와 같다", renameHave = "가진 주문서 {n}장", renamePh = "새 이름", renameGo = "변경", renameDone = "이름이 「{name}」이 되었다" },
+		words = { head = "로벅스로 산 것은 「보관함」에 들어온다", price = "{n} 로벅스", passPrice = "{n} 로벅스 · {days}일", buy = "구매", soon = "준비 중", own = "보유", subscribe = "구독", soldOut = "품절", stockLeft = "한정 {max}개 · 남은 {n}개", week = "이번 주 {n}/{max}", once = "산 수 {n}/{max}", trade = "거래 가능", account = "계정", nowMoney = "지금 사면 달돈 {n}(Lv.{band})", nowDust = "지금 사면 달가루 {n}(Lv.{band})", boxMoney = "쓰면 달돈 {n}", boxDust = "쓰면 달가루 {n}", take = "받기", takeAll = "모두 받기", boxEmpty = "보관함이 비었다", boxHint = "받으면 가방의 「소비」 탭으로 간다", asked = "구매 창을 띄웠다 — 결제가 끝나면 보관함에", got = "「{name}」 — 보관함에 들어왔다", gotSlot = "캐릭터 칸이 하나 늘었다", gotPass = "달빛 패스 — 오늘부터 30일", gotOwn = "「{name}」 — 계정에 들어왔다", giftMax = "레벨 순위 1위 선물", giftMax2 = "레벨 순위 2위 선물", giftMax3 = "레벨 순위 3위 선물", petOn = "꺼내기", petOff = "넣기", rideOn = "타기", rideOff = "내리기", skinOn = "장착", skinOff = "해제", skinKind = "무기 꾸밈", skinTag = "장착 중", skinHint = "계정의 모든 캐릭터의 무기가 이 모습이 된다 · 능력치는 그대로", dskinKind = "데미지 스킨", dskinHint = "내가 때린 숫자가 이 모습이 된다 — 같은 맵의 사람에게도 보인다", bagTab = "캐시", bagEmpty = "가진 펫 · 탈것이 없다", petKind = "펫", mountKind = "탈것", petOutTag = "꺼내 둠", rideTag = "타는 중", bagHint = "퀵슬롯에 놓으면 그 키로 꺼내고 넣는다", rideHint = "퀵슬롯에 놓으면 그 키로 타고 내린다(N 키도)", taken = "{n}개를 가방에 넣었다", full = "가방에 자리가 없다", renameTitle = "이름 바꾸기", renameText = "새 이름을 적는다 — 규칙은 처음 만들 때와 같다", renameHave = "가진 주문서 {n}장", renamePh = "새 이름", renameGo = "변경", renameDone = "이름이 「{name}」이 되었다", giftMode = "선물하기", giftBack = "구매하기", giftHead = "선물할 상품의 「선물」을 누른다", gift = "선물", giftNo = "선물 불가", giftText = "받는 사람이 접속하면 보관함 · 계정에 들어간다", giftPh = "받는 사람의 닉네임", giftGo = "보내기", giftCancel = "돌아가기", giftAsked = "구매 창을 띄웠다 — 결제가 끝나면 「{to}」에게 간다", giftSentHead = "선물을 보냈다", giftSent = "「{name}」 — 「{to}」에게 보냈다", giftGotHead = "선물이 왔다", giftGot = "「{name}」 — {from}님이 보낸 선물", giftNeedName = "받는 사람의 닉네임을 적어 주세요", giftNoName = "「{name}」 닉네임은 없다", giftSelf = "나에게는 선물할 수 없다 — 「구매」로 산다", giftCant = "이 상품은 선물할 수 없다", giftPolicy = "이 계정은 로블록스 정책으로 유료 상품을 선물할 수 없다", giftPolicyTo = "받는 사람의 계정은 로블록스 정책으로 유료 상품을 받을 수 없다", giftTo = "받는 사람이 받을 수 없다 — {why}", giftBox = "받는 사람에게 아직 받지 않은 선물이 너무 많다", giftBusy = "결제 창이 이미 떠 있다 — 끝난 뒤에 다시", giftRead = "받는 사람의 계정을 읽지 못했다 — 잠시 뒤에 다시" },
 		boxOf = { bmBag = "bagx", bmStore = "storex", bmRename = "rename", bmExp = "exp", bmDrop = "drop", bmDyePoint = "dyepoint", bmDyeRobe = "dyerobe" },
 		space = {
 			bg = "shop_bg.png",

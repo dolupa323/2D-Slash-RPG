@@ -184,9 +184,6 @@ do
 			for _ = 1, 10 do
 				h.x, h.y, h.dir = X, Y, 1
 				foe.x, foe.stun, foe.bind, foe.bindImm = X + (def.at or 14), 0, 0, 0
-				if id == "sl_vent" then
-					h.kit.heat = 0
-				end
 				c:dryCast(h, id, 0, tick)
 			end
 			local guard = 0
@@ -205,7 +202,7 @@ do
 	end
 	expect(shown >= 35, "쓰는 스킬 서른다섯 넘게 % 피해가 적힌다 — " .. shown)
 	expect(kinds.sum > 0, "여러 타(줄)짜리가 있다 — 타수 나누기(2026-10-14)로 한 타짜리도 여러 줄로 적힌다")
-	eq(kinds.full, 1, "장치를 다 갖췄을 때가 기준인 스킬 하나(열 방출 — 공명 폭발은 2026-10-26 S238부터 수정 없이 친 값이 기준)")
+	eq(kinds.full, 0, "장치를 다 갖췄을 때가 기준인 스킬은 없다(공명 폭발은 2026-10-26 S238부터 수정 없이 친 값이 기준 · 살라맨더의 큰 한 방 셋은 2026-11-04에 뺐다)")
 	-- 2차 레벨 1은 1차 마스터보다 세다는 것이 적힌 수로도 보인다(같은 시간으로 견준다 — 사용자 2026-10-08)
 	for class, c in CLASSES.classes do
 		for _, kind in { "mob", "boss" } do

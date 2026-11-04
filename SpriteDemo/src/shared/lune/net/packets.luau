@@ -34,11 +34,14 @@ local packets = {
 	Chars = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 2, Burst = 5 } },
 	-- 명예의 전당: 순위판 셋의 위 열 줄 { level = { { name, class, value } … }, power = …, robux = … }
 	Rank = { Kind = "Function", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 3 } },
+	Schedule = { Kind = "Function", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 2, Burst = 4 } },
+	Finder = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } }, -- 파티 찾기(2026-11-05): view · make(보스, 난이도, 조건 단계) · apply(방장) · withdraw · accept · deny(사람) · ready(켜기) · start · leave — sim/finder.luau -- 스케줄러 창(2026-11-03): 그 캐릭터의 일일 · 주간 할 일 { daily, weekly, dayLeft, weekLeft } — sim/schedule.luau
 	-- 능력치에 점수를 찍는다(능력치 이름, 점수) · 남은 점수를 모두 주 능력치에
 	StatAdd = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number }, RateLimit = { PerSecond = 10, Burst = 20 } },
 	StatAuto = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 2, Burst = 3 } },
 	-- 스킬을 한 레벨 올린다(스킬 id) · 남은 포인트를 추천대로
 	SkillUp = { Kind = "Event", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 10, Burst = 20 } },
+	SkillDown = { Kind = "Event", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 10, Burst = 20 } }, -- 스킬 레벨을 하나 내린다(2026-10-31 — 스킬 창의 「−」)
 	SkillAuto = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 2, Burst = 3 } },
 	-- 전직하며 받은 공짜 초기화를 쓴다(스킬 창의 「초기화」 — 찍은 스킬을 모두 되돌린다)
 	SkillReset = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 2 } },
@@ -97,7 +100,7 @@ local packets = {
 	-- 퀘스트 연출(2026-10-15 — shared/lune/cine.luau): "on" = 장면이 시작됐다(그동안 맞지 않는다 — 90초 뒤 저절로 풀린다) · "off" = 끝났다 · "seen" id = 그 장면을 봤다(다시 틀지 않게 캐릭터에 적는다)
 	Cine = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } },
 	-- 기술을 쓴다: 기술 id, 몇째 구간, 쓴 자리(x, y), 보는 쪽
-	Skill = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number, t.number, t.number, t.dir }, RateLimit = { PerSecond = 8, Burst = 10 } },
+	Skill = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number, t.number, t.number, t.dir, t.any }, RateLimit = { PerSecond = 8, Burst = 10 } }, -- (여섯째 = 화면이 그 판을 살라맨더의 강화판으로 그렸는가 — true · false · 없음, 받는 쪽 world.luau가 boolean만 쓴다 · 2026-11-04)
 	-- 떨어진 것을 줍는다(물건 번호)
 	Pickup = { Kind = "Event", Direction = "ClientToServer", Args = { t.number }, RateLimit = { PerSecond = 10, Burst = 15 } },
 	-- 내 펫이 떨어진 것에 닿았다(물건 번호 — 2026-10-20). 서버가 펫을 꺼내 두었는지 · 영웅에게서 가까운지 · 주인을 확인하고 줍는다(펫은 0.3초에 하나)
@@ -111,7 +114,7 @@ local packets = {
 
 	-- ===== 서버 → 클라이언트 =====
 	Self = { Kind = "Event", Direction = "ServerToClient", Doc = "내 상태(sim/hero.luau의 view)" },
-	CashGot = { Kind = "Event", Direction = "ServerToClient", Doc = "유료 상품을 받았다(구매 보관함이 바뀌었다) — 상품 이름표(2026-10-20)" },
+	CashGot = { Kind = "Event", Direction = "ServerToClient", Doc = "유료 상품을 받았다(구매 보관함이 바뀌었다) — 상품 이름표(2026-10-20) · 선물이면 { to = 받는 사람 } · { from = 보낸 사람 }(2026-10-31)" },
 	Snap = { Kind = "Event", Direction = "ServerToClient", Doc = "장면 이름, 졸개 목록 { id, x, dir, 상태, 상태가 된 뒤 흐른 시간, 체력 }" },
 	Hits = { Kind = "Event", Direction = "ServerToClient", Doc = "누가(userId), 맞은 졸개 목록 { mob, dmg, hp, dead, big, crit, proc(사출기 · 장치의 타), sx, sy(그것이 날아오는 자리), mark(표식의 남은 초) }" },
 	Hurt = { Kind = "Event", Direction = "ServerToClient", Doc = "내가 맞았다 { dmg, hp, from, dead }" },
@@ -120,7 +123,7 @@ local packets = {
 	Heroes = { Kind = "Event", Direction = "ServerToClient", Doc = "장면 이름, 그 방 사람들의 자리 { id, x, y, dir, 살아 있는가 } — 초당 10번" },
 	Who = { Kind = "Event", Direction = "ServerToClient", Doc = "장면 이름, 그 방 사람들의 이름표 { id, name, class, level } — 들고 날 때 · 레벨이 오를 때" },
 	Buffs = { Kind = "Event", Direction = "ServerToClient", Doc = "방의 누군가에게 걸린 버프가 바뀌었다: 누구, { { id, t, dur, x, y } … }(건 차례) — 그 사람의 몸에 버프의 모습이 보인다" },
-	Act = { Kind = "Event", Direction = "ServerToClient", Doc = "다른 사람이 기술을 쓴다: 누구, 기술, 구간, x, y, 보는 쪽, 모은 단계(힘 모으기 — 없으면 0)" },
+	Act = { Kind = "Event", Direction = "ServerToClient", Doc = "다른 사람이 기술을 쓴다: 누구, 기술, 구간, x, y, 보는 쪽, 모은 단계(힘 모으기 — 없으면 0), 살라맨더의 강화판인가" },
 	PartyInfo = { Kind = "Event", Direction = "ServerToClient", Doc = "내 파티 { leader, members = { { id, name, class, level, hp, maxHp, scene } … } } — 파티가 없으면 members가 비어 있다" },
 	PartyAsk = { Kind = "Event", Direction = "ServerToClient", Doc = "파티 초대 { from, name } — 초대가 사라졌으면 from = false" },
 	Quests = { Kind = "Event", Direction = "ServerToClient", Doc = "내 퀘스트의 상태 { [id] = { done, c = { 할 일마다의 수 } } } — 바뀔 때마다. 둘째 값 = 방금 끝낸 퀘스트의 id(없으면 nil)" },
@@ -129,6 +132,7 @@ local packets = {
 	MacroView = { Kind = "Event", Direction = "ServerToClient", Doc = "매크로 확인: { check = 문제(위의 셋 · 아래 아홉 · 남은 초 · 남은 기회 — 답은 없다) 또는 nil, stopped = 사냥 보상 멈춤, retryIn = 다시 확인까지 초, result = 방금의 결과 } (2026-10-23)" },
 	Voyage = { Kind = "Event", Direction = "ServerToClient", Doc = "배: { left = 닿기까지 초, dest } 갑판에 올랐다 · { arrived = 장면, dest } 닿았다(2026-10-16)" },
 	RiftView = { Kind = "Event", Direction = "ServerToClient", Doc = "토벌의 방의 상태(sim/rift.luau의 view — 물결 · 남은 몬스터 · 시간 · 완료 · 실패, 2026-10-16)" },
+	FinderView = { Kind = "Event", Direction = "ServerToClient", Doc = "파티 찾기의 화면(2026-11-05 — { rooms, mine, bosses, max, steps } · 내 방이 바뀌면 · 신청 · 수락 · 거절 · 출발 · 닫힘)" },
 	WeekView = { Kind = "Event", Direction = "ServerToClient", Doc = "주간 보스의 방의 상태(sim/weekly.luau의 roomView — { boss, mode, state = fight | clear | fail, left, back }, 2026-10-24)" },
 	WeekPay = { Kind = "Event", Direction = "ServerToClient", Doc = "주간 보스를 격파했다 { boss, mode, first(이번 주 처음), view } — 보상은 아직 없다(사용자: 보상설계는 나중에, 2026-10-24)" },
 	RiftPay = { Kind = "Event", Direction = "ServerToClient", Doc = "토벌 완료의 보상 { xp, money, dust, gear(장비의 꼴 · 없으면 nil), full(가방이 차서 장비를 못 받았다), none(오늘 보상을 다 받았다), left }" },
@@ -152,6 +156,9 @@ local packets = {
 	Burst = { Kind = "Event", Direction = "ServerToClient", Doc = "폭탄병이 터짐 { mob, x, y }" },
 	Crystal = { Kind = "Event", Direction = "ServerToClient", Doc = "무니의 달 수정 { add = { { id, owner, x, y, life } … }, gone = { id … } }" },
 	Dodge = { Kind = "Event", Direction = "ServerToClient", Doc = "내가 피했다(리븐의 날랜 몸)" },
+	Rekindle = { Kind = "Event", Direction = "ServerToClient", Doc = "재점화(살라맨더)가 쓰러질 피해를 버텼다: 영웅 번호, x, y — 방의 모두가 그 자리에 분홍 불기둥(pixelfx 그림 pfx_sl_rekindle)을 본다 · 나면 흔들림 · 반전 · 글(2026-11-03)" },
+	RideDash = { Kind = "Event", Direction = "ClientToServer", Args = { t.number, t.number, t.number }, RateLimit = { PerSecond = 3, Burst = 4 }, Doc = "탄 채 대쉬를 썼다(2026-11-03 — 대쉬가 있는 탈것 · ride.generated의 dash): x, y, dir — 서버가 같은 방 사람들에게 RideDashed로 알린다(움직임은 Move가 나른다 — 이동 몫 안)" },
+	RideDashed = { Kind = "Event", Direction = "ServerToClient", Doc = "같은 방의 누가 탄 채 대쉬를 썼다: 영웅 번호, x, y, dir — 그 사람이 내달리는 동안 탈것 · 탄 영웅의 잔상(그 직업의 색 · 2026-11-03)" },
 	Return = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 3 }, Doc = "쓰러진 뒤 마을로 돌아간다(「마을로 돌아갈까요?」 상자의 단추) — 쓰러지고 조금 지난 뒤부터 받는다" },
 	Raise = { Kind = "Event", Direction = "ServerToClient", Doc = "소생을 받아 그 자리에서 일어났다 { hp }" },
 	Warp = { Kind = "Event", Direction = "ServerToClient", Doc = "서버가 내 자리를 바로잡는다: x, y — 너무 멀리 간 자리 보고를 받지 않았을 때(그대로 두면 서버가 아는 자리와 영영 어긋난다)" },

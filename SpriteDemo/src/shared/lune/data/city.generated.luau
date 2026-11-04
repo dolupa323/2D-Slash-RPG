@@ -543,6 +543,31 @@ return {
 					},
 				},
 			},
+			{
+				id = "lavagiant",
+				name = "용암 거인",
+				room = "r3d5",
+				door = { scene = "r3d4", x = 662 },
+				quest = "wq07",
+				story = nil,
+				text = "분화구 밑의 굴을 지키는 거인이 다시 깨어났다. 너무 커서 굴에 들어오지 못해 갈라진 틈으로 손을 밀어 넣고, 숨구멍마다 마그마 혹을 밀어 올려 대분화를 일으킨다.",
+				normal = { need = 120, lv = 150, hp = 10000, hit = 1.3 },
+				hard = nil,
+				pay = {
+					normal = {
+						dust = 73000,
+						money = 2450000,
+						goods = {
+							{ id = "potion4", n = 60, pile = 5 },
+							{ id = "scroll_return", n = 3, pile = 1 },
+						},
+						drop = { u = "lava_ring", pct = 1.5 },
+					},
+				},
+				time = 1200,
+				rooms = { "r3d5", "r3d6", "r3d7" },
+				dev = true,
+			},
 		},
 	},
 }
