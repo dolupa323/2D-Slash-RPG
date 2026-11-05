@@ -359,7 +359,7 @@ function Gim.boss(room, mob, heroes, dt: number, events): boolean
 		if g.floodTick <= 0 then
 			g.floodTick = G.flood.tick
 			for _, h in heroes do
-				if alive(h) and mob.y - h.y < G.flood.up and h.y <= mob.y + 4 and not Buffs.guard(h) then
+				if alive(h) and mob.y - h.y < G.flood.up and h.y <= mob.y + 4 then -- (기믹 = 트루 데미지 — 생존기로도 피하지 못한다: 2026-11-05)
 					local dmg = Hero.hurt(h, h.maxHp * G.flood.pct / 100, true)
 					if dmg > 0 then
 						table.insert(events, { type = "hurt", hero = h.id, dmg = dmg, hp = h.hp, from = mob.x, dead = not h.alive })
@@ -575,7 +575,7 @@ function Gim.strike(room, mob, p, heroes, events)
 				break
 			end
 		end
-		if got and not Buffs.guard(got) then
+		if got then -- (기믹 — 생존기로도 빠져나가지 못한다: 2026-11-05 "유틸들로 보스 기믹을 씹는경우는 없어야한다")
 			local lo, hi = partOf(mob)
 			-- 쥔 주먹의 자리(설계 grab.at = 그쪽으로 몇 점 · 바닥에서 몇 점 — 쳐든 주먹): 그 사람을 높이 들어 올린다
 			local side = p.side or 1

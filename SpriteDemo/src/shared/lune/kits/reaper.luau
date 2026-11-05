@@ -261,7 +261,7 @@ end
 --  양옆(176도트)에 큰 낫날이 하나씩 솟아(0 ~ 0.1) → 리퍼 쪽 가운데로 쓸어 온다(0.1 ~ 0.34 · 갈수록 빠르게 · 빠르기 줄을 끄는 장) → 가운데에서 만나 번쩍(0.34) → 부서진다.
 --  그림 = Codex가 그린 장면을 점으로 옮긴 것(공방 assetpack/lune/fx/raw_rp_reap.png → fx/reaper_reap.png · tools/build_lune_reaper_sickle.py reap 8 — 한 점 = 받은 그림 8화소 · 낫날 42도트) ·
 --  코드로 그리는 것은 없다 — 받은 장면을 자리 · 때에 맞춰 찍기만 한다(오른쪽 날은 그린 그대로 왼쪽으로 · 왼쪽 날은 뒤집는다). 맞은 적의 번쩍임 = 사슬낫 때 받은 그림(fx/reaper_sickle.png의 bite).
---  판정: 한 번(단타 — 쓸어 오는 도중 0.18초) · 양옆 196 · 위 64 · 아래 32 · 12마리까지 · 끌어 모으기(gather — 지형과 상관없이 리퍼의 발밑 코앞으로 · 보스는 빼고 · 서버 Room:gatherMob —
+--  판정: 한 번(단타 — 쓸어 오는 도중 0.18초) · 양옆 196 · 위 64 · 아래 32 · 12마리까지 · 끌어 모으기(gather — 제 발판 안에서 리퍼 쪽으로(2026-11-05 — 그 전: 지형과 상관없이) · 보스는 빼고 · 서버 Room:pullMob —
 --   2026-11-03 사용자 "일반몬스터는 지형상관없이 쫙 끌려와야"). 때 · 크기는 제가 정한 것
 --  공방 kits/reaper.js와 줄마다 같다. 장(공방 fx/reaper_reap.json · reaper_sickle.json): { x, y, w, h, 기준 x, 기준 y } — 기준 = 칸 가운데
 local RP = {
@@ -741,7 +741,8 @@ do
 			end
 		end
 	end
-	table.insert(skills, { id = "rp_behead", key = "F", shot = 0.44, segs = { { clip = "dslash", fps = 22, ev = ev } } })
+	-- 2026-11-05 사용자 "보스기 퍼뎀 3차가 4차보다 쎈경우는 없어야한다": 22 → 13장/초 · 0.44 → 0.74초 — 가장 빠른 보스기라 한 번에 넣는 %가 3차 단죄 만렙보다 작았다(Lv.1 510% < 722%). 초당 세기(rate)는 그대로(공방 kits/reaper.js와 같다)
+	table.insert(skills, { id = "rp_behead", key = "F", shot = 0.74, segs = { { clip = "dslash", fps = 13, ev = ev } } })
 end
 
 local more = {

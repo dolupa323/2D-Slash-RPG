@@ -398,7 +398,7 @@ end
 local function guestHero(userId: number, class: string, level: number?, mode: string?)
 	local h = Hero.new(userId, class)
 	if level then
-		while h.level < math.clamp(level, 1, N.MAX_LEVEL) do
+		while h.level < math.clamp(level, 1, N.LEVEL_CAP) do
 			Hero.gainXp(h, N.xpNeed(h.level) - h.xp)
 		end
 	else
@@ -2205,6 +2205,23 @@ local function onItem(player, action: string, a: any, b: any, c: any, d: any)
 			ok = made ~= nil
 			result = if made then { slot = made.slot, stage = made.stage, q = made.q, star = made.star, who = made.who } else nil
 		end
+	elseif action == "coinMake" or action == "coinBuy" then
+		-- 보스 주화(2026-11-05 — design/bosscoin.js · sim/bosscoin.luau): 숯돌(NPCDO coinshop) 곁에서. coinMake(세트, 수) = 보스의 핵 + 사냥의 핵 → 주화 · coinBuy(세트, 장비의 이름표) = 주화 → 그 장비
+		local BossCoin = require(lune.sim.bosscoin) -- (world.luau의 지역 이름이 한도에 닿아 여기서 부른다)
+		if not nearNpc(s, "coinshop") then
+			why = BossCoin.WORDS.far
+		elseif action == "coinMake" then
+			ok, why = BossCoin.make(h, a, b)
+			result = if ok then { made = a, n = if typeof(b) == "number" then b else 1 } else nil
+		else
+			local made
+			made, why = BossCoin.buy(h, a, b, itemRng) -- (성능은 교환할 때 굴린다 — 사냥터 드롭과 같은 비율)
+			ok = made ~= nil
+			result = if made then { slot = made.slot, stage = made.stage, q = made.q, star = made.star, who = made.who, u = made.u } else nil
+			if made then
+				Analytics.custom(s, "CoinGear", 1, tostring(b))
+			end
+		end
 	elseif action == "enhance" or action == "restore" then -- (별 옮기기 「transfer」는 2026-10-15에 뺐다)
 		if h.level < OPEN.forge then
 			why = ("Lv.%d부터 한다"):format(OPEN.forge)
@@ -3902,8 +3919,8 @@ local function onAdmin(player, what: string, a: any, b: any, c: any)
 		end
 		return done(if wasDown then "일으키고 체력을 채웠다" else "체력을 채웠다")
 	elseif what == "level" then
-		if not wholeIn(a, 1, N.MAX_LEVEL) then
-			return no(("레벨은 1~%d"):format(N.MAX_LEVEL))
+		if not wholeIn(a, 1, N.LEVEL_CAP) then
+			return no(("레벨은 1~%d"):format(N.LEVEL_CAP))
 		end
 		Hero.setLevel(h, a)
 		fire("Quests", player, Quests.view(h.quests))
@@ -4040,6 +4057,11 @@ local function onAdmin(player, what: string, a: any, b: any, c: any)
 		h.quests[b0.quest] = { done = true, c = {} }
 		if h.level < b0.normal.need then
 			Hero.setLevel(h, b0.normal.need)
+		end
+		-- 출현을 기다리는 보스(2026-11-05 용암 거인): Studio에서는 이 서버의 출현을 지금으로 당긴다(시험 — 저장소에 적지 않는다). 라이브에서는 당기지 않는다(퍼블리시하면 모두에게 1시간 뒤)
+		if b0.reveal and World.studio then
+			local Reveal = require(lune.sim.reveal)
+			Reveal.at[b0.id] = math.min(Reveal.at[b0.id] or math.huge, os.time())
 		end
 		h.rift = h.rift or {}
 		if h.rift.week then
@@ -4384,6 +4406,68 @@ function World.toStage(room, here, key: string)
 		toRoom(nkey, "WeekView", Weekly.roomView(nroom))
 	end
 end
+-- 보스의 출현(2026-11-05 — server modules/reveal.luau · shared sim/reveal.luau): 1초마다 — ① 떡밥 알림 · 출현을 이 서버의 모두에게(RevealNews — 모든 서버가 같은 시각 · 같은 말)
+--  ② 출현 시각을 모르는 화면 · 바뀐 화면에 보낸다(Reveal — 왼쪽 아래 닉네임 위의 빨간 남은 시간). 출현하면 보스 퀘스트 · 문 · 스케줄러가 저절로 열린다(Reveal.open을 본다)
+function World.revealTick(dt: number)
+	World.revealT = (World.revealT or 0) + dt
+	if World.revealT < 1 then
+		return
+	end
+	World.revealT = 0
+	local RS = require(script.Parent.reveal)
+	local now = os.time()
+	for _, news in RS.tick(now) do
+		for p in sessions do
+			fire("RevealNews", p, news)
+		end
+	end
+	local view = RS.view(now)
+	local sig = ""
+	for id, at in view.at do
+		sig ..= id .. "=" .. tostring(at) .. ";"
+	end
+	for p, s in sessions do
+		if s.revealSig ~= sig then
+			s.revealSig = sig
+			fire("Reveal", p, view)
+		end
+	end
+end
+-- 보스의 최초 격파(2026-11-05 사용자: "퍼클 이벤트도 들어가야해 최초 격파 3 파티까지야 … 퍼클 칭호 깨자마자 바로 지급되어야하고, 전 서버에 메시지 송출된다"):
+--  그 보스(design/weekboss.js의 first)를 격파한 방의 사람들로 세계 기록에 적어 본다(server modules/firstClear.luau). 자리를 얻으면 그 자리에서 칭호 · 모든 서버에 알림.
+--  기록에 적는 사람 = 캐릭터가 있는 사람(관리자 · 시험 봇 · 확인용 임시 계정은 빼고 센다 — 만렙 최초 달성 · 명예의 전당과 같다) · 퍼블리시하지 않는 보스(dev)는 셈하지 않는다.
+--  Studio = 시험(저장소에 적지 않고 이 서버의 기억에만 · 관리자 · dev 보스도 — 알림과 칭호를 Play에서 볼 수 있게)
+function World.firstClear(b, here)
+	if not b or not b.first then
+		return
+	end
+	local test = World.studio == true
+	if (b.dev or not require(lune.sim.reveal).open(b.id)) and not test then
+		return -- 퍼블리시하지 않는 보스 · 아직 출현하지 않은 보스(관리자의 시험 입장)는 셈하지 않는다
+	end
+	local Rank = require(lune.sim.rank)
+	local members, byKey = {}, {}
+	for _, s in here do
+		if s.hero and s.cid and s.name ~= "" and not s.guest and not isBot(s.player) and (test or not Admin.is(s.player)) then
+			local key = Rank.charKey(s.player.UserId, s.cid)
+			table.insert(members, { key = key, name = s.name, class = s.hero.class })
+			byKey[key] = s
+		end
+	end
+	if #members == 0 then
+		return
+	end
+	require(script.Parent.firstClear).claim(b, { at = os.time(), members = members }, test, function(_rank, entry)
+		local Titles = require(lune.sim.titles)
+		for _, m in entry.members do
+			local s = byKey[m.key]
+			if s and s.hero and s.hero.titles and Titles.give(s.hero, b.first.title) then
+				s.dirty = true
+				fire("TitleGot", s.player, { b.first.title })
+			end
+		end
+	end)
+end
 -- 사람들(list)을 새 보상의 방으로(관리 「보상의 방」도 이 길로 — 격파를 적지 않고 나 혼자)
 function World.openBoxFor(here, bossId: string, mode: string, who, mul: number?, test: number?)
 	local Weekly = require(lune.sim.weekly)
@@ -4502,6 +4586,7 @@ function World.tick(dt: number)
 		end
 	end
 	stepBots(dt)
+	World.revealTick(dt) -- 보스의 출현(2026-11-05): 1초마다 — 떡밥 알림 · 출현 · 화면의 남은 시간
 	-- 사람: 무적 · 벌칙 · 물약 대기 시간, 쓰러졌으면 마을에서 일어난다
 	for _, s in sessions do
 		-- 매크로 확인(2026-10-23): 1초마다 — 때가 되면 문제를 보낸다 · 시간이 다 된 문제는 놓침
@@ -4758,6 +4843,7 @@ function World.tick(dt: number)
 							end
 							fire("WeekPay", s.player, { boss = wk.boss, mode = wk.mode, first = first, view = Weekly.view(s.hero.rift, now) })
 						end
+						World.firstClear(b, here) -- 최초 격파(2026-11-05 — 모든 서버를 통틀어 먼저 격파한 파티들 · 칭호 · 모든 서버에 알림)
 					end
 				end
 				if room.lavaNext then
@@ -4887,7 +4973,8 @@ local function onCash(player, a: any, b: any)
 		if not s.hero then
 			return { ok = false, why = "캐릭터로 들어간 뒤에 받는다" }
 		end
-		local moved, left = Cash.take(s.hero, s.acct.bm, b)
+		-- b = 줄(그 줄을 모두) · { i = 줄, n = 몇 개 }(나눠 받기 — 2026-11-06) · 없으면 모두
+		local moved, left = if typeof(b) == "table" then Cash.take(s.hero, s.acct.bm, b.i, b.n) else Cash.take(s.hero, s.acct.bm, b)
 		if moved > 0 then
 			s.dirty = true
 			sendBag(s)
@@ -4895,6 +4982,7 @@ local function onCash(player, a: any, b: any)
 		end
 		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks(), s.hero)
 		view.ok = moved > 0
+		view.moved = moved -- (옮긴 수 — 나눠 받기의 알림 · 2026-11-06)
 		view.why = if moved > 0 then nil elseif left > 0 then "가방에 자리가 없다" else "받을 것이 없다"
 		return view
 	elseif a == "pet" then
@@ -5042,6 +5130,14 @@ function World.start()
 			fire("Megaphone", p, text)
 		end
 	end)
+	-- 보스의 최초 격파(2026-11-05): 어느 서버에서 자리를 얻은 파티가 나오면 이 서버의 모두에게(화면 위 큰 알림 · 채팅 — 클라이언트 boot.luau의 FirstClear)
+	require(script.Parent.firstClear).start(function(news)
+		local bb = require(lune.sim.weekly).boss(news.boss)
+		local view = { boss = if bb then bb.name else news.boss, n = news.n, max = news.max, names = news.names, test = news.test == true }
+		for p in sessions do
+			fire("FirstClear", p, view)
+		end
+	end)
 	-- 만렙 최초 달성(2026-10-24): 어느 서버에서 처음 만렙이 나오면 이 서버의 모두에게 축하 알림 · 레벨 판을 바로 다시 읽는다(1위 박제)
 	require(script.Parent.firstMax).start(function(rec)
 		rankCache = nil
@@ -5078,6 +5174,7 @@ function World.start()
 	end)
 	-- 달빛 상점 안(s.shop)에서는 받지 않는 일 — 움직임 · 기술 · 줍기 · 물약 · 문 · 경매장 · 퀘스트 · 아이템 …(맵에서 빠져 있다 — 2026-10-21)
 	World.studio = select(2, pcall(function() return RunService:IsStudio() end)) == true -- Studio에서 도는가(만렙 최초 달성을 적지 않는다 — 2026-10-24)
+	require(script.Parent.reveal).start(World.studio, os.time()) -- 보스의 출현 시각(2026-11-05 — 이 판으로 처음 켜진 서버가 「지금 + 1시간」을 적는다 · Studio는 기억에만)
 	local function outside(fn)
 		return function(player, ...)
 			local s = sessions[player]
@@ -5144,6 +5241,13 @@ function World.start()
 	Net.OnServer("Admin", onAdmin)
 	Net.OnServer("Keys", onKeys)
 	Net.OnServer("Sound", onSound)
+	-- 메뉴 단추의 차례(끌어 옮겼다 — 2026-11-06): 계정에 적고 곧 저장한다(꼴은 Account.setMenu가 본다)
+	Net.OnServer("MenuOrder", function(player, list)
+		local s = sessions[player]
+		if s and s.acct and Account.setMenu(s.acct, list) then
+			saveSoon(s)
+		end
+	end)
 	Net.OnServer("Daily", Analytics.wrap("Daily", onDaily, World.session))
 	Net.OnServer("Attend", Analytics.wrap("Attend", onAttend, World.session))
 	Net.OnServer("Achieve", Analytics.wrap("Achieve", onAchieve, World.session))
@@ -5225,10 +5329,12 @@ function World.start()
 		toRoom(key, "WeekView", Weekly.roomView(room))
 		return key
 	end
-	-- 파티 찾기(2026-11-05 — 사용자 "파티 보스라서 파티구하고 방만들고 막 이런 UI도 있어야해 파티를 구해서 가는거라서" · 고르심: 같은 서버만 · 방장이 수락 · 방장 출발 → 바로 보스 방).
-	--  셈 = sim/finder.luau · 창 = client/lune/ui/finderWindow.luau. 방의 사람 = 방장의 파티(수락하면 여기서 그 사람을 방장의 파티에 넣는다 — Party.invite → accept).
-	--  action: "view" · "make"(보스, 난이도, 조건 단계) · "apply"(방장) · "withdraw" · "accept" · "deny"(사람) · "ready"(켜기) · "start" · "leave"(방장 = 방을 닫는다 · 파티원 = 파티를 나간다).
-	--  바뀌면 그 방의 사람 · 신청한 사람 · 상대에게 새 화면(FinderView)을 보낸다. 대답 = 부른 사람의 화면 { ok, why, rooms, mine, bosses, max, steps }
+	-- 파티 찾기(2026-11-05 — sim/finder.luau · 창 client/lune/ui/finderWindow.luau). 사용자: "파티 보스라서 파티구하고 방만들고 막 이런 UI도 있어야해" · 고르심: 같은 서버만 · 방장이 수락 →
+	--  같은 날 다시: "메뉴탭에서 접근하는게 아니라 해당 던전에서 파티방을 만드는거야 … 로스트아크 파티모집 어떻게하는지 … 공부하고만들어" — 로스트아크의 레이드 파티 찾기 꼴:
+	--  보스마다 따로(그 보스의 문 → 보스 창의 [파티 찾기]) · 등록 · 신청 · 입장은 그 문 앞에서(같은 맵 · 가로 Finder.NEAR점 안) · 입장 = 모두 문 앞에 있을 때 그 보스 방으로(World.enterWeekly).
+	--  방의 사람 = 방장의 파티(수락하면 여기서 그 사람을 방장의 파티에 넣는다 — Party.invite → accept). 제목은 Roblox의 TextService로 거른다(다른 사람에게 보이는 글).
+	--  action: "view"(보스) · "make"(보스, 난이도, { title, step, same }) · "apply"(방장) · "withdraw" · "accept" · "deny"(사람) · "start" · "leave"(방장 = 모집 취소 · 파티원 = 파티를 나간다).
+	--  바뀌면 그 방의 사람 · 신청한 사람 · 상대에게 새 화면(FinderView)을 보낸다. 대답 = 부른 사람의 화면 { ok, why, boss, rooms, mine, me, max, steps, titleMax }
 	World.finderBook = require(lune.sim.finder).new()
 	function World.finderParty()
 		return {
@@ -5239,57 +5345,71 @@ function World.start()
 				local p = Party.of(book, uid)
 				return if p then p.leader else uid
 			end,
+			classOf = function(uid)
+				local t = byUser[uid]
+				return if t and t.hero then t.hero.class else nil
+			end,
 		}
 	end
-	function World.finderView(s, why: string?)
+	-- 그 사람이 그 보스의 문 앞에 있나(같은 맵 · 가로 Finder.NEAR점 안)
+	function World.atDoor(t, b): boolean
+		local Finder = require(lune.sim.finder)
+		return t ~= nil and t.hero ~= nil and b ~= nil and t.scene == b.door.scene and math.abs(t.hero.x - b.door.x) <= Finder.NEAR
+	end
+	function World.finderView(s, why: string?, bossId: any?)
 		local Finder, Weekly = require(lune.sim.finder), require(lune.sim.weekly)
 		local fb, P = World.finderBook, World.finderParty()
 		local me = s.player.UserId
-		local now = os.time()
+		local mineR = Finder.roomOf(fb, P, me)
+		local boss = Weekly.boss(bossId) or (mineR and Weekly.boss(mineR.boss)) or Weekly.boss(s.finderBoss)
+		if not boss then
+			return { ok = why == nil, why = why, rooms = {}, mine = nil, max = Finder.MAX, steps = Finder.LV_STEPS, titleMax = Finder.TITLE_MAX }
+		end
+		s.finderBoss = boss.id -- (마지막으로 연 보스 — 서버가 먼저 보내는 화면에 쓴다)
+		local CL = CLASSES.classes
 		local function who(uid)
 			local t = byUser[uid]
 			if t and t.hero then
-				return { name = t.name, lv = t.hero.level, power = Hero.power(t.hero) }
+				return { id = uid, name = t.name, lv = t.hero.level, power = Hero.power(t.hero), class = (CL[t.hero.class] and CL[t.hero.class].name) or t.hero.class, here = World.atDoor(t, boss) }
 			end
-			return { name = "?", lv = 0, power = 0 }
+			return { id = uid, name = "?", lv = 0, power = 0, class = "", here = false }
 		end
+		local myInfo = { level = s.hero.level, class = s.hero.class }
 		local rooms = {}
-		for _, r in Finder.list(fb, P) do
-			local bb = Weekly.boss(r.boss)
-			table.insert(rooms, { id = r.leader, boss = if bb then bb.name else r.boss, mode = r.mode, lv = r.minLv, n = r.n, leader = who(r.leader).name, mine = r.leader == P.leader(me), applied = fb.app[me] == r.leader })
-		end
-		local mine = nil
-		local r = Finder.roomOf(fb, P, me)
-		if r then
-			local bb = Weekly.boss(r.boss)
-			local members, apps = {}, {}
+		for _, r in Finder.list(fb, P, boss.id) do
+			local members = {}
 			for _, uid in P.members(r.leader) do
 				local w = who(uid)
-				table.insert(members, { id = uid, name = w.name, lv = w.lv, leader = uid == r.leader, ready = uid == r.leader or r.ready[uid] == true })
+				w.leader = uid == r.leader
+				table.insert(members, w)
 			end
-			if r.leader == me then
-				for _, uid in r.apps do
-					local w = who(uid)
-					table.insert(apps, { id = uid, name = w.name, lv = w.lv, power = w.power })
-				end
-			end
-			mine = { boss = if bb then bb.name else r.boss, mode = r.mode, lv = r.minLv, lead = r.leader == me, ready = r.ready[me] == true, members = members, apps = apps }
+			table.insert(rooms, { id = r.leader, mode = r.mode, title = r.title, lv = r.minLv, same = r.sameClass, n = r.n, leader = who(r.leader).name, members = members,
+				applied = fb.app[me] == r.leader, mine = P.leader(me) == r.leader, can = Finder.canApply(fb, P, me, r.leader, myInfo) })
 		end
-		local bosses = {}
-		for _, bb in Weekly.DATA.bosses do
-			if not bb.dev or Admin.is(s.player) then
-				local modes = {}
-				for _, m in Weekly.MODES do
-					if bb[m] and not Weekly.canEnter(s.hero, bb, m, now) then
-						table.insert(modes, m)
-					end
-				end
-				if #modes > 0 then
-					table.insert(bosses, { id = bb.id, name = bb.name, modes = modes, need = { normal = bb.normal.need, hard = if bb.hard then bb.hard.need else nil } })
+		local mine = nil
+		if mineR then
+			local members, apps = {}, {}
+			for _, uid in P.members(mineR.leader) do
+				local w = who(uid)
+				w.leader = uid == mineR.leader
+				table.insert(members, w)
+			end
+			if mineR.leader == me then
+				for _, uid in mineR.apps do
+					table.insert(apps, who(uid))
 				end
 			end
+			local mb = Weekly.boss(mineR.boss)
+			mine = { boss = if mb then mb.name else mineR.boss, bossId = mineR.boss, mode = mineR.mode, title = mineR.title, lv = mineR.minLv, same = mineR.sameClass, lead = mineR.leader == me, members = members, apps = apps }
 		end
-		return { ok = why == nil, why = why, rooms = rooms, mine = mine, bosses = bosses, max = Finder.MAX, steps = Finder.LV_STEPS }
+		local modes = {}
+		for _, m in Weekly.MODES do
+			if boss[m] then
+				table.insert(modes, { id = m, need = boss[m].need, can = Weekly.canEnter(s.hero, boss, m, os.time()) == nil })
+			end
+		end
+		return { ok = why == nil, why = why, boss = { id = boss.id, name = boss.name, modes = modes }, rooms = rooms, mine = mine, here = World.atDoor(s, boss),
+			max = Finder.MAX, steps = Finder.LV_STEPS, titleMax = Finder.TITLE_MAX }
 	end
 	-- 그 사람들에게 새 화면을 보낸다(부른 사람은 대답으로 받는다)
 	function World.finderPush(ids, except: number?)
@@ -5311,11 +5431,15 @@ function World.start()
 		end
 		return ids
 	end
-	-- 파티에서 빠졌다(나가기 · 접속을 끊음 — partyLeave): 그 사람의 신청을 거두고 · 방장이었으면 방을 닫고 · 남은 사람들에게 알린다
+	-- 파티에서 빠졌다(나가기 · 접속을 끊음 — partyLeave): 그 사람의 신청을 거두고 · 방장이었으면 모집을 닫고 · 남은 사람들에게 알린다
 	function World.finderLeft(uid: number, left)
 		local Finder = require(lune.sim.finder)
 		local fb, P = World.finderBook, World.finderParty()
 		local touched = table.clone(left or {})
+		local at = fb.app[uid] and fb.rooms[fb.app[uid]]
+		if at then
+			table.insert(touched, at.leader)
+		end
 		Finder.withdraw(fb, uid)
 		local own = fb.rooms[uid]
 		if own then
@@ -5341,6 +5465,7 @@ function World.start()
 		local fb, P = World.finderBook, World.finderParty()
 		local now = os.time()
 		local why = nil
+		local viewBoss = nil
 		local before = Finder.roomOf(fb, P, me)
 		local touched = if before then finderAll(before) else {}
 		if fb.app[me] and fb.rooms[fb.app[me]] then
@@ -5348,30 +5473,59 @@ function World.start()
 				table.insert(touched, id)
 			end
 		end
-		if action == "make" then
-			local bb = Weekly.boss(a)
-			if not bb or (bb.dev and not Admin.is(player)) then
+		local function bossOK(id): any
+			local bb = Weekly.boss(id)
+			if bb and (bb.dev or not require(lune.sim.reveal).open(bb.id)) and not Admin.is(player) then
+				return nil -- 퍼블리시하지 않는 보스 · 아직 출현하지 않은 보스(2026-11-05 — 관리자만)
+			end
+			return bb
+		end
+		if action == "view" then
+			viewBoss = bossOK(a) and a or nil
+		elseif action == "make" then
+			local bb = bossOK(a)
+			local form = if typeof(c) == "table" then c else {}
+			viewBoss = a
+			if not bb then
 				why = "모르는 보스다"
+			elseif not World.atDoor(s, bb) then
+				why = "보스의 문 앞에서 등록한다"
 			elseif b2 ~= "normal" and not (b2 == "hard" and bb.hard) then
 				why = "모르는 난이도다"
-			elseif typeof(c) ~= "number" or Finder.LV_STEPS[c] == nil then
+			elseif typeof(form.step) ~= "number" or Finder.LV_STEPS[form.step] == nil then
 				why = "모르는 조건이다"
 			else
 				why = Weekly.canEnter(s.hero, bb, b2, now)
+				local title = if why then "" else Finder.cleanTitle(form.title)
+				if not why and title ~= "" then
+					local ok, filtered = pcall(function()
+						return TextService:FilterStringAsync(title, me):GetNonChatStringForBroadcastAsync()
+					end)
+					if not ok or typeof(filtered) ~= "string" then
+						why = "제목을 거르지 못했다 — 다시 등록해 주세요"
+					else
+						title = filtered
+					end
+				end
 				if not why then
-					local _, w2 = Finder.make(fb, P, me, bb.id, b2, bb[b2].need + Finder.LV_STEPS[c])
+					local _, w2 = Finder.make(fb, P, me, { boss = bb.id, mode = b2, title = if title ~= "" then title else Weekly.DATA.words.finderTitle or "", minLv = bb[b2].need + Finder.LV_STEPS[form.step], sameClass = form.same == true })
 					why = w2
 				end
 			end
 		elseif action == "apply" then
 			local r = typeof(a) == "number" and fb.rooms[a] or nil
-			local bb = r and Weekly.boss(r.boss)
+			local bb = r and bossOK(r.boss)
 			if not r or not bb then
 				why = "없는 방이다"
 			else
-				why = Weekly.canEnter(s.hero, bb, r.mode, now)
+				viewBoss = r.boss
+				if not World.atDoor(s, bb) then
+					why = "보스의 문 앞에서 신청한다"
+				else
+					why = Weekly.canEnter(s.hero, bb, r.mode, now)
+				end
 				if not why then
-					local _, w2 = Finder.apply(fb, P, me, a, s.hero.level)
+					local _, w2 = Finder.apply(fb, P, me, a, { level = s.hero.level, class = s.hero.class })
 					why = w2
 					if not why then
 						for _, id in finderAll(r) do
@@ -5409,9 +5563,6 @@ function World.start()
 			if typeof(a) == "number" then
 				table.insert(touched, a)
 			end
-		elseif action == "ready" then
-			local _, w2 = Finder.setReady(fb, P, me, a == true)
-			why = w2
 		elseif action == "leave" then
 			if fb.rooms[me] then
 				Finder.close(fb, me)
@@ -5432,8 +5583,11 @@ function World.start()
 					if not ms or not ms.hero then
 						why = "파티원이 이 서버에 없다"
 						break
+					elseif not World.atDoor(ms, bb) then
+						why = ("%s — 보스의 문 앞에 없다"):format(ms.name)
+						break
 					elseif ms.hero.inCine or not ms.hero.alive then
-						why = ("%s — 지금은 출발할 수 없다"):format(ms.name)
+						why = ("%s — 지금은 입장할 수 없다"):format(ms.name)
 						break
 					end
 					local w5 = bb and Weekly.canEnter(ms.hero, bb, r.mode, now)
@@ -5448,7 +5602,7 @@ function World.start()
 					World.enterWeekly(going, bb, r.mode)
 				end
 			end
-		elseif action ~= "view" then
+		else
 			return nil
 		end
 		for _, cr in Finder.sweep(fb, P) do
@@ -5465,7 +5619,7 @@ function World.start()
 		if action ~= "view" then
 			World.finderPush(touched, me)
 		end
-		return World.finderView(s, why)
+		return World.finderView(s, why, viewBoss)
 	end), World.session))
 	Net.OnServer("Sail", Analytics.wrap("Sail", onSail, World.session))
 	Net.OnServer("Market", Analytics.wrap("Market", onMarket, World.session))

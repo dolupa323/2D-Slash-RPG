@@ -161,8 +161,11 @@ do
 			h.invuln = 5
 			room:step({ h }, 1 / 60)
 		end
-		eq(up.y, h.y, ("다른 높이(%.0f)의 졸개가 리퍼의 발판(%.0f)으로 옮겨졌다"):format(y0, h.y))
-		expect(math.abs(up.x - h.x) <= 20, ("리퍼 코앞까지(%.0f → %.0f · 리퍼 %.0f)"):format(x0, up.x, h.x))
+		-- 2026-11-05 사용자 "리퍼3차스킬이 끝까지 안끌어와도 되니까 몬스터가 스폰은 정상적으로되고, 이동도 정상적으로 되어야해": 다른 높이의 졸개는 제 발판에 그대로(높이가 바뀌지 않는다) —
+		--  그 전(11-03): 리퍼의 발판으로 옮겼다가 살아남은 졸개가 그 자리에 머물고 화면과 어긋났다
+		eq(up.y, y0, ("다른 높이(%.0f)의 졸개는 제 발판에 그대로 — 리퍼의 발판(%.0f)으로 옮겨지지 않는다"):format(y0, h.y))
+		local lo, hi = room:footSpan(up)
+		expect(up.x >= lo and up.x <= hi, ("제 발판 안에서만 움직였다(%.0f · 발판 %.0f ~ %.0f)"):format(up.x, lo, hi))
 		-- 보스는 끌려오지 않는다: 리퍼 곁의 졸개를 잠깐 보스로 쳐서 같은 타(끌어 모으기)를 맞힌다
 		local def, bx, by = boss.def, boss.x, boss.y
 		boss.state, boss.def = "idle", setmetatable({ boss = true }, { __index = def })
@@ -177,7 +180,7 @@ do
 				row = r
 			end
 		end
-		expect(row and row[13] == h.y, "옮겨진 높이를 화면에 보낸다")
+		expect(row and row[13] == nil, "높이가 바뀌지 않았으니 높이를 보내지 않는다(화면은 제 발판의 높이로 그린다)")
 		up.state, up.respawn = "gone", 0
 		room:step({ h }, 1 / 60)
 		eq(up.y, y0, "다시 나타나면 처음 높이")

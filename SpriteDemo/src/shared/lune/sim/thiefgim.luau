@@ -368,7 +368,7 @@ function Gim.tick(room, heroes, dt: number, events)
 					-- 터진다
 					for _, h in heroes do
 						if near(h, add.y, add.x - G.bomb.r, add.x + G.bomb.r, G.bomb.up) then
-							room:hurtHero(events, h, mob, G.bomb.hit)
+							room:hurtHero(events, h, mob, G.bomb.hit, nil, true) -- 기믹 = 트루 데미지(2026-11-05)
 						end
 					end
 					add.away, add.state, add.t = true, "gone", 0
@@ -414,7 +414,7 @@ function Gim.tick(room, heroes, dt: number, events)
 			end
 		end
 		if got then
-			room:hurtHero(events, got, k.mob, k.mul)
+			room:hurtHero(events, got, k.mob, k.mul, nil, true) -- 기믹 = 트루 데미지(2026-11-05)
 			local px = math.clamp(k.mob.x + k.mob.dir * k.def.pull, k.mob.a, k.mob.b)
 			got.x = px
 			table.insert(events, { type = "pull", hero = got.id, x = px })

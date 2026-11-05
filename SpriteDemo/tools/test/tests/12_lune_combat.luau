@@ -154,12 +154,21 @@ eq(Hero.killXp(vet, vet.level, 1), math.max(1, math.floor(full * 0.2 + 0.5)), "�
 -- 최고 레벨
 local top = Hero.new(3, "mooni")
 top.auto = true
-Hero.gainXp(top, 1e15)
-eq(top.level, N.MAX_LEVEL, "최고 레벨에서 멈춘다")
-eq(Hero.gainXp(top, 1000), 0, "더 오르지 않는다")
-eq(top.xp, 0, "최고 레벨에서는 경험치가 쌓이지 않는다")
+local to150 = 0
+for L = 1, N.MAX_LEVEL - 1 do
+	to150 += N.xpNeed(L)
+end
+Hero.gainXp(top, to150 + N.XP_WALL * 0.5)
+eq(top.level, N.MAX_LEVEL, "Lv.150")
+eq(Hero.gainXp(top, 1000), 0, "더 오르지 않는다(1,000으로는)")
+expect(math.abs(top.xp - N.XP_WALL * 0.5 - 1000) < 1, "Lv.150부터 한 레벨 = XP_WALL(풀 쿠폰 · 풀 패스로 젠을 다 잡는 24시간 사냥 한 달 — 2026-11-06) — 절반이 쌓였다")
 eq(top.ap + top.stats.str + top.stats.int, N.apAt(N.MAX_LEVEL), "받은 능력치 점수 합(저절로 주 능력치에 찍힌다)")
 eq(top.stats.str, N.apAt(N.MAX_LEVEL), "무니의 주 능력치는 힘")
+eq(Hero.gainXp(top, N.XP_WALL * 0.5), 1, "남은 절반을 채우면 151")
+eq(top.level, N.MAX_LEVEL + 1, "Lv.151")
+Hero.gainXp(top, N.XP_WALL * 100)
+eq(top.level, N.LEVEL_CAP, "만렙 200에서 멈춘다")
+eq(top.xp, 0, "만렙에서는 경험치가 쌓이지 않는다")
 
 -- ---- 2-1) 직업 · 능력치 · 스킬 ----
 eq(#CLASSES.order, 5, "직업 다섯")
@@ -276,7 +285,7 @@ eq(Hero.unpack(1, nil), nil, "없으면 nil")
 eq(Hero.unpack(1, { class = "wizard", level = 3 }), nil, "없는 직업")
 -- 최고 레벨을 넘는 레벨(설계의 최고 레벨이 줄었다)은 최고 레벨로 맞춘다(2026-10-18 검토 — 전에는 캐릭터에 들어갈 수 없게 됐다) · 0 이하 · 소수는 여전히 말이 안 된다
 local over = Hero.unpack(1, { class = "axion", level = 999 })
-expect(over ~= nil and over.level == N.MAX_LEVEL, "최고 레벨을 넘는 레벨은 최고 레벨로")
+expect(over ~= nil and over.level == N.LEVEL_CAP, "만렙(200)을 넘는 레벨은 만렙으로")
 eq(Hero.unpack(1, { class = "axion", level = 0 }), nil, "레벨이 말이 안 됨(0)")
 eq(Hero.unpack(1, { class = "axion", level = 2.5 }), nil, "레벨이 말이 안 됨(소수)")
 eq(Hero.unpack(1, { class = "axion", level = 2.5 }), nil, "레벨이 소수")

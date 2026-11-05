@@ -46,6 +46,22 @@ for _, list in { RIDE_DATA.pets, RIDE_DATA.mounts } do
 		end
 	end
 end
+-- 묶음(2026-11-06 「여러 개를 한 번에」 — 공방 bm.js BM_PACKS): 그 상품과 그것을 담은 묶음들 { { id, n } }(1개부터 수의 차례) · 묶음이 없는 상품은 nil
+local PACKS = {}
+for _, p in BM.products do
+	if typeof(p.of) == "string" and BY[p.of] then
+		PACKS[p.of] = PACKS[p.of] or { { id = p.of, n = 1 } }
+		table.insert(PACKS[p.of], { id = p.id, n = p.n or 1 })
+	end
+end
+for _, list in PACKS do
+	table.sort(list, function(a, b)
+		return a.n < b.n
+	end)
+end
+function CashWindow.packs(id: string)
+	return PACKS[id]
+end
 -- 그 상품(이름 · 한 줄 설명 · 그림 — 퀵슬롯의 설명 · 가방의 캐시 탭이 쓴다). 쿠폰 펫도 든다(위)
 function CashWindow.product(id: string)
 	return BY[id]
@@ -151,7 +167,7 @@ function CashWindow.rows(view, tab: number, gift: boolean?)
 			elseif g and g.kind == "bmDust" then
 				text = Format.fill(W.boxDust, { n = Format.comma(g.amount) })
 			end
-			table.insert(out, { box = i, icon = if g and g.icon then g.icon else "bm_starter", name = if g then g.name else e.id, text = text, n = e.n })
+			table.insert(out, { box = i, item = e.id, icon = if g and g.icon then g.icon else "bm_starter", name = if g then g.name else e.id, text = text, n = e.n })
 		end
 		return out
 	end
@@ -414,11 +430,13 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 	local waiting = false -- 답을 기다리는 중(두 번 눌러 구매 창이 둘 뜨지 않게)
 	local giftMode, giftId = false, nil -- 선물하기(2026-10-31): 줄의 단추가 「선물」 · 닉네임 칸을 띄운 상품
 	local giftNote, giftTone = nil, nil
+	-- 수 고르기(2026-11-06): pick = { buy = 상품 }(1개 · 5개 · 10개 — 선물하기면 고른 묶음으로 닉네임 칸) · { box = 보관함의 줄, id, n, icon, name }(나눠 받기 — takeN개)
+	local pick, takeN = nil, 1
 	local textW = w - S.textX - S.sideW - 8
 	local head = Ui.text(body, W.head, 0, 2, w - S.giftW - 8, { color = C.dim })
 	local giftBtn = Ui.button(body, W.giftMode, w - S.giftW, 0, S.giftW, function()
 		giftMode = not giftMode
-		giftId, note, noteTone = nil, nil, nil
+		giftId, note, noteTone, pick = nil, nil, nil, nil
 		view.refresh()
 	end, { h = S.giftH })
 	giftBtn.frame.Name = "GiftMode"
@@ -430,7 +448,7 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 		local item = Ui.tab(body, t[2], tx, S.tabY, function()
 			if tab ~= i then
 				tab = i
-				note, giftId = nil, nil
+				note, giftId, pick = nil, nil, nil
 				list.CanvasPosition = Vector2.zero -- 다른 탭은 맨 위부터
 				view.refresh()
 			end
@@ -464,7 +482,22 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 				return
 			end
 			if r.act.gift then
-				giftId, giftNote, giftTone = r.act.gift, nil, nil -- 닉네임 칸을 띄운다
+				if CashWindow.packs(r.act.gift) then
+					pick, note = { buy = r.act.gift }, nil -- 묶음이 있으면 몇 개를 선물할지 먼저(2026-11-06)
+				else
+					giftId, giftNote, giftTone = r.act.gift, nil, nil -- 닉네임 칸을 띄운다
+				end
+				view.refresh()
+				return
+			end
+			-- 여러 개를 한 번에(2026-11-06): 묶음이 있는 상품의 「구매」 → 1개 · 5개 · 10개 / 보관함에 2개 이상인 줄의 「받기」 → 받을 수
+			if r.act.id and CashWindow.packs(r.act.id) then
+				pick, note = { buy = r.act.id }, nil
+				view.refresh()
+				return
+			elseif r.act.box and (r.act.n or 1) > 1 then
+				pick, note = { box = r.act.box, id = r.act.item, n = r.act.n, icon = r.act.icon, name = r.act.name }, nil
+				takeN = r.act.n
 				view.refresh()
 				return
 			end
@@ -476,7 +509,7 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 			if res and res.why then
 				note, noteTone = res.why, C.red
 			elseif act.box and res and res.ok then
-				note, noteTone = Format.fill(W.taken, { n = act.n }), C.green
+				note, noteTone = Format.fill(W.taken, { n = res.moved or act.n }), C.green
 			elseif (act.pet ~= nil or act.ride ~= nil) and res and res.ok then
 				note, noteTone = nil, nil -- 꺼냈다 · 탔다(화면의 펫 · 탈것이 바로 보인다)
 			elseif res and res.ok then
@@ -637,8 +670,113 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 		giftNote, giftTone = nil, nil
 		view.refresh()
 	end)
+	-- 수 고르기(2026-11-06 사용자: "여러수량을 한번에 구매요청하고 로벅스도 그 개수에맞춰" · "수령을 나눠서 할수있어야해"): 목록 자리에 —
+	--  고른 것의 줄(그림 · 이름 · 안내) / 사기 = 1개 · 5개 · 10개(값 · 「구매」 — 선물하기면 「선물」 → 닉네임 칸) / 받기 = [-] [수] [+] [모두] … 「받기」 · 「보관함에 n개」 · 아래 「돌아가기」
+	local pickBox = Ui.group(body, 0, S.listY, w, S.rows * S.row, "Pick")
+	Ui.slot(pickBox, 0, 2, S.iconS)
+	local pIcon = Ui.pic(pickBox, nil, 2, 4)
+	local pName = Ui.text(pickBox, "", S.textX, 3, textW, { font = "body" })
+	local pSide = Ui.text(pickBox, "", w - S.sideW, S.priceY, S.sideW, { align = "right", color = C.gold })
+	local pHead = Ui.text(pickBox, "", S.textX, 19, w - S.textX, { color = C.dim })
+	local opts = {}
+	for k = 1, 3 do
+		local y = S.pickY + (k - 1) * S.pickRow
+		local o = {}
+		o.qty = Ui.text(pickBox, "", S.textX, y + 4, 80, { font = "body" })
+		o.price = Ui.text(pickBox, "", 0, y + 6, w - S.btnW - 8, { align = "right", color = C.gold })
+		o.btn = Ui.button(pickBox, W.buy, w - S.btnW, y, S.btnW, function()
+			if waiting or not o.id then
+				return
+			end
+			if giftMode then
+				giftId, giftNote, giftTone, pick = o.id, nil, nil, nil -- 고른 묶음의 닉네임 칸
+				view.refresh()
+				return
+			end
+			waiting = true
+			local res = ctx.cashDo("buy", o.id)
+			waiting = false
+			note, noteTone = nil, nil
+			if res and res.why then
+				note, noteTone = res.why, C.red
+			elseif res and res.ok then
+				note, noteTone, pick = W.asked, C.dim, nil
+			end
+			view.refresh()
+		end, { main = true, h = 22 })
+		o.btn.frame.Name = "Pick" .. k
+		opts[k] = o
+	end
+	local function setTake(n: number)
+		takeN = math.clamp(math.floor(n), 1, math.max(1, (pick and pick.n) or 1))
+		view.refresh()
+	end
+	local ty = S.pickY
+	local minus = Ui.button(pickBox, "-", 0, ty, S.stepW, function()
+		setTake(takeN - 1)
+	end)
+	minus.frame.Name = "TakeLess"
+	local qField = Ui.field(pickBox, S.stepW + 4, ty, S.qtyW, Ui.M.button, "1")
+	qField.Name = "TakeN"
+	local plus = Ui.button(pickBox, "+", S.stepW + 8 + S.qtyW, ty, S.stepW, function()
+		setTake(takeN + 1)
+	end)
+	plus.frame.Name = "TakeMore"
+	local maxB = Ui.button(pickBox, W.takeMax, S.stepW * 2 + 12 + S.qtyW, ty, S.maxW, function()
+		setTake((pick and pick.n) or 1)
+	end)
+	maxB.frame.Name = "TakeMax"
+	local takeGo = Ui.button(pickBox, W.take, w - S.btnW, ty, S.btnW, function()
+		if waiting or not (pick and pick.box) then
+			return
+		end
+		waiting = true
+		local want = takeN
+		local res = ctx.cashDo("take", { i = pick.box, n = want })
+		waiting = false
+		note, noteTone = nil, nil
+		if res and res.why then
+			note, noteTone = res.why, C.red
+		elseif res and res.ok then
+			note, noteTone, pick = Format.fill(W.taken, { n = res.moved or want }), C.green, nil
+		end
+		view.refresh()
+	end, { main = true })
+	takeGo.frame.Name = "TakeGo"
+	local pHave = Ui.text(pickBox, "", 0, ty + Ui.M.button + 8, w, { color = C.dim })
+	-- 받을 수의 칸: 숫자만 · 1 ~ 보관함의 수(적는 동안 빈 칸이어도 된다 — 다 적으면 그 수)
+	do
+		local ok, sig = pcall(function()
+			return qField:GetPropertyChangedSignal("Text")
+		end)
+		if ok and typeof(sig) == "RBXScriptSignal" then
+			sig:Connect(function()
+				local digits = string.gsub(qField.Text, "[^0-9]", "")
+				if digits ~= qField.Text then
+					qField.Text = digits
+					return
+				end
+				local n = tonumber(digits)
+				if n and pick and pick.n then
+					local k = math.clamp(n, 1, pick.n)
+					if k ~= takeN then
+						takeN = k
+						view.refresh()
+					end
+					if tostring(k) ~= digits then
+						qField.Text = tostring(k)
+					end
+				end
+			end)
+		end
+	end
+
 	local back = Ui.button(body, W.giftCancel, 0, fy, S.allW, function()
-		giftId = nil
+		if pick then
+			pick = nil
+		else
+			giftId = nil
+		end
 		view.refresh()
 	end)
 	back.frame.Name = "GiftBack"
@@ -654,16 +792,86 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 		local isPass = key == "pass"
 		local lock = v ~= nil and v.giftLock == true -- 로블록스 정책으로 선물을 보낼 수 없는 계정
 		local form = giftId ~= nil
+		-- 수 고르기: 보관함의 줄이 바뀌었으면(다른 것이 받아졌다) 닫는다 · 받을 수는 그 줄의 수 안에서
+		if pick and pick.box then
+			local e = v and v.box and v.box[pick.box]
+			if not e or e.id ~= pick.id then
+				pick = nil
+			else
+				pick.n = e.n
+				takeN = math.clamp(takeN, 1, math.max(1, e.n))
+			end
+		end
+		local picking = pick ~= nil and not form
+		-- (수 고르기의 단추 · 칸은 그 모습일 때만 — 아래에서 켠다)
+		for _, o in opts do
+			o.btn.frame.Visible = false
+		end
+		for _, b in { minus, plus, maxB, takeGo } do
+			b.frame.Visible = false
+		end
 		head:set(if giftMode then W.giftHead else W.head)
 		giftBtn:setText(if giftMode then W.giftBack else W.giftMode)
 		giftBtn:setMain(giftMode)
 		giftBox.Visible = form
-		passBox.Visible = isPass and not form
-		list.Visible = not isPass and not form
-		all.frame.Visible = not form
-		back.frame.Visible = form
+		pickBox.Visible = picking
+		passBox.Visible = isPass and not form and not picking
+		list.Visible = not isPass and not form and not picking
+		all.frame.Visible = not form and not picking
+		back.frame.Visible = form or picking
 		local rows = if isPass then {} else CashWindow.rows(v, tab, giftMode)
-		empty:show(not form and not isPass and #rows == 0)
+		empty:show(not form and not picking and not isPass and #rows == 0)
+		if picking then
+			local buying = pick.buy ~= nil
+			local p = if buying then BY[pick.buy] else nil
+			Ui.setPic(pIcon, if p then p.icon else pick.icon)
+			pName:set(if p then p.name else (pick.name or ""))
+			pSide:set(if buying then "" else ("x%d"):format(pick.n or 0))
+			pHead:set(if not buying then W.takeHead elseif giftMode then W.qtyGift else W.qtyHead)
+			local packs = (buying and CashWindow.packs(pick.buy)) or {}
+			local seen = {}
+			for _, e in (v and v.list) or {} do
+				seen[e.id] = e
+			end
+			for k, o in opts do
+				local pk = packs[k]
+				o.id = nil
+				o.qty:show(pk ~= nil)
+				o.price:show(pk ~= nil)
+				o.btn.frame.Visible = pk ~= nil
+				if pk then
+					local e = seen[pk.id] or {}
+					local state = if giftMode then (if lock then "noGift" elseif not e.ready then "soon" else "gift") elseif not e.ready then "soon" else "buy"
+					o.qty:set(Format.fill(W.qty, { n = pk.n }))
+					o.price:set(CashWindow.priceOf(v, pk.id))
+					o.price:color(if state == "soon" then C.dim else C.gold)
+					o.btn:setText(if state == "soon" then W.soon elseif state == "gift" then W.gift elseif state == "noGift" then W.giftNo else W.buy)
+					o.btn:setEnabled(state == "buy" or state == "gift")
+					o.id = if state == "buy" or state == "gift" then pk.id else nil
+				end
+			end
+			for _, b in { minus, plus, maxB, takeGo } do
+				b.frame.Visible = not buying
+			end
+			local fieldFrame = qField.Parent
+			if fieldFrame and fieldFrame:IsA("GuiObject") then
+				fieldFrame.Visible = not buying
+			end
+			pHave:show(not buying)
+			if not buying then
+				minus:setEnabled(takeN > 1)
+				plus:setEnabled(takeN < (pick.n or 1))
+				maxB:setEnabled(takeN < (pick.n or 1))
+				pHave:set(Format.fill(W.takeHave, { n = pick.n or 0 }))
+				local focused = false
+				pcall(function()
+					focused = qField:IsFocused()
+				end)
+				if not focused and qField.Text ~= tostring(takeN) then
+					qField.Text = tostring(takeN)
+				end
+			end
+		end
 		if form then
 			local p = BY[giftId]
 			Ui.setPic(gIcon, p and p.icon or nil)
@@ -695,7 +903,7 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 					ru.btn:setText(W.take)
 					ru.btn:setEnabled(true)
 					ru.btn:setMain(true)
-					ru.act = { box = r.box, n = r.n }
+					ru.act = { box = r.box, n = r.n, item = r.item, icon = r.icon, name = r.name }
 				elseif r.state == "pet" or r.state == "mount" then
 					ru.count:set("")
 					ru.price:set(W.own)

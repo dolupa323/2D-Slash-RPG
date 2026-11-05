@@ -1496,6 +1496,100 @@
           ✔ S175 **파티마다 따로 된 방 — 2026-10-21 (사용자: "파티마다 따로 되어야합니다 … 한서버에 100명 있으면 차례를 엄청나게 기다려야하는겁니다. 설계부터가 잘못됬어요 솔로게임처럼되어있습니다")** — export_lune_game.mjs: 스토리 보스의 방 · story 방 · 튜토리얼 꿈에 scene.inst = "party"(r1c4 · in_cellar · dream) + SCENES.base(방 이름 → 장면). world.luau roomKeyFor(place 안 — 이미 그 장면의 방이면 그대로 · 같은 파티의 방 · 아니면 <장면>#번호) · onTravel/moveTo가 place 뒤 s.scene · 돌아온 문 = base · 빈 #방은 닫음 · resumeScene에 sc.inst · 꿈 비교는 Tutorial.isDream(서버 · 화면 21곳). 설계 이름과 견주는 곳은 base로: quests.luau(onKill · onVisit · wantsMob · wantsKill · spotsIn · use · drops) · achieve visited · navi aim · worldmap path · cine(find · findAll · before · lookAt · fits). bosses.js 글. 시험 69(48개) · 13 · 26 · 29 · 30 · 31 · 33 · 42 · 50 · 51을 새 방식으로 · analytics Death 필드는 방 번호를 뗀다. 전체 495,957개 통과(약 2,800개 적은 것은 시험 13이 보낸 메시지마다 세는데 꿈이 사람마다 나뉘어 메시지가 준 것 — 표시를 뺀 복사본과 구간별로 견줘 확인) · 규칙 검사 통과 · Rojo 확인. Play 안 봄.
           ✔ S176 **초기화 무료 · 이름표 레벨 · 넓은 명예의 전당 · 대영주의 성 순위 판 · 쿠폰 + 기본펫 — 2026-10-21 (사용자: "스텟, 스킬 초기화 완전무료로 … 닉네임 이름표 왼쪽에 레벨 … 명예의 전당 좀더 넓찍하게 … 대영주의 성에도 … 순위 표시 … 검정색 동그랗게 생긴 … 기본펫 … 쿠폰 코드 입력창")** — ① Hero.freeReset = 찍은 것이 있으면 몇 번이든(resets는 저장의 꼴만) · Hero.statsSpent · 패킷 StatReset(world 등록 자리에 바로 — world.luau 지역 이름 200 한도) · statWindow 「초기화」(UILAYOUT.stat.resetW 92 · 두 번 누르기) · skillWindow 늘 「초기화」 · items.js 상인의 statreset 줄 뺌 · basics.js SPRULE · 시험 탭 paint.js paintStat · luneTab statreset. ② 이름표 판 바깥 왼쪽에 레벨(사용자 "이름테두리 바깥에 레벨표기입니다" — 처음엔 판 안에 넣었었다): ui.luau Ui.tag의 lead · Ui.tagLead(판의 왼쪽 테두리 밖 3점 · small_o) · othersView.levelText · boot · 시험 탭 paint.js nameTag(lead) · luneTab tagOf. ③ town/indoor/raw_hall.png 다시(Codex v3 — 예전 raw_hall_v1.png) · town.js 비석 face [68,76,148,135] · [161,76,242,135] · [254,75,335,135] · back_in_hall 올림. ④ city/indoor/raw_ct_castle.png 다시(Codex v3 — 예전 raw_ct_castle_v1.png) · city.js ct_castle.stones(board · pad 1 · face [95,48|80|111,185,70|102|133]) · build_lune_cityrooms stones · 내보내기 board · pad · hallStones.luau · luneTab 같은 셈 · back_ct_castle 올림. ⑤ cash.luau coupons · couponCode · redeem · server modules/coupons.luau(LIST — 처음 DONGGEULI → pet_round) · CashServer.coupon(틀린 번호 1분 다섯 · saveNow · notify) · 패킷 Coupon · ui/couponWindow.luau(메뉴 「쿠폰」 · UILAYOUT.coupon) · boot wctx.coupon · ride.js pet_round(free coupon · line) · bm.js SHOP_PETS(상품 · 줄 · built에서 뺌) · cashWindow.product가 쿠폰 펫도 · 그림: bm/bm_pet_round.png(Codex 시안 셋) → build_lune_ride.py --only → lune_ride_hand.mjs pet_round(구멍 16 · 풀 3 · 숨 · 깜빡) → made · 아이콘 icons/icons24 끝에 한 칸(ride_icons.json에도) → build_lune_ui · chars_3 · mask · ui_kit 올림. 시험 70(74개) · 18 · 13 · 47 · 54(성의 숨은 이야기 st_manor tx 7 → 17) · 66. 전체 495,721개 통과 · 규칙 검사 통과 · Rojo 확인. Play 안 봄. **이어서 "동글이 좀더 작게"**: lune_ride_hand.mjs pet_round = 손으로 다시 찍은 17 x 14점(rows · pal — build_lune_ride_made가 R.rows를 읽게) · 아이콘 다시 자름(ride_icons.json at 18 [2,4] · 24 [-1,1]) · chars_3 · mask · ui_kit 다시 올림 · 시험 70(80개). **이어서 "검정동글이말고 재까마귀 몬스터 모델 그대로 … 몬스터보다는 크기가 작게 … 쿠폰펫"**: ride.js pet_crow「아기 재까마귀」(free coupon · from crow) · build_lune_ride_made가 from = 몬스터의 서기 띠를 그대로 옮겨 petSize 0.6으로(chars.generated에서 몬스터와 같은 그림판 칸) · RIDE_HAND에서 pet_round 뺌(RIDE_HAND_UNUSED) · 아이콘 칸을 ride_pet_crow로(18 [15,6] · 24 [9,3]) · coupons.luau DONGGEULI → pet_crow · 시험 70(86개) · ui_kit 다시 올림(chars_3은 예전 것과 같아져 그 번호). **이어서 "테스트 계정에서 다시 쿠폰을 입력할수없어서 … 달빛패스 일딴 비활성화 … 펫은 펫 탭으로 … 달빛상점 ui가 너무 작아 모바일에서도 반응형"**: CashServer.syncCoupons(계정을 읽을 때 쓴 쿠폰의 지금 펫을 넣고 저장 — world.luau s.acct 자리) · bm.js BM_SHOP.tabs 편의 · 펫 · 재화 · 꾸밈 · 보관함 · rows.pet · off [pass] · built에서 pass 뺌 · 검사기 off 규칙 · layout.luau L.shopSpace(묶음 k배 — maxScale 1.5 · 정수 화소 우선 · bottom 8) · cashShop.luau 묶음 Panels + UIScale · 미리보기 world 배율을 정수 화소로. 시험 70(110개) · 62(탭을 이름표로) · 65. **이어서 "쿠폰 기록을 초기화해줘 쿠폰등록하는것부터 영상을찍어야해"**: CashServer.resetCoupons(쓴 쿠폰 · free 펫 · petOut) · world onAdmin "coupons"(saveNow · CashGot · sendWho) · adminWindow 탭 「계정」 · 「쓴 기록 지우기」 · 시험 70(119개) · 30(계정 탭은 단추 하나).
           ✔ S177 **퍼블리시한 게임의 오류 보고 — 2026-10-21 (사용자: "이 스크린샷은 퍼블리시한 게임에서 오류가뜬겁니다. 왜 어던오류가 있는거고 해결도하세요")** — ① forgeWindow:417(1,727번): 첫 내려치기 전 STRIKES[0] → prevAt = STRIKES[strike] or 0 · 시험 53. ② pixelText:55 invalid UTF-8(554번): %s 빈칸 지우기(이름 칸 title · cashWindow · couponWindow · auctionView · cash.couponCode · pixelText fitLine)를 ASCII [ \t\r\n]로 · pixelText.Clean(깨진 바이트 → ?)을 Measure · Wrap · Fit에 · 시험 70. ③ 계정 잠금으로 내보냄(퍼블리시 때 서버를 옮기며): LOCK_TRIES 6 → 24(36초 — 닫히는 서버의 30초보다 길게). ④ 빈도 제한: Item 12/20 · 물약 state.sendPotion 0.34초 · Hop 0.6초 · Move 0.08초. ⑤ 우리 밖: 소리 HTTP 502 · CoreGui GameSettings · Teleport GameEnded · DataStore 줄서기 경고. 전체 495,782개 통과 · Rojo 확인.
+          ✔ S349 **Lv.150부터 한 레벨 = 한 달 — 2026-11-06 (사용자: "아니 오만오천년은 아니지 1업에 한달정도걸리게 풀 경험치쿠폰에 풀패스기준 젠 안흘리고 최대의 사냥효율로사냥한다고 했을때 24시간 사냥기준으로 한달정도")** — Play 안 함 · 커밋 안 함.
+               jobs.js XP_WALL 9e15 → 720억(72,000,000,000 — Lv.150 ~ 199 모두). 셈: 가장 높은 사냥터 「틈새 회랑」(r4e1 — 봉인의 그림자 9마리 · Lv.148 · 체력 1.3배 · 다시 나오는 8초)을 나오는 대로 모두 잡으면 1분에 67.5마리 ·
+               한 마리 18,423(8,099 x 1.3 x 쿠폰 1.5 + 패스 0.25) · 정예(30마리마다 10배) x 1.33 → 1분에 약 165만 → 24시간 30.2일. check_lune_design이 지금의 자료로 다시 셈해 25 ~ 35일인지 본다(맵 · 몬스터 · 쿠폰 · 패스가 바뀌면 알린다).
+               [제가 정한 것] 둥근 수 720억 · 레벨마다 같게(사냥터가 Lv.150에서 끝나 버는 빠르기가 그대로) · 혼자 사냥 기준(파티 덤은 넣지 않음). 시험 12(151에 오르고 200에서 멈춘다) · 11 · 30.
+          ✔ S348 **버그 여섯 · 로벅스 묶음(5 · 10개) · 보관함 나눠 받기 · 메뉴 단추 끌어 옮기기 · 만렙 200(벽) · 강타 석상 · 용암 거인 마지막 방 다시(패턴 · 움찔 · 크기 · pixelfx) — 2026-11-06
+               (사용자: "리퍼3차스킬 … 몬스터가 원래 잘 정해져있던 자리에 … 스폰되는게아니라 이상하게 … 모루 몬스터 … 피1 남아서 … 엑시온 4차 사냥스킬 … 데미지가 안들어가는 … 무니 수호령 … 외형은 계속 그대로 … 리퍼 분신, 리퍼 저승문을 설치하고 맵을 이동하면 안보여 …
+                데미지는 들어가 … 리븐 4차 사냥기 하단판정 … 로벅스 경험치 쿠폰이나, 드롭률 쿠폰같은거 살때 여러수량을 한번에 … 달빛상점 … 수령을 나눠서 … 강타 캐릭터 석상에 말걸면 무언가를 지키러 떠났다... … 팝업 ui들 … 드래그앤 드랍으로 위치 바꿀수있게 …
+                만렙은 200 이고 … 151을 찍는것도 불가능하게" · "용암거인 좌 우로 브레스 뿜는패턴 고개돌리는거 스프라이트 쓰지마 … 마지막 페이즈에서 짤패턴들이 하나도 안아파 … 거의 죽을정도 … 뎀감은 적용 … 하늘에서 레이저 … 팔 들고 포효하는 모션도 쓰지마 …
+                원래형태에서 움찔거리기만 … 오른쪽 전역 뜨면 다 왼쪽으로 … 바닥위험이면 다 발판위로 … 발판도 견제하는 가로 레이저선 … pixelfx를 활용해서 … 너무 핑크핑크하고 … 크기도 엄청 작아지고 … 쥐는 패턴할때 … 발톱이 세개가생겨")
+               — 확인은 사용자(Play 안 함 · 커밋 안 함).
+               ① 버그: caster.luau 그림자 흡혈 = 자기 발판의 리퍼 곁으로만(room:pullMob — 시험 117) · LATE_CHARGE 30(초승달 — 모은 뒤 1.6초 넘게 쥐면 「뗐다」를 버리던 것) · Room:forget이 그 사람의 placed · caster를 지운다 ·
+                 리븐 rv_phantom 판정 아래 60 · 발이 72점 아래까지 · 무니 mn_guard2 = 화면도 둘 + 각성 모습(kits/mooni.luau · 공방 kits/mooni.js) — 시험 128(14). 모루 피 1은 서버에서 재현 안 됨(①의 자리 어긋남으로 봄 — 사용자에게 말함).
+               ② 만렙 200: jobs.js LEVEL_CAP 200 · XP_WALL 9e15(Lv.150부터 한 레벨) · numbers.js xpNeed / **xpScale(벽 없는 한 레벨 — 보상의 잣대)**. 검사가 퀘스트 경험치 222,571,226,809,022를 찾아냄(xpNeed의 벽을 보상에 씀) →
+                 questplay · quests · daily · 시험 탭 던전 = xpScale · 지금 가장 큰 퀘스트 21,649,194(커밋된 것과 같다) · rift.luau = Lv.149 기준. 게임 hero.luau gainXp가 LEVEL_CAP까지 · 관리 창 레벨 200까지.
+               ③ 강타 석상: ui.js STATUE_NAMED['강타'] 다섯 줄 → rankStatues.luau pickLines(말 걸 때마다 하나) · 영문.
+               ④ 로벅스 묶음: bm.js BM_PACKS(of 5 — bagx · exp · drop · money · dust · n 5 · 10 · 값 = 한 개 x 수) → 상품 exp_x5 …(of · n) · ROBLOX_IDS 0(사용자가 대시보드에 만들 때까지 그 줄만 「준비 중」) ·
+                 sim/cash.luau Cash.grant(of의 것을 n개 — 결제 하나) · 상점 창(cashWindow.luau · 공방 paint.js paintCash)의 수 고르기: 「구매」 → 1 · 5 · 10개(값 · 「구매」 — 선물하기면 「선물」 → 닉네임 칸) ·
+                 등록표 34개(write_lune_bm_dash.mjs) · 대시보드 그림 *_x5 · *_x10(금빛 꼬리표 — build_lune_bm_images.py) · 검사: 묶음은 탭에 없다(그 상품의 「구매」 안).
+               ⑤ 나눠 받기: Cash.take(h, c, i, n) · 서버 "take" { i, n } · view.moved · 2개 이상인 줄의 「받기」 → [-] [수] [+] [모두] … 「받기」 · 공방 ?lunedemo=cashqty · cashqtyready · cashtakepart — 시험 129 · 62.
+               ⑥ 메뉴 단추 끌어 옮기기: hud.luau Hud.menuDrag(6점 넘게 끌면 그림이 따라오고 놓은 단추의 자리로 끼움 · 끈 뒤의 「눌렀다」는 버림) · Account.menu(계정 · 영문 소문자 16개까지) · 패킷 MenuOrder ·
+                 Layout.menuOrder / 공방 ui.js menuOrder(적힌 차례 → 나머지는 설계의 차례) · 공방 시험 탭도 끌어 옮긴다(?lunemenu=…) — 시험 130(18).
+               ⑦ 용암 거인 마지막 방(weekboss.js): 끓는 숨 둘 · 분노의 숨 · 손 내려찍기 셋을 빼고 sky(하늘의 용암 줄기 — 자리 여덟 · up 999) · halfR · halfL(그쪽 절반 · 발판 위도 — zone -16 ~ 999) · floor(발 14점 안) ·
+                 lines(band lo 20 · lines [58, 106]) · 연속 sides · updown(절반 아래). 세기 2.6(입장 리븐의 약 88% · 기믹이 아니라 감소가 든다) · 기둥 · 화산탄 비 2.6 · 맥동 1.6. 예고 = bossfx lavaLines · skyMark(게임 · 공방 같은 꼴) ·
+                 방 전체의 예고는 방의 둘레 · 230점까지만 그린다. 동작: build_lava.py — 마지막 방 = 바탕 몸통의 움찔(flinch · flinchL · flinchR: 3점 내려앉음 → 금 한 단 → 2점 솟음) · 맥동 · 끓음도 움찔 ·
+                 손의 방 = 쳐든 주먹(hand_raise) 없이 원래 손을 들었다 내림 · 금의 빛은 한 단까지(덜 분홍). 몸통 = base_body_g.png를 4.64화소 격자로(k_body_big.png 315 x 182 — 그 전 275 x 159) · 칸 520 x 196 ·
+                 maps.js r3d7 camUp 22(그 방만 카메라를 내림 — sceneView.luau · 공방 luneTab · 이름표가 퀵슬롯 키 글자와 겹치지 않는 끝) · 몸통 판정 [-160, 160, 0, 185]. 시안과 나란히 본 그림 dev/LAVA_1106_final_vs_concept.png.
+                 이펙트: tools/build_lune_boss_pfx.py(새 — BOSS_FXART의 pfx 그림을 pixelfx로 뽑아 bossfx_pfx.json · build_lune_boss_fx.py가 합친다) · 열 가지(ground-slam · flame-pillar 둘 · smite · quake · rune-circle ·
+                 우리 효과 lune/lava-line(방을 가로지르는 열선) · lune/lava-roll(구르는 용암 혹)) · 색 = 바위 회색 → 짙은 용암 → 분홍 → 흰 심. 쥐기 표시 = 발밑에 도는 분홍 고리(lavaView · 공방). 시험 122(213 — 새 패턴의 맞는 자리 · 세기).
+                 캐릭터 그림판 24장(chars_1 ~ 12 · mask)을 다시 올림(write_lune_ids — 남은 것 0).
+               [제가 정한 것] 묶음 다섯 · 5 · 10 · 할인 없음 · 나눠 받기의 꼴 · 메뉴 차례를 계정에 · 석상 다섯 줄 · 세기 2.6 / 1.6 · 예고 · 쉬는 틈 · 자리 · 거인의 크기와 카메라 · 이펙트의 고름 · 색 · 묶음 그림의 꼬리표.
+               ⑧ 이 판에서 찾아 고친 것: export_lune_game.mjs numbers 표의 줄 끝 주석(S347에 단 것)이 POWER를 가려 numbers.generated에서 POWER가 빠졌다(전투력 셈이 멈출 뻔 — 시험 11 · 12 · 18 · 19 · 21이 찾음) · 시험 12 · 30 · 109를 새 규칙(만렙 200 · 늦은 떼기 30초)으로.
+               검사: 전체 531,046개 통과 · 규칙 검사 통과 · 영문 빠짐 0.
+               남은 것(사용자): 대시보드에 묶음 개발자 상품 10개(등록표.txt) → 번호 → bm.js ROBLOX_IDS · Play로 확인.
+          ✔ S347 **출현 대기 5분 · 가방 128칸(확장권 20장) · 보스기 4차 ≥ 3차(리퍼 참수) · 보스 기믹 = 트루 데미지 · 무니 치유 · 소생 · 축복 확인 — 2026-11-05
+               (사용자: "용암거인 대기 1시간 말고 5분으로 하자 바로 퍼클할수있게 그리고 인벤 최대칸 128칸까지로 하고 , 로벅스로 128칸까지 늘릴수있게하자 그리고 보스기 퍼뎀 3차가 4차보다 쎈경우는 없어야한다
+               그리고 무니 소생이나 힐같은거 잘적용되어야하고 살라나, 무니 피해감소, 리퍼 피흡 이런 유틸들로 보스 기믹을 씹는경우는 없어야한다 트루데미지로 들어와야해")** — Play 안 함 · 커밋 안 함.
+               ① weekboss.js reveal wait 3600 → 300 · marks 5 · 4 · 3 · 2 · 1분 · 30 · 10초 전.
+               ② bm.js bagCap 64 → 128 · bagSteps 4 → 20(한 장 = 세 탭 4칸 · 값 그대로) · bag.luau 저장을 읽을 때 확장권 수의 한도 16 → 64(16을 넘으면 0으로 돌아가 칸을 잃을 뻔했다).
+               ③ 보스기 %(시험 126 새로 — 스킬 창의 「지금 Lv」와 같은 셈): 만렙에서는 3차가 4차보다 센 직업이 없었다. 리퍼만 4차 참수 Lv.1(728% x 0.7 = 510%) < 3차 단죄 만렙 722% —
+                  참수 = 가장 빠른 보스기(0.6초). 초당 22장 → 13장 · 0.44 → 0.74초(kits/reaper.luau · 공방 kits/reaper.js)로 한 번의 %를 1,213%로(초당 세기 rate 12.13은 그대로 — DPS 그대로) → Lv.1 849% ≥ 722%.
+                  (리븐 3차 잔영 난무 344%가 2차 배후 교차 349%보다 작은 것은 누르고 있는 동안 베는 기술의 0.5초마다 %라 그대로 — 사용자가 말한 것은 3차 · 4차)
+               ④ 트루 데미지: room.luau Room:hurtHero의 pierce(즉사 kill도) = 방어구 · 무니(지키는 마음 · 달의 축복 · 수정 방벽 · 달의 성역) · 살라맨더(달궈진 몸 · 굳센 자세) 피해 감소 · 리븐 회피 · 생존기 · 죽음의 가호 · 재점화를 모두 무시 ·
+                  thiefgim 불씨 폭탄 · 갈고리 = pierce · lavagim 끓는 바닥 · 움켜쥐기 = 생존기 중에도(전에는 건너뛰었다) · 리퍼 처치 흡혈은 기믹의 졸개(gimAdd — 마그마 혹 · 심장 · 불씨 폭탄 · 가짜 두목)에서는 차지 않는다.
+                  맞은 뒤 0.6초 무적은 그대로(모든 피해에 같은 숨 — 제가 정한 것). 살라맨더의 뜨거운 피(초마다 회복)는 그대로.
+               ⑤ 무니: 시험 127이 용암 거인의 방에서 파티 둘로 달빛 치유(다친 파티원에게) · 달의 축복(파티원에게도) · 소생(그 자리 · 데스 카운트 그대로)을 확인 — 고칠 것이 없었다.
+               검사: 시험 126(30개) · 127(22개) · 125(41개 — 5분으로) 실패 0 · 전체 530,208개 가운데 실패 1개(103 그림자 사수 「생존기가 걸려 있으면 즉사를 막는다」 = 예전 규칙 → 「걸려 있어도 쓰러진다」로 고쳐 86개 0) · 영문 빠진 것 0 · 규칙 검사 통과.
+          ✔ S346 **용암 거인 공개(1시간 출현 대기 · 떡밥 알림 · 왼쪽 아래 빨간 남은 시간) · 솔플 = 한 파티 · 화심 장비 직업 전용 · 교환 때 성능 굴림 · 150제 18성 = 140제 22성 · 세트 효과(보스 전리품 · 화심) — 2026-11-05
+               (사용자: "퍼블리시 할거고 솔플로 잡아도 한 파티로 되서 퍼클적용되어야하고 이거진짜 연결 누락되거나 하면 절대안된다 그리고 150제 장비는 무기,방어구 전부 직업 전용으로간다 … 뽑을때마다 빼어난 확정 아니고
+               교환할때 샤냥터 드롭 장비처럼 랜덤값 … 지금 출시된 보스들의 장신구 세트효과 … 150제 장비도 세트효과 … 140제 22성수치가 150제 18성정도로 … 내가 퍼블리시를 하면 보스가 바로 열리는게 아니라
+               1시간에 한번 랜덤 대사로 용암거인이 출현한다는 떡밥 메시지를 계속 전체서버 공지로 … 왼쪽 아래에 캐릭터 ui 닉네임 위에 빨간시간 … 1시간정도로")** — Play 안 함 · 커밋 안 함.
+               ① 공개: weekboss.js lavagiant release를 지우고 reveal { wait 3600 · marks 60 · 50 · 40 · 30 · 20 · 10 · 5 · 1분 전 · lines 여덟 } · 공지 글 = UPDATE_NOTES 「다음 공지에 더할 것」(보류 칸에서 옮김).
+                  shared/lune/sim/reveal.luau(Reveal.at · open · left · clockText · markCrossed · line) · server modules/reveal.luau(이 판으로 처음 켜진 서버가 세계 기록 reveal_<보스> = 지금 + 3600 — store.luau revealClaim UpdateAsync ·
+                  못 적으면 30초마다 다시 · Studio = 기억에만) · world.luau World.revealTick(1초마다 RevealNews tease · open을 이 서버의 모두에게 — 모든 서버가 같은 시각 · 같은 말 · 화면에 Reveal { at, now }) ·
+                  닫힘: Quests.state(wq07 locked) · Weekly.canEnter(「아직 깨어나지 않았다 — 출현까지 47:12」) · Schedule · 파티 찾기 · World.firstClear · 관리 「보스전 → 용암」은 Studio에서만 그 서버의 출현을 당긴다.
+                  화면: hud.luau Hud.reveal(닉네임 위 빨강 「용암 거인 출현까지 47:12」 — Hud.step) · boot Reveal(서버의 지금으로 시계 맞춤 · 퀘스트 「!!」 다시) · RevealNews(화면 위 큰 알림 + 채팅) · 공방 paintHud · ?lunedemo=reveal · UILAYOUT.vitals.revealGap.
+               ② 솔플 = 한 파티: 이미 그렇게 셈했다(방의 사람 하나) — 시험 125가 실제 입장 → 격파 → 보상의 방 흐름으로 확인(기록 한 파티 · 그 자리 칭호 · FirstClear · 다른 서버로 · 심장핵이 가방에).
+               ③ 화심 장비: 부위 다섯 x 직업 다섯 = 25가지(bosscoin.js coinUniques — 이름표 fireheart_<부위>_<직업>) · Items.classOf · Bag.canWear 「다른 직업의 장비다」 · 화면 BagWindow.canWear · ItemInfo의 직업 줄 ·
+                  교환 = Items.rollQuality(사냥터 드롭과 같은 10 · 20 · 40 · 22 · 8%) · 이름 앞에 성능(「빼어난 화심 창」 — roll) · 세기 배 mul = bosscoin.js coinMul(무기 1.12 · 방어구 1.135 — Lv.140 22성 = Lv.150 18성) → Items.options · sum · 공방 gearOpt.
+               ④ 세트 효과: bosscoin.js GEARSETS — 보스 전리품(흑수정 마안 · 검은 맹세 견장 · 잿불 도적의 허리띠 · 식은 심장의 반지 = set bossacc: 2 올스탯 8 공 4 · 3 올스탯 12 공 8 · 4 올스탯 20 공 12 방 30) ·
+                  화심(2 올스탯 20 · 3 공 15 · 4 올스탯 30 방 60 · 5 공 25) — 단계가 쌓인다 · Items.setBonus가 Items.sum에 · 상세 판에 「화심 세트 3/5」 · 단계마다 「2세트 — 올스탯 +20」(받는 단계는 민트).
+               제가 정한 것: 알림의 때(10분마다 + 5 · 1분 전) · 떡밥의 말 여덟 · 세트 효과의 수(화심 다섯 = 전투력 약 +10%) · 「1시간에 한번」을 한 시간 동안 이어지는 알림으로 읽음 · 관리자도 라이브에서는 1시간을 기다림.
+               검사: 시험 125(41개 — 새로 · 출현 · 솔플 최초 격파 · 보상의 방의 심장핵) · 124(196개) · 122 · 28(출현한 것으로 보고) · 13 · 15 · 16 · 17 · 27 · 29 · 33 · 88 · 90 · 94 · 104 ~ 106 · 110 · 113 · 119 · 123 실패 0 · 전체 530,433개 가운데 실패 5개(38 · 56 = 「다시 깨어난 분화구」를 받아 보는 시험이 출현 전이라 막힘 → 출현한 것으로 보게 · 41 = 경매장 시험이 교환 불가 물건을 올리려 함 → 뺌) 고쳐 다시 돌려 0 · 영문 빠진 것 0 · 규칙 검사 통과 · 공방 화면(dev/REVEAL_1_hud_coinshop.png).
+          ✔ S345 **용암 거인: 최초 격파 이벤트(세 파티 · 칭호 · 모든 서버 알림) + 보스 주화 장비 「화심 세트」(메이플의 앱솔랩스 · 아케인셰이드 코인처럼) — 2026-11-05 (사용자: "퍼클 이벤트도 들어가야해 최초 격파 3 파티까지야 3인이 아니고 3파티
+               퍼클 칭호 깨자마자 바로 지급되어야하고, 전 서버에 메시지 송출된다 … 메이플 스우, 데미안처럼 150제 장비를 만들수있는 코어를 드롭할거고, 코어 이름은 알아서 정해 멋지게 … 사냥하면서 나오는 보조 코어는
+               용암거인 관련 주변 사냥터에서 드롭되면된다 스토리에 알맞게 어우러지게")** — Play 안 함 · 커밋 안 함 · 용암 거인은 그대로 퍼블리시 막힘(공지 글은 UPDATE_NOTES 「보류」 칸).
+               찾아본 것(나무위키 「메이플스토리/코인」): 앱솔랩스 코인 = 스우의 S급 코어 1 + 기계무덤 몬스터의 A급 코어 20(헤이븐 삼손이 · 무기 5 · 방어구 2) · 스티그마 코인 = 데미안 확정 1 + 세계수 몬스터 20 ·
+                  판타즈마 · 아라크노 코인 = 루시드 · 윌 1 + 그 지역 몬스터 9(무기 24 · 방어구 12) · 메이플의 최초 격파 이벤트 = 선착순 3개 파티.
+               ① 최초 격파: weekboss.js lavagiant first { parties 3, title fc_lavagiant } · 칭호 「거인을 잠재운 자」(achieve.js rule firstClear · 용암 거인의 분홍) · 세계 기록 firstClear_<보스>(store.luau firstClearGet · firstClearAdd — UpdateAsync) ·
+                  shared/lune/sim/firstClear.luau(세 파티까지 · 이미 기록에 있는 사람이 섞인 파티는 아니다 · 이름들) · server modules/firstClear.luau(claim → 그 자리에서 칭호 · 이 서버에 바로 + MessagingService LuneFirstClear) ·
+                  world.luau World.firstClear(격파한 방의 사람 — 관리자 · 봇 · 임시 계정은 빼고 센다 · dev 보스는 셈하지 않는다 · Studio = 기억에만 시험) · titles.luau(기록에 없는 캐릭터의 그 칭호는 뺀다) · 패킷 FirstClear · boot 화면 위 큰 알림 + 채팅.
+               ② 화심 세트: design/bosscoin.js(새 파일) — 「거인의 심장핵」(용암 거인 pay.goods — 받는 사람마다 하나) · 「거인의 불씨핵」(r3d1 화산 기슭 · r3d2 갈라진 비탈 · r3d3 분화구 가장자리 몬스터 2% · 드롭률 패스 · 쿠폰 받음) ·
+                  「화심 주화」(심장핵 1 + 불씨핵 20) · 장비 아홉(화심 큰 도끼 · 창 · 낫 · 대검 · 불주먹 · 투구 · 갑옷 · 건틀릿 · 장화 — Lv.150 빼어난 · 무기 주화 5 · 방어구 2) · 바꿔 주는 사람 = 화롯골의 대장장이 숯돌(대장간의 기능이 비어 있던 역할 주민 — NPCDO coinshop · 대사 둘을 바꿈).
+                  게임: sim/bosscoin.luau · items.luau(makeUnique who · Items.bound) · market.luau(bound = 경매장 불가 — 심장핵 · 주화 · 화심 장비) · room.luau lootFor(불씨핵) · world.luau Item coinMake · coinBuy · ui/coinWindow.luau 「숯돌의 화로」(대장장이 제작 줄과 같은 짜임) ·
+                  itemCell(이름 붙은 장비의 제 그림) · 공방 paint.js paintCoinShop · ?lunedemo=coinshop · coinshopfull · UILAYOUT.coinshop · WINDOWS coinshop.
+               그림: tools/build_lune_fireheart_icons.py — 팩의 무기 다섯 · Lv.150 쪽 방어구 넷 · 달돈 · 용암 바위 · 심장 돌 아이콘을 거인의 색(돌 셋 + 분홍 셋)으로 옮겨 칠함(18 · 24 — 모양 · 테두리는 팩 그대로) → assetpack/lune/ui/hand · bosscoin_icons_direct.json → 아이콘 두 벌 · UI 키트.
+               제가 정한 것: 이름(거인의 심장핵 · 거인의 불씨핵 · 화심 주화 · 화심 세트 · 거인을 잠재운 자) · 불씨핵 2% · 주화 = 1 + 20 · 무기 5 · 방어구 2 · 장비 = Lv.150 빼어난(세트 효과 없음) · 교환 불가(불씨핵만 경매장) ·
+                  내 직업의 무기만 보인다 · 같은 사람이 두 자리를 차지하지 않는다 · 관리자는 기록에 들지 않는다.
+               검사: 시험 124(122개 — 새로) · 90(칭호 열둘) · 15 · 88 · 106 · 113 · 122 · 123 실패 0 · 영문 빠진 것 0(새 글 52) · 규칙 검사 통과 · UI 키트(1024x770) rbxassetid://116686113422271 · 공방 화면(dev/FH_1_coinshop.png).
+          ✔ S344 **파티 찾기를 로스트아크의 레이드 파티 찾기 꼴로 다시 — 그 보스의 문에서만 · 모집 글 등록 → 파티 대기실 · 다 늘어놓은 단추 줄 — 2026-11-05 (사용자: "그러면 파티찾기를 이용하면 어디서든지 보스출발이 되는거야?
+               그리고 보스,난이도, 조건 선택을 클랙해서 바꾸는게 어디있어 제발 ui 의 기본은 지키자 메뉴탭에서 접근하는게 아니라 해당 던전에서 파티방을 만드는거야 그 던전 갈사람을 구할수있는 구인구직 ui 를 만드는거고
+               로스트아크 파티모집 어떻게하는지 레이드 게임들에서 구인구직을 어떻게 구현하는지 공부하고만들어")** — Play 안 함 · 커밋 안 함. S343의 메뉴 판을 바꾼다.
+               찾아본 것: 로스트아크 공식 게임 가이드 「파티」(lostark.game.onstove.com/GameGuide) · 레이드 입장 창 오른쪽 아래 [파티 찾기] → [모집 글 등록](제목 · 최소 아이템 레벨 · 동일 직업 허용) → 파티 대기실(설정 · 신청자 수락 · 거절) ·
+                  [참가 신청](한 번에 한 파티 — 다른 곳에 신청하면 앞의 것은 취소 · 수락 전 [참가 취소]) · 모집이 끝나면 남은 신청은 자동 거절 · 같은 곳에 모여야 입장(인벤 4821 · 11367 · 케이벤치 193985) ·
+                  FFXIV 파티 모집(Party Finder — 목적지별 목록 · 모집 글 · 조건) · WoW 미리 만든 파티(Premade Groups — 활동을 고른 뒤 목록 · 신청 · 리더 수락).
+               ① 여는 곳: 메뉴에서 뺐다(design/basics.js WINDOWS finder via '보스 창에서' → 게임 menu = false). 그 보스의 문 → 보스 창 아래 단추 셋 [혼자 입장] [파티 입장] [파티 찾기](weeklyWindow.luau · 공방 paintWeekly) → 그 보스의 파티 찾기 창(넓은 창 · 제목 「파티 찾기 · 보스 이름」).
+               ② 「어디서든 출발?」 → 이제는 아니다: 등록 · 신청 · 입장 모두 서버가 그 보스의 문 앞(같은 맵 · 문에서 가로 120점 안 — Finder.NEAR)인지 본다. 입장은 방장이 누르고, 파티원 모두가 문 앞에 있어야 켜진다(대기실에 「문 앞」 · 「멀리」).
+               ③ 창(client/lune/ui/finderWindow.luau 다시 · 540 x 300): 위 줄 [모집 글 등록] · 난이도 거르기 탭(전체 · 노말 · 하드) · 제목 찾기 칸(적으면 바로 거른다) /
+                  방 목록(줄을 누르면 고른 줄이 밝다 — 제목 … n/4 · 난이도 · 최소 레벨 · 방장 · 「신청함」 · 여섯 줄씩 [다음]) · 오른쪽 고른 방(제목 · 조건 · 같은 직업 · 파티원 — 레벨 · 이름 · 직업 · 전투력) + [참가 신청] | [참가 취소] · 못 하는 까닭은 아래 빨간 줄 /
+                  모집 글 등록 = 제목 칸(20자 · Roblox TextService로 거른다) · 난이도 · 최소 레벨(입장 레벨 + 0 · 5 · 10 · 20 — 보기를 다 늘어놓은 단추 줄 · 고른 것이 밝다 · 들어갈 수 없는 난이도는 꺼짐) · 직업 「같은 직업도 받는다」(체크 칸) · [등록] [취소] /
+                  파티 대기실 = 파티원 넷(방장 · 문 앞 / 멀리) + 방장 [입장] [모집 취소] · 파티원 [나가기] · 오른쪽 신청자(레벨 · 이름 · 직업 · 전투력 · [수락] [거절]).
+               ④ 셈 sim/finder.luau 다시: 방마다 boss · mode · title · minLv · sameClass · 준비(ready)는 없앴다(로스트아크에도 없다 — 모두 문 앞이면 방장이 입장) · canApply(내 방 · 파티 있음 · 모집 중 · 가득 · 최소 레벨 · 같은 직업) · list(그 보스만) · cleanTitle.
+                  서버 world.luau "Finder"(view(보스) · make(보스, 난이도, { title, step, same }) · apply · withdraw · accept · deny · leave · start) · World.atDoor · finderView(보스마다 · 파티원의 직업 · 문 앞) · 패킷 Finder 인자 4.
+               제가 정한 것: 문 앞 = 가로 120점 · 최소 레벨 단계 0 · 5 · 10 · 20 · 제목을 비우면 「함께 가실 분」 · 한 방에 신청 여덟까지 · 창의 치수와 글 · 창을 열면 보스 창은 닫힌다(넓은 창).
+               검사: 시험 123(147개 — 셈 · 창 다시) · 106 · 16 · 119 실패 0 · 창 등록 · 보내는 인자 0 · 영문 빠진 것 0(새 글 42) · 규칙 검사 통과 · 공방 화면(dev/FINDER_2_window.png — 보스 창 · 목록 · 신청함 · 등록 · 대기실 방장 · 대기실 파티원).
           ✔ S343 **파티 찾기 — 같은 서버의 보스 파티 모집(방 만들기 · 신청 · 방장 수락 · 출발 → 바로 보스 방) — 2026-11-05 (사용자: "그리고 파티 보스라서 파티구하고 방만들고 막 이런 UI도 있어야해 파티를 구해서 가는거라서" →
                고르심: 「같은 서버만」 · 「방장이 수락」 · 「방장 출발 → 바로 보스 방」)** — Play 안 함 · 커밋 안 함.
                찾아본 것: 로스트아크(파티 찾기 — 관문 고르기 · 1인 1공대 신청 · 모집창에 전투력이 없다는 건의) · WoW(파티 찾기 도구 — 모집 글 · 신청 · 방장 초대) · 메이플(파티 찾기). 세부 화면은 검색으로 확인하지 못했다.

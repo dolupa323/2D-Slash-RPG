@@ -715,29 +715,42 @@ local skills = {
 		g.shake(1, 0.1)
 	end } } } },
 	{ id = "mn_ray", key = "D", shot = 0.52, segs = { { clip = "thrust", fps = 14, ev = { [6] = ray } } } },
-	{ id = "mn_guard", key = "C", instant = true, shot = 2.4, cast = function(g) -- 수호령: 떠 있는 수정이 따라다니며 빛을 쏜다. 하나만 둔다 — 다시 쓰면 있던 것을 거두고 새로 깨운다
+	{ id = "mn_guard", key = "C", instant = true, shot = 2.4, cast = function(g) -- 수호령: 떠 있는 수정이 따라다니며 빛을 쏜다. 하나만 둔다 — 다시 쓰면 가장 오래된 것을 거두고 새로 깨운다
+		-- 수호령 각성(4차 mn_guard2 — 2026-11-05 사용자 "무니 수호령스킬을 진화시키는데 수호령 외형은 계속 그대로라서 구분이안된다"): 둘까지(서버 room.luau의 guards와 같다 — 그 전 화면은 늘 하나만 그렸다) ·
+		--  각성한 수호령은 1.3배 · 둘레에 흰 빛 고리 · 도는 조각 넷(보통은 둘) · 둘째는 무니의 앞쪽 위에. 크기 · 고리 · 자리는 제가 정한 것
 		local tone = g.tone
-		if g.s.guard then
-			g.s.guard.dead = true
+		local woke = g.sk("mn_guard2") > 0
+		local keep = if woke then 2 else 1
+		g.s.guards = g.s.guards or {}
+		local list = {}
+		for _, q in g.s.guards do
+			if not q.dead and q.t < q.life then
+				table.insert(list, q)
+			end
 		end
-		g.fx.aura(g.x, g.y, tone, { r = 12, h = 30, rings = false })
-		g.fx.hex(g.x - g.dir * 14, g.y - 26, 18, 5, tone, { squash = 1, back = false, life = 0.3 })
-		g.s.guard = g.shot({
+		while #list >= keep do
+			table.remove(list, 1).dead = true
+		end
+		local slot = #list + 1 -- 1 = 등 뒤 · 2 = 앞쪽 위
+		g.fx.aura(g.x, g.y, tone, { r = if woke then 18 else 12, h = if woke then 40 else 30, rings = woke })
+		g.fx.hex(g.x - g.dir * 14, g.y - 26, if woke then 24 else 18, 5, tone, { squash = 1, back = false, life = 0.3 })
+		local guard = g.shot({
 			x = g.x,
 			y = g.y - 30,
 			life = 60,
 			at = 1,
 			summon = "mn_guard",
 			update = function(p, dt)
-				p.x += (g.x - g.dir * 14 - p.x) * min(1, dt * 3)
-				p.y = g.y - 31 + sin(p.t * 3) * 2
+				local ox, oy = if slot == 2 then g.dir * 12 else -g.dir * 14, if slot == 2 then -44 else -31
+				p.x += (g.x + ox - p.x) * min(1, dt * 3)
+				p.y = g.y + oy + sin(p.t * 3 + slot) * 2
 				p.at += dt
 				if p.at > 2 then
 					local m = g.nearest(150, { from = p.x })
 					if m then
 						p.at = 0
-						g.fx.bolt(p.x, p.y, m.x, m.y - m.h - 8, tone, { jag = 2, th = 2 })
-						g.fx.pop(m.x, m.y - m.h - 8, tone, { r = 5 })
+						g.fx.bolt(p.x, p.y, m.x, m.y - m.h - 8, tone, { jag = 2, th = if woke then 3 else 2 })
+						g.fx.pop(m.x, m.y - m.h - 8, tone, { r = if woke then 7 else 5 })
 						g.hurt(m, 4, { proc = true })
 					end
 				end
@@ -745,29 +758,42 @@ local skills = {
 			finish = function(p)
 				g.fx.shards(p.x, p.y, 6, tone, { kind = "tri", speed = 60, up = 30 })
 			end,
-			draw = function(ctx, p) -- Aseprite로 그린 수정 + 둘레를 도는 작은 조각 둘(뒤쪽은 수정 뒤, 앞쪽은 수정 앞)
+			draw = function(ctx, p) -- Aseprite로 그린 수정 + 둘레를 도는 작은 조각(뒤쪽은 수정 뒤, 앞쪽은 수정 앞) · 각성 = 크게 · 흰 빛 고리 · 조각 넷
 				local by, grow = R(p.y), min(1, p.t * 5)
+				local sc = if woke then 1.3 else 1
+				local n = if woke then 4 else 2
+				if woke then -- 흰 빛 고리(수정 뒤 — 숨 쉬듯 밝아졌다 어두워진다)
+					local rr = 13 + sin(p.t * 4) * 1
+					ctx:style(tone.l)
+					for a = 0, 15 do
+						local an = a * 0.3927 + p.t * 0.8
+						ctx:rect(R(p.x + cos(an) * rr), by + 1 + R(sin(an) * rr * 0.6), 1, 1)
+					end
+				end
 				for _, front in { false, true } do
 					if front then
-						crystal(ctx, g.art.mn_cr, "spirit", p.x, by + 10, { grow = grow })
+						crystal(ctx, g.art.mn_cr, "spirit", p.x, by + R(10 * sc), { grow = grow, sc = sc })
 						if p.at > 1.7 then -- 쏘기 직전에 번쩍
 							ctx:style(tone.w)
 							ctx:rect(R(p.x) - 3, by, 7, 1)
 							ctx:rect(R(p.x), by - 3, 1, 7)
 						end
 					end
-					for i = 0, 1 do
-						local a = p.t * 3 + i * 3.1416
+					for i = 0, n - 1 do
+						local a = p.t * 3 + i * (6.2832 / n)
 						local sn = sin(a)
 						if (sn > 0) ~= front then
 							continue
 						end
-						local ox, oy = R(p.x + cos(a) * 9), by + 2 + R(sn * 3)
-						poly(ctx, { { ox, oy - 3 }, { ox + 2, oy }, { ox, oy + 3 }, { ox - 2, oy } }, if front then tone.l else tone.d)
+						local ox, oy = R(p.x + cos(a) * 9 * sc), by + 2 + R(sn * 3 * sc)
+						poly(ctx, { { ox, oy - 3 }, { ox + 2, oy }, { ox, oy + 3 }, { ox - 2, oy } }, if front then (if woke then tone.w else tone.l) else tone.d)
 					end
 				end
 			end,
 		})
+		table.insert(list, guard)
+		g.s.guards = list
+		g.s.guard = guard
 	end },
 	buff("mn_bless", "2"),
 	{ id = "mn_wall", key = "5", instant = true, shot = 0.9, cast = function(g) -- 수정이 차례로 솟고 돔이 닫힌다

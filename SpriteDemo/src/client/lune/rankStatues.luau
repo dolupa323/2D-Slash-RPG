@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local Net = require(lune.net.net)
 local CHARS = require(lune.data["chars.generated"])
+local UI = require(lune.data["ui.generated"]) -- statueNamed = 석상에 선 사람마다의 말(2026-11-05)
 local Sprite = require(script.Parent.sprite)
 local Stage = require(script.Parent.stage)
 
@@ -83,6 +84,11 @@ local function stand(s, row)
 		s.name = name
 		s.npc.tag:SetText(("%s %s"):format(s.n.role, name))
 	end
+	-- 그 사람만의 말(2026-11-05 — 공방 ui.js STATUE_NAMED · 강타 「무언가를 지키러 떠났다…」): 말을 걸 때마다 그 줄들 가운데 하나(ui/talk.luau의 pickLines). 없으면 순위의 말
+	local pool = row and typeof(row.name) == "string" and UI.statueNamed and UI.statueNamed[row.name]
+	s.npc.pickLines = if pool and #pool > 0 then function()
+		return { pool[math.random(1, #pool)] }
+	end else nil
 end
 
 -- 매 화면: 때가 되면 레벨 판을 받는다

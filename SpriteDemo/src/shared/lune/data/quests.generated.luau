@@ -17,6 +17,7 @@ return {
 			endNpc = "master",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -39,6 +40,7 @@ return {
 			endNpc = "elder",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -63,6 +65,7 @@ return {
 			endNpc = "elder",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -87,6 +90,7 @@ return {
 			endNpc = "elder",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -111,6 +115,7 @@ return {
 			endNpc = "elder",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -135,6 +140,7 @@ return {
 			endNpc = "oldman",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -159,6 +165,7 @@ return {
 			endNpc = "oldman",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -183,6 +190,7 @@ return {
 			endNpc = "oldman",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -208,6 +216,7 @@ return {
 			endNpc = "guard1",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -233,6 +242,7 @@ return {
 			endNpc = "guard1",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -257,6 +267,7 @@ return {
 			endNpc = "guard1",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -281,6 +292,7 @@ return {
 			endNpc = "guard1",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -305,6 +317,7 @@ return {
 			endNpc = "guard1",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -329,6 +342,7 @@ return {
 			endNpc = "elder",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -353,6 +367,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = false,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -375,6 +390,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = false,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -397,6 +413,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = false,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -419,6 +436,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = false,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -441,6 +459,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = false,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -463,6 +482,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = false,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -485,6 +505,7 @@ return {
 			endNpc = "baram",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {  },
@@ -507,6 +528,7 @@ return {
 			endNpc = "baram",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -535,6 +557,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {  },
@@ -557,6 +580,7 @@ return {
 			endNpc = "dahong",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {  },
@@ -579,6 +603,7 @@ return {
 			endNpc = "dolsoe",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -603,6 +628,7 @@ return {
 			endNpc = "galmae",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -627,6 +653,7 @@ return {
 			endNpc = "galmae",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -651,6 +678,7 @@ return {
 			endNpc = "garak",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -675,6 +703,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = true,
 			steps = {
@@ -699,6 +728,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = true,
 			steps = {
@@ -723,6 +753,7 @@ return {
 			endNpc = "garak",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -747,6 +778,7 @@ return {
 			endNpc = "hangyeol",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {  },
@@ -769,6 +801,7 @@ return {
 			endNpc = "bori",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -793,6 +826,7 @@ return {
 			endNpc = "bori",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -817,6 +851,7 @@ return {
 			endNpc = "nurung",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -841,6 +876,7 @@ return {
 			endNpc = "nurung",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -865,6 +901,7 @@ return {
 			endNpc = "galmae",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {  },
@@ -887,6 +924,7 @@ return {
 			endNpc = "galgi",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -911,6 +949,7 @@ return {
 			endNpc = "galgi",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -935,6 +974,7 @@ return {
 			endNpc = "solgae",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -959,6 +999,7 @@ return {
 			endNpc = "solgae",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -983,6 +1024,7 @@ return {
 			endNpc = "solgae",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -1007,6 +1049,7 @@ return {
 			endNpc = "saebyeok",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -1031,6 +1074,7 @@ return {
 			endNpc = "saebyeok",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -1055,6 +1099,7 @@ return {
 			endNpc = "hangyeol",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -1079,6 +1124,7 @@ return {
 			endNpc = "beodeul",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -1103,6 +1149,7 @@ return {
 			endNpc = "ssuk",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = false,
 			steps = {
@@ -1127,6 +1174,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = true,
 			steps = {
@@ -1151,6 +1199,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = true,
 			steps = {
@@ -1175,6 +1224,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = true,
 			big = true,
 			steps = {
@@ -1198,7 +1248,8 @@ return {
 			giver = "granny",
 			endNpc = false,
 			auto = false,
-			playable = false,
+			playable = true,
+			reveal = "lavagiant",
 			city = true,
 			big = true,
 			steps = {
@@ -1223,6 +1274,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -1245,6 +1297,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1269,6 +1322,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1293,6 +1347,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1317,6 +1372,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1341,6 +1397,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -1363,6 +1420,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1388,6 +1446,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1412,6 +1471,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1436,6 +1496,7 @@ return {
 			endNpc = "beodeul",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1460,6 +1521,7 @@ return {
 			endNpc = "beodeul",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1484,6 +1546,7 @@ return {
 			endNpc = "ssuk",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1508,6 +1571,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = false,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -1530,6 +1594,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = false,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -1552,6 +1617,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1576,6 +1642,7 @@ return {
 			endNpc = "dahong",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1600,6 +1667,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1624,6 +1692,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = false,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -1646,6 +1715,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1670,6 +1740,7 @@ return {
 			endNpc = "guide",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1694,6 +1765,7 @@ return {
 			endNpc = "saltman",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -1716,6 +1788,7 @@ return {
 			endNpc = "saltman",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1740,6 +1813,7 @@ return {
 			endNpc = "firechild",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1764,6 +1838,7 @@ return {
 			endNpc = "granny",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1788,6 +1863,7 @@ return {
 			endNpc = "granny",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1812,6 +1888,7 @@ return {
 			endNpc = "granny",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -1834,6 +1911,7 @@ return {
 			endNpc = "granny",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1858,6 +1936,7 @@ return {
 			endNpc = "granny",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1882,6 +1961,7 @@ return {
 			endNpc = "guide",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1906,6 +1986,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = false,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -1928,6 +2009,7 @@ return {
 			endNpc = "minerkid",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1952,6 +2034,7 @@ return {
 			endNpc = "saltman",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -1976,6 +2059,7 @@ return {
 			endNpc = "firechild",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2000,6 +2084,7 @@ return {
 			endNpc = "firechild",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2024,6 +2109,7 @@ return {
 			endNpc = "granny",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2048,6 +2134,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = false,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -2070,6 +2157,7 @@ return {
 			endNpc = "firechild",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2094,6 +2182,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = false,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -2116,6 +2205,7 @@ return {
 			endNpc = "granny",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -2138,6 +2228,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2162,6 +2253,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2186,6 +2278,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2210,6 +2303,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2234,6 +2328,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2258,6 +2353,7 @@ return {
 			endNpc = "elder",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -2280,6 +2376,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2304,6 +2401,7 @@ return {
 			endNpc = "elder",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2328,6 +2426,7 @@ return {
 			endNpc = "guide",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2352,6 +2451,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = false,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -2374,6 +2474,7 @@ return {
 			endNpc = "guide",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2398,6 +2499,7 @@ return {
 			endNpc = "mason",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2422,6 +2524,7 @@ return {
 			endNpc = false,
 			auto = false,
 			playable = false,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {  },
@@ -2444,6 +2547,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2468,6 +2572,7 @@ return {
 			endNpc = "clockgirl",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2492,6 +2597,7 @@ return {
 			endNpc = "squire",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2516,6 +2622,7 @@ return {
 			endNpc = "ranger",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2540,6 +2647,7 @@ return {
 			endNpc = "elder",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2564,6 +2672,7 @@ return {
 			endNpc = "master",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2597,6 +2706,7 @@ return {
 			endNpc = "master",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {
@@ -2630,6 +2740,7 @@ return {
 			endNpc = "master",
 			auto = false,
 			playable = true,
+			reveal = false,
 			city = false,
 			big = false,
 			steps = {

@@ -4,6 +4,10 @@ local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")
 local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
 local D = req("ReplicatedStorage/shared/lune/data/worldmap.generated")
 local WM = req("ReplicatedStorage/shared/lune/ui/worldmap")
+do -- 출현을 기다리는 보스(2026-11-05 용암 거인)는 출현한 것으로 본다(보스 퀘스트의 「!!」 · 자리를 본다 — 출현 전의 닫힘은 시험 125)
+	local Reveal = req("ReplicatedStorage/shared/lune/sim/reveal")
+	Reveal.at.lavagiant = Reveal.clock() - 1
+end
 local Quests = req("ReplicatedStorage/shared/lune/sim/quests")
 local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
 local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
@@ -239,7 +243,7 @@ do
 	local uses = {}
 	for _, def in QD.list do
 		for i, step in def.steps do
-			if step.type == "use" and def.playable ~= false then -- (받을 수 없는 퀘스트는 뺀다 — 2026-11-05: 퍼블리시하지 않는 용암 거인의 보스 퀘스트 「다시 깨어난 분화구」)
+			if step.type == "use" and def.playable ~= false then -- (받을 수 없는 퀘스트는 뺀다 — 2026-11-05) · 출현을 기다리는 보스의 퀘스트는 아래에서 출현한 것으로 본다
 				table.insert(uses, { def = def, i = i, step = step })
 			end
 		end

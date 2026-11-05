@@ -51,7 +51,7 @@ local G = def.story.gimmick
 expect(G and G.mod == "lava" and #G.parts == 3 and G.parts[1].share == 0.25 and G.parts[3].share == 0.5, "기믹 lava · 부위 셋(왼팔 25% · 오른팔 25% · 몸통 50%)")
 eq(def.story.mark, "lava", "그 보스만의 예고 모양")
 local char = CHARS.chars[def.sprite]
-for _, clip in { "spawn", "spawn2", "spawn3", "idle", "idle2", "idle3", "slamL", "palmL", "flickL", "throwR", "boil", "stagger", "shift2", "slamR", "grabR", "grab", "throwR2", "fount", "boil2", "stagger2", "shift3", "breathL", "breathR", "pulse", "pillar", "boil3", "stagger3", "sink", "under", "rise", "death", "handL", "handR" } do
+for _, clip in { "spawn", "spawn2", "spawn3", "idle", "idle2", "idle3", "slamL", "palmL", "flickL", "throwR", "boil", "stagger", "shift2", "slamR", "grabR", "grab", "throwR2", "fount", "boil2", "stagger2", "shift3", "flinch", "flinchL", "flinchR", "pulse", "boil3", "stagger3", "sink", "under", "rise", "death" } do
 	expect(char and char.clips[clip] ~= nil, "동작 그림 " .. clip)
 end
 local P = {}
@@ -61,8 +61,20 @@ for _, p in def.story.patterns do
 		expect(char.clips[p.clip] ~= nil and def.story.anim[p.clip] ~= nil and def.story.anim[p.clip].hit ~= nil, ("%s: 동작 %s과 그 치는 장"):format(p.id, p.clip))
 	end
 end
-for _, id in { "slamL", "palmL", "flickL", "magma", "scrape", "slamR", "slamR2", "grab", "rock", "fount", "double", "breathL", "breathR", "pillar", "rain", "pulse", "breaths", "handL", "handR", "hands" } do
+for _, id in { "slamL", "palmL", "flickL", "magma", "scrape", "slamR", "slamR2", "grab", "rock", "fount", "double", "sky", "pillar", "rain", "pulse", "halfR", "halfL", "floor", "lines", "sides", "updown" } do
 	expect(P[id] ~= nil, "패턴 " .. id)
+end
+-- 2026-11-06 사용자 "고개돌리는거 스프라이트 쓰지마 · 팔 들고 포효하는 모션도 쓰지마 팔드는 모션도 쓰지마 그냥 원래형태에서 움찔거리기만": 끓는 숨 · 손 내려찍기가 없다 · 마지막 방의 동작은 움찔(flinch)과 맥동뿐
+for _, id in { "breathL", "breathR", "breaths", "handL", "handR", "hands" } do
+	expect(P[id] == nil, "뺀 패턴 " .. id)
+end
+for _, clip in { "breathL", "breathR", "pillar", "handL", "handR" } do
+	expect(char.clips[clip] == nil, "뺀 동작 그림 " .. clip)
+end
+for _, p in def.story.patterns do
+	if p.ph == 3 and p.clip then
+		expect(p.clip == "flinch" or p.clip == "flinchL" or p.clip == "flinchR" or p.clip == "pulse", ("마지막 방 %s의 동작 = 움찔 · 맥동(%s)"):format(p.id, p.clip))
+	end
 end
 expect(COMBAT.mobs.lavablister and COMBAT.mobs.lavablister.gim == "blister" and CHARS.chars.lavablister ~= nil, "마그마 혹(졸개)과 그 그림")
 expect(COMBAT.mobs.lavaheart and COMBAT.mobs.lavaheart.gim == "heart" and CHARS.chars.lavaheart ~= nil, "용암 심장(졸개)과 그 그림")
@@ -70,10 +82,12 @@ local q = Quests.def("wq07")
 expect(q ~= nil and q.big and q.after == "r3m9" and q.steps[1].type == "use", "보스 퀘스트: 「분화구의 깃발」(메인) 뒤 · 틈으로 내려가기")
 expect(Items.unique("lava_ring") ~= nil and Items.unique("lava_ring").slot == "ring", "드문 보상 「식은 심장의 반지」(반지)")
 
--- ---- 퍼블리시하지 않는다(2026-11-04 사용자 "용암거인은 일단 만들어두고 퍼블리시는 안할거야" — weekboss.js의 release false) ----
+-- ---- 공개(2026-11-05 사용자 "퍼블리시 할거고 … 보스는 바로 열리는게아니고" — release를 지우고 reveal: 출현 시각 전에는 닫혀 있다 · 시험 125가 서버의 흐름을 본다) ----
 do
-	expect(b.dev == true, "퍼블리시하지 않는 보스(dev — 입장은 관리자만: 서버 world.luau)")
-	eq(Quests.state({ r3m9 = { done = true, c = {} } }, 150, "wq07"), "locked", "보스 퀘스트 「다시 깨어난 분화구」를 아무도 받지 못한다(문이 닫힌 채)")
+	local Reveal = req("ReplicatedStorage/shared/lune/sim/reveal")
+	Reveal.at = {}
+	expect(not b.dev and b.reveal ~= nil, "공개한 보스 · 출현을 기다린다")
+	eq(Quests.state({ r3m9 = { done = true, c = {} } }, 150, "wq07"), "locked", "출현 전: 보스 퀘스트 「다시 깨어난 분화구」를 받지 못한다(문이 닫힌 채)")
 	local Schedule = req("ReplicatedStorage/shared/lune/sim/schedule")
 	local hs = Hero.new(5, "riven")
 	Hero.setLevel(hs, 150)
@@ -83,7 +97,9 @@ do
 			seen = true
 		end
 	end
-	expect(not seen, "스케줄러의 주간 목록에 없다")
+	expect(not seen, "출현 전: 스케줄러의 주간 목록에 없다")
+	Reveal.at.lavagiant = Reveal.clock() - 1 -- (모듈의 시계 · 아래 들어가기는 출현한 뒤로 본다)
+	eq(Quests.state({ r3m9 = { done = true, c = {} } }, 150, "wq07"), "open", "출현 뒤: 받는다")
 end
 
 -- ---- ② 들어가기 ----
@@ -360,46 +376,63 @@ do
 	expect(not h2.alive, "즉사(무적 · 막기와 상관없이)")
 end
 
--- ---- ⑦ 끓는 숨: 낮은 발판 높이만 ----
-do
-	local room, heroes, m = open("r3d7", 71, { 150, 100 })
-	local lowH, floorH
-	for _, h in heroes do
-		if h.x == 150 then
-			lowH = h
-		else
-			floorH = h
-		end
-	end
-	m.lava.ventT, m.lava.floodT = 999, 999
-	m.hp = m.maxHp * 0.45
-	m.lava.heartDone = true
-	local p = room:bossStart(m, idx("breathL"), lowH)
-	local pin = { [lowH.id] = { 150, FLOOR - 48 }, [floorH.id] = { 100, FLOOR } }
-	local ev = run(room, heroes, m, p.tell + 0.2, {}, pin, true)
-	expect(count(ev, function(e) return e.type == "hurt" and e.hero == lowH.id end) >= 1, "낮은 발판 위의 사람이 맞는다")
-	eq(count(ev, function(e) return e.type == "hurt" and e.hero == floorH.id end), 0, "바닥의 사람은 맞지 않는다")
+-- ---- ⑦ 마지막 방의 짤 패턴(2026-11-06 사용자: "오른쪽 전역 뜨면 다 왼쪽으로 도망가고 왼쪽 전역 뜨면 다 오른쪽으로 도망가고 바닥위험이면 다 발판위로 도망가고 발판도 견제하는 가로 레이저선 패턴도") ----
+local function hurtOf(ev, h)
+	return count(ev, function(e) return e.type == "hurt" and e.hero == h.id end)
 end
-
--- ---- ⑦-2 마지막 방의 손(2026-11-04 다듬기 — 두 손이 친다): 그 손 밑(몸에서 60 ~ 190점)만 · 몸 앞 가운데는 괜찮다 ----
-do
-	local room, heroes, m = open("r3d7", 72, { 140, 256 })
-	local underH, midH
+local function twoAt(seed, xa, xb)
+	local room, heroes, m = open("r3d7", seed, { xa, xb })
+	local A, B
 	for _, h in heroes do
-		if h.x == 140 then
-			underH = h
+		if h.x == xa then
+			A = h
 		else
-			midH = h
+			B = h
 		end
 	end
 	m.lava.ventT, m.lava.floodT = 999, 999
 	m.hp = m.maxHp * 0.45
 	m.lava.heartDone = true
-	local p = room:bossStart(m, idx("handL"), underH)
-	local pin = { [underH.id] = { 140, FLOOR }, [midH.id] = { 256, FLOOR } }
-	local ev = run(room, heroes, m, p.tell + 0.2, {}, pin, true)
-	expect(count(ev, function(e) return e.type == "hurt" and e.hero == underH.id end) >= 1, "왼손 밑(몸에서 왼쪽 116점)의 사람이 맞는다")
-	eq(count(ev, function(e) return e.type == "hurt" and e.hero == midH.id end), 0, "몸 앞 가운데의 사람은 맞지 않는다")
+	return room, heroes, m, A, B
+end
+-- 가로 열선: 발판 위(낮은 껍질 — 바닥에서 48점)는 맞고 · 바닥은 괜찮다
+do
+	local room, heroes, m, lowH, floorH = twoAt(71, 40, 100)
+	local p = room:bossStart(m, idx("lines"), lowH)
+	local ev = run(room, heroes, m, p.tell + 0.2, {}, { [lowH.id] = { 40, FLOOR - 48 }, [floorH.id] = { 100, FLOOR } }, true)
+	expect(hurtOf(ev, lowH) >= 1, "가로 열선: 낮은 껍질 위의 사람이 맞는다")
+	eq(hurtOf(ev, floorH), 0, "가로 열선: 바닥의 사람은 맞지 않는다")
+end
+-- 끓는 바닥: 바닥은 맞고 · 발판 위는 괜찮다
+do
+	local room, heroes, m, lowH, floorH = twoAt(72, 40, 300)
+	local p = room:bossStart(m, idx("floor"), lowH)
+	local ev = run(room, heroes, m, p.tell + 0.2, {}, { [lowH.id] = { 40, FLOOR - 48 }, [floorH.id] = { 300, FLOOR } }, true)
+	expect(hurtOf(ev, floorH) >= 1, "끓는 바닥: 바닥의 사람이 맞는다(방 어디서나)")
+	eq(hurtOf(ev, lowH), 0, "끓는 바닥: 발판 위의 사람은 맞지 않는다")
+end
+-- 오른쪽 · 왼쪽 불바다: 그쪽 절반(발판 위도)은 맞고 · 반대쪽은 괜찮다
+for _, case in { { "halfR", 420, 90 }, { "halfL", 90, 420 } } do
+	local id, hitX, safeX = case[1], case[2], case[3]
+	local room, heroes, m, hitH, safeH = twoAt(73, hitX, safeX)
+	local p = room:bossStart(m, idx(id), hitH)
+	local ev = run(room, heroes, m, p.tell + 0.2, {}, { [hitH.id] = { hitX, FLOOR - 96 }, [safeH.id] = { safeX, FLOOR } }, true)
+	expect(hurtOf(ev, hitH) >= 1, ("%s: 그쪽 절반의 높은 껍질 위(%d)도 맞는다"):format(id, hitX))
+	eq(hurtOf(ev, safeH), 0, ("%s: 반대쪽(%d)은 맞지 않는다"):format(id, safeX))
+end
+-- 하늘의 용암 줄기: 하늘에서 바닥까지(발판 위도) — 자리 여덟을 고른다
+do
+	local room, heroes, m = twoAt(74, 150, 400)
+	room.gimQ = {}
+	local p = room:bossStart(m, idx("sky"), first(heroes))
+	eq(p.spots and p.spots.up, 999, "하늘의 용암 줄기는 하늘까지 닿는다(up 999 — 화면은 하늘의 빛줄)")
+	local n = 0
+	for _, bl in room.blasts or {} do
+		if bl.mob == m then
+			n += 1
+		end
+	end
+	expect(n >= 8, ("자리 여덟(두 번에 나눠) — %d"):format(n))
 end
 
 -- ---- ⑧ 사람마다의 자리 ----
@@ -494,16 +527,17 @@ do
 		return (ev[1] and ev[1].dmg or 0) / h.maxHp * 100
 	end
 	-- (설계의 %(S326) x 세기 1.3 — 2026-11-05 사용자 "맞는패턴은 더 아프게")
-	local want = { slamL = 45, palmL = 35, flickL = 30, magma = 30, scrape = 40, slamR = 45, rock = 35, fount = 35, breathL = 50, pillar = 45, rain = 30, pulse = 20, handL = 45, handR = 45 }
+	-- 마지막 방(2026-11-06 사용자 "마지막 페이즈에서 짤패턴들이 하나도 안아파 … 거의 죽을정도의 데미지가 들어와야지 뎀감은 적용되는걸로"): 세기 2.6 = 67.3% x 1.3 = 리븐 체력의 약 88% · 맥동 1.6(세 번)
+	local want = { slamL = 45, palmL = 35, flickL = 30, magma = 30, scrape = 40, slamR = 45, rock = 35, fount = 35, sky = 67.3, pillar = 67.3, rain = 67.3, pulse = 41.4, halfR = 67.3, halfL = 67.3, floor = 67.3, lines = 67.3 }
 	for id, w0 in want do
 		local w = w0 * 1.3
 		local got = pct(P[id].mul)
-		expect(math.abs(got - w) <= 3.5, ("%s: 리븐 체력의 %.1f%% (설계 %d%% x 1.3 = %.1f%%)"):format(id, got, w0, w))
+		expect(math.abs(got - w) <= 3.5, ("%s: 리븐 체력의 %.1f%% (설계 %.1f%% x 1.3 = %.1f%%)"):format(id, got, w0, w))
 	end
 end
 
 -- ---- ⑫ 예고 모양 ----
-expect(BossFx.lavaCrack and BossFx.lavaSmear and BossFx.lavaBand and BossFx.bubbleMark and BossFx.heatColumn and BossFx.magmaSigil, "용암 거인만의 예고 모양(금 · 물결 · 아지랑이 띠 · 거품 원 · 아지랑이 기둥 · 용암 방울)")
+expect(BossFx.lavaCrack and BossFx.lavaSmear and BossFx.lavaBand and BossFx.bubbleMark and BossFx.heatColumn and BossFx.magmaSigil and BossFx.lavaLines and BossFx.skyMark, "용암 거인만의 예고 모양(금 · 물결 · 아지랑이 띠 · 거품 원 · 아지랑이 기둥 · 용암 방울 · 가로 열선 · 하늘의 빛줄)")
 eq(BossFx.phaseOf(def.story.week.normal.hp, 1, G.parts), 1, "화면의 페이즈: 가득 = 첫째")
 eq(BossFx.phaseOf(0.75, 1, G.parts), 2, "화면의 페이즈: 왼팔의 끝(75%) = 둘째")
 eq(BossFx.phaseOf(0.3, 1, G.parts), 3, "화면의 페이즈: 절반 아래 = 셋째")

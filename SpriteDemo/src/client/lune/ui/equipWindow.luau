@@ -112,7 +112,7 @@ function EquipWindow.build(body: Frame, ctx, w: number, _h: number)
 		end
 		ItemDetail.show("equip", {
 			key = table.concat({ "equip", it.id, it.q, it.star, tostring(it.broken), me.level, ui.service or "-" }, "|"),
-			info = ItemInfo.gear(it, me, nil, true),
+			info = ItemInfo.gear(it, { level = me.level, class = me.class, spec = me.spec, equip = bag.equip }, nil, true), -- equip = 세트 효과의 낀 수(2026-11-05)
 			item = it,
 			buttons = buttons,
 			onClose = function()

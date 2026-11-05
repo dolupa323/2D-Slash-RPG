@@ -86,6 +86,31 @@ function L.menuLabel(id: string, name: string): string
 	return L.MENU.labels[id] or name
 end
 
+-- 끌어 옮긴 차례로 메뉴 단추를 늘어놓는다(2026-11-06 — 계정에 저장된 이름표 목록 · 공방 js/lune/design/ui.js의 menuOrder와 같은 셈):
+--  적힌 이름표를 그 차례로 앞에 · 적히지 않은 단추(나중에 생긴 창)는 처음 차례대로 뒤에 · 지금 없는 이름표는 건너뛴다. list = { { id, … } }
+function L.menuOrder(list, order: any)
+	if typeof(order) ~= "table" or #order == 0 then
+		return list
+	end
+	local by, out, used = {}, {}, {}
+	for _, item in list do
+		by[item.id] = item
+	end
+	for _, id in order do
+		local item = by[id]
+		if item and not used[id] then
+			used[id] = true
+			table.insert(out, item)
+		end
+	end
+	for _, item in list do
+		if not used[item.id] then
+			table.insert(out, item)
+		end
+	end
+	return out
+end
+
 -- 화면 틀의 격자 폭이 gw일 때 메뉴 단추의 간격: 그 격자에서의 칸의 폭에서 나온다(넓은 칸 → pitch, 좁은 격자의 칸 → tight)
 function L.menuPitch(gw: number?): number
 	return (L.rect(UI.hud.menu, gw).w - L.MENU.slot) / (L.MENU.max - 1)
@@ -109,7 +134,8 @@ L.CINE = D.cine -- 퀘스트 연출(장면 — 2026-10-15): 장의 이름 · 보
 L.DAILY = D.daily -- 일일 의뢰: 머리글(top) 아래 의뢰마다 한 칸(row — 맵의 이름 · 의뢰의 이름 · 오른쪽 단추 btnW · 진행 띠 barH), 가르는 줄 아래 보상 두 줄(payRow — 이름표 labelW)
 L.ATTEND = D.attend -- 출석(2026-10-15): 머리글(top) · 칸 cols x rows(cell · gap) · 가르는 줄 아래(lineY) 받을 것 한 줄(rowH) · 안내와 「받기」(btnW)
 L.DUNGEON = D.dungeon -- 던전 창(2026-10-21 — 수정 거울숲): 이름 · 오늘 · 레벨 · 글 · 완료 보상 · 안내 · [혼자 입장] [파티 입장] · 까닭(portalScale · portalLift = 던전의 문의 포탈 빛)
-L.FINDER = D.finder -- 파티 찾기(2026-11-05 — 메뉴에서): 탭 모집 중 · 방 만들기 | 내 방 / 방 목록 · 신청 / 보스 · 난이도 · 조건 / 파티원 · 준비 · 신청한 사람 · 수락 · 거절 · 출발
+L.COINSHOP = D.coinshop -- 숯돌의 화로(2026-11-05 — design/bosscoin.js · 대장장이의 제작 줄과 같은 짜임)
+L.FINDER = D.finder -- 파티 찾기(2026-11-05 — 그 보스의 문 → 보스 창의 [파티 찾기] · 넓은 창): 위 줄 [모집 글 등록] · 난이도 탭 · 제목 찾기 / 방 목록 · 고른 방 / 모집 글 등록 / 파티 대기실(파티원 · 신청자)
 L.SCHEDULE = D.schedule -- 스케줄러(2026-11-03 — 메뉴에서): 탭 일일 · 주간 / 줄마다 [칸] 이름 · 진행 / 다음 초기화까지 · 안내
 L.WEEKLY = D.weekly -- 보스 창(2026-10-24 — 주간 보스): 이름 · 이번 주 · 글 · [노말] [하드] · 입장 레벨 · 격파 보상 · 안내 · [혼자 입장] [파티 입장] · 까닭(timeY = 보스의 방의 남은 시간 줄)
 L.RIFT = D.rift -- 수정 틈 토벌(2026-10-16): 머리글(top) 아래 단계마다 한 칸(row — 이름 · 「입장」 btnW · 몬스터 · 보상) · 아래 안내(footY)

@@ -222,7 +222,7 @@ function SceneView:update(heroX: number, heroY: number, clock: number, grounded:
 		self.camXf = want
 	end
 	local cx = round(math.clamp(self.camXf - G.VIEW_W / 2, 0, math.max(0, self.width - G.VIEW_W)))
-	local cy = G.GROUND_Y - Kit.GROUND
+	local cy = G.GROUND_Y - Kit.GROUND - (self.scene.camUp or 0) -- camUp = 그 맵의 카메라를 아래로(2026-11-06 끓는 분화구 속 — 커진 용암 거인이 머리까지 보이게 · 공방 maps.js)
 	if self.scene.tall then
 		local top = math.max(0, self.height - Kit.GROUND - (G.GROUND_Y - Kit.GROUND)) -- 카메라가 내려갈 수 있는 끝
 		local dt = if self.lastClock then math.clamp(clock - self.lastClock, 0, 0.1) else 0

@@ -2615,7 +2615,7 @@ local function listen()
 	Net.OnClient("PartyAsk", function(ask)
 		PartyHud.ask(ask)
 	end)
-	-- 파티 찾기(2026-11-05): 내 방이 바뀌었다(신청 · 수락 · 거절 · 준비 · 닫힘 — 서버가 먼저 보낸다)
+	-- 파티 찾기(2026-11-05): 내 방이 바뀌었다(신청 · 수락 · 거절 · 닫힘 · 입장 — 서버가 먼저 보낸다)
 	Net.OnClient("FinderView", function(v)
 		if typeof(v) == "table" then
 			v.why = nil
@@ -2721,6 +2721,18 @@ local function listen()
 			state.fx:float("+" .. Format.short(e.result) .. " 달돈", state.body.x, state.body.y - 34, Effects.GOLD) -- 상점에 팔았다
 		elseif e.action == "use" and e.ok and e.why and state.fx then
 			state.fx:float(e.why, state.body.x, state.body.y - 46, Effects.MINT, 1.6) -- 달빛 부적 · 능력치 초기화 주문서를 썼다(「약해짐이 풀렸다」 · 「능력치를 모두 되돌렸다」 — 2026-10-18 검토: 전에는 실패만 띄웠다)
+		elseif (e.action == "coinMake" or e.action == "coinBuy") and e.ok and e.result then
+			-- 숯돌의 화로(2026-11-05): 벼린 것 — 창의 아래 줄 · 머리 위
+			local label = if e.result.made then nil else ItemCell.label(e.result)
+			if e.result.made then
+				local st = require(lune.sim.bosscoin).set(e.result.made)
+				local g = st and Items.goods(st.coin.id)
+				label = if g then g.name else ""
+			end
+			state.ui.coinResult = label
+			if state.fx and label then
+				state.fx:float(label, state.body.x, state.body.y - 34, if e.result.made then Effects.GOLD else ItemCell.color(e.result), 1.8)
+			end
 		elseif e.action == "craft" and e.ok and e.result then
 			state.ui.craftResult = e.result -- 대장장이가 만들어 준 장비(제작 창이 이름을 적는다)
 			if state.fx then
@@ -2786,6 +2798,58 @@ local function listen()
 		Chat.note(("[%s] %s"):format(Rank.FIRST_TITLE, text))
 		HallStones.soon()
 		require(script.Parent.rankStatues).soon()
+	end)
+	-- 보스의 출현(2026-11-05 — server modules/reveal.luau · sim/reveal.luau): 출현 시각을 받아 적는다(왼쪽 아래의 빨간 남은 시간은 Hud.step이 그린다 · 보스 퀘스트의 「!!」를 다시 그린다)
+	--  시계가 서버와 어긋나도 남은 시간이 맞게 서버의 지금(now)으로 맞춘다
+	Net.OnClient("Reveal", function(v)
+		if typeof(v) ~= "table" or typeof(v.at) ~= "table" then
+			return
+		end
+		local Reveal = require(lune.sim.reveal)
+		local off = (tonumber(v.now) or os.time()) - os.time()
+		Reveal.clock = function()
+			return os.time() + off
+		end
+		for id, at in v.at do
+			if typeof(id) == "string" and typeof(at) == "number" then
+				Reveal.at[id] = at
+			end
+		end
+		if state.drawQuests then
+			state.drawQuests()
+		end
+	end)
+	-- 떡밥 알림 · 출현(모든 서버가 같은 때 — 화면 위 큰 알림 + 채팅): tease = 「용암 거인 출현까지 30:00」 + 말 한 줄 · open = 「용암 거인 출현!」 + 「… 아궁 할멈을 찾아가자(Lv.120부터)」
+	Net.OnClient("RevealNews", function(e)
+		if typeof(e) ~= "table" or typeof(e.name) ~= "string" then
+			return
+		end
+		local Reveal = require(lune.sim.reveal)
+		local WW = require(lune.sim.weekly).DATA.words
+		local head, sub
+		if e.kind == "open" then
+			head = Format.fill(WW.openHead, { name = e.name })
+			sub = Format.fill(WW.openSub, { lv = tonumber(e.lv) or 1 })
+			Music.sfx("success")
+		else
+			head = Format.fill(WW.revealHead, { name = e.name, t = Reveal.clockText(tonumber(e.left) or 0) })
+			sub = tostring(e.line or "")
+		end
+		pcall(Guide.banner, head, sub, if e.kind == "open" then 12 else 9)
+		Chat.note(("[%s] %s"):format(head, sub))
+		if e.kind == "open" and state.drawQuests then
+			state.drawQuests() -- 보스 퀘스트의 「!!」가 생긴다
+		end
+	end)
+	-- 보스의 최초 격파(2026-11-05 — server modules/firstClear.luau): 어느 서버에서든 자리를 얻은 파티가 나오면 화면 위 큰 알림 「최초 격파 1/3 — 용암 거인」 + 이름들 · 채팅 알림 글
+	Net.OnClient("FirstClear", function(e)
+		if typeof(e) ~= "table" or typeof(e.boss) ~= "string" or typeof(e.names) ~= "string" then
+			return
+		end
+		local WW = require(lune.sim.weekly).DATA.words
+		local head = Format.fill(WW.firstHead, { n = tonumber(e.n) or 1, max = tonumber(e.max) or 3, boss = e.boss })
+		pcall(Guide.banner, head, e.names, 10)
+		Chat.note(("[%s] %s"):format(head, e.names))
 	end)
 	Net.OnClient("Sold", function(e)
 		if typeof(e) ~= "table" then
@@ -2885,6 +2949,7 @@ function Boot.start()
 	end
 	if first and first.select then
 		Music.import(first.select.sound) -- 계정에 저장된 소리 설정(처음 화면부터 그 크기로)
+		state.menuOrder = first.select.menu -- 메뉴 단추의 차례(끌어 옮긴 것 — 2026-11-06)
 		ViewOpts.import(first.select.sound) -- 같은 표의 화면 설정(다른 사람의 스킬 효과 · 피해 숫자)
 		Music.play(MUSIC.title)
 		-- 로딩 화면 → START → 캐릭터 고르기. 캐릭터로 들어가면 서버가 준 내 상태와 방을 받아 이어 간다(그동안 늘 보이는 화면은 숨긴다)
@@ -3079,8 +3144,14 @@ function Boot.start()
 			end
 		end
 		table.insert(menu, { id = "more", name = "메뉴", key = "" })
+		-- 끌어 옮긴 차례(2026-11-06 — 계정에 저장: Account.setMenu): 적힌 것을 그 차례로 앞에 · 적히지 않은 단추(새로 생긴 창)는 처음 차례대로 뒤에
+		menu = Layout.menuOrder(menu, state.menuOrder)
 		closeMore()
-		Hud.setMenu(menu, onMenu)
+		Hud.setMenu(menu, onMenu, function(order)
+			state.menuOrder = order
+			Net.FireServer("MenuOrder", order)
+			drawKeyHints()
+		end)
 		if state.me then
 			Hud.setSelf(state.me)
 		end
@@ -3137,7 +3208,7 @@ function Boot.start()
 					local def = Quests.def(m.id)
 					Talk.start(npc, def.wait, def.name)
 				else
-					Talk.start(npc, npc.lines)
+					Talk.start(npc, if npc.pickLines then npc.pickLines() else npc.lines) -- (랭킹 석상에 선 사람의 말 — 2026-11-05)
 				end
 			end)
 			return true
@@ -3288,6 +3359,17 @@ function Boot.start()
 		elseif kind == "hall" then
 			-- 명예의 전당의 비석: 그 비석의 순위판을 연다(hall_level → "level")
 			Windows.open("hall", string.match(npc.id, "^hall_(%a+)$") or "level", true)
+		elseif kind == "coinshop" then
+			-- 보스 주화(2026-11-05 — design/bosscoin.js): 화롯골의 대장장이 숯돌 = 「숯돌의 화로」 창(그 사람이 맡은 세트 — 화심 세트)과 가방
+			local setId = nil
+			for _, st in require(lune.sim.bosscoin).DATA.sets do
+				if st.npc == npc.id then
+					setId = st.id
+				end
+			end
+			Windows.close("shop")
+			Windows.open("coinshop", setId)
+			Windows.open("bag", nil, true)
 		elseif kind == "shop" then
 			openService("merchant")
 		elseif kind == "smith" then
@@ -3557,13 +3639,13 @@ function Boot.start()
 				end
 			end)
 		end,
-		-- 파티 찾기(2026-11-05 — 메뉴 → 「파티 찾기」): 서버의 마지막 대답 { ok, why, rooms, mine, bosses, max, steps }(world.luau의 "Finder" · sim/finder.luau) · 묻기 · 하기
+		-- 파티 찾기(2026-11-05 — 그 보스의 문 → 보스 창의 [파티 찾기]): 서버의 마지막 대답 { ok, why, boss, rooms, mine, here, max, steps, titleMax }(world.luau의 "Finder" · sim/finder.luau) · 묻기(그 보스) · 하기
 		finder = function()
 			return state.finder
 		end,
-		finderFetch = function()
+		finderFetch = function(boss: any)
 			task.spawn(function()
-				local ok, res = pcall(Net.Invoke, "Finder", "view", nil, nil, nil)
+				local ok, res = pcall(Net.Invoke, "Finder", "view", boss, nil, nil)
 				if ok and typeof(res) == "table" then
 					res.why = if state.finder then state.finder.why else nil -- (물어본 대답은 까닭이 없다 — 앞의 까닭을 잠깐 남긴다)
 					state.finder = res
@@ -3761,7 +3843,8 @@ function Boot.start()
 	Windows.register("attend", AttendWindow) -- 출석(메뉴 → 「출석」 · 그날 처음 들어오면 한 번)
 	Windows.register("achieve", AchieveWindow) -- 업적(메뉴 → 「업적」)
 	Windows.register("coupon", CouponWindow) -- 쿠폰(메뉴 → 「쿠폰」 — 2026-10-21)
-	Windows.register("finder", require(script.Parent.ui.finderWindow)) -- 파티 찾기(메뉴 → 「파티 찾기」 — 2026-11-05 · 같은 서버의 보스 파티 모집)
+	Windows.register("coinshop", require(script.Parent.ui.coinWindow)) -- 숯돌의 화로(2026-11-05 — 보스 주화: 심장핵 + 불씨핵 → 화심 주화 → 화심 세트)
+	Windows.register("finder", require(script.Parent.ui.finderWindow)) -- 파티 찾기(그 보스의 문 → 보스 창의 [파티 찾기] — 2026-11-05 · 같은 서버 · 로스트아크의 레이드 파티 찾기 꼴)
 	Windows.register("schedule", require(script.Parent.ui.scheduleWindow)) -- 스케줄러(메뉴 → 「스케줄러」 — 2026-11-03 · 메이플 스케줄러처럼 일일 · 주간 할 일)
 	Windows.register("cash", CashWindow) -- 달빛 상점의 판(창으로는 이름 바꾸기 칸 · 염색만 — 가방에서 주문서 · 염색약을 쓰면. 상점은 들어가는 공간: cashShop.luau)
 	CashWindow.ctx = Windows.context() -- (염색 창의 제목이 내 직업을 본다 — 살라맨더는 「머리 색」)

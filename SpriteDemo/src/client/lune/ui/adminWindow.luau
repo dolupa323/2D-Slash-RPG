@@ -200,8 +200,8 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 			y = row(p, y, ("레벨(지금 %d)"):format(level), {
 				{ text = "-10", id = "lvm10", on = function() ask("level", math.max(1, level - 10)) end },
 				{ text = "-1", id = "lvm1", on = function() ask("level", math.max(1, level - 1)) end },
-				{ text = "+1", id = "lvp1", on = function() ask("level", math.min(N.MAX_LEVEL, level + 1)) end },
-				{ text = "+10", id = "lvp10", on = function() ask("level", math.min(N.MAX_LEVEL, level + 10)) end },
+				{ text = "+1", id = "lvp1", on = function() ask("level", math.min(N.LEVEL_CAP, level + 1)) end },
+				{ text = "+10", id = "lvp10", on = function() ask("level", math.min(N.LEVEL_CAP, level + 10)) end },
 			})
 			local ls = {}
 			for _, v in AdminWindow.LEVELS do

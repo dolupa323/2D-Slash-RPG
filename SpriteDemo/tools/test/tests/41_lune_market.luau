@@ -63,7 +63,7 @@ do
 	for _, g in Items.data.GOODS do
 		if g.quest and not quest then
 			quest = g
-		elseif g.tab == "etc" and not g.quest and g.kind ~= "event" and not mat then -- (기간 이벤트의 물건 — 호박 사탕 — 은 올릴 수 없다: 113_lune_halloween)
+		elseif g.tab == "etc" and not g.quest and g.kind ~= "event" and not g.bound and not mat then -- (기간 이벤트의 물건 — 호박 사탕 — 은 올릴 수 없다: 113_lune_halloween) · 교환 불가(bound — 보스 주화의 심장핵 · 주화: 2026-11-05 시험 124)
 			mat = g
 		end
 	end

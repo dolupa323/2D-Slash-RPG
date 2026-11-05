@@ -92,12 +92,39 @@ end
 function Items.unique(id: any)
 	return if typeof(id) == "string" then UNIQUE[id] else nil
 end
-function Items.makeUnique(id: string)
+-- q = 성능(주지 않으면 그 이름표의 것 — 보스 주화 장비는 교환할 때 굴려서 준다: 2026-11-05 사용자 "빼어난 확정 아니고 교환할때 샤냥터 드롭 장비처럼 랜덤값으로")
+function Items.makeUnique(id: string, q: number?)
 	local u = UNIQUE[id]
 	assert(u, "없는 이름표 " .. tostring(id))
-	local it = Items.make(u.slot, u.stage, u.q)
+	local it = Items.make(u.slot, u.stage, q or u.q, u.who) -- who = 그 직업의 무기(보스 주화 장비 — 2026-11-05 화심 창 · 화심 큰 도끼 …)
 	it.u = id
 	return it
+end
+-- 그 장비를 낄 수 있는 직업(없으면 nil = 누구나 — 무기는 who · 보스 주화의 방어구는 그 이름표의 who: 2026-11-05 "무니는 무니 방어구 밖에 못쓰는거야 150제는")
+function Items.classOf(it): string?
+	if it.slot == "weapon" then
+		return it.who
+	end
+	local u = it.u and UNIQUE[it.u]
+	return if u then u.who else nil
+end
+-- 세기의 배(보스 주화 장비 — 2026-11-05 「140제 22성 = 150제 18성」: 공방 bosscoin.js의 match) · 그 밖은 1
+local function mulOf(it): number
+	local u = it.u and UNIQUE[it.u]
+	return (u and u.mul) or 1
+end
+Items.mulOf = mulOf
+-- 경매장에 올리지 못하는 것인가(2026-11-05 보스 주화: 거인의 심장핵 · 화심 주화 · 화심 장비 — design/bosscoin.js의 bound). it = 장비 · 또는 { item = 소비 · 기타 아이템의 이름표 }
+function Items.bound(it: any): boolean
+	if typeof(it) ~= "table" then
+		return false
+	end
+	if it.item ~= nil then
+		local g = Items.goods(it.item)
+		return g ~= nil and g.bound == true
+	end
+	local u = it.u and UNIQUE[it.u]
+	return u ~= nil and u.bound == true
 end
 
 -- 저장된 것 · 받은 것의 꼴이 맞는가
@@ -116,8 +143,8 @@ function Items.valid(it: any): boolean
 	end
 	if it.u ~= nil then
 		local u = UNIQUE[it.u]
-		if not u or u.slot ~= it.slot or u.stage ~= it.stage then
-			return false -- 모르는 이름표 · 부위나 단계가 다르다
+		if not u or u.slot ~= it.slot or u.stage ~= it.stage or (it.slot == "weapon" and u.who ~= nil and u.who ~= it.who) then
+			return false -- 모르는 이름표 · 부위나 단계가 다르다 · 직업마다의 무기인데 직업이 다르다(방어구의 직업은 이름표에 — Items.classOf)
 		end
 	end
 	return it.star <= Items.starCap(it.stage)
@@ -153,7 +180,11 @@ end
 function Items.name(it): string
 	local u = it.u and UNIQUE[it.u]
 	if u then
-		return u.name -- 이름 붙은 장비(보스 — 2026-10-27)
+		-- 이름 붙은 장비(보스 — 2026-10-27). 성능을 굴려 받는 것(보스 주화 — roll)은 사냥 장비처럼 앞에 성능(「빼어난 화심 창」 · 보통은 이름만)
+		if u.roll and it.q ~= D.NORMAL and D.QUALITY[it.q] then
+			return D.QUALITY[it.q].name .. " " .. u.name
+		end
+		return u.name
 	end
 	local head = if it.q == D.NORMAL then "" else D.QUALITY[it.q].name .. " "
 	return ("%sLv.%d %s"):format(head, it.stage, Items.baseName(it))
@@ -170,15 +201,16 @@ local function gearAtk(it, k: number, q: number): number
 	if u and u.atk then
 		return u.atk
 	end
-	return math.max(1, round(N.armorAtk(it.stage) * k * q))
+	return math.max(1, round(N.armorAtk(it.stage) * k * q * mulOf(it)))
 end
 function Items.options(it)
 	local q = 1 + D.QUALITY[it.q].bonus / 100
+	local mq = q * mulOf(it) -- (보스 주화 장비의 세기 배 — 2026-11-05)
 	local base
 	if it.slot == "weapon" then
-		base = { atk = round(N.weaponAtk(it.stage) * q) }
+		base = { atk = round(N.weaponAtk(it.stage) * mq) }
 	elseif ARMOR[it.slot] then
-		base = { stat = round(N.armorStat(it.stage) * q), atk = gearAtk(it, 1, q), def = round(N.armorDef(it.stage) * q) }
+		base = { stat = round(N.armorStat(it.stage) * mq), atk = gearAtk(it, 1, q), def = round(N.armorDef(it.stage) * mq) }
 	else
 		base = { stat = round(N.armorStat(it.stage) * SPEC.acc.stat * q), atk = gearAtk(it, SPEC.acc.atk, q) }
 	end
@@ -202,14 +234,15 @@ function Items.sum(list)
 	for _, it in list do
 		if not it.broken then
 			local q = 1 + D.QUALITY[it.q].bonus / 100
+			local mq = q * mulOf(it)
 			if it.slot == "weapon" then
-				atk += round(round(N.weaponAtk(it.stage) * q) * (1 + N.starPct("weapon", it.star) / 100))
+				atk += round(round(N.weaponAtk(it.stage) * mq) * (1 + N.starPct("weapon", it.star) / 100))
 			else
 				local k = 1 + N.starPct("armor", it.star) / 100
 				if ARMOR[it.slot] then
-					stat += round(round(N.armorStat(it.stage) * q) * k)
+					stat += round(round(N.armorStat(it.stage) * mq) * k)
 					atk += round(gearAtk(it, 1, q) * k)
-					def += round(round(N.armorDef(it.stage) * q) * k)
+					def += round(round(N.armorDef(it.stage) * mq) * k)
 				else
 					stat += round(round(N.armorStat(it.stage) * SPEC.acc.stat * q) * k)
 					atk += round(gearAtk(it, SPEC.acc.atk, q) * k)
@@ -217,7 +250,46 @@ function Items.sum(list)
 			end
 		end
 	end
-	return { atk = atk, stat = stat, def = def }
+	-- 세트 효과(2026-11-05 — 공방 bosscoin.js GEARSETS · 보스 전리품 · 화심): 그 세트의 것을 n개 끼면 n까지의 단계를 모두
+	local bonus = Items.setBonus(list)
+	return { atk = atk + bonus.atk, stat = stat + bonus.stat, def = def + bonus.def }
+end
+
+-- ---------- 세트 효과(2026-11-05 사용자: "지금 출시된 보스들의 장신구 세트효과가 있어야해 2세트 효과 , 3세트효과 이런식으로 150제 장비도 세트효과 추가하고 너무강력하진않게 하지만 맞추는 메리트는 있게") ----------
+--  이름 붙은 장비의 set(보스 전리품 = 보스의 장신구 넷 · 화심 = 무기 + 방어구 넷 — 직업이 달라도 같은 세트)을 부위마다 센다(부서진 것은 세지 않는다)
+local SETS = {}
+for _, g in D.GEARSETS or {} do
+	SETS[g.id] = g
+end
+function Items.gearSet(id: any)
+	return if typeof(id) == "string" then SETS[id] else nil
+end
+-- 끼고 있는 것들에서 세트마다 낀 수 { [세트] = n }
+function Items.setCounts(list): { [string]: number }
+	local n = {}
+	local seen = {}
+	for _, it in list do
+		local u = it.u and UNIQUE[it.u]
+		if u and u.set and SETS[u.set] and not it.broken and not seen[it.slot] then
+			seen[it.slot] = true
+			n[u.set] = (n[u.set] or 0) + 1
+		end
+	end
+	return n
+end
+-- 세트 효과의 합 { stat, atk, def }
+function Items.setBonus(list)
+	local out = { stat = 0, atk = 0, def = 0 }
+	for id, n in Items.setCounts(list) do
+		for _, st in SETS[id].steps do
+			if n >= st.n then
+				out.stat += st.stat or 0
+				out.atk += st.atk or 0
+				out.def += st.def or 0
+			end
+		end
+	end
+	return out
 end
 
 -- 받는 피해 감소 %: 끼고 있는 방어구의 방어력 합으로(같은 레벨 방어구 넷 = 30% · 빈 부위 · 부서진 것은 0)

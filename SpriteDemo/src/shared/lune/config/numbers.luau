@@ -8,6 +8,9 @@ local MAX = D.MAX_LEVEL
 
 local N = {}
 N.MAX_LEVEL = MAX
+-- 레벨의 진짜 상한(2026-11-05 사용자 "만렙은 200 이고 절대 레벨업이 불가능한수준으로 151을 찍는것도 불가능하게") · Lv.150부터 다음 레벨까지의 경험치. MAX_LEVEL(150)은 만렙의 기록 · 칭호 · 순위 · 곡선의 기준 그대로
+N.LEVEL_CAP = D.LEVEL_CAP or MAX
+N.XP_WALL = D.XP_WALL or 72e9 -- Lv.150부터 한 레벨(2026-11-06 — 공방 jobs.js: 한 달)
 N.data = D
 
 local function round(v: number): number
@@ -79,7 +82,10 @@ end
 function N.mobHp(L: number): number
 	return round(SPEC.hpK * N.refAttack(L) * N.easeAt(L))
 end
-function N.xpNeed(L: number): number -- 다음 레벨까지 필요한 경험치
+function N.xpNeed(L: number): number -- 다음 레벨까지 필요한 경험치(Lv.150부터는 XP_WALL — 2026-11-05)
+	if L >= MAX then
+		return N.XP_WALL
+	end
 	return N.killsAt(L) * N.mobXp(L)
 end
 -- 내 레벨과 몬스터 레벨의 차이에 따른 경험치 %(차이 10 안쪽 100 · 11~20은 한 레벨마다 5씩 줄어 50까지 · 21 넘으면 10)

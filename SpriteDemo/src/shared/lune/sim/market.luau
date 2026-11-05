@@ -96,6 +96,9 @@ function Market.sellable(it: any): (boolean?, string?)
 	if not back then
 		return nil, Market.WHY.item
 	end
+	if Items.bound(back) then
+		return nil, Market.WHY.bound -- 교환 불가(2026-11-05 보스 주화: 거인의 심장핵 · 화심 주화 · 화심 장비 — 모아서 바꾸는 것 · 그 사람이 얻은 것)
+	end
 	if back.item then
 		local def = Items.goods(back.item)
 		if def.quest then

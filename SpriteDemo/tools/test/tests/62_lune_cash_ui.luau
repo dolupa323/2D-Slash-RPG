@@ -9,6 +9,7 @@ local Cash = req("ReplicatedStorage/shared/lune/sim/cash")
 local Account = req("ReplicatedStorage/shared/lune/sim/account")
 local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
 local Items = req("ReplicatedStorage/shared/lune/sim/items")
+local Format = req("ReplicatedStorage/shared/lune/ui/format")
 
 local function frame(name)
 	local f = { Name = name, Visible = true, children = {} }
@@ -181,7 +182,15 @@ local ctx = {
 	cashDo = function(action, a)
 		table.insert(calls, { action, a })
 		if action == "take" then
-			if a then
+			if typeof(a) == "table" then -- 나눠 받기(2026-11-06): { i = 줄, n = 몇 개 }
+				local e = view.box[a.i]
+				local k = math.min(e.n, a.n)
+				e.n -= k
+				if e.n <= 0 then
+					table.remove(view.box, a.i)
+				end
+				return { ok = true, list = view.list, box = view.box, moved = k }
+			elseif a then
 				table.remove(view.box, a)
 			else
 				view.box = {}
@@ -254,16 +263,72 @@ local takes = buttonsNamed(W.take)
 eq(#takes, 2, "보관함의 줄마다 「받기」")
 expect(textOf("x2") ~= nil, "경험치 쿠폰 x2")
 expect(textOf(("쓰면 달돈 %s"):format(req("ReplicatedStorage/shared/lune/ui/format").comma(money.amount))) ~= nil, "주머니에 든 양")
+-- 나눠 받기(2026-11-06 사용자 "수령을 나눠서 할수있어야해"): 2개 이상인 줄의 「받기」 → 받을 수를 고르는 모습([-] [수] [+] [모두] … 「받기」)
+local function btnNamed(name)
+	for _, b in buttons do
+		if b.frame.Name == name then
+			return b
+		end
+	end
+	return nil
+end
+local nCalls = #calls
+takes[2].click()
+eq(calls[#calls][1], "take", "1개뿐인 줄(달돈 주머니)은 바로 받는다")
+eq(calls[#calls][2], 2, "둘째 줄")
+nCalls = #calls
+takes = buttonsNamed(W.take)
 takes[1].click()
+eq(#calls, nCalls, "2개인 줄은 바로 받지 않고 몇 개를 받을지 묻는다")
+expect(textOf(W.takeHead) ~= nil, "「몇 개를 받을까」")
+expect(textOf(Format.fill(W.takeHave, { n = 2 })) ~= nil, "「보관함에 2개」")
+local go, less, more = btnNamed("TakeGo"), btnNamed("TakeLess"), btnNamed("TakeMore")
+expect(go and go.frame.Visible, "「받기」가 보인다")
+expect(less and less.enabled and more and not more.enabled, "처음 = 모두(2) — 「-」만 켜짐")
+less.click()
+expect(not less.enabled and more.enabled, "1개로 줄였다")
+go.click()
 eq(calls[#calls][1], "take", "서버에 받기를 묻는다")
-eq(calls[#calls][2], 1, "첫 줄")
-expect(textOf("2개를 가방에 넣었다") ~= nil, "받은 수의 알림")
+expect(typeof(calls[#calls][2]) == "table" and calls[#calls][2].i == 1 and calls[#calls][2].n == 1, "첫 줄에서 1개")
+expect(textOf("1개를 가방에 넣었다") ~= nil, "받은 수의 알림")
+expect(not go.frame.Visible, "받으면 목록으로")
+expect(textOf("x1") ~= nil, "보관함에 1개가 남았다")
 local all = buttonsNamed(W.takeAll)[1]
 expect(all and all.enabled, "남은 것이 있으면 「모두 받기」")
 all.click()
 eq(calls[#calls][2], nil, "모두 받기 = 줄 없이")
 expect(not all.enabled, "다 받으면 꺼진다")
 expect(textOf(W.boxEmpty) ~= nil, "빈 보관함")
+-- 여러 개를 한 번에(2026-11-06 사용자 "여러수량을 한번에 구매요청하고 로벅스도 그 개수에맞춰"): 묶음이 있는 상품(경험치 쿠폰)의 「구매」 → 1개 · 5개 · 10개 → 고른 묶음의 구매 창
+do
+	tabs[1].click()
+	local acts = {}
+	for _, b in buttons do
+		if b.frame.Name == "Act" then
+			table.insert(acts, b)
+		end
+	end
+	local k = table.find(BM.shop.rows.conv, "exp")
+	local n0 = #calls
+	acts[k].click()
+	eq(#calls, n0, "묶음이 있으면 바로 사지 않고 몇 개를 살지 묻는다")
+	expect(textOf(W.qtyHead) ~= nil, "「몇 개를 살까」")
+	for i, n in { 1, 5, 10 } do
+		local b = btnNamed("Pick" .. i)
+		expect(b ~= nil and b.frame.Visible and b.enabled, ("%d개의 「구매」"):format(n))
+		expect(textOf(Format.fill(W.qty, { n = n })) ~= nil, ("「%d개」"):format(n))
+	end
+	expect(textOf(Format.fill(W.price, { n = 245 })) ~= nil, "5개 = 245 로벅스(49 x 5)")
+	expect(textOf(Format.fill(W.price, { n = 490 })) ~= nil, "10개 = 490 로벅스")
+	btnNamed("Pick2").click()
+	eq(calls[#calls][1], "buy", "고른 묶음을 산다")
+	eq(calls[#calls][2], "exp_x5", "경험치 쿠폰 5개")
+	expect(not btnNamed("Pick2").frame.Visible, "구매 창을 띄우면 목록으로")
+	local ck = table.find(BM.shop.rows.conv, "charx")
+	n0 = #calls
+	acts[ck].click()
+	eq(calls[#calls][2], "charx", "묶음이 없는 상품(캐릭터 칸 +1)은 바로 산다")
+end
 -- 선물하기(2026-10-31 사용자 "달빛상점에 모든 품목을 아이템 선물을 할수있게 해줘"): 「선물하기」 → 줄의 단추가 「선물」(영구 패스 = 「선물 불가」) →
 --  「선물」 → 목록 자리에 닉네임 칸 → 「보내기」 → 서버에 gift { id, to } → 목록으로 · 「구매 창을 띄웠다 — 결제가 끝나면 「받는이」에게 간다」
 do

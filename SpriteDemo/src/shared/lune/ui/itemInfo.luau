@@ -59,8 +59,9 @@ function I.gear(it, me, worn: any, isWorn: boolean?)
 	local tier = "tier" .. (it.q - 1)
 	local o = Items.options(it)
 	local rows = { { W.need, "Lv." .. need, if me.level >= need then "text" else "red" } }
-	if it.slot == "weapon" then
-		table.insert(rows, { W.job, CLASSES.classes[it.who].name, if it.who == me.class then "text" else "red" })
+	local cls = Items.classOf(it) -- 무기 · 보스 주화의 방어구(2026-11-05 — 그 직업만)
+	if cls and CLASSES.classes[cls] then
+		table.insert(rows, { W.job, CLASSES.classes[cls].name, if cls == me.class then "text" else "red" })
 	end
 	table.insert(rows, { W.quality, if q.bonus == 0 then q.name else ("%s %s%d%%"):format(q.name, if q.bonus > 0 then "+" else "", q.bonus), tier })
 	for _, k in I.ORDER do
@@ -73,7 +74,7 @@ function I.gear(it, me, worn: any, isWorn: boolean?)
 		table.insert(notes, { W.brokenNote, "red" })
 	elseif isWorn then
 		table.insert(notes, { W.worn, "accent" })
-	elseif it.slot == "weapon" and it.who ~= me.class then
+	elseif cls ~= nil and cls ~= me.class then
 		table.insert(notes, { W.otherJob, "red" })
 	elseif me.level < need then
 		table.insert(notes, { Format.fill(W.needLv, { n = need }), "red" })
@@ -98,6 +99,28 @@ function I.gear(it, me, worn: any, isWorn: boolean?)
 	local u = Items.unique(it.u)
 	if u then
 		table.insert(notes, 1, { u.text, "text" }) -- 이름 붙은 장비(보스 — 2026-10-27)의 글을 맨 위에
+		-- 세트 효과(2026-11-05 — Items.setBonus): 「화심 세트 3/5」 · 단계마다 「2세트 — 올스탯 +20」(지금 받는 단계는 민트 · 아직은 흐림). 낀 수 = me.equip(장착한 것 — 없으면 0)
+		local set = u.set and Items.gearSet(u.set)
+		if set then
+			local worn = {}
+			for _, e in (me.equip or {}) do
+				table.insert(worn, e)
+			end
+			local have = Items.setCounts(worn)[set.id] or 0
+			local top = set.steps[#set.steps].n
+			local at = 2
+			table.insert(notes, at, { Format.fill(W.setHead, { name = set.name, n = have, max = top }), "gold" })
+			for _, st in set.steps do
+				local parts = {}
+				for _, k in I.ORDER do
+					if (st[k] or 0) > 0 then
+						table.insert(parts, ("%s +%d"):format(W[k], st[k]))
+					end
+				end
+				at += 1
+				table.insert(notes, at, { Format.fill(W.setStep, { n = st.n, what = table.concat(parts, " · ") }), if have >= st.n then "accent" else "dim" })
+			end
+		end
 	end
 	return {
 		name = name,

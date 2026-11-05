@@ -266,8 +266,10 @@ function Room:bossFight(): boolean
 end
 
 --  kill = 즉사(2026-10-27 그림자 사수 「검은 가시밭」 — 사용자 "그 안쪽라인을 때리는 즉사패턴도 있어야해"): 남은 체력만큼을 넘게 친다(방어로 줄지 않는다 · 회피로 못 피한다).
---   생존기(무적) · 죽음의 가호 · 재점화는 그대로 듣는다(제가 정한 것 — 다시 쓰기가 긴 버티는 기술의 몫)
-function Room:hurtHero(events, h, mob, mul: number, kill: boolean?)
+--  pierce = 기믹의 트루 데미지(2026-11-05 사용자: "살라나, 무니 피해감소, 리퍼 피흡 이런 유틸들로 보스 기믹을 씹는경우는 없어야한다 트루데미지로 들어와야해"):
+--   방어구 · 피해 감소(무니의 지키는 마음 · 달의 축복 · 수정 방벽 · 달의 성역 · 살라맨더의 달궈진 몸 · 굳센 자세 …) · 회피 · 생존기(무적) · 죽음의 가호 · 재점화를 모두 무시한다.
+--   즉사(kill)도 기믹이라 트루 데미지다(그 전: 생존기 · 죽음의 가호 · 재점화는 들었다 — 10-27 제가 정한 것을 사용자 말대로 바꿨다). 맞은 뒤 잠깐의 무적(0.6초)만은 그대로 — 모든 피해에 같은 숨
+function Room:hurtHero(events, h, mob, mul: number, kill: boolean?, pierce: boolean?)
 	if h.inCine then -- 퀘스트 연출이 도는 동안은 맞지 않는다(피하기 · 버티기도 굴리지 않는다)
 		return
 	end
@@ -282,16 +284,17 @@ function Room:hurtHero(events, h, mob, mul: number, kill: boolean?)
 	if mob.gim or mob.lava then
 		mul *= gimOf(mob).hitMul(self, mob) -- 갈고리로 털어 간 버프의 힘(불씨 도둑 두목)
 	end
-	-- 리븐의 날랜 몸: 확률로 피한다(맞을 수 있을 때만 굴린다 — 피한 뒤에도 맞은 뒤처럼 잠깐은 다시 맞지 않는다)
+	local true_ = pierce == true or kill == true -- 기믹(트루 데미지 — 2026-11-05)
+	-- 리븐의 날랜 몸: 확률로 피한다(맞을 수 있을 때만 굴린다 — 피한 뒤에도 맞은 뒤처럼 잠깐은 다시 맞지 않는다) · 기믹은 피하지 못한다
 	local dodge = Kit.dodge(h) + Passives.dodge(h) -- 흘리기(4차): 회피 +
-	if dodge > 0 and not kill and h.alive and h.invuln <= 0 and self.rng:NextNumber(0, 1) < dodge then
+	if dodge > 0 and not true_ and h.alive and h.invuln <= 0 and self.rng:NextNumber(0, 1) < dodge then
 		h.invuln = RULES.invuln
 		Passives.dodged(h) -- 흘리기: 피하면 다음 베기가 반드시 표식 치명타
 		table.insert(events, { type = "dodge", hero = h.id })
 		return
 	end
-	-- 생존기(버티기 · 그림자 숨기 · 저승 걸음 · 맞불): 그동안은 피해를 받지 않는다
-	if Buffs.guard(h) then
+	-- 생존기(버티기 · 그림자 숨기 · 저승 걸음 · 맞불): 그동안은 피해를 받지 않는다 — 기믹(트루 데미지)은 그래도 들어온다
+	if Buffs.guard(h) and not true_ then
 		return
 	end
 	-- 끼고 있는 방어구만큼 덜 아프다. 무니의 지키는 마음은 거기에 더 줄인다(제 수정 곁에서는 두 배). 버프(달의 축복 · 수정 방벽 · 달의 성역)도 줄인다
@@ -307,12 +310,14 @@ function Room:hurtHero(events, h, mob, mul: number, kill: boolean?)
 	if self.weeklyHit and (mob.boss or mob.add) then
 		mul *= self.weeklyHit -- 주간 보스의 난이도(하드는 더 세게 — 2026-10-24)
 	end
-	local raw = N.rawHit("mob", mob.lv) * (1 - Hero.cut(h, mob.lv) / 100) * mul * Kit.cut(h, self:nearCrystal(h)) * Buffs.cut(h) * Passives.cut(h, casting)
+	local raw = if true_
+		then N.rawHit("mob", mob.lv) * mul -- 트루 데미지: 방어구 · 피해 감소를 거치지 않는다
+		else N.rawHit("mob", mob.lv) * (1 - Hero.cut(h, mob.lv) / 100) * mul * Kit.cut(h, self:nearCrystal(h)) * Buffs.cut(h) * Passives.cut(h, casting)
 	if kill then
 		raw = h.hp + h.maxHp -- 즉사: 남은 체력을 넘게
 	end
-	-- 죽음의 가호: 쓰러질 피해를 한 번 버틴다(체력 1로 남는다)
-	if h.alive and h.invuln <= 0 and raw >= h.hp and Buffs.ward(h) then
+	-- 죽음의 가호: 쓰러질 피해를 한 번 버틴다(체력 1로 남는다) — 기믹은 버티지 못한다
+	if not true_ and h.alive and h.invuln <= 0 and raw >= h.hp and Buffs.ward(h) then
 		local lost = h.hp - 1
 		h.hp, h.invuln = 1, RULES.invuln
 		table.insert(events, { type = "ward", hero = h.id })
@@ -321,8 +326,8 @@ function Room:hurtHero(events, h, mob, mul: number, kill: boolean?)
 		end
 		return
 	end
-	-- 재점화(살라맨더 4차): 쓰러질 피해를 받으면 열기를 모두 태워 버틴다(오래에 한 번)
-	if h.alive and h.invuln <= 0 and raw >= h.hp then
+	-- 재점화(살라맨더 4차): 쓰러질 피해를 받으면 열기를 모두 태워 버틴다(오래에 한 번) — 기믹은 버티지 못한다
+	if not true_ and h.alive and h.invuln <= 0 and raw >= h.hp then
 		local left = Passives.rekindle(h, self.time)
 		if left then
 			local lost = math.max(0, h.hp - left)
@@ -1189,6 +1194,18 @@ function Room:forget(hero)
 			end
 		end
 	end
+	-- 그 사람이 놓은 설치 · 소환(리퍼의 저승문 · 망령 · 분신 …)과 날아가는 것 · 남은 타이머도 버린다(2026-11-05 사용자 "리퍼 분신, 리퍼 저승문을 설치하고 맵을 이동하면 안보여
+	--  보이지 않는데 데미지는 들어가 이런 버그가 존재해서는안된다"): 서버는 사람이 있는 방만 돌려(world.luau), 떠난 방이 비면 놓인 것이 그대로 남았다가 주인이 돌아오면 다시 쳤다 — 화면은 떠날 때 지웠다
+	if self.placed then
+		for i = #self.placed, 1, -1 do
+			if self.placed[i].owner == hero then
+				table.remove(self.placed, i)
+			end
+		end
+	end
+	if self.caster then
+		self.caster:drop(hero)
+	end
 end
 
 function Room:step(heroes, dt: number)
@@ -1873,7 +1890,7 @@ function Room:reaperKill(hero, mob, dmg: number, mates, out, extra)
 	end
 	local kit = KIT.reaper
 	local s = Kit.scale(hero, "passive")
-	if s > 0 and hero.alive and hero.hp < hero.maxHp then
+	if s > 0 and hero.alive and hero.hp < hero.maxHp and not mob.gimAdd then -- (보스 기믹의 졸개 — 마그마 혹 · 심장 · 불씨 폭탄 · 가짜 두목 — 를 잡아서는 되찾지 않는다: 2026-11-05 "리퍼 피흡 … 보스 기믹을 씹는경우는 없어야한다")
 		local heal = math.min(hero.maxHp - hero.hp, math.max(1, math.floor(hero.maxHp * kit.passive.kill / 100 * s + 0.5)))
 		hero.hp += heal
 		out.heal = (out.heal or 0) + heal
@@ -2534,6 +2551,17 @@ function Room:lootFor(hero, mob)
 			self.eventRng = self.eventRng or Random.new(((self.keySeed or 0) + os.time() + 31) % 2147483629)
 			if self.eventRng:NextNumber(0, 100) < e.candy.chance then
 				goods(e.candy.id)
+			end
+		end
+		-- 보스 주화의 사냥의 핵(2026-11-05 — design/bosscoin.js · 용암 거인 둘레의 사냥터 셋이 「거인의 불씨핵」): 그 맵의 보통 몬스터가 pct% · 드롭률 패스 · 쿠폰 · 쓰러진 뒤의 벌칙을 받는다(재료와 같다 — dropMul).
+		--  따로 굴린다(장비 · 재료의 난수 차례를 바꾸지 않게 — 이벤트 사탕과 같은 난수) · (room.luau의 지역 이름이 한도에 가까워 여기서 부른다)
+		local subs = require(script.Parent.bosscoin).subsAt(string.match(self.key or "", "^([^#]+)"))
+		if #subs > 0 then
+			self.eventRng = self.eventRng or Random.new(((self.keySeed or 0) + os.time() + 31) % 2147483629)
+			for _, sub in subs do
+				if self.eventRng:NextNumber(0, 100) < sub.pct * dropMul then
+					goods(sub.id)
+				end
 			end
 		end
 	end

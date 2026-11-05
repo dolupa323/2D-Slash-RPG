@@ -6,6 +6,10 @@
 local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
 local WM = req("ReplicatedStorage/shared/lune/ui/worldmap")
 local Quests = req("ReplicatedStorage/shared/lune/sim/quests")
+do -- 출현을 기다리는 보스(2026-11-05 용암 거인)는 출현한 것으로 본다(출현 전의 닫힘은 시험 125)
+	local Reveal = req("ReplicatedStorage/shared/lune/sim/reveal")
+	Reveal.at.lavagiant = Reveal.clock() - 1
+end
 local Daily = req("ReplicatedStorage/shared/lune/sim/daily")
 local Navi = req("ReplicatedStorage/shared/lune/ui/navi")
 local Panel = req("ReplicatedStorage/shared/lune/ui/questPanel")

@@ -61,7 +61,8 @@ end
 
 -- 그 장비를 지금 낄 수 있는가(화면의 단추를 켜고 끄는 데 쓴다 — 서버가 다시 본다)
 function BagWindow.canWear(me, it): boolean
-	return not it.broken and (it.slot ~= "weapon" or it.who == me.class) and me.level >= Items.needLevel(it)
+	local cls = Items.classOf(it) -- 무기 · 보스 주화의 방어구(2026-11-05 — 그 직업만)
+	return not it.broken and (cls == nil or cls == me.class) and me.level >= Items.needLevel(it)
 end
 
 -- 지금 낀 것보다 좋은 장비인가(2026-10-18 — 칸의 왼쪽 위에 초록 ▲): 장착할 수 있고, 장착하면 전투력이 오른다(상세 판의 「장착하면 전투력 +n」과 같은 셈)
@@ -691,7 +692,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			local it = entry
 			local worn = bag.equip[it.slot]
 			local can = BagWindow.canWear(me, it)
-			spec.info = ItemInfo.gear(it, me, worn, false)
+			spec.info = ItemInfo.gear(it, { level = me.level, class = me.class, spec = me.spec, equip = bag.equip }, worn, false) -- equip = 세트 효과의 낀 수(2026-11-05)
 			if ask and ask.kind == "sellGear" then
 				spec.ask = ItemDetail.ask("sellGear", nil, 1, 1, {
 					gain = function()

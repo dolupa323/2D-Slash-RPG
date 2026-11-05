@@ -98,8 +98,8 @@ function Schedule.view(h, acct, now: number)
 	end
 	-- 주간 보스마다: 이번 주 격파(노말 · 하드 가운데 하나 — 한국 시간 목요일 0시에 다시)
 	for _, b in Weekly.DATA.bosses do
-		if b.dev then
-			continue -- 퍼블리시하지 않는 보스(2026-11-04 용암 거인 — 관리자만)
+		if b.dev or not require(script.Parent.reveal).open(b.id, now) then
+			continue -- 퍼블리시하지 않는 보스(2026-11-04) · 아직 출현하지 않은 보스(2026-11-05 — 출현하면 줄이 생긴다)
 		end
 		local q = h.quests and h.quests[b.quest]
 		local open = q ~= nil and q.done == true

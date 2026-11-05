@@ -2,7 +2,7 @@
 --  ① 대분화(vents · pop · ventsOk · wipe): 숨구멍의 혹마다 아래에 빛나는 고리와 머리 위의 체력 띠 · 보스 창의 패턴 줄에 「대분화까지 n초」(bv.note) · 깨지면 분홍 조각 ·
 --     다 깨면 「숨이 막혔다! 휘청!」 · 남으면 방 전체의 흰 · 분홍 섬광과 큰 흔들림(모두 쓰러진다 — 서버가 정한다)
 --  ② 끓어오르는 분화구(boil · flood · floodEnd): 예고 동안 바닥 위로 「용암이 차오를 높이」의 끓는 선 · 끓는 동안 바닥 전체에 넘실대는 용암(발판 위는 덮지 않는다)
---  ③ 움켜쥐기(grabMark · grab · free · thrown · crush · drop · grabMiss): 겨눈 사람을 거인의 흰 돌 발톱 셋이 둘러싸며 조여 온다(fx_grabmark — 따라다닌다 · 예고 시간에 맞춰 장이 넘어간다:
+--  ③ 움켜쥐기(grabMark · grab · free · thrown · crush · drop · grabMiss): 겨눈 사람의 발밑에 분홍 고리가 돈다(fx_grabmark — 따라다닌다 · 2026-11-06 발톱 셋을 뺐다:
 --     2026-11-05 사용자 "머리위에 아이콘뜨는것도 구리고" — 전에는 머리 위의 분홍 손 아이콘) → 잡히면 내 몸이 쥔 주먹의 자리에 묶인다(ctx.hold — boot.luau) · 못 풀면 즉사(crush)
 --  ④ 사람마다 · 가장 먼 사람 · 방 곳곳의 자리(spots): 서버가 고른 자리에 예고(BossFx.spot 'lava') → 때가 되면 솟는다 · 구르는 바위(roll)
 --  ⑤ 심장(heart · hop · heartOk · heartMiss): 튀는 자리 사이의 포물선 꼬리 · 머리 위의 체력 띠
@@ -117,7 +117,7 @@ function LavaView.new(bv, ctx)
 				c:rect(x - 13, y - 27, floor(26 * f + 0.5), 2)
 			end
 		end
-		-- 움켜쥐기의 표시: 겨눈 사람을 둘러싸며 조여 오는 거인의 발톱(fx_grabmark — 0.3초 전부터는 그 자리에 멈춘다)
+		-- 움켜쥐기의 표시: 겨눈 사람의 발밑에 도는 분홍 고리(fx_grabmark — 0.3초 전부터는 그 자리에 멈춘다)
 		if lv.mark then
 			local mk = lv.mark
 			local k = math.clamp((now - mk.at) / mk.T, 0, 1)
@@ -223,7 +223,7 @@ function LavaView.event(lv, e)
 		local T = e.t or 1.5
 		local rec = px and fx.sprite(whoOf(bv) or "", "fx_grabmark", px, py, 1, {}) or nil
 		if rec then
-			rec.fps, rec.life = 6 / T, T -- 여섯 장이 예고 시간 동안(마지막 장 = 발톱이 닫힌다)
+			rec.life = T -- 발밑에 도는 분홍 고리(2026-11-06 — pixelfx rune-circle · 제 빠르기로 돌며 예고 시간 동안 · 그 전: 발톱 셋이 조여 오는 장 여섯 — 사용자 "손 아래에 이상하게 발톱이 세개가생겨")
 		end
 		lv.mark = { hero = e.hero, at = now, T = T, rec = rec }
 	elseif k == "grab" then

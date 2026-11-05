@@ -278,8 +278,11 @@ do
 		expect(ok and lv == 4, ("끝까지 모은 뒤 %.1f초 늦게 떼도 4단계(%s · %s)"):format(extra, tostring(ok), tostring(lv)))
 		expect(hurt >= 3 and onRock, ("4단계 초승달은 바위를 넘어 코볼트를 벤다(%.1f초 늦게 — %d마리)"):format(extra, hurt))
 	end
-	local okFar = late(3)
-	expect(not okFar, "아주 늦은(3초) 「뗐다」는 받지 않는다")
+	-- 2026-11-05 사용자 제보(초승달을 오래 모았다가 떼면 피해가 안 든다): 다 모은 뒤 3초를 쥐고 있다가 떼도 받는다(caster.luau LATE_CHARGE 30) · 31초 넘게는 받지 않는다
+	local okLate = late(3)
+	expect(okLate, "끝까지 모은 뒤 3초 쥐고 있다가 떼도 받는다")
+	local okFar = late(31)
+	expect(not okFar, "아주 늦은(31초) 「뗐다」는 받지 않는다")
 end
 
 -- ---- 7) 끝까지 모아 친 뒤 키를 누른 채 이어 쓰기(2026-11-03 사용자 제보: 전투 호흡을 건 채 초승달 가르기나 다른 스킬을 끝까지 모아 쓰면 이펙트는 나가는데 딜이 안 들어간다) ----

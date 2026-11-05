@@ -499,7 +499,7 @@ end
 -- 레벨을 그 값으로 맞춘다(올리기도 내리기도): 능력치 · 스킬을 처음으로 되돌리고 그 레벨까지의 점수를 새로 준다(찍지 않은 채로). 가방 · 장비 · 달돈 · 퀘스트 · 키는 그대로.
 --  차수: job을 주면 그 차수로(그 레벨이 닿을 수 있는 데까지), 안 주면 지금의 차수를 지킨다(레벨이 모자라면 낮아진다)
 function Hero.setLevel(h, level: number, job: number?)
-	level = math.clamp(math.floor(level), 1, N.MAX_LEVEL)
+	level = math.clamp(math.floor(level), 1, N.LEVEL_CAP)
 	local want = math.clamp(math.floor(job or h.job), 1, Hero.jobAt(level))
 	h.level, h.xp = level, 0
 	h.stats = { str = 0, dex = 0, int = 0, luk = 0, hp = 0 }
@@ -595,19 +595,22 @@ end
 -- 경험치를 얻는다. 오른 레벨 수를 돌려준다.
 function Hero.gainXp(h, amount: number): number
 	local ups = 0
-	if h.level >= N.MAX_LEVEL then
+	if h.level >= N.LEVEL_CAP then
 		return 0
 	end
 	h.xp += amount * (h.xpBoost or 1) -- 관리자의 시험용 경험치 배율(저장하지 않는다 — 서버의 관리자 명령만 정한다)
-	while h.level < N.MAX_LEVEL and h.xp >= N.xpNeed(h.level) do
+	-- (상한 200 · Lv.150부터는 다음 레벨까지 XP_WALL — 2026-11-06 풀 쿠폰 · 풀 패스로 젠을 다 잡는 24시간 사냥 한 달(그 전 11-05: 닿지 않는 벽 · 그 전: 150에서 멈추고 경험치 0))
+	while h.level < N.LEVEL_CAP and h.xp >= N.xpNeed(h.level) do
 		h.xp -= N.xpNeed(h.level)
 		h.level += 1
 		h.ap += STATS.perLevel
 		h.sp += Hero.spGain(h.class, h.level) -- 그 차수의 스킬을 다 찍을 만큼 받았으면 더 받지 않는다
 		ups += 1
 	end
-	if h.level >= N.MAX_LEVEL then
+	if h.level >= N.LEVEL_CAP then
 		h.xp = 0
+	end
+	if h.level >= N.MAX_LEVEL then
 		if not h.maxAt then
 			h.maxAt = os.time() -- 만렙에 오른 때(레벨 순위에서 만렙끼리의 차례)
 			h.maxNow = true -- 이 접속에서 경험치로 막 만렙이 됐다(저장하지 않는다 — 만렙 최초 달성 알림은 이것일 때만: world.luau)
@@ -1008,7 +1011,7 @@ function Hero.unpack(id: any, data: any)
 		return nil
 	end
 	local h = Hero.new(id, data.class)
-	h.level = math.min(data.level, N.MAX_LEVEL) -- (최고 레벨이 줄었으면 그 레벨로 — 캐릭터를 못 쓰게 되지 않게 · 2026-10-18 검토)
+	h.level = math.min(data.level, N.LEVEL_CAP) -- (최고 레벨이 줄었으면 그 레벨로 — 캐릭터를 못 쓰게 되지 않게 · 2026-10-18 검토)
 	-- 차수: 저장된 것(그 레벨에 닿을 수 있는 데까지). 전직 퀘스트가 생기기 전에 저장된 캐릭터(2026-10-10 이전)는 레벨만 되면 전직했으므로 그 레벨의 차수 그대로다
 	h.job = if whole(data.job, 1, #CLASSES.jobs) then math.min(data.job, Hero.jobAt(h.level)) else Hero.jobAt(h.level)
 	h.xp = if typeof(data.xp) == "number" and data.xp >= 0 and data.xp < N.xpNeed(h.level) then math.floor(data.xp) else 0

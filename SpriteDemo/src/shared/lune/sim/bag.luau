@@ -483,6 +483,8 @@ function Bag.canWear(h, it): (boolean?, string?)
 		return nil, "부서진 장비다"
 	elseif it.slot == "weapon" and it.who ~= h.class then
 		return nil, "다른 직업의 무기다"
+	elseif Items.classOf(it) ~= nil and Items.classOf(it) ~= h.class then
+		return nil, "다른 직업의 장비다" -- 보스 주화의 방어구(2026-11-05 — 그 직업만)
 	elseif h.level < Items.needLevel(it) then
 		return nil, ("Lv.%d부터 장착할 수 있다"):format(Items.needLevel(it))
 	end
@@ -971,7 +973,7 @@ function Bag.unpack(h, data: any): boolean
 	end
 	h.equip, h.nextItem = {}, 1
 	h.bagGrow = if whole(data.grow, 0, BAG.times) then data.grow else 0
-	h.bagPaid = if whole(data.paid, 0, 16) then data.paid else 0 -- 가방 확장권(유료)으로 늘린 번 — 생기기 전의 저장 = 0
+	h.bagPaid = if whole(data.paid, 0, 64) then data.paid else 0 -- 가방 확장권(유료)으로 늘린 번 — 생기기 전의 저장 = 0 · (16 → 64: 2026-11-05 확장권이 스무 장까지 — 128칸. 16을 넘으면 0으로 돌아가 칸을 잃었다)
 	h.dust = if whole(data.dust, 0, 9e15) then data.dust else 0
 	h.essence = if whole(data.essence, 0, 9e9) then data.essence else 0
 	-- 저장된 것이 지금의 가방 칸 수보다 뒤에 있으면(설계의 가방 칸이 줄었다) 넓히기를 그만큼 더 쳐 둔다 — 물건을 잃지 않게(창고의 loadStore와 같다 · 2026-10-18 검토)
@@ -994,7 +996,7 @@ function Bag.unpack(h, data: any): boolean
 	h.gear, h.use, h.etc = blank(size), blank(size), blank(size)
 	for _, row in data.equip do
 		local it = unpackItem(row)
-		if it and not h.equip[it.slot] and not it.broken and (it.slot ~= "weapon" or it.who == h.class) then
+		if it and not h.equip[it.slot] and not it.broken and (Items.classOf(it) == nil or Items.classOf(it) == h.class) then -- (무기 · 보스 주화의 방어구 — 그 직업만: 2026-11-05)
 			h.equip[it.slot] = stamp(h, it)
 		end
 	end

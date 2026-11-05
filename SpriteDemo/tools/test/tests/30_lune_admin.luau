@@ -126,7 +126,7 @@ eq(h.hp, h.maxHp, "체력이 다 찬다")
 expect(h.quests.job2 == nil and Quests.state(h.quests, h.level, "job2") == "open", "Lv.30의 1차는 전직 퀘스트를 받을 수 있다(저절로 받지는 않는다 — 사제에게 가서 받는다)")
 ask("level", 5)
 expect(h.level == 5 and h.ap == N.apAt(5), "Lv.5로 내린다")
-for _, bad in { 0, N.MAX_LEVEL + 1, 1.5, -3, 0 / 0, math.huge, "30", true } do
+for _, bad in { 0, N.LEVEL_CAP + 1, 1.5, -3, 0 / 0, math.huge, "30", true } do -- (만렙 200 — 2026-11-05: 관리 창도 200까지)
 	refused("level", bad, nil, nil, "레벨 " .. tostring(bad))
 end
 -- 차수: 그 레벨이 되어야 한다

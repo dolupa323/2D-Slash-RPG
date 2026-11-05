@@ -240,10 +240,25 @@ function TitleServer.grant(s, first, eligible: boolean, now: number, admin: bool
 			s.dirty = true
 			table.insert(lost, t.id)
 		end
+		-- 보스의 최초 격파(2026-11-05 — rule firstClear · server modules/firstClear.luau): 세계 기록 firstClear_<boss>에 든 캐릭터만 · 기록을 읽었는데 없으면 뺀다(Studio에서 시험한 것이 남지 않게)
+		local fcMine = false
+		if t.rule == "firstClear" and t.boss then
+			local list = require(script.Parent.firstClear).get(t.boss)
+			if list ~= nil then
+				fcMine = require(lune.sim.firstClear).rankOf(list, key) ~= nil
+				if not fcMine and h.titles[t.id] then
+					h.titles[t.id] = nil
+					if h.title == t.id then
+						h.title = nil
+					end
+					s.dirty = true
+				end
+			end
+		end
 		local rk = recKey(t)
 		local rec = if rk then firsts[rk] else nil
 		local mine = (t.rule == "admin" and admin == true) or (t.rule == "first" and first ~= nil and first.key == key) or (t.rule == "ten" and ten ~= nil and has(ten, key))
-			or ((t.rule == "classFirst" or t.rule == "named") and typeof(rec) == "table" and rec.key == key) or (t.rule == "goldking" and goldMine)
+			or ((t.rule == "classFirst" or t.rule == "named") and typeof(rec) == "table" and rec.key == key) or (t.rule == "goldking" and goldMine) or fcMine
 		if mine and Titles.give(h, t.id) then
 			table.insert(got, t.id)
 		end

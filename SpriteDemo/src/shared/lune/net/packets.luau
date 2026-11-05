@@ -84,6 +84,8 @@ local packets = {
 	Macro = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 3, Burst = 6 } },
 	-- 소리 설정을 저장한다 { music = 0~10, sfx = 0~10, on = 켰는가 } — 꼴은 서버가 다시 본다(계정에 저장 — sim/account.luau의 setSound)
 	Sound = { Kind = "Event", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 12 } },
+	-- 화면 아래 메뉴 단추의 차례를 저장한다(끌어 옮겼다 — 2026-11-06) { 창 이름표 … } — 꼴은 서버가 다시 본다(sim/account.luau의 setMenu)
+	MenuOrder = { Kind = "Event", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 2, Burst = 6 } },
 	-- 퀵슬롯을 바꿨다: 칸들 전체 { "potion" · 스킬의 이름표 · false … } — 꼴과 놓아도 되는 스킬인지는 서버가 다시 본다. 돌려주는 값 = 서버가 가진 칸들(받아들였으면 보낸 것, 아니면 예전 것)
 	Slots = { Kind = "Function", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 8 } },
 	-- 스마트폰의 단추 배치를 바꿨다: 같은 꼴(칸들 전체) — PC의 퀵슬롯과 따로 저장한다. 돌려주는 값 = 서버가 가진 배치
@@ -146,6 +148,9 @@ local packets = {
 	ShotEnd = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 번호" },
 	Megaphone = { Kind = "Event", Direction = "ServerToClient", Doc = "관리자의 확성기(모든 서버의 모두에게 — 2026-10-21): 글 — 화면 위 큰 알림 「공지」 + 채팅 알림 글" },
 	TitleGot = { Kind = "Event", Direction = "ServerToClient", Doc = "칭호를 받았다(2026-10-26): { 칭호의 이름표 … } — 화면 위 알림 「칭호 획득」 · 둘째가 true면 잃었다(황금왕이 넘어갔다 — 2026-10-29: 「칭호 이전」)" },
+	Reveal = { Kind = "Event", Direction = "ServerToClient", Doc = "보스의 출현 시각(2026-11-05 — server modules/reveal.luau): { at = { [보스] = os.time }, now = 서버의 지금 } — 왼쪽 아래 닉네임 위의 빨간 남은 시간 · 보스 퀘스트 · 문이 그때 열린다" },
+	RevealNews = { Kind = "Event", Direction = "ServerToClient", Doc = "보스 출현의 알림(모든 서버가 같은 때 — 2026-11-05): { kind = \"tease\"(남은 때마다 · left · line) | \"open\"(출현 · lv), boss, name } — 화면 위 큰 알림 + 채팅" },
+	FirstClear = { Kind = "Event", Direction = "ServerToClient", Doc = "보스의 최초 격파(모든 서버의 모두에게 — 2026-11-05): { boss(이름), n(차례), max(파티 수), names(「A, B, C」), test(Studio의 시험) } — 화면 위 큰 알림 + 채팅 알림 글" },
 	FirstMax = { Kind = "Event", Direction = "ServerToClient", Doc = "만렙 최초 달성(모든 서버의 모두에게 — 2026-10-24): { name, class, level } — 화면 위 큰 알림 「축하」 + 채팅 알림 글 · 명예의 전당을 바로 다시 받는다" },
 	Sold = { Kind = "Event", Direction = "ServerToClient", Doc = "경매장에 올린 내 물건이 팔렸다 { name(물건 이름), n(팔린 수) } — 획득 알림 한 줄 · 「경매」 단추의 점(2026-10-18)" },
 	BoxView = { Kind = "Event", Direction = "ServerToClient", Doc = "보상의 방의 상자 { boss, mode, opened, left(남은 초), x · y(상자의 바닥 가운데) } — 2026-10-28 sim/weekly.luau의 boxView" },

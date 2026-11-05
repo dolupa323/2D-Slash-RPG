@@ -113,6 +113,8 @@ function Q.state(book, level: number, id: string): string
 		return if st.done then "done" elseif Q.isReady(book, id) then "ready" else "active"
 	elseif not def.playable or level < def.lv then
 		return "locked"
+	elseif def.reveal and not require(script.Parent.reveal).open(def.reveal) then
+		return "locked" -- 그 보스가 아직 출현하지 않았다(2026-11-05 — sim/reveal.luau · 용암 거인의 「다시 깨어난 분화구」)
 	elseif def.after and not (book[def.after] and book[def.after].done) then
 		return "locked"
 	elseif def.kind == "job" and def.reward.job and def.reward.job > 2 then

@@ -57,7 +57,7 @@ function WeeklyWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 	end
 	Ui.text(body, W.note, 0, S.noteY, w, { color = C.dim })
 	Ui.text(body, W.reset, 0, S.resetY, w, { color = C.dim })
-	local bhalf = math.floor((w - S.btnGap) / 2)
+	local bthird = math.floor((w - S.btnGap * 2) / 3) -- 단추 셋: 혼자 입장 · 파티 입장 · 파티 찾기(2026-11-05)
 	local entering = false
 	local function enter(party: boolean)
 		if entering then
@@ -67,14 +67,19 @@ function WeeklyWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 		ctx.weekDo("enter", b.id, WeeklyWindow.mode, party)
 		entering = false
 	end
-	local solo = Ui.button(body, W.solo, 0, S.btnY, bhalf, function()
+	local solo = Ui.button(body, W.solo, 0, S.btnY, bthird, function()
 		enter(false)
 	end, { main = true })
 	solo.frame.Name = "Solo"
-	local party = Ui.button(body, W.party, bhalf + S.btnGap, S.btnY, w - bhalf - S.btnGap, function()
+	local party = Ui.button(body, W.party, bthird + S.btnGap, S.btnY, bthird, function()
 		enter(true)
 	end)
 	party.frame.Name = "Party"
+	-- 파티 찾기(2026-11-05 — 로스트아크의 레이드 입장 창 오른쪽 아래 [파티 찾기]처럼): 이 보스의 모집 글 · 파티 대기실(넓은 창 — client/lune/ui/finderWindow.luau)
+	local finder = Ui.button(body, W.finder or "", (bthird + S.btnGap) * 2, S.btnY, w - (bthird + S.btnGap) * 2, function()
+		require(script.Parent.windows).open("finder", b.id)
+	end)
+	finder.frame.Name = "Finder"
 	local note = Ui.text(body, "", 0, S.footY, w, { color = C.dim })
 
 	function view.refresh()

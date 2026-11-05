@@ -30,7 +30,8 @@ local GRACE = 0.3 -- 구간이 제 시간을 다 쓴 뒤 다음 구간의 알림
 local EARLY = 0.15 -- 화면의 시계가 이만큼 앞서 있어도 받는다(초)
 -- 모으는 구간의 「뗐다」를 서버가 그 구간을 닫은 뒤에도 기다리는 시간(초 — 보통 구간은 0.2). 끝까지 모으면 서버는 GRACE 뒤에 구간을 닫는데,
 --  화면이 멈칫하면(한 화면에 STEP 5걸음까지만 따라잡는다 — boot.luau) · 네트워크가 흔들리면 화면의 「뗐다」가 그보다 늦게 온다(2026-10-29 제보 — 아래 begin)
-local LATE_CHARGE = 1.0
+local LATE_CHARGE = 30 -- 2026-11-05 사용자 제보("엑시온 4차 사냥스킬을 날렸을때 이펙트는 무조건 맞는 위치에있는데 데미지가 안들어가는 문제"): 끝까지 모은 뒤 1초 넘게 누르고 있다가 떼면
+--  서버가 「뗐다」를 버려 화면의 초승달만 날아갔다(시험: 3초 모으면 피해 0 · 1.6초까지는 들었다). 다른 기술을 쓰기 전까지는 늦게 떼어도 받는다(단계는 끝까지 모은 것 — 그 구간에서 흐른 시간) · 1.0 → 30초
 -- 모아 친 한 방(모으는 구간 바로 다음의 마지막 구간) 뒤의 다음 스킬은 이만큼 일찍 와도 받는다(초 — 남은 타는 그 자리에서 터뜨린다 · 보통은 EARLY).
 --  2026-11-03 사용자 제보(액시온: 전투 호흡을 건 채 초승달 가르기 · 다른 기술을 끝까지 모아 쓰면 이펙트는 나가는데 피해가 없다): 키를 누른 채 이어 쓰면 화면은 한 방이 끝나자마자
 --  다음 판을 시작하는데, 「뗐다」가 늦게 닿았거나 다음 판의 알림이 빨리 닿아 서버의 한 방이 0.15초 넘게 남아 있으면 다음 판의 첫 구간을 버렸다 — 그 판의 「뗐다」도 버려져
@@ -282,9 +283,11 @@ function Caster:strike(a, m, w: number, o, landed): boolean
 	-- 끌어당기기 · 넘어뜨리기: 보통 적만(묶인 적은 빼고)
 	if not m.def.boss and (m.bind or 0) <= 0 then
 		if o.gather and not m.afk and not m.gim and not m.gimAdd and not (room.scene and room.scene.dojo) then
-			-- 끌어 모으기(그림자 흡혈): 지형과 상관없이 리퍼의 발밑 코앞으로(온 쪽에 8 ~ 16점 — 겹쳐 서지 않게) · room.luau Room:gatherMob
+			-- 끌어 모으기(그림자 흡혈): 리퍼의 코앞 쪽으로(온 쪽에 8 ~ 16점 — 겹쳐 서지 않게) — 제 발판 안에서만(room.luau Room:pullMob: 높이 · 발판은 그대로 · 다시 나타나면 처음 자리).
+			--  2026-11-05 사용자 "리퍼 3차스킬 끌고오는 스킬 만든이후로 몬스터가 원래 잘 정해져있던 자리에 몬스터가 스폰되는게아니라 이상하게 스폰된다 … 리퍼3차스킬이 끝까지 안끌어와도 되니까
+			--  몬스터가 스폰은 정상적으로되고, 이동도 정상적으로 되어야해" — 그 전(11-03): 지형과 상관없이 리퍼의 발밑으로 옮겨(Room:gatherMob) 다른 발판 · 높이에 살아남은 졸개가 그 자리에 머물고 화면과 어긋났다
 			local side = if m.x > hero.x then 1 else -1
-			room:gatherMob(m, hero.x + side * (8 + (m.id % 5) * 2), room:groundUnder(hero.x, hero.y), hero.x)
+			room:pullMob(m, hero.x + side * (8 + (m.id % 5) * 2))
 		elseif o.pull then
 			local toward = if m.x > hero.x then -1 else 1
 			room:pullMob(m, m.x + toward * min(o.pull * PULL, max(0, abs(m.x - hero.x) - 10))) -- (제 발판 끝까지 — 활동 구간 밖이면 구간을 넓힌다 · room.luau Room:pullMob)

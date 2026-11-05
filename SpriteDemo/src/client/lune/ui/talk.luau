@@ -423,7 +423,7 @@ function Talk.next(npc, force: boolean?): boolean
 		return true
 	end
 	if Talk.npc ~= npc then
-		Talk.start(npc, npc.lines)
+		Talk.start(npc, if npc.pickLines then npc.pickLines() else npc.lines) -- pickLines = 그때마다 고르는 말(랭킹 석상에 선 사람의 말 — 2026-11-05 rankStatues.luau)
 		return true
 	end
 	if not full() then

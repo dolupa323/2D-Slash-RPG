@@ -120,7 +120,7 @@ function Rift.dungeonMark(r, id: string, now: number): boolean
 end
 -- 완료 보상의 경험치: 그 레벨의 한 레벨 경험치의 pay.need배
 function Rift.dungeonXp(level: number): number
-	return math.max(1, math.floor(N.xpNeed(level) * DG.pay.need + 0.5))
+	return math.max(1, math.floor(N.xpNeed(math.min(level, N.MAX_LEVEL - 1)) * DG.pay.need + 0.5)) -- (Lv.150부터의 한 레벨은 XP_WALL — 기준은 Lv.149까지: 2026-11-05)
 end
 -- 그 던전에 들어갈 수 있는가. 맞으면 nil, 아니면 까닭(문이 열렸는가 = 그 퀘스트를 끝냈는가 · 레벨 · 오늘)
 function Rift.canDungeon(h, t, now: number): string?

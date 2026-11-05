@@ -60,10 +60,35 @@ function Account.setSound(acct, v: any): boolean
 	return true
 end
 
+-- 화면 아래 메뉴 단추의 차례(2026-11-06 사용자: "팝업 ui들 퀘스트, 인벤토리 이런거 버튼있잖아 이런것도 드래그앤 드랍으로 위치 바꿀수있게"):
+--  끌어 옮긴 차례를 창의 이름표 목록으로(계정의 모든 캐릭터가 같이 — 소리 설정처럼). 이름표는 영문 소문자 · 겹치지 않게 · 16개까지(모르는 이름표는 화면이 건너뛴다)
+function Account.cleanMenu(v: any): { string }?
+	if typeof(v) ~= "table" or #v > 16 then
+		return nil
+	end
+	local out, seen = {}, {}
+	for _, id in ipairs(v) do
+		if typeof(id) ~= "string" or #id > 16 or not string.match(id, "^[a-z]+$") or seen[id] then
+			return nil
+		end
+		seen[id] = true
+		table.insert(out, id)
+	end
+	return out
+end
+function Account.setMenu(acct, v: any): boolean
+	local list = Account.cleanMenu(v)
+	if not list then
+		return false
+	end
+	acct.menu = list
+	return true
+end
+
 function Account.new()
 	-- spent = 이 계정이 게임에 쓴 로벅스(명예의 전당의 후원 판) · sound = 소리 설정
 	-- market = 경매장에 맡긴 것(올린 물건 · 아직 찾지 않은 것 — sim/market.luau). 창고처럼 계정의 캐릭터들이 같이 본다
-	return { next = 1, last = false, chars = {}, store = false, storeGot = {}, broken = {}, spent = 0, sound = Account.soundDefault(), market = Market.newBook(), tutDone = false, att = Attend.new(), ach = Achieve.new(), bm = Cash.new(), macro = Macro.newSaved() } -- att = 출석(sim/attend.luau) · ach = 업적(sim/achieve.luau) — 계정의 것(2026-10-15) -- tutDone = 이 계정의 캐릭터가 튜토리얼 「달빛 꿈」을 한 번 끝냈다(그 뒤의 새 캐릭터는 건너뛸 수 있다)
+	return { next = 1, last = false, chars = {}, store = false, storeGot = {}, broken = {}, spent = 0, sound = Account.soundDefault(), market = Market.newBook(), tutDone = false, att = Attend.new(), ach = Achieve.new(), bm = Cash.new(), macro = Macro.newSaved(), menu = false } -- menu = 메뉴 단추의 차례(끌어 옮긴 것 — 없으면 처음 차례) · att = 출석(sim/attend.luau) · ach = 업적(sim/achieve.luau) — 계정의 것(2026-10-15) -- tutDone = 이 계정의 캐릭터가 튜토리얼 「달빛 꿈」을 한 번 끝냈다(그 뒤의 새 캐릭터는 건너뛸 수 있다)
 end
 
 -- 이름을 견줄 때의 꼴(영문은 소문자로 — Moon과 moon은 같은 이름이다)
@@ -469,7 +494,7 @@ function Account.pack(acct)
 	for _, raw in acct.broken do
 		table.insert(chars, raw)
 	end
-	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, storeGot = acct.storeGot, spent = acct.spent, sound = acct.sound, market = Market.packBook(acct.market), tutDone = acct.tutDone == true, att = Attend.pack(acct.att), ach = Achieve.pack(acct.ach), bm = Cash.pack(acct.bm), macro = Macro.pack(acct.macro) }
+	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, storeGot = acct.storeGot, spent = acct.spent, sound = acct.sound, market = Market.packBook(acct.market), tutDone = acct.tutDone == true, att = Attend.pack(acct.att), ach = Achieve.pack(acct.ach), bm = Cash.pack(acct.bm), macro = Macro.pack(acct.macro), menu = acct.menu }
 end
 
 function Account.unpack(data: any)
@@ -506,6 +531,7 @@ function Account.unpack(data: any)
 	end
 	acct.spent = if whole(data.spent, 0, 9e12) then data.spent else 0
 	acct.sound = Account.cleanSound(data.sound) or Account.soundDefault() -- 소리 설정이 생기기 전의 저장 = 처음 크기
+	acct.menu = Account.cleanMenu(data.menu) or false -- 메뉴 단추의 차례(2026-11-06 — 그 전의 저장 = 처음 차례)
 	acct.market = Market.unpackBook(data.market) -- 경매장이 생기기 전의 저장 = 맡긴 것 없음
 	acct.att = Attend.unpack(data.att) -- 출석 · 업적이 생기기 전(2026-10-15)의 저장 = 새 판 · 아무것도 안 함
 	acct.ach = Achieve.unpack(data.ach)
@@ -527,7 +553,7 @@ function Account.view(acct)
 		local level = if typeof(c.hero.level) == "number" then c.hero.level else 1
 		table.insert(chars, { id = c.id, name = c.name, class = c.class, level = level, look = c.hero.look }) -- look = 무기 · 로브 색(염색 — 고르는 화면의 그림도 그 색)
 	end
-	return { chars = chars, max = Account.maxChars(acct), last = acct.last, sound = acct.sound } -- sound = 소리 설정(처음 화면부터 그 크기로 튼다)
+	return { chars = chars, max = Account.maxChars(acct), last = acct.last, sound = acct.sound, menu = acct.menu or nil } -- sound = 소리 설정(처음 화면부터 그 크기로 튼다)
 end
 
 -- 계정이 받은 창고 칸(탭마다 — 2026-10-18): 「창고 칸」 보상을 준 부탁마다 그 보상의 칸 수(quests의 정의를 본다)

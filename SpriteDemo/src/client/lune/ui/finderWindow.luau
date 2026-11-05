@@ -1,9 +1,12 @@
--- 파티 찾기 창 — 메뉴 → 「파티 찾기」(2026-11-05 사용자 "파티 보스라서 파티구하고 방만들고 막 이런 UI도 있어야해 파티를 구해서 가는거라서" ·
---  고르심: 같은 서버만 · 방장이 수락 · 방장 출발 → 바로 보스 방). 로스트아크 · WoW의 파티 찾기 꼴.
---  탭: 「모집 중」(방마다 두 줄 — 보스 · 난이도 … n/4 / 조건 레벨 · 방장 — 오른쪽 「신청」 · 「신청 취소」) · 「방 만들기」(보스 · 난이도 · 조건을 단추로 돌려 고르고 「방 만들기」) ·
---   방에 들면 「방 만들기」 자리가 「내 방」(머리 줄 · 파티원과 준비 · 방장에게는 신청한 사람의 「수락」 · 「거절」 · 아래 [출발 · 방 닫기] 또는 [준비 · 방 나가기]).
---  셈은 서버(ctx.finderDo → world.luau의 "Finder" → shared/lune/sim/finder.luau). 창을 열 때 · 열려 있는 동안 3초마다 묻고, 내 방이 바뀌면 서버가 먼저 보낸다(FinderView).
---  모양은 공방 시험 탭 js/lune/ui/paint.js의 paintFinder와 같다(치수 = 공방 design/ui.js UILAYOUT.finder · 글 = FINDER). 화면 오른쪽의 옆 판(ui/windows.luau)
+-- 파티 찾기 창 — 그 보스의 문 → 보스 창의 [파티 찾기](2026-11-05). 사용자: "파티 보스라서 파티구하고 방만들고 막 이런 UI도 있어야해" →
+--  같은 날 "메뉴탭에서 접근하는게 아니라 해당 던전에서 파티방을 만드는거야 그 던전 갈사람을 구할수있는 구인구직 ui 를 만드는거고 로스트아크 파티모집 어떻게하는지 … 공부하고만들어" ·
+--  "보스,난이도, 조건 선택을 클랙해서 바꾸는게 어디있어 제발 ui 의 기본은 지키자". 로스트아크의 레이드 파티 찾기 꼴(보스마다 따로 · 모집 글 등록 → 파티 대기실 · 참가 신청 → 방장 수락):
+--  넓은 창(혼자 쓴다). 위 줄 = [모집 글 등록](왼쪽 위) · 난이도 거르기 탭(전체 · 노말 · 하드) · 제목 찾기 칸(오른쪽) /
+--   왼쪽 = 방 목록(줄을 누르면 고른 줄이 밝다 — 제목 … n/4 / 난이도 · 최소 레벨 · 방장 · 「신청함」) / 오른쪽 = 고른 방(제목 · 조건 · 같은 직업 · 파티원 — 레벨 · 이름 · 직업 · 전투력) + [참가 신청] · [참가 취소].
+--  모집 글 등록 = 제목(글 칸) · 난이도 · 최소 레벨(보기를 다 늘어놓은 단추 줄 — 고른 것이 밝다) · 같은 직업도 받기(체크 칸) · [등록] [취소].
+--  파티 대기실(내가 든 방이 있으면) = 왼쪽 파티원 넷(방장 · 문 앞 / 멀리) + [입장] [모집 취소] | [나가기] · 오른쪽 신청자(수락 · 거절).
+--  셈은 서버(ctx.finderDo → world.luau의 "Finder" → shared/lune/sim/finder.luau) — 창을 열 때 · 열려 있는 동안 3초마다 묻고, 내 방이 바뀌면 서버가 먼저 보낸다(FinderView).
+--  모양은 공방 시험 탭 js/lune/ui/paint.js의 paintFinder와 같다(치수 = 공방 design/ui.js UILAYOUT.finder · 글 = FINDER). 화면의 넓은 창(ui/windows.luau)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local UI = require(lune.data["ui.generated"])
@@ -16,15 +19,24 @@ local C = Ui.COLOR
 local S = Layout.FINDER
 local W = UI.finder
 local POLL = 3 -- 열려 있는 동안 묻는 사이(초)
+local CHECK = { { 0, 2 }, { 1, 3 }, { 2, 4 }, { 3, 3 }, { 4, 2 }, { 5, 1 }, { 6, 0 } } -- 체크의 점(스케줄러의 칸과 같다)
 
-local FinderWindow = {}
+local FinderWindow = { wide = true }
 FinderWindow.TITLE = W.title
-FinderWindow.tab = "list" -- 고른 탭(창을 닫았다 열어도 남는다)
+FinderWindow.view = "list" -- "list" 방 목록 · "form" 모집 글 등록(내 방이 있으면 늘 파티 대기실)
+FinderWindow.filter = "all" -- 난이도 거르기
+FinderWindow.sel = nil :: any -- 고른 방(방장)
 FinderWindow.page = 1
-FinderWindow.pick = { boss = 1, mode = 1, step = 1 } -- 방 만들기에서 고른 것(차례)
+FinderWindow.form = { mode = nil :: string?, step = 1, same = true }
 
 function FinderWindow.size(): (number, number)
 	return S.w, S.h
+end
+
+-- 창의 제목 = 「파티 찾기 · 그 보스」(보스마다 따로 — 로스트아크처럼)
+function FinderWindow.title(arg: any): string?
+	local b = Weekly.boss(arg)
+	return if b then W.title .. " · " .. b.name else nil
 end
 
 local function modeName(mode: string): string
@@ -32,11 +44,32 @@ local function modeName(mode: string): string
 	return if m then m.name else mode
 end
 
-function FinderWindow.build(body: Frame, ctx, w: number, _h: number)
+-- 체크 칸: 켜면 민트 칸에 어두운 체크 · 끄면 테두리만
+local function checkbox(parent: Instance, x: number, y: number, on: boolean)
+	local s = S.checkS
+	Ui.box(parent, x, y, s, s, if on then C.accent else C.line)
+	if not on then
+		Ui.box(parent, x + 1, y + 1, s - 2, s - 2, C.panel2)
+		return
+	end
+	for _, p in CHECK do
+		Ui.box(parent, x + 2 + p[1], y + 3 + p[2], 1, 2, C.ink)
+	end
+end
+
+function FinderWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 	local view = {}
-	local holder: Frame? = nil
+	local bossId = arg
 	local alive = true
+	local holder: Frame? = nil
+	-- 늘 있는 것: 제목 찾기 칸 · 제목 칸(다시 짓지 않는다 — 다시 지으면 적던 글이 끊긴다) · 아래 까닭 줄
+	local search = Ui.field(body, w - S.searchW, 0, S.searchW, S.barH, W.search)
+	local titleBox = Ui.field(body, S.formLabelW, S.formY, w - S.formLabelW, S.barH, W.form.hint)
 	local why = Ui.text(body, "", 0, S.whyY, w, { color = C.red })
+	search:GetPropertyChangedSignal("Text"):Connect(function()
+		FinderWindow.page = 1
+		view.refresh()
+	end)
 
 	local function act(action: string, a: any, b: any, c: any)
 		if ctx.finderDo then
@@ -44,141 +77,263 @@ function FinderWindow.build(body: Frame, ctx, w: number, _h: number)
 		end
 	end
 
-	-- 모집 중: 방마다 두 줄 + 오른쪽 단추
-	local function list(p: Frame, got)
-		local rooms = got.rooms or {}
-		if #rooms == 0 then
-			Ui.text(p, W.none, 0, S.listY + 4, w, { color = C.dim, lines = 2 })
+	-- 위 줄: [모집 글 등록] · 난이도 탭(목록일 때) · 제목(등록 · 대기실일 때)
+	local function bar(p: Frame, got)
+		local modes = (got.boss and got.boss.modes) or {}
+		if got.mine then
+			Ui.text(p, W.room.title, 0, 4, 120, { font = "body", color = C.gold })
+			Ui.text(p, got.mine.boss .. " · " .. modeName(got.mine.mode) .. " · " .. Format.fill(W.cond, { lv = got.mine.lv }) .. " · " .. (if got.mine.same then W.same else W.noSame), 124, 6, w - 124, { align = "right", color = C.dim })
 			return
+		elseif FinderWindow.view == "form" then
+			Ui.text(p, W.form.title .. " — " .. (if got.boss then got.boss.name else ""), 0, 4, w, { font = "body", color = C.gold })
+			return
+		end
+		Ui.button(p, W.register, 0, 0, S.regW, function()
+			FinderWindow.view = "form"
+			view.refresh()
+		end, { h = S.barH, main = true }).frame.Name = "Do_register"
+		local tabs = { { "all", W.all } }
+		if #modes > 1 then
+			for _, m in modes do
+				table.insert(tabs, { m.id, modeName(m.id) })
+			end
+		end
+		local tx = S.tabX
+		for _, t in tabs do
+			local tab = Ui.tab(p, t[2], tx, 4, function()
+				FinderWindow.filter = t[1]
+				FinderWindow.page = 1
+				view.refresh()
+			end)
+			tab.frame.Name = "Tab_" .. t[1]
+			tab:setOn(FinderWindow.filter == t[1])
+			tx += tab.width + 14
+		end
+	end
+
+	-- 방 목록(왼쪽) · 고른 방(오른쪽)
+	local function list(p: Frame, got)
+		local key = string.lower(search.Text or "")
+		local rooms = {}
+		for _, r in got.rooms or {} do
+			if (FinderWindow.filter == "all" or r.mode == FinderWindow.filter) and (key == "" or string.find(string.lower(r.title), key, 1, true)) then
+				table.insert(rooms, r)
+			end
+		end
+		local max = got.max or 4
+		if #rooms == 0 then
+			Ui.text(p, W.none, 0, S.listY + 4, S.listW, { color = C.dim, lines = 2 })
 		end
 		local pages = math.max(1, math.ceil(#rooms / S.rows))
 		FinderWindow.page = math.clamp(FinderWindow.page, 1, pages)
+		local sel = nil
+		for _, r in rooms do
+			if r.id == FinderWindow.sel then
+				sel = r
+			end
+		end
+		if not sel then
+			sel = rooms[(FinderWindow.page - 1) * S.rows + 1]
+			FinderWindow.sel = if sel then sel.id else nil
+		end
 		for i = 1, S.rows do
 			local r = rooms[(FinderWindow.page - 1) * S.rows + i]
 			if not r then
 				break
 			end
 			local y = S.listY + (i - 1) * S.rowH
-			if i > 1 then
-				Ui.line(p, 0, y - 2, w)
+			local on = r == sel
+			local row = Ui.group(p, 0, y, S.listW, S.rowH - 2, "Row" .. i)
+			if on then
+				Ui.box(row, 0, 0, S.listW, S.rowH - 2, C.panel2)
+				Ui.box(row, 0, 0, 2, S.rowH - 2, C.accent)
 			end
-			local full = r.n >= (got.max or 4)
-			Ui.text(p, r.boss .. " · " .. modeName(r.mode), 0, y + 2, w - S.btnW - 48, { color = C.gold })
-			Ui.text(p, Format.fill(W.count, { n = r.n, max = got.max or 4 }), w - S.btnW - 44, y + 2, 36, { align = "right", color = if full then C.off else C.accent })
-			Ui.text(p, Format.fill(W.sub, { lv = r.lv, name = r.leader }), 0, y + 18, w - S.btnW - 8, { color = C.dim })
-			local btn = Ui.button(p, if r.applied then W.applied else W.apply, w - S.btnW, y + 5, S.btnW, function()
-				if r.applied then
-					act("withdraw")
-				else
-					act("apply", r.id)
-				end
-			end, { h = 22 })
-			btn.frame.Name = "Do_apply" .. i
-			btn:setEnabled(r.applied or (not r.mine and not full and got.mine == nil))
+			Ui.text(row, r.title, 8, 3, S.listW - 64, { color = if on then C.accent else C.text })
+			Ui.text(row, Format.fill(W.count, { n = r.n, max = max }), S.listW - 52, 3, 46, { align = "right", color = if r.n >= max then C.off else C.gold })
+			Ui.text(row, Format.fill(W.rowSub, { mode = modeName(r.mode), lv = r.lv, name = r.leader }), 8, 19, S.listW - 72, { color = C.dim })
+			if r.applied then
+				Ui.text(row, W.applied, S.listW - 62, 19, 56, { align = "right", color = C.accent })
+			end
+			Ui.hit(row).Activated:Connect(function()
+				FinderWindow.sel = r.id
+				view.refresh()
+			end)
+			if i > 1 then
+				Ui.line(p, 0, y - 2, S.listW)
+			end
 		end
 		if pages > 1 then
-			Ui.text(p, Format.fill(W.page, { a = FinderWindow.page, b = pages }), 0, S.btnY + 4, 80, { color = C.dim })
-			Ui.button(p, W.next, w - 56, S.btnY, 56, function()
+			Ui.text(p, Format.fill(W.page, { a = FinderWindow.page, b = pages }), 0, S.btnY + 5, 60, { color = C.dim })
+			Ui.button(p, W.next, S.listW - 64, S.btnY, 64, function()
 				FinderWindow.page = FinderWindow.page % pages + 1
 				view.refresh()
-			end, { h = 22 }).frame.Name = "Do_next"
+			end, { h = S.barH }).frame.Name = "Do_next"
 		end
+		-- 고른 방
+		local x, sw = S.sideX, S.sideW
+		Ui.box(p, x - 7, S.listY, 1, S.btnY + 22 - S.listY, C.line)
+		if not sel then
+			Ui.text(p, W.pick, x, S.sideY + 4, sw, { color = C.dim, lines = 2 })
+			return nil
+		end
+		Ui.text(p, sel.title, x, S.sideY, sw, { font = "body", color = C.gold })
+		Ui.text(p, modeName(sel.mode) .. " · " .. Format.fill(W.cond, { lv = sel.lv }), x, S.sideY + 20, sw, { color = C.text })
+		Ui.text(p, if sel.same then W.same else W.noSame, x, S.sideY + 36, sw, { color = C.dim })
+		Ui.text(p, Format.fill(W.members, { n = sel.n, max = max }), x, S.sideMembersY - 18, sw, { color = C.gold })
+		for i, m in sel.members or {} do
+			local y = S.sideMembersY + (i - 1) * S.sideMemberH
+			Ui.text(p, Format.fill(W.member, { lv = m.lv, name = m.name }), x, y, sw - 40, { color = C.text })
+			if m.leader then
+				Ui.text(p, W.room.leader, x + sw - 40, y, 40, { align = "right", color = C.gold })
+			end
+			Ui.text(p, Format.fill(W.memberSub, { class = m.class, power = Format.comma(m.power) }), x, y + 14, sw, { color = C.dim })
+		end
+		local btn = Ui.button(p, if sel.applied then W.cancel else W.apply, x, S.btnY, sw, function()
+			if sel.applied then
+				act("withdraw")
+			else
+				act("apply", sel.id)
+			end
+		end, { main = not sel.applied })
+		btn.frame.Name = "Do_apply"
+		btn:setEnabled(sel.applied or sel.can == nil)
+		return if sel.applied then nil else sel.can
 	end
 
-	-- 방 만들기: 보스 · 난이도 · 조건을 단추로 돌려 고른다
-	local function make(p: Frame, got)
-		local bosses = got.bosses or {}
-		if #bosses == 0 then
-			Ui.text(p, W.noBoss, 0, S.pickY, w, { color = C.dim, lines = 2 })
-			return
+	-- 모집 글 등록: 제목 · 난이도 · 최소 레벨 · 같은 직업
+	local function form(p: Frame, got)
+		local fm = FinderWindow.form
+		local modes = (got.boss and got.boss.modes) or {}
+		local pickMode = nil
+		for _, m in modes do
+			if m.id == fm.mode and m.can then
+				pickMode = m
+			end
 		end
-		local pk = FinderWindow.pick
-		pk.boss = math.clamp(pk.boss, 1, #bosses)
-		local bb = bosses[pk.boss]
-		pk.mode = math.clamp(pk.mode, 1, #bb.modes)
-		local mode = bb.modes[pk.mode]
+		if not pickMode then
+			for _, m in modes do
+				if m.can and not pickMode then
+					pickMode = m
+				end
+			end
+			pickMode = pickMode or modes[1]
+			fm.mode = if pickMode then pickMode.id else nil
+		end
 		local steps = got.steps or { 0 }
-		pk.step = math.clamp(pk.step, 1, #steps)
-		local need = (bb.need and bb.need[mode]) or 1
-		local rows = {
-			{ W.boss, bb.name, function()
-				pk.boss = pk.boss % #bosses + 1
-				pk.mode = 1
-			end },
-			{ W.mode, modeName(mode), function()
-				pk.mode = pk.mode % #bb.modes + 1
-			end },
-			{ W.cond, Format.fill(W.condLv, { lv = need + steps[pk.step] }), function()
-				pk.step = pk.step % #steps + 1
-			end },
-		}
-		for i, row in rows do
-			local y = S.pickY + (i - 1) * S.pickH
-			Ui.text(p, row[1], 0, y + 6, S.pickLabelW - 4, { color = C.dim })
-			Ui.button(p, row[2], S.pickLabelW, y, w - S.pickLabelW, function()
-				row[3]()
-				view.refresh()
-			end, { h = 22 }).frame.Name = "Do_pick" .. i
+		fm.step = math.clamp(fm.step, 1, #steps)
+		local labels = { W.form.name, W.form.mode, W.form.lv, W.form.job }
+		for i, l in labels do
+			Ui.text(p, l, 0, S.formY + (i - 1) * S.formH + 5, S.formLabelW - 6, { color = C.dim })
 		end
-		Ui.text(p, W.makeNote, 0, S.noteY, w, { color = C.dim, lines = 2 })
-		Ui.button(p, W.make, 0, S.makeY, w, function()
-			act("make", bb.id, mode, pk.step)
-		end, { main = true }).frame.Name = "Do_make"
+		-- 난이도: 보기를 다 늘어놓은 단추 줄(고른 것이 밝다 · 들어갈 수 없는 난이도는 흐림)
+		for i, m in modes do
+			local b = Ui.button(p, modeName(m.id), S.formLabelW + (i - 1) * (S.segW + 6), S.formY + S.formH, S.segW, function()
+				fm.mode = m.id
+				view.refresh()
+			end, { h = S.barH, main = pickMode == m })
+			b.frame.Name = "Do_mode_" .. m.id
+			b:setEnabled(m.can)
+		end
+		-- 최소 레벨: 입장 레벨 + 0 · 5 · 10 · 20
+		local need = if pickMode then pickMode.need else 1
+		for i, st in steps do
+			local b = Ui.button(p, Format.fill(W.cond, { lv = need + st }), S.formLabelW + (i - 1) * (S.segW + 6), S.formY + S.formH * 2, S.segW, function()
+				fm.step = i
+				view.refresh()
+			end, { h = S.barH, main = fm.step == i })
+			b.frame.Name = "Do_step" .. i
+		end
+		-- 같은 직업도 받기(체크 칸 — 글까지 누르는 자리)
+		local cy = S.formY + S.formH * 3
+		local check = Ui.group(p, S.formLabelW, cy, w - S.formLabelW, S.barH, "Same")
+		checkbox(check, 0, 5, fm.same)
+		Ui.text(check, W.form.same, S.checkS + 8, 4, w - S.formLabelW - S.checkS - 8, { color = C.text })
+		Ui.hit(check).Activated:Connect(function()
+			fm.same = not fm.same
+			view.refresh()
+		end)
+		Ui.text(p, W.form.note, 0, S.formNoteY, w, { color = C.dim, lines = 2 })
+		local ok = Ui.button(p, W.form.ok, 0, S.formBtnY, S.formBtnW, function()
+			if fm.mode then
+				act("make", bossId, fm.mode, { title = titleBox.Text, step = fm.step, same = fm.same })
+				FinderWindow.view = "list"
+			end
+		end, { main = true })
+		ok.frame.Name = "Do_ok"
+		ok:setEnabled(pickMode ~= nil and pickMode.can)
+		Ui.button(p, W.form.back, S.formBtnW + 8, S.formBtnY, S.formBtnW, function()
+			FinderWindow.view = "list"
+			view.refresh()
+		end).frame.Name = "Do_back"
 	end
 
-	-- 내 방: 머리 줄 · 파티원 · 신청한 사람(방장에게만) · 아래 단추 둘
+	-- 파티 대기실: 왼쪽 파티원 · 아래 단추 / 오른쪽 신청자
 	local function room(p: Frame, got)
 		local m = got.mine
-		Ui.text(p, Format.fill(W.head, { boss = m.boss, mode = modeName(m.mode), lv = m.lv }), 0, S.headY, w, { color = C.gold })
-		local waiting = 0
-		for i = 1, got.max or 4 do
-			local y = S.memberY + (i - 1) * S.memberH
+		local max = got.max or 4
+		Ui.text(p, m.title, 0, S.roomY, S.listW, { color = C.text })
+		local away = 0
+		for i = 1, max do
+			local y = S.roomMemberY + (i - 1) * S.roomMemberH
 			local mb = m.members[i]
+			if i > 1 then
+				Ui.line(p, 0, y - 4, S.listW)
+			end
 			if mb then
-				Ui.text(p, Format.fill(W.member, { lv = mb.lv, name = mb.name }), 0, y, w - 70, { font = "body" })
-				Ui.text(p, if mb.leader then W.leader elseif mb.ready then W.ready else W.wait, w - 66, y + 1, 66, { align = "right", color = if mb.leader then C.gold elseif mb.ready then C.accent else C.dim })
-				if not mb.leader and not mb.ready then
-					waiting += 1
+				Ui.text(p, Format.fill(W.member, { lv = mb.lv, name = mb.name }), 0, y, S.listW - 96, { font = "body", color = C.text })
+				if mb.leader then
+					Ui.text(p, W.room.leader, S.listW - 96, y + 1, 44, { align = "right", color = C.gold })
+				end
+				Ui.text(p, if mb.here then W.room.here else W.room.away, S.listW - 48, y + 1, 48, { align = "right", color = if mb.here then C.accent else C.dim })
+				Ui.text(p, Format.fill(W.memberSub, { class = mb.class, power = Format.comma(mb.power) }), 0, y + 18, S.listW, { color = C.dim })
+				if not mb.here then
+					away += 1
 				end
 			else
 				Ui.text(p, "-", 0, y, 40, { color = C.off })
 			end
 		end
-		local half = math.floor((w - 8) / 2)
+		local half = math.floor((S.listW - 8) / 2)
 		if m.lead then
-			Ui.text(p, W.apps, 0, S.appsY, w, { color = C.gold })
-			if #m.apps == 0 then
-				Ui.text(p, W.noApps, 0, S.appsY + 20, w, { color = C.dim })
-			end
-			for i = 1, S.apps do
-				local ap = m.apps[i]
-				if not ap then
-					break
-				end
-				local y = S.appsY + 18 + (i - 1) * S.appH
-				Ui.text(p, Format.fill(W.app, { lv = ap.lv, name = ap.name, power = Format.comma(ap.power) }), 0, y + 5, w - S.appBtnW * 2 - 8, { color = C.text })
-				Ui.button(p, W.accept, w - S.appBtnW * 2 - 4, y, S.appBtnW, function()
-					act("accept", ap.id)
-				end, { h = 22 }).frame.Name = "Do_accept" .. i
-				Ui.button(p, W.deny, w - S.appBtnW, y, S.appBtnW, function()
-					act("deny", ap.id)
-				end, { h = 22 }).frame.Name = "Do_deny" .. i
-			end
-			local go = Ui.button(p, W.start, 0, S.btnY, half, function()
+			Ui.text(p, W.room.startNote, 0, S.btnY - 18, S.listW, { color = C.dim })
+			local go = Ui.button(p, W.room.start, 0, S.btnY, half, function()
 				act("start")
 			end, { main = true })
 			go.frame.Name = "Do_start"
-			go:setEnabled(#m.members >= 2 and waiting == 0)
-			Ui.button(p, W.close, w - half, S.btnY, half, function()
+			go:setEnabled(#m.members >= 2 and away == 0)
+			Ui.button(p, W.room.stop, S.listW - half, S.btnY, half, function()
 				act("leave")
-			end).frame.Name = "Do_close"
+			end).frame.Name = "Do_stop"
 		else
-			Ui.button(p, if m.ready then W.readyOff else W.readyOn, 0, S.btnY, half, function()
-				act("ready", not m.ready)
-			end, { main = not m.ready }).frame.Name = "Do_ready"
-			Ui.button(p, W.leave, w - half, S.btnY, half, function()
+			Ui.button(p, W.room.leave, 0, S.btnY, half, function()
 				act("leave")
 			end).frame.Name = "Do_leave"
+		end
+		-- 신청자(방장에게만)
+		local x, sw = S.sideX, S.sideW
+		Ui.box(p, x - 7, S.roomY, 1, S.btnY + 22 - S.roomY, C.line)
+		if not m.lead then
+			Ui.text(p, W.room.wait, x, S.sideY + 4, sw, { color = C.dim, lines = 2 })
+			return
+		end
+		Ui.text(p, Format.fill(W.room.apps, { n = #m.apps }), x, S.sideY, sw, { color = C.gold })
+		if #m.apps == 0 then
+			Ui.text(p, W.room.noApps, x, S.appY, sw, { color = C.dim })
+		end
+		local textW = sw - S.appBtnW * 2 - 8
+		for i, ap in m.apps do
+			local y = S.appY + (i - 1) * S.appH
+			if y + S.appH > S.btnY + 22 then
+				break
+			end
+			Ui.text(p, Format.fill(W.member, { lv = ap.lv, name = ap.name }), x, y + 3, textW, { color = C.text })
+			Ui.text(p, Format.fill(W.memberSub, { class = ap.class, power = Format.comma(ap.power) }), x, y + 22, sw, { color = C.dim })
+			Ui.button(p, W.room.accept, x + sw - S.appBtnW * 2 - 4, y - 2, S.appBtnW, function()
+				act("accept", ap.id)
+			end, { h = S.barH, main = true }).frame.Name = "Do_accept" .. i
+			Ui.button(p, W.room.deny, x + sw - S.appBtnW, y - 2, S.appBtnW, function()
+				act("deny", ap.id)
+			end, { h = S.barH }).frame.Name = "Do_deny" .. i
 		end
 	end
 
@@ -189,48 +344,36 @@ function FinderWindow.build(body: Frame, ctx, w: number, _h: number)
 		local p = Ui.group(body, 0, 0, w, S.whyY, "Finder")
 		holder = p
 		local got = ctx.finder and ctx.finder() or nil
-		if got and got.mine and FinderWindow.tab == "make" then
-			FinderWindow.tab = "room"
-		elseif got and not got.mine and FinderWindow.tab == "room" then
-			FinderWindow.tab = "list"
-		end
-		-- 탭: 「모집 중 n」 · 「방 만들기」(방에 들어 있으면 「내 방」)
-		local tabs = { { "list", W.tabs.list .. (if got then " " .. #(got.rooms or {}) else "") }, if got and got.mine then { "room", W.tabs.room } else { "make", W.tabs.make } }
-		local tx = 0
-		for _, t in tabs do
-			local tab = Ui.tab(p, t[2], tx, 0, function()
-				FinderWindow.tab = t[1]
-				view.refresh()
-			end)
-			tab.frame.Name = "Tab_" .. t[1]
-			tab:setOn(FinderWindow.tab == t[1])
-			tx += tab.width + 16
-		end
+		local listing = got ~= nil and got.mine == nil and FinderWindow.view ~= "form"
+		search.Parent.Visible = listing
+		titleBox.Parent.Visible = got ~= nil and got.mine == nil and FinderWindow.view == "form"
 		if not got then
 			Ui.text(p, W.loading, 0, S.listY + 4, w, { color = C.dim })
 			why:set("")
 			return
 		end
-		why:set(got.why or "")
-		if FinderWindow.tab == "room" and got.mine then
+		bar(p, got)
+		local hint = nil
+		if got.mine then
 			room(p, got)
-		elseif FinderWindow.tab == "make" then
-			make(p, got)
+		elseif FinderWindow.view == "form" then
+			form(p, got)
 		else
-			list(p, got)
+			hint = list(p, got)
 		end
+		why:set(got.why or hint or "")
 	end
 	function view.destroy()
 		alive = false
 	end
 	view.refresh()
 	if ctx.finderFetch then
-		ctx.finderFetch() -- 창을 열 때 묻는다(대답이 오면 Windows.refresh가 다시 그린다)
+		ctx.finderFetch(bossId) -- 창을 열 때 묻는다(대답이 오면 Windows.refresh가 다시 그린다)
 		task.spawn(function()
 			while alive do
 				task.wait(POLL)
 				if alive then
-					ctx.finderFetch() -- 열려 있는 동안(다른 사람이 만든 방 · 인원)
+					ctx.finderFetch(bossId) -- 열려 있는 동안(다른 사람이 연 방 · 인원 · 신청)
 				end
 			end
 		end)

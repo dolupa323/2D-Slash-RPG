@@ -54,6 +54,9 @@ function Hud.init()
 	Hud.vitalsBox = box
 	Hud.level = Ui.text(box, "Lv.1", 0, L.nameY, 60, { color = C.gold, outline = true })
 	Hud.name = Ui.text(box, "", 40, L.nameY, v.w - 40, { outline = true })
+	-- 보스의 출현까지 남은 시간(2026-11-05 사용자: "게임 왼쪽 아래에 캐릭터 ui 닉네임 위에 빨간시간이 표시되고 그시간이 다되면 보스 출현이야"): 닉네임 바로 위 · 빨강 · 「용암 거인 출현까지 47:12」(Hud.step이 고친다)
+	Hud.reveal = Ui.text(box, "", 0, L.nameY - M.small - V.revealGap, v.w, { color = C.red, outline = true })
+	Hud.revealText = ""
 	Hud.hp = Ui.bar(box, 0, L.hpY, V.barW, V.hpH, C.hp, C.hpDark)
 	-- 체력이 닳고 찰 때의 효과(사용자 2026-10-13: "체력 다는거나  회복되는게 잘 보이지않습니다. 효과가 좀 들어가야해요"):
 	--  띠 안에 닳은 자리(밝은 색) · 찬 자리(풀빛)를 빨간 띠 아래에 깔고, 번쩍임을 맨 위에 덮는다. 띠 오른쪽 위에 「-23 · +60」이 떠오른다. 셈은 shared/lune/ui/hpFx.luau, 장마다 Hud.step이 그린다
@@ -402,12 +405,110 @@ function Hud.placeMenu()
 	end
 end
 
---  누르면 그 창이 열린다. list = { { id, name, key } … } — 여덟까지, 오른쪽 끝에 붙여 놓는다
-function Hud.setMenu(list, onClick: (string) -> ())
+-- 끌어 옮기기(2026-11-06 사용자: "게임내 팝업 ui들 퀘스트, 인벤토리 이런거 버튼있잖아 이런것도 드래그앤 드랍으로 위치 바꿀수있게 해줘"):
+--  단추를 누른 채 Hud.MENU_DRAG점 넘게 움직이면 그 단추의 그림이 마우스(손가락)를 따라오고, 놓은 자리의 단추 자리로 끼워 넣는다(그 사이 단추들은 한 칸씩 밀린다) → onMove(새 차례)
+--  움직이지 않고 떼면 지금처럼 그 창이 열린다. 놓을 자리의 단추는 민트 테두리. 단추 줄 밖에 놓으면 그만둔다
+Hud.MENU_DRAG = 6
+Hud.menuDrag = nil -- 누르고 있는 단추 { id, input, start, moved, ghost, endT }
+-- 그 화면의 점(마우스 · 손가락)이 어느 메뉴 단추 위인가 → 이름표 · 없으면 nil
+function Hud.menuAt(at: Vector2): string?
+	for id, item in Hud.menu or {} do
+		if item.frame.Visible then
+			local p, size = item.frame.AbsolutePosition, item.frame.AbsoluteSize
+			if at.X >= p.X and at.X < p.X + size.X and at.Y >= p.Y and at.Y < p.Y + size.Y then
+				return id
+			end
+		end
+	end
+	return nil
+end
+-- 끌기를 끝낸다(at = 놓은 자리 · nil = 그만둔다)
+function Hud.menuDrop(at: Vector2?)
+	local d = Hud.menuDrag
+	Hud.menuDrag = nil
+	if not d then
+		return
+	end
+	if d.ghost then
+		d.ghost:Destroy()
+	end
+	Hud.setOpen(Hud.openSet or {})
+	if not d.moved then
+		return
+	end
+	Hud.menuDragEnd = os.clock() -- (뗄 때 함께 오는 「눌렀다」를 버린다)
+	local to = if at then Hud.menuAt(at) else nil
+	if not to or to == d.id or not Hud.menuOnMove then
+		return
+	end
+	local order = {}
+	for _, item in Hud.menuList or {} do
+		table.insert(order, item.id)
+	end
+	local from, at2 = table.find(order, d.id), table.find(order, to)
+	if from and at2 then
+		table.remove(order, from)
+		table.insert(order, at2, d.id)
+		Hud.menuOnMove(order)
+	end
+end
+function Hud.menuDragInit()
+	if Hud.menuDragOn then
+		return
+	end
+	Hud.menuDragOn = true
+	if not (UIS.InputChanged and UIS.InputEnded and UIS.WindowFocusReleased) then
+		return -- (입력 신호가 없는 곳 — 시험의 가짜 화면)
+	end
+	UIS.InputChanged:Connect(function(input)
+		local d = Hud.menuDrag
+		if not d then
+			return
+		end
+		local mouse = input.UserInputType == Enum.UserInputType.MouseMovement and d.input.UserInputType == Enum.UserInputType.MouseButton1
+		if not mouse and input ~= d.input then
+			return
+		end
+		local at = Vector2.new(input.Position.X, input.Position.Y)
+		if not d.moved and (at - d.start).Magnitude > Hud.MENU_DRAG * Stage.uiScale then
+			d.moved = true
+			local s = MN.slot
+			local ghost = Ui.group(Stage.ui, 0, 0, s, s, "MenuGhost")
+			ghost.ZIndex = 400
+			Ui.slot(ghost, 0, 0, s):setOn(true)
+			Ui.pic(ghost, MENU_PIC[d.id] or "menu_gear", math.floor((s - PIC) / 2), math.floor((s - PIC) / 2)).ZIndex = 2
+			d.ghost = ghost
+		end
+		if d.moved and d.ghost then
+			local origin = Stage.ui.AbsolutePosition
+			local s = MN.slot
+			d.ghost.Position = UDim2.fromOffset(math.floor((at.X - origin.X) / Stage.uiScale - s / 2 + 0.5), math.floor((at.Y - origin.Y) / Stage.uiScale - s / 2 + 0.5))
+			local hot = Hud.menuAt(at)
+			for id, item in Hud.menu or {} do
+				item.cell:setOn(id == hot or (Hud.openSet or {})[id] == true)
+			end
+		end
+	end)
+	UIS.InputEnded:Connect(function(input)
+		local d = Hud.menuDrag
+		if d and (input == d.input or (input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType == d.input.UserInputType)) then
+			Hud.menuDrop(Vector2.new(input.Position.X, input.Position.Y))
+		end
+	end)
+	UIS.WindowFocusReleased:Connect(function()
+		Hud.menuDrop(nil)
+	end)
+end
+
+--  누르면 그 창이 열린다. list = { { id, name, key } … } — 여덟까지, 오른쪽 끝에 붙여 놓는다 · onMove(새 차례) = 끌어 옮겼다(없으면 옮기지 않는다)
+function Hud.setMenu(list, onClick: (string) -> (), onMove: (({ string }) -> ())?)
 	for _, old in Hud.menu or {} do
 		old.frame:Destroy()
 	end
 	Hud.menu = {}
+	Hud.menuList = list
+	Hud.menuOnMove = onMove
+	Hud.menuDragInit()
 	local r = UI.hud.menu
 	local n = math.min(#list, Hud.MENU_MAX)
 	local s = MN.slot
@@ -430,8 +531,17 @@ function Hud.setMenu(list, onClick: (string) -> ())
 		flash.Visible = false
 		local hit = Ui.hit(frame)
 		hit.Activated:Connect(function()
+			if (Hud.menuDrag and Hud.menuDrag.moved) or os.clock() - (Hud.menuDragEnd or -1) < 0.25 then
+				return -- 끌어 옮긴 것(창을 열지 않는다)
+			end
 			onClick(item.id)
 		end)
+		local began = hit.InputBegan -- (시험의 가짜 화면에는 없다)
+		if began then began:Connect(function(input)
+			if onMove and not Hud.menuDrag and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+				Hud.menuDrag = { id = item.id, input = input, start = Vector2.new(input.Position.X, input.Position.Y), moved = false }
+			end
+		end) end
 		frame.Visible = not Hud.touch
 		Hud.menu[item.id] = { frame = frame, cell = cell, label = label, dot = dot, flash = flash, mark = false, i = i, n = n }
 	end
@@ -749,7 +859,31 @@ end
 
 -- 장마다(boot의 그리는 고리가 부른다): 체력 바의 효과를 흘려보낸다
 Hud.READY_T = 0.3 -- 다시 쓰기가 끝난 칸이 하얗게 번쩍이는 시간(초)
+-- 출현을 기다리는 보스의 남은 시간 글(없으면 "") — shared/lune/sim/reveal.luau · 화면은 서버가 보낸 출현 시각(boot의 Reveal)
+function Hud.revealLine(): string
+	local Reveal = require(lune.sim.reveal)
+	local WD = require(lune.sim.weekly).DATA
+	local best, bestLeft = nil, math.huge
+	for _, b in WD.bosses do
+		local left = Reveal.left(b.id)
+		if b.reveal and left and left > 0 and left < bestLeft then
+			best, bestLeft = b, left
+		end
+	end
+	if not best then
+		return ""
+	end
+	return Format.fill(WD.words.revealHud, { name = best.name, t = Reveal.clockText(bestLeft) })
+end
+
 function Hud.step(dt: number)
+	if Hud.reveal then
+		local line = Hud.revealLine()
+		if line ~= Hud.revealText then
+			Hud.revealText = line
+			Hud.reveal:set(line)
+		end
+	end
 	local st = Hud.hpFx
 	if st and not HpFx.idle(st) then
 		HpFx.step(st, dt)

@@ -596,6 +596,83 @@ function Store.maxTenAdd(rec, cap: number): any
 	return have
 end
 
+-- 보스의 출현 시각(2026-11-05 — server modules/reveal.luau): 열쇠 reveal_<보스> = { at }. 없을 때만 적는다(이 판으로 처음 켜진 서버) — 돌려주는 것 = 저장소의 시각(적지 못했으면 nil)
+function Store.revealClaim(boss: string, at: number): number?
+	local key = "reveal_" .. boss
+	if offline then
+		memory.world[key] = memory.world[key] or { at = at }
+		return memory.world[key].at
+	end
+	local ds = getStore("world")
+	if not ds then
+		return nil
+	end
+	local have = nil
+	local ok, err = try(function()
+		have = nil
+		ds:UpdateAsync(key, function(old)
+			if typeof(old) == "table" and typeof(old.at) == "number" then
+				have = old.at
+				return nil -- 이미 있다: 그대로
+			end
+			have = at
+			return { at = at }
+		end)
+	end)
+	if not ok then
+		warn(("[lune] 출현 시각 %s을 적지 못했다: %s"):format(boss, tostring(err)))
+		return nil
+	end
+	return have
+end
+
+-- 보스의 최초 격파(2026-11-05 사용자: "퍼클 이벤트도 들어가야해 최초 격파 3 파티까지야") — 열쇠 firstClear_<보스> = 격파한 차례대로 파티들(shared/lune/sim/firstClear.luau의 꼴).
+--  cap 파티가 차기 전에만 더한다(UpdateAsync — 여러 서버에서 같은 때 격파해도 차례가 겹치지 않는다). 읽기: (읽었는가, 목록) · 더하기: (차례 또는 nil, 저장소의 목록) — 적지 못했으면 (nil, nil)
+function Store.firstClearGet(boss: string): (boolean, any)
+	local key = "firstClear_" .. boss
+	if offline then
+		return true, memory.world[key] or {}
+	end
+	local ok, result = read("world", key)
+	if ok then
+		return true, if typeof(result) == "table" then result else {}
+	end
+	return offline, if offline then memory.world[key] or {} else nil
+end
+function Store.firstClearAdd(boss: string, entry, cap: number): (number?, any)
+	local FirstClear = require(game:GetService("ReplicatedStorage").shared.lune.sim.firstClear)
+	local key = "firstClear_" .. boss
+	if offline then
+		local new, rank = FirstClear.add(memory.world[key], entry, cap)
+		if new then
+			memory.world[key] = new
+		end
+		return rank, memory.world[key] or {}
+	end
+	local ds = getStore("world")
+	if not ds then
+		return nil, nil
+	end
+	local rank, have = nil, nil
+	local ok, err = try(function()
+		rank, have = nil, nil
+		ds:UpdateAsync(key, function(old)
+			local new, r = FirstClear.add(old, entry, cap)
+			rank, have = r, new or (if typeof(old) == "table" then old else {})
+			return new -- (nil = 그대로 둔다)
+		end)
+	end)
+	if not ok then
+		warn(("[lune] 최초 격파 기록 %s을 적지 못했다: %s"):format(boss, tostring(err)))
+		if studio() then
+			offline = true
+			return Store.firstClearAdd(boss, entry, cap)
+		end
+		return nil, nil
+	end
+	return rank, have
+end
+
 -- 직업마다의 첫 만렙(2026-10-27 사용자: "직업별 첫 만렙 유저들 칭호 만들거야") — 열쇠 firstMax_<직업> = { key, name, class, at }. 비어 있을 때만 적는다(firstMax와 같다)
 function Store.classFirstGet(class: string): (boolean, any)
 	if offline then

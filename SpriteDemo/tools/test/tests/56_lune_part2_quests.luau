@@ -4,6 +4,10 @@
 --   할 일의 자리(↑ 자리 · 들르기 맵)가 게임의 장면에 있는지, 모으는 물건이 가방에 들어가는 아이템인지도 함께 본다 — 한 번도 끝까지 해 보지 않은 퀘스트가 없게.
 local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
 local Quests = req("ReplicatedStorage/shared/lune/sim/quests")
+do -- 출현을 기다리는 보스(2026-11-05 용암 거인)는 출현한 것으로 본다(출현 전의 닫힘은 시험 125)
+	local Reveal = req("ReplicatedStorage/shared/lune/sim/reveal")
+	Reveal.at.lavagiant = Reveal.clock() - 1
+end
 local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
 local Items = req("ReplicatedStorage/shared/lune/sim/items")
 local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")

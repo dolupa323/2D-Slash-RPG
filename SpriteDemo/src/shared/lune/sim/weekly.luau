@@ -85,6 +85,11 @@ function Weekly.canEnter(h, b, mode: string, now: number): string?
 		return "모르는 난이도다"
 	elseif not h.alive then
 		return "쓰러진 채로는 들어갈 수 없다"
+	elseif not require(script.Parent.reveal).open(b.id, now) then
+		-- 아직 출현하지 않았다(2026-11-05 — sim/reveal.luau): 「아직 깨어나지 않았다 — 출현까지 47:12」(시각을 모르면 「보스의 문이 굳게 닫혀 있다」)
+		local Reveal = require(script.Parent.reveal)
+		local left = Reveal.left(b.id, now)
+		return if left then (string.gsub(words.revealClosed or words.closed, "{t}", Reveal.clockText(left))) else words.closed
 	elseif not (st and st.done) then
 		return words.closed
 	elseif h.level < m.need then

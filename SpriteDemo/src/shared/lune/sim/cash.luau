@@ -223,12 +223,15 @@ function Cash.grant(acct, key: string, receiptId: string, now: number, baseChars
 		end
 	end
 	local band = Cash.bandOf(Cash.topLevel(acct, live))
-	if key == "money" then
-		addBox(c, "bm_money_" .. band, 1)
-	elseif key == "dust" then
-		addBox(c, "bm_dust_" .. band, 1)
-	elseif key == "bagx" or key == "storex" or key == "rename" or key == "exp" or key == "drop" or key == "dyepoint" or key == "dyerobe" then -- (염색약 — 2026-10-22 · 드롭률 쿠폰 — 2026-10-27)
-		addBox(c, "bm_" .. key, 1)
+	-- 묶음(2026-11-06 「여러 개를 한 번에」 — bm.js BM_PACKS): of = 담긴 상품 · n = 수 → 그 상품을 n개(결제는 하나 · 결제 번호도 하나)
+	local base = if typeof(p.of) == "string" and PRODUCT[p.of] then p.of else key
+	local cnt = if typeof(p.n) == "number" and p.n >= 1 then math.floor(p.n) else 1
+	if base == "money" then
+		addBox(c, "bm_money_" .. band, cnt)
+	elseif base == "dust" then
+		addBox(c, "bm_dust_" .. band, cnt)
+	elseif base == "bagx" or base == "storex" or base == "rename" or base == "exp" or base == "drop" or base == "dyepoint" or base == "dyerobe" then -- (염색약 — 2026-10-22 · 드롭률 쿠폰 — 2026-10-27)
+		addBox(c, "bm_" .. base, cnt)
 	elseif key == "charx" then
 		c.slots = math.min(c.slots + 1, D.rules.charCap - (baseChars or 6))
 	elseif key == "starter" then
@@ -271,13 +274,16 @@ function Cash.grant(acct, key: string, receiptId: string, now: number, baseChars
 	return true
 end
 
--- 보관함에서 가방으로(i = 그 줄만 · 없으면 모두). 가방에 들어가는 만큼만 옮긴다 → 옮긴 수 · 남은 줄 수
-function Cash.take(h, c, i: any?): (number, number)
+-- 보관함에서 가방으로(i = 그 줄만 · 없으면 모두 · n = 그 줄에서 몇 개 — 없으면 그 줄을 모두 · 2026-11-06 사용자 "수령을 나눠서 할수있어야해").
+--  가방에 들어가는 만큼만 옮긴다 → 옮긴 수 · 남은 줄 수
+function Cash.take(h, c, i: any?, n: any?): (number, number)
 	local moved = 0
-	local list = if whole(i, 1, #c.box) then { c.box[i] } else table.clone(c.box)
+	local one = whole(i, 1, #c.box)
+	local list = if one then { c.box[i] } else table.clone(c.box)
+	local want = if one and whole(n, 1, 1e6) then n else math.huge
 	for _, e in list do
 		local room = Bag.room(h, e.id)
-		local k = math.min(room, e.n)
+		local k = math.min(room, e.n, want)
 		if k > 0 and Bag.give(h, e.id, k) then
 			e.n -= k
 			moved += k

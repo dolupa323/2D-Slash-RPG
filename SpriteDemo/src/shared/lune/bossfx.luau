@@ -935,6 +935,61 @@ function BossFx.heatColumn(ctx, x: number, y: number, r: number, up: number, k: 
 	end
 	ctx:alpha(1)
 end
+-- 가로 열선(2026-11-06 — 사용자 "발판도 견제하는 가로 레이저선 패턴도"): 맞는 자리(발이 바닥에서 lift 넘게 — 발판 위 · 뛰는 중)의 옅은 칠 ·
+--  발판 높이마다(lines — 바닥에서 몇 점) 방을 가로지르는 가는 빛줄(성긴 점선 → 촘촘한 점선 → 이어진 줄 · 끝이 가까우면 깜박) · 위아래 어두운 테 · 양 끝의 흰 빛점
+function BossFx.lavaLines(ctx, lo: number, hi: number, y: number, lift: number, lines, k: number)
+	lo, hi, y, k = R(lo), R(hi), R(y), math.clamp(k, 0, 1)
+	local blink = blinkOf(k)
+	ctx:alpha(0.1 + 0.08 * k)
+	ctx:style(T.n)
+	ctx:rect(lo, y - 230, hi - lo, 230 - R(lift))
+	ctx:alpha(1)
+	local gap = if k < 0.5 then 4 elseif k < 0.85 then 2 else 0
+	for _, h in lines do
+		local ly = y - R(h)
+		ctx:alpha(0.45)
+		ctx:style(T.d)
+		ctx:rect(lo, ly - 1, hi - lo, 1)
+		ctx:rect(lo, ly + 1, hi - lo, 1)
+		ctx:alpha(1)
+		ctx:style(if blink then T.w else T.l)
+		if gap == 0 then
+			ctx:rect(lo, ly, hi - lo, 1)
+		else
+			local x = lo + R(k * 40) % (gap * 2)
+			while x < hi do
+				ctx:rect(x, ly, gap, 1)
+				x += gap * 2
+			end
+		end
+		ctx:style(T.w)
+		ctx:rect(lo, ly - 1, 2, 3)
+		ctx:rect(hi - 2, ly - 1, 2, 3)
+	end
+end
+-- 하늘의 용암 줄기(2026-11-06 — 사용자 "하늘에서 레이저같은게 떨어지는 형식"): 맞는 폭의 옅은 칠 · 하늘에서 바닥까지 가는 빛줄(위에서부터 차오르고 · 굵어진다 · 끝이 가까우면 깜박) · 바닥의 표시 줄과 흰 점
+function BossFx.skyMark(ctx, x: number, y: number, r: number, k: number)
+	x, y, k = R(x), R(y), math.clamp(k, 0, 1)
+	local blink = blinkOf(k)
+	local top = y - 230
+	ctx:alpha(0.12 + 0.12 * k)
+	ctx:style(T.n)
+	ctx:rect(x - r, top, r * 2, y - top)
+	ctx:alpha(1)
+	local len = R((y - top) * min(1, k * 1.4))
+	ctx:style(if blink then T.w else T.l)
+	ctx:rect(x, top, 1, len)
+	if k > 0.5 then
+		ctx:alpha(0.6)
+		ctx:rect(x - 1, top, 1, len)
+		ctx:rect(x + 1, top, 1, len)
+		ctx:alpha(1)
+	end
+	ctx:style(if blink then T.w else T.n)
+	ctx:rect(x - r, y - 2, r * 2, 3)
+	ctx:style(T.w)
+	ctx:rect(x - 1, y - 3, 3, 3)
+end
 -- 머리 위(분홍 「!」 대신): 떨어지는 용암 방울
 function BossFx.magmaSigil(ctx, x: number, y: number, k: number)
 	x, y = R(x), R(y)
@@ -970,8 +1025,10 @@ function BossFx.spot(ctx, x: number, y: number, r: number, up: number, k: number
 		end
 		return
 	end
-	if mark == "lava" then -- 용암 거인(2026-11-04): 솟는 것(바닥에서 하늘까지 — up 150 넘게)은 아지랑이 기둥 · 떨어지는 것은 끓는 거품 원 + 마그마 덩이
-		if up >= 150 then
+	if mark == "lava" then -- 용암 거인(2026-11-04): 솟는 것(바닥에서 하늘까지 — up 150 넘게)은 아지랑이 기둥 · 떨어지는 것은 끓는 거품 원 + 마그마 덩이 · 하늘에서 내리꽂히는 것(up 900 넘게 — 2026-11-06)은 하늘의 빛줄
+		if up >= 900 then
+			BossFx.skyMark(ctx, x, y, r, k)
+		elseif up >= 150 then
 			BossFx.heatColumn(ctx, x, y, r, up, k)
 		else
 			BossFx.bubbleMark(ctx, x, y, r, up, k)
@@ -1281,17 +1338,22 @@ function BossFx.tell(ctx, x: number, y: number, dir: number, p, k: number, a: nu
 	local knight = mark == "knight" -- 타락한 부단장의 대검 기사 표시(2026-10-28 — 위 swordBand · fallingSword · crescentBand · hornRings · plungeMark · crescentLane · swordSigil)
 	local thief = mark == "thief" -- 불씨 도둑 두목의 도둑 표시(2026-10-28 — 위 hookBand · sackRing · fuseRoom · hookLine · rollLane · bombSigil)
 	local lava = mark == "lava" -- 용암 거인(2026-11-04 — 위 lavaCrack · lavaSmear · lavaBand · bubbleMark · heatColumn · magmaSigil)
-	if p.band and lava then -- 끓는 숨: 그쪽 낮은 발판 높이의 띠(방 끝까지)
-		local x0 = x + dir * p.band.from
+	if p.band and lava then -- 끓는 숨: 그쪽 낮은 발판 높이의 띠(방 끝까지) · 가로 열선(lines — 2026-11-06): 발판 높이마다 방을 가로지르는 빛줄
+		local x0 = math.clamp(x + dir * p.band.from, a - 20, b + 20)
 		local x1 = math.clamp(x + dir * p.band.to, a - 20, b + 20)
-		BossFx.lavaBand(ctx, min(x0, x1), max(x0, x1), y, p.band.lo, p.band.hi, dir, k)
-	end
-	if p.zone and lava then -- 높은 자리(주먹)는 금 · 낮은 띠(손바닥 · 그러쥐기)는 흐르는 물결
-		local x0, x1 = x + dir * p.zone.from, x + dir * p.zone.to
-		if p.zone.up >= 30 then
-			BossFx.lavaCrack(ctx, min(x0, x1), max(x0, x1), y, p.zone.up, dir, k)
+		if p.band.lines then
+			BossFx.lavaLines(ctx, min(x0, x1), max(x0, x1), y, p.band.lo, p.band.lines, k)
 		else
-			BossFx.lavaSmear(ctx, min(x0, x1), max(x0, x1), y, p.zone.up, if p.pull then -dir else dir, k)
+			BossFx.lavaBand(ctx, min(x0, x1), max(x0, x1), y, p.band.lo, p.band.hi, dir, k)
+		end
+	end
+	if p.zone and lava then -- 높은 자리(주먹 · 불바다)는 금 · 낮은 띠(손바닥 · 그러쥐기 · 끓는 바닥)는 흐르는 물결 — 방 전체(±999)는 방의 둘레까지만 · 하늘까지(999)는 230점까지만 그린다(2026-11-06)
+		local x0, x1 = math.clamp(x + dir * p.zone.from, a - 20, b + 20), math.clamp(x + dir * p.zone.to, a - 20, b + 20)
+		local up = min(p.zone.up, 230)
+		if p.zone.up >= 30 then
+			BossFx.lavaCrack(ctx, min(x0, x1), max(x0, x1), y, up, dir, k)
+		else
+			BossFx.lavaSmear(ctx, min(x0, x1), max(x0, x1), y, up, if p.pull then -dir else dir, k)
 		end
 	elseif p.zone and thief then -- 패턴의 동작(clip)마다 다른 꼴
 		local x0, x1 = x + dir * p.zone.from, x + dir * p.zone.to

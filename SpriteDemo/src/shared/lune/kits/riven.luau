@@ -346,7 +346,7 @@ local function phantom(g)
 	local foes = {}
 	for _, m in g.mobs() do
 		local off = (m.x - x0) * dir
-		if abs(m.y - y) <= 72 and off > -8 and off <= PH_REACH - 8 then
+		if m.y - y <= 66 and y - m.y <= 72 and off > -8 and off <= PH_REACH - 8 then -- (칼자국을 긋는 적 = 맞는 곳의 적 — 아래 66 · 2026-11-05)
 			table.insert(foes, { m = m, off = off })
 		end
 	end
@@ -409,7 +409,9 @@ local function phantom(g)
 	end)
 	for _, t in { 0, 0.05, 0.1 } do
 		g.after(pop + t, function()
-			g.hitAt(cx, y, PH_REACH / 2, 60, 4, { mark = t == 0 })
+			-- 맞는 곳: 앞 0 ~ 248 · 위 60 · 아래 66(2026-11-05 사용자 "리븐 4차 사냥기 하단판정 넓혀야해 안맞는 현상이 있어" — 그 전: 발밑 6까지라 칼자국(위아래 72 안의 적)은 그어지는데
+			--  조금 낮은 발판의 적은 맞지 않았다 · hitAt의 아래 끝 = 발밑 + 6이라 가운데를 60 내려 높이 126으로)
+			g.hitAt(cx, y + 60, PH_REACH / 2, 126, 4, { mark = t == 0 })
 		end)
 	end
 end

@@ -57,6 +57,10 @@ function ItemCell.icon(it): string
 		local g = Items.goods(it.item)
 		return if g then g.icon else ""
 	end
+	local u = it.u and Items.unique(it.u)
+	if u and u.icon and ICONS[u.icon] then
+		return u.icon -- 제 그림이 있는 이름 붙은 장비(2026-11-05 화심 세트)
+	end
 	if it.slot == "weapon" then
 		return WEAPON[it.who] or "w_sword"
 	end
