@@ -36,14 +36,46 @@ function I.refSpec(level: number)
 	return { main = STATS.base + STATS.perLevel * (level - 1) + all, sub = STATS.base + all, atk = N.weaponAtk(level) + 4 * math.max(1, math.floor(N.armorAtk(level) + 0.5)), k = 1 + SPEC.crit.chance / 100 * (SPEC.crit.mul - 1) } -- (방어구 넷의 공격력도 — 2026-10-28)
 end
 
--- 지금 장착한 것(worn — 없으면 nil)을 it로 바꾸면 달라지는 전투력. sp = 내 스펙 { main, sub, atk, k }
-function I.wearDiff(it, worn, sp): number
+-- 지금 장착한 것(worn — 없으면 nil)을 it로 바꾸면 달라지는 전투력. sp = 내 스펙 { main, sub, atk, k } · cls = 내 직업(추가 옵션의 힘 · 민첩 · 지능 · 운이 주스탯 · 부스탯인가 — 없으면 올스탯만)
+--  추가 옵션(2026-11-07): 올스탯 · 공격력 · 그 직업의 주 · 부스탯 · 데미지 % · 최종 데미지 %를 넣는다(크리티컬 확률 · 데미지는 넣지 않는다 — 내 지금 크리티컬을 화면이 모른다)
+function I.wearDiff(it, worn, sp, cls: string?): number
 	local a = Items.options(it).total
 	local b = if worn then Items.options(worn).total else {}
-	local ds, da = (a.stat or 0) - (b.stat or 0), (a.atk or 0) - (b.atk or 0)
-	local raw = (N.statAtk(sp.main + ds, sp.sub + ds, sp.atk + da) - N.statAtk(sp.main, sp.sub, sp.atk)) * sp.k
+	local ea = Items.exSum({ it })
+	local eb = if worn then Items.exSum({ worn }) else {}
+	local function dx(k: string): number
+		return (ea[k] or 0) - (eb[k] or 0)
+	end
+	local ds, da = (a.stat or 0) - (b.stat or 0) + dx("all"), (a.atk or 0) - (b.atk or 0) + dx("atk")
+	local pair = cls and STATS.classes and STATS.classes[cls]
+	local dm, dsub = ds + (if pair then dx(pair[1]) else 0), ds + (if pair then dx(pair[2]) else 0)
+	local mul = (1 + dx("dmg") / 100) * (1 + dx("final") / 100)
+	local raw = (N.statAtk(sp.main + dm, sp.sub + dsub, sp.atk + da) * mul - N.statAtk(sp.main, sp.sub, sp.atk)) * sp.k
 	return math.sign(raw) * math.floor(math.abs(raw) + 0.5)
 end
+
+-- 추가 옵션 한 줄의 값(2026-11-07): 「+12」 · % 옵션은 「+3%」
+local EXOPT = {}
+for _, p in (Items.EXTRA.pool or {}) do
+	EXOPT[p.id] = p
+end
+function I.exText(k: string, v: number): string
+	local p = EXOPT[k]
+	return if p and p.pct then ("+%d%%"):format(v) else "+" .. Format.short(v)
+end
+-- 추가 옵션들을 줄로(큐브 창의 BEFORE · AFTER — 2026-11-10): { { 이름, 값 } … }
+function I.exRows(ex: any): { { string } }
+	local out = {}
+	for _, e in (if typeof(ex) == "table" then ex else {}) do
+		local p = EXOPT[e.k]
+		if p then
+			table.insert(out, { p.name, I.exText(e.k, e.v) })
+		end
+	end
+	return out
+end
+-- 옵션 줄(올스탯 · 공격력 · 방어력)과 같은 추가 옵션의 종류
+local EXSAME = { stat = "all", atk = "atk", def = "def" }
 
 -- 옵션 한 줄의 값: 「+68」 · 별이 붙었으면 「+68 (65 +3)」
 function I.optText(base: number, total: number): string
@@ -64,9 +96,30 @@ function I.gear(it, me, worn: any, isWorn: boolean?)
 		table.insert(rows, { W.job, CLASSES.classes[cls].name, if cls == me.class then "text" else "red" })
 	end
 	table.insert(rows, { W.quality, if q.bonus == 0 then q.name else ("%s %s%d%%"):format(q.name, if q.bonus > 0 then "+" else "", q.bonus), tier })
+	-- 추가 옵션(2026-11-07 — 사용자 "장비 능력치 옆에 연두색으로 + 몇 이라고 뜨고 거기에는 특별한 옵션들이뜬다"): 같은 종류의 옵션 줄 끝에 연두 「+n」(4째 칸) ·
+	--  그 장비에 없는 줄(무기의 방어력 · 올스탯 …)과 그 밖의 것(힘 · 크리티컬 확률 …)은 아래에 줄마다 연두로(추가 옵션의 차례대로). 부서진 장비(흔적)는 쳐 주지 않아 보이지 않는다
+	local ex = {}
+	if not it.broken and typeof(it.ex) == "table" then
+		for _, e in it.ex do
+			ex[e.k] = (ex[e.k] or 0) + e.v
+		end
+	end
+	local shownEx = {}
 	for _, k in I.ORDER do
 		if o.base[k] ~= nil then
-			table.insert(rows, { W[k], I.optText(o.base[k], o.total[k]), if k == "def" then "text" else "gold" })
+			local ek = EXSAME[k]
+			local add = ex[ek]
+			if add then
+				shownEx[ek] = true
+			end
+			table.insert(rows, { W[k], I.optText(o.base[k], o.total[k]), if k == "def" then "text" else "gold", if add then I.exText(ek, add) else nil })
+		end
+	end
+	if not it.broken and typeof(it.ex) == "table" then
+		for _, e in it.ex do
+			if not shownEx[e.k] and EXOPT[e.k] then
+				table.insert(rows, { EXOPT[e.k].name, I.exText(e.k, e.v), "extra" })
+			end
 		end
 	end
 	local notes = {}
@@ -79,7 +132,7 @@ function I.gear(it, me, worn: any, isWorn: boolean?)
 	elseif me.level < need then
 		table.insert(notes, { Format.fill(W.needLv, { n = need }), "red" })
 	else
-		local d = I.wearDiff(it, worn, me.spec or I.refSpec(me.level))
+		local d = I.wearDiff(it, worn, me.spec or I.refSpec(me.level), me.class)
 		if d > 0 then
 			table.insert(notes, { Format.fill(W.wearUp, { n = Format.short(d) }), "accent" })
 		elseif d < 0 then

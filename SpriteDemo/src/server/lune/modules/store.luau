@@ -16,7 +16,7 @@ local function studio(): boolean
 end
 
 local NAME = { account = "LuneAccount_v1", names = "LuneNames_v1", old = "LuneHero_v1", rankInfo = "LuneRankInfo_v1", market = "LuneMarket_v2", world = "LuneWorld_v1" } -- world = 세계의 기록(만렙 최초 달성 — 2026-10-24)
-local RANK = { level = "LuneRankLevel_v1", power = "LuneRankPower_v1", robux = "LuneRankRobux_v1" } -- 순위판(OrderedDataStore): 열쇠 → 점수
+local RANK = { level = "LuneRankLevel_v1", power = "LuneRankPower_v1", robux = "LuneRankRobux_v1", macro = "LuneRankMacro_v1" } -- 순위판(OrderedDataStore): 열쇠 → 점수 · macro = 매크로 종합 점수(열쇠 UserId — 2026-11-09 관리 창 「위험 순위」)
 local RETRIES = 3
 local WAIT = 1
 
@@ -266,7 +266,10 @@ end
 --  판마다 OrderedDataStore 하나(열쇠 → 점수). 이름 · 직업은 따로(rankInfo — 열쇠 → { name, class }).
 --  memoryOnly = 저장소에 쓰지 않고 이 서버의 메모리에만 둔다(확인용 임시 계정 — Studio에서 판을 볼 때만 쓰인다). 읽을 때는 저장소의 것과 메모리의 것을 합친다.
 local ranks = {} -- [판] = OrderedDataStore
-local rankMemory = { level = {}, power = {}, robux = {} } -- [판][열쇠] = 점수(메모리에만 있는 것 · 저장소를 못 쓸 때의 것)
+local rankMemory = {} -- [판][열쇠] = 점수(메모리에만 있는 것 · 저장소를 못 쓸 때의 것)
+for board in RANK do -- 판마다 빈 칸을 RANK에서 만든다(2026-11-09 — 전에는 손으로 적은 level · power · robux뿐이라 새 판 macro에서 rankRemove가 nil을 건드려 서버 tick이 멈췄다)
+	rankMemory[board] = {}
+end
 local infoMemory = {} -- [열쇠] = { name, class }
 -- 읽어 둔 이름은 10~15분 뒤에 다시 읽는다(2026-10-26 사용자: "지금 랭킹 한국어 류빌로 나오잖아 닉네임은 Ryuville인데" — 전에는 서버가 닫힐 때까지 처음 읽은 이름을 썼다:
 --  다른 서버에서 이름을 바꾸면(이름 바꾸기 주문서 · 운영자가 고친 이름) 이 서버의 순위판에는 옛 이름이 남았다). 다시 읽는 때를 열쇠마다 흩어 한꺼번에 읽지 않게

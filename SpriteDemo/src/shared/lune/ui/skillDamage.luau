@@ -118,7 +118,12 @@ function SkillDamage.castText(id: string, lv: number): string?
 	if not c then
 		return nil
 	end
-	return withTime(Format.fill(WORDS[c.kind], { pct = round(c.pct), n = c.n }), c.time)
+	local text = Format.fill(WORDS[c.kind], { pct = round(c.pct), n = c.n })
+	local def = COMBAT.cast[id]
+	if def.mob and WORDS.mob then -- 보스가 아닌 적에게 곱하는 수(백귀야행 — 2026-11-09 공방 combat.js CAST의 mob · 서버 sim/caster.luau Caster:strike)
+		text ..= Format.fill(WORDS.mob, { x = def.mob })
+	end
+	return withTime(text, c.time)
 end
 
 -- 스킬 창이 그 레벨에 적는 글: 공방이 실어 보낸 효과 글(사출기 · 장치 · 패시브 · 버프 · 1차 공격 스킬의 % 피해)이 있으면 그것, 없으면 2~4차의 쓰는 스킬의 % 피해. 적을 것이 없으면 nil

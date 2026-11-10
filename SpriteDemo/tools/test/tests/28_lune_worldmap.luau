@@ -16,15 +16,15 @@ local N = req("ReplicatedStorage/shared/lune/config/numbers")
 pixelText.Register("small", KIT.font.small, {})
 
 -- ---- 1) 자료의 꼴 ----
-eq(#D.order, 6, "지역 넷과 은달 항구 · 물마루 바다")
-eq(table.concat(D.order, " "), "r1 city r2 r3 r4 sea", "탭의 차례: 초승 고개 → 은달 항구 → 수정 숲 → 땅속 화롯골 → 만월성 → 물마루 바다")
+eq(#D.order, 7, "지역 다섯(2026-11-07 윤슬 호수)과 은달 항구 · 물마루 바다")
+eq(table.concat(D.order, " "), "r1 city r2 r3 r4 sea r5", "탭의 차례: 초승 고개 → 은달 항구 → 수정 숲 → 땅속 화롯골 → 만월성 → 물마루 바다 → 윤슬 호수")
 for _, rid in D.order do
 	local region = D.regions[rid]
 	if rid == "city" then
 		-- 은달 항구 = 한 장의 큰 맵(2026-10-16 — 사용자 「한 장의 큰 도시」): 마디 하나, 길 없음
 		expect(region ~= nil and #region.nodes == 1 and region.nodes[1].id == "ct", "은달 항구는 마디 하나(한 장)")
 	else
-		expect(region ~= nil and #region.nodes >= 6 and #region.links >= #region.nodes - 1, "지역의 마디와 길 " .. rid)
+		expect(region ~= nil and #region.nodes >= (if rid == "r5" then 4 else 6) and #region.links >= #region.nodes - 1, "지역의 마디와 길 " .. rid) -- (r5 = 윤슬 호수 — 마을 · 사냥터 셋 · 달샘의 다섯 장 · 2026-11-07)
 	end
 	local ids = {}
 	for _, n in region.nodes do
@@ -365,7 +365,9 @@ do
 		for _, ex in WM.exits(rid) do
 			exits += 1
 			expect(WM.node(rid, ex.node) ~= nil and D.regions[ex.to] ~= nil and WM.node(ex.to, ex.toNode) ~= nil and ex.to ~= rid, "이어지는 곳의 값 " .. rid .. " " .. ex.node)
-			expect(has(ex.to, ex.toNode, rid), ("돌아오는 길도 있다 %s %s → %s"):format(rid, ex.node, ex.to))
+			if not D.regions[rid].closed then -- (아직 열지 않은 지역에서 나가는 길은 되돌아오는 출구가 없다 — 2026-11-10)
+				expect(has(ex.to, ex.toNode, rid), ("돌아오는 길도 있다 %s %s → %s"):format(rid, ex.node, ex.to))
+			end
 		end
 		-- 마디 아래의 줄들: 세 줄까지 · 줄마다 이름 칸(88점)에 들어간다
 		for _, n in D.regions[rid].nodes do

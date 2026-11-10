@@ -194,6 +194,7 @@ do
 		myPet = function() return "pet_silver" end,
 		myRide = function() return nil end,
 		togglePet = function(id) table.insert(calls, { "pet", id }) end,
+		petOne = function(id, add) table.insert(calls, { if add then "petAdd" else "petOff", id }) end,
 		toggleRide = function(id) table.insert(calls, { "ride", id }) end,
 		cashProduct = function(id) return { name = "이름 " .. id, line = "설명" } end,
 	}, { __index = ctx })
@@ -238,5 +239,56 @@ do
 	-- 끌기: 퀵슬롯에 놓을 이름표
 	cells[3].began({ UserInputType = Enum.UserInputType.MouseButton1, Position = Vector2.new(5, 5) })
 	eq(presses[#presses] and presses[#presses].what, "mount_wolf", "끌면 퀵슬롯에 그 탈것의 이름표")
+	-- 같은 것을 여럿 가졌다(2026-11-10 뽑기의 「하나 더」): 칸에 가진 수 · 펫은 「더 꺼내기」 · 「하나 넣기」(하나씩) · 다른 것은 그대로
+	cashView = { pets = { "pet_silver", "pet_scarf" }, mounts = { "mount_wolf" }, petsOut = { "pet_silver", "pet_silver" }, petOut = "pet_silver", mount = "mount_wolf", extra = { pet_silver = 1, mount_wolf = 2 } }
+	cctx.myPets = function() return cashView.petsOut end
+	bview.refresh()
+	expect(cells[1].item and cells[1].item.n == 2 and cells[1].item.out == 2 and cells[1].item.on == true, "은빛 달토끼 = 가진 수 2 · 둘 다 꺼냄")
+	eq(cells[2].item and cells[2].item.n, 1, "목도리 달토끼 = 하나")
+	eq(cells[3].item and cells[3].item.n, 3, "달빛 늑대 = 셋")
+	cells[1].onClick(cells[1].item)
+	bview.refresh()
+	local sp = shown.spec
+	expect(sp and sp.buttons[1].text == BMW.petMore and sp.buttons[1].off == true, "둘 다 꺼냈으면 「더 꺼내기」는 꺼짐")
+	expect(sp and sp.buttons[2].text == BMW.petLess and not sp.buttons[2].off, "「하나 넣기」")
+	expect(sp and sp.buttons[3] ~= nil and #sp.buttons == 3, "「퀵슬롯」까지 셋")
+	expect(sp and string.find(sp.info.sub, "2", 1, true) ~= nil, "부제에 가진 수 " .. tostring(sp and sp.info.sub))
+	sp.buttons[2].onClick()
+	expect(calls[#calls][1] == "petOff" and calls[#calls][2] == "pet_silver", "「하나 넣기」 → 하나만")
+	cashView.petsOut = { "pet_silver" }
+	bview.refresh()
+	sp = shown.spec
+	expect(sp and sp.buttons[1].text == BMW.petMore and not sp.buttons[1].off, "하나 꺼냈으면 「더 꺼내기」가 켜진다")
+	sp.buttons[1].onClick()
+	expect(calls[#calls][1] == "petAdd" and calls[#calls][2] == "pet_silver", "「더 꺼내기」 → 하나 더")
+	cashView.petsOut = {}
+	bview.refresh()
+	eq(shown.spec and shown.spec.buttons[1].text, BMW.petOn, "하나도 안 꺼냈으면 「꺼내기」")
+	cells[3].onClick(cells[3].item)
+	bview.refresh()
+	eq(shown.spec and shown.spec.buttons[1].text, BMW.rideOn, "탈것은 수가 많아도 「타기」 그대로")
+	cctx.myPets = nil
+	-- 한 화면(24칸)을 넘게 가지면(2026-11-10 사용자 "캐시칸이 적어서 그냥 템 증발해버리는데" — 전에는 스물다섯 번째부터 그려지지 않았다): 칸을 더 만들고 밀어서 본다
+	local many = {}
+	for i = 1, 31 do
+		table.insert(many, "dskin_" .. i)
+	end
+	cashView = { pets = { "pet_silver", "pet_scarf" }, mounts = { "mount_wolf" }, petOut = "pet_silver", mount = "mount_wolf", dskins = many, dskin = "dskin_1" }
+	bview.refresh()
+	local G = scrolls[#scrolls]
+	local shownN, last = 0, nil
+	for _, c in cells do
+		if c.frame.Visible and c.item then
+			shownN += 1
+			last = c.item
+		end
+	end
+	eq(shownN, 34, "가진 것 서른넷이 모두 칸에 있다(펫 둘 · 탈것 하나 · 데미지 스킨 서른하나)")
+	expect(last and last.ride == "dskin_31", "마지막 칸 = 서른한 번째 데미지 스킨")
+	expect(G.ScrollingEnabled == true and G.ScrollBarThickness > 0, "한 화면을 넘으면 밀 수 있다")
+	eq(G.CanvasSize.Y.Offset, math.ceil(34 / BAG.cols) * 40, "밀기 속 = 가진 것의 줄 수")
+	cashView = { pets = { "pet_silver" }, mounts = {} }
+	bview.refresh()
+	expect(G.ScrollingEnabled == false and G.ScrollBarThickness == 0, "적게 가지면 밀기가 꺼진다")
 	bview.destroy()
 end

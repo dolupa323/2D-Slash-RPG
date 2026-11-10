@@ -326,3 +326,54 @@ do
 	expect(disk[5400] ~= nil and disk[5400].keep == "진짜 계정", "나가며 저장된 것을 덮어쓰지 않는다")
 	failRead[5400] = nil
 end
+
+-- ---- 키 설정은 계정의 것(2026-11-07 사용자: "지금 키세팅을 캐릭터별로 해줘야하는 불편함이있어") ----
+--  한 계정의 캐릭터 둘: A에서 바꾼 키 = B에서도 · B에서 다시 바꾸면 A도 · 다시 접속해도(저장소를 거쳐) 같다 · 퀵슬롯에 놓은 것은 캐릭터마다 그대로
+--  예전 저장(계정에 키가 없다): 먼저 들어간 캐릭터가 바꿔 둔 키를 계정의 것으로 삼는다
+do
+	local p = { UserId = 5300, Name = "키공유", attrs = {}, SetAttribute = function(self, k, v) self.attrs[k] = v end }
+	handlers.Ready(p)
+	local a = handlers.Chars(p, "create", "공유하나", "riven")
+	local b = handlers.Chars(p, "create", "공유둘", "axion")
+	expect(a and a.ok and b and b.ok, "한 계정에 캐릭터 둘")
+	handlers.Chars(p, "enter", a.id)
+	local keysA = { ["slot:1"] = "T", jump = "X", ["win:bag"] = "B" }
+	handlers.Keys(p, keysA)
+	local slotsA = table.clone(World.session(p).hero.slots)
+	handlers.Chars(p, "leave")
+	local got = handlers.Chars(p, "enter", b.id)
+	expect(got ~= nil and same(got.self.keys, keysA), "A에서 바꾼 키가 B에도 — " .. show(got and got.self.keys or {}))
+	expect(not same(got.self.slots, slotsA), "퀵슬롯에 놓은 것은 캐릭터마다(직업이 다르다)")
+	local keysB = { ["slot:2"] = "G", pickup = "C" }
+	handlers.Keys(p, keysB)
+	handlers.Chars(p, "leave")
+	got = handlers.Chars(p, "enter", a.id)
+	expect(got ~= nil and same(got.self.keys, keysB), "B에서 다시 바꾸면 A도 그 키 — " .. show(got and got.self.keys or {}))
+	-- 다시 접속(저장소를 거친다)
+	World.removePlayer(p)
+	handlers.Ready(p)
+	got = handlers.Chars(p, "enter", b.id)
+	expect(got ~= nil and same(got.self.keys, keysB), "다시 접속해도 계정의 키 — " .. show(got and got.self.keys or {}))
+	-- 「기본으로」(바꾼 것 없음 = 빈 표)도 계정의 것
+	handlers.Keys(p, {})
+	handlers.Chars(p, "leave")
+	got = handlers.Chars(p, "enter", a.id)
+	expect(got ~= nil and next(got.self.keys) == nil, "「기본으로」를 누르면 다른 캐릭터도 기본 키")
+	World.removePlayer(p)
+	-- 예전 저장: 계정에 키가 없고, 캐릭터 A의 저장에만 바꾼 키가 있다
+	local saved = disk[p.UserId]
+	expect(saved ~= nil, "(저장소에 계정이 있다)")
+	if saved then
+		saved.keys = nil
+		for _, c in saved.chars do
+			c.hero.keys = if c.id == a.id then { ["slot:5"] = "Q", jump = "Z" } else {}
+		end
+		handlers.Ready(p)
+		got = handlers.Chars(p, "enter", a.id)
+		expect(got ~= nil and same(got.self.keys, { ["slot:5"] = "Q", jump = "Z" }), "예전 저장: A는 제가 바꿔 둔 키 그대로")
+		handlers.Chars(p, "leave")
+		got = handlers.Chars(p, "enter", b.id)
+		expect(got ~= nil and same(got.self.keys, { ["slot:5"] = "Q", jump = "Z" }), "예전 저장: A의 키가 계정의 것이 되어 B에도 — " .. show(got and got.self.keys or {}))
+		World.removePlayer(p)
+	end
+end

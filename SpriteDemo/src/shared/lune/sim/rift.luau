@@ -84,7 +84,7 @@ function Rift.use(r, now: number): boolean
 	return true
 end
 function Rift.pack(r)
-	return { day = r.day, used = r.used, clears = r.clears, dungeon = table.clone(r.dungeon or {}), week = Weekly.clean(r.week) }
+	return { day = r.day, used = r.used, clears = r.clears, dungeon = table.clone(r.dungeon or {}), week = Weekly.clean(r.week), prac = Weekly.cleanPractice(r.prac) } -- prac = 오늘 쓴 보스 연습(2026-11-10)
 end
 function Rift.unpack(data: any)
 	local r = Rift.new()
@@ -100,6 +100,7 @@ function Rift.unpack(data: any)
 			end
 		end
 		r.week = Weekly.clean(data.week) -- 주간 보스(2026-10-24 — 그 전의 저장 = 이번 주 아직 안 함)
+		r.prac = Weekly.cleanPractice(data.prac) -- 보스 연습(2026-11-10 — 그 전의 저장 = 오늘 아직 안 함)
 	end
 	return r
 end

@@ -130,7 +130,9 @@ function Stage.init()
 		local okInset, inset = pcall(function()
 			return GuiService:GetGuiInset()
 		end)
+		local insetWas = Stage.insetTop
 		Stage.insetTop = if okInset then math.max(0, math.ceil((inset.Y - top) / us)) else 0
+		changed = changed or Stage.insetTop ~= insetWas -- (배율이 같아도 창의 높이가 바뀌어 Roblox 단추 띠가 덮는 높이가 바뀌면 다시 놓는다 — 달빛 상점의 윗줄: 2026-11-10)
 		if changed then
 			for _, fn in resized do
 				fn()

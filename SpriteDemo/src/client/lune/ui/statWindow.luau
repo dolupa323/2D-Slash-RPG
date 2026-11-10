@@ -20,6 +20,7 @@ local MARK = UI.statTip.marks
 local TIPCOLOR = { main = C.gold, sub = C.accent, none = C.dim, hp = C.text }
 
 local StatWindow = {}
+StatWindow.per = 1 -- 「한 번에」 찍는 점수(창을 닫았다 열어도 그대로 — 2026-11-10)
 
 function StatWindow.size(): (number, number)
 	return Layout.statBody(#STATS.order)
@@ -32,6 +33,15 @@ function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 	Ui.box(pointsDot, 1, 1, 4, 4, C.gold)
 	pointsDot.ZIndex = 9
 	pointsDot.Visible = false
+	-- 한 번에 찍는 점수(2026-11-10 사용자 "스텟 찍기 숫자 입력해서 몇씩 찍을수 있게 해줘 지금 스텟 초기화하고나서 +버튼을 엄청많이 눌러서 찍어야하는 불편함이 있어"):
+	--  맨 윗줄 오른쪽 「한 번에 [n]」 — +를 누르면 n점(남은 점수보다 크면 남은 만큼 · 서버 Hero.addStat이 n점을 한 번에). 자리는 공방 design/ui.js UILAYOUT.stat.per(제가 정한 것)
+	local PER = S.per
+	Ui.text(body, UI.skillWords.per, w - PER.w - 4 - PER.label, 2, PER.label, { align = "right", color = C.dim })
+	local per = Ui.numberField(body, w - PER.w, -3, PER.w, PER.h, StatWindow.per, function(n)
+		StatWindow.per = n
+	end)
+	per.box.Parent.Name = "Per"
+	StatWindow.perField = per
 	local rows = {}
 	local last = nil -- 마지막으로 받은 내 상태
 	local tip = nil -- 떠 있는 설명 판 { frame, id }
@@ -92,7 +102,9 @@ function StatWindow.build(body: Frame, ctx, w: number, _h: number)
 		local tag = Ui.text(body, "", S.tagX, ty + 1, 30, { color = C.accent })
 		local value = Ui.text(body, "", S.tagX + 32, ty, w - S.tagX - 32 - S.valueRight, { font = "body", align = "right" })
 		local plus = Ui.button(body, "+", w - S.plusW, y, S.plusW, function()
-			ctx.send("StatAdd", id, 1)
+			local n = per.get()
+			StatWindow.per = n
+			ctx.send("StatAdd", id, math.clamp(n, 1, math.max(1, if last then last.ap else n))) -- (「한 번에」의 점수 — 남은 것보다 크면 남은 만큼)
 		end)
 		-- 줄에 마우스를 올리면 설명이 뜨고, 벗어나면 사라진다. 터치는 줄을 누르면 뜨고 한 번 더 누르면 사라진다
 		local over = Instance.new("TextButton")

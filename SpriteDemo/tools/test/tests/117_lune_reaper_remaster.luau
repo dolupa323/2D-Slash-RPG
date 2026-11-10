@@ -47,9 +47,9 @@ do
 	local room, h = arena({ rp_reap = 10, rp_parade = 10, rp_soul = 10, rp_awaken = 15 })
 	h.job = 4
 	expect(not Kit.noCd(h, COMBAT.cast.rp_parade.type), "사신화가 아니면 백귀야행의 다시 쓰기(12초)가 있다")
-	h.kit.gauge = COMBAT.kit.reaper.core.gauge.max
+	h.kit.gauge = Kit.gaugeMax(h)
 	expect(Buffs.cast(h, "rp_form", 0) ~= nil, "게이지가 가득 → 사신화")
-	expect(Kit.noCd(h, COMBAT.cast.rp_parade.type) and Kit.noCd(h, COMBAT.cast.rp_reap.type), "사신화 동안 백귀야행 · 영혼 수확의 다시 쓰기가 없다")
+	expect(Kit.noCd(h, COMBAT.cast.rp_parade.type) and Kit.noCd(h, COMBAT.cast.rp_reap.type), "사신화 동안 백귀야행 · 영혼 수확의 다시 쓰기가 없다 — 어디서나(2026-11-10 — 보스 방 · 레이드 · 스토리 · 던전도)")
 	expect(math.abs(h.buffs.rp_form.t - (COMBAT.kit.reaper.core.form.dur[4] + 5)) < 1e-6, "4차 15초 + 사신 각성 5초")
 	room.time += 1
 end

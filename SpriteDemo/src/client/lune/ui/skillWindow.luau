@@ -24,6 +24,7 @@ local TYPES = CLASSES.types
 local SQ = UI.skillWords.seq -- 시퀀스(2026-10-30 — 설명 칸 오른쪽 위의 「시퀀스」 단추로 시퀀스 창을 연다)
 
 local SkillWindow = { wide = true }
+SkillWindow.per = 1 -- 「한 번에」 올리는 레벨(창을 닫았다 열어도 그대로 — 2026-11-10)
 
 function SkillWindow.size(): (number, number)
 	local w, h = Layout.skillBody()
@@ -71,7 +72,17 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 	local view = {}
 
 	local points = Ui.text(body, "", listW - 160, 2, 160, { color = C.gold, align = "right" })
-	local info = Ui.text(body, "", 0, S.infoY + 6, listW - S.autoW - 8, {})
+	-- 한 번에 올리는 레벨(2026-11-10 사용자 "스킬포인트도 마찬가지 한번에 숫자입력해서 그값만큼 찍을수있게"): 「추천대로 찍기」 왼쪽 「한 번에 [n]」 — +를 누르면 n레벨
+	--  (서버가 한 레벨씩 올리다 그 차수의 포인트 · 마스터 · 먼저 배울 스킬에서 멈춘다). 자리는 공방 design/ui.js UILAYOUT.skill.per(제가 정한 것)
+	local PER = S.per
+	local perX = listW - S.autoW - 8 - PER.w
+	Ui.text(body, WORDS.per, perX - 4 - PER.label, S.infoY + 6, PER.label, { align = "right", color = C.dim })
+	local per = Ui.numberField(body, perX, S.infoY + 1, PER.w, PER.h, SkillWindow.per, function(n)
+		SkillWindow.per = n
+	end)
+	per.box.Parent.Name = "Per"
+	SkillWindow.perField = per
+	local info = Ui.text(body, "", 0, S.infoY + 6, perX - 4 - PER.label - 8, {})
 	local auto = Ui.button(body, WORDS.auto, listW - S.autoW, S.infoY, S.autoW, function()
 		ctx.send("SkillAuto")
 	end, { main = true, h = 22, font = "small" })
@@ -132,7 +143,9 @@ function SkillWindow.build(body: Frame, ctx, _w: number, h: number)
 			local sk = tiers and tiers[tab].skills[i]
 			if sk then
 				selected = i
-				ctx.send("SkillUp", sk.id)
+				local n = per.get()
+				SkillWindow.per = n
+				ctx.send("SkillUp", sk.id, n) -- (「한 번에」의 레벨 — 서버가 포인트 · 마스터에서 멈춘다)
 				view.paint()
 			end
 		end)

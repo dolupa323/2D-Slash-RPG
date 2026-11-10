@@ -150,8 +150,8 @@ local function dropKeys(only: ((Enum.KeyCode) -> boolean)?)
 	end
 end
 
--- Roblox 채팅의 입력줄에 글을 치는 중인가(boot가 chat.luau의 Chat.focused를 넣는다). 그 입력줄은 Roblox의 화면이라 GetFocusedTextBox로는 보이지 않는다 —
---  이것을 보지 않으면 채팅에 친 글자(Q · W · A …)가 스킬로 나간다(2026-10-13: 채팅을 Roblox의 기본 채팅으로 바꿨다. Enter로 열던 우리 채팅 판은 없다)
+-- 채팅의 적는 칸에 글을 치는 중인가(boot가 chat.luau의 Chat.focused · 수량 창을 넣는다). 우리 채팅 창(2026-11-06)의 칸은 GetFocusedTextBox로도 보이지만,
+--  2026-10-13 ~ 11-06의 Roblox 입력줄은 보이지 않아 따로 물었다 — 그대로 둔다(채팅에 친 글자 Q · W · A …가 스킬로 나가지 않게)
 Input.typing = nil :: (() -> boolean)?
 Input.paused = false -- 캐릭터 고르기 화면에 가 있는 동안에는 게임의 키를 받지 않는다(boot.luau의 toSelect)
 
@@ -163,7 +163,8 @@ function Input.init()
 		end
 		if captureFn then
 			-- 키 설정 중: 이 키를 새 키로 넘긴다(Esc와 알 수 없는 키는 받지 않는다)
-			if input.KeyCode ~= Enum.KeyCode.Escape and input.KeyCode ~= Enum.KeyCode.Unknown then
+			-- Enter는 채팅의 키라 받지 않는다(2026-11-06 — 우리 채팅 창: Enter = 적는 칸으로)
+			if input.KeyCode ~= Enum.KeyCode.Escape and input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode ~= Enum.KeyCode.Return and input.KeyCode ~= Enum.KeyCode.KeypadEnter then
 				local fn = captureFn
 				captureFn = nil
 				fn(input.KeyCode)

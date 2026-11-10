@@ -281,11 +281,13 @@ function Effects:addDrop(d)
 		frame.Visible = false
 	end
 	-- 달돈은 빙글 돈다(spin — 부품 dropCoin1~4를 차례로: 앞 → 비스듬히 → 옆 → 비스듬히). 주화라는 것이 한눈에 보인다
-	self.drops[d.id] = { frame = frame, x = d.x, y = d.y, w = w, h = h, amount = d.amount, kind = d.kind, item = d.item, name = d.name, phase = d.id * 0.7, pop = pop, nopet = d.nopet == true, spin = d.kind ~= "dust" and d.kind ~= "gear" and d.kind ~= "quest" and d.kind ~= "goods" }
+	-- born = 땅에 놓인 때(화면의 시계 state.now — 튀어나오는 것은 다 떨어진 뒤): 빨아들이는 펫은 그만큼(ride.js suck.wait) 지난 것만 줍는다(2026-11-10 사용자 "성능좋은 희귀 펫들 빨아들이는게 그냥 아이템 나오자마자 띡띡 없어져서 체감 자체가 안되잖아 드롭이 되면 기다렸다가 먹는다는 느낌이 있어야지 피드백적으로")
+	local born = (self.now or 0) + (if pop then pop.delay + pop.dur else 0.35)
+	self.drops[d.id] = { frame = frame, x = d.x, y = d.y, w = w, h = h, amount = d.amount, kind = d.kind, item = d.item, name = d.name, phase = d.id * 0.7, pop = pop, nopet = d.nopet == true, born = born, spin = d.kind ~= "dust" and d.kind ~= "gear" and d.kind ~= "quest" and d.kind ~= "goods" }
 end
 
 -- 펫이 주웠다: 그것이 (x, y)로 빨려 든다(2026-10-21 사용자 "펫의 줍기판정이 살짝 자석처럼 되어야합니다" — 그림만. 줍는 것은 서버)
-Effects.PULL = 0.15
+Effects.PULL = 0.3 -- (0.15 → 0.3초: 펫에게 날아가는 것이 보이게 — 2026-11-10)
 function Effects:pull(id: number, x: number, y: number)
 	local d = self.drops[id]
 	if d then
@@ -315,6 +317,7 @@ function Effects:dropNear(x: number, y: number, reach: number): number?
 end
 
 function Effects:update(now: number, dt: number)
+	self.now = now -- (떨어진 것의 born — 화면의 시계)
 	for i = #self.floats, 1, -1 do
 		local f = self.floats[i]
 		f.t += dt
@@ -441,7 +444,8 @@ function Effects:update(now: number, dt: number)
 				d.pull = nil -- 서버가 주지 않았다(남의 것 · 가방이 가득): 제자리로
 			else
 				local k = math.min(1, d.pull.t / Effects.PULL)
-				dx, dy, bob = d.x + (d.pull.x - d.x) * k, d.y + (d.pull.y - d.y) * k, 0
+				k = k * k -- 처음엔 천천히 떠올랐다가 빨려 든다(2026-11-10)
+				dx, dy, bob = d.x + (d.pull.x - d.x) * k, d.y + (d.pull.y - d.y) * k - 10 * math.sin(math.pi * k), 0
 			end
 		end
 		d.frame.Position = UDim2.fromOffset(math.floor(dx - d.w / 2 + 0.5), math.floor(dy - d.h - 2 + bob + 0.5))

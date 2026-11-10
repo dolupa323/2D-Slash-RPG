@@ -101,7 +101,7 @@ end
 expect(npcIn("ct_smith", "citysmith") and npcIn("ct_storage", "citykeeper") and npcIn("ct_auction", "auctioneer") and npcIn("ct_office", "clerk") and npcIn("ct_office", "warden"), "그 사람은 제 건물 안에")
 -- 배
 expect(V.time >= 5 and V.time <= 20, "바다를 건너는 시간 10초쯤(사용자 2026-10-16 \"배타는 시간 더 짧게 10초정도\") — " .. V.time)
-eq(#V.routes, 6, "탈것 여섯(마을 ↔ 항구 배 · 항구 ↔ 물마루 마을 배 · 항구 ↔ 등불 포구 비행선)")
+eq(#V.routes, 8, "탈것 여덟(마을 ↔ 항구 배 · 항구 ↔ 물마루 마을 배 · 항구 ↔ 등불 포구 비행선 · 옛 근위대 숙소 ↔ 물별 마을 별고래 — 2026-11-07)")
 for _, r in V.routes do
 	local ship = SCENES.scenes[r.ship]
 	expect(ship ~= nil and ship.ship == true and #ship.portals == 0, "갑판(문이 없다) " .. r.ship)

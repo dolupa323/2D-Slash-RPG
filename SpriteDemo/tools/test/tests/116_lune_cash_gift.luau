@@ -227,3 +227,308 @@ c.gift, c.lock = { k = "bagx", uid = 7, to = "가", at = NOW }, true
 local back = Cash.unpack(Cash.pack(c))
 expect(back.gift and back.gift.k == "bagx" and back.gift.uid == 7 and back.gift.to == "가" and back.lock == true, "저장했다가 읽어도 그대로")
 expect(Cash.unpack(Cash.pack(Cash.new())).gift == false, "없으면 false")
+
+-- ⑩ 겹침 보상(2026-11-10 사용자: "이미 샀는데 증발된사람들한테 소급적용 해줘야해 … 돈관련된건 철저하게해야해"):
+--  운영자가 보낸 "dupfix:<상자>:<횟수>"가 선물 상자 → 접속하지 않은 사람도 들어오면 계정에(남은 횟수) · 같은 것은 한 번 · 그 상자에서 나오는 가진 것에만 쓴다 · 결제의 기록에 남는다
+local fx = { player = { UserId = 204 }, acct = account(204, "겹친이"), loaded = true, name = "겹친이" }
+data["acct_204"] = Account.pack(fx.acct)
+eq(Cash.dupfixKey("petbox", 2), "dupfix:petbox:2", "보내는 이름표")
+expect(Cash.dupfixOf("dupfix:nobox:1") == nil and Cash.dupfixOf("dupfix:petbox:0") == nil and Cash.dupfixOf("dupfix:petbox:100") == nil, "없는 상자 · 이상한 횟수는 받지 않는다")
+Store.bmGiftAdd(204, { k = Cash.dupfixKey("petbox", 2), rid = "fixA", from = "운영자", to = "겹친이", at = NOW })
+sessions[204] = fx
+table.clear(events)
+CashServer.giftTick(fx)
+local function boxN(c, id)
+	for _, e in c.box do
+		if e.id == id then
+			return e.n
+		end
+	end
+	return 0
+end
+eq(boxN(fx.acct.bm, "bm_pick_petbox"), 2, "들어오면 보관함에 펫 선택 상자 2개(2026-11-10 상자 판매 바로잡기부터 — 그 전에는 고르는 표)")
+eq(#boxOf(204), 0, "선물 상자에서는 지웠다")
+expect(events[1] and events[1][1] == "got" and events[1][3] == "dupfix:petbox:2", "받은 사람에게 알림(그 이름표)")
+local logged = fx.acct.bm.log[#fx.acct.bm.log]
+expect(logged and logged.k == "dupfix:petbox:2" and logged.r == "gfixA", "결제의 기록에 남는다")
+expect(not Cash.grant(fx.acct, "dupfix:petbox:2", "gfixA", NOW, Account.MAX), "같은 것은 두 번 받지 않는다")
+eq(boxN(fx.acct.bm, "bm_pick_petbox"), 2, "그대로 2개")
+fx.acct.bm.dupfix.petbox = 2 -- (그 전에 받아 둔 고르는 표 — 쓰는 길은 남아 있다)
+-- 쓰기: 그 상자에서 나오는 가진 것만
+local r0, w0 = Cash.dupfixUse(fx.acct, "pet_silver")
+expect(r0 == nil and w0 == Cash.DUPFIX_NONE, "가지지 않은 것에는 못 쓴다")
+fx.acct.bm.pets.pet_silver = true
+fx.acct.bm.mounts.mount_wolf = true
+local r1 = Cash.dupfixUse(fx.acct, "mount_wolf")
+expect(r1 == nil, "그 상자에서 나오지 않는 것(지금의 탈것 — 탈것 상자에 없다)에는 못 쓴다")
+local r2, n2 = Cash.dupfixUse(fx.acct, "pet_silver")
+expect(r2 == true and n2 == 2, "은빛 달토끼 하나 더 — 이제 2")
+eq(fx.acct.bm.dupfix.petbox, 1, "남은 1번")
+expect(Cash.dupfixUse(fx.acct, "pet_silver"), "한 번 더")
+eq(fx.acct.bm.dupfix.petbox, nil, "다 쓰면 지운다")
+eq(Cash.count(fx.acct.bm, "pet_silver"), 3, "은빛 달토끼 3")
+expect(Cash.dupfixUse(fx.acct, "pet_silver") == nil, "남은 것이 없으면 못 쓴다")
+-- 저장 꼴: 남은 횟수 · 기록
+fx.acct.bm.dupfix.mountbox = 3
+local backFix = Cash.unpack(Cash.pack(fx.acct.bm), Account.MAX)
+eq(backFix.dupfix.mountbox, 3, "저장 → 읽기: 남은 횟수")
+eq(#backFix.log, #fx.acct.bm.log, "저장 → 읽기: 기록")
+local view = Cash.view(fx.acct, NOW)
+eq(view.dupfix and view.dupfix.mountbox, 3, "상점 상태에 남은 횟수(가방 캐시 탭의 단추)")
+local bad = Cash.pack(fx.acct.bm)
+bad.dupfix = { nobox = 2, petbox = -1, mountbox = 1.5 }
+local backBad = Cash.unpack(bad, Account.MAX)
+expect(next(backBad.dupfix) == nil, "없는 상자 · 이상한 수는 버린다")
+-- 산 것도 기록에: 상자를 사면 나온 것까지
+local buyer = account(205, "산이")
+expect(Cash.grant(buyer, "petbox", "buy1", NOW, Account.MAX), "펫 상자를 샀다")
+local lb = buyer.bm.log[#buyer.bm.log]
+expect(lb and lb.r == "buy1" and lb.k == "petbox" and typeof(lb.g) == "string" and lb.t == NOW, "기록 = 결제 번호 · 상품 · 때 · 나온 것 " .. tostring(lb and lb.g))
+expect(Cash.grant(buyer, "bagx", "buy2", NOW, Account.MAX) and buyer.bm.log[#buyer.bm.log].g == nil, "뽑기가 아닌 것은 나온 것 없이")
+
+-- ⑪ 겹침의 자동 보상(2026-11-10 사용자: "그사람이 가지고있는 캐시템이랑 산 상자를 비교하면 얼마나 사라졌는지 알수있는거아니야? 정확히 파악해야"):
+--  사라진 수 = 산 수(로블록스 판매 기록) − 그 상자의 것을 가진 수(따로 산 달토끼 뺌) · 이미 준 수는 빼고 · 새 서버의 결제(기록)는 따로
+local UPTO = 1794322062
+local a1 = Account.new()
+for _, id in { "dsk_mint", "dsk_blossom", "dsk_frost", "dsk_ember", "dsk_moon", "dsk_starry", "dsk_royal", "dsk_aurora" } do
+	a1.bm.dskins[id] = true -- 데미지 스킨 상자의 여덟을 모두 가졌다
+end
+a1.bm.ntags.ntag_wave = true
+a1.bm.ntags.ntag_sprout = true -- (두 종류 — 어느 것이 겹쳤는지 모른다 → 선택상자)
+local dry = Cash.dupfixAuto(a1.bm, { dmgskin = 18, tagskin = 4 }, UPTO, NOW, true)
+eq(#dry, 2, "산 상자 둘의 줄")
+local byBox = {}
+for _, r in dry do
+	byBox[r.box] = r
+end
+expect(byBox.dmgskin.bought == 18 and byBox.dmgskin.owned == 8 and byBox.dmgskin.lost == 10 and byBox.dmgskin.add == 10, "데미지 스킨 상자 18개 · 여덟 가짐 → 10개 사라짐")
+expect(byBox.tagskin.lost == 2 and byBox.tagskin.add == 2, "이름표 테두리 상자 4개 · 둘 가짐 → 2개")
+expect(next(a1.bm.dupfix) == nil, "셈만(조회)은 계정을 바꾸지 않는다")
+Cash.dupfixAuto(a1.bm, { dmgskin = 18, tagskin = 4 }, UPTO, NOW)
+expect(a1.bm.dupfix.dmgskin == 10 and a1.bm.dupfix.tagskin == 2, "겹침 보상(선택상자) 10 · 2번")
+expect(a1.bm.fixGiven.dmgskin == 10 and a1.bm.fixGiven.tagskin == 2, "준 수를 적는다")
+local again = Cash.dupfixAuto(a1.bm, { dmgskin = 18, tagskin = 4 }, UPTO, NOW)
+expect(again[1].add == 0 and again[2].add == 0 and a1.bm.dupfix.dmgskin == 10, "다시 셈해도 두 번 주지 않는다")
+Cash.dupfixAuto(a1.bm, { dmgskin = 20, tagskin = 4 }, UPTO, NOW)
+eq(a1.bm.dupfix.dmgskin, 12, "판매 기록을 다시 받아 2개 늘면 모자란 2번만 더")
+local autoLog = 0
+for _, e in a1.bm.log do
+	if string.sub(e.r, 1, 4) == "auto" then
+		autoLog += 1
+	end
+end
+eq(autoLog, 3, "자동 보상도 결제의 기록에(10 · 2 · 2)")
+-- 펫 상자: 따로 산 달토끼는 상자에서 나온 것으로 세지 않는다
+local a2 = Account.new()
+a2.bm.pets.pet_lantern = true -- 옛 상점에서 산 것
+a2.bm.pets.pet_bud = true -- 상자에서 나온 것
+local pr = Cash.dupfixAuto(a2.bm, { petbox = 3, direct = { "pet_lantern" } }, UPTO, NOW)[1]
+expect(pr.owned == 1 and pr.lost == 2, "펫 상자 3개 · 상자에서 나온 것 하나 → 2개 사라짐(초롱 달토끼는 따로 산 것)")
+-- 새 서버의 결제: 기록 받은 뒤(upTo 뒤) 새것이 나온 것은 가진 수에서 뺀다 · upTo까지 새 서버에서 산 것은 산 수에서 뺀다(그때는 겹쳐도 하나 더)
+local a3 = Account.new()
+a3.bm.mounts.mount_jelly = true
+a3.bm.mounts.mount_whale = true -- 기록 받은 뒤 새 서버에서 산 상자에서 나왔다
+a3.bm.log = { { r = "n1", k = "mountbox", t = UPTO + 60, g = "mount_whale" } }
+local mr = Cash.dupfixAuto(a3.bm, { mountbox = 2 }, UPTO, NOW, true)[1]
+expect(mr.owned == 1 and mr.lost == 1, "기록 뒤에 새로 얻은 것은 빼고 센다(2개 · 하나 가짐 → 1개)")
+a3.bm.log = { { r = "n0", k = "mountbox", t = UPTO - 60, g = "mount_jelly", n = 2 } }
+local mr2 = Cash.dupfixAuto(a3.bm, { mountbox = 2 }, UPTO, NOW, true)[1]
+expect(mr2.bought == 1 and mr2.lost == 0, "기록 전에 새 서버에서 산 것(겹쳐도 하나 더 받음)은 산 수에서 뺀다")
+expect(#Cash.dupfixAuto(a3.bm, nil, UPTO, NOW, true) == 0, "판매 기록이 없는 사람 = 없음")
+-- 저장 꼴: 준 수
+local backGiven = Cash.unpack(Cash.pack(a1.bm), Account.MAX)
+eq(backGiven.fixGiven.dmgskin, 12, "저장 → 읽기: 준 수")
+-- 서버: 들어온 사람마다 한 번 — 판매 기록에 있는 사람(Tuesday — modules/dupfixBuys.luau)이면 넣고 바로 저장 · 알림 / 저장에 실패하면 되돌리고 나중에
+local tu = { player = { UserId = 1275060964 }, acct = account(1275060964, "화요일"), loaded = true, name = "화요일" }
+tu.acct.bm.pets.pet_lantern = true
+tu.acct.bm.pets.pet_bud = true
+tu.acct.bm.mounts.mount_jelly = true
+tu.acct.bm.ntags.ntag_wave = true
+tu.acct.bm.ntags.ntag_lotus = true
+tu.acct.bm.bubbles.bub_wave = true
+tu.acct.bm.dskins.dsk_mint = true
+sessions[1275060964] = tu
+table.clear(events)
+saveOk = false
+CashServer.dupfixAuto(tu)
+expect(next(tu.acct.bm.dupfix) == nil and not tu.fixDone and #events == 0, "저장에 실패하면 넣지 않고 알리지 않는다")
+saveOk = true
+tu.fixNext = 0
+CashServer.dupfixAuto(tu)
+expect(tu.fixDone == true, "한 번 했다")
+eq(tu.acct.bm.dupfix.petbox, 2, "펫 상자 3 − 1(초롱 달토끼는 따로 산 것) = 2번(두 종류 → 선택상자)")
+eq(tu.acct.bm.dupfix.tagskin, 1, "이름표 테두리 상자 3 − 2 = 1번(두 종류 → 선택상자)")
+expect(tu.acct.bm.dupfix.bubblebox == nil and Cash.count(tu.acct.bm, "bub_wave") == 2, "말풍선 상자 2 − 1 = 1 · 한 종류(물결)만 → 물결 말풍선을 바로 하나 더")
+eq(tu.acct.bm.dupfix.dmgskin, nil, "데미지 스킨 상자 1개 · 하나 가짐 → 없음")
+eq(tu.acct.bm.dupfix.mountbox, nil, "탈것 상자 1개 · 하나 가짐 → 없음")
+local fixEvents = 0
+for _, e in events do
+	if e[1] == "got" and string.match(e[3], "^dupfix:") then
+		fixEvents += 1
+	end
+end
+eq(fixEvents, 2, "선택상자마다 알림(펫 · 이름표 테두리)")
+local itemEvents = 0
+for _, e in events do
+	if e[1] == "got" and e[3] == "fixitem:bub_wave:1" then
+		itemEvents += 1
+	end
+end
+eq(itemEvents, 1, "원래 상품으로 준 것도 알림(물결 말풍선)")
+-- 그 상자의 것을 하나도 안 가졌으면 겹침일 수 없다 → 아직 들어오지 않은 결제(로블록스가 다시 보낸다) — 주지 않는다
+local r0 = Cash.dupfixAuto(Account.new().bm, { tagskin = 2 }, UPTO, NOW, true)[1]
+expect(r0.lost == 0 and r0.add == 0, "상자의 것이 하나도 없으면 사라진 수 0(두 번 받지 않게)")
+table.clear(events)
+CashServer.dupfixAuto(tu)
+eq(#events, 0, "다시 부르지 않는다(들어온 뒤 한 번)")
+local none = { player = { UserId = 999 }, acct = account(999, "안산이"), loaded = true, name = "안산이" }
+CashServer.dupfixAuto(none)
+expect(none.fixDone == true and next(none.acct.bm.dupfix) == nil, "판매 기록에 없는 사람은 아무것도 없다")
+
+-- ⑫ 최대한 원래 상품으로(2026-11-10 사용자: "최대한 원래 상품으로 지급하고 그게 추론되지 않는경우는 선택상자로 지급하자"):
+--  겹침은 그때 이미 가진 것만 나온다 → 그 상자의 것을 한 종류만 가졌으면 사라진 것은 모두 그것 = 그 아이템을 바로 · 두 종류 이상이면 선택상자
+local a5 = Account.new()
+a5.bm.mounts.mount_whale = true
+local r5 = Cash.dupfixAuto(a5.bm, { mountbox = 3 }, UPTO, NOW)[1]
+expect(r5.sure == "mount_whale" and r5.lost == 2, "탈것 상자 3개 · 별고래 하나만 → 사라진 2개는 모두 별고래")
+expect(Cash.count(a5.bm, "mount_whale") == 3 and a5.bm.dupfix.mountbox == nil, "별고래를 바로 2개 더(가진 수 3) · 선택상자는 없음")
+local l5 = a5.bm.log[#a5.bm.log]
+expect(l5 and l5.k == "fixitem:mount_whale:2" and l5.g == "mount_whale" and l5.n == 3, "기록 = 원래 상품 · 수 · 그 뒤의 가진 수")
+expect(Cash.dupfixAuto(a5.bm, { mountbox = 3 }, UPTO, NOW)[1].add == 0 and Cash.count(a5.bm, "mount_whale") == 3, "다시 셈해도 두 번 주지 않는다")
+local a6 = Account.new()
+a6.bm.pets.pet_lantern = true -- 옛 상점에서 따로 산 것 하나뿐
+local r6 = Cash.dupfixAuto(a6.bm, { petbox = 2, direct = { "pet_lantern" } }, UPTO, NOW)[1]
+expect(r6.owned == 0 and r6.lost == 2 and r6.sure == "pet_lantern" and Cash.count(a6.bm, "pet_lantern") == 3, "펫 상자 2개 · 따로 산 초롱 달토끼뿐 → 겹친 2개는 초롱 달토끼 → 2마리 더")
+local a7 = Account.new()
+a7.bm.mounts.mount_jelly = true
+a7.bm.mounts.mount_whale = true
+local r7 = Cash.dupfixAuto(a7.bm, { mountbox = 4 }, UPTO, NOW)[1]
+expect(r7.sure == nil and a7.bm.dupfix.mountbox == 2 and Cash.count(a7.bm, "mount_jelly") == 1, "두 종류를 가졌으면 어느 것인지 모른다 → 선택상자 2번")
+eq(Cash.fixItemOf("fixitem:mount_whale:2"), "mount_whale", "알림의 이름표를 읽는다")
+eq(Cash.itemName("mount_whale"), Cash.MOUNT.mount_whale.name, "아이템 이름")
+-- 서버: 원래 상품으로 준 것은 그 이름표로 알린다(1ca_dy1 — 탈것 상자 2개 · 달빛 해파리 하나만)
+local ca = { player = { UserId = 11858280522 }, acct = account(11858280522, "씨에이"), loaded = true, name = "씨에이" }
+ca.acct.bm.mounts.mount_jelly = true
+sessions[11858280522] = ca
+table.clear(events)
+CashServer.dupfixAuto(ca)
+expect(Cash.count(ca.acct.bm, "mount_jelly") == 2 and next(ca.acct.bm.dupfix) == nil, "달빛 해파리 하나 더(가진 수 2) · 선택상자 없음")
+expect(events[1] and events[1][3] == "fixitem:mount_jelly:1", "알림 = 원래 상품 " .. tostring(events[1] and events[1][3]))
+
+-- ⑬ 상자 판매 바로잡기(2026-11-10 사용자: "다시 다뺏고 안연상자를 산것보다 카테고리별로 +3인거야 그리고 상자별로 선택상자를 주는걸로"):
+--  상자에서 받은 것을 모두 거둔다(가진 것 · 하나 더 · 남은 겹침 보상 · 보관함의 윤슬 조각 — 따로 산 달토끼는 하나 남긴다) → 상자마다 안 연 상자(산 수 + 3) · 선택 상자 하나 · 계정에 한 번
+local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
+local Items = req("ReplicatedStorage/shared/lune/sim/items")
+local hz = Account.new()
+local hb = hz.bm
+for _, id in { "dsk_mint", "dsk_blossom", "dsk_frost", "dsk_ember", "dsk_moon", "dsk_aurora" } do
+	hb.dskins[id] = true
+end
+hb.extra.dsk_aurora = 12 -- (선택상자를 오로라에 몰아 써 13개)
+hb.dskin = "dsk_aurora"
+hb.mounts.mount_whale, hb.mounts.mount_jelly = true, true
+hb.mounts.mount_wolf = true -- (상자 밖의 탈것 — 그대로)
+hb.mount = "mount_whale"
+hb.ntags.ntag_wave = true
+hb.ntag = "ntag_wave"
+hb.bubbles.bub_lotus = true
+hb.bubble = "bub_lotus"
+hb.pets.pet_silver, hb.pets.pet_lantern = true, true -- 옛 상점에서 따로 산 것
+hb.extra.pet_lantern = 1
+hb.petsOut = { "pet_lantern", "pet_lantern", "pet_silver" }
+hb.dupfix.tagskin = 2
+hb.fixGiven.dmgskin = 10
+table.insert(hb.box, { id = "yunseul", n = 24 })
+table.insert(hb.box, { id = "bm_exp", n = 2 })
+local HBUY = { dmgskin = 18, mountbox = 7, tagskin = 4, bubblebox = 2, direct = { "pet_silver", "pet_lantern", "pet_scarf" } }
+local rz = Cash.boxReset(hb, HBUY, NOW, 1)
+expect(rz ~= nil, "바로잡았다")
+for _, id in { "dsk_mint", "dsk_blossom", "dsk_frost", "dsk_ember", "dsk_moon", "dsk_aurora" } do
+	expect(not hb.dskins[id], "데미지 스킨을 거뒀다 " .. id)
+end
+eq(rz.taken.dsk_aurora, 13, "오로라 13개를 거뒀다")
+expect(not hb.mounts.mount_whale and not hb.mounts.mount_jelly and hb.mounts.mount_wolf, "상자의 탈것만 거둔다(달빛 늑대는 그대로)")
+expect(not hb.ntags.ntag_wave and not hb.bubbles.bub_lotus, "이름표 테두리 · 말풍선을 거뒀다")
+expect(hb.dskin == false and hb.mount == false and hb.ntag == false and hb.bubble == false, "낀 것 · 고른 탈것을 푼다")
+expect(hb.pets.pet_silver and hb.pets.pet_lantern and Cash.count(hb, "pet_lantern") == 2, "펫 상자를 사지 않은 사람의 펫은 그대로")
+eq(table.concat(hb.petsOut, ","), "pet_lantern,pet_lantern,pet_silver", "꺼낸 펫도 그대로")
+-- 펫 상자를 산 사람(Tuesday처럼): 상자의 펫은 거두고 · 따로 산 초롱 달토끼는 하나 남기고 하나 더는 거둔다 · 꺼낸 펫은 가진 수까지
+local tz = Account.new()
+local tb = tz.bm
+tb.pets.pet_lantern, tb.pets.pet_bud, tb.pets.pet_fox = true, true, true
+tb.extra.pet_lantern, tb.extra.pet_fox = 2, 1
+tb.petsOut = { "pet_lantern", "pet_lantern", "pet_fox" }
+local tr = Cash.boxReset(tb, { petbox = 3, direct = { "pet_lantern" } }, NOW, 1)
+expect(tb.pets.pet_lantern and not tb.pets.pet_bud and not tb.pets.pet_fox, "상자의 펫은 거두고 따로 산 초롱 달토끼는 남는다")
+expect(Cash.count(tb, "pet_lantern") == 1 and tr.taken.pet_lantern == 2 and tr.taken.pet_fox == 2, "초롱 달토끼의 하나 더(2)와 여우 둘을 거뒀다")
+eq(table.concat(tb.petsOut, ","), "pet_lantern", "꺼낸 펫은 가진 것 · 가진 수까지")
+eq(tb.petOut, "pet_lantern", "첫째 펫")
+expect(next(hb.dupfix) == nil and hb.fixGiven.dmgskin == nil, "남은 겹침 보상 · 준 수를 지운다")
+local inBox = {}
+for _, e in hb.box do
+	inBox[e.id] = e.n
+end
+expect(inBox.bm_box_dmgskin == 21 and inBox.bm_box_mountbox == 10 and inBox.bm_box_tagskin == 7 and inBox.bm_box_bubblebox == 5, "안 연 상자 = 산 수 + 3(상자마다)")
+expect(inBox.bm_pick_dmgskin == 1 and inBox.bm_pick_mountbox == 1 and inBox.bm_pick_tagskin == 1 and inBox.bm_pick_bubblebox == 1, "선택 상자 하나씩(상자마다)")
+expect(inBox.bm_box_petbox == nil and inBox.bm_pick_petbox == nil, "사지 않은 상자는 없다")
+expect(inBox.yunseul == nil and rz.shards == 24, "보관함의 윤슬 조각을 거뒀다(24)")
+eq(inBox.bm_exp, 2, "다른 보관함 물건은 그대로")
+eq(Cash.boxReset(hb, HBUY, NOW, 1), nil, "계정에 한 번")
+local back = Cash.unpack(Cash.pack(hb), Account.MAX)
+eq(back.boxReset, 1, "저장 → 읽기: 바로잡은 차례")
+for _, e in back.box do
+	if e.id == "bm_box_dmgskin" then
+		eq(e.n, 21, "저장 → 읽기: 안 연 상자")
+	end
+end
+-- 안 연 상자를 쓴다(가방 「사용」 — Cash.use): 그 자리에서 열린다(산 것과 같은 셈 · 뽑기 연출의 lastBox · 기록)
+local uh = Hero.new(1, "axion")
+local boxDef = Items.goods("bm_box_dmgskin")
+expect(boxDef and boxDef.kind == "bmBox" and boxDef.box == "dmgskin" and boxDef.bound == true and boxDef.paid == true, "안 연 상자의 아이템(경매장 불가)")
+local okUse = Cash.use(uh, hz, boxDef)
+expect(okUse == true and hb.lastBox and hb.lastBox.k == "dmgskin" and typeof(hb.lastBox.got) == "string", "열었다 — " .. tostring(hb.lastBox and hb.lastBox.got))
+expect(hb.dskins[hb.lastBox.got] == true, "나온 것이 계정에")
+expect(hb.log[#hb.log].k == "open:dmgskin" and hb.log[#hb.log].g == hb.lastBox.got, "열기도 결제의 기록에")
+local firstGot = hb.lastBox.got
+hb.lastBox = nil
+-- 같은 것이 또 나오면 하나 더
+Cash.use(uh, hz, boxDef)
+local sameOrNew = hb.lastBox.got
+expect(Cash.count(hb, sameOrNew) >= 1, "두 번째도 계정에")
+local _ = firstGot
+-- 선택 상자: 그 상자의 것 하나를 고른다(가방의 선택 상자를 쓴다 · 가진 것이면 하나 더)
+local pickDef = Items.goods("bm_pick_tagskin")
+expect(pickDef and pickDef.kind == "bmPick" and pickDef.box == "tagskin" and pickDef.bound == true, "선택 상자의 아이템")
+expect(Bag.give(uh, "bm_pick_tagskin", 1), "가방에 선택 상자")
+local nP, wP = Cash.pickBox(uh, hz, "dsk_aurora")
+expect(nP == nil and wP ~= nil, "다른 상자의 것은 못 고른다(이름표 테두리 선택 상자로 데미지 스킨)")
+local okP, cntP = Cash.pickBox(uh, hz, "ntag_royal")
+expect(okP == true and cntP == 1 and hb.ntags.ntag_royal == true, "황금 왕관 이름표를 골라 받았다")
+eq(hb.ntag, "ntag_royal", "낀 것이 없으면 바로 낀다")
+eq(Bag.count(uh, "bm_pick_tagskin"), 0, "선택 상자를 썼다")
+expect(Cash.pickBox(uh, hz, "ntag_royal") == nil, "선택 상자가 없으면 못 고른다")
+-- 서버: 계정을 읽을 때 한 번(판매 기록에 있는 사람 — hinoo) · 저장에 실패하면 되돌린다
+local hs = { player = { UserId = 1372895479 }, acct = account(1372895479, "히누"), loaded = true, name = "히누" }
+hs.acct.bm.dskins.dsk_aurora = true
+hs.acct.bm.extra.dsk_aurora = 12
+saveOk = false
+expect(CashServer.boxReset(hs) == false and hs.acct.bm.dskins.dsk_aurora == true and (hs.acct.bm.boxReset or 0) == 0, "저장에 실패하면 되돌린다")
+saveOk = true
+expect(CashServer.boxReset(hs) == true and hs.resetNote == true, "바로잡았다(들어오면 알림)")
+expect(not hs.acct.bm.dskins.dsk_aurora and Cash.count(hs.acct.bm, "dsk_aurora") == 0, "오로라를 거뒀다")
+local hsBox = {}
+for _, e in hs.acct.bm.box do
+	hsBox[e.id] = e.n
+end
+expect(hsBox.bm_box_dmgskin == 21 and hsBox.bm_box_mountbox == 10 and hsBox.bm_box_tagskin == 7 and hsBox.bm_box_bubblebox == 5, "hinoo: 안 연 상자 21 · 10 · 7 · 5")
+expect(CashServer.boxReset(hs) == false, "다시 하지 않는다")
+local nobody = { player = { UserId = 999 }, acct = account(999, "아무개"), loaded = true, name = "아무개" }
+expect(CashServer.boxReset(nobody) == false and (nobody.acct.bm.boxReset or 0) == 0, "판매 기록에 없는 사람은 그대로")
+-- 운영자가 보내는 것(관리 창 「뽑기 보상」): 이제 선택 상자
+local gz = Account.new()
+expect(Cash.grant(gz, "dupfix:mountbox:2", "gpick1", NOW, Account.MAX), "보낸 것을 받는다")
+local gzBox = {}
+for _, e in gz.bm.box do
+	gzBox[e.id] = e.n
+end
+expect(gzBox.bm_pick_mountbox == 2 and next(gz.bm.dupfix) == nil, "탈것 선택 상자 2개(고르는 표가 아니다)")

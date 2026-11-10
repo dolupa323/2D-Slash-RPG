@@ -677,14 +677,14 @@ table.insert(skills, {
 	segs = { { clip = "smokein", fps = 20, float = true, start = function(g)
 		local t = nil
 		for _, m in g.mobs() do
-			if m.mark > 0 and abs(m.x - g.x) < 230 and (not t or m.mark > t.mark) then
+			if m.mark > 0 and abs((m.aimX or m.x) - g.x) < 230 and (not t or m.mark > t.mark) then
 				t = m
 			end
 		end
 		t = t or g.boss()
 		g.s.ex = t
 		if t then
-			blink(g, t.x - g.dir * 12)
+			blink(g, g.spot(t) - g.dir * 12) -- (용암 거인의 팔은 손 앞으로 — 전에는 벽(겨드랑이)으로 순간이동했다: 2026-11-10)
 		end
 	end, ev = { [2] = function(g) -- 표식이 한 점으로 빨려 들었다가 세로로 터진다
 		local m = g.s.ex
@@ -693,9 +693,10 @@ table.insert(skills, {
 		end
 		local k = m.mark
 		m.mark = 0
-		g.fx.ring(m.x, m.y - m.h - 8, 26, 3, g.tone, { squash = 1, back = false, life = 0.12 })
-		g.fx.cut(m.x, m.y - m.h - 14, 76, 90, g.tone, { th = 6, life = 0.3, delay = 0.1 })
-		g.fx.ring(m.x, m.y, 4, 30, g.tone, { delay = 0.1 })
+		local mx, head = g.spot(m, 8)
+		g.fx.ring(mx, head, 26, 3, g.tone, { squash = 1, back = false, life = 0.12 })
+		g.fx.cut(mx, head - 6, 76, 90, g.tone, { th = 6, life = 0.3, delay = 0.1 })
+		g.fx.ring(mx, m.y, 4, 30, g.tone, { delay = 0.1 })
 		g.after(0.1, function()
 			g.hurt(m, 20 + k * 8, { stop = 0.1 })
 			g.shake(3, 0.15)

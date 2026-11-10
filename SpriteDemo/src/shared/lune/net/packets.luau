@@ -39,8 +39,8 @@ local packets = {
 	-- 능력치에 점수를 찍는다(능력치 이름, 점수) · 남은 점수를 모두 주 능력치에
 	StatAdd = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number }, RateLimit = { PerSecond = 10, Burst = 20 } },
 	StatAuto = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 2, Burst = 3 } },
-	-- 스킬을 한 레벨 올린다(스킬 id) · 남은 포인트를 추천대로
-	SkillUp = { Kind = "Event", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 10, Burst = 20 } },
+	-- 스킬을 올린다(스킬 id, 몇 레벨 — 2026-11-10 스킬 창의 「한 번에」 칸: 그만큼 · 포인트 · 마스터에서 멈춘다) · 남은 포인트를 추천대로
+	SkillUp = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number }, RateLimit = { PerSecond = 10, Burst = 20 } },
 	SkillDown = { Kind = "Event", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 10, Burst = 20 } }, -- 스킬 레벨을 하나 내린다(2026-10-31 — 스킬 창의 「−」)
 	SkillAuto = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 2, Burst = 3 } },
 	-- 전직하며 받은 공짜 초기화를 쓴다(스킬 창의 「초기화」 — 찍은 스킬을 모두 되돌린다)
@@ -72,7 +72,7 @@ local packets = {
 	Sail = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 2, Burst = 4 } },
 	Rift = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } }, -- 셋째 = 던전에 파티로 들어가는가(2026-10-21)
 	-- 주간 보스(2026-10-24): "view" · "enter" 보스 · 난이도("normal" | "hard") · 파티인가 — 돌려주는 값 { ok, why, view = { done = { 보스 = 격파한 난이도 | false }, reset = 다음 초기화까지 초 } } (world.luau · 셈은 sim/weekly.luau)
-	Week = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } },
+	Week = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } }, -- (다섯째 = 연습 — 2026-11-10)
 	-- 경매장(메이플 옥션 방식 — 메뉴에서 어디서나): "mine" 내 것(판매 · 완료 탭) · "browse" 분류의 목록과 시세(장부의 이름, 새로 고침) · "list" 올리기(탭, 칸, 수, { 개당 값, 시간 }) ·
 	--  "buy" 사기(장부, 줄, 수, 본 값) · "settle" 내 것 하나(번호, "take" 수령 · "collect" 대금 수령 · "back" 취소 / 반환 · "relist" 재등록) · "all" 모두 받기
 	--  돌려주는 값 { ok, why, msg, rows(목록) · trades(시세) · board, mine(내 것), used · max(판매 수), now } — server/lune/modules/world.luau의 onMarket · 셈은 sim/market.luau
@@ -82,10 +82,12 @@ local packets = {
 	-- 매크로 확인(2026-10-23): "answer"(문제의 번호, 고른 칸 셋) · "again"(보상 멈춤에서 다시 확인) → { result = pass · wrong · fail · bad, check?, stopped, retryIn } (server modules/macroGuard.luau)
 	Sequence = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.number, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } }, -- 시퀀스 하나를 바꾼다(가지 "skill" · "buff", 번호, 넣은 것들 — 2026-10-30 · sim/sequence.luau)
 	Macro = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 3, Burst = 6 } },
+	Rune = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any, t.any }, RateLimit = { PerSecond = 4, Burst = 8 } }, -- 룬 · 별똥별 조각(2026-11-07 — modules/runeGuard.luau): ("start") → 화살표 | ("answer", { 화살표 … }) → 결과 | ("bait", 번호) → 주웠나
 	-- 소리 설정을 저장한다 { music = 0~10, sfx = 0~10, on = 켰는가 } — 꼴은 서버가 다시 본다(계정에 저장 — sim/account.luau의 setSound)
 	Sound = { Kind = "Event", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 12 } },
 	-- 화면 아래 메뉴 단추의 차례를 저장한다(끌어 옮겼다 — 2026-11-06) { 창 이름표 … } — 꼴은 서버가 다시 본다(sim/account.luau의 setMenu)
 	MenuOrder = { Kind = "Event", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 2, Burst = 6 } },
+	Firework = { Kind = "Event", Direction = "ClientToServer", Args = {}, RateLimit = { PerSecond = 1, Burst = 2 } }, -- 마을의 축포 상자 앞에서 ↑(2026-11-10 — 공방 design/ambient.js의 launch): 서버가 그 앞인지 · 한 사람 gap초 · 한 맵 roomGap초를 보고 같은 맵 모두에게 Fireworks
 	-- 퀵슬롯을 바꿨다: 칸들 전체 { "potion" · 스킬의 이름표 · false … } — 꼴과 놓아도 되는 스킬인지는 서버가 다시 본다. 돌려주는 값 = 서버가 가진 칸들(받아들였으면 보낸 것, 아니면 예전 것)
 	Slots = { Kind = "Function", Direction = "ClientToServer", Args = { t.table }, RateLimit = { PerSecond = 4, Burst = 8 } },
 	-- 스마트폰의 단추 배치를 바꿨다: 같은 꼴(칸들 전체) — PC의 퀵슬롯과 따로 저장한다. 돌려주는 값 = 서버가 가진 배치
@@ -125,12 +127,16 @@ local packets = {
 	Heroes = { Kind = "Event", Direction = "ServerToClient", Doc = "장면 이름, 그 방 사람들의 자리 { id, x, y, dir, 살아 있는가 } — 초당 10번" },
 	Who = { Kind = "Event", Direction = "ServerToClient", Doc = "장면 이름, 그 방 사람들의 이름표 { id, name, class, level } — 들고 날 때 · 레벨이 오를 때" },
 	Buffs = { Kind = "Event", Direction = "ServerToClient", Doc = "방의 누군가에게 걸린 버프가 바뀌었다: 누구, { { id, t, dur, x, y } … }(건 차례) — 그 사람의 몸에 버프의 모습이 보인다" },
+	Fireworks = { Kind = "Event", Direction = "ServerToClient", Doc = "마을의 축포 상자에서 불꽃이 솟는다: 장면, 상자의 발밑 x, y, 씨앗(모두가 같은 모양 — 2026-11-10)" },
 	Act = { Kind = "Event", Direction = "ServerToClient", Doc = "다른 사람이 기술을 쓴다: 누구, 기술, 구간, x, y, 보는 쪽, 모은 단계(힘 모으기 — 없으면 0), 살라맨더의 강화판인가" },
 	PartyInfo = { Kind = "Event", Direction = "ServerToClient", Doc = "내 파티 { leader, members = { { id, name, class, level, hp, maxHp, scene } … } } — 파티가 없으면 members가 비어 있다" },
 	PartyAsk = { Kind = "Event", Direction = "ServerToClient", Doc = "파티 초대 { from, name } — 초대가 사라졌으면 from = false" },
 	Quests = { Kind = "Event", Direction = "ServerToClient", Doc = "내 퀘스트의 상태 { [id] = { done, c = { 할 일마다의 수 } } } — 바뀔 때마다. 둘째 값 = 방금 끝낸 퀘스트의 id(없으면 nil)" },
 	DailyView = { Kind = "Event", Direction = "ServerToClient", Doc = "일일 의뢰의 상태(sim/daily.luau의 view) — 잡은 수가 오를 때마다" },
 	AchDone = { Kind = "Event", Direction = "ServerToClient", Doc = "새로 해낸 업적들의 id { … } — 화면 위의 띠 「업적 달성 · 이름」(2026-10-15)" },
+	WeekMvp = { Kind = "Event", Direction = "ServerToClient", Doc = "주간 보스 격파의 MVP(2026-11-07): { boss, mode, rows = { { id, name, class, dmg, gim, deaths, score, mvp, best } … }, mvp, me }" },
+	RuneMap = { Kind = "Event", Direction = "ServerToClient", Doc = "룬(2026-11-07): 그 맵의 { rune = { x, y, id } 또는 nil, stage = 저주 단계 } · 해방한 사람은 { buffLeft, cdLeft, guardLeft }도" },
+	Bait = { Kind = "Event", Direction = "ServerToClient", Doc = "별똥별 조각(2026-11-07): 나에게만 { id, x, y, life } 또는 { gone = id }" },
 	MacroView = { Kind = "Event", Direction = "ServerToClient", Doc = "매크로 확인: { check = 문제(위의 셋 · 아래 아홉 · 남은 초 · 남은 기회 — 답은 없다) 또는 nil, stopped = 사냥 보상 멈춤, retryIn = 다시 확인까지 초, result = 방금의 결과 } (2026-10-23)" },
 	Voyage = { Kind = "Event", Direction = "ServerToClient", Doc = "배: { left = 닿기까지 초, dest } 갑판에 올랐다 · { arrived = 장면, dest } 닿았다(2026-10-16)" },
 	RiftView = { Kind = "Event", Direction = "ServerToClient", Doc = "토벌의 방의 상태(sim/rift.luau의 view — 물결 · 남은 몬스터 · 시간 · 완료 · 실패, 2026-10-16)" },
@@ -147,6 +153,7 @@ local packets = {
 	MobCast = { Kind = "Event", Direction = "ServerToClient", Doc = "몬스터의 마법이 뜸 { id, kind(쓴 몬스터의 종류), x, y, dir(쓴 몬스터가 보던 쪽 — 앞으로 뻗는 마법은 그쪽으로 그린다) } — 그 종류의 마법 그림(cast)이 그 자리에서 한 번 돈다. 맞는 것은 서버가 예고 뒤에 따로 알린다(Hurt)" },
 	ShotEnd = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 번호" },
 	Megaphone = { Kind = "Event", Direction = "ServerToClient", Doc = "관리자의 확성기(모든 서버의 모두에게 — 2026-10-21): 글 — 화면 위 큰 알림 「공지」 + 채팅 알림 글" },
+	MacroWarn = { Kind = "Event", Direction = "ServerToClient", Doc = "매크로 운영 경고(2026-11-09 — server macroGuard.luau Guard.warn): 글 — 화면 위 알림 「운영 경고」 + 채팅 알림 글" },
 	TitleGot = { Kind = "Event", Direction = "ServerToClient", Doc = "칭호를 받았다(2026-10-26): { 칭호의 이름표 … } — 화면 위 알림 「칭호 획득」 · 둘째가 true면 잃었다(황금왕이 넘어갔다 — 2026-10-29: 「칭호 이전」)" },
 	Reveal = { Kind = "Event", Direction = "ServerToClient", Doc = "보스의 출현 시각(2026-11-05 — server modules/reveal.luau): { at = { [보스] = os.time }, now = 서버의 지금 } — 왼쪽 아래 닉네임 위의 빨간 남은 시간 · 보스 퀘스트 · 문이 그때 열린다" },
 	RevealNews = { Kind = "Event", Direction = "ServerToClient", Doc = "보스 출현의 알림(모든 서버가 같은 때 — 2026-11-05): { kind = \"tease\"(남은 때마다 · left · line) | \"open\"(출현 · lv), boss, name } — 화면 위 큰 알림 + 채팅" },

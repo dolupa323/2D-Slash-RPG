@@ -11,9 +11,11 @@ local Hero = req("ReplicatedStorage/shared/lune/sim/hero")
 local Items = req("ReplicatedStorage/shared/lune/sim/items")
 local Format = req("ReplicatedStorage/shared/lune/ui/format")
 
+local created = {} -- 만든 틀(선택 상자의 칸을 이름으로 찾는다 — 2026-11-10)
 local function frame(name)
 	local f = { Name = name, Visible = true, children = {} }
 	function f:Destroy() end
+	table.insert(created, f)
 	return f
 end
 local texts, buttons, tabs, scrolls, fields, pics, previews = {}, {}, {}, {}, {}, {}, {}
@@ -35,6 +37,7 @@ local function text(_, value, x, y, width, opts)
 	return t
 end
 local COLOR = setmetatable({}, { __index = function(_, k) return k end }) -- 색 = 그 이름
+local worldIcons = {}
 MOCK("Client/lune/ui/ui", {
 	COLOR = COLOR,
 	M = { small = 10, smallLine = 14, body = 12, button = 26 },
@@ -73,8 +76,14 @@ MOCK("Client/lune/ui/ui", {
 	setWorldIcon = function(label, name)
 		label.icon = name
 	end,
+	worldIcon = function(_, name, x, y, sz)
+		local f = frame("WorldIcon")
+		f.icon, f.x, f.y, f.size = name, x, y, sz
+		table.insert(worldIcons, f) -- (선택 상자의 칸 — 2026-11-10)
+		return f
+	end,
 	hit = function(parent)
-		local h = { Activated = { Connect = function(_, fn) parent.click = fn end }, MouseEnter = { Connect = function(_, fn) parent.hover = fn end } }
+		local h = { Activated = { Connect = function(_, fn) parent.click = fn end }, MouseEnter = { Connect = function(_, fn) parent.hover = fn end }, MouseLeave = { Connect = function(_, fn) parent.leave = fn end } } -- (진짜 Ui.hit = TextButton — 카드는 떠날 때 테두리를 되돌린다 · 2026-11-10)
 		return h
 	end,
 	bar = function()
@@ -438,16 +447,17 @@ for _, v in view.list do
 	end
 end
 view.petOut, view.mount, view.riding = "pet_scarf", "mount_boar", true
-local conv = CashWindow.rows(view, T.pet) -- 펫은 「펫」 탭(2026-10-21)
-local scarf
+local conv = CashWindow.rows(view, T.pet) -- 펫은 「펫」 탭(2026-10-21) · 2026-11-07부터 펫은 「윤슬 펫 상자」 한 줄(펫 셋을 따로 파는 줄은 껐다)
+local box
 for _, r in conv do
-	if r.id == "pet_scarf" then
-		scarf = r
+	expect(string.sub(r.id, 1, 4) ~= "pet_", "펫 탭에 펫을 따로 파는 줄이 없다(상자에서만) " .. r.id)
+	if r.id == "petbox" then
+		box = r
 	end
 end
-eq(scarf.state, "own", "가진 펫의 줄 = 「보유」")
-eq(scarf.use, nil, "가진 펫의 줄에 꺼내기 · 넣기가 없다")
-eq(scarf.count, nil, "가진 펫의 줄에 「산 수 1/1」을 적지 않는다")
+expect(box ~= nil and box.random == true, "펫 탭 = 윤슬 펫 상자(확률형 — 「확률 보기」)")
+eq(box and box.use, nil, "상자 줄에 꺼내기 · 넣기가 없다")
+eq(box and box.count, nil, "상자 줄에 「산 수」를 적지 않는다")
 local boar
 for _, r in CashWindow.rows(view, T.look) do
 	if r.id == "mount_boar" then
@@ -466,16 +476,28 @@ ctx.cashPreview = function(id)
 	table.insert(seen, id)
 end
 expect(#previews >= 1, "줄마다 미리보기 자리가 있다")
-previews[1].click() -- 꾸밈 탭의 첫 줄(탈것)
-previews[1].hover()
-eq(seen[1], CashWindow.rows(view, T.look)[1].id, "꾸밈 탭 첫 줄을 누르면 그 탈것을 미리보기에")
+local lookRows = CashWindow.rows(view, T.look)
+local at = 1 -- 꾸밈 탭의 첫 탈것 줄(2026-11-07부터 맨 위는 「윤슬 탈것 상자」 — 탈것이 아니라 미리보기에 보내지 않는다 · 줄의 틀은 칸마다 하나라 previews[i] = i째 줄)
+for i, r in lookRows do
+	if string.sub(r.id, 1, 6) == "mount_" then
+		at = i
+		break
+	end
+end
+previews[at].click()
+previews[at].hover()
+eq(seen[1], lookRows[at].id, "꾸밈 탭의 탈것 줄을 누르면 그 탈것을 미리보기에")
+local n0 = #seen
+previews[1].click() -- 맨 위의 상자 줄
+eq(#seen, n0, "꾸밈 탭의 상자 줄은 미리보기에 보내지 않는다")
 eq(#seen, 2, "올려 두어도 미리보기에(PC)")
 tabs[T.money].click() -- 재화 탭: 펫 · 탈것이 아니다
 previews[1].click()
 eq(#seen, 2, "재화 줄은 미리보기에 보내지 않는다")
-tabs[T.pet].click() -- 펫 탭(2026-10-21 — 펫은 편의가 아니라 제 탭에)
+tabs[T.pet].click() -- 펫 탭(2026-10-21 — 펫은 편의가 아니라 제 탭에) · 2026-11-07부터 첫 줄 = 윤슬 펫 상자(펫이 아니라 미리보기에 보내지 않는다)
+local before = #seen
 previews[1].click()
-eq(seen[#seen], BM.shop.rows.pet[1], "펫 탭의 첫 줄을 누르면 그 펫을 미리보기에")
+eq(#seen, before, "펫 탭의 상자 줄은 미리보기에 보내지 않는다")
 tabs[T.look].click()
 eq(CashWindow.product("pet_silver").name, BM.products[(function()
 	for i, p in BM.products do
@@ -527,4 +549,148 @@ do
 	eq(r0 and r0.state, "soldOut", "다 팔리면 「품절」")
 	expect(r0 and r0.full == true, "남은 수는 빨간 글")
 	expect(W.soldOut == "품절", "품절의 글")
+end
+
+-- 화면 가득의 달빛 상점(2026-11-10 사용자 "달빛상점 접속 ui를 좀 메이플 캐시샵처럼 전체화면으로해서 좀 둘러보기도 좋게 개편을 해줘"): 상품 = 카드 · 꾸밈 탭의 작은 분류
+do
+	-- 배치: 1080p(960 x 540) = 4줄 · 폰(768 x 432) = 3줄 · 미리보기 + 판이 화면 안 · 카드는 가장 좁게 card.min
+	local F = BM.shop.full
+	for _, c in { { 960, 540, 4, "PC 1080p" }, { 768, 432, 3, "폰" }, { 1152, 648, 5, "PC 1366x768" } } do
+		local L = Layout.shopFull(c[1], c[2])
+		eq(L.cols, c[3], c[4] .. ": 카드 줄 수")
+		expect(L.cardW >= F.card.min, c[4] .. ": 카드 폭 " .. L.cardW)
+		expect(L.previewX + L.previewW < L.panelX and L.panelX + L.panelW <= c[1] - F.pad + 0.5, c[4] .. ": 미리보기 · 판이 가로로 화면 안")
+		expect(L.previewY + L.h <= c[2], c[4] .. ": 세로로 화면 안")
+		expect(L.cols * L.cardW + (L.cols - 1) * L.gap <= L.bodyW, c[4] .. ": 카드 줄이 판 안")
+	end
+	-- 창 모드(F11 아님 — 2026-11-10 사용자 "달빛상점 f11 안누르면 해상도가 안맞아서 나갈수가없어"): 화면 위를 Roblox 단추 띠가 덮는 높이(inset)만큼 윗줄 · 판을 내린다 · 그래도 화면 안
+	for _, c in { { 1152, 648, 30 }, { 768, 432, 21 }, { 960, 540, 0 } } do
+		local Li = Layout.shopFull(c[1], c[2], c[3])
+		eq(Li.top, c[3], ("%dx%d: 윗줄(제목 · 「나가기」)이 띠 아래로 %d"):format(c[1], c[2], c[3]))
+		expect(Li.previewY >= c[3] + F.topH and Li.panelY == Li.previewY, ("%dx%d: 미리보기 · 판이 윗줄 아래"):format(c[1], c[2]))
+		expect(Li.previewY + Li.h <= c[2] - F.pad + 0.5, ("%dx%d: 띠만큼 내려도 판의 아래가 화면 안"):format(c[1], c[2]))
+		expect(Li.leaveX + BM.shop.space.leaveW <= c[1], ("%dx%d: 「나가기」가 화면 안(가로)"):format(c[1], c[2]))
+	end
+	local L = Layout.shopFull(960, 540)
+	table.clear(texts)
+	table.clear(buttons)
+	table.clear(tabs)
+	table.clear(scrolls)
+	table.clear(previews)
+	local gv = CashWindow.build(frame("Full"), ctx, L.bodyW, L.bodyH, nil, L)
+	local list = scrolls[1]
+	expect(list ~= nil, "카드 목록(밀기 틀)")
+	-- 꾸밈 탭: 작은 분류 넷 · 처음은 「전체」 · 「뽑기 상자」를 누르면 상자 넷만
+	local look = nil
+	for _, t in tabs do
+		if t.label == BM.shop.tabs[T.look][2] then
+			look = t
+		end
+	end
+	look.click()
+	local chips = {}
+	for _, b in buttons do
+		if b.frame.Name and string.sub(b.frame.Name, 1, 5) == "Chip_" then
+			chips[string.sub(b.frame.Name, 6)] = b
+		end
+	end
+	for _, c in BM.shop.sub.look do
+		expect(chips[c.id] ~= nil and chips[c.id].frame.Visible, "꾸밈 탭의 작은 분류 " .. c.name)
+	end
+	expect(chips.all.main == true, "처음은 「전체」")
+	local function shownNames()
+		local out = {}
+		for _, b in buttons do
+			if b.frame.Name == "Act" and b.frame.Visible and b.label ~= nil then
+				table.insert(out, b)
+			end
+		end
+		return out
+	end
+	local allN = #CashWindow.rows(ctx.cash(), T.look)
+	local cardsNow = 0
+	for _, t in texts do
+		if t.shown and t.opts and t.opts.font == "body" and t.opts.align == "center" and t.value ~= "" then
+			cardsNow += 1
+		end
+	end
+	expect(cardsNow >= allN, ("「전체」 = 꾸밈의 모든 카드(%d · 이름 %d)"):format(allN, cardsNow))
+	chips.box.click()
+	expect(chips.box.main == true and chips.all.main == false, "「뽑기 상자」를 골랐다")
+	local boxNames = {}
+	for _, id in BM.shop.sub.look[2].ids do
+		for _, p in BM.products do
+			if p.id == id then
+				boxNames[p.name] = true
+			end
+		end
+	end
+	local shown, others = 0, 0
+	for _, t in texts do
+		if t.shown and t.opts and t.opts.font == "body" and t.opts.align == "center" and t.value ~= "" then
+			if boxNames[t.value] then
+				shown += 1
+			end
+		end
+	end
+	local _ = shownNames
+	eq(shown, 4, "뽑기 상자 넷의 카드")
+	-- 다른 탭으로 가면 작은 분류가 숨고 「전체」로
+	tabs[1].click()
+	expect(not chips.box.frame.Visible, "편의 탭에는 작은 분류가 없다")
+	look.click()
+	expect(chips.all.main == true, "꾸밈으로 돌아오면 「전체」")
+	local _ = others
+	local _ = gv
+end
+
+-- 선택 상자(2026-11-10 상자 판매 바로잡기 — 가방에서 쓰면 "pick:<상자>"): 크기 · 제목 · 그 상자의 것 칸(그림 · 이름 · 드문 것 금빛 · 가진 수) · 고르고 「받기」 → 서버에 그것
+do
+	local Gacha = req("ReplicatedStorage/shared/lune/sim/gacha")
+	local box = Gacha.box("dmgskin")
+	local pw, ph = CashWindow.size("pick:dmgskin")
+	eq(pw, Layout.CASH.w, "선택 상자 창의 폭")
+	eq(ph, CashWindow.pickH("dmgskin"), "선택 상자 창의 높이")
+	expect(ph + 44 + 14 + 16 <= 432, ("스마트폰의 화면 틀(432)에 들어간다 — %d"):format(ph + 74))
+	expect(string.find(CashWindow.title("pick:dmgskin"), "데미지 스킨 상자", 1, true) ~= nil, "제목 = 그 상자 — " .. CashWindow.title("pick:dmgskin"))
+	eq(CashWindow.pickOf("pick:nobox"), nil, "없는 상자는 상점")
+	-- 칸이 창 안에 든다(모든 상자)
+	for _, bid in { "petbox", "mountbox", "bubblebox", "dmgskin", "tagskin" } do
+		local n = #Gacha.box(bid).pool
+		local lx, ly = CashWindow.pickCell(n)
+		expect(lx + Layout.CASH.selCellW <= Layout.CASH.w and ly + Layout.CASH.selCellH <= CashWindow.pickH(bid) - 26, "마지막 칸이 창 안 — " .. bid)
+	end
+	table.clear(texts)
+	table.clear(buttons)
+	table.clear(worldIcons)
+	bag.use = { { item = "bm_pick_dmgskin", n = 1 } }
+	view.dskins = { "dsk_mint" }
+	view.extra = { dsk_mint = 1 }
+	local pv = CashWindow.build(frame("BodyPick"), ctx, pw, ph, "pick:dmgskin")
+	eq(#worldIcons, #box.pool, "칸마다 그림")
+	expect(worldIcons[1].size == Layout.CASH.selIcon, "그림 = 칸 크기에 맞춤")
+	expect(textOf("선택 상자 1개") ~= nil, "가진 선택 상자")
+	expect(textOf("가진 수 2") ~= nil, "가진 것의 가진 수(민트 — 1 + 하나 더)")
+	local aurora = textOf("오로라 데미지 스킨")
+	expect(aurora ~= nil and aurora.opts.color == COLOR.gold, "드문 것은 금빛")
+	local go = buttonsNamed(W.pickGo)[1]
+	expect(go ~= nil and not go.enabled, "고르기 전에는 「받기」가 꺼진다")
+	-- 칸을 누른다(ui.hit의 click — 칸 틀)
+	local cell = nil
+	for _, f in created do
+		if f.Name == "Pick_dsk_aurora" then
+			cell = f
+		end
+	end
+	expect(cell ~= nil and cell.click ~= nil, "칸을 누를 수 있다")
+	if cell and cell.click then
+		cell.click()
+	end
+	expect(go.enabled, "고르면 켜진다")
+	go.click()
+	expect(calls[#calls][1] == "pick" and calls[#calls][2] == "dsk_aurora", "서버에 고른 것")
+	bag.use = { { item = "bm_pick_dmgskin", n = 0 } }
+	pv.refresh()
+	expect(not go.enabled, "선택 상자를 다 쓰면 꺼진다")
+	view.dskins, view.extra = nil, nil
 end

@@ -23,6 +23,7 @@ SERVICE("TextService", { FilterStringAsync = function(_, text) return { GetNonCh
 local disk, book = {}, {}
 local rankDisk, rankInfo = {}, {}
 local marketBoards = {} -- 경매장의 장부(가짜 저장소)
+local bmGifts = {} -- 달빛 상점의 선물 상자(가짜 저장소 — 계정 번호 → 목록)
 MOCK("ServerScriptService/server/lune/modules/store", {
 	loadAccount = function(id) return disk[id] end,
 	saveAccount = function(id, data) disk[id] = data; return true end,
@@ -38,6 +39,10 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	rankInfoGet = function(key) return rankInfo[key] end,
 	rankInfoRemove = function(key) rankInfo[key] = nil end,
 	isOffline = function() return false end,
+	-- 달빛 상점의 선물 상자(관리 창 「뽑기 보상」의 겹침 보상이 여기에 들어간다 — 2026-11-10 · 자세한 것은 116_lune_cash_gift.luau)
+	bmGiftAdd = function(uid, g) bmGifts[uid] = bmGifts[uid] or {}; table.insert(bmGifts[uid], g); return true end,
+	bmGiftList = function(uid) return true, bmGifts[uid] or {} end,
+	bmGiftRemove = function(uid, rids) local keep = {}; for _, g in bmGifts[uid] or {} do if not rids[g.rid] then table.insert(keep, g) end end; bmGifts[uid] = keep; return true end,
 	-- 경매장의 장부(관리 창의 「경매장 시험」이 쓴다 — 자세한 것은 41_lune_market.luau)
 	marketRead = function(key) return true, marketBoards[key] end,
 	marketUpdate = function(key, fn)
@@ -423,10 +428,83 @@ do
 		Lang.set("ko")
 		ViewOpts.lang = "auto"
 	end
+	-- 매크로 탭의 계정 기록 · 위험 순위(2026-11-09 사용자 "계정마다 종속된 로그기록이랑 점수를 내가 계속 볼수있어야해"): 서버가 보낸 기록을 그린다 —
+	--  오류 없이 · 단추가 창 안 · 「경고」는 접속 중인 사람에게만 · 위험 순위의 줄을 누르면 그 사람의 기록
+	do
+		local now = os.time()
+		local rec = { name = "시험꾼", uid = 7, online = true, score = 85, grade = "severe", parts = { behave = 62, bait = 80, check = 50, rune = 30, blind = 0 }, bait = { 2, 10 },
+			days = { { key = "20261109", m = 120, ls = 62, rc = 40, ci = 2, cp = 1, cf = 1, bl = 0, bg = 1, bm = 4, score = 85 }, { key = "20261108", m = 300, ls = 70, rc = 0, ci = 5, cp = 2, cf = 3, bl = 2, bg = 0, bm = 9, score = 95 } },
+			eps = { { t0 = now - 3600, t1 = now - 600, map = "hunt", peak = 96, how = { loop = { seq = "s:ax_slam|pick|s:ax_slam|hop|potion", lap = 4, laps = 48, cv = 1, cover = 100 }, route = { n = 6, lap = 4.2, laps = 26, cv = 0, cover = 98 }, sim = 99 } },
+				{ t0 = now - 90000, t1 = now - 86000, map = "nope", peak = 60 } },
+			warns = { { t = now - 86400, s = 85, by = "auto", before = 80, after = 12 }, { t = now - 600, s = 90, by = "admin" } } }
+		local asked = {}
+		table.clear(buttons)
+		local view = AdminWindow.build(frame("Body"), { me = function() return nil end, saveSound = function() end, admin = function(what)
+			table.insert(asked, what)
+			if what == "macroFind" or what == "macroWarn" then
+				return { ok = true, msg = "ok", record = rec }
+			elseif what == "macroTop" then
+				return { ok = true, msg = "ok", top = { { uid = 7, name = "시험꾼", score = 85 }, { uid = 8, name = "둘째", score = 40 } } }
+			end
+			return { ok = true, msg = "ok", rows = {}, log = {} }
+		end }, w, hgt)
+		tabClicks["매크로"]()
+		local function press(text: string): boolean
+			for _, b in buttons do
+				if b.text == text then
+					b.click()
+					return true
+				end
+			end
+			return false
+		end
+		local function inside(what: string)
+			for _, b in buttons do
+				expect(b.x >= 0 and b.x + b.w <= w and b.y >= 0 and b.y + 22 <= hgt - 52, ("%s: 단추가 창 안이다 「%s」"):format(what, b.text))
+				expect(pixelText.Measure(b.text, b.font) <= b.w - 6, ("%s: 단추의 글이 단추에 들어간다 「%s」"):format(what, b.text))
+			end
+		end
+		expect(press("기록"), "매크로 탭: 「기록」 단추")
+		expect(table.find(asked, "macroFind") ~= nil, "「기록」 = 서버에 그 계정의 기록을 묻는다")
+		inside("계정 기록")
+		expect(press("경고"), "접속 중인 사람의 기록에는 「경고」 단추")
+		expect(table.find(asked, "macroWarn") ~= nil, "「경고」 = 서버가 그 사람에게 경고")
+		rec.online = false
+		expect(press("기록"), "다시 「기록」")
+		local hasWarn = false
+		for _, b in buttons do
+			hasWarn = hasWarn or b.text == "경고"
+		end
+		expect(not hasWarn, "접속하지 않은 사람(저장된 기록)에게는 「경고」가 없다")
+		expect(press("위험 순위"), "「위험 순위」 단추")
+		inside("위험 순위")
+		local row = nil
+		for _, b in buttons do
+			if string.find(b.text, "시험꾼", 1, true) then
+				row = b
+			end
+		end
+		expect(row ~= nil, "위험 순위에 그 사람의 줄")
+		if row then
+			local before = #asked
+			row.click()
+			expect(asked[before + 1] == "macroFind", "줄을 누르면 그 사람의 기록")
+		end
+		expect(press("이 서버"), "「이 서버」로 돌아간다")
+		view.destroy()
+	end
 	-- 관리자: 누른 만큼 서버가 대답한다
 	local calls, answered = run(pAdmin, true)
 	expect(showCalls == #AdminWindow.BOSS_SHOW and shown == AdminWindow.BOSS_SHOW[#AdminWindow.BOSS_SHOW], ("「보스 크기」의 단추마다 그림의 크기를 바꾼다(%d번 · 마지막 %d%%)"):format(showCalls, shown))
 	expect(calls >= 40 and answered == calls, ("관리자가 누른 단추는 모두 서버가 대답한다(%d번 가운데 %d번)"):format(calls, answered))
+	-- 「뽑기 보상」 탭(2026-11-10): 닉네임을 비우고 누르면 나에게 — 선물 상자에 "dupfix:<상자>:<횟수>"가 횟수 단추마다 하나씩
+	local fixSent = 0
+	for _, g in bmGifts[pAdmin.UserId] or {} do
+		if string.match(g.k, "^dupfix:[%w_]+:%d+$") and g.from == "운영자" then
+			fixSent += 1
+		end
+	end
+	eq(fixSent, #AdminWindow.FIX_N, "「뽑기 보상」의 횟수 단추마다 선물 상자에 겹침 보상")
 	-- 영문(관리 창의 언어 단추 — 2026-10-27): 글을 영문으로 바꿔 재고 그리는 게임과 같이 — 모든 탭의 단추 글이 단추에, 단추가 창 안에 든다
 	do
 		local Lang = req("ReplicatedStorage/shared/lune/lang")

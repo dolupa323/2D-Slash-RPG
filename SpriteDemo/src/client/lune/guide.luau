@@ -32,6 +32,19 @@ function Guide.init(root: Frame)
 	bannerBox.Visible = false
 end
 
+-- 위 가운데에 다른 판이 떠 있으면(보스 체력 바 — 패턴 이름 · 데스 카운트 줄까지) 그 아래로 내린다(2026-11-07 사용자 "z인덱스랑 다른요소 신경안쓰고 작업해서 이상하게 보이는것들":
+--  안내 줄(50)이 패턴 이름 줄(56)에 · 큰 알림(86)이 보스 바 끝(88)에 걸쳤다). below = 그 판의 아랫 끝(기준 격자의 높이 · 없으면 nil)
+local shownBelow: number? = nil
+function Guide.setBelow(below: number?)
+	if below == shownBelow or not hintBox then
+		return
+	end
+	shownBelow = below
+	local push = if below then math.max(0, below + 4 - Guide.HINT_Y) else 0
+	hintBox.Position = Stage.atPosition("tc", (Stage.REF_W - Guide.HINT_W) / 2, Guide.HINT_Y + push)
+	bannerBox.Position = Stage.atPosition("tc", (Stage.REF_W - Guide.BANNER_W) / 2, Guide.BANNER_Y + push)
+end
+
 -- 안내 한 줄(없으면 nil · 빈 글)
 function Guide.setHint(text: string?)
 	local value = text or ""

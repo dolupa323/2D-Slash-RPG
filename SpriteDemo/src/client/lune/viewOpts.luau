@@ -11,6 +11,10 @@ function ViewOpts.import(sound: any)
 		ViewOpts.myNums = sound.myNums ~= false
 		ViewOpts.lang = if sound.lang == "ko" or sound.lang == "en" then sound.lang else "auto"
 		ViewOpts.touch = if sound.touch == "old" then "old" else "new"
+		ViewOpts.chat = if typeof(sound.chat) == "table" then sound.chat else nil -- 채팅 창을 옮긴 자리(2026-11-09 — chat.luau Chat.pos)
+		pcall(function()
+			require(script.Parent.chat).setPos(ViewOpts.chat)
+		end)
 	end
 	ViewOpts.applyLang()
 	ViewOpts.applyTouch()
@@ -35,12 +39,16 @@ function ViewOpts.applyLang()
 	Lang.set(Lang.pick(if ok then locale else nil, ViewOpts.lang))
 	if Lang.code ~= was then
 		require(script.Parent.Parent.modules.ui.pixelText).RefreshAll()
+		pcall(function()
+			require(script.Parent.chat).build() -- 채팅 창의 탭 자리는 글의 폭으로 놓는다(언어가 바뀌면 다시 — 2026-11-06)
+		end)
 	end
 end
 
 -- 저장할 꼴에 얹는다(소리 설정의 표에 fx · nums를 더한다)
 function ViewOpts.into(t)
 	t.fx, t.nums, t.myNums, t.lang, t.touch = ViewOpts.fx, ViewOpts.nums, ViewOpts.myNums, ViewOpts.lang, ViewOpts.touch
+	t.chat = ViewOpts.chat -- (채팅 창을 옮긴 자리 — 2026-11-09)
 	return t
 end
 

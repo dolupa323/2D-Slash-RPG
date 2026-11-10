@@ -96,7 +96,14 @@ function Daily.sync(h, region: string, now: number)
 		end
 		return st, false
 	end
-	st = { day = day, tasks = Daily.pick(region, h.level, day, Quests.lineMobs(h.quests or {}, region)), bonus = false }
+	-- 피할 몬스터 = 줄의 몬스터 + 아직 갈 수 없는 지역의 사냥터(풀의 need — 탈것으로만 닿는 지역의 길을 여는 퀘스트: 윤슬 호수 = 「봉인의 문」 · 2026-11-07)
+	local skip = Quests.lineMobs(h.quests or {}, region)
+	for _, q in board.pool do
+		if q.need and not Quests.finished(h.quests or {}, q.need) then
+			skip[q.mob] = true
+		end
+	end
+	st = { day = day, tasks = Daily.pick(region, h.level, day, skip), bonus = false }
 	h.daily[region] = st
 	return st, true
 end

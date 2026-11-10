@@ -32,6 +32,33 @@ function Event.on(id: string, now: number?): boolean
 	return if a <= b then md >= a and md <= b else (md >= a or md <= b)
 end
 
+-- ---------- 접속 선물(2026-11-10 사용자 "11월 11일에 그냥 접속하는 유저들한테 기타아이템에다가 빼빼로 아이템 지급하고 못받은 유저들을 위한 빼빼로다. 이렇게 설명적히게해서 아이템 추가해줘" — 공방 event.js EVENTS.gifts) ----------
+--  그날(그 나라의 날짜 — tz) 게임에 들어와 있으면 계정마다 해마다 한 번: 그때 하는 캐릭터의 가방에 n개. 받은 해 = acct.evGift[선물] (sim/account.luau가 저장한다)
+Event.GIFTS = D.gifts or {}
+-- 그때(없으면 지금) 그 선물의 날인가 · 그 해
+function Event.giftDay(g, now: number?): (boolean, number)
+	local d = os.date("!*t", math.floor(now or Event.clock()) + g.tz * 3600)
+	return d.month == g.on[1] and d.day == g.on[2], d.year
+end
+-- 오늘 줄 선물을 준다 → 준 것들 · 가방에 자리가 없어 못 준 것들(다음에 다시 — 서버가 접속해 있는 동안 다시 부른다)
+function Event.giveGifts(acct, h, now: number?): ({ any }, { any })
+	local Bag = require(script.Parent.bag)
+	local given, full = {}, {}
+	acct.evGift = acct.evGift or {}
+	for _, g in Event.GIFTS do
+		local on, year = Event.giftDay(g, now)
+		if on and acct.evGift[g.id] ~= year then
+			if Bag.room(h, g.item) >= g.n and Bag.give(h, g.item, g.n) then
+				acct.evGift[g.id] = year
+				table.insert(given, g)
+			else
+				table.insert(full, g)
+			end
+		end
+	end
+	return given, full
+end
+
 -- 지금 켜져 있는 이벤트들
 function Event.active(now: number?): { any }
 	local out = {}
@@ -228,6 +255,12 @@ function Event.dskin(id: any)
 			if q.id == id then
 				return q
 			end
+		end
+	end
+	-- 데미지 스킨 상자의 것(2026-11-10 — bm.generated의 dskins: id · name · part · icon · line · rare)
+	for _, q in (require(script.Parent.Parent.data["bm.generated"]).dskins or {}).list or {} do
+		if q.id == id then
+			return q
 		end
 	end
 	return nil

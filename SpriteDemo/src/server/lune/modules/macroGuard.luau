@@ -18,7 +18,7 @@ local COMBAT = require(lune.data["combat.generated"])
 local Guard = {}
 local rng = Random.new()
 local LOG_MAX = 60
-Guard.log = {} -- 이 서버의 최근 일(관리 창): { t, uid, name, what = "issue" · "pass" · "wrong" · "fail" · "force" · "clear", n = 놓친 수, wait = 기다릴 초 }
+Guard.log = {} -- 이 서버의 최근 일(관리 창): { t, uid, name, what = "issue" · "pass" · "wrong" · "fail" · "force" · "clear" · "warn", n = 놓친 수, wait = 기다릴 초 }
 
 local function note(s, what: string, n: number?, wait: number?)
 	table.insert(Guard.log, 1, { t = os.time(), uid = s.player.UserId, name = s.name or s.player.Name, what = what, n = n, wait = wait })
@@ -96,12 +96,20 @@ end
 function Guard.onMove(s, x: number, y: number)
 	if s.macro then
 		Macro.onMove(s.macro, x, y, os.time())
+		Macro.cell(s.macro, x, y, os.clock(), os.time()) -- 행동 로그: 지난 칸의 차례(같은 길 — 2026-11-09)
+	end
+end
+-- 행동 로그(2026-11-09 — sim/macro.luau Macro.act): 줍기 "pick" · 물약 "potion" · 문 "hop" — world.luau가 부른다
+function Guard.onAct(s, kind: string)
+	if s.macro then
+		Macro.act(s.macro, kind, os.clock(), os.time())
 	end
 end
 
 function Guard.onSkill(s, id: string)
 	if s.macro then
 		Macro.onSkill(s.macro, id, os.clock())
+		Macro.act(s.macro, "s:" .. id, os.clock(), os.time()) -- 행동 로그: 1분의 벡터 · 차례(2026-11-09)
 		-- 게임 창이 앞에 없는데(다른 창을 보고 있다 · 내려 두었다) 스킬이 들어왔다 = 사람이 누른 것이 아니다(2026-10-24)
 		if s.macroBlur then
 			Macro.onBlind(s.macro, os.time())
@@ -133,6 +141,30 @@ function Guard.tick(s, key: string?)
 	if Macro.pending(st) and now - (s.macroPushAt or 0) >= 5 then
 		s.macroPushAt = now
 		push(s, nil)
+	end
+	-- 계정의 매크로 기록(2026-11-09 — sim/macro.luau Macro.minute · Macro.total · 공방 design/macro.js의 record): 1분마다
+	--  사냥 맵에서 사냥 중이면 그 1분(로그 점수 · 룬의 저주 · 의심 구간)을 계정에 적고, 종합 점수를 다시 셈한다 → 모든 서버의 「위험 순위」 · 심각이면 경고
+	local minute = now // 60
+	if s.macroMin ~= minute then
+		s.macroMin = minute
+		if Guard.huntScene(key) and Macro.hunting(st, now) then
+			local r0 = Macro.logScore(st, now)
+			Macro.minute(st, now, if r0 then r0.score else 0, s.hero.curse or 0, SCENES.base(key or "") or key or "", Macro.how(r0))
+			s.dirty = true
+		else
+			Macro.endEp(st)
+		end
+		st.total = Macro.total(st.saved, now)
+		Guard.board(s, now)
+		if Macro.warnDue(st, now) then
+			Guard.warn(s, "auto")
+		end
+	end
+	-- 행동 로그의 점수가 높으면 Analytics에 남긴다(그 숫자로 문턱을 고친다 — 2026-11-09 · 한 사람에 note초에 한 번)
+	local lr = Macro.logScore(st, now)
+	if lr and lr.score >= MD.log.level.mid and now - (s.macroLogAt or -math.huge) >= MD.log.note then
+		s.macroLogAt = now
+		Analytics.custom(s, "MacroLog", math.floor(lr.score * 100), if lr.score >= MD.log.level.high then "high" else "mid")
 	end
 	local what = Macro.tick(st, now, { hunt = Guard.huntScene(key) }, function()
 		return rng:NextNumber()
@@ -225,6 +257,75 @@ function Guard.clear(s)
 		s.dirty = true
 	end
 end
+-- 모든 서버의 「위험 순위」(순위판 macro — 열쇠 = UserId · 점수 = 종합 점수): record.board.every초마다 · min 넘으면 적고, 내려가면 이 접속에서 한 번 지운다
+function Guard.board(s, now: number)
+	local st = s.macro
+	local BD = MD.record.board
+	if not st or not st.total or now - (s.macroBoardAt or -math.huge) < BD.every then
+		return
+	end
+	s.macroBoardAt = now
+	local Store = require(script.Parent.store)
+	local uid = tostring(s.player.UserId)
+	-- 저장소에 쓰는 것은 따로 돌린다(2026-11-09 — 이 함수는 서버 틱(Heartbeat) 안에서 불린다: 쓰기를 기다리면 그동안 틱 전체가 멈춘다)
+	if st.total.score >= BD.min then
+		local score, info = st.total.score, { name = s.name or s.player.Name, at = now }
+		task.spawn(function()
+			Store.rankSet("macro", uid, score)
+			Store.rankInfoSet("macro_" .. uid, info)
+		end)
+		s.macroBoardOff = nil
+	elseif not s.macroBoardOff then
+		task.spawn(Store.rankRemove, "macro", uid)
+		s.macroBoardOff = true
+	end
+end
+-- 경고(2026-11-09 사용자 "심각한 유저의 경우 채팅창에 경고 주고 개선되는지도 파악할수있어야해"): 그 사람의 채팅창 · 화면 위에 「운영 경고」 · 계정의 warns에 남긴다(관리 창이 전 · 뒤를 견준다)
+--  by = "auto"(심각 · 하루에 한 번 — Macro.warnDue) · "admin"(관리 창의 「경고」)
+function Guard.warn(s, by: string)
+	local st = s.macro
+	if not st then
+		return
+	end
+	local now = os.time()
+	st.total = st.total or Macro.total(st.saved, now)
+	Macro.warned(st, now, by)
+	Net.FireClient("MacroWarn", s.player, MD.record.words.warn)
+	note(s, "warn")
+	Analytics.custom(s, "MacroWarn", st.total.score, by)
+	s.dirty = true
+end
+-- 미끼(별똥별 조각)의 결과(server runeGuard.luau가 부른다): 주웠다 · 놓쳤다 → 계정의 최근 결과 · 그날의 수
+function Guard.bait(s, got: boolean)
+	if s.macro then
+		Macro.baitResult(s.macro, got, os.time())
+		s.dirty = true
+	end
+end
+-- 관리 창의 「기록」(접속 중인 사람 — 지금의 계정 자료로): Macro.recordView + 이름
+function Guard.record(s)
+	local st = s.macro
+	if not st then
+		return nil
+	end
+	local v = Macro.recordView(st.saved, os.time())
+	v.name, v.uid, v.online = s.name or s.player.Name, s.player.UserId, true
+	return v
+end
+-- 관리 창에 보일 행동 로그의 까닭(2026-11-09 — 숫자는 % · 0 ~ 100): { score, sim = { 평균, 흩어짐, 분 수 }, loop · route = { 덮는 몫, 한 바퀴 흔들림, 바퀴 수 } } 또는 nil
+function Guard.logView(st, now: number)
+	local r = Macro.logScore(st, now)
+	if not r then
+		return nil
+	end
+	local function pct(v: number): number
+		return math.floor(v * 100 + 0.5)
+	end
+	local function ring(x)
+		return if x then { pct(x.cover), pct(x.cv), x.laps } else nil
+	end
+	return { score = pct(r.score), sim = if r.sim then { pct(r.sim.mean), pct(r.sim.sd), r.sim.n } else nil, loop = ring(r.loop), route = ring(r.route) }
+end
 -- 관리 창의 줄(이 서버의 사람들 — 의심이 높은 차례): { uid, name, level, suspect, huntMin, fails, stopped, pending }
 function Guard.list(sessions)
 	local now = os.time()
@@ -232,7 +333,7 @@ function Guard.list(sessions)
 	for _, s in sessions do
 		local st = s.macro
 		if st and s.hero then
-			table.insert(out, { uid = s.player.UserId, name = s.name or s.player.Name, level = s.hero.level, suspect = Macro.level(st, now), huntMin = math.floor(Macro.huntFor(st, now) / 60), fails = #st.saved.fails, stopped = Macro.stopped(st), pending = Macro.pending(st) })
+			table.insert(out, { uid = s.player.UserId, name = s.name or s.player.Name, level = s.hero.level, suspect = Macro.level(st, now), huntMin = math.floor(Macro.huntFor(st, now) / 60), fails = #st.saved.fails, stopped = Macro.stopped(st), pending = Macro.pending(st), bait = { require(lune.sim.rune).baitCounts(st.bait, now) }, log = Guard.logView(st, now), total = st.total and st.total.score, grade = st.total and st.total.grade }) -- bait = 지난 한 시간의 별똥별 조각 { 주운 수, 떨어진 수 }(2026-11-07)
 		end
 	end
 	local rank = { high = 3, mid = 2, low = 1 }

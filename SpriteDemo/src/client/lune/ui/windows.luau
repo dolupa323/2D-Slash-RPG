@@ -72,6 +72,21 @@ function Windows.init(context)
 	end)
 end
 
+-- 창 층을 달빛 상점의 공간(층 500) 위로 올린다 · 되돌린다(2026-11-10 사용자 "확률보기 눌러도 뭐뜨는게 없고" — 공간 안에서 연 「확률 보기」 창이
+--  층 150이라 공간 뒤에 떠서 보이지 않았다). cashShop.luau가 들어갈 때 true · 나올 때 false
+Windows.RAISED = 550
+function Windows.raise(on: boolean)
+	if root then
+		root.ZIndex = if on then Windows.RAISED else 150
+	end
+	if closers then
+		closers.ZIndex = if on then Windows.RAISED + 10 else 300
+	end
+end
+function Windows.layerZ(): number?
+	return if root then root.ZIndex else nil
+end
+
 -- 창을 등록한다. def = { wide = 넓은 창인가, side = 늘 그쪽에 뜨는 창("right" — 가방), size = function(arg) → 속의 폭 · 높이, build = function(body, ctx, w, h, arg) → { refresh(me), destroy() } }
 function Windows.register(id: string, def)
 	local info = nil

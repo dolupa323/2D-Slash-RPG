@@ -222,11 +222,11 @@ do
 	expect(d, "생존기(무적)가 걸려 있어도 쓰러진다(2026-11-05 사용자 \"유틸들로 보스 기믹을 씹는경우는 없어야한다 트루데미지로\" — 그 전: 막았다)")
 end
 
--- ---- ⑤ 그림자 사수만의 예고(2026-10-27 — 사용자: "지금 패턴표시랑 이펙트랑 너무 똑같잖아 달라야지 다른보슨데") ----
---  표시 모양 = story.mark "archer": 조준선(물결) · 조준경(화살비) · 수정 씨앗(수정 덫) · 조준 십자선(머리 위). 판정의 칠은 맞는 높이(lift ~ up) 그대로
+-- ---- ⑤ 예고(2026-11-09 사용자: "그냥 단색 희미한 영역만 보이는거야" — 예고 = 맞을 자리의 희미한 단색 칠 하나 · 보스마다 다른 것은 머리 위 표시뿐) ----
+--  그 전(2026-10-27 "너무 똑같잖아 달라야지")의 조준선 · 조준경 · 수정 씨앗 · 가시밭의 모양은 뺐다 — 머리 위의 조준 십자선만 남았다
 do
 	local BossFx = req("ReplicatedStorage/shared/lune/bossfx")
-	eq(def.story.mark, "archer", "그림자 사수의 표시 모양")
+	eq(def.story.mark, "archer", "그림자 사수의 머리 위 표시")
 	local function canvas()
 		local c = { rects = {}, color = 0, a = 1 }
 		function c:style(v)
@@ -244,48 +244,29 @@ do
 	for _, id in { "shot", "pierceHigh" } do
 		local p = P[id]
 		local c = canvas()
-		BossFx.tell(c, 400, floorY, -1, p, 0.5, 96, 704, 100, nil, "archer")
-		local band
-		for _, r in c.rects do
-			if r.a > 0.1 and r.a < 0.2 and r.w > 100 then
-				band = r
-			end
-		end
-		expect(band ~= nil and band.y == floorY - p.wave.up and band.y + band.h == floorY - (p.wave.lift or 0), ("%s: 조준선의 옅은 칠 = 맞는 높이(바닥에서 %d ~ %d)"):format(id, p.wave.lift or 0, p.wave.up))
-		local cOld = canvas()
-		BossFx.tell(cOld, 400, floorY, -1, p, 0.5, 96, 704, 100, nil, nil)
-		expect(#c.rects ~= #cOld.rects, id .. ": 다른 보스의 띠(꺾쇠)와 다른 그림")
+		BossFx.tell(c, 400, floorY, -1, p, 0.5, 96, 704, nil, nil, "archer")
+		local band = c.rects[1]
+		expect(#c.rects == 1 and band.y == floorY - p.wave.up and band.y + band.h == floorY - (p.wave.lift or 0) and band.a < 0.3, ("%s: 날아갈 길의 희미한 칠 하나 = 맞는 높이(바닥에서 %d ~ %d)"):format(id, p.wave.lift or 0, p.wave.up))
 	end
 	for _, grid in { false, true } do
 		local c = canvas()
 		BossFx.spot(c, 300, floorY, 14, 50, 0.6, nil, nil, "archer", grid)
-		local hasEdge = false
-		for _, r in c.rects do
-			if r.x == 300 - 14 or r.x == 300 + 14 - 1 then
-				hasEdge = true
-			end
-		end
-		expect(#c.rects > 20 and hasEdge, (if grid then "수정 씨앗" else "조준경") .. ": 그리고 판정의 양옆(x ± r)을 보인다")
+		local r = c.rects[1]
+		expect(#c.rects == 1 and r.x == 300 - 14 and r.w == 28 and r.y == floorY - 50 and r.h == 50, (if grid then "수정 덫" else "화살비") .. ": 표시된 자리 = 기둥 칠 하나(x ± r · 높이 up)")
 	end
-	-- 검은 가시밭(즉사 — 2026-10-27): 판정의 넓이(몸의 양쪽 104점 · 높이 90) 전체를 짙게 칠하고 양 끝에 굵은 경계를 세운다
+	-- 검은 가시밭(즉사): 판정의 넓이(몸의 양쪽 104점 · 높이 90) 그대로 칠 하나
 	do
 		local T = P.thorns
 		local c = canvas()
-		BossFx.tell(c, 400, floorY, -1, T, 0.5, 96, 704, 100, nil, "archer")
+		BossFx.tell(c, 400, floorY, -1, T, 0.5, 96, 704, nil, nil, "archer")
 		local lo, hi = 400 - T.zone.to, 400 - T.zone.from
-		local fill, edgeL, edgeR = nil, false, false
-		for _, r in c.rects do
-			if r.a >= 0.2 and r.x == lo and r.w == hi - lo and r.h == T.zone.up then
-				fill = r
-			end
-			if r.x == lo and r.w == 2 and r.h == T.zone.up then
-				edgeL = true
-			end
-			if r.x == hi - 2 and r.w == 2 and r.h == T.zone.up then
-				edgeR = true
-			end
-		end
-		expect(fill ~= nil and fill.y == floorY - T.zone.up, ("가시밭: 판정의 넓이(%d ~ %d · 높이 %d)를 짙게 칠한다"):format(lo, hi, T.zone.up))
-		expect(edgeL and edgeR, "가시밭: 양 끝에 나가야 할 경계(굵은 세로 줄)")
+		local r = c.rects[1]
+		expect(#c.rects == 1 and r.x == lo and r.w == hi - lo and r.y == floorY - T.zone.up and r.h == T.zone.up, ("가시밭: 판정의 넓이(%d ~ %d · 높이 %d) 그대로 칠 하나"):format(lo, hi, T.zone.up))
+	end
+	do -- 머리 위: 조준 십자선(다른 보스의 「!」와 다르다)
+		local c, cA = canvas(), canvas()
+		BossFx.tell(c, 400, floorY, -1, P.shot, 0.5, 96, 704, 100, nil, "archer")
+		BossFx.tell(cA, 400, floorY, -1, P.shot, 0.5, 96, 704, 100, nil, nil)
+		expect(#c.rects > 1 and #c.rects ~= #cA.rects, "머리 위의 표시가 다른 보스와 다르다")
 	end
 end

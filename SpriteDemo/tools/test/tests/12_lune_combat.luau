@@ -781,3 +781,15 @@ do
 	eq(rest(field, 8), 0, "사냥터에서는 가만히 있어도 차지 않는다")
 	h.invuln = 0
 end
+
+-- 필요한 경험치가 줄었을 때(2026-11-06 「150레벨까지 조금 완화」 — Lv.1 ~ 149 x0.8): 저장된 경험치가 그 레벨의 필요치를 넘으면 버리지 않고 들어올 때 레벨이 오른다
+do
+	local h0 = Hero.new(9, "axion")
+	Hero.setLevel(h0, 50, Hero.jobAt(50))
+	local data = Hero.pack(h0)
+	data.xp = N.xpNeed(50) + 10
+	local back = Hero.unpack(9, data)
+	eq(back.level, 51, "넘친 경험치로 들어올 때 Lv.51")
+	eq(back.xp, 10, "남은 경험치 10")
+	expect(math.abs(N.xpNeed(149) - math.floor(N.killsAt(149) * N.mobXp(149) * 0.8 + 0.5)) < 1, "Lv.149의 필요 경험치 = 그 전의 0.8배")
+end

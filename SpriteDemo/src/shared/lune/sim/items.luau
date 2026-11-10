@@ -252,7 +252,9 @@ function Items.sum(list)
 	end
 	-- 세트 효과(2026-11-05 — 공방 bosscoin.js GEARSETS · 보스 전리품 · 화심): 그 세트의 것을 n개 끼면 n까지의 단계를 모두
 	local bonus = Items.setBonus(list)
-	return { atk = atk + bonus.atk, stat = stat + bonus.stat, def = def + bonus.def }
+	-- 추가 옵션(2026-11-07): 공격력 · 올스탯 · 방어력은 여기 더한다(힘 · 민첩 · 지능 · 운은 Hero.spec이 ex로 · % 옵션은 패시브 · 키트 · 버프의 셈이)
+	local ex = Items.exSum(list)
+	return { atk = atk + bonus.atk + (ex.atk or 0), stat = stat + bonus.stat + (ex.all or 0), def = def + bonus.def + (ex.def or 0), ex = ex }
 end
 
 -- ---------- 세트 효과(2026-11-05 사용자: "지금 출시된 보스들의 장신구 세트효과가 있어야해 2세트 효과 , 3세트효과 이런식으로 150제 장비도 세트효과 추가하고 너무강력하진않게 하지만 맞추는 메리트는 있게") ----------
@@ -290,6 +292,167 @@ function Items.setBonus(list)
 		end
 	end
 	return out
+end
+
+-- ---------- 추가 옵션(2026-11-07 — 공방 js/lune/design/items.js 4-1b의 EXTRA · 사용자 "모든 장비에 메이플스토리 추가옵션 같은 개념을 부여할거야") ----------
+--  장비마다 it.ex = { { k = 종류, v = 값 }, … } — 줄 수 = 착용 레벨로(150 이상 3 · 70 이상 2 · 그 아래 1) · 종류는 겹치지 않게 같은 확률 · 값은 범위의 정수 하나(같은 확률).
+--  장비가 가방 · 장비 칸 · 창고에 처음 들어올 때(bag.luau의 stamp) 없으면 굴린다 — 떨어진 것 · 만든 것 · 산 것 · 보스 · 주화 교환 · 이날 전에 생긴 옛 장비 모두.
+--  별(강화)은 추가 옵션에 붙지 않는다(메이플과 같다). 부서진 장비(흔적)의 추가 옵션은 쳐 주지 않는다(되살리면 그대로).
+--  값의 뜻: str · dex · int · luk · all · atk · def = 그만큼 더한다 · hp · crit · critDmg · dmg · final · cut · run = % 더한다
+local EX = D.EXTRA or { counts = {}, pool = {}, pctMin = 0.3 }
+local EXPOOL = {}
+for i, p in EX.pool do
+	EXPOOL[p.id] = p
+	p.order = i
+end
+Items.EXTRA = EX
+local EXRNG = Random.new()
+-- 그 레벨 장비의 추가 옵션 줄 수
+function Items.exCount(stage: number): number
+	for _, c in EX.counts do
+		if stage >= c.min then
+			return c.n
+		end
+	end
+	return 0
+end
+-- 그 옵션의 값 범위(정수 · 적어도 1) — 공방 extraRange와 같은 셈
+function Items.exRange(id: string, stage: number): (number, number)
+	local o = EXPOOL[id]
+	if not o then
+		return 0, 0
+	end
+	if o.pct then
+		local s = math.clamp(stage / 150, EX.pctMin, 1)
+		local lo = math.max(1, round(o.lo * s))
+		return lo, math.max(lo, round(o.hi * s))
+	end
+	local b = if o.base == "stat" then N.armorStat(stage) elseif o.base == "watk" then N.weaponAtk(stage) else N.armorDef(stage)
+	local lo = math.max(1, round(o.lo * b))
+	return lo, math.max(lo, round(o.hi * b))
+end
+-- 새로 굴린다(줄 수는 그 레벨의 것) — { { k, v }, … }
+function Items.rollExtra(stage: number, rng: any?): { any }
+	local r = rng or EXRNG
+	local left = {}
+	for _, p in EX.pool do
+		table.insert(left, p.id)
+	end
+	local out = {}
+	for _ = 1, math.min(Items.exCount(stage), #left) do
+		local k = table.remove(left, r:NextInteger(1, #left))
+		local lo, hi = Items.exRange(k, stage)
+		table.insert(out, { k = k, v = r:NextInteger(lo, hi) })
+	end
+	return out
+end
+-- 꼴이 맞는가: 줄 수가 그 레벨의 것 · 아는 종류 · 겹치지 않는다 · 값은 1 이상의 정수
+function Items.exValid(it): boolean
+	local ex = it.ex
+	if typeof(ex) ~= "table" or #ex ~= Items.exCount(it.stage) then
+		return false
+	end
+	local seen = {}
+	for _, e in ex do
+		if typeof(e) ~= "table" or not EXPOOL[e.k] or seen[e.k] or typeof(e.v) ~= "number" or e.v ~= math.floor(e.v) or e.v < 1 or e.v > 1e6 then
+			return false
+		end
+		seen[e.k] = true
+	end
+	return true
+end
+-- 없으면(또는 꼴이 틀리면) 굴려 붙인다
+--  (자동 검사의 가짜 환경은 shared.LUNE_NOEXTRA = true — 옛 검사들이 정한 숫자를 보게 · 추가 옵션의 검사(tests/133)만 끈다)
+function Items.ensureExtra(it, rng: any?)
+	if typeof(shared) == "table" and shared.LUNE_NOEXTRA then
+		return it
+	end
+	if typeof(it) == "table" and SLOT[it.slot] and typeof(it.stage) == "number" and not Items.exValid(it) then
+		it.ex = Items.rollExtra(it.stage, rng)
+	end
+	return it
+end
+-- 장비 하나의 저장 줄(가방 · 창고 — bag.luau · 경매장 — market.luau가 같이 쓴다):
+--  { 부위, 단계, 성능, 별, 직업(무기 — 아니면 ""), 잇단 실패, 부서짐(1 · 0), 이름표(보스의 이름 붙은 장비 — 2026-10-27), 추가 옵션(2026-11-07 — Items.packEx) }
+--  이름표가 없으면 8째는 비우고(추가 옵션이 있으면 false — 줄에 빈 데가 없게), 추가 옵션이 없으면 9째를 비운다
+function Items.packRow(it)
+	local row = { it.slot, it.stage, it.q, it.star, it.who or "", it.fails or 0, if it.broken then 1 else 0 }
+	if it.u then
+		row[8] = it.u
+	end
+	local ex = Items.packEx(it)
+	if ex then
+		row[8] = it.u or false
+		row[9] = ex
+	end
+	return row
+end
+-- 저장 꼴: { 종류, 값, 종류, 값, … }(평평하게 — 가방 · 창고 · 경매장의 줄 9째)
+function Items.packEx(it): any
+	if typeof(it.ex) ~= "table" then
+		return nil
+	end
+	local out = {}
+	for _, e in it.ex do
+		table.insert(out, e.k)
+		table.insert(out, e.v)
+	end
+	return out
+end
+function Items.unpackEx(row: any): any
+	if typeof(row) ~= "table" then
+		return nil
+	end
+	local out = {}
+	for i = 1, #row - 1, 2 do
+		table.insert(out, { k = row[i], v = row[i + 1] })
+	end
+	return out
+end
+-- 보낼 꼴(화면 — 아이템 상세): 그대로 복사
+function Items.viewEx(it): any
+	if typeof(it.ex) ~= "table" then
+		return nil
+	end
+	local out = {}
+	for i, e in it.ex do
+		out[i] = { k = e.k, v = e.v }
+	end
+	return out
+end
+-- 끼고 있는 것들의 추가 옵션 합 { [종류] = 값 }(부서진 것은 빼고)
+function Items.exSum(list): { [string]: number }
+	local out = {}
+	for _, it in list do
+		if not it.broken and typeof(it.ex) == "table" then
+			for _, e in it.ex do
+				out[e.k] = (out[e.k] or 0) + e.v
+			end
+		end
+	end
+	return out
+end
+-- 캐릭터가 끼고 있는 것의 그 종류 합(h.equip — 패시브 · 키트 · 버프의 셈이 부른다)
+function Items.exOf(h, key: string): number
+	local n = 0
+	if typeof(h) ~= "table" or typeof(h.equip) ~= "table" then
+		return 0
+	end
+	for _, it in h.equip do
+		if not it.broken and typeof(it.ex) == "table" then
+			for _, e in it.ex do
+				if e.k == key then
+					n += e.v
+				end
+			end
+		end
+	end
+	return n
+end
+-- 재설정(윤슬 조각): 줄 수 그대로 새로 굴린다
+function Items.reroll(it, rng: any?)
+	it.ex = Items.rollExtra(it.stage, rng)
+	return it.ex
 end
 
 -- 받는 피해 감소 %: 끼고 있는 방어구의 방어력 합으로(같은 레벨 방어구 넷 = 30% · 빈 부위 · 부서진 것은 0)

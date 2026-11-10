@@ -72,7 +72,7 @@ local function wisp(g, t, i: number, n: number, o)
 end
 -- 낫질이 맞았다: 가까운 적들에게 도깨비불을 보낸다(영혼 수만큼 — 넷까지)
 local function wisps(g, from)
-	local n = if g.sk("rp_wisp2") > 0 then min(4, 1 + (if g.has("rp_form") then 4 else floor((g.s.gauge or 0) / 34))) else 1 -- (떼혼불: 게이지 34마다 하나 더 · 사신화 동안 넷)
+	local n = if g.sk("rp_wisp2") > 0 then min(4, 1 + (if g.has("rp_form") then 4 else floor((g.s.gauge or 0) * 100 / (g.s.gaugeMax or 100) / 34))) else 1 -- (떼혼불: 게이지 34%마다 하나 더 · 사신화 동안 넷 · 가득은 차수마다 — 2026-11-09)
 	local list = {}
 	for _, m in g.mobs() do
 		if abs(m.x - from.x) < 160 then
@@ -290,6 +290,19 @@ local function reapAt(t: number)
 		return { d = REAP.from - (REAP.from - REAP.to) * u * u, f = if u < 0.2 then RP.blade else RP.rush, a = 1 }
 	end
 	return { d = REAP.to, f = RP.shatter, a = max(0, 1 - (t - REAP.sweep) / (REAP.life - REAP.sweep)) }
+end
+-- 참수의 초승달(2026-11-10 사용자 "참수 지금 너무 이상하고 … 원래 4차사냥기를 말하는거야 최초에 … 그걸로 이펙트를 하자" — 공방 kits/reaper.js의 beheadFx와 같다):
+--  처음(10-11)의 4차 사냥기 대수확 = 납작한 초승달(굵은 것 + 안쪽 가는 것) · 돌아오는 초승달 → 참수의 세 타(i 0 = 앞으로 긋는 초승달 · 1 = 돌아오는 초승달 · 2 = 둘을 겹친 큰 초승달) ·
+--  길이는 참수의 판정(앞 60)에 맞춰 줄였다(그 전 150 · 110 · 90). 같은 날 낮의 Codixel 낫날 그림은 쓰지 않는다(사용자 「너무 이상하다」)
+local function beheadFx(g, i: number)
+	-- 크기 = 처음 대수확 그대로(2026-11-10 사용자 "범위 너무작잖아 엄청 커도된다 원래 사냥기 쓰는것처럼" — 판정도 앞 160 · 위 64)
+	if i == 0 or i == 2 then
+		g.fx.slash(g.fwd(-10), g.y - 2, g.dir, 150, -6, 36, g.tone, { thick = 20, life = 0.34 })
+		g.fx.slash(g.fwd(-10), g.y - 2, g.dir, 110, -4, 30, g.tone, { thick = 8, life = 0.4 })
+	end
+	if i == 1 or i == 2 then
+		g.fx.slash(g.fwd(-6), g.y - 2, g.dir, 90, 30, -6, g.tone, { thick = 10, life = 0.3 })
+	end
 end
 -- 맞은 적의 번쩍임(3장 — 0.05초씩)
 local function bite(g, x: number, y: number, flip: boolean)
@@ -693,18 +706,20 @@ local skills = {
 		if not m then
 			return
 		end
-		local top = if m.boss then 44 else 28
-		g.fx.pop(m.x, m.y - m.h - top, g.tone, { r = 6, life = 0.3 })
-		reaperShade(g, m.x + (if m.x >= g.x then 1 else -1) * (if m.boss then 26 else 14), m.y, if m.x >= g.x then -1 else 1, 0.6, 3) -- 적 등 뒤에 선 사신 그림자(2026-10-31)
+		-- 겨눌 자리(g.spot — 용암 거인의 팔은 손: 2026-11-10 사용자 "용암거인 팔의 히트박스 문제야 … 손에있어야해" — 전에는 보스의 자리(벽 = 겨드랑이)에 그렸고 거리도 거기서 쟀다)
+		local mx, head = g.spot(m, if m.boss then 44 else 28)
+		local base = if m.aimTop then head + 40 else m.y - m.h -- (낫이 떨어지는 바닥: 손이면 주먹 위 40점 아래 · 아니면 몸의 자리)
+		g.fx.pop(mx, head, g.tone, { r = 6, life = 0.3 })
+		reaperShade(g, mx + (if mx >= g.x then 1 else -1) * (if m.boss then 26 else 14), m.y, if mx >= g.x then -1 else 1, 0.6, 3) -- 적 등 뒤에 선 사신 그림자(2026-10-31)
 		for i = 0, 2 do
 			g.after(0.14 + i * 0.16, function()
 				if m.dead >= 0 then
 					return
 				end
-				local x = m.x + (i - 1) * 5
-				g.fx.cut(x, m.y - m.h - 46, 76, 90, g.tone, { th = 3, life = 0.18 })
-				g.fx.slash(x - 6, m.y - m.h - 6, 1, 12, 200, 340, g.tone, { thick = 5, life = 0.2 })
-				g.fx.ring(m.x, m.y, 2, 14, g.tone, { life = 0.2 })
+				local x = mx + (i - 1) * 5
+				g.fx.cut(x, base - 46, 76, 90, g.tone, { th = 3, life = 0.18 })
+				g.fx.slash(x - 6, base - 6, 1, 12, 200, 340, g.tone, { thick = 5, life = 0.2 })
+				g.fx.ring(mx, m.y, 2, 14, g.tone, { life = 0.2 })
 				g.hurt(m, 9, { stop = if i == 2 then 0.05 else 0 })
 			end)
 		end
@@ -729,8 +744,8 @@ do
 		local n = i - 1
 		ev[f] = function(g)
 			local x = g.fwd(24) + (n - 1) * 3
-			g.fx.cut(x, g.y - 26, 66, 90, g.tone, { th = 3, life = 0.18 })
-			local hs = g.hit(0, 46, 60, 4, 8, { stop = 0.03 })
+			beheadFx(g, n) -- 처음의 4차 사냥기(대수확)의 초승달(2026-11-10 — 아래 beheadFx)
+			local hs = g.hit(-10, 160, 64, 4, 8, { stop = 0.03 }) -- 판정 = 처음 대수확처럼 뒤 10 ~ 앞 160 · 위 64(2026-11-10 사용자 "범위 너무작잖아 엄청 커도된다 원래 사냥기 쓰는것처럼" — 그 전 앞 46 → 60)
 			if #hs > 0 and g.has("rp_form") then -- 사신화 중이면 타마다 그림자 낫이 한 번 더(2026-10-31 — 그 전: 영혼을 하나씩 태워)
 				g.after(0.12, function()
 					g.fx.cut(x + 4, g.y - 26, 72, 96, DARK, { th = 5, life = 0.22 })
@@ -742,7 +757,8 @@ do
 		end
 	end
 	-- 2026-11-05 사용자 "보스기 퍼뎀 3차가 4차보다 쎈경우는 없어야한다": 22 → 13장/초 · 0.44 → 0.74초 — 가장 빠른 보스기라 한 번에 넣는 %가 3차 단죄 만렙보다 작았다(Lv.1 510% < 722%). 초당 세기(rate)는 그대로(공방 kits/reaper.js와 같다)
-	table.insert(skills, { id = "rp_behead", key = "F", shot = 0.74, segs = { { clip = "dslash", fps = 13, ev = ev } } })
+	-- 2026-11-10 사용자 "공속 살짝빠르게": 13 → 14장/초(0.74 → 0.69초 — 제가 정한 것)
+	table.insert(skills, { id = "rp_behead", key = "F", shot = 0.69, segs = { { clip = "dslash", fps = 14, ev = ev } } })
 end
 
 local more = {
@@ -820,18 +836,28 @@ for _, s in Common.commons do
 	table.insert(skills, s)
 end
 
+-- 사신화를 쓸 수 있는가(게이지를 배웠고 가득 · 아직 변하지 않았다 — 화면의 미리 셈: 진짜는 서버 sim/kit.luau Kit.formReady). g.s.gaugeMax = 서버가 알려 준 가득(차수마다 — boot.luau syncKit)
+local function formReady(g): boolean
+	return g.sk("rp_soul") > 0 and not g.has("rp_form") and (g.s.gauge or 0) >= (g.s.gaugeMax or 100)
+end
+
 local reaper = {
 	tone = "pink",
 	toggle = "rp_wisp",
 	icons = { c_hero = "moon", rp_wisp = "flame", rp_chill = "haste", rp_fade = "shield", rp_form = "scythe" },
 	init = function(g)
-		g.s = { gauge = 0, wispAt = -9, gate = nil, ghosts = {} }
+		g.s = { gauge = 0, gaugeMax = 100, wispAt = -9, gate = nil, ghosts = {} }
+	end,
+	-- 사신화를 쓸 수 있을 때(2026-11-09 사용자 "사신화를 쓸 수 있을 풀게이지가 되었을때 시각적으로 보여야하고"): 퀵슬롯의 사신화 칸이 빛난다(boot.luau → hud.luau · touch.luau — 빛나는 칸은 glowOf)
+	formReady = formReady,
+	glowOf = function(id: string): boolean
+		return id == "rp_form"
 	end,
 	haste = function(g)
 		return if g.has("rp_chill") then 1.25 else 1
 	end,
 	mult = function(g)
-		return 1 + (if g.has("rp_form") then 0.4 else 0) + (if g.has("c_hero") then 0.05 else 0)
+		return 1 + (if g.has("rp_form") then COMBAT.buffs.rp_form.fx.dmg else 0) + (if g.has("c_hero") then 0.05 else 0) -- (사신화의 데미지 — 2026-11-09 +40% → +15%)
 	end,
 	dim = function(g)
 		return if g.has("rp_form") then 0.25 else 0
@@ -859,10 +885,36 @@ local reaper = {
 	end,
 	tick = function(g)
 		g.hero.alpha = if g.has("rp_fade") then 0.4 else 1
+		-- 게이지가 가득해지는 순간: 발밑에서 사신의 기운이 한 번 퍼지고 넋이 솟는다 · 가득한 동안: 발밑에서 넋이 조금씩 피어오른다(아래 drawBack의 일렁이는 그림자와 함께 — 2026-11-09)
+		local ready = formReady(g)
+		if ready and not g.s.readyOn then
+			g.fx.ring(g.x, g.y, 4, 34, DARK, { squash = 0.35, life = 0.45 })
+			g.fx.ring(g.x, g.y, 3, 26, g.tone, { squash = 0.35, life = 0.4, delay = 0.05 })
+			g.fx.rise(g.x, g.y - 4, 8, g.tone, { life = 0.9 })
+		end
+		g.s.readyOn = ready
+		if ready and g.clock - (g.s.readyFx or -9) > 0.35 then
+			g.s.readyFx = g.clock
+			g.fx.rise(g.x, g.y - 2, 1, g.tone, { life = 0.8, w = 20 })
+		end
 	end,
 	drawBack = function(ctx, g)
 		if g.has("rp_form") then
 			g.sprite("skill", 10, g.x, g.y, g.dir, { color = 0x12161c, alpha = 0.8 }) -- 사신화: 등 뒤에 선 사신 그림자(시트의 그림)
+		elseif formReady(g) then -- 사신화를 쓸 수 있다(2026-11-09): 발밑에 일렁이는 칠흑 그림자 + 분홍 테(숨 쉬듯)
+			local k, fy = 0.5 + 0.5 * sin(g.clock * 6), R(g.y) - 2 -- (2점 위 — 발판의 윗줄에 가리지 않게)
+			ctx:alpha(0.45 + 0.25 * k)
+			ctx:style(0x12161c)
+			for dy = -2, 2 do
+				ctx:rect(R(g.x) - 15 + abs(dy) * 3, fy + dy, 30 - abs(dy) * 6, 1)
+			end
+			ctx:alpha(0.35 + 0.45 * k)
+			ctx:style(g.tone.n)
+			ctx:rect(R(g.x) - 15, fy, 2, 1)
+			ctx:rect(R(g.x) + 13, fy, 2, 1)
+			ctx:rect(R(g.x) - 9, fy - 2, 18, 1)
+			ctx:rect(R(g.x) - 9, fy + 2, 18, 1)
+			ctx:alpha(1)
 		end
 		if g.has("rp_fade") then -- 저승 걸음: 발밑의 어두운 웅덩이
 			ctx:alpha(0.6)
@@ -874,24 +926,31 @@ local reaper = {
 		end
 	end,
 	-- 사신 게이지 막대(발밑의 이름표 바로 아래 — 2026-11-01 사용자 "게이지 샐래맨더 게이지처럼하면되잖아": 살라맨더의 열기 막대와 같은 꼴 · 그 전: 몸 둘레를 도는 구슬).
-	--  채우는 동안 진한 색(d) · 가득하면 깜빡인다(l ↔ n — 사신화를 쓸 수 있다) · 사신화 동안은 남은 시간만큼(깜빡인다 — 처음 받은 남은 시간이 가득). 게이지를 배운 내 캐릭터에만 보인다
+	--  채우는 동안 진한 색(d) · 가득하면 흰색 ↔ 밝은 색으로 빠르게 깜빡이고 테두리가 분홍으로 빛난다(사신화를 쓸 수 있다 — 2026-11-09 · 그 전: 사신화 동안과 같은 깜빡임이라 가렸다)
+	--  사신화 동안은 남은 시간만큼(l ↔ n 깜빡인다 — 처음 받은 남은 시간이 가득). 가득은 차수마다(g.s.gaugeMax — 2026-11-09). 게이지를 배운 내 캐릭터에만 보인다
 	draw = function(ctx, g)
 		if g.sk("rp_soul") <= 0 then
 			return
 		end
 		local x, y = R(g.x) - 9, R(g.y) + Common.gaugeDown(g)
-		local form, full = g.has("rp_form"), (g.s.gauge or 0) >= 100
+		local gmax = g.s.gaugeMax or 100
+		local form, full = g.has("rp_form"), (g.s.gauge or 0) >= gmax
 		local k
 		if form then
 			g.s.formTotal = max(g.s.formTotal or 0, g.left("rp_form"))
 			k = g.left("rp_form") / max(0.01, g.s.formTotal)
 		else
 			g.s.formTotal = nil
-			k = (g.s.gauge or 0) / 100
+			k = (g.s.gauge or 0) / gmax
 		end
-		ctx:style(0x12161c)
+		ctx:style(if full and not form then g.tone.n else 0x12161c)
 		ctx:rect(x - 1, y - 1, 20, 4)
-		ctx:style(if form or full then (if floor(g.clock * 10) % 2 == 1 then g.tone.l else g.tone.n) else g.tone.d)
+		-- 깜빡이지 않는다(2026-11-10 사용자 "사신화 게이지 너무 깜빡거려 게이지는 깜빡거리지않아도된다"): 가득 = 흰 막대 + 분홍 테두리 · 사신화 동안 = 밝은 막대(남은 시간만큼) · 채우는 동안 = 진한 색
+		if full and not form then
+			ctx:style(g.tone.w)
+		else
+			ctx:style(if form then g.tone.l else g.tone.d)
+		end
 		ctx:rect(x, y, R(18 * min(1, k)), 2)
 	end,
 	drawBind = coilBind,
@@ -904,7 +963,7 @@ local reaper = {
 					return
 				end
 				g.fx.cut(m.x + 3, m.y - m.h - 12, 36, 70, DARK, { th = 4, life = 0.2 })
-				g.hurt(m, ceil(dmg * 0.5), { proc = true })
+				g.hurt(m, ceil(dmg * COMBAT.kit.reaper.core.form.shade), { proc = true }) -- (그 타의 form.shade — 2026-11-09 50% → 15%)
 			end)
 		end,
 		soul = function(g, m, near)

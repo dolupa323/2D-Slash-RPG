@@ -86,7 +86,7 @@ SERVICE("MessagingService", {
 	end,
 })
 SERVICE("TextService", { FilterStringAsync = function(_, text) return { GetNonChatStringForBroadcastAsync = function() return text end } end })
-local disk, names, world, ranks = {}, {}, {}, { level = {}, power = {}, robux = {} }
+local disk, names, world, ranks = {}, {}, {}, { level = {}, power = {}, robux = {}, macro = {} } -- (macro = 매크로 기록의 순위 — 2026-11-09 macroGuard가 지운다)
 local info = {}
 MOCK("ServerScriptService/server/lune/modules/store", {
 	lock = function() return true end,

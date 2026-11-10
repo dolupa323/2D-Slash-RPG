@@ -62,7 +62,7 @@ for _, p in BM.products or BM.items or BM do
 end
 for _, list in { RIDE.pets, RIDE.mounts } do
 	for _, r in list do
-		local name = names[r.id] or (r.free and r.name) -- 쿠폰으로만 받는 펫(까망 동글이 — 상품이 아니다 · 2026-10-21)은 펫 표의 이름
+		local name = names[r.id] or ((r.free or r.box) and r.name) -- 쿠폰으로만 받는 펫(까망 동글이 — 상품이 아니다 · 2026-10-21)과 윤슬 상자에서만 나오는 펫 · 탈것(box — 2026-11-07)은 펫 표의 이름
 		expect(name ~= nil, r.id .. ": 상품의 이름이 있다(쿠폰 펫은 펫 표의 이름)")
 		if name then
 			local fit = pixelText.Fit(name, 50, 2)

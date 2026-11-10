@@ -3,6 +3,7 @@
 --  보는 것: ① 파티가 아닌 사람이 한 대 치고 다른 사람이 잡으면 둘 다 센다 ② 친 뒤 쓰러졌거나 맵을 떠난 사람은 세지 않는다
 --   ③ 다시 나온 몬스터는 새로 센다(전에 친 것은 넘어가지 않는다) ④ 잡은 사람의 파티원(같은 맵)은 치지 않아도 센다(예전 그대로)
 --   ⑤ 경험치는 때린 만큼 나눈다 · 떨어지는 것은 가장 많이 깎은 사람의 것(2026-10-22 사용자 "지금 필드에서 막타 뺏기면 경험치도 못먹나?" → "때린만큼 나눠받기로 하자")
+local N = req("ReplicatedStorage/shared/lune/config/numbers")
 local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
 COMBAT.rules.critChance = 0
 local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
@@ -126,7 +127,15 @@ do
 	mob.hitBy = { [1] = seventy }
 	mob.hp = mob.maxHp - seventy
 	local full = Hero.killXp(a, mob.lv, mob.def.hp) -- 혼자 잡을 때의 경험치(정예 배수 앞)
-	local xa, xb = a.xp, b.xp
+	-- (모은 경험치의 합 — 2026-11-06 레벨업 경험치가 줄어 이 한 마리로 레벨이 오를 수 있다: 막대 대신 합으로 본다)
+	local function totalXp(h)
+		local t = h.xp
+		for L = 1, h.level - 1 do
+			t += N.xpNeed(L)
+		end
+		return t
+	end
+	local xa, xb = totalXp(a), totalXp(b)
 	local out = room:skillHit(b, hit(9999), b.x, b.y, 1, 1)
 	eq(#out.kills, 1, "b가 막타")
 	local kill = out.kills[1]
@@ -139,8 +148,8 @@ do
 	expect(math.abs(ratio - seventy / (mob.maxHp - seventy)) < 0.1, ("a : b = 깎은 체력의 비(%.2f — 기대 %.2f)"):format(ratio, seventy / (mob.maxHp - seventy)))
 	local want = full * COMBAT.fieldElite.xp
 	expect(math.abs(got[1] + got[2] - want) <= 1.5, ("둘의 합 = 한 마리(정예)의 경험치(%d + %d ≈ %.1f)"):format(got[1], got[2], want))
-	eq(a.xp - xa, got[1], "a의 경험치가 그만큼 오른다")
-	eq(b.xp - xb, got[2], "b의 경험치가 그만큼 오른다")
+	eq(totalXp(a) - xa, got[1], "a의 경험치가 그만큼 오른다")
+	eq(totalXp(b) - xb, got[2], "b의 경험치가 그만큼 오른다")
 	expect(kill.drop ~= nil and kill.drop.owner == 1, "떨어진 달돈은 가장 많이 깎은 a의 것(막타 b가 아니라)")
 	expect(has(kill.credit, 1) and has(kill.credit, 2), "퀘스트 숫자는 둘 다")
 end

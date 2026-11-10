@@ -100,8 +100,8 @@ do
 	near(CAST.ax_execute.rate / (CAST.ax_execute.tune or 1), N.data.POWER.dps * 2.744, 1e-3, "4차 보스기")
 	near(CAST.ax_wheel.tune or 1, 1.15, 1e-6, "회전 내려치기 +15%(2026-10-27 사용자 \"액시온 회전내려치기 조금 상향\")")
 	near(CAST.rp_judge.tune or 1, 1.3, 1e-6, "단죄 +30%(2026-10-27 사용자 \"리퍼 단죄는 좀더 상향\")")
-	eq(CAST.ax_execute.tune, CAST.ax_wheel.tune, "처단도 회전 내려치기만큼(4차 레벨 1 > 3차 마스터를 지킨다)")
-	eq(CAST.rp_behead.tune, CAST.rp_judge.tune, "참수도 단죄만큼")
+	expect((CAST.ax_execute.tune or 1) >= (CAST.ax_wheel.tune or 1), "처단도 회전 내려치기만큼은(4차 레벨 1 > 3차 마스터를 지킨다 — 2026-11-06 실제 초당으로 맞춰 1.35)")
+	near(CAST.rp_behead.tune, 1.47, 1e-6, "참수 1.47(2026-11-10 사용자 \"리퍼 4차 보스기 … 퍼뎀 살짝버프하고 공속 살짝빠르게\" — 단죄 1.3보다 위)")
 	-- 새 차수의 스킬은 레벨 1부터 앞 차수의 같은 갈래 스킬을 마스터한 것보다 세다(사용자 2026-10-08: "당연히 1차 마스터보다 2차 1레벨 스킬이 강해야합니다. 이건 기본이에요")
 	--  같은 시간 동안 넣는 피해로 견준다: 레벨 1 = 앞 차수 마스터의 1.1배 · 마스터 = 1.4배
 	local FLOORC = COMBAT.castRule.floor
@@ -198,7 +198,9 @@ do
 		eq(#c.errors, 0, "오류 없이 돈다 " .. id)
 		-- 사냥기는 일반 몬스터에게 +50% · 보스기는 보스가 아니면 보정이 없다 · 그 밖은 누구에게나 +50%
 		local fit = if def.type == "boss" then 1 else 1 + RULES.targetBonus / 100
-		local want = Hero.powerRaw(h) * def.rate * (p.time + def.cdTime) * RULES.dmgScale * fit * 10 * (p.measured / p.w)
+		-- real = 실제 피해에만 곱하는 몫(2026-11-06 — 직업의 장치 때문에 설계보다 더 · 덜 들어가는 기술 · 공방 combat.js CAST)
+		-- mob = 보스가 아닌 적에게 곱하는 수(백귀야행 x4 — 2026-11-09 · 여기의 적은 보스가 아니다)
+		local want = Hero.powerRaw(h) * def.rate * (p.time + def.cdTime) * RULES.dmgScale * fit * 10 * (p.measured / p.w) * (def.real or 1) * (def.mob or 1)
 		near(total(a), want, 0.05, "열 번 쓴 피해의 합 = 설계의 피해 " .. id)
 	end
 	-- 스킬 레벨의 세기: 레벨 1은 마스터의 40%
@@ -572,7 +574,8 @@ do
 	local _, _, c, tick = dry(r)
 	c:dryCast(r, "rp_reap", 0, tick)
 	local GA = COMBAT.kit.reaper.core.gauge
-	expect(math.abs((r.kit.gauge or 0) - GA.reap * GA.job[2]) < 1e-6, ("영혼 수확: 사신 게이지 +%.1f(%s)"):format(GA.reap * GA.job[2], tostring(r.kit.gauge)))
+	local want = GA.reap * GA.job[2]
+	expect(math.abs((r.kit.gauge or 0) - want) < 1e-6, ("영혼 수확: 사신 게이지 +%.1f(%s)"):format(want, tostring(r.kit.gauge)))
 	expect(c:actor(r).out.kit, "장치의 모습이 바뀌었다고 알린다")
 	-- 참수: 사신화 중이면 타마다 그림자 낫이 한 번 더(2026-10-31 — 그 전: 영혼을 하나씩 태워) · 사신화의 그림자 낫(맞을 때마다)도 붙는다
 	local b = hero("reaper", { rp_behead = 30, rp_soul = 10 })

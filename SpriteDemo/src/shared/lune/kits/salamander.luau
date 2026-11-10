@@ -40,7 +40,7 @@ local function hotAt(g): number
 	return if g.sk("sl_heat2") > 0 then 40 else HEAT.hot
 end
 local function hot(g): boolean
-	return g.s.heat >= hotAt(g) or g.has("sl_overheat")
+	return g.s.heat >= hotAt(g) or g.s.hotOn == true or g.has("sl_overheat") -- (hotOn = 서버의 달아오름 — 열기를 써도 이어진다 · 2026-11-07)
 end
 -- 가득 찼는가(사냥기 · 보스기가 강화판으로 나간다 — 폭주 동안은 늘 가득)
 local function full(g): boolean
@@ -93,7 +93,8 @@ end
 
 local function fist(g, dmg: number) -- 앞으로 날아가는 각진 주먹 모양 불길(강화판: 1.5배 · 꼬리 불티)
 	local dir, tone, enh = g.dir, g.tone, g.s.enh == true
-	g.shot({ x = g.fwd(14), y = g.y - 9, vx = dir * 270, life = 0.42, w = if enh then 20 else 14, h = if enh then 24 else 18, dmg = dmg, o = { kb = 60 }, draw = function(ctx, p)
+	-- 날아가는 거리 0.42 → 0.55초 = 113 → 149점(2026-11-10 사용자 "살라 4차 보스기 가로 사거리 조금더 길어져야한다" · 제가 정한 것)
+	g.shot({ x = g.fwd(14), y = g.y - 9, vx = dir * 270, life = 0.55, w = if enh then 20 else 14, h = if enh then 24 else 18, dmg = dmg, o = { kb = 60 }, draw = function(ctx, p)
 		drawFist(ctx, p.x, p.y, if enh then 9 else 6, dir, tone)
 	end, every = if enh then { 0.04, function(p)
 		g.fx.shards(p.x - dir * 8, p.y, 1, tone, flameWith({ speed = 16 }))
@@ -713,19 +714,20 @@ local more = {
 			fist(g, 9)
 		end } },
 		{ clip = "punch", from = 0, to = 9, fps = 22, needPress = true, ev = { [6] = function(g)
-			local x, y, gy, enh = g.fwd(60), g.y - 9, g.y, g.s.enh == true
+			-- 셋째 폭발: 앞 60 → 70 · 둘레 44 → 62(강화판 56 → 76) — 앞 16 ~ 104 → 8 ~ 132점(2026-11-10 사용자 "살라 4차 보스기 가로 사거리 조금더 길어져야한다" · 붙어 선 적도 맞게 가까운 쪽도 덮는다 · 이펙트도 그만큼 · 제가 정한 것)
+			local x, y, gy, enh = g.fwd(70), g.y - 9, g.y, g.s.enh == true
 			fist(g, 0)
 			g.after(0.16, function()
-				g.fx.ring(x, y, 4, 34, g.tone, { squash = 1, back = false })
-				g.fx.ring(x, y, 2, 22, g.tone, { squash = 1, back = false, delay = 0.06 })
-				if enh then -- 강화판: 별 모양 섬광 · 양옆 54까지 불기둥(터지는 둘레 44 → 56)
-					flash(g, x, y, 44, 0.26)
+				g.fx.ring(x, y, 4, 48, g.tone, { squash = 1, back = false })
+				g.fx.ring(x, y, 2, 32, g.tone, { squash = 1, back = false, delay = 0.06 })
+				if enh then -- 강화판: 별 모양 섬광 · 양옆 72까지 불기둥(터지는 둘레 62 → 76)
+					flash(g, x, y, 60, 0.26)
 					for i = -3, 3 do
-						pillar(g, x + i * 18, gy, 14 - abs(i), 52 - abs(i) * 8, { delay = 0.03 * abs(i), life = 0.5, seed = i })
+						pillar(g, x + i * 24, gy, 14 - abs(i), 52 - abs(i) * 8, { delay = 0.03 * abs(i), life = 0.5, seed = i })
 					end
 				end
-				g.fx.shards(x, y, if enh then 30 else 20, g.tone, flameWith({ speed = 180 }))
-				g.hitAt(x, gy, if enh then 56 else 44, if enh then 60 else 50, 16, { kb = 150, stop = 0.08 })
+				g.fx.shards(x, y, if enh then 34 else 24, g.tone, flameWith({ speed = 210 }))
+				g.hitAt(x, gy, if enh then 76 else 62, if enh then 60 else 50, 16, { kb = 150, stop = 0.08 })
 				g.shake(1, 0.12)
 			end)
 		end } },

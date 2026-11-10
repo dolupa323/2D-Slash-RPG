@@ -57,4 +57,15 @@ return {
 			words = { bannerSub = "{from} ~ {to} · 사냥터의 몬스터가 호박 사탕을 떨어뜨린다 — 마을의 호박 마녀에게 가져가자", menu = "{what} · 사탕 {n}개", more = "다른 선물 보기", ask = "「{what}」 — 사탕 {n}개와 바꿀까?", yes = "바꾸기", got = "받았다 — {what}", short = "사탕이 모자란다({have}/{n})", once = "이미 받은 선물이다", off = "지금은 할로윈이 아니다", far = "호박 마녀 곁에서 바꿀 수 있다", potionWhat = "{name} {n}개", goodsWhat = "{name} {n}개", titleWhat = "칭호 「{name}」", date = "{m}월 {d}일", shopTitle = "호박 마녀 할로의 상점", candy = "가진 사탕", till = "{to}까지", buy = "구매", own = "보유", soldOut = "다 샀다", count = "{n}/{max}", bought = "받았다 — {what}", dayCount = "오늘 {n}/{max}", dayOut = "내일 다시", dayFull = "오늘은 다 샀다 — 한국 시각 0시에 다시", dustWhat = "달가루 랜덤 상자", dustGot = "달가루 랜덤 상자 — 달가루 +{n}", dustSmall = "아쉽다… 달가루 +{n}", dustBig = "많이 나왔다! 달가루 +{n}", dustJackpot = "대박! 달가루 +{n}", mountWhat = "탈것 「{name}」", petWhat = "펫 「{name}」", dskinWhat = "{name}" },
 		},
 	},
+	gifts = {
+		{
+			id = "pepero",
+			name = "빼빼로 데이",
+			on = { 11, 11 },
+			tz = 9,
+			n = 1,
+			item = "etc_pepero",
+			words = { got = "빼빼로 데이 선물 — 「빼빼로」를 받았다(가방 「기타」 탭)", full = "가방 「기타」 탭이 가득 차 빼빼로를 아직 받지 못했다 — 한 칸 비우면 들어온다" },
+		},
+	},
 }

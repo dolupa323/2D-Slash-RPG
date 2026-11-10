@@ -336,17 +336,25 @@ do
 		local bottom = feet + L.TAG.down + L.TAG.h
 		expect(bottom <= L.rect(UI.hud.skills, G.min.w, G.min.h).y + K.keyUp, ("발밑의 이름표(아래 끝 %d)가 스킬 칸의 아랫줄 위"):format(bottom))
 	end
-	-- 채팅: Roblox의 기본 채팅을 그대로 쓴다(사용자 2026-10-13: "우리가 자체 채팅을 구현하는게 아니라 로블록스 채팅이 있어요 …") — 우리가 그리는 채팅 칸 · 쓰는 판 · 폰의 단추와 그 셈은 없다
-	expect(UI.hud.chat == nil and UI.hudTouch.chat == nil and UI.layout.chat == nil, "우리 채팅 칸과 그 치수는 없다")
-	expect(Tags.chatLine == nil and Tags.chatClean == nil and L.chatOpen == nil and L.CHAT == nil, "우리 채팅 판의 셈은 없다")
+	-- 채팅(2026-11-06 사용자: "이제 로블록스 채팅이 아닌 우리 게임 자체 채팅구현하자" — 2026-10-13 ~ 11-06에는 Roblox의 기본 채팅이라 우리 칸이 없었다):
+	--  PC의 판(hud.chat — 위의 겹침 검사에 든다) · 폰의 판(hudTouch.chat) · 폰의 「채팅」 단추 하나 · 탭 넷 · 보낼 곳 둘 · 색. 예전 우리 채팅 판(10-13 전)의 셈은 되살리지 않았다
+	expect(UI.hud.chat ~= nil and UI.hudTouch.chat ~= nil and UI.layout.chat == nil, "채팅 판의 자리(PC · 폰)가 있다 · 치수는 chatUi에")
+	expect(Tags.chatLine == nil and Tags.chatClean == nil and L.chatOpen == nil and L.CHAT == nil, "10-13 전의 우리 채팅 판의 셈은 없다(새 셈은 ui/chatLog.luau)")
+	local chatButtons = 0
 	for _, t in UI.touch do
-		expect(t.act ~= "chat", "폰의 「채팅」 단추는 없다(Roblox의 채팅 단추로 연다)")
+		if t.act == "chat" then
+			chatButtons += 1
+		end
 	end
+	eq(chatButtons, 1, "폰의 「채팅」 단추가 하나")
 	local CU = UI.chatUi
-	expect(CU.tabs == true and CU.party.channel == "파티 · Party", "채널 탭이 켜져 있다 — 「파티」 채널에 쓸 수 있다")
-	expect(CU.window.alpha >= 0 and CU.window.alpha <= 1 and CU.window.width > 0 and CU.window.height > 0, "Roblox 채팅 창에 거는 값이 말이 된다")
-	for _, hex in { CU.window.back, CU.window.text, CU.window.dim, CU.nameColor, CU.party.color } do
+	expect(#CU.tabs == 4 and #CU.send == 2 and CU.party.channel == "파티 · Party", "탭 넷 · 보낼 곳 둘 · 파티 채널의 이름(서버와 같다)")
+	expect(CU.alpha >= 0 and CU.alpha <= 1 and CU.maxLen > 0 and CU.maxLen <= 200 and CU.keep >= 20, "판의 비침 · 보내는 글자 수(Roblox는 200자까지) · 지난 글 수")
+	for _, hex in { CU.back, CU.nameColor, CU.textColor, CU.noteColor, CU.party.color } do
 		expect(hex:match("^#%x%x%x%x%x%x$") ~= nil, "색은 #rrggbb " .. hex)
 	end
-	expect(CU.gap >= 0 and CU.keep > UI.hud.vitals.h, "파티원 칸을 띄우는 만큼 · 화면 아래에 남기는 높이(체력 덩어리보다 크다)")
+	for _, g in GRIDS do
+		local c, v = L.rect(UI.hud.chat, g.w, g.h), L.rect(UI.hud.vitals, g.w, g.h)
+		expect(c.y + c.h <= v.y - 13, ("PC의 채팅 판이 체력 덩어리(닉네임 위 보스 출현 시간)에 닿지 않는다(%s)"):format(g.name))
+	end
 end

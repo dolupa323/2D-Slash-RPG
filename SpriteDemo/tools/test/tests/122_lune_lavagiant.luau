@@ -27,7 +27,40 @@ local m6, b6 = Weekly.ofKey("r3d6#wn3")
 expect(m6 == "normal" and b6 == b and Weekly.isRoomOf(b, "r3d7") and not Weekly.isRoomOf(b, "r3d4"), "둘째 · 마지막 방도 그 보스의 방이다")
 eq(Weekly.stageKey("r3d5#wn12", "r3d6"), "r3d6#wn12", "다음 방 = 같은 번호")
 eq(b.time, 1200, "제한 시간 20분(그 보스만)")
-expect(b.normal ~= nil and b.hard == nil, "난이도 하나(노말만)")
+-- 하드(2026-11-09 사용자 "용암거인 하드모드를 만들고 … 반지확률이 좀더 높고, 화심장비 완제가 낮은확률로 드롭되고 핵도 노말보다 1개더주고"): 체력 · 세기 · 입장 · 보상
+expect(b.normal ~= nil and b.hard ~= nil, "난이도 둘(노말 · 하드)")
+expect(b.hard.hp > b.normal.hp and b.hard.hit > b.normal.hit and b.hard.need >= b.normal.need, "하드 = 체력 · 세기 · 입장 레벨이 노말보다 높다")
+do
+	local pn, ph = b.pay.normal, b.pay.hard
+	expect(ph ~= nil and ph.drop and ph.drop.u == pn.drop.u and ph.drop.pct > pn.drop.pct, "하드: 반지 확률이 더 높다")
+	local function heart(p)
+		for _, g in p.goods do
+			if g.id == "etc_fh_heart" then
+				return g.n
+			end
+		end
+		return 0
+	end
+	eq(heart(ph), heart(pn) + 1, "하드: 거인의 심장핵이 노말보다 하나 더")
+	local fire = nil
+	for _, e in ph.more or {} do
+		if e.pick == "fireheart" then
+			fire = e
+		end
+	end
+	expect(fire ~= nil and fire.pct > 0 and fire.pct < ph.drop.pct, "하드: 화심 장비 완제(낮은 확률)")
+	expect(pn.more == nil, "노말에는 화심 장비 완제가 없다")
+	-- 굴리기: 100%로 걸면 받을 사람의 직업 화심 장비가 하나 · 성능을 굴린다
+	local keepPct = fire.pct
+	fire.pct = 100
+	local got = Weekly.rollMore(b, "hard", Random.new(5), 1, { "mooni" })
+	fire.pct = keepPct
+	local it = got[1]
+	local Items = req("ReplicatedStorage/shared/lune/sim/items")
+	local u = it and Items.unique(it.u)
+	expect(#got == 1 and u ~= nil and u.set == "fireheart" and u.who == "mooni", "받을 사람(무니)의 화심 장비 하나")
+	eq(#Weekly.rollMore(b, "normal", Random.new(5), 1, { "mooni" }), 0, "노말에서는 굴리지 않는다")
+end
 local door
 for _, p in SCENES.scenes.r3d4.portals do
 	if p.weekly == "lavagiant" then
@@ -537,7 +570,110 @@ do
 end
 
 -- ---- ⑫ 예고 모양 ----
-expect(BossFx.lavaCrack and BossFx.lavaSmear and BossFx.lavaBand and BossFx.bubbleMark and BossFx.heatColumn and BossFx.magmaSigil and BossFx.lavaLines and BossFx.skyMark, "용암 거인만의 예고 모양(금 · 물결 · 아지랑이 띠 · 거품 원 · 아지랑이 기둥 · 용암 방울 · 가로 열선 · 하늘의 빛줄)")
+-- (2026-11-09 사용자: "그냥 단색 희미한 영역만 보이는거야" — 예고 = 맞을 자리의 희미한 단색 칠 하나 · 보스마다 다른 것은 머리 위 표시뿐 — 그 전의 금 · 물결 · 거품 원 · 아지랑이 기둥 · 가로 열선 · 하늘의 빛줄 모양은 뺐다)
+expect(BossFx.area and BossFx.magmaSigil, "예고 = 희미한 단색 칠(area) · 머리 위의 용암 방울")
 eq(BossFx.phaseOf(def.story.week.normal.hp, 1, G.parts), 1, "화면의 페이즈: 가득 = 첫째")
 eq(BossFx.phaseOf(0.75, 1, G.parts), 2, "화면의 페이즈: 왼팔의 끝(75%) = 둘째")
 eq(BossFx.phaseOf(0.3, 1, G.parts), 3, "화면의 페이즈: 절반 아래 = 셋째")
+
+-- ---- ⑬ 하드(2026-11-10 사용자 "용암거인 패턴이 노말이랑 똑같아 데미지도 더들어와야지"): 하드에만 쓰는 패턴 · 세기 · 몰아침 · 기믹의 수 ----
+do
+	local HW = def.story.week.hard
+	eq(HW.hit, 9, "하드 세기 9.0(노말 1.3)")
+	eq(HW.tempo, 0.85, "하드: 쉬는 틈 · 다시 쓰기 x 0.85")
+	-- 패턴: 하드에만 · 노말에만 · 연속기가 부르는 패턴이 다 있다
+	local hardOnly, normalOnly = {}, {}
+	for _, p in def.story.patterns do
+		if p.mode == "hard" then
+			table.insert(hardOnly, p.id)
+		elseif p.mode == "normal" then
+			table.insert(normalOnly, p.id)
+		end
+		for _, id in p.chain or {} do
+			expect(P[id] ~= nil and P[id].mode == nil, ("연속기 %s의 %s: 있고 두 난이도 모두 쓴다"):format(p.id, id))
+		end
+		if p.look then
+			expect(P[p.look] ~= nil, ("%s: 그 이펙트를 빌린 패턴 %s가 있다"):format(p.id, p.look))
+		end
+	end
+	expect(#hardOnly >= 8, ("하드에만 쓰는 패턴 %d개(방마다)"):format(#hardOnly))
+	for _, id in { "slamPalm", "magmaRain", "grabH", "quake", "skyH", "trapR", "trapL", "storm" } do
+		expect(P[id] ~= nil and P[id].mode == "hard", "하드의 패턴 " .. id)
+	end
+	expect(P.grab.mode == "normal" and P.sky.mode == "normal", "움켜쥐기 · 하늘의 용암 줄기 = 노말에서만(하드는 더 센 것)")
+	expect(P.grabH.grab.pct > P.grab.grab.pct and P.grabH.tell < P.grab.tell and P.grabH.grab.free > P.grab.grab.free, "조이는 움켜쥐기: 더 빨리 · 더 아프게 · 놓게 하기 더 어렵게")
+	expect(P.skyH.spots.n > P.sky.spots.n, "하늘의 용암 소나기: 줄기가 더 많다")
+	expect(P.magmaRain.spots.fx ~= nil and P.skyH.spots.fx == P.sky.spots.fx and P.grabH.fx ~= nil, "빌린 이펙트가 붙었다(look)")
+
+	-- 방: 하드의 방은 mode · tempo · 기믹의 수를 안다 / 노말의 방은 그대로
+	local function openAs(id: string, mode: string, seed: number)
+		local room = Room.new(id .. (if mode == "hard" then "#wh" else "#wn") .. seed, SCENES.scenes[id], Random.new(seed))
+		local p = Hero.new(seed * 10 + 1, "riven")
+		Hero.setLevel(p, 150)
+		p.x, p.y, p.invuln = 120, FLOOR, 0
+		local heroes = { [p.id] = p }
+		local m = room.bosses[1]
+		for _ = 1, math.floor((LavaGim.spawnTime(m) + 0.4) / DT) do
+			room:step(heroes, DT)
+		end
+		return room, heroes, m
+	end
+	local rh, _, mh = openAs("r3d7", "hard", 401)
+	local rn, _, mn = openAs("r3d7", "normal", 402)
+	expect(rh.weeklyMode == "hard" and rh.weeklyHit == 9 and rh.weeklyTempo == 0.85, "하드의 방: 세기 9 · tempo 0.85")
+	expect(rn.weeklyMode == "normal" and rn.weeklyTempo == nil, "노말의 방: tempo 없음")
+	mh.lava.flood, mn.lava.flood = 0, 0
+	expect(rh:bossCan(mh, P.skyH, 0) and not rh:bossCan(mh, P.sky, 0), "하드: 하늘의 용암 소나기를 쓰고 · 줄기(노말의 것)는 쓰지 않는다")
+	expect(rn:bossCan(mn, P.sky, 0) and not rn:bossCan(mn, P.skyH, 0), "노말: 줄기를 쓰고 · 소나기(하드의 것)는 쓰지 않는다")
+	expect(rh:bossCan(mh, P.storm, 0) and not rn:bossCan(mn, P.storm, 0), "연속기 「기둥과 화산탄」은 하드에만")
+	-- 다시 쓰기 x tempo: 하늘의 용암 소나기(every 4초) — 하드는 3.4초 뒤에 다시 쓴다
+	mh.used.skyH = rh.time - 3.5
+	expect(rh:bossCan(mh, P.skyH, 0), "하드: every 4 x 0.85 = 3.4초 뒤 다시")
+	mn.used.sky = rn.time - 3.5
+	expect(not rn:bossCan(mn, P.sky, 0), "노말: 4초가 지나야 다시")
+	-- 쉬는 틈 x tempo
+	rh:bossDone(mh, P.pillar, {})
+	expect(math.abs(mh.rest - P.pillar.rest * 0.85) < 1e-6, "하드: 쉬는 틈 x 0.85")
+	rn:bossDone(mn, P.pillar, {})
+	expect(math.abs(mn.rest - P.pillar.rest) < 1e-6, "노말: 쉬는 틈 그대로")
+	-- 기믹의 수(gimmick.hard가 한 겹 덮는다)
+	expect(mh.lavaG ~= nil and mh.lavaG.vents.count[3] == 14 and mh.lavaG.flood.pct == 10 and mh.lavaG.heart.time == 15 and mh.lavaG.heart.regain == 0.08, "하드: 대분화 14초 · 끓는 바닥 10% · 심장 15초 · 못 깨면 8%")
+	expect(mh.lavaG.vents.hp == G.vents.hp and mh.lavaG.flood.tell == G.flood.tell and #mh.lavaG.heart.hops == #G.heart.hops, "덮지 않은 칸은 그대로")
+	expect(mn.lavaG == nil, "노말: 설계 그대로")
+
+	-- 세기: 전투력 1~4위 정도(Lv.150 · 화심 장비 · 무기 22성 · 방어구 18성)의 % — 노말에 Lv.120(무기 17 · 방어구 5)으로 들어온 사람보다 아프다
+	local function geared(class: string, lv: number, wStar: number, aStar: number, fire: boolean)
+		local h = Hero.new(9, class)
+		Hero.setLevel(h, lv, Hero.jobAt(lv))
+		Hero.autoStat(h)
+		local stage = Items.stageOf(math.min(lv, 140))
+		for _, slot in Items.data.GEAR do
+			local it = Items.make(slot, stage, Items.data.NORMAL, class)
+			if fire then
+				for _, u in Items.data.UNIQUES do
+					if u.set == "fireheart" and u.who == class and u.slot == slot then
+						it = Items.makeUnique(u.id)
+					end
+				end
+			end
+			it.star = if slot == "weapon" then wStar else aStar
+			h.equip[slot] = it
+		end
+		Hero.recalc(h)
+		return h
+	end
+	local function pctIn(room, m, h, mul: number): number
+		h.hp, h.invuln, h.alive = h.maxHp, 0, true
+		local ev = {}
+		room:hurtHero(ev, h, m, mul)
+		return (ev[1] and ev[1].dmg or 0) / h.maxHp * 100
+	end
+	local top = geared("riven", 150, 22, 18, true)
+	expect(Hero.power(top) > 45000 and Hero.power(top) < 60000, ("잣대 캐릭터의 전투력 %d(1~4위 47,151 ~ 55,618)"):format(Hero.power(top)))
+	local entry = geared("riven", 120, 17, 5, false)
+	local hardOne, normalOne = pctIn(rh, mh, top, 1), pctIn(rn, mn, entry, 1)
+	print(("[LAVAHARD] 세기 1: 하드(잣대 리븐) %.1f%% · 노말(Lv.120 입장 리븐) %.1f%% · 마지막 방 짤패턴(2.6) 하드 %.1f%%"):format(hardOne, normalOne, pctIn(rh, mh, top, 2.6)))
+	expect(hardOne > normalOne and math.abs(hardOne - 38.1) <= 3, ("하드가 더 아프다: 세기 1 = %.1f%%(설계 38.1%%) > 노말 입장 %.1f%%"):format(hardOne, normalOne))
+	local same = pctIn(rn, mn, top, 1)
+	expect(hardOne / math.max(0.01, same) > 6, ("같은 사람이 노말에서 맞는 것(%.1f%%)의 6배 넘게"):format(same))
+end

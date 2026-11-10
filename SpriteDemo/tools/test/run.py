@@ -54,6 +54,17 @@ def bundle():
     # LUNE_RAID_ONLY=salamander: only that class, alone (no parties, no checks) · LUNE_RAID_ENH=0.5: the salamander empowered skill's x times this (0 = off) — tuning one class quickly (2026-11-04)
     parts.append('RAID_ONLY = %s' % (('"%s"' % os.environ['LUNE_RAID_ONLY']) if os.environ.get('LUNE_RAID_ONLY') else 'nil'))
     parts.append('RAID_ENH = %s' % (repr(float(os.environ['LUNE_RAID_ENH'])) if os.environ.get('LUNE_RAID_ENH') else 'nil'))
+    # LUNE_RAID_EXPERT=1: a skilled hand — per skill/state measured damage per second, reaper gauge→form→no-cd spam, salamander heat build→empowered (2026-11-07) · LUNE_RAID_SECS=180: measuring seconds
+    parts.append('RAID_EXPERT = %s' % ('true' if os.environ.get('LUNE_RAID_EXPERT') else 'false'))
+    parts.append('RAID_SECS = %s' % (str(int(os.environ['LUNE_RAID_SECS'])) if os.environ.get('LUNE_RAID_SECS') else 'nil'))
+    # LUNE_RAID_FILL=rp_behead: pin the expert hand's gauge/heat filler (no-cooldown skill) to compare cycles by real runs (2026-11-07)
+    # LUNE_RAID_SKIP=rv_smoke,..: the expert hand never uses these (A/B a skill whose side effects the per-cast count cannot see — 2026-11-08)
+    parts.append('RAID_SKIP = %s' % (('{ %s }' % ', '.join('["%s"] = true' % x for x in os.environ['LUNE_RAID_SKIP'].split(',') if x)) if os.environ.get('LUNE_RAID_SKIP') else 'nil'))
+    # LUNE_RAID_FSPAM=rp_parade: in reaper form the expert hand spams this (60 s nukes still go first when ready) — the players' cycle (2026-11-09)
+    parts.append('RAID_FSPAM = %s' % (('"%s"' % os.environ['LUNE_RAID_FSPAM']) if os.environ.get('LUNE_RAID_FSPAM') else 'nil'))
+    parts.append('RAID_FILL = %s' % (('"%s"' % os.environ['LUNE_RAID_FILL']) if os.environ.get('LUNE_RAID_FILL') else 'nil'))
+    # LUNE_SKILLDPS=1: tests/131_lune_skill_dps.luau measures every 사냥기 · 보스기 alone on a boss (Lv.150 · all skills master) — the within-class order checks (2026-11-06)
+    parts.append('SKILL_DPS = %s' % ('true' if os.environ.get('LUNE_SKILLDPS') else 'false'))
     # LUNE_LANG_SWEEP=1: every dot-font text is translated to English while the tests run; finish() lists what could not be translated (mock.luau)
     parts.append('LANG_SWEEP = %s; SWEEP_MISSING = {}; SWEEP_TEST = ""' % ('true' if os.environ.get('LUNE_LANG_SWEEP') else 'false'))
     count = 0

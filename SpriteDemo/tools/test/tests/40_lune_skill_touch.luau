@@ -196,7 +196,9 @@ do
 				got += e.dmg
 			end
 			local fit = if def.type == "boss" then 1 else 1 + RULES.targetBonus / 100
-			local want = Hero.powerRaw(h) * SkillDamage.cast(id, lv).pct / 100 * RULES.dmgScale * fit * 10 * (p.measured / p.w)
+			-- real = 직업의 장치 때문에 설계의 %보다 더 · 덜 들어가는 기술의 실제 피해에만 곱하는 몫(2026-11-06 — 스킬 창은 설계의 % · 차수의 사다리 그대로 · 공방 combat.js CAST)
+			-- mob = 보스가 아닌 적에게 곱하는 수(백귀야행 x4 — 2026-11-09 · 스킬 창에 「보스가 아닌 적에게는 4배」로 적힌다 · 여기의 적은 보스가 아니다)
+			local want = Hero.powerRaw(h) * SkillDamage.cast(id, lv).pct / 100 * RULES.dmgScale * fit * 10 * (p.measured / p.w) * (def.real or 1) * (def.mob or 1)
 			near(got, want, 0.05, ("적힌 %% = 서버의 피해 %s Lv.%d"):format(id, lv))
 		end
 	end
@@ -317,109 +319,251 @@ do
 	expect(K.btnH >= 32 and K.row > K.btnH, "손가락으로 누를 만한 높이 · 단추 사이가 떨어져 있다")
 end
 
--- ---- 5) 채팅 = Roblox의 기본 채팅(client/lune/chat.luau) ----
---  사용자 2026-10-13: "우리가 자체 채팅을 구현하는게 아니라 로블록스 채팅이 있어요 로블록스 공식문서좀 확인해보고 ,  그걸 어떻게 로블록스 채팅을 우리게임에 자연스럽게 사용하게 연결할수있는지"
---  화면은 Roblox의 것이라 여기서 볼 수 있는 것은 우리가 정하는 것뿐이다: 글의 앞머리(캐릭터의 이름 · 파티의 꼬리표) · 파티원 칸을 채팅 창 아래로 내리는 셈.
+-- ---- 5) 채팅 = 우리 게임의 채팅 창(2026-11-06 — client/lune/chat.luau · 셈 shared/lune/ui/chatLog.luau) ----
+--  사용자 2026-11-06: "이제 로블록스 채팅이 아닌 우리 게임 자체 채팅구현하자" (2026-10-13 ~ 11-06에는 Roblox의 기본 채팅 창이었다 — 그 검사는 이것으로 바꿨다)
+--  보는 것: 글 다듬기 · 지난 글 수 · 탭 · 줄 나누기(앞머리는 첫 줄에만 · 폭 안) · 남의 글은 영문으로 바꾸지 않는다 · 스크롤 · 판의 치수 = 공방의 셈 ·
+--           Roblox의 기본 화면을 끈다 · 보내는 채널 · 보내지 못한 까닭 · 받은 글의 이름(캐릭터의 이름) · 폰의 점
 do
 	local CU = UI.chatUi
-	-- 가짜 Roblox 채팅 설정: 걸리는 속성을 적어 두고, 진짜처럼 수 속성에 nil을 넣으면 오류를 낸다
-	--  (2026-10-13: 자료에 없는 값(stroke)을 TextStrokeTransparency에 걸려던 줄이 남아 Studio의 Output에 "value of type nil cannot be converted to a number"가 떴다 — 화면 코드를 돌려 보지 않아 놓쳤다)
-	local bad = {}
-	local function fake(class: string)
-		local store, got = {}, {}
-		local o = setmetatable({}, {
-			__index = function(_, k)
-				if k == "ClassName" then
-					return class
-				elseif k == "set" then
-					return got
-				elseif k == "GetPropertyChangedSignal" then
-					return function() return { Connect = function() end } end
-				end
-				return store[k]
-			end,
-			__newindex = function(_, k, v)
-				if v == nil then
-					table.insert(bad, class .. "." .. tostring(k))
-					error("value of type nil cannot be converted to a number")
-				end
-				store[k] = v
-				got[k] = true
-			end,
-		})
-		return o
+	local Log = req("ReplicatedStorage/shared/lune/ui/chatLog")
+	-- 다듬기
+	eq(Log.clean("  안녕&lt;b&gt;\n하세요\t "), "안녕<b> 하세요", "Roblox가 바꿔 보낸 꾸밈 글자를 되돌리고 줄바꿈은 빈칸 · 앞뒤 빈칸을 지운다")
+	eq(Log.clean("<font color='#ff0000'>Slow down</font>", true), "Slow down", "Roblox의 알림 글은 꾸밈 꼬리표를 지운다")
+	eq(Log.clean("<b>그대로</b>"), "<b>그대로</b>", "사람이 친 글의 < >는 그대로(꾸밈으로 읽지 않는다)")
+	eq(Log.clean(42), "", "글이 아닌 것")
+	eq(Log.clean("가" .. string.char(0xEA)), "가?", "깨진 글자는 ?")
+	eq(Log.cut("가나다라", 2), "가나", "글자 수로 자른다")
+	eq(Log.cut("abc", 5), "abc", "짧으면 그대로")
+	-- 지난 글은 keep개까지
+	local log = Log.new()
+	for i = 1, CU.keep + 5 do
+		Log.add(log, "near", "달토끼", "글" .. i)
 	end
-	local configs = { ChatWindowConfiguration = fake("ChatWindowConfiguration"), ChatInputBarConfiguration = fake("ChatInputBarConfiguration"), ChannelTabsConfiguration = fake("ChannelTabsConfiguration") }
-	local TCS = { FindFirstChildOfClass = function(_, class) return configs[class] end, GetDescendants = function() return {} end }
-	SERVICE("TextChatService", TCS)
-	SERVICE("Players", { GetPlayerByUserId = function(_, id) return if id == 7 then { GetAttribute = function() return "달토끼" end } elseif id == 8 then { GetAttribute = function() return nil end } else nil end })
-	local resized = 0
-	MOCK("Client/lune/stage", {
-		uiScale = 2,
-		uiH = 540,
-		ui = nil,
-		onResize = function() resized += 1 end,
-		atPosition = function(_, x, y) return { X = { Scale = 0, Offset = x }, Y = { Scale = 0, Offset = y } } end,
-		placeRect = function() return { Visible = true } end,
-	})
-	MOCK("Client/lune/ui/ui", { COLOR = setmetatable({}, { __index = function() return "c" end }) })
-	local Chat = req("Client/lune/chat")
-	eq(Chat.prefix("달토끼", false), ("<font color='%s'>달토끼:</font>"):format(CU.nameColor), "둘레의 글: 캐릭터의 이름")
-	eq(Chat.prefix("달토끼", true), ("<font color='%s'>[파티]</font> <font color='%s'>달토끼:</font>"):format(CU.party.color, CU.party.color), "파티의 글: 꼬리표와 이름이 파티의 색")
-	eq(Chat.prefix(nil, false), nil, "캐릭터를 고르기 전인 사람은 Roblox의 기본 앞머리 그대로")
-	eq(Chat.prefix("", true), nil, "빈 이름")
-	eq(Chat.prefix(42, false), nil, "글이 아닌 것")
-	eq(Chat.plain("<b>&'\""), "&lt;b&gt;&amp;&apos;&quot;", "이름이 글자 꾸밈 꼬리표로 읽히지 않는다")
-	eq(Chat.focused(), false, "입력줄을 아직 모르면 글을 치는 중이 아니다")
-	eq(Chat.bottom, 0, "채팅 창의 자리를 모르면 0")
-	-- 실제로 건다: 오류 없이 · nil을 넣으려 한 속성이 없고 · 걸어야 하는 속성이 모두 걸린다
-	local warned = #warnings
-	Chat.init()
-	eq(#bad, 0, "수 속성에 nil을 넣으려 한 것이 없다 — " .. table.concat(bad, ", "))
-	eq(#warnings, warned, "자료에 없는 값을 걸려는 줄이 없다 — " .. tostring(warnings[#warnings]))
-	local WANT = {
-		ChatWindowConfiguration = { "Enabled", "BackgroundColor3", "BackgroundTransparency", "TextColor3", "WidthScale", "HeightScale" },
-		ChatInputBarConfiguration = { "Enabled", "BackgroundColor3", "BackgroundTransparency", "TextColor3", "PlaceholderColor3" },
-		ChannelTabsConfiguration = { "Enabled", "BackgroundColor3", "BackgroundTransparency", "TextColor3", "SelectedTabTextColor3" },
-	}
-	for class, keys in WANT do
-		for _, k in keys do
-			expect(configs[class].set[k] == true and configs[class][k] ~= nil, ("%s.%s가 걸린다"):format(class, k))
+	eq(#log.list, CU.keep, "지난 글은 keep개까지")
+	eq(log.list[1].text, "글6", "오래된 것부터 버린다")
+	eq(Log.add(log, "near", "a", ""), nil, "빈 글은 넣지 않는다")
+	eq(Log.add(log, "whisper", "a", "x"), nil, "모르는 갈래는 넣지 않는다")
+	-- 탭 · 앞머리
+	local l2 = Log.new()
+	Log.add(l2, "near", "달토끼", "안녕")
+	Log.add(l2, "party", "별빛", "가자")
+	Log.add(l2, "note", "누구", "[공지] 점검")
+	local flat = function(t)
+		return t
+	end
+	eq(#Log.rows(l2, "all", 999, flat, "[파티]"), 3, "전체 = 모두")
+	eq(#Log.rows(l2, "near", 999, flat, "[파티]"), 1, "일반 탭")
+	eq(#Log.rows(l2, "party", 999, flat, "[파티]"), 1, "파티 탭")
+	eq(#Log.rows(l2, "note", 999, flat, "[파티]"), 1, "알림 탭")
+	local rows = Log.rows(l2, "all", 999, flat, "[Party]")
+	eq(rows[1].head, "달토끼: ", "일반: 앞머리 = 「이름: 」")
+	eq(rows[1].body, "안녕", "일반: 글")
+	eq(rows[2].head, "[Party] 별빛: ", "파티: 꼬리표(그 사람의 언어) + 이름")
+	eq(rows[2].kind, "party", "파티의 줄")
+	eq(rows[3].head, "", "알림은 앞머리가 없다")
+	eq(rows[3].body, "[공지] 점검", "알림의 글")
+	eq(l2.list[3].name, nil, "알림에는 이름이 없다")
+	-- 줄 나누기(실제 글씨로): 긴 글은 여러 줄 · 앞머리는 첫 줄에만 · 모든 줄이 칸의 폭 안
+	pixelText.Register("small_o", KIT.font.small_o, {})
+	local wrap = function(t, w)
+		return pixelText.Wrap(t, w, "small_o", true)
+	end
+	local Ls = Log.layout("small")
+	local long = Log.new()
+	Log.add(long, "near", "달토끼", string.rep("가나다라마바사 ", 12))
+	local lr = Log.rows(long, "all", Ls.logW, wrap, "[파티]")
+	expect(#lr >= 3, ("긴 글은 여러 줄(%d줄)"):format(#lr))
+	eq(lr[1].head, "달토끼: ", "첫 줄에 앞머리")
+	for i, r in lr do
+		expect(pixelText.Measure(r.head .. r.body, "small_o", true) <= Ls.logW, ("%d째 줄이 칸의 폭(%d) 안"):format(i, Ls.logW))
+		if i > 1 then
+			eq(r.head, "", ("%d째 줄에는 앞머리가 없다"):format(i))
 		end
 	end
-	eq(configs.ChatWindowConfiguration.Enabled, true, "Roblox의 채팅 창을 켠다")
-	eq(configs.ChatInputBarConfiguration.Enabled, true, "입력줄을 켠다")
-	eq(configs.ChannelTabsConfiguration.Enabled, true, "채널 탭을 켠다(「파티」에 쓰려면 있어야 한다)")
-	eq(configs.ChatWindowConfiguration.BackgroundColor3.hex, CU.window.back, "창의 바탕색은 자료의 것")
-	eq(configs.ChatWindowConfiguration.BackgroundTransparency, CU.window.alpha, "바탕의 비침")
-	eq(configs.ChatWindowConfiguration.WidthScale, CU.window.width, "창의 폭")
-	eq(Chat.focused(), false, "글을 치는 중이 아니다")
-	configs.ChatInputBarConfiguration.IsFocused = true
-	eq(Chat.focused(), true, "입력줄에 글을 치는 중이면 게임의 키를 받지 않는다")
-	configs.ChatInputBarConfiguration.IsFocused = false
-	-- 받은 글의 앞머리: 캐릭터의 이름으로(파티 채널이면 꼬리표)
-	expect(typeof(TCS.OnIncomingMessage) == "function", "받은 글을 손보는 함수가 걸려 있다")
-	local near = TCS.OnIncomingMessage({ TextSource = { UserId = 7 }, TextChannel = { Name = "RBXGeneral" } })
-	eq(near.PrefixText, Chat.prefix("달토끼", false), "둘레의 글의 앞머리")
-	local party = TCS.OnIncomingMessage({ TextSource = { UserId = 7 }, TextChannel = { Name = CU.party.channel } })
-	eq(party.PrefixText, Chat.prefix("달토끼", true), "파티의 글의 앞머리")
-	eq(TCS.OnIncomingMessage({ TextSource = { UserId = 8 }, TextChannel = { Name = "RBXGeneral" } }).PrefixText, nil, "캐릭터의 이름이 없는 사람은 Roblox의 앞머리 그대로")
-	eq(TCS.OnIncomingMessage({ TextSource = nil, TextChannel = { Name = "RBXSystem" } }).PrefixText, nil, "알림 글은 손대지 않는다")
-	-- 파티원 칸: PC에서는 채팅 창의 아래로(폰 · 모를 때는 제자리)
+	expect(Log.rows(long, "all", Ls.logW, wrap, "[파티]")[1] == lr[1], "같은 폭이면 나눈 줄을 다시 쓴다")
+	-- 남이 친 글은 영문으로 바꾸지 않는다(raw) — 게임의 말은 바꾼다
+	pixelText.SetTranslator(function()
+		return "BAG"
+	end)
+	eq(pixelText.Wrap("가방", 200, "small", true), "가방", "raw: 사람이 친 글은 그대로")
+	eq(pixelText.Wrap("가방", 200, "small"), "BAG", "게임의 말은 그 사람의 언어로")
+	eq(pixelText.Fit("가방", 200, 1, "small", true), "가방", "raw: 줄이기도 그대로")
+	pixelText.SetTranslator(nil)
+	-- 스크롤: 맨 아래부터 · 올린 만큼 · 끝에서 멈춘다
+	local first, sc, top = Log.view(20, 8, 0)
+	expect(first == 13 and sc == 0 and top == 12, "맨 아래 여덟 줄(13~20)")
+	first = Log.view(20, 8, 5)
+	eq(first, 8, "다섯 줄 올리면 8~15")
+	first, sc = Log.view(20, 8, 99)
+	expect(first == 1 and sc == 12, "맨 위에서 멈춘다")
+	first, sc = Log.view(3, 8, 4)
+	expect(first == 1 and sc == 0, "줄이 칸보다 적으면 올릴 수 없다")
+	eq(Log.thumb(3, 8, 0, 112), nil, "줄이 칸보다 적으면 막대가 없다")
+	local at, len = Log.thumb(20, 8, 0, 112)
+	expect(at ~= nil and len ~= nil and at + len == 112, "맨 아래를 볼 때 막대는 아래 끝")
+	at = Log.thumb(20, 8, 12, 112)
+	eq(at, 0, "맨 위를 볼 때 막대는 위 끝")
+	-- 판의 치수(자료 = 공방 ui.js의 chatLayout): 높이 = 줄 수에서 · 입력줄과 적는 칸이 판 안 · PC의 칸 = 크게 한 판 · 폰의 칸 = 폰의 판
+	for _, m in { "small", "big", "touch" } do
+		local Lc = Log.layout(m)
+		eq(Lc.logY + Lc.lines * CU.lineH + CU.gap, Lc.inputY, m .. ": 글 칸 아래에 입력줄")
+		eq(Lc.inputY + CU.inputH + CU.pad, Lc.h, m .. ": 입력줄 아래가 판의 끝")
+		expect(Lc.fieldX + Lc.fieldW <= UI.hud.chat.w - CU.pad and Lc.fieldW >= 120, m .. ": 적는 칸이 판 안 · 너무 좁지 않다")
+		expect(Lc.chanX[#Lc.chanX] + CU.chanW < Lc.fieldX, m .. ": 보낼 곳 단추가 적는 칸과 겹치지 않는다")
+	end
+	eq(UI.hud.chat.h, Log.layout("big").h, "PC의 칸 = 크게 한 판(아래 끝을 두고 위로 자란다)")
+	eq(UI.hudTouch.chat.h, Log.layout("touch").h, "폰의 칸 = 폰의 판")
+	expect(Log.layout("small").tabs == false and Log.layout("big").tabs and Log.layout("touch").close and not Log.layout("touch").toggle, "작게 = 탭 없음 · 폰 = 「×」(「+ / −」 없음)")
+	expect(Log.layout("big").lines > Log.layout("small").lines, "크게 하면 줄이 늘어난다")
+	-- 보내지 못한 까닭
+	eq(Log.failText("Floodchecked"), CU.fail.Floodchecked, "너무 빨리 보냈다")
+	eq(Log.failText("Weird"), CU.fail.other, "모르는 까닭")
+	eq(Log.failText(nil), CU.fail.other, "까닭이 없다")
+
+	-- 화면 코드(client/lune/chat.luau) — 화면 틀은 짓지 않고(root 없이) 끄기 · 보내기 · 받기만 본다
+	local configs = {}
+	local function cfg(class: string)
+		local o = { ClassName = class, Enabled = true }
+		configs[class] = o
+		return o
+	end
+	local sent = {}
+	local reply = { Status = Enum.TextChatMessageStatus.Success }
+	local function channel(name)
+		return {
+			Name = name,
+			SendAsync = function(self, text)
+				table.insert(sent, { self.Name, text })
+				return reply
+			end,
+		}
+	end
+	local channels = { RBXGeneral = channel("RBXGeneral"), [CU.party.channel] = channel(CU.party.channel) }
+	local onMsg = nil
+	local function sig()
+		return { Connect = function() end }
+	end
+	SERVICE("TextChatService", {
+		GetDescendants = function()
+			return { cfg("ChatWindowConfiguration"), cfg("ChatInputBarConfiguration"), cfg("ChannelTabsConfiguration"), cfg("BubbleChatConfiguration") }
+		end,
+		DescendantAdded = sig(),
+		MessageReceived = {
+			Connect = function(_, fn)
+				onMsg = fn
+			end,
+		},
+		WaitForChild = function(_, name)
+			return if name == "TextChannels"
+				then {
+					FindFirstChild = function(_, k)
+						return channels[k]
+					end,
+				}
+				else nil
+		end,
+	})
+	SERVICE("Players", {
+		LocalPlayer = { UserId = 7 },
+		GetPlayerByUserId = function(_, id)
+			local names = { [7] = "달토끼", [8] = "별빛" }
+			if id == 7 or id == 8 or id == 9 then
+				return {
+					GetAttribute = function()
+						return names[id]
+					end,
+				}
+			end
+			return nil
+		end,
+	})
+	SERVICE("UserInputService", {
+		InputBegan = sig(),
+		InputChanged = sig(),
+		InputEnded = sig(),
+		GetFocusedTextBox = function()
+			return nil
+		end,
+	})
+	MOCK("Client/lune/stage", {
+		onResize = function() end,
+		uiScale = 2,
+		placeRect = function()
+			return { Visible = true }
+		end,
+		atPosition = function(_, x, y)
+			return { X = { Scale = 0, Offset = x }, Y = { Scale = 0, Offset = y } }
+		end,
+	})
+	MOCK("Client/lune/ui/ui", { COLOR = setmetatable({}, { __index = function() return "c" end }) })
+	MOCK("Client/modules/ui/pixelText", pixelText) -- (게임에서의 자리 — 묶음은 client/modules를 Client로 얹는다)
+	local Chat = req("Client/lune/chat")
+	Chat.init(nil)
+	eq(configs.ChatWindowConfiguration.Enabled, false, "Roblox의 채팅 창을 끈다")
+	eq(configs.ChatInputBarConfiguration.Enabled, false, "Roblox의 입력줄을 끈다")
+	eq(configs.ChannelTabsConfiguration.Enabled, false, "Roblox의 채널 탭을 끈다")
+	eq(configs.BubbleChatConfiguration.Enabled, true, "그 밖의 설정은 건드리지 않는다")
+	expect(onMsg ~= nil, "받은 글을 듣는다(MessageReceived)")
+	eq(Chat.focused(), false, "적는 칸이 없으면 글을 치는 중이 아니다")
+	-- 받기: 이름 = 캐릭터의 이름 · 채널 = 일반 / 파티 · Roblox의 알림 · 보내지 못한 글은 넣지 않는다
+	local function last()
+		return Chat.log.list[#Chat.log.list]
+	end
+	local OK = Enum.TextChatMessageStatus.Success
+	onMsg({ TextSource = { UserId = 8 }, TextChannel = { Name = "RBXGeneral" }, Text = "안녕 &lt;3", Status = OK })
+	expect(last().kind == "near" and last().name == "별빛" and last().text == "안녕 <3", "일반의 글: 캐릭터의 이름 · 꾸밈 글자를 되돌린다")
+	onMsg({ TextSource = { UserId = 8 }, TextChannel = { Name = CU.party.channel }, Text = "보스 가요", Status = OK })
+	eq(last().kind, "party", "파티 채널의 글")
+	onMsg({ TextSource = { UserId = 9 }, TextChannel = { Name = "RBXGeneral" }, Text = "누구게", Status = OK })
+	eq(last().name, "?", "캐릭터의 이름을 모르면 ?(Roblox의 이름은 쓰지 않는다)")
+	onMsg({ TextSource = nil, TextChannel = { Name = "RBXSystem" }, Text = "<font color='#ff0000'>Too fast</font>", Status = OK })
+	expect(last().kind == "note" and last().text == "Too fast", "Roblox의 알림 = 알림 탭(꾸밈 꼬리표를 지운다)")
+	local n = #Chat.log.list
+	onMsg({ TextSource = { UserId = 8 }, TextChannel = { Name = "RBXGeneral" }, Text = "막힌 글", Status = Enum.TextChatMessageStatus.TextFilterFailed })
+	eq(#Chat.log.list, n, "보내지 못한 글은 넣지 않는다")
+	-- 폰: 닫혀 있는 동안 남의 글이 오면 점 · 내 글 · 알림은 아니다
+	local unread = false
+	Chat.onUnread = function(on)
+		unread = on
+	end
+	Chat.touch, Chat.open = true, false
+	onMsg({ TextSource = { UserId = 7 }, TextChannel = { Name = "RBXGeneral" }, Text = "내 글", Status = OK })
+	eq(unread, false, "내 글은 점을 켜지 않는다")
+	Chat.note("알림 하나")
+	eq(unread, false, "알림은 점을 켜지 않는다")
+	onMsg({ TextSource = { UserId = 8 }, TextChannel = { Name = "RBXGeneral" }, Text = "남의 글", Status = OK })
+	eq(unread, true, "닫혀 있는 동안 남의 글이 오면 점")
+	Chat.setOpen(true)
+	eq(unread, false, "열면 점이 꺼진다")
+	Chat.touch, Chat.open = false, false
+	-- 보내기: 일반 = RBXGeneral · 파티 = 파티 채널 · 다듬고 자른다 · 빈 글은 보내지 않는다
+	eq(Chat.send("   "), false, "빈 글은 보내지 않는다")
+	eq(#sent, 0, "아무것도 보내지 않았다")
+	Chat.send("  안녕하세요  ")
+	expect(sent[1] ~= nil and sent[1][1] == "RBXGeneral" and sent[1][2] == "안녕하세요", "일반으로 보낸다(앞뒤 빈칸을 지우고)")
+	Chat.setSend("party")
+	Chat.hasParty = function()
+		return false
+	end
+	Chat.send("파티 갈 사람")
+	expect(sent[2] ~= nil and sent[2][1] == CU.party.channel, "파티로 보낸다")
+	eq(last().text, CU.noParty, "파티가 없으면 나에게만 보인다는 알림")
+	Chat.setSend("near")
+	Chat.send(string.rep("가", CU.maxLen + 30))
+	eq(sent[3] and utf8.len(sent[3][2]), CU.maxLen, "maxLen자까지만 보낸다")
+	reply = { Status = Enum.TextChatMessageStatus.Floodchecked }
+	Chat.send("빨리빨리")
+	eq(last().text, CU.fail.Floodchecked, "보내지 못하면 까닭을 알림으로")
+	reply = { Status = OK }
+	Chat.scroll = 5
+	Chat.send("맨 아래로")
+	eq(Chat.scroll, 0, "보내면 맨 아래로")
+	-- 파티원 칸: 늘 제자리(Roblox 채팅 창 아래로 내리지 않는다)
 	local PartyHud = req("Client/lune/partyHud")
 	PartyHud.init({}, function() end)
 	local r = UI.hud.party
-	PartyHud.setTop(0)
-	eq(PartyHud.box.Position.Y.Offset, r.y, "채팅 창의 자리를 모르면 제자리")
 	PartyHud.setTop(150)
-	eq(PartyHud.box.Position.Y.Offset, 150 + CU.gap, "채팅 창의 아래 끝에서 조금 띄워 그 아래에")
-	eq(PartyHud.box.Position.X.Offset, r.x, "옆 자리는 그대로")
-	PartyHud.setTop(4)
-	eq(PartyHud.box.Position.Y.Offset, r.y, "창이 파티원 칸보다 위에서 끝나면 제자리")
-	PartyHud.setTop(540 - CU.keep - r.h - CU.gap + 1)
-	eq(PartyHud.box.Position.Y.Offset, r.y, "창이 너무 길면(체력 덩어리 쪽으로 밀리면) 제자리에 둔다")
-	PartyHud.setTop(540 - CU.keep - r.h - CU.gap)
-	eq(PartyHud.box.Position.Y.Offset, 540 - CU.keep - r.h, "딱 들어가는 데까지는 내린다")
+	eq(PartyHud.box.Position.Y.Offset, r.y, "파티원 칸은 늘 제자리")
 end
 
 RULES.spread, RULES.critChance = keepSpread, keepCrit

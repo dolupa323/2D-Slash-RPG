@@ -211,7 +211,8 @@ local function requireMock(target)
 end
 req = requireMock
 function MOCK(path, value) LOADED[path] = value end
-function RESET() table.clear(LOADED); table.clear(timers); table.clear(services); table.clear(warnings); table.clear(CREATED); clock.now = 1000 end
+shared = { LUNE_NOEXTRA = true } -- 장비 추가 옵션(2026-11-07 — sim/items.luau의 Items.ensureExtra)을 굴리지 않는다: 옛 검사들이 정한 숫자를 그대로 본다 · tests/133이 켜 본다
+function RESET() shared.LUNE_NOEXTRA = true; table.clear(LOADED); table.clear(timers); table.clear(services); table.clear(warnings); table.clear(CREATED); clock.now = 1000 end
 V = vec
 RandomNew = Random.new
 

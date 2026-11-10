@@ -647,6 +647,15 @@ do
 	eq(BossView.hpLabel(1234.2, 53640, 288, function(t) return #t * 6 end), "1235/53640", "체력의 숫자: 지금/최대")
 	eq(BossView.hpLabel(-5, 53640, 288, function(t) return #t * 6 end), "0/53640", "체력이 다하면 0")
 	expect(BossView.hpLabel(53640, 53640, 30, function(t) return #t * 6 end) ~= "53640/53640", "칸이 좁으면 짧게 적는다")
+	-- 물약 제한(2026-11-07 — 용암 거인 한 레이드에 20병): 보스 체력 바 아래 줄의 「물약 남은/처음」 — 내 쓴 수로 · 다 쓰면 0 · 제한이 없는 보스면 nil
+	SERVICE("Players", { LocalPlayer = { UserId = 77 } })
+	BossView.setWeekly({ state = "fight", livesMax = 5, lives = {}, potionCap = 20, potions = { ["77"] = 3, ["78"] = 19 } })
+	eq(BossView.potionsLeft(), 17, "내가 3병 썼으면 17 남았다(남의 수와 따로)")
+	BossView.setWeekly({ state = "fight", livesMax = 5, lives = {}, potionCap = 20, potions = { ["77"] = 25 } })
+	eq(BossView.potionsLeft(), 0, "다 쓰면 0")
+	BossView.setWeekly({ state = "fight", livesMax = 5, lives = {} })
+	eq(BossView.potionsLeft(), nil, "제한이 없는 보스는 물약 표시가 없다")
+	BossView.setWeekly(nil)
 	-- ---- 새 패턴(2026-10-12 밤 — 공방 STORYBOSS_NEXT): 표시된 자리 · 도약 · 포효 · 검기 · 연속기 ----
 	local BossPat = req("ReplicatedStorage/shared/lune/sim/bosspat")
 	local BossFx = req("ReplicatedStorage/shared/lune/bossfx")
@@ -678,7 +687,7 @@ do
 	eq(bv.spots[1].x, 300, "첫 자리 = 겨눈 사람의 발밑")
 	drawn = 0
 	adds()[#adds()].args[2](ctx, 0.5)
-	expect(drawn > 5, "표시된 자리를 그린다")
+	expect(drawn >= 1, "표시된 자리를 그린다(희미한 칠 하나 — 2026-11-09 경고 장판 = 단색 영역)")
 	local blast0 = spr(e.spots.fx)
 	snap2(1, 600, "act", 0.05, ei, 300)
 	eq(spr(e.spots.fx), blast0, "예고가 끝난 순간에는 아직 솟지 않는다(자리마다 제 때에)")
@@ -737,7 +746,7 @@ do
 	expect(mm.jump > lp.leap.peak * 0.9, ("도약: 몸이 공중에 떠 있다(%.0f점)"):format(mm.jump))
 	drawn = 0
 	adds()[#adds()].args[2](ctx, 0.5)
-	expect(drawn > 5, "도약: 날아가는 동안에도 내려앉을 자리가 보인다")
+	expect(drawn >= 1, "도약: 날아가는 동안에도 내려앉을 자리가 보인다(칠 하나)")
 	snap2(1, 366, "act", lp.leap.time + 0.02, li, 300)
 	expect(spr(lp.fx[1].clip) == beam0 + 1 and v2:get(1).jump == 0, "도약: 내려앉으면 치는 이펙트 · 몸은 바닥에")
 	snap2(1, 366, "act", lp.leap.time + 0.1, li, 300)

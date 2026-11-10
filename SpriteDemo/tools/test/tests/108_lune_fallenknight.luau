@@ -216,7 +216,7 @@ do -- 금서의 불(방 전체 · 두 번): 불씨의 자리에 서 있으면 �
 	eq(hurts(play(room, p, heroes, m, "pyre", lo + sp.gap * 3 + sp.gap, FLOOR, 4), 38), 0, "금서의 불: 불씨 사이에 서면 안 맞는다")
 end
 
--- ---- ④ 타락한 부단장만의 예고(mark "knight") — 판정의 칠 = 맞는 자리 그대로 · 다른 보스의 그림과 다르다 ----
+-- ---- ④ 예고(2026-11-09 사용자: "그냥 단색 희미한 영역만 보이는거야" — 예고 = 맞을 자리의 희미한 단색 칠 하나 · 보스마다 다른 것은 머리 위 표시뿐) — 판정의 칠 = 맞는 자리 그대로 ----
 do
 	local BossFx = req("ReplicatedStorage/shared/lune/bossfx")
 	local function canvas()
@@ -247,9 +247,9 @@ do
 		BossFx.tell(c, X, floorY, -1, p, 0.5, 112, 704, 100, nil, "knight")
 		local lo, hi = X - p.zone.to, X - p.zone.from
 		expect(fill(c, lo, hi, floorY - p.zone.up, floorY), ("%s: 판정의 칠 = 맞는 자리(%d ~ %d · 높이 %d)"):format(id, lo, hi, p.zone.up))
-		local cOld = canvas()
-		BossFx.tell(cOld, X, floorY, -1, p, 0.5, 112, 704, 100, nil, nil)
-		expect(#c.rects ~= #cOld.rects, id .. ": 다른 보스의 붉은 자리와 다른 그림")
+		local cOnly = canvas()
+		BossFx.tell(cOnly, X, floorY, -1, p, 0.5, 112, 704, nil, nil, "knight")
+		eq(#cOnly.rects, 1, id .. ": 칠 하나뿐(칼 · 초승달 같은 모양이 없다)")
 	end
 	for _, id in { "waveLow", "waveHigh" } do
 		local p = P[id]
@@ -269,15 +269,7 @@ do
 	for _, grid in { false, true } do
 		local c = canvas()
 		BossFx.spot(c, 300, floorY, 14, 56, 0.6, nil, nil, "knight", grid)
-		local hasEdge = false
-		for _, r in c.rects do
-			if r.x == 300 - 14 or r.x == 300 + 14 - 1 then
-				hasEdge = true
-			end
-		end
-		local cOld = canvas()
-		BossFx.spot(cOld, 300, floorY, 14, 56, 0.6, nil, nil, "archer", grid)
-		expect(#c.rects > 20 and hasEdge and #c.rects ~= #cOld.rects, (if grid then "민트 불씨" else "떨어지는 종이") .. ": 판정의 양옆(x ± r)을 보이고 그림자 사수의 것과 다르다")
+		expect(#c.rects == 1 and c.rects[1].x == 300 - 14 and c.rects[1].w == 28 and c.rects[1].h == 56, (if grid then "금서의 불" else "불타는 장부") .. ": 표시된 자리 = 기둥 칠 하나(x ± r · 높이 up)")
 	end
 	do -- 머리 위: 칼 표시(다른 보스의 「!」 · 그림자 사수의 조준 십자선과 다르다)
 		local c, cA, cX = canvas(), canvas(), canvas()

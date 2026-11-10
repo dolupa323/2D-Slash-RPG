@@ -242,3 +242,52 @@ eq(asked, 2, "다시 묻는 것은 60초에 한 번")
 Statues.leave()
 Statues.update()
 eq(asked, 2, "떠나면 묻지 않는다")
+
+-- ④ 석상이 될 뻔한 돌(2026-11-07 사용자: "랭킹석상 옆에 약간 찌그러진 돌 추가하고 말걸면 석상이 될뻔한 돌이다. 이렇게 나오게해줘"):
+--  마을의 석상 곁(같은 발판 · 3위 받침대와 겹치지 않는다 · 섬 안) · 그림 없는 주민 + rock = statue_rock · 말 = 사용자의 말 그대로 · 이름표는 이름만(구실이 비었다) ·
+--  그림판에 있고 올라가 있다 · rankStatues가 그 자리에 그린다 · 3위와 사이에 서면 가까운 쪽(↑)
+local rockNpc = nil
+for _, n in town.npcs or {} do
+	if n.rock then
+		rockNpc = n
+	end
+end
+expect(rockNpc ~= nil and rockNpc.rock == "statue_rock" and rockNpc.stone == true, "마을에 석상이 될 뻔한 돌(그림 없는 주민 + 돌 그림)")
+if rockNpc then
+	eq(rockNpc.lines and rockNpc.lines[1], "석상이 될뻔한 돌이다.", "말을 걸면 「석상이 될뻔한 돌이다.」")
+	eq(rockNpc.role, "", "구실이 비었다(이름표 = 이름만)")
+	local c = CHARS.chars.statue_rock
+	expect(c ~= nil and c.clips.idle ~= nil and #c.clips.idle.frames == 1 and uploaded(c), "돌 그림 statue_rock이 그림판에 있고 올라가 있다")
+	if c and statues[3] then
+		local p3 = CHARS.chars.plinth3
+		eq(rockNpc.y, statues[3].y, "석상과 같은 발판 위")
+		expect(statues[3].x - p3.ox + p3.fw <= rockNpc.x - c.ox, "3위 받침대와 겹치지 않는다")
+		expect(rockNpc.x - c.ox + c.fw <= 832, "명예의 전당의 섬(832점까지) 안")
+		expect(c.fh < CHARS.chars.plinth3.fh + 10, "석상보다 훨씬 낮다(받침대 높이 언저리)")
+	end
+	expect(rockNpc.tagRow == 1, "이름표는 한 줄 아래(3위의 이름표와 겹치지 않게)")
+	-- rankStatues가 그 자리에 돌을 그린다 · 순위가 바뀌어도 건드리지 않는다
+	table.clear(made)
+	Statues.enter({ world = {}, npcs = { { def = rockNpc, tag = {} } } })
+	local rockSp = nil
+	for _, sp in made do
+		if sp.who == "statue_rock" then
+			rockSp = sp
+		end
+	end
+	expect(rockSp ~= nil and rockSp.x == rockNpc.x and rockSp.y == rockNpc.y and rockSp.dir == -1, "돌이 그 자리(발밑)에 그려진다(그린 그대로)")
+	Statues.leave()
+	-- ↑: 3위와 돌 사이에서는 가까운 쪽(게임 client/lune/sceneView.luau의 npcNear와 같은 규칙 — 30점 안에서 가장 가까운 주민. 이 시험의 가짜 모듈로는 sceneView를 불러올 수 없어 규칙을 옮겨 본다)
+	local mid = math.floor((statues[3].x + rockNpc.x) / 2)
+	local function near(x)
+		local best, bestD = nil, 30
+		for _, d in { statues[3], rockNpc } do
+			local dd = math.abs(d.x - x)
+			if dd < bestD then
+				best, bestD = d, dd
+			end
+		end
+		return best
+	end
+	expect(near(rockNpc.x) == rockNpc and near(mid + 2) == rockNpc and near(mid - 2) == statues[3], "돌 앞에서 ↑ = 돌 · 3위 앞에서 ↑ = 3위")
+end

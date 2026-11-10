@@ -14,6 +14,7 @@ local KIT = COMBAT.kit -- [직업] = { skills, toggle, core, passive }
 local SKILL = COMBAT.kitSkill -- [스킬] = { who, role, max }
 local PASS = COMBAT.passive -- 2~4차의 패시브가 장치를 키운다(깊은 호흡 = 3단계 · 영혼 주머니 = 영혼 8 · 끓는 피 = 열기) — 셈은 sim/passives.luau, 여기서는 장치의 크기만 읽는다
 local FLOOR = CLASSES.skillRule.floor
+local Items = require(script.Parent.items) -- (장비 추가 옵션 — 2026-11-07)
 local Buffs = require(script.Parent.buffs) -- (사신화의 조건 · 시간을 버프에 건다 — 아래 Buffs.hooks)
 
 local Kit = {}
@@ -61,7 +62,8 @@ end
 local GAUGE = KIT.reaper.core.gauge
 local FORM = KIT.reaper.core.form
 Kit.FORM = "rp_form" -- 사신화(버프 · 1차부터 처음부터 준다)
-function Kit.gaugeMax(): number
+-- 가득이 얼마인가(h는 받기만 한다 — 2026-11-09 낮에 차수마다로 바꿨다가 되돌렸다: 사용자 "사신화 가동률을 롤백하고 사신화 스펙을 조정해")
+function Kit.gaugeMax(_h): number
 	return GAUGE.max
 end
 -- 사신으로 변해 있는가
@@ -70,7 +72,7 @@ function Kit.formed(h): boolean
 end
 -- 게이지가 가득한가(사신화를 쓸 수 있다)
 function Kit.formReady(h): boolean
-	return h.class == "reaper" and (h.kit.gauge or 0) >= GAUGE.max and not Kit.formed(h)
+	return h.class == "reaper" and (h.kit.gauge or 0) >= Kit.gaugeMax(h) and not Kit.formed(h)
 end
 -- 사신화의 시간: 차수마다 + 사신의 그릇(3차) + 사신 각성(4차)
 function Kit.formTime(h): number
@@ -85,6 +87,7 @@ function Kit.formTime(h): number
 end
 -- 게이지를 채운다: kind = "hit"(낫 기술이 맞았다 — 한 번 쓸 때 한 번) · "kill"(쓰러뜨렸다) · "reap"(영혼 수확이 맞았다). n = 몇 번어치(저승문 곁의 처치 = 2).
 --  차수의 배수(전직할수록 빨리) x 수확의 계약 x 사신 게이지의 레벨. 사신화 동안에는 차지 않는다. 바뀌었으면 true
+--  (2026-11-09 낮의 「1초에 5씩 · 차수마다 가득」은 되돌렸다 — 가동률은 그대로 · 사신화의 능력치를 낮췄다: 공방 combat.js BUFFS.rp_form · KIT1.reaper.core.form.shade · PASSIVE.rp_edge)
 function Kit.gainGauge(h, kind: string, n: number?): boolean
 	if h.class ~= "reaper" or Kit.level(h, "core") < 1 or Kit.formed(h) then
 		return false
@@ -100,6 +103,7 @@ function Kit.gainGauge(h, kind: string, n: number?): boolean
 	return k.gauge ~= before
 end
 -- 사신화 동안 다시 쓰기가 없는 기술인가(사신 각성 — 사냥기 · 공격기: 광역 난사). typ = 그 기술의 갈래(COMBAT.skills · cast의 type)
+--  어디서나(2026-11-10 사용자 "리퍼 사신화 백귀야행 쿨타임 무한으로 되는거 레이드,스토리,던전 제한 없애 일몹뎀으로 대체하고 데미지너프 했잖아 이걸 왜 이중으로넣어" — 11-09의 「사냥터에서만」을 거뒀다: 백귀야행은 이미 보스에게 1/4 · 보스가 아닌 적에게 4배 — CAST rp_parade의 share · mob)
 function Kit.noCd(h, typ: any): boolean
 	if h.class ~= "reaper" or not Kit.formed(h) or (typ ~= "mob" and typ ~= "attack") then
 		return false
@@ -184,26 +188,37 @@ end
 
 -- 최대 체력의 배수: 액시온의 묵직한 몸
 function Kit.maxHp(h): number
+	local ex = 1 + Items.exOf(h, "hp") / 100 -- (장비 추가 옵션의 최대 체력 % — 2026-11-07)
 	if h.class == "axion" then
-		return 1 + KIT.axion.passive.hp / 100 * Kit.scale(h, "passive")
+		return (1 + KIT.axion.passive.hp / 100 * Kit.scale(h, "passive")) * ex
 	end
-	return 1
+	return ex
 end
 
 -- 달아올랐는가(살라맨더: 열기가 hot 이상)
+-- 달아오름(2026-11-07 사용자: "계속 때리고 막타치면 열기 빠지는데 뎀감효과가 깜빡깜빡 거리는거 장난치는것도아니고"): 열기가 기준(50 · 끓는 피 40)에 닿으면 켜지고,
+--  강화판이 열기를 써서 내려가도 꺼지지 않는다 — 싸움을 멈춰 열기가 식어서(Kit.step의 식기) 기준 아래로 내려갈 때만 꺼진다(k.hotOn). 달궈진 몸(받는 피해 감소) · 뜨거운 피 · 겹불티가 이것을 본다
 function Kit.hot(h): boolean
-	return h.class == "salamander" and Kit.level(h, "core") > 0 and h.kit.heat >= Kit.hotAt(h)
+	if h.class ~= "salamander" or Kit.level(h, "core") <= 0 then
+		return false
+	end
+	local k = h.kit
+	if k.heat >= Kit.hotAt(h) then
+		k.hotOn = true
+	end
+	return k.hotOn == true
 end
 
 -- 걸음 · 뛰는 힘의 배수: 리븐의 날랜 몸 · 살라맨더의 뜨거운 피(달아오름 동안)
 function Kit.move(h): (number, number)
+	local ex = Items.exOf(h, "run") / 100 -- (장비 추가 옵션의 이동 속도 % — 2026-11-07 · 더한다)
 	if h.class == "riven" then
 		local p, s = KIT.riven.passive, Kit.scale(h, "passive")
-		return 1 + p.run / 100 * s, 1 + p.jump / 100 * s
+		return 1 + p.run / 100 * s + ex, 1 + p.jump / 100 * s
 	elseif h.class == "salamander" and Kit.hot(h) then
-		return 1 + KIT.salamander.passive.run / 100 * Kit.scale(h, "passive"), 1
+		return 1 + KIT.salamander.passive.run / 100 * Kit.scale(h, "passive") + ex, 1
 	end
-	return 1, 1
+	return 1 + ex, 1
 end
 
 -- 맞지 않을 확률(0~1): 리븐의 날랜 몸
@@ -319,7 +334,7 @@ function Kit.gainHeat(h, cast): boolean
 	local fx, s = pass(h, "sl_heat2") -- 끓는 피: 더 빨리 오른다
 	k.heat = math.min(core.max, k.heat + core.gain * (1 + (if fx then fx.gain * s else 0)))
 	k.heatT = 0
-	return k.heat >= Kit.hotAt(h)
+	return Kit.hot(h)
 end
 
 -- ---------- 살라맨더의 강화판(2026-11-04 사용자 "게이지를 가득채우면 불길에 휩싸이면서 사냥기, 보스기 가 강화되고 강화된 스킬들은 퀵슬롯에서 빛나는거야 그리고 그 스킬을 사용하면
@@ -369,10 +384,13 @@ function Kit.tick(h, dt: number): (boolean, number)
 			if k.heatT > core.cool then
 				local before = k.heat
 				local fx, s = pass(h, "sl_heat2") -- 끓는 피: 천천히 식는다
-				local hot = Kit.hotAt(h)
+				local wasHot = Kit.hot(h)
 				k.heat = math.max(0, k.heat - core.decay * (1 - (if fx then fx.slow * s else 0)) * math.min(dt, k.heatT - core.cool)) -- cool초를 넘긴 만큼만 식는다
+				if k.heat < Kit.hotAt(h) then
+					k.hotOn = false -- 식어서 기준 아래로: 달아오름이 꺼진다(강화판으로 열기를 쓴 것으로는 꺼지지 않는다)
+				end
 				-- 화면의 숫자(5 단위) · 달아오름이 바뀔 때만 알린다
-				changed = math.floor(before / 5) ~= math.floor(k.heat / 5) or (before >= hot) ~= (k.heat >= hot)
+				changed = math.floor(before / 5) ~= math.floor(k.heat / 5) or wasHot ~= Kit.hot(h)
 			end
 		end
 		-- 뜨거운 피: 초마다 최대 체력의 regen%
@@ -395,7 +413,7 @@ end
 -- on = 사출기를 켰는가 · gauge = 사신 게이지(정수 — 리퍼) · heat = 열기(정수) · hot = 달아올랐는가
 function Kit.view(h)
 	local k = h.kit
-	return { on = k.on, gauge = math.floor(k.gauge or 0), heat = math.floor(k.heat), hot = Kit.hot(h) }
+	return { on = k.on, gauge = math.floor(k.gauge or 0), gaugeMax = if h.class == "reaper" then Kit.gaugeMax(h) else nil, heat = math.floor(k.heat), hot = Kit.hot(h) } -- gaugeMax = 리퍼의 가득(차수마다 — 2026-11-09)
 end
 
 return Kit

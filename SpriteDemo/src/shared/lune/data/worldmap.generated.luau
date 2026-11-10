@@ -2,7 +2,7 @@
 -- 월드맵: 지역마다 맵들의 자리(x · y = 0~1)와 이어진 길(dino-workshop/js/lune/design/journey.js). sceneNode = 게임의 장면이 어느 지역의 어느 마디인가.
 -- 실내(가게 · 사당)처럼 마디에 없는 장면은 화면이 문을 따라 가장 가까운 마디를 찾는다. kinds = 장소의 갈래 이름.
 return {
-	order = { "r1", "city", "r2", "r3", "r4", "sea" },
+	order = { "r1", "city", "r2", "r3", "r4", "sea", "r5" },
 	regions = {
 		r1 = {
 			name = "초승 고개",
@@ -813,6 +813,64 @@ return {
 				},
 			},
 		},
+		r5 = {
+			name = "윤슬 호수",
+			full = "5지역 윤슬 호수(Lv.150~)",
+			nodes = {
+				{
+					id = "r5t",
+					name = "물별 마을",
+					label = "물별 마을",
+					kind = "town",
+					x = 0.12,
+					y = 0.75,
+					scenes = { "r5t" },
+				},
+				{
+					id = "r5a1",
+					name = "연등 갈대밭",
+					label = "연등 갈대밭",
+					kind = "hunt",
+					x = 0.33,
+					y = 0.75,
+					scenes = { "r5a1" },
+				},
+				{
+					id = "r5a2",
+					name = "별이 내린 물가",
+					label = "별이 내린 물가",
+					kind = "hunt",
+					x = 0.54,
+					y = 0.75,
+					scenes = { "r5a2" },
+				},
+				{
+					id = "r5a3",
+					name = "가라앉은 다리",
+					label = "가라앉은 다리",
+					kind = "hunt",
+					x = 0.75,
+					y = 0.75,
+					scenes = { "r5a3" },
+				},
+				{
+					id = "r5s",
+					name = "달샘",
+					label = "달샘",
+					kind = "rest",
+					x = 0.9,
+					y = 0.5,
+					scenes = { "r5s" },
+				},
+			},
+			links = {
+				{ "r5t", "r5a1" },
+				{ "r5a1", "r5a2" },
+				{ "r5a2", "r5a3" },
+				{ "r5a3", "r5s" },
+			},
+			closed = true,
+		},
 		city = {
 			name = "은달 항구",
 			full = "은달 항구",
@@ -1054,6 +1112,11 @@ return {
 		r4d4 = { region = "r4", node = "r4d4" },
 		r4e1 = { region = "r4", node = "r4e" },
 		r4es = { region = "r4", node = "r4e" },
+		r5t = { region = "r5", node = "r5t" },
+		r5a1 = { region = "r5", node = "r5a1" },
+		r5a2 = { region = "r5", node = "r5a2" },
+		r5a3 = { region = "r5", node = "r5a3" },
+		r5s = { region = "r5", node = "r5s" },
 		ct = { region = "city", node = "ct" },
 		seat = { region = "sea", node = "seat" },
 		sea1 = { region = "sea", node = "sea1" },
@@ -1070,7 +1133,7 @@ return {
 	artSize = { w = 384, h = 256 },
 	coach = {
 		name = "역마차",
-		stations = { "town", "r1af", "r1bv", "r1cc", "ct", "r2af", "r2bs", "port", "r3ah", "r3t", "r3cs", "r4bh", "r4ch", "seat", "seaf" },
+		stations = { "town", "r1af", "r1bv", "r1cc", "ct", "r2af", "r2bs", "port", "r3ah", "r3t", "r3cs", "r4bh", "r4ch", "seat", "seaf", "r5t" },
 		fare = { base = 50, step = 20 },
 		words = { title = "역마차", menu = "{name} · 달돈 {n}", more = "다른 정류장 보기", none = "이 땅에는 갈 정류장이 없다네.", ask = "{name}까지 달돈 {n}이네. 가겠나?", board = "탄다", notHere = "마부 곁에서 탄다", far = "배로 가야 하는 곳이다", poor = "달돈이 모자란다", done = "{name}에 닿았다", busy = "지금은 탈 수 없다" },
 	},

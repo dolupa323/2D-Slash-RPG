@@ -48,6 +48,33 @@ local HOLD = 0.3 -- 스마트폰: 칸을 이만큼(초) 누르고 있다가 밀�
 local BAR = 3 -- 스크롤 막대의 두께(화면 틀의 점 — 칸의 오른쪽 끝에 겹친다)
 
 local BagWindow = { side = "right" } -- 가방은 늘 오른쪽에 뜬다(같이 열린 창은 왼쪽으로 간다)
+
+-- 윤슬 조각(2026-11-07 — 장비 추가 옵션의 재설정 · 공방 items.js EXTRA): 장비 상세의 단추 둘 — 「옵션 재설정」(조각이 있을 때 · 부서진 것은 안 된다) · 「확률 보기」(늘 — 로블록스 규정: 쓰기 전에 확률을 본다)
+BagWindow.TOOL = Items.EXTRA.reroll and Items.EXTRA.reroll.id or nil
+function BagWindow.rerollButtons(bag, it, button, onReroll: () -> ())
+	local EW = Items.EXTRA.words
+	if not EW or not BagWindow.TOOL then
+		return
+	end
+	local have = Bag.countIn(bag, BagWindow.TOOL)
+	if have > 0 and not it.broken then
+		button(EW.reroll, function() -- 큐브 창(2026-11-10 — 메이플 큐브처럼 BEFORE · AFTER를 고른다 · 그 전: 묻고 바로 바꿨다)
+			local _ = onReroll
+			Windows.open("cube", it.id)
+		end)
+	end
+	button(EW.odds, function()
+		Windows.open("odds", "reroll:" .. it.stage)
+	end)
+end
+-- 추가 옵션을 한 줄 글로(상세를 다시 그릴지 견준다)
+function BagWindow.exKey(it): string
+	local parts = {}
+	for _, e in (it.ex or {}) do
+		table.insert(parts, e.k .. e.v)
+	end
+	return table.concat(parts, ",")
+end
 BagWindow.COLS, BagWindow.ROWS = COLS, ROWS
 
 function BagWindow.size(): (number, number)
@@ -70,7 +97,7 @@ function BagWindow.better(me, bag, it): boolean
 	if not it or it.item or typeof(it.stage) ~= "number" or typeof(it.q) ~= "number" or typeof(it.star) ~= "number" or not BagWindow.canWear(me, it) then
 		return false -- (장비의 꼴이 다 갖춰지지 않은 것 — 셈하지 않는다)
 	end
-	return ItemInfo.wearDiff(it, (bag.equip or {})[it.slot], me.spec or ItemInfo.refSpec(me.level or 1)) > 0 -- (장착한 것의 표가 없으면 빈 몸으로 셈한다)
+	return ItemInfo.wearDiff(it, (bag.equip or {})[it.slot], me.spec or ItemInfo.refSpec(me.level or 1), me.class) > 0 -- (장착한 것의 표가 없으면 빈 몸으로 셈한다)
 end
 
 -- 그림과 숫자(달돈 · 달가루 · 정수). (x, y) = 그림의 왼쪽 위 — 숫자는 그 오른쪽에
@@ -114,7 +141,13 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		end
 		local myPets, myRide = ctx.myPets and ctx.myPets(), ctx.myRide and ctx.myRide()
 		for _, id in v.pets or {} do
-			table.insert(out, { ride = id, kind = "pet", on = table.find(myPets or v.petsOut or { v.petOut }, id) ~= nil }) -- 꺼내 둔 펫들(셋까지 — 2026-10-30)
+			local outN = 0 -- 꺼내 둔 그 펫의 수(같은 펫을 여럿 가졌으면 여럿 — 2026-11-10)
+			for _, k in myPets or v.petsOut or { v.petOut } do
+				if k == id then
+					outN += 1
+				end
+			end
+			table.insert(out, { ride = id, kind = "pet", on = outN > 0, out = outN }) -- 꺼내 둔 펫들(셋까지 — 2026-10-30)
 		end
 		for _, id in v.mounts or {} do
 			table.insert(out, { ride = id, kind = "mount", on = myRide == id })
@@ -126,6 +159,17 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		local myD = if ctx.myDskin then ctx.myDskin() else v.dskin
 		for _, id in v.dskins or {} do
 			table.insert(out, { ride = id, kind = "dskin", on = (myD or v.dskin) == id }) -- 데미지 스킨(2026-10-29 — 할로윈)
+		end
+		local myB = if ctx.myBubble then ctx.myBubble() else v.bubble
+		for _, id in v.bubbles or {} do
+			table.insert(out, { ride = id, kind = "bubble", on = (myB or v.bubble) == id }) -- 말풍선 꾸밈(2026-11-07)
+		end
+		local myN = if ctx.myNtag then ctx.myNtag() else v.ntag
+		for _, id in v.ntags or {} do
+			table.insert(out, { ride = id, kind = "ntag", on = (myN or v.ntag) == id }) -- 이름표 테두리(2026-11-10)
+		end
+		for _, e in out do
+			e.n = 1 + ((typeof(v.extra) == "table" and v.extra[e.ride]) or 0) -- 가진 수(뽑기에서 가진 것이 나오면 하나 더 — 2026-11-10 · 칸의 「×n」)
 		end
 		return out
 	end
@@ -176,6 +220,9 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			return
 		elseif g and (g.kind == "bmDyePoint" or g.kind == "bmDyeRobe") and ctx.openDye then
 			ctx.openDye(if g.kind == "bmDyePoint" then "point" else "robe") -- 염색약: 색을 고르는 창(색이 바뀔 때 서버가 염색약을 쓴다 — 2026-10-22)
+			return
+		elseif g and g.kind == "bmPick" and ctx.openPick then
+			ctx.openPick(g.box) -- 선택 상자: 그 상자의 것을 고르는 창(고르면 서버가 선택 상자를 쓴다 — 2026-11-10)
 			return
 		end
 		ctx.send("Potion", entry.item)
@@ -271,6 +318,10 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					ctx.toggleWskin(it.ride) -- 캐시 무기: 장착 · 해제
 				elseif it.kind == "dskin" and ctx.toggleDskin then
 					ctx.toggleDskin(it.ride) -- 데미지 스킨: 장착 · 해제(2026-10-29)
+				elseif it.kind == "bubble" and ctx.toggleBubble then
+					ctx.toggleBubble(it.ride) -- 말풍선 꾸밈: 장착 · 해제(2026-11-07)
+				elseif it.kind == "ntag" and ctx.toggleNtag then
+					ctx.toggleNtag(it.ride) -- 이름표 테두리: 장착 · 해제(2026-11-10)
 				end
 			elseif twice then
 				-- 두 번 누르기: 장비는 장착, 소비 아이템은 사용
@@ -614,11 +665,22 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			local prod = ctx.cashProduct and ctx.cashProduct(entry.ride)
 			local isPet = entry.kind == "pet"
 			local isD = entry.kind == "dskin" -- 데미지 스킨(2026-10-29): 캐시 무기처럼 장착 · 해제
-			local isSkin = entry.kind == "wskin" or isD -- 캐시 무기(2026-10-23): 장착 · 해제(퀵슬롯에는 놓지 않는다)
+			local isB = entry.kind == "bubble" -- 말풍선 꾸밈(2026-11-07): 데미지 스킨과 같다
+			local isN = entry.kind == "ntag" -- 이름표 테두리(2026-11-10): 말풍선 꾸밈과 같다
+			local isSkin = entry.kind == "wskin" or isD or isB or isN -- 캐시 무기(2026-10-23): 장착 · 해제(퀵슬롯에는 놓지 않는다)
 			if isD then
 				local q = require(lune.sim.event).dskin(entry.ride)
 				prod = q and { name = q.name, line = q.line } or prod
 			end
+			local BUB = if isB then require(lune.sim.cash).BUBBLE[entry.ride] else nil
+			if BUB then
+				prod = { name = BUB.name, line = BUB.line }
+			end
+			local NT = if isN then require(lune.sim.cash).NTAG[entry.ride] else nil
+			if NT then
+				prod = { name = NT.name, line = NT.line }
+			end
+			local BW_ = if isB then require(lune.data["bm.generated"]).bubbles.words elseif isN then require(lune.data["bm.generated"]).nametags.words else nil -- (이름표 테두리도 같은 꼴의 글 — kind · hint)
 			local spec = { item = entry, buttons = {}, onClose = function()
 				unselect()
 				redraw()
@@ -626,25 +688,66 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			spec.info = {
 				name = if prod then prod.name else entry.ride,
 				tone = "text",
-				sub = (if isD then BMW.dskinKind elseif isSkin then BMW.skinKind elseif isPet then BMW.petKind else BMW.mountKind) .. (if entry.on then " · " .. (if isSkin then BMW.skinTag elseif isPet then BMW.petOutTag else BMW.rideTag) else ""),
+				sub = (if (isB or isN) and BW_ then BW_.kind elseif isD then BMW.dskinKind elseif isSkin then BMW.skinKind elseif isPet then BMW.petKind else BMW.mountKind)
+					.. (if (entry.n or 1) > 1 then " · " .. Format.fill(BMW.countTag or "", { n = entry.n }) else "") -- (가진 수 — 2026-11-10)
+					.. (if entry.on then " · " .. (if isSkin then BMW.skinTag elseif isPet then BMW.petOutTag .. (if (entry.n or 1) > 1 then " " .. tostring(entry.out or 1) else "") else BMW.rideTag) else ""),
 				rows = {},
-				notes = { { if prod then prod.line or "" else "", "text" }, { if isD then BMW.dskinHint elseif isSkin then BMW.skinHint elseif isPet then BMW.bagHint else BMW.rideHint, "dim" } },
+				notes = { { if prod then prod.line or "" else "", "text" }, { if (isB or isN) and BW_ then BW_.hint elseif isD then BMW.dskinHint elseif isSkin then BMW.skinHint elseif isPet then BMW.bagHint else BMW.rideHint, "dim" } },
 			}
-			table.insert(spec.buttons, {
-				text = if isSkin then (if entry.on then BMW.skinOff else BMW.skinOn) elseif isPet then (if entry.on then BMW.petOff else BMW.petOn) else (if entry.on then BMW.rideOff else BMW.rideOn),
-				main = not entry.on,
-				onClick = function()
-					if isD and ctx.toggleDskin then
-						ctx.toggleDskin(entry.ride)
-					elseif isSkin and ctx.toggleWskin then
-						ctx.toggleWskin(entry.ride)
-					elseif isPet and ctx.togglePet then
-						ctx.togglePet(entry.ride)
-					elseif not isPet and ctx.toggleRide then
-						ctx.toggleRide(entry.ride)
+			-- 겹침 보상(2026-11-10 — 운영자가 보낸 것 · sim/cash.luau dupfix): 이것이 나오는 상자에 남은 횟수가 있으면 안내 한 줄 + 「겹침 보상 받기」(마지막 단추)
+			local fixLeft = 0
+			local cv = ctx.cash and ctx.cash()
+			if cv and typeof(cv.dupfix) == "table" then
+				for bid, b in require(lune.sim.gacha).BOXES do
+					for _, e in b.pool or {} do
+						if e[1] == entry.ride and typeof(cv.dupfix[bid]) == "number" and cv.dupfix[bid] > fixLeft then
+							fixLeft = cv.dupfix[bid]
+						end
 					end
-				end,
-			})
+				end
+			end
+			if fixLeft > 0 then
+				table.insert(spec.info.notes, { Format.fill(BMW.dupfixHint or "", { n = fixLeft }), "accent" })
+			end
+			local manyPets = isPet and (entry.n or 1) > 1 and ctx.petOne ~= nil
+			if manyPets then
+				-- 같은 펫을 둘 이상 가졌다(2026-11-10): 「꺼내기 · 더 꺼내기」(가진 수까지 · 셋까지) · 「하나 넣기」 — 하나씩
+				table.insert(spec.buttons, {
+					text = if (entry.out or 0) > 0 then BMW.petMore else BMW.petOn,
+					main = true,
+					off = (entry.out or 0) >= entry.n,
+					onClick = function()
+						ctx.petOne(entry.ride, true)
+					end,
+				})
+				table.insert(spec.buttons, {
+					text = BMW.petLess,
+					off = (entry.out or 0) <= 0,
+					onClick = function()
+						ctx.petOne(entry.ride, false)
+					end,
+				})
+			else
+				table.insert(spec.buttons, {
+					text = if isSkin then (if entry.on then BMW.skinOff else BMW.skinOn) elseif isPet then (if entry.on then BMW.petOff else BMW.petOn) else (if entry.on then BMW.rideOff else BMW.rideOn),
+					main = not entry.on,
+					onClick = function()
+						if isB and ctx.toggleBubble then
+							ctx.toggleBubble(entry.ride)
+						elseif isN and ctx.toggleNtag then
+							ctx.toggleNtag(entry.ride)
+						elseif isD and ctx.toggleDskin then
+							ctx.toggleDskin(entry.ride)
+						elseif isSkin and ctx.toggleWskin then
+							ctx.toggleWskin(entry.ride)
+						elseif isPet and ctx.togglePet then
+							ctx.togglePet(entry.ride)
+						elseif not isPet and ctx.toggleRide then
+							ctx.toggleRide(entry.ride)
+						end
+					end,
+				})
+			end
 			if not isSkin then -- (캐시 무기는 퀵슬롯에 놓지 않는다 — 한 번 장착하면 그대로)
 				table.insert(spec.buttons, {
 					text = WORDS.quick,
@@ -653,7 +756,16 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					end,
 				})
 			end
-			spec.key = table.concat({ "cash", entry.ride, tostring(entry.on) }, "|")
+			if fixLeft > 0 and ctx.dupfixUse then
+				table.insert(spec.buttons, {
+					text = BMW.dupfixBtn,
+					main = true,
+					onClick = function()
+						ctx.dupfixUse(entry.ride)
+					end,
+				})
+			end
+			spec.key = table.concat({ "cash", entry.ride, tostring(entry.on), tostring(entry.out or ""), tostring(entry.n or 1), tostring(fixLeft) }, "|")
 			ItemDetail.show("bag", spec)
 			return
 		end
@@ -705,6 +817,16 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					end,
 					no = stopAsk,
 				})
+			elseif ask and ask.kind == "reroll" then
+				-- 윤슬 조각(2026-11-07 — 추가 옵션을 다시 굴린다): 「윤슬 조각 1개로 추가 옵션을 다시 굴릴까요?」 · 재설정 · 취소 → 서버가 굴려 상세가 새 옵션으로 다시 그려진다
+				spec.ask = ItemDetail.ask("reroll", nil, 1, 1, {
+					yes = function()
+						ctx.send("Item", "reroll", it.id)
+						ask = nil
+						view.refresh()
+					end,
+					no = stopAsk,
+				})
 			elseif ask and ask.kind == "dismantle" then
 				-- 분해도 한 번 묻는다(2026-10-18 — 전에는 누르면 바로 사라졌다): 「이 장비를 분해할까요?  달가루 +n」 · 분해 · 취소
 				spec.ask = ItemDetail.ask("dismantle", nil, 1, 1, {
@@ -729,6 +851,10 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					ask = { kind = "dismantle" }
 					view.refresh()
 				end)
+				BagWindow.rerollButtons(bag, it, button, function()
+					ask = { kind = "reroll" }
+					view.refresh()
+				end)
 				if service == "store" then
 					button(WORDS.toStore, function()
 						ctx.send("Item", "storeIn", "gear", slot)
@@ -749,7 +875,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					end)
 				end
 			end
-			spec.key = table.concat({ "gear", it.id, it.q, it.star, tostring(it.broken), me.level, if worn then worn.id else 0, if worn then worn.star else 0, service or "-", tostring(can), if ask then ask.kind else "-" }, "|")
+			spec.key = table.concat({ "gear", it.id, it.q, it.star, tostring(it.broken), me.level, if worn then worn.id else 0, if worn then worn.star else 0, service or "-", tostring(can), if ask then ask.kind else "-", BagWindow.exKey(it), Bag.countIn(bag, BagWindow.TOOL or "") }, "|") -- (추가 옵션 · 가진 윤슬 조각이 바뀌면 다시 그린다 — 2026-11-07)
 		else
 			local def = Items.goods(entry.item)
 			local have = Bag.countIn(bag, entry.item)
@@ -815,15 +941,22 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			end
 		end
 		if key() == "cash" then
-			-- 캐시 탭: 가진 펫 · 탈것만(정렬 · 늘리기 없음). 비었으면 안내
+			-- 캐시 탭: 가진 펫 · 탈것 · 캐시 무기 · 데미지 스킨 · 말풍선 · 이름표 테두리(정렬 · 늘리기 없음). 비었으면 안내
+			--  가진 것이 한 화면(COLS x ROWS)을 넘으면 칸을 더 만들고 밀어서 본다(2026-11-10 사용자 "캐시칸이 적어서 그냥 템 증발해버리는데" — 전에는 스물네 번째 뒤의 것이 그려지지 않아
+			--   계정에는 있는데 가방에서 보이지 않고 낄 수도 없었다)
 			local own = cashList()
-			gridRoot.CanvasSize = UDim2.fromOffset(0, ROWS * S)
-			gridRoot.ScrollingEnabled = false
-			gridRoot.ScrollBarThickness = 0
+			local rowsC = math.max(ROWS, math.ceil(#own / COLS))
+			for i = #cells + 1, rowsC * COLS do
+				makeCell(i)
+			end
+			local scrollC = rowsC > ROWS
+			gridRoot.CanvasSize = UDim2.fromOffset(0, rowsC * S)
+			gridRoot.ScrollingEnabled = scrollC and not ctx.quick.dragging()
+			gridRoot.ScrollBarThickness = if scrollC then BAR else 0
 			count:set(if #own == 0 then BMW.bagEmpty else "")
 			detail(bag, me)
 			for i, cell in cells do
-				cell.frame.Visible = i <= COLS * ROWS
+				cell.frame.Visible = i <= rowsC * COLS
 				cell:set(own[i], { selected = sel ~= nil and sel.tab == "cash" and own[i] ~= nil and own[i].ride == sel.id })
 			end
 			grow.frame.Visible = false

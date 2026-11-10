@@ -20,6 +20,7 @@ local Ui = require(script.Parent.ui)
 local Stage = require(script.Parent.Parent.stage)
 local Sprite = require(script.Parent.Parent.sprite)
 local Dye = require(lune.sim.dye)
+local Gacha = require(lune.sim.gacha) -- 선택 상자의 고르는 모습(2026-11-10)
 local DYE = Dye.data
 
 local C = Ui.COLOR
@@ -41,8 +42,8 @@ end
 local RIDE_DATA = require(lune.data["ride.generated"])
 for _, list in { RIDE_DATA.pets, RIDE_DATA.mounts } do
 	for _, q in list do
-		if q.free and not BY[q.id] then
-			BY[q.id] = { id = q.id, name = q.name, line = q.line or "", icon = "ride_" .. q.id, free = q.free }
+		if (q.free or q.box) and not BY[q.id] then -- (box = 윤슬 상자의 펫 · 탈것 — 2026-11-07)
+			BY[q.id] = { id = q.id, name = q.name, line = q.line or "", icon = "ride_" .. q.id, free = q.free, box = q.box }
 		end
 	end
 end
@@ -82,11 +83,29 @@ function CashWindow.dyeH(): number
 	return S.dyeY + S.dyeBox + S.dyeBtnY + Ui.M.button
 end
 
+-- 선택 상자의 모습이면 그 상자(arg "pick:<상자>" — 2026-11-10 상자 판매 바로잡기)
+local function pickOf(arg: any): string?
+	local bid = if typeof(arg) == "string" and string.sub(arg, 1, 5) == "pick:" then string.sub(arg, 6) else nil
+	return if bid and Gacha.box(bid) then bid else nil
+end
+CashWindow.pickOf = pickOf
+-- 그 칸의 자리(창의 속 기준 — i는 1부터) · 창의 높이(칸의 줄 수 + 「받기」)
+function CashWindow.pickCell(i: number): (number, number)
+	local col, row = (i - 1) % S.selCols, (i - 1) // S.selCols
+	return col * (S.selCellW + S.selGap), S.selY + row * (S.selCellH + S.selGap)
+end
+function CashWindow.pickH(bid: string): number
+	local n = #((Gacha.box(bid) or {}).pool or {})
+	return S.selY + math.ceil(n / S.selCols) * (S.selCellH + S.selGap) + S.selBtnY + Ui.M.button
+end
+
 function CashWindow.size(arg: any): (number, number)
 	if arg == "rename" then
 		return S.w, S.renameH
 	elseif dyePart(arg) then
 		return S.w, CashWindow.dyeH()
+	elseif pickOf(arg) then
+		return S.w, CashWindow.pickH(pickOf(arg) :: string)
 	end
 	return S.w, S.listY + S.rows * S.row + S.footY + Ui.M.button
 end
@@ -96,6 +115,10 @@ function CashWindow.dyeTitle(part: string, class: string?): string
 	return if part == "robe" then DYE.words.title.robe elseif hero and hero.hair then DYE.words.title.hair else DYE.words.title.point
 end
 function CashWindow.title(arg: any): string
+	local bid = pickOf(arg)
+	if bid then
+		return Format.fill(W.pickTitle or "{box}", { box = (BY[bid] and BY[bid].name) or bid })
+	end
 	local part = dyePart(arg)
 	if part then
 		local ctx = CashWindow.ctx
@@ -199,10 +222,16 @@ function CashWindow.rows(view, tab: number, gift: boolean?)
 		if gift then
 			state = if not CashWindow.giftable(id) or (view ~= nil and view.giftLock == true) then "noGift" elseif not v.ready then "soon" elseif soldOut then "soldOut" else "gift"
 		end
+		-- 뽑기 상자(2026-11-07): 나올 것이 남지 않으면 「모두 보유」(구매 단추 대신) · random = 줄 셋째 칸의 「확률 보기」
+		if v.boxLeft ~= nil and v.boxLeft <= 0 and not gift then
+			state = "own"
+		end
 		table.insert(out, {
 			id = id,
 			icon = p.icon,
 			name = p.name,
+			random = p.random == true,
+			boxAll = v.boxLeft ~= nil and v.boxLeft <= 0,
 			tag = if p.trade then W.trade else W.account,
 			tagTone = if p.trade then "accent" else "dim",
 			text = text,
@@ -415,7 +444,92 @@ local function buildDye(body: Frame, ctx, w: number, part: string)
 	return view
 end
 
-function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
+-- 선택 상자의 모습(2026-11-10 상자 판매 바로잡기 — 가방 · 퀵슬롯에서 선택 상자를 쓰면): 안내 · 가진 선택 상자 · 그 상자의 것 칸(그림 · 이름 — 드문 것은 금빛 · 가진 수) ·
+--  알림 · 「받기」 → ctx.cashDo("pick", 고른 것) — 서버가 선택 상자를 하나 쓰고 그것을 준다(가진 것이면 하나 더). 칸의 그림 = 가방 캐시 탭과 같은 것(ItemCell.icon)
+local PICK_KIND = { pet = "pet", mount = "mount", dskin = "dskin", bubble = "bubble", ntag = "ntag" }
+local function buildPick(body: Frame, ctx, w: number, bid: string)
+	local ItemCell = require(script.Parent.itemCell)
+	local CashSim = require(lune.sim.cash)
+	local view = {}
+	local b = Gacha.box(bid)
+	local item = "bm_pick_" .. bid
+	local pick, note, tone, busy = nil, nil, nil, false
+	Ui.text(body, W.pickHint or "", 0, 2, w, { color = C.dim })
+	local have = Ui.text(body, "", 0, 18, w, {})
+	local cells = {}
+	for i, e in b.pool do
+		local id = e[1]
+		local x, y = CashWindow.pickCell(i)
+		local frame = Ui.box(body, x, y, S.selCellW, S.selCellH, C.line)
+		frame.Name = "Pick_" .. id
+		Ui.box(frame, 1, 1, S.selCellW - 2, S.selCellH - 2, C.panel)
+		Ui.worldIcon(frame, ItemCell.icon({ ride = id, kind = PICK_KIND[b.kind] or "mount" }), math.floor((S.selCellW - S.selIcon) / 2), 2, S.selIcon)
+		local rare = table.find(b.rare or {}, id) ~= nil
+		Ui.text(frame, CashSim.itemName(id), 2, S.selNameY, S.selCellW - 4, { align = "center", lines = 2, color = if rare then C.gold else C.text })
+		local own = Ui.text(frame, "", 2, S.selOwnY, S.selCellW - 4, { align = "center", color = C.dim })
+		local hit = Ui.hit(frame)
+		hit.Activated:Connect(function()
+			if busy then
+				return
+			end
+			pick = id
+			note = nil
+			view.refresh()
+		end)
+		cells[i] = { id = id, frame = frame, own = own }
+	end
+	local btnY = CashWindow.pickH(bid) - Ui.M.button
+	local noteText = Ui.text(body, "", 0, btnY + math.floor((Ui.M.button - Ui.M.small) / 2), w - S.btnW - 8, { color = C.dim })
+	local go
+	go = Ui.button(body, W.pickGo or "", w - S.btnW, btnY, S.btnW, function()
+		if busy or not pick then
+			return
+		end
+		busy = true
+		view.refresh()
+		local res = ctx.cashDo("pick", pick)
+		busy = false
+		if res and res.ok then
+			note, tone = Format.fill(W.pickDone or "", { name = CashSim.itemName(pick) }), C.green
+		else
+			note, tone = (res and res.why) or "", C.red
+		end
+		view.refresh()
+	end, { main = true })
+	go.frame.Name = "PickGo"
+	-- 가진 수(상점 상태 — 목록에 있으면 1 + 더 받은 수)
+	local function owned(id: string): number
+		local v = ctx.cash and ctx.cash()
+		if not v then
+			return 0
+		end
+		local list = (if b.kind == "pet" then v.pets elseif b.kind == "bubble" then v.bubbles elseif b.kind == "dskin" then v.dskins elseif b.kind == "ntag" then v.ntags else v.mounts) or {}
+		if not table.find(list, id) then
+			return 0
+		end
+		return 1 + ((typeof(v.extra) == "table" and v.extra[id]) or 0)
+	end
+	function view.refresh()
+		local n = Bag.countIn(ctx.bag(), item)
+		have:set(Format.fill(W.pickHave or "", { n = n }))
+		have:color(if n > 0 then C.gold else C.red)
+		for _, c in cells do
+			c.frame.BackgroundColor3 = if c.id == pick then C.accent else C.line
+			local k = owned(c.id)
+			c.own:set(if k > 0 then Format.fill(W.pickOwn or "", { n = k }) else "")
+		end
+		go:setEnabled(n > 0 and pick ~= nil and not busy)
+		noteText:set(note or (if pick == nil and n > 0 then W.pickNone or "" else ""))
+		noteText:color(tone or C.dim)
+	end
+	function view.destroy() end
+	view.refresh()
+	return view
+end
+
+-- grid = 화면 가득의 달빛 상점(2026-11-10 — Layout.shopFull의 cols · cardW · cardH · gap): 상품을 줄 대신 카드로 줄지어(그림 크게 · 이름 · 한 줄 · 값 · 「구매」 · 위 오른쪽 「확률 보기」) ·
+--  꾸밈 탭에는 작은 분류(SHOP.sub — 전체 · 뽑기 상자 · 탈것 · 캐시 무기) · 목록은 판의 아래 끝까지. 없으면 예전의 줄(창 · 시험)
+function CashWindow.build(body: Frame, ctx, w: number, h: number, arg: any, grid: any?)
 	CashWindow.ctx = ctx
 	if arg == "rename" then
 		return buildRename(body, ctx, w)
@@ -423,6 +537,10 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 	local part = dyePart(arg)
 	if part then
 		return buildDye(body, ctx, w, part)
+	end
+	local pickBid = pickOf(arg)
+	if pickBid then
+		return buildPick(body, ctx, w, pickBid)
 	end
 	local view = {}
 	local tab = 1
@@ -460,74 +578,163 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 	-- 보관함에 받을 것이 있으면 「보관함」 옆에 금빛 수(보관함 탭은 맨 끝이라 다른 탭이 밀리지 않는다)
 	local boxN = Ui.text(body, "", tx - 14 + 4, S.tabY, 40, { color = C.gold })
 	Ui.line(body, 0, S.listY - 6, w)
+	local FULL = SHOP.full
+	-- 작은 분류(화면 가득일 때 · 꾸밈 탭 — 2026-11-10 메이플 캐시샵의 작은 분류 탭): 누르면 그 분류의 것만
+	local chip = "all"
+	local chipsUi = {}
+	if grid and SHOP.sub then
+		for key, list_ in SHOP.sub do
+			local cx = 0
+			for _, c in list_ do
+				local cw = Ui.measure(c.name) + 18
+				local b = Ui.button(body, c.name, cx, S.listY, cw, function()
+					if chip ~= c.id then
+						chip = c.id
+						list.CanvasPosition = Vector2.zero
+						view.refresh()
+					end
+				end, { h = FULL.chipH, font = "small" })
+				b.frame.Name = "Chip_" .. c.id
+				table.insert(chipsUi, { key = key, id = c.id, btn = b })
+				cx += cw + FULL.chipGap
+			end
+		end
+	end
+	local function listTop(): number
+		local key = SHOP.tabs[tab][1]
+		return if grid and SHOP.sub and SHOP.sub[key] then S.listY + FULL.chipH + 8 else S.listY
+	end
+	local fy = if grid then h - Ui.M.button else S.listY + S.rows * S.row + S.footY -- 아래 줄(「모두 받기」 · 알림)
 
 	-- 상품 · 보관함의 줄: 스크롤 틀(rows개가 보이고 나머지는 민다 — 마우스 휠 · 손가락). 막대는 판의 오른쪽 여백에
-	list = Ui.scroll(body, 0, S.listY, w + 10, S.rows * S.row, MOST * S.row, S.scrollW)
+	list = if grid then Ui.scroll(body, 0, S.listY, w, fy - S.footY - S.listY, MOST * (grid.cardH + grid.gap), S.scrollW) else Ui.scroll(body, 0, S.listY, w + 10, S.rows * S.row, MOST * S.row, S.scrollW)
 	list.Name = "List"
 	local empty = Ui.text(body, W.boxEmpty, 0, S.listY + 20, w, { align = "center", color = C.dim })
 	local rowsUi = {}
-	for i = 1, MOST do
-		local f = Ui.group(list, 0, (i - 1) * S.row, w, S.row, "Row" .. i)
-		local r = { frame = f }
-		Ui.slot(f, 0, 2, S.iconS)
-		r.icon = Ui.pic(f, nil, 2, 4)
-		r.name = Ui.text(f, "", S.textX, 3, textW, { font = "body" })
-		r.tag = Ui.text(f, "", S.textX, 5, 80, {})
-		r.text = Ui.text(f, "", S.textX, 19, textW, { color = C.dim })
-		r.count = Ui.text(f, "", S.textX, S.countY, textW, { color = C.accent })
-		r.price = Ui.text(f, "", w - S.sideW, S.priceY, S.sideW, { align = "right", color = C.gold })
-		r.own = Ui.text(f, W.own, w - S.sideW, S.btnY + 6, S.sideW, { align = "right", color = C.green })
-		r.btn = Ui.button(f, W.buy, w - S.btnW, S.btnY, S.btnW, function()
-			if waiting or not r.act then
-				return
-			end
-			if r.act.gift then
-				if CashWindow.packs(r.act.gift) then
-					pick, note = { buy = r.act.gift }, nil -- 묶음이 있으면 몇 개를 선물할지 먼저(2026-11-06)
-				else
-					giftId, giftNote, giftTone = r.act.gift, nil, nil -- 닉네임 칸을 띄운다
-				end
-				view.refresh()
-				return
-			end
-			-- 여러 개를 한 번에(2026-11-06): 묶음이 있는 상품의 「구매」 → 1개 · 5개 · 10개 / 보관함에 2개 이상인 줄의 「받기」 → 받을 수
-			if r.act.id and CashWindow.packs(r.act.id) then
-				pick, note = { buy = r.act.id }, nil
-				view.refresh()
-				return
-			elseif r.act.box and (r.act.n or 1) > 1 then
-				pick, note = { box = r.act.box, id = r.act.item, n = r.act.n, icon = r.act.icon, name = r.act.name }, nil
-				takeN = r.act.n
-				view.refresh()
-				return
-			end
-			waiting = true
-			local act = r.act
-			local res = if act.box then ctx.cashDo("take", act.box) elseif act.pet ~= nil then ctx.cashDo("pet", act.pet) elseif act.ride ~= nil then ctx.cashDo("ride", act.ride) else ctx.cashDo("buy", act.id)
-			waiting = false
-			note, noteTone = nil, nil
-			if res and res.why then
-				note, noteTone = res.why, C.red
-			elseif act.box and res and res.ok then
-				note, noteTone = Format.fill(W.taken, { n = res.moved or act.n }), C.green
-			elseif (act.pet ~= nil or act.ride ~= nil) and res and res.ok then
-				note, noteTone = nil, nil -- 꺼냈다 · 탔다(화면의 펫 · 탈것이 바로 보인다)
-			elseif res and res.ok then
-				note, noteTone = W.asked, C.dim
+	-- 줄 · 카드의 단추: 사기 · 받기 · 선물(묶음이 있으면 수 고르기 · 선물이면 닉네임 칸)
+	local function onAct(r)
+		if waiting or not r.act then
+			return
+		end
+		if r.act.gift then
+			if CashWindow.packs(r.act.gift) then
+				pick, note = { buy = r.act.gift }, nil -- 묶음이 있으면 몇 개를 선물할지 먼저(2026-11-06)
+			else
+				giftId, giftNote, giftTone = r.act.gift, nil, nil -- 닉네임 칸을 띄운다
 			end
 			view.refresh()
-		end, { main = true, h = 22 })
-		r.btn.frame.Name = "Act"
-		-- 펫 · 탈것의 줄: 그림 · 이름 쪽을 누르면(PC는 올려 두기만 해도) 달빛 상점의 미리보기에 내 캐릭터와 같이(2026-10-21 — 메이플 캐시샵의 미리보기. 단추 자리는 비운다)
-		local pv = Ui.group(f, 0, 0, w - S.btnW - 6, S.row, "Preview")
-		local hit = Ui.hit(pv)
+			return
+		end
+		-- 여러 개를 한 번에(2026-11-06): 묶음이 있는 상품의 「구매」 → 1개 · 5개 · 10개 / 보관함에 2개 이상인 줄의 「받기」 → 받을 수
+		if r.act.id and CashWindow.packs(r.act.id) then
+			pick, note = { buy = r.act.id }, nil
+			view.refresh()
+			return
+		elseif r.act.box and (r.act.n or 1) > 1 then
+			pick, note = { box = r.act.box, id = r.act.item, n = r.act.n, icon = r.act.icon, name = r.act.name }, nil
+			takeN = r.act.n
+			view.refresh()
+			return
+		end
+		waiting = true
+		local act = r.act
+		local res = if act.box then ctx.cashDo("take", act.box) elseif act.pet ~= nil then ctx.cashDo("pet", act.pet) elseif act.ride ~= nil then ctx.cashDo("ride", act.ride) else ctx.cashDo("buy", act.id)
+		waiting = false
+		note, noteTone = nil, nil
+		if res and res.why then
+			note, noteTone = res.why, C.red
+		elseif act.box and res and res.ok then
+			note, noteTone = Format.fill(W.taken, { n = res.moved or act.n }), C.green
+		elseif (act.pet ~= nil or act.ride ~= nil) and res and res.ok then
+			note, noteTone = nil, nil -- 꺼냈다 · 탔다(화면의 펫 · 탈것이 바로 보인다)
+		elseif res and res.ok then
+			note, noteTone = W.asked, C.dim
+		end
+		view.refresh()
+	end
+	-- 확률 보기(2026-11-07 — 로블록스 규정: 확률형 상품은 사기 전에 모든 결과의 확률 %) → 확률 창(ui/oddsWindow.luau)
+	local function onOdds(r)
+		if r.oddsArg then
+			require(script.Parent.windows).open("odds", r.oddsArg)
+		end
+	end
+	-- 펫 · 탈것 · 캐시 무기: 그림 · 이름 쪽을 누르면(PC는 올려 두기만 해도) 달빛 상점의 미리보기에 내 캐릭터와 같이(2026-10-21 — 메이플 캐시샵의 미리보기)
+	local function previewHit(r, holder: Frame)
+		local hit = Ui.hit(holder)
 		local function show()
 			if r.preview and ctx.cashPreview then
 				ctx.cashPreview(r.preview)
 			end
 		end
 		hit.Activated:Connect(show)
-		hit.MouseEnter:Connect(show)
+		hit.MouseEnter:Connect(function()
+			show()
+			if r.stroke then
+				r.stroke.Color = C.accent -- (카드: 올린 것을 민트 테두리로)
+			end
+		end)
+		hit.MouseLeave:Connect(function()
+			if r.stroke then
+				r.stroke.Color = C.line
+			end
+		end)
+	end
+	for i = 1, MOST do
+		local r
+		if grid then
+			-- 카드(2026-11-10): 테두리 판 · 가운데 큰 그림(24점 그림의 두 배) · 이름 · 한 줄 · 횟수 · 값 · 아래 「구매」 · 위 왼쪽 꼬리표 · 위 오른쪽 「확률 보기」
+			local CARD = FULL.card
+			local cw, ch = grid.cardW, grid.cardH
+			local f = Ui.group(list, ((i - 1) % grid.cols) * (cw + grid.gap), ((i - 1) // grid.cols) * (ch + grid.gap), cw, ch, "Card" .. i)
+			r = { frame = f, card = true }
+			local back = Ui.box(f, 0, 0, cw, ch, C.panel2)
+			back.Name = "Back"
+			local stroke = Instance.new("UIStroke")
+			stroke.Color = C.line
+			stroke.Thickness = 1
+			stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			stroke.Parent = back
+			r.stroke = stroke
+			Ui.slot(f, math.floor((cw - CARD.slot) / 2), CARD.iconY, CARD.slot)
+			r.icon = Ui.pic(f, nil, math.floor((cw - 48) / 2), CARD.iconY + math.floor((CARD.slot - 48) / 2))
+			r.icon.Size = UDim2.fromOffset(48, 48)
+			r.icon.ZIndex = 2
+			r.name = Ui.text(f, "", 4, CARD.nameY, cw - 8, { font = "body", align = "center" })
+			r.tag = Ui.text(f, "", 6, 5, cw - 12, {})
+			r.text = Ui.text(f, "", 4, CARD.textY, cw - 8, { color = C.dim, align = "center", lines = CARD.textLines or 1, line = Ui.M.smallLine })
+			r.count = Ui.text(f, "", 4, CARD.countY, cw - 8, { color = C.accent, align = "center" })
+			r.price = Ui.text(f, "", 4, CARD.priceY, cw - 8, { align = "center", color = C.gold })
+			r.own = Ui.text(f, W.own, 4, CARD.btnY + 6, cw - 8, { align = "center", color = C.green })
+			previewHit(r, Ui.group(f, 0, 0, cw, CARD.btnY - 2, "Preview"))
+			r.odds = Ui.button(f, W.odds or "", cw - CARD.oddsW - 5, 4, CARD.oddsW, function()
+				onOdds(r)
+			end, { h = 14, font = "small" })
+			r.btn = Ui.button(f, W.buy, 8, CARD.btnY, cw - 16, function()
+				onAct(r)
+			end, { main = true, h = CARD.btnH })
+		else
+			local f = Ui.group(list, 0, (i - 1) * S.row, w, S.row, "Row" .. i)
+			r = { frame = f }
+			Ui.slot(f, 0, 2, S.iconS)
+			r.icon = Ui.pic(f, nil, 2, 4)
+			r.name = Ui.text(f, "", S.textX, 3, textW, { font = "body" })
+			r.tag = Ui.text(f, "", S.textX, 5, 80, {})
+			r.text = Ui.text(f, "", S.textX, 19, textW, { color = C.dim })
+			r.count = Ui.text(f, "", S.textX, S.countY, textW, { color = C.accent })
+			r.price = Ui.text(f, "", w - S.sideW, S.priceY, S.sideW, { align = "right", color = C.gold })
+			r.own = Ui.text(f, W.own, w - S.sideW, S.btnY + 6, S.sideW, { align = "right", color = C.green })
+			-- 확률 보기: 줄 셋째 칸의 작은 단추
+			r.odds = Ui.button(f, W.odds or "", S.textX, S.countY - 2, 64, function()
+				onOdds(r)
+			end, { h = 14, font = "small" })
+			r.btn = Ui.button(f, W.buy, w - S.btnW, S.btnY, S.btnW, function()
+				onAct(r)
+			end, { main = true, h = 22 })
+			previewHit(r, Ui.group(f, 0, 0, w - S.btnW - 6, S.row, "Preview"))
+		end
+		r.odds.frame.Name = "Odds"
+		r.odds.frame.Visible = false
+		r.btn.frame.Name = "Act"
 		rowsUi[i] = r
 	end
 
@@ -612,7 +819,6 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 		passRow.claim.frame.Name = "PassClaim"
 	end
 
-	local fy = S.listY + S.rows * S.row + S.footY
 	Ui.line(body, 0, fy - 5, w)
 	local all = Ui.button(body, W.takeAll, 0, fy, S.allW, function()
 		if waiting then
@@ -820,6 +1026,40 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 		all.frame.Visible = not form and not picking
 		back.frame.Visible = form or picking
 		local rows = if isPass then {} else CashWindow.rows(v, tab, giftMode)
+		-- 작은 분류(화면 가득 · 꾸밈 탭): 고른 분류의 것만 · 다른 탭으로 가면 「전체」
+		local subs = if grid and SHOP.sub then SHOP.sub[key] else nil
+		if not subs then
+			chip = "all"
+		end
+		local chipIds = nil
+		for _, c in subs or {} do
+			if c.id == chip and c.ids then
+				chipIds = {}
+				for _, id in c.ids do
+					chipIds[id] = true
+				end
+			end
+		end
+		if chipIds then
+			local kept = {}
+			for _, r in rows do
+				if r.id and chipIds[r.id] then
+					table.insert(kept, r)
+				end
+			end
+			rows = kept
+		end
+		local showList = not isPass and not form and not picking
+		for _, cu in chipsUi do
+			cu.btn.frame.Visible = showList and cu.key == key
+			cu.btn:setMain(cu.id == chip)
+		end
+		local top = listTop()
+		if grid then
+			list.Position = UDim2.fromOffset(0, top)
+			list.Size = UDim2.fromOffset(w, fy - S.footY - top)
+		end
+		empty:move(0, top + 20)
 		empty:show(not form and not picking and not isPass and #rows == 0)
 		if picking then
 			local buying = pick.buy ~= nil
@@ -885,14 +1125,17 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 			local r = rows[i]
 			ru.frame.Visible = r ~= nil
 			ru.act = nil
-			ru.preview = if r and typeof(r.id) == "string" and (string.sub(r.id, 1, 4) == "pet_" or string.sub(r.id, 1, 6) == "mount_") then r.id else nil
+			ru.odds.frame.Visible = false -- (확률 보기 — 확률형 상품의 줄만 아래에서 켠다)
+			ru.preview = if r and typeof(r.id) == "string" and (string.sub(r.id, 1, 4) == "pet_" or string.sub(r.id, 1, 6) == "mount_" or string.sub(r.id, 1, 6) == "wskin_") then r.id else nil -- (캐시 무기 — 미리보기의 내 캐릭터가 그 무기를 든다 · 2026-11-10 사용자 "캐쉬무기들 미리보기가 되어야하고")
 			if r then
 				Ui.setPic(ru.icon, r.icon)
 				ru.name:set(r.name)
 				local nw = Ui.measure(r.name, "body")
 				ru.tag:set(r.tag or "")
 				ru.tag:color(C[r.tagTone or "dim"] or C.dim)
-				ru.tag:move(S.textX + nw + 6, 5)
+				if not ru.card then
+					ru.tag:move(S.textX + nw + 6, 5) -- (카드는 위 왼쪽 귀퉁이 그대로)
+				end
 				ru.text:set(r.text)
 				if r.box then
 					ru.count:set("")
@@ -920,7 +1163,10 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 					end
 				else
 					ru.btn:setMain(true)
-					ru.count:set(r.count or "")
+					ru.odds.frame.Visible = r.random == true
+					ru.oddsArg = if r.random then (if string.sub(r.id, 1, 7) == "yunseul" then "reroll:150" else "box:" .. r.id) else nil
+					ru.own:set(if r.boxAll then (W.boxAll or W.own) else W.own)
+					ru.count:set(if r.random then "" else (r.count or ""))
 					ru.count:color(if r.full then C.red else C.accent)
 					ru.price:set(r.price)
 					ru.price:color(if r.state == "soon" or r.state == "soldOut" then C.dim else C.gold)
@@ -932,9 +1178,18 @@ function CashWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 				end
 			end
 		end
-		list.CanvasSize = UDim2.fromOffset(0, math.max(S.rows, #rows) * S.row)
-		list.ScrollingEnabled = #rows > S.rows
-		list.ScrollBarThickness = if #rows > S.rows then S.scrollW else 0
+		if grid then
+			local lines = math.ceil(#rows / grid.cols)
+			local contentH = math.max(0, lines * (grid.cardH + grid.gap) - grid.gap)
+			local viewH = fy - S.footY - top
+			list.CanvasSize = UDim2.fromOffset(0, math.max(viewH, contentH))
+			list.ScrollingEnabled = contentH > viewH
+			list.ScrollBarThickness = if contentH > viewH then S.scrollW else 0
+		else
+			list.CanvasSize = UDim2.fromOffset(0, math.max(S.rows, #rows) * S.row)
+			list.ScrollingEnabled = #rows > S.rows
+			list.ScrollBarThickness = if #rows > S.rows then S.scrollW else 0
+		end
 		if isPass then
 			local pv = (v and v.pass) or {}
 			local pr = CashWindow.rows(v, tab, giftMode)[1]

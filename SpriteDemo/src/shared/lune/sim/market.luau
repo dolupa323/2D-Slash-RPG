@@ -50,7 +50,7 @@ function Market.pack(it: any)
 	elseif it.item ~= nil then
 		return { g = it.item, n = it.n }
 	end
-	return { it.slot, it.stage, it.q, it.star, it.who or "", it.fails or 0, if it.broken then 1 else 0, it.u } -- 8째 = 이름표(2026-10-27)
+	return Items.packRow(it) -- 가방의 줄과 같다(items.luau의 Items.packRow — 8째 = 이름표 · 9째 = 추가 옵션 2026-11-07)
 end
 
 -- 장부의 꼴 → 가방의 것(꼴이 맞지 않으면 nil). 장비에는 번호(id)가 없다 — 가방에 넣을 때 붙는다
@@ -65,7 +65,7 @@ function Market.unpack(row: any)
 		end
 		return { item = row.g, n = row.n }
 	end
-	local it = { slot = row[1], stage = row[2], q = row[3], star = row[4], who = if row[5] ~= "" then row[5] else nil, fails = row[6], broken = row[7] == 1, u = if typeof(row[8]) == "string" then row[8] else nil }
+	local it = { slot = row[1], stage = row[2], q = row[3], star = row[4], who = if row[5] ~= "" then row[5] else nil, fails = row[6], broken = row[7] == 1, u = if typeof(row[8]) == "string" then row[8] else nil, ex = Items.unpackEx(row[9]) }
 	if not Items.valid(it) or not whole(it.fails, 0, 9) then
 		return nil
 	end

@@ -180,7 +180,7 @@ function Hero.spec(h)
 	local gear = Items.sum(Bag.worn(h))
 	local stats = {}
 	for id, pts in h.stats do
-		stats[id] = STATS.base + pts + (if id == "hp" then 0 else gear.stat)
+		stats[id] = STATS.base + pts + (if id == "hp" then 0 else gear.stat + (gear.ex[id] or 0)) -- (추가 옵션의 힘 · 민첩 · 지능 · 운 — 2026-11-07 · 올스탯은 gear.stat에 들었다)
 	end
 	return { main = stats[pair[1]], sub = stats[pair[2]], atk = gear.atk, def = gear.def, stats = stats, gearStat = gear.stat }
 end
@@ -198,7 +198,7 @@ end
 --  sp = 이미 셈한 Hero.spec(내 상태를 보낼 때 한 번만 셈한다)
 function Hero.power(h, sp: any?): number
 	local s = sp or Hero.spec(h)
-	return math.floor(N.statAtk(s.main, s.sub, s.atk) * (1 + Passives.atkPct(h)) * (1 + Passives.sumOf(h, "final")) * critExp(h) + 0.5)
+	return math.floor(N.statAtk(s.main, s.sub, s.atk) * (1 + Passives.atkPct(h)) * (1 + Passives.sumOf(h, "final")) * (1 + Items.exOf(h, "dmg") / 100) * critExp(h) + 0.5) -- (장비 추가 옵션의 데미지 % — 2026-11-07: 버프가 아니라 늘 붙는 것이라 넣는다)
 end
 -- 피해의 셈이 쓰는 값(= 곱하기 전의 스탯 공격력). 그 위에 영혼(Kit.attack) · 버프(Buffs.dmg) · 패시브(Passives.atk)를 곱한다
 --  관리자의 시험용 피해 배율(h.dmgBoost — 저장하지 않는다)은 여기에만 곱한다: 보이는 전투력과 순위(Hero.power)는 그대로다
@@ -208,7 +208,7 @@ end
 -- 아이템 상세의 「장착하면 전투력 +n」을 셈하는 재료(화면에 보낸다 — shared/lune/ui/itemInfo.luau): 주스탯 · 부스탯 · 공격력 · k(전투력 = statAtk x k)
 function Hero.specView(h, spec: any?)
 	local sp = spec or Hero.spec(h)
-	return { main = sp.main, sub = sp.sub, atk = sp.atk, k = (1 + Passives.atkPct(h)) * (1 + Passives.sumOf(h, "final")) * critExp(h) }
+	return { main = sp.main, sub = sp.sub, atk = sp.atk, k = (1 + Passives.atkPct(h)) * (1 + Passives.sumOf(h, "final")) * (1 + Items.exOf(h, "dmg") / 100) * critExp(h) }
 end
 
 -- 끼고 있는 방어구가 줄여 주는 피해 %(그 레벨의 몬스터에게 맞을 때)
@@ -643,6 +643,7 @@ function Hero.killXp(h, mobLevel: number, mobHpMul: number): number
 		xp *= 1 - N.data.BODY.death.cut / 100
 	end
 	xp *= Cash.expMul(h) -- 경험치 쿠폰(사냥 경험치만 — 2026-10-20 사용자 「경험치 쿠폰 판매해도 됩니다」)
+	xp *= (h.runeXp or 1) * (1 - (h.curse or 0)) -- 룬의 힘(해방한 뒤 +100%) · 룬의 저주(그 맵의 룬을 두면 50 ~ 100% 덜 — 2026-11-07 · 서버 modules/runeGuard.luau가 1초마다 단다)
 	return math.max(1, math.floor(xp + 0.5))
 end
 
@@ -974,6 +975,7 @@ function Hero.pack(h)
 		weak = math.floor(h.weak),
 		expLeft = math.floor(h.expLeft or 0),
 		dropLeft = math.floor(h.dropLeft or 0),
+		runeCurse = if h.runeCurse then { s = h.runeCurse.s, map = h.runeCurse.map } else false, -- 룬의 저주(2026-11-10 — 다시 접속해도 남는다: server modules/runeGuard.luau)
 		bag = Bag.pack(h),
 		quests = Quests.pack(h.quests),
 		daily = Daily.pack(h.daily),
@@ -1014,11 +1016,14 @@ function Hero.unpack(id: any, data: any)
 	h.level = math.min(data.level, N.LEVEL_CAP) -- (최고 레벨이 줄었으면 그 레벨로 — 캐릭터를 못 쓰게 되지 않게 · 2026-10-18 검토)
 	-- 차수: 저장된 것(그 레벨에 닿을 수 있는 데까지). 전직 퀘스트가 생기기 전에 저장된 캐릭터(2026-10-10 이전)는 레벨만 되면 전직했으므로 그 레벨의 차수 그대로다
 	h.job = if whole(data.job, 1, #CLASSES.jobs) then math.min(data.job, Hero.jobAt(h.level)) else Hero.jobAt(h.level)
-	h.xp = if typeof(data.xp) == "number" and data.xp >= 0 and data.xp < N.xpNeed(h.level) then math.floor(data.xp) else 0
+	-- (2026-11-06: 필요한 경험치가 줄어 저장된 경험치가 그 레벨의 필요치를 넘을 수 있다 — 버리지 않고 아래 끝에서 레벨을 올린다 · 말이 안 되는 수만 0)
+	h.xp = if typeof(data.xp) == "number" and data.xp >= 0 and data.xp < N.XP_WALL * 2 then math.floor(data.xp) else 0
 	h.money = if whole(data.money, 0, 9e15) then data.money else 0
 	h.weak = if whole(data.weak, 0, 3600) then data.weak else 0
 	h.expLeft = if whole(data.expLeft, 0, Cash.RULES.exp.cap) then data.expLeft else 0 -- 경험치 쿠폰 — 생기기 전의 저장 = 0
 	h.dropLeft = if whole(data.dropLeft, 0, Cash.RULES.drop.cap) then data.dropLeft else 0 -- 드롭률 쿠폰(2026-10-27) — 생기기 전의 저장 = 0
+	local rc = data.runeCurse -- 룬의 저주(2026-11-10 — 단계 1 ~ 8 · 받은 맵) · 생기기 전의 저장 = 없다
+	h.runeCurse = if typeof(rc) == "table" and whole(rc.s, 1, 8) and typeof(rc.map) == "string" and #rc.map <= 40 then { s = rc.s, map = rc.map } else nil
 	-- 공짜 초기화: 이것이 생기기 전에 전직한 캐릭터(2026-10-11 이전 — 저장에 없다)는 한 번 받는다
 	h.resets = if whole(data.resets, 0, 1) then data.resets elseif data.resets == nil and h.job >= 2 then 1 else 0
 	h.last = if typeof(data.last) == "string" and #data.last <= 40 then data.last else nil -- 없는 장면이면 서버가 마지막 마을 · 시작 마을로(world.luau의 resumeScene)
@@ -1151,6 +1156,9 @@ function Hero.unpack(id: any, data: any)
 	end
 
 	h.kit.on = data.kitOn == true and Kit.level(h, "toggle") > 0
+	if h.xp >= N.xpNeed(h.level) and h.level < N.LEVEL_CAP then
+		Hero.gainXp(h, 0) -- 필요한 경험치가 줄어 넘친 몫으로 레벨을 올린다(2026-11-06 — 능력치 · 스킬 점수도 그 레벨만큼)
+	end
 	h.maxHp = maxHpOf(h)
 	h.hp = h.maxHp
 	return h

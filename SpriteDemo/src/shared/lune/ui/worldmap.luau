@@ -33,10 +33,11 @@ WM.PIN = { town = 5, village = 5, rest = 4, hunt = 4, road = 3, climb = 4, dead 
 WM.PLATE = { padX = 4, h = 14, gap = 3 } -- 이름표: 글의 양옆 여백 · 높이 · 표시와의 사이
 
 -- 그림이 있는 지역들(탭의 차례) — 그림이 없는 지역은 월드맵에 나오지 않는다
+--  closed = 아직 열지 않은 지역(2026-11-10 사용자 "일단 신지역은 아직 막아둬"): 탭에 넣지 않는다(그 안에 서 있는 관리자에게는 mapWindow가 그 지역을 연다)
 function WM.arted(): { string }
 	local out = {}
 	for _, rid in D.order do
-		if D.regions[rid].art then
+		if D.regions[rid].art and not D.regions[rid].closed then
 			table.insert(out, rid)
 		end
 	end
@@ -248,7 +249,7 @@ function WM.exits(rid: string)
 		for _, key in n.scenes do
 			for _, p in hopsOf(key) do
 				local to = D.sceneNode[p.to]
-				if to and to.region ~= rid and not seen[n.id .. ">" .. to.region] then
+				if to and to.region ~= rid and not seen[n.id .. ">" .. to.region] and not (D.regions[to.region] and D.regions[to.region].closed) then -- (아직 열지 않은 지역으로 가는 출구는 싣지 않는다 — 2026-11-10)
 					seen[n.id .. ">" .. to.region] = true
 					table.insert(out, { node = n.id, to = to.region, toNode = to.node })
 				end

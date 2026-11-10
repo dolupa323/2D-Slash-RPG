@@ -22,6 +22,16 @@ local Bubbles = {}
 Bubbles.SHOW = SHOW
 -- 그 사람(번호 = UserId)의 발 자리(도트) — 이 맵의 화면에 없으면 nil. boot가 넣어 준다
 Bubbles.where = nil :: ((any) -> (number?, number?))?
+-- 그 사람의 말풍선 꾸밈(이름 — 없으면 nil · 2026-11-07 달빛 상점의 말풍선 상자). boot가 넣어 준다
+Bubbles.skinOf = nil :: ((any) -> string?)?
+local SKIN = {} -- 말풍선 꾸밈의 이름표(bm.generated의 bubbles — 공방 design/bubble.js)
+local BUBBLES = require(ReplicatedStorage.shared.lune.data["bm.generated"]).bubbles
+for _, q in (BUBBLES and BUBBLES.list) or {} do
+	SKIN[q.id] = q
+end
+local function hex(h: string): Color3
+	return Color3.fromRGB(tonumber(string.sub(h, 2, 3), 16) or 255, tonumber(string.sub(h, 4, 5), 16) or 255, tonumber(string.sub(h, 6, 7), 16) or 255)
+end
 
 local root: Frame? = nil
 local list = {} -- [번호] = { frame, back, tail, body, till, w, h, text }
@@ -32,15 +42,17 @@ local function unescape(text: string): string
 	return (string.gsub(text, "&(%a+);", ENTITY))
 end
 
-local function make(id: any)
-	local f = Ui.group(root, 0, 0, 1, 1, "Bubble" .. tostring(id))
+local function make(id: any, parent: Instance?)
+	local f = Ui.group(parent or root, 0, 0, 1, 1, "Bubble" .. tostring(id))
 	f.Visible = false
 	local back = Ui.part(f, "uBubble", 0, 0, 12, 14)
 	local tail = Ui.part(f, "uTail", 0, 0)
 	tail.ZIndex = 2
-	local body = Ui.text(f, "", B.padX, B.padY, B.textW, { font = "body", lines = B.lines, line = LINE, color = C.bubbleInk, z = 3 })
-	local b = { frame = f, back = back, tail = tail, body = body, till = 0, w = 0, h = 0, text = "" }
-	list[id] = b
+	local body = Ui.text(f, "", B.padX, B.padY, B.textW, { font = "body", lines = B.lines, line = LINE, color = C.bubbleInk, z = 3, raw = true }) -- raw: 사람이 친 글은 영문으로 바꾸지 않는다(2026-11-06)
+	local b = { frame = f, back = back, tail = tail, body = body, till = 0, w = 0, h = 0, text = "", skin = nil, motif = nil, spark = nil, edge = nil, edgeC = nil }
+	if not parent then
+		list[id] = b
+	end
 	return b
 end
 
@@ -56,12 +68,92 @@ function Bubbles.init()
 	end)
 end
 
+-- 꾸밈을 입힌다(2026-11-07): 말풍선 그림을 tint로 물들이고 글은 ink · 왼쪽 위 귀퉁이에 7x7 무늬 · 드문 것은 오른쪽 위에 반짝임(Bubbles.place가 깜빡인다). nil = 처음 모습
+local function dress(b, id: string?)
+	if b.skin == id then
+		return
+	end
+	b.skin = id
+	if b.motif then
+		b.motif:Destroy()
+		b.motif = nil
+	end
+	if b.spark then
+		b.spark:Destroy()
+		b.spark = nil
+	end
+	if b.edge then
+		b.edge:Destroy()
+		b.edge = nil
+	end
+	local q = if id then SKIN[id] else nil
+	local white = Color3.new(1, 1, 1)
+	b.back.ImageColor3 = if q then hex(q.tint) else white
+	b.tail.ImageColor3 = if q then hex(q.tint) else white
+	b.body:color(if q then hex(q.ink) else C.bubbleInk)
+	if not q then
+		return
+	end
+	-- 테두리 · 안쪽 윗줄의 빛(말풍선의 크기가 정해진 뒤 Bubbles.say가 자리를 맞춘다 — b.edge)
+	local e = Ui.group(b.frame, 0, 0, 1, 1, "Edge")
+	e.ZIndex = 3
+	local c0, c1 = hex(q.mc[1]), hex(q.mc[2])
+	b.edge = e
+	b.edgeC = { c0, c1 }
+	local rows = BUBBLES.motifs[q.motif]
+	if rows then
+		local g = Ui.group(b.frame, -6, -10, 14, 14, "Motif") -- (무늬 = 두 배 — 왼쪽 위 귀퉁이에 붙인 딱지)
+		g.ZIndex = 4
+		local c1, c2 = hex(q.mc[1]), hex(q.mc[2])
+		for ry, row in rows do
+			for rx = 1, #row do
+				local ch = string.sub(row, rx, rx)
+				if ch == "1" or ch == "2" then
+					local px = Ui.box(g, (rx - 1) * 2, (ry - 1) * 2, 2, 2, if ch == "1" then c1 else c2)
+					px.ZIndex = 4
+				end
+			end
+		end
+		b.motif = g
+	end
+	if q.twinkle then
+		local sp = Ui.group(b.frame, 0, -3, 5, 5, "Spark")
+		sp.ZIndex = 4
+		local c = hex(q.mc[2])
+		for _, d in { { 2, 0 }, { 2, 1 }, { 0, 2 }, { 1, 2 }, { 2, 2 }, { 3, 2 }, { 4, 2 }, { 2, 3 }, { 2, 4 } } do
+			local px = Ui.box(sp, d[1], d[2], 1, 1, c)
+			px.ZIndex = 4
+		end
+		b.spark = sp
+	end
+end
+
+-- 글을 넣고 말풍선의 크기 · 꾸밈 테두리를 맞춘다(머리 위 Bubbles.say · 뽑기 연출의 Bubbles.sample)
+local function fill(b, text: string)
+	b.text = text
+	b.body:set(text)
+	local fitted = pixelText.Fit(text, B.textW, B.lines, "body", true)
+	local count = #string.split(fitted, "\n")
+	b.w = math.max(pixelText.Measure(fitted, "body", true), 24) + B.padX * 2
+	b.h = (count - 1) * LINE + 14 + B.padY * 2
+	b.back.Size = UDim2.fromOffset(b.w, b.h + 2)
+	if b.edge and b.edgeC then -- 꾸밈의 테두리(위 · 아래 · 왼쪽 · 오른쪽 한 점 — 둥근 모서리는 그대로) · 안쪽 윗줄의 빛
+		b.edge:ClearAllChildren()
+		local c0, c1 = b.edgeC[1], b.edgeC[2]
+		for _, r in { { 2, 0, b.w - 4, 1, c0 }, { 2, b.h - 1, b.w - 4, 1, c0 }, { 0, 2, 1, b.h - 4, c0 }, { b.w - 1, 2, 1, b.h - 4, c0 }, { 3, 2, b.w - 6, 1, c1 } } do
+			local px = Ui.box(b.edge, r[1], r[2], r[3], r[4], r[5])
+			px.ZIndex = 3
+		end
+	end
+	b.frame.Size = UDim2.fromOffset(b.w, b.h + B.tail)
+end
+
 -- 그 사람의 머리 위에 말을 띄운다(이미 떠 있으면 새 말로 바꾼다)
 function Bubbles.say(id: any, text: string)
 	if not root then
 		return
 	end
-	text = string.gsub(pixelText.Clean(unescape(text)), "[\r\n\t]", " ")
+	text = string.gsub(pixelText.Clean(unescape(text), true), "[\r\n\t]", " ") -- (true = 사람이 친 글 — 영문으로 바꾸지 않는다: 2026-11-06)
 	local n = utf8.len(text) or 0
 	if n > MAX then
 		text = string.sub(text, 1, (utf8.offset(text, MAX + 1) or (#text + 1)) - 1) .. "…"
@@ -70,16 +162,30 @@ function Bubbles.say(id: any, text: string)
 		return -- 빈 말(빈칸만 — 한글을 빈칸으로 잘못 읽지 않게 ASCII 빈칸만 본다)
 	end
 	local b = list[id] or make(id)
-	b.text = text
-	b.body:set(text)
-	local fitted = pixelText.Fit(text, B.textW, B.lines, "body")
-	local count = #string.split(fitted, "\n")
-	b.w = math.max(pixelText.Measure(fitted, "body"), 24) + B.padX * 2
-	b.h = (count - 1) * LINE + 14 + B.padY * 2
-	b.back.Size = UDim2.fromOffset(b.w, b.h + 2)
-	b.frame.Size = UDim2.fromOffset(b.w, b.h + B.tail)
+	dress(b, if Bubbles.skinOf then Bubbles.skinOf(id) else nil) -- 그 사람의 말풍선 꾸밈(2026-11-07)
+	fill(b, text)
 	b.till = os.clock() + SHOW
 	Bubbles.place()
+end
+
+-- 말풍선 꾸밈 하나를 그 자리에 놓는다(2026-11-10 뽑기 연출 ui/gachaView.luau — 말풍선 상자에서 나온 꾸밈을 머리 위가 아니라 판 위에 그대로):
+--  parent 안의 (x, y)가 말풍선의 가운데 아래(꼬리 끝) · 반짝임은 Bubbles.twinkle(b, now)로. 돌려준 것의 frame을 지우면 사라진다
+function Bubbles.sample(parent: Instance, skin: string?, text: string, x: number, y: number)
+	local b = make("Sample", parent)
+	dress(b, skin)
+	fill(b, require(ReplicatedStorage.shared.lune.lang).t(text)) -- (말풍선의 글은 raw — 사람이 친 글이 아니라 꾸밈의 이름이니 영문으로 바꿔 넣는다)
+	b.frame.Position = UDim2.fromOffset(x - math.floor(b.w / 2), y - b.h - B.tail)
+	b.tail.Position = UDim2.fromOffset(math.floor(b.w / 2) - 4, b.h - 1)
+	if b.spark then
+		b.spark.Position = UDim2.fromOffset(b.w - 3, -3)
+	end
+	b.frame.Visible = true
+	return b
+end
+function Bubbles.twinkle(b, now: number)
+	if b and b.spark then
+		b.spark.Visible = now % 1 < 0.4
+	end
 end
 
 -- 매 화면: 말풍선이 그 사람을 따라간다(시간이 다 됐거나 그 사람이 이 맵 · 화면에 없으면 숨긴다)
@@ -102,6 +208,10 @@ function Bubbles.place()
 		local bottom = Overlay.y(y - HEAD - B.up)
 		b.frame.Position = UDim2.fromOffset(cx - math.floor(b.w / 2), bottom - b.h - B.tail)
 		b.tail.Position = UDim2.fromOffset(math.floor(b.w / 2) - 4, b.h - 1)
+		if b.spark then -- 드문 꾸밈의 반짝임: 오른쪽 위에서 0.4초 보이고 0.6초 숨는다
+			b.spark.Position = UDim2.fromOffset(b.w - 3, -3)
+			b.spark.Visible = (now * 1.0) % 1 < 0.4
+		end
 		b.frame.Visible = cx >= 0 and cx <= Stage.uiW
 	end
 end

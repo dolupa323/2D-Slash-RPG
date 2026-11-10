@@ -79,7 +79,7 @@ function V.sub(it, me, worn: any): (string, string)
 	if it.star > 0 then
 		head = ("★%d %s"):format(it.star, head)
 	end
-	local d = ItemInfo.wearDiff(it, worn, me.spec or ItemInfo.refSpec(me.level))
+	local d = ItemInfo.wearDiff(it, worn, me.spec or ItemInfo.refSpec(me.level), me.class)
 	if d > 0 then
 		return head .. " · " .. Format.fill(IW.wearUp, { n = Format.short(d) }), "accent"
 	elseif d < 0 then

@@ -26,20 +26,24 @@ BossView.__index = BossView
 
 -- 화면 위 가운데의 체력 바(한 번 만든다): 이름(금색) · 넓은 바(안에 지금/최대 숫자) · 그 아래에 지금 쓰는 패턴의 이름(분홍)
 --  공방 「기본 · UI」의 UILAYOUT.boss · 시험 탭의 P.bossBar와 같은 자리 · 크기
+--  폰(손가락 단추 — 2026-11-07): 작은 폰에서 오른쪽 위의 버프 줄에 걸려 그 아래(yTouch) · 조금 좁게(wTouch). 손가락 단추가 켜지고 꺼지면 update가 다시 짓는다
 function BossView.init(root: Frame)
 	local B = Layout.BOSS
-	local box = Stage.place(root, "Boss", "tc", math.floor((Stage.REF_W - B.w) / 2), B.y, B.w, B.patY + 16)
+	local touch = Stage.touchLike()
+	local bw, by = if touch then B.wTouch or B.w else B.w, if touch then B.yTouch or B.y else B.y
+	BossView.root, BossView.layoutTouch, BossView.top = root, touch, by
+	local box = Stage.place(root, "Boss", "tc", math.floor((Stage.REF_W - bw) / 2), by, bw, math.max(B.patY, Layout.WEEKLY.timeY) + 16) -- (데스 카운트 · 남은 시간 줄은 패턴 이름 아래 — 2026-11-07)
 	box.Visible = false
 	BossView.box = box
-	BossView.name = Ui.text(box, "", 0, 0, B.w, { font = "body", color = C.gold, align = "center", outline = true })
-	BossView.bar = Ui.bar(box, 0, B.barY, B.w, B.h, C.hp)
-	BossView.barFx = HpBar.attach(BossView.bar, B.w, B.h) -- 닳은 자리가 밝게 남았다 줄어든다 · 번쩍임(사용자 2026-10-13: "몬스터 체력바도  유저 체력바처럼 고도화 되어야합니다.")
-	BossView.hpText = Ui.text(box, "", B.pad, B.barY + math.floor((B.h - M.small) / 2), B.w - B.pad * 2, { align = "center", outline = true, z = 6 })
-	BossView.pat = Ui.text(box, "", 0, B.patY, B.w, { font = "body", color = PINK, align = "center", outline = true })
+	BossView.name = Ui.text(box, "", 0, 0, bw, { font = "body", color = C.gold, align = "center", outline = true })
+	BossView.bar = Ui.bar(box, 0, B.barY, bw, B.h, C.hp)
+	BossView.barFx = HpBar.attach(BossView.bar, bw, B.h) -- 닳은 자리가 밝게 남았다 줄어든다 · 번쩍임(사용자 2026-10-13: "몬스터 체력바도  유저 체력바처럼 고도화 되어야합니다.")
+	BossView.hpText = Ui.text(box, "", B.pad, B.barY + math.floor((B.h - M.small) / 2), bw - B.pad * 2, { align = "center", outline = true, z = 6 })
+	BossView.pat = Ui.text(box, "", 0, B.patY, bw, { font = "body", color = PINK, align = "center", outline = true })
 	-- 주간 보스의 방(2026-10-24): 이름 줄의 오른쪽 끝에 「노말 · 14:59」(난이도의 색 · 남은 시간). 그 밖의 방에서는 비어 있다
-	BossView.week = Ui.text(box, "", 0, Layout.WEEKLY.timeY, B.w, { align = "right", color = C.dim, outline = true })
+	BossView.week = Ui.text(box, "", 0, Layout.WEEKLY.timeY, bw, { align = "right", color = C.dim, outline = true })
 	-- 데스 카운트(2026-10-27): 같은 줄의 왼쪽 끝에 「데스 카운트 5」(내 것 — 1이 남으면 빨갛게). 그 밖의 방에서는 비어 있다
-	BossView.lives = Ui.text(box, "", 0, Layout.WEEKLY.timeY, B.w, { align = "left", color = C.dim, outline = true })
+	BossView.lives = Ui.text(box, "", 0, Layout.WEEKLY.timeY, bw, { align = "left", color = C.dim, outline = true })
 	BossView.shownName, BossView.shownHp, BossView.shownPat = nil, nil, nil
 end
 
@@ -66,6 +70,16 @@ function BossView.livesLeft(): number?
 	local n = if lp and v.lives then v.lives[tostring(lp.UserId)] else nil
 	return if n then n else v.livesMax
 end
+-- 내 남은 물약(물약 제한이 있는 보스의 방에서 싸우는 동안만 — 아니면 nil · 2026-11-07)
+function BossView.potionsLeft(): number?
+	local v = BossView.weekly
+	if not v or v.state ~= "fight" or typeof(v.potionCap) ~= "number" then
+		return nil
+	end
+	local lp = game:GetService("Players").LocalPlayer
+	local used = if lp and v.potions then v.potions[tostring(lp.UserId)] else nil
+	return math.max(0, v.potionCap - (tonumber(used) or 0))
+end
 local function weekText(): string?
 	local v = BossView.weekly
 	if not v then
@@ -74,7 +88,8 @@ local function weekText(): string?
 	local W = require(ReplicatedStorage.shared.lune.sim.weekly).DATA
 	local mode = W.modes[v.mode]
 	local left = if v.state == "fight" then math.max(0, (v.left or 0) - (os.clock() - (BossView.weeklyAt or os.clock()))) else 0
-	return (if mode then mode.name else "") .. " · " .. string.format("%d:%02d", math.floor(left / 60), math.floor(left % 60))
+	local tag = if v.practice then " " .. (W.words.practiceTag or "") else "" -- 연습의 방(2026-11-10): 「노말 연습 · 20:00」
+	return (if mode then mode.name else "") .. tag .. " · " .. string.format("%d:%02d", math.floor(left / 60), math.floor(left % 60))
 end
 
 -- 체력 글: "지금 / 최대"(칸에 안 들어가면 짧게 — shared/lune/ui/format.luau의 hp)
@@ -141,6 +156,11 @@ function BossView.new(mobs, cast, effects, scene, hooks)
 end
 
 function BossView:update(dt: number)
+	if BossView.root and BossView.box and Stage.touchLike() ~= BossView.layoutTouch then -- 손가락 단추가 켜졌다 · 꺼졌다: 그 자리 · 폭으로 다시 짓는다
+		local was = BossView.box
+		BossView.init(BossView.root)
+		was:Destroy()
+	end
 	local shown, shownPat = nil, ""
 	local now = os.clock()
 	for _, b in self.list do
@@ -335,11 +355,19 @@ function BossView:update(dt: number)
 			end
 		end
 		local left = BossView.livesLeft()
-		if BossView.lives and BossView.shownLives ~= left then
-			BossView.shownLives = left
+		-- 물약 제한(2026-11-07 — 용암 거인 한 레이드에 20개): 데스 카운트 뒤에 「 · 물약 17/20」(남은 수 / 처음 수 · 다 쓰면 빨강). 제한이 없는 보스는 데스 카운트만
+		local pot = BossView.potionsLeft()
+		local key = if left then ("%d/%s"):format(left, tostring(pot)) else nil
+		if BossView.lives and BossView.shownLives ~= key then
+			BossView.shownLives = key
 			local W = require(ReplicatedStorage.shared.lune.sim.weekly).DATA
-			BossView.lives:set(if left then (string.gsub(W.words.lives, "{n}", tostring(left))) else "")
-			BossView.lives:color(if left and left <= 1 then C.red else C.dim)
+			local text = if left then (string.gsub(W.words.lives, "{n}", tostring(left))) else ""
+			if left and pot then
+				local cap = BossView.weekly and BossView.weekly.potionCap or pot
+				text ..= " · " .. string.gsub(string.gsub(W.words.potions, "{n}", tostring(pot)), "{max}", tostring(cap))
+			end
+			BossView.lives:set(text)
+			BossView.lives:color(if left and (left <= 1 or pot == 0) then C.red else C.dim)
 		end
 		BossView.barFx:step(dt)
 	else

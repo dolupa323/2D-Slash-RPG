@@ -13,6 +13,7 @@ local Fx = require(lune.fx)
 local Kitset = require(lune.kitset)
 local CHARS = require(lune.data["chars.generated"])
 local COMBAT = require(lune.data["combat.generated"])
+local LavaGim = require(lune.sim.lavagim) -- 부위가 있는 보스의 겨눌 자리(Gim.aimAt — 2026-11-10)
 local FxArt = require(script.Parent.fxart)
 local Sprite = require(script.Parent.sprite)
 
@@ -69,6 +70,10 @@ function Cast:syncMobs(dt: number)
 		m.boss = m.def.boss == true
 		m.dead = if aliveMob(m) then -1 else 0
 		m.max = m.info.maxHp
+		-- 겨눌 자리(용암 거인의 팔 — 손 · 2026-11-10 · 서버 sim/caster.luau의 dress와 같다): 대상을 고르는 거리 · 그림 · 피해 숫자의 자리
+		local aim = LavaGim.aimAt(m.def, m.hp or m.info.hp or m.info.maxHp, m.info.maxHp)
+		m.aimX = if aim then m.x + aim[1] else nil
+		m.aimTop = if aim then aim[2] else nil
 		m.mark = m.mark or 0
 		m.markT = m.markT or 0
 		m.bind = max(0, (m.bind or 0) - dt)
@@ -203,10 +208,11 @@ local function makeG(self, a)
 		local from, not_, front = (o and o.from) or a.x, o and o["not"], o and o.front
 		local best, bd = nil, range
 		for _, m in self:alive() do
-			if m == not_ or abs(m.y - a.y) > 60 or (front and (m.x - a.x) * a.dir < -8) then
+			local mx = m.aimX or m.x -- (부위가 있는 보스는 겨눌 자리 — 2026-11-10)
+			if m == not_ or abs(m.y - a.y) > 60 or (front and (mx - a.x) * a.dir < -8) then
 				continue
 			end
-			local d = abs(m.x - from)
+			local d = abs(mx - from)
 			if d <= bd then
 				bd, best = d, m
 			end
@@ -216,11 +222,18 @@ local function makeG(self, a)
 	function g.boss()
 		local best = nil
 		for _, m in self:alive() do
-			if abs(m.x - a.x) < 280 and (not best or m.max > best.max) then
+			if abs((m.aimX or m.x) - a.x) < 280 and (not best or m.max > best.max) then
 				best = m
 			end
 		end
 		return best
+	end
+	-- 그 몬스터를 겨눌 자리(서버 sim/caster.luau의 g.spot과 같다): 가로 · 머리(땅 위)
+	function g.spot(m, top: number?): (number, number)
+		if m.aimX then
+			return m.aimX, m.y - (m.aimTop or 0)
+		end
+		return m.x, m.y - (m.h or 0) - (top or 0) -- (뜬 높이가 아직 없는 몬스터 — 재 보기의 빈 방: 0)
 	end
 	-- 화면 효과는 내가 쓴 기술에만 붙는다(남의 기술이 내 화면을 흔들지 않는다)
 	function g.shake(amount: number, t: number)
@@ -587,12 +600,14 @@ end
 -- 졸개가 맞았다(시험 탭의 hurt): 파편이 튄다. 쓰러졌으면 세모 파편이 터진다. by = 때린 사람의 직업 색
 --  dir = 때린 쪽의 반대(몬스터가 밀리는 쪽 — 1 · -1): 불꽃은 때린 쪽으로 조금 치우친 자리에서 퍼지고, 파편은 반대쪽으로 튄다(공방 combat.js의 hit)
 function Cast:hurt(m, tone, big: boolean?, dead: boolean?, dir: number?)
-	local y = m.info.y
+	-- 맞은 자리: 부위가 있는 보스(용암 거인의 팔)는 손(겨눌 자리의 가운데 높이 — 2026-11-10) · 아니면 발밑 조금 위
+	local x = m.aimX or m.x
+	local y = if m.aimTop then m.info.y - math.floor(m.aimTop / 2) else m.info.y
 	local H = COMBAT.rules.hit
-	self.fx.pop(m.x - (dir or 0) * 3, y - 8, tone, { r = if big then H.sparkBig else H.spark, life = 0.14 })
-	self.fx.shards(m.x, y - 7, if big then H.shardsBig else H.shards, tone, { speed = 70, up = 40, kind = "mix", life = 0.4, dir = dir or 0, spread = 1.2 })
+	self.fx.pop(x - (dir or 0) * 3, y - 8, tone, { r = if big then H.sparkBig else H.spark, life = 0.14 })
+	self.fx.shards(x, y - 7, if big then H.shardsBig else H.shards, tone, { speed = 70, up = 40, kind = "mix", life = 0.4, dir = dir or 0, spread = 1.2 })
 	if dead then
-		self.fx.shards(m.x, y - 6, 8, tone, { kind = "tri" })
+		self.fx.shards(x, y - 6, 8, tone, { kind = "tri" })
 	end
 end
 

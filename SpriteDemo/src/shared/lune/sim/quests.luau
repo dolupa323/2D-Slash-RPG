@@ -354,7 +354,7 @@ function Q.opens(id: any)
 					who = n.role
 				end
 			end
-			table.insert(out, { scene = r.from, place = from.name, label = ("%s — %s로 가는 %s"):format(who or "배", r.dest, if r.kind == "airship" then "비행선" else "배") })
+			table.insert(out, { scene = r.from, place = from.name, label = ("%s — %s로 가는 %s"):format(who or "배", r.dest, if r.kind == "airship" then "비행선" elseif r.kind == "whale" then "별고래" else "배") }) -- (whale = 별고래 — 2026-11-07)
 		end
 	end
 	table.sort(out, function(a, b)

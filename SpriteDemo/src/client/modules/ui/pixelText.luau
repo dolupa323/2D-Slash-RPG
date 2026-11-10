@@ -59,8 +59,9 @@ function exports.SetTranslator(fn: ((string) -> string)?)
 	translator = fn
 end
 
-local function clean(text: string): string
-	if translator then
+-- raw = 바꾸지 않는다(사람이 친 채팅 글 — 2026-11-06: 우리 게임의 채팅 창 · 말풍선. 영문 화면에서 남의 한국어 글이 낱말째 영문으로 바뀌지 않게)
+local function clean(text: string, raw: boolean?): string
+	if translator and not raw then
 		text = translator(text)
 	end
 	if utf8.len(text) then
@@ -90,9 +91,9 @@ local function lineWidth(font, line: string): number
 	return w
 end
 
-function exports.Measure(text: string, fontKey: string?): (number, number)
+function exports.Measure(text: string, fontKey: string?, raw: boolean?): (number, number)
 	local font = fonts[fontKey or "body"]
-	text = clean(text)
+	text = clean(text, raw)
 	local w, n = 0, 0
 	for line in (text .. "\n"):gmatch("(.-)\n") do
 		w = math.max(w, lineWidth(font, line))
@@ -102,9 +103,9 @@ function exports.Measure(text: string, fontKey: string?): (number, number)
 end
 
 -- 폭에 맞춰 줄바꿈: 띄어쓰기에서 먼저 끊고, 한 낱말이 폭보다 길면 글자에서 끊는다(공방 js/font.js wrap과 같은 규칙).
-function exports.Wrap(text: string, maxWidth: number, fontKey: string?): string
+function exports.Wrap(text: string, maxWidth: number, fontKey: string?, raw: boolean?): string
 	local font = fonts[fontKey or "body"]
-	text = clean(text)
+	text = clean(text, raw)
 	local out = {}
 	for para in (text .. "\n"):gmatch("(.-)\n") do
 		local line = ""
@@ -150,14 +151,14 @@ end
 
 -- 칸에 맞추기: 폭(maxWidth)을 넘으면 줄을 바꾸고, 줄 수(maxLines)를 넘으면 마지막 줄 끝을 "…"로 줄인다.
 -- maxLines = 1이면 줄을 바꾸지 않고 한 줄로 줄인다.
-function exports.Fit(text: string, maxWidth: number, maxLines: number?, fontKey: string?): string
+function exports.Fit(text: string, maxWidth: number, maxLines: number?, fontKey: string?, raw: boolean?): string
 	local font = fonts[fontKey or "body"]
-	text = clean(text)
+	text = clean(text, raw)
 	if maxLines == 1 then
 		return fitLine(font, (text:gsub("\n", " ")), maxWidth)
 	end
 	local lines = {}
-	for line in (exports.Wrap(text, maxWidth, fontKey) .. "\n"):gmatch("(.-)\n") do
+	for line in (exports.Wrap(text, maxWidth, fontKey, raw) .. "\n"):gmatch("(.-)\n") do
 		table.insert(lines, line)
 	end
 	if maxLines and #lines > maxLines then
@@ -195,7 +196,7 @@ end
 -- 칸 제한(MaxWidth · MaxLines)이 있으면 그 안에 들어가게 고친 글
 function Label:_fitted(text: string): string
 	if self._maxWidth then
-		return exports.Fit(text, self._maxWidth, self._maxLines, self._fontKey)
+		return exports.Fit(text, self._maxWidth, self._maxLines, self._fontKey, self._raw)
 	end
 	return text
 end
@@ -207,8 +208,8 @@ function Label:_render()
 	table.clear(self._glyphs)
 	local font = self._font
 	local pages = pagesOf[self._fontKey] or (townIds.FONT and townIds.FONT[self._fontKey]) or {}
-	local shown = self:_fitted(clean(self._text)) -- (clean = 언어 · 깨진 글자 — 칸 제한이 없는 글도 지난다)
-	local width, height = exports.Measure(shown, self._fontKey)
+	local shown = self:_fitted(clean(self._text, self._raw)) -- (clean = 언어 · 깨진 글자 — 칸 제한이 없는 글도 지난다 · Raw면 언어는 그대로)
+	local width, height = exports.Measure(shown, self._fontKey, self._raw)
 	local lineH = self._line or font.line -- 줄 간격(Line을 주면 그 값 — 말풍선처럼 줄 사이를 넓게 쓸 때)
 	if self._line then
 		height = height / font.line * lineH
@@ -326,6 +327,7 @@ function exports.new(parent: Instance, props)
 		_maxWidth = props.MaxWidth, -- 이 폭을 넘으면 줄바꿈
 		_maxLines = props.MaxLines, -- 이 줄 수를 넘으면 …로 줄임
 		_line = props.Line, -- 줄 간격(안 주면 글꼴의 것)
+		_raw = props.Raw == true, -- 글을 영문으로 바꾸지 않는다(사람이 친 채팅 글)
 		_glyphs = {},
 	}, Label)
 	live[self] = true

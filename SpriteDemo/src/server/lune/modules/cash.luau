@@ -317,6 +317,11 @@ function CashServer.prompt(s, key: any): (boolean, string?)
 		end
 		s.acct.bm.gift = false
 	end
+	-- 확률형 상품(2026-11-07 — 뽑기 상자 · 윤슬 조각): 로블록스 정책에서 확률형 유료 아이템이 막힌 계정(ArePaidRandomItemsRestricted)은 구매 창을 띄우지 않는다(design/bm.js BM_RULES.random)
+	local RND = Cash.RULES.random
+	if p.random and RND and RND.policy and typeof(s.policy) == "table" and s.policy.ArePaidRandomItemsRestricted == true then
+		return false, Cash.WORDS.randomBlocked or "로블록스 정책으로 이 계정은 확률형 상품을 살 수 없다"
+	end
 	local ok, why = Cash.canBuy(s.acct, key, W.now(), CashServer.pending(uid, key), Account.MAX)
 	if not ok then
 		return false, why
@@ -501,6 +506,63 @@ local function claimGifts(s)
 	for _, g in got do
 		W.giftGot(s, g.k, g.from)
 	end
+end
+
+-- 뽑기 겹침의 자동 보상(2026-11-10 사용자: "그사람이 가지고있는 캐시템이랑 산 상자를 비교하면 얼마나 사라졌는지 알수있는거아니야? 정확히 파악해야 내가 보상을하지 이거 엄청 큰문제야"):
+--  세계에 들어온 뒤 한 번(world.luau의 1초 셈) — modules/dupfixBuys.luau(로블록스 판매 기록의 산 수)와 이 계정의 가진 것으로 sim/cash.luau Cash.dupfixAuto →
+--  넣은 것이 있으면 바로 저장(못 하면 되돌리고 30초 뒤 다시) · 상자마다 화면 위 알림 「겹침 보상」(CashGot "dupfix:<상자>:<수>" — 선물로 받은 겹침 보상과 같은 알림)
+function CashServer.dupfixAuto(s)
+	if not s or s.fixDone or not s.acct or not s.loaded or s.guest or os.clock() < (s.fixNext or 0) then
+		return
+	end
+	local DATA = require(script.Parent.dupfixBuys)
+	local buy = DATA.buys[s.player.UserId]
+	if not buy then
+		s.fixDone = true
+		return
+	end
+	local before = Cash.pack(s.acct.bm)
+	local added = {}
+	for _, r in Cash.dupfixAuto(s.acct.bm, buy, DATA.upTo, W.now()) do
+		if r.add > 0 then
+			table.insert(added, r)
+		end
+	end
+	if #added > 0 and not W.saveNow(s) then
+		s.acct.bm = Cash.unpack(before, Account.MAX)
+		s.fixNext = os.clock() + 30
+		return
+	end
+	s.fixDone = true
+	for _, r in added do
+		-- 원래 상품으로 준 것 = "fixitem:<아이템>:<수>"(그 아이템 · 이제 가진 수를 알린다) · 선택상자 = "dupfix:<상자>:<수>"
+		W.giftGot(s, if r.sure then Cash.fixItemKey(r.sure, r.add) else Cash.dupfixKey(r.box, math.min(r.add, Cash.DUPFIX_MAX)), "운영자")
+	end
+end
+
+-- 상자 판매 바로잡기(2026-11-10 사용자: "다시 다뺏고 안연상자를 산것보다 카테고리별로 +3인거야 그리고 상자별로 선택상자를 주는걸로"):
+--  계정을 읽은 직후 한 번(world.luau — 결제를 받기 전) · modules/dupfixBuys.luau에 있는 사람만 · sim/cash.luau Cash.boxReset → 바로 저장(못 하면 되돌리고 다음 접속 때 다시).
+--  했으면 true(세계에 들어오면 알림 — s.resetNote)
+function CashServer.boxReset(s): boolean
+	if not s or not s.acct or not s.loaded or s.guest then
+		return false
+	end
+	local DATA = require(script.Parent.dupfixBuys)
+	local buy = DATA.buys[s.player.UserId]
+	if not buy then
+		return false
+	end
+	local before = Cash.pack(s.acct.bm)
+	local done = Cash.boxReset(s.acct.bm, buy, W.now(), DATA.reset or 1)
+	if not done then
+		return false
+	end
+	if not W.saveNow(s) then
+		s.acct.bm = Cash.unpack(before, Account.MAX)
+		return false
+	end
+	s.resetNote = true
+	return true
 end
 
 -- 사람마다 1초에 한 번(world.luau): 이 계정의 로블록스 정책을 계정에 적고(남이 선물할 때 본다) · 들어온 뒤 한 번 · 소식이 오면 한 번 선물 상자를 연다

@@ -103,6 +103,8 @@ function Others:setWho(roster)
 				Ui.tagLead(o.tag, Others.levelText(w.level))
 			end
 			o.dskin = w.dskin or nil -- 그 사람의 데미지 스킨(2026-10-29 — 그 사람이 때린 숫자의 모습: boot의 Hits)
+			o.bubble = w.bubble or nil -- 그 사람의 말풍선 꾸밈(2026-11-07 — chatBubbles.luau)
+			Ui.tagSkin(o.tag, w.ntag or nil) -- 그 사람의 이름표 테두리(2026-11-10 — 바뀌었을 때만 다시 그린다)
 			if o.title ~= (w.title or false) then
 				o.title = w.title or false
 				Others.setTitle(o.tag, o.title) -- 그 사람이 단 칭호(2026-10-26)

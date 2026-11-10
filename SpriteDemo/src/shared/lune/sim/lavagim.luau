@@ -21,13 +21,36 @@ local Gim = {}
 local HERO_W = 5
 local TILE = 16
 
+-- 그 거인의 기믹 수(2026-11-09 사용자 "용암거인 패턴이 노말이랑 똑같아 데미지도 더들어와야지"): 하드의 방이면 gimmick.hard가 덮은 것(Gim.init이 mob.lavaG에 만들어 둔다) · 아니면 설계 그대로
+local function GM(mob)
+	return mob.lavaG or mob.def.story.gimmick
+end
+-- 한 겹 덮기: hard.vents · hard.flood · hard.heart의 칸이 같은 이름의 칸을 덮는다(나머지는 그대로)
+local function withHard(G)
+	local out = table.clone(G)
+	for k, over in G.hard or {} do
+		if typeof(over) == "table" and typeof(G[k]) == "table" then
+			local t = table.clone(G[k])
+			for a, v in over do
+				t[a] = v
+			end
+			out[k] = t
+		else
+			out[k] = over
+		end
+	end
+	out.hard = nil
+	return out
+end
+Gim.withHard = withHard
+
 local function alive(h): boolean
 	return h.alive and not h.inCine
 end
 
 -- 부위(지금 페이즈)의 체력 구간: lo ~ hi(전체 체력 기준) · 그 부위
 local function partOf(mob, ph: number?)
-	local P = mob.def.story.gimmick.parts
+	local P = GM(mob).parts
 	local k = ph or mob.ph
 	local lo, hi = 0, 1
 	local acc = 0
@@ -41,6 +64,24 @@ local function partOf(mob, ph: number?)
 	return mob.maxHp * lo, mob.maxHp * hi, P[k]
 end
 Gim.partOf = partOf
+
+-- 지금 부위의 겨눌 자리(2026-11-10 사용자 "용암거인 팔의 히트박스 문제야 … 손에있어야해 거기에 데미지가떠야하는거고"): 보스의 자리(벽)에서 { dx, 땅 위 top } — 부위가 없는 몬스터는 nil.
+--  남은 체력으로 부위를 고른다(화면 bossView의 이름 · 바와 같은 셈 — 화면은 서버의 ph를 모른다). 대상을 고르는 스킬의 거리 · 그림 · 피해 숫자의 자리가 이것을 쓴다(공방 weekboss.js gimmick.parts의 aim)
+function Gim.aimAt(def, hp: number, maxHp: number)
+	local G = def and def.story and def.story.gimmick
+	local parts = G and G.parts
+	if not parts or not maxHp or maxHp <= 0 then
+		return nil
+	end
+	local acc, pick = 0, nil
+	for i = #parts, 1, -1 do
+		if hp > maxHp * acc then
+			pick = parts[i]
+		end
+		acc += parts[i].share
+	end
+	return pick and pick.aim
+end
 
 -- 지금 부위의 남은 몫(0 ~ 1)
 local function partFrac(mob): number
@@ -73,7 +114,10 @@ local function newAdd(room, boss, kind: string, role: string, hp: number)
 end
 
 function Gim.init(room, boss)
-	local G = boss.def.story.gimmick
+	if room.weeklyMode == "hard" and boss.def.story.gimmick.hard then
+		boss.lavaG = withHard(boss.def.story.gimmick) -- 하드: 대분화 · 끓는 분화구 · 심장의 수가 더 빡빡하다(설계 weekboss.js gimmick.hard)
+	end
+	local G = GM(boss)
 	boss.gimMod = "lava"
 	boss.ph = boss.stage or 1 -- 몇째 방(그 부위부터 — 장면의 bosses의 stage)
 	if boss.ph > 1 then
@@ -170,7 +214,7 @@ end
 
 -- 숨구멍에 혹을 밀어 올린다(지금 페이즈가 쓰는 자리)
 local function ventsStart(room, mob, events)
-	local g, V = mob.lava, mob.def.story.gimmick.vents
+	local g, V = mob.lava, GM(mob).vents
 	local ph = mob.ph
 	local use = table.clone(V.use[ph])
 	local alt = V.alt[ph]
@@ -197,7 +241,7 @@ local function ventsStart(room, mob, events)
 end
 
 local function ventsEnd(room, mob, ok: boolean, heroes, events)
-	local g, V = mob.lava, mob.def.story.gimmick.vents
+	local g, V = mob.lava, GM(mob).vents
 	for _, add in g.vents.adds do
 		add.away, add.state, add.t = true, "gone", 0
 	end
@@ -222,7 +266,7 @@ end
 
 -- 심장 드러남
 local function heartStart(room, mob, events)
-	local g, H = mob.lava, mob.def.story.gimmick.heart
+	local g, H = mob.lava, GM(mob).heart
 	release(room, mob, "drop", events)
 	cancel(room, mob)
 	local lo, hi = partOf(mob)
@@ -239,7 +283,7 @@ end
 local function heartHop(room, mob, events)
 	local g = mob.lava
 	local add = g.heartAdd
-	local HOPS = mob.def.story.gimmick.heart.hops
+	local HOPS = GM(mob).heart.hops
 	g.heart.spot = g.heart.spot % #HOPS + 1
 	local at = HOPS[g.heart.spot]
 	local fromX, fromY = add.x, add.y
@@ -249,7 +293,7 @@ local function heartHop(room, mob, events)
 end
 
 local function stepHeart(room, mob, heroes, dt: number, events)
-	local g, H = mob.lava, mob.def.story.gimmick.heart
+	local g, H = mob.lava, GM(mob).heart
 	local hs = g.heart
 	hs.t += dt
 	if hs.st == "sink" then
@@ -294,7 +338,7 @@ end
 
 -- 페이즈가 바뀐다(부위가 다 닳았다): shift초 동안 맞지 않는다
 local function shiftStart(room, mob, events)
-	local g, G = mob.lava, mob.def.story.gimmick
+	local g, G = mob.lava, GM(mob)
 	release(room, mob, "drop", events)
 	cancel(room, mob)
 	g.toShift = false
@@ -320,7 +364,7 @@ end
 
 -- 보스의 한 걸음(방의 stepBoss가 맨 앞에 부른다). true면 방은 그 걸음을 더 하지 않는다(예고 · 친 뒤 · 바인드는 방이 한다)
 function Gim.boss(room, mob, heroes, dt: number, events): boolean
-	local g, G = mob.lava, mob.def.story.gimmick
+	local g, G = mob.lava, GM(mob)
 	g.heroes = heroes
 	-- 받는 피해 배수(휘청 · 심장을 깬 뒤)의 시간
 	if g.mulT > 0 then
@@ -638,7 +682,7 @@ function Gim.dmgIn(room, mob, dmg: number, events): number
 		g.grab.freeLeft -= d
 	end
 	local lo = partOf(mob)
-	if mob.ph < #mob.def.story.gimmick.parts and mob.hp - d <= lo then
+	if mob.ph < #GM(mob).parts and mob.hp - d <= lo then
 		d = math.max(0, math.ceil(mob.hp - lo))
 		g.toShift = true
 	end
@@ -673,7 +717,7 @@ end
 
 -- 방에 들어서 선 뒤 맞지 않는 시간(손이 굴 끝에서 밀고 들어오는 · 몸통이 솟는 — 설계 gimmick.spawn[페이즈] · 방의 stepBoss가 본다)
 function Gim.spawnTime(mob): number
-	local S = mob.def.story.gimmick.spawn
+	local S = GM(mob).spawn
 	return (S and S[mob.ph or 1]) or 0.8
 end
 

@@ -57,8 +57,12 @@ function Voyage.onShip(scene: any): (any, string?)
 	return nil, nil
 end
 -- 이 탈것을 탈 수 있는가(need가 있으면 그 퀘스트를 끝낸 뒤 — 돌아오는 길은 늘 탄다)
-function Voyage.open(book, r): boolean
+--  closed = 아직 열지 않은 지역으로 가는 길(2026-11-10 사용자 "일단 신지역은 아직 막아둬" — 공방 world.js CLOSED_REGIONS): 관리자(admin)만 탄다 · 못 타면 r.closed가 그 사람의 말
+function Voyage.open(book, r, admin: boolean?): boolean
 	if not r then
+		return false
+	end
+	if r.closed and not admin then
 		return false
 	end
 	if r.need then

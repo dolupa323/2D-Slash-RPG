@@ -157,7 +157,7 @@ function Room.new(key: string, scene, rng)
 		return math.max(1, math.floor(N.mobHp(lv) * (mul or kind.hp) * RULES.dmgScale * (1 + RULES.targetBonus / 100) + 0.5))
 	end
 	-- 주간 보스의 방(2026-10-24 — sim/weekly.luau): 이름이 <방>#wn번호 · #wh번호면 그 난이도의 레벨 · 체력(그 레벨 몬스터 체력의 배) · 세기로 세운다. 그 보스 하나만 선다(퀘스트와 상관없이)
-	local wMode, wBoss = Weekly.ofKey(key)
+	local wMode, wBoss, wPractice = Weekly.ofKey(key) -- wPractice = 연습의 방(2026-11-10 — #wp)
 	for _, def in scene.bosses or {} do
 		local kind = COMBAT.mobs[def.kind]
 		local wk = if wMode and wBoss and def.kind == wBoss.id and kind.story.week then kind.story.week[wMode] else nil
@@ -165,6 +165,8 @@ function Room.new(key: string, scene, rng)
 		local maxHp = hpOf(lv, kind, if wk then wk.hp else nil)
 		if wk then
 			self.weeklyHit = wk.hit -- 보스와 그 졸개가 치는 세기의 배(Room:hurtHero)
+			-- 난이도(2026-11-09 사용자 "용암거인 패턴이 노말이랑 똑같아 데미지도 더들어와야지"): 패턴의 mode(그 난이도에서만 — Room:bossCan) · tempo(쉬는 틈 · 다시 쓰기의 배 — 하드는 더 몰아친다)
+			self.weeklyMode, self.weeklyTempo = wMode, wk.tempo
 		end
 		local boss = {
 			id = #self.mobs + 1, kind = def.kind, def = kind, lv = lv, homeX = def.x, y = def.y, a = def.range[1], b = def.range[2], x = def.x, dir = -1,
@@ -213,7 +215,7 @@ function Room.new(key: string, scene, rng)
 		Rift.start(self, Rift.tier(scene.rift)) -- 토벌의 방: 물결이 올 때까지 몬스터가 없다
 	end
 	if wMode and wBoss and self.weeklyHit then
-		Weekly.start(self, wMode, wBoss) -- 주간 보스의 방: 제한 시간 · 격파 · 돌아가기(sim/weekly.luau)
+		Weekly.start(self, wMode, wBoss, wPractice) -- 주간 보스의 방: 제한 시간 · 격파 · 돌아가기(sim/weekly.luau) · 연습이면 보상 없이
 	end
 	return self
 end
@@ -328,10 +330,10 @@ function Room:hurtHero(events, h, mob, mul: number, kill: boolean?, pierce: bool
 	end
 	-- 재점화(살라맨더 4차): 쓰러질 피해를 받으면 열기를 모두 태워 버틴다(오래에 한 번) — 기믹은 버티지 못한다
 	if not true_ and h.alive and h.invuln <= 0 and raw >= h.hp then
-		local left = Passives.rekindle(h, self.time)
+		local left, guard = Passives.rekindle(h, self.time)
 		if left then
 			local lost = math.max(0, h.hp - left)
-			h.hp, h.invuln = left, RULES.invuln
+			h.hp, h.invuln = left, math.max(RULES.invuln, guard or 0) -- 버틴 뒤 무적(passive의 guard — 2026-11-10 1.5초 · 기믹의 즉사(대분화 · 짓눌림)는 무적을 지우고 들어온다)
 			table.insert(events, { type = "self", hero = h.id })
 			table.insert(events, { type = "rekindle", hero = h.id, x = h.x, y = h.y }) -- 방의 모두가 그 자리의 불기둥을 본다(2026-11-03 사용자 "써졌는지도 구분할수가 없어서 사용되었을때 극적인 이펙트가 있어야해")
 			table.insert(events, { type = "hurt", hero = h.id, dmg = lost, hp = h.hp, from = mob.x, dead = false })
@@ -880,7 +882,9 @@ end
 
 -- 그 패턴을 지금 쓸 수 있는가(겨눈 사람과의 거리 dist)
 function Room:bossCan(mob, p, dist: number): boolean
-	local ok = not p.only and (not p.from or mob.hp <= mob.maxHp * p.from) and (not p.every or self.time - (mob.used[p.id] or -math.huge) >= p.every)
+	local tempo = self.weeklyTempo or 1 -- (주간 보스의 난이도 — 하드는 다시 쓰기가 짧다)
+	local ok = not p.only and (not p.mode or p.mode == (self.weeklyMode or "normal")) -- mode = 그 난이도에서만 쓰는 패턴(2026-11-09 용암 거인 하드)
+		and (not p.from or mob.hp <= mob.maxHp * p.from) and (not p.every or self.time - (mob.used[p.id] or -math.huge) >= p.every * tempo)
 		and (not p.reach or dist <= p.reach) and (not p.far or dist >= p.far)
 	if ok and mob.lava then
 		ok = LavaGim.can(self, mob, p) -- 페이즈 · 부위 체력의 몫 · 끓는 동안 · 그쪽 팔에 사람이 있는가(용암 거인)
@@ -989,7 +993,7 @@ function Room:bossStart(mob, i: number, target)
 	if pick.chain then
 		mob.chain = table.clone(pick.chain)
 		mob.chainQuick, mob.chainStep, mob.chainPat = pick.quick, pick.chainStep or 0, i
-		mob.chainRest = 1.8 * rageOf(mob, S) -- 다 끝나면 길게 쉰다(때릴 틈)
+		mob.chainRest = 1.8 * rageOf(mob, S) * (self.weeklyTempo or 1) -- 다 끝나면 길게 쉰다(때릴 틈 · 하드는 tempo배)
 		return self:bossBegin(mob, patIndex(S, table.remove(mob.chain, 1)), nil, target)
 	end
 	mob.chain, mob.chainRest, mob.chainPat = nil, nil, 0
@@ -1003,7 +1007,7 @@ function Room:bossDone(mob, p, heroes)
 		self:bossBegin(mob, patIndex(S, id), mob.chainQuick, if mob.target then heroes[mob.target] else nil)
 		return
 	end
-	mob.state, mob.t, mob.pat, mob.rest = "idle", 0, 0, mob.chainRest or p.rest * rageOf(mob, S)
+	mob.state, mob.t, mob.pat, mob.rest = "idle", 0, 0, mob.chainRest or p.rest * rageOf(mob, S) * (self.weeklyTempo or 1)
 	mob.chain, mob.chainRest, mob.chainPat, mob.quick, mob.alt = nil, nil, 0, 1, 0
 end
 
@@ -1608,6 +1612,9 @@ function Room:damageMob(mob, dmg: number, fromX: number, byId: any): boolean
 	if byId ~= nil and took > 0 then
 		mob.hitBy = mob.hitBy or {}
 		mob.hitBy[byId] = (mob.hitBy[byId] or 0) + took
+		if self.weekly then
+			Weekly.note(self, byId, mob, took) -- MVP(2026-11-07): 보스에게 · 보스 곁의 것에 넣은 피해
+		end
 	end
 	if mob.hp <= 0 then
 		mob.state, mob.t, mob.target = "dead", 0, nil
@@ -1654,6 +1661,18 @@ end
 --  crit = { chance(%), mul } — 줄마다 크리티컬을 따로 굴린다(사용자 2026-10-14: "한스킬의 스킬이여도 모든타수가 별개로 크리티컬 확률이 적용되는겁니다").
 --   그때 dmg는 크리티컬 전의 피해다. 크리티컬이 터진 줄만 mul배 · 칸의 crits = { [몇째 줄] = true } · 하나라도 터지면 칸의 crit · big. 합(dmg)은 크리티컬까지 든 것
 --  돌려주는 것: 쓰러졌는가 · 실제로 넣은 피해
+-- 직업 · 차수마다의 보스 보정(공방 combat.js RULES.bossClass — 아래 Room:strike) — 보스가 아니면 1.
+--  맞힌 목록(landed)에는 이것을 나눈 피해를 적는다: 그 피해의 몇 %로 한 번 더 나가는 덧타(불꽃 · 메아리 도끼 · 표창 · 불티 · 분신 · 그림자 · 칼날)가 Room:strike를 또 지나며 두 번 곱해지지 않게(2026-11-08)
+function Room:bossMul(hero, mob): number
+	if not (hero and mob and mob.def and mob.def.boss and RULES.bossClass) then
+		return 1
+	end
+	local bm = RULES.bossClass[hero.class]
+	if typeof(bm) == "table" then
+		bm = bm[math.clamp(hero.job or 1, 1, #bm)]
+	end
+	return if typeof(bm) == "number" and bm > 0 then bm else 1
+end
 function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, lines: number?, crit): (boolean, number)
 	-- 기믹의 졸개(불씨 폭탄 · 가짜 두목 — 체력 1): 맞으면 되날아가거나 그을음으로 터진다 · 경험치 · 물건 · 숫자 없음(sim/thiefgim.luau)
 	if mob.gimAdd and not mob.hpAdd then
@@ -1673,6 +1692,13 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 	-- 갈라짐(액시온의 쪼개기)이 걸린 적은 누구에게 맞든 더 아프다
 	if (mob.rend or 0) > 0 then
 		dmg = math.max(1, math.floor(dmg * (1 + CASTRULE.rend) + 0.5))
+	end
+	-- 직업마다의 보스 보정(2026-11-07 사용자 "보스 dps 밸런스가 안맞는데 … 밸런스를 똑바로 잡아야해" — 공방 combat.js의 RULES.bossClass):
+	--  잘하는 사람의 손(리퍼의 사신화 가동 · 살라맨더의 강화판까지 — 시험 104 LUNE_RAID_EXPERT)으로 잰 보스 딜을 고르게 하는 배수. 보스에게만(사냥 · 기믹의 졸개는 그대로) ·
+	--  차수마다 다르다(배열의 hero.job째 — 4차에만 있는 것(사신 각성 · 백열 …)이 있어 2차 · 3차 레이드의 차이가 Lv.150과 다르다)
+	local bm = self:bossMul(hero, mob)
+	if bm ~= 1 then
+		dmg = math.max(1, math.floor(dmg * bm + 0.5))
 	end
 	local parts, crits = nil, nil
 	if (lines or 1) > 1 then
@@ -1741,7 +1767,7 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 		-- 스토리 보스와 그가 부른 졸개: 경험치도 물건도 주지 않는다(보상은 그 메인 퀘스트의 것뿐). 보스는 방에 있는 모두에게 잡은 것으로 친다 — 서버가 gains의 사람마다 퀘스트를 센다
 		if mob.boss or mob.add then
 			local gains, credit = {}, {}
-			if mob.boss then
+			if mob.boss and not (self.weekly and self.weekly.practice) then -- (연습의 방: 보스를 잡은 것으로 퀘스트 · 업적에 세지 않는다 — 2026-11-10)
 				for _, h in self.heroes or { hero } do
 					table.insert(gains, { hero = h.id, xp = 0, ups = 0, level = h.level })
 					table.insert(credit, h.id)
@@ -2183,7 +2209,7 @@ function Room:skillHit(hero, hit, x: number, y: number, dir: number, scale: numb
 				if not dead and (hit.stun or 0) > 0 and not mob.def.boss and (mob.bind or 0) <= 0 then
 					mob.stun = math.max(mob.stun or 0, hit.stun) -- 넘어뜨린다: 보통 적만(충격파 — 끝까지 모아 친 대지 강타 · 2026-10-28)
 				end
-				table.insert(landed, { mob = mob, dmg = dealt, dead = dead })
+				table.insert(landed, { mob = mob, dmg = dealt / self:bossMul(hero, mob), dead = dead }) -- (보스 보정을 나눈 피해 — 덧타가 두 번 곱하지 않게: Room:bossMul)
 			end
 		end
 	end
@@ -2242,8 +2268,25 @@ function Room:kitAfter(hero, landed, x: number, y: number, sweep, power: number,
 	if class == "reaper" then
 		-- (생기 흡수는 맞힐 때가 아니라 쓰러뜨릴 때 — Room:reaperKill · 2026-10-31 사용자 "피흡도 처치시 흡혈로 해서 보스전에서는 흡혈효율이 좋지않은데 사냥에서는 흡혈 잘되게")
 		-- 사신 게이지(2026-10-31 게이지 직업): 낫 기술이 맞으면(한 번 쓸 때 한 번) · 영혼 수확은 크게
-		if Kit.gainGauge(hero, if opts and opts.id == "rp_reap" then "reap" else "hit") then
+		if Kit.gainGauge(hero, if opts and opts.id == "rp_reap" then "reap" elseif opts and opts.id == "rp_behead" then "behead" else "hit") then -- (참수 = behead — 2026-11-10 조금 더)
 			out.kit = true
+		end
+		-- 보스전의 작은 흡혈(2026-11-10 사용자 "리퍼 피흡 보스전에서도 피흡살짝되게 작은수치로 추가로줘" — 공방 combat.js KIT1.reaper.passive의 boss · bossGap): 보스에게 맞으면 한 번 쓸 때 한 번 · bossGap초에 한 번까지
+		local P = KIT.reaper.passive
+		if P.boss and hero.alive and hero.hp < hero.maxHp and (hero.bossDrainAt == nil or self.time - hero.bossDrainAt >= (P.bossGap or 0.5)) then
+			local onBoss = false
+			for _, l in landed do
+				if l.mob.def.boss and not l.mob.gimAdd then
+					onBoss = true
+				end
+			end
+			local sc = Kit.scale(hero, "passive")
+			if onBoss and sc > 0 then
+				hero.bossDrainAt = self.time
+				local heal = math.min(hero.maxHp - hero.hp, math.max(1, math.floor(hero.maxHp * P.boss / 100 * sc + 0.5)))
+				hero.hp += heal
+				out.heal = (out.heal or 0) + heal
+			end
 		end
 		-- 사신화: 맞을 때마다 그림자 낫이 따라 벤다 — 그 타 피해의 form.shade(화면은 kits/reaper.luau의 procs.shade)
 		if Kit.formed(hero) then
@@ -2406,7 +2449,7 @@ function Room:kitAfter(hero, landed, x: number, y: number, sweep, power: number,
 			end)
 			if #list > 0 then
 				st.at = now
-				local n = if twoS > 0 then math.min(two.max, 1 + (if Kit.formed(hero) then two.max else math.floor((st.gauge or 0) / 34))) else 1 -- 떼혼불: 게이지 34마다 하나 더 · 사신화 동안 가득(2026-10-31)
+				local n = if twoS > 0 then math.min(two.max, 1 + (if Kit.formed(hero) then two.max else math.floor((st.gauge or 0) * 100 / Kit.gaugeMax(hero) / 34))) else 1 -- 떼혼불: 게이지 34%마다 하나 더(가득은 차수마다 — 2026-11-09) · 사신화 동안 가득(2026-10-31)
 				for i = 0, n - 1 do
 					local target = list[i % #list + 1]
 					if alive(target) then
@@ -2507,6 +2550,10 @@ function Room:dropFor(hero, mob)
 	if hero.weak > 0 then
 		amount *= 1 - N.data.BODY.death.cut / 100
 	end
+	amount *= 1 - (hero.curse or 0) -- 룬의 저주(2026-11-07)
+	if amount < 0.5 then
+		return nil
+	end
 	local drop = { id = self.nextId, kind = "money", amount = math.max(1, math.floor(amount + 0.5)), x = self:dropX(mob, 0), y = mob.y, owner = hero.id, born = self.time }
 	self.nextId += 1
 	self.drops[drop.id] = drop
@@ -2517,6 +2564,7 @@ end
 function Room:lootFor(hero, mob)
 	local out = {}
 	local mul = if hero.weak > 0 then 1 - N.data.BODY.death.cut / 100 else 1
+	mul *= 1 - (hero.curse or 0) -- 룬의 저주(2026-11-07 — 그 맵의 룬을 두면 떨어지는 것도 덜)
 	if mob.fieldElite then
 		mul *= FE.loot -- 사냥터 정예: 나올 확률이 loot배
 	end

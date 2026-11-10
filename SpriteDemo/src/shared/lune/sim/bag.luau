@@ -20,6 +20,7 @@ Bag.FULL = FULL
 local function stamp(h, it)
 	it.id = h.nextItem
 	h.nextItem += 1
+	Items.ensureExtra(it) -- 추가 옵션이 없으면 여기서 태어난다(2026-11-07 — 떨어진 것 · 만든 것 · 산 것 · 보상 · 옛 장비 모두 이곳을 지난다)
 	return it
 end
 
@@ -521,6 +522,40 @@ function Bag.unequip(h, slot: any, to: any): (boolean?, string?)
 	return true
 end
 
+-- 윤슬 조각으로 추가 옵션을 다시 굴린다(2026-11-07 — 공방 items.js 4-1b): 가방 · 장비 칸의 장비 하나(부서진 흔적은 안 된다) · 조각 하나를 쓴다 → 새 추가 옵션(줄 수 그대로)
+function Bag.reroll(h, id: any, rng: any?): (any?, string?)
+	local it, where = Bag.find(h, id)
+	if not it or (where ~= "gear" and where ~= "equip") then
+		return nil, "가방에 없는 장비다"
+	end
+	if it.broken then
+		return nil, "부서진 장비다"
+	end
+	local tool = Items.EXTRA.reroll and Items.EXTRA.reroll.id
+	if not tool or Bag.count(h, tool) <= 0 then
+		return nil, Items.EXTRA.words and Items.EXTRA.words.noTool or "윤슬 조각이 없다"
+	end
+	Bag.take(h, tool, 1)
+	return Items.reroll(it, rng)
+end
+-- 큐브 창(2026-11-10 사용자 "윤슬조각 돌리는거 왜 비포, 에프터 선택이 없는데? 메이플 큐브 ui 처럼"): 조각 하나를 쓰고 새 옵션을 굴려 돌려준다 — 장비에는 아직 넣지 않는다(AFTER).
+--  고르는 것은 부른 쪽(서버 world.luau의 rerollPick — AFTER 적용이면 it.ex를 바꾼다) → 새 옵션 · 까닭 · 그 장비
+function Bag.rerollTry(h, id: any, rng: any?): (any?, string?, any?)
+	local it, where = Bag.find(h, id)
+	if not it or (where ~= "gear" and where ~= "equip") then
+		return nil, "가방에 없는 장비다", nil
+	end
+	if it.broken then
+		return nil, "부서진 장비다", nil
+	end
+	local tool = Items.EXTRA.reroll and Items.EXTRA.reroll.id
+	if not tool or Bag.count(h, tool) <= 0 then
+		return nil, Items.EXTRA.words and Items.EXTRA.words.noTool or "윤슬 조각이 없다", nil
+	end
+	Bag.take(h, tool, 1)
+	return Items.rollExtra(it.stage, rng), nil, it
+end
+
 -- 가방의 장비를 분해한다. 나온 달가루를 돌려준다
 function Bag.dismantle(h, id: any): (number?, string?)
 	local it, where, index = Bag.find(h, id)
@@ -836,14 +871,14 @@ end
 
 -- ---------- 저장 ----------
 local function packItem(it)
-	return { it.slot, it.stage, it.q, it.star, it.who or "", it.fails or 0, if it.broken then 1 else 0, it.u } -- 8째 = 이름표(보스의 이름 붙은 장비 — 2026-10-27 · 없으면 비운다)
+	return Items.packRow(it) -- 줄의 꼴은 items.luau의 Items.packRow(8째 = 이름표 · 9째 = 추가 옵션 — 2026-11-07)
 end
 
 local function unpackItem(row: any)
 	if typeof(row) ~= "table" then
 		return nil
 	end
-	local it = { slot = row[1], stage = row[2], q = row[3], star = row[4], who = if row[5] ~= "" then row[5] else nil, fails = row[6], broken = row[7] == 1, u = if typeof(row[8]) == "string" then row[8] else nil }
+	local it = { slot = row[1], stage = row[2], q = row[3], star = row[4], who = if row[5] ~= "" then row[5] else nil, fails = row[6], broken = row[7] == 1, u = if typeof(row[8]) == "string" then row[8] else nil, ex = Items.unpackEx(row[9]) }
 	-- 별이 그 단계의 상한을 넘으면(설계의 상한이 줄었다) 장비를 버리지 않고 상한으로 맞춘다(2026-10-18 검토)
 	if typeof(it.stage) == "number" and it.stage >= 1 and it.stage <= 200 and typeof(it.star) == "number" and it.star > Items.starCap(it.stage) then
 		it.star = Items.starCap(it.stage)
@@ -1018,7 +1053,7 @@ end
 
 -- ---------- 클라이언트에 보내는 것 ----------
 local function viewItem(it)
-	return { id = it.id, slot = it.slot, stage = it.stage, q = it.q, star = it.star, who = it.who, broken = it.broken, fails = it.fails or 0, u = it.u }
+	return { id = it.id, slot = it.slot, stage = it.stage, q = it.q, star = it.star, who = it.who, broken = it.broken, fails = it.fails or 0, u = it.u, ex = Items.viewEx(it) }
 end
 
 -- 칸들을 보낼 꼴로(길이 size — 빈 칸은 false)

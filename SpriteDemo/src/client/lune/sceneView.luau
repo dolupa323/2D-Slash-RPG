@@ -144,7 +144,9 @@ function SceneView.new(view: Frame, key: string, scene, tagLayer: Frame)
 	for _, npc in self.npcs do
 		local n = npc.def
 		-- tagRow = 이름표를 몇 줄 아래로(마을의 랭킹 석상 2위 — 곁의 1위와 30점 떨어져 이름표가 겹치면 하나가 숨는다 · 2026-11-03)
-		npc.tag = tag(("%s %s"):format(n.role, n.name), n.x, n.y, SceneView.TAG_DOWN + (if typeof(n.tagRow) == "number" then n.tagRow * Layout.TAG.h else 0), C.gold)
+		-- 구실(role)이 비면 이름만(석상이 될 뻔한 돌 「찌그러진 돌」 — 2026-11-07)
+		npc.tag = tag(if typeof(n.role) == "string" and n.role ~= "" then ("%s %s"):format(n.role, n.name) else n.name, n.x, n.y, SceneView.TAG_DOWN + (if typeof(n.tagRow) == "number" then n.tagRow * Layout.TAG.h else 0), C.gold)
+		npc.tagRec = self.tags[#self.tags] -- (오가는 주민의 이름표는 update가 따라 옮긴다 — 2026-11-10)
 		-- 퀘스트 표시: 머리 위의 ! (받을 수 있다) · ? (돌려줄 수 있다) — 게임 세계의 그림(굵은 도트)
 		npc.mark = Kit.part(self.topLayer, SceneView.MARK["!"], 0, 0) -- 자리는 update가 잡는다(! 와 ? 의 폭이 다르다)
 		npc.mark.Visible = false
@@ -285,7 +287,19 @@ function SceneView:update(heroX: number, heroY: number, clock: number, grounded:
 		local n = npc.def
 		local o = self.npcOver and self.npcOver[n.id]
 		local dir = n.dir
-		if o and o.dir then
+		-- 방 안을 오가는 주민(roam = { a, b, speed } — 2026-11-10 사용자 "뛰어노는아이 지윤 … 집안에서 계속돌아다니게해주고"): a ~ b점을 speed점/초로 쉬지 않고 오간다 · 가는 쪽을 본다 · 두 장을 빨리 돌린다(뛰는 모습)
+		--  자리(n.x)를 그대로 옮겨 둔다 — 말 걸기(npcNear) · 혼잣말 말풍선 · 이름표 · 퀘스트 표시가 그 자리를 따른다(서버는 이 주민의 자리를 쓰지 않는다: 말만 하는 주민)
+		local roaming = n.roam ~= nil and not (o and o.x)
+		if roaming then
+			local R = n.roam
+			local L = math.max(1, R.b - R.a)
+			local s = (clock * R.speed) % (2 * L)
+			n.x = R.a + (if s < L then s else 2 * L - s)
+			dir = if s < L then 1 else -1
+			if npc.tagRec then
+				npc.tagRec.wx = n.x
+			end
+		elseif o and o.dir then
 			dir = o.dir
 		elseif math.abs(n.x - heroX) < 70 and heroX ~= n.x then
 			dir = if heroX > n.x then 1 else -1
@@ -297,7 +311,7 @@ function SceneView:update(heroX: number, heroY: number, clock: number, grounded:
 			npc.label.Position = UDim2.fromOffset(round(nx - npc.nw / 2), n.y - npc.nh)
 		end
 		npc.label.Visible = not n.stone and not (o and o.hidden)
-		local frame = math.floor(clock * (if o and o.walk then 8 else 1.6) + (i - 1) * 0.4) % 2
+		local frame = math.floor(clock * (if (o and o.walk) or roaming then 8 else 1.6) + (i - 1) * 0.4) % 2
 		local key = dir .. ":" .. frame
 		if npc.shown ~= key then
 			npc.shown = key

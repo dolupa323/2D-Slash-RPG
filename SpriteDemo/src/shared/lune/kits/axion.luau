@@ -129,12 +129,18 @@ end
 --   찍는 순간: 도끼 끝의 별빛 + 양옆으로 피어오르는 큰 초승달 한 쌍 + 화면이 잠깐 어두워진다
 --   퍼짐: 초승달 일곱이 사방으로 층을 뚫고 날아간다(커지며 얇아지고, 뒤에 잔상 둘) → 지나간 자리에 달가루가 내려앉는다
 --   맞음: 초승달이 닿는 때에 맞춰 적마다 초승달 한 쌍이 맞물리고 별빛이 튄다
-local PULSE = { x = 180, up = 140, down = 80, life = 0.48, dirs = { 12, 38, 64, 90, 116, 142, 168 } }
+-- 달빛 파동(2026-11-07 사용자 "액시온 광역기 이펙트랑 범위 일치안하는 부분있다 달파"): 판정은 좌우 x · 위 up · 아래 down의 네모인데 초승달이 위쪽 반원(dirs)으로만 날아가
+--  아래층의 적은 이펙트 없이 맞고, 위쪽 모서리도 이펙트 밖에서 맞았다 → 초승달이 판정 네모의 끝까지 날아가고(at) 아래로도 다섯(low) · 맞는 때 = 초승달이 그 적에 닿는 때. 범위(숫자)는 그대로
+local PULSE = { x = 180, up = 140, down = 80, life = 0.48, dirs = { 12, 38, 64, 90, 116, 142, 168 }, low = { -20, -50, -90, -130, -160 } }
+local PULSE_ALL = table.clone(PULSE.dirs)
+for _, d in PULSE.low do
+	table.insert(PULSE_ALL, d)
+end
 local PULSE_GHOST = { { 0.17, 0.2 }, { 0.085, 0.42 } }
 local DUST = { n = 0x2f3742, l = 0x56657a }
 local function pulse(g)
 	local x, y, tone = g.x, g.y, g.tone
-	local cy, RX, RY, ax = y - 10, PULSE.x, PULSE.up - 12, g.fwd(16)
+	local cy, RX, RYU, RYD, ax = y - 10, PULSE.x, PULSE.up - 10, PULSE.down + 10, g.fwd(16) -- (cy = 몸 가운데 — 위 · 아래 끝은 판정의 up · down과 같은 줄)
 	local function ease(k)
 		return 1 - (1 - k) * (1 - k)
 	end
@@ -152,9 +158,11 @@ local function pulse(g)
 	end
 	g.fx.shards(ax, y - 4, 14, tone, { up = 170, kind = "tri", speed = 120 })
 	g.fx.shards(ax, y - 1, 8, DUST, { kind = "dot", up = 100, speed = 80 })
-	local function at(deg, e)
+	local function at(deg, e) -- 그 방향으로 판정 네모의 끝까지 간 자리의 e배
 		local a = deg * 0.01745
-		return x + cos(a) * RX * e, cy - sin(a) * RY * e, math.atan2(sin(a) * RY, cos(a) * RX) / 0.01745
+		local ca, sa = cos(a), sin(a)
+		local t = min(if abs(ca) > 0.001 then RX / abs(ca) else 1e9, if abs(sa) > 0.001 then (if sa >= 0 then RYU else RYD) / abs(sa) else 1e9)
+		return x + ca * t * e, cy - sa * t * e, deg
 	end
 	local function moon(ctx, deg, e, k, c, core)
 		local px, py, phi = at(deg, e)
@@ -167,7 +175,7 @@ local function pulse(g)
 	end
 	g.fx.add(PULSE.life, function(ctx, k)
 		local e, fade = ease(k), if k > 0.78 then (1 - k) / 0.22 else 1
-		for _, deg in PULSE.dirs do
+		for _, deg in PULSE_ALL do
 			for _, b in PULSE_GHOST do -- 잔상 둘
 				if e > b[1] + 0.05 then
 					ctx:alpha(b[2] * fade)
@@ -179,7 +187,7 @@ local function pulse(g)
 		end
 		ctx:alpha(1)
 	end)
-	for _, deg in PULSE.dirs do -- 달가루 · 세모 파편
+	for _, deg in PULSE_ALL do -- 달가루 · 세모 파편
 		for _, e in { 0.3, 0.55, 0.8, 0.97 } do
 			local px, py = at(deg, e)
 			g.after(PULSE.life * (1 - sqrt(1 - e)) + 0.03, function()
@@ -195,7 +203,8 @@ local function pulse(g)
 		if abs(dx) > RX or dy < -PULSE.up or dy > PULSE.down then
 			continue -- 층을 가리지 않는다: 범위 안이면 위층 · 아래층도 맞는다
 		end
-		local u = min(1, sqrt((dx / RX) ^ 2 + ((dy + 10) / RY) ^ 2))
+		local dyc = dy + 10
+		local u = min(1, max(abs(dx) / RX, abs(dyc) / (if dyc < 0 then RYU else RYD))) -- 초승달이 그 적에 닿는 때(네모 끝까지 가는 길의 몇 배인가)
 		g.after(PULSE.life * (1 - sqrt(1 - u)), function()
 			if m.dead >= 0 then
 				return

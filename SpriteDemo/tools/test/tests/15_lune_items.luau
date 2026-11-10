@@ -792,7 +792,7 @@ do
 			expect(width(ask) <= L.detailInner(), ("묻는 글 %s(폭 %d)이 판의 속(%d)에 들어간다"):format(ask, width(ask), L.detailInner()))
 			expect(widthBody(pair[2]) <= two - 6, "하는 단추의 글 " .. pair[2])
 		end
-		eq(kinds, 9, "수를 고르는 일: 사기(2026-10-21 수량 창) · 버리기 · 맡기기 · 찾기 · 팔기 · 나누기 · 장비 팔기 · 분해(2026-10-18 — 분해도 한 번 묻는다) · 물약 · 귀환 주문서 분해(2026-10-27)")
+		eq(kinds, 10, "수를 고르는 일: 사기(2026-10-21 수량 창) · 버리기 · 맡기기 · 찾기 · 팔기 · 나누기 · 장비 팔기 · 분해(2026-10-18 — 분해도 한 번 묻는다) · 물약 · 귀환 주문서 분해(2026-10-27) · 윤슬 조각의 재설정(2026-11-07)")
 		expect(widthBody(WD.askNo) <= two - 6, "그만두는 단추의 글")
 		expect(widthBody(WD.sort) <= L.STORE.sortW - 6, "창고의 정렬 단추의 글")
 		expect(width(WD.shopHint) <= SHOP.w - SHOP.hintX, "상점의 안내 글(끌어다 놓으면 판다)이 달돈 · 달가루의 오른쪽에 들어간다")
@@ -804,7 +804,7 @@ do
 				expect(width(row[1]) <= K.labelW - 4, ("%s: 줄의 이름 %s(폭 %d)이 칸(%d)에"):format(label, row[1], width(row[1]), K.labelW))
 				expect(width(row[2]) <= L.detailValueW(), ("%s: 줄의 값 %s(폭 %d)이 칸(%d)에"):format(label, row[2], width(row[2]), L.detailValueW()))
 			end
-			expect(#info.rows <= 6, label .. ": 줄은 여섯까지")
+			expect(#info.rows <= 9, label .. ": 줄은 아홉까지(여섯 + 추가 옵션 셋 — 2026-11-07)")
 			local noteLines = 0
 			for _, note in info.notes do
 				local lines = string.split(pixelText.Wrap(note[1], L.detailInner(), "small"), "\n")
@@ -819,12 +819,22 @@ do
 		end
 		-- 모든 부위 · 단계 · 성능에서(가장 높은 별 · 부서진 것까지): 가장 넓은 값들
 		for _, slot in D.SLOTS do
-			for _, stage in { 1, 140 } do
+			for _, stage in { 1, 140, 150 } do
 				for _, q in { 1, 5 } do
 					local it = Items.make(slot.id, stage, q, "salamander")
 					it.star = Items.starCap(stage)
 					fits(Info.gear(it, { level = 150, class = "salamander" }, nil, false), Items.name(it))
 					fits(Info.gear(it, { level = 1, class = "riven" }, nil, true), Items.name(it) .. " 장착 중")
+					-- 추가 옵션(2026-11-07): 이름이 가장 넓은 셋 · 값이 가장 큰 것(그 레벨 범위의 끝)
+					for _, trio in { { "critDmg", "cut", "crit" }, { "final", "run", "hp" }, { "def", "all", "atk" }, { "str", "dex", "luk" }, { "int", "dmg", "critDmg" } } do
+						it.ex = {}
+						for i = 1, math.min(#trio, Items.exCount(stage)) do
+							local _, hi = Items.exRange(trio[i], stage)
+							table.insert(it.ex, { k = trio[i], v = hi })
+						end
+						fits(Info.gear(it, { level = 150, class = "salamander" }, nil, false), Items.name(it) .. " 추가 옵션 " .. table.concat(trio, "·"))
+					end
+					it.ex = nil
 					it.broken = true
 					fits(Info.gear(it, { level = 150, class = "salamander" }, nil, false), Items.name(it) .. " 부서짐")
 				end

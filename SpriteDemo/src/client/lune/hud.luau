@@ -587,10 +587,41 @@ function Hud.hideBuffTip()
 end
 
 -- 설명 판 하나를 parent에 짓는다(능력치의 설명과 같은 판): t = { kind, title, tag, lines }. 돌려주는 것 = 판 · 높이(자리는 부른 쪽이 놓는다)
+-- 설명 판을 띄우는 맨 위 층(2026-11-07 사용자 "채팅창이랑 경험치바에 마우스 올렸을때 보이는거랑 겹치거나 … z인덱스"): 판은 그 칸(parent) 안에 지었는데
+--  HUD 안에서 나중에 지은 것(채팅 · 파티 칸 · 보스 바 …)이 같은 z라 판을 덮었다 → 판은 이 층(창 150 · 상세 판 156 위 · 메뉴 160 아래)에, 자리는 그 칸에 붙은 채
+Hud.tips = nil :: Frame?
+function Hud.tipLayer(): Frame
+	if not Hud.tips or not Hud.tips.Parent then
+		Hud.tips = Stage.group(Stage.ui, "Tips", 158)
+	end
+	return Hud.tips :: Frame
+end
+
 function Hud.tipPanel(parent: Instance, t, name: string): (Frame, number)
 	local color = TIPCOLOR[t.kind] or C.accent
 	local inner = TIP.w - TIP.pad * 2
-	local frame = Ui.group(parent, 0, 0, TIP.w, 10, name)
+	-- 그 칸의 자리(기준 격자)에 놓인 빈 틀 — 부르는 쪽은 예전처럼 그 칸에 대한 자리를 frame.Position에 적는다 · 판을 지우면 틀도 지운다
+	local at = Instance.new("Frame")
+	at.Name = name .. "At"
+	at.BackgroundTransparency = 1
+	at.BorderSizePixel = 0
+	at.Size = UDim2.fromOffset(0, 0)
+	local okAt, d = pcall(function()
+		return (parent :: GuiObject).AbsolutePosition - Stage.ui.AbsolutePosition
+	end)
+	if okAt and typeof(d) == "Vector2" then
+		at.Position = UDim2.fromOffset(math.floor(d.X / Stage.uiScale + 0.5), math.floor(d.Y / Stage.uiScale + 0.5))
+	end
+	at.Parent = Hud.tipLayer()
+	local frame = Ui.group(at, 0, 0, TIP.w, 10, name)
+	local okEv, ev = pcall(function()
+		return (frame :: any).Destroying
+	end)
+	if okEv and ev then
+		ev:Connect(function()
+			at:Destroy()
+		end)
+	end
 	frame.ZIndex = 20
 	local back = Ui.part(frame, "uTip", 0, 0, TIP.w, 10)
 	local title = Ui.text(frame, t.title, TIP.pad, TIP.pad, inner, { font = "body", color = color })
@@ -920,6 +951,7 @@ end
 
 -- 경험치 줄의 설명: 덩어리(box) 위에 — 지금 / 필요한 경험치(%) · 다음 레벨까지
 Hud.xpTip = nil :: Frame?
+Hud.xpTipBox = nil :: Instance? -- 설명 판이 붙는 칸(판은 맨 위 층에 있어 판의 Parent가 칸이 아니다 — 2026-11-07)
 Hud.lastXp = nil :: { xp: number, need: number, level: number }?
 function Hud.hideXpTip()
 	if Hud.xpTip then
@@ -938,6 +970,7 @@ function Hud.showXpTip(box: Instance)
 	if not x then
 		return
 	end
+	Hud.xpTipBox = box
 	local frame, h = Hud.tipPanel(box, Hud.xpTipText(x.xp, x.need, x.level), "XpTip")
 	frame.Position = UDim2.fromOffset(0, -h - 6)
 	Hud.xpTip = frame
@@ -946,7 +979,7 @@ end
 function Hud.setSelf(me)
 	Hud.lastXp = { xp = me.xp, need = me.need, level = me.level }
 	if Hud.xpTip then
-		Hud.showXpTip(Hud.xpTip.Parent :: Instance) -- 떠 있는 동안 경험치가 오르면 새 수로
+		Hud.showXpTip(Hud.xpTipBox :: Instance) -- 떠 있는 동안 경험치가 오르면 새 수로
 	end
 	local level = "Lv." .. me.level
 	Hud.level:set(level)

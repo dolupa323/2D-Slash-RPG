@@ -311,6 +311,13 @@ do
 	expect(k.alive, "재점화: 쓰러질 피해를 버틴다")
 	near(k.hp, math.floor(k.maxHp * PASS.sl_rekindle.fx.rekindle + 0.5), 1e-6, "최대 체력의 30%로")
 	eq(k.kit.heat, 0, "열기를 모두 태웠다")
+	-- 버틴 뒤 무적(2026-11-10 사용자 "살라맨더 재점화 하고 바로죽는게 문제야 1초라도 무적이 들어가야해"): guard초(1.5) — 그동안 맞아도 그대로
+	expect((PASS.sl_rekindle.fx.guard or 0) >= 1, "재점화 뒤 무적 1초 넘게")
+	near(k.invuln, PASS.sl_rekindle.fx.guard, 1e-6, "버틴 뒤 무적 = guard초")
+	local hpKept = k.hp
+	room3:hurtHero({}, k, mob3, 1000)
+	expect(k.alive and k.hp == hpKept, "무적인 동안 맞아도 그대로(바로 쓰러지지 않는다)")
+	k.invuln = 0
 	local told = nil
 	for _, e in events do
 		if e.type == "rekindle" then
@@ -549,7 +556,8 @@ do
 	near(Kit.formTime(r), FORM.dur[4] + PASS.rp_soul2.fx.formTime + PASS.rp_awaken.fx.formTime, 1e-6, "사신 각성: +5초")
 	expect(not Kit.noCd(r, "attack"), "사신화가 아니면 다시 쓰기가 있다")
 	req("ReplicatedStorage/shared/lune/sim/buffs").give(r, "rp_form", 1, r.x, r.y)
-	expect(Kit.noCd(r, "attack") and Kit.noCd(r, "mob"), "사신 각성: 사신화 동안 공격기 · 사냥기의 다시 쓰기가 없다(광역 난사)")
+	expect(Kit.noCd(r, "attack") and Kit.noCd(r, "mob"), "사신 각성: 사신화 동안 공격기 · 사냥기의 다시 쓰기가 없다(광역 난사 — 어디서나 2026-11-10)")
+	expect(Kit.noCd(r, "attack"), "보스 방에서도 다시 쓰기가 없다(2026-11-10 — 11-09의 「사냥터에서만」을 거뒀다)")
 	expect(not Kit.noCd(r, "nuke") and not Kit.noCd(r, "bind"), "큰 기술 · 바인드는 그대로")
 	r.skills.rp_awaken = nil
 	expect(not Kit.noCd(r, "attack"), "사신 각성이 없으면 다시 쓰기가 있다")
@@ -583,7 +591,7 @@ do
 	local e = hero("reaper", { rp_soul = 10, rp_edge = 10 })
 	local e0 = Passives.atk(e)
 	req("ReplicatedStorage/shared/lune/sim/buffs").give(e, "rp_form", 1, e.x, e.y)
-	near(Passives.atk(e) / e0, 1 + PASS.rp_edge.fx.formFinal, 1e-6, "사신의 낫날: 사신화 동안 최종 데미지 +25%")
+	near(Passives.atk(e) / e0, 1 + PASS.rp_edge.fx.formFinal, 1e-6, "사신의 낫날: 사신화 동안 최종 데미지 +" .. PASS.rp_edge.fx.formFinal * 100 .. "%(2026-11-09 +25% → +10%)")
 	-- 넋 베기(3차 — 2026-11-01): 크리티컬 확률 · 크리티컬 데미지 +
 	local c0, m0 = Passives.crit(hero("reaper", {}))
 	local c1, m1 = Passives.crit(hero("reaper", { rp_cleave = 10 }))

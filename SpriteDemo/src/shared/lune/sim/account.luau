@@ -49,7 +49,12 @@ function Account.cleanSound(v: any)
 	if v.touch ~= nil and v.touch ~= "new" and v.touch ~= "old" then
 		return nil
 	end
-	return { music = v.music, sfx = v.sfx, on = v.on, fx = v.fx ~= false, nums = v.nums ~= false, myNums = v.myNums ~= false, lang = v.lang or "auto", touch = v.touch or "new" }
+	-- 채팅 창을 옮긴 자리(2026-11-09 — client chat.luau Chat.pos): { x, y } 정수(화면 틀의 점 · ±2000 안) · 꼴이 틀리면 처음 자리(nil)로
+	local chat = nil
+	if typeof(v.chat) == "table" and whole(v.chat.x, -2000, 2000) and whole(v.chat.y, -2000, 2000) then
+		chat = { x = v.chat.x, y = v.chat.y }
+	end
+	return { music = v.music, sfx = v.sfx, on = v.on, fx = v.fx ~= false, nums = v.nums ~= false, myNums = v.myNums ~= false, lang = v.lang or "auto", touch = v.touch or "new", chat = chat }
 end
 function Account.setSound(acct, v: any): boolean
 	local sound = Account.cleanSound(v)
@@ -85,10 +90,30 @@ function Account.setMenu(acct, v: any): boolean
 	return true
 end
 
+-- 키 설정(2026-11-07 사용자: "지금 키세팅을 캐릭터별로 해줘야하는 불편함이있어"): 계정의 모든 캐릭터가 같이 쓴다(소리 설정 · 메뉴 단추의 차례처럼).
+--  꼴 = 캐릭터의 것과 같다(sim/hero.luau의 keys — 기본과 다른 것만 { [하는 일] = 키 이름 } · 빈 표 = 모두 기본). false = 아직 계정에 적지 않았다(그 전의 저장 —
+--  들어가는 캐릭터가 바꿔 둔 키가 있으면 그것을 계정의 것으로 삼는다: world.luau의 「enter」). 퀵슬롯에 놓은 스킬은 직업마다 달라 캐릭터의 것 그대로
+function Account.cleanKeys(v: any): { [string]: string }?
+	if typeof(v) ~= "table" then
+		return nil
+	end
+	local out, n = {}, 0
+	for action, key in v do
+		if typeof(action) == "string" and typeof(key) == "string" and #action <= 40 and #key <= 24 and string.match(action, "^[%w:_]+$") and string.match(key, "^%w+$") then
+			n += 1
+			if n > 48 then
+				return nil
+			end
+			out[action] = key
+		end
+	end
+	return out
+end
+
 function Account.new()
 	-- spent = 이 계정이 게임에 쓴 로벅스(명예의 전당의 후원 판) · sound = 소리 설정
 	-- market = 경매장에 맡긴 것(올린 물건 · 아직 찾지 않은 것 — sim/market.luau). 창고처럼 계정의 캐릭터들이 같이 본다
-	return { next = 1, last = false, chars = {}, store = false, storeGot = {}, broken = {}, spent = 0, sound = Account.soundDefault(), market = Market.newBook(), tutDone = false, att = Attend.new(), ach = Achieve.new(), bm = Cash.new(), macro = Macro.newSaved(), menu = false } -- menu = 메뉴 단추의 차례(끌어 옮긴 것 — 없으면 처음 차례) · att = 출석(sim/attend.luau) · ach = 업적(sim/achieve.luau) — 계정의 것(2026-10-15) -- tutDone = 이 계정의 캐릭터가 튜토리얼 「달빛 꿈」을 한 번 끝냈다(그 뒤의 새 캐릭터는 건너뛸 수 있다)
+	return { next = 1, last = false, chars = {}, store = false, storeGot = {}, broken = {}, spent = 0, sound = Account.soundDefault(), market = Market.newBook(), tutDone = false, att = Attend.new(), ach = Achieve.new(), bm = Cash.new(), macro = Macro.newSaved(), menu = false, keys = false, evGift = {} } -- evGift = 접속 선물을 받은 해 { [선물] = 해 }(2026-11-10 빼빼로 데이 — sim/event.luau) -- menu = 메뉴 단추의 차례(끌어 옮긴 것 — 없으면 처음 차례) · att = 출석(sim/attend.luau) · ach = 업적(sim/achieve.luau) — 계정의 것(2026-10-15) -- tutDone = 이 계정의 캐릭터가 튜토리얼 「달빛 꿈」을 한 번 끝냈다(그 뒤의 새 캐릭터는 건너뛸 수 있다)
 end
 
 -- 이름을 견줄 때의 꼴(영문은 소문자로 — Moon과 moon은 같은 이름이다)
@@ -494,7 +519,7 @@ function Account.pack(acct)
 	for _, raw in acct.broken do
 		table.insert(chars, raw)
 	end
-	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, storeGot = acct.storeGot, spent = acct.spent, sound = acct.sound, market = Market.packBook(acct.market), tutDone = acct.tutDone == true, att = Attend.pack(acct.att), ach = Achieve.pack(acct.ach), bm = Cash.pack(acct.bm), macro = Macro.pack(acct.macro), menu = acct.menu }
+	return { v = Account.VERSION, next = acct.next, last = acct.last, chars = chars, store = acct.store, storeGot = acct.storeGot, spent = acct.spent, sound = acct.sound, market = Market.packBook(acct.market), tutDone = acct.tutDone == true, att = Attend.pack(acct.att), ach = Achieve.pack(acct.ach), bm = Cash.pack(acct.bm), macro = Macro.pack(acct.macro), menu = acct.menu, keys = acct.keys, evGift = acct.evGift }
 end
 
 function Account.unpack(data: any)
@@ -532,6 +557,16 @@ function Account.unpack(data: any)
 	acct.spent = if whole(data.spent, 0, 9e12) then data.spent else 0
 	acct.sound = Account.cleanSound(data.sound) or Account.soundDefault() -- 소리 설정이 생기기 전의 저장 = 처음 크기
 	acct.menu = Account.cleanMenu(data.menu) or false -- 메뉴 단추의 차례(2026-11-06 — 그 전의 저장 = 처음 차례)
+	acct.keys = Account.cleanKeys(data.keys) or false -- 키 설정(2026-11-07 — 그 전의 저장 = 아직 없다: 들어가는 캐릭터의 것을 삼는다)
+	-- 접속 선물을 받은 해(2026-11-10 — 그 전의 저장 = 아직 안 받음): 이름표(20자 안) → 해(정수)
+	acct.evGift = {}
+	if typeof(data.evGift) == "table" then
+		for id, y in data.evGift do
+			if typeof(id) == "string" and #id <= 20 and whole(y, 2000, 3000) then
+				acct.evGift[id] = y
+			end
+		end
+	end
 	acct.market = Market.unpackBook(data.market) -- 경매장이 생기기 전의 저장 = 맡긴 것 없음
 	acct.att = Attend.unpack(data.att) -- 출석 · 업적이 생기기 전(2026-10-15)의 저장 = 새 판 · 아무것도 안 함
 	acct.ach = Achieve.unpack(data.ach)

@@ -37,6 +37,21 @@ do
 	expect(sc ~= nil and sc.vault == true and sc.chest ~= nil, "보상의 방(달의 보물고) · 상자의 자리")
 	expect(SCENES.scenes[Weekly.boxKey(7)] == sc, "wkbox#7 = 보상의 방의 장면")
 	expect(Weekly.isBox(Weekly.boxKey(7)) and not Weekly.isBox(BOX.scene) and not Weekly.isBox("r2b5#wn3"), "보상의 방 이름")
+	-- 보스마다 다른 보상의 방(2026-11-06 사용자 "각 보스마다 보상방 위치판정도, 디자인도 다 달라야해 각 보스 컨셉에 맞게"): 맵 · 그림체 · 상자의 자리가 저마다
+	local seenScene, seenChest = {}, {}
+	for _, b in Weekly.DATA.bosses do
+		local bs = Weekly.boxScene(b.id)
+		local sc2 = SCENES.scenes[bs]
+		expect(bs ~= BOX.scene and sc2 ~= nil and sc2.vault and sc2.chest ~= nil, ("%s: 제 보상의 방(%s)"):format(b.id, bs))
+		expect(not seenScene[bs], ("%s: 다른 보스와 같은 방이 아니다"):format(b.id))
+		seenScene[bs] = true
+		if sc2 and sc2.chest then
+			local key = sc2.chest.x .. ":" .. sc2.chest.y
+			expect(not seenChest[key], ("%s: 상자의 자리(%d, %d)가 다른 보스와 다르다"):format(b.id, sc2.chest.x, sc2.chest.y))
+			seenChest[key] = true
+			expect(Weekly.isBox(Weekly.boxKey(3, b.id)) and SCENES.base(Weekly.boxKey(3, b.id)) == bs, ("%s: 방 이름 %s#번호"):format(b.id, bs))
+		end
+	end
 	expect(BOX.dust >= 2 and BOX.money >= 2, "달가루 · 달돈을 여러 덩이로 흩뿌린다")
 end
 
@@ -106,6 +121,14 @@ do
 		WeeklyWindow.mode = "normal"
 		view.refresh()
 		expect(shows("달가루 2,200 · 달돈 100,000") and shows(W.payHardOnly), "노말을 고르면 노말의 것")
+		-- 연습(2026-11-10): [연습]을 고르면 보상 줄 = 「없음 — …」 · 아래 안내 = 오늘 남은 연습
+		WeeklyWindow.practice = true
+		view.refresh()
+		expect(shows(W.practicePay), "연습: 보상 줄 = " .. W.practicePay)
+		expect(shows((string.gsub(string.gsub(W.practiceNote, "{n}", "20"), "{max}", "20"))), "연습: 「이번 주 격파와 상관없이 · 오늘 남은 연습 20/20」")
+		WeeklyWindow.practice = false
+		view.refresh()
+		expect(shows(W.note), "격파로 돌아오면 원래 안내")
 	end
 	expect(h > 0, "창의 높이")
 end
@@ -244,7 +267,7 @@ do
 	expect(room.box ~= nil and room.box.who[h.id] == true and not room.box.opened, "상자가 닫혀 있고 나는 받을 사람")
 	expect(World.room(broom.key) == nil or #broom.drops == 0, "보스의 방에는 아무것도 떨어지지 않았다")
 	local bv = lastOf(p, "BoxView")
-	expect(bv ~= nil and bv[1].opened == false and bv[1].x == SCENES.scenes[BOX.scene].chest.x, "화면에 상자(닫힘 · 자리)")
+	expect(bv ~= nil and bv[1].opened == false and bv[1].x == SCENES.scenes[Weekly.boxScene(B.id)].chest.x, "화면에 상자(닫힘 · 자리)")
 	-- 멀리서는 안 열린다
 	s.hero.x = SCENES.scenes[s.scene].spawn.x
 	local far = handlers.Week(p, "open")
@@ -265,7 +288,7 @@ do
 		elseif d.kind == "gear" then
 			gear += 1
 		end
-		fromOk = fromOk and d.fromX == SCENES.scenes[BOX.scene].chest.x and d.delay ~= nil and d.keep == true and d.party == room.box.who
+		fromOk = fromOk and d.fromX == SCENES.scenes[Weekly.boxScene(B.id)].chest.x and d.delay ~= nil and d.keep == true and d.party == room.box.who
 	end
 	eq(nd, BOX.dust, "달가루 덩이 수")
 	eq(nm, BOX.money, "달돈 덩이 수")
@@ -455,7 +478,12 @@ do
 	eq(a.hero.money - ma, 300000, "A 달돈")
 	eq(b.hero.money - mb, 300000, "B 달돈")
 	eq(eyes(a.hero) + eyes(b.hero), 1, "줍지 않은 장비는 받을 사람 가운데 하나의 가방에")
-	local leftA = lastOf(pa, "WeekPay")
+	local leftA = nil -- (남은 보상의 알림 — 그 뒤에 줍지 않은 장비의 알림이 A에게 올 수도 있어 마지막 것이 아니라 left인 것을 찾는다 · 2026-11-06)
+	for _, f in fired do
+		if f.player == pa and f.name == "WeekPay" and f.args[1].left then
+			leftA = f.args
+		end
+	end
 	expect(leftA ~= nil and leftA[1].left == true and leftA[1].dust == 6400, "화면에 「남은 보상」")
 	local n = 0
 	for _ in room.drops do
@@ -686,4 +714,127 @@ do
 	eq(Bag.count(s.hero, "potion3") - p0, 60, "하드: 큰 달빛 물약 +60")
 	eq(Bag.count(s.hero, "scroll_return") - r0, 3, "하드: 귀환 주문서 +3")
 	World.removePlayer(p)
+end
+
+-- 보상의 방에서 귀환 주문서(2026-11-06 사용자 "보상방에서 마을귀환주문서 쓰면 완전 이상한대로 가버리잖아 … 보스 입구 기준으로 마을찾아야지"):
+--  보상의 방은 모든 보스가 같이 쓰는 맵이라 그 맵의 「가장 가까운 마을」이 하나였다 → 그 보스의 문이 있는 맵의 가장 가까운 마을로(관리 「보상의 방」과 같은 길로 연다)
+do
+	local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
+	local p3, s3 = join(70)
+	World.openBoxFor({ s3 }, B.id, "normal", { [s3.hero.id] = true }, 1, 1)
+	expect(Weekly.isBox(s3.scene), "보상의 방에 들어왔다")
+	Bag.give(s3.hero, "scroll_return", 1)
+	handlers.Potion(p3, "scroll_return")
+	local door = B.door.scene
+	local want = if SCENES.homes[door] then door else SCENES.scenes[door].ret
+	eq(SCENES.base(s3.scene), want, ("보상의 방에서 귀환 주문서 → 보스의 문(%s)에서 가장 가까운 마을(%s)"):format(door, tostring(want)))
+	World.removePlayer(p3)
+end
+
+-- 용암 거인의 물약 제한(2026-11-07 사용자: "용암거인 포션 제한 걸자 한 레이드 내에서 20개 제한"):
+--  레이드(세 방이 하나로) 안에서 사람마다 20병까지 — 21병째는 마셔지지 않고(가방 그대로) 「이 레이드에서는 물약을 20개까지 쓸 수 있다」 · 다음 굴로 옮겨도 쓴 수가 이어진다 ·
+--  화면에 보내는 방의 상태에 쓴 수와 제한 · 다른 보스(그림자 사수)는 제한이 없다 · 귀환 주문서는 세지 않는다
+do
+	local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
+	local LB = Weekly.boss("lavagiant")
+	eq(LB and LB.potionCap, 20, "용암 거인: 한 레이드에 물약 20병")
+	eq(B.potionCap, nil, "그림자 사수: 물약 제한 없음")
+	local p4, s4 = join(150)
+	local key = "r3d5#wn9907"
+	World.jump(p4, key)
+	local room = World.room(s4.scene)
+	Weekly.start(room, "normal", LB)
+	Bag.give(s4.hero, "potion3", 40)
+	local function drink(): boolean
+		s4.hero.hp, s4.hero.potionWait = 1, 0
+		local before = Bag.count(s4.hero, "potion3")
+		handlers.Potion(p4, "potion3")
+		return Bag.count(s4.hero, "potion3") < before
+	end
+	local n = 0
+	for _ = 1, 20 do
+		if drink() then
+			n += 1
+		end
+	end
+	eq(n, 20, "20병까지는 마셔진다")
+	eq(room.weekly.potions[tostring(p4.UserId)], 20, "쓴 수 20")
+	fired = {}
+	expect(not drink(), "21병째는 마셔지지 않는다(가방 그대로)")
+	local done = lastOf(p4, "ItemDone")
+	expect(done ~= nil and done[1].ok == false and done[1].why == "이 레이드에서는 물약을 20개까지 쓸 수 있다", "까닭: 「이 레이드에서는 물약을 20개까지 쓸 수 있다」 — " .. tostring(done and done[1].why))
+	local view = Weekly.roomView(room)
+	expect(view.potionCap == 20 and view.potions[tostring(p4.UserId)] == 20, "화면에 보내는 상태에 쓴 수와 제한")
+	-- 다음 굴로 옮겨도 이어진다(World.toStage — 시간 · 데스 카운트와 같다)
+	room.lavaNext = { ph = 2, hp = 1000 }
+	World.toStage(room, { s4 }, s4.scene)
+	local room2 = World.room(s4.scene)
+	expect(room2 ~= room and room2.weekly ~= nil, "다음 굴로 옮겼다 — " .. tostring(s4.scene))
+	eq(room2.weekly and room2.weekly.potions and room2.weekly.potions[tostring(p4.UserId)], 20, "다음 굴에서도 쓴 수 20")
+	expect(not drink(), "다음 굴에서도 21병째는 막힌다")
+	-- 다른 사람은 따로 센다
+	expect(Weekly.canDrink(room2, 1), "다른 사람은 따로(아직 0병)")
+	-- 제한이 없는 보스의 방
+	local plain = { weekly = { boss = B.id, potions = {} } }
+	expect(Weekly.canDrink(plain, p4.UserId) and Weekly.potionCap(plain) == nil, "그림자 사수의 방은 제한이 없다")
+	World.removePlayer(p4)
+end
+
+-- 보스 창의 정보 줄(2026-11-07): 물약 제한이 있는 보스(용암 거인)는 끝에 「물약 20개까지」 · 제한 시간은 그 보스의 것(20분)
+do
+	local WeeklyWindow = req("Client/lune/ui/weeklyWindow")
+	local LB = Weekly.boss("lavagiant")
+	local ctx = { me = function() return { level = 150 } end, week = function() return nil end, weekDo = function() end, partyHere = function() return false end }
+	local w, h = WeeklyWindow.size()
+	WeeklyWindow.mode = "normal"
+	local ok, view = pcall(WeeklyWindow.build, frame("Body"), ctx, w, h, LB.id)
+	expect(ok, "용암 거인의 보스 창을 끝까지 짓는다 — " .. tostring(view))
+	if ok then
+		view.refresh()
+		local line = nil
+		for _, t in texts do
+			if typeof(t.text) == "string" and string.find(t.text, "물약 20개까지", 1, true) then
+				line = t.text
+			end
+		end
+		expect(line ~= nil and string.find(line, "제한 시간 20분", 1, true) ~= nil, "정보 줄 = 「… · 제한 시간 20분 · 물약 20개까지」 — " .. tostring(line))
+	end
+end
+
+-- 보상이 벽으로 들어가지 않는다(2026-11-07 사용자: "지금 보스 보상이 벽으로 들어가는 문제가 있어요"):
+--  보스마다의 보상의 방에서 상자를 여러 번 열어(씨앗 40개) — 떨어진 자리마다 그 칸과 튀어 오르는 높이의 칸이 막히지 않았고, 상자의 땅(벽 안쪽)에 있다
+--  전에는 맵 끝 20점만 피해 도둑단의 장물 창고(상자 x 88 · 왼쪽 벽 0~32) · 기사단의 봉헌실(상자 x 376 · 오른쪽 벽 448~)에서 벽 속에 떨어졌다
+do
+	local Physics = req("ReplicatedStorage/shared/lune/sim/physics")
+	for _, bossId in { "shadowarcher", "fallenknight", "thiefboss", "lavagiant" } do
+		local bb = Weekly.boss(bossId)
+		local scene = SCENES.scenes[Weekly.boxScene(bossId)]
+		local mode = if bb.pay and bb.pay.hard then "hard" else "normal"
+		local bad, total, minX, maxX = 0, 0, math.huge, -math.huge
+		for seed = 1, 40 do
+			local placed = {}
+			local fake = {
+				scene = scene,
+				box = { boss = bossId, mode = mode, who = { [1] = true, [2] = true }, mul = 1, test = nil },
+				addDrop = function(_, d, x, y)
+					table.insert(placed, { x = x, y = y })
+					return d
+				end,
+			}
+			Weekly.openBox(fake, Random.new(seed))
+			for _, q in placed do
+				total += 1
+				minX, maxX = math.min(minX, q.x), math.max(maxX, q.x)
+				local tx = math.floor(q.x / 16)
+				local inWall = Physics.cell(scene, tx, math.floor((q.y - 1) / 16)) == "#" or Physics.cell(scene, tx, math.floor((scene.chest.y - 30) / 16)) == "#"
+				if inWall then
+					bad += 1
+				end
+			end
+		end
+		expect(total > 0, ("%s: 보상이 떨어졌다"):format(bossId))
+		eq(bad, 0, ("%s(%s): 벽 속에 떨어진 보상 0개(%d개 가운데 · x %d~%d)"):format(bossId, scene.id or Weekly.boxScene(bossId), total, minX, maxX))
+		local lo, hi = Weekly.dropSpan(scene, scene.chest)
+		expect(minX >= lo and maxX <= hi, ("%s: 모두 벽 안쪽(%d~%d)"):format(bossId, lo, hi))
+	end
 end

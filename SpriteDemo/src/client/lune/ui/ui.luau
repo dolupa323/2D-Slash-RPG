@@ -197,6 +197,7 @@ end
 -- ---------- 글 ----------
 -- 글. width = 이 글이 쓸 수 있는 폭(넘으면 줄을 바꾸고, lines를 넘으면 …로 줄인다). opts.align = "left" | "center" | "right"(그 폭 안에서)
 --  opts.font = "small"(기본) · "body" / opts.outline = 어두운 테두리(판 없이 게임 화면 위에 적는 글) / opts.color / opts.lines / opts.line(줄 간격) / opts.z
+--  opts.raw = 글을 영문으로 바꾸지 않는다(사람이 친 채팅 글 — 2026-11-06)
 function Ui.text(parent: Instance, text: string, x: number, y: number, width: number, opts)
 	opts = opts or {}
 	local label = pixelText.new(parent, {
@@ -208,6 +209,7 @@ function Ui.text(parent: Instance, text: string, x: number, y: number, width: nu
 		MaxLines = opts.lines or 1,
 		Line = opts.line,
 		ZIndex = opts.z,
+		Raw = opts.raw,
 	})
 	local item = { label = label, x = x, y = y, width = width, align = opts.align or "left" }
 	local function place()
@@ -321,8 +323,119 @@ function Ui.tagLead(label, text: string)
 	else
 		label.lead:SetText(text)
 	end
-	label.lead.Frame.Position = UDim2.fromOffset(-P.padX - Ui.TAG_LEAD_GAP - label.lead.Width, 0)
+	label.lead.Frame.Position = UDim2.fromOffset(-P.padX - Ui.TAG_LEAD_GAP - (label.leadShift or 0) - label.lead.Width, 0) -- (leadShift = 이름표 테두리의 왼쪽 그림만큼 더 밖으로 — 2026-11-10)
 	label.lead.Frame.Visible = text ~= ""
+end
+
+-- 이름표 테두리(2026-11-10 — 달빛 상점의 「이름표 테두리 상자」 · 공방 design/nametag.js · 공방 시험 탭 paint.js nameTag(skin)과 같은 자리):
+--  판(plate = true로 만든 이름표)의 바탕 · 테두리 색을 바꾸고, 안쪽 한 줄(inner — 두 겹 테두리) · 양 끝의 그림(UI 키트의 ntag_<이름> — 오른쪽은 뒤집는다 · 판 안으로 over점 겹친다) ·
+--  위 가운데의 그림(ntag_<이름>_top) · 오른쪽 위 귀퉁이의 흰 별빛(spark)을 붙인다. id = nil이면 처음 모습(어두운 판 · 민트 테두리). 글씨는 그대로(흰 글)
+local NTAGS = {}
+for _, q in (require(lune.data["bm.generated"]).nametags or {}).list or {} do
+	NTAGS[q.id] = q
+end
+Ui.NTAGS = NTAGS
+local function hexColor(h: string): Color3
+	return Color3.fromRGB(tonumber(string.sub(h, 2, 3), 16) or 0, tonumber(string.sub(h, 4, 5), 16) or 0, tonumber(string.sub(h, 6, 7), 16) or 0)
+end
+function Ui.tagSkin(label, id: string?)
+	local box = label.Frame:FindFirstChild("Plate")
+	if not box or label.ntag == (id or false) then
+		return
+	end
+	label.ntag = id or false
+	if label.ntagParts then
+		for _, p in label.ntagParts do
+			p:Destroy()
+		end
+	end
+	label.ntagParts = {}
+	local q = if id then NTAGS[id] else nil
+	local stroke = box:FindFirstChildOfClass("UIStroke")
+	box.BackgroundColor3 = if q then hexColor(q.fill) else C.ink
+	if stroke then
+		stroke.Color = if q then hexColor(q.border) else C.accent
+	end
+	label.leadShift = 0
+	label.ntagFit = nil
+	local P = Layout.TAG.plate
+	if q and id then
+		local parts = label.ntagParts
+		local over = q.over or 2
+		if q.inner then -- 안쪽 한 줄: 판의 가장자리 한 점(바깥 테두리 바로 안)
+			local f = Instance.new("Frame")
+			f.Name = "Inner"
+			f.BackgroundTransparency = 1
+			f.BorderSizePixel = 0
+			f.Position = UDim2.fromOffset(1, 1)
+			f.Size = UDim2.new(1, -2, 1, -2)
+			f.ZIndex = 1
+			local st = Instance.new("UIStroke")
+			st.Color = hexColor(q.inner)
+			st.Thickness = 1
+			st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			st.LineJoinMode = Enum.LineJoinMode.Miter
+			st.Parent = f
+			f.Parent = box
+			table.insert(parts, f)
+		end
+		local endName = "ntag_" .. id
+		local endPart = PARTS[endName]
+		local left = if endPart then Ui.part(label.Frame, endName, 0, 0) else nil
+		local right = if endPart then Ui.part(label.Frame, endName, 0, 0) else nil
+		if right and endPart then -- (오른쪽 = 뒤집은 것)
+			right.ImageRectOffset = Vector2.new(endPart.x + endPart.w, endPart.y)
+			right.ImageRectSize = Vector2.new(-endPart.w, endPart.h)
+		end
+		local topPart = PARTS[endName .. "_top"]
+		local top = if topPart then Ui.part(label.Frame, endName .. "_top", 0, 0) else nil
+		local spark = nil
+		if q.spark then
+			spark = Ui.group(label.Frame, 0, 0, 3, 3, "Spark")
+			for _, d in { { 1, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 }, { 1, 2 } } do
+				Ui.box(spark, d[1], d[2], 1, 1, Color3.new(1, 1, 1)).ZIndex = 3
+			end
+		end
+		for _, p in { left, right, top, spark } do
+			if p then
+				p.ZIndex = 2
+				table.insert(parts, p)
+			end
+		end
+		if endPart then
+			label.leadShift = endPart.w - over
+		end
+		-- 판의 크기가 바뀌면(이름이 바뀌면) 자리를 다시: 판의 테두리(UIStroke — 판 바깥 한 점) 기준
+		local function fit()
+			local w = label.Frame.Size.X.Offset
+			local bx, by = -P.padX - 1, -P.padY - 1 -- 테두리의 왼쪽 위
+			local bw, bh = w + P.padX * 2 + 2, M.small + P.padY * 2 + 2
+			if left and right and endPart then
+				local ey = by + math.floor((bh - endPart.h) / 2)
+				left.Position = UDim2.fromOffset(bx - endPart.w + over, ey)
+				right.Position = UDim2.fromOffset(bx + bw - over, ey)
+			end
+			if top and topPart then
+				top.Position = UDim2.fromOffset(bx + math.floor((bw - topPart.w) / 2), by - topPart.h + over)
+			end
+			if spark then
+				spark.Position = UDim2.fromOffset(bx + bw - 4, by - 1)
+			end
+		end
+		label.ntagFit = fit
+		if not label.ntagHooked then
+			label.ntagHooked = true
+			label.Frame:GetPropertyChangedSignal("Size"):Connect(function()
+				if label.ntagFit then
+					label.ntagFit()
+				end
+			end)
+		end
+		fit()
+	end
+	if label.lead then -- (레벨 글을 왼쪽 그림의 바깥으로 — Ui.tagLead와 같은 셈)
+		label.lead.Frame.Position = UDim2.fromOffset(-P.padX - Ui.TAG_LEAD_GAP - label.leadShift - label.lead.Width, 0)
+	end
 end
 
 -- 이름표 아래의 칭호(2026-10-26): 판 바로 아래 가운데에 작은 글 한 줄(그 칭호의 색). ""이면 숨긴다. 이름이 바뀌어 판의 폭이 바뀌면 다시 가운데로
@@ -380,6 +493,30 @@ function Ui.field(parent: Instance, x: number, y: number, w: number, h: number, 
 	box.ZIndex = 6
 	box.Parent = frame
 	return box
+end
+
+-- 숫자 칸(2026-11-10 — 능력치 · 스킬 창의 「한 번에」): 숫자만 적힌다(셋째 자리까지) · 칸을 떠나면 1 이상의 정수로 맞추고 onSet(n). 돌려주는 것 = { box(TextBox), get() → 지금 적힌 수(빈칸이면 value) }
+function Ui.numberField(parent: Instance, x: number, y: number, w: number, h: number, value: number, onSet: (number) -> ())
+	local box = Ui.field(parent, x, y, w, h, tostring(value))
+	box.Text = tostring(value)
+	box.TextXAlignment = Enum.TextXAlignment.Center
+	box:GetPropertyChangedSignal("Text"):Connect(function()
+		local clean = string.sub((string.gsub(box.Text, "%D", "")), 1, 3)
+		if clean ~= box.Text then
+			box.Text = clean
+		end
+	end)
+	local item = { box = box }
+	function item.get(): number
+		local n = tonumber(box.Text)
+		return if n and n >= 1 then math.floor(n) else value
+	end
+	box.FocusLost:Connect(function()
+		value = item.get()
+		box.Text = tostring(value)
+		onSet(value)
+	end)
+	return item
 end
 
 -- 단추(높이 26 — 글 12와 위아래 여백 7). opts.main = 그 창에서 가장 하고 싶은 일(민트로 칠한다 — 창마다 하나쯤) · opts.h = 다른 높이 · opts.font

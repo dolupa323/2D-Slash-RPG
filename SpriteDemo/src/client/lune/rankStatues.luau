@@ -25,17 +25,27 @@ local nextFetch = 0
 -- 그 장면에 들어섰다: statue가 적힌 주민마다 받침대를 놓는다(없으면 아무것도 하지 않는다). view = sceneView
 function RankStatues.enter(view)
 	RankStatues.leave()
-	local found = {}
+	local found, rocks = {}, {}
 	for _, npc in view.npcs or {} do
 		if npc.def.statue then
 			table.insert(found, npc)
+		elseif typeof(npc.def.rock) == "string" then
+			table.insert(rocks, npc)
 		end
 	end
-	if #found == 0 then
+	if #found == 0 and #rocks == 0 then
 		return
 	end
 	gen += 1
 	layer = Stage.group(view.world, "Statues", RankStatues.Z)
+	-- 석상이 될 뻔한 돌(2026-11-07 사용자: "랭킹석상 옆에 약간 찌그러진 돌 추가하고 말걸면 석상이 될뻔한 돌이다. 이렇게 나오게해줘"):
+	--  그림 없는 주민 가운데 rock(그림의 이름 — 공방 town.js TOWNMAP.statueRock · tools/build_lune_statue.py의 statue_rock)이 적힌 것의 자리에 그 돌을 놓는다(말은 주민의 말 그대로 · 순위와 상관없다)
+	for _, npc in rocks do
+		local n = npc.def
+		if CHARS.chars[n.rock] then
+			Sprite.new(layer :: Frame, n.rock, 1):set("idle", 1, n.x, n.y, -1) -- (-1 = 그린 그대로)
+		end
+	end
 	for _, npc in found do
 		local n = npc.def
 		local key = "plinth" .. tostring(n.statue)

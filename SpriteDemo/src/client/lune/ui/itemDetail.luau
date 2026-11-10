@@ -132,8 +132,14 @@ function ItemDetail.show(owner: string, spec)
 	Ui.line(panel, K.pad, y + math.floor(K.rowTop / 2), inner)
 	y += K.rowTop
 	for _, row in info.rows do
-		Ui.text(panel, row[1], K.pad, y + 3, K.labelW, { color = C.dim })
-		Ui.text(panel, row[2], K.pad + K.labelW, y + 3, Layout.detailValueW(), { color = C[row[3]] or C.text })
+		Ui.text(panel, row[1], K.pad, y + 3, K.labelW, { color = if row[3] == "extra" then C.extra else C.dim }) -- (추가 옵션의 줄은 이름도 연두 — 2026-11-07)
+		local value = Ui.text(panel, row[2], K.pad + K.labelW, y + 3, Layout.detailValueW(), { color = C[row[3]] or C.text })
+		if row[4] then
+			-- 같은 종류의 추가 옵션(연두 「+n」 — 2026-11-07): 값 바로 뒤에. 칸을 넘으면 값의 오른쪽 끝에 붙여 줄인다
+			local vw = value:size()
+			local x = math.min(vw + 6, Layout.detailValueW() - 28)
+			Ui.text(panel, row[4], K.pad + K.labelW + x, y + 3, Layout.detailValueW() - x, { color = C.extra })
+		end
 		y += K.rowH
 	end
 

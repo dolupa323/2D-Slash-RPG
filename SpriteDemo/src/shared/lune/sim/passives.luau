@@ -10,6 +10,7 @@
 local COMBAT = require(script.Parent.Parent.data["combat.generated"])
 local CLASSES = require(script.Parent.Parent.data["classes.generated"])
 local Kit = require(script.Parent.kit)
+local Items = require(script.Parent.items) -- (장비 추가 옵션 — 2026-11-07)
 
 local PASS = COMBAT.passive
 local RULES = COMBAT.rules
@@ -53,12 +54,18 @@ end
 Passives.scale = scaleOf
 
 -- 그 열쇠의 값 x 세기를 그 직업의 패시브에서 모두 더한다
+-- 장비 추가 옵션이 더하는 몫(2026-11-07 — sim/items.luau의 Items.exOf): 크리티컬 확률(% 그대로) · 크리티컬 데미지(배수 — %/100) · 최종 데미지(%/100)
+local EXKEY = { crit = { "crit", 1 }, critMul = { "critDmg", 0.01 }, final = { "final", 0.01 } }
+local function exAdd(h, key: string): number
+	local e = EXKEY[key]
+	return if e then Items.exOf(h, e[1]) * e[2] else 0
+end
 local function sum(h, key: string): number
 	local list = BY[h.class] and BY[h.class][key]
 	if not list then
-		return 0
+		return exAdd(h, key)
 	end
-	local total = 0
+	local total = exAdd(h, key)
 	for _, id in list do
 		local s = scaleOf(h, id)
 		if s > 0 then
@@ -239,10 +246,10 @@ end
 -- 받는 피해의 배수. casting = 기술을 쓰는 중인가(굳센 자세)
 function Passives.cut(h, casting: boolean?): number
 	local class = BY[h.class]
+	local mul = 1 - math.min(Items.exOf(h, "cut"), 90) / 100 -- (장비 추가 옵션의 받는 피해 감소 — 2026-11-07)
 	if not class then
-		return 1
+		return mul
 	end
-	local mul = 1
 	if class.cut then
 		local fx, s = Passives.get(h, "cut")
 		if fx then
@@ -268,15 +275,16 @@ function Passives.dodged(h)
 	end
 end
 
--- 쓰러질 피해를 받았다(살라맨더의 재점화): 버틸 수 있으면 열기를 모두 태우고, 남길 체력을 돌려준다(못 버티면 nil). now = 방의 시간
-function Passives.rekindle(h, now: number): number?
+-- 쓰러질 피해를 받았다(살라맨더의 재점화): 버틸 수 있으면 열기를 모두 태우고, 남길 체력 · 버틴 뒤 무적 초를 돌려준다(못 버티면 nil). now = 방의 시간
+--  무적(fx.guard — 2026-11-10 사용자 "살라맨더 재점화 하고 바로죽는게 문제야 1초라도 무적이 들어가야해": 그 전에는 보통 맞은 뒤와 같은 0.6초라 이어지는 타에 바로 쓰러졌다)
+function Passives.rekindle(h, now: number): (number?, number?)
 	local fx, s = Passives.get(h, "rekindle")
 	if not fx or not h.pass or now < h.pass.rekindle then
-		return nil
+		return nil, nil
 	end
 	h.pass.rekindle = now + fx.cd
 	h.kit.heat = 0
-	return math.max(1, math.floor(h.maxHp * fx.rekindle * s + 0.5))
+	return math.max(1, math.floor(h.maxHp * fx.rekindle * s + 0.5)), fx.guard
 end
 
 return Passives

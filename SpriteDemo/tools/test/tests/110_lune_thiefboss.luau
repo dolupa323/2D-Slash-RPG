@@ -398,7 +398,7 @@ do -- 큰 불단지: 끊지 못하면 방 전체가 터진다(어디 서 있어�
 	expect(gimOf(ev, "bigjar") == 1 and hurtsOf(ev, 53) >= 1, "5초를 다 모으면 방 전체가 터진다")
 end
 
--- ---- ⑤ 불씨 도둑 두목만의 예고(mark "thief") — 판정의 칠 = 맞는 자리 그대로 · 다른 보스의 그림과 다르다 ----
+-- ---- ⑤ 예고(2026-11-09 사용자: "그냥 단색 희미한 영역만 보이는거야" — 예고 = 맞을 자리의 희미한 단색 칠 하나 · 보스마다 다른 것은 머리 위 표시뿐) — 판정의 칠 = 맞는 자리 그대로 ----
 do
 	local BossFx = req("ReplicatedStorage/shared/lune/bossfx")
 	local function canvas()
@@ -429,10 +429,9 @@ do
 		BossFx.tell(c, X, floorY, -1, p, 0.5, 112, 704, 100, nil, "thief")
 		local lo, hi = X - p.zone.to, X - p.zone.from
 		expect(fill(c, lo, hi, floorY - p.zone.up, floorY), ("%s: 판정의 칠 = 맞는 자리(%d ~ %d · 높이 %d)"):format(id, lo, hi, p.zone.up))
-		local cOld, cK = canvas(), canvas()
-		BossFx.tell(cOld, X, floorY, -1, p, 0.5, 112, 704, 100, nil, nil)
-		BossFx.tell(cK, X, floorY, -1, p, 0.5, 112, 704, 100, nil, "knight")
-		expect(#c.rects ~= #cOld.rects and #c.rects ~= #cK.rects, id .. ": 다른 보스의 그림과 다르다")
+		local cOnly = canvas()
+		BossFx.tell(cOnly, X, floorY, -1, p, 0.5, 112, 704, nil, nil, "thief")
+		eq(#cOnly.rects, 1, id .. ": 칠 하나뿐(갈고리 · 자루 같은 모양이 없다)")
 	end
 	do -- 낚아채기: 갈고리가 날아갈 길(높이 0 ~ up)
 		local p = P.hook
@@ -448,25 +447,16 @@ do
 		BossFx.tell(c, X, floorY, -1, p, 0.5, 112, 704, 100, nil, "thief")
 		expect(fill(c, 112, X, floorY - p.dash.up, floorY), "굴러 박치기: 방 끝까지 · 높이 " .. p.dash.up)
 	end
-	do -- 큰 불단지: 방 전체 + 도화선(다른 그림)
+	do -- 큰 불단지: 방 전체(±999)는 방의 둘레까지(112 - 20 ~ 704 + 20) 칠 하나
 		local p = P.bigjar
-		local c, cOld = canvas(), canvas()
-		BossFx.tell(c, X, floorY, -1, p, 0.5, 112, 704, 100, nil, "thief")
-		BossFx.tell(cOld, X, floorY, -1, p, 0.5, 112, 704, 100, nil, nil)
-		expect(#c.rects > 0 and #c.rects ~= #cOld.rects, "큰 불단지: 타 들어가는 도화선")
+		local c = canvas()
+		BossFx.tell(c, X, floorY, -1, p, 0.5, 112, 704, nil, nil, "thief")
+		expect(#c.rects == 1 and c.rects[1].x == 92 and c.rects[1].x + c.rects[1].w == 724, "큰 불단지: 방의 둘레까지 칠 하나")
 	end
 	for _, grid in { false, true } do
 		local c = canvas()
 		BossFx.spot(c, 300, floorY, 14, 56, 0.6, nil, nil, "thief", grid)
-		local hasEdge = false
-		for _, r in c.rects do
-			if r.x == 300 - 14 or r.x == 300 + 14 - 1 then
-				hasEdge = true
-			end
-		end
-		local cK = canvas()
-		BossFx.spot(cK, 300, floorY, 14, 56, 0.6, nil, nil, "knight", grid)
-		expect(#c.rects > 15 and hasEdge and #c.rects ~= #cK.rects, (if grid then "화약 자루" else "굴려 놓은 폭탄") .. ": 판정의 양옆(x ± r)을 보이고 부단장의 것과 다르다")
+		expect(#c.rects == 1 and c.rects[1].x == 300 - 14 and c.rects[1].w == 28 and c.rects[1].h == 56, (if grid then "화약 비" else "폭탄 깔기") .. ": 표시된 자리 = 기둥 칠 하나(x ± r · 높이 up)")
 	end
 	do -- 머리 위: 불붙은 폭탄(다른 보스의 「!」 · 조준 십자선 · 칼과 다르다)
 		local c, cA, cK = canvas(), canvas(), canvas()

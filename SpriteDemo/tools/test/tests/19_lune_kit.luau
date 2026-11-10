@@ -349,6 +349,7 @@ do
 	local G = core.gauge
 	-- 사신 게이지(2026-10-31 사용자: "게이지 직업으로 설계하자 메이플 루미너스 처럼 사신화가 1차부터 있고 사신 게이지가 있어 …"):
 	--  낫 기술이 맞으면 hit · 쓰러뜨리면 kill(차수의 배수 — 전직할수록 빨리) · 가득하면 멈춘다 · 공격력은 오르지 않는다 · 저절로 줄지 않는다
+	--  (2026-11-09 낮의 「1초에 5씩 · 차수마다 가득」은 되돌렸다 — 사용자 "사신화 가동률을 롤백하고 사신화 스펙을 조정해")
 	local room, h, a, b0 = arena("reaper", { rp_soul = 10 })
 	b0.x = 1430
 	h.job = 1
@@ -365,10 +366,12 @@ do
 	strike(room, h, "rp_hook", 2, nil)
 	near(h.kit.gauge - g1, G.hit * G.job[4], 1e-6, "4차는 그 배수만큼 빨리 찬다")
 	expect(G.job[1] < G.job[2] and G.job[2] < G.job[3] and G.job[3] < G.job[4], "전직할수록 빨리")
+	eq(Kit.gaugeMax(h), G.max, "가득은 하나(" .. G.max .. ")")
 	h.kit.gauge = G.max - 0.5
 	strike(room, h, "rp_hook", 2, nil)
 	eq(h.kit.gauge, G.max, "가득하면 멈춘다")
 	eq(Kit.view(h).gauge, G.max, "화면에 게이지가 간다")
+	eq(Kit.view(h).gaugeMax, G.max, "화면에 가득이 간다(발밑 막대 · 퀵슬롯의 빛)")
 	near(Kit.attack(h), 1, 1e-9, "게이지는 공격력을 올리지 않는다(세지는 것은 사신화)")
 	Kit.tick(h, 999)
 	eq(h.kit.gauge, G.max, "저절로 줄지 않는다")
@@ -382,7 +385,7 @@ do
 	expect(not Kit.gainGauge(h, "hit"), "사신화 동안에는 차지 않는다")
 	local outF = strike(room, h, "rp_hook", 2, nil)
 	expect(#procs(outF, "shade") >= 1, "사신화: 맞을 때마다 그림자 낫")
-	expect(math.abs(procs(outF, "shade")[1].dmg / mains(outF)[1].dmg - core.form.shade) < 0.05, "그림자 낫 = 그 타 피해의 절반")
+	expect(math.abs(procs(outF, "shade")[1].dmg / mains(outF)[1].dmg - core.form.shade) < 0.05, "그림자 낫 = 그 타 피해의 form.shade(2026-11-09 50% → 15%)")
 	h.buffs.rp_form = nil
 	h.kit.gauge = 50
 	eq(Buffs.cast(h, "rp_form", 0), nil, "게이지가 덜 차면 사신화를 못 쓴다")
@@ -393,9 +396,9 @@ do
 	-- 피해에 들어간다(같은 씨앗의 방 둘): 사신화 = 피해 +40%
 	local roomA, hA = arena("reaper", { rp_soul = 10 }, 21)
 	local roomB, hB = arena("reaper", { rp_soul = 10 }, 21)
-	hB.kit.gauge = G.max
+	hB.kit.gauge = Kit.gaugeMax(hB)
 	Buffs.cast(hB, "rp_form", 0)
-	near(mains(strike(roomB, hB, "rp_hook", 2, nil))[1].dmg / mains(strike(roomA, hA, "rp_hook", 2, nil))[1].dmg, 1.4, 0.02, "사신화: 피해 +40%")
+	near(mains(strike(roomB, hB, "rp_hook", 2, nil))[1].dmg / mains(strike(roomA, hA, "rp_hook", 2, nil))[1].dmg, 1 + COMBAT.buffs.rp_form.fx.dmg, 0.02, "사신화: 피해 +" .. COMBAT.buffs.rp_form.fx.dmg * 100 .. "%(2026-11-09 +40% → +15%)")
 
 	-- 도깨비불: 2초에 한 번, 맞은 적에게 — 초당 피해의 18%(한 번에 0.36초 치)
 	local roomW, hW, aW = arena("reaper", { rp_wisp = 10 })
@@ -555,6 +558,13 @@ do
 		end
 	end
 	expect(Kit.hot(h) and Kit.view(h).hot == true and Kit.view(h).heat == core.max, "달아올랐다")
+	-- 달아오름은 강화판으로 열기를 써도 이어진다(2026-11-07 사용자 "계속 때리고 막타치면 열기 빠지는데 뎀감효과가 깜빡깜빡 거리는거"): 열기가 0이 돼도 꺼지지 않고, 식어서 기준 아래로 내려갈 때만 꺼진다(아래)
+	do
+		local keep = h.kit.heat
+		h.kit.heat = 0
+		expect(Kit.hot(h) and Kit.view(h).hot == true, "강화판으로 열기를 다 써도 달아오름(받는 피해 감소)은 이어진다")
+		h.kit.heat = keep
+	end
 	-- cool초(6) 동안 못 맞히면 초마다 decay(15)씩 식는다(2026-11-03 — 그 전 3초 · 25)
 	local changed = Kit.tick(h, core.cool - 0.5)
 	expect(not changed and h.kit.heat == core.max, "식기 시작하는 때 전에는 식지 않는다")

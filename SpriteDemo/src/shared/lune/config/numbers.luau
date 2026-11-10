@@ -86,7 +86,7 @@ function N.xpNeed(L: number): number -- 다음 레벨까지 필요한 경험치(
 	if L >= MAX then
 		return N.XP_WALL
 	end
-	return N.killsAt(L) * N.mobXp(L)
+	return round(N.killsAt(L) * N.mobXp(L) * (D.XP_EASE or 1)) -- XP_EASE = Lv.1 ~ 149의 몫(2026-11-06 「150레벨까지 조금 완화」 — 0.8 · 공방 numbers.js)
 end
 -- 내 레벨과 몬스터 레벨의 차이에 따른 경험치 %(차이 10 안쪽 100 · 11~20은 한 레벨마다 5씩 줄어 50까지 · 21 넘으면 10)
 function N.xpRate(myLevel: number, mobLevel: number): number

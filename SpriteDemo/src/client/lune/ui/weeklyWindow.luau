@@ -19,6 +19,7 @@ local W = WD.words
 local WeeklyWindow = {}
 WeeklyWindow.TITLE = W.title
 WeeklyWindow.mode = "normal" -- 고른 난이도(창을 닫았다 열어도 남는다)
+WeeklyWindow.practice = false -- [격파] [연습] 가운데 연습을 골랐는가(2026-11-10 — 공방 weekboss.js practice)
 
 function WeeklyWindow.size(): (number, number)
 	return S.w, S.h
@@ -48,6 +49,16 @@ function WeeklyWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 		btn.frame.Name = if mode == "hard" then "Hard" else "Normal"
 		modeBtn[mode] = btn
 	end
+	-- [격파] [연습](2026-11-10 사용자 "보스 연습모드도 추가해야해 내가 그 주에 그 보스를 클리어해도 도전할수있게 보상은 안주는 그냥 연습모드인거지"): 고른 쪽이 밝다
+	local kindBtn = {}
+	for i, k in { "clear", "practice" } do
+		local btn = Ui.button(body, if k == "practice" then W.kindPractice else W.kindClear, if i == 1 then 0 else half + S.modeGap, S.kindY, if i == 1 then half else w - half - S.modeGap, function()
+			WeeklyWindow.practice = k == "practice"
+			view.refresh()
+		end)
+		btn.frame.Name = if k == "practice" then "Practice" else "Clear"
+		kindBtn[k] = btn
+	end
 	local info = Ui.text(body, "", 0, S.infoY, w, { color = C.dim })
 	Ui.text(body, W.pay, 0, S.payY, S.payLabelW, { color = C.dim })
 	-- 격파 보상 세 줄(2026-10-27 — sim/weekly.luau의 payLines · 고른 난이도마다): 달가루 · 달돈 / 첫 격파 칭호(있는 보스만 — 그림자 사수는 없다 · 10-28) / 이름 붙은 장비(하드) — 장신구 줄은 민트
@@ -55,7 +66,7 @@ function WeeklyWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 	for i = 1, 3 do
 		payRows[i] = Ui.text(body, "", S.payLabelW, S.payY + (i - 1) * S.payGap, w - S.payLabelW, { color = if i == 3 then C.accent else C.gold })
 	end
-	Ui.text(body, W.note, 0, S.noteY, w, { color = C.dim })
+	local noteLine = Ui.text(body, W.note, 0, S.noteY, w, { color = C.dim }) -- (연습이면 「이번 주 격파와 상관없이 · 오늘 남은 연습 n/20」)
 	Ui.text(body, W.reset, 0, S.resetY, w, { color = C.dim })
 	local bthird = math.floor((w - S.btnGap * 2) / 3) -- 단추 셋: 혼자 입장 · 파티 입장 · 파티 찾기(2026-11-05)
 	local entering = false
@@ -64,7 +75,7 @@ function WeeklyWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 			return
 		end
 		entering = true
-		ctx.weekDo("enter", b.id, WeeklyWindow.mode, party)
+		ctx.weekDo("enter", b.id, WeeklyWindow.mode, party, WeeklyWindow.practice)
 		entering = false
 	end
 	local solo = Ui.button(body, W.solo, 0, S.btnY, bthird, function()
@@ -89,22 +100,52 @@ function WeeklyWindow.build(body: Frame, ctx, w: number, _h: number, arg: any)
 		local done = got and got.view and got.view.done and got.view.done[b.id]
 		local mode = WeeklyWindow.mode
 		local m = b[mode]
+		local prac = WeeklyWindow.practice
+		local pracMax = Weekly.PRACTICE.perDay or 999999 -- (false = 횟수 제한 없음 — 2026-11-10)
+		local pracLeft = if got and got.view and typeof(got.view.prac) == "number" then got.view.prac else pracMax
+		for k, btn in kindBtn do
+			btn:setMain((k == "practice") == prac)
+		end
+		noteLine:set(if prac then Format.fill(W.practiceNote, { n = pracLeft, max = pracMax }) else W.note)
 		week:set(Format.fill(W.week, { n = if done then 1 else 0 }))
 		week:color(if done then C.dim else C.accent)
 		for k, btn in modeBtn do
 			btn:setMain(k == mode)
 		end
-		info:set(Format.fill(W.modeLine, { need = m.need, lv = m.lv }) .. " · " .. Format.fill(W.time, { m = math.floor((b.time or WD.time) / 60) })) -- (그 보스만의 제한 시간 — 용암 거인 20분)
-		local lines, itemAt = Weekly.payLines(b, mode)
-		for i, t in lines do
-			payRows[i]:set(t)
-			payRows[i]:color(if i == itemAt then C.accent else C.gold) -- 장신구 줄은 민트(칭호가 없는 보스는 둘째 줄 — 2026-10-28)
+		-- (그 보스만의 제한 시간 — 용암 거인 20분 · 물약 제한이 있으면 끝에 「물약 20개까지」 — 2026-11-07)
+		local infoText = Format.fill(W.modeLine, { need = m.need, lv = m.lv }) .. " · " .. Format.fill(W.time, { m = math.floor((b.time or WD.time) / 60) })
+		if typeof(b.potionCap) == "number" then
+			infoText ..= " · " .. Format.fill(W.potionCap, { n = b.potionCap })
 		end
-		local open = not done and level >= m.need
+		info:set(infoText)
+		local lines, itemAt = Weekly.payLines(b, mode)
+		if prac then
+			lines, itemAt = { W.practicePay, "", "" }, 0 -- 연습: 보상 없음(2026-11-10)
+		end
+		for i, t in lines do
+			-- 칸(w - payLabelW)을 넘는 줄(소비 아이템이 넷 — 용암 거인 · 2026-11-07 윤슬 조각을 더하며): 뒤에서부터 덜어 내고 「 외 n가지」(글은 칸을 넘지 않는다)
+			local avail = w - S.payLabelW
+			if Ui.measure(t) > avail and string.find(t, " · ", 1, true) then
+				local parts = string.split(t, " · ")
+				local cut = 0
+				while #parts > 1 and Ui.measure(table.concat(parts, " · ") .. Format.fill(W.payMore or " 외 {n}가지", { n = cut + 1 })) > avail do
+					table.remove(parts)
+					cut += 1
+				end
+				if cut > 0 then
+					t = table.concat(parts, " · ") .. Format.fill(W.payMore or " 외 {n}가지", { n = cut })
+				end
+			end
+			payRows[i]:set(t)
+			payRows[i]:color(if prac then C.dim elseif i == itemAt then C.accent else C.gold) -- 장신구 줄은 민트(칭호가 없는 보스는 둘째 줄 — 2026-10-28) · 연습은 흐리게
+		end
+		local open = (if prac then pracLeft > 0 else not done) and level >= m.need -- (연습: 이번 주 격파와 상관없이 · 오늘 남은 연습이 있으면)
 		solo:setEnabled(open)
 		party:setEnabled(open and ctx.partyHere ~= nil and ctx.partyHere())
 		local why = got and got.why
-		if not why and done then
+		if not why and prac and pracLeft <= 0 then
+			why = Format.fill(W.practiceOut, { max = pracMax })
+		elseif not why and done and not prac then
 			why = W.done
 		elseif not why and level < m.need then
 			why = Format.fill(W.low, { a = m.need })

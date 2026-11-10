@@ -9,6 +9,7 @@
 --  걸리는 순간의 이펙트 · 걸려 있는 동안의 모습은 직업 묶음(shared/lune/kits)이 화면에서 그린다.
 local COMBAT = require(script.Parent.Parent.data["combat.generated"])
 local CLASSES = require(script.Parent.Parent.data["classes.generated"])
+local Items = require(script.Parent.items) -- (장비 추가 옵션 — 2026-11-07)
 
 local BUFF = COMBAT.buffs
 local FLOOR = CLASSES.skillRule.floor
@@ -102,7 +103,7 @@ end
 
 -- 주는 피해의 배수
 function Buffs.dmg(h): number
-	local mul = 1
+	local mul = 1 + Items.exOf(h, "dmg") / 100 -- (장비 추가 옵션의 데미지 % — 2026-11-07 · 화면의 「데미지」 줄에도 든다)
 	for id, b in h.buffs do
 		local fx = BUFF[id].fx
 		if fx.dmg and works(h, b, fx) then

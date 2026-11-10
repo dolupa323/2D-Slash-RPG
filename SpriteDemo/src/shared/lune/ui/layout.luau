@@ -177,6 +177,26 @@ function L.shopSpace(uiW: number, uiH: number, us: number?)
 	return { k = k, panelW = panelW, panelH = panelH, total = total, x0 = x0, y0 = y0, previewX = 0, panelX = SP.previewW + SP.gap, leaveX = uiW - SP.pad - SP.leaveW }
 end
 
+-- 달빛 상점 — 화면 가득(2026-11-10 사용자 "달빛상점 접속 ui를 좀 메이플 캐시샵처럼 전체화면으로해서 좀 둘러보기도 좋게 개편을 해줘" · 공방 bm.js BM_SHOP.full · 공방 paint.js cashFullLayout과 같은 셈):
+--  위 줄(topH — 제목 · 「나가기」) 아래로 왼쪽 = 미리보기(화면 폭 x previewK · previewMin ~ previewMax) · 오른쪽 = 상품 판(남은 폭 모두). 판 안의 상품은 카드로 cols줄(카드는 가장 좁게 card.min · 밀기 막대 자리를 뺀 폭에 들어가는 만큼)
+-- inset = 화면 위의 Roblox 기본 단추 띠가 덮는 높이(Stage.insetTop — 2026-11-10 사용자 "달빛상점 f11 안누르면 해상도가 안맞아서 나갈수가없어": 창 모드에서 윗줄의 「나가기」가 그 띠 밑에 깔렸다) · 공방 paint.js cashFullLayout과 같다
+function L.shopFull(uiW: number, uiH: number, inset: number?)
+	local top = math.max(0, inset or 0)
+	local BM = require(script.Parent.Parent.data["bm.generated"])
+	local F = BM.shop.full
+	local CARD = F.card
+	local previewW = math.clamp(math.floor(uiW * F.previewK), F.previewMin, F.previewMax)
+	local h = uiH - F.topH - top - F.pad
+	local panelX = F.pad + previewW + F.gap
+	local panelW = uiW - panelX - F.pad
+	local bodyW, bodyH = panelW - F.panelPad * 2, h - F.panelPad * 2
+	local gridW = bodyW - D.cash.scrollW - 6 -- (오른쪽의 밀기 막대 자리)
+	local cols = math.max(2, math.floor((gridW + CARD.gap) / (CARD.min + CARD.gap)))
+	local cardW = math.floor((gridW - (cols - 1) * CARD.gap) / cols)
+	return { top = top, previewX = F.pad, previewY = F.topH + top, previewW = previewW, h = h, panelX = panelX, panelY = F.topH + top, panelW = panelW, bodyW = bodyW, bodyH = bodyH,
+		cols = cols, cardW = cardW, cardH = CARD.h, gap = CARD.gap, leaveX = uiW - F.pad - BM.shop.space.leaveW }
+end
+
 -- 스마트폰의 「단추 배치」 목록(공방 ui.js의 UILAYOUT.touchChooser — 2026-10-21 점검). 놓을 것이 n개 · 화면 틀의 높이 uiH(왼쪽 위의 Roblox 단추가 가리는 높이는 뺀 것)일 때:
 --  판은 왼쪽 위에 서고 화면에 들어가는 만큼만 길어진다 — 넘치는 줄은 그 안에서 위아래로 민다.
 --  돌려주는 것: w · h = 판의 크기 / viewH = 칸들이 보이는 높이 / contentH = 칸들의 높이 / rowH = 한 줄(칸 + 이름 두 줄) / scroll = 밀어야 다 보이는가

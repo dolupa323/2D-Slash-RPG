@@ -169,9 +169,10 @@ do
 	end
 	eq(keys.pet, "펫", "「펫」 탭이 있다")
 	eq(keys.pass, nil, "「패스」 탭은 없다(꺼 둠)")
+	expect(table.find(SHOP.rows.pet, "petbox") ~= nil, "펫 탭에 윤슬 펫 상자(2026-11-07 — 펫은 상자에서만)")
 	for _, q in RIDE.pets do
 		if not q.free then
-			expect(table.find(SHOP.rows.pet, q.id) ~= nil and table.find(SHOP.rows.conv, q.id) == nil, q.id .. ": 펫 탭에 있고 편의 탭에는 없다")
+			expect(table.find(SHOP.rows.pet, q.id) == nil and table.find(SHOP.rows.conv, q.id) == nil, q.id .. ": 펫을 따로 파는 줄은 없다(상자에서 나온다)")
 		end
 	end
 	local pass

@@ -304,13 +304,15 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 	if drops and onPick and now >= self.nextPick then
 		local cy = b.y - 6 -- 펫 몸의 가운데쯤(발밑에서 6점 위)
 		local suck = RideView.sucks(self.petId) -- 로벅스 펫: 둘레 suck.r점 원 안을 빨아들인다(2026-10-22)
-		local radius = if suck then P.suck.r else P.magnet
-		local far = if suck then (P.suck.reach or P.reach + P.slack) else P.reach + P.slack -- 서버가 받는 영웅과의 거리(로벅스 펫은 더 멀리 — 10-22 「범위 더크게」)
+		local SK = (PET[self.petId] and PET[self.petId].suck) or P.suck -- 드문 상자 펫은 제 빨아들이기(맵 전체 — 2026-11-07 ride.js의 suck)
+		local radius = if suck then SK.r else P.magnet
+		local far = if suck then (SK.reach or P.reach + P.slack) else P.reach + P.slack -- 서버가 받는 영웅과의 거리(로벅스 펫은 더 멀리 — 10-22 「범위 더크게」)
 		local pick, pd = nil, math.huge
 		for id, d in drops do
 			local ddx, ddy = d.x - b.x, d.y - 4 - cy
 			local dist = math.sqrt(ddx * ddx + ddy * ddy)
-			if not d.nopet and dist <= radius and dist < pd and (self.tried[id] or 0) <= now and math.abs(d.x - hero.x) <= far then
+			local settled = not suck or (now - (d.born or -math.huge)) >= (SK.wait or 0) -- 빨아들이는 펫: 떨어진 뒤 wait초가 지난 것만(2026-11-10 사용자 "성능좋은 희귀 펫들 빨아들이는게 그냥 아이템 나오자마자 띡띡 없어져서 체감 자체가 안되잖아 드롭이 되면 기다렸다가 먹는다는 느낌이 있어야지 피드백적으로")
+			if settled and not d.nopet and dist <= radius and dist < pd and (self.tried[id] or 0) <= now and math.abs(d.x - hero.x) <= far then
 				pick, pd = id, dist
 			end
 		end
@@ -319,7 +321,7 @@ function RideView:petStep(now: number, hero, drops: any?, onPick: ((number, numb
 			if self.goal == pick then
 				self.goal = nil
 			end
-			self.nextPick = now + (if suck then P.suck.every else P.every)
+			self.nextPick = now + (if suck then SK.every else P.every)
 			onPick(pick, b.x, cy, self.slot)
 		end
 	end

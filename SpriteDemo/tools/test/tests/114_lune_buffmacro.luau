@@ -131,6 +131,13 @@ MOCK("Client/lune/ui/ui", {
 	pic = function(_, name) local p = frame("Pic"); p.pic = name; return p end,
 	setPic = function(label, name) label.pic = name; label.Visible = name ~= nil end,
 	measure = function(t) return #t * 4 end,
+	numberField = function(_, x, y, w, h2, value) -- (스킬 창의 「한 번에」 칸 — 2026-11-10)
+		local it = { box = { Parent = frame("Field") }, value = value }
+		function it.get()
+			return it.value
+		end
+		return it
+	end,
 })
 local opened = {}
 MOCK("Client/lune/ui/windows", { open = function(id) table.insert(opened, id) end })

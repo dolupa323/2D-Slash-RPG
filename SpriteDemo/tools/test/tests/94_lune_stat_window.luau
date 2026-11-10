@@ -27,6 +27,7 @@ local function textItem(t)
 	return strict(it, "글 칸(Ui.text)")
 end
 local buttons = {}
+local perField = nil -- (「한 번에」 칸 — 2026-11-10)
 MOCK("Client/lune/stage", { uiW = 960, uiH = 540, uiScale = 1, ui = frame("Ui") })
 MOCK("Client/lune/ui/ui", {
 	COLOR = setmetatable({}, { __index = function() return Color3.fromRGB(1, 2, 3) end }),
@@ -46,6 +47,14 @@ MOCK("Client/lune/ui/ui", {
 		return strict(b, "단추(Ui.button)")
 	end,
 	measure = function(t) return #t * 4 end,
+	numberField = function(_, x, y, w, h, value, onSet)
+		local it = { box = { Parent = frame("Field") }, value = value, onSet = onSet }
+		function it.get()
+			return it.value
+		end
+		perField = it
+		return it
+	end,
 })
 local StatWindow = req("Client/lune/ui/statWindow")
 local Titles = req("ReplicatedStorage/shared/lune/sim/titles")
@@ -82,6 +91,18 @@ if ok then
 		local last = sent[#sent]
 		expect(last and last[1] == "Title" and last[2] == "max10", "「바꾸기」 = 다음 칭호를 서버에 보낸다")
 	end
+	-- 「한 번에 [n]」(2026-11-10): +를 누르면 적은 점수만큼 · 남은 점수보다 크면 남은 만큼
+	local per = perField
+	expect(per ~= nil and per.value == 1, "「한 번에」 칸이 있다(처음 1)")
+	expect(has("한 번에"), "「한 번에」 글")
+	per.value = 3
+	buttons["+"].click()
+	local last = sent[#sent]
+	expect(last and last[1] == "StatAdd" and last[3] == 3, "+ = 적은 3점을 한 번에 " .. tostring(last and last[3]))
+	per.value = 99
+	buttons["+"].click()
+	last = sent[#sent]
+	expect(last and last[1] == "StatAdd" and last[3] == 5, "남은 5점보다 크면 5점 " .. tostring(last and last[3]))
 	-- 칭호가 없으면 「없음」 · 단추가 꺼진다
 	me.titles, me.title = {}, false
 	view.refresh(me)

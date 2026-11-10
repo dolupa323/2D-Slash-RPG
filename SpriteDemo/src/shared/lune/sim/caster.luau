@@ -18,6 +18,7 @@ local Buffs = require(script.Parent.buffs)
 local Passives = require(script.Parent.passives)
 local Physics = require(script.Parent.physics)
 local Lines = require(script.Parent.lines) -- 타수 나누기(한 타를 여러 줄로)
+local LavaGim = require(script.Parent.lavagim) -- 부위가 있는 보스의 겨눌 자리(Gim.aimAt — 2026-11-10)
 
 local CAST = COMBAT.cast
 local RULE = COMBAT.castRule
@@ -157,6 +158,10 @@ local function dress(m)
 	m.stun = m.stun or 0
 	m.rend = m.rend or 0
 	m.cracks = m.cracks or 0
+	-- 겨눌 자리(용암 거인의 팔 — 손 · 2026-11-10): aimX = 대상을 고르는 거리 · 그림의 가로 · aimTop = 땅 위 높이(없으면 몸의 자리 그대로)
+	local aim = LavaGim.aimAt(m.def, m.hp, m.maxHp)
+	m.aimX = if aim then m.x + aim[1] else nil
+	m.aimTop = if aim then aim[2] else nil
 end
 
 function Caster:syncMobs()
@@ -256,7 +261,7 @@ local function unitOf(hero, id: string, lv: number): number
 	local p = if lv > 0 then Caster.profile(id, lv) else base
 	local scale = castScale(hero.skills[id] or 0, def.max)
 	local charge = if lv > 0 then Kit.chargeMul(hero, lv, base.time, perOf(id)) else 1
-	return def.rate * (base.time + def.cdTime) * scale * charge / p.w
+	return def.rate * (base.time + def.cdTime) * scale * charge * (def.real or 1) / p.w -- real = 실제 피해에만 곱하는 몫(2026-11-06 — 공방 combat.js CAST · 스킬 창의 %는 rate 그대로)
 end
 
 -- 그 스킬의 한 타를 몇 줄로 적는가(타수 나누기 — sim/lines.luau): 빈 방에서 잰 「붙어 있는 적 한 마리가 한 번 쓸 때 맞는 타의 수」로. 극딜기(큰 기술 — nuke)는 더 많이
@@ -271,7 +276,10 @@ end
 function Caster:context(a, id: string, lv: number, mates)
 	local def = CAST[id]
 	-- 모아 친 한 방(모은 단계 1 이상 — 액시온)은 피해 숫자 한 줄(2026-10-28 사용자: "딜도 단일타수로 빵 뜨고" → 고르심 「모은 한 방만 한 숫자」)
-	return { id = id, lv = lv, kind = if def.type == "mob" or def.type == "boss" then def.type else nil, unit = if self.probe then 1 else unitOf(a.hero, id, lv), lines = if self.probe or lv > 0 then 1 else Caster.lines(id), mates = mates }
+	-- mob = 보스가 아닌 적에게 곱하는 수(백귀야행 — 공방 combat.js CAST의 mob · 아래 Caster:strike).
+	--  2026-11-09 사용자 "백귀야행의 깡데미지를 한참더 줄이고 그비율만큼 일반몹데미지로 보정해 사신화 백귀야행 초기화의 매커니즘이 사냥에서만 쓰이게": 쓰임 1/4 · 일반 몬스터에게 4배(그대로) ·
+	--  다시 쓰기 없음은 어디서나(2026-11-10 — 11-09의 「사냥터에서만」을 거뒀다). 보스에게는 백귀야행이 1/4이라(위 mob · CAST의 share) 따로 막지 않는다
+	return { id = id, lv = lv, kind = if def.type == "mob" or def.type == "boss" then def.type else nil, mob = def.mob, unit = if self.probe then 1 else unitOf(a.hero, id, lv), lines = if self.probe or lv > 0 then 1 else Caster.lines(id), mates = mates }
 end
 
 -- 졸개 하나에게 몫 w의 타. 맞았으면 true(landed에 적는다)
@@ -308,7 +316,7 @@ function Caster:strike(a, m, w: number, o, landed): boolean
 	end
 	local power = Hero.powerRaw(hero) * Kit.attack(hero) * Buffs.dmg(hero) * Passives.atk(hero)
 	local roll = 1 + room.rng:NextNumber(-RULES.spread, RULES.spread) / 100
-	local fit = if (ctx.kind == "mob" and m.def.boss) or (ctx.kind == "boss" and not m.def.boss) then 1 else 1 + RULES.targetBonus / 100
+	local fit = (if (ctx.kind == "mob" and m.def.boss) or (ctx.kind == "boss" and not m.def.boss) then 1 else 1 + RULES.targetBonus / 100) * (if ctx.mob and not m.def.boss then ctx.mob else 1) -- (ctx.mob = 보스가 아닌 적에게 — 백귀야행 · Caster:context)
 	-- 패시브가 그 적에게 붙이는 것(넘어진 적 · 체력 · 거리 · 이어 맞히기 · 모은 단계 · 옛 사냥기)
 	local mul, crit = Passives.vs(hero, m, { skill = ctx.id, charge = ctx.lv, now = room.time }), false
 	-- 치명타: 모든 직업의 기술 타가 확률로(1차와 같은 셈 — sim/room.luau의 skillHit). 흘리기 = 피한 뒤의 첫 베기는 반드시
@@ -347,7 +355,7 @@ function Caster:strike(a, m, w: number, o, landed): boolean
 			end
 		end
 	end
-	table.insert(landed, { mob = m, dmg = dealt, dead = dead })
+	table.insert(landed, { mob = m, dmg = dealt / room:bossMul(hero, m), dead = dead }) -- (보스 보정을 나눈 피해 — 덧타가 두 번 곱하지 않게: room.luau Room:bossMul)
 	return true
 end
 
@@ -462,10 +470,11 @@ local function makeG(self, a)
 		local from, not_, front = (o and o.from) or hero.x, o and o["not"], o and o.front
 		local best, bd = nil, range
 		for _, m in room.mobs do
-			if not aliveMob(m) or m == not_ or abs(m.y - hero.y) > 60 or (front and (m.x - hero.x) * hero.dir < -8) then
+			local mx = m.aimX or m.x -- (부위가 있는 보스는 겨눌 자리 — 2026-11-10)
+			if not aliveMob(m) or m == not_ or abs(m.y - hero.y) > 60 or (front and (mx - hero.x) * hero.dir < -8) then
 				continue
 			end
-			local d = abs(m.x - from)
+			local d = abs(mx - from)
 			if d <= bd then
 				bd, best = d, m
 			end
@@ -475,11 +484,18 @@ local function makeG(self, a)
 	function g.boss()
 		local best = nil
 		for _, m in room.mobs do
-			if aliveMob(m) and abs(m.x - hero.x) < 280 and (not best or m.maxHp > best.maxHp) then
+			if aliveMob(m) and abs((m.aimX or m.x) - hero.x) < 280 and (not best or m.maxHp > best.maxHp) then
 				best = m
 			end
 		end
 		return best
+	end
+	-- 그 몬스터를 겨눌 자리: 가로 · 머리(땅 위) — 부위가 있는 보스(용암 거인의 팔)는 손(Gim.aimAt) · 아니면 몸의 자리와 머리 위(top — 없으면 0)
+	function g.spot(m, top: number?): (number, number)
+		if m.aimX then
+			return m.aimX, m.y - (m.aimTop or 0)
+		end
+		return m.x, m.y - (m.h or 0) - (top or 0) -- (뜬 높이가 아직 없는 몬스터 — 재 보기의 빈 방: 0)
 	end
 	g.shake, g.stop, g.invert, g.dim, g.ghost, g.sprite, g.call, g.split = NOOP, NOOP, NOOP, NOOP, NOOP, NOOP, NOOP, NOOP -- split = 화면 가르기(화면만 — 2026-10-24)
 	-- 소생(무니 4차): 쓰러져 비석이 선 파티원을 그 자리에서 일으킨다 — 최대 체력의 일부로(설계 CASTRULE.heal의 revive). 쓰러진 벌칙도 없던 일이 된다

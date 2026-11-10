@@ -66,7 +66,47 @@ local Kit = req("ReplicatedStorage/shared/lune/sim/kit")
 local Buffs = req("ReplicatedStorage/shared/lune/sim/buffs")
 local Caster = req("ReplicatedStorage/shared/lune/sim/caster")
 local Weekly = req("ReplicatedStorage/shared/lune/sim/weekly")
+local Room = req("ReplicatedStorage/shared/lune/sim/room")
 World.start()
+
+-- 잘하는 손의 몫 세기(2026-11-07): 보스에게 들어간 피해를 그 피해를 낸 서버의 기술 판(Caster의 ctx)에 붙인다 — 늦게 터지는 타 · 날아가는 것 · 덧불도 제 판으로.
+--  판이 처음 맞힌 때 열려 있던 기록(손이 누른 기술 · 그때의 상태)이 그 판의 주인이다 · 판이 없는 것(설치 · 소환 · 사출기 · 1차)은 「other」(고르는 데 쓰지 않는다)
+local ATTR = { hand = nil :: any, ctx = nil :: any }
+do
+	local cStrike, rStrike = Caster.strike, Room.strike
+	Caster.strike = function(self, a, ...)
+		local prev = ATTR.ctx
+		ATTR.ctx = a and a.ctx
+		local r = cStrike(self, a, ...)
+		ATTR.ctx = prev
+		return r
+	end
+	Room.strike = function(self, hero, mob, dmg, ...)
+		local dead, dealt = rStrike(self, hero, mob, dmg, ...)
+		local hd = ATTR.hand
+		if hd and hero == hd.h and mob.def and mob.def.boss and (dealt or 0) > 0 then
+			local ctx = ATTR.ctx
+			local key = "other"
+			if ctx then
+				if ctx.__rec == nil then
+					ctx.__rec = if hd.rec then hd.rec.id .. "|" .. hd.rec.st else "other"
+					if ctx.enh and ctx.enh > 1 then
+						hd.enhN += 1
+						hd.enhSum += ctx.enh
+					end
+				end
+				key = ctx.__rec
+			end
+			hd.by[key] = (hd.by[key] or 0) + dealt
+			local stNow = hd:state()
+			hd.bySt[stNow] = (hd.bySt[stNow] or 0) + dealt
+			if key == "other" then
+				hd.otherSt[stNow] = (hd.otherSt[stNow] or 0) + dealt
+			end
+		end
+		return dead, dealt
+	end
+end
 
 local B = Weekly.boss("shadowarcher")
 if RAID_LV then
@@ -208,8 +248,252 @@ end
 local Hand = {}
 Hand.__index = Hand
 function Hand.new(p, s, hold: string)
-	local self = setmetatable({ p = p, s = s, h = s.hero, plan = kitOf(s.hero), hold = hold, act = nil, last = {}, uses = {} }, Hand)
+	local self = setmetatable({ p = p, s = s, h = s.hero, plan = kitOf(s.hero), hold = hold, act = nil, last = {}, uses = {}, stats = {}, rec = nil, total = 0, by = {}, enhN = 0, enhSum = 0, stT = {}, bySt = {}, otherSt = {}, gs = {}, after = { s = 0, n = 0 }, g0 = { s = 0, n = 0 }, fPhases = 0 }, Hand)
 	return self
+end
+
+-- ---------- 잘하는 사람의 손(LUNE_RAID_EXPERT=1 — 2026-11-07 사용자: "사신화 가동률이랑 사냥 3차기로 하면 게이지 제일많이 차는거랑 백귀야행광클하면서 dps 뽑아내는거 생각해야해
+--   그리고 살라맨더 열기 최대충전일때만 효과들어가는 패시브도 생각해야하고 … 무슨 이상한 시험 돌려가지고 정확하지도 않은 수치 받는게 아니고") ----------
+--  기술마다 · 상태마다(리퍼: 사신화 중 F · 살라맨더: 강화판 E) 실제로 들어간 피해 ÷ 그 기술을 쓴 시간(다음 기술을 누를 때까지)을 재어 두고, 쓸 수 있는 것 가운데 가장 센 것을 고른다(처음 보는 것은 한 번씩 써 본다).
+--  리퍼: 사신화가 아니고 게이지가 덜 찼으면 게이지가 가장 빨리 차는 것(맞힌 판마다 — 영혼 수확은 더 · 빨리 끝나는 기술일수록 초당 더) → 가득 차면 사신화(버프처럼 바로) → 사신화 동안은 다시 쓰기가 없는 기술(백귀야행 …)을 쉬지 않고.
+--  살라맨더: 열기가 가득하면(또는 폭주) 강화판으로 가장 센 것 · 아니면 (그 기술의 피해 + 강화판 한 번의 덤 ÷ 3) ÷ 시간이 가장 큰 것(열기는 맞힌 판마다 34 — 세 판이면 가득).
+function Hand:castable(now: number)
+	local h, out = self.h, {}
+	for id, lv in h.skills do
+		if lv < 1 or (RAID_SKIP and RAID_SKIP[id]) then
+			continue -- (LUNE_RAID_SKIP — 쓰지 않는 손과 견준다)
+		end
+		local def = COMBAT.cast[id] or COMBAT.skills[id]
+		local k = kindOf(h, id)
+		if not def or (k ~= "cast" and k ~= "first") then
+			continue
+		end
+		if def.type ~= "mob" and def.type ~= "boss" and def.type ~= "attack" and def.type ~= "nuke" then
+			continue
+		end
+		local ready = if k == "first" then not (self.s.cds and self.s.cds[id] and now < self.s.cds[id]) else (h.cds[id] or 0) <= now or Kit.noCd(h, def.type) -- (잘하는 손 — 사신 각성: 어디서나 2026-11-10)
+		if ready then
+			table.insert(out, id)
+		end
+	end
+	table.sort(out)
+	return out
+end
+function Hand:state(): string
+	local h = self.h
+	if h.class == "reaper" then
+		return if Kit.formed(h) then "F" else "N"
+	elseif h.class == "salamander" then
+		local full = h.kit.heat >= COMBAT.kit.salamander.core.max or (h.buffs and h.buffs.sl_overheat ~= nil)
+		return if full then "E" else "N"
+	end
+	return "N"
+end
+function Hand:dmgOf(key: string): number
+	return self.by[key] or 0
+end
+function Hand:rate(id: string, st: string): number?
+	local r = self.stats[id .. "|" .. st]
+	return if r and r.t > 0 then self:dmgOf(id .. "|" .. st) / r.t else nil
+end
+function Hand:timeOf(id: string, st: string): number
+	local r = self.stats[id .. "|" .. st] or self.stats[id .. "|N"]
+	if r and r.n > 0 then
+		return r.t / r.n
+	end
+	local ok, pr = pcall(Caster.profile, id, 0)
+	return if ok and pr then math.max(0.2, pr.time / Buffs.haste(self.h)) else 0.6
+end
+-- 기술 하나를 시작했다: 앞의 것을 닫고(들어간 피해 · 걸린 시간) 이것을 연다
+function Hand:mark(id: string?, now: number)
+	local r = self.rec
+	if r then
+		local key = r.id .. "|" .. r.st
+		local x = self.stats[key] or { d = 0, t = 0, n = 0 }
+		x.t += math.max(1e-3, now - r.t0)
+		x.n += 1
+		self.stats[key] = x
+		self.stT[r.st] = (self.stT[r.st] or 0) + math.max(1e-3, now - r.t0)
+		-- 게이지(리퍼) · 열기(살라맨더)의 표본: 그 판이 채운 만큼(가득 차기 전의 것만) · 사신화가 끝난 뒤의 게이지 · 강화판을 쓴 뒤의 열기
+		local st, kv = self:state(), self:kitVal()
+		if r.st == "N" and st == "N" and kv < self:kitMax() and kv >= r.k0 then
+			local q = self.gs[r.id] or { s = 0, n = 0 }
+			q.s += kv - r.k0
+			q.n += 1
+			self.gs[r.id] = q
+		elseif r.st == "N" and st == "F" then
+			self.fPhases += 1
+		elseif r.st == "F" and st == "N" then
+			self.g0.s += kv
+			self.g0.n += 1
+		elseif r.st == "E" and st == "N" then
+			self.after.s += kv
+			self.after.n += 1
+		end
+	end
+	self.rec = if id then { id = id, st = self:state(), d0 = self.total, t0 = now, k0 = self:kitVal() } else nil
+end
+function Hand:kitVal(): number
+	local h = self.h
+	return if h.class == "reaper" then (h.kit.gauge or 0) elseif h.class == "salamander" then (h.kit.heat or 0) else 0
+end
+function Hand:kitMax(): number
+	local h = self.h
+	return if h.class == "reaper" then Kit.gaugeMax(h) elseif h.class == "salamander" then COMBAT.kit.salamander.core.max else math.huge
+end
+-- 한 바퀴의 초당 피해(다시 쓰기가 없는 기술 id로 게이지 · 열기를 채울 때 — 잰 것으로):
+--  리퍼 = (사신화 동안의 초당 피해 x 사신화 한 번의 길이 + 채우는 동안(판 수 = 채울 몫 ÷ 그 판의 게이지) x (그 판의 피해 + 판이 없는 피해)) ÷ (사신화 + 채우는 시간)
+--  살라맨더 = (강화판 한 번(가장 센 것) + 채우는 판 수(= (가득 - 강화판 뒤의 열기) ÷ 그 판의 열기를 올림) x 그 판) ÷ 그 시간 — 판이 없는 피해는 상태마다 초당으로 더한다
+function Hand:cycleR(id: string): number?
+	local h = self.h
+	local n, q = self.stats[id .. "|N"], self.gs[id]
+	if not n or n.n == 0 or not q or q.n == 0 or q.s <= 0 then
+		return nil
+	end
+	local d, t, g = self:dmgOf(id .. "|N") / n.n, n.t / n.n, q.s / q.n
+	local tN = self.stT.N or 0
+	local oN = if tN > 0 then (self.otherSt.N or 0) / tN else 0
+	if h.class == "reaper" then
+		local tF = self.stT.F or 0
+		if self.fPhases < 1 or tF <= 0 then
+			return nil
+		end
+		local TF, rF = tF / self.fPhases, (self.bySt.F or 0) / tF
+		local need = math.max(1, self:kitMax() - (if self.g0.n > 0 then self.g0.s / self.g0.n else 0))
+		local m = need / g
+		return (rF * TF + m * (d + oN * t)) / (TF + m * t)
+	elseif h.class == "salamander" then
+		local tE = self.stT.E or 0
+		local oE = if tE > 0 then (self.otherSt.E or 0) / tE else 0
+		local dE, eT = nil, nil
+		for key, x in self.stats do
+			local eid, st = string.match(key, "^(.-)|(%a)$")
+			local def = eid and COMBAT.cast[eid]
+			if st == "E" and def and (def.type == "mob" or def.type == "boss") and (def.cd or 0) == 0 and x.n > 0 then
+				local de, te = self:dmgOf(key) / x.n, x.t / x.n
+				if not dE or de / te > dE / eT then
+					dE, eT = de, te
+				end
+			end
+		end
+		if not dE or self.after.n == 0 then
+			return nil
+		end
+		local k = math.max(1, math.ceil((self:kitMax() - self.after.s / self.after.n) / g - 1e-6))
+		return (dE + oE * eT + k * (d + oN * t)) / (eT + k * t)
+	end
+	return nil
+end
+function Hand:bestCycle(list): (string?, number)
+	local cyc, cv = nil, -1
+	for _, id in list do
+		local def = COMBAT.cast[id]
+		local R = if def and (def.cd or 0) == 0 then self:cycleR(id) else nil
+		if R and R > cv then
+			cyc, cv = id, R
+		end
+	end
+	if RAID_FILL and table.find(list, RAID_FILL) then
+		local x = self.stats[RAID_FILL .. "|N"]
+		if x and x.n >= 3 then
+			cyc, cv = RAID_FILL, self:cycleR(RAID_FILL) or cv
+		end
+	end
+	return cyc, cv
+end
+function Hand:expertPick(now: number): string?
+	local h = self.h
+	local list = self:castable(now)
+	if #list == 0 then
+		return nil
+	end
+	local st = self:state()
+	-- (LUNE_RAID_FSPAM: 사신화 동안 이것만 난사 — 큰 기술(nuke · 사신 강림)은 돌면 먼저 · 2026-11-09 사용자 "그림자흡혈로 사신화 가동률을 높이고 사신화에서 백귀야행 난사하는게 가장 높은 dps")
+	if RAID_FSPAM and st == "F" and table.find(list, RAID_FSPAM) then
+		for _, id in list do
+			local def = COMBAT.cast[id]
+			if def and def.type == "nuke" then
+				return id
+			end
+		end
+		return RAID_FSPAM
+	end
+	-- 처음 보는 것(이 상태에서)은 한 번씩 · 다시 쓰기가 없는 것은 세 번(한 번은 치명타 하나로 흔들린다 — 채우는 기술을 고르는 데 쓴다)
+	for _, id in list do
+		local x = self.stats[id .. "|" .. st]
+		local def = COMBAT.cast[id]
+		if not x or (x.n < 3 and def and (def.cd or 0) == 0) then
+			return id
+		end
+	end
+	if h.class == "reaper" and st == "N" and Kit.level(h, "core") > 0 and (h.kit.gauge or 0) < Kit.gaugeMax(h) then
+		local G = COMBAT.kit.reaper.core.gauge
+		local cyc, cv = self:bestCycle(list)
+		if cyc then
+			-- 다시 쓰기가 있는 것: 사신화에서 더 세면 아껴 둔다 · 아니면 한 바퀴보다 세면 쓴다
+			for _, id in list do
+				local def = COMBAT.cast[id]
+				if def and (def.cd or 0) > 0 then
+					local xn, xf = self.stats[id .. "|N"], self.stats[id .. "|F"]
+					local dn = if xn and xn.n > 0 then self:dmgOf(id .. "|N") / xn.n else 0
+					local df = if xf and xf.n > 0 then self:dmgOf(id .. "|F") / xf.n else 0
+					if xn and xn.n > 0 and df <= dn and dn / (xn.t / xn.n) > cv then
+						return id
+					end
+				end
+			end
+			return cyc
+		end
+		local best, bv = nil, -1
+		for _, id in list do
+			local v = (if id == "rp_reap" then G.reap else G.hit) / self:timeOf(id, st) + (self:rate(id, st) or 0) * 1e-9
+			if v > bv then
+				best, bv = id, v
+			end
+		end
+		return best
+	end
+	if h.class == "salamander" and st == "N" then
+		local cyc, cv = self:bestCycle(list)
+		if cyc then
+			-- 다시 쓰기가 있는 것(화룡 승천 · 화산권 …)은 강화판이 없으니 한 바퀴보다 세면 바로
+			for _, id in list do
+				local def = COMBAT.cast[id]
+				if def and (def.cd or 0) > 0 then
+					local x = self.stats[id .. "|N"]
+					if x and x.n > 0 and self:dmgOf(id .. "|N") / x.t > cv then
+						return id
+					end
+				end
+			end
+			return cyc
+		end
+		-- 강화판 한 번의 덤: 강화판으로 가장 센 것의 (강화 피해 - 보통 피해)
+		local bonus = 0
+		for _, id in list do
+			local e, n = self.stats[id .. "|E"], self.stats[id .. "|N"]
+			if e and n and e.n > 0 and n.n > 0 then
+				bonus = math.max(bonus, self:dmgOf(id .. "|E") / e.n - self:dmgOf(id .. "|N") / n.n)
+			end
+		end
+		local best, bv = nil, -1
+		for _, id in list do
+			local n = self.stats[id .. "|N"]
+			local v = if n and n.n > 0 then (self:dmgOf(id .. "|N") / n.n + bonus / 3) / (n.t / n.n) else 0
+			if v > bv then
+				best, bv = id, v
+			end
+		end
+		return best
+	end
+	local best, bv = nil, -1
+	for _, id in list do
+		local v = self:rate(id, st) or 0
+		if v > bv then
+			best, bv = id, v
+		end
+	end
+	return best
 end
 function Hand:stand(m, at: number)
 	local s, h = self.s, self.h
@@ -257,13 +541,24 @@ end
 -- 시간을 쓰는 다음 일을 고른다: 동작이 있는 설치 → 다시 쓰기가 돈 공격기 → 보스기
 function Hand:pick(now: number): string?
 	local h, s = self.h, self.s
+	if RAID_EXPERT then
+		for _, id in self.plan.firsts do -- (동작이 있는 설치는 다시 쓰기가 돌면 먼저)
+			if not (s.cds and s.cds[id] and now < s.cds[id]) then
+				return id
+			end
+		end
+		return self:expertPick(now)
+	end
 	for _, id in self.plan.firsts do
 		if not (s.cds and s.cds[id] and now < s.cds[id]) then
 			return id
 		end
 	end
 	for _, id in self.plan.attacks do
-		if (h.cds[id] or 0) <= now then
+		-- 제 다시 쓰기마다 한 번(2026-11-10 — 사신 각성이 보스 방에서도 다시 쓰기를 없애 기본 손이 백귀야행을 난사하지 않게: 사용자의 잣대 「극딜기가 돌때마다 쓰고 나머지 보스평타」)
+		self.atkAt = self.atkAt or {}
+		if (h.cds[id] or 0) <= now and now >= (self.atkAt[id] or -math.huge) then
+			self.atkAt[id] = now + (COMBAT.cast[id].cd or 0)
 			return id
 		end
 	end
@@ -312,6 +607,8 @@ function Hand:step(m, room, now: number)
 			elseif seg.till then
 				over = true
 			else
+				-- 광클 = 동작이 끝나는 그 걸음(1/60초)에 다음 것: 화면은 동작이 끝나야 다음 기술을 받는다(client boot.luau 「2~4차의 스킬을 쓰는 중이다」) —
+				--  서버가 받아 주는 EARLY 0.15초(sim/caster.luau Caster:busy)는 화면 · 네트워크 시계의 어긋남 몫이라 정상 손은 얻지 못한다(2026-11-07 잠깐 넣었다가 뺐다)
 				over = sk.t >= sk.need
 			end
 			if over then
@@ -334,6 +631,9 @@ function Hand:step(m, room, now: number)
 		return
 	end
 	local k = kindOf(h, id)
+	if RAID_EXPERT then
+		self:mark(id, now) -- (잘하는 손: 기술마다 · 상태마다 들어간 피해와 시간)
+	end
 	if k == "first" then
 		self:stand(m, 14)
 		local before = self.s.skill
@@ -390,6 +690,7 @@ local function fight(classes: { string }, mode: string, holds: { [string]: strin
 		assert(e.s.scene == key, "파티원이 같은 방에 들지 못했다")
 		table.insert(hands, Hand.new(e.p, e.s, (holds and holds[e.s.hero.class]) or "min"))
 	end
+	ATTR.hand = if RAID_EXPERT and #hands == 1 then hands[1] else nil
 	local dealt, t = 0, 0
 	local by = {} -- 혼자일 때: 그 걸음에 쓰고 있던 기술마다 들어간 피해(늦게 터지는 것 · 사출기도 그때의 기술에 붙는다 — 대강의 몫)
 	local total = warm + secs
@@ -411,6 +712,9 @@ local function fight(classes: { string }, mode: string, holds: { [string]: strin
 		m = bossIn(key)
 		if m then
 			local hold = math.floor(m.maxHp * 0.51)
+			if #hands == 1 then
+				hands[1].total += math.max(0, hold - m.hp) -- (잘하는 손이 기술마다의 피해를 잰다 — 몸 풀기 동안에도)
+			end
 			if t > warm then
 				local d = math.max(0, hold - m.hp)
 				dealt += d
@@ -422,7 +726,7 @@ local function fight(classes: { string }, mode: string, holds: { [string]: strin
 			m.hp = hold
 		end
 	end
-	local out = { dps = dealt / secs, maxHp = m and m.maxHp or 0, heroes = {}, by = by, total = dealt }
+	local out = { dps = dealt / secs, maxHp = m and m.maxHp or 0, heroes = {}, by = by, total = dealt, hand = hands[1] }
 	for i, e in ps do
 		local h = e.s.hero
 		out.heroes[i] = { class = h.class, power = Hero.power(h), uses = hands[i].uses, filler = hands[i].plan.filler }
@@ -444,9 +748,9 @@ local function usesText(u)
 end
 
 -- ---------- 재기 ----------
-local SECS, WARM = RAID.secs, RAID.warm
+local SECS, WARM = RAID_SECS or RAID.secs, if RAID_EXPERT then math.max(RAID.warm, 40) else RAID.warm -- (잘하는 손은 처음 40초 동안 기술마다 써 보며 잰다 · LUNE_RAID_SECS)
 local result = {}
-for _, mode in { "normal", "hard" } do
+for _, mode in (if RAID_EXPERT and RAID_ONLY then { "normal" } else { "normal", "hard" }) do -- (잘하는 손 · 한 직업만이면 한 번 — 난이도는 보스의 레벨만 다르다)
 	local m0 = B[mode]
 	result[mode] = { solo = {}, party = {} }
 	-- 혼자(제 버프만): 누르고 있는 기술은 짧게 · 길게 둘 다 재서 센 쪽을 파티에서 쓴다
@@ -480,6 +784,59 @@ for _, mode in { "normal", "hard" } do
 		holds[class] = best.hold
 		result[mode].solo[class] = best
 		local h = best.heroes[1]
+		if RAID_EXPERT then
+			local hd = best.hand
+			local list = {}
+			local all = 0
+			for _, d in hd and hd.by or {} do
+				all += d
+			end
+			for key, x in hd and hd.stats or {} do
+				table.insert(list, { key = key, x = x, d = hd.by[key] or 0 })
+			end
+			table.sort(list, function(a, b)
+				return a.d > b.d
+			end)
+			local parts = {}
+			for i, e in list do
+				if i <= 10 then
+					table.insert(parts, ("%s x%d 한 번 %.0f · %.2fs · 초당 %.0f · 몫 %.0f%%"):format(e.key, e.x.n, e.d / math.max(1, e.x.n), e.x.t / math.max(1, e.x.n), e.d / math.max(1e-3, e.x.t), e.d / math.max(1, all) * 100))
+				end
+			end
+			print(("[EXPERT] %s %-10s | %s"):format(mode, class, table.concat(parts, " · ")))
+			local stParts = {}
+			local stAll = 0
+			for _, tt in hd.stT do
+				stAll += tt
+			end
+			for st, tt in hd.stT do
+				table.insert(stParts, ("%s %.0f%%"):format(st, tt / math.max(1e-3, stAll) * 100))
+			end
+			table.sort(stParts)
+			if class == "reaper" or class == "salamander" then
+				local rows = {}
+				for key, x in hd.stats do
+					local id, st = string.match(key, "^(.-)|(%a)$")
+					local def = id and COMBAT.cast[id]
+					if st == "N" and def and (def.cd or 0) == 0 then
+						local R = hd:cycleR(id)
+						local q = hd.gs[id]
+						if R then
+							table.insert(rows, { id = id, R = R, g = q.s / q.n, t = x.t / x.n, d = hd:dmgOf(key) / x.n })
+						end
+					end
+				end
+				table.sort(rows, function(a, b)
+					return a.R > b.R
+				end)
+				local parts = {}
+				for _, e in rows do
+					table.insert(parts, ("%s 한 바퀴 초당 %.0f(판 %.2fs · 게이지/열기 %.1f · 한 번 %.0f)"):format(e.id, e.R, e.t, e.g, e.d))
+				end
+				print(("[EXPERT]   채우는 기술마다: %s · 사신화 %d번 · 사신화 뒤 게이지 %.1f · 강화판 뒤 열기 %.1f"):format(table.concat(parts, " · "), hd.fPhases, hd.g0.s / math.max(1, hd.g0.n), hd.after.s / math.max(1, hd.after.n)))
+			end
+			print(("[EXPERT]   상태의 시간 %s · 판이 없는 피해(설치 · 소환 · 사출기 · 덧) %.0f%% · 강화판 %d번(평균 x%.3f) · 판마다 센 합 / 체력으로 잰 합 %.3f"):format(table.concat(stParts, " · "), (hd.by.other or 0) / math.max(1, all) * 100, hd.enhN, hd.enhSum / math.max(1, hd.enhN), all / math.max(1, hd.total)))
+		end
 		print(("[RAID] %s Lv.%d 혼자 %-10s | 초당 %7.0f | 전투력 %d | 보스기 %s(누르기 %s) | %s"):format(mode, (RAID_LV and RAID_LV[mode]) or m0.need, class, best.dps, h.power, tostring(h.filler), best.hold, usesText(h.uses)))
 		-- 보스기 한 번에 들어간 피해 ÷ 설계의 한 번(전투력 x rate x (쓰는 시간 + 다시 쓰기 몫) x 스킬 레벨의 세기 x 보스기 1.5) — 1을 크게 넘으면 설계보다 세다
 		local f = h.filler

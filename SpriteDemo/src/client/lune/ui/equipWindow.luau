@@ -7,6 +7,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lune = ReplicatedStorage.shared.lune
 local Items = require(lune.sim.items)
+local Bag = require(lune.sim.bag) -- (가진 윤슬 조각의 수 — 2026-11-07)
 local ItemInfo = require(lune.ui.itemInfo)
 local Sheet = require(lune.ui.sheet) -- 능력치 표의 칸 · 값의 글
 local Layout = require(lune.ui.layout) -- 치수(자동 검사가 같은 값을 본다)
@@ -110,16 +111,41 @@ function EquipWindow.build(body: Frame, ctx, w: number, _h: number)
 				ctx.toForge(it.id)
 			end })
 		end
-		ItemDetail.show("equip", {
-			key = table.concat({ "equip", it.id, it.q, it.star, tostring(it.broken), me.level, ui.service or "-" }, "|"),
-			info = ItemInfo.gear(it, { level = me.level, class = me.class, spec = me.spec, equip = bag.equip }, nil, true), -- equip = 세트 효과의 낀 수(2026-11-05)
+		-- 윤슬 조각(2026-11-07 — 낀 장비의 추가 옵션도 다시 굴린다): 「옵션 재설정」은 한 번 묻는다 · 「확률 보기」
+		local BagWindow = require(script.Parent.bagWindow)
+		local askReroll = ui.equipAsk == it.id
+		local spec = {
+			key = table.concat({ "equip", it.id, it.q, it.star, tostring(it.broken), me.level, ui.service or "-", BagWindow.exKey(it), Bag.countIn(bag, BagWindow.TOOL or ""), tostring(askReroll) }, "|"),
+			info = ItemInfo.gear(it, { level = me.level, class = me.class, spec = me.spec, equip = bag.equip }, nil, true),
 			item = it,
 			buttons = buttons,
 			onClose = function()
 				selected = nil
+				ui.equipAsk = nil
 				redraw()
 			end,
-		})
+		}
+		if askReroll then
+			spec.ask = ItemDetail.ask("reroll", nil, 1, 1, {
+				yes = function()
+					ctx.send("Item", "reroll", it.id)
+					ui.equipAsk = nil
+					redraw()
+				end,
+				no = function()
+					ui.equipAsk = nil
+					redraw()
+				end,
+			})
+		else
+			BagWindow.rerollButtons(bag, it, function(text, onClick)
+				table.insert(buttons, { text = text, onClick = onClick })
+			end, function()
+				ui.equipAsk = it.id
+				redraw()
+			end)
+		end
+		ItemDetail.show("equip", spec) -- (info의 equip = 세트 효과의 낀 수 — 2026-11-05)
 	end
 
 	function view.refresh()

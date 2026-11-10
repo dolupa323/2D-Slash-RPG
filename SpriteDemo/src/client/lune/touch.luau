@@ -1,5 +1,6 @@
 -- 스마트폰(터치) 단추 — 공방 「기본 · UI」 탭의 스마트폰 화면 배치(data/ui.generated.luau의 touch)를 그대로 그린다.
---  「채팅」 단추는 없다(2026-10-13): 채팅은 Roblox의 기본 채팅이고, 폰에서는 화면 위의 Roblox 채팅 단추로 연다(chat.luau).
+--  「채팅」 단추(2026-11-06 — 우리 게임의 채팅 창): 누르면 채팅 판이 열리고(chat.luau의 Chat.toggle — 판이 열려 있는 동안 이 단추는 숨는다 · 판 안의 「×」로 닫는다),
+--    닫혀 있는 동안 남의 글이 오면 노란 점. (2026-10-13 ~ 11-06에는 단추가 없었다 — Roblox의 채팅 단추로 열었다)
 --  사용자 결정(2026-10-06): 스마트폰 터치 조작을 지원한다. 터치 화면이면 저절로 켜진다(Studio에서는 화면 틀의 속성 Touch = true로 켜 볼 수 있다).
 --  사용자 2026-10-08(폰에서 해 보고): "모바일버튼을 누르고 거기에 배치할수있는 선택지가 나오고 그걸선택하면 그버튼에 배치되는식 … 소비템이던, 스킬이던
 --    현재 사냥,보스,대쉬이렇게 글씨로 적혀있는것도 드래그앤 드랍으로 바꿀수있어야 … 이동형 터치패드도 동그라미만 있는게 아니라 그 가운데 잡고 돌리는 동그라미가 하나 더
@@ -56,6 +57,7 @@ local opts = nil
 local root: Frame = nil
 local buttons = {} -- 누르는 단추들 { t, frame, stroke, hit, … }
 local slotButtons = {} -- [칸] = 단추
+local chatPart = { dot = nil :: Frame?, button = nil :: Frame?, hidden = false } -- 「채팅」 단추와 그 점 · 판이 열려 숨겨 둔 채인가(2026-11-06)
 local menuDot: Frame? = nil -- 「메뉴」 단추 오른쪽 위의 노란 점(받을 출석 · 업적이 있다 — 2026-10-15)
 local pad = nil -- 조이스틱 { frame, knob, radius }
 local chooser: Frame? = nil -- 놓을 것의 목록
@@ -455,7 +457,7 @@ local function makeSlot(t)
 	return b
 end
 
--- 칸이 아닌 단추: 「메뉴」뿐이다(점프 · 상호작용은 2026-10-21부터 칸 단추에 놓이는 것 — 「단추 배치」에서 끌어 옮긴다)
+-- 칸이 아닌 단추: 「메뉴」 · 「채팅」(2026-11-06)뿐이다(점프 · 상호작용은 2026-10-21부터 칸 단추에 놓이는 것 — 「단추 배치」에서 끌어 옮긴다)
 local function makeAct(t)
 	local b = makeButton(t)
 	if t.act == "menu" then
@@ -466,6 +468,16 @@ local function makeAct(t)
 		dot.ZIndex = 12
 		dot.Visible = false
 		menuDot = dot
+	elseif t.act == "chat" then
+		b.label = Ui.text(b.mid, "채팅", -40, -7, 80, { font = "body", align = "center", outline = true })
+		local dot = Ui.box(b.mid, math.floor(t.w / 2) - 8, -math.floor(t.h / 2) + 2, 6, 6, Ui.COLOR.ink)
+		Ui.box(dot, 1, 1, 4, 4, Ui.COLOR.gold)
+		dot.Name = "Dot"
+		dot.ZIndex = 12
+		dot.Visible = false
+		chatPart.dot = dot
+		chatPart.button = b.frame
+		b.frame.Visible = not chatPart.hidden
 	end
 	local finger: InputObject? = nil
 	b.hit.InputBegan:Connect(function(input)
@@ -480,6 +492,8 @@ local function makeAct(t)
 		paintButton(b)
 		if t.act == "menu" then
 			opts.onMenu()
+		elseif t.act == "chat" and opts.onChat then
+			opts.onChat()
 		end
 	end)
 	b.release = function(input: InputObject)
@@ -735,6 +749,19 @@ end
 function Touch.markMenu(on: boolean)
 	if menuDot then
 		menuDot.Visible = on
+	end
+end
+
+-- 「채팅」 단추의 점(닫혀 있는 동안 남의 글이 왔다 — chat.luau의 Chat.onUnread) · 단추를 보인다/숨긴다(판이 열려 있는 동안 숨는다 — Chat.onOpen)
+function Touch.markChat(on: boolean)
+	if chatPart.dot then
+		chatPart.dot.Visible = on
+	end
+end
+function Touch.showChat(on: boolean)
+	chatPart.hidden = not on
+	if chatPart.button then
+		chatPart.button.Visible = on
 	end
 end
 

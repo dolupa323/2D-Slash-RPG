@@ -47,6 +47,12 @@ end
 -- 그 아이템의 아이콘 이름
 function ItemCell.icon(it): string
 	if it.ride then
+		if it.kind == "bubble" then
+			return "bm_bubblebox" -- 말풍선 꾸밈(2026-11-07): 말풍선 상자의 그림
+		end
+		if it.kind == "ntag" then
+			return "bm_ntagbox" -- 이름표 테두리(2026-11-10): 이름표 테두리 상자의 그림
+		end
 		if it.kind == "dskin" then
 			local q = require(game:GetService("ReplicatedStorage").shared.lune.sim.event).dskin(it.ride)
 			return if q then q.icon else it.ride -- 데미지 스킨(2026-10-29): 그 스킨의 아이콘
@@ -125,7 +131,7 @@ function ItemCell.new(parent: Instance, x: number, y: number, onClick: (any) -> 
 	local icon = Ui.worldIcon(outer, nil, 0, 0, S)
 	local star = Ui.text(outer, "", 0, S - 13, S - 4, { align = "right", outline = true, color = C.text, z = 6 })
 	local cross = Ui.text(outer, "", 0, math.floor((S - 12) / 2), S, { font = "body", align = "center", outline = true, color = C.red, z = 6 })
-	local up = Ui.text(outer, "", 3, 2, 12, { outline = true, color = C.green, z = 6 }) -- 지금 낀 것보다 좋은 장비 ▲(2026-10-18 — opts.better)
+	local up = Ui.text(outer, "", 3, 2, S - 6, { outline = true, color = C.green, z = 6 }) -- 지금 낀 것보다 좋은 장비 ▲(2026-10-18 — opts.better) · 캐시 탭의 가진 수 「×2」(2026-11-10)
 	local veil = Ui.box(outer, 1, 1, S - 2, S - 2, C.ink, 0.45) -- 아직 열리지 않은 칸
 	veil.Name = "Locked"
 	veil.ZIndex = 5
@@ -153,7 +159,13 @@ function ItemCell.new(parent: Instance, x: number, y: number, onClick: (any) -> 
 		local broken = it ~= nil and it.broken == true
 		icon.ImageColor3 = if broken then Color3.fromRGB(90, 90, 100) else Color3.new(1, 1, 1)
 		cross:set(if broken then "×" else "")
-		up:set(if it and opts.better then "▲" else "")
+		if it and it.ride and (it.n or 1) > 1 then
+			up:set("×" .. tostring(it.n)) -- 같은 것을 여럿 가졌다(뽑기의 「하나 더」 — 2026-11-10)
+			up:color(C.text)
+		else
+			up:set(if it and opts.better then "▲" else "")
+			up:color(C.green)
+		end
 		slot:setOn(opts.selected == true or opts.hot == true)
 		veil.Visible = opts.locked == true
 	end
