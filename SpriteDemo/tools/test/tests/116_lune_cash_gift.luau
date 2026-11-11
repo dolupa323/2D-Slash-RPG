@@ -1,5 +1,6 @@
 -- 「달의 계승자」 — 달빛 상점의 선물하기(2026-10-31 사용자: "달빛상점에 모든 품목을 아이템 선물을 할수있게 해줘 다른사람에게 선물을 보낼수있게").
---  server/lune/modules/cash.luau의 CashServer.gift · processReceipt · giftTick · store.luau의 bmgift_<계정>.
+--  server/lune/modules/cash.luau의 CashServer.gift · deliverGift · giftTick · store.luau의 bmgift_<계정>.
+--  2026-11-11 루나부터: 보내는 사람의 루나로 산다(구매 창 없음) — 값을 빼고 「보낼 선물」(giftOut)을 저장한 뒤 받는 상자에 넣는다(못 넣으면 다시) · 영구 패스도 보낸다.
 --  보는 것: 선물할 수 있는 상품(개발자 상품만 — 영구 패스는 아니다) · 나에게는 못 · 없는 닉네임 · 로블록스 정책(보내는 쪽 · 받는 쪽) · 받는 사람의 한도(아직 받지 않은 선물까지 센다) ·
 --   결제가 오면 받는 계정의 상자에 · 산 사람에게는 주지 않고 결제 번호만 · 같은 결제가 다시 와도 한 번 · 저장에 실패하면 되돌린다 ·
 --   받는 사람이 이 서버에 있으면 바로 · 접속하지 않았으면 들어올 때 · 받는 쪽 저장에 실패하면 상자에 남는다 · 선물 상자가 가득 차면 더 보내지 못한다
@@ -27,9 +28,13 @@ SERVICE("DataStoreService", {
 	end,
 })
 local prompts = {}
+local robloxPass = {} -- [계정] = 로블록스에서 산 게임 패스를 가졌다(2026-11-11 — 영구 패스 선물의 검사)
 SERVICE("MarketplaceService", {
 	PromptProductPurchase = function(_, player, rid)
 		table.insert(prompts, { player.UserId, rid })
+	end,
+	UserOwnsGamePassAsync = function(_, uid, rid)
+		return robloxPass[uid] == true
 	end,
 })
 local Store = req("ServerScriptService/server/lune/modules/store")
@@ -41,16 +46,16 @@ local W = Cash.WORDS
 local GRANTED, LATER = Enum.ProductPurchaseDecision.PurchaseGranted, Enum.ProductPurchaseDecision.NotProcessedYet
 local NOW = 2000000000
 
--- ① 선물할 수 있는 상품
-expect(Cash.giftable("bagx"), "가방 확장권은 선물할 수 있다(개발자 상품)")
-expect(not Cash.giftable("xp125"), "경험치 1.25배 패스는 못 한다(게임 패스 — 로블록스가 남에게 사 주지 못하게 한다)")
+-- ① 선물할 수 있는 상품(개발자 상품 — 확률형 · 영구 게임 패스는 아니다: 패스는 로벅스로 따로 산다 · 2026-11-11)
+expect(Cash.giftable("bagx"), "가방 확장권은 선물할 수 있다")
+expect(not Cash.giftable("xp125"), "경험치 1.25배 패스는 선물하지 않는다(게임 패스 — 로블록스가 남에게 사 주지 못하게 한다)")
+expect(Cash.giftable("petbox") and Cash.giftable("yunseul"), "뽑기 상자 · 윤슬 조각도 선물한다(2026-11-11 — 뽑기 제한 계정은 막는다 · ⑫)")
 expect(not Cash.giftable("nope"), "없는 상품은 못 한다")
 local PET = nil
 for _, p in Cash.PRODUCTS do
 	if string.sub(p.id, 1, 4) == "pet_" and p.kind == "product" then
 		PET = p.id
-		p.rid = if typeof(p.rid) == "number" and p.rid > 0 then p.rid else 990100
-		p.built = true
+		p.built = true -- (상점의 펫 셋은 2026-11-07부터 꺼 두었다 — 여기서는 판다고 친다)
 		break
 	end
 end
@@ -99,6 +104,9 @@ local function boxOf(uid)
 	local _, list = Store.bmGiftList(uid)
 	return list
 end
+local function lastLog(acct)
+	return acct.bm.log[#acct.bm.log]
+end
 
 -- ② 보내지 못하는 것
 local ok, why = CashServer.gift(me, "bagx", "보내는이")
@@ -107,9 +115,14 @@ ok, why = CashServer.gift(me, "bagx", "아무도아닌이")
 expect(not ok and why == "「아무도아닌이」 닉네임은 없다", "없는 닉네임 — " .. tostring(why))
 ok, why = CashServer.gift(me, "bagx", "  ")
 expect(not ok and why == W.giftNeedName, "닉네임을 적지 않았다 — " .. tostring(why))
-ok, why = CashServer.gift(me, "xp125", "받는이")
-expect(not ok and why == W.giftCant, "영구 패스는 선물하지 못한다 — " .. tostring(why))
+ok, why = CashServer.gift(me, "bagx", "받는이")
+expect(not ok and why == W.lunaShort and #boxOf(202) == 0, "루나가 없으면 보내지 못한다 — " .. tostring(why))
+me.acct.bm.luna = 2000
+-- 「유료 아이템 거래 불가」 계정(2026-11-11 사용자 결정 「모두 열기」 — 설계 gift.policy = false): 막지 않는다
 me.policy = { IsPaidItemTradingAllowed = false }
+expect(Cash.RULES.gift.policy == false and not CashServer.giftLocked(me), "거래 불가 계정도 선물을 막지 않는다(상점 창의 giftLock 없음)")
+-- 스위치를 다시 켜면(gift.policy = true) 예전처럼 막는다
+Cash.RULES.gift.policy = true
 ok, why = CashServer.gift(me, "bagx", "받는이")
 expect(not ok and why == W.giftPolicy, "로블록스 정책으로 유료 아이템을 거래할 수 없는 계정은 보내지 못한다 — " .. tostring(why))
 expect(CashServer.giftLocked(me), "상점 창에 미리 알린다(giftLock)")
@@ -122,26 +135,21 @@ expect(not ok and why == W.giftPolicyTo, "받는 사람이 막힌 계정이면 �
 you.policy = { IsPaidItemTradingAllowed = true }
 CashServer.giftTick(you)
 expect(you.acct.bm.lock == false, "정책이 바뀌면 다시 적는다")
-eq(#prompts, 0, "구매 창은 아직 하나도 띄우지 않았다")
+Cash.RULES.gift.policy = false
+eq(me.acct.bm.luna, 2000, "보내지 못한 것은 루나를 쓰지 않았다")
 
--- ③ 이 서버에 있는 사람에게 가방 확장권
-ok, why = CashServer.gift(me, "bagx", " 받는이 ")
-expect(ok, "선물의 구매 창을 띄운다 — " .. tostring(why))
-eq(#prompts, 1, "구매 창 하나")
-expect(me.acct.bm.gift and me.acct.bm.gift.uid == 202 and me.acct.bm.gift.to == "받는이", "띄운 선물을 계정에 적었다(앞뒤 빈칸은 뺀다)")
-local okBuy, whyBuy = CashServer.prompt(me, "bagx")
-expect(not okBuy and whyBuy == W.giftBusy, "선물의 구매 창이 떠 있으면 같은 상품을 나에게 사는 창은 띄우지 않는다 — " .. tostring(whyBuy))
-local okOther, whyOther = CashServer.gift(me, "money", "받는이")
-expect(not okOther and whyOther == W.giftBusy, "선물의 구매 창이 떠 있으면 다른 선물도 기다린다 — " .. tostring(whyOther))
-eq(CashServer.processReceipt({ PlayerId = 201, PurchaseId = "p1", CurrencySpent = 49 }, "bagx"), GRANTED, "결제가 왔다")
-eq(count(me.acct, "bm_bagx"), 0, "산 사람의 보관함에는 넣지 않는다")
-expect(Cash.granted(me.acct.bm, "p1"), "산 사람의 계정에는 결제 번호만")
-eq(me.acct.spent, 49, "쓴 로벅스는 산 사람의 것")
-expect(me.acct.bm.gift == false, "띄운 선물을 지웠다")
+-- ③ 이 서버에 있는 사람에게 가방 확장권(루나 49)
+local spent
+ok, why, _, spent = CashServer.gift(me, "bagx", " 받는이 ")
+expect(ok and spent == 49, "루나로 보낸다 — " .. tostring(why))
+eq(me.acct.bm.luna, 2000 - 49, "보낸 사람의 루나가 값만큼 줄었다")
+expect(me.acct.bm.giftOut == false, "받는 상자에 넣었으니 「보낼 선물」을 지웠다")
+eq(count(me.acct, "bm_bagx"), 0, "보낸 사람의 보관함에는 넣지 않는다")
+local lg = lastLog(me.acct)
+expect(lg and lg.k == "gift:bagx" and lg.d == -49 and lg.l == 1951, "결제의 기록에 -49 · 남은 1951")
 eq(#boxOf(202), 1, "받는 계정의 선물 상자에 하나")
 expect(events[1] and events[1][1] == "sent" and events[1][4] == "받는이", "보낸 사람에게 「보냈다」")
-eq(CashServer.processReceipt({ PlayerId = 201, PurchaseId = "p1", CurrencySpent = 49 }, "bagx"), GRANTED, "같은 결제가 다시 와도")
-eq(#boxOf(202), 1, "상자에는 한 번만")
+eq(#prompts, 0, "로블록스의 구매 창은 뜨지 않는다")
 CashServer.giftTick(you)
 eq(count(you.acct, "bm_bagx"), 1, "받는 사람의 보관함에 가방 확장권")
 eq(#boxOf(202), 0, "선물 상자를 비웠다")
@@ -150,11 +158,31 @@ expect(got and got[1] == "got" and got[2] == 202 and got[4] == "보내는이", "
 CashServer.giftTick(you)
 eq(count(you.acct, "bm_bagx"), 1, "두 번 넣지 않는다")
 
+-- ③-2 받는 상자에 닿지 못했다 → 루나는 냈고 「보낼 선물」이 남는다 · 다음 선물은 기다린다 · 닿으면 넣는다(한 번만)
+local realAdd = Store.bmGiftAdd
+Store.bmGiftAdd = function() -- (선물 상자에 닿지 못한다 — 저장소의 다시 해 보기 · 기다림 없이)
+	return nil
+end
+ok, why = CashServer.gift(me, "exp", "받는이")
+expect(ok, "냈다(넣는 것은 나중에) — " .. tostring(why))
+expect(me.acct.bm.giftOut and me.acct.bm.giftOut.k == "exp" and me.acct.bm.giftOut.uid == 202, "「보낼 선물」이 계정에 남는다(저장된다)")
+eq(me.acct.bm.luna, 1951 - 49, "루나는 냈다")
+ok, why = CashServer.gift(me, "bagx", "받는이")
+expect(not ok and why == W.giftSending, "앞의 선물을 넣는 중이면 다음 선물은 기다린다 — " .. tostring(why))
+local saved = Cash.unpack(Cash.pack(me.acct.bm))
+expect(saved.giftOut and saved.giftOut.k == "exp" and saved.giftOut.rid == me.acct.bm.giftOut.rid, "저장했다가 읽어도 「보낼 선물」 그대로(서버가 꺼져도 다시 넣는다)")
+Store.bmGiftAdd = realAdd
+expect(CashServer.deliverGift(me), "닿으면 넣는다")
+expect(me.acct.bm.giftOut == false and #boxOf(202) == 1, "넣고 지웠다")
+Store.bmGiftAdd(202, { k = "exp", rid = boxOf(202)[1].rid, from = "보내는이", to = "받는이", at = NOW })
+eq(#boxOf(202), 1, "같은 번호는 상자에 한 번만(서버가 꺼졌다 켜져 다시 넣어도)")
+CashServer.giftTick(you)
+eq(count(you.acct, "bm_exp"), 1, "받는 사람에게 경험치 쿠폰 하나")
+
 -- ④ 받는 사람의 한도: 계정에 하나인 펫 — 아직 받지 않은 선물도 센다
 ok, why = CashServer.gift(me, PET, "받는이")
 expect(ok, "펫을 선물한다 — " .. tostring(why))
-eq(CashServer.processReceipt({ PlayerId = 201, PurchaseId = "p2", CurrencySpent = 399 }, PET), GRANTED, "펫의 결제")
-expect(not me.acct.bm.pets[PET], "산 사람은 펫을 받지 않는다")
+expect(not me.acct.bm.pets[PET], "보낸 사람은 펫을 받지 않는다")
 ok, why = CashServer.gift(me, PET, "받는이")
 expect(not ok and string.find(why or "", "받는 사람이 받을 수 없다", 1, true) ~= nil, "아직 받지 않은 같은 펫이 상자에 있으면 또 보내지 못한다 — " .. tostring(why))
 you.bmGiftDone = nil
@@ -163,17 +191,15 @@ expect(you.acct.bm.pets[PET] == true, "받는 사람의 계정에 펫")
 ok, why = CashServer.gift(me, PET, "받는이")
 expect(not ok and why ~= nil, "이미 가진 펫은 보내지 못한다 — " .. tostring(why))
 
--- ⑤ 결제를 저장하지 못했다 → 되돌린다 · 다시 오면 보낸다(상자에는 한 번)
-ok = CashServer.gift(me, "dust", "받는이")
-expect(ok, "달가루 상자를 선물한다")
+-- ⑤ 보낸 사람의 저장에 실패했다 → 루나 · 계정 그대로 · 상자에도 넣지 않는다
+local lunaBefore = me.acct.bm.luna
 saveOk = false
-eq(CashServer.processReceipt({ PlayerId = 201, PurchaseId = "p3", CurrencySpent = 49 }, "dust"), LATER, "저장 실패 → 아직")
-expect(not Cash.granted(me.acct.bm, "p3"), "결제 번호를 되돌렸다")
-expect(me.acct.bm.gift and me.acct.bm.gift.k == "dust", "띄운 선물도 되돌렸다(다시 오면 그 사람에게)")
-eq(me.acct.spent, 49 + 399, "쓴 로벅스도 되돌렸다")
+ok, why = CashServer.gift(me, "dust", "받는이")
+expect(not ok and string.find(why or "", "저장하지 못했다", 1, true) ~= nil, "저장 실패 → 보내지 않았다 — " .. tostring(why))
+expect(me.acct.bm.luna == lunaBefore and me.acct.bm.giftOut == false and #boxOf(202) == 0, "루나 · 보낼 선물 · 받는 상자 그대로")
 saveOk = true
-eq(CashServer.processReceipt({ PlayerId = 201, PurchaseId = "p3", CurrencySpent = 49 }, "dust"), GRANTED, "다시 오면 보낸다")
-eq(#boxOf(202), 1, "상자에는 한 번만")
+ok = CashServer.gift(me, "dust", "받는이")
+expect(ok and #boxOf(202) == 1, "다시 보내면 간다")
 
 -- ⑥ 받는 쪽이 저장하지 못했다 → 상자에 남는다 · 다음에 받는다
 saveOk = false
@@ -201,7 +227,6 @@ eq(#boxOf(202), 0, "상자를 비웠다")
 -- ⑦ 접속하지 않은 사람(저장된 계정을 읽어 한도를 본다) → 들어오면 받는다
 ok, why = CashServer.gift(me, "money", "멀리있는이")
 expect(ok, "접속하지 않은 사람에게도 보낸다 — " .. tostring(why))
-eq(CashServer.processReceipt({ PlayerId = 201, PurchaseId = "p4", CurrencySpent = 99 }, "money"), GRANTED, "결제")
 eq(#boxOf(203), 1, "그 계정의 상자에")
 sessions[203] = { player = { UserId = 203 }, acct = Account.unpack(data["acct_203"]), loaded = true, name = "멀리있는이" }
 CashServer.giftTick(sessions[203])
@@ -213,20 +238,38 @@ for _, e in sessions[203].acct.bm.box do
 end
 eq(money, 1, "들어오면 달돈 주머니가 보관함에")
 
+-- ⑦-2 영구 게임 패스는 선물하지 않는다(로벅스로 따로 — 2026-11-11 사용자 "패스는 아예 별도입니다")
+local lunaP = me.acct.bm.luna
+ok, why = CashServer.gift(me, "xp125", "받는이")
+expect(not ok and why == W.giftCant and me.acct.bm.luna == lunaP, "영구 패스는 보내지 못한다(루나 그대로) — " .. tostring(why))
+
 -- ⑧ 선물 상자가 가득 찼다
 for i = 1, Cash.RULES.gift.max do
 	Store.bmGiftAdd(202, { k = "bagx", rid = "fill" .. i, from = "x", to = "받는이", at = NOW })
 end
+lunaBefore = me.acct.bm.luna
 ok, why = CashServer.gift(me, "bagx", "받는이")
-expect(not ok and why == W.giftBox, "아직 받지 않은 선물이 가득하면 더 보내지 못한다 — " .. tostring(why))
+expect(not ok and why == W.giftBox and me.acct.bm.luna == lunaBefore, "아직 받지 않은 선물이 가득하면 더 보내지 못한다(루나 그대로) — " .. tostring(why))
 eq(#boxOf(202), Cash.RULES.gift.max, "돈을 낸 것은 버리지 않는다")
+data["bmgift_202"] = nil
 
--- ⑨ 저장 꼴: 띄운 선물 · 정책
+-- ⑧-2 루나 전에 띄운 선물의 구매 창(결제가 늦게 오면 — 예전 결제도 그대로 보낸다)
+me.acct.bm.gift = { k = "bagx", uid = 202, to = "받는이", at = NOW }
+eq(CashServer.processReceipt({ PlayerId = 201, PurchaseId = "old1", CurrencySpent = 49 }, "bagx"), GRANTED, "예전 선물의 결제가 왔다")
+expect(Cash.granted(me.acct.bm, "old1") and me.acct.bm.gift == false and #boxOf(202) == 1, "받는 상자에 넣고 결제 번호만 남긴다")
+eq(CashServer.processReceipt({ PlayerId = 201, PurchaseId = "old1", CurrencySpent = 49 }, "bagx"), GRANTED, "같은 결제가 다시 와도")
+eq(#boxOf(202), 1, "상자에는 한 번만")
+data["bmgift_202"] = nil
+
+-- ⑨ 저장 꼴: 띄운 선물 · 정책 · 루나 · 영구 패스 · 보낼 선물
 local c = Cash.new()
 c.gift, c.lock = { k = "bagx", uid = 7, to = "가", at = NOW }, true
+c.luna, c.giftOut = 321, { k = "money", uid = 9, to = "나", rid = "L201_1_1", at = NOW }
 local back = Cash.unpack(Cash.pack(c))
 expect(back.gift and back.gift.k == "bagx" and back.gift.uid == 7 and back.gift.to == "가" and back.lock == true, "저장했다가 읽어도 그대로")
-expect(Cash.unpack(Cash.pack(Cash.new())).gift == false, "없으면 false")
+expect(back.luna == 321 and back.giftOut and back.giftOut.rid == "L201_1_1", "루나 · 보낼 선물")
+local empty = Cash.unpack(Cash.pack(Cash.new()))
+expect(empty.gift == false and empty.giftOut == false and empty.luna == 0, "없으면 false · 루나 0")
 
 -- ⑩ 겹침 보상(2026-11-10 사용자: "이미 샀는데 증발된사람들한테 소급적용 해줘야해 … 돈관련된건 철저하게해야해"):
 --  운영자가 보낸 "dupfix:<상자>:<횟수>"가 선물 상자 → 접속하지 않은 사람도 들어오면 계정에(남은 횟수) · 같은 것은 한 번 · 그 상자에서 나오는 가진 것에만 쓴다 · 결제의 기록에 남는다
@@ -532,3 +575,123 @@ for _, e in gz.bm.box do
 	gzBox[e.id] = e.n
 end
 expect(gzBox.bm_pick_mountbox == 2 and next(gz.bm.dupfix) == nil, "탈것 선택 상자 2개(고르는 표가 아니다)")
+
+-- ⑪ 꺼낸 상자 결과물의 선물(2026-11-11 사용자: "꺼내팔기 한다음에 경매장에 거래가능하게만들면된다 선물하기도 가능하게"):
+--  가방의 bm_cos_<이름> 하나 → 받는 사람의 선물 상자("cos:<이름>") → 들어오면 보관함에 그 물건 · 막는 것: 정책(보내는 쪽 · 받는 쪽 — 유료 거래 · 뽑기) · 가방에 없음 · 저장 실패 = 되돌림
+do
+	local Bag = req("ReplicatedStorage/shared/lune/sim/bag")
+	local ITEM = "bm_cos_pet_fox"
+	data["bmgift_202"] = nil
+	saveOk = true
+	me.hero = Hero.new(201, "axion")
+	me.policy, you.policy = {}, {}
+	me.acct.bm.giftOut, me.lunaBusy = false, nil
+	you.acct.bm.lock, you.acct.bm.rlock = false, false
+	local g0, w0 = CashServer.giftItem(me, ITEM, "받는이")
+	expect(not g0 and w0 == W.giftNoItem, "가방에 없으면 보내지 못한다 — " .. tostring(w0))
+	Bag.give(me.hero, ITEM, 2)
+	local g1, w1 = CashServer.giftItem(me, "bm_exp", "받는이")
+	expect(not g1 and w1 == W.giftCant, "상자 결과물이 아닌 것은 이 길로 보내지 않는다")
+	me.policy = { ArePaidRandomItemsRestricted = true }
+	local g2, w2 = CashServer.giftItem(me, ITEM, "받는이")
+	expect(not g2 and w2 == W.giftRandom and Bag.count(me.hero, ITEM) == 2, "뽑기 제한 계정은 보내지 못한다 — " .. tostring(w2))
+	me.policy = {}
+	you.acct.bm.rlock = true
+	local g3, w3 = CashServer.giftItem(me, ITEM, "받는이")
+	expect(not g3 and w3 == W.giftRandomTo, "받는 사람이 뽑기 제한 계정이면 보내지 못한다 — " .. tostring(w3))
+	you.acct.bm.rlock = false
+	you.acct.bm.lock = true
+	Cash.RULES.gift.policy = true -- (스위치를 켜면 — 지금은 꺼 둠: 사용자 결정 11-11)
+	local g4, w4 = CashServer.giftItem(me, ITEM, "받는이")
+	expect(not g4 and w4 == W.giftPolicyTo, "스위치를 켜면: 받는 사람이 유료 거래 제한 계정이면 보내지 못한다")
+	Cash.RULES.gift.policy = false
+	you.acct.bm.lock = false
+	-- 저장 실패 → 가방 · 계정 그대로
+	saveOk = false
+	local g5, w5 = CashServer.giftItem(me, ITEM, "받는이")
+	expect(not g5 and string.find(w5 or "", "저장하지 못했다", 1, true) ~= nil and Bag.count(me.hero, ITEM) == 2 and me.acct.bm.giftOut == false and #boxOf(202) == 0, "저장 실패 → 물건 · 보낼 선물 · 받는 상자 그대로")
+	saveOk = true
+	-- 보낸다
+	table.clear(events)
+	local ok6, w6, to6 = CashServer.giftItem(me, ITEM, " 받는이 ")
+	expect(ok6 and to6 == "받는이", "보낸다 — " .. tostring(w6))
+	eq(Bag.count(me.hero, ITEM), 1, "가방에서 하나가 빠졌다")
+	expect(me.acct.bm.giftOut == false and #boxOf(202) == 1 and boxOf(202)[1].k == "cos:pet_fox", "받는 상자에 cos:pet_fox")
+	local lg = me.acct.bm.log[#me.acct.bm.log]
+	expect(lg and lg.k == "giftcos:pet_fox" and lg.g == "pet_fox", "결제의 기록에 giftcos")
+	expect(events[1] and events[1][1] == "sent" and events[1][3] == "cos:pet_fox", "보낸 사람에게 「보냈다」")
+	-- 받는 사람이 지금 뽑기 제한이면 받지 않고 상자에 남긴다 → 풀리면 받는다
+	you.policy = { ArePaidRandomItemsRestricted = true }
+	you.bmGiftDone, you.bmGiftNext = nil, 0
+	CashServer.giftTick(you)
+	expect(you.acct.bm.rlock == true and #boxOf(202) == 1 and count(you.acct, ITEM) == 0, "뽑기 제한이면 상자에 남는다(정책을 계정에 적었다)")
+	you.policy = {}
+	you.bmGiftDone, you.bmGiftNext = nil, 0
+	CashServer.giftTick(you)
+	expect(count(you.acct, ITEM) == 1 and #boxOf(202) == 0 and you.acct.bm.rlock == false, "받으면 보관함에 그 물건 하나")
+	local got = events[#events]
+	expect(got and got[1] == "got" and got[3] == "cos:pet_fox" and got[4] == "보내는이", "받은 사람에게 「보내는이님이 보낸 선물」")
+	-- 저장 꼴: 보낼 선물(상자 결과물) · 뽑기 제한
+	local c2 = Cash.new()
+	c2.giftOut, c2.rlock = { k = "cos:pet_fox", uid = 9, to = "나", rid = "L1_1_1", at = NOW }, true
+	local b2 = Cash.unpack(Cash.pack(c2))
+	expect(b2.giftOut and b2.giftOut.k == "cos:pet_fox" and b2.rlock == true, "저장했다가 읽어도 그대로")
+	expect(Cash.cosGiftOf("cos:nope") == nil and Cash.cosGiftOf("cos:pet_fox") == "pet_fox", "모르는 것은 받지 않는다")
+	me.hero = nil
+end
+
+-- ⑫ 뽑기 상자 · 윤슬 조각의 선물(2026-11-11 사용자: "선물이 가능하고 영국 18세이하라던가 그러면 선물이 안된다고떠야지"):
+--  보낸다 → 받는 상자에 "box:<상자>" → 들어오면 보관함에 안 연 상자(bm_box_<상자>) · 윤슬 조각은 보관함에 조각 ·
+--  로블록스가 뽑기를 막은 계정(ArePaidRandomItemsRestricted) = 보내지 못한다(「이 계정은 … 뽑기 상자를 선물할 수 없다」) · 받는 쪽이면 보내지 못한다 · 받을 차례에 막혀 있으면 상자에 남는다
+do
+	data["bmgift_202"] = nil
+	saveOk = true
+	me.policy, you.policy = {}, {}
+	me.acct.bm.giftOut, me.lunaBusy = false, nil
+	you.acct.bm.lock, you.acct.bm.rlock = false, false
+	me.acct.bm.luna = 5000
+	me.policy = { ArePaidRandomItemsRestricted = true }
+	expect(CashServer.randomLocked(me), "뽑기 제한 계정")
+	local b1, w1 = CashServer.gift(me, "petbox", "받는이")
+	expect(not b1 and w1 == W.giftRandomBox and me.acct.bm.luna == 5000, "뽑기 제한 계정은 상자를 보내지 못한다 — " .. tostring(w1))
+	local b1b = CashServer.gift(me, "bagx", "받는이")
+	expect(b1b, "뽑기 제한 계정도 확률형이 아닌 것은 보낸다")
+	data["bmgift_202"] = nil
+	me.policy = {}
+	you.acct.bm.rlock = true
+	local lunaB = me.acct.bm.luna
+	local b2, w2 = CashServer.gift(me, "petbox", "받는이")
+	expect(not b2 and w2 == W.giftRandomBoxTo and me.acct.bm.luna == lunaB, "받는 사람이 뽑기 제한 계정이면 보내지 못한다 — " .. tostring(w2))
+	you.acct.bm.rlock = false
+	-- 보낸다
+	table.clear(events)
+	local b3, w3, _, s3 = CashServer.gift(me, "petbox", "받는이")
+	expect(b3 and s3 == Cash.lunaPrice("petbox"), "윤슬 펫 상자를 보낸다 — " .. tostring(w3))
+	expect(#boxOf(202) == 1 and boxOf(202)[1].k == "box:petbox", "받는 상자에 box:petbox(안 연 채로)")
+	expect(events[1] and events[1][1] == "sent" and events[1][3] == "box:petbox", "보낸 사람에게 「보냈다」")
+	local before = Cash.count(you.acct.bm, "pet_fox") + Cash.count(you.acct.bm, "pet_silver")
+	-- 받을 차례에 막혀 있으면 남는다 → 풀리면 받는다
+	you.policy = { ArePaidRandomItemsRestricted = true }
+	you.bmGiftDone, you.bmGiftNext = nil, 0
+	CashServer.giftTick(you)
+	expect(#boxOf(202) == 1 and count(you.acct, "bm_box_petbox") == 0, "뽑기 제한이면 상자에 남는다")
+	you.policy = {}
+	you.bmGiftDone, you.bmGiftNext = nil, 0
+	CashServer.giftTick(you)
+	expect(count(you.acct, "bm_box_petbox") == 1 and #boxOf(202) == 0, "받으면 보관함에 안 연 상자 하나(받은 사람이 연다)")
+	eq(Cash.count(you.acct.bm, "pet_fox") + Cash.count(you.acct.bm, "pet_silver"), before, "받는 순간 열리지 않는다")
+	local got = events[#events]
+	expect(got and got[1] == "got" and got[3] == "box:petbox", "받은 사람에게 「선물이 왔다」")
+	-- 윤슬 조각 5개 묶음
+	local b4 = CashServer.gift(me, "yunseul_x5", "받는이")
+	expect(b4, "윤슬 조각 5개를 보낸다")
+	you.bmGiftDone, you.bmGiftNext = nil, 0
+	CashServer.giftTick(you)
+	eq(count(you.acct, "yunseul"), 5, "보관함에 윤슬 조각 5")
+	-- 저장 꼴
+	local c3 = Cash.new()
+	c3.giftOut = { k = "box:mountbox", uid = 9, to = "나", rid = "L1_2_3", at = NOW }
+	local b5 = Cash.unpack(Cash.pack(c3))
+	expect(b5.giftOut and b5.giftOut.k == "box:mountbox", "보낼 선물(상자) 그대로")
+	expect(Cash.boxGiftOf("box:nope") == nil, "없는 상자는 받지 않는다")
+end

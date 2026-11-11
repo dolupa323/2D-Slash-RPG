@@ -414,6 +414,12 @@ state.dupfixUse = function(id: string)
 		end
 	end)
 end
+-- 상자 결과물 하나를 경매장에 올리는 물건으로 꺼낸다(2026-11-11 — 가방 캐시 탭의 「꺼내 팔기」): 서버가 가방 소비 탭에 넣고 바로 저장 · 결과 글은 cashInvoke가 띄운다
+state.cosOut = function(id: string)
+	once(function()
+		cashInvoke("cosOut", id)
+	end)
+end
 -- 같은 펫을 하나 더 꺼낸다(add) · 하나 넣는다 — 같은 펫을 둘 이상 가졌을 때 가방 캐시 탭의 단추(2026-11-10)
 state.petOne = function(id: string, add: boolean)
 	once(function()
@@ -2849,6 +2855,9 @@ local function listen()
 		elseif (e.action == "sell" or e.action == "sellMany") and e.ok and state.fx then -- (여러 개 판매도 — 2026-10-23)
 			state.fx:float("+" .. Format.short(e.result) .. " 달돈", state.body.x, state.body.y - 34, Effects.GOLD) -- 상점에 팔았다
 		elseif e.action == "use" and e.ok and e.why and state.fx then
+			if e.cos then
+				task.spawn(cashInvoke, "view") -- 상자 결과물을 계정에 넣었다(2026-11-11): 가방 캐시 탭의 가진 수를 다시 받는다
+			end
 			state.fx:float(e.why, state.body.x, state.body.y - 46, Effects.MINT, 1.6) -- 달빛 부적 · 능력치 초기화 주문서를 썼다(「약해짐이 풀렸다」 · 「능력치를 모두 되돌렸다」 — 2026-10-18 검토: 전에는 실패만 띄웠다)
 		elseif (e.action == "coinMake" or e.action == "coinBuy") and e.ok and e.result then
 			-- 숯돌의 화로(2026-11-05): 벼린 것 — 창의 아래 줄 · 머리 위
@@ -2946,7 +2955,8 @@ local function listen()
 			return
 		end
 		local Rank = require(lune.sim.rank)
-		local text = Format.fill(Rank.FIRST_TEXT, { name = e.name, level = tonumber(e.level) or 150 })
+		local rank = tonumber(e.rank) or 1 -- Lv.200에 오른 차례(2026-11-11 — 둘째 · 셋째는 「n번째로」)
+		local text = Format.fill(if rank > 1 then Rank.CAP_TEXT else Rank.FIRST_TEXT, { name = e.name, level = tonumber(e.level) or 150, rank = rank })
 		pcall(Guide.banner, Rank.FIRST_TITLE, text, 10)
 		Chat.note(("[%s] %s"):format(Rank.FIRST_TITLE, text))
 		HallStones.soon()
@@ -3882,6 +3892,10 @@ function Boot.start()
 		openRename = function()
 			Windows.open("cash", "rename", true) -- 가방에서 이름 바꾸기 주문서를 썼다 → 이름을 적는 칸
 		end,
+		-- 꺼낸 상자 결과물의 선물(2026-11-11): 가방의 「선물하기」 → 닉네임을 적는 칸
+		openGiftItem = function(id: string)
+			Windows.open("cash", "giftItem:" .. tostring(id), true)
+		end,
 		-- 염색약(2026-10-22): 가방 · 퀵슬롯에서 쓰면 색을 고르는 창(part = point · robe) · 내 직업 · 지금 색(창의 미리보기)
 		openDye = function(part: string)
 			Windows.open("cash", "dye:" .. part, true)
@@ -4019,6 +4033,7 @@ function Boot.start()
 		local wctx = Windows.context()
 		wctx.togglePet = state.togglePet
 		wctx.petOne = state.petOne
+		wctx.cosOut = state.cosOut -- 상자 결과물 꺼내 팔기(2026-11-11)
 		wctx.dupfixUse = state.dupfixUse
 		wctx.toggleRide = state.toggleRide
 		wctx.toggleWskin = state.toggleWskin -- 캐시 무기(2026-10-23)
@@ -4618,7 +4633,13 @@ function Boot.start()
 	-- 로벅스로 산 것이 보관함에 들어왔다(서버의 ProcessReceipt가 저장까지 마친 뒤 — 2026-10-20): 가운데 위 알림 · 상점 창을 고쳐 그린다
 	Net.OnClient("CashGot", function(key, gift)
 		local p = CashWindow.product(key) -- 상점에서 팔지 않는 펫 · 탈것(쿠폰 · 만렙 축하 선물)도 이름이 있다(2026-10-25 — 전에는 상품 목록에서만 찾아 알림이 뜨지 않았다)
-		if p and typeof(gift) == "table" and gift.box ~= nil then
+		local lunaPack = require(lune.sim.cash).lunaPack(key)
+		if lunaPack then
+			-- 루나 충전이 끝났다(2026-11-11 — 서버 ProcessReceipt): 「루나 충전」 — 더한 수 · 지금 루나
+			local W = CashWindow.WORDS
+			local have = if typeof(gift) == "table" and typeof(gift.luna) == "number" then gift.luna else 0
+			Guide.banner(W.chargedHead or "", Format.fill(W.charged or "", { n = Format.comma(lunaPack.n), have = Format.comma(have) }), 5)
+		elseif p and typeof(gift) == "table" and gift.box ~= nil then
 			-- 뽑기 상자(2026-11-07 → 2026-11-10 연출): 사자마자 화면 가득 뽑기 연출(ui/gachaView.luau — 상자가 떨어져 떨리다 번쩍 · 나온 것 · 드문 것이면 금빛) →
 			--  닫으면 달빛 상점의 미리보기에 나온 펫 · 탈것을. 연출을 못 띄우면 예전처럼 위 가운데 알림(「「윤슬 여우」이(가) 나왔다!」 · 가진 것뿐이면 윤슬 조각)
 			local GachaView = require(script.Parent.ui.gachaView)
@@ -4660,6 +4681,17 @@ function Boot.start()
 			local bp = CashWindow.product(box)
 			local W = CashWindow.WORDS
 			Guide.banner(W.dupfixHead or "", Format.fill(W.dupfixGot or "", { box = (bp and bp.name) or box, n = n }), 6)
+		elseif (require(lune.sim.cash).cosGiftOf(key) or require(lune.sim.cash).boxGiftOf(key)) and typeof(gift) == "table" then
+			-- 상자 결과물 · 뽑기 상자의 선물(2026-11-11): 보낸 사람 = 「선물을 보냈다」 · 받은 사람 = 「선물이 왔다」(보관함에 — 상자는 안 연 채로)
+			local CashSim = require(lune.sim.cash)
+			local W = CashWindow.WORDS
+			local bid = CashSim.boxGiftOf(key)
+			local nm = if bid then ((CashWindow.product(bid) or {}).name or bid) else CashSim.itemName(CashSim.cosGiftOf(key))
+			if typeof(gift.to) == "string" then
+				Guide.banner(W.giftSentHead, Format.fill(W.giftSent, { name = nm, to = gift.to }), 4)
+			elseif typeof(gift.from) == "string" then
+				Guide.banner(W.giftGotHead, Format.fill(W.giftGot, { name = nm, from = gift.from }), 5)
+			end
 		elseif p and typeof(gift) == "table" and (typeof(gift.to) == "string" or typeof(gift.from) == "string") then
 			-- 선물(2026-10-31 — 달빛 상점의 「선물하기」): 보낸 사람 = 「선물을 보냈다」 · 받은 사람 = 「선물이 왔다 — 누가 보낸 무엇」
 			local W = CashWindow.WORDS

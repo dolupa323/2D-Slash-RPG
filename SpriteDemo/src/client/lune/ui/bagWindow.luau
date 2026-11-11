@@ -297,7 +297,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 				return
 			end
 			if bulk and key() == "gear" then
-				if it and it.id ~= nil then
+				if it and it.id ~= nil and not it.lock then -- (잠긴 것은 고르지 않는다 — 2026-11-11)
 					bulk[it.id] = if bulk[it.id] then nil else true -- 여러 개 분해: 누르면 고름 · 풂
 				end
 				bulkAsk = false
@@ -520,7 +520,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 						gain += Items.sellPrice(it)
 						first = first or it
 					end
-					if (it.star or 0) <= 0 then
+					if (it.star or 0) <= 0 and not it.lock then -- (잠긴 것은 등급 단추가 고르지 않는다 — 2026-11-11)
 						ofGrade[it.q] = ofGrade[it.q] or {}
 						table.insert(ofGrade[it.q], it.id)
 					end
@@ -593,7 +593,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 						gain += Items.dismantle(it)
 						first = first or it
 					end
-					if (it.star or 0) <= 0 and not BagWindow.better(me, bag, it) then
+					if (it.star or 0) <= 0 and not it.lock and not BagWindow.better(me, bag, it) then
 						all += 1
 						allOn = allOn and bulk[it.id] == true
 					end
@@ -632,7 +632,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					local on = not (all > 0 and allOn)
 					for i = 1, bag.size do
 						local it = bag.gear[i]
-						if it and (it.star or 0) <= 0 and not BagWindow.better(me, bag, it) then
+						if it and (it.star or 0) <= 0 and not it.lock and not BagWindow.better(me, bag, it) then
 							bulk[it.id] = if on then true else nil
 						elseif it and not on then
 							bulk[it.id] = nil
@@ -765,6 +765,17 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					end,
 				})
 			end
+			-- 상자 결과물(2026-11-11 — 경매장에서 사고판다): 「꺼내 팔기」 = 하나를 가방 소비 탭의 물건(bm_cos_<이름>)으로 꺼낸다 · 서버가 쓰는 중인 마지막 하나 · 가방이 찬 것을 막는다
+			local cosDef = Items.goods("bm_cos_" .. tostring(entry.ride))
+			if cosDef and cosDef.kind == "bmCos" and ctx.cosOut then
+				table.insert(spec.info.notes, { BMW.cosHint or "", "dim" })
+				table.insert(spec.buttons, {
+					text = BMW.cosOut,
+					onClick = function()
+						ctx.cosOut(entry.ride)
+					end,
+				})
+			end
 			spec.key = table.concat({ "cash", entry.ride, tostring(entry.on), tostring(entry.out or ""), tostring(entry.n or 1), tostring(fixLeft) }, "|")
 			ItemDetail.show("bag", spec)
 			return
@@ -850,7 +861,7 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 				button(WORDS.dismantle, function()
 					ask = { kind = "dismantle" }
 					view.refresh()
-				end)
+				end, nil, it.lock == true) -- (잠긴 것은 꺼진다 — 2026-11-11 아이템 잠금)
 				BagWindow.rerollButtons(bag, it, button, function()
 					ask = { kind = "reroll" }
 					view.refresh()
@@ -872,8 +883,15 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					button(WORDS.sell, function()
 						ask = { kind = "sellGear" }
 						view.refresh()
-					end)
+					end, nil, it.lock == true)
 				end
+				-- 아이템 잠금(2026-11-11 사용자: "아이템 잠금기능 만들어줘 잠근거는 판매, 분해 이런거 적용안되게"): 잠그면 분해 · 팔기 · 경매장 · 여러 개 분해 · 판매에서 빠진다
+				button(if it.lock then WORDS.unlock else WORDS.lock, function()
+					ctx.send("Item", "lock", "gear", slot, not it.lock)
+				end)
+			end
+			if it.lock and spec.info and spec.info.notes then
+				table.insert(spec.info.notes, { WORDS.lockNote, "accent" })
 			end
 			spec.key = table.concat({ "gear", it.id, it.q, it.star, tostring(it.broken), me.level, if worn then worn.id else 0, if worn then worn.star else 0, service or "-", tostring(can), if ask then ask.kind else "-", BagWindow.exKey(it), Bag.countIn(bag, BagWindow.TOOL or "") }, "|") -- (추가 옵션 · 가진 윤슬 조각이 바뀌면 다시 그린다 — 2026-11-07)
 		else
@@ -889,16 +907,22 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 					button(WORDS.quick, function()
 						ctx.quick.pick(entry.item) -- 퀵슬롯(스마트폰: 칸 단추)이 반짝인다 — 놓을 칸을 누른다
 					end)
+					if def.kind == "bmCos" and ctx.openGiftItem then
+						-- 꺼낸 상자 결과물의 선물 (2026-11-11 사용자: "꺼내팔기 한다음에 경매장에 거래가능하게만들면된다 선물하기도 가능하게"): 닉네임을 적는 창(상점 창의 giftItem 모습)
+						button(BMW.giftItem, function()
+							ctx.openGiftItem(entry.item)
+						end)
+					end
 				end
 				if Items.goodsDust(entry.item, 1) ~= nil then
 					-- 물약 · 귀환 주문서: 분해하면 소량의 달가루(2026-10-27 사용자 "포션이랑 마을귀환주문서 분해할수있게하고 분해하면 소량의 달가루 주는형식으로")
 					button(WORDS.dismantle, function()
 						askCount("dismantleGoods", tabKey, slot, entry) -- 처음에는 그 칸의 묶음 전부
-					end)
+					end, nil, entry.lock == true)
 				end
 				button(WORDS.discard, function()
 					askCount("discard", tabKey, slot, entry) -- 처음에는 그 칸의 묶음 전부
-				end)
+				end, nil, entry.lock == true)
 				if entry.n > 1 then
 					button(WORDS.split, function()
 						askCount("split", tabKey, slot, entry) -- 처음에는 절반
@@ -920,7 +944,14 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 				elseif service == "shop" and def.sell > 0 then
 					button(WORDS.sell, function()
 						askCount("sell", tabKey, slot, entry)
-					end)
+					end, nil, entry.lock == true)
+				end
+				-- 아이템 잠금(2026-11-11): 이 칸의 묶음을 잠그고 푼다
+				button(if entry.lock then WORDS.unlock else WORDS.lock, function()
+					ctx.send("Item", "lock", tabKey, slot, not entry.lock)
+				end)
+				if entry.lock and spec.info and spec.info.notes then
+					table.insert(spec.info.notes, { WORDS.lockNote, "accent" })
 				end
 			end
 			spec.key = table.concat({ tabKey, slot, entry.item, entry.n, have, me.level, service or "-" }, "|")

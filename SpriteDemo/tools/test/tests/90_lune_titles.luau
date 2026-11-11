@@ -22,11 +22,13 @@ local function signal()
 end
 SERVICE("Players", { PlayerAdded = signal(), PlayerRemoving = signal(), GetPlayers = function() return {} end })
 SERVICE("RunService", { Heartbeat = signal(), IsStudio = function() return false end })
-SERVICE("MessagingService", { PublishAsync = function() end, SubscribeAsync = function() end })
+local published = {} -- 모든 서버로 보낸 소식(2026-11-11 Lv.200 세 사람)
+SERVICE("MessagingService", { PublishAsync = function(_, topic, data) table.insert(published, { topic = topic, data = data }) end, SubscribeAsync = function() end })
 SERVICE("TextService", { FilterStringAsync = function(_, text) return { GetNonChatStringForBroadcastAsync = function() return text end } end })
 local disk, names = {}, {}
 local firstRec = nil
 local tenDisk = {}
+local capDisk = {} -- Lv.200에 오른 차례로 세 사람(2026-11-11)
 local classDisk = {} -- [직업] = 그 직업의 첫 만렙 기록
 local goldDisk = nil -- 황금왕의 세계 기록(2026-10-29)
 local robuxRows = {} -- 후원 판(높은 차례)
@@ -61,6 +63,18 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	classFirstGet = function(class) return true, classDisk[class] end, -- 직업마다의 첫 만렙(2026-10-27)
 	classFirstClaim = function(class, rec) classDisk[class] = classDisk[class] or rec return classDisk[class] end,
 	maxTenGet = function() return table.clone(tenDisk) end,
+	capThreeGet = function() return table.clone(capDisk) end,
+	capThreeAdd = function(rec, cap)
+		for _, r in capDisk do
+			if r.key == rec.key then return table.clone(capDisk) end
+		end
+		if #capDisk < cap then
+			local at = 1
+			while at <= #capDisk and capDisk[at].at <= rec.at do at += 1 end
+			table.insert(capDisk, at, rec)
+		end
+		return table.clone(capDisk)
+	end,
 	maxTenAdd = function(rec, cap)
 		for _, r in tenDisk do
 			if r.key == rec.key then return table.clone(tenDisk) end
@@ -101,7 +115,7 @@ local function gotOf(p)
 	return nil
 end
 
-eq(#Titles.LIST, 12, "칭호 열둘(운영자 · 1위 · 황금왕 · 용암 거인의 최초 격파(2026-11-05) · 직업마다의 첫 만렙 다섯 · 열 사람 · 앞설 뻔했던 자 · 할로윈의 호박 수확자 — 그림자 사수의 칭호 둘은 2026-10-28에 뺐다)")
+eq(#Titles.LIST, 14, "칭호 열넷(운영자 · 1위 · 황금왕 · 용암 거인의 최초 격파 · 직업마다의 첫 만렙 다섯 · 열 사람 · Lv.200의 첫 사람 · 세 사람(2026-11-11) · 앞설 뻔했던 자 · 할로윈의 호박 수확자)")
 eq(Titles.LIST[1].id, "gm", "가장 높은 것 = 운영자(2026-10-26)")
 eq(Titles.LIST[2].id, "max1", "그다음 = 1위")
 eq(Titles.CAP, 10, "열 사람")
@@ -375,4 +389,62 @@ do
 	expect(sr.hero.titles.almost == true, "이름을 바꿔도 묶인 캐릭터는 받는다")
 	World.removePlayer(pr)
 	World.removePlayer(po)
+end
+
+-- ⑨ Lv.200(2026-11-11 사용자: "200만렙 달성 이벤트랑 칭호, 3명까지 칭호주고 150때랑 똑같아 랭커칭호주고 하는거야"):
+--  Lv.200에 오른 차례로 세 사람이 세계 기록(capThree)에 적힌다 · 첫째 = 「정점의 계승자」(cap1) + 「만월 너머의 계승자」(cap3) · 둘째 · 셋째 = cap3 · 넷째부터 없음 · Lv.199는 없음
+--  새로 적힐 때마다 이 서버의 모두에게 「FirstMax」(level 200 · rank) · 다른 서버로 소식(LuneCapNews)
+do
+	eq(Titles.CAP3, 3, "세 사람")
+	local t1, t3 = nil, nil
+	for _, t in Titles.LIST do
+		if t.id == "cap1" then t1 = t end
+		if t.id == "cap3" then t3 = t end
+	end
+	expect(t1 and t1.rule == "cap1" and t1.name == "정점의 계승자", "칭호 「정점의 계승자」(rule cap1)")
+	expect(t3 and t3.rule == "cap3" and t3.name == "만월 너머의 계승자", "칭호 「만월 너머의 계승자」(rule cap3)")
+	capDisk = {}
+	TitleServer.reset(table.clone(tenDisk), othersTaken(), nil, {})
+	local function newsTo(p)
+		local out = {}
+		for _, m in sent do
+			if m.name == "FirstMax" and m.player == p and typeof(m.args[1]) == "table" and m.args[1].level == N.LEVEL_CAP then
+				table.insert(out, m.args[1])
+			end
+		end
+		return out
+	end
+	local pa, sa = join(9401, "이백첫째", "riven", N.LEVEL_CAP, 100)
+	sa.hero.capAt = 5000
+	run(2.5)
+	expect(sa.hero.titles.cap1 and sa.hero.titles.cap3, "첫째는 둘 다")
+	local na = newsTo(pa)
+	expect(#na >= 1 and na[1].rank == 1 and na[1].name == "이백첫째", "이 서버의 모두에게 축하 알림(첫째)")
+	local pub = 0
+	for _, m in published do
+		if m.topic == "LuneCapNews" and m.data.rank == 1 then pub += 1 end
+	end
+	eq(pub, 1, "다른 서버로도 한 번 보낸다")
+	local pb, sb = join(9402, "이백둘째", "axion", N.LEVEL_CAP, 100)
+	sb.hero.capAt = 6000
+	local pc, sc = join(9403, "이백셋째", "mooni", N.LEVEL_CAP, 100)
+	sc.hero.capAt = 7000
+	run(2.5)
+	expect(sb.hero.titles.cap3 and not sb.hero.titles.cap1, "둘째는 세 사람 칭호만")
+	expect(sc.hero.titles.cap3 and not sc.hero.titles.cap1, "셋째도")
+	local nb = newsTo(pa)
+	local ranks = {}
+	for _, n in nb do table.insert(ranks, n.rank) end
+	table.sort(ranks)
+	eq(table.concat(ranks, ","), "1,2,3", "알림은 첫째 · 둘째 · 셋째(차례가 붙는다)")
+	local pd, sd = join(9404, "이백넷째", "salamander", N.LEVEL_CAP, 100)
+	sd.hero.capAt = 8000
+	local pe, se = join(9405, "아직199", "reaper", N.LEVEL_CAP - 1, 100)
+	run(2.5)
+	eq(#capDisk, 3, "셋이 차면 더 적지 않는다")
+	expect(not sd.hero.titles.cap3 and not sd.hero.titles.cap1, "넷째는 칭호가 없다")
+	expect(not se.hero.titles.cap3, "Lv.199는 없다")
+	for _, p in { pa, pb, pc, pd, pe } do
+		World.removePlayer(p)
+	end
 end

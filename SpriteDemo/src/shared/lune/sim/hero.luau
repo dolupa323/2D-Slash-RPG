@@ -280,6 +280,7 @@ function Hero.new(id: any, class: string)
 	h.inCine = false -- 장면이 도는 중(맞지 않는다 — 저장하지 않는다. 서버가 90초 뒤에 저절로 푼다)
 	h.played = 0 -- 이 캐릭터로 논 시간(초 · 저장한다 — 서버가 센다. 로블록스 분석의 LevelUp 값 · 2026-10-15)
 	h.maxAt = nil -- 만렙에 오른 때(os.time — 저장한다). 레벨 순위에서 만렙끼리는 먼저 오른 사람이 위(2026-10-24 사용자: "만렙이면 찍은 순서대로 제일먼저찍은사람이 1위 여야하는데" — sim/rank.luau)
+	h.capAt = nil -- Lv.200(LEVEL_CAP)에 오른 때(os.time — 저장한다 · 2026-11-11 사용자 "200만렙 달성 이벤트랑 칭호, 3명까지 칭호주고 150때랑 똑같아"): 레벨 순위에서 200끼리는 먼저 오른 사람이 위 · 먼저 오른 셋의 기록(server modules/titles.luau)
 	h.look = {} -- 무기 · 로브 색(염색약 — sim/dye.luau · 2026-10-22): { point = 색?, robe = 색? } · 없으면 원래 색
 	h.wskin = false -- 낀 캐시 무기(캐릭터마다 · 저장한다 — 2026-11-03 사용자 "무기스킨 캐릭마다 낄수있게": 전에는 계정에 하나라 모든 캐릭터에 같이 적용됐다 · 가진 것은 계정의 것 — sim/cash.luau)
 	h.titles = {} -- 가진 칭호 { [id] = true }(sim/titles.luau — 2026-10-26 · 저장한다)
@@ -599,7 +600,7 @@ function Hero.gainXp(h, amount: number): number
 		return 0
 	end
 	h.xp += amount * (h.xpBoost or 1) -- 관리자의 시험용 경험치 배율(저장하지 않는다 — 서버의 관리자 명령만 정한다)
-	-- (상한 200 · Lv.150부터는 다음 레벨까지 XP_WALL — 2026-11-06 풀 쿠폰 · 풀 패스로 젠을 다 잡는 24시간 사냥 한 달(그 전 11-05: 닿지 않는 벽 · 그 전: 150에서 멈추고 경험치 0))
+	-- (상한 200 · Lv.150부터는 N.xpNeed의 곡선 XP_TOP — 2026-11-11: 150 → 200 약 90일(최대 효율) · 그 전 11-06 ~ 11-10: 한 레벨 720억 = 한 달의 벽 · 11-05: 닿지 않는 벽 · 그 전: 150에서 멈추고 경험치 0)
 	while h.level < N.LEVEL_CAP and h.xp >= N.xpNeed(h.level) do
 		h.xp -= N.xpNeed(h.level)
 		h.level += 1
@@ -615,6 +616,10 @@ function Hero.gainXp(h, amount: number): number
 			h.maxAt = os.time() -- 만렙에 오른 때(레벨 순위에서 만렙끼리의 차례)
 			h.maxNow = true -- 이 접속에서 경험치로 막 만렙이 됐다(저장하지 않는다 — 만렙 최초 달성 알림은 이것일 때만: world.luau)
 		end
+	end
+	if h.level >= N.LEVEL_CAP and not h.capAt then
+		h.capAt = os.time() -- Lv.200에 오른 때(2026-11-11 — 200끼리의 순위 · 먼저 오른 셋의 기록)
+		h.capNow = true -- 이 접속에서 경험치로 막 200이 됐다(저장하지 않는다)
 	end
 	if ups > 0 then
 		local from = h.job
@@ -985,6 +990,7 @@ function Hero.pack(h)
 		cine = Hero.cineList(h),
 		played = math.floor(h.played or 0),
 		maxAt = h.maxAt, -- 만렙에 오른 때(2026-10-24)
+		capAt = h.capAt, -- Lv.200에 오른 때(2026-11-11)
 		look = Dye.clean(h.look), -- 무기 · 로브 색(2026-10-22)
 		wskin = h.wskin, -- 낀 캐시 무기(2026-11-03 — 아직 정하지 않았으면 nil: 서버가 계정에 껴 두었던 것으로 한 번 채운다 · Cash.heroWskin)
 		titles = Titles.owned(h), -- 가진 칭호(2026-10-26)
@@ -1017,7 +1023,7 @@ function Hero.unpack(id: any, data: any)
 	-- 차수: 저장된 것(그 레벨에 닿을 수 있는 데까지). 전직 퀘스트가 생기기 전에 저장된 캐릭터(2026-10-10 이전)는 레벨만 되면 전직했으므로 그 레벨의 차수 그대로다
 	h.job = if whole(data.job, 1, #CLASSES.jobs) then math.min(data.job, Hero.jobAt(h.level)) else Hero.jobAt(h.level)
 	-- (2026-11-06: 필요한 경험치가 줄어 저장된 경험치가 그 레벨의 필요치를 넘을 수 있다 — 버리지 않고 아래 끝에서 레벨을 올린다 · 말이 안 되는 수만 0)
-	h.xp = if typeof(data.xp) == "number" and data.xp >= 0 and data.xp < N.XP_WALL * 2 then math.floor(data.xp) else 0
+	h.xp = if typeof(data.xp) == "number" and data.xp >= 0 and data.xp < 1e13 then math.floor(data.xp) else 0 -- (1e13 = Lv.150 → 200의 합(약 2,580억)보다 넉넉히 — 2026-11-11 벽을 풀며: Lv.150에서 쌓아 둔 경험치는 아래 끝에서 새 곡선대로 레벨이 된다)
 	h.money = if whole(data.money, 0, 9e15) then data.money else 0
 	h.weak = if whole(data.weak, 0, 3600) then data.weak else 0
 	h.expLeft = if whole(data.expLeft, 0, Cash.RULES.exp.cap) then data.expLeft else 0 -- 경험치 쿠폰 — 생기기 전의 저장 = 0
@@ -1047,6 +1053,7 @@ function Hero.unpack(id: any, data: any)
 	end
 	h.played = if whole(data.played, 0, 1e10) then data.played else 0 -- (이것이 생기기 전의 저장 = 0부터 센다)
 	h.maxAt = if whole(data.maxAt, 1, 1e11) and h.level >= N.MAX_LEVEL then data.maxAt else nil -- 만렙에 오른 때(이것이 생기기 전에 만렙이 된 캐릭터 = 없음 — 서버가 처음 본 때로 채운다: world.luau pushRank)
+	h.capAt = if whole(data.capAt, 1, 1e11) and h.level >= N.LEVEL_CAP then data.capAt else nil -- Lv.200에 오른 때(2026-11-11 — 이것이 생기기 전의 저장 = 없음)
 	h.look = Dye.clean(data.look) -- 무기 · 로브 색(이것이 생기기 전의 저장 · 모르는 색 = 원래 색)
 	h.wskin = if typeof(data.wskin) == "string" or data.wskin == false then data.wskin else nil -- 낀 캐시 무기(이것이 생기기 전의 저장 = nil — 서버가 계정에 껴 두었던 것으로 한 번 채운다)
 	Titles.unpack(h, data.titles, data.title) -- 칭호(이것이 생기기 전의 저장 = 없음 — 서버가 세계 기록을 보고 준다)

@@ -270,10 +270,11 @@ sess.loaded = false
 eq(CashServer.processReceipt({ PlayerId = 77, PurchaseId = "p4", CurrencySpent = 49 }, "dust"), LATER, "계정을 다 읽기 전 → 아직")
 sess.loaded = true
 eq(CashServer.processReceipt({ PlayerId = 77, ProductId = 123456789, PurchaseId = "p5" }), LATER, "모르는 상품 번호 → 아직(주지 않는다)")
-local okP, whyP = CashServer.prompt(sess, "tele")
-expect(not okP and whyP == "판매 준비 중", "번호가 없거나 게임에 아직 없는 상품(순간이동의 돌)은 구매 창을 띄우지 않는다")
-local _, whyM = CashServer.prompt(sess, "money")
-expect(whyM ~= "판매 준비 중", "대시보드 번호가 있고 만들어 둔 상품(달돈 주머니)은 한도를 보는 데까지 간다 — " .. tostring(whyM))
+-- (2026-11-11 루나부터 상품은 CashServer.buy가 루나로 판다 — 전에는 prompt가 구매 창을 띄웠다)
+local okP, whyP = CashServer.buy(sess, "tele")
+expect(not okP and whyP == "판매 준비 중", "게임에 아직 없는 상품(순간이동의 돌)은 팔지 않는다(루나가 모자란다는 말보다 먼저) — " .. tostring(whyP))
+local _, whyM = CashServer.buy(sess, "money")
+expect(whyM ~= "판매 준비 중" and whyM == Cash.WORDS.lunaShort, "만들어 둔 상품(달돈 주머니)은 한도 · 루나를 보는 데까지 간다 — " .. tostring(whyM))
 local priced = Cash.view(sess.acct, NOW, nil, nil, { money = 77 })
 local moneyRow
 for _, v in priced.list do

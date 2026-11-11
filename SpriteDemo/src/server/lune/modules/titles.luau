@@ -77,6 +77,12 @@ end
 
 local ten = nil -- 아는 열 사람의 기록(서버가 켜질 때 읽는다 — 읽기 전이면 nil)
 local busy, failAt = false, -math.huge
+-- Lv.200에 오른 차례로 세 사람(2026-11-11 사용자: "200만렙 달성 이벤트랑 칭호, 3명까지 칭호주고 150때랑 똑같아 랭커칭호주고") — 세계 기록 capThree(store.luau)
+--  [1] = 처음 Lv.200(rule cap1의 칭호 · 레벨 판 1위에 고정 — world.luau) · 셋 모두 = rule cap3의 칭호. 새로 적히면 모든 서버에 축하 알림(MessagingService CAP_TOPIC)
+local cap = nil
+local capBusy, capFailAt = false, -math.huge
+local capDeliver: (any) -> () = function() end
+TitleServer.CAP_TOPIC = "LuneCapNews"
 -- 직업마다의 첫 만렙(2026-10-27 사용자: "직업별 첫 만렙 유저들 칭호 만들거야"): [직업] = 기록 { key, name, class, at } · false = 읽었는데 아직 없다 · nil = 아직 못 읽었다
 local firsts = {}
 local classBusy, classFailAt = {}, {}
@@ -148,9 +154,71 @@ local function loadClasses()
 		end
 	end)
 end
+local function loadCap()
+	task.spawn(function()
+		local ok, list = pcall(Store.capThreeGet)
+		if ok and typeof(list) == "table" then
+			cap = list
+		end
+	end)
+end
+-- fn(알림) = 이 서버의 모두에게 축하 알림(world.luau가 정한다) · 알림 = { name, class, level, rank }
+function TitleServer.onCap(fn: (any) -> ())
+	capDeliver = fn
+end
 function TitleServer.start()
 	load()
 	loadClasses()
+	loadCap()
+	task.spawn(function()
+		pcall(function()
+			game:GetService("MessagingService"):SubscribeAsync(TitleServer.CAP_TOPIC, function(msg)
+				local d = msg and msg.Data
+				if typeof(d) == "table" and typeof(d.name) == "string" then
+					loadCap() -- 다른 서버에서 적혔다: 기록을 다시 읽는다(칭호는 다음 1초에)
+					capDeliver(d)
+				end
+			end)
+		end)
+	end)
+end
+-- 지금 아는 Lv.200 세 사람의 기록(없으면 nil — 자동 검사 · 레벨 판의 1위 고정이 본다)
+function TitleServer.cap()
+	return cap
+end
+-- Lv.200인 캐릭터를 세 사람의 기록에 적어 본다 — 새로 적히면 이 서버와 다른 모든 서버에 알린다(몇 번째인지)
+function TitleServer.tryCap(rec, now: number)
+	if capBusy or now - capFailAt < TitleServer.RETRY then
+		return
+	end
+	if cap == nil then
+		capFailAt = now
+		loadCap()
+		return
+	end
+	if has(cap, rec.key) or #cap >= Titles.CAP3 then
+		return
+	end
+	capBusy = true
+	task.spawn(function()
+		local ok, list = pcall(Store.capThreeAdd, rec, Titles.CAP3)
+		capBusy = false
+		if ok and typeof(list) == "table" then
+			cap = list
+			for i, r in list do
+				if typeof(r) == "table" and r.key == rec.key then
+					local news = { name = rec.name, class = rec.class, level = N.LEVEL_CAP, rank = i }
+					capDeliver(news)
+					pcall(function()
+						game:GetService("MessagingService"):PublishAsync(TitleServer.CAP_TOPIC, news)
+					end)
+					break
+				end
+			end
+		else
+			capFailAt = now
+		end
+	end)
 end
 
 -- 지금 아는 열 사람의 기록(없으면 nil — 자동 검사가 본다)
@@ -195,6 +263,9 @@ function TitleServer.grant(s, first, eligible: boolean, now: number, admin: bool
 	local key = Rank.charKey(s.player.UserId, s.cid)
 	if eligible and h.level >= N.MAX_LEVEL and h.maxAt then
 		TitleServer.tryTen({ key = key, name = s.name, class = h.class, at = h.maxAt }, now)
+	end
+	if eligible and h.level >= N.LEVEL_CAP and h.capAt then
+		TitleServer.tryCap({ key = key, name = s.name, class = h.class, at = h.capAt }, now) -- Lv.200 세 사람(2026-11-11)
 	end
 	-- 직업마다의 첫 만렙: 기록이 비었으면 채운다 — 열 사람의 기록에 그 직업이 있으면 그 가장 이른 사람으로, 없으면 지금 만렙인 이 캐릭터로
 	for _, t in Titles.LIST do
@@ -259,6 +330,7 @@ function TitleServer.grant(s, first, eligible: boolean, now: number, admin: bool
 		local rec = if rk then firsts[rk] else nil
 		local mine = (t.rule == "admin" and admin == true) or (t.rule == "first" and first ~= nil and first.key == key) or (t.rule == "ten" and ten ~= nil and has(ten, key))
 			or ((t.rule == "classFirst" or t.rule == "named") and typeof(rec) == "table" and rec.key == key) or (t.rule == "goldking" and goldMine) or fcMine
+			or (t.rule == "cap1" and cap ~= nil and typeof(cap[1]) == "table" and cap[1].key == key) or (t.rule == "cap3" and cap ~= nil and has(cap, key)) -- Lv.200의 첫 사람 · 세 사람(2026-11-11)
 		if mine and Titles.give(h, t.id) then
 			table.insert(got, t.id)
 		end
@@ -267,8 +339,9 @@ function TitleServer.grant(s, first, eligible: boolean, now: number, admin: bool
 end
 
 -- (자동 검사: 기록을 비운다 · classes = 직업마다의 첫 만렙 기록 [직업] = 기록 · false(없음) — 안 주면 모두 「아직 못 읽었다」)
-function TitleServer.reset(list, classes, goldRec)
+function TitleServer.reset(list, classes, goldRec, capList)
 	ten, busy, failAt = list, false, -math.huge
+	cap, capBusy, capFailAt = capList, false, -math.huge
 	firsts, classBusy, classFailAt = classes or {}, {}, {}
 	gold, goldBusy, goldAt = goldRec, false, -math.huge
 end

@@ -509,7 +509,7 @@ local function pushRank(s)
 		h.maxAt = os.time() -- 만렙에 오른 때가 적히기 전(2026-10-24)에 만렙이 되었고 MAX_FIX에도 없는 캐릭터: 서버가 처음 본 때로 채운다
 		s.dirty = true
 	end
-	local level, power = Rank.levelScore(h.level, h.xp, Hero.xpNeed(h), h.maxAt), Hero.power(h)
+	local level, power = Rank.levelScore(h.level, h.xp, Hero.xpNeed(h), h.maxAt, h.capAt), Hero.power(h) -- capAt = Lv.200에 오른 때(2026-11-11 — 200끼리의 차례)
 	if sent.key ~= key or sent.name ~= s.name then
 		Store.rankInfoSet(key, { name = s.name, class = h.class }, s.guest == true)
 		sent.key, sent.name, sent.level, sent.power = key, s.name, nil, nil
@@ -1181,8 +1181,12 @@ local function rankBoards()
 			end
 			return info
 		end)
-		local first = if board == "level" then require(script.Parent.firstMax).get() else nil
-		boards[board] = if first then Rank.pinFirst(view, first, keys, N.MAX_LEVEL) else view -- 만렙 최초 달성은 레벨 판 1위에 고정(2026-10-24)
+		-- 레벨 판 1위 고정(2026-10-24 처음 150 — 「레벨 순위 1위에 영원히 새겨집니다」) → 2026-11-11 처음 Lv.200이 나오면 그 사람으로 넘어간다(사용자 "200만렙 달성 이벤트 … 150때랑 똑같아").
+		--  처음 200이 나오기 전에는 처음 150의 고정 그대로(약속한 것) — 제가 정한 것
+		local capList = if board == "level" then require(script.Parent.titles).cap() else nil
+		local first200 = if typeof(capList) == "table" and typeof(capList[1]) == "table" then capList[1] else nil
+		local first = if first200 then first200 elseif board == "level" then require(script.Parent.firstMax).get() else nil
+		boards[board] = if first then Rank.pinFirst(view, first, keys, if first200 then N.LEVEL_CAP else N.MAX_LEVEL) else view
 	end
 	rankCache, rankAt = boards, World.now
 	return boards
@@ -2200,6 +2204,9 @@ local function onItem(player, action: string, a: any, b: any, c: any, d: any)
 		ok, why = Bag.move(h, a, b, c) -- 탭 · 옮길 칸 · 놓을 칸
 	elseif action == "sort" then
 		ok, why = Bag.sort(h, a)
+	elseif action == "lock" then
+		-- 아이템 잠금 (2026-11-11 사용자: "아이템 잠금기능 만들어줘 잠근거는 판매, 분해 이런거 적용안되게 인벤토리에서 잠글수있는기능을만들어줘"): a = 탭 · b = 칸 · c = 잠근다(true) / 푼다
+		ok, why = Bag.lock(h, a, b, c == true)
 	elseif action == "discard" then
 		ok, why = Bag.discard(h, a, b, c) -- 탭 · 칸 · 버릴 수
 	elseif action == "split" then
@@ -2369,6 +2376,14 @@ local function onPotion(player, id: any)
 				end
 			end
 			fire("ItemDone", player, { action = "use", ok = true })
+			return
+		elseif goods.kind == "bmCos" then
+			-- 상자 결과물을 계정에 넣었다(2026-11-11 — 경매장에서 산 것 · 꺼낸 것): 바로 저장(유료의 것 — 상자를 연 것과 같게) · 바로 꺼낸 펫 · 낀 탈것은 방 사람들에게도 · cos = 창이 캐시 목록을 다시 받는다
+			saveAccount(s)
+			if s.scene and not s.shop then
+				sendWho(s.scene)
+			end
+			fire("ItemDone", player, { action = "use", ok = true, why = msg, cos = true })
 			return
 		end
 		saveSoon(s)
@@ -3398,13 +3413,31 @@ end
 
 -- 유료 상품으로 받은 아이템(GOODS의 paid)을 거래하지 못하게 해야 하는 이용자인가 — 로블록스 정책의 값(IsPaidItemTradingAllowed)이 false일 때만(읽지 못했으면 막지 않는다)
 --  공식 문서는 이 규칙을 확률형 결과물에 대해 적었다. 우리 유료 아이템은 확률이 없지만, 막힌 이용자에게는 같은 대로 막아 둔다(2026-10-20 — design/bm.js)
-local PAID_LOCKED = "이 계정은 유료 상품으로 받은 아이템을 거래할 수 없다(로블록스 정책)"
-local function paidLocked(s, row: any): boolean
+-- 경매장의 정책 막기(로블록스 PolicyService — 2026-11-11 지역 이름 수 줄이기: 이 파일의 맨 위 이름이 200개를 넘으면 컴파일되지 않는다 → 한 표에 모은다)
+--  paid: 유료 상품으로 받은 아이템(GOODS의 paid)을 거래할 수 없는 계정(IsPaidItemTradingAllowed == false)
+--  random: 상자 결과물(2026-11-11 — GOODS의 random: 돈을 낸 뽑기의 결과물)을 거래하지 못하게 해야 하는 계정 — 로블록스가 뽑기 제한으로 표시한 계정(ArePaidRandomItemsRestricted)
+--   공식 문서: 대상이 아닌 사용자에게는 뽑기 결과물의 거래 기능에 접근하게 하면 안 된다 → 그 사람에게는 경매장에서 보이지 않고(목록 · 시세) 올리기 · 사기도 막는다
+local TradeLock = {
+	PAID = "이 계정은 유료 상품으로 받은 아이템을 거래할 수 없다(로블록스 정책)",
+	RANDOM = "이 계정은 뽑기 상자의 결과물을 사고팔 수 없다(로블록스 정책)",
+}
+function TradeLock.paid(s, row: any): boolean
 	if typeof(row) ~= "table" or typeof(row.g) ~= "string" then
 		return false
 	end
 	local def = Items.goods(row.g)
-	return def ~= nil and def.paid == true and typeof(s.policy) == "table" and s.policy.IsPaidItemTradingAllowed == false
+	-- (2026-11-11 사용자 결정 「모두 열기」: 설계 BM_RULES.market.paidPolicy가 true일 때만 막는다 — 지금 false)
+	return Cash.RULES.market ~= nil and Cash.RULES.market.paidPolicy == true and def ~= nil and def.paid == true and typeof(s.policy) == "table" and s.policy.IsPaidItemTradingAllowed == false
+end
+function TradeLock.restricted(s): boolean
+	return typeof(s.policy) == "table" and s.policy.ArePaidRandomItemsRestricted == true
+end
+function TradeLock.random(s, row: any): boolean
+	if not TradeLock.restricted(s) or typeof(row) ~= "table" or typeof(row.g) ~= "string" then
+		return false
+	end
+	local def = Items.goods(row.g)
+	return def ~= nil and def.random == true
 end
 
 local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
@@ -3417,7 +3450,7 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 		local out = extra or {}
 		out.ok, out.why, out.now = ok == true, why, now
 		out.used, out.max = Market.count(book), MARKET.slots + Cash.marketPlus(s.acct, now) -- 달빛 패스가 있는 시즌이면 칸이 더(2026-10-20)
-		out.paidLock = typeof(s.policy) == "table" and s.policy.IsPaidItemTradingAllowed == false or nil -- 로벅스로 산 아이템을 거래할 수 없는 계정(로블록스 정책) — 창이 판매 목록에 미리 적는다(2026-10-30)
+		out.paidLock = Cash.RULES.market ~= nil and Cash.RULES.market.paidPolicy == true and typeof(s.policy) == "table" and s.policy.IsPaidItemTradingAllowed == false or nil -- 로벅스로 산 아이템을 거래할 수 없는 계정(로블록스 정책) — 창이 판매 목록에 미리 적는다(2026-10-30)
 		return out
 	end
 	if s.guest then
@@ -3430,7 +3463,22 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 		return reply(nil, MWHY.busy)
 	end
 	local function listing(board: string, doc: any)
-		return { rows = Market.rows(doc, now, userId), trades = Market.trades(doc, now), board = board }
+		local rows, trades = Market.rows(doc, now, userId), Market.trades(doc, now)
+		if TradeLock.restricted(s) then -- 뽑기 제한 계정에는 상자 결과물이 보이지 않는다(2026-11-11)
+			local keepRows, keepTrades = {}, {}
+			for _, r in rows do
+				if not TradeLock.random(s, r.it) then
+					table.insert(keepRows, r)
+				end
+			end
+			for _, r in trades do
+				if not TradeLock.random(s, r.it) then
+					table.insert(keepTrades, r)
+				end
+			end
+			rows, trades = keepRows, keepTrades
+		end
+		return { rows = rows, trades = trades, board = board }
 	end
 	local function work()
 		if action == "mine" then
@@ -3455,6 +3503,8 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 			local held = h[a][b]
 			if not held then
 				return reply(nil, MWHY.item)
+			elseif held.lock then
+				return reply(nil, Bag.LOCKED) -- (잠긴 것 — 2026-11-11 아이템 잠금)
 			elseif not Market.priceOk(price) or not Market.hoursOk(hours) then
 				return reply(nil, MWHY.price)
 			elseif Market.count(book) >= MARKET.slots + Cash.marketPlus(s.acct, now) then
@@ -3471,8 +3521,10 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 			end
 			local can, whyNot = Market.sellable(Market.unpack(row))
 			local board = Market.boardOf(row)
-			if can and paidLocked(s, row) then
-				return reply(nil, PAID_LOCKED)
+			if can and TradeLock.paid(s, row) then
+				return reply(nil, TradeLock.PAID)
+			elseif can and TradeLock.random(s, row) then
+				return reply(nil, TradeLock.RANDOM)
 			end
 			if not can or not board then
 				return reply(nil, whyNot or MWHY.item)
@@ -3538,8 +3590,10 @@ local function onMarket(player, action: string, a: any, b: any, c: any, d: any)
 				return reply(nil, MWHY.mine)
 			elseif c > seen.l then
 				return reply(nil, MWHY.count, listing(a, doc))
-			elseif paidLocked(s, seen.it) then
-				return reply(nil, PAID_LOCKED)
+			elseif TradeLock.paid(s, seen.it) then
+				return reply(nil, TradeLock.PAID)
+			elseif TradeLock.random(s, seen.it) then
+				return reply(nil, TradeLock.RANDOM)
 			end
 			local cost = d * c
 			if h.money < cost then
@@ -4394,6 +4448,10 @@ local function onDebug(player, what: string, n: number)
 		if p then
 			CashServer.processReceipt({ PlayerId = player.UserId, ProductId = 0, PurchaseId = ("debug-%d-%d"):format(os.time(), math.random(1, 1e9)), CurrencySpent = 0 }, p.id)
 		end
+	elseif what == "luna" then
+		-- Studio에서만: 루나 n을 넣는다 · 음수면 뺀다(2026-11-11 — 루나 묶음의 상품 번호가 없어도 루나로 사 보게 · Studio도 진짜 저장에 적으니 확인 뒤 같은 수를 빼 둔다 · 결제의 기록에 「debug」)
+		Cash.addLuna(s.acct, n, "debug", os.time())
+		s.dirty = true
 	elseif what == "xp" then
 		local ups = Hero.gainXp(hero, math.max(0, n))
 		fire("Gain", player, { xp = n, ups = ups, level = hero.level })
@@ -5166,7 +5224,7 @@ local function onCash(player, a: any, b: any)
 		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks(), s.hero)
 		view.ok = true
 		view.riding = s.riding == true
-		view.giftLock = CashServer.giftLocked(s) or nil -- 로블록스 정책으로 선물을 보낼 수 없는 계정(2026-10-31 — 상점 창이 「선물하기」에 미리 적는다)
+		view.giftLock, view.randomLock = CashServer.giftLocked(s) or nil, CashServer.randomLocked(s) or nil -- 로블록스 정책으로 선물을 보낼 수 없는 계정(2026-10-31 — 상점 창이 「선물하기」에 미리 적는다)
 		return view
 	elseif a == "enter" then
 		-- 달빛 상점에 들어간다(2026-10-21): 마을에서만 · 살아 있을 때. 들어가 있는 동안 맵에서 빠진다(inRoom) — 다른 사람에게 사라졌다고 알린다
@@ -5188,7 +5246,7 @@ local function onCash(player, a: any, b: any)
 		local view = Cash.view(s.acct, now, s.passes, s.hero.level, CashServer.prices(), CashServer.stocks(), s.hero)
 		view.ok = true
 		view.riding = s.riding == true
-		view.giftLock = CashServer.giftLocked(s) or nil
+		view.giftLock, view.randomLock = CashServer.giftLocked(s) or nil, CashServer.randomLocked(s) or nil
 		return view
 	elseif a == "leave" then
 		-- 나온다: 들어간 자리로 다시(맵의 그림 · 몬스터 · 사람을 처음부터 받는다 — moveTo가 Revive로 그 장면을 보낸다)
@@ -5199,19 +5257,41 @@ local function onCash(player, a: any, b: any)
 		s.shop = nil
 		return { ok = true }
 	elseif a == "buy" then
+		-- 루나로 산다(2026-11-11 — server/lune/modules/cash.luau CashServer.buy · 로블록스의 구매 창은 뜨지 않는다): 산 뒤의 상점 표(남은 루나)와 쓴 루나
 		if not s.shop then
 			return { ok = false, why = "달빛 상점 안에서 산다" }
 		end
-		local ok, why = CashServer.prompt(s, b)
+		local pp = Cash.product(b)
+		if pp and pp.kind == "pass" then
+			-- 영구 게임 패스(2026-11-11 사용자 "패스는 아예 별도입니다 패스는 로벅스로 구매하게하면됩니다"): 로블록스의 게임 패스 구매 창(로벅스) — 산 순간은 PromptGamePassPurchaseFinished
+			local okP, whyP = CashServer.promptPass(s, b)
+			return { ok = okP, why = whyP, prompted = okP or nil }
+		end
+		local ok, got = CashServer.buy(s, b)
+		local view = Cash.view(s.acct, os.time(), s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks(), s.hero)
+		view.ok, view.why, view.spent = ok == true, if ok then nil else got, if ok then got else nil
+		view.riding = s.riding == true
+		view.giftLock, view.randomLock = CashServer.giftLocked(s) or nil, CashServer.randomLocked(s) or nil
+		return view
+	elseif a == "charge" then
+		-- 루나 충전(2026-11-11): 그 묶음의 로블록스 구매 창 → 결제가 끝나면 ProcessReceipt가 루나를 더하고 CashGot을 보낸다
+		if not s.shop then
+			return { ok = false, why = "달빛 상점 안에서 충전한다" }
+		end
+		local ok, why = CashServer.charge(s, b)
 		return { ok = ok, why = why }
 	elseif a == "gift" then
-		-- 선물하기(2026-10-31 — server/lune/modules/cash.luau CashServer.gift): { id = 상품, to = 받는 사람의 닉네임 } → 선물의 구매 창
+		-- 선물하기(2026-10-31 — server/lune/modules/cash.luau CashServer.gift): { id = 상품, to = 받는 사람의 닉네임 } → 2026-11-11부터 루나로 보낸다(쓴 루나 · 산 뒤의 상점 표)
 		if not s.shop then
 			return { ok = false, why = "달빛 상점 안에서 산다" }
 		end
 		local t = if typeof(b) == "table" then b else {}
-		local ok, why, to = CashServer.gift(s, t.id, t.to)
-		return { ok = ok, why = why, to = to }
+		local ok, why, to, spent = CashServer.gift(s, t.id, t.to)
+		local view = Cash.view(s.acct, os.time(), s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks(), s.hero)
+		view.ok, view.why, view.to, view.spent = ok == true, why, to, spent
+		view.riding = s.riding == true
+		view.giftLock, view.randomLock = CashServer.giftLocked(s) or nil, CashServer.randomLocked(s) or nil
+		return view
 	elseif a == "take" then
 		if not s.hero then
 			return { ok = false, why = "캐릭터로 들어간 뒤에 받는다" }
@@ -5239,6 +5319,38 @@ local function onCash(player, a: any, b: any)
 		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks(), s.hero)
 		view.ok, view.why = ok == true, if ok then nil else got
 		view.fixN = if ok then got else nil -- (받은 뒤의 가진 수 — 알림)
+		return view
+	elseif a == "giftItem" then
+		-- 꺼낸 상자 결과물을 선물한다 (2026-11-11 사용자: "꺼내팔기 한다음에 경매장에 거래가능하게만들면된다 선물하기도 가능하게") — server/lune/modules/cash.luau CashServer.giftItem: { id = 가방의 물건, to = 닉네임 }
+		if not s.hero then
+			return { ok = false, why = "캐릭터로 들어간 뒤에 보낸다" }
+		end
+		local t = if typeof(b) == "table" then b else {}
+		local ok, why, to = CashServer.giftItem(s, t.id, t.to)
+		if ok then
+			sendBag(s)
+		end
+		return { ok = ok, why = why, to = to }
+	elseif a == "cosOut" then
+		-- 상자 결과물 하나를 경매장에 올리는 물건으로 꺼낸다(2026-11-11 — sim/cash.luau Cash.cosOut · 가방 캐시 탭의 「물건으로 꺼내기」): 바로 저장(못 하면 계정 · 가방을 되돌린다 — 결제와 같은 조심)
+		if not s.hero then
+			return { ok = false, why = "캐릭터로 들어간 뒤에 꺼낸다" }
+		end
+		local before = Cash.pack(s.acct.bm)
+		local ok, why = Cash.cosOut(s.acct.bm, s.hero, b)
+		if ok and not saveNow(s) then
+			s.acct.bm = Cash.unpack(before, Account.MAX)
+			Bag.take(s.hero, "bm_cos_" .. tostring(b), 1)
+			ok, why = nil, "저장하지 못했다 — 다시 눌러 주세요"
+		end
+		if ok then
+			sendBag(s)
+			if s.scene then
+				sendWho(s.scene) -- (꺼낸 것이 끼고 있던 것과 상관없어도 — 가진 수가 바뀐 펫 · 탈것을 방 사람들의 모습과 맞춘다)
+			end
+		end
+		local view = Cash.view(s.acct, now, s.passes, s.hero and s.hero.level, CashServer.prices(), CashServer.stocks(), s.hero)
+		view.ok, view.why = ok == true, why
 		return view
 	elseif a == "pet" or a == "petAdd" or a == "petOff" then
 		-- 펫을 꺼낸다 · 넣는다(이름표 — 꺼내 둔 것이면 넣고 아니면 꺼낸다: 셋까지 · 2026-10-30) · 모두 넣는다(false) — 계정의 모든 캐릭터가 같이(2026-10-20)
@@ -5463,6 +5575,13 @@ function World.start()
 		end
 	end)
 	-- 칭호(2026-10-26): 만렙 열 사람의 기록을 읽어 둔다(주는 것은 1초마다 — 아래 사람마다의 일)
+	--  Lv.200 세 사람(2026-11-11 사용자 "200만렙 달성 이벤트랑 칭호, 3명까지 칭호주고 150때랑 똑같아"): 새로 적히면(이 서버든 다른 서버든) 이 서버의 모두에게 축하 알림 · 레벨 판을 다시 읽는다
+	require(script.Parent.titles).onCap(function(d)
+		rankCache = nil
+		for p in sessions do
+			fire("FirstMax", p, { name = d.name, class = d.class, level = N.LEVEL_CAP, rank = tonumber(d.rank) or 1 })
+		end
+	end)
 	require(script.Parent.titles).start()
 	-- 관리자의 선물(2026-10-29): 다른 서버에서 「그 계정에 보냈다」 — 이 서버에 있으면 다음 1초에 상자를 연다(사람마다의 일)
 	require(script.Parent.gifts).start(function(uid: number)
@@ -6013,6 +6132,10 @@ function World.start()
 				if lb.got and s.scene then
 					sendWho(s.scene) -- 나온 펫을 바로 꺼냈다(꺼내 둔 것이 없었으면) — 다른 사람의 화면에도
 				end
+				return
+			end
+			if Cash.lunaPack(key) then
+				fire("CashGot", s.player, key, { luna = s.acct.bm.luna or 0 }) -- 루나 충전(2026-11-11): 더한 뒤의 루나를 같이(알림의 「지금 루나 n」)
 				return
 			end
 			fire("CashGot", s.player, key)

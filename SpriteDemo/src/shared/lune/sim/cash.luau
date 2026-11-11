@@ -13,6 +13,8 @@
 --   ev = 기간 이벤트의 상점에서 산 수 { ["<이벤트>:<해>:<물건>"] = 수 }(한도가 있는 것 — 할로윈의 달가루 상자 · 2026-10-29)
 --   gift = 띄운 선물의 구매 창 { k = 상품, uid = 받는 계정, to = 받는 사람의 닉네임, at = 띄운 때 }(없으면 false — 결제가 오면 그 사람에게 · 2026-10-31 선물하기)
 --   lock = 로블록스 정책에서 유료 아이템을 거래할 수 없는 계정이다(들어올 때 서버가 적는다 — 남이 이 계정에 선물할 때 본다)
+--   luna = 가진 루나(2026-11-11 — 로벅스로 충전하는 화폐 · 상점의 개발자 상품을 이것으로 산다 · 영구 게임 패스는 따로 로벅스로 (2026-11-11 사용자: "패스는 아예 별도입니다 패스는 로벅스로 구매하게하면됩니다"))
+--   giftOut = 루나를 내고 아직 받는 사람의 선물 상자에 넣지 못한 선물 { k, uid, to, rid, at }(없으면 false — 서버가 넣을 때까지 다시 넣어 본다)
 --  [제안] 값 · 수 · 한도는 모두 설계의 제안이다.
 local lune = script.Parent.Parent
 local D = require(lune.data["bm.generated"])
@@ -69,6 +71,31 @@ for _, p in D.products do
 end
 Cash.PRODUCTS = D.products
 Cash.WORDS = D.shop.words
+-- 루나(2026-11-11 사용자: "이제 루나도 구현하고 , 지금 로벅스 물품들 모두 루나로 구매하는식으로 만들고 … 기존 로벅스로 구매한 아이템들도 루나로 산것과같은 판정으로" — 공방 bm.js LUNA):
+--  로벅스로 충전하는 계정의 화폐(c.luna). 충전 = 개발자 상품(루나 묶음 luna_<수>) → Cash.chargeLuna · 상점의 개발자 상품 = Cash.buyLuna(값 = 상품의 luna — 1 로벅스 = 1 루나).
+--  영구 게임 패스(kind pass)는 루나와 따로 — 지금처럼 로블록스의 게임 패스 구매 창으로 로벅스로 산다 · 선물하지 않는다 (2026-11-11 사용자: "패스는 아예 별도입니다 패스는 로벅스로 구매하게하면됩니다")
+--  예전에 로벅스로 바로 산 것과 루나로 산 것은 같은 셈(giveProduct)으로 주어 판정이 다르지 않다
+local LUNA = D.luna or { name = "루나", icon = "bm_luna", packs = {} }
+local LUNA_PACK = {}
+for _, q in LUNA.packs do
+	LUNA_PACK[q.id] = q
+	if typeof(q.rid) == "number" and q.rid > 0 then
+		BY_RID[q.rid] = q.id
+	end
+end
+Cash.LUNA = LUNA
+Cash.LUNA_MAX = 1e9 -- 한 계정이 가질 수 있는 가장 많은 루나(저장의 검사)
+function Cash.lunaPack(key: any)
+	return if typeof(key) == "string" then LUNA_PACK[key] else nil
+end
+-- 그 상품의 루나 값(설계의 luna · 없으면 robux)
+function Cash.lunaPrice(key: any): number?
+	local p = if typeof(key) == "string" then PRODUCT[key] else nil
+	if not p then
+		return nil
+	end
+	return if typeof(p.luna) == "number" then p.luna else p.robux
+end
 
 local function whole(v: any, lo: number, hi: number): boolean
 	return typeof(v) == "number" and v == v and v % 1 == 0 and v >= lo and v <= hi
@@ -216,10 +243,11 @@ end
 
 -- 결제의 기록(2026-11-10 — "돈관련된건 철저하게"): 받은 결제마다 { r = 결제 번호, k = 상품, t = 때, g = 뽑기에서 나온 것, n = 그 뒤의 가진 수(겹쳤을 때) } · 최근 LOG_KEEP개.
 --  산 것 · 선물로 받은 것(결제 번호 "g…") · 겹침 보상이 모두 남는다 — 무엇을 주었는지 나중에 확인한다(전에는 결제 번호만 남아 겹침을 되짚을 수 없었다)
-Cash.LOG_KEEP = 200
-local function logBuy(c, receiptId: string, key: string, now: number, got: any?, n: any?)
+Cash.LOG_KEEP = 400 -- (2026-11-11 루나 — 충전 · 쓰기마다 한 줄이라 200에서 늘렸다)
+-- d = 루나가 늘고 준 수(충전 +n · 사기 · 선물 -값) · l = 그 뒤의 루나(2026-11-11 — 루나의 흐름을 계정의 기록만으로 다시 셀 수 있게)
+local function logBuy(c, receiptId: string, key: string, now: number, got: any?, n: any?, d: number?, l: number?)
 	c.log = if typeof(c.log) == "table" then c.log else {}
-	table.insert(c.log, { r = string.sub(receiptId, 1, 80), k = string.sub(key, 1, 60), t = math.floor(now), g = if typeof(got) == "string" then got else nil, n = n })
+	table.insert(c.log, { r = string.sub(receiptId, 1, 80), k = string.sub(key, 1, 60), t = math.floor(now), g = if typeof(got) == "string" then got else nil, n = n, d = d, l = l })
 	while #c.log > Cash.LOG_KEEP do
 		table.remove(c.log, 1)
 	end
@@ -299,7 +327,7 @@ function Cash.dupfixAuto(c, buy, upTo: number, now: number, dry: boolean?)
 end
 
 function Cash.new()
-	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petsOut = {}, petOut = false, mount = false, coupons = {}, wskins = {}, wskin = false, dskins = {}, dskin = false, bubbles = {}, bubble = false, ntags = {}, ntag = false, extra = {}, dupfix = {}, fixGiven = {}, boxReset = 0, log = {}, ev = {}, gift = false, lock = false } -- coupons = 이 계정이 쓴 쿠폰 { [번호] = 쓴 때 }(2026-10-21) · extra = 더 받은 수(2026-11-10 — Cash.count) · dupfix · log = 아래
+	return { box = {}, rec = {}, week = 0, wc = {}, once = {}, slots = 0, store = 0, pass = Pass.new(), pets = {}, mounts = {}, petsOut = {}, petOut = false, mount = false, coupons = {}, wskins = {}, wskin = false, dskins = {}, dskin = false, bubbles = {}, bubble = false, ntags = {}, ntag = false, extra = {}, dupfix = {}, fixGiven = {}, boxReset = 0, log = {}, ev = {}, gift = false, lock = false, rlock = false, luna = 0, giftOut = false } -- (luna · giftOut — 2026-11-11 루나 · rlock = 뽑기 제한 계정 — 상자 결과물의 선물) · coupons = 이 계정이 쓴 쿠폰 { [번호] = 쓴 때 }(2026-10-21) · extra = 더 받은 수(2026-11-10 — Cash.count) · dupfix · log = 아래
 end
 
 function Cash.product(key: any)
@@ -358,7 +386,7 @@ function Cash.canBuy(acct, key: any, now: number, pending: number?, baseChars: n
 	elseif not c then
 		return false, "계정을 읽지 못했다"
 	elseif p.kind ~= "product" then
-		return true -- 게임 패스 · 구독은 로블록스가 「이미 가졌다」를 막는다
+		return true -- 게임 패스 · 구독은 로블록스가 「이미 가졌다」를 막는다(영구 패스는 로벅스로 — 루나와 따로 · 2026-11-11)
 	elseif key == "charx" and c.slots + wait >= D.rules.charCap - (baseChars or 6) then
 		return false, ("캐릭터 칸이 가장 많다(%d칸)"):format(D.rules.charCap)
 	elseif p.limit and Cash.bought(c, key, now) + wait >= p.limit.n then
@@ -453,30 +481,16 @@ end
 -- 선물할 수 있는 상품인가(2026-10-31 선물하기): 로블록스 개발자 상품만 — 게임 패스 · 구독은 로블록스가 남에게 사 주지 못하게 한다
 function Cash.giftable(key: any): boolean
 	local p = Cash.product(key)
-	return p ~= nil and p.kind == "product" and Cash.ready(p) and p.random ~= true -- (확률형 — 뽑기 상자 · 윤슬 조각은 선물하지 않는다: 받는 사람의 확률을 보낸 사람이 볼 수 없다 · 2026-11-07)
+	return p ~= nil and p.kind == "product" and Cash.ready(p) -- (영구 게임 패스는 로블록스가 남에게 사 주지 못하게 한다 — 루나와 따로 · 2026-11-11) · 뽑기 상자 · 윤슬 조각도 (2026-11-11 사용자: "선물이 가능하고 영국 18세이하라던가 그러면 선물이 안된다고떠야지") — 뽑기 제한 계정은 서버가 막는다 -- (확률형 — 뽑기 상자 · 윤슬 조각은 선물하지 않는다: 받는 사람의 확률을 보낸 사람이 볼 수 없다 · 2026-11-07)
 end
 
-function Cash.grant(acct, key: string, receiptId: string, now: number, baseChars: number?, live: number?): (boolean, string?)
+-- 상품 하나를 준다(로벅스 결제 · 루나로 산 것 · 받은 선물 — 모두 이 셈 하나: 2026-11-11 사용자 "기존 로벅스로 구매한 아이템들도 루나로 산것과같은 판정으로")
+--  준 것: 보관함의 아이템 · 계정의 칸 · 계정의 펫 · 탈것(영구 게임 패스는 로블록스가 계정에 — 여기로 오지 않는다). 횟수가 정해진 상품은 산 수를 센다. → true / false · 까닭(바꾼 것이 없다)
+local function giveProduct(acct, key: string, now: number, baseChars: number?, live: number?): (boolean, string?)
 	local c = acct.bm
-	local fixBox, fixN = Cash.dupfixOf(key)
-	if fixBox then
-		-- 겹침 보상(운영자가 보낸 것 — 위의 dupfix): 결제 번호처럼 한 번만 받는다
-		if Cash.granted(c, receiptId) then
-			return false, "dup"
-		end
-		addBox(c, "bm_pick_" .. fixBox, fixN) -- (2026-11-10 상자 판매 바로잡기부터: 고르는 표 대신 선택 상자 — 그 상자의 것 하나를 골라 받는다)
-		Cash.note(c, receiptId)
-		logBuy(c, receiptId, key, now)
-		return true
-	end
 	local p = PRODUCT[key]
 	if not p then
 		return false, "없는 상품이다"
-	end
-	for _, r in c.rec do
-		if r == receiptId then
-			return false, "dup"
-		end
 	end
 	local band = Cash.bandOf(Cash.topLevel(acct, live))
 	-- 묶음(2026-11-06 「여러 개를 한 번에」 — bm.js BM_PACKS): of = 담긴 상품 · n = 수 → 그 상품을 n개(결제는 하나 · 결제 번호도 하나)
@@ -533,9 +547,184 @@ function Cash.grant(acct, key: string, receiptId: string, now: number, baseChars
 			c.once[key] = (c.once[key] or 0) + 1
 		end
 	end
+	return true
+end
+
+-- 상자 결과물의 선물 (2026-11-11 사용자: "꺼내팔기 한다음에 경매장에 거래가능하게만들면된다 선물하기도 가능하게"):
+--  가방의 「bm_cos_<이름>」(꺼내 팔기로 꺼낸 것) 하나를 받는 사람의 선물 상자에 "cos:<이름>"으로 → 받으면 보관함에 그 물건 하나(쓰면 계정에 · 경매장에 올린다)
+-- 뽑기 상자의 선물 (2026-11-11 사용자: "선물이 가능하고 영국 18세이하라던가 그러면 선물이 안된다고떠야지"): 받는 사람의 선물 상자에 "box:<상자>" → 받으면 보관함에 「안 연 상자」(bm_box_<상자> — 쓰면 그 자리에서 열린다 · 연출)
+function Cash.boxGiftKey(bid: string): string
+	return "box:" .. bid
+end
+function Cash.boxGiftOf(key: any): string?
+	if typeof(key) ~= "string" or string.sub(key, 1, 4) ~= "box:" then
+		return nil
+	end
+	local bid = string.sub(key, 5)
+	return if Gacha.box(bid) and Items.goods("bm_box_" .. bid) then bid else nil
+end
+function Cash.cosGiftKey(id: string): string
+	return "cos:" .. id
+end
+function Cash.cosGiftOf(key: any): string?
+	if typeof(key) ~= "string" or string.sub(key, 1, 4) ~= "cos:" then
+		return nil
+	end
+	local id = string.sub(key, 5)
+	local g = Items.goods("bm_cos_" .. id)
+	return if g and g.kind == "bmCos" then id else nil
+end
+-- 보내는 쪽: 가방에서 하나를 빼고 「보낼 선물」(giftOut)을 적는다(서버가 받는 상자에 넣으면 지운다 — 루나 선물과 같은 길) · 결제의 기록에 giftcos:<이름>
+function Cash.giftItemOut(acct, h, itemId: any, uid: number, to: string, rid: string, now: number): (boolean, string?)
+	local c = acct.bm
+	local g = if typeof(itemId) == "string" then Items.goods(itemId) else nil
+	if not g or g.kind ~= "bmCos" or typeof(g.cos) ~= "string" then
+		return false, Cash.WORDS.giftCant
+	elseif c.giftOut then
+		return false, Cash.WORDS.giftSending or Cash.WORDS.giftBusy
+	elseif Bag.count(h, itemId) < 1 then
+		return false, Cash.WORDS.giftNoItem
+	elseif Bag.countFree(h, itemId) < 1 then
+		return false, Bag.LOCKED -- (잠긴 것뿐이다 — 2026-11-11 아이템 잠금)
+	end
+	Bag.takeFree(h, itemId, 1)
+	c.giftOut = { k = Cash.cosGiftKey(g.cos), uid = uid, to = to, rid = rid, at = now }
+	logBuy(c, rid, "giftcos:" .. g.cos, now, g.cos, 1)
+	return true
+end
+
+function Cash.grant(acct, key: string, receiptId: string, now: number, baseChars: number?, live: number?): (boolean, string?)
+	local c = acct.bm
+	local giftBox = Cash.boxGiftOf(key)
+	if giftBox then
+		-- 받은 뽑기 상자(위 — 선물): 보관함에 안 연 상자 하나 · 같은 선물은 한 번
+		if Cash.granted(c, receiptId) then
+			return false, "dup"
+		end
+		addBox(c, "bm_box_" .. giftBox, 1)
+		Cash.note(c, receiptId)
+		logBuy(c, receiptId, key, now, nil, 1)
+		return true
+	end
+	local cosId = Cash.cosGiftOf(key)
+	if cosId then
+		-- 받은 상자 결과물(위 — 선물): 보관함에 그 물건 하나 · 같은 선물은 한 번
+		if Cash.granted(c, receiptId) then
+			return false, "dup"
+		end
+		addBox(c, "bm_cos_" .. cosId, 1)
+		Cash.note(c, receiptId)
+		logBuy(c, receiptId, key, now, cosId, 1)
+		return true
+	end
+	local fixBox, fixN = Cash.dupfixOf(key)
+	if fixBox then
+		-- 겹침 보상(운영자가 보낸 것 — 위의 dupfix): 결제 번호처럼 한 번만 받는다
+		if Cash.granted(c, receiptId) then
+			return false, "dup"
+		end
+		addBox(c, "bm_pick_" .. fixBox, fixN) -- (2026-11-10 상자 판매 바로잡기부터: 고르는 표 대신 선택 상자 — 그 상자의 것 하나를 골라 받는다)
+		Cash.note(c, receiptId)
+		logBuy(c, receiptId, key, now)
+		return true
+	end
+	local p = PRODUCT[key]
+	if not p then
+		return false, "없는 상품이다"
+	end
+	for _, r in c.rec do
+		if r == receiptId then
+			return false, "dup"
+		end
+	end
+	local ok, why = giveProduct(acct, key, now, baseChars, live)
+	if not ok then
+		return false, why
+	end
 	Cash.note(c, receiptId)
 	logBuy(c, receiptId, key, now, c.lastBox and c.lastBox.k == key and c.lastBox.got or nil, c.lastBox and c.lastBox.k == key and c.lastBox.n or nil)
 	return true
+end
+
+-- 루나를 충전한다(결제 하나 = 한 번 — 2026-11-11): key = 루나 묶음(luna_<수>) · 같은 결제 번호를 두 번 받으면 주지 않는다(false, "dup") → true · 더한 수
+function Cash.chargeLuna(acct, key: string, receiptId: string, now: number): (boolean, any)
+	local c = acct.bm
+	local q = LUNA_PACK[key]
+	if not q then
+		return false, "없는 루나 묶음이다"
+	elseif Cash.granted(c, receiptId) then
+		return false, "dup"
+	end
+	c.luna = math.min(Cash.LUNA_MAX, (c.luna or 0) + q.n)
+	Cash.note(c, receiptId)
+	logBuy(c, receiptId, key, now, nil, nil, q.n, c.luna)
+	return true, q.n
+end
+
+-- 결제가 아닌 길로 루나를 더하거나 뺀다(Studio의 확인 · 운영자의 보상 — 2026-11-11): n < 0이면 빼되 0 아래로는 가지 않는다 ·
+--  기록에 k = key("debug" · "admin:<누가>") · 실제로 바뀐 수로 남긴다 → 바뀐 뒤의 루나
+function Cash.addLuna(acct, n: number, key: string, now: number): number
+	local c = acct.bm
+	local before = c.luna or 0
+	c.luna = math.clamp(before + math.floor(tonumber(n) or 0), 0, Cash.LUNA_MAX)
+	logBuy(c, ("%s_%d"):format(key, math.floor(now)), key, now, nil, nil, c.luna - before, c.luna)
+	return c.luna
+end
+
+-- 루나로 산 것 · 보낸 선물의 기록 번호(로블록스의 결제 번호가 아니라 서버가 짓는다 — 결제 번호 목록 rec에는 넣지 않는다 · uid가 들어 다른 사람의 것과 겹치지 않는다)
+local lunaSeq = 0
+function Cash.lunaRid(now: number, uid: number?): string
+	lunaSeq += 1
+	return ("L%d_%d_%d"):format(math.floor(uid or 0), math.floor(now), lunaSeq)
+end
+
+-- 루나로 산다(2026-11-11 — 상점의 「구매」): 게임에 만들어 둔 상품 · 살 수 있나(Cash.canBuy) · 루나가 넉넉한가 → 준다(giveProduct — 로벅스 결제와 같은 셈) · 루나를 뺀다 ·
+--  결제의 기록에 -값과 남은 루나 → true · 쓴 루나 / false · 까닭(바꾼 것이 없다). 확률형의 로블록스 정책 · 로블록스에서 산 패스 · 한정 판매 · 저장은 서버가 본다(CashServer.buy)
+function Cash.buyLuna(acct, key: any, now: number, rid: string, baseChars: number?, live: number?): (boolean, any)
+	local c = acct.bm
+	local p = Cash.product(key)
+	if not p then
+		return false, "없는 상품이다"
+	elseif p.kind ~= "product" then
+		return false, Cash.WORDS.passRobux or "영구 패스는 로벅스로 산다" -- (루나와 따로 — 2026-11-11)
+	elseif not Cash.ready(p) then
+		return false, "판매 준비 중"
+	end
+	local ok, why = Cash.canBuy(acct, key, now, 0, baseChars)
+	if not ok then
+		return false, why
+	end
+	local price = Cash.lunaPrice(key) or 0
+	if (c.luna or 0) < price then
+		return false, Cash.WORDS.lunaShort
+	end
+	local done, err = giveProduct(acct, key, now, baseChars, live)
+	if not done then
+		return false, err
+	end
+	c.luna -= price
+	local lb = if c.lastBox and c.lastBox.k == key then c.lastBox else nil
+	logBuy(c, rid, key, now, lb and lb.got or nil, lb and lb.n or nil, -price, c.luna)
+	return true, price
+end
+
+-- 루나로 선물한다(2026-11-11): 보내는 계정에서 값을 빼고 「보낼 선물」(giftOut)을 적는다 → 서버가 받는 계정의 선물 상자에 넣으면 지운다(못 넣으면 다시 넣어 본다 — 루나는 이미 냈다).
+--  받는 계정의 한도 · 로블록스 정책은 서버가 먼저 본다(CashServer.gift). → true · 쓴 루나 / false · 까닭
+function Cash.payGift(acct, key: any, uid: number, to: string, rid: string, now: number): (boolean, any)
+	local c = acct.bm
+	if not Cash.giftable(key) then
+		return false, Cash.WORDS.giftCant
+	elseif c.giftOut then
+		return false, Cash.WORDS.giftSending or Cash.WORDS.giftBusy
+	end
+	local price = Cash.lunaPrice(key) or 0
+	if (c.luna or 0) < price then
+		return false, Cash.WORDS.lunaShort
+	end
+	c.luna -= price
+	c.giftOut = { k = if Gacha.box(key) then Cash.boxGiftKey(key) else key, uid = uid, to = to, rid = rid, at = now } -- (뽑기 상자는 안 연 채로 — 받은 사람이 연다)
+	logBuy(c, rid, "gift:" .. key, now, nil, nil, -price, c.luna)
+	return true, price
 end
 
 -- 보관함에서 가방으로(i = 그 줄만 · 없으면 모두 · n = 그 줄에서 몇 개 — 없으면 그 줄을 모두 · 2026-11-06 사용자 "수령을 나눠서 할수있어야해").
@@ -563,6 +752,41 @@ end
 
 -- 유료 아이템을 쓴다(가방에서 하나 덜어 내는 것은 부른 쪽 — 쓸 수 있을 때만). → true · 결과 글 / nil · 쓸 수 없는 까닭
 --  bmStore는 계정의 창고를 늘린다(부른 쪽이 창고 칸을 다시 맞춘다) · bmRename은 이름을 받아야 해서 부른 쪽이 따로 한다
+-- 상자 결과물 하나를 경매장에 올리는 물건으로 꺼낸다(2026-11-11 사용자: "뽑기상자에서 나온 부산물을 그냥 경매장에서 거래가능하도록하게해"):
+--  가진 수 -1(더 받은 수가 있으면 그것부터 · 마지막 하나면 계정에서 뺀다) → 가방 소비 탭에 「bm_cos_<이름>」 하나(경매장 분류 「소비」) · 결제의 기록에 cosout
+--  꺼내 둔 펫(꺼낸 수가 가진 수와 같으면) · 끼고 있는 마지막 하나(탈것 · 말풍선 · 데미지 스킨 · 이름표 테두리)는 꺼내지 않는다(먼저 넣거나 뺀다) · 가방에 자리가 없으면 안 된다
+local CAT = { pet = "pets", mount = "mounts", bubble = "bubbles", dskin = "dskins", ntag = "ntags" }
+local WEAR = { mount = "mount", bubble = "bubble", dskin = "dskin", ntag = "ntag" }
+function Cash.cosOut(c, h, id: any): (boolean?, string?)
+	if typeof(c) ~= "table" or typeof(id) ~= "string" then
+		return nil, "없는 것이다"
+	end
+	local def = Items.goods("bm_cos_" .. id)
+	local b = def and def.kind == "bmCos" and Gacha.box(def.box)
+	if not b or not CAT[b.kind] then
+		return nil, "경매장에 올릴 수 없는 것이다"
+	end
+	local n = Cash.count(c, id)
+	if n <= 0 then
+		return nil, "가진 것이 없다"
+	elseif b.kind == "pet" and Cash.petOutCount(c, id) >= n then
+		return nil, "꺼내 둔 펫이다 — 먼저 넣는다"
+	elseif n == 1 and WEAR[b.kind] and c[WEAR[b.kind]] == id then
+		return nil, "끼고 있는 것이다 — 먼저 뺀다"
+	elseif Bag.room(h, def.id) < 1 then
+		return nil, "가방에 자리가 없다"
+	end
+	local more = if typeof(c.extra) == "table" then c.extra[id] or 0 else 0
+	if more > 0 then
+		c.extra[id] = if more > 1 then more - 1 else nil
+	else
+		c[CAT[b.kind]][id] = nil
+	end
+	Bag.give(h, def.id, 1)
+	logBuy(c, ("cosout%d_%s"):format(os.time(), id), "cosout:" .. id, os.time(), id, Cash.count(c, id))
+	return true, ("「%s」 — 가방의 소비 탭에 꺼냈다(경매장에 올릴 수 있다)"):format(def.name)
+end
+
 function Cash.use(h, acct, def): (boolean?, string?)
 	local c = acct.bm
 	local R = D.rules
@@ -597,6 +821,12 @@ function Cash.use(h, acct, def): (boolean?, string?)
 		end
 		h.dropLeft = (h.dropLeft or 0) + R.drop.add
 		return true, ("장비 · 재료 %s배 — %d분 남음"):format(tostring(R.drop.mul), math.ceil(h.dropLeft / 60))
+	elseif def.kind == "bmCos" and Gacha.box(def.box) and typeof(def.cos) == "string" then
+		-- 상자 결과물(2026-11-11 — 경매장에서 산 것 · 내가 꺼낸 것): 계정에 넣는다(가진 것이면 가진 수 +1 · 낀 것 · 꺼낸 펫이 없으면 바로 — 상자에서 나온 것과 같은 셈) · 결제의 기록에도
+		giveBoxItem(c, def.box, def.cos)
+		local n = Cash.count(c, def.cos)
+		logBuy(c, ("cosin%d_%s"):format(os.time(), def.cos), "cosin:" .. def.cos, os.time(), def.cos, n)
+		return true, ("「%s」 — 계정에 들어갔다(가진 수 %d)"):format(def.name, n)
 	elseif def.kind == "bmBox" and Gacha.box(def.box) then
 		-- 안 연 상자(2026-11-10 상자 판매 바로잡기): 그 자리에서 연다 — 산 것과 같은 셈(openBox · 가진 것이면 하나 더) · 결제의 기록에도(open:<상자>)
 		local got, n = openBox(c, def.box)
@@ -979,7 +1209,7 @@ function Cash.pack(c)
 	end
 	local log = {}
 	for _, e in (typeof(c.log) == "table" and c.log) or {} do
-		table.insert(log, { r = e.r, k = e.k, t = e.t, g = e.g, n = e.n })
+		table.insert(log, { r = e.r, k = e.k, t = e.t, g = e.g, n = e.n, d = e.d, l = e.l })
 	end
 	local fixGiven = {}
 	for k, n in (typeof(c.fixGiven) == "table" and c.fixGiven) or {} do
@@ -987,7 +1217,7 @@ function Cash.pack(c)
 			fixGiven[k] = n
 		end
 	end
-	return { boxReset = c.boxReset or 0, fixGiven = fixGiven, log = log, dupfix = dupfix, extra = extra, ntags = Cash.ntagList(c.ntags), ntag = c.ntag, bubbles = Cash.bubbleList(c.bubbles), bubble = c.bubble, dskins = dskins, dskin = c.dskin, ev = table.clone(c.ev), box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petsOut = table.clone(Cash.petsOut(c)), petOut = c.petOut, mount = c.mount, coupons = table.clone(c.coupons), wskins = wskins, wskin = c.wskin, gift = if c.gift then table.clone(c.gift) else false, lock = c.lock == true }
+	return { rlock = c.rlock == true, luna = c.luna or 0, giftOut = if c.giftOut then table.clone(c.giftOut) else false, boxReset = c.boxReset or 0, fixGiven = fixGiven, log = log, dupfix = dupfix, extra = extra, ntags = Cash.ntagList(c.ntags), ntag = c.ntag, bubbles = Cash.bubbleList(c.bubbles), bubble = c.bubble, dskins = dskins, dskin = c.dskin, ev = table.clone(c.ev), box = box, rec = table.clone(c.rec), week = c.week, wc = table.clone(c.wc), once = table.clone(c.once), slots = c.slots, store = c.store, pass = Pass.pack(c.pass), pets = pets, mounts = mounts, petsOut = table.clone(Cash.petsOut(c)), petOut = c.petOut, mount = c.mount, coupons = table.clone(c.coupons), wskins = wskins, wskin = c.wskin, gift = if c.gift then table.clone(c.gift) else false, lock = c.lock == true }
 end
 
 -- 꼴이 이상한 것은 버린다(없는 아이템 · 이상한 수). 생기기 전의 저장 = 빈 것
@@ -1061,7 +1291,7 @@ function Cash.unpack(data: any, baseChars: number?)
 	if typeof(data.log) == "table" then
 		for _, e in data.log do
 			if typeof(e) == "table" and typeof(e.r) == "string" and #e.r <= 80 and typeof(e.k) == "string" and #e.k <= 60 and whole(e.t, 0, 1e10) and #c.log < Cash.LOG_KEEP then
-				table.insert(c.log, { r = e.r, k = e.k, t = e.t, g = if typeof(e.g) == "string" and #e.g <= 40 then e.g else nil, n = if whole(e.n, 1, 1e4) then e.n else nil })
+				table.insert(c.log, { r = e.r, k = e.k, t = e.t, g = if typeof(e.g) == "string" and #e.g <= 40 then e.g else nil, n = if whole(e.n, 1, 1e4) then e.n else nil, d = if whole(e.d, -Cash.LUNA_MAX, Cash.LUNA_MAX) then e.d else nil, l = if whole(e.l, 0, Cash.LUNA_MAX) then e.l else nil })
 			end
 		end
 	end
@@ -1092,6 +1322,13 @@ function Cash.unpack(data: any, baseChars: number?)
 		c.gift = { k = g.k, uid = g.uid, to = g.to, at = g.at }
 	end
 	c.lock = data.lock == true
+	c.rlock = data.rlock == true -- (뽑기 제한 계정 — 들어올 때 서버가 적는다 · 남이 상자 결과물을 선물할 때 본다)
+	-- 루나 · 보내는 선물(2026-11-11)
+	c.luna = if whole(data.luna, 0, Cash.LUNA_MAX) then data.luna else 0
+	local go = data.giftOut
+	if typeof(go) == "table" and (PRODUCT[go.k] or Cash.cosGiftOf(go.k) or Cash.boxGiftOf(go.k)) and whole(go.uid, 1, 1e15) and typeof(go.to) == "string" and #go.to <= 60 and typeof(go.rid) == "string" and #go.rid <= 80 and whole(go.at, 0, 1e10) then
+		c.giftOut = { k = go.k, uid = go.uid, to = go.to, rid = go.rid, at = go.at }
+	end
 	if typeof(data.coupons) == "table" then
 		local n = 0
 		for code, at in data.coupons do
@@ -1145,10 +1382,17 @@ function Cash.redeem(acct, def, now: number): (boolean, any)
 	return true, { pet = def.pet, mount = def.mount }
 end
 
--- 살 수 있게 된 상품인가: 로블록스 상품 번호가 있고(대시보드에서 만든 뒤) 게임에 만들어 둔 것(built — 펫 · 순간이동 · 꾸밈 · 패스는 아직)
+-- 살 수 있게 된 상품인가: 게임에 만들어 둔 것(built). 2026-11-11 루나부터 개발자 상품은 루나로 사서 로블록스 상품 번호가 없어도 된다(번호가 드는 것은 루나 묶음 — Cash.packReady ·
+--  로벅스로 사는 영구 게임 패스는 번호도 있어야 한다)
 function Cash.ready(p): boolean
-	local hasId = (typeof(p.rid) == "number" and p.rid > 0) or (typeof(p.rid) == "string" and p.rid ~= "")
-	return hasId and p.built == true
+	if typeof(p) ~= "table" or p.built ~= true then
+		return false
+	end
+	return p.kind == "product" or (typeof(p.rid) == "number" and p.rid > 0)
+end
+-- 충전할 수 있는 루나 묶음인가(로블록스 상품 번호가 있다 — 사용자가 대시보드에서 만든 뒤)
+function Cash.packReady(q): boolean
+	return typeof(q) == "table" and typeof(q.rid) == "number" and q.rid > 0
 end
 
 -- 상점 창에 보내는 것: 상품마다 살 수 있나(ready) · 산 수(주간이면 이번 주) · 패스를 가졌나 · 보관함 · 주머니 · 상자의 레벨대(band)
@@ -1158,13 +1402,17 @@ function Cash.view(acct, now: number, owned: any?, live: number?, prices: any?, 
 	local list = {}
 	for _, p in D.products do
 		local robux = if typeof(prices) == "table" and typeof(prices[p.id]) == "number" then prices[p.id] else p.robux -- 로블록스의 실제 값(대시보드에서 바꾸면 그 값) · 못 읽었으면 설계의 값
-		table.insert(list, { id = p.id, ready = Cash.ready(p), bought = Cash.bought(c, p.id, now), own = (owned ~= nil and owned[p.id] == true) or c.pets[p.id] == true or c.mounts[p.id] == true or c.wskins[p.id] == true, robux = robux, left = if p.stock and typeof(stocks) == "table" and typeof(stocks[p.id]) == "number" then stocks[p.id] else nil, boxLeft = if Gacha.box(p.id) then Gacha.left(p.id, Gacha.ownedOf(c, p.id)) else nil }) -- boxLeft = 뽑기 상자에서 아직 나올 수 있는 것의 수(2026-11-07) -- own = 게임 패스를 가졌다 · 펫 · 탈것을 샀다 · left = 한정 판매의 남은 수
+		table.insert(list, { id = p.id, luna = Cash.lunaPrice(p.id), ready = Cash.ready(p), bought = Cash.bought(c, p.id, now), own = (owned ~= nil and owned[p.id] == true) or c.pets[p.id] == true or c.mounts[p.id] == true or c.wskins[p.id] == true, robux = robux, left = if p.stock and typeof(stocks) == "table" and typeof(stocks[p.id]) == "number" then stocks[p.id] else nil, boxLeft = if Gacha.box(p.id) then Gacha.left(p.id, Gacha.ownedOf(c, p.id)) else nil }) -- boxLeft = 뽑기 상자에서 아직 나올 수 있는 것의 수(2026-11-07) -- own = 게임 패스를 가졌다 · 펫 · 탈것을 샀다 · left = 한정 판매의 남은 수
 	end
 	local box = {}
 	for _, e in c.box do
 		table.insert(box, { id = e.id, n = e.n })
 	end
-	return { list = list, box = box, band = Cash.bandOf(Cash.topLevel(acct, live)), slots = c.slots, store = c.store, pass = Pass.view(c.pass, now), pets = Cash.ownList(c.pets), mounts = Cash.ownList(c.mounts), petsOut = table.clone(Cash.petsOut(c)), petOut = c.petOut, mount = c.mount, wskins = Cash.skinList(c.wskins), wskin = if hero then Cash.heroWskin(acct, hero) else c.wskin, dskins = Cash.dskinList(c.dskins), dskin = c.dskin, bubbles = Cash.bubbleList(c.bubbles), bubble = c.bubble, ntags = Cash.ntagList(c.ntags), ntag = c.ntag, ev = table.clone(c.ev), extra = table.clone(c.extra or {}), dupfix = table.clone(c.dupfix or {}) } -- extra = 더 받은 수(가방 캐시 탭의 「×n」 — 2026-11-10)
+	local packs = {} -- 루나 충전의 묶음(2026-11-11): 로블록스의 실제 값(prices — 서버가 읽은 것 · 없으면 설계의 값) · 충전할 수 있나
+	for _, q in LUNA.packs do
+		table.insert(packs, { id = q.id, n = q.n, robux = if typeof(prices) == "table" and typeof(prices[q.id]) == "number" then prices[q.id] else q.robux, ready = Cash.packReady(q) })
+	end
+	return { luna = c.luna or 0, packs = packs, giftOut = if c.giftOut then true else nil, list = list, box = box, band = Cash.bandOf(Cash.topLevel(acct, live)), slots = c.slots, store = c.store, pass = Pass.view(c.pass, now), pets = Cash.ownList(c.pets), mounts = Cash.ownList(c.mounts), petsOut = table.clone(Cash.petsOut(c)), petOut = c.petOut, mount = c.mount, wskins = Cash.skinList(c.wskins), wskin = if hero then Cash.heroWskin(acct, hero) else c.wskin, dskins = Cash.dskinList(c.dskins), dskin = c.dskin, bubbles = Cash.bubbleList(c.bubbles), bubble = c.bubble, ntags = Cash.ntagList(c.ntags), ntag = c.ntag, ev = table.clone(c.ev), extra = table.clone(c.extra or {}), dupfix = table.clone(c.dupfix or {}) } -- extra = 더 받은 수(가방 캐시 탭의 「×n」 — 2026-11-10)
 end
 
 -- 확인용(테스트): 상품 표가 아이템 표와 맞는가

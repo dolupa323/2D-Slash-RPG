@@ -11,15 +11,19 @@ do
 	local Rank = req("ReplicatedStorage/shared/lune/sim/rank")
 	local HeroM = req("ReplicatedStorage/shared/lune/sim/hero")
 	local M = N.MAX_LEVEL
+	local C = N.LEVEL_CAP
 	local t0 = os.time({ year = 2026, month = 10, day = 24, hour = 0 })
-	local first = Rank.levelScore(M, 0, 1, t0)
-	local second = Rank.levelScore(M, 0, 1, t0 + 60)
-	local later = Rank.levelScore(M, 0, 1, t0 + 86400 * 30)
-	expect(first > second and second > later, "만렙: 먼저 오른 사람의 점수가 더 크다")
-	eq(Rank.levelOf(first), M, "만렙의 점수도 레벨은 만렙으로 읽힌다")
-	eq(Rank.levelOf(later), M, "한 달 뒤에 오른 사람도 만렙")
-	eq(Rank.valueText("level", later), "Lv." .. M, "판의 글은 그대로 Lv." .. M)
-	expect(later > Rank.levelScore(M - 1, N.xpNeed(M - 1) - 1, N.xpNeed(M - 1)), "아무리 늦게 오른 만렙도 Lv." .. (M - 1) .. "보다 위")
+	-- 2026-11-11 벽을 풀며: 「만렙끼리 먼저 오른 차례」는 이제 Lv.200(LEVEL_CAP)의 것(capAt) · 150 ~ 199는 다른 레벨처럼 레벨 + 경험치의 비율
+	local first = Rank.levelScore(C, 0, 1, nil, t0)
+	local second = Rank.levelScore(C, 0, 1, nil, t0 + 60)
+	local later = Rank.levelScore(C, 0, 1, nil, t0 + 86400 * 30)
+	expect(first > second and second > later, "Lv.200: 먼저 오른 사람의 점수가 더 크다")
+	eq(Rank.levelOf(first), C, "Lv.200의 점수도 레벨은 200으로 읽힌다")
+	eq(Rank.levelOf(later), C, "한 달 뒤에 오른 사람도 200")
+	eq(Rank.valueText("level", later), "Lv." .. C, "판의 글은 그대로 Lv." .. C)
+	expect(later > Rank.levelScore(C - 1, N.xpNeed(C - 1) - 1, N.xpNeed(C - 1)), "아무리 늦게 오른 200도 Lv." .. (C - 1) .. "보다 위")
+	expect(Rank.levelScore(M + 1, 0, N.xpNeed(M + 1)) > Rank.levelScore(M, N.xpNeed(M) - 1, N.xpNeed(M), t0), "Lv.151은 Lv.150의 거의 다 찬 경험치보다 위(150은 더 이상 오른 때로 줄을 서지 않는다)")
+	expect(Rank.levelScore(M, N.xpNeed(M) * 0.6, N.xpNeed(M), t0) > Rank.levelScore(M, N.xpNeed(M) * 0.2, N.xpNeed(M), t0 - 86400), "Lv.150끼리는 경험치의 비율대로(먼저 오른 때가 아니라)")
 	-- 오른 때는 캐릭터에 적히고 저장된다
 	local h = HeroM.new(8801, "riven")
 	HeroM.setLevel(h, M - 1)
@@ -32,34 +36,16 @@ do
 	eq(h.maxAt, at, "만렙에서 더 벌어도 오른 때는 그대로")
 	local back = HeroM.unpack(8801, HeroM.pack(h))
 	eq(back.maxAt, at, "저장되고 읽힌다")
-	-- 저장본에서 찾은 오른 때(Rank.MAX_FIX — 2026-10-24): 강타 → 0NJ4 → 여왕
-	local F = Rank.MAX_FIX
-	local a1, a2, a3 = Rank.levelScore(M, 0, 1, F.c7932577222_1), Rank.levelScore(M, 0, 1, F.c9233200460_1), Rank.levelScore(M, 0, 1, F.c2995182643_1)
-	expect(a1 > a2 and a2 > a3, "찾은 차례: 강타 > 0NJ4 > 여왕")
-	eq(a1, 150965886, "강타의 점수(실제 순위판에 적은 값)")
-	-- 2026-10-29 사용자: "여왕 캐릭터 랭킹 계속 내려가는거 작업해 원래 랭킹으로 보이게" — 옛 서버가 덮은 옛 점수(만렙 = 150,000,000)를 판을 읽을 때 올린다(Rank.fixMax)
+	HeroM.setLevel(h, C - 1)
+	h.xp = 0
+	HeroM.gainXp(h, N.xpNeed(C - 1) + 5)
+	eq(h.level, C, "Lv.200에 올랐다")
+	expect(typeof(h.capAt) == "number", "Lv.200에 오른 때(capAt)가 적혔다(2026-11-11)")
+	eq(HeroM.unpack(8801, HeroM.pack(h)).capAt, h.capAt, "capAt도 저장되고 읽힌다")
+	-- Rank.fixMax(2026-10-29 — 옛 서버가 덮은 「150 + 오른 때」 점수를 올리던 것): 2026-11-11부터 멈춘다(150 위가 다시 열려 레벨 + 경험치로 줄을 세운다)
 	local raised = {}
-	local function raise(key, score)
-		table.insert(raised, { key, score })
-	end
-	local QUEEN = "c2995182643_1"
-	local rows = {
-		{ key = "c111_1", score = Rank.levelScore(M, 0, 1, F[QUEEN] + 86400) }, -- 하루 뒤에 만렙
-		{ key = "c222_1", score = Rank.levelScore(M, 0, 1, F[QUEEN] + 3600) }, -- 한 시간 뒤에 만렙
-		{ key = QUEEN, score = M * 1000000 }, -- 옛 점수
-	}
-	table.sort(rows, function(x, y) return x.score > y.score end)
-	eq(rows[3].key, QUEEN, "고치기 전: 여왕이 뒤에 오른 두 사람보다 아래")
-	Rank.fixMax(rows, raise, false)
-	eq(rows[1].key, QUEEN, "고친 뒤: 먼저 오른 여왕이 위")
-	eq(rows[1].score, a3, "여왕의 점수 = 찾아 둔 오른 때의 점수")
-	eq(#raised, 1, "저장소에는 낮았던 그 줄만 올린다")
-	eq(raised[1] and raised[1][1], QUEEN, "올린 열쇠")
-	raised = {}
-	Rank.fixMax(rows, raise, false)
-	eq(#raised, 0, "이미 맞으면 다시 쓰지 않는다")
-	Rank.fixMax({}, raise, true)
-	eq(#raised, 3, "서버가 처음 읽을 때는 판에 안 보이는 셋도 올려 본다(저장소는 있는 줄만 · 낮을 때만 올린다)")
+	Rank.fixMax({ { key = "c2995182643_1", score = M * 1000000 } }, function(key, score) table.insert(raised, { key, score }) end, true)
+	eq(#raised, 0, "fixMax는 아무것도 올리지 않는다(2026-11-11)")
 end
 
 local handlers, sent = {}, {}

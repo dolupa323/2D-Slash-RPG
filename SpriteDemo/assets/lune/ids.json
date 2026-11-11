@@ -56,8 +56,8 @@
   "id": "rbxassetid://105450659975716"
  },
  "ui_kit.png": {
-  "hash": "f7802412a17dddfedcb7405317d08a98",
-  "id": "rbxassetid://136787431093075"
+  "hash": "e8484b3514ab2793b06968e0cf0a72ec",
+  "id": "rbxassetid://107009683767128"
  },
  "font_small_2.png": {
   "hash": "a39c57d23acf7233f3419f3f15021ff7",
@@ -916,12 +916,12 @@
   "id": "rbxassetid://127707644885971"
  },
  "chars_8.png": {
-  "hash": "0b819b117265572088e24ead3ee4dffb",
-  "id": "rbxassetid://105718300340045"
+  "hash": "7fab2ddef34c73e968f7af4055519094",
+  "id": "rbxassetid://74636761898065"
  },
  "chars_9.png": {
-  "hash": "398faa7b8c08c39374226bab381077cf",
-  "id": "rbxassetid://88644248420522"
+  "hash": "ac6744f7d2197b7a2b4cbe4742b94de5",
+  "id": "rbxassetid://74931635344450"
  },
  "chars_10.png": {
   "hash": "d63ea3700353851b55f8d6c74b713cac",
@@ -936,12 +936,12 @@
   "id": "rbxassetid://119872632773164"
  },
  "chars_mask_8.png": {
-  "hash": "866ec5c29eccc920aa341cb0e380bd64",
-  "id": "rbxassetid://108277800525562"
+  "hash": "a08dac7633b82c64bcd698bdd41608d2",
+  "id": "rbxassetid://86858573863493"
  },
  "chars_mask_9.png": {
-  "hash": "adf5b2d3f35259d80bf38fb80cf996d5",
-  "id": "rbxassetid://128124082577066"
+  "hash": "17ee8a2e7f04d87f2a31b1390a26d7b6",
+  "id": "rbxassetid://92761527433126"
  },
  "chars_mask_10.png": {
   "hash": "56f8ac50aadfeda8df0604f887c1851c",
@@ -1288,8 +1288,8 @@
   "id": "rbxassetid://115094931307777"
  },
  "ground_r5t_1.png": {
-  "hash": "d4635d177fef3102970930eb011d7b18",
-  "id": "rbxassetid://110029761710010"
+  "hash": "5b047e0ab20490a432d4960bc4edb7c3",
+  "id": "rbxassetid://72343598896697"
  },
  "ground_r5a2_1.png": {
   "hash": "7d287cf5a3a59310dee33ba99d4f47d5",
@@ -1308,8 +1308,8 @@
   "id": "rbxassetid://130891657693390"
  },
  "props_r5t.png": {
-  "hash": "d28a74e233c372f0464f256e22a50ece",
-  "id": "rbxassetid://111688218126550"
+  "hash": "b6285671bdf11f910a3f7fd4dcf0012a",
+  "id": "rbxassetid://74985662728834"
  },
  "ground_r5a3_1.png": {
   "hash": "1639c0650b6359e71f50d2ef04da2e67",
@@ -1330,5 +1330,13 @@
  "back_r5_hut.png": {
   "hash": "a92561f6d716fbbec9ea269cfee64a2a",
   "id": "rbxassetid://114987848254757"
+ },
+ "props_r5a1.png": {
+  "hash": "d28a74e233c372f0464f256e22a50ece",
+  "id": "rbxassetid://111688218126550"
+ },
+ "ground_r5t_2.png": {
+  "hash": "efe1faadee79747c80e78ae720efd6b5",
+  "id": "rbxassetid://134915391029217"
  }
 }

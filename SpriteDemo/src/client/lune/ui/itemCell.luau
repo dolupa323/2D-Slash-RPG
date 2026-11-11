@@ -132,6 +132,14 @@ function ItemCell.new(parent: Instance, x: number, y: number, onClick: (any) -> 
 	local star = Ui.text(outer, "", 0, S - 13, S - 4, { align = "right", outline = true, color = C.text, z = 6 })
 	local cross = Ui.text(outer, "", 0, math.floor((S - 12) / 2), S, { font = "body", align = "center", outline = true, color = C.red, z = 6 })
 	local up = Ui.text(outer, "", 3, 2, S - 6, { outline = true, color = C.green, z = 6 }) -- 지금 낀 것보다 좋은 장비 ▲(2026-10-18 — opts.better) · 캐시 탭의 가진 수 「×2」(2026-11-10)
+	-- 아이템 잠금(2026-11-11): 오른쪽 위 작은 금빛 자물쇠(점 — 고리 · 몸 · 열쇠 구멍 · 어두운 테)
+	local lockMark = Ui.group(outer, S - 11, 2, 9, 11, "LockMark")
+	lockMark.ZIndex = 7
+	for _, r in { { 1, 0, 7, 5, C.ink }, { 0, 4, 9, 7, C.ink }, { 2, 1, 5, 1, C.gold }, { 2, 2, 1, 3, C.gold }, { 6, 2, 1, 3, C.gold }, { 1, 5, 7, 5, C.gold }, { 4, 7, 1, 2, C.ink } } do
+		local b = Ui.box(lockMark, r[1], r[2], r[3], r[4], r[5])
+		b.ZIndex = 7
+	end
+	lockMark.Visible = false
 	local veil = Ui.box(outer, 1, 1, S - 2, S - 2, C.ink, 0.45) -- 아직 열리지 않은 칸
 	veil.Name = "Locked"
 	veil.ZIndex = 5
@@ -168,6 +176,7 @@ function ItemCell.new(parent: Instance, x: number, y: number, onClick: (any) -> 
 		end
 		slot:setOn(opts.selected == true or opts.hot == true)
 		veil.Visible = opts.locked == true
+		lockMark.Visible = it ~= nil and it.lock == true -- (아이템 잠금 — opts.locked는 「아직 열리지 않은 칸」)
 	end
 	cell:set(nil)
 	return cell

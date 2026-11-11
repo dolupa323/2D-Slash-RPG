@@ -5,12 +5,16 @@
 --   · 게임 패스는 로블록스가 산 기록을 남기지 않는다(UserOwnsGamePassAsync로 본다) · 구독은 GetUserSubscriptionStatusAsync · Players.UserSubscriptionStatusChanged
 --  같은 결제를 두 번 주지 않는다: 처리한 결제 번호를 계정 저장(acct.bm.rec)에 남기고, 준 것과 번호를 한 번의 저장으로 함께 적는다(계정 잠금 — 한 계정은 한 서버만 쓴다).
 --  저장에 실패하면 준 것을 되돌리고 NotProcessedYet — 돈을 받고 주지 않는 일 · 두 번 주는 일 둘 다 없게.
+--  루나(2026-11-11 — 공방 bm.js LUNA): 로블록스의 구매 창은 루나 충전(luna_<수>)에서만 뜬다 → ProcessReceipt가 계정에 루나를 더한다.
+--   상점의 개발자 상품은 CashServer.buy가 루나로 판다 · 선물은 CashServer.gift가 루나로 보낸다 · 영구 게임 패스는 따로 로벅스로(CashServer.promptPass — 로블록스의 게임 패스 구매 창 (2026-11-11 사용자: "패스는 아예 별도입니다 패스는 로벅스로 구매하게하면됩니다")). 예전 로벅스 상품의 결제가 다시 와도 지금처럼 준다(같은 셈 — sim/cash.luau giveProduct).
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
 
 local lune = game:GetService("ReplicatedStorage").shared.lune
 local Cash = require(lune.sim.cash)
 local Account = require(lune.sim.account)
+local Items = require(lune.sim.items)
+local Bag = require(lune.sim.bag)
 
 local Coupons = require(script.Parent.coupons)
 local Store = require(script.Parent.store)
@@ -72,6 +76,28 @@ function CashServer.processReceipt(info, key: string?)
 		return Decision.NotProcessedYet -- 이 서버에 없거나 계정을 다 읽지 못했다 — 들어올 때 다시
 	end
 	local acct = s.acct
+	-- 루나 충전(2026-11-11): 묶음의 루나를 계정에 더하고 바로 저장(못 하면 되돌리고 NotProcessedYet — 로블록스가 다시 보낸다)
+	if Cash.lunaPack(k) then
+		local before, spentBefore = Cash.pack(acct.bm), acct.spent
+		local ok, why = Cash.chargeLuna(acct, k, tostring(info.PurchaseId), W.now())
+		if not ok then
+			if why == "dup" then
+				return Decision.PurchaseGranted -- 이미 더한 결제(로블록스가 다시 보냈다)
+			end
+			warn("[Cash] 루나를 더하지 못했다", k, why)
+			return Decision.NotProcessedYet
+		end
+		acct.spent += math.max(0, math.floor(tonumber(info.CurrencySpent) or 0))
+		if W.saveNow(s) then
+			addPending(info.PlayerId, k, -1)
+			task.spawn(W.afterSpent, s)
+			W.notify(s, k)
+			return Decision.PurchaseGranted
+		end
+		acct.bm = Cash.unpack(before, Account.MAX)
+		acct.spent = spentBefore
+		return Decision.NotProcessedYet
+	end
 	local p = Cash.product(k)
 	-- 한정 판매: 잡아 둔 것을 판 것으로 적는다(이미 준 결제 — 로블록스가 다시 보낸 것 — 은 다시 세지 않는다)
 	local took = false
@@ -297,77 +323,149 @@ function CashServer.resetCoupons(acct): (number, number)
 	return codes, pets
 end
 
--- 구매 창을 띄운다(서버가 한도를 본 뒤에만). → true / false · 까닭
-local open: (any, string, any) -> (boolean, string?)
-function CashServer.prompt(s, key: any): (boolean, string?)
+-- 루나로 산다(2026-11-11 사용자: "지금 로벅스 물품들 모두 루나로 구매하는식으로" — 상점의 「구매」 · 로블록스의 구매 창은 뜨지 않는다).
+--  서버가 본다: 계정 · 확률형의 로블록스 정책(ArePaidRandomItemsRestricted — 루나로도 막는다) · 로블록스에서 산 영구 패스 · 한도와 루나(sim Cash.buyLuna) ·
+--  한정 판매(하나를 잡아 둔 뒤 판 것으로 적는다). 준 것 · 쓴 루나를 한 번의 저장으로 적고, 저장에 실패하면 모두 되돌린다(루나도 그대로). → true · 쓴 루나 / false · 까닭
+function CashServer.buy(s, key: any): (boolean, any)
 	local p = Cash.product(key)
 	if not p then
 		return false, "없는 상품이다"
 	elseif not s.acct or not s.loaded or s.guest then
 		return false, "계정을 읽지 못했다"
 	elseif not Cash.ready(p) then
-		return false, "판매 준비 중" -- 상품 번호가 없거나 게임에 아직 만들지 않은 것
+		return false, "판매 준비 중" -- (게임에 아직 만들지 않은 것 — 루나가 모자란다는 말보다 먼저)
+	elseif s.lunaBusy then
+		return false, "앞의 구매를 처리하는 중이다"
 	end
-	local uid = s.player.UserId
-	-- 선물로 띄운 구매 창이 떠 있으면 같은 상품은 띄우지 않는다(결제가 누구의 것인지 섞이지 않게) · 닫힌 지난 것이면 지운다(나에게 산다)
-	local gift = s.acct.bm.gift
-	if gift and gift.k == key then
-		if CashServer.pending(uid, key) > 0 then
-			return false, Cash.WORDS.giftBusy
-		end
-		s.acct.bm.gift = false
-	end
-	-- 확률형 상품(2026-11-07 — 뽑기 상자 · 윤슬 조각): 로블록스 정책에서 확률형 유료 아이템이 막힌 계정(ArePaidRandomItemsRestricted)은 구매 창을 띄우지 않는다(design/bm.js BM_RULES.random)
 	local RND = Cash.RULES.random
 	if p.random and RND and RND.policy and typeof(s.policy) == "table" and s.policy.ArePaidRandomItemsRestricted == true then
 		return false, Cash.WORDS.randomBlocked or "로블록스 정책으로 이 계정은 확률형 상품을 살 수 없다"
 	end
-	local ok, why = Cash.canBuy(s.acct, key, W.now(), CashServer.pending(uid, key), Account.MAX)
-	if not ok then
-		return false, why
+	if p.kind ~= "product" then
+		return false, Cash.WORDS.passRobux or "영구 패스는 로벅스로 산다" -- (루나와 따로 — CashServer.promptPass)
 	end
-	return open(s, key, p)
-end
-
--- 구매 창을 띄운다(살 수 있는지는 부른 쪽이 보았다 — 나에게 사기 · 선물하기)
-open = function(s, key: string, p): (boolean, string?)
 	local uid = s.player.UserId
-	-- 한정 판매: 한 개를 잡아 둔 뒤에 구매 창을 띄운다(다 팔렸거나 남은 것을 모두 남이 잡았으면 띄우지 않는다)
+	local now = W.now()
+	-- 미리 본다(한정 판매의 하나를 잡기 전에 — 루나가 모자라거나 한도가 찼으면 잡지 않는다)
+	local ok0, why0 = Cash.canBuy(s.acct, key, now, 0, Account.MAX)
+	if not ok0 then
+		return false, why0
+	elseif (s.acct.bm.luna or 0) < (Cash.lunaPrice(key) or 0) then
+		return false, Cash.WORDS.lunaShort
+	end
+	s.lunaBusy = true
+	local held = false
 	if p.stock then
-		local held, rec = Store.stockHold(key, uid, p.stock, CashServer.clock(), CashServer.HOLD)
+		local got, rec = Store.stockHold(key, uid, p.stock, CashServer.clock(), CashServer.HOLD)
 		noteStock(key, rec)
-		if held == nil then
+		if got == nil then
+			s.lunaBusy = false
 			return false, "지금은 남은 수를 확인할 수 없다 — 잠시 뒤에 다시"
-		elseif not held then
+		elseif not got then
+			s.lunaBusy = false
 			if typeof(rec) == "table" and rec.sold >= p.stock then
 				return false, Cash.WORDS.soldOut
 			end
-			return false, "남은 것을 다른 분이 결제하는 중이다 — 잠시 뒤에 다시"
+			return false, "남은 것을 다른 분이 사는 중이다 — 잠시 뒤에 다시"
 		end
+		held = true
 	end
-	local done, err = pcall(function()
-		if p.kind == "product" then
-			addPending(uid, key, 1)
-			MarketplaceService:PromptProductPurchase(s.player, p.rid)
-		elseif p.kind == "pass" then
-			MarketplaceService:PromptGamePassPurchase(s.player, p.rid)
-		else
-			MarketplaceService:PromptSubscriptionPurchase(s.player, p.rid)
-		end
-	end)
-	if not done then
-		addPending(uid, key, -1)
-		warn("[Cash] 구매 창을 띄우지 못했다", key, err)
-		if p.stock then
+	local function release()
+		if held then
 			local _, rec = Store.stockRelease(key, uid, CashServer.clock())
 			noteStock(key, rec)
 		end
+	end
+	local before = Cash.pack(s.acct.bm)
+	local wskinBefore = s.hero and s.hero.wskin
+	local ok, got = Cash.buyLuna(s.acct, key, now, Cash.lunaRid(now, uid), Account.MAX, s.hero and s.hero.level)
+	if not ok then
+		release()
+		s.lunaBusy = false
+		return false, got
+	end
+	local took = false
+	if held then
+		local done, rec = Store.stockTake(key, uid, p.stock, CashServer.clock())
+		noteStock(key, rec)
+		if not done then
+			s.acct.bm = Cash.unpack(before, Account.MAX)
+			release()
+			s.lunaBusy = false
+			return false, "지금은 남은 수를 확인할 수 없다 — 잠시 뒤에 다시"
+		end
+		took = true
+	end
+	if s.hero and string.sub(key, 1, 6) == "wskin_" then
+		s.hero.wskin = key -- 산 캐시 무기는 산 캐릭터가 바로 낀다(로벅스로 산 때와 같다)
+	end
+	if W.saveNow(s) then
+		s.lunaBusy = false
+		W.notify(s, key)
+		return true, got
+	end
+	s.acct.bm = Cash.unpack(before, Account.MAX)
+	if s.hero then
+		s.hero.wskin = wskinBefore
+	end
+	if took then
+		local _, rec = Store.stockUntake(key, uid, CashServer.clock(), CashServer.HOLD)
+		noteStock(key, rec)
+		release()
+	end
+	s.lunaBusy = false
+	return false, "저장하지 못했다 — 루나는 그대로다(잠시 뒤에 다시)"
+end
+
+-- 영구 게임 패스의 구매 창을 띄운다(로벅스 — 루나와 따로 (2026-11-11 사용자: "패스는 아예 별도입니다 패스는 로벅스로 구매하게하면됩니다")): 게임에 만들어 둔 패스 · 로블록스 번호 · 아직 가지지 않은 것.
+--  산 순간은 PromptGamePassPurchaseFinished가 효과를 얹고 알린다(아래 start) → true / false · 까닭
+function CashServer.promptPass(s, key: any): (boolean, string?)
+	local p = Cash.product(key)
+	if not p or p.kind ~= "pass" then
+		return false, "없는 패스다"
+	elseif not s.acct or not s.loaded or s.guest then
+		return false, "계정을 읽지 못했다"
+	elseif not Cash.ready(p) then
+		return false, "판매 준비 중"
+	elseif CashServer.owns(s, key) then
+		return false, "이미 가진 패스다"
+	end
+	local done, err = pcall(function()
+		MarketplaceService:PromptGamePassPurchase(s.player, p.rid)
+	end)
+	if not done then
+		warn("[Cash] 패스의 구매 창을 띄우지 못했다", key, err)
+		return false, "구매 창을 띄우지 못했다"
+	end
+	return true
+end
+
+-- 루나 충전의 구매 창을 띄운다(2026-11-11 — 상점의 「루나 충전」 탭): 묶음에 로블록스 상품 번호가 있어야 한다. 더하는 것은 ProcessReceipt에서만 → true / false · 까닭
+function CashServer.charge(s, key: any): (boolean, string?)
+	local q = Cash.lunaPack(key)
+	if not q then
+		return false, "없는 루나 묶음이다"
+	elseif not s.acct or not s.loaded or s.guest then
+		return false, "계정을 읽지 못했다"
+	elseif not Cash.packReady(q) then
+		return false, "판매 준비 중"
+	end
+	local uid = s.player.UserId
+	addPending(uid, key, 1)
+	local done, err = pcall(function()
+		MarketplaceService:PromptProductPurchase(s.player, q.rid)
+	end)
+	if not done then
+		addPending(uid, key, -1)
+		warn("[Cash] 충전의 구매 창을 띄우지 못했다", key, err)
 		return false, "구매 창을 띄우지 못했다"
 	end
 	return true
 end
 
 -- ---------- 선물하기(2026-10-31 사용자: "달빛상점에 모든 품목을 아이템 선물을 할수있게 해줘 다른사람에게 선물을 보낼수있게") ----------
+--  2026-11-11 루나부터: 보내는 사람의 루나로 산다(구매 창이 없다) — 값을 빼고 「보낼 선물」(giftOut)을 적어 저장한 뒤 받는 계정의 선물 상자에 넣는다(못 넣으면 giftTick이 다시).
+--   영구 게임 패스는 선물하지 않는다(로벅스로 따로 — 로블록스가 남에게 사 주지 못하게 한다). 아래의 「구매 창」 이야기는 루나 전의 것(예전 결제가 다시 오면 processReceipt가 그대로 처리한다)
 --  보내는 쪽: 상점 창의 「선물」 → 받는 사람의 닉네임 → CashServer.gift가 본다(선물할 수 있는 상품 · 로블록스 정책 · 나 아님 · 받는 계정의 한도 — 아직 받지 않은 선물까지 센다) →
 --   띄운 선물을 계정에 적고(acct.bm.gift) 구매 창을 띄운다 → 결제가 오면(processReceipt) 받는 계정의 선물 상자(store.luau bmgift_)에 넣고 산 사람의 계정에는 결제 번호만 → 모든 서버에 알린다.
 --  받는 쪽: 그 계정이 있는 서버가 들어온 뒤 한 번 · 소식이 오면 한 번(CashServer.giftTick) 상자를 읽어 계정에 넣고(Cash.grant — 결제 번호 "g" .. 번호) 저장한 뒤에 상자에서 지운다.
@@ -377,6 +475,10 @@ local Format = require(lune.ui.format)
 local GIFT = Cash.RULES.gift or { policy = true, max = 100 }
 local GW = Cash.WORDS
 
+-- 이 사람은 로블록스가 뽑기를 막은 계정인가(ArePaidRandomItemsRestricted — 뽑기 상자 · 윤슬 조각 · 상자 결과물을 보내지도 받지도 못한다 (2026-11-11 사용자: "선물이 가능하고 영국 18세이하라던가 그러면 선물이 안된다고떠야지"))
+function CashServer.randomLocked(s): boolean
+	return typeof(s.policy) == "table" and s.policy.ArePaidRandomItemsRestricted == true
+end
 -- 이 사람은 로블록스 정책으로 선물을 보낼 수 없는가
 function CashServer.giftLocked(s): boolean
 	return GIFT.policy == true and typeof(s.policy) == "table" and s.policy.IsPaidItemTradingAllowed == false
@@ -407,8 +509,26 @@ local function giftAccount(uid: number): (any, boolean)
 	return if ok then acct else nil, false
 end
 
--- 선물의 구매 창을 띄운다 → 띄웠는가 · 까닭 · 받는 사람의 닉네임
-function CashServer.gift(s, key: any, to: any): (boolean, string?, string?)
+-- 루나를 낸 선물을 받는 계정의 선물 상자에 넣는다(넣었으면 「보낼 선물」을 지우고 알린다 · 못 넣으면 giftTick이 다시) → 넣었는가
+function CashServer.deliverGift(s): boolean
+	local go = s and s.acct and s.acct.bm.giftOut
+	if not go then
+		return true
+	end
+	if not Store.bmGiftAdd(go.uid, { k = go.k, rid = go.rid, from = s.name or "", to = go.to, at = go.at }) then
+		s.giftOutNext = os.clock() + 15
+		return false
+	end
+	-- (같은 번호는 상자에 한 번만 든다 · 받는 쪽은 번호로 한 번만 받는다 — 지운 것이 저장되기 전에 서버가 꺼져 다시 넣어도 두 번 받지 않는다)
+	s.acct.bm.giftOut = false
+	s.dirty = true
+	CashServer.ping(go.uid)
+	W.giftSent(s, go.k, go.to)
+	return true
+end
+
+-- 루나로 선물한다 → 보냈는가 · 까닭 · 받는 사람의 닉네임 · 쓴 루나
+function CashServer.gift(s, key: any, to: any): (boolean, string?, string?, number?)
 	local p = Cash.product(key)
 	if not p or not Cash.giftable(key) then
 		return false, GW.giftCant
@@ -416,6 +536,10 @@ function CashServer.gift(s, key: any, to: any): (boolean, string?, string?)
 		return false, "계정을 읽지 못했다"
 	elseif CashServer.giftLocked(s) then
 		return false, GW.giftPolicy
+	elseif p.random and CashServer.randomLocked(s) then
+		return false, GW.giftRandomBox -- (뽑기 제한 계정 — 2026-11-11)
+	elseif s.acct.bm.giftOut or s.lunaBusy then
+		return false, GW.giftSending or GW.giftBusy
 	end
 	local name = if typeof(to) == "string" then string.gsub(string.gsub(to, "^[ \t]+", ""), "[ \t]+$", "") else ""
 	if name == "" or #name > 60 then
@@ -430,10 +554,8 @@ function CashServer.gift(s, key: any, to: any): (boolean, string?, string?)
 	local buyer = s.player.UserId
 	if uid == buyer then
 		return false, GW.giftSelf
-	end
-	local busy = s.acct.bm.gift
-	if CashServer.pending(buyer, key) > 0 or (busy and CashServer.pending(buyer, busy.k) > 0) then
-		return false, GW.giftBusy
+	elseif (s.acct.bm.luna or 0) < (Cash.lunaPrice(key) or 0) then
+		return false, GW.lunaShort
 	end
 	local acct, failed = giftAccount(uid)
 	if failed then
@@ -442,6 +564,8 @@ function CashServer.gift(s, key: any, to: any): (boolean, string?, string?)
 		return false, Format.fill(GW.giftNoName, { name = name })
 	elseif GIFT.policy == true and acct.bm.lock == true then
 		return false, GW.giftPolicyTo
+	elseif p.random and acct.bm.rlock == true then
+		return false, GW.giftRandomBoxTo -- (받는 사람이 뽑기 제한 계정 — 들어올 때 giftTick이 적어 둔 값)
 	end
 	local okList, list = Store.bmGiftList(uid)
 	if not okList then
@@ -459,13 +583,91 @@ function CashServer.gift(s, key: any, to: any): (boolean, string?, string?)
 	if not ok then
 		return false, Format.fill(GW.giftTo, { why = why or "" })
 	end
-	s.acct.bm.gift = { k = key, uid = uid, to = name, at = W.now() }
-	s.dirty = true
-	local done, err = open(s, key, p)
-	if not done then
-		s.acct.bm.gift = false
-		return false, err
+	s.lunaBusy = true
+	local before = Cash.pack(s.acct.bm)
+	local now = W.now()
+	local paid, spent = Cash.payGift(s.acct, key, uid, name, Cash.lunaRid(now, buyer), now)
+	if not paid then
+		s.lunaBusy = false
+		return false, spent
 	end
+	if not W.saveNow(s) then
+		s.acct.bm = Cash.unpack(before, Account.MAX)
+		s.lunaBusy = false
+		return false, "저장하지 못했다 — 루나는 그대로다(잠시 뒤에 다시)"
+	end
+	s.lunaBusy = false
+	CashServer.deliverGift(s) -- (못 넣었으면 giftTick이 15초 뒤에 다시 — 루나는 이미 냈고 선물은 반드시 간다)
+	return true, nil, name, spent
+end
+
+-- 꺼낸 상자 결과물을 선물한다 (2026-11-11 사용자: "꺼내팔기 한다음에 경매장에 거래가능하게만들면된다 선물하기도 가능하게"):
+--  가방의 bm_cos_<이름> 하나 → 받는 사람의 선물 상자("cos:<이름>") → 받으면 보관함에 그 물건(쓰면 계정 · 경매장).
+--  막는 것: 로블록스 정책 — 보내는 쪽 · 받는 쪽 모두 유료 아이템 거래 제한(lock) · 뽑기 제한(rlock) · 나에게 · 없는 닉네임 · 받는 상자가 가득 · 앞의 선물을 넣는 중.
+--  가방에서 빼고 「보낼 선물」을 적어 저장한 뒤 넣는다(저장에 실패하면 가방 · 계정을 되돌린다 · 못 넣으면 giftTick이 다시) → 보냈는가 · 까닭 · 받는 사람의 닉네임
+function CashServer.giftItem(s, itemId: any, to: any): (boolean, string?, string?)
+	local g = if typeof(itemId) == "string" then Items.goods(itemId) else nil
+	if not g or g.kind ~= "bmCos" then
+		return false, GW.giftCant
+	elseif not s.hero or not s.acct or not s.loaded or s.guest then
+		return false, "계정을 읽지 못했다"
+	elseif CashServer.giftLocked(s) then
+		return false, GW.giftPolicy
+	elseif typeof(s.policy) == "table" and s.policy.ArePaidRandomItemsRestricted == true then
+		return false, GW.giftRandom
+	elseif s.acct.bm.giftOut or s.lunaBusy then
+		return false, GW.giftSending or GW.giftBusy
+	elseif Bag.count(s.hero, itemId) < 1 then
+		return false, GW.giftNoItem
+	elseif Bag.countFree(s.hero, itemId) < 1 then
+		return false, Bag.LOCKED -- (잠긴 것뿐이다 — 2026-11-11)
+	end
+	local name = if typeof(to) == "string" then string.gsub(string.gsub(to, "^[ \t]+", ""), "[ \t]+$", "") else ""
+	if name == "" or #name > 60 then
+		return false, GW.giftNeedName
+	end
+	local uid = Store.nameOwner(Account.nameKey(name))
+	if uid == false then
+		return false, GW.giftRead
+	elseif typeof(uid) ~= "number" then
+		return false, Format.fill(GW.giftNoName, { name = name })
+	end
+	local sender = s.player.UserId
+	if uid == sender then
+		return false, GW.giftSelf
+	end
+	local acct, failed = giftAccount(uid)
+	if failed then
+		return false, GW.giftRead
+	elseif not acct then
+		return false, Format.fill(GW.giftNoName, { name = name })
+	elseif GIFT.policy == true and acct.bm.lock == true then
+		return false, GW.giftPolicyTo
+	elseif acct.bm.rlock == true then
+		return false, GW.giftRandomTo
+	end
+	local okList, list = Store.bmGiftList(uid)
+	if not okList then
+		return false, GW.giftRead
+	elseif #list >= (GIFT.max or 100) then
+		return false, GW.giftBox
+	end
+	s.lunaBusy = true
+	local before = Cash.pack(s.acct.bm)
+	local now = W.now()
+	local ok, why = Cash.giftItemOut(s.acct, s.hero, itemId, uid, name, Cash.lunaRid(now, sender), now)
+	if not ok then
+		s.lunaBusy = false
+		return false, why
+	end
+	if not W.saveNow(s) then
+		s.acct.bm = Cash.unpack(before, Account.MAX)
+		Bag.give(s.hero, itemId, 1)
+		s.lunaBusy = false
+		return false, "저장하지 못했다 — 물건은 그대로다(잠시 뒤에 다시)"
+	end
+	s.lunaBusy = false
+	CashServer.deliverGift(s) -- (못 넣었으면 giftTick이 15초 뒤에 다시 — 가방에서는 이미 뺐고 선물은 반드시 간다)
 	return true, nil, name
 end
 
@@ -483,14 +685,19 @@ local function claimGifts(s)
 	end
 	local acct = s.acct
 	local before, done, got = Cash.pack(acct.bm), {}, {}
+	local rlocked = typeof(s.policy) == "table" and s.policy.ArePaidRandomItemsRestricted == true
 	for _, g in list do
-		local put, why = Cash.grant(acct, g.k, "g" .. g.rid, W.now(), Account.MAX, s.hero and s.hero.level)
+		local put, why = nil, "hold" -- (뽑기 제한 계정은 상자 결과물을 받지 않는다 — 상자에 남는다 · 2026-11-11)
+		local pg = Cash.product(g.k)
+		if not (rlocked and (Cash.cosGiftOf(g.k) or Cash.boxGiftOf(g.k) or (pg and pg.random))) then -- (뽑기 상자 · 윤슬 조각 · 상자 결과물)
+			put, why = Cash.grant(acct, g.k, "g" .. g.rid, W.now(), Account.MAX, s.hero and s.hero.level)
+		end
 		if put then
 			done[g.rid] = true
 			table.insert(got, g)
 		elseif why == "dup" then
 			done[g.rid] = true -- (넣고 저장까지 했는데 상자에서 지우지 못했던 것)
-		else
+		elseif why ~= "hold" then
 			warn("[Cash] 선물을 넣지 못했다", g.k, why)
 		end
 	end
@@ -576,6 +783,23 @@ function CashServer.giftTick(s)
 			s.acct.bm.lock = lock
 			s.dirty = true
 		end
+		local rlock = s.policy.ArePaidRandomItemsRestricted == true -- (뽑기 제한 — 남이 상자 결과물을 선물할 때 본다 · 2026-11-11)
+		if s.acct.bm.rlock ~= rlock then
+			s.acct.bm.rlock = rlock
+			s.dirty = true
+		end
+	end
+	-- 루나를 낸 선물을 아직 넣지 못했으면 다시 넣어 본다(2026-11-11 — 15초마다)
+	if s.acct.bm.giftOut and not s.giftOutBusy and os.clock() >= (s.giftOutNext or 0) then
+		s.giftOutBusy = true
+		task.spawn(function()
+			local ok, err = pcall(CashServer.deliverGift, s)
+			s.giftOutBusy = false
+			if not ok then
+				warn("[Cash] 선물 보내기: " .. tostring(err))
+				s.giftOutNext = os.clock() + 15
+			end
+		end)
 	end
 	if s.bmGiftDone or s.bmGiftBusy or os.clock() < (s.bmGiftNext or 0) then
 		return
@@ -614,6 +838,21 @@ local function fetchPrices()
 				end)
 				if ok and typeof(info) == "table" and typeof(info.PriceInRobux) == "number" then
 					priceOf[p.id] = info.PriceInRobux
+					got += 1
+				end
+				left -= 1
+			end)
+		end
+	end
+	for _, q in Cash.LUNA.packs do -- 루나 묶음(2026-11-11 — 개발자 상품)
+		if Cash.packReady(q) then
+			left += 1
+			task.spawn(function()
+				local ok, info = pcall(function()
+					return MarketplaceService:GetProductInfoAsync(q.rid, Enum.InfoType.Product)
+				end)
+				if ok and typeof(info) == "table" and typeof(info.PriceInRobux) == "number" then
+					priceOf[q.id] = info.PriceInRobux
 					got += 1
 				end
 				left -= 1

@@ -10,7 +10,7 @@ local N = {}
 N.MAX_LEVEL = MAX
 -- 레벨의 진짜 상한(2026-11-05 사용자 "만렙은 200 이고 절대 레벨업이 불가능한수준으로 151을 찍는것도 불가능하게") · Lv.150부터 다음 레벨까지의 경험치. MAX_LEVEL(150)은 만렙의 기록 · 칭호 · 순위 · 곡선의 기준 그대로
 N.LEVEL_CAP = D.LEVEL_CAP or MAX
-N.XP_WALL = D.XP_WALL or 72e9 -- Lv.150부터 한 레벨(2026-11-06 — 공방 jobs.js: 한 달)
+N.XP_TOP = D.XP_TOP or { first = 1e8, ratio = 1.122 } -- Lv.150부터 한 레벨 = first x ratio^(L - 150)(2026-11-11 벽을 풀었다 — 공방 jobs.js: 별 · 룬 · 쿠폰 · 패스를 다 쓰는 24시간 사냥으로 150 → 200 약 90일 · 그 전 XP_WALL 720억)
 N.data = D
 
 local function round(v: number): number
@@ -82,15 +82,16 @@ end
 function N.mobHp(L: number): number
 	return round(SPEC.hpK * N.refAttack(L) * N.easeAt(L))
 end
-function N.xpNeed(L: number): number -- 다음 레벨까지 필요한 경험치(Lv.150부터는 XP_WALL — 2026-11-05)
+function N.xpNeed(L: number): number -- 다음 레벨까지 필요한 경험치(Lv.150부터는 XP_TOP의 곡선 — 2026-11-11 · 공방 numbers.js xpTop과 같은 셈)
 	if L >= MAX then
-		return N.XP_WALL
+		return round(N.XP_TOP.first * N.XP_TOP.ratio ^ (L - MAX))
 	end
 	return round(N.killsAt(L) * N.mobXp(L) * (D.XP_EASE or 1)) -- XP_EASE = Lv.1 ~ 149의 몫(2026-11-06 「150레벨까지 조금 완화」 — 0.8 · 공방 numbers.js)
 end
 -- 내 레벨과 몬스터 레벨의 차이에 따른 경험치 %(차이 10 안쪽 100 · 11~20은 한 레벨마다 5씩 줄어 50까지 · 21 넘으면 10)
+--  내 레벨은 150(MAX_LEVEL)까지만 센다(2026-11-11 — 몬스터가 Lv.150에서 끝나 Lv.171부터는 어디서든 10%였다 · 150 → 200을 사냥으로 갈 수 있게)
 function N.xpRate(myLevel: number, mobLevel: number): number
-	local diff = math.abs(myLevel - mobLevel)
+	local diff = math.abs(math.min(myLevel, MAX) - mobLevel)
 	local rule = D.XPRULE.diff
 	if diff <= rule[1].upto then
 		return rule[1].pct

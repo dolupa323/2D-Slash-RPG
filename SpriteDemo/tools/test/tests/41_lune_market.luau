@@ -1826,9 +1826,18 @@ do
 	vb.destroy()
 	-- 로벅스로 산 아이템을 거래할 수 없는 계정(로블록스 정책 IsPaidItemTradingAllowed = false — 2026-10-30 사용자 "경험치, 드롭률 쿠폰 경매장 등록 안된다는데?" → "알림안뜨는데"):
 	--  판매 목록의 그 줄에 「거래 불가 — 로블록스 정책」 · 골라도 「등록」이 눌리지 않는다(전에는 등록을 눌러야 창 맨 아래 줄에만 떴다) · 정책이 막지 않는 계정은 그대로 올린다
+	-- (2026-11-11 사용자 결정 「모두 열기」 — 설계 market.paidPolicy = false: 지금은 막지 않는다 · 아래는 스위치를 켰을 때의 셈)
 	do
+		local RULES = req("ReplicatedStorage/shared/lune/sim/cash").RULES
+		expect(RULES.market and RULES.market.paidPolicy == false, "지금은 거래 불가 계정도 경매장에서 막지 않는다")
 		Bag.give(sa.hero, "bm_exp", 2)
 		sa.policy = { IsPaidItemTradingAllowed = false }
+		local wf, vf = open(pa, sa)
+		press(wf, "tab", W.tabs[2])
+		press(wf, "button", W.sell)
+		expect(not has(wf, W.paidLock), "스위치를 끈 지금: 거래 불가 계정도 「거래 불가」 표시 없음")
+		vf.destroy()
+		RULES.market.paidPolicy = true
 		local wl, vl = open(pa, sa)
 		press(wl, "tab", W.tabs[2])
 		press(wl, "button", W.sell)
@@ -1847,6 +1856,7 @@ do
 		expect(not has(wo, W.paidLock), "정책이 막지 않는 계정: 표시 없음")
 		vo.destroy()
 		sa.policy = nil
+		RULES.market.paidPolicy = false
 	end
 	eq(#overflow, 0, "칸을 넘는 글이 없다: " .. table.concat(overflow, " / "))
 	eq(#warnings, 0, "경고가 없다: " .. table.concat(warnings, " / "))
@@ -1898,4 +1908,78 @@ do
 	expect(r.ok == true, "산 것을 되판다 " .. tostring(r.why))
 	sv.h.Admin(pm, "market", "clear")
 	eq(#boards.a_hat.list, 1, "다른 사람의 물건은 그대로다")
+end
+
+-- ================= 7) 상자 결과물(2026-11-11 사용자: "뽑기상자에서 나온 부산물을 그냥 경매장에서 거래가능하도록하게해") =================
+--  가방의 「bm_cos_<이름>」(가진 것 하나를 꺼낸 것 — sim/cash.luau Cash.cosOut)은 경매장 「소비」에 올라간다.
+--  로블록스가 뽑기 제한으로 표시한 계정(ArePaidRandomItemsRestricted)은 올리지도 · 보지도(목록 · 시세) · 사지도 못한다(공식 문서: 결과물의 거래 기능에 접근하게 하면 안 된다)
+do
+	table.clear(disk)
+	table.clear(boards)
+	table.clear(names)
+	fail.save, fail.update, fail.read = false, false, false
+	slow = 0
+	local sv = server()
+	local Bag, Items = sv.Bag, sv.Items
+	local LOCKED = "이 계정은 뽑기 상자의 결과물을 사고팔 수 없다(로블록스 정책)"
+	local pa, sa = enter(sv, 9501, "상자판매", "riven")
+	local pb, sb = enter(sv, 9502, "상자구매", "mooni")
+	local pc, sc = enter(sv, 9503, "뽑기막힘", "axion")
+	reset(sv, sa.hero, 10000)
+	reset(sv, sb.hero, 10000)
+	reset(sv, sc.hero, 10000)
+	local def = Items.goods("bm_cos_pet_fox")
+	expect(def ~= nil and def.kind == "bmCos" and def.random == true and def.paid == true and def.bound ~= true and def.cos == "pet_fox", "상자 결과물 = 경매장에 올리는 물건(random · paid · 묶이지 않음)")
+	local function slotOf(h, id)
+		for i = 1, Bag.size(h) do
+			local it = h.use[i]
+			if it and it.item == id then
+				return i
+			end
+		end
+		return nil
+	end
+	sc.policy = { ArePaidRandomItemsRestricted = true }
+	Bag.give(sc.hero, "bm_cos_pet_fox", 1)
+	local r = sv.h.Market(pc, "list", "use", slotOf(sc.hero, "bm_cos_pet_fox"), 1, { 500, 24 })
+	expect(r.ok == false and r.why == LOCKED and Bag.count(sc.hero, "bm_cos_pet_fox") == 1, "뽑기 제한 계정은 올리지 못한다(가방 그대로)")
+	Bag.give(sa.hero, "bm_cos_pet_fox", 1)
+	r = sv.h.Market(pa, "list", "use", slotOf(sa.hero, "bm_cos_pet_fox"), 1, { 500, 24 })
+	expect(r.ok == true and Bag.count(sa.hero, "bm_cos_pet_fox") == 0, "보통 계정은 올린다 " .. tostring(r.why))
+	local entry = boards.u.list[1]
+	expect(entry ~= nil and entry.it.g == "bm_cos_pet_fox", "장부(소비)에 올라갔다")
+	expect(#sv.h.Market(pb, "browse", "u", true).rows == 1, "보통 계정에는 보인다")
+	expect(#sv.h.Market(pc, "browse", "u", true).rows == 0, "뽑기 제한 계정에는 보이지 않는다")
+	r = sv.h.Market(pc, "buy", "u", entry.id, 1, 500)
+	expect(r.ok == false and r.why == LOCKED and sc.hero.money == 10000, "뽑기 제한 계정은 (번호를 알아도) 사지 못한다 · 달돈 그대로")
+	r = sv.h.Market(pb, "buy", "u", entry.id, 1, 500)
+	expect(r.ok == true and sb.hero.money == 9500, "보통 계정은 산다 " .. tostring(r.why))
+	sc.policy = nil
+end
+
+-- ================= 8) 아이템 잠금(2026-11-11 사용자: "아이템 잠금기능 만들어줘 잠근거는 판매, 분해 이런거 적용안되게") — 잠긴 것은 경매장에 올리지 못한다 =================
+do
+	table.clear(disk)
+	table.clear(boards)
+	table.clear(names)
+	fail.save, fail.update, fail.read = false, false, false
+	slow = 0
+	local sv = server()
+	local Bag = sv.Bag
+	local pa, sa = enter(sv, 9601, "잠근이", "riven")
+	reset(sv, sa.hero, 10000)
+	Bag.give(sa.hero, "potion1", 5)
+	local slot
+	for i = 1, Bag.size(sa.hero) do
+		local it = sa.hero.use[i]
+		if it and it.item == "potion1" then
+			slot = i
+		end
+	end
+	Bag.lock(sa.hero, "use", slot, true)
+	local r = sv.h.Market(pa, "list", "use", slot, 1, { 500, 24 })
+	expect(r.ok == false and r.why == Bag.LOCKED and Bag.count(sa.hero, "potion1") == 5, "잠긴 묶음은 올리지 못한다(가방 그대로)")
+	Bag.lock(sa.hero, "use", slot, false)
+	r = sv.h.Market(pa, "list", "use", slot, 1, { 500, 24 })
+	expect(r.ok == true and Bag.count(sa.hero, "potion1") == 4, "풀면 올린다 " .. tostring(r.why))
 end

@@ -495,6 +495,9 @@ return {
 	},
 	questMark = { new = "markNew", done = "markDone", big = "markBig", main = "markMain", mainDone = "markMainDone", daily = "markDaily", dailyDone = "markDailyDone", up = 2 },
 	words = {
+		lock = "잠금",
+		unlock = "잠금 풀기",
+		lockNote = "잠김 — 팔기 · 분해 · 버리기 · 경매 등록이 안 된다",
 		equip = "장착",
 		equipIf = "장착하면",
 		unequip = "해제",

@@ -542,17 +542,18 @@ end
 
 -- 열쇠 maxTen = 만렙에 오른 차례대로 열 캐릭터 { { key, name, class, at } … }(오른 때의 차례 — 2026-10-26 칭호 「만월의 십인」).
 --  열이 차기 전에만 더한다(이미 있는 캐릭터는 다시 넣지 않는다 · 열이 차면 그대로). 돌려주는 것: 저장소에 있는 목록(읽지 못했으면 nil)
-function Store.maxTenGet(): any
+--  열쇠 capThree = Lv.200(LEVEL_CAP)에 오른 차례대로 세 캐릭터(2026-11-11 사용자 "200만렙 달성 이벤트랑 칭호, 3명까지 칭호주고 150때랑 똑같아") — 같은 길(rankedGet · rankedAdd)
+local function rankedGet(name: string): any
 	if offline then
-		return memory.world.maxTen or {}
+		return memory.world[name] or {}
 	end
-	local ok, result = read("world", "maxTen")
+	local ok, result = read("world", name)
 	if ok then
 		return if typeof(result) == "table" then result else {}
 	end
-	return if offline then memory.world.maxTen or {} else nil
+	return if offline then memory.world[name] or {} else nil
 end
-function Store.maxTenAdd(rec, cap: number): any
+local function rankedAdd(name: string, rec, cap: number, what: string): any
 	local function add(old)
 		local list = if typeof(old) == "table" then old else {}
 		for _, r in list do
@@ -572,8 +573,8 @@ function Store.maxTenAdd(rec, cap: number): any
 		return new, new
 	end
 	if offline then
-		local new, have = add(memory.world.maxTen)
-		memory.world.maxTen = new or have
+		local new, have = add(memory.world[name])
+		memory.world[name] = new or have
 		return have
 	end
 	local ds = getStore("world")
@@ -582,21 +583,33 @@ function Store.maxTenAdd(rec, cap: number): any
 	end
 	local have = nil
 	local ok, err = try(function()
-		ds:UpdateAsync("maxTen", function(old)
+		ds:UpdateAsync(name, function(old)
 			local new, now = add(old)
 			have = now
 			return new
 		end)
 	end)
 	if not ok then
-		warn(("[lune] 만렙 열 사람의 기록을 적지 못했다: %s"):format(tostring(err)))
+		warn(("[lune] %s의 기록을 적지 못했다: %s"):format(what, tostring(err)))
 		if studio() then
 			offline = true
-			return Store.maxTenAdd(rec, cap)
+			return rankedAdd(name, rec, cap, what)
 		end
 		return nil
 	end
 	return have
+end
+function Store.maxTenGet(): any
+	return rankedGet("maxTen")
+end
+function Store.maxTenAdd(rec, cap: number): any
+	return rankedAdd("maxTen", rec, cap, "만렙 열 사람")
+end
+function Store.capThreeGet(): any
+	return rankedGet("capThree")
+end
+function Store.capThreeAdd(rec, cap: number): any
+	return rankedAdd("capThree", rec, cap, "Lv.200 세 사람")
 end
 
 -- 보스의 출현 시각(2026-11-05 — server modules/reveal.luau): 열쇠 reveal_<보스> = { at }. 없을 때만 적는다(이 판으로 처음 켜진 서버) — 돌려주는 것 = 저장소의 시각(적지 못했으면 nil)

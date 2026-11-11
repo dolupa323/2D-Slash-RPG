@@ -2,7 +2,9 @@
 --  모양은 공방 시험 탭의 js/lune/ui/paint.js(paintCash · ?lunedemo=cash)와 같다. 글 · 탭 · 상품의 차례는 공방 design/bm.js(BM_SHOP → data/bm.generated.luau의 shop).
 --   안내 한 줄 · 탭 다섯(편의 · 재화 · 꾸밈 · 패스 · 보관함 — 받을 것이 있으면 「보관함」 옆에 금빛 수) · 줄의 스크롤 · 아래 「모두 받기」와 알림.
 --   상품의 줄: [그림 칸] 이름 · 꼬리표(거래 가능 / 계정) / 한 줄 설명(재화 = 지금 사면 드는 양) / 횟수 · 오른쪽 = 값 · 「구매」(못 사면 「준비 중」 · 다 산 것은 꺼진 「구매」 · 가진 패스는 「보유」).
---  사는 것: 「구매」 → ctx.cashDo("buy", 상품) → 서버가 한도를 보고 로블록스의 구매 창을 띄운다(server/lune/modules/cash.luau) →
+--  루나(2026-11-11 — 공방 bm.js LUNA): 상품은 루나로 산다 · 안내 줄 = 지금 루나 · 「루나 충전」 탭의 「충전」 → ctx.cashDo("charge", 묶음) → 로블록스의 구매 창(결제가 끝나면 서버가 루나를 더하고 CashGot).
+--   「구매」는 늘 수 고르기 자리(묶음이 없으면 1개만 · 지금 루나)에서 한 번 더 누른다 → ctx.cashDo("buy", 상품) → 서버가 루나로 바로 판다(모자라면 그 자리의 단추가 「충전하기」).
+--  (루나 전) 사는 것: 「구매」 → ctx.cashDo("buy", 상품) → 서버가 한도를 보고 로블록스의 구매 창을 띄운다(server/lune/modules/cash.luau) →
 --   결제가 끝나면 서버(ProcessReceipt)가 보관함에 넣고 "CashGot"을 보낸다(boot가 알림을 띄우고 창을 고쳐 그린다). 결제를 이 창이 셈하지는 않는다.
 --  보관함 → 가방: 「받기」 · 「모두 받기」 → ctx.cashDo("take", 줄?). 이름 바꾸기(arg "rename"): 가방에서 「이름 바꾸기 주문서」를 쓰면 이 창이 이름 칸으로 열린다 → ctx.cashDo("rename", 새 이름).
 --  선물하기(2026-10-31): 안내 줄 오른쪽의 「선물하기」로 바꾸면 줄의 「구매」가 「선물」이 된다(영구 패스 = 「선물 불가」) → 누르면 목록 자리에 닉네임 칸 →
@@ -99,8 +101,16 @@ function CashWindow.pickH(bid: string): number
 	return S.selY + math.ceil(n / S.selCols) * (S.selCellH + S.selGap) + S.selBtnY + Ui.M.button
 end
 
+-- 상자 결과물을 선물하는 모습이면 그 물건(arg "giftItem:<물건>" — 2026-11-11)
+local function giftItemOf(arg: any): string?
+	local id = if typeof(arg) == "string" and string.sub(arg, 1, 9) == "giftItem:" then string.sub(arg, 10) else nil
+	local g = id and Items.goods(id)
+	return if g and g.kind == "bmCos" then id else nil
+end
+CashWindow.giftItemOf = giftItemOf
+
 function CashWindow.size(arg: any): (number, number)
-	if arg == "rename" then
+	if arg == "rename" or giftItemOf(arg) then
 		return S.w, S.renameH
 	elseif dyePart(arg) then
 		return S.w, CashWindow.dyeH()
@@ -123,6 +133,9 @@ function CashWindow.title(arg: any): string
 	if part then
 		local ctx = CashWindow.ctx
 		return CashWindow.dyeTitle(part, ctx and ctx.myClass and ctx.myClass())
+	end
+	if giftItemOf(arg) then
+		return W.giftItem
 	end
 	return if arg == "rename" then W.renameTitle else SHOP.title
 end
@@ -159,20 +172,24 @@ function CashWindow.boxCount(view): number
 	return n
 end
 
--- 선물할 수 있는 상품인가(로블록스 개발자 상품만 — 게임 패스는 남에게 사 주지 못한다 · 서버의 Cash.giftable과 같다)
+-- 선물할 수 있는 상품인가(서버의 Cash.giftable과 같다 — 개발자 상품만 · 확률형은 뺀다 · 영구 게임 패스는 로벅스로 따로 산다: 로블록스가 남에게 사 주지 못하게 한다)
 function CashWindow.giftable(id: string): boolean
 	local p = BY[id]
-	return p ~= nil and p.kind == "product"
+	return p ~= nil and p.kind == "product" -- (뽑기 상자 · 윤슬 조각도 — 2026-11-11 · 뽑기 제한 계정은 rows가 「선물 불가」)
 end
--- 그 상품의 값의 글(서버가 읽은 로블록스의 실제 값 · 없으면 설계의 값)
-function CashWindow.priceOf(view, id: string): string
-	local p = BY[id]
+-- 그 상품의 루나 값(2026-11-11 — 서버의 Cash.view의 luna · 없으면 설계의 값)
+function CashWindow.lunaOf(view, id: string): number
 	for _, v in (view and view.list) or {} do
-		if v.id == id and v.robux then
-			return Format.fill(W.price, { n = v.robux })
+		if v.id == id and typeof(v.luna) == "number" then
+			return v.luna
 		end
 	end
-	return Format.fill(W.price, { n = p and p.robux or 0 })
+	local p = BY[id]
+	return (p and (p.luna or p.robux)) or 0
+end
+-- 그 상품의 값의 글(「49 루나」)
+function CashWindow.priceOf(view, id: string): string
+	return Format.fill(W.price, { n = Format.comma(CashWindow.lunaOf(view, id)) })
 end
 
 -- 그 탭의 줄들(공방 paint.js의 cashRows와 같은 셈). view = 서버의 Cash.view
@@ -180,7 +197,19 @@ end
 function CashWindow.rows(view, tab: number, gift: boolean?)
 	local key = SHOP.tabs[tab] and SHOP.tabs[tab][1]
 	local out = {}
-	if key == "box" then
+	if key == "luna" then
+		-- 루나 충전(2026-11-11): 묶음마다 [그림] 「루나 n」 · 한 줄 · 값(로벅스 — 서버가 읽은 실제 값) · 「충전」(상품 번호가 없으면 「준비 중」 · 선물하기에서는 「선물 불가」)
+		local byId = {}
+		for _, q in (view and view.packs) or {} do
+			byId[q.id] = q
+		end
+		for _, q in (BM.luna and BM.luna.packs) or {} do
+			local v = byId[q.id] or {}
+			table.insert(out, { id = q.id, charge = true, icon = q.icon or BM.luna.icon, name = Format.fill(W.packName, { n = Format.comma(q.n) }), text = Format.fill(W.packText, { n = Format.comma(q.n) }),
+				price = Format.fill(W.packPrice, { n = Format.comma(v.robux or q.robux) }), state = if gift then "noGift" elseif v.ready then "charge" else "soon", tag = "", tagTone = "dim" })
+		end
+		return out
+	elseif key == "box" then
 		for i, e in (view and view.box) or {} do
 			local g = Items.goods(e.id)
 			local from = g and SHOP.boxOf[g.kind] and BY[SHOP.boxOf[g.kind]]
@@ -220,7 +249,7 @@ function CashWindow.rows(view, tab: number, gift: boolean?)
 		local soldOut = p.stock and not v.own and typeof(v.left) == "number" and v.left <= 0
 		local state = if v.own then "own" elseif not v.ready then "soon" elseif soldOut then "soldOut" elseif full then "full" else "buy"
 		if gift then
-			state = if not CashWindow.giftable(id) or (view ~= nil and view.giftLock == true) then "noGift" elseif not v.ready then "soon" elseif soldOut then "soldOut" else "gift"
+			state = if not CashWindow.giftable(id) or (view ~= nil and view.giftLock == true) or (p.random and view ~= nil and view.randomLock == true) then "noGift" elseif not v.ready then "soon" elseif soldOut then "soldOut" else "gift"
 		end
 		-- 뽑기 상자(2026-11-07): 나올 것이 남지 않으면 「모두 보유」(구매 단추 대신) · random = 줄 셋째 칸의 「확률 보기」
 		if v.boxLeft ~= nil and v.boxLeft <= 0 and not gift then
@@ -235,7 +264,8 @@ function CashWindow.rows(view, tab: number, gift: boolean?)
 			tag = if p.trade then W.trade else W.account,
 			tagTone = if p.trade then "accent" else "dim",
 			text = text,
-			price = Format.fill(W.price, { n = v.robux or p.robux }), -- 서버가 읽은 로블록스의 실제 값(없으면 설계의 값)
+			-- 루나의 값(2026-11-11 — 서버의 Cash.view) · 영구 게임 패스는 로벅스(로블록스에서 읽은 실제 값 — 루나와 따로: 사용자 "패스는 아예 별도입니다 패스는 로벅스로 구매하게하면됩니다")
+			price = if p.kind == "pass" then Format.fill(W.packPrice, { n = Format.comma(v.robux or p.robux) }) else Format.fill(W.price, { n = Format.comma(v.luna or p.luna or p.robux) }),
 			state = state,
 			on = on == true,
 			count = if p.stock and (gift or not v.own) then Format.fill(W.stockLeft, { n = if typeof(v.left) == "number" then v.left else p.stock, max = p.stock })
@@ -307,6 +337,56 @@ local function buildRename(body: Frame, ctx, w: number)
 		have:color(if n > 0 then C.gold else C.red)
 		go:setEnabled(n > 0 and field.Text ~= "" and not busy)
 		noteText:set(note or "")
+		noteText:color(tone or C.dim)
+	end
+	view.refresh()
+	return view
+end
+
+-- 꺼낸 상자 결과물의 선물(2026-11-11 사용자: "꺼내팔기 한다음에 경매장에 거래가능하게만들면된다 선물하기도 가능하게"): 그림 · 이름 · 안내 / [닉네임] 「보내기」 / 알림 · 가진 수
+--  → ctx.cashDo("giftItem", { id, to }) — 서버가 가방에서 하나를 빼 받는 사람의 선물 상자에(받으면 보관함)
+local function buildGiftItem(body: Frame, ctx, w: number, id: string)
+	local view = {}
+	local note, tone = nil, nil
+	local busy = false
+	local g = Items.goods(id)
+	Ui.slot(body, 0, 0, S.iconS)
+	local icon = Ui.pic(body, nil, 2, 2)
+	Ui.setPic(icon, g and g.icon or nil)
+	Ui.text(body, (g and g.name) or id, S.textX, 1, w - S.textX, { font = "body" })
+	local have = Ui.text(body, "", S.textX, 17, w - S.textX, {})
+	local fw = w - S.btnW - 8
+	local field = Ui.field(body, 0, S.renameY, fw, Ui.M.button, W.giftPh)
+	field.Name = "GiftItemTo"
+	local go
+	go = Ui.button(body, W.giftGo, w - S.btnW, S.renameY, S.btnW, function()
+		local to = field.Text
+		if busy or to == "" then
+			return
+		end
+		busy = true
+		local res = ctx.cashDo("giftItem", { id = id, to = to })
+		busy = false
+		if res and res.ok then
+			note, tone = Format.fill(W.giftItemDone or "", { to = res.to or to }), C.green
+			field.Text = ""
+		else
+			note, tone = (res and res.why) or W.giftNeedName, C.red
+		end
+		view.refresh()
+	end, { main = true })
+	go.frame.Name = "GiftItemGo"
+	local noteText = Ui.text(body, "", 0, S.renameY + Ui.M.button + 8, w, { color = C.dim, lines = 2 })
+	keepName(field, function()
+		note, tone = nil, nil
+		view.refresh()
+	end)
+	function view.refresh()
+		local n = Bag.countIn(ctx.bag(), id)
+		have:set(Format.fill(W.giftItemHave or "", { n = n }))
+		have:color(if n > 0 then C.gold else C.red)
+		go:setEnabled(n > 0 and field.Text ~= "" and not busy)
+		noteText:set(note or W.giftItemText or "") -- (보내기 전에는 안내 — 받는 사람이 접속하면 보관함에)
 		noteText:color(tone or C.dim)
 	end
 	view.refresh()
@@ -534,6 +614,10 @@ function CashWindow.build(body: Frame, ctx, w: number, h: number, arg: any, grid
 	if arg == "rename" then
 		return buildRename(body, ctx, w)
 	end
+	local giftItem = giftItemOf(arg)
+	if giftItem then
+		return buildGiftItem(body, ctx, w, giftItem)
+	end
 	local part = dyePart(arg)
 	if part then
 		return buildDye(body, ctx, w, part)
@@ -616,6 +700,19 @@ function CashWindow.build(body: Frame, ctx, w: number, h: number, arg: any, grid
 		if waiting or not r.act then
 			return
 		end
+		if r.act.charge then
+			-- 루나 충전(2026-11-11): 로블록스의 구매 창 → 결제가 끝나면 서버가 루나를 더하고 알린다(CashGot)
+			waiting = true
+			local res = ctx.cashDo("charge", r.act.charge)
+			waiting = false
+			if res and res.ok then
+				note, noteTone = W.chargeAsked, C.dim
+			else
+				note, noteTone = (res and res.why) or W.soon, C.red
+			end
+			view.refresh()
+			return
+		end
 		if r.act.gift then
 			if CashWindow.packs(r.act.gift) then
 				pick, note = { buy = r.act.gift }, nil -- 묶음이 있으면 몇 개를 선물할지 먼저(2026-11-06)
@@ -626,7 +723,21 @@ function CashWindow.build(body: Frame, ctx, w: number, h: number, arg: any, grid
 			return
 		end
 		-- 여러 개를 한 번에(2026-11-06): 묶음이 있는 상품의 「구매」 → 1개 · 5개 · 10개 / 보관함에 2개 이상인 줄의 「받기」 → 받을 수
-		if r.act.id and CashWindow.packs(r.act.id) then
+		-- 영구 게임 패스(로벅스 — 루나와 따로): 로블록스의 게임 패스 구매 창을 바로(그 창이 확인이다)
+		if r.act.id and BY[r.act.id] and BY[r.act.id].kind == "pass" then
+			waiting = true
+			local res = ctx.cashDo("buy", r.act.id)
+			waiting = false
+			if res and res.ok then
+				note, noteTone = W.asked, C.dim
+			else
+				note, noteTone = (res and res.why) or W.soon, C.red
+			end
+			view.refresh()
+			return
+		end
+		-- 2026-11-11 루나: 「구매」는 묶음이 없어도 이 자리(1개 · 값 · 지금 루나)에서 한 번 더 누른다 — 로블록스의 구매 창이 없으니 잘못 누른 한 번에 루나가 나가지 않게
+		if r.act.id then
 			pick, note = { buy = r.act.id }, nil
 			view.refresh()
 			return
@@ -862,8 +973,8 @@ function CashWindow.build(body: Frame, ctx, w: number, h: number, arg: any, grid
 		local res = ctx.cashDo("gift", { id = giftId, to = gField.Text })
 		waiting = false
 		if res and res.ok then
-			giftId = nil -- 목록으로 — 아래 알림 줄에 「구매 창을 띄웠다」
-			note, noteTone = Format.fill(W.giftAsked, { to = res.to or gField.Text }), C.dim
+			giftId = nil -- 목록으로 — 아래 알림 줄에 「보냈다 — 루나 n」(2026-11-11 루나)
+			note, noteTone = Format.fill(W.giftAsked, { to = res.to or gField.Text, n = Format.comma(res.spent or 0) }), C.green
 			gField.Text = ""
 		else
 			giftNote, giftTone = (res and res.why) or W.giftNeedName, C.red
@@ -891,6 +1002,18 @@ function CashWindow.build(body: Frame, ctx, w: number, h: number, arg: any, grid
 		o.qty = Ui.text(pickBox, "", S.textX, y + 4, 80, { font = "body" })
 		o.price = Ui.text(pickBox, "", 0, y + 6, w - S.btnW - 8, { align = "right", color = C.gold })
 		o.btn = Ui.button(pickBox, W.buy, w - S.btnW, y, S.btnW, function()
+			if o.toCharge and not waiting then
+				-- 루나가 모자란다(2026-11-11): 「루나 충전」 탭으로
+				for ti, tt in SHOP.tabs do
+					if tt[1] == "luna" then
+						tab = ti
+					end
+				end
+				pick, note = nil, nil
+				list.CanvasPosition = Vector2.zero
+				view.refresh()
+				return
+			end
 			if waiting or not o.id then
 				return
 			end
@@ -900,13 +1023,15 @@ function CashWindow.build(body: Frame, ctx, w: number, h: number, arg: any, grid
 				return
 			end
 			waiting = true
+			local bought = o.id
 			local res = ctx.cashDo("buy", o.id)
 			waiting = false
 			note, noteTone = nil, nil
 			if res and res.why then
 				note, noteTone = res.why, C.red
 			elseif res and res.ok then
-				note, noteTone, pick = W.asked, C.dim, nil
+				local bp = BY[bought]
+				note, noteTone, pick = Format.fill(W.bought, { name = (bp and bp.name) or bought, n = Format.comma(res.spent or 0), have = Format.comma(res.luna or 0) }), C.green, nil -- (루나로 샀다 — 2026-11-11)
 			end
 			view.refresh()
 		end, { main = true, h = 22 })
@@ -1016,7 +1141,7 @@ function CashWindow.build(body: Frame, ctx, w: number, h: number, arg: any, grid
 		for _, b in { minus, plus, maxB, takeGo } do
 			b.frame.Visible = false
 		end
-		head:set(if giftMode then W.giftHead else W.head)
+		head:set(if giftMode then W.giftHead else Format.fill(W.head, { n = Format.comma((v and v.luna) or 0) })) -- (지금 루나 — 2026-11-11)
 		giftBtn:setText(if giftMode then W.giftBack else W.giftMode)
 		giftBtn:setMain(giftMode)
 		giftBox.Visible = form
@@ -1067,27 +1192,32 @@ function CashWindow.build(body: Frame, ctx, w: number, h: number, arg: any, grid
 			Ui.setPic(pIcon, if p then p.icon else pick.icon)
 			pName:set(if p then p.name else (pick.name or ""))
 			pSide:set(if buying then "" else ("x%d"):format(pick.n or 0))
-			pHead:set(if not buying then W.takeHead elseif giftMode then W.qtyGift else W.qtyHead)
-			local packs = (buying and CashWindow.packs(pick.buy)) or {}
+			local have = (v and v.luna) or 0
+			pHead:set(if not buying then W.takeHead elseif giftMode then Format.fill(W.qtyGift, { have = Format.comma(have) }) else Format.fill(W.qtyHead, { have = Format.comma(have) }))
+			local packs = if buying then (CashWindow.packs(pick.buy) or { { id = pick.buy, n = 1 } }) else {} -- (묶음이 없으면 1개만 — 2026-11-11)
 			local seen = {}
 			for _, e in (v and v.list) or {} do
 				seen[e.id] = e
 			end
 			for k, o in opts do
 				local pk = packs[k]
-				o.id = nil
+				o.id, o.toCharge = nil, nil
 				o.qty:show(pk ~= nil)
 				o.price:show(pk ~= nil)
 				o.btn.frame.Visible = pk ~= nil
 				if pk then
 					local e = seen[pk.id] or {}
 					local state = if giftMode then (if lock then "noGift" elseif not e.ready then "soon" else "gift") elseif not e.ready then "soon" else "buy"
+					if state == "buy" and have < CashWindow.lunaOf(v, pk.id) then
+						state = "short" -- 루나가 모자란다(2026-11-11) → 단추 「충전하기」
+					end
 					o.qty:set(Format.fill(W.qty, { n = pk.n }))
 					o.price:set(CashWindow.priceOf(v, pk.id))
 					o.price:color(if state == "soon" then C.dim else C.gold)
-					o.btn:setText(if state == "soon" then W.soon elseif state == "gift" then W.gift elseif state == "noGift" then W.giftNo else W.buy)
-					o.btn:setEnabled(state == "buy" or state == "gift")
+					o.btn:setText(if state == "soon" then W.soon elseif state == "gift" then W.gift elseif state == "noGift" then W.giftNo elseif state == "short" then W.toCharge else W.buy)
+					o.btn:setEnabled(state == "buy" or state == "gift" or state == "short")
 					o.id = if state == "buy" or state == "gift" then pk.id else nil
+					o.toCharge = state == "short" or nil
 				end
 			end
 			for _, b in { minus, plus, maxB, takeGo } do
@@ -1147,6 +1277,17 @@ function CashWindow.build(body: Frame, ctx, w: number, h: number, arg: any, grid
 					ru.btn:setEnabled(true)
 					ru.btn:setMain(true)
 					ru.act = { box = r.box, n = r.n, item = r.item, icon = r.icon, name = r.name }
+				elseif r.charge then
+					-- 루나 충전의 줄(2026-11-11): 값 = 로벅스 · 「충전」
+					ru.count:set("")
+					ru.price:set(r.price)
+					ru.price:color(if r.state == "charge" then C.gold else C.dim)
+					ru.own:show(false)
+					ru.btn.frame.Visible = true
+					ru.btn:setText(if r.state == "charge" then W.charge elseif r.state == "noGift" then W.giftNo else W.soon)
+					ru.btn:setEnabled(r.state == "charge")
+					ru.btn:setMain(true)
+					ru.act = if r.state == "charge" then { charge = r.id } else nil
 				elseif r.state == "pet" or r.state == "mount" then
 					ru.count:set("")
 					ru.price:set(W.own)
@@ -1224,8 +1365,10 @@ function CashWindow.build(body: Frame, ctx, w: number, h: number, arg: any, grid
 			passRow.claim:setEnabled((pv.ready or 0) > 0)
 		end
 		all:setEnabled(n > 0)
-		noteText:set(if form then "" else note or (if key == "box" and n > 0 then W.boxHint else ""))
-		noteText:color(noteTone or C.dim)
+		-- 뽑기 제한 계정의 선물하기(2026-11-11): 아래 줄에 까닭(빨강) — 「선물이 안 된다고 떠야지」
+		local randomNote = giftMode and v ~= nil and v.randomLock == true and not note and not form
+		noteText:set(if form then "" elseif randomNote then (W.giftRandomNote or W.giftRandomBox or "") else note or (if key == "box" and n > 0 then W.boxHint elseif key == "luna" then (W.lunaHint or "") else ""))
+		noteText:color(if randomNote then C.red else noteTone or C.dim)
 	end
 	if ctx.cashFetch then
 		ctx.cashFetch() -- 열 때 서버의 지금 것을 받아 온다(받으면 다시 그린다)

@@ -158,17 +158,37 @@ local to150 = 0
 for L = 1, N.MAX_LEVEL - 1 do
 	to150 += N.xpNeed(L)
 end
-Hero.gainXp(top, to150 + N.XP_WALL * 0.5)
+local need150 = N.xpNeed(N.MAX_LEVEL)
+Hero.gainXp(top, to150 + need150 * 0.5)
 eq(top.level, N.MAX_LEVEL, "Lv.150")
 eq(Hero.gainXp(top, 1000), 0, "더 오르지 않는다(1,000으로는)")
-expect(math.abs(top.xp - N.XP_WALL * 0.5 - 1000) < 1, "Lv.150부터 한 레벨 = XP_WALL(풀 쿠폰 · 풀 패스로 젠을 다 잡는 24시간 사냥 한 달 — 2026-11-06) — 절반이 쌓였다")
+expect(math.abs(top.xp - need150 * 0.5 - 1000) < 1, "Lv.150부터 한 레벨 = XP_TOP의 곡선(2026-11-11 — 그 전 XP_WALL) — 절반이 쌓였다")
 eq(top.ap + top.stats.str + top.stats.int, N.apAt(N.MAX_LEVEL), "받은 능력치 점수 합(저절로 주 능력치에 찍힌다)")
 eq(top.stats.str, N.apAt(N.MAX_LEVEL), "무니의 주 능력치는 힘")
-eq(Hero.gainXp(top, N.XP_WALL * 0.5), 1, "남은 절반을 채우면 151")
+eq(Hero.gainXp(top, need150 * 0.5), 1, "남은 절반을 채우면 151")
 eq(top.level, N.MAX_LEVEL + 1, "Lv.151")
-Hero.gainXp(top, N.XP_WALL * 100)
+-- Lv.150 → 200의 곡선(2026-11-11 사용자: "다시 정상궤도로 … 최대한의 효율로 24시간 사냥한다고 했을때 200달성이 3개월정도"): 공방 jobs.js XP_TOP과 같은 셈 · 커지기만 한다 · 합
+eq(N.xpNeed(N.MAX_LEVEL), 100000000, "Lv.150 한 레벨 = 1억(공방 jobs.js XP_TOP.first)")
+expect(N.xpNeed(N.MAX_LEVEL) > N.xpNeed(N.MAX_LEVEL - 1), "Lv.150이 Lv.149보다 크다(곡선이 이어진다)")
+local sum, grows = 0, true
+for L = N.MAX_LEVEL, N.LEVEL_CAP - 1 do
+	sum += N.xpNeed(L)
+	if L > N.MAX_LEVEL and N.xpNeed(L) <= N.xpNeed(L - 1) then
+		grows = false
+	end
+end
+expect(grows, "Lv.150 ~ 199의 한 레벨이 커지기만 한다")
+expect(sum > 2.4e11 and sum < 2.8e11, ("Lv.150 → 200의 합 약 2,580억(최대 효율 하루 약 28.7억 x 90일) — %d"):format(sum))
+eq(N.xpNeed(199), math.floor(1e8 * 1.122 ^ 49 + 0.5), "Lv.199 = first x ratio^49(공방 numbers.js xpTop과 같은 셈)")
+-- 레벨 차이: 내 레벨은 150까지만 센다(몬스터가 Lv.150에서 끝난다 — 그러지 않으면 Lv.171부터 어디서든 10%)
+eq(N.xpRate(199, 150), 100, "Lv.199가 Lv.150 몬스터를 잡아도 100%")
+eq(N.xpRate(199, 148), 100, "Lv.199가 Lv.148(틈새 회랑)을 잡아도 100%")
+eq(N.xpRate(199, 130), 50, "Lv.199가 Lv.130을 잡으면 150과 130의 차이 20 = 50%")
+eq(N.xpRate(120, 150), 10, "Lv.150 아래는 그대로(Lv.120이 Lv.150을 잡으면 차이 30 → 10%)")
+Hero.gainXp(top, sum * 2)
 eq(top.level, N.LEVEL_CAP, "만렙 200에서 멈춘다")
 eq(top.xp, 0, "만렙에서는 경험치가 쌓이지 않는다")
+expect(top.capAt ~= nil, "Lv.200에 오른 때(capAt)가 적힌다(2026-11-11)")
 
 -- ---- 2-1) 직업 · 능력치 · 스킬 ----
 eq(#CLASSES.order, 5, "직업 다섯")

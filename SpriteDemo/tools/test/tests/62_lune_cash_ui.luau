@@ -170,7 +170,7 @@ eq(Cash.view(acct, NOW, nil, 41).band, 40, "지금 놀고 있는 캐릭터가 �
 for _, v in view.list do
 	local p = Cash.product(v.id)
 	local hasId = typeof(p.rid) == "number" and p.rid > 0
-	eq(v.ready, hasId and p.built == true, "대시보드 번호가 있고 게임에 만들어 둔 것만 살 수 있다 " .. v.id)
+	eq(v.ready, p.built == true, "게임에 만들어 둔 것은 살 수 있다(2026-11-11 루나로 — 상품 번호가 없어도) " .. v.id .. tostring(hasId))
 end
 -- 상품 번호를 넣은 뒤(대시보드에서 만든 뒤): 만들어 둔 것만 살 수 있다
 local saved = {}
@@ -207,6 +207,10 @@ local ctx = {
 			return { ok = true, list = view.list, box = view.box }
 		elseif action == "rename" then
 			return { ok = true, name = a }
+		elseif action == "buy" then
+			return { ok = true, spent = 99, luna = 901 } -- (루나로 샀다 — 2026-11-11: 쓴 루나 · 남은 루나)
+		elseif action == "gift" then
+			return { ok = true, to = typeof(a) == "table" and a.to or nil, spent = 99 } -- (루나로 보냈다 — 2026-11-11)
 		end
 		return { ok = true }
 	end,
@@ -221,7 +225,7 @@ for i, t in BM.shop.tabs do
 	T[t[1]] = i
 end
 expect(tabs[1].on, "처음은 편의 탭")
-expect(textOf(W.head) ~= nil, "안내 한 줄")
+expect(textOf(Format.fill(W.head, { n = "0" })) ~= nil, "안내 한 줄 = 지금 루나(2026-11-11 — 처음 0)")
 expect(textOf("3") ~= nil, "보관함 옆에 받을 것의 수(경험치 쿠폰 2 + 주머니 1)")
 -- 편의 탭: 첫 줄 = 첫걸음 묶음
 local rows = CashWindow.rows(view, 1)
@@ -237,13 +241,53 @@ for _, r in rows do
 end
 eq(tele and tele.state, "soon", "순간이동의 돌(아직 없음)은 번호가 있어도 「준비 중」")
 expect(#buttonsNamed(W.soon) >= 1, "화면에 「준비 중」 단추")
--- 「구매」 → 서버에 묻는다
+-- 「구매」 → 먼저 확인 자리(2026-11-11 루나: 묶음이 없어도 1개 · 지금 루나 — 로블록스의 구매 창이 없어 한 번 더 누른다) → 그 자리의 「구매」 → 서버에 묻는다
+local function buttonFramed(name)
+	for _, b in buttons do
+		if b.frame.Name == name then
+			return b
+		end
+	end
+	return nil
+end
+view.luna = 1000
 local buy = buttonsNamed(W.buy)[1]
 expect(buy ~= nil and buy.enabled, "「구매」가 켜져 있다")
 buy.click()
+eq(#calls, 0, "바로 사지 않는다 — 확인 자리")
+expect(textOf(Format.fill(W.qtyHead, { have = Format.comma(1000) })) ~= nil, "확인 자리: 지금 루나 1,000")
+local p1 = buttonFramed("Pick1")
+expect(p1 ~= nil and p1.frame.Visible and p1.label == W.buy and p1.enabled, "1개의 「구매」")
+expect(not buttonFramed("Pick2").frame.Visible, "묶음이 없으면 1개만")
+p1.click()
 eq(calls[1][1], "buy", "서버에 구매를 묻는다")
 eq(calls[1][2], "starter", "그 상품")
-expect(textOf(W.asked) ~= nil, "구매 창을 띄웠다는 알림")
+expect(textOf(Format.fill(W.bought, { name = Cash.product("starter").name, n = "99", have = "901" })) ~= nil, "산 뒤의 알림 — 쓴 루나 · 남은 루나")
+-- 영구 게임 패스(로벅스 — 루나와 따로 · 2026-11-11 사용자 "패스는 아예 별도입니다"): 값은 「249 로벅스」 · 「구매」는 확인 자리 없이 서버에 묻는다(로블록스의 구매 창)
+do
+	local pr
+	for _, r in CashWindow.rows(view, 1) do
+		if r.id == "xp125" then
+			pr = r
+		end
+	end
+	eq(pr and pr.price, Format.fill(W.packPrice, { n = Format.comma(Cash.product("xp125").robux) }), "영구 패스의 값 = 로벅스")
+end
+-- 루나가 모자라면 그 자리의 단추가 「충전하기」 → 「루나 충전」 탭(묶음 여섯)
+view.luna = 10
+buttonsNamed(W.buy)[1].click()
+local p1b = buttonFramed("Pick1")
+expect(p1b.label == W.toCharge and p1b.enabled, "모자라면 「충전하기」")
+eq(#calls, 1, "모자라면 서버에 묻지 않는다")
+p1b.click()
+expect(tabs[T.luna].on, "「루나 충전」 탭으로")
+local lrows = CashWindow.rows(view, T.luna)
+eq(#lrows, 6, "루나 묶음 여섯")
+expect(lrows[1].charge and lrows[1].name == Format.fill(W.packName, { n = "50" }) and lrows[1].price == Format.fill(W.packPrice, { n = "50" }), "「루나 50」 · 「50 로벅스」")
+eq(lrows[1].state, if Cash.packReady(Cash.LUNA.packs[1]) then "charge" else "soon", "상품 번호가 있어야 「충전」(없으면 「준비 중」)")
+expect(textOf(W.lunaHint) ~= nil, "탭 아래 안내")
+tabs[1].click()
+view.luna = 1000
 -- 재화 탭: 드는 양 · 주간 횟수
 acct.bm.week = Cash.weekOf(NOW)
 acct.bm.wc = { dust = 3 }
@@ -317,11 +361,12 @@ do
 			table.insert(acts, b)
 		end
 	end
+	view.luna = 1000 -- (루나가 넉넉하다 — 2026-11-11)
 	local k = table.find(BM.shop.rows.conv, "exp")
 	local n0 = #calls
 	acts[k].click()
 	eq(#calls, n0, "묶음이 있으면 바로 사지 않고 몇 개를 살지 묻는다")
-	expect(textOf(W.qtyHead) ~= nil, "「몇 개를 살까」")
+	expect(textOf(Format.fill(W.qtyHead, { have = Format.comma(1000) })) ~= nil, "「몇 개를 살까 — 지금 루나 1,000」")
 	for i, n in { 1, 5, 10 } do
 		local b = btnNamed("Pick" .. i)
 		expect(b ~= nil and b.frame.Visible and b.enabled, ("%d개의 「구매」"):format(n))
@@ -336,7 +381,9 @@ do
 	local ck = table.find(BM.shop.rows.conv, "charx")
 	n0 = #calls
 	acts[ck].click()
-	eq(calls[#calls][2], "charx", "묶음이 없는 상품(캐릭터 칸 +1)은 바로 산다")
+	eq(#calls, n0, "묶음이 없는 상품(캐릭터 칸 +1)도 확인 자리를 거친다(2026-11-11 루나 — 1개만)")
+	btnNamed("Pick1").click()
+	eq(calls[#calls][2], "charx", "확인 자리의 「구매」로 산다")
 end
 -- 선물하기(2026-10-31 사용자 "달빛상점에 모든 품목을 아이템 선물을 할수있게 해줘"): 「선물하기」 → 줄의 단추가 「선물」(영구 패스 = 「선물 불가」) →
 --  「선물」 → 목록 자리에 닉네임 칸 → 「보내기」 → 서버에 gift { id, to } → 목록으로 · 「구매 창을 띄웠다 — 결제가 끝나면 「받는이」에게 간다」
@@ -361,7 +408,16 @@ do
 		byId[r.id] = r
 	end
 	eq(byId.starter.state, "gift", "첫걸음 묶음 = 「선물」")
-	eq(byId.xp125 and byId.xp125.state, "noGift", "경험치 1.25배 패스 = 「선물 불가」(게임 패스)")
+	eq(byId.xp125 and byId.xp125.state, "noGift", "경험치 1.25배 패스 = 「선물 불가」(게임 패스 — 로벅스로 따로)")
+	eq(byId.yunseul and byId.yunseul.state, "gift", "윤슬 조각(확률형)도 「선물」(2026-11-11)")
+	view.randomLock = true
+	local locked = {}
+	for _, r in CashWindow.rows(view, 1, true) do
+		locked[r.id] = r
+	end
+	eq(locked.yunseul.state, "noGift", "뽑기 제한 계정 = 확률형은 「선물 불가」")
+	eq(locked.starter.state, "gift", "뽑기 제한 계정도 확률형이 아닌 것은 「선물」")
+	view.randomLock = nil
 	eq(byId.starter.count, nil, "선물할 때는 내가 산 수를 적지 않는다(받는 사람의 것은 서버가 본다)")
 	expect(#buttonsNamed(W.giftNo) >= 1, "화면에 「선물 불가」")
 	local giftB = buttonsNamed(W.gift)[1]
@@ -386,7 +442,7 @@ do
 	eq(calls[#calls][1], "gift", "서버에 선물을 묻는다")
 	expect(typeof(calls[#calls][2]) == "table" and calls[#calls][2].id == "starter" and calls[#calls][2].to == "받는이", "그 상품 · 그 닉네임")
 	expect(scrolls[1].Visible and not backB.frame.Visible, "보내면 목록으로")
-	expect(textOf(req("ReplicatedStorage/shared/lune/ui/format").fill(W.giftAsked, { to = "받는이" })) ~= nil, "「구매 창을 띄웠다 — 결제가 끝나면 「받는이」에게 간다」")
+	expect(textOf(req("ReplicatedStorage/shared/lune/ui/format").fill(W.giftAsked, { to = "받는이", n = "99" })) ~= nil, "「「받는이」에게 보냈다 — 루나 99」(2026-11-11 루나)")
 	-- 로블록스 정책으로 막힌 계정: 줄이 모두 「선물 불가」
 	view.giftLock = true
 	cv.refresh()
@@ -395,7 +451,7 @@ do
 	end
 	view.giftLock = nil
 	gm.click()
-	expect(gm.label == W.giftMode and textOf(W.head) ~= nil, "다시 누르면 「구매」로")
+	expect(gm.label == W.giftMode and textOf(Format.fill(W.head, { n = Format.comma(view.luna or 0) })) ~= nil, "다시 누르면 「구매」로")
 end
 -- 패스 탭: 2026-10-21 사용자 "달빛패스 일딴 비활성화해" — 탭이 없다(다시 켜면 아래가 돈다)
 if not T.pass then

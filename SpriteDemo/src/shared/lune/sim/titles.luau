@@ -7,6 +7,7 @@ local Titles = {}
 Titles.LIST = AC.titles.list
 Titles.WORDS = AC.titles.words
 Titles.CAP = AC.titles.ten -- 「만월의 십인」의 수(만렙에 오른 차례로)
+Titles.CAP3 = AC.titles.capN or 3 -- Lv.200에 오른 차례로 칭호를 받는 사람의 수(2026-11-11 사용자 "3명까지 칭호주고")
 
 local BY, ORDER = {}, {}
 for i, t in Titles.LIST do

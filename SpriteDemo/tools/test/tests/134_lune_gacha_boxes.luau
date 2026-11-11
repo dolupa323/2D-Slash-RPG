@@ -177,8 +177,8 @@ fresh.chars[1] = { hero = { level = 10 } }
 expect(Cash.grant(fresh, "petbox", "f1", NOW, Account.MAX) and fresh.bm.lastBox.n == nil and fresh.bm.pets[fresh.bm.lastBox.got] == true, "처음 나온 펫은 계정에(가진 수 알림 없음)")
 eq(Cash.count(fresh.bm, fresh.bm.lastBox.got), 1, "처음 나온 것 = 하나")
 expect(not Cash.grant(fresh, "petbox", "f1", NOW, Account.MAX), "같은 결제 번호는 두 번 주지 않는다")
--- 확률형은 선물하지 않는다
-expect(not Cash.giftable("petbox") and not Cash.giftable("mountbox") and not Cash.giftable("yunseul"), "확률형 상품은 선물 불가")
+-- 확률형도 선물한다(2026-11-11 사용자: "선물이 가능하고 영국 18세이하라던가 그러면 선물이 안된다고떠야지" — 뽑기 제한 계정은 서버가 막는다 · 시험 116 ⑫)
+expect(Cash.giftable("petbox") and Cash.giftable("mountbox") and Cash.giftable("yunseul"), "확률형 상품도 선물한다")
 
 -- ④ 많이 열어 본 확률이 표와 맞는다(새 계정 · 처음 한 번 열 때의 분포)
 local rng = Random.new(5)
@@ -290,7 +290,7 @@ do
 			end
 		end
 		expect(rareMax < commonMin, key .. ": 드문 것(더 예쁜 것)은 어느 보통 것보다 확률이 낮다")
-		expect(Cash.product(key).random == true and not Cash.giftable(key), key .. ": 확률형 · 선물 불가")
+		expect(Cash.product(key).random == true and Cash.giftable(key) and Cash.boxGiftOf(Cash.boxGiftKey(key)) == key, key .. ": 확률형 · 선물(받으면 안 연 상자)")
 	end
 	eq(#BM.dskins.list, 8, "데미지 스킨 여덟")
 	eq(#BM.nametags.list, 8, "이름표 테두리 여덟")

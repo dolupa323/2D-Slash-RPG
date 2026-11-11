@@ -245,6 +245,53 @@ function Bag.give(h, id: any, n: any): (boolean?, string?)
 end
 
 -- 아이템을 n개 덜어 낸다(앞 칸의 묶음부터). 모자라면 하나도 덜지 않는다
+-- ---------- 아이템 잠금 (2026-11-11 사용자: "아이템 잠금기능 만들어줘 잠근거는 판매, 분해 이런거 적용안되게 인벤토리에서 잠글수있는기능을만들어줘") ----------
+--  가방의 칸 하나(장비 · 소비 · 기타의 묶음)를 잠그고 푼다(it.lock = true). 잠긴 것은 손을 떠나는 일이 안 된다: 팔기(하나 · 여러 개) · 분해(장비 · 묶음 · 여러 개) · 버리기 ·
+--   경매장에 올리기 · 꺼낸 상자 결과물의 선물. 쓰기 · 장착 · 옮기기 · 맡기기 · 강화는 된다(제가 정한 것 — 일부러 하는 일). 잠금은 그것에 붙어 다닌다(옮기기 · 장착 · 창고 · 저장 — 장비 줄 10째 · 묶음 줄 3째) ·
+--   묶음을 나누면 나눈 것도 잠긴다
+Bag.LOCKED = "잠긴 물건이다 — 먼저 잠금을 푼다"
+function Bag.lock(h, tab: any, slot: any, on: any): (boolean?, string?)
+	if not isTab(tab) or not whole(slot, 1, Bag.size(h)) or not h[tab][slot] then
+		return nil, "빈 칸이다"
+	end
+	h[tab][slot].lock = if on then true else nil
+	return true
+end
+-- 잠기지 않은 묶음의 수 · 잠기지 않은 묶음에서만 덜어 낸다(선물처럼 손을 떠나는 일)
+function Bag.countFree(h, id: any): number
+	local def = Items.goods(id)
+	if not def then
+		return 0
+	end
+	local n = 0
+	for i = 1, Bag.size(h) do
+		local s = h[def.tab][i]
+		if s and s.item == id and not s.lock then
+			n += s.n
+		end
+	end
+	return n
+end
+function Bag.takeFree(h, id: any, n: any): (boolean?, string?)
+	local def = Items.goods(id)
+	if not def or not whole(n, 1, 1e6) or Bag.countFree(h, id) < n then
+		return nil, Bag.LOCKED
+	end
+	local list, left = h[def.tab], n
+	for i = 1, Bag.size(h) do
+		local s = list[i]
+		if left > 0 and s and s.item == id and not s.lock then
+			local cut = math.min(left, s.n)
+			s.n -= cut
+			left -= cut
+			if s.n == 0 then
+				list[i] = false
+			end
+		end
+	end
+	return true
+end
+
 function Bag.take(h, id: any, n: any): (boolean?, string?)
 	local def = Items.goods(id)
 	if not def or not whole(n, 1, 1e6) or Bag.count(h, id) < n then
@@ -388,7 +435,7 @@ function Bag.split(h, tab: any, slot: any, n: any, to: any): (boolean?, string?)
 		return nil, FULL
 	end
 	s.n -= n
-	list[at] = { item = s.item, n = n }
+	list[at] = { item = s.item, n = n, lock = s.lock } -- (잠긴 묶음을 나누면 나눈 것도 잠긴다 — 2026-11-11)
 	return true
 end
 
@@ -435,6 +482,9 @@ function Bag.sell(h, tab: any, slot: any, n: any): (number?, string?)
 		return nil, "빈 칸이다"
 	end
 	local e = h[tab][slot]
+	if e.lock then
+		return nil, Bag.LOCKED -- (잠긴 것 — 2026-11-11)
+	end
 	if tab == "gear" then
 		local price = Items.sellPrice(e)
 		h.gear[slot] = false
@@ -467,7 +517,9 @@ function Bag.discard(h, tab: any, slot: any, n: any): (boolean?, string?)
 		return nil, "빈 칸이다"
 	end
 	local s = h[tab][slot]
-	if not whole(n, 1, s.n) then
+	if s.lock then
+		return nil, Bag.LOCKED
+	elseif not whole(n, 1, s.n) then
 		return nil, "버릴 수 없는 수다"
 	end
 	s.n -= n
@@ -561,6 +613,8 @@ function Bag.dismantle(h, id: any): (number?, string?)
 	local it, where, index = Bag.find(h, id)
 	if not it or where ~= "gear" then
 		return nil, "가방에 없는 장비다"
+	elseif it.lock then
+		return nil, Bag.LOCKED
 	end
 	local dust = Items.dismantle(it)
 	h.gear[index] = false
@@ -576,6 +630,8 @@ function Bag.dismantleGoods(h, tab: any, slot: any, n: any): (number?, string?)
 	local s = h[tab][slot]
 	if not s or s.n < n then
 		return nil, "가진 것이 모자란다"
+	elseif s.lock then
+		return nil, Bag.LOCKED
 	end
 	local dust = Items.goodsDust(s.item, n)
 	if dust == nil then
@@ -604,12 +660,14 @@ function Bag.dismantleMany(h, ids: any): (number?, string?, number?)
 			return nil, "한 번에 너무 많다"
 		end
 	end
-	local seen, total, n = {}, 0, 0
+	local seen, total, n, locked = {}, 0, 0, 0
 	for _, id in ids do
 		if (typeof(id) == "number" or typeof(id) == "string") and not seen[id] then
 			seen[id] = true
 			local it, where, index = Bag.find(h, id)
-			if it and where == "gear" then
+			if it and where == "gear" and it.lock then
+				locked += 1 -- (잠긴 것은 건너뛴다 — 2026-11-11)
+			elseif it and where == "gear" then
 				total += Items.dismantle(it)
 				h.gear[index] = false
 				n += 1
@@ -617,7 +675,7 @@ function Bag.dismantleMany(h, ids: any): (number?, string?, number?)
 		end
 	end
 	if n == 0 then
-		return nil, "가방에 없는 장비다"
+		return nil, if locked > 0 then Bag.LOCKED else "가방에 없는 장비다"
 	end
 	h.dust += total
 	return total, nil, n
@@ -636,12 +694,14 @@ function Bag.sellMany(h, ids: any): (number?, string?, number?)
 			return nil, "한 번에 너무 많다"
 		end
 	end
-	local seen, total, n = {}, 0, 0
+	local seen, total, n, locked = {}, 0, 0, 0
 	for _, id in ids do
 		if (typeof(id) == "number" or typeof(id) == "string") and not seen[id] then
 			seen[id] = true
 			local it, where, index = Bag.find(h, id)
-			if it and where == "gear" then
+			if it and where == "gear" and it.lock then
+				locked += 1 -- (잠긴 것은 건너뛴다 — 2026-11-11)
+			elseif it and where == "gear" then
 				local price = Items.sellPrice(it)
 				h.gear[index] = false
 				total += price
@@ -651,7 +711,7 @@ function Bag.sellMany(h, ids: any): (number?, string?, number?)
 		end
 	end
 	if n == 0 then
-		return nil, "가방에 없는 장비다"
+		return nil, if locked > 0 then Bag.LOCKED else "가방에 없는 장비다"
 	end
 	h.money += total
 	return total, nil, n
@@ -878,7 +938,7 @@ local function unpackItem(row: any)
 	if typeof(row) ~= "table" then
 		return nil
 	end
-	local it = { slot = row[1], stage = row[2], q = row[3], star = row[4], who = if row[5] ~= "" then row[5] else nil, fails = row[6], broken = row[7] == 1, u = if typeof(row[8]) == "string" then row[8] else nil, ex = Items.unpackEx(row[9]) }
+	local it = { slot = row[1], stage = row[2], q = row[3], star = row[4], who = if row[5] ~= "" then row[5] else nil, fails = row[6], broken = row[7] == 1, u = if typeof(row[8]) == "string" then row[8] else nil, ex = Items.unpackEx(row[9]), lock = if row[10] == 1 then true else nil } -- (lock = 잠금 — 2026-11-11)
 	-- 별이 그 단계의 상한을 넘으면(설계의 상한이 줄었다) 장비를 버리지 않고 상한으로 맞춘다(2026-10-18 검토)
 	if typeof(it.stage) == "number" and it.stage >= 1 and it.stage <= 200 and typeof(it.star) == "number" and it.star > Items.starCap(it.stage) then
 		it.star = Items.starCap(it.stage)
@@ -908,7 +968,7 @@ local function packSlots(list, size: number, one)
 end
 
 local function packStack(s)
-	return { s.item, s.n }
+	return if s.lock then { s.item, s.n, 1 } else { s.item, s.n } -- (3째 = 잠금 — 2026-11-11)
 end
 
 function Bag.pack(h)
@@ -942,7 +1002,7 @@ local function unpackStacks(list, size: number, tab: string, rows: any)
 		local row = rows[i]
 		local def = if typeof(row) == "table" then Items.goods(row[1]) else nil
 		if def and def.tab == tab and whole(row[2], 1, 1e6) then
-			list[i] = { item = def.id, n = math.min(row[2], def.stack) }
+			list[i] = { item = def.id, n = math.min(row[2], def.stack), lock = if row[3] == 1 then true else nil }
 			if row[2] > def.stack then
 				table.insert(over, { def = def, n = row[2] - def.stack })
 			end
@@ -1053,7 +1113,7 @@ end
 
 -- ---------- 클라이언트에 보내는 것 ----------
 local function viewItem(it)
-	return { id = it.id, slot = it.slot, stage = it.stage, q = it.q, star = it.star, who = it.who, broken = it.broken, fails = it.fails or 0, u = it.u, ex = Items.viewEx(it) }
+	return { id = it.id, slot = it.slot, stage = it.stage, q = it.q, star = it.star, who = it.who, broken = it.broken, fails = it.fails or 0, u = it.u, ex = Items.viewEx(it), lock = it.lock }
 end
 
 -- 칸들을 보낼 꼴로(길이 size — 빈 칸은 false)
@@ -1067,7 +1127,7 @@ local function viewSlots(src, size: number)
 		for _, tab in { "use", "etc" } do
 			local s = src[tab][i]
 			if s then
-				out[tab][i] = { item = s.item, n = s.n }
+				out[tab][i] = { item = s.item, n = s.n, lock = s.lock }
 			end
 		end
 	end

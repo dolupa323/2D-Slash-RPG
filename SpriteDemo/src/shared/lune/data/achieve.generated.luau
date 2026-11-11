@@ -384,6 +384,7 @@ return {
 	},
 	titles = {
 		ten = 10,
+		capN = 3,
 		words = { label = "칭호", none = "없음", change = "바꾸기", banner = "칭호 획득", got = "「{name}」 칭호를 받았습니다", lostBanner = "칭호 이전", lost = "「{name}」 칭호가 새 주인에게 넘어갔습니다" },
 		list = {
 			{ id = "gm", name = "운영자", color = "red", rule = "admin", class = false, boss = false, line = "게임을 만들고 돌보는 사람" },
@@ -396,6 +397,8 @@ return {
 			{ id = "first_mooni", name = "가장 앞선 자", color = "#8FC9FF", rule = "classFirst", class = "mooni", boss = false, line = "리틀 무니로 가장 먼저 Lv.150에 오른 사람" },
 			{ id = "first_salamander", name = "가장 앞선 자", color = "#FF7A45", rule = "classFirst", class = "salamander", boss = false, line = "살라맨더로 가장 먼저 Lv.150에 오른 사람" },
 			{ id = "max10", name = "만월의 계승자", color = "accent", rule = "ten", class = false, boss = false, line = "Lv.150에 오른 차례로 열 사람" },
+			{ id = "cap1", name = "정점의 계승자", color = "#FFF1B8", rule = "cap1", class = false, boss = false, line = "가장 먼저 Lv.200에 오른 단 한 사람" },
+			{ id = "cap3", name = "만월 너머의 계승자", color = "#C9B8FF", rule = "cap3", class = false, boss = false, line = "Lv.200에 오른 차례로 세 사람" },
 			{ id = "almost", name = "앞설 뻔했던 자", color = "#8E939B", rule = "named", class = false, boss = false, line = "처음으로 Lv.100에 오른 사람 — 순위에는 오르지 못했다" },
 			{ id = "pumpkin", name = "호박 수확자", color = "#FF9A3D", rule = "event", class = false, boss = false, line = "달빛 할로윈에 호박 사탕 100개를 모은 사람" },
 		},

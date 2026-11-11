@@ -385,6 +385,12 @@ function Items.packRow(it)
 		row[8] = it.u or false
 		row[9] = ex
 	end
+	if it.lock then
+		-- 잠금(2026-11-11 — 가방의 아이템 잠금): 10째 = 1(빈 8 · 9째는 false로 채운다)
+		row[8] = row[8] or false
+		row[9] = row[9] or false
+		row[10] = 1
+	end
 	return row
 end
 -- 저장 꼴: { 종류, 값, 종류, 값, … }(평평하게 — 가방 · 창고 · 경매장의 줄 9째)
