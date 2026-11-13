@@ -2,7 +2,10 @@
 --  사용자: "인벤토리 위아래 버튼으로 움직이는게아니라 스크롤이어야합니다. 모바일에서도 정상작동하게"
 --  보는 것: ▲▼ 단추가 없다 · 칸들이 스크롤 틀 안에 있다 · 늘린 가방(48칸)은 칸이 다 있고 스크롤이 켜진다 · 24칸이면 꺼진다 · 탭을 바꾸면 맨 위로 ·
 --   스마트폰에서 끌기는 잠깐 누르고 있어야 시작한다(가방이 hold를 넘긴다) · 끄는 동안 스크롤이 선다
+--  2026-11-13 마우스를 올린 칸의 정보(PC — 메이플처럼): 고른 것이 없으면 정보만(단추 없음) · 벗어나면 닫힘 · 고르면 단추가 붙는다 · 손가락 · 다른 창의 상세 · 캐시 탭은 아니다 · 장비 창도 같다
 local Layout = req("ReplicatedStorage/shared/lune/ui/layout")
+local lastInput = Enum.UserInputType.MouseMovement
+SERVICE("UserInputService", { GetLastInputType = function() return lastInput end })
 local BAG = Layout.BAG
 
 local buttons, scrolls, cells, presses, madeTabs, shown = {}, {}, {}, {}, {}, {}
@@ -62,7 +65,7 @@ MOCK("Client/lune/ui/itemCell", {
 	over = function() return true end,
 	new = function(parent, x, y, onClick)
 		local c = { frame = frame("Cell"), parent = parent, x = x, y = y, onClick = onClick }
-		c.hit = { InputBegan = { Connect = function(_, fn) c.began = fn end } }
+		c.hit = { InputBegan = { Connect = function(_, fn) c.began = fn end }, MouseEnter = { Connect = function(_, fn) c.enter = fn end }, MouseLeave = { Connect = function(_, fn) c.leave = fn end }, MouseButton2Click = { Connect = function(_, fn) c.right = fn end } }
 		function c.set(_, item, o)
 			c.item, c.o = item, o
 		end
@@ -70,7 +73,7 @@ MOCK("Client/lune/ui/itemCell", {
 		return c
 	end,
 })
-MOCK("Client/lune/ui/itemDetail", { show = function(_, spec) shown.spec = spec end, hide = function() shown.spec = nil end })
+MOCK("Client/lune/ui/itemDetail", { show = function(_, spec) shown.spec = spec end, hide = function() shown.spec = nil end, pinned = function() return if shown.spec and not shown.spec.peek then shown.pinOwner or "bag" else nil end })
 MOCK("Client/lune/ui/windows", { refresh = function() end })
 
 local BagWindow = req("Client/lune/ui/bagWindow")
@@ -129,7 +132,7 @@ for i, c in cells do
 end
 -- 끌기의 넘김
 bag.size = 48
-bag.gear[3] = { id = 7, slot = "hat", stage = 1, q = 2 }
+bag.gear[3] = { id = 7, slot = "hat", stage = 1, q = 2, star = 0 } -- (star — 마우스를 올린 칸의 정보가 별의 %를 센다)
 view.refresh()
 cells[3].item = bag.gear[3]
 cells[3].began({ UserInputType = Enum.UserInputType.Touch, Position = Vector2.new(5, 5) })
@@ -140,6 +143,68 @@ p.extra.onStart()
 eq(grid.ScrollingEnabled, false, "끄는 동안은 스크롤이 선다")
 p.extra.onEnd()
 eq(grid.ScrollingEnabled, true, "끌기가 끝나면 스크롤이 다시 켜진다")
+-- 마우스를 올린 칸(2026-11-13)
+do
+	bag.equip = {}
+	shown.spec = nil
+	view.refresh()
+	cells[3].enter()
+	local ps = shown.spec
+	expect(ps ~= nil and ps.item == bag.gear[3] and #ps.buttons == 0, "마우스를 올리면 그 장비의 정보가 뜬다(단추 없이)")
+	expect(ps and string.sub(ps.key, 1, 5) == "peek|", "올린 것의 판은 고른 것과 다른 열쇠(다시 그린다)")
+	cells[4].enter() -- (빈 칸)
+	eq(shown.spec and shown.spec.item, bag.gear[3], "빈 칸에 올려도 그대로(빈 칸은 띄우지 않는다)")
+	cells[3].leave()
+	eq(shown.spec, nil, "벗어나면 닫힌다")
+	cells[3].enter()
+	cells[3].onClick(bag.gear[3]) -- 누르면 고른다 → 단추가 붙는다
+	view.refresh()
+	expect(shown.spec and #shown.spec.buttons > 0 and string.sub(shown.spec.key, 1, 5) ~= "peek|", "누르면 지금처럼 고른다(단추)")
+	cells[3].leave()
+	expect(shown.spec and #shown.spec.buttons > 0, "고른 것은 마우스가 벗어나도 남는다")
+	shown.spec.onClose()
+	view.refresh()
+	eq(shown.spec, nil, "닫으면 없다")
+	-- 손가락: 폰은 누를 때도 MouseEnter가 온다 — 띄우지 않는다
+	lastInput = Enum.UserInputType.Touch
+	cells[3].enter()
+	eq(shown.spec, nil, "손가락이면 띄우지 않는다")
+	lastInput = Enum.UserInputType.MouseMovement
+	-- 다른 창의 상세가 떠 있으면 띄우지 않는다
+	ctx.ui.detail = "equip"
+	cells[3].enter()
+	eq(shown.spec, nil, "다른 창의 상세가 있으면 띄우지 않는다")
+	ctx.ui.detail = nil
+	-- 소비 탭의 물약
+	expect(BagWindow.canPeek(true, false, false, nil, "bag", "use", false, false), "셈: 마우스 · 빈 상세 · 소비 탭")
+	expect(not BagWindow.canPeek(true, false, false, nil, "bag", "cash", false, false), "셈: 캐시 탭은 아니다")
+	expect(not BagWindow.canPeek(true, false, false, nil, "bag", "gear", true, false), "셈: 끄는 중은 아니다")
+	expect(not BagWindow.canPeek(true, false, true, nil, "bag", "gear", false, false), "셈: 여러 개 분해 중은 아니다")
+	expect(not BagWindow.canPeek(true, true, false, "bag", "bag", "gear", false, false), "셈: 고른 것이 있으면 아니다")
+	expect(BagWindow.canPeek(true, false, false, "equip", "equip", "equip", false, false), "셈: 장비 창의 것이 떠 있으면 장비 창은 띄운다")
+	-- 고른 것이 없으면 주인 표시를 푼다(2026-11-14 검토 — 남아 있으면 다른 창의 마우스 올림이 막혔다)
+	ctx.ui.detail = "bag"
+	shown.spec = nil
+	view.refresh()
+	eq(ctx.ui.detail, nil, "고른 것이 없으면 ui.detail = nil")
+	-- 다른 창(대장장이 등)이 눌러서 띄운 판이 있으면 마우스 올림이 그 판을 닫지 않는다(2026-11-14 검토)
+	local forge = { item = {}, buttons = { {} } }
+	shown.spec, shown.pinOwner = forge, "forge"
+	cells[3].enter()
+	expect(shown.spec == forge, "대장장이의 판이 그대로")
+	cells[3].leave()
+	shown.spec, shown.pinOwner = nil, nil
+	-- 오른쪽 클릭(2026-11-13 — PC: 두 번 누르기와 같은 일): 장비 = 장착 · 빈 칸은 아무것도
+	local sent = {}
+	local keepSend = ctx.send
+	ctx.send = function(...) table.insert(sent, { ... }) end
+	view.refresh()
+	cells[3].right()
+	expect(#sent == 1 and sent[1][1] == "Item" and sent[1][2] == "equip" and sent[1][3] == 7, "장비 칸을 오른쪽 클릭하면 장착한다")
+	cells[4].right()
+	eq(#sent, 1, "빈 칸의 오른쪽 클릭은 아무것도 하지 않는다")
+	ctx.send = keepSend
+end
 view.destroy()
 
 -- ---- 창고도 늘린 만큼 칸이 있고 스크롤한다(2026-10-18 검토 — 창고 칸을 늘려도(Bag.growStore) 처음 24칸만 지어 25칸부터 보이지도 꺼내지도 못했다) ----
@@ -174,6 +239,14 @@ do
 	expect(sp ~= nil and sp.extra.hold and sp.extra.hold > 0 and typeof(sp.extra.onStart) == "function", "창고의 끌기도 잠깐 누르고 있어야 시작한다")
 	sp.extra.onStart()
 	eq(scrolls[1].ScrollingEnabled, false, "끄는 동안 창고의 스크롤이 선다")
+	sp.extra.onEnd()
+	-- 마우스를 올린 칸(2026-11-13 — 가방과 같다): 정보만 · 벗어나면 닫힘
+	shown.spec = nil
+	sview.refresh()
+	cells[2].enter()
+	expect(shown.spec ~= nil and shown.spec.item == storeBag.store.gear[2] and #shown.spec.buttons == 0, "창고: 마우스를 올리면 정보만")
+	cells[2].leave()
+	eq(shown.spec, nil, "창고: 벗어나면 닫힌다")
 	sview.destroy()
 end
 

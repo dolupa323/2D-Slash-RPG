@@ -27,6 +27,7 @@ QuestHud.H = Panel.H
 QuestHud.MARK = { new = UI.questMark.new, done = UI.questMark.done } -- 「!」 · 「?」 그림(주민 머리 위의 것과 같다)
 
 QuestHud.touch, QuestHud.buffs = false, false -- 스마트폰 단추가 켜졌는가 · 버프가 떠 있는가
+QuestHud.bar = false -- 폰 단추 배치가 「바로가기」인가(2026-11-13 — 오른쪽 위 바로가기 판 아래: 공방 basics.js TOUCH_BAR.quest)
 QuestHud.covered = false -- 오른쪽 창이 이 자리를 덮고 있는가(덮인 동안은 그리지 않는다)
 QuestHud.shown, QuestHud.guided = 0, 0
 QuestHud.any = false -- 적을 것이 있는가(어느 모습에서든 — 없으면 판이 없다)
@@ -46,13 +47,16 @@ local last = nil :: any -- 마지막으로 그린 것(접기 단추 · 격자가
 local function place()
 	local r = UI.hud.quest
 	local t = UI.hudTouch.quest
+	if QuestHud.bar and UI.touchBar and UI.touchBar.quest then
+		t = UI.touchBar.quest -- (바로가기 줄의 알리미 자리가 따로 적혀 있을 때만 — 지금은 없다: 한 줄 줄은 새 배치의 자리 그대로 · 2026-11-14 오류 「attempt to index nil with 'h'」)
+	end
 	if not QuestHud.box then
 		return
 	end
 	if QuestHud.touch and t then
-		QuestHud.box.Position = Stage.atPosition(t.at, t.x, t.y)
+		Stage.move(QuestHud.box, t.at, t.x, t.y) -- (옮긴 자리 · 화면 안 — 2026-11-12)
 	else
-		QuestHud.box.Position = Stage.atPosition(r.at, r.x, if QuestHud.buffs then r.y else UI.hud.buffs.y)
+		Stage.move(QuestHud.box, r.at, r.x, if QuestHud.buffs then r.y else UI.hud.buffs.y)
 	end
 end
 
@@ -89,6 +93,17 @@ end
 function QuestHud.setTouch(on: boolean)
 	QuestHud.touch = on
 	place()
+end
+-- 바로가기 배치(2026-11-13): 판의 자리 · 가장 큰 높이가 바뀐다
+function QuestHud.setBar(on: boolean)
+	if QuestHud.bar == (on == true) then
+		return
+	end
+	QuestHud.bar = on == true
+	place()
+	if QuestHud.redraw then
+		QuestHud.redraw()
+	end
 end
 
 -- 오른쪽 끝에 창이 떴다 · 닫혔다: 창의 바탕이 살짝 비쳐서(ui.js의 panelAlpha) 알리미의 글이 창의 글 뒤로 비쳐 보인다 — 덮인 동안은 감춘다
@@ -180,7 +195,7 @@ function QuestHud.set(book, names, level: number?, daily: any?)
 	end
 	last = { book, names, level, daily }
 	QuestHud.glow = nil
-	local maxH = Panel.maxH(Stage.uiH, QuestHud.touch)
+	local maxH = if QuestHud.touch and QuestHud.bar and UI.touchBar and UI.touchBar.quest then UI.touchBar.quest.h else Panel.maxH(Stage.uiH, QuestHud.touch) -- (바로가기 줄의 알리미 높이가 따로 적혀 있을 때만 — 지금은 없어 새 배치와 같다 · 2026-11-14: 그 값을 지운 뒤에도 읽어 폰에서 오류가 났다)
 	local rows, height, shown, guided, info = Panel.layout(book or {}, names, level, maxH, daily, QuestHud.size)
 	QuestHud.shown = shown
 	QuestHud.guided = guided

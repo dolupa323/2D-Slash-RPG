@@ -59,7 +59,8 @@ expect(Account.setSound(acct, { music = 5, sfx = 5, on = true, lang = "jp" }) ==
 expect(Account.setSound(acct, { music = 5, sfx = 5, on = true }) == true and acct.sound.lang == "auto", "언어가 없으면 자동")
 -- 폰 단추 배치(2026-10-28 사용자 "모바일 ui … 이전 구조가 더 익숙한 사람들은 전버전으로도 쓸수있게 설정창에서 바꿀수있게"): "new" · "old" · 없으면 "new" · 모르는 값은 받지 않는다
 expect(Account.setSound(acct, { music = 5, sfx = 5, on = true, touch = "old" }) == true and acct.sound.touch == "old", "예전 배치를 받는다")
-expect(Account.setSound(acct, { music = 5, sfx = 5, on = true, touch = "left" }) == false and acct.sound.touch == "old", "모르는 배치는 받지 않는다")
+expect(Account.setSound(acct, { music = 5, sfx = 5, on = true, touch = "upside" }) == false and acct.sound.touch == "old", "모르는 배치는 받지 않는다") -- (left는 2026-11-14부터 왼손 배치)
+expect(Account.setSound(acct, { music = 5, sfx = 5, on = true, touch = "left" }) == true and acct.sound.touch == "left", "왼손 배치를 받는다(2026-11-14)")
 expect(Account.setSound(acct, { music = 5, sfx = 5, on = true }) == true and acct.sound.touch == "new", "배치가 없으면 새 배치")
 local back = Account.unpack(Account.pack(acct))
 expect(back ~= nil and same(back.sound, acct.sound), "싸고 풀어도 그대로다")

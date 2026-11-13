@@ -36,12 +36,13 @@ do
 	expect(Macro.tick(st, t, { hunt = false }, rnd) == nil, "사냥 맵이 아니면 띄우지 않는다")
 	t = hunt(st, t, 22, 6)
 	eq(Macro.tick(st, t, { hunt = true }, rnd), "issue", "쉬지 않고 26분 잡으면 문제를 낸다(의심 낮음 15~25분 — 2026-10-24 사용자: \"매크로검사 주기 짧게해라\")")
-	-- 쉼: 5분 넘게 잡지 않으면 처음부터
+	-- 쉼(2026-11-13 바뀜 — 사용자 "10분 나와버리면 9분 매크로 돌리고 게임 나갔다가 들어와서 다시 9분"): 쉬어도 「사냥한 초」는 계정에 남아 0이 되지 않는다
+	--  (전에는 15분 쉬면 처음부터 — 확인이 뜨기 전에 멈추고 쉬면 한 번도 받지 않았다)
 	local st2 = Macro.new(0, nil)
 	local t2 = hunt(st2, 0, 100, 6)
 	t2 += D.rest + 1
-	t2 = hunt(st2, t2, 6, 6) -- (이 시험은 움직임을 적지 않아 「한자리 사냥」 = 의심 중간(8~12분)이다 — 그보다 짧게)
-	expect(Macro.tick(st2, t2, { hunt = true }, rnd) == nil, "쉬었다가 다시 잡기 시작하면 쉬지 않은 시간을 다시 잰다")
+	t2 = hunt(st2, t2, 6, 6)
+	eq(Macro.tick(st2, t2, { hunt = true }, rnd), "issue", "쉬었다가 다시 잡아도 사냥한 시간은 이어진다(100분 + 6분 → 확인)")
 	-- 마을에 잠깐 들른 것은 쉼이 아니다 · REST_STAY초 넘게 머물면 쉼(2026-10-24)
 	local st3 = Macro.new(0, nil)
 	local t3 = hunt(st3, 0, 10, 6)
@@ -54,7 +55,9 @@ do
 	Macro.onRest(st4, t4)
 	Macro.tick(st4, t4 + Macro.REST_STAY + 5, { hunt = false }, rnd)
 	t4 = hunt(st4, t4 + Macro.REST_STAY + 10, 6, 6)
-	expect(Macro.tick(st4, t4, { hunt = true }, rnd) == nil, "마을에 2분 넘게 머물렀다면 쉼 — 다시 잰다")
+	eq(st4.saved.hs, 594 + 354, "마을에 오래 머물러도 사냥한 초는 이어진다(처치 사이 60초 이하만 — 10분 + 6분)")
+	local r4 = Macro.tick(st4, t4, { hunt = true }, rnd)
+	eq(r4 == "issue", st4.saved.hs >= Macro.dueOf(Macro.level(st4, t4), st4.saved.dr), "이번 차례의 때를 넘었을 때만 확인")
 	-- 너무 고른 연타 = high(접속 30분 전이라도 앞당긴다)
 	local st3 = Macro.new(0, nil)
 	local c = 0
@@ -62,7 +65,7 @@ do
 		c += 1.5
 		Macro.onSkill(st3, "ax_slam", c)
 	end
-	eq(Macro.level(st3, 100), "high", "같은 스킬을 1.5초 간격 그대로 40번 = 의심 높음")
+	eq(Macro.level(st3, 100), "mid", "같은 스킬을 1.5초 간격 그대로 40번 = 의심 중간(2026-11-13 낮: 키를 누르고 있어도 고르다 — 「높음」은 증거로만)")
 	local st4 = Macro.new(0, nil)
 	c = 0
 	for i = 1, 40 do
@@ -114,14 +117,30 @@ do
 	eq(Macro.answer(st, v.token, wrong, 2), "wrong", "틀림 2")
 	eq(Macro.answer(st, v.token, wrong, 3), "fail", "세 번 틀리면 놓침")
 	expect(Macro.stopped(st), "놓치면 보상 멈춤")
-	eq(Macro.retryIn(st, 3), D.stop[1], "첫 놓침은 곧바로 다시 확인할 수 있다")
-	local v2 = Macro.issue(st, 10, rint)
-	eq(Macro.tick(st, 10 + D.time + 1, { hunt = true }, rnd), "expire", "시간이 다 되면 놓침")
-	Macro.fail(st, 10 + D.time + 1)
-	eq(Macro.retryIn(st, 10 + D.time + 1), D.stop[2], "24시간 안의 두 번째 놓침 = 10분 기다림")
+	eq(Macro.retryIn(st, 3), 0, "그동안 사냥하지 않은 놓침(세 번 틀림)은 곧바로 다시 확인할 수 있다")
+	eq(#st.saved.fails, 0, "사냥을 잇지 않은 놓침은 사다리에 세지 않는다(2026-11-14 사용자 — 애먼 사람이 걸린다)")
+	-- 자리를 비워 놓침(문제가 떠 있는 동안 잡지 않았다): 몇 번이든 0초 — 하루에 네 번 비워도 6시간이 아니다
+	for k = 1, 5 do
+		local tk = 100 + k * 200
+		Macro.issue(st, tk, rint)
+		Macro.fail(st, tk + D.time + 1)
+		eq(Macro.retryIn(st, tk + D.time + 1), 0, ("자리를 비워 놓친 %d번째도 곧바로 다시 확인(6시간 아님)"):format(k))
+	end
+	eq(#st.saved.fails, 0, "자리를 비운 놓침은 사다리에 없다")
+	-- 문제가 떠 있는데도 사냥을 이었다(activeKills마리 넘게): 사다리 — 첫 곧바로 · 둘째 10분
+	local v2 = Macro.issue(st, 1500, rint)
+	st.check.kills = D.record.activeKills
+	Macro.fail(st, 1500 + D.time + 1)
+	eq(Macro.retryIn(st, 1500 + D.time + 1), D.stop[1], "사냥을 이은 첫 놓침 = 곧바로")
+	Macro.issue(st, 1700, rint)
+	eq(Macro.tick(st, 1700 + D.time + 1, { hunt = true }, rnd), "expire", "시간이 다 되면 놓침")
+	st.check.kills = D.record.activeKills
+	Macro.fail(st, 1700 + D.time + 1)
+	eq(Macro.retryIn(st, 1700 + D.time + 1), D.stop[2], "24시간 안의 사냥을 이은 두 번째 놓침 = 10분 기다림")
 	expect(v2.token ~= v.token, "문제마다 번호가 다르다")
-	local later = 10 + D.forget + 100
+	local later = 1700 + D.forget + 100
 	Macro.issue(st, later, rint)
+	st.check.kills = D.record.activeKills
 	Macro.fail(st, later)
 	eq(#st.saved.fails, 1, "24시간이 지난 놓침은 세지 않는다")
 	eq(Macro.retryIn(st, later), D.stop[1], "그래서 다시 첫 놓침의 기다림")

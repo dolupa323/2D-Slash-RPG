@@ -36,7 +36,7 @@ function PartyHud.setTop(_top: number?)
 		return
 	end
 	local r = UI.hud.party
-	box.Position = Stage.atPosition(r.at, r.x, r.y)
+	Stage.move(box, r.at, r.x, r.y) -- (옮긴 자리 · 화면 안 — 2026-11-12)
 end
 
 -- info = 서버가 보낸 파티의 모습 { leader, members = { { id, name, class, level, hp, maxHp, scene } … } } · myId = 나 · scene = 내가 있는 맵

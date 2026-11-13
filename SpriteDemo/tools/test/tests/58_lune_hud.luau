@@ -50,6 +50,7 @@ MOCK("Client/lune/stage", {
 	group = function(parent, name) return frame(name, parent) end,
 	placeRect = function(parent, name) return frame(name, parent) end,
 	atPosition = function(_, x, y) return UDim2.fromOffset(x, y) end,
+	move = function(frame, _, x, y) frame.Position = UDim2.fromOffset(x, y) end, -- (진짜 Stage.move — 2026-11-12)
 	onResize = function() end,
 })
 MOCK("Client/lune/ui/ui", {
@@ -64,8 +65,8 @@ MOCK("Client/lune/ui/ui", {
 	part = function(parent, name) return frame(name, parent) end,
 	slot = function(parent) local s = { frame = frame("Slot", parent), on = false } function s.setOn(_, on) s.on = on end return s end,
 	bar = function(parent) local b = { frame = frame("Bar", parent), fill = frame("Fill", parent), ratio = 0 } function b.set(_, r) b.ratio = r end return b end,
-	keycap = function(parent) local k = { value = "" } function k.set(_, v) k.value = v end function k.color() end return k end,
-	hit = function(f) return { Activated = { Connect = function(_, fn) f.click = fn end } } end,
+	keycap = function(parent, text) local k = { value = text or "", frame = frame("Key", parent) } function k.set(_, v) k.value = v end function k.color() end return k end,
+	hit = function(f) return { Activated = { Connect = function(_, fn) f.click = fn end }, MouseEnter = { Connect = function(_, fn) f.enter = fn end }, MouseLeave = { Connect = function(_, fn) f.leave = fn end } } end,
 })
 local lastInput: any = Enum.UserInputType.MouseMovement
 SERVICE("UserInputService", { GetLastInputType = function() return lastInput end, GetMouseLocation = function() return Vector2.new(5, 5) end })
@@ -163,3 +164,20 @@ expect(Hud.menu.bag.dot.Visible == true and Hud.menu.auction.dot.Visible ~= true
 Hud.markMenu("bag", false)
 Hud.setMenu(menu, function() end)
 expect(Hud.menu.bag.dot.Visible ~= true, "끈 점은 다시 지어도 꺼져 있다")
+-- ---- 메뉴 단추의 단축키(2026-11-13 — PC: 마우스를 올리면 칸 위에 키 딱지 · 벗어나면 숨김 · 손가락은 아니다 · 키가 없는 「메뉴」는 없다) ----
+do
+	local km = { { id = "bag", name = "가방", key = "I" }, { id = "auction", name = "경매장", key = "" }, { id = "more", name = "메뉴", key = "" } }
+	Hud.setMenu(km, function() end)
+	local bagItem = Hud.menu.bag
+	expect(bagItem.keyHint ~= nil and bagItem.keyHint.value == "I", "가방 단추에 키 딱지 「I」")
+	expect(bagItem.keyHint.frame.Visible == false, "처음에는 숨어 있다(10-08 개편의 이름표 그대로)")
+	expect(Hud.menu.auction.keyHint == nil and Hud.menu.more.keyHint == nil, "키가 없는 단추에는 딱지가 없다")
+	bagItem.frame.enter()
+	expect(bagItem.keyHint.frame.Visible == true, "마우스를 올리면 키 딱지가 보인다")
+	bagItem.frame.leave()
+	expect(bagItem.keyHint.frame.Visible == false, "벗어나면 숨는다")
+	lastInput = Enum.UserInputType.Touch
+	bagItem.frame.enter()
+	expect(bagItem.keyHint.frame.Visible == false, "손가락이면 보이지 않는다")
+	lastInput = Enum.UserInputType.MouseMovement
+end

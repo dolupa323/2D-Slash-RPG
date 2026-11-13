@@ -726,7 +726,10 @@ end
 local function startSeg(id: string, seg: number, lv: number?)
 	local def = COMBAT.skills[id]
 	local sk = { id = id, def = def, seg = seg, t = 0, queued = false, vx = nil :: number?, move = 0, shown = {} }
-	local hot = state.enhOf(id, seg) -- (살라맨더의 강화판 — 서버에 함께 보내고 그 판을 강화판으로 그린다)
+	local hot: any = state.enhOf(id, seg) -- (살라맨더의 강화판 — 서버에 함께 보내고 그 판을 강화판으로 그린다)
+	if seg > 1 and def.segs[seg - 1].charge then
+		hot = lv or 0 -- 모으기 다음 구간: 화면이 센 모은 단계를 보낸다 — 서버가 흐른 시간으로 검사해 흔들림 안이면 이 단계로 판정(보이는 범위 = 맞는 범위 · sim/kit.luau Kit.chargeClaim · 2026-11-11 밤)
+	end
 	-- (사신 각성 — 리퍼가 사신으로 변해 있는 동안 사냥기 · 공격기의 다시 쓰기가 없다 · 서버 world.luau와 같다 · 2026-10-31)
 	if seg == 1 and def.cd > 0 and not state.noCd(def.type) then
 		state.cds[id] = state.clock + def.cd
@@ -786,7 +789,10 @@ local function startKit(id: string, seg: number, lv: number?)
 	sk.lv = lv or sk.lv
 	sk.last = kitLast(sk.s)
 	state.skill = sk
-	local hot = state.enhOf(id, seg) -- (살라맨더의 강화판 — 서버에 함께 보내고 그 판을 강화판으로 그린다)
+	local hot: any = state.enhOf(id, seg) -- (살라맨더의 강화판 — 서버에 함께 보내고 그 판을 강화판으로 그린다)
+	if seg > 1 and kdef.segs[seg - 1] and kdef.segs[seg - 1].charge then
+		hot = sk.lv or 0 -- 모으기 다음 구간: 화면이 센 모은 단계(서버 caster가 info.claim으로 검사 — sim/kit.luau Kit.chargeClaim · 2026-11-11 밤)
+	end
 	Net.FireServer("Skill", id, seg, body.x, body.y, state.dir, hot)
 	local a = state.actor
 	a.x, a.y, a.dir, a.ground, a.vx, a.vy = body.x, body.y, state.dir, body.ground, body.vx or 0, body.vy or 0
@@ -1235,6 +1241,10 @@ local function step()
 	end
 	-- 문 앞에서 ↑: 서버에 묻고, 허락하면 그 장면으로
 	local wantUp = Input.take("up") and body.ground and not state.skill
+	-- 룬이 1순위(2026-11-12 사용자 "룬 떠있을때 전리품 주워진다고 룬 바로 못하는거 문제있어 무조건 룬이 1순위로 판정들어가야해"): 룬 곁의 ↑는 간이 포탈 · 상자 · 문 · 주민보다 먼저 해방
+	if wantUp and require(script.Parent.runeView).tryStart(body.x, body.y) then
+		wantUp = false
+	end
 	-- 문 · 간이 포탈을 막 지나왔으면 portalCalm까지 다시 지나지 않는다(넘어오자마자 되돌아가지 않게 — 2026-11-09 · 1초는 제가 정한 것 · goScene · Warp가 세운다)
 	local calm = os.clock() < (state.portalCalm or 0)
 	local hop = wantUp and not calm and state.view:warpNear(body.x, body.y)
@@ -1635,6 +1645,15 @@ local paintBuffs: () -> () -- 버프 자리를 그린다(아래에서 짓는다)
 -- 폰의 「메뉴」 단추의 점(2026-10-18): 받을 출석 · 업적 · 모험의 서(state.moreMark)에 더해 — 폰에서는 가방 · 경매 단추가 「메뉴」 안에 있어 그 점(가방이 가득 참 · 팔림)도 여기에 모은다
 local function phoneMark()
 	Touch.markMenu(state.moreMark == true or Hud.marks.bag == true or Hud.marks.auction == true)
+	-- 바로가기 판의 점(2026-11-13): 판에 있는 칸은 그 칸에 · 판에 없는 것(능력치 · 경매 · 출석 · 업적 · 모험의 서)은 「전체」에
+	local TouchBar = require(script.Parent.touchBar)
+	TouchBar.mark("bag", Hud.marks.bag == true)
+	TouchBar.mark("skill", Hud.marks.skill == true)
+	TouchBar.mark("@all", state.moreMark == true or Hud.marks.stat == true or Hud.marks.auction == true)
+end
+Hud.onMark = phoneMark -- (가방이 가득 · 찍을 점수 · 팔림이 바뀔 때마다 — 2026-11-13)
+Hud.onOpenSet = function(set)
+	require(script.Parent.touchBar).setOpen(set)
 end
 
 -- ---------- 퀘스트 연출(장면 — 2026-10-15) ----------
@@ -1864,7 +1883,7 @@ local function draw(dt: number)
 	require(script.Parent.rankStatues).update()
 	-- 스마트폰의 상호작용 단추가 지금 할 일: 떨어진 물건 → 문 → 주민의 차례로 가까운 것
 	if Touch.on then
-		Touch.setAct(if state.dead then nil elseif state.fx and state.fx:dropNear(body.x, body.y, RULES.pickup) then "pickup" elseif require(script.Parent.boxView).near(body.x, body.y) then "chest" elseif state.view:portalNear(body.x, body.y) or state.view:warpNear(body.x, body.y) then "portal" elseif nearSpot(body.x, body.y) or require(script.Parent.runeView).near(body.x, body.y) then "spot" elseif state.view:npcNear(body.x, body.y) then "npc" elseif SCENES.scenes[state.sceneKey].vista and SCENES.scenes[state.sceneKey].vista.x and math.abs(body.x - SCENES.scenes[state.sceneKey].vista.x) <= 40 then "vista" else nil)
+		Touch.setAct(if state.dead then nil elseif require(script.Parent.runeView).ready(body.x, body.y) then "rune" elseif state.fx and state.fx:dropNear(body.x, body.y, RULES.pickup) then "pickup" elseif require(script.Parent.boxView).near(body.x, body.y) then "chest" elseif state.view:portalNear(body.x, body.y) or state.view:warpNear(body.x, body.y) then "portal" elseif nearSpot(body.x, body.y) or require(script.Parent.runeView).near(body.x, body.y) then "spot" elseif state.view:npcNear(body.x, body.y) then "npc" elseif SCENES.scenes[state.sceneKey].vista and SCENES.scenes[state.sceneKey].vista.x and math.abs(body.x - SCENES.scenes[state.sceneKey].vista.x) <= 40 then "vista" else nil)
 	end
 	state.mobs:update(if held then state.holdNow else state.now) -- 멈칫하는 동안은 몬스터의 그림도 멈춘 순간 그대로(하얗게 번쩍인 채)
 	require(script.Parent.boxView).update(state.now, dt, body) -- 보상의 방의 상자(2026-10-28)
@@ -3247,7 +3266,66 @@ function Boot.start()
 		if isAdmin() then
 			table.insert(items, { id = "admin", name = "관리" })
 		end
+		table.insert(items, { id = "@layout", name = UI_DATA.layout.arrange.name }) -- 화면 배치(2026-11-12 — 판을 끌어 옮긴다: ui/arrange.luau)
 		table.insert(items, { id = "@chars", name = "캐릭터 선택" }) -- 저장하고 캐릭터 고르기 화면으로 돌아간다
+		-- 묶음 메뉴(2026-11-13 — 폰의 「바로가기」 배치와 같은 판: ui/menuGrid.luau): 묶음마다 그림 칸 · 칸의 왼쪽 위에 그 창의 키(M · O · H …) · 받을 것이 있으면 노란 점.
+		--  전에는 창 이름만 적힌 단추를 세로 한 줄로 — 어떤 키로 여는지 · 무슨 창인지 그림이 없었다. 아래 줄의 단추(가방 · 장비 …)도 넣는다(전체를 한눈에)
+		do
+			local MenuGrid = require(script.Parent.ui.menuGrid)
+			local all = {}
+			for _, w0 in Windows.list() do
+				if MAIN[w0.id] then
+					table.insert(all, { id = w0.id, name = w0.name })
+				end
+			end
+			for _, it in items do
+				table.insert(all, it)
+			end
+			local keys = {}
+			for _, it in all do
+				if string.sub(it.id, 1, 1) ~= "@" then
+					keys[it.id] = keyName("win:" .. it.id)
+				end
+			end
+			local me = state.me
+			local marks = {
+				attend = me ~= nil and (me.attReady or 0) > 0, achieve = me ~= nil and (me.achReady or 0) > 0, tome = state.bond ~= nil and Bond.ready(state.bond),
+				bag = Hud.marks.bag == true, auction = Hud.marks.auction == true, stat = Hud.marks.stat == true, skill = Hud.marks.skill == true,
+			}
+			local r = UI_HUD.menu
+			local gw = math.min(MenuGrid.K.maxW, Stage.uiW - 40)
+			local room = Stage.uiH - (Stage.REF_H - r.y) - 16 -- 아래 단추 줄 위로 들어가는 높이(격자가 작아도)
+			local gh = math.max(160, math.min(room, MenuGrid.need(all, gw)))
+			local holder = Stage.place(Stage.ui, "More", r.at, r.x + r.w - gw, r.y - gh - 6, gw, gh)
+			holder.ZIndex = 160
+			-- 판 밖을 누르면 닫힌다(2026-11-13): 비치는 막(어둡게 하지 않는다 — PC는 게임 화면을 그대로 본다) · 판이 닫히면 같이 사라진다
+			local back = Instance.new("TextButton")
+			back.Name = "MoreBack"
+			back.Text = ""
+			back.AutoButtonColor = false
+			back.BackgroundTransparency = 1
+			back.Size = UDim2.fromScale(1, 1)
+			back.ZIndex = 159
+			back.Parent = Stage.ui
+			back.Activated:Connect(closeMore)
+			holder.Destroying:Connect(function()
+				if back.Parent then
+					back:Destroy()
+				end
+			end)
+			MenuGrid.build(holder, gw, gh, all, marks, function(id)
+				closeMore()
+				if id == "@chars" then
+					state.toSelect()
+				elseif id == "@layout" then
+					require(script.Parent.ui.arrange).open()
+				else
+					state.openWin(id) -- (아래 단추 줄 · 키와 같은 길 — 상점 · 경매장은 마을에서만)
+				end
+			end, closeMore, keys)
+			morePanel = holder
+			return
+		end
 		local w, rowH = 132, 28
 		local h = #items * rowH + 14
 		local r = UI_HUD.menu
@@ -3271,6 +3349,8 @@ function Boot.start()
 				closeMore()
 				if item.id == "@chars" then
 					state.toSelect()
+				elseif item.id == "@layout" then
+					require(script.Parent.ui.arrange).open()
 				else
 					Windows.toggle(item.id)
 				end
@@ -4017,6 +4097,7 @@ function Boot.start()
 	Windows.register("seq", require(script.Parent.ui.seqWindow)) -- 시퀀스(스킬 창의 「시퀀스」 단추 — 2026-10-30 · 메이플)
 	Windows.register("keys", KeysWindow)
 	Windows.register("sound", SoundWindow)
+	Windows.register("channel", require(script.Parent.ui.channelWindow)) -- 채널(2026-11-12 — 메뉴에서 · 서버 World.onChannel)
 	Windows.register("daily", DailyWindow) -- 일일 의뢰(마을의 의뢰 게시판 앞에서 ↑)
 	Windows.register("attend", AttendWindow) -- 출석(메뉴 → 「출석」 · 그날 처음 들어오면 한 번)
 	Windows.register("achieve", AchieveWindow) -- 업적(메뉴 → 「업적」)
@@ -4220,12 +4301,34 @@ function Boot.start()
 	end
 	Chat.onOpen = function(on)
 		Touch.showChat(not on)
+		if on then
+			require(script.Parent.chatPeek).hide() -- (판을 열면 한 줄 미리 보기를 숨긴다 — 2026-11-13)
+		end
+	end
+	-- 바로가기 배치의 채팅 한 줄 미리 보기(2026-11-13 — chatPeek.luau: 판이 닫혀 있는 동안 남의 글을 「채팅」 단추 아래에 6초)
+	Chat.onPeek = function(kind, name, text)
+		require(script.Parent.chatPeek).show(kind, name, text) -- (사람의 글 — 옮기지 않는다)
 	end
 	Chat.init(Hud.root)
 	-- 채팅 창을 옮겼다(2026-11-09 — PC 손잡이 · chat.luau Chat.pos): 계정의 화면 설정에 저장(소리 설정과 한 표 — sim/account.luau sound.chat)
-	Chat.onMoved = function(pos)
-		ViewOpts.chat = pos
+	Chat.onMoved = function(_pos)
+		ViewOpts.captureUi() -- (PC = sound.chat · 폰 = sound.ui.touch.Chat — 2026-11-12)
 		Net.FireServer("Sound", ViewOpts.into(Music.export()))
+	end
+	-- 화면 배치(2026-11-12 사용자: "지금 채팅창처럼 모든 ui 가 끌어서 자리를 옮길수 있어야해 지금 모바일에서 잘려보이는경우 엄청많아"):
+	--  판을 옮기는 모드(ui/arrange.luau — 설정 창의 「화면 배치 — 바꾸기」) · 창의 제목 줄 끌기(ui/windows.luau) → 계정의 화면 설정에 기기 종류마다 저장
+	do
+		local Arrange = require(script.Parent.ui.arrange)
+		local function saveUi()
+			ViewOpts.captureUi()
+			Net.FireServer("Sound", ViewOpts.into(Music.export()))
+		end
+		Arrange.chat = Chat
+		Arrange.onSave = saveUi
+		Arrange.onReset = function()
+			Windows.relayout()
+		end
+		Windows.onMoved = saveUi
 	end
 	-- 채팅 말풍선(2026-10-26): 받은 글을 보낸 사람의 머리 위에(chatBubbles.luau). 자리 = 나는 내 몸 · 다른 사람은 이 맵의 그 사람(없으면 숨긴다)
 	ChatBubbles.where = function(id)
@@ -4351,6 +4454,13 @@ function Boot.start()
 			end
 			return Touch.frameOf(arg)
 		elseif kind == "touchmenu" then
+			-- 바로가기 줄(2026-11-13 · 2026-11-14 세 배치 모두): 가방 · 장비 · 스킬 · 퀘스트 · 상점은 오른쪽 위 줄에 바로 있다 — 그 칸(메뉴를 열 것 없이)
+			do
+				local tile = require(script.Parent.touchBar).frame(arg)
+				if tile then
+					return tile
+				end
+			end
 			return state.touchMenuItems and state.touchMenuItems[arg] or nil
 		end
 		return nil
@@ -4494,6 +4604,24 @@ function Boot.start()
 				state.fx:float(text, state.body.x, state.body.y - 46, if good then Effects.MINT else Effects.PINK, 1.8)
 			end
 		end
+		-- 하루 사냥 시간(2026-11-12 — huntCapView.luau · 서버 World.huntCapStep): 남은 분 알림 · 다 썼을 때 큰 알림 + 채팅 · 사냥터에서 「소진」 띠
+		do
+			local HuntCapView = require(script.Parent.huntCapView)
+			HuntCapView.banner = function(head: string, line: string, seconds: number)
+				pcall(Guide.banner, head, line, seconds)
+			end
+			HuntCapView.note = function(text: string)
+				Chat.note(require(lune.lang).t(text))
+			end
+			Net.OnClient("HuntTime", function(v)
+				HuntCapView.update(v)
+			end)
+		end
+		-- 매크로 감옥에 들어갔다(2026-11-11): 화면 위 알림 「사냥 정지 — 매크로 의심」(10초) + 채팅 알림 글 — MacroWarn과 같은 꼴
+		MacroWindow.notice = function(head: string, line: string)
+			pcall(Guide.banner, head, line, 10)
+			Chat.note(("[%s] %s"):format(require(lune.lang).t(head), require(lune.lang).t(line)))
+		end
 		Net.OnClient("MacroView", function(v)
 			MacroWindow.update(v)
 		end)
@@ -4527,6 +4655,41 @@ function Boot.start()
 			end
 			Talk.close()
 		end
+		-- ESC(2026-11-12 사용자: "esc로 동작을 아무것도 할수없어 로블록스 앱이 뺏어버려서 우리 ui를 닫거나 하게해줘"):
+		--  Roblox는 ESC로 제 메뉴를 연다 — 게임이 막거나 대신할 수 없다(DevForum: ContextActionService로도 못 막는다 · 처리된 입력으로 온다).
+		--  그래서 ESC가 눌리거나(처리된 입력이어도 본다) Roblox 메뉴가 열리면(GuiService.MenuOpened) 우리 것을 한 번에 다 닫는다: 대화창(거절) · 메뉴 · 열린 창 모두 · 달빛 상점.
+		--  한 번에 다 닫는 까닭: ESC를 한 번 더 누르는 것은 Roblox 메뉴를 닫으려는 것이라, 창을 하나씩 닫으면 원치 않는 창까지 닫힌다. 매크로 확인 창 · 장면(컷신 — 제 Esc가 있다)은 닫지 않는다
+		do
+			local escAt = -math.huge
+			local function escAll()
+				if os.clock() - escAt < 0.3 or MacroWindow.isOpen() or CineView.active() then
+					return
+				end
+				escAt = os.clock()
+				local Arrange = require(script.Parent.ui.arrange)
+				if Arrange.active then
+					Arrange.close(true) -- (화면 배치 중이면 저장하고 끝낸다)
+				end
+				if Talk.npc and Talk.npc ~= Talk.CINE then
+					Talk.decline()
+				end
+				closeMenus()
+				for _ = 1, 20 do
+					if not Windows.closeTop() then
+						break
+					end
+				end
+				if CashShop.isOpen() then
+					CashShop.leave(state.shopCtx)
+				end
+			end
+			game:GetService("UserInputService").InputBegan:Connect(function(input)
+				if input.KeyCode == Enum.KeyCode.Escape then
+					escAll()
+				end
+			end)
+			game:GetService("GuiService").MenuOpened:Connect(escAll)
+		end
 		-- 게임 창이 앞에 있는가를 서버에 알린다(창이 앞에 없는데 스킬이 들어오면 매크로로 본다 — 서버 modules/macroGuard.luau · 2026-10-24)
 		local UIS = game:GetService("UserInputService")
 		local function focus(on: boolean)
@@ -4537,6 +4700,10 @@ function Boot.start()
 		end)
 		UIS.WindowFocusReleased:Connect(function()
 			focus(false)
+		end)
+		-- 손의 기록(2026-11-13 — inputStat.luau · 서버 macroGuard.luau "input"): 1분마다 누른 수 · 한 프레임도 안 된 수 · 터치 수 · 같은 점의 수만(어떤 키인지는 보내지 않는다)
+		require(script.Parent.inputStat).start(function(v)
+			task.spawn(pcall, Net.Invoke, "Macro", "input", v)
 		end)
 	end
 	-- 배(2026-10-16 — sim/voyage.luau): 갑판에 올랐다 · 닿았다
@@ -4784,6 +4951,134 @@ function Boot.start()
 
 	-- 스마트폰 단추(터치 화면이면 저절로 켜진다)
 	local touchMenu: Frame? = nil
+	-- 폰 메뉴에 놓을 것(창 · 하는 일) — 「메뉴」의 단추 목록과 바로가기 배치의 묶음 메뉴가 같이 쓴다(2026-11-13)
+	state.touchMenuList = function()
+		local items = Windows.list() -- 키 설정은 넣지 않는다(손가락 단추에는 바꿀 키가 없다)
+		-- 키 없이 「메뉴」 안에 두는 창(출석 · 업적 · 모험의 서 · 게임 설정 — PC의 「메뉴」와 같다). 전에는 빠져 폰에서는 출석 · 업적을 열 수 없었다(2026-10-18 검토)
+		for _, w in UI_DATA.windows do
+			if w.menu and w.id ~= "keys" and Windows.info(w.id) and (not w.need or (state.bond and state.bond.open)) then
+				table.insert(items, { id = w.id, name = w.name })
+			end
+		end
+		if state.me ~= nil and state.me.admin ~= nil then
+			table.insert(items, { id = "admin", name = "관리" }) -- 관리자에게만
+		end
+		table.insert(items, { id = "@arrange", name = "단추 배치" }) -- 스킬 · 물약을 단추에 놓는다
+		table.insert(items, { id = "@layout", name = UI_DATA.layout.arrange.name }) -- 화면 배치(2026-11-12 — 판 · 채팅 창을 끌어 옮긴다: ui/arrange.luau)
+		table.insert(items, { id = "@chars", name = "캐릭터 선택" }) -- 저장하고 캐릭터 고르기 화면으로 돌아간다
+		return items
+	end
+	-- 메뉴의 한 줄을 골랐다(목록 · 묶음 메뉴 같이)
+	state.touchMenuPick = function(id: string)
+		if id == "@arrange" then
+			Touch.arrange(true)
+		elseif id == "@layout" then
+			require(script.Parent.ui.arrange).open()
+		elseif id == "@chars" then
+			state.toSelect()
+		else
+			-- PC의 단추 줄 · 키와 같은 길(2026-10-21 점검): 「달빛 상점」 = 들어가는 공간(마을에서만) · 경매장 = 마을에서만
+			state.openWin(id)
+		end
+	end
+	-- 메뉴 칸의 노란 점(2026-11-13 — 묶음 메뉴 · 바로가기 판): 찍을 점수 · 가방이 가득 · 경매장에서 팔림 · 받을 출석 · 업적 · 모험의 서
+	state.menuMarks = function()
+		local me = state.me
+		return {
+			stat = Hud.marks.stat == true, skill = Hud.marks.skill == true, bag = Hud.marks.bag == true, auction = Hud.marks.auction == true,
+			attend = me ~= nil and (me.attReady or 0) > 0, achieve = me ~= nil and (me.achReady or 0) > 0, tome = state.bond ~= nil and Bond.ready(state.bond),
+		}
+	end
+	-- 바로가기 배치의 「전체」: 묶음 메뉴(ui/menuGrid.luau) — 한 번 더 누르면 닫힌다
+	state.openMenuGrid = function()
+		if touchMenu then
+			touchMenu:Destroy()
+			touchMenu = nil
+			return
+		end
+		local MenuGrid = require(script.Parent.ui.menuGrid)
+		-- 오른쪽 옆 판(2026-11-14 사용자: "메뉴누르면 전 화면 가리는게 아니라 사이드바 형식으로 해" — 몇 분 전의 「화면 가득」 · 그 전의 가운데 판을 바꿨다):
+		--  바로가기 줄 바로 아래부터 화면 아래까지 · 폭 = 칸 셋 줄(MenuGrid.sideW) · 오른쪽에서 미끄러져 나온다 · 게임 화면은 덮지 않는다(밖을 누르면 닫힘)
+		local TB = UI_DATA.touchBar
+		local w = MenuGrid.sideW()
+		local top = TB.y + TB.tile + 6
+		local h = Stage.uiH - top - 8
+		local holder = Stage.place(Stage.ui, "TouchMenu", "tr", UI_DATA.grid.w - 8 - w, top, w, h)
+		do -- 미끄러져 나오기(0.16초)
+			local final = holder.Position
+			holder.Position = final + UDim2.fromOffset(w + 16, 0)
+			game:GetService("TweenService"):Create(holder, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = final }):Play()
+		end
+		holder.ZIndex = 160
+		-- 판 밖을 누르면 닫힌다(2026-11-13 — 모바일 메뉴의 흔한 법): 판 뒤에 화면 전체를 덮는 옅은 막
+		local back = Instance.new("TextButton")
+		back.Name = "TouchMenuBack"
+		back.Text = ""
+		back.AutoButtonColor = false
+		back.BackgroundColor3 = Color3.new(0, 0, 0)
+		back.BackgroundTransparency = 1 -- (옆 판 — 게임 화면을 어둡게 덮지 않는다 · 밖을 누르면 닫히는 것만)
+		back.BorderSizePixel = 0
+		back.Size = UDim2.fromScale(1, 1)
+		back.ZIndex = 159
+		back.Parent = Stage.ui
+		local function close()
+			if touchMenu == holder then
+				touchMenu = nil
+			end
+			back:Destroy()
+			holder:Destroy()
+		end
+		back.Activated:Connect(close)
+		holder.Destroying:Connect(function()
+			if back.Parent then
+				back:Destroy() -- (장면이 바뀌어 다른 길로 닫혀도 막이 남지 않게)
+			end
+		end)
+		-- 「바로가기 고치기」(2026-11-13 — 메이플스토리M의 퀵 메뉴처럼): 고치는 동안 칸을 누르면 바로가기 줄에 놓거나 뺀다(다섯까지) · 계정에 저장(sound.bar)
+		local TouchBar = require(script.Parent.touchBar)
+		local editing = state.barEditing == true
+		local cur = {}
+		for _, id in TouchBar.list(TouchBar.picked) do
+			if id ~= "@all" then
+				table.insert(cur, id)
+			end
+		end
+		local function reopen()
+			close()
+			state.openMenuGrid()
+		end
+		local edit = { on = editing, list = cur, toggle = function() -- (바로가기 줄은 세 배치 모두에 — 2026-11-14)
+			state.barEditing = not editing
+			reopen()
+		end }
+		local built = MenuGrid.build(holder, w, h, state.touchMenuList(), state.menuMarks(), function(id)
+			if edit and editing then
+				if not MenuGrid.canPin(id) then
+					return
+				end
+				local i = table.find(cur, id)
+				if i then
+					table.remove(cur, i)
+				elseif #cur < UI_DATA.touchBar.cols - 1 then
+					table.insert(cur, id)
+				else
+					return -- (다섯이 찼다 — 하나를 빼고 놓는다)
+				end
+				ViewOpts.bar = cur
+				TouchBar.setItems(cur)
+				Net.FireServer("Sound", ViewOpts.into(Music.export()))
+				reopen()
+				return
+			end
+			close()
+			state.touchMenuPick(id)
+		end, function()
+			state.barEditing = false
+			close()
+		end, nil, edit, true)
+		state.touchMenuItems = built.frames -- 튜토리얼(꿈)이 그 칸을 반짝이게 한다
+		touchMenu = holder
+	end
 	state.closeTouchMenu = function() -- (장면 · 대화가 시작되면 닫는다 — closeMenus)
 		if touchMenu then
 			touchMenu:Destroy()
@@ -4881,6 +5176,8 @@ function Boot.start()
 			if not down then
 				Input.release("pickup")
 				Input.release("up")
+			elseif state.body and require(script.Parent.runeView).ready(state.body.x, state.body.y) then
+				Input.press("up") -- 룬이 1순위(2026-11-12 사용자 "룬 떠있을때 전리품 주워진다고 룬 바로 못하는거 문제있어 무조건 룬이 1순위로 판정들어가야해") — 곁에 떨어진 것이 있어도 해방부터
 			elseif state.fx and state.fx:dropNear(state.body.x, state.body.y, RULES.pickup) then
 				Input.press("pickup")
 			else
@@ -4891,6 +5188,7 @@ function Boot.start()
 			Chat.toggle() -- 「채팅」 단추(2026-11-06)
 		end,
 		onToggle = function(on: boolean)
+			require(script.Parent.touchBar).setTouch(on) -- 바로가기 판(2026-11-13)
 			Hud.setTouch(on)
 			QuestHud.setTouch(on)
 			GainLog.setTouch(on)
@@ -4899,26 +5197,19 @@ function Boot.start()
 				state.placeParty()
 			end
 		end,
-		-- 메뉴: 창 이름이 적힌 큰 단추들
+		-- 메뉴: 창 이름이 적힌 큰 단추들(새 배치 · 예전 배치) · 바로가기 배치는 묶음 메뉴(2026-11-13 — ui/menuGrid.luau: state.openMenuGrid)
 		onMenu = function()
 			if touchMenu then
 				touchMenu:Destroy()
 				touchMenu = nil
 				return
 			end
-			local items = Windows.list() -- 키 설정은 넣지 않는다(손가락 단추에는 바꿀 키가 없다)
-			-- 키 없이 「메뉴」 안에 두는 창(출석 · 업적 · 모험의 서 · 게임 설정 — PC의 「메뉴」와 같다). 전에는 빠져 폰에서는 출석 · 업적을 열 수 없었다(2026-10-18 검토)
-			for _, w in UI_DATA.windows do
-				if w.menu and w.id ~= "keys" and Windows.info(w.id) and (not w.need or (state.bond and state.bond.open)) then
-					table.insert(items, { id = w.id, name = w.name })
-				end
+			if state.openMenuGrid then
+				state.openMenuGrid() -- (세 배치 모두 묶음 메뉴 — 2026-11-14 · 「메뉴」 단추는 이제 없고 바로가기 줄의 「전체」가 연다)
+				return
 			end
+			local items = state.touchMenuList() -- (창 · 출석 · 업적 · 관리 · 단추 배치 · 화면 배치 · 캐릭터 선택 — 2026-11-13 묶음 메뉴와 같이 쓰게 위로 뺐다)
 			state.touchMenuItems = {}
-			if state.me ~= nil and state.me.admin ~= nil then
-				table.insert(items, { id = "admin", name = "관리" }) -- 관리자에게만
-			end
-			table.insert(items, { id = "@arrange", name = "단추 배치" }) -- 스킬 · 물약을 단추에 놓는다
-			table.insert(items, { id = "@chars", name = "캐릭터 선택" }) -- 저장하고 캐릭터 고르기 화면으로 돌아간다
 			-- 단추가 화면보다 길면(폰의 화면 틀은 768x432 — 단추 열셋이면 520) 판은 화면에 들어가는 만큼만 서고, 그 안에서 위아래로 민다
 			--  사용자 2026-10-13(폰에서 해 보고): "메뉴탭 열었을때 스크롤이 되어야해 모든메뉴를 접근할수가 없다" — 치수는 Layout.touchMenu(공방 ui.js의 UILAYOUT.touchMenu)
 			local m = Layout.touchMenu(#items, Stage.uiH)
@@ -4933,15 +5224,7 @@ function Boot.start()
 				local itemBtn = Ui.button(list, win.name, 0, (i - 1) * K.row, m.btnW, function()
 					holder:Destroy()
 					touchMenu = nil
-					if win.id == "@arrange" then
-						Touch.arrange(true)
-					elseif win.id == "@chars" then
-						state.toSelect()
-					else
-						-- PC의 단추 줄 · 키와 같은 길(2026-10-21 점검): 「달빛 상점」 = 들어가는 공간(마을에서만) · 경매장 = 마을에서만.
-						--  전에는 여기서 창을 바로 열어(Windows.toggle) 폰에서는 상점이 예전처럼 창으로 열리고 마을 밖에서도 열렸다
-						state.openWin(win.id)
-					end
+					state.touchMenuPick(win.id) -- (전에는 여기서 창을 바로 열어 폰에서는 상점이 창으로 열리고 마을 밖에서도 열렸다 — 2026-10-21 점검)
 				end, { h = K.btnH, font = "body", main = win.id == "@arrange" })
 				state.touchMenuItems[win.id] = itemBtn.frame -- 튜토리얼(꿈)이 그 줄을 반짝이게 한다
 			end
@@ -4950,6 +5233,32 @@ function Boot.start()
 	})
 
 	Touch.setCounts()
+	-- 바로가기 판(폰 단추 배치 「바로가기」 — 2026-11-13 touchBar.luau): 칸 = 창(PC의 단추 줄과 같은 길) · 「전체」 = 묶음 메뉴
+	do
+		local TouchBar = require(script.Parent.touchBar)
+		TouchBar.init({
+			open = function(id: string)
+				if touchMenu then
+					touchMenu:Destroy()
+					touchMenu = nil
+				end
+				state.openWin(id)
+			end,
+			all = function()
+				state.openMenuGrid()
+			end,
+			name = function(id: string): string
+				local L = UI_DATA.layout.menu.labels
+				local info = Windows.info(id)
+				return (L and L[id]) or (info and info.name) or id
+			end,
+		})
+		Touch.barFrame = TouchBar.frame
+		-- (손가락 단추가 켜졌는가 = Touch.on — 전에는 그 순간 단추 판이 보이는가(Touch.root.Visible)를 넘겨, 들어올 때 대화 · 장면 · 캐릭터 선택으로 판이 잠깐 숨어 있으면
+		--  바로가기 줄이 꺼진 채로 남아 「바로가기」 배치에서 메뉴가 통째로 사라졌다 — 2026-11-14 사용자 "다른 버전ui 에서 메뉴탭이 아예 사라저버리는데?")
+		TouchBar.setTouch(Touch.on == true)
+		ViewOpts.applyTouch()
+	end
 
 	-- 내 상태가 올 때마다: 레벨이 올라 새 창이 열리면 메뉴 칸이 생기고 한 번 반짝인다 · 스마트폰 물약 단추의 남은 수
 	state.afterSelf = function(me)

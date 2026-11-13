@@ -14,8 +14,8 @@ end
 -- 아직 열지 않은 지역(2026-11-10 사용자 "일단 신지역은 아직 막아둬" — 공방 world.js CLOSED_REGIONS): 닫혀 있으면 ①의 「할 수 있다」 · ⑥의 「호수의 의뢰가 나온다」 대신 닫힌 것을 본다(⑦). 열면 원래대로
 local CLOSED = WM.regions.r5 ~= nil and WM.regions.r5.closed == true
 
--- ① 메인 일곱: 4편의 끝(「봉인의 문」 r4m9) 뒤에 이어 열린다 · 한 줄 · 모두 할 수 있다 · 모두 Lv.150 안
-for i = 1, 7 do
+-- ① 메인 열둘: 4편의 끝(「봉인의 문」 r4m9) 뒤에 이어 열린다 · 한 줄 · 모두 할 수 있다 · 일곱째까지 Lv.150 안 · 여덟째부터(물안개 숲 · 등롱 사당 · 달빛 버드나무 · 심연 · 용의 무덤 — 2026-11-11 · 다시 놓기 저녁)는 Lv.150~160 안
+for i = 1, 12 do
 	local q = Q["r5m" .. i]
 	expect(q ~= nil, "메인 r5m" .. i .. "가 있다")
 	if q then
@@ -24,7 +24,11 @@ for i = 1, 7 do
 		else
 			expect(q.kind == "main" and q.playable, q.id .. ": 할 수 있는 메인")
 		end
-		expect(q.lv <= 150, q.id .. ": Lv.150 안(Lv.150부터 한 레벨이 아주 길다) — " .. q.lv)
+		if i <= 7 then
+			expect(q.lv <= 150, q.id .. ": Lv.150 안(Lv.150부터 한 레벨이 아주 길다) — " .. q.lv)
+		else
+			expect(q.lv > 150 and q.lv <= 160, q.id .. ": Lv.150~160 안(윤슬 호수의 깊은 곳) — " .. q.lv)
+		end
 		eq(q.after, if i == 1 or CLOSED then "r4m9" else "r5m" .. (i - 1), q.id .. ": 앞의 메인을 끝내야 열린다(닫혀 있으면 모두 「봉인의 문」 뒤 — 받지는 못한다)")
 		for _, st in q.steps do
 			expect(st.type ~= "boss", q.id .. ": 메인은 보스와 싸우지 않는다")
@@ -42,8 +46,8 @@ for i = 1, 7 do
 	end
 end
 
--- ② 맵: 마을 하나 · 사냥터 셋(한 맵 = 한 몬스터) · 이야기 맵
-local want = { r5t = 0, r5a1 = "lotusbud", r5a2 = "starshard", r5a3 = "rippleknight", r5s = 0 }
+-- ② 맵: 마을 하나 · 사냥터 다섯(한 맵 = 한 몬스터 — 넷째 · 다섯째 2026-11-11) · 이야기 맵
+local want = { r5t = 0, r5a1 = "lotusbud", r5a2 = "starshard", r5a3 = "rippleknight", r5s = 0, r5a4 = "mistcrane", r5a5 = "lurefish", r5b1 = 0, r5b2 = "willowisp", r5c1 = 0 } -- (등롱 사당 · 달빛 버드나무 · 용의 무덤 — 2026-11-11 저녁)
 for id, mob in want do
 	local s = SCENES.scenes[id]
 	expect(s ~= nil, "장면 " .. id)
@@ -104,7 +108,7 @@ if reg then
 	for _, n in reg.nodes do
 		ids[n.id] = true
 	end
-	for _, id in { "r5t", "r5a1", "r5a2", "r5a3" } do
+	for _, id in { "r5t", "r5a1", "r5a2", "r5a3", "r5s", "r5a4", "r5a5", "r5b1", "r5b2", "r5c1" } do
 		expect(ids[id], "월드맵 마디 " .. id)
 	end
 end
@@ -113,7 +117,7 @@ end
 do
 	local Daily = req("ReplicatedStorage/shared/lune/sim/daily")
 	local DD = req("ReplicatedStorage/shared/lune/data/daily.generated")
-	local lake = { lotusbud = true, starshard = true, rippleknight = true }
+	local lake = { lotusbud = true, starshard = true, rippleknight = true, mistcrane = true, lurefish = true, willowisp = true, lotustoad = true, lakeserpent = true, lanternturtle = true } -- (두루미 · 아귀 2026-11-11 · 버들 정령 저녁 · 두꺼비 · 이무기 · 거북 2026-11-13)
 	local needs = 0
 	for _, q in DD.boards.tower.pool do
 		if lake[q.mob] then
@@ -123,7 +127,7 @@ do
 			eq(q.need, nil, "기도 탑의 풀: 걸어서 · 배로 가는 사냥터에는 조건이 없다 — " .. q.mob)
 		end
 	end
-	eq(needs, if CLOSED then 0 else 3, if CLOSED then "닫힌 지역: 기도 탑의 풀에 호수의 사냥터가 없다" else "기도 탑의 풀에 호수의 사냥터 셋")
+	eq(needs, if CLOSED then 0 else 9, if CLOSED then "닫힌 지역: 기도 탑의 풀에 호수의 사냥터가 없다" else "기도 탑의 풀에 호수의 사냥터 아홉(연잎 늪 · 이무기 굴 · 이끼 여울 2026-11-13)")
 	local function lakeTasks(book)
 		local n = 0
 		for day = 0, 20 do
@@ -171,4 +175,62 @@ if CLOSED then
 		expect(ex.to ~= "r5", "만월성의 지도에 윤슬 호수로 가는 출구가 없다")
 	end
 	eq(Quests.state(book, 150, "r5m1"), "locked", "4편을 끝낸 Lv.150: 제5편 첫 메인을 받지 못한다")
+end
+
+-- 2026-11-12(사용자 "메인퀘 초승달마을에서 안받아지는데"): 제5편의 첫 메인은 초승달 마을의 촌장(보름 영감 — 「봉인의 문」을 돌려받은 사람)이 준다.
+--  「주민은 제 지역의 퀘스트만」(Quests.givesIn)에 걸려 받을 수 없었다 → 지역이 넘어가는 메인(앞 메인이 다른 지역)은 주는 사람이 선 곳이면 어디서든
+do
+	local Quests = req("ReplicatedStorage/shared/lune/sim/quests")
+	local first = Quests.def("r5m1")
+	expect(first ~= nil and first.giver == "elder" and first.after == "r4m9", "제5편의 첫 메인 = 촌장(elder)이 · 「봉인의 문」 다음")
+	local town = nil -- 촌장이 선 곳(초승달 마을의 촌장의 집 — 1지역)
+	for key, sc in SCENES.scenes do
+		for _, n in sc.npcs or {} do
+			if n.id == "elder" then
+				town = sc
+			end
+		end
+	end
+	expect(town ~= nil and town.region == "r1", "촌장은 1지역(초승달 마을)에 선다")
+	town = town or SCENES.scenes.town
+	expect(Quests.givesIn(first, town.region, town.also), "초승달 마을(1지역)에서도 제5편의 첫 메인을 준다")
+	-- 「봉인의 문」까지 끝낸 Lv.150 캐릭터: 초승달 마을의 촌장에게 「!」(받을 것)
+	local book = {}
+	for _, def in D.list do
+		if def.kind == "main" and def.region ~= "r5" and def.playable then
+			book[def.id] = { done = true }
+		end
+	end
+	local at = Quests.atNpc(book, 150, "elder", town.region, town.also)
+	expect(table.find(at.offer, "r5m1") ~= nil, "촌장에게 제5편의 첫 메인이 「받을 것」으로 뜬다")
+	local second = Quests.def("r5m2")
+	expect(not Quests.givesIn(second, town.region, town.also), "제5편의 둘째 메인부터는 윤슬 호수에서만(지역 안의 것)")
+end
+
+-- 모든 지역: 받을 수 있는 퀘스트는 주는 사람이 선 곳 어딘가에서 실제로 준다(2026-11-12 — 제5편의 첫 메인 · 윤슬 호수의 지역 없음(r[1-4]) 두 가지를 이것으로 잡는다)
+do
+	local Quests = req("ReplicatedStorage/shared/lune/sim/quests")
+	local bad = {}
+	local n = 0
+	for _, def in D.list do
+		if def.playable and not def.auto and typeof(def.giver) == "string" and def.kind ~= "job" then
+			n += 1
+			local ok = false
+			for _, sc in SCENES.scenes do
+				for _, npc in sc.npcs or {} do
+					if npc.id == def.giver and Quests.givesIn(def, sc.region, sc.also) then
+						ok = true
+					end
+				end
+			end
+			if not ok then
+				table.insert(bad, def.id .. "(" .. def.giver .. ")")
+			end
+		end
+	end
+	expect(n > 100, "받을 수 있는 퀘스트를 모두 봤다(" .. n .. ")")
+	eq(table.concat(bad, ", "), "", "주는 사람에게서 받을 수 없는 퀘스트가 없다")
+	for _, key in { "r5t", "r5a1", "r5s", "r5c1" } do
+		eq(SCENES.scenes[key].region, "r5", "윤슬 호수의 맵은 지역 r5: " .. key)
+	end
 end

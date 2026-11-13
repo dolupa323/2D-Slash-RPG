@@ -77,7 +77,7 @@ do
 		expect(r.route ~= nil and r.route.score > 0.8, "매크로: 같은 길을 같은 시간에 돈다")
 		expect(r.sim ~= nil and r.sim.mean > 0.98, "매크로: 1분마다 같은 비율")
 	end
-	eq(Macro.level(st, now), "high", "매크로: 의심 높음 → 매크로 확인을 일찍(3 ~ 5분)")
+	eq(Macro.level(st, now), "mid", "매크로: 행동 로그가 높다 → 의심 중간(2026-11-13 낮: 행동 로그만으로는 「높음」이 아니다 — 사용자 \"매크로 방지그림이 너무 자주뜬다는데?\")")
 	expect(Macro.level(st, now, true) ~= "high", "날파리의 셈(noLong)에는 로그를 쓰지 않는다")
 	-- every초 동안은 앞의 셈을 그대로
 	local again = Macro.logScore(st, now + LG.every - 1)
@@ -179,6 +179,9 @@ do
 		end
 		Macro.note(st, "ci", 1, base + 7200)
 		Macro.note(st, "cf", 1, base + 7260)
+		-- 키를 한 프레임도 안 되게 누른다(프로그램 — 2026-11-13 손의 기록). 행동 · 룬만으로는 하루 73(문제)까지: 2026-11-13부터 행동의 무게 0.45(사람도 되풀이해 사냥한다)
+		Macro.note(st, "kt", 400, base + 7300)
+		Macro.note(st, "kz", 380, base + 7300)
 	end
 	local now = DAY0 + 6 * 86400 + 4 * 3600
 	local t = Macro.total(st.saved, now)

@@ -980,7 +980,7 @@ function Hero.pack(h)
 		weak = math.floor(h.weak),
 		expLeft = math.floor(h.expLeft or 0),
 		dropLeft = math.floor(h.dropLeft or 0),
-		runeCurse = if h.runeCurse then { s = h.runeCurse.s, map = h.runeCurse.map } else false, -- 룬의 저주(2026-11-10 — 다시 접속해도 남는다: server modules/runeGuard.luau)
+		runeCurse = if h.runeCurse then { s = h.runeCurse.s, n = math.floor(h.runeCurse.n or 0), map = h.runeCurse.map } else false, -- 룬의 저주(2026-11-10 — 다시 접속해도 남는다: server modules/runeGuard.luau · n = 그 사람이 룬을 두고 사냥한 초 — 2026-11-12)
 		bag = Bag.pack(h),
 		quests = Quests.pack(h.quests),
 		daily = Daily.pack(h.daily),
@@ -1028,8 +1028,10 @@ function Hero.unpack(id: any, data: any)
 	h.weak = if whole(data.weak, 0, 3600) then data.weak else 0
 	h.expLeft = if whole(data.expLeft, 0, Cash.RULES.exp.cap) then data.expLeft else 0 -- 경험치 쿠폰 — 생기기 전의 저장 = 0
 	h.dropLeft = if whole(data.dropLeft, 0, Cash.RULES.drop.cap) then data.dropLeft else 0 -- 드롭률 쿠폰(2026-10-27) — 생기기 전의 저장 = 0
-	local rc = data.runeCurse -- 룬의 저주(2026-11-10 — 단계 1 ~ 8 · 받은 맵) · 생기기 전의 저장 = 없다
-	h.runeCurse = if typeof(rc) == "table" and whole(rc.s, 1, 8) and typeof(rc.map) == "string" and #rc.map <= 40 then { s = rc.s, map = rc.map } else nil
+	local rc = data.runeCurse -- 룬의 저주(2026-11-10 — 단계 0 ~ 8 · 받은 맵) · 생기기 전의 저장 = 없다
+	-- 2026-11-12(사용자 "다른사람이 룬의저주를 만든자리를 그 대상자가 아닌사람이 들어갔다가 나오면 룬의 저주가 걸려버려 … 사냥터가 기준이아니라 그 유저가 기준인거야"):
+	--  저주를 그 사람이 룬을 두고 사냥한 초(n)로 셈한다 — n이 없는 옛 저장(맵의 저주를 물려받은 것 · 억울하게 걸린 사람이 섞여 있다)은 한 번 풀어 준다(제가 정한 것)
+	h.runeCurse = if typeof(rc) == "table" and whole(rc.s, 0, 8) and typeof(rc.n) == "number" and rc.n >= 0 and rc.n < 1e7 and typeof(rc.map) == "string" and #rc.map <= 40 then { s = rc.s, n = math.floor(rc.n), map = rc.map } else nil
 	-- 공짜 초기화: 이것이 생기기 전에 전직한 캐릭터(2026-10-11 이전 — 저장에 없다)는 한 번 받는다
 	h.resets = if whole(data.resets, 0, 1) then data.resets elseif data.resets == nil and h.job >= 2 then 1 else 0
 	h.last = if typeof(data.last) == "string" and #data.last <= 40 then data.last else nil -- 없는 장면이면 서버가 마지막 마을 · 시작 마을로(world.luau의 resumeScene)

@@ -60,6 +60,7 @@ Chat.scroll = 0 -- 맨 아래에서 올려 본 줄 수
 Chat.bottom = 0 -- (예전: Roblox 채팅 창의 아래 끝 — 이제 쓰지 않는다. 늘 0)
 Chat.onUnread = nil :: ((boolean) -> ())? -- 폰: 닫혀 있는 동안 남의 글이 왔다 · 열어서 봤다(boot가 touch의 점에 잇는다)
 Chat.onOpen = nil :: ((boolean) -> ())? -- 폰: 판이 열렸다 · 닫혔다(boot가 「채팅」 단추를 숨기고 보인다)
+Chat.onPeek = nil :: ((kind: string, name: string?, text: string) -> ())? -- 폰: 닫혀 있는 동안 남의 글이 왔다 — 그 글(boot가 바로가기 배치의 한 줄 미리 보기에 잇는다 · chatPeek.luau · 2026-11-13)
 Chat.hasParty = nil :: (() -> boolean)? -- 지금 파티가 있나(boot가 partyHud에 잇는다)
 
 local root: Instance? = nil
@@ -177,6 +178,9 @@ local function add(kind: string, name: string?, text: string, mine: boolean?)
 	end
 	if Chat.touch and not Chat.open and not mine and kind ~= "note" and Chat.onUnread then
 		Chat.onUnread(true)
+	end
+	if Chat.touch and not Chat.open and not mine and kind ~= "note" and Chat.onPeek then
+		Chat.onPeek(kind, name, text)
 	end
 	paint()
 end
@@ -368,10 +372,7 @@ build = function()
 	local r = rect()
 	local Lc = Log.layout(Chat.mode())
 	local y = if Chat.touch then r.y else r.y + r.h - Lc.h -- PC: 아래 끝은 그대로 · 폰: 위 끝은 그대로
-	local bx, by = r.x, y
-	if not Chat.touch then
-		bx, by = placed(r.at, r.x, y, r.w, Lc.h, Chat.pos) -- (옮긴 자리 — 위 Chat.pos)
-	end
+	local bx, by = placed(r.at, r.x, y, r.w, Lc.h, Chat.pos) -- (옮긴 자리 — 위 Chat.pos · 2026-11-12부터 폰도: 「화면 배치」 ui/arrange.luau로 옮긴다 — 자리는 기기 종류마다 따로 저장)
 	local box = Stage.place(root, "Chat", r.at, bx, by, r.w, Lc.h)
 	holder = box
 	box.Visible = not Chat.touch or Chat.open

@@ -39,7 +39,7 @@ for key, sc in S.scenes do
 			end
 			expect(#sc.layers >= 2 and top.f == 0 and top.w == S.view[1] and top.h == S.view[2] and drift, key .. " 배는 흘러가는 바다 위에 화면만 한 배 그림 한 장")
 		else
-			expect(#sc.layers == 1 and sc.layers[1].f == 0 and sc.layers[1].w == S.view[1] and sc.layers[1].h == S.view[2], key .. " 실내는 화면만 한 방 그림 한 장")
+			expect((sc.jail and #sc.layers == 0) or #sc.layers == 1 and sc.layers[1].f == 0 and sc.layers[1].w == S.view[1] and sc.layers[1].h == S.view[2], key .. " 실내는 화면만 한 방 그림 한 장") -- (검정 방 — 매크로 감옥 2026-11-11: 그림이 하나도 없다)
 		end
 		eq(sc.w * T, S.view[1], key .. " 실내는 한 화면 폭")
 		expect(not sc.tall, key .. " 실내는 카메라가 세로로 움직이지 않는다")

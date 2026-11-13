@@ -7,8 +7,13 @@ local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
 local TICK = 1 / 20
 
 local handlers = {}
+local revives = {} -- [UserId] = 마지막으로 받은 Revive(2026-11-12 — 파티가 한꺼번에 들어가는가)
 MOCK("ReplicatedStorage/shared/lune/net/net", {
-	FireClient = function() end,
+	FireClient = function(name, player, e)
+		if name == "Revive" then
+			revives[player.UserId] = e
+		end
+	end,
 	OnServer = function(name, fn)
 		handlers[name] = fn
 	end,
@@ -184,6 +189,13 @@ do
 	local r = handlers.Week(pa, "enter", B.id, "normal", true, true)
 	expect(r and r.ok, "파티로 연습")
 	eq(b.scene, a.scene, "둘 다 같은 연습의 방")
+	-- 2026-11-12 사용자 "보스입장하고 파티원이 바로 안보여": 먼저 옮겨진 사람(방장)이 받은 방 목록에도 파티원이 이미 있다(World.moveGroup — 화면의 막이 파티원 그림까지 받은 뒤에 걷힌다)
+	local ra = revives[pa.UserId]
+	local names = {}
+	for _, w in (ra and ra.room and ra.room.who) or {} do
+		names[w.id] = true
+	end
+	expect(names[a.hero.id] and names[b.hero.id], "방장이 받은 방 목록에 둘 다 있다(전에는 저만)")
 	local now = SNOW
 	expect(Weekly.practiceLeft(a.hero.rift, now) >= 1e6 and Weekly.practiceLeft(b.hero.rift, now) >= 1e6, "파티로 들어가도 제한 없음")
 	World.removePlayer(pa)

@@ -1,7 +1,8 @@
 -- 마을의 랭킹 석상(2026-11-03 사용자 "마을에 랭킹 1,2,3 등 석상 만들자 말걸면 멋진말 나오고").
 --  장면의 주민 가운데 statue(순위)가 적힌 것(그림 없는 주민 — 이름표와 말만: 공방 design/town.js의 TOWNMAP.statues · 초승달 마을 명예의 전당 앞)의 자리에
 --  받침대(1위 금 · 2위 은 · 3위 동 — Codex 그림을 점으로 옮긴 것: 캐릭터 그림판 plinth1 ~ 3 · 공방 tools/build_lune_statue.py)를 놓고, 그 위에
---  레벨 순위의 그 사람(명예의 전당의 레벨 판과 같은 것 — Net "Rank")의 직업 캐릭터를 돌로 세운다: 캐릭터 그림판 stone_<직업>(서 있는 첫 장을 밝은 돌 다섯 색으로
+--  Lv.150에 오른 차례로 박제된 그 사람(Net "Rank"의 statues — 서버 world.luau World.statueRows: 1위 처음 만렙 · 2 · 3위 만렙 열 사람의 기록. 레벨 판이 아니다 —
+--   2026-11-12 사용자 "석상은 150레벨때 찍은 순서대로 랭킹 1,2,3등이 박제되는거야 … 석상사람이 바뀌면 안되지")의 직업 캐릭터를 돌로 세운다: 캐릭터 그림판 stone_<직업>(서 있는 첫 장을 밝은 돌 다섯 색으로
 --   다시 칠한 것 — 공방 tools/build_lune_statue.py. 그림 위에 색을 곱하면 청록 · 분홍이 비쳐 유령처럼 보여서 따로 둔다).
 --  이름표 = 「레벨 n위 그 사람의 이름」(순위가 비면 설계의 이름 「석상」 · 받침대만). 들어설 때 받고 REFRESH초마다 다시 받는다.
 --  층 = 맵 틀 안 포탈 그림 위 · 주민 · 몬스터 · 캐릭터 뒤(맵의 소품처럼 — 사람을 가리지 않는다). 자리 · 돌의 색 · 바라보는 쪽은 제가 정한 것
@@ -74,7 +75,7 @@ function RankStatues.soon()
 	nextFetch = 0
 end
 
--- 한 석상을 그 사람(row = 레벨 판의 줄 { name, class } · 없으면 nil)으로 세운다
+-- 한 석상을 그 사람(row = { name, class } — Lv.150에 오른 차례의 기록 · 없으면 nil)으로 세운다
 local function stand(s, row)
 	local who = if row and typeof(row.class) == "string" and CHARS.chars["stone_" .. row.class] then "stone_" .. row.class else nil
 	if s.who ~= who then
@@ -117,9 +118,10 @@ function RankStatues.update()
 		if not ok or typeof(got) ~= "table" or my ~= gen then
 			return
 		end
-		local rows = got.level or {}
+		local rows = if typeof(got.statues) == "table" then got.statues else {} -- (레벨 판 got.level이 아니다 — 2026-11-12)
 		for _, s in list do
-			stand(s, rows[s.n.statue])
+			local row = rows[s.n.statue]
+			stand(s, if typeof(row) == "table" then row else nil)
 		end
 	end)
 end

@@ -15,6 +15,7 @@
 --  달돈 · 달가루 · 정수는 칸을 차지하지 않는다 — 창 아래에 그림과 숫자로(공방 「돈 · 상점」 탭의 가방 규칙).
 --  PC · 스마트폰이 같은 창이다: 누르기 = 톡, 끌기 = 누른 채 움직이기, 두 번 누르기 = 톡톡.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UIS = game:GetService("UserInputService")
 local lune = ReplicatedStorage.shared.lune
 local Items = require(lune.sim.items)
 local Bag = require(lune.sim.bag)
@@ -107,6 +108,12 @@ local function purse(parent: Instance, icon: string, x: number, y: number, w: nu
 end
 BagWindow.purse = purse
 
+-- 마우스를 올린 칸의 정보를 띄우는가(셈만 — 시험이 본다 · 장비 창도 쓴다): 칸에 것이 있고 · 고른 것 · 여러 개 분해가 없고 · 다른 창(owner가 아닌 것)의 상세가 떠 있지 않고 ·
+--  캐시 탭이 아니고 · 끌지 않고 · 마우스(손가락 아님)
+function BagWindow.canPeek(has: boolean, selected: boolean, bulkOn: boolean, detailOwner: string?, owner: string, tabKey: string, dragging: boolean, touch: boolean): boolean
+	return has and not selected and not bulkOn and (detailOwner == nil or detailOwner == owner) and tabKey ~= "cash" and not dragging and not touch
+end
+
 function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 	local ui = ctx.ui
 	local S = ItemCell.size()
@@ -121,6 +128,9 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 	--  잡화 상인의 상점 창이 옆에 있으면(ui.service == "shop") 「분해」 자리가 「판매」 → 칸 · 등급 단추(그 등급의 장비를 모두 고름 · 다시 누르면 풂 · ★는 빼고) → [판매]는 한 번 더 묻는다 → 서버 Bag.sellMany
 	local bulkMode = "dismantle" -- "dismantle" · "sell"(켤 때 정한다 — 상점 창이 닫히면 판매는 꺼진다)
 	local hot: number? = nil -- 끌던 것을 놓을 칸
+	-- 마우스를 올린 칸(2026-11-13 사용자 "pc 버전의 ux 를 개선" — 메이플 PC처럼 칸에 마우스를 올리면 누르지 않아도 그 아이템의 정보가 뜬다):
+	--  아무것도 고르지 않았을 때만(고른 것 · 여러 개 분해 · 다른 창의 상세가 먼저) · 할 일 단추 없이 정보만 · 벗어나면 닫힌다 · 누르면 지금처럼 고른다(단추가 붙는다). 손가락은 아니다(폰은 누를 때도 MouseEnter가 온다)
+	local peek = nil :: { tab: string, slot: number }?
 	local lastClick = { slot = 0, t = 0 }
 	local dragEnd = 0 -- 마지막으로 끌기를 끝낸 때(그 직후에 오는 "눌렀다"는 끌기의 끝이지 누른 것이 아니다)
 	local view = {}
@@ -286,6 +296,32 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		local n = ItemCell.at(cells, at)
 		return if n and bag and n <= bag.size then n else nil
 	end
+	-- 칸의 것을 바로 쓴다(두 번 누르기 · PC 오른쪽 클릭 — 2026-11-13 사용자 "pc 버전의 ux 를 개선": 많은 PC RPG처럼 오른쪽 클릭 한 번으로 장착 · 사용):
+	--  장비 = 장착(낄 수 있을 때) · 소비 = 사용 · 캐시 탭 = 꺼내기 · 넣기 / 타기 · 내리기 / 장착 · 해제 · 기타 = 아무것도 하지 않는다
+	local function quickAct(it)
+		if it.ride then
+			if it.kind == "pet" and ctx.togglePet then
+				ctx.togglePet(it.ride)
+			elseif it.kind == "mount" and ctx.toggleRide then
+				ctx.toggleRide(it.ride)
+			elseif it.kind == "wskin" and ctx.toggleWskin then
+				ctx.toggleWskin(it.ride) -- 캐시 무기: 장착 · 해제
+			elseif it.kind == "dskin" and ctx.toggleDskin then
+				ctx.toggleDskin(it.ride) -- 데미지 스킨: 장착 · 해제(2026-10-29)
+			elseif it.kind == "bubble" and ctx.toggleBubble then
+				ctx.toggleBubble(it.ride) -- 말풍선 꾸밈: 장착 · 해제(2026-11-07)
+			elseif it.kind == "ntag" and ctx.toggleNtag then
+				ctx.toggleNtag(it.ride) -- 이름표 테두리: 장착 · 해제(2026-11-10)
+			end
+			return
+		end
+		local me = ctx.me()
+		if key() == "gear" and me and BagWindow.canWear(me, it) then
+			wear(it)
+		elseif key() == "use" then
+			use(it)
+		end
+	end
 	local function makeCell(i: number)
 		local col, row = (i - 1) % COLS, math.floor((i - 1) / COLS)
 		local cell
@@ -308,35 +344,38 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 			lastClick = { slot = if twice then 0 else n, t = now }
 			if not it then
 				unselect()
-			elseif twice and it.ride then
-				-- 캐시 탭: 두 번 누르기 = 꺼내기 · 넣기 / 타기 · 내리기
-				if it.kind == "pet" and ctx.togglePet then
-					ctx.togglePet(it.ride)
-				elseif it.kind == "mount" and ctx.toggleRide then
-					ctx.toggleRide(it.ride)
-				elseif it.kind == "wskin" and ctx.toggleWskin then
-					ctx.toggleWskin(it.ride) -- 캐시 무기: 장착 · 해제
-				elseif it.kind == "dskin" and ctx.toggleDskin then
-					ctx.toggleDskin(it.ride) -- 데미지 스킨: 장착 · 해제(2026-10-29)
-				elseif it.kind == "bubble" and ctx.toggleBubble then
-					ctx.toggleBubble(it.ride) -- 말풍선 꾸밈: 장착 · 해제(2026-11-07)
-				elseif it.kind == "ntag" and ctx.toggleNtag then
-					ctx.toggleNtag(it.ride) -- 이름표 테두리: 장착 · 해제(2026-11-10)
-				end
 			elseif twice then
-				-- 두 번 누르기: 장비는 장착, 소비 아이템은 사용
-				local me = ctx.me()
-				if key() == "gear" and me and BagWindow.canWear(me, it) then
-					wear(it)
-				elseif key() == "use" then
-					use(it)
-				end
+				quickAct(it) -- 두 번 누르기(아래 — 오른쪽 클릭과 같은 일)
 			else
 				choose(key(), n, it)
 			end
 			redraw()
 		end, S)
 		cells[i] = cell
+		local right = (cell.hit :: any).MouseButton2Click -- (시험의 가짜 화면에는 없을 수 있다)
+		if right then
+			right:Connect(function()
+				local it = cell.item
+				if not it or bulk or ctx.quick.dragging() then
+					return
+				end
+				peek = nil
+				quickAct(it)
+				redraw()
+			end)
+		end
+		cell.hit.MouseEnter:Connect(function()
+			if BagWindow.canPeek(cell.item ~= nil, sel ~= nil, bulk ~= nil, ui.detail or ItemDetail.pinned(), "bag", key(), ctx.quick.dragging(), UIS:GetLastInputType() == Enum.UserInputType.Touch) then
+				peek = { tab = key(), slot = i }
+				view.refresh()
+			end
+		end)
+		cell.hit.MouseLeave:Connect(function()
+			if peek and peek.slot == i then
+				peek = nil
+				view.refresh()
+			end
+		end)
 		-- 끌기: 칸의 것을 누른 채 움직이면 그림이 따라온다(ui/quickEdit.luau가 끌기를 맡는다).
 		--  가방의 다른 칸 = 옮긴다 · 퀵슬롯 = 소비 아이템을 그 칸에 놓는다 · 창고 창 = 맡긴다 · 상점 창 = 팔지 묻는다
 		cell.hit.InputBegan:Connect(function(input)
@@ -796,9 +835,35 @@ function BagWindow.build(body: Frame, ctx, w: number, _h: number)
 		end
 		if not sel or not entry then
 			unselect()
+			if ui.detail == "bag" then
+				ui.detail = nil -- 고른 것이 없다: 주인 표시를 푼다(2026-11-14 — 남아 있으면 다른 창의 마우스 올림이 창을 닫을 때까지 막혔다)
+			end
+			-- 마우스를 올린 칸(위의 peek): 정보만(단추 없음 · 닫기 = 올린 것을 푼다)
+			local pin = ItemDetail.pinned()
+			local pe = if peek and peek.tab == key() and ui.detail == nil and (pin == nil or pin == "bag") then bag[peek.tab][peek.slot] else nil
+			if pe then
+				local pspec = { item = pe, buttons = {}, peek = true, onClose = function()
+					peek = nil
+					ItemDetail.hide("bag")
+				end }
+				if peek.tab == "gear" then
+					pspec.info = ItemInfo.gear(pe, { level = me.level, class = me.class, spec = me.spec, equip = bag.equip }, bag.equip[pe.slot], false)
+					pspec.key = table.concat({ "peek", "gear", pe.id, pe.q, pe.star, me.level, BagWindow.exKey(pe), tostring(pe.lock) }, "|")
+				else
+					pspec.info = ItemInfo.goods(pe.item, me, Bag.countIn(bag, pe.item))
+					pspec.key = table.concat({ "peek", peek.tab, peek.slot, pe.item, pe.n, me.level }, "|")
+				end
+				if pe.lock and pspec.info and pspec.info.notes then
+					table.insert(pspec.info.notes, { WORDS.lockNote, "accent" })
+				end
+				ItemDetail.show("bag", pspec)
+				return
+			end
+			peek = nil
 			ItemDetail.hide("bag")
 			return
 		end
+		peek = nil -- (고르면 올린 것은 잊는다)
 		local slot, tabKey, service = sel.slot, sel.tab, ui.service
 		local spec = { item = entry, buttons = {}, onClose = function()
 			unselect()

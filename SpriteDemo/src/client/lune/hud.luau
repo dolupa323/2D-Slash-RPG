@@ -530,6 +530,28 @@ function Hud.setMenu(list, onClick: (string) -> (), onMove: (({ string }) -> ())
 		flash.ZIndex = 8
 		flash.Visible = false
 		local hit = Ui.hit(frame)
+		-- 단축키(2026-11-13 사용자 "pc 버전의 ux 를 개선"): 마우스를 올리면 칸 위에 그 창의 키 딱지(퀵슬롯의 딱지와 같은 그림 — 늘 보이지는 않는다: 10-08 개편의 이름표 그대로) ·
+		--  키는 「키 설정」에서 바꾼 대로(drawKeyHints가 다시 짓는다) · 손가락은 아니다
+		local keyText = Format.keyShort(item.key or "")
+		local cap = nil
+		if keyText ~= "" then
+			cap = Ui.keycap(frame, keyText, math.floor(s / 2), -KEY_UP)
+			cap.frame.Name = "KeyHint"
+			cap.frame.Visible = false
+		end
+		local enter, leave = hit.MouseEnter, hit.MouseLeave -- (시험의 가짜 화면에는 없을 수 있다)
+		if enter and leave then
+			enter:Connect(function()
+				if cap and not touching() then
+					cap.frame.Visible = true
+				end
+			end)
+			leave:Connect(function()
+				if cap then
+					cap.frame.Visible = false
+				end
+			end)
+		end
 		hit.Activated:Connect(function()
 			if (Hud.menuDrag and Hud.menuDrag.moved) or os.clock() - (Hud.menuDragEnd or -1) < 0.25 then
 				return -- 끌어 옮긴 것(창을 열지 않는다)
@@ -543,7 +565,7 @@ function Hud.setMenu(list, onClick: (string) -> (), onMove: (({ string }) -> ())
 			end
 		end) end
 		frame.Visible = not Hud.touch
-		Hud.menu[item.id] = { frame = frame, cell = cell, label = label, dot = dot, flash = flash, mark = false, i = i, n = n }
+		Hud.menu[item.id] = { frame = frame, cell = cell, label = label, dot = dot, flash = flash, mark = false, i = i, n = n, keyHint = cap }
 	end
 	Hud.setOpen(Hud.openSet or {})
 	for id, on in Hud.marks do -- 단추를 다시 지어도 점은 그대로(가방이 가득 찼다 · 찍을 점수 … — 2026-10-18)
@@ -552,8 +574,12 @@ function Hud.setMenu(list, onClick: (string) -> (), onMove: (({ string }) -> ())
 end
 
 -- 열려 있는 창의 단추는 민트(테두리와 이름). set = { [창 id] = true }
+Hud.onOpenSet = nil :: ((set: any) -> ())? -- 열린 창이 바뀌었다(boot — 바로가기 판의 칸도 민트로 · 2026-11-13)
 function Hud.setOpen(set)
 	Hud.openSet = set
+	if Hud.onOpenSet then
+		Hud.onOpenSet(set)
+	end
 	for id, item in Hud.menu or {} do
 		local on = set[id] == true
 		item.cell:setOn(on)
@@ -770,20 +796,35 @@ end
 --  체력 덩어리는 아래 가운데로 옮긴다(왼쪽 아래에는 이동 패드가 온다 — data/ui.generated.luau의 hudTouch)
 function Hud.setTouch(on: boolean)
 	Hud.touch = on
-	local v = if on and UI.hudTouch.vitals then UI.hudTouch.vitals else UI.hud.vitals
+	local v = if on and Hud.left and UI.hudTouchLeft and UI.hudTouchLeft.vitals then UI.hudTouchLeft.vitals elseif on and UI.hudTouch.vitals then UI.hudTouch.vitals else UI.hud.vitals -- (왼손 배치 — 2026-11-14)
 	local vx = if on and Hud.legacy and UI.touchOld then UI.touchOld.vitalsX else v.x -- 예전 배치(2026-10-28)의 체력 막대 자리
-	Hud.vitalsBox.Position = Stage.atPosition(v.at, vx, v.y)
-	-- 버프 자리: 스마트폰에서는 오른쪽 위의 「메뉴」 단추만큼 왼쪽으로
-	local bf = if on and UI.hudTouch.buffs then UI.hudTouch.buffs else UI.hud.buffs
-	Hud.buffRoot.Position = Stage.atPosition(bf.at, bf.x, bf.y)
+	Stage.move(Hud.vitalsBox, v.at, vx, v.y) -- (옮긴 자리 · 화면 안 — 2026-11-12)
+	-- 버프 자리: 스마트폰에서는 오른쪽 위의 「메뉴」 단추만큼 왼쪽으로 · 바로가기 배치는 그 판의 왼쪽(2026-11-13 — 공방 basics.js TOUCH_BAR.buffs)
+	local bf = if on and Hud.bar and UI.touchBar then UI.touchBar.buffs elseif on and UI.hudTouch.buffs then UI.hudTouch.buffs else UI.hud.buffs
+	Stage.move(Hud.buffRoot, bf.at, bf.x, bf.y)
 	Hud.skillRoot.Visible = not on and not Hud.locked
 	for _, item in Hud.menu or {} do
 		item.frame.Visible = not on
 	end
 end
 
+-- 왼손 배치(2026-11-14): 체력 막대는 가운데에서 거울 자리(공방 basics.js HUDTOUCH_LEFT)
+Hud.left = false
+function Hud.setLeft(on: boolean)
+	Hud.left = on == true
+	if Hud.touch and Hud.vitalsBox then
+		Hud.setTouch(true)
+	end
+end
 -- 폰 단추 배치(2026-10-28 — 게임 설정 창): 예전 배치면 체력 막대도 그때의 자리로
 Hud.legacy = false
+Hud.bar = false -- 바로가기 배치(2026-11-13): 버프가 오른쪽 위 바로가기 판의 왼쪽
+function Hud.setBar(on: boolean)
+	Hud.bar = on == true
+	if Hud.touch and Hud.vitalsBox then
+		Hud.setTouch(true)
+	end
+end
 function Hud.setLegacy(on: boolean)
 	Hud.legacy = on == true
 	if Hud.touch and Hud.vitalsBox then
@@ -793,8 +834,13 @@ end
 
 -- 메뉴 단추를 눈에 띄게(찍을 점수가 남았을 때 등)
 Hud.marks = {} :: { [string]: boolean } -- 단추마다 점이 켜져 있어야 하는가(단추를 다시 지을 때 되살린다)
+Hud.onMark = nil :: (() -> ())? -- 점이 바뀌었다(boot — 폰의 「메뉴」 단추 · 바로가기 판의 점을 다시 맞춘다 · 2026-11-13)
 function Hud.markMenu(id: string, on: boolean)
+	local changed = Hud.marks[id] ~= on
 	Hud.marks[id] = on
+	if changed and Hud.onMark then
+		Hud.onMark()
+	end
 	local item = Hud.menu and Hud.menu[id]
 	if item and item.mark ~= on then
 		item.mark = on

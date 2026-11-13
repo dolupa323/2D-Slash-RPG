@@ -863,6 +863,10 @@ function Caster:begin(hero, id: string, seg: number, mates, info): (boolean, num
 				surged = true
 			end
 			lv = if Buffs.full(hero) then levels else math.clamp(floor(max(0, held - segTime(hero.class, prev)) / per + 0.08) + from, 0, levels)
+			-- 화면이 센 단계와 맞춘다(info.claim — 흔들림 안이면 화면의 단계 · 보이는 범위 = 맞는 범위 · sim/kit.luau Kit.chargeClaim · 2026-11-11 밤)
+			if not Buffs.full(hero) and info and info.claim ~= nil then
+				lv = Kit.chargeClaim(lv, info.claim, max(0, held - segTime(hero.class, prev)), per, from, levels)
+			end
 		end
 		if lv > 0 or not ctx then
 			ctx = self:context(a, id, lv, mates)

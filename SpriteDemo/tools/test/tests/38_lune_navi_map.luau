@@ -490,7 +490,7 @@ do
 		partSize = function(name) return KITDATA.parts[name].w, KITDATA.parts[name].h end,
 	})
 	local resize = {}
-	local StageMock = { uiH = 540, place = function(root, name, at, x, y, w, h) return frame(name, root, x, y, w, h) end, atPosition = function() return {} end, onResize = function(fn) table.insert(resize, fn) end }
+	local StageMock = { uiH = 540, place = function(root, name, at, x, y, w, h) return frame(name, root, x, y, w, h) end, atPosition = function() return {} end, move = function(frame) frame.Position = {} end --[[ (진짜 Stage.move — 2026-11-12) ]], onResize = function(fn) table.insert(resize, fn) end }
 	MOCK("Client/lune/stage", StageMock)
 	MOCK("Client/lune/overlay", { layer = function(name) return frame(name) end, x = function(wx) return wx * 2 end, y = function(wy) return wy * 2 end })
 	local QuestHud = req("Client/lune/questHud")
@@ -584,6 +584,15 @@ do
 	end
 	eq(#pressed, keys, "단추를 누르면 그 줄의 이름표가 온다")
 	expect(table.find(pressed, "r1m3") ~= nil, "하는 중인 퀘스트의 단추")
+	-- 폰 + 바로가기 줄(2026-11-14 — 세 배치 모두에 줄을 넣자 폰에서 「attempt to index nil with 'h'」: 지운 touchBar.quest를 읽었다)
+	local okBar, errBar = pcall(function()
+		QuestHud.setTouch(true)
+		QuestHud.setBar(true)
+		QuestHud.set(book, names, 6, nil)
+		QuestHud.setBar(false)
+		QuestHud.setTouch(false)
+	end)
+	expect(okBar, "폰 + 바로가기 줄에서 알리미를 그려도 오류가 없다 " .. tostring(errBar))
 
 	-- 머리 위의 화살표: 방향마다 하나만 보인다 · 「enter」는 위쪽 화살표 · 「none」 · nil이면 감춘다 · 캐릭터 머리 위(발밑에서 UP만큼 위)
 	local NaviArrow = req("Client/lune/naviArrow")

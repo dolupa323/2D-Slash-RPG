@@ -22,9 +22,14 @@ local shown = {} -- 칸마다 지금 적힌 글 · 색(바뀔 때만 다시 그�
 GainLog.touch = false
 GainLog.covered = false
 
+GainLog.left = false -- 왼손 배치(2026-11-14 — 오른쪽 위 퀘스트 알리미 아래: 왼쪽 위에는 뒤집은 칸 단추가 온다)
 local function rect()
-	local r = if GainLog.touch and UI.hudTouch.gainLog then UI.hudTouch.gainLog else UI.hud.gainLog
+	local r = if GainLog.touch and GainLog.left and UI.hudTouchLeft and UI.hudTouchLeft.gainLog then UI.hudTouchLeft.gainLog elseif GainLog.touch and UI.hudTouch.gainLog then UI.hudTouch.gainLog else UI.hud.gainLog
 	return r
+end
+function GainLog.setLeft(on: boolean)
+	GainLog.left = on == true
+	GainLog.setTouch(GainLog.touch)
 end
 
 function GainLog.init(root: Frame)
@@ -41,7 +46,7 @@ function GainLog.setTouch(on: boolean)
 	GainLog.touch = on
 	if box then
 		local r = rect()
-		box.Position = Stage.atPosition(r.at, r.x, r.y)
+		Stage.move(box, r.at, r.x, r.y) -- (옮긴 자리 · 화면 안 — 2026-11-12)
 	end
 end
 

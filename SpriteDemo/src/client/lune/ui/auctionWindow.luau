@@ -251,25 +251,73 @@ function AuctionWindow.build(body: Frame, ctx, w: number, h: number)
 			end
 		end, { h = S.catH })
 	end
+	-- 무기의 직업(2026-11-13 — 누를 때마다 다음 직업으로 바뀌던 것을 펼침 목록으로: 단추 = 지금 직업 + 아래 화살 · 누르면 바로 아래에 다섯 직업이 모두(고른 것 민트) ·
+	--  고르면 닫힌다 · 목록 밖(창 안)을 누르거나 단추를 다시 누르면 닫힌다)
+	local classX = #cats * (S.catW + S.catGap)
+	local classList: Frame? = nil
+	local function closeClassList()
+		if classList then
+			classList:Destroy()
+			classList = nil
+		end
+	end
 	local classButton
-	classButton = Ui.button(header, View.className(class), #cats * (S.catW + S.catGap), 0, S.classW, function()
-		class = View.nextClass(class)
-		classButton:setText(View.className(class))
-		reload(false)
+	classButton = Ui.button(header, View.className(class), classX, 0, S.classW, function()
+		if classList then
+			closeClassList()
+			return
+		end
+		local list = View.classList()
+		local rowH = S.catH + 2
+		local holder = Ui.group(body, 0, 0, w, h, "ClassPick")
+		holder.ZIndex = 40
+		local away = Ui.hit(holder) -- (목록 밖을 누르면 닫힌다)
+		away.ZIndex = 1
+		away.Activated:Connect(closeClassList)
+		local panel = Ui.panel(holder, classX, S.top + S.catH + 2, S.classW, #list * rowH + 6)
+		panel.ZIndex = 2
+		for i, c in list do
+			local b = Ui.button(panel, c.name, 3, 3 + (i - 1) * rowH, S.classW - 6, function()
+				closeClassList()
+				if class ~= c.id then
+					class = c.id
+					classButton:setText(View.className(class))
+					reload(false)
+				end
+			end, { h = S.catH, main = c.id == class })
+			b.frame.Name = "Class_" .. c.id
+		end
+		classList = holder
 	end, { h = S.catH })
+	-- 아래 화살(작은 세모 — 목록이 펼쳐진다는 표시)
+	for k = 0, 2 do
+		local tri = Ui.box(classButton.frame, S.classW - 12 + k, math.floor(S.catH / 2) - 1 + k, 5 - k * 2, 1, C.dim)
+		tri.ZIndex = 8
+	end
 	local refresh = Ui.button(header, W.refresh, w - S.refreshW, 0, S.refreshW, function()
 		reload(true)
 	end, { h = S.catH })
 	local searchY = S.searchY - S.top
 	local search = Ui.field(header, 0, searchY, S.searchW, S.field, W.search)
-	local sortButton
-	sortButton = Ui.button(header, View.sortName(sort), S.searchW + 8, searchY, S.sortW, function()
-		sort, ask = View.nextSort(sort), nil
-		sortButton:setText(View.sortName(sort))
-		fillBuy()
-		paint()
-	end, { h = S.field })
-	local total = Ui.text(header, "", S.searchW + 8 + S.sortW + 8, searchY + 6, w - S.searchW - S.sortW - 16, { align = "right", color = C.dim })
+	-- 차례(2026-11-13 — 누를 때마다 바뀌던 단추를 둘 다 보이는 단추로: 고른 것 민트)
+	local sortButtons = {} :: { any }
+	local sortGroup = Ui.group(header, S.searchW + 8, searchY, 1, S.field, "Sort")
+	local sx = 0
+	for _, sd in View.sortList() do
+		local bw = Ui.measure(sd.name, "small") + 14
+		local b = Ui.button(sortGroup, sd.name, sx, 0, bw, function()
+			if sort ~= sd.id then
+				sort, ask = sd.id, nil
+				fillBuy()
+				paint()
+			end
+		end, { h = S.field, main = sd.id == sort })
+		b.frame.Name = "Sort_" .. sd.id
+		sortButtons[sd.id] = b
+		sx += bw + 4
+	end
+	local sortW = sx - 4
+	local total = Ui.text(header, "", S.searchW + 8 + sortW + 8, searchY + 6, w - S.searchW - sortW - 16, { align = "right", color = C.dim })
 
 	local listY = S.listTop
 	local listH = h - S.listTop - S.footH - 4
@@ -677,8 +725,14 @@ function AuctionWindow.build(body: Frame, ctx, w: number, h: number)
 		end
 		classButton.frame.Visible = cat == "weapon"
 		classButton:setEnabled(not busy)
+		if busy or cat ~= "weapon" or (tab ~= "buy" and tab ~= "log") then
+			closeClassList()
+		end
 		refresh:setEnabled(not busy)
-		sortButton.frame.Visible = tab == "buy"
+		sortGroup.Visible = tab == "buy"
+		for id, b in sortButtons do
+			b:setMain(id == sort)
+		end
 		for _, b in buyRows do
 			b.button:setEnabled(not busy and me ~= nil and me.money >= b.row.p)
 		end

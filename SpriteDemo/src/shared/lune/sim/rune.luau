@@ -15,8 +15,19 @@ local R, B = D.rune, D.bait
 function Rune.newMap()
 	return { huntSince = nil :: number?, lastKill = nil :: number?, rune = nil, nextId = 1 }
 end
+--  h = 룬을 푼 뒤(또는 처음부터) 사냥한 초 — own초가 되면 그 사람이 선 사냥 맵에 룬이 없으면 바로 나온다(2026-11-13 · server runeGuard.luau가 쌓고 계정에 남긴다)
 function Rune.newPlayer()
-	return { cdUntil = 0, guardUntil = 0, buffUntil = 0, try = nil, retryAt = 0, bait = { nextAt = nil :: number?, cur = nil, nextId = 1 } }
+	return { cdUntil = 0, guardUntil = 0, buffUntil = 0, h = 0, try = nil, retryAt = 0, bait = { nextAt = nil :: number?, cur = nil, nextId = 1 } }
+end
+-- 그 사람 몫의 룬(2026-11-13 사용자: "룬한번 사람이 까버리고 가호 받은상태에서 15분 매크로 돌려버리고 15분 끝나기전에 게임 껐다가 다시들어와서"):
+--  룬을 푼 뒤 own초 넘게 사냥했는데 지금 선 맵에 룬이 없다 → 그 맵에 바로 나올 때인가(맵의 룬은 맵마다라 채널 · 서버를 옮기면 처음부터였다)
+function Rune.owes(m, p): boolean
+	return m ~= nil and m.rune == nil and p ~= nil and (p.h or 0) >= R.own
+end
+-- 룬을 그 자리에 놓는다(Rune.tick이 고른 때가 아닌 때 — 위 Rune.owes)
+function Rune.place(m, now: number, x: number, y: number)
+	m.rune = { x = x, y = y, born = now, id = m.nextId }
+	m.nextId += 1
 end
 
 -- 그 맵에서 잡았다: 사냥이 끊겼으면(B.hunt.window초 넘게 처치가 없었다) 사냥 시계를 지금부터
@@ -54,6 +65,15 @@ function Rune.stage(m, now: number): number
 		return 0
 	end
 	local over = now - r.born - R.curse.after
+	if over < 0 then
+		return 0
+	end
+	return math.min(#R.curse.cut, 1 + math.floor(over / R.curse.every))
+end
+-- 그 사람의 저주 단계(2026-11-12 사용자: "다른사람이 룬의저주를 만든자리를 그 대상자가 아닌사람이 들어갔다가 나오면 룬의 저주가 걸려버려 … 사냥터가 기준이아니라 그 유저가 기준인거야"):
+--  n = 그 사람이 룬이 나와 있는 사냥 맵에서 사냥하며 룬을 두고 지나간 초(server runeGuard가 쌓는다) → 0 = 없다 · after초부터 1단계 · every초마다 하나씩(맵의 셈 Rune.stage와 같은 숫자)
+function Rune.stageOf(n: number): number
+	local over = n - R.curse.after
 	if over < 0 then
 		return 0
 	end
@@ -124,6 +144,7 @@ function Rune.answer(m, p, keys: any, now: number): string
 	p.buffUntil = now + R.buff.time
 	p.cdUntil = now + R.cooldown
 	p.guardUntil = now + R.guard
+	p.h = 0 -- 그 사람 몫의 다음 룬은 다시 own초 사냥한 뒤(2026-11-13)
 	return "done"
 end
 
@@ -168,10 +189,10 @@ function Rune.baitTick(p, stat, now: number, hunting: boolean, rnd: (number, num
 	end
 	return nil
 end
--- 떨어뜨린다(서버가 자리를 정한 뒤)
-function Rune.baitDrop(p, stat, now: number, x: number, y: number)
+-- 떨어뜨린다(서버가 자리를 정한 뒤). route = 그 사람이 다니던 길 위(주워도 사람의 증거로 치지 않는다 — 2026-11-13)
+function Rune.baitDrop(p, stat, now: number, x: number, y: number, route: boolean?)
 	local b = p.bait
-	b.cur = { id = b.nextId, x = x, y = y, untilAt = now + B.life }
+	b.cur = { id = b.nextId, x = x, y = y, untilAt = now + B.life, route = route == true }
 	b.nextId += 1
 	pushTime(stat.shown, now)
 	return b.cur

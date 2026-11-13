@@ -29,9 +29,7 @@ Rank.MAX_FIX = {
 --   여왕이 판에서 계속 내려갔다. 전에는 그 캐릭터가 새 서버에 들어와야만 고쳐졌다. 이제 서버가 판을 읽을 때(60초마다) 고친다 —
 --  rows = 판에서 읽은 줄 { key, score }(높은 차례 — 고친 뒤 다시 줄 세운다) · raise(key, score) = 저장소에 올려 적기(있는 줄만 · 더 낮을 때만) · all = 판에 안 보이는 것도 올려 본다(서버가 처음 읽을 때)
 function Rank.fixMax(rows, raise, all: boolean?)
-	if true then
-		return -- 2026-11-11: 150 위가 다시 열려(레벨 + 경험치로 줄을 세운다) 「150끼리 오른 때」를 바로잡을 일이 없다 — 멈춘다(MAX_FIX는 기록으로 남긴다)
-	end
+	-- (2026-11-11 낮에 멈췄다가 같은 날 저녁 다시 켬 — Lv.150끼리는 다시 오른 때의 차례: 찾아 둔 셋의 점수가 낮게 적혀 있으면 올린다. 이미 151 위라 점수가 더 높으면 그대로)
 	local changed = false
 	for key, at in Rank.MAX_FIX do
 		local want = Rank.levelScore(N.MAX_LEVEL, 0, 1, at)
@@ -63,10 +61,17 @@ end
 -- 레벨 순위의 점수: 레벨이 먼저, 그다음 그 레벨에서 모은 경험치의 비율. 만렙이면 오른 때(maxAt — 먼저 오른 쪽이 위)
 --  2026-11-11 벽을 풀며(150 → 200을 다시 오른다): 그 「만렙」이 이제 Lv.200(LEVEL_CAP) — 200끼리만 오른 때(capAt)의 차례 · 150 ~ 199는 다른 레벨처럼 레벨 + 경험치의 비율.
 --   (그 전에는 Lv.150 이상이 모두 「150 + 오른 때(maxAt)」였다 — maxAt은 칭호 「만월의 계승자」 · 직업마다의 첫 만렙의 기록에 그대로 쓴다)
+--  2026-11-11 저녁(사용자: "151렙이 있는데 랭킹 1등이 안되는데? 만렙 풀리면 이제는 200기준으로 정렬되어야지 150동렙일때만 찍은순서로 되는거고"):
+--   Lv.150 그 레벨에서만 다시 「150에 오른 때(maxAt)」의 차례(먼저 찍은 사람이 위 — 경험치의 비율이 아니다) · 151 ~ 199 = 레벨 + 경험치의 비율 · 200 = 오른 때(capAt).
+--   (점수 = 레벨 x 눈금 + 눈금 안의 값이라 레벨이 높으면 늘 위다. 처음 150의 1위 고정은 world.luau rankBoards에서 뺐다 — 고정은 처음 200만)
 function Rank.levelScore(level: number, xp: number, need: number, maxAt: number?, capAt: number?): number
 	if level >= N.LEVEL_CAP then
 		local minutes = math.clamp(math.floor(((capAt or os.time()) - Rank.MAX_EPOCH) / 60), 0, XP_STEPS - 1)
 		return N.LEVEL_CAP * XP_STEPS + (XP_STEPS - 1 - minutes)
+	end
+	if level == N.MAX_LEVEL then
+		local minutes = math.clamp(math.floor(((maxAt or os.time()) - Rank.MAX_EPOCH) / 60), 0, XP_STEPS - 1)
+		return N.MAX_LEVEL * XP_STEPS + (XP_STEPS - 1 - minutes)
 	end
 	local part = if need > 0 then math.clamp(xp / need, 0, 0.999999) else 0
 	return level * XP_STEPS + math.floor(part * XP_STEPS)

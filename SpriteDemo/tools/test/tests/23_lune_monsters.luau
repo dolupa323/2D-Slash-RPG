@@ -24,8 +24,10 @@ local PLACE = {
 	r4a3 = { banner = 6 }, r4a4 = { statue = 5 }, sea1 = { clam = 10 }, sea2 = { barnacle = 9 }, sea3 = { jelly = 10 }, sea4 = { eel = 10 }, sea7 = { anchor = 9 }, sea5 = { tangle = 5, urchin = 5 }, sea6 = { mimic = 9 }, r3b3 = { thief = 10 }, r4d3 = { gloom = 9 }, r4e1 = { pool = 9 },
 	-- 3지역의 분화구 · 4지역의 내성과 봉인의 회랑
 	r3d3 = { scorpion = 10 }, r4c2 = { book = 6 }, r4d1 = { eye = 10 }, r4d2 = { mage = 9 },
-	-- 5지역 윤슬 호수(2026-11-07 — 모두 Lv.150 · 아홉 · 아홉 · 여덟)
+	-- 5지역 윤슬 호수(2026-11-07 — 아홉 · 아홉 · 여덟 · 2026-11-11부터 Lv.150 · 152 · 155)
 	r5a1 = { lotusbud = 9 }, r5a2 = { starshard = 9 }, r5a3 = { rippleknight = 8 },
+	-- 윤슬 호수의 깊은 곳(2026-11-11 — 물안개 숲 · 달그림자 심연: 여덟 · 여덟)
+	r5a4 = { mistcrane = 8 }, r5a5 = { lurefish = 8 }, r5b2 = { willowisp = 8 }, r5a6 = { lotustoad = 8 }, r5a7 = { lakeserpent = 8 }, r5a8 = { lanternturtle = 8 }, -- (연잎 늪 · 이무기 굴 — 2026-11-13 · 이끼 여울 — 밤) -- (달빛 버드나무 — 2026-11-11 저녁)
 }
 -- 1지역의 사냥터: 한 맵에 한 종류 · 한 종류는 한 맵(사용자 2026-10-14: "퀘스트에는 등장하지도않는 폭탄병이랑 큰 달버섯이 맵구조의 절반 젠을 담당해버리는겁니다 … 궁병이 중복으로 등장할 이유가없음")
 local ONE = { r1a1 = "trainee", hunt = "warrior", r1a3 = "puff", r1a4 = "crow", r1b1 = "archer", r1b2 = "bomber", r1b3 = "crab", r1c1 = "ewarrior", r1c2 = "earcher", r1c3 = "helm" }
@@ -72,7 +74,7 @@ for kind, m in COMBAT.mobs do
 		end
 	end
 end
-eq(newKinds, 55, "새 몬스터 쉰다섯(바닷속의 셋 · 남은 맵의 여섯 · 윤슬 호수의 여섯 포함)")
+eq(newKinds, 61, "새 몬스터 예순하나(바닷속의 셋 · 남은 맵의 여섯 · 윤슬 호수의 열둘 포함 — 안개 두루미 · 심연 등불아귀 · 버들 정령 2026-11-11 · 연잎 두꺼비 · 새끼 이무기 · 등롱 거북 2026-11-13)")
 
 -- ---- 2) 배치: 표대로 놓였는가 · 레벨이 그 장면의 다른 몬스터와 이어지는가 · 퀘스트의 병사가 남았는가 ----
 local placed = {}

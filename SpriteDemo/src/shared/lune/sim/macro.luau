@@ -1,8 +1,9 @@
 -- 매크로 확인의 셈(공방 js/lune/design/macro.js · 2026-10-23 사용자: "현재 게임에서 매크로 유저들이 많아 어떻게 잡을지 해결해봐").
 --  서버가 재고(처치 · 움직인 칸 · 스킬을 누른 간격) 서버가 문제를 내고 채점한다. 화면도 서버도 모르는 순수한 셈이다(server/lune/modules/macroGuard.luau가 부른다).
 --  st(세션마다) = { born 접속한 때 · rest 쉬지 않은 사냥이 시작된 때 · kills 처치한 때들 · moves[칸] = 마지막으로 선 때 · gaps 같은 스킬을 다시 누른 간격들(초) · last[스킬] = 누른 때(os.clock)
---                  · draw 이번 차례의 0~1(언제 띄울지) · check 떠 있는 문제 · passAt 마지막으로 통과한 때 · force 관리자가 보냄
---                  · saved = 계정에 남는 것 { fails = 놓친 때들 · stopped 보상 멈춤 · stopUntil 이때부터 다시 확인할 수 있다 · pending 문제가 떠 있는 채 나갔다 } }
+--                  · check 떠 있는 문제(kills = 떠 있는 동안 잡은 수) · passAt 마지막으로 통과한 때 · force 관리자가 보냄
+--                  · saved = 계정에 남는 것 { fails = 놓친 때들 · stopped 보상 멈춤 · stopUntil 이때부터 다시 확인할 수 있다 · pending 문제가 떠 있는 채 나갔다
+--                            · hs 지난 확인 뒤로 사냥한 초 · dr 이번 차례의 0~1(언제 띄울지 — 2026-11-13: 둘 다 계정에 남는다 · 아래 Macro.dueOf) · rn 룬의 사람 시계(server runeGuard.luau) } }
 --  시각: now = os.time()(초) · 스킬 간격만 os.clock()(소수 초)
 local D = require(script.Parent.Parent.data["macro.generated"])
 
@@ -21,9 +22,37 @@ local function nums(list: any): { number }
 	return out
 end
 
+-- 날마다의 칸(KST 날짜마다 — 아래 Macro.note): m 사냥한 분 · ls 로그 점수 합 · rc 룬의 저주 속 사냥 분 · ci · cp · cf 확인(받음 · 통과 · 놓침 — 2026-11-13부터 cf는 「떠 있는 동안에도 잡았다」만) ·
+--  bl 창 밖 입력 · bg · bm 미끼(주움 · 놓침) · rl 이어 사냥으로 다시 들어온 수(2026-11-13) · ca 자리를 비워 놓친 확인(점수에 넣지 않는다) · br2 길 위의 미끼를 주운 수(사람의 증거가 아니다) ·
+--  kt · kz 키를 누른 수 · 그 가운데 한 프레임도 안 된 수 · tt · ts 터치 수 · 그 가운데 같은 점을 되풀이한 수(손의 기록 — 아래 Macro.inputNote)
+local DAYF_ALL = { "m", "ls", "rc", "ci", "cp", "cf", "bl", "bg", "bm", "rl", "ca", "br2", "kt", "kz", "tt", "ts" }
+
 -- 계정에 남는 것(Account.pack · unpack)
 function Macro.newSaved()
-	return { fails = {}, stopped = false, stopUntil = 0, pending = false, days = {}, eps = {}, br = "", warns = {} } -- days · eps · br · warns = 계정마다의 매크로 기록(2026-11-09 — 아래 Macro.total)
+	return { fails = {}, stopped = false, stopUntil = 0, pending = false, days = {}, eps = {}, br = "", warns = {}, jail = Macro.newJail(), run = nil :: any, relogs = {}, hs = 0, dr = nil :: number?, rn = nil :: any } -- run · relogs = 이어 사냥(2026-11-13 — 아래 Macro.new) -- days · eps · br · warns = 계정마다의 매크로 기록(2026-11-09 — 아래 Macro.total) · jail = 감옥(2026-11-11 — 아래 Macro.jailStart)
+end
+-- 감옥의 기록: n = 이 계정이 갇힌 횟수(줄지 않는다) · untilT = 이때까지 갇힌다(os.time — 0 = 갇히지 않았다) · from = 잡혀 온 자리 { k = 장면, x, y, cid = 그 캐릭터 } · log = { t 때, s 종합 점수, sec 길이 }
+function Macro.newJail()
+	return { n = 0, untilT = 0, from = nil :: any, log = {} }
+end
+local function unpackJail(raw: any)
+	local j = Macro.newJail()
+	if typeof(raw) == "table" then
+		j.n = if typeof(raw.n) == "number" then math.max(0, math.floor(raw.n)) else 0
+		j.untilT = if typeof(raw.untilT) == "number" then raw.untilT else 0
+		local f = raw.from
+		if typeof(f) == "table" and typeof(f.k) == "string" and typeof(f.x) == "number" and typeof(f.y) == "number" then
+			j.from = { k = f.k, x = f.x, y = f.y, cid = if typeof(f.cid) == "number" then f.cid else nil }
+		end
+		if typeof(raw.log) == "table" then
+			for _, e in raw.log do
+				if typeof(e) == "table" and typeof(e.t) == "number" then
+					table.insert(j.log, { t = e.t, s = if typeof(e.s) == "number" then e.s else 0, sec = if typeof(e.sec) == "number" then e.sec else 0 })
+				end
+			end
+		end
+	end
+	return j
 end
 function Macro.unpack(raw: any)
 	local m = Macro.newSaved()
@@ -37,7 +66,7 @@ function Macro.unpack(raw: any)
 			for k, d in raw.days do
 				if typeof(k) == "string" and typeof(d) == "table" then
 					local c = {}
-					for _, f in { "m", "ls", "rc", "ci", "cp", "cf", "bl", "bg", "bm" } do
+					for _, f in DAYF_ALL do
 						if typeof(d[f]) == "number" then
 							c[f] = d[f]
 						end
@@ -61,16 +90,64 @@ function Macro.unpack(raw: any)
 				end
 			end
 		end
+		m.jail = unpackJail(raw.jail)
+		-- 이어 사냥(2026-11-13): 쉬지 않은 사냥의 시작 · 마지막 처치 · 확인의 때 · 마지막 통과 · 다시 들어온 때들
+		local r = raw.run
+		if typeof(r) == "table" and typeof(r.rest) == "number" and typeof(r.last) == "number" then
+			m.run = { rest = r.rest, last = r.last, pass = if typeof(r.pass) == "number" then r.pass else 0 }
+		end
+		m.relogs = nums(raw.relogs)
+		-- 확인의 때(2026-11-13): 사냥한 초 · 이번 차례의 0~1 · 룬의 사람 시계 { c 쿨 · g 가호 · b 힘(os.time) · h 룬을 푼 뒤 사냥한 초 }
+		m.hs = if typeof(raw.hs) == "number" and raw.hs >= 0 and raw.hs < 1e7 then raw.hs else 0
+		m.dr = if typeof(raw.dr) == "number" and raw.dr >= 0 and raw.dr <= 1 then raw.dr else nil
+		local rn = raw.rn
+		if typeof(rn) == "table" then
+			local function num(v)
+				return if typeof(v) == "number" and v >= 0 and v < 1e10 then v else 0
+			end
+			m.rn = { c = num(rn.c), g = num(rn.g), b = num(rn.b), h = num(rn.h) }
+		end
 	end
 	return m
 end
 function Macro.pack(m)
+	local j = m.jail
 	return { fails = table.clone(m.fails), stopped = m.stopped or nil, stopUntil = if m.stopUntil > 0 then m.stopUntil else nil, pending = m.pending or nil,
-		days = if next(m.days or {}) ~= nil then m.days else nil, eps = if m.eps and #m.eps > 0 then m.eps else nil, br = if m.br and m.br ~= "" then m.br else nil, warns = if m.warns and #m.warns > 0 then m.warns else nil }
+		days = if next(m.days or {}) ~= nil then m.days else nil, eps = if m.eps and #m.eps > 0 then m.eps else nil, br = if m.br and m.br ~= "" then m.br else nil, warns = if m.warns and #m.warns > 0 then m.warns else nil,
+		jail = if j and (j.n > 0 or j.untilT > 0) then { n = j.n, untilT = if j.untilT > 0 then j.untilT else nil, from = j.from, log = if #j.log > 0 then j.log else nil } else nil,
+		run = m.run, relogs = if m.relogs and #m.relogs > 0 then m.relogs else nil, hs = if (m.hs or 0) > 0 then math.floor(m.hs) else nil, dr = m.dr, rn = m.rn }
 end
 
 function Macro.new(now: number, saved)
-	return { born = now, rest = now, kills = {}, moves = {}, gaps = {}, last = {}, draw = nil :: number?, check = nil, passAt = 0, force = false, saved = saved or Macro.newSaved(), bait = require(script.Parent.rune).newStat() } -- bait = 별똥별 조각의 기록(2026-11-07 — sim/rune.luau)
+	local st = { born = now, rest = now, kills = {}, moves = {}, gaps = {}, last = {}, check = nil, passAt = 0, force = false, saved = saved or Macro.newSaved(), bait = require(script.Parent.rune).newStat() } -- bait = 별똥별 조각의 기록(2026-11-07 — sim/rune.luau)
+	-- 이어 사냥(2026-11-13 사용자: "메크로가 게임을 나갔다가 들어왔다가 하면서 매크로 탐지 안당하면서 악용하면 아예 못잡아"):
+	--  마지막 처치에서 rest초 안에 다시 들어왔다 → 쉬지 않은 사냥 시계 · 확인의 때 · 마지막 통과를 그대로 잇고 처음 first초의 봐주기도 없다 · 다시 들어온 때를 계정에 적는다(Macro.level · 관리 창)
+	local run = st.saved.run
+	if run and now >= run.last and now - run.last < D.rest then
+		st.rest = run.rest
+		st.passAt = run.pass or 0
+		st.born = now - D.first
+		st.prevKill = run.last
+		st.relogged = true
+		st.saved.relogs = st.saved.relogs or {}
+		table.insert(st.saved.relogs, now)
+		while #st.saved.relogs > 20 do
+			table.remove(st.saved.relogs, 1)
+		end
+		Macro.note(st, "rl", 1, now)
+	end
+	return st
+end
+-- 지난 keep초 안에 이어 사냥으로 다시 들어온 수(2026-11-13)
+function Macro.relogCount(st, now: number): number
+	local R = D.relog
+	local n = 0
+	for _, t0 in (st.saved and st.saved.relogs) or {} do
+		if R and now - t0 <= R.keep then
+			n += 1
+		end
+	end
+	return n
 end
 
 -- ---------- 행동 로그 분석(2026-11-09 — 공방 design/macro.js의 log · 상용 게임의 서버 로그 탐지를 옮긴 것) ----------
@@ -272,7 +349,7 @@ end
 --  saved(계정에 남는다)에 더한 것: days[KST 날짜] = { m 사냥한 분 · ls 그 분들의 로그 점수 합 · rc 룬의 저주(runeCut 넘게)를 두고 사냥한 분 · ci · cp · cf 매크로 확인(받음 · 통과 · 놓침) ·
 --   bl 창 밖 입력 · bg · bm 미끼(주움 · 놓침) } · eps = 의심 구간 { t0, t1, map, peak(%), how } · br = 미끼의 최근 결과("1" 주움 · "0" 놓침 — baitRing개) · warns = { t, s(그때 점수), by("auto" · "admin") }
 local RC = D.record
-local DAYF = { "m", "ls", "rc", "ci", "cp", "cf", "bl", "bg", "bm" }
+local DAYF = DAYF_ALL
 
 -- 그날의 열쇠(KST — 「20261109」)
 function Macro.dayKey(now: number): string
@@ -389,9 +466,17 @@ local function scoreOf(sum, br: string?)
 	parts.check = if (sum.ci or 0) >= P.check.need then ramp((sum.cf or 0) / sum.ci, P.check.lo, P.check.hi) else 0
 	parts.rune = if (sum.m or 0) > 0 then ramp((sum.rc or 0) / sum.m, P.rune.lo, P.rune.hi) else 0
 	parts.blind = ramp(sum.bl or 0, P.blind.lo, P.blind.hi)
+	-- 손의 기록(2026-11-13 — design/macro.js input): 키를 한 프레임도 안 되게 누른 몫 · 폰에서 같은 점을 되풀이한 몫(큰 쪽)
+	local IN = D.input
+	local key = if (sum.kt or 0) >= IN.need then ramp((sum.kz or 0) / sum.kt, IN.key.lo, IN.key.hi) else 0
+	local touch = if (sum.tt or 0) >= IN.need then ramp((sum.ts or 0) / sum.tt, IN.touch.lo, IN.touch.hi) else 0
+	parts.input = math.max(key, touch)
+	parts.inputKey = key -- (증거에 쓰는 키 쪽 — 아래 Macro.proof · 종합 점수에는 넣지 않는다)
 	local keep = 1
 	for k, v in parts do
-		keep *= 1 - P[k].w * v
+		if P[k] then -- (inputKey는 점수에 넣지 않는다)
+			keep *= 1 - P[k].w * v
+		end
 	end
 	local score = math.floor((1 - keep) * 100 + 0.5)
 	return score, parts, n, miss
@@ -410,7 +495,35 @@ function Macro.total(saved, now: number)
 		end
 	end
 	local score, parts, n, miss = scoreOf(sum, saved.br or "")
-	return { score = score, grade = Macro.grade(score), parts = parts, sum = sum, baitN = n, baitMiss = miss }
+	local out = { score = score, grade = Macro.grade(score), parts = parts, sum = sum, baitN = n, baitMiss = miss }
+	out.human = Macro.human(out)
+	out.proof = Macro.proof(out)
+	return out
+end
+-- 증거가 있는가(2026-11-14 사용자: "지금 매크로가 아니라 애먼사람만 정지시키고있는데?" — 유저 글 "매크로가 너무 많이 뜹니다 무슨 3분에 한번씩 떠요 매크로 하고 잠깐 자리 비우면 6시간 정지에요" — 공방 design/macro.js의 proof): 확인이 떠 있는데도 사냥을 이어 간 놓침 · 한 프레임도 안 되는 키 누름.
+--  벌(감옥 · 의심 높음 · 자동 경고)은 이것이 있을 때만 — 별똥별 · 룬 · 되풀이 사냥 · 다시 접속만으로는 확인을 「중간」으로 앞당기는 데까지
+function Macro.proof(t): boolean
+	local PR = D.proof
+	if not PR or not t or not t.parts then
+		return true -- (설계에 없으면 예전처럼)
+	end
+	return (t.parts.check or 0) >= PR.check or (t.parts.inputKey or 0) >= PR.key
+end
+-- 사람으로 보는가(2026-11-12 사용자: "사람다운 신호가 사람이라고 판단되면 감옥에 넣지않기로 하자" — 공방 design/macro.js의 record.human):
+--  미끼를 baitNeed개 넘게 받아 bait 넘게 주웠다 · 매크로 확인을 checkNeed번 넘게 받아 놓친 것이 없다 · 룬의 저주 속 사냥 항목이 0 · 손의 기록 항목(input)이 0 — 넷 다
+--  (2026-11-13: 창 밖 입력은 뺐다 — 사용자 "지금 창내림 세는것도 의미가 없고")
+--  → 감옥(Macro.jailDue) · 자동 경고(Macro.warnDue)를 하지 않는다. 종합 점수 · 등급 · 기록은 그대로
+function Macro.human(t): boolean
+	local H = RC.human
+	if not H or not t or not t.sum then
+		return false
+	end
+	local s = t.sum
+	local baitOk = (t.baitN or 0) >= H.baitNeed and ((t.baitN - (t.baitMiss or 0)) / t.baitN) >= H.bait
+	local checkOk = (s.ci or 0) >= H.checkNeed and (s.cf or 0) == 0
+	local runeOk = (t.parts and t.parts.rune or 0) <= 0
+	local inputOk = (t.parts and t.parts.input or 0) <= 0
+	return baitOk and checkOk and runeOk and inputOk
 end
 -- 하루의 점수(그날의 기록만 — 미끼도 그날 주운 · 놓친 수): 관리 창의 날마다 줄 · 경고 전 · 뒤 견주기
 function Macro.dayScore(d): number
@@ -437,7 +550,7 @@ end
 -- 경고할 때인가: 심각 · 그날 사냥 minHunt분 넘게 · 마지막 경고에서 every초 지남
 function Macro.warnDue(st, now: number): boolean
 	local t = st.total
-	if not t or t.grade ~= "severe" then
+	if not t or t.grade ~= "severe" or t.human or t.proof == false then -- (사람으로 보면 · 증거가 없으면 자동 경고도 하지 않는다 — 2026-11-12 · 2026-11-14)
 		return false
 	end
 	local d = st.saved.days[Macro.dayKey(now)]
@@ -464,7 +577,8 @@ function Macro.recordView(saved, now: number)
 		local key = Macro.dayKey(now - i * 86400)
 		local d = saved.days[key]
 		if d and ((d.m or 0) > 0 or (d.ci or 0) > 0 or (d.bg or 0) + (d.bm or 0) > 0) then
-			table.insert(days, { key = key, m = d.m or 0, ls = if (d.m or 0) > 0 then pct((d.ls or 0) / d.m) else 0, rc = d.rc or 0, ci = d.ci or 0, cp = d.cp or 0, cf = d.cf or 0, bl = d.bl or 0, bg = d.bg or 0, bm = d.bm or 0, score = Macro.dayScore(d) })
+			table.insert(days, { key = key, m = d.m or 0, ls = if (d.m or 0) > 0 then pct((d.ls or 0) / d.m) else 0, rc = d.rc or 0, ci = d.ci or 0, cp = d.cp or 0, cf = d.cf or 0, bl = d.bl or 0, bg = d.bg or 0, bm = d.bm or 0, rl = d.rl or 0,
+				ca = d.ca or 0, br2 = d.br2 or 0, kt = d.kt or 0, kz = d.kz or 0, tt = d.tt or 0, ts = d.ts or 0, score = Macro.dayScore(d) }) -- (2026-11-13: 자리 비움 놓침 · 길 위 미끼 · 손의 기록)
 		end
 	end
 	local eps = {}
@@ -478,9 +592,10 @@ function Macro.recordView(saved, now: number)
 		table.insert(warns, { t = w.t, s = w.s, by = w.by, before = before and math.floor(before + 0.5), after = after and math.floor(after + 0.5) })
 	end
 	return {
-		score = t.score, grade = t.grade,
-		parts = { behave = pct(t.parts.behave), bait = pct(t.parts.bait), check = pct(t.parts.check), rune = pct(t.parts.rune), blind = pct(t.parts.blind) },
+		score = t.score, grade = t.grade, human = t.human, proof = t.proof, -- human = 사람으로 본다(감옥 · 자동 경고 없음 — 2026-11-12) · proof = 증거가 있다(없으면 감옥 · 의심 높음 · 자동 경고 없음 — 2026-11-14)
+		parts = { behave = pct(t.parts.behave), bait = pct(t.parts.bait), check = pct(t.parts.check), rune = pct(t.parts.rune), blind = pct(t.parts.blind), input = pct(t.parts.input or 0) },
 		bait = { t.baitN - t.baitMiss, t.baitN }, sum = t.sum, days = days, eps = eps, warns = warns,
+		jail = { n = saved.jail and saved.jail.n or 0, left = if saved.jail then math.max(0, saved.jail.untilT - now) else 0, last = saved.jail and saved.jail.log[#saved.jail.log] }, -- 감옥(2026-11-11): 횟수 · 남은 초 · 마지막 { t, s, sec }
 	}
 end
 
@@ -501,11 +616,26 @@ function Macro.onKill(st, now: number)
 		-- 「사냥 보상 멈춤」인데도 잡은 수(2026-10-28 매크로 방지 날파리 — design/afk.js의 when.kills): 보상이 0인데 화면 위의 「사냥 보상 멈춤」을 누르지 않고 계속 잡는다 = 사람이 아니다
 		st.stopKills = (st.stopKills or 0) + 1
 	end
-	local prev = st.kills[#st.kills]
+	local prev = st.kills[#st.kills] or st.prevKill -- (이어 사냥이면 나가기 전의 마지막 처치 — 2026-11-13)
 	if prev == nil or now - prev >= D.rest then
 		st.rest = now -- 한참 쉬다가 다시 잡기 시작했다
 	end
 	table.insert(st.kills, now)
+	-- 이어 사냥을 위해 계정에 남긴다(2026-11-13 — 위 Macro.new): 쉬지 않은 사냥의 시작 · 마지막 처치 · 확인의 때 · 마지막 통과
+	local run = st.saved.run
+	if not run then
+		st.saved.run = { rest = st.rest, last = now, pass = st.passAt }
+	else
+		run.rest, run.last, run.pass = st.rest, now, st.passAt
+	end
+	-- 확인의 때를 재는 「사냥한 초」(2026-11-13 — 계정에 남는다: 쉬어도 · 나갔다 들어와도 0이 되지 않는다): 바로 앞 처치에서 huntGap초 안이면 그 사이를 더한다
+	if prev ~= nil and now >= prev and now - prev <= D.huntGap then
+		st.saved.hs = (st.saved.hs or 0) + (now - prev)
+	end
+	-- 문제가 떠 있는 동안에도 잡았다(2026-11-13 — 놓쳤을 때 「자리를 비웠다」와 「잡으면서 무시했다」를 가른다: Macro.fail)
+	if st.check then
+		st.check.kills = (st.check.kills or 0) + 1
+	end
 	do -- 행동 로그(아래 Macro.logScore): 처치는 1분의 벡터에만(몬스터가 나오는 때를 따르므로 차례에는 넣지 않는다)
 		local lg = logOf(st)
 		bump(lg, "kill", now)
@@ -575,10 +705,8 @@ function Macro.level(st, now: number, noLong: boolean?): string
 			var += (g - mean) ^ 2
 		end
 		local cv = math.sqrt(var / #st.gaps) / mean
-		if cv < S.cv.high then
-			return "high"
-		elseif cv < S.cv.mid then
-			level = "mid"
+		if cv < S.cv.mid then
+			level = "mid" -- (2026-11-13 낮: 「높음」 → 「중간」까지 — 키를 누르고 있어도 간격이 고르다)
 		end
 	end
 	if killsIn(st, now, S.still.window) >= S.still.kills then
@@ -592,31 +720,33 @@ function Macro.level(st, now: number, noLong: boolean?): string
 			level = "mid"
 		end
 	end
-	if not noLong and now - st.rest >= S.long then
-		level = "mid"
-	end
+	-- (오래 쉬지 않은 사냥 = 의심 중간은 2026-11-13 낮에 뺐다 — 사용자 "매크로 방지그림이 너무 자주뜬다는데?": 보통 사람이 오래 사냥한다)
 	-- 계정의 종합 점수(2026-11-09 — 아래 Macro.total · 서버가 1분마다 st.total): 심각 = 「의심 높음」 · 문제 = 「중간」만큼 자주 확인. 날파리(noLong)에는 쓰지 않는다
 	if not noLong and st.total then
-		if st.total.grade == "severe" then
+		if st.total.grade == "severe" and st.total.proof ~= false then
 			return "high"
-		elseif st.total.grade == "problem" then
+		elseif st.total.grade == "severe" or st.total.grade == "problem" then
+			level = "mid" -- (증거 없는 「심각」은 「중간」까지 — 2026-11-14 애먼 사람이 3 ~ 5분마다 확인을 받았다)
+		end
+	end
+	-- 행동 로그 분석(2026-11-09 — 위 Macro.logScore): 합친 점수가 level.mid를 넘으면 「중간」(2026-11-13 낮: 「높음」은 뺐다 — 한자리에서 되풀이해 사냥하는 사람도 높다). 날파리(noLong)에는 쓰지 않는다
+	if not noLong then
+		local r = Macro.logScore(st, now)
+		if r and r.score >= LG.level.mid then
 			level = "mid"
 		end
 	end
-	-- 행동 로그 분석(2026-11-09 — 위 Macro.logScore): 합친 점수가 level.high · level.mid를 넘으면. 날파리(noLong)에는 쓰지 않는다
-	if not noLong then
-		local r = Macro.logScore(st, now)
-		if r and r.score >= LG.level.high then
-			return "high"
-		elseif r and r.score >= LG.level.mid then
-			level = "mid"
+	-- 나갔다 들어오기(2026-11-13 — design/macro.js relog): 지난 keep초 안에 이어 사냥으로 다시 들어온 수가 mid · high번이면. 날파리(noLong)에는 쓰지 않는다
+	if not noLong and D.relog then
+		local n = Macro.relogCount(st, now)
+		if n >= D.relog.mid then
+			level = "mid" -- (high번도 「중간」까지 — 2026-11-14: 폰은 끊겨 다시 들어오기도 한다)
 		end
 	end
 	-- 별똥별 조각(2026-11-07 — design/rune.js BAIT): 지난 한 시간 동안 하나도 줍지 않고 여럿 놓쳤다(누가 봐도 주울 것을 그냥 지나친다)
+	--  (2026-11-13 낮: 「중간」까지 — 다니지 않던 자리에 떨어지게 된 뒤로 줍지 않는 사람도 있다. 놓친 비율은 종합 점수의 bait로 「심각」에 들어간다)
 	local bl = require(script.Parent.rune).baitLevel(st.bait, now)
-	if bl == "high" then
-		return "high"
-	elseif bl == "mid" then
+	if bl == "high" or bl == "mid" then
 		level = "mid"
 	end
 	return level
@@ -658,19 +788,74 @@ function Macro.tick(st, now: number, ctx, rnd: () -> number): string?
 		st.blind = nil
 		return "issue" -- 게임 창이 앞에 없는데 스킬이 계속 들어왔다: 통과한 지 얼마 안 됐어도 바로(2026-10-24)
 	end
-	if not Macro.hunting(st, now) or now - st.passAt < D.afterPass then
+	if not Macro.hunting(st, now) then
 		return nil
 	end
 	local level = Macro.level(st, now)
 	if level ~= "high" and now - st.born < D.first then
 		return nil
 	end
-	if st.draw == nil then
-		st.draw = rnd()
+	-- 2026-11-13 사용자: "매크로 방지 그림이 정해진 패턴으로 나와서 … 10분 나와버리면 9분 매크로 돌리고 게임 나갔다가 들어와서 다시 9분" —
+	--  계정에 남는 「사냥한 초」(Macro.onKill이 더한다 — 쉬어도 · 나갔다 들어와도 0이 되지 않는다)가 이번 차례의 때(Macro.dueOf — 언제든 올 수 있다)를 넘으면
+	local sv = st.saved
+	if sv.dr == nil then
+		sv.dr = rnd()
 	end
-	local g = D.gap[level]
-	local due = g[1] + (g[2] - g[1]) * st.draw
-	return if now - st.rest >= due then "issue" else nil
+	return if (sv.hs or 0) >= Macro.dueOf(level, sv.dr) then "issue" else nil
+end
+
+-- 이번 차례의 때(사냥한 초): floor + 지수 분포(평균 mean)를 cap에서 자른 것의 u(0~1) 자리 — u = 0이면 floor · 1이면 cap(design/macro.js wait)
+--  지수 분포라 「지금까지 안 왔으니 n분은 안전」이 없다(앞으로 올 때의 분포가 지금까지 기다린 것과 상관없다)
+function Macro.dueOf(level: string, u: number): number
+	local w = D.wait[level] or D.wait.low
+	local span = w.cap - w.floor
+	local top = 1 - math.exp(-span / w.mean)
+	local q = math.clamp(u, 0, 1) * top
+	return w.floor + math.min(span, -w.mean * math.log(1 - q))
+end
+
+-- 지난 sec초 동안 그 사람이 서 본 가로 범위(같은 층 — y에서 위아래 half점 안의 칸): 가장 왼쪽 · 가장 오른쪽(점) · 없으면 nil
+--  별똥별을 다녀간 적 없는 자리에 떨어뜨리는 데 쓴다(2026-11-13 — server runeGuard.luau)
+function Macro.rangeX(st, now: number, sec: number, y: number, half: number?): (number?, number?)
+	local c = D.suspect.still.cell
+	local h = half or 48
+	local lo, hi = nil, nil
+	for key, t in st.moves do
+		if now - t <= sec then
+			local cx, cy = string.match(key, "^(-?%d+),(-?%d+)$")
+			if cx and math.abs((tonumber(cy) :: number) * c + c / 2 - y) <= h then
+				local x0 = (tonumber(cx) :: number) * c
+				lo = if lo == nil then x0 else math.min(lo, x0)
+				hi = if hi == nil then x0 + c else math.max(hi, x0 + c)
+			end
+		end
+	end
+	return lo, hi
+end
+
+-- 손의 기록(2026-11-13 — 화면 client inputStat.luau가 every초마다 보낸다 · server macroGuard.luau가 사냥 맵에서만 부른다): 꼴이 바르면 그날의 칸에 더한다 → 더했나
+--  v = { kt, kz, tt, ts } — 정수 · 0 ~ max · kz ≤ kt · ts ≤ tt
+function Macro.inputNote(st, v: any, now: number): boolean
+	if typeof(v) ~= "table" then
+		return false
+	end
+	local IN = D.input
+	local function whole(x): number?
+		return if typeof(x) == "number" and x == x and x % 1 == 0 and x >= 0 and x <= IN.max then x else nil
+	end
+	local kt, kz, tt, ts = whole(v.kt), whole(v.kz), whole(v.tt), whole(v.ts)
+	if not kt or not kz or not tt or not ts or kz > kt or ts > tt or kt + tt == 0 then
+		return false
+	end
+	Macro.note(st, "kt", kt, now)
+	Macro.note(st, "kz", kz, now)
+	Macro.note(st, "tt", tt, now)
+	Macro.note(st, "ts", ts, now)
+	return true
+end
+-- 길 위의 별똥별을 주웠다(사람의 증거로 치지 않는다 — 날마다 br2에만)
+function Macro.baitRoute(st, now: number)
+	Macro.note(st, "br2", 1, now)
 end
 
 -- 문제를 낸다: 위의 셋(top) · 아래 아홉(cells — { kind, flip }) · 답(answer[칸] = true). 화면에 보낼 것(view)을 돌려준다
@@ -699,8 +884,9 @@ function Macro.issue(st, now: number, rnd: (number) -> number)
 		end
 	end
 	local token = tostring(rnd(1e9))
-	st.check = { token = token, top = top, cells = cells, answer = answer, deadline = now + D.time, tries = D.tries }
+	st.check = { token = token, top = top, cells = cells, answer = answer, deadline = now + D.time, tries = D.tries, kills = 0 }
 	Macro.note(st, "ci", 1, now) -- (계정의 기록 — 2026-11-09)
+	st.saved.hs, st.saved.dr = 0, nil -- 다음 차례는 다시 0부터 · 새로 뽑는다(2026-11-13)
 	st.force = false
 	st.saved.pending = true
 	return Macro.view(st, now)
@@ -716,9 +902,12 @@ function Macro.view(st, now: number)
 end
 
 -- 놓쳤다: 보상 멈춤(24시간 안의 n번째 놓침이면 stop[n]초 뒤부터 다시 확인할 수 있다) → n, 기다릴 초
-function Macro.fail(st, now: number): (number, number)
+--  answered = 세 번 틀렸다(대답은 했다). 시간이 다 된 놓침은 떠 있는 동안 activeKills마리 넘게 잡았을 때만 점수의 놓침(cf) — 아니면 자리를 비운 것(ca · 2026-11-13)
+function Macro.fail(st, now: number, answered: boolean?): (number, number)
+	-- 사다리(10분 · 1시간 · 6시간)는 「문제가 떠 있는 동안에도 사냥을 이어 간」 놓침만(2026-11-14 사용자: "지금 매크로가 아니라 애먼사람만 정지시키고있는데?" — 유저 글 "매크로가 너무 많이 뜹니다 무슨 3분에 한번씩 떠요 매크로 하고 잠깐 자리 비우면 6시간 정지에요") —
+	--  전에는 자리를 비워 놓친 것 · 세 번 틀린 것도 세어, 하루에 네 번 자리를 비우면 6시간 보상 멈춤이었다. 그 놓침은 이제 0초(돌아와 「다시 확인」을 통과하면 바로 풀림)
+	local active = ((st.check and st.check.kills) or 0) >= D.record.activeKills
 	st.check = nil
-	st.draw = nil
 	local m = st.saved
 	local keep = {}
 	for _, t in m.fails do
@@ -726,10 +915,12 @@ function Macro.fail(st, now: number): (number, number)
 			table.insert(keep, t)
 		end
 	end
-	table.insert(keep, now)
+	if active then
+		table.insert(keep, now)
+	end
 	m.fails = keep
-	Macro.note(st, "cf", 1, now) -- (계정의 기록 — 2026-11-09)
-	local wait = D.stop[math.min(#keep, #D.stop)]
+	Macro.note(st, if active then "cf" else "ca", 1, now) -- (계정의 기록 — 2026-11-09 · 2026-11-13 자리 비움은 ca · 2026-11-14 세 번 틀림도 사냥을 잇지 않았으면 ca)
+	local wait = if active then D.stop[math.min(#keep, #D.stop)] else 0
 	m.stopped, m.stopUntil, m.pending = true, now + wait, false
 	return #keep, wait
 end
@@ -765,7 +956,6 @@ function Macro.answer(st, token: any, picks: any, now: number): string
 	end
 	if ok then
 		st.check = nil
-		st.draw = nil
 		st.passAt = now
 		st.rest = now -- 다음 확인은 다시 쉬지 않은 사냥 시간을 채운 뒤
 		st.saved.stopped, st.saved.stopUntil, st.saved.pending = false, 0, false
@@ -775,7 +965,7 @@ function Macro.answer(st, token: any, picks: any, now: number): string
 	end
 	c.tries -= 1
 	if c.tries <= 0 then
-		Macro.fail(st, now)
+		Macro.fail(st, now, true)
 		return "fail"
 	end
 	return "wrong"
@@ -803,11 +993,69 @@ function Macro.forceNow(st)
 end
 function Macro.clear(st)
 	st.check = nil
-	st.draw = nil
+	st.saved.dr = nil
 	st.force = false
 	st.saved.stopped, st.saved.stopUntil, st.saved.pending = false, 0, false
 	st.saved.fails = {}
 	st.stopKills = 0
+end
+
+-- ---------- 감옥(2026-11-11 사용자: "매크로 점수 너무 높으면 사냥 정지 아무것도 없는 검정방에 가둬버려 처음엔 5분가두고 그다음에 또 높으면 10분가두고") ----------
+--  공방 design/macro.js의 jail. 종합 점수(Macro.total — 지난 7일)가 JL.min 넘고 · 이 접속(또는 지난 감옥)에서 사냥한 1분이 JL.hunt분 차면 가둔다.
+--  n번째 감옥의 길이 = JL.time[n](넘으면 마지막 것 — 5분 · 10분 · 10분 …). 시계는 os.time이라 접속하지 않아도 흐른다.
+--  옮기는 것은 서버(modules/macroGuard.luau Guard.jailWant · world.luau World.jailStep) — 여기는 셈만.
+local JL = D.jail
+local function jailOf(st)
+	st.saved.jail = st.saved.jail or Macro.newJail()
+	return st.saved.jail
+end
+function Macro.jailed(st, now: number): boolean
+	return jailOf(st).untilT > now
+end
+function Macro.jailLeft(st, now: number): number
+	return math.max(0, jailOf(st).untilT - now)
+end
+-- 계정 자료(저장된 것 · 아직 세션이 읽지 않은 것)만으로: 지금 갇혀 있나(들어올 때 검정 방에서 시작하게 — world.luau)
+function Macro.jailedRaw(raw: any, now: number): boolean
+	local j = typeof(raw) == "table" and raw.jail
+	return typeof(j) == "table" and typeof(j.untilT) == "number" and j.untilT > now
+end
+-- 사냥한 1분(사냥 맵 · 사냥 중 — 서버가 1분마다)
+function Macro.jailMinute(st)
+	st.jailHunt = (st.jailHunt or 0) + 1
+end
+-- 가둘 때인가: 종합 점수 ≥ min · 사냥한 1분이 hunt분 · 갇혀 있지 않다 · 매크로 확인이 떠 있지 않다
+function Macro.jailDue(st, now: number): boolean
+	local t = st.total
+	return t ~= nil and t.score >= JL.min and not t.human and t.proof ~= false and (st.jailHunt or 0) >= JL.hunt and not Macro.jailed(st, now) and not Macro.pending(st) -- (사람으로 보면 · 증거가 없으면 넣지 않는다 — 2026-11-12 · 2026-11-14)
+end
+-- 이번 감옥의 길이(초): n번째(1부터)
+function Macro.jailTime(n: number): number
+	return JL.time[math.clamp(n, 1, #JL.time)]
+end
+-- 가둔다: from = 잡혀 온 자리 { k, x, y } → 길이(초) · 몇 번째
+function Macro.jailStart(st, now: number, from, sec0: number?): (number, number)
+	local j = jailOf(st)
+	j.n += 1
+	local sec = sec0 or Macro.jailTime(j.n) -- (sec0 = 관리자가 정한 길이 — 2026-11-12 관리 창의 「감옥 10분 · 60분」)
+	j.untilT = now + sec
+	j.from = from
+	table.insert(j.log, { t = now, s = if st.total then st.total.score else 0, sec = sec })
+	while #j.log > JL.keep do
+		table.remove(j.log, 1)
+	end
+	st.jailHunt = 0
+	return sec, j.n
+end
+-- 시간이 다 됐다 · 관리자가 풀었다: 잡혀 온 자리를 돌려준다(한 번만 — 꺼낸 뒤에는 nil)
+function Macro.jailFree(st)
+	jailOf(st).untilT = 0
+end
+function Macro.jailTakeFrom(st)
+	local j = jailOf(st)
+	local f = j.from
+	j.from = nil
+	return f
 end
 
 return Macro

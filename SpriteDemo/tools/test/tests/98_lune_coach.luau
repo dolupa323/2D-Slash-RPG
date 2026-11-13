@@ -29,7 +29,8 @@ for _, key in D.stations do
 	local n = coachIn(key)
 	expect(n ~= nil, "정류장에 마부가 있다 " .. key)
 	if n then
-		eq(n.role .. " " .. n.name, "역마차 마부", "마부의 이름표(「역마차 마부」) " .. key)
+		local want = if string.sub(key, 1, 2) == "r5" then "나룻배 뱃사공" else "역마차 마부" -- (호수의 정류장은 마부 대신 뱃사공 — 공방 coachSpot.js · 2026-11-11 저녁)
+		eq(n.role .. " " .. n.name, want, "마부의 이름표(「" .. want .. "」) " .. key)
 		local c, r = math.floor(n.x / 16) + 1, math.floor(n.y / 16) + 1
 		local below, at = string.sub(sc.rows[r] or "", c, c), string.sub(sc.rows[r - 1] or "", c, c)
 		expect((below == "#" or below == "=") and at == ".", ("마부가 땅 위에 선다 %s (%d, %d: 발밑 %s · 몸 %s)"):format(key, n.x, n.y, below, at))

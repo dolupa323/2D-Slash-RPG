@@ -84,7 +84,7 @@ do
 	local outside = 0
 	for key, sc in SCENES.scenes do
 		-- (개인 연무장은 뺀다 — 2026-10-26: 나가는 문이 들어온 마을(@home)이라 어느 마을의 마디인지 장면만으로는 모른다 · 연무장에서는 월드맵에 「내가 있는 곳」이 없다 — 제가 정한 것)
-		if WM.nodeOf(key) == nil and not sc.dojo then
+		if WM.nodeOf(key) == nil and not sc.dojo and not sc.jail then -- (검정 방 — 매크로 감옥 2026-11-11: 문이 없다 · 서버가 옮겨 넣는다)
 			outside += 1
 		end
 	end
@@ -735,9 +735,11 @@ do
 		end,
 		tab = function() local t = { width = 40 } function t.setOn() end return t end,
 		hit = function(parent)
-			return { Activated = { Connect = function(_, fn) hits[parent.Name] = fn end } }
+			return { Activated = { Connect = function(_, fn) hits[parent.Name] = fn end }, MouseEnter = { Connect = function(_, fn) hits["enter:" .. parent.Name] = fn end }, MouseLeave = { Connect = function(_, fn) hits["leave:" .. parent.Name] = fn end } }
 		end,
 	})
+	local lastInput = Enum.UserInputType.MouseMovement
+	SERVICE("UserInputService", { GetLastInputType = function() return lastInput end })
 	MOCK("Client/lune/ui/kit", { part = function(parent, name) expect(typeof(name) == "string" and name ~= "", "퀘스트 표시의 부품 이름") return frame("Part", parent) end })
 	local MapWindow = req("Client/lune/ui/mapWindow")
 	local w, h = MapWindow.size()
@@ -793,6 +795,18 @@ do
 	eq(sideLink(), "초승달 마을의 포탈로 간다", "어떻게 가는지 적힌다")
 	hits["HitName_r1bh"]()
 	eq(sideName(), "옛 은신처", "이름표를 눌러도 고른다")
+	-- 마우스를 올리면 그곳의 글을 잠깐(2026-11-13 — 누르지 않아도) · 벗어나면 고른 곳으로 · 손가락은 아니다
+	hits["enter:Hit_town"]()
+	eq(sideName(), "초승달 마을", "마우스를 올리면 그곳의 글")
+	hits["leave:Hit_town"]()
+	eq(sideName(), "옛 은신처", "벗어나면 고른 곳의 글로 돌아온다")
+	hits["enter:HitName_out:city"]()
+	eq(sideName(), "은달 항구", "이름표에 올려도")
+	hits["leave:HitName_out:city"]()
+	lastInput = Enum.UserInputType.Touch
+	hits["enter:Hit_town"]()
+	eq(sideName(), "옛 은신처", "손가락이면 바꾸지 않는다(누르기로만)")
+	lastInput = Enum.UserInputType.MouseMovement
 	view.destroy()
 	-- 파티원(2026-10-18): 이 지역에 있는 파티원마다 그 장소 곁에 금빛 점 — 다른 지역 · 장소가 없는 맵의 사람은 그리지 않는다
 	local party = { { id = 1, name = "나", scene = "town" }, { id = 2, name = "둘", scene = "town" }, { id = 3, name = "셋", scene = "town" }, { id = 4, name = "넷", scene = "ct" } }

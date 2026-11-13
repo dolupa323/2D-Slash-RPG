@@ -713,7 +713,7 @@ do
 	-- 칸이 창 안에 든다(모든 상자)
 	for _, bid in { "petbox", "mountbox", "bubblebox", "dmgskin", "tagskin" } do
 		local n = #Gacha.box(bid).pool
-		local lx, ly = CashWindow.pickCell(n)
+		local lx, ly = CashWindow.pickCell(math.min(n, CashWindow.PICK_ROWS * Layout.CASH.selCols)) -- (줄이 PICK_ROWS를 넘으면 그 안에서 민다 — 2026-11-13: 보이는 마지막 줄까지)
 		expect(lx + Layout.CASH.selCellW <= Layout.CASH.w and ly + Layout.CASH.selCellH <= CashWindow.pickH(bid) - 26, "마지막 칸이 창 안 — " .. bid)
 	end
 	table.clear(texts)

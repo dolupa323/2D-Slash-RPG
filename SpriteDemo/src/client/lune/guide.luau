@@ -41,8 +41,8 @@ function Guide.setBelow(below: number?)
 	end
 	shownBelow = below
 	local push = if below then math.max(0, below + 4 - Guide.HINT_Y) else 0
-	hintBox.Position = Stage.atPosition("tc", (Stage.REF_W - Guide.HINT_W) / 2, Guide.HINT_Y + push)
-	bannerBox.Position = Stage.atPosition("tc", (Stage.REF_W - Guide.BANNER_W) / 2, Guide.BANNER_Y + push)
+	Stage.move(hintBox, "tc", (Stage.REF_W - Guide.HINT_W) / 2, Guide.HINT_Y + push) -- (옮긴 자리 · 화면 안 — 2026-11-12)
+	Stage.move(bannerBox, "tc", (Stage.REF_W - Guide.BANNER_W) / 2, Guide.BANNER_Y + push)
 end
 
 -- 안내 한 줄(없으면 nil · 빈 글)

@@ -8,8 +8,8 @@
   "id": "rbxassetid://70389067240845"
  },
  "villagers.png": {
-  "hash": "a8ae4b51adc0e9070589b8a8881326df",
-  "id": "rbxassetid://113182249370440"
+  "hash": "a36ddb3f5bd9d9c239923c798e8417f0",
+  "id": "rbxassetid://86369845251102"
  },
  "ground_town_2.png": {
   "hash": "194550519172b6f52d4ec0a61d0607b5",
@@ -56,8 +56,8 @@
   "id": "rbxassetid://105450659975716"
  },
  "ui_kit.png": {
-  "hash": "e8484b3514ab2793b06968e0cf0a72ec",
-  "id": "rbxassetid://107009683767128"
+  "hash": "1cd0c31720eebdf8c21226c743566131",
+  "id": "rbxassetid://85041431011456"
  },
  "font_small_2.png": {
   "hash": "a39c57d23acf7233f3419f3f15021ff7",
@@ -912,44 +912,44 @@
   "id": "rbxassetid://129307589678082"
  },
  "chars_7.png": {
-  "hash": "51cf7539b06f1749d915b437c7304544",
-  "id": "rbxassetid://127707644885971"
+  "hash": "c2c11e468f602d3168294040867c08b1",
+  "id": "rbxassetid://84742773882029"
  },
  "chars_8.png": {
-  "hash": "7fab2ddef34c73e968f7af4055519094",
-  "id": "rbxassetid://74636761898065"
+  "hash": "5ed43877fc641cf93f05875f506240ac",
+  "id": "rbxassetid://140078640177242"
  },
  "chars_9.png": {
-  "hash": "ac6744f7d2197b7a2b4cbe4742b94de5",
-  "id": "rbxassetid://74931635344450"
+  "hash": "38515eadf100cbca794f523ca8476ee9",
+  "id": "rbxassetid://126290641032478"
  },
  "chars_10.png": {
+  "hash": "e71639c7939b9ce7ef0623358e59e5fd",
+  "id": "rbxassetid://140032314862205"
+ },
+ "chars_11.png": {
   "hash": "d63ea3700353851b55f8d6c74b713cac",
   "id": "rbxassetid://114244655978082"
  },
- "chars_11.png": {
-  "hash": "2181ff4ddf47492c09aaaef30c1081a1",
-  "id": "rbxassetid://110423226946443"
- },
  "chars_mask_7.png": {
-  "hash": "7bd91862cf5188820fdbdcff58f06dfa",
-  "id": "rbxassetid://119872632773164"
+  "hash": "9bb33478084b2d6e36012188e6e6ba0a",
+  "id": "rbxassetid://98586224500381"
  },
  "chars_mask_8.png": {
-  "hash": "a08dac7633b82c64bcd698bdd41608d2",
-  "id": "rbxassetid://86858573863493"
+  "hash": "a6a5371490dcd8513814ac5f8fa38367",
+  "id": "rbxassetid://131407551275104"
  },
  "chars_mask_9.png": {
-  "hash": "17ee8a2e7f04d87f2a31b1390a26d7b6",
-  "id": "rbxassetid://92761527433126"
+  "hash": "bc2991329340eb5d15306be8199f2a4e",
+  "id": "rbxassetid://106983118564803"
  },
  "chars_mask_10.png": {
-  "hash": "56f8ac50aadfeda8df0604f887c1851c",
-  "id": "rbxassetid://109045907888606"
+  "hash": "34b3f5b9e9f0aedc3e28ea6fcdcbe381",
+  "id": "rbxassetid://85044568467224"
  },
  "chars_mask_11.png": {
-  "hash": "26a5c173dd7f57b65adfeb44e6ba73fa",
-  "id": "rbxassetid://128767551977047"
+  "hash": "56f8ac50aadfeda8df0604f887c1851c",
+  "id": "rbxassetid://109045907888606"
  },
  "back_in_cellar.png": {
   "hash": "8b4f0dac61020348753d324fa2aee4c4",
@@ -1338,5 +1338,97 @@
  "ground_r5t_2.png": {
   "hash": "efe1faadee79747c80e78ae720efd6b5",
   "id": "rbxassetid://134915391029217"
+ },
+ "ground_r5a4_1.png": {
+  "hash": "09b06e02cb619616b38360eff412499b",
+  "id": "rbxassetid://139407789223371"
+ },
+ "props_r5a4.png": {
+  "hash": "66ecb92985d320cabbd748d2ed4f32ac",
+  "id": "rbxassetid://107927553917854"
+ },
+ "sky_r5a5.png": {
+  "hash": "88be9b256f826f2670328f97ae43d6ef",
+  "id": "rbxassetid://75179065632782"
+ },
+ "near_r5a5.png": {
+  "hash": "c4f5134f634a6e05c3ec8e69ae901ef9",
+  "id": "rbxassetid://123549444582364"
+ },
+ "ground_r5a5_1.png": {
+  "hash": "10e7637399577ab1f2935408bc8df799",
+  "id": "rbxassetid://131021935148380"
+ },
+ "near_r5a4.png": {
+  "hash": "d176eebd12c6e577246eac51bd33ad4c",
+  "id": "rbxassetid://121509956508831"
+ },
+ "far_r5a5.png": {
+  "hash": "cc1041efb67cde9ee09ed25c2dd20209",
+  "id": "rbxassetid://131778910913423"
+ },
+ "far_r5a4.png": {
+  "hash": "0eb1f54405f958635627eeb6f88e56a9",
+  "id": "rbxassetid://114827264150815"
+ },
+ "sky_r5a4.png": {
+  "hash": "f198929870f20bf3943e096b05fa5f6b",
+  "id": "rbxassetid://87697309527214"
+ },
+ "wall_r5b2.png": {
+  "hash": "aa36a6be7f028e09da8ea104fa432348",
+  "id": "rbxassetid://117974200114249"
+ },
+ "sky_r5b1.png": {
+  "hash": "f198929870f20bf3943e096b05fa5f6b",
+  "id": "rbxassetid://87697309527214"
+ },
+ "ground_r5c1_1.png": {
+  "hash": "7b00d695ffdaa3ddbdd204257017b338",
+  "id": "rbxassetid://100837127853989"
+ },
+ "near_r5b1.png": {
+  "hash": "d176eebd12c6e577246eac51bd33ad4c",
+  "id": "rbxassetid://121509956508831"
+ },
+ "sky_r5c1.png": {
+  "hash": "88be9b256f826f2670328f97ae43d6ef",
+  "id": "rbxassetid://75179065632782"
+ },
+ "far_r5b1.png": {
+  "hash": "0eb1f54405f958635627eeb6f88e56a9",
+  "id": "rbxassetid://114827264150815"
+ },
+ "near_r5c1.png": {
+  "hash": "c4f5134f634a6e05c3ec8e69ae901ef9",
+  "id": "rbxassetid://123549444582364"
+ },
+ "ground_r5b1_1.png": {
+  "hash": "0e864869ed8614a9363370b6e2a709e6",
+  "id": "rbxassetid://80843145668570"
+ },
+ "props_r5b1.png": {
+  "hash": "b92d7425b73ecc58216b0f67d88ee287",
+  "id": "rbxassetid://129927328220911"
+ },
+ "ground_r5b2_1.png": {
+  "hash": "8dcf57adba5a4fd868ced997b994798b",
+  "id": "rbxassetid://135789367554139"
+ },
+ "far_r5c1.png": {
+  "hash": "cc1041efb67cde9ee09ed25c2dd20209",
+  "id": "rbxassetid://131778910913423"
+ },
+ "ground_r5a7_1.png": {
+  "hash": "2801f597bfe417f985e6a8140da9ab8b",
+  "id": "rbxassetid://109757841632236"
+ },
+ "ground_r5a6_1.png": {
+  "hash": "232432e66521ccf43da742b45df86959",
+  "id": "rbxassetid://81392000467660"
+ },
+ "ground_r5a8_1.png": {
+  "hash": "7cc8a10a4c11e71c23178532d4d11163",
+  "id": "rbxassetid://108557592109217"
  }
 }

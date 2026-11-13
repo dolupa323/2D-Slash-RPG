@@ -34,7 +34,7 @@ local PIC = 24 -- 그림 한 장(화면 틀의 점)
 local STICK = { walk = 0.35, side = 70, ud = 40 }
 local HOLD_FIRST, HOLD_NEXT = 0.3, 0.12 -- 공격 스킬을 누르고 있을 때: 처음 다시 누르기까지 · 그 뒤의 간격(초)
 local DRAG = Quick.DATA.drag -- 이만큼 움직이면 끌기로 본다(화면 틀의 점)
-local ACT_WORDS = { pickup = "줍기", portal = "들어가기", npc = "말 걸기", spot = "살펴보기", vista = "둘러보기", chest = "상자 열기" } -- spot = 맵에 놓인 것 앞(퀘스트의 자리) · vista = 경관의 자리(성의 테라스 — 2026-10-18) · chest = 보상의 방의 상자(2026-10-28)
+local ACT_WORDS = { rune = "룬 해방", pickup = "줍기", portal = "들어가기", npc = "말 걸기", spot = "살펴보기", vista = "둘러보기", chest = "상자 열기" } -- spot = 맵에 놓인 것 앞(퀘스트의 자리) · vista = 경관의 자리(성의 테라스 — 2026-10-18) · chest = 보상의 방의 상자(2026-10-28)
 
 local Touch = {}
 Touch.STICK = STICK -- (시험이 본다)
@@ -630,11 +630,16 @@ local function build()
 			t = table.clone(t0)
 			t.x, t.y = o.x, o.y
 		end
+		-- 왼손 배치(2026-11-14 사용자: 셋째 배치 = 「왼손 배치」(메뉴 개편을 세 배치 모두에 넣어 「바로가기」가 새 배치와 같아졌다)): 화면 위 4분의 1 아래의 단추(조이스틱 · 칸 단추)를 좌우로 뒤집는다 — 위쪽(채팅)은 그대로
+		if Touch.style == "left" and t.kind ~= "hud" and t.y + t.h / 2 >= VIEW_H / 4 then
+			t = table.clone(t)
+			t.x = VIEW_W - t.x - t.w
+		end
 		if t.kind == "pad" then
 			makePad(t)
 		elseif t.slot then
 			makeSlot(t)
-		elseif t.act then
+		elseif t.act and t.act ~= "menu" then -- (「메뉴」 단추는 없다 — 오른쪽 위 바로가기 줄의 「전체」가 그 일: touchBar.luau · 2026-11-13 바로가기 배치 → 2026-11-14 세 배치 모두)
 			makeAct(t)
 		end
 	end
@@ -650,21 +655,31 @@ end
 -- ---------- 밖에서 알려 주는 것 ----------
 -- 폰 단추 배치(2026-10-28): true = 예전 배치(상호작용 단추가 조이스틱 바로 옆) — 바뀌면 단추를 다시 짓는다
 Touch.legacy = false
+Touch.style = "new" -- "new" · "old" · "left"(왼손 배치 — 2026-11-14 사용자: 셋째 배치 = 「왼손 배치」(메뉴 개편을 세 배치 모두에 넣어 「바로가기」가 새 배치와 같아졌다)) · 바로가기 줄은 셋 모두(touchBar.luau) · 2026-11-13의 "bar"는 "new"로
 function Touch.setLegacy(on: boolean)
-	on = on == true
-	if Touch.legacy == on then
+	Touch.setStyle(if on then "old" else (if Touch.style == "left" then "left" else "new"))
+end
+function Touch.setStyle(style: string)
+	style = if style == "old" or style == "left" then style else "new"
+	if Touch.style == style and Touch.legacy == (style == "old") then
 		return
 	end
-	Touch.legacy = on
+	Touch.style = style
+	Touch.legacy = style == "old"
 	if root then
 		build()
 	end
 end
+-- 바로가기 배치의 판(touchBar.luau가 단다): 「메뉴」의 틀을 물으면 그 판의 「전체」 칸
+Touch.barFrame = nil :: ((name: string) -> GuiObject?)?
 -- 칸들에 놓인 것(PC의 퀵슬롯과 같은 열두 칸)
 -- 단추 하나의 틀(튜토리얼의 꿈이 그 단추를 반짝이게 한다 — 2026-10-14): name = "pad"(조이스틱) · "jump" · "interact" · "menu" · "slot"(arg = 칸 번호)
 function Touch.frameOf(name: string, arg: number?): GuiObject?
 	if name == "pad" then
 		return if pad then pad.frame else nil
+	end
+	if name == "menu" and Touch.barFrame then -- (세 배치 모두 — 2026-11-14)
+		return Touch.barFrame("@all") -- (바로가기 배치 — 2026-11-13)
 	end
 	for _, b in buttons do
 		-- 점프 · 상호작용은 그것이 놓인 칸 단추(2026-10-21 — 「단추 배치」에서 옮겼으면 옮긴 자리)

@@ -25,6 +25,12 @@ MacroWindow.onOpen = nil :: (() -> ())? -- 새 문제가 떴다: 열려 있는 �
 local layer: Frame? = nil
 local win = nil -- { holder, view, picks, deadline, cells, okBtn, left, tries, picked, note, conn, busy }
 local stop = { holder = nil :: Frame?, text = nil, hint = nil, stopped = false, retryAt = 0, conn = nil :: RBXScriptConnection? }
+-- 감옥(2026-11-11 — 서버 macroGuard.luau Guard.jail · 공방 design/macro.js의 jail): 갇혀 있는 동안 화면 위 가운데에 「사냥 정지 — 매크로 의심」 · 「남은 시간 m:ss」(보상 멈춤 띠 대신)
+local jail = { holder = nil :: Frame?, left = nil, endAt = 0, shown = -1, conn = nil :: RBXScriptConnection? }
+local JW = D.jail.words
+local function jailOn(): boolean
+	return jail.endAt > os.clock()
+end
 
 local function root(): Frame
 	if not layer then
@@ -223,7 +229,7 @@ end
 
 -- 보상 멈춤 띠(누르면 다시 확인 — 기다릴 시간이 남았으면 그 분)
 local function paintStop()
-	if not stop.stopped then
+	if not stop.stopped or jailOn() then
 		if stop.holder then
 			stop.holder.Visible = false
 		end
@@ -259,7 +265,42 @@ local function paintStop()
 	(stop.holder :: Frame).Visible = true
 end
 
--- 서버가 알린 것 · 대답의 결과: { check?, stopped, retryIn, result? }
+-- 감옥의 띠(남은 시간이 0이 되면 스스로 닫고 보상 멈춤 띠를 다시 본다)
+local function paintJail()
+	if not jailOn() then
+		if jail.holder then
+			jail.holder.Visible = false
+		end
+		paintStop()
+		return
+	end
+	if not jail.holder then
+		local J = D.jail.look
+		local holder = Stage.place(root(), "MacroJail", "tc", Stage.REF_W / 2 - J.w / 2, J.y, J.w, J.h)
+		Ui.panel(holder, 0, 0, J.w, J.h)
+		Ui.text(holder, JW.head, 0, 4, J.w, { align = "center", color = C.red })
+		jail.left = Ui.text(holder, "", 0, 4 + M.smallLine, J.w, { align = "center", color = C.dim })
+		jail.holder = holder
+		jail.conn = RunService.Heartbeat:Connect(function()
+			if not (jail.holder and jail.holder.Visible) then
+				return
+			end
+			local left = math.ceil(jail.endAt - os.clock())
+			if left <= 0 then
+				paintJail()
+			elseif left ~= jail.shown then -- (1초에 한 번만 글을 바꾼다)
+				jail.shown = left
+				jail.left:set(Format.fill(JW.left, { t = ("%d:%02d"):format(left // 60, left % 60) }))
+			end
+		end)
+	end
+	jail.shown = -1;
+	(jail.holder :: Frame).Visible = true
+	paintStop()
+end
+
+-- 서버가 알린 것 · 대답의 결과: { check?, stopped, retryIn, result?, jail = 감옥의 남은 초, jailNew = 방금 갇혔다(분), jailOut = 방금 풀려 나왔다 }
+MacroWindow.notice = nil :: ((head: string, line: string) -> ())? -- 화면 위 알림 + 채팅 글(boot.luau가 단다 — 감옥에 들어갈 때)
 function MacroWindow.update(v)
 	if type(v) ~= "table" then
 		return
@@ -282,6 +323,16 @@ function MacroWindow.update(v)
 		stop.stopped = v.stopped == true
 		stop.retryAt = os.clock() + (tonumber(v.retryIn) or 0)
 		paintStop()
+	end
+	if v.jail ~= nil then
+		jail.endAt = os.clock() + (tonumber(v.jail) or 0)
+		paintJail()
+	end
+	if typeof(v.jailNew) == "number" and MacroWindow.notice then
+		MacroWindow.notice(JW.head, Format.fill(JW.enter, { m = v.jailNew }))
+	end
+	if v.jailOut and MacroWindow.say then
+		MacroWindow.say(JW.out, true)
 	end
 end
 

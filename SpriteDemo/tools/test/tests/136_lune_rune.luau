@@ -141,7 +141,7 @@ eq(Rune.baitLevel(some, tt), nil, "하나라도 주웠으면 의심하지 않는
 -- 매크로 확인의 의심에 들어간다
 local ms = Macro.new(tt, nil)
 ms.bait = bs
-eq(Macro.level(ms, tt + B.life + 1, true), "high", "매크로 확인의 의심 = high(확인이 더 자주 뜬다)")
+eq(Macro.level(ms, tt + B.life + 1, true), "mid", "매크로 확인의 의심 = 중간(확인이 더 자주 뜬다 — 2026-11-13 낮: 별똥별만으로는 「높음」이 아니다)")
 local g, shown = Rune.baitCounts(st, B.every[1] + 2)
 expect(g == 1 and shown == 1, "관리 창의 「별똥별 1/1」")
 
@@ -174,9 +174,12 @@ do
 	local function sess(id)
 		local hero = Hero.new(id, "axion")
 		hero.level = 30
-		local x = { player = { UserId = id }, scene = A, hero = hero }
+		local x = { player = { UserId = id }, scene = A, hero = hero, macro = { kills = {} } } -- macro.kills = 그 사람이 잡은 때(저주는 그 사람이 사냥할 때만 쌓인다 — 2026-11-12)
 		table.insert(sessions, x)
 		return x
+	end
+	local function now0()
+		return 1700000000 + math.floor(clock.now) -- (서버의 모듈이 보는 시계 — mock.luau osMock)
 	end
 	local sa, sb = sess(71), sess(72)
 	local function tickAll()
@@ -187,12 +190,60 @@ do
 	-- 맵 A에서 사냥을 이어 룬이 나오고 2단계 저주가 되기까지
 	for _ = 1, math.ceil((R.appear + R.curse.after + R.curse.every + 5) / 30) do
 		RG.onKill(A)
-		clock.now += 30
-		tickAll()
+		for _, x in sessions do
+			table.insert(x.macro.kills, now0()) -- (둘 다 맵 A에서 잡고 있다)
+		end
+		for _ = 1, 30 do -- (1초마다 — 저주의 초를 쌓는 셈이 1초씩 본다)
+			clock.now += 1
+			tickAll()
+			for _, x in sessions do
+				if x.scene == A then
+					table.insert(x.macro.kills, now0())
+				end
+			end
+		end
 	end
 	expect(sa.hero.curse ~= nil and sa.hero.curse >= R.curse.cut[2] - 1e-9, ("맵 A의 저주 2단계 이상(%s)"):format(tostring(sa.hero.curse)))
 	local stageA = sa.hero.runeCurse and sa.hero.runeCurse.s or 0
 	expect(stageA >= 2 and sa.hero.runeCurse.map == A, "저주가 사람에게 붙었다(단계 · 맵)")
+	-- 2026-11-12(사용자 "다른사람이 룬의저주를 만든자리를 그 대상자가 아닌사람이 들어갔다가 나오면 룬의 저주가 걸려버려 … 그 유저가 기준인거야"):
+	--  저주가 쌓인 맵 A에 새 사람(sc)이 들어와 잠깐 사냥하고 나가면 아무것도 받지 않는다 · 잡지 않고 오래 서 있어도(구경) 받지 않는다 · 룬을 두고 5분 넘게 사냥하면 그때부터 그 사람의 저주
+	do
+		local sc = sess(73)
+		for _ = 1, 60 do -- 1분 사냥
+			table.insert(sc.macro.kills, now0())
+			clock.now += 1
+			RG.tick(sc, A)
+		end
+		eq(sc.hero.curse, nil, "저주 맵에 막 들어와 1분 사냥: 깎지 않는다(맵의 저주를 물려받지 않는다)")
+		expect(sc.hero.runeCurse == nil or sc.hero.runeCurse.s == 0, "새 사람의 저주 단계 0")
+		sc.scene = Bm
+		clock.now += 1
+		RG.tick(sc, Bm)
+		eq(sc.hero.curse, nil, "나와서 다른 사냥터: 저주 없음")
+		local sd = sess(74)
+		for _ = 1, R.curse.after + 60 do -- 잡지 않고 6분 서 있다(구경)
+			clock.now += 1
+			RG.tick(sd, A)
+		end
+		eq(sd.hero.curse, nil, "잡지 않고 서 있기만 한 사람: 저주 없음")
+		sc.scene = A
+		for _ = 1, R.curse.after + 10 do -- 룬을 두고 5분 넘게 사냥
+			table.insert(sc.macro.kills, now0())
+			clock.now += 1
+			RG.tick(sc, A)
+		end
+		eq(sc.hero.runeCurse and sc.hero.runeCurse.s, 1, "룬을 두고 5분 넘게 사냥하면 그 사람의 저주 1단계")
+		for i = #sessions, 1, -1 do
+			if sessions[i] == sc or sessions[i] == sd then
+				table.remove(sessions, i)
+			end
+		end
+		-- 옛 저장(n이 없다 — 맵의 저주를 물려받은 것)은 한 번 풀린다
+		local old = Hero.pack(Hero.new(75, "axion"))
+		old.runeCurse = { s = 3, map = A }
+		eq(Hero.unpack(75, old).runeCurse, nil, "옛 꼴의 저주(n 없음)는 풀어 준다")
+	end
 	-- 다른 사냥터로: 남는다
 	sa.scene = Bm
 	RG.onScene(sa, Bm)
@@ -242,4 +293,30 @@ do
 	clock.now += 1
 	RG.tick(sa, Bm)
 	eq(sa.hero.curse, R.curse.cut[stageA], "다른 맵에 있던 사람은 그대로(맵 A의 룬이 풀렸어도 — 사냥터를 옮겨 피할 수 없게)")
+	-- 저주를 지닌 채 룬이 없는 사냥터(다른 채널의 방 · 다른 맵)에서 사냥하면 그 자리에 룬이 놓인다(2026-11-14 사용자 "다른 채널에서 뜬 룬이 본인채널에도 저주가 걸려버린다" —
+	--  전에는 「그 사람 몫」(룬을 푼 뒤 오래 사냥)일 때만 놓여, 남의 룬으로 생긴 저주를 다른 채널에서 풀 길이 없었다)
+	local C2 = A .. "#c2"
+	sa.scene = C2
+	RG.onScene(sa, C2)
+	local mark = #fired
+	table.insert(sa.macro.kills, now0())
+	clock.now += 1
+	RG.tick(sa, C2)
+	local placed = nil
+	for i = mark + 1, #fired do
+		local f = fired[i]
+		if f.name == "RuneMap" and f.player == sa.player and f.v and f.v.rune then
+			placed = f.v.rune
+		end
+	end
+	expect(placed ~= nil, "저주를 지닌 사람이 룬 없는 채널의 방에서 사냥하면 그 방에 룬이 놓인다(풀 수 있다)")
+	if placed then
+		sa.hero.x, sa.hero.y = placed.x, placed.y
+		local ok2 = RG.onRemote(sa, "start")
+		if ok2 and ok2.arrows then
+			local res2 = RG.onRemote(sa, "answer", ok2.arrows)
+			eq(res2 and res2.result, "done", "그 룬을 풀었다")
+		end
+		eq(sa.hero.runeCurse, nil, "다른 채널에서 생긴 저주도 지금 채널에서 풀린다")
+	end
 end

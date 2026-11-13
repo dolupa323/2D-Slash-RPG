@@ -494,6 +494,9 @@ do
 		atPosition = function(_, x, y)
 			return { X = { Scale = 0, Offset = x }, Y = { Scale = 0, Offset = y } }
 		end,
+		move = function(frame, _, x, y) -- (진짜 Stage.move — 옮긴 만큼 · 화면 안 · 2026-11-12)
+			frame.Position = { X = { Scale = 0, Offset = x }, Y = { Scale = 0, Offset = y } }
+		end,
 	})
 	MOCK("Client/lune/ui/ui", { COLOR = setmetatable({}, { __index = function() return "c" end }) })
 	MOCK("Client/modules/ui/pixelText", pixelText) -- (게임에서의 자리 — 묶음은 client/modules를 Client로 얹는다)

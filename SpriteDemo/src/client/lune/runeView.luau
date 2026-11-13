@@ -39,13 +39,14 @@ function RuneView.setMap(v)
 	if typeof(v) ~= "table" then
 		return
 	end
-	local had, stageWas = view.rune, view.stage or 0
+	local had, stageWas = view.rune, tonumber(view.curse) or 0
 	view, mapAt = v, os.clock()
 	if v.rune and not had and hooks and hooks.banner then
 		hooks.banner(W.appeared, W.hint)
 	end
-	local st = v.stage or 0
-	if st > stageWas and hooks and hooks.banner then
+	-- 내 저주의 단계가 올랐을 때만(2026-11-12 — 저주는 그 사람이 룬을 두고 사냥한 시간으로 쌓인다: 맵의 단계로 알리면 막 들어온 사람에게도 떴다)
+	local st = tonumber(v.curse) or 0
+	if st > stageWas and R.curse.cut[st] and hooks and hooks.banner then
 		hooks.banner(Format.fill(W.curse, { n = st, p = floor(R.curse.cut[st] * 100 + 0.5) }), W.curseHint)
 	end
 	if not v.rune and prompt then
@@ -212,6 +213,10 @@ end
 function RuneView.near(x: number, y: number): boolean
 	local r = view.rune
 	return r ~= nil and abs(x - r.x) <= R.reach.x and abs(y - r.y) <= R.reach.y
+end
+-- 지금 곁의 룬을 해방할 수 있나(룬이 1순위 — 2026-11-12): 곁에 있고 · 내 쿨이 끝났고 · 화살표 판이 떠 있지 않다. 쿨 중이면 폰의 상호작용 단추는 줍기로(룬 곁의 전리품도 주울 수 있게)
+function RuneView.ready(x: number, y: number): boolean
+	return RuneView.near(x, y) and left("cdLeft") <= 0 and not prompt and not starting
 end
 -- 머리 위의 글(boot의 이름표 자리 셈): 곁에 서 있으면 「↑ 룬 해방」
 function RuneView.hint(x: number, y: number): (string?, number?, number?)

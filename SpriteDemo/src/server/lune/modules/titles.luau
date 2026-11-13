@@ -187,7 +187,19 @@ function TitleServer.cap()
 	return cap
 end
 -- Lv.200인 캐릭터를 세 사람의 기록에 적어 본다 — 새로 적히면 이 서버와 다른 모든 서버에 알린다(몇 번째인지)
+--  후보는 한 박자(그다음 부름) 기다렸다가 이 서버의 후보 가운데 가장 먼저 닿은 사람부터 적는다(2026-11-13 — 기록은 닿은 시각 순으로 끼워 넣는데, 거의 같은 때 닿은 둘을
+--   늦게 닿은 사람부터 적으면 그가 「둘째」로 알려진 뒤 먼저 닿은 사람이 그 앞에 끼어 또 「둘째」로 알려졌다 — 시험 90 「1,2,2」). 나간 사람도 후보로 남아 적힌다(닿은 것은 맞다)
+local capWant = {} :: { [string]: { rec: any, seen: number } }
 function TitleServer.tryCap(rec, now: number)
+	local w = capWant[rec.key]
+	-- 이 사람이 앞 부름(1초 전)부터 후보였다 = 그 사이 이 서버의 다른 Lv.200도 모두 한 번씩 불렸다(grant는 사람마다 1초에 한 번) — 2026-11-14 검토:
+	--  전에는 「어느 후보든 앞 틱부터」(0.05초)를 보아, 다른 Lv.200(이미 적힌 1위 등)의 부름 때문에 늦게 닿은 사람이 먼저 적힐 수 있었다
+	local repeatCall = w ~= nil and w.seen < now
+	if w then
+		w.rec = rec
+	else
+		capWant[rec.key] = { rec = rec, seen = now }
+	end
 	if capBusy or now - capFailAt < TitleServer.RETRY then
 		return
 	end
@@ -196,9 +208,20 @@ function TitleServer.tryCap(rec, now: number)
 		loadCap()
 		return
 	end
-	if has(cap, rec.key) or #cap >= Titles.CAP3 then
+	local best = nil
+	for k, cw in capWant do
+		if has(cap, k) or #cap >= Titles.CAP3 then
+			capWant[k] = nil -- 이미 적혔다 · 다 찼다
+		else
+			if not best or (cw.rec.at or math.huge) < (best.at or math.huge) then
+				best = cw.rec
+			end
+		end
+	end
+	if not best or not repeatCall then
 		return
 	end
+	rec = best
 	capBusy = true
 	task.spawn(function()
 		local ok, list = pcall(Store.capThreeAdd, rec, Titles.CAP3)

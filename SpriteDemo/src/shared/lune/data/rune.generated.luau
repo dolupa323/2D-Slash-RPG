@@ -3,6 +3,7 @@
 return {
 	rune = {
 		appear = 900,
+		own = 900,
 		keys = 4,
 		time = 6,
 		retry = 3,
@@ -23,6 +24,7 @@ return {
 		life = 20,
 		dist = { 60, 140 },
 		hunt = { window = 120, kills = 2 },
+		route = { sec = 300, margin = 24, far = 300 },
 		reward = { dustMin = 3 },
 		window = 3600,
 		mid = 4,

@@ -36,6 +36,11 @@ end
 function ItemDetail.owner(): string?
 	return if shown then shown.owner else nil
 end
+-- 눌러서 띄운(마우스 올림이 아닌) 판의 주인 — 없으면 nil(2026-11-14: 대장장이 · 코인 상점 · 경매장은 ui.detail을 쓰지 않아,
+--  가방 위를 마우스로 지나가기만 해도 그 판이 닫혔다 — 마우스 올림은 이 판이 있으면 띄우지 않는다)
+function ItemDetail.pinned(): string?
+	return if shown and not shown.peek then shown.owner else nil
+end
 
 -- 판을 닫는다. owner를 주면 그 창의 것일 때만
 function ItemDetail.hide(owner: string?)
@@ -90,6 +95,7 @@ function ItemDetail.show(owner: string, spec)
 	end
 	if shown and shown.owner == owner and shown.key == spec.key then
 		shown.holder.Position = at
+		shown.peek = spec.peek == true
 		return
 	end
 	ItemDetail.hide(nil)
@@ -208,7 +214,7 @@ function ItemDetail.show(owner: string, spec)
 	if back then
 		(back :: ImageLabel).Size = UDim2.fromOffset(K.w, h)
 	end
-	shown = { owner = owner, key = spec.key, holder = holder }
+	shown = { owner = owner, key = spec.key, holder = holder, peek = spec.peek == true } -- (peek = 마우스를 올려 띄운 판 — 2026-11-14)
 end
 
 return ItemDetail

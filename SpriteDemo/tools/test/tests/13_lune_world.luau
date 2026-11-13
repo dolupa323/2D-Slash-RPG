@@ -1,4 +1,5 @@
 -- 「달의 계승자」 — 서버의 세계(server/lune/modules/world.luau): 들어오기 · 자리 보고 · 문 · 기술(구간과 이어 누르기) · 보상 · 줍기 · 물약 · 쓰러졌다 일어나기
+req("ReplicatedStorage/shared/lune/sim/channel").DATA.fill = 1e9 -- (이 시험은 채널을 보지 않는다 — 사람이 많아도 모두 채널 1: 채널은 시험 156 · 2026-11-12)
 local N = req("ReplicatedStorage/shared/lune/config/numbers")
 local COMBAT = req("ReplicatedStorage/shared/lune/data/combat.generated")
 COMBAT.rules.critChance = 0 -- 치명타는 따로 본다(22_lune_passives.luau의 치명타 검사) — 이 파일은 치명타 없이 피해를 그대로 잰다
@@ -2495,7 +2496,7 @@ do
 	for key, scn in SCENES.scenes do
 		if SCENES.homes[key] then
 			expect(scn.ret == false, "마을 자신은 돌아갈 곳이 없다 " .. key)
-		elseif key ~= "dream" and not scn.ship and not scn.dojo then -- (꿈 · 배와 비행선의 갑판은 쓸 수 없다 · 개인 연무장은 들어온 마을로 — 서버가 그때 정한다: 시험 91)
+		elseif key ~= "dream" and not scn.ship and not scn.dojo and not scn.jail then -- (검정 방 — 매크로 감옥 2026-11-11: 귀환 주문서를 쓰지 않는다 · 시험 154) -- (꿈 · 배와 비행선의 갑판은 쓸 수 없다 · 개인 연무장은 들어온 마을로 — 서버가 그때 정한다: 시험 91)
 			expect(typeof(scn.ret) == "string" and SCENES.homes[scn.ret] == true, ("가장 가까운 마을이 있다 %s → %s"):format(key, tostring(scn.ret)))
 		end
 	end

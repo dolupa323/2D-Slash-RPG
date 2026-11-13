@@ -49,6 +49,7 @@ local packets = {
 	Title = { Kind = "Event", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 3, Burst = 5 } }, -- 칭호를 단다(가진 칭호의 이름표 · ""이면 뗀다 — 2026-10-26)
 	Coupon = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 1, Burst = 2 } }, -- 쿠폰 번호를 적었다 → { ok, why?, pet? }(2026-10-21 · 서버 modules/cash.luau의 CashServer.coupon)
 	EventTrade = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.string }, RateLimit = { PerSecond = 2, Burst = 4 } }, -- 기간 이벤트의 교환(이벤트 이름표 · 바꿀 것의 이름표) → { ok, msg }(2026-10-29 할로윈 — 서버가 기간 · 주민 곁 · 사탕 · 가방을 다시 본다: sim/event.luau)
+	Channel = { Kind = "Function", Direction = "ClientToServer", Args = { t.string, t.any }, RateLimit = { PerSecond = 2, Burst = 4 } }, -- 채널(2026-11-12 — server World.onChannel): "list" · "go"(채널 번호) → { ok, why, now, counts, count, wait, splits }
 	Coach = { Kind = "Function", Direction = "ClientToServer", Args = { t.string }, RateLimit = { PerSecond = 1, Burst = 3 } }, -- 역마차를 탄다(갈 정류장의 장면 이름) → { ok, msg }(2026-10-26 — 서버가 지금 있는 곳 · 삯 · 달돈을 다시 본다: sim/coach.luau)
 	-- 물건을 다룬다: 하는 일(equip · unequip · dismantle · buy · enhance · transfer · restore · grow · storeIn · storeOut)과 그 대상 둘(번호 · 부위 · 수 등)
 	Item = { Kind = "Event", Direction = "ClientToServer", Args = { t.string, t.any, t.any, t.any, t.any }, RateLimit = { PerSecond = 12, Burst = 20 } }, -- (2026-10-21: 8 · 12 → 12 · 20 — 가방 · 상점에서 빠르게 연달아 누르면 넘쳐 버려졌다 · 일마다 서버가 다시 본다)
@@ -137,7 +138,7 @@ local packets = {
 	WeekMvp = { Kind = "Event", Direction = "ServerToClient", Doc = "주간 보스 격파의 MVP(2026-11-07): { boss, mode, rows = { { id, name, class, dmg, gim, deaths, score, mvp, best } … }, mvp, me }" },
 	RuneMap = { Kind = "Event", Direction = "ServerToClient", Doc = "룬(2026-11-07): 그 맵의 { rune = { x, y, id } 또는 nil, stage = 저주 단계 } · 해방한 사람은 { buffLeft, cdLeft, guardLeft }도" },
 	Bait = { Kind = "Event", Direction = "ServerToClient", Doc = "별똥별 조각(2026-11-07): 나에게만 { id, x, y, life } 또는 { gone = id }" },
-	MacroView = { Kind = "Event", Direction = "ServerToClient", Doc = "매크로 확인: { check = 문제(위의 셋 · 아래 아홉 · 남은 초 · 남은 기회 — 답은 없다) 또는 nil, stopped = 사냥 보상 멈춤, retryIn = 다시 확인까지 초, result = 방금의 결과 } (2026-10-23)" },
+	MacroView = { Kind = "Event", Direction = "ServerToClient", Doc = "매크로 확인: { check = 문제(위의 셋 · 아래 아홉 · 남은 초 · 남은 기회 — 답은 없다) 또는 nil, stopped = 사냥 보상 멈춤, retryIn = 다시 확인까지 초, result = 방금의 결과, jail = 감옥의 남은 초 · jailNew = 방금 갇힘(분) · jailOut = 방금 나옴(2026-11-11) } (2026-10-23)" },
 	Voyage = { Kind = "Event", Direction = "ServerToClient", Doc = "배: { left = 닿기까지 초, dest } 갑판에 올랐다 · { arrived = 장면, dest } 닿았다(2026-10-16)" },
 	RiftView = { Kind = "Event", Direction = "ServerToClient", Doc = "토벌의 방의 상태(sim/rift.luau의 view — 물결 · 남은 몬스터 · 시간 · 완료 · 실패, 2026-10-16)" },
 	FinderView = { Kind = "Event", Direction = "ServerToClient", Doc = "파티 찾기의 화면(2026-11-05 — { rooms, mine, bosses, max, steps } · 내 방이 바뀌면 · 신청 · 수락 · 거절 · 출발 · 닫힘)" },
@@ -153,6 +154,7 @@ local packets = {
 	MobCast = { Kind = "Event", Direction = "ServerToClient", Doc = "몬스터의 마법이 뜸 { id, kind(쓴 몬스터의 종류), x, y, dir(쓴 몬스터가 보던 쪽 — 앞으로 뻗는 마법은 그쪽으로 그린다) } — 그 종류의 마법 그림(cast)이 그 자리에서 한 번 돈다. 맞는 것은 서버가 예고 뒤에 따로 알린다(Hurt)" },
 	ShotEnd = { Kind = "Event", Direction = "ServerToClient", Doc = "화살 번호" },
 	Megaphone = { Kind = "Event", Direction = "ServerToClient", Doc = "관리자의 확성기(모든 서버의 모두에게 — 2026-10-21): 글 — 화면 위 큰 알림 「공지」 + 채팅 알림 글" },
+	HuntTime = { Kind = "Event", Direction = "ServerToClient", Doc = "하루 사냥 시간(2026-11-12 — server World.huntCapStep): { left = 남은 분, cap = 하루의 분, over = 다 썼다, hunt = 지금 사냥 맵, crossed = 방금 다 썼다 }" },
 	MacroWarn = { Kind = "Event", Direction = "ServerToClient", Doc = "매크로 운영 경고(2026-11-09 — server macroGuard.luau Guard.warn): 글 — 화면 위 알림 「운영 경고」 + 채팅 알림 글" },
 	TitleGot = { Kind = "Event", Direction = "ServerToClient", Doc = "칭호를 받았다(2026-10-26): { 칭호의 이름표 … } — 화면 위 알림 「칭호 획득」 · 둘째가 true면 잃었다(황금왕이 넘어갔다 — 2026-10-29: 「칭호 이전」)" },
 	Reveal = { Kind = "Event", Direction = "ServerToClient", Doc = "보스의 출현 시각(2026-11-05 — server modules/reveal.luau): { at = { [보스] = os.time }, now = 서버의 지금 } — 왼쪽 아래 닉네임 위의 빨간 남은 시간 · 보스 퀘스트 · 문이 그때 열린다" },

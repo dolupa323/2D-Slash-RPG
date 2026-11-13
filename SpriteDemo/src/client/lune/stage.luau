@@ -106,6 +106,12 @@ function Stage.init()
 	uiScale.Parent = ui
 
 	local function fit()
+		-- 손가락 화면에서 글 칸을 쓰는 동안은 다시 맞추지 않는다(2026-11-11 밤 — 사용자: "모바일에서 경매장 액수라던지 뭐 다른 숫자를 입력해야하는 소요가 생기면 그냥 와다다 ui 가 꺼져버리는 버그"):
+		--  글 칸을 누르면 화면 키보드가 올라오며 화면 틀의 크기 · Roblox 단추 띠의 높이가 바뀐다 → 배율 · 띠가 달라졌다고 보고 onResize를 불러 창을 모두 닫았다(ui/windows.luau).
+		--  키보드가 떠 있는 동안은 그대로 두고, 칸에서 손을 떼면(TextBoxFocusReleased — 아래) 그때 한 번 맞춘다: 키보드가 내려가 크기가 돌아와 있으면 바뀐 것이 없어 창이 그대로다
+		if Stage.touchLike() and UserInputService:GetFocusedTextBox() ~= nil then
+			return
+		end
 		local real = gui.AbsoluteSize
 		local size = real
 		local fake = gui:GetAttribute("Screen")
@@ -117,6 +123,7 @@ function Stage.init()
 		end
 		local s, us = Stage.scalesFor(size.X, size.Y, Stage.touchLike())
 		local changed = s ~= Stage.scale or us ~= Stage.uiScale
+		local scaled = changed -- (배율이 정말 바뀌었는가 — onResize의 fn에 넘긴다: 창은 이때만 닫는다 · 2026-11-11 밤)
 		Stage.scale, Stage.uiScale, Stage.ratio = s, us, s / us
 		Stage.uiW, Stage.uiH = G.VIEW_W * s / us, G.VIEW_H * s / us
 		viewScale.Scale = s
@@ -135,12 +142,16 @@ function Stage.init()
 		changed = changed or Stage.insetTop ~= insetWas -- (배율이 같아도 창의 높이가 바뀌어 Roblox 단추 띠가 덮는 높이가 바뀌면 다시 놓는다 — 달빛 상점의 윗줄: 2026-11-10)
 		if changed then
 			for _, fn in resized do
-				fn()
+				fn(scaled) -- scaled = 배율이 바뀌었다(false = Roblox 단추 띠만 — 다시 놓기만 하면 된다)
 			end
 		end
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 	gui:GetAttributeChangedSignal("Screen"):Connect(fit)
+	-- 글 칸에서 손을 뗐다: 쓰는 동안 미뤄 둔 맞추기를 한 번(키보드가 내려가며 크기가 바뀌는 것보다 먼저 오면 그 크기 바뀜이 다시 부른다 — 2026-11-11 밤)
+	UserInputService.TextBoxFocusReleased:Connect(function()
+		task.defer(fit)
+	end)
 	Stage.refit = fit -- 터치인가가 바뀌면(touch.luau) 다시 맞춘다
 	fit()
 
@@ -169,7 +180,7 @@ end
 
 -- 화면 틀의 격자가 바뀌면(창 크기가 바뀌어 배율이 달라지면) fn을 부른다
 -- 돌려주는 것: 그 함수를 빼는 함수(화면을 닫을 때 — 2026-10-18 검토: 캐릭터 고르기를 열 때마다 하나씩 쌓여 닫힌 화면을 붙들고 있었다)
-function Stage.onResize(fn: () -> ()): () -> ()
+function Stage.onResize(fn: (scaled: boolean?) -> ()): () -> () -- (scaled = 배율이 바뀌었는가 — false면 Roblox 단추 띠만 바뀌었다: 2026-11-11 밤)
 	table.insert(resized, fn)
 	return function()
 		local i = table.find(resized, fn)
@@ -216,14 +227,76 @@ function Stage.atPosition(at: string, x: number, y: number): UDim2
 	return UDim2.new(fx, x - Stage.REF_W * fx, fy, y - Stage.REF_H * fy + down)
 end
 
+-- ---------- 옮긴 자리 · 화면 안으로(2026-11-12 사용자: "지금 채팅창처럼 모든 ui 가 끌어서 자리를 옮길수 있어야해 지금 모바일에서 잘려보이는경우 엄청많아") ----------
+--  Stage.moved[판의 이름] = 처음 자리에서 옮긴 만큼 { x, y }(화면 틀의 점) — 「UI 배치」(ui/arrange.luau) · 창의 제목 줄 끌기(ui/windows.luau)가 고치고,
+--   계정의 화면 설정에 기기 종류(pc · touch)마다 저장한다(viewOpts.luau ViewOpts.ui · sim/account.luau sound.ui).
+--  Stage.fit = 판이 화면 밖으로 나가지 않게: 화면 틀보다 작은 판은 화면 안으로 민다(폰의 작은 격자 768x432에서 기준 격자 960x540으로 놓은 판의 끝이 잘려 보였다) ·
+--   화면보다 큰 판(배경 · 덮개)은 그 쪽으로는 그대로 둔다
+Stage.moved = {} :: { [string]: { x: number, y: number } }
+Stage.placed = {} :: { [string]: any } -- [이름] = { frame, at, x, y, w, h } — 마지막으로 놓인 판(「UI 배치」가 끌 판을 찾는다)
+local function anchorOf(at: string): (number, number, number)
+	local fy = if at:sub(1, 1) == "b" then 1 else 0
+	local side = at:sub(2, 2)
+	local fx = if side == "r" then 1 elseif side == "c" then 0.5 else 0
+	return fx, fy, if at == "tl" then Stage.insetTop else 0
+end
+function Stage.fit(at: string, x: number, y: number, w: number, h: number): (number, number)
+	local fx, fy, down = anchorOf(at)
+	local left = fx * Stage.uiW + x - Stage.REF_W * fx
+	local top = fy * Stage.uiH + y - Stage.REF_H * fy + down
+	if w <= Stage.uiW then
+		x += math.clamp(left, 0, Stage.uiW - w) - left
+	end
+	if h <= Stage.uiH then
+		y += math.clamp(top, 0, Stage.uiH - h) - top
+	end
+	return x, y
+end
+-- 느슨하게 화면 안으로(창을 끌 때 — 2026-11-12 사용자: "창 끌어다 자리 바꾸는거 모바일에서 어느정도 터치보정이 되어야해 영역밖으로 끌어다놓는다고하면 바로 제자리로 돌아가는게 너무판정이 빡세다"):
+--  창 전체가 아니라 — 위의 제목 줄(keepH)은 늘 화면 안 · 오른쪽 끝(닫기 X가 있다)은 화면 안 · 왼쪽과 아래로는 keepW · keepH만 남으면 화면 밖으로 나가도 된다
+function Stage.fitLoose(at: string, x: number, y: number, w: number, h: number, keepW: number, keepH: number): (number, number)
+	local fx, fy, down = anchorOf(at)
+	local left = fx * Stage.uiW + x - Stage.REF_W * fx
+	local top = fy * Stage.uiH + y - Stage.REF_H * fy + down
+	local lo, hi = -(w - keepW), Stage.uiW - w
+	if hi >= lo then
+		x += math.clamp(left, lo, hi) - left
+	end
+	local tlo, thi = 0, Stage.uiH - keepH
+	if thi >= tlo then
+		y += math.clamp(top, tlo, thi) - top
+	end
+	return x, y
+end
+
+-- 그 이름의 판을 (x, y)(처음 자리)에 놓을 때의 자리: 옮긴 만큼을 더하고 화면 안으로
+function Stage.movedPosition(name: string, at: string, x: number, y: number, w: number, h: number): UDim2
+	local off = Stage.moved[name]
+	if off then
+		x, y = x + off.x, y + off.y
+	end
+	x, y = Stage.fit(at, x, y, w, h)
+	return Stage.atPosition(at, x, y)
+end
+-- 이미 놓인 판을 다시 놓는다(그 판이 제 자리를 바꿀 때 — 옮긴 만큼 · 화면 안을 지킨다). 판의 크기는 지금의 Size
+function Stage.move(frame: GuiObject, at: string, x: number, y: number)
+	local w, h = frame.Size.X.Offset, frame.Size.Y.Offset
+	frame.Position = Stage.movedPosition(frame.Name, at, x, y, w, h)
+	local rec = Stage.placed[frame.Name]
+	if rec and rec.frame == frame then
+		rec.at, rec.x, rec.y, rec.w, rec.h = at, x, y, w, h
+	end
+end
+
 function Stage.place(parent: Instance, name: string, at: string, x: number, y: number, w: number, h: number): Frame
 	local frame = Instance.new("Frame")
 	frame.Name = name
 	frame.BackgroundTransparency = 1
 	frame.BorderSizePixel = 0
-	frame.Position = Stage.atPosition(at, x, y)
+	frame.Position = Stage.movedPosition(name, at, x, y, w, h)
 	frame.Size = UDim2.fromOffset(w, h)
 	frame.Parent = parent
+	Stage.placed[name] = { frame = frame, at = at, x = x, y = y, w = w, h = h }
 	return frame
 end
 

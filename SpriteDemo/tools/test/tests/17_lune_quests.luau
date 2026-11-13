@@ -210,7 +210,7 @@ do
 		expect(def.region == string.sub(def.id, 1, 2) or def.kind == "job" or (def.city and (def.region == false or def.region == "r1" or def.region == "r2" or (string.match(def.id, "^wq") ~= nil and (def.region == "r3" or def.region == "r4")))), "퀘스트의 지역 " .. def.id) -- 2편의 퀘스트: 도시(false) · 반달 나루(r2) · 주간 보스의 퀘스트(wq — 주는 사람이 선 지역)
 	end
 	for key, scene in SCENES.scenes do
-		expect(scene.region == false or scene.region == "r1" or scene.region == "r2" or scene.region == "r3" or scene.region == "r4", "장면의 지역 " .. key)
+		expect(scene.region == false or scene.region == "r1" or scene.region == "r2" or scene.region == "r3" or scene.region == "r4" or scene.region == "r5", "장면의 지역 " .. key) -- (r5 — 윤슬 호수: 2026-11-12 전에는 지역 없음으로 내보내져 호수 주민이 퀘스트를 주지 못했다)
 	end
 	eq(SCENES.scenes.town.region, "r1", "마을은 1지역")
 	eq(SCENES.scenes.port.region, "r3", "등불 포구는 3지역의 들머리")

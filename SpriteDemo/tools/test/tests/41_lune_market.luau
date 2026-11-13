@@ -1418,6 +1418,12 @@ do
 	function Ui.line(parent)
 		return node("line", parent)
 	end
+	function Ui.panel(parent) -- (직업 펼침 목록의 판 — 2026-11-13)
+		return node("panel", parent)
+	end
+	function Ui.measure(text, font)
+		return (pixelText.Measure(text, font or "small"))
+	end
 	function Ui.scroll(parent, _x, _y, _w, h, contentH)
 		local o = node("scroll", parent)
 		o.h, o.contentH = h, contentH
@@ -1681,10 +1687,33 @@ do
 	expect(table.find(log, "read:w_riven") ~= nil and has(wb, W.empty), "사는 사람의 창: 제 직업의 무기부터")
 	press(wb, "button", "무기")
 	expect(find(wb, "button", View.className("riven")) ~= nil, "무기 분류에서는 직업 단추가 보인다")
+	-- 직업은 펼침 목록(2026-11-13 — 누를 때마다 다음 직업으로 바뀌던 단추를 바꿨다: 사용자 11-05 "클릭해서 바꾸는게 어디있어 제발 ui 의 기본은 지키자")
 	press(wb, "button", View.className("riven"))
-	expect(find(wb, "button", View.className(View.nextClass("riven"))) ~= nil and table.find(log, "read:w_" .. View.nextClass("riven")) ~= nil, "직업 단추를 누르면 다음 직업의 무기를 묻는다")
+	local classes = View.classList()
+	eq(#classes, 5, "직업 목록 = 다섯")
+	for _, c in classes do
+		local b = find(wb, "button", c.name, if c.id == "riven" then 2 else 1)
+		expect(b ~= nil and b.main == (c.id == "riven"), "목록에 모든 직업이 보이고 지금 직업이 밝다 — " .. c.id)
+	end
+	local nextC = View.nextClass("riven")
+	table.clear(log)
+	press(wb, "button", View.className(nextC))
+	expect(find(wb, "button", View.className(nextC)) ~= nil and count(wb, "button", View.className(nextC)) == 1 and table.find(log, "read:w_" .. nextC) ~= nil, "고르면 목록이 닫히고 그 직업의 무기를 묻는다")
+	eq(count(wb, "button", View.className("riven")), 0, "고른 뒤 단추는 새 직업의 이름")
+	press(wb, "button", View.className(nextC))
+	expect(count(wb, "button", View.className("riven")) == 1, "다시 누르면 다시 펼친다")
+	press(wb, "button", View.className(nextC)) -- (단추를 다시 누르면 닫힌다)
+	eq(count(wb, "button", View.className("riven")), 0, "단추를 다시 누르면 닫힌다")
+	press(wb, "button", View.className(nextC))
+	press(wb, "hit", nil, count(wb, "hit")) -- (목록 밖 — 펼칠 때 지은 막)
+	eq(count(wb, "button", View.className("riven")), 0, "목록 밖을 누르면 닫힌다")
 	press(wb, "button", "모자")
-	expect(find(wb, "button", View.className(View.nextClass("riven"))) == nil, "다른 분류에서는 직업 단추가 없다")
+	expect(find(wb, "button", View.className(nextC)) == nil, "다른 분류에서는 직업 단추가 없다")
+	-- 차례: 둘 다 보이는 단추(고른 것이 밝다)
+	expect(find(wb, "button", W.sortPrice) ~= nil and find(wb, "button", W.sortTime) ~= nil and find(wb, "button", W.sortPrice).main == true and find(wb, "button", W.sortTime).main == false, "차례 단추 둘 · 처음은 가격 낮은 순")
+	press(wb, "button", W.sortTime)
+	expect(find(wb, "button", W.sortTime).main == true and find(wb, "button", W.sortPrice).main == false, "남은 시간 순을 고르면 그것이 밝다")
+	press(wb, "button", W.sortPrice)
 	expect(has(wb, hatName) and has(wb, "창판매자") and find(wb, "text", "1,000") ~= nil and count(wb, "button", W.buy) == 1 and has(wb, Format.fill(W.rows, { n = 1 })) and find(wb, "text", W.unit) == nil, "모자 분류: 이름 · 판매자 · 값 · 「구매」(장비에는 「개당」이 없다)")
 	expect(find(wb, "button", "모자").main == true and find(wb, "button", "무기").main == false, "고른 분류가 밝다")
 	hb.money = 10
@@ -1806,9 +1835,9 @@ do
 	expect(has(wa, W.wait) and find(wa, "button", W.refresh).enabled == false and find(wa, "button", "모자").enabled == false, "기다리는 동안 「처리 중…」 — 단추가 꺼진다")
 	advance(2)
 	expect(not has(wa, W.wait) and find(wa, "button", W.refresh).enabled == true, "답이 오면 다시 눌린다")
-	-- 차례 단추
-	press(wa, "button", W.sortPrice)
-	expect(find(wa, "button", W.sortTime) ~= nil and find(wa, "button", W.sortPrice) == nil, "차례 단추: 「남은 시간 순」으로 바뀐다")
+	-- 차례 단추(2026-11-13 — 둘 다 보인다: 누른 것이 밝아진다)
+	press(wa, "button", W.sortTime)
+	expect(find(wa, "button", W.sortTime).main == true and find(wa, "button", W.sortPrice) ~= nil and find(wa, "button", W.sortPrice).main == false, "차례 단추: 「남은 시간 순」이 밝아지고 「가격 낮은 순」도 보인다")
 	-- 답이 없다(보내는 빠르기의 한도 · 오류)
 	ca.market = function()
 		return nil

@@ -18,7 +18,7 @@ local COMBAT = require(lune.data["combat.generated"])
 local Guard = {}
 local rng = Random.new()
 local LOG_MAX = 60
-Guard.log = {} -- 이 서버의 최근 일(관리 창): { t, uid, name, what = "issue" · "pass" · "wrong" · "fail" · "force" · "clear" · "warn", n = 놓친 수, wait = 기다릴 초 }
+Guard.log = {} -- 이 서버의 최근 일(관리 창): { t, uid, name, what = "issue" · "pass" · "wrong" · "fail" · "force" · "clear" · "warn" · "jail"(n = 몇 번째 · wait = 길이 초) · "unjail", n = 놓친 수, wait = 기다릴 초 }
 
 local function note(s, what: string, n: number?, wait: number?)
 	table.insert(Guard.log, 1, { t = os.time(), uid = s.player.UserId, name = s.name or s.player.Name, what = what, n = n, wait = wait })
@@ -60,8 +60,9 @@ local function mark(s)
 	end
 end
 
--- 화면에 알린다: 떠 있는 문제 · 보상 멈춤(다시 확인까지 남은 초) · 방금의 결과
-local function push(s, result: string?)
+-- 화면에 알린다: 떠 있는 문제 · 보상 멈춤(다시 확인까지 남은 초) · 방금의 결과 · 감옥(남은 초 — 0 = 갇히지 않았다 · 2026-11-11)
+--  jailNew = 방금 갇혔다(분 — 화면 위 알림 + 채팅 글) · jailOut = 방금 풀려 나왔다
+local function push(s, result: string?, jailNew: number?, jailOut: boolean?)
 	local st = s.macro
 	if not st then
 		return
@@ -72,6 +73,9 @@ local function push(s, result: string?)
 		stopped = Macro.stopped(st),
 		retryIn = Macro.retryIn(st, now),
 		result = result,
+		jail = Macro.jailLeft(st, now),
+		jailNew = jailNew,
+		jailOut = jailOut,
 	})
 end
 
@@ -82,8 +86,8 @@ function Guard.start(s)
 		acct.macro = s.macro.saved -- 같은 것을 가리킨다(저장하면 그대로 남는다)
 	end
 	mark(s)
-	if Macro.stopped(s.macro) then
-		push(s, nil) -- 보상 멈춤인 채 들어왔다: 화면 위의 「사냥 보상 멈춤」
+	if Macro.stopped(s.macro) or Macro.jailed(s.macro, os.time()) then
+		push(s, nil) -- 보상 멈춤 · 감옥인 채 들어왔다: 화면 위의 「사냥 보상 멈춤」 · 「사냥 정지」 띠
 	end
 end
 
@@ -147,9 +151,11 @@ function Guard.tick(s, key: string?)
 	local minute = now // 60
 	if s.macroMin ~= minute then
 		s.macroMin = minute
-		if Guard.huntScene(key) and Macro.hunting(st, now) then
+		local hunted = Guard.huntScene(key) and Macro.hunting(st, now)
+		if hunted then
 			local r0 = Macro.logScore(st, now)
 			Macro.minute(st, now, if r0 then r0.score else 0, s.hero.curse or 0, SCENES.base(key or "") or key or "", Macro.how(r0))
+			Macro.jailMinute(st) -- 감옥(2026-11-11): 이 접속 · 지난 감옥 뒤로 사냥한 1분
 			s.dirty = true
 		else
 			Macro.endEp(st)
@@ -159,6 +165,15 @@ function Guard.tick(s, key: string?)
 		if Macro.warnDue(st, now) then
 			Guard.warn(s, "auto")
 		end
+		-- 감옥(2026-11-11 사용자 "매크로 점수 너무 높으면 사냥 정지 아무것도 없는 검정방에 가둬버려"): 지금 사냥 맵에서 사냥하던 중일 때만(옮기는 것은 world.luau World.jailStep)
+		if hunted and s.hero.alive and Macro.jailDue(st, now) then
+			Guard.jail(s, key)
+		end
+	end
+	-- 갇혀 있는 동안 10초마다 남은 시간을 다시 알린다(화면이 늦게 열렸거나 시계가 어긋났을 때)
+	if Macro.jailed(st, now) and now - (s.jailPushAt or 0) >= 10 then
+		s.jailPushAt = now
+		push(s, nil)
 	end
 	-- 행동 로그의 점수가 높으면 Analytics에 남긴다(그 숫자로 문턱을 고친다 — 2026-11-09 · 한 사람에 note초에 한 번)
 	local lr = Macro.logScore(st, now)
@@ -221,6 +236,21 @@ function Guard.onRemote(s, action: string, a: any, b: any)
 		-- 게임 창이 앞에 있는가(화면이 UserInputService.WindowFocused · WindowFocusReleased로 알린다 — 2026-10-24)
 		s.macroBlur = a == false or nil
 		return { result = nil }
+	elseif action == "input" then
+		-- 손의 기록(2026-11-13 — client inputStat.luau · sim/macro.luau Macro.inputNote): 사냥 맵에서 사냥 중일 때만 · input.every초에 한 번만 받는다(더 자주 오면 버린다)
+		local IN = MD.input
+		if now - (s.macroInAt or -math.huge) < IN.every * 0.8 then
+			return { result = nil }
+		end
+		s.macroInAt = now
+		if Guard.huntScene(s.scene) and Macro.hunting(st, now) and Macro.inputNote(st, a, now) then
+			s.dirty = true
+			local kt, tt = (a.kt or 0), (a.tt or 0)
+			if (kt > 0 and a.kz / kt >= IN.key.lo) or (tt > 0 and a.ts / tt >= IN.touch.lo) then
+				Analytics.custom(s, "MacroInput", math.floor(math.max(if kt > 0 then a.kz / kt else 0, if tt > 0 then a.ts / tt else 0) * 100), if kt >= tt then "key" else "touch")
+			end
+		end
+		return { result = nil }
 	end
 	return { result = "bad" }
 end
@@ -250,6 +280,7 @@ end
 function Guard.clear(s)
 	if s.macro then
 		Macro.clear(s.macro)
+		Macro.jailFree(s.macro) -- 감옥도 푼다(2026-11-11 — 다음 1초에 World.jailStep이 잡혀 온 자리로 꺼낸다 · 횟수는 그대로)
 		shield(s)
 		note(s, "clear")
 		mark(s)
@@ -257,11 +288,16 @@ function Guard.clear(s)
 		s.dirty = true
 	end
 end
--- 모든 서버의 「위험 순위」(순위판 macro — 열쇠 = UserId · 점수 = 종합 점수): record.board.every초마다 · min 넘으면 적고, 내려가면 이 접속에서 한 번 지운다
-function Guard.board(s, now: number)
+-- 모든 서버의 「모든 계정」(순위판 macro — 열쇠 = UserId · 점수 = 종합 점수): record.board.every초마다 · min 넘으면 적고, 내려가면 이 접속에서 한 번 지운다
+--  (2026-11-13 사용자 "모든계정 누르면 왜 모든계정이 안나오고 11명만나와?" — min 30 → 0: 모든 계정을 적는다)
+-- force = 기다리지 않고 지금(나갈 때 — 2026-11-12 사용자: "접속자 뿐만아니라 비접속자도 내가 지표를 볼수있어야지": 마지막 점수가 남게)
+function Guard.board(s, now: number, force: boolean?)
 	local st = s.macro
 	local BD = MD.record.board
-	if not st or not st.total or now - (s.macroBoardAt or -math.huge) < BD.every then
+	if st and force then
+		st.total = Macro.total(st.saved, now)
+	end
+	if not st or not st.total or (not force and now - (s.macroBoardAt or -math.huge) < BD.every) then
 		return
 	end
 	s.macroBoardAt = now
@@ -269,7 +305,7 @@ function Guard.board(s, now: number)
 	local uid = tostring(s.player.UserId)
 	-- 저장소에 쓰는 것은 따로 돌린다(2026-11-09 — 이 함수는 서버 틱(Heartbeat) 안에서 불린다: 쓰기를 기다리면 그동안 틱 전체가 멈춘다)
 	if st.total.score >= BD.min then
-		local score, info = st.total.score, { name = s.name or s.player.Name, at = now }
+		local score, info = st.total.score, { name = s.name or s.player.Name, at = now, hu = st.total.human or nil } -- hu = 사람으로 봄(2026-11-12)
 		task.spawn(function()
 			Store.rankSet("macro", uid, score)
 			Store.rankInfoSet("macro_" .. uid, info)
@@ -294,6 +330,68 @@ function Guard.warn(s, by: string)
 	note(s, "warn")
 	Analytics.custom(s, "MacroWarn", st.total.score, by)
 	s.dirty = true
+end
+-- ---------- 감옥(2026-11-11 사용자: "매크로 점수 너무 높으면 사냥 정지 아무것도 없는 검정방에 가둬버려 처음엔 5분가두고 그다음에 또 높으면 10분가두고") ----------
+--  공방 design/macro.js의 jail · 셈은 sim/macro.luau(Macro.jailDue · jailStart) · 장면 「검정 방」(그 사람 혼자 — 문 · 몬스터 · 주민이 없다).
+--  여기는 정하고 알리기만 한다 — 사람을 옮기는 것은 world.luau의 World.jailStep(1초마다 Guard.jailWant를 보고 검정 방으로 · 잡혀 온 자리로).
+local JAIL = MD.jail.scene
+Guard.JAIL = JAIL -- 장면의 이름표(world.luau가 들어올 때 · 옮길 때 쓴다)
+-- sec = 길이(초 — 관리자가 넣을 때: 관리 창 · server adminCmd.luau). 없으면 횟수의 규칙(5분 · 10분) → 넣은 길이(초)
+function Guard.jail(s, key: string?, sec0: number?): number?
+	if not s.macro and s.acct then
+		Guard.start(s)
+	end
+	local st = s.macro
+	if not st or not s.hero then
+		return nil
+	end
+	local now = os.time()
+	local from = { k = SCENES.base(key or "") or key or "", x = s.hero.x, y = s.hero.y, cid = s.cid } -- cid = 잡혀 온 캐릭터(다른 캐릭터로 풀려나면 그 맵으로 보내지 않는다)
+	if Macro.jailed(st, now) then
+		from = st.saved.jail.from or from -- (이미 갇혀 있다: 잡혀 온 자리는 그대로 — 검정 방을 잡혀 온 자리로 적지 않는다)
+	end
+	local sec, n = Macro.jailStart(st, now, from, sec0)
+	note(s, if sec0 then "jailAdmin" else "jail", n, sec)
+	Analytics.custom(s, "MacroJail", st.total and st.total.score or 0, tostring(n))
+	s.jailPushAt = now
+	push(s, nil, math.ceil(sec / 60))
+	s.dirty = true
+	return sec
+end
+-- 그 장면이 검정 방인가(방 이름 jail#번호도)
+function Guard.isJail(key: string?): boolean
+	return key ~= nil and (SCENES.base(key) or key) == JAIL
+end
+-- 1초마다(world.luau): "in" = 갇혀 있는데 검정 방 밖이다 · "out" = 시간이 다 됐는데(또는 풀렸는데) 아직 검정 방이다 · nil = 그대로
+function Guard.jailWant(s, key: string?): string?
+	local st = s.macro
+	if not st or not s.hero or not key then
+		return nil
+	end
+	local inJail = Guard.isJail(key)
+	if Macro.jailed(st, os.time()) then
+		return if inJail then nil else "in"
+	end
+	return if inJail then "out" else nil
+end
+-- 검정 방에서 꺼냈다(world.luau가 옮긴 뒤): 잡혀 온 자리를 돌려준다(꺼낸 뒤에는 nil) · 화면에 「사냥 정지가 끝났습니다」
+function Guard.jailTakeFrom(s)
+	return if s.macro then Macro.jailTakeFrom(s.macro) else nil
+end
+function Guard.jailOut(s)
+	if s.macro then
+		note(s, "unjail")
+		push(s, nil, nil, true)
+		s.dirty = true
+	end
+end
+-- 들어올 때(world.luau — 세션의 매크로 셈이 아직 없을 수 있다): 이 계정이 지금 갇혀 있나
+function Guard.jailedAcct(s): boolean
+	local now = os.time()
+	if s.macro then
+		return Macro.jailed(s.macro, now)
+	end
+	return s.acct ~= nil and Macro.jailedRaw(s.acct.macro, now)
 end
 -- 미끼(별똥별 조각)의 결과(server runeGuard.luau가 부른다): 주웠다 · 놓쳤다 → 계정의 최근 결과 · 그날의 수
 function Guard.bait(s, got: boolean)
@@ -333,7 +431,7 @@ function Guard.list(sessions)
 	for _, s in sessions do
 		local st = s.macro
 		if st and s.hero then
-			table.insert(out, { uid = s.player.UserId, name = s.name or s.player.Name, level = s.hero.level, suspect = Macro.level(st, now), huntMin = math.floor(Macro.huntFor(st, now) / 60), fails = #st.saved.fails, stopped = Macro.stopped(st), pending = Macro.pending(st), bait = { require(lune.sim.rune).baitCounts(st.bait, now) }, log = Guard.logView(st, now), total = st.total and st.total.score, grade = st.total and st.total.grade }) -- bait = 지난 한 시간의 별똥별 조각 { 주운 수, 떨어진 수 }(2026-11-07)
+			table.insert(out, { uid = s.player.UserId, name = s.name or s.player.Name, level = s.hero.level, suspect = Macro.level(st, now), huntMin = math.floor(Macro.huntFor(st, now) / 60), fails = #st.saved.fails, stopped = Macro.stopped(st), pending = Macro.pending(st), bait = { require(lune.sim.rune).baitCounts(st.bait, now) }, log = Guard.logView(st, now), total = st.total and st.total.score, grade = st.total and st.total.grade, jail = Macro.jailLeft(st, now), jails = st.saved.jail and st.saved.jail.n or 0 }) -- bait = 지난 한 시간의 별똥별 조각 { 주운 수, 떨어진 수 }(2026-11-07) · jail = 감옥의 남은 초 · jails = 갇힌 횟수(2026-11-11)
 		end
 	end
 	local rank = { high = 3, mid = 2, low = 1 }

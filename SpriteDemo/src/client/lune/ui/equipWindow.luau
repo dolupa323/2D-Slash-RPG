@@ -5,6 +5,7 @@
 --   사용자 2026-10-08: "장비 탭에서 각각의 장비를 선택하면 그 해당장비가 장비창 옆에 작은모달이 떠서 아이템 스펙이 나와야합니다."
 --  같은 부위를 두 번 누르면 해제(가방에서 두 번 누르면 장착인 것과 짝). 화면 오른쪽 · 왼쪽의 옆 판(ui/windows.luau). 칸의 크기는 장비 그림의 크기(화면 틀의 배율)를 따른다.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UIS = game:GetService("UserInputService")
 local lune = ReplicatedStorage.shared.lune
 local Items = require(lune.sim.items)
 local Bag = require(lune.sim.bag) -- (가진 윤슬 조각의 수 — 2026-11-07)
@@ -42,6 +43,7 @@ function EquipWindow.build(body: Frame, ctx, w: number, _h: number)
 	local S, RX = metrics()
 	local nameW = w - RX
 	local selected: string? = nil
+	local peek: string? = nil -- 마우스를 올린 부위(2026-11-13 — 가방 창의 peek과 같다: 고른 것이 없을 때 정보만 · 벗어나면 닫힌다 · 마우스만)
 	local lastClick = { slot = "", t = 0 }
 	local view = {}
 	local rows = {}
@@ -74,6 +76,31 @@ function EquipWindow.build(body: Frame, ctx, w: number, _h: number)
 			end
 			redraw()
 		end, S)
+		-- 오른쪽 클릭 = 해제(두 번 누르기와 같은 일 — 2026-11-13 PC)
+		local right = (cell.hit :: any).MouseButton2Click
+		if right then
+			right:Connect(function()
+				if cell.item then
+					ctx.send("Item", "unequip", slot.id)
+					selected, peek = nil, nil
+					redraw()
+				end
+			end)
+		end
+		cell.hit.MouseEnter:Connect(function()
+			local BagWindow = require(script.Parent.bagWindow)
+			local dragging = ctx.quick ~= nil and ctx.quick.dragging ~= nil and ctx.quick.dragging() -- (가방의 것을 끌고 지나갈 때는 띄우지 않는다)
+			if BagWindow.canPeek(cell.item ~= nil, selected ~= nil, false, ui.detail or ItemDetail.pinned(), "equip", "equip", dragging, UIS:GetLastInputType() == Enum.UserInputType.Touch) then
+				peek = slot.id
+				view.refresh()
+			end
+		end)
+		cell.hit.MouseLeave:Connect(function()
+			if peek == slot.id then
+				peek = nil
+				view.refresh()
+			end
+		end)
 		-- 무기 · 방어구는 칸 옆에 한 줄(장신구는 고르면 상세 판에 이름이 뜬다)
 		local text = if isAcc then nil else Ui.text(body, "", x + S + 8, y + math.floor((S - 10) / 2), EquipWindow.TEXT_W, { color = C.dim })
 		rows[slot.id] = { cell = cell, text = text, slot = slot }
@@ -97,9 +124,32 @@ function EquipWindow.build(body: Frame, ctx, w: number, _h: number)
 		local it = if selected then bag.equip[selected] else nil
 		if not it then
 			selected = nil
+			if ui.detail == "equip" then
+				ui.detail = nil -- 고른 것이 없다: 주인 표시를 푼다(2026-11-14)
+			end
+			-- 마우스를 올린 부위: 정보만(단추 없음)
+			local pin = ItemDetail.pinned()
+			local pe = if peek and ui.detail == nil and (pin == nil or pin == "equip") then bag.equip[peek] else nil
+			if pe then
+				local BagWindow = require(script.Parent.bagWindow)
+				ItemDetail.show("equip", {
+					peek = true,
+					key = table.concat({ "peek", "equip", pe.id, pe.q, pe.star, me.level, BagWindow.exKey(pe) }, "|"),
+					info = ItemInfo.gear(pe, { level = me.level, class = me.class, spec = me.spec, equip = bag.equip }, nil, true),
+					item = pe,
+					buttons = {},
+					onClose = function()
+						peek = nil
+						ItemDetail.hide("equip")
+					end,
+				})
+				return
+			end
+			peek = nil
 			ItemDetail.hide("equip")
 			return
 		end
+		peek = nil
 		local slotId = selected
 		local buttons = { { text = WORDS.unequip, main = true, onClick = function()
 			ctx.send("Item", "unequip", slotId)

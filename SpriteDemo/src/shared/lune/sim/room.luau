@@ -1831,8 +1831,8 @@ function Room:strike(hero, mob, dmg: number, fromX: number, mates, out, extra, l
 		local gains, myXp, myUps = {}, 0, 0
 		for _, mate in order do
 			local xp = math.max(1, math.floor(sum[mate] + 0.5))
-			if mate.noReward then
-				xp = 0 -- 매크로 확인: 사냥 보상이 멈췄다 · 문제가 떠 있다(2026-10-23 — server macroGuard.luau가 단다 · 저장하지 않는다)
+			if mate.noReward or mate.huntCap then
+				xp = 0 -- 매크로 확인: 사냥 보상이 멈췄다 · 문제가 떠 있다(2026-10-23 — server macroGuard.luau가 단다 · 저장하지 않는다) · 하루 사냥 시간이 다 됐다(huntCap — 2026-11-12 · server world.luau World.huntCapStep)
 			end
 			local ups = if xp > 0 then Hero.gainXp(mate, xp) else 0
 			table.insert(gains, { hero = mate.id, xp = xp, ups = ups, level = mate.level })
@@ -2537,6 +2537,9 @@ end
 
 -- 잡은 졸개가 떨어뜨리는 달돈(열에 여섯). 장비와 달가루는 lootFor.
 function Room:dropFor(hero, mob)
+	if hero.huntCap then
+		return nil -- 하루 사냥 시간이 다 됐다(2026-11-12 사용자 "6시간 이상 사냥하면 경험치, 달돈,달가루 이런거 사냥파밍 다 불가능하게 해줘 자원이 안뜨게")
+	end
 	local base
 	if mob.fieldElite then
 		base = N.killMoney(mob.lv) * mob.def.hp * FE.money -- 사냥터 정예: 반드시 떨어지고 money배(보통 한 마리가 주는 달돈의 기댓값에)
@@ -2563,6 +2566,9 @@ end
 -- 잡은 졸개가 떨어뜨리는 장비와 달가루(없으면 빈 표). 쓰러진 뒤의 벌칙 동안에는 덜 나온다.
 function Room:lootFor(hero, mob)
 	local out = {}
+	if hero.huntCap then
+		return out -- 하루 사냥 시간이 다 됐다: 장비 · 재료 · 달가루 모두 없다(2026-11-12)
+	end
 	local mul = if hero.weak > 0 then 1 - N.data.BODY.death.cut / 100 else 1
 	mul *= 1 - (hero.curse or 0) -- 룬의 저주(2026-11-07 — 그 맵의 룬을 두면 떨어지는 것도 덜)
 	if mob.fieldElite then

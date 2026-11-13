@@ -4,6 +4,8 @@
 --  ② 그림: 받침대 plinth1 ~ 3(1위가 가장 높다) · 다섯 직업의 돌 석상 stone_<직업>이 캐릭터 그림판에 있고 그 판이 로블록스에 올라가 있다
 --  ③ client/lune/rankStatues.luau: 들어서면 받침대 셋 · 레벨 판을 받으면 그 직업의 돌 석상이 받침대 윗면에 서고 이름표 = 「레벨 n위 이름」 ·
 --     순위가 비면 석상 없이 이름표 「레벨 n위 석상」 · 1위가 바뀌면 석상도 바뀐다 · 떠나면 다 걷는다
+--  2026-11-12 사용자 "석상은 150레벨때 찍은 순서대로 랭킹 1,2,3등이 박제되는거야 200확장으로인해서 랭킹변동된다고 석상사람이 바뀌면 안되지":
+--   석상은 레벨 판(got.level)이 아니라 Lv.150에 오른 차례의 기록(got.statues — 서버 World.statueRows · 시험 88)을 본다 → 레벨 판이 바뀌어도 그대로
 local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
 local CHARS = req("ReplicatedStorage/shared/lune/data/chars.generated")
 local ASSETS = req("ReplicatedStorage/shared/lune/data/assets.generated")
@@ -154,7 +156,7 @@ MOCK("Client/lune/stage", {
 		return f
 	end,
 })
-local answer = { level = { { name = "가나다", class = "mooni" }, { name = "라마", class = "axion" } } }
+local answer = { level = { { name = "레벨판1위", class = "riven" } }, statues = { { name = "가나다", class = "mooni" }, { name = "라마", class = "axion" }, false } } -- (레벨 판의 1위는 석상과 다른 사람)
 local asked = 0
 MOCK("ReplicatedStorage/shared/lune/net/net", {
 	Invoke = function(name)
@@ -225,7 +227,7 @@ eq(tags[1], statues[1].role .. " 가나다", "1위 이름표 = 「레벨 1위 �
 eq(tags[2], statues[2].role .. " 라마", "2위 이름표")
 eq(tags[3], statues[3].role .. " " .. statues[3].name, "빈 순위의 이름표 = 「레벨 3위 석상」")
 -- 1위가 바뀌었다(만렙 최초 달성 등) → 곧 다시 묻고 석상을 바꾼다
-answer = { level = { { name = "새1위", class = "reaper" }, { name = "라마", class = "axion" }, { name = "셋째", class = "salamander" } } }
+answer = { level = { { name = "Lv200사람", class = "riven" } }, statues = { { name = "새1위", class = "reaper" }, { name = "라마", class = "axion" }, { name = "셋째", class = "salamander" } } }
 Statues.soon()
 Statues.update()
 eq(asked, 2, "soon → 다시 묻는다")
@@ -237,6 +239,7 @@ for _, sp in made do
 end
 eq(live[statues[1].x], "stone_reaper", "1위 석상이 새 사람의 직업으로 바뀐다")
 eq(live[statues[3].x], "stone_salamander", "3위가 생기면 석상이 선다")
+expect(live[statues[1].x] ~= "stone_riven", "레벨 판의 1위(Lv.200 · 리븐)는 석상에 서지 않는다")
 Statues.update()
 eq(asked, 2, "다시 묻는 것은 60초에 한 번")
 Statues.leave()

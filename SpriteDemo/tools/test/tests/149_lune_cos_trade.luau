@@ -20,7 +20,7 @@ for bid, b in Gacha.BOXES do
 		total += 1
 	end
 end
-eq(total, 34, "상자 다섯의 서른넷")
+eq(total, 44, "상자 다섯의 마흔넷(2026-11-13 데미지 스킨 다섯 · 탈것 셋 + 여의주 이무기 · 꽃구름을 더했다 — 그 전 서른넷)")
 
 -- 펫 둘(하나 더 받은 것 1)
 c.pets.pet_fox = true

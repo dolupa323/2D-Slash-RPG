@@ -10,6 +10,7 @@
 --     자리는 공방 시험 탭의 js/lune/ui/paint.js(paintShop · paintCraft)와 같다 — 치수는 공방 설계 자료(UILAYOUT.shop · craft).
 --  화면 오른쪽 · 왼쪽의 옆 판(ui/windows.luau).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UIS = game:GetService("UserInputService")
 local lune = ReplicatedStorage.shared.lune
 local Items = require(lune.sim.items)
 local Bag = require(lune.sim.bag)
@@ -115,6 +116,7 @@ local function buildStore(body: Frame, ctx, w: number)
 	end
 	local tab = 1
 	local sel = nil :: { tab: string, slot: number, id: any }? -- 고른 칸(id = 장비의 번호 · 묶음의 이름표)
+	local peek = nil :: { tab: string, slot: number }? -- 마우스를 올린 칸(2026-11-13 — 가방 창의 peek과 같다: 고른 것이 없을 때 정보만 · 벗어나면 닫힘 · 마우스만)
 	local hot: number? = nil -- 끌던 것을 놓을 칸
 	local lastClick = { slot = 0, t = 0 }
 	local dragEnd = 0
@@ -215,6 +217,18 @@ local function buildStore(body: Frame, ctx, w: number)
 			redraw()
 		end, S)
 		cells[i] = cell
+		cell.hit.MouseEnter:Connect(function()
+			if BagWindow.canPeek(cell.item ~= nil, sel ~= nil, false, ui.detail or ItemDetail.pinned(), "shop", key(), ctx.quick.dragging(), UIS:GetLastInputType() == Enum.UserInputType.Touch) then
+				peek = { tab = key(), slot = i }
+				view.refresh()
+			end
+		end)
+		cell.hit.MouseLeave:Connect(function()
+			if peek and peek.slot == i then
+				peek = nil
+				view.refresh()
+			end
+		end)
 		-- 끌기: 창고의 다른 칸 = 창고 안에서 옮긴다 · 가방 창 = 찾는다(놓은 칸에 — 묶음은 전부)
 		cell.hit.InputBegan:Connect(function(input)
 			local it = cell.item
@@ -378,9 +392,33 @@ local function buildStore(body: Frame, ctx, w: number)
 		end
 		if not sel or not entry then
 			unselect()
+			if ui.detail == "shop" then
+				ui.detail = nil -- 고른 것이 없다: 주인 표시를 푼다(2026-11-14)
+			end
+			-- 마우스를 올린 칸: 정보만(단추 없음)
+			local pin = ItemDetail.pinned()
+			local pl = if peek and peek.tab == key() and ui.detail == nil and (pin == nil or pin == "shop") then bag.store[peek.tab] else nil
+			local pe = if pl then pl[peek.slot] else nil
+			if pe then
+				local pspec = { item = pe, buttons = {}, peek = true, onClose = function()
+					peek = nil
+					ItemDetail.hide("shop")
+				end }
+				if peek.tab == "gear" then
+					pspec.info = ItemInfo.gear(pe, me, bag.equip[pe.slot], false)
+					pspec.key = table.concat({ "peek", "store", pe.id, pe.q, pe.star, me.level }, "|")
+				else
+					pspec.info = ItemInfo.goods(pe.item, me, pe.n)
+					pspec.key = table.concat({ "peek", "store", peek.tab, peek.slot, pe.item, pe.n, me.level }, "|")
+				end
+				ItemDetail.show("shop", pspec)
+				return
+			end
+			peek = nil
 			ItemDetail.hide("shop")
 			return
 		end
+		peek = nil
 		local slot, tabKey = sel.slot, sel.tab
 		local spec = { item = entry, buttons = {}, onClose = function()
 			unselect()

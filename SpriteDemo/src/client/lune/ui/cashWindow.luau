@@ -96,9 +96,14 @@ function CashWindow.pickCell(i: number): (number, number)
 	local col, row = (i - 1) % S.selCols, (i - 1) // S.selCols
 	return col * (S.selCellW + S.selGap), S.selY + row * (S.selCellH + S.selGap)
 end
+-- 칸은 PICK_ROWS줄까지 보이고 그보다 많으면 그 안에서 위아래로 민다(2026-11-13 — 데미지 스킨이 열셋이 되어 넷째 줄이 폰의 화면 틀 432를 넘었다 · 제가 정한 것)
+local PICK_ROWS = 3
+CashWindow.PICK_ROWS = PICK_ROWS
+function CashWindow.pickRows(bid: string): number
+	return math.ceil(#((Gacha.box(bid) or {}).pool or {}) / S.selCols)
+end
 function CashWindow.pickH(bid: string): number
-	local n = #((Gacha.box(bid) or {}).pool or {})
-	return S.selY + math.ceil(n / S.selCols) * (S.selCellH + S.selGap) + S.selBtnY + Ui.M.button
+	return S.selY + math.min(PICK_ROWS, CashWindow.pickRows(bid)) * (S.selCellH + S.selGap) + S.selBtnY + Ui.M.button
 end
 
 -- 상자 결과물을 선물하는 모습이면 그 물건(arg "giftItem:<물건>" — 2026-11-11)
@@ -537,10 +542,20 @@ local function buildPick(body: Frame, ctx, w: number, bid: string)
 	Ui.text(body, W.pickHint or "", 0, 2, w, { color = C.dim })
 	local have = Ui.text(body, "", 0, 18, w, {})
 	local cells = {}
+	-- 줄이 많으면 칸들을 미는 판 안에(2026-11-13)
+	local rows = CashWindow.pickRows(bid)
+	local holder: Instance = body
+	local dy = 0
+	if rows > PICK_ROWS then
+		local viewH = PICK_ROWS * (S.selCellH + S.selGap)
+		holder = Ui.scroll(body, 0, S.selY, w, viewH, rows * (S.selCellH + S.selGap), S.scrollW)
+		holder.Name = "PickList"
+		dy = S.selY
+	end
 	for i, e in b.pool do
 		local id = e[1]
 		local x, y = CashWindow.pickCell(i)
-		local frame = Ui.box(body, x, y, S.selCellW, S.selCellH, C.line)
+		local frame = Ui.box(holder, x, y - dy, S.selCellW, S.selCellH, C.line)
 		frame.Name = "Pick_" .. id
 		Ui.box(frame, 1, 1, S.selCellW - 2, S.selCellH - 2, C.panel)
 		Ui.worldIcon(frame, ItemCell.icon({ ride = id, kind = PICK_KIND[b.kind] or "mount" }), math.floor((S.selCellW - S.selIcon) / 2), 2, S.selIcon)

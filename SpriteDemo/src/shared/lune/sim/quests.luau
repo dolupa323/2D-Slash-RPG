@@ -223,7 +223,7 @@ end
 --   하드코딩 박는식으로 개발을하면안되요" — 전에는 그 퀘스트의 맵에서 잡은 것만 세고 떨어뜨렸다). 이야기의 자리에서만 세는 일(only — 사당 지하를 지키는 「불타는 마을」)만 그 맵을 본다.
 -- 방의 이름 → 장면의 이름(r1c4#5 → r1c4): 파티마다 따로 들어가는 장면(스토리 보스 · 사당 지하 · 꿈 — scenes의 inst)의 방에서도 설계의 scene과 견준다(2026-10-21)
 local function baseOf(scene: any): any
-	return if type(scene) == "string" then (string.match(scene, "^(.-)#w?[nh]?%d+$") or scene) else scene
+	return if type(scene) == "string" then (string.match(scene, "^(.-)#c?w?p?[nh]?%d+$") or scene) else scene
 end
 Q.baseOf = baseOf
 local function counts(def, step, scene: string): boolean
@@ -560,8 +560,35 @@ function Q.atNpc(book, level: number, npc: string, region: any?, also: any?)
 end
 
 -- 그 지역(region · also)의 맵에 선 사람이 그 퀘스트를 주는가 — 서버의 받기도 같은 것으로 가린다. 전직 퀘스트는 사제가 어디서든 준다
+-- 주는 사람이 그 퀘스트의 지역에 서 있지 않으면 그 사람이 선 곳이면 어디서든 준다
+--  (2026-11-12 사용자: "메인퀘 초승달마을에서 안받아지는데" — 제5편의 첫 메인은 「봉인의 문」을 돌려받은 초승달 마을의 촌장 보름 영감(촌장의 집 — 1지역)이 주는데,
+--   「주민은 제 지역의 퀘스트만」에 걸려 윤슬 호수를 연 뒤에도 받을 수 없었다 · 「!」도 뜨지 않았다.
+--   여러 지역에 서는 주민(샛별 · 반달 · 하늬 …)은 그 퀘스트의 지역에도 서 있으니 전처럼 그 지역에서만 준다)
+local npcRegions: { [string]: { [any]: boolean } }? = nil
+local function standsIn(npc: any, region: any): boolean
+	if not npcRegions then
+		npcRegions = {}
+		local SC = require(script.Parent.Parent.data["scenes.generated"])
+		for _, sc in SC.scenes do
+			for _, n in sc.npcs or {} do
+				if typeof(n.id) == "string" then
+					npcRegions[n.id] = npcRegions[n.id] or {}
+					npcRegions[n.id][sc.region] = true
+					if sc.also then
+						npcRegions[n.id][sc.also] = true
+					end
+				end
+			end
+		end
+	end
+	local set = (npcRegions :: any)[npc]
+	return set ~= nil and set[region] == true
+end
+local function handoff(def): boolean
+	return typeof(def.giver) == "string" and not standsIn(def.giver, def.region)
+end
 function Q.givesIn(def, region: any, also: any?): boolean
-	return def.region == region or (also ~= nil and also ~= false and def.region == also) or def.kind == "job"
+	return def.region == region or (also ~= nil and also ~= false and def.region == also) or def.kind == "job" or handoff(def)
 end
 
 -- 주민에게 말을 걸었을 때의 고르는 말(2026-10-18 — 메이플스토리의 NPC 대화처럼): 돌려줄 · 받을 · 하는 중인 퀘스트가 모두 합쳐 둘 넘으면

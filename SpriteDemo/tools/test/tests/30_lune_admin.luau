@@ -35,6 +35,14 @@ MOCK("ServerScriptService/server/lune/modules/store", {
 	rankRaise = function(board, key, score) local d = rankDisk[board]; if d and d[key] and d[key] < score then d[key] = score end end,
 	rankRemove = function(board, key) if rankDisk[board] then rankDisk[board][key] = nil end end,
 	rankTop = function() return {} end,
+	rankWalk = function(board) -- (2026-11-13 「모든 계정」 — 판 전체를 높은 차례로 · 끝까지 읽었다)
+		local rows = {}
+		for k, v in rankDisk[board] or {} do
+			table.insert(rows, { key = k, score = v })
+		end
+		table.sort(rows, function(a, b) if a.score ~= b.score then return a.score > b.score end return a.key < b.key end)
+		return rows, true
+	end,
 	rankInfoSet = function(key, info) rankInfo[key] = info end,
 	rankInfoGet = function(key) return rankInfo[key] end,
 	rankInfoRemove = function(key) rankInfo[key] = nil end,
@@ -467,24 +475,27 @@ do
 		expect(press("기록"), "매크로 탭: 「기록」 단추")
 		expect(table.find(asked, "macroFind") ~= nil, "「기록」 = 서버에 그 계정의 기록을 묻는다")
 		inside("계정 기록")
-		expect(press("경고"), "접속 중인 사람의 기록에는 「경고」 단추")
-		expect(table.find(asked, "macroWarn") ~= nil, "「경고」 = 서버가 그 사람에게 경고")
+		expect(press("경고"), "기록에는 「경고」 단추")
+		expect(table.find(asked, "macroAct") ~= nil, "「경고」 = 서버에 바로 하는 조치(macroAct — 2026-11-12: 어느 서버에 있든)")
 		rec.online = false
 		expect(press("기록"), "다시 「기록」")
-		local hasWarn = false
+		local has = {}
 		for _, b in buttons do
-			hasWarn = hasWarn or b.text == "경고"
+			has[b.text] = true
 		end
-		expect(not hasWarn, "접속하지 않은 사람(저장된 기록)에게는 「경고」가 없다")
-		expect(press("위험 순위"), "「위험 순위」 단추")
-		inside("위험 순위")
+		-- 2026-11-12(사용자 "모든유저를 확인하고 즉시 경고메시지보내고 … 깜빵에 바로 … 날파리 … 룬의 저주 … 풀어줄수있는기능"): 접속하지 않은 사람에게도(다음에 들어올 때)
+		for _, want in { "경고", "감옥 10분", "풀기", "날파리", "저주 풀기", "쿠폰 +1", "정지" } do
+			expect(has[want], "접속하지 않은 사람의 기록에도 「" .. want .. "」")
+		end
+		expect(press("모든 계정"), "「모든 계정」 단추(2026-11-12 — 「위험 순위」가 이름을 바꿨다: 접속하지 않은 사람도)")
+		inside("모든 계정")
 		local row = nil
 		for _, b in buttons do
 			if string.find(b.text, "시험꾼", 1, true) then
 				row = b
 			end
 		end
-		expect(row ~= nil, "위험 순위에 그 사람의 줄")
+		expect(row ~= nil, "모든 계정에 그 사람의 줄")
 		if row then
 			local before = #asked
 			row.click()
@@ -635,4 +646,33 @@ do
 	expect(not c.mounts.mount_deer_gold and not c.mounts.mount_deer_silver and not c.mounts.mount_deer_bronze, "셋 다 빠졌다")
 	expect(c.mount == false or c.mount == nil, "고른 탈것이 순위 사슴이었으면 고르지 않은 것으로")
 	expect(handlers.Admin(pAdmin, "rankMounts", "모름").ok == false, "모르는 일은 하지 않는다")
+end
+-- ---- 「모든 계정」은 모든 계정을 쪽마다(2026-11-13 사용자 "관리 탭에서 모든계정 누르면 왜 모든계정이 안나오고 11명만나와?") ----
+--  전에는 종합 30 넘는 계정만 순위판에 적고(record.board.min) 50줄만 읽었다 — 이제 모든 계정을 적고(min 0) · 쪽마다 12줄
+do
+	local MD = req("ReplicatedStorage/shared/lune/data/macro.generated")
+	eq(MD.record.board.min, 0, "모든 계정을 적는다(종합 0점도)")
+	rankDisk.macro = {}
+	for i = 1, 30 do
+		rankDisk.macro[tostring(900000 + i)] = i % 7 -- (0점인 계정도 있다)
+		rankInfo["macro_" .. (900000 + i)] = { name = "계정" .. i, at = 1 }
+	end
+	local r1 = handlers.Admin(pAdmin, "macroTop", 1)
+	expect(r1 and r1.ok, "모든 계정 1쪽")
+	eq(r1.total, 30, "30명 모두(0점도)")
+	eq(r1.pages, 3, "12명씩 3쪽")
+	eq(#r1.top, 12, "1쪽에 12줄")
+	expect(r1.top[1].score >= r1.top[12].score, "높은 차례")
+	local r3 = handlers.Admin(pAdmin, "macroTop", 3)
+	eq(#r3.top, 6, "3쪽에 6줄")
+	eq(r3.top[1].i, 25, "3쪽의 첫 줄은 25번째")
+	expect(string.find(r3.top[6].name, "계정", 1, true) ~= nil, "줄마다 이름")
+	local zero = 0
+	for _, r in r3.top do
+		if r.score == 0 then
+			zero += 1
+		end
+	end
+	expect(zero > 0, "0점인 계정도 나온다")
+	rankDisk.macro = {}
 end

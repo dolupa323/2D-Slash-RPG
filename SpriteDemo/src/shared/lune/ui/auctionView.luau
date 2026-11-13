@@ -26,7 +26,16 @@ end
 function V.board(cat: string, class: string): string
 	return Market.catBoard(cat, class)
 end
--- 무기의 직업을 바꾸는 단추: 다음 직업 · 그 이름
+-- 무기의 직업: 고를 수 있는 것 모두(2026-11-13 — 누를 때마다 다음 직업으로 바뀌던 단추를 목록으로: 사용자 11-05 "클릭해서 바꾸는게 어디있어 제발 ui 의 기본은 지키자")
+--  { { id, name } … } — 창은 단추를 누르면 이 모두를 펼친 목록을 띄운다(고른 것 민트)
+function V.classList(): { { id: string, name: string } }
+	local out = {}
+	for _, id in CLASSES.order do
+		table.insert(out, { id = id, name = V.className(id) })
+	end
+	return out
+end
+-- (옛 셈 — 시험이 본다: 다음 직업)
 function V.nextClass(class: string): string
 	local i = table.find(CLASSES.order, class) or 0
 	return CLASSES.order[i % #CLASSES.order + 1]
@@ -112,6 +121,14 @@ end
 -- 구매 목록의 차례: "price" = 받은 그대로(싼 것부터) · "time" = 곧 끝나는 것부터. 새 표를 돌려준다
 function V.sortName(mode: string): string
 	return if mode == "time" then W.sortTime else W.sortPrice
+end
+-- 차례의 단추들(모두 보이게 — 2026-11-13): { { id, name } … }
+function V.sortList(): { { id: string, name: string } }
+	local out = {}
+	for _, id in V.SORTS do
+		table.insert(out, { id = id, name = V.sortName(id) })
+	end
+	return out
 end
 function V.nextSort(mode: string): string
 	return if mode == "time" then "price" else "time"

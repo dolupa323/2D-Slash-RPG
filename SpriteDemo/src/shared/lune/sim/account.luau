@@ -32,6 +32,7 @@ end
 function Account.soundDefault()
 	return { music = SOUND.start, sfx = SOUND.start, on = true, fx = true, nums = true, myNums = true, lang = "auto", touch = "new" } -- fx · nums = 화면 설정(다른 사람의 스킬 효과 · 피해 숫자 — 2026-10-18) · lang = 언어("auto" 로블록스의 언어 설정을 따른다 · "ko" · "en" — 2026-10-27)
 end
+Account.BAR_MAX = 5 -- 바로가기 줄의 칸(「전체」 빼고 — 2026-11-13)
 -- 받은 것 · 저장된 것의 꼴을 본다: 맞으면 새 표, 아니면 nil
 function Account.cleanSound(v: any)
 	if typeof(v) ~= "table" or not whole(v.music, 0, SOUND.steps) or not whole(v.sfx, 0, SOUND.steps) or typeof(v.on) ~= "boolean" then
@@ -45,8 +46,8 @@ function Account.cleanSound(v: any)
 	if v.lang ~= nil and v.lang ~= "auto" and v.lang ~= "ko" and v.lang ~= "en" then
 		return nil
 	end
-	-- 폰 단추 배치(2026-10-28): "new" · "old"(없으면 — 그 전의 저장 — "new" · 그 밖의 값은 받지 않는다)
-	if v.touch ~= nil and v.touch ~= "new" and v.touch ~= "old" then
+	-- 폰 단추 배치(2026-10-28): "new" · "old" · "bar"(바로가기 — 2026-11-13)(없으면 — 그 전의 저장 — "new" · 그 밖의 값은 받지 않는다)
+	if v.touch ~= nil and v.touch ~= "new" and v.touch ~= "old" and v.touch ~= "bar" and v.touch ~= "left" then -- (left = 왼손 배치 · bar = 2026-11-13의 바로가기 — 이제 새 배치로 읽는다)
 		return nil
 	end
 	-- 채팅 창을 옮긴 자리(2026-11-09 — client chat.luau Chat.pos): { x, y } 정수(화면 틀의 점 · ±2000 안) · 꼴이 틀리면 처음 자리(nil)로
@@ -54,7 +55,43 @@ function Account.cleanSound(v: any)
 	if typeof(v.chat) == "table" and whole(v.chat.x, -2000, 2000) and whole(v.chat.y, -2000, 2000) then
 		chat = { x = v.chat.x, y = v.chat.y }
 	end
-	return { music = v.music, sfx = v.sfx, on = v.on, fx = v.fx ~= false, nums = v.nums ~= false, myNums = v.myNums ~= false, lang = v.lang or "auto", touch = v.touch or "new", chat = chat }
+	-- 화면 배치(2026-11-12 — client ui/arrange.luau · 창의 제목 줄 끌기): { pc = { [판의 이름] = { x, y } }, touch = { … } } — 이름은 영문 · 숫자 · _ 40자까지 · 기기마다 60개까지 ·
+	--  x · y는 정수(±2000) · 꼴이 틀린 줄은 버린다(나머지는 받는다)
+	local ui = nil
+	if typeof(v.ui) == "table" then
+		ui = { pc = {}, touch = {} }
+		for _, kind in { "pc", "touch" } do
+			local src = v.ui[kind]
+			if typeof(src) == "table" then
+				local n = 0
+				for name, p in src do
+					if n >= 60 then
+						break
+					end
+					if typeof(name) == "string" and #name <= 40 and string.match(name, "^[%w_]+$") and typeof(p) == "table" and whole(p.x, -2000, 2000) and whole(p.y, -2000, 2000) then
+						ui[kind][name] = { x = p.x, y = p.y }
+						n += 1
+					end
+				end
+			end
+		end
+	end
+	-- 바로가기 줄에 놓은 것(2026-11-13 — 폰 「바로가기」 배치 · 묶음 메뉴의 「바로가기 고치기」): 창의 이름 다섯까지(영문 · 숫자 · _ · @ 20자 · 겹치지 않게) · 꼴이 틀린 것은 버린다 · 없으면 처음 차례
+	local bar = nil
+	if typeof(v.bar) == "table" then
+		bar = {}
+		local seen = {}
+		for _, id in v.bar do
+			if #bar >= Account.BAR_MAX then
+				break
+			end
+			if typeof(id) == "string" and #id <= 20 and string.match(id, "^[%w_@]+$") and id ~= "@all" and not seen[id] then
+				seen[id] = true
+				table.insert(bar, id)
+			end
+		end
+	end
+	return { music = v.music, sfx = v.sfx, on = v.on, fx = v.fx ~= false, nums = v.nums ~= false, myNums = v.myNums ~= false, lang = v.lang or "auto", touch = v.touch or "new", chat = chat, ui = ui, bar = bar }
 end
 function Account.setSound(acct, v: any): boolean
 	local sound = Account.cleanSound(v)

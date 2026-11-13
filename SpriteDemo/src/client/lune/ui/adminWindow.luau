@@ -129,6 +129,10 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 	local goodsPage = 1
 	local macroGot = nil -- 매크로 탭: 서버가 보낸 이 서버의 사람들 · 최근 일(탭을 열 때 · 「이 서버」)
 	local macroMode, macroName, macroRec, macroTop = "list", "", nil, nil -- 매크로 탭(2026-11-09): "list" 이 서버 · "top" 위험 순위 · "rec" 한 계정의 기록 · 적은 닉네임
+	local macroAll, macroAllPage = nil, 1 -- 매크로 탭 「접속자」(2026-11-12): 모든 서버의 접속자(점수 높은 차례) · 쪽
+	local macroAllInfo = {} :: any -- 이 서버의 판 pv · 사냥 시간 제한 hc · 가장 새 판 top(2026-11-13)
+	local macroTopPage = 1 -- 매크로 탭 「모든 계정」의 쪽(2026-11-12)
+	local macroTopInfo = { pages = 1, total = 0, more = false } -- 서버가 쪽마다 보낸다(2026-11-13 — 모든 계정: 쪽마다 서버에 묻는다)
 	local banName, banGot = "", nil -- 정지 탭: 적은 닉네임 · 서버가 찾아 준 그 사람(계정 번호 · 로블록스 이름)
 	local candyName, eventPick = "", 1 -- 이벤트 탭: 받을 사람의 닉네임 · 고른 이벤트
 	local tabs = {}
@@ -186,6 +190,19 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 			end
 			if after then
 				after(got)
+			end
+		end)
+	end
+	-- 「모든 계정」의 n쪽을 서버에 묻는다(2026-11-13 — 쪽마다 · 서버가 순위판을 그 쪽까지 읽는다)
+	function view.topPage(n: number)
+		ask("macroTop", n, nil, nil, function(got)
+			if alive and typeof(got) == "table" and got.ok then
+				macroTop, macroMode = got.top or {}, "top"
+				macroTopPage = got.page or n
+				macroTopInfo = { pages = got.pages or 1, total = got.total or #macroTop, more = got.more == true }
+				if tab == "macro" then
+					view.draw()
+				end
 			end
 		end)
 	end
@@ -366,7 +383,7 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 			--  사용자 2026-11-09 "계정마다 종속된 로그기록이랑 점수를 내가 계속 볼수있어야해 초기화되는게아니라 … 종합점수로 쭉 내가 유저로그를 볼수있어야해 … 경고 주고 개선되는지도 파악할수있어야해"
 			--  위 줄: 닉네임 → 「기록」(그 계정의 기록 — 접속하지 않았어도 저장된 것) · 「위험 순위」(모든 서버 — 종합 점수 높은 차례) · 「이 서버」(지금 이 서버의 사람들)
 			local LV = { high = "의심 높음", mid = "의심 중간", low = "의심 낮음" }
-			local WHAT = { issue = "문제를 받음", pass = "통과", wrong = "틀림", fail = "놓침", force = "관리자가 보냄", clear = "관리자가 풂", warn = "경고" }
+			local WHAT = { issue = "문제를 받음", pass = "통과", wrong = "틀림", fail = "놓침", force = "관리자가 보냄", clear = "관리자가 풂", warn = "경고", jail = "감옥", unjail = "감옥에서 나옴" } -- (감옥 — 2026-11-11)
 			local GR = MACRO.record.words.grade
 			local function refresh()
 				ask("macroList", nil, nil, nil, function(got)
@@ -390,10 +407,12 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 			end
 			-- (단추의 폭 = 글의 폭 + 10 — 영문이 길다)
 			local bwFind = math.max(40, Ui.measure("기록", "small") + 10)
-			local bwTop = math.max(64, Ui.measure("위험 순위", "small") + 10)
+			local bwTop = math.max(64, Ui.measure("모든 계정", "small") + 10) -- (「위험 순위」 → 「모든 계정」 — 2026-11-12: 접속하지 않은 사람도)
 			local bwHere = math.max(60, Ui.measure("이 서버", "small") + 10)
+			local bwAll = math.max(60, Ui.measure("접속자", "small") + 10) -- (「모든 서버」 → 「접속자」 — 지금 모든 서버에 있는 사람)
 			local xHere = w - bwHere
-			local xTop = xHere - 4 - bwTop
+			local xAll = xHere - 4 - bwAll
+			local xTop = xAll - 4 - bwTop
 			local xFind = xTop - 4 - bwFind
 			local field = Ui.field(p, 0, 0, xFind - 4, 22, "닉네임")
 			field.Name = "MacroInput"
@@ -402,20 +421,25 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 				macroName = field.Text
 			end)
 			Ui.button(p, "기록", xFind, 0, bwFind, function() openRec(field.Text) end, { h = 22, font = "small", main = true }).frame.Name = "Do_macroFind"
-			Ui.button(p, "위험 순위", xTop, 0, bwTop, function()
-				ask("macroTop", nil, nil, nil, function(got)
-					if alive and typeof(got) == "table" and got.ok then
-						macroTop, macroMode = got.top or {}, "top"
-						if tab == "macro" then
-							view.draw()
-						end
-					end
-				end)
+			Ui.button(p, "모든 계정", xTop, 0, bwTop, function()
+				view.topPage(1)
 			end, { h = 22, font = "small" }).frame.Name = "Do_macroTop"
 			Ui.button(p, "이 서버", xHere, 0, bwHere, function()
 				macroMode = "list"
 				refresh()
 			end, { h = 22, font = "small" }).frame.Name = "Do_macroRefresh"
+			-- 모든 서버의 접속자(2026-11-12 사용자: "매크로 점수 내가 같은서버인유저밖에 못봐 모든유저를 확인하고 …") — server adminCmd.luau(30초마다 서버마다 적는다)
+			Ui.button(p, "접속자", xAll, 0, bwAll, function()
+				ask("macroAll", nil, nil, nil, function(got)
+					if alive and typeof(got) == "table" and got.ok then
+						macroAll, macroAllPage, macroMode = got.all or {}, 1, "all"
+						macroAllInfo = { pv = got.pv, hc = got.hc == true }
+						if tab == "macro" then
+							view.draw()
+						end
+					end
+				end)
+			end, { h = 22, font = "small" }).frame.Name = "Do_macroAll"
 			y = 28
 			local function line(text: string, color, lines: number?)
 				Ui.text(p, text, 0, y, w, { color = color or C.text, lines = lines })
@@ -428,10 +452,43 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 				-- 한 계정의 기록: 종합 점수 · 항목 · 날마다 · 의심 구간(언제 · 어디서 · 어떻게) · 경고(전 · 뒤)
 				local r = macroRec
 				local hot = r.grade == "severe" or r.grade == "problem"
-				line(("%s · 종합 %d(%s) · %s"):format(tostring(r.name), r.score or 0, GR[r.grade] or "", if r.online then "이 서버에 있다" else "저장된 기록"), if hot then C.red else C.text)
+				line(("%s · 종합 %d(%s) · %s"):format(tostring(r.name), r.score or 0, GR[r.grade] or "", if r.online then "이 서버에 있다" else "저장된 기록"), if hot and not r.human and r.proof ~= false then C.red else C.text)
+				if r.proof == false and hot then
+					line("증거 없음 — 확인을 놓친 채 사냥 · 기계 같은 키 누름이 없다: 감옥 · 의심 높음 · 자동 경고 없음(확인만 조금 자주)", C.gold) -- (2026-11-14 사용자 "지금 매크로가 아니라 애먼사람만 정지시키고있는데?")
+				end
+				if r.human then
+					line("사람으로 봄 — 미끼 · 확인 · 룬 · 손이 깨끗하다: 감옥 · 자동 경고 없음", C.green) -- (2026-11-12 사용자 "사람다운 신호가 사람이라고 판단되면 감옥에 넣지않기로 하자")
+				end
 				local pt = r.parts or {}
 				local bait = r.bait or { 0, 0 }
-				line(("행동 %d · 미끼 %d(주움 %d/%d) · 확인 %d · 룬 %d · 창 밖 %d"):format(pt.behave or 0, pt.bait or 0, bait[1] or 0, bait[2] or 0, pt.check or 0, pt.rune or 0, pt.blind or 0), C.dim)
+				line(("행동 %d · 미끼 %d(주움 %d/%d) · 확인 %d · 룬 %d · 손 %d"):format(pt.behave or 0, pt.bait or 0, bait[1] or 0, bait[2] or 0, pt.check or 0, pt.rune or 0, pt.input or 0), C.dim) -- (2026-11-13: 손 = 키 · 터치의 기록 · 창 밖은 점수에 넣지 않는다 — 사용자 "지금 창내림 세는것도 의미가 없고")
+				-- 바로 하는 조치(2026-11-12 사용자: "즉시 경고메시지보내고 … 경험치 쿠폰도 … 제재도 즉시 … 깜빵에 바로 … 날파리를 날릴수도" · "룬의 저주 … 풀어줄수있는기능도"):
+				--  어느 서버에 있든 · 접속하지 않았어도(다음에 들어올 때) — server world.luau onAdmin "macroAct" · adminCmd.luau. 정지는 정지 탭과 같은 길(바로 모든 서버에서 내보낸다)
+				do
+					local acts = {
+						{ "경고", "warn" }, { "감옥 10분", "jail", 10 }, { "감옥 60분", "jail", 60 }, { "풀기", "unjail" }, { "날파리", "fly" }, { "날파리 거두기", "unfly" }, -- (거두기 — 2026-11-12)
+						{ "저주 풀기", "uncurse" }, { "쿠폰 +1", "coupon", 1 }, { "쿠폰 +10", "coupon", 10 }, { "정지", "ban" },
+					}
+					local bx, by = 0, y + 2
+					for i, act in acts do
+						local bw = math.max(44, Ui.measure(act[1], "small") + 12)
+						if bx + bw > w then
+							bx, by = 0, by + 24
+						end
+						Ui.button(p, act[1], bx, by, bw, function()
+							ask("macroAct", r.name, act[2], act[3], function(got)
+								if alive and typeof(got) == "table" and got.ok and typeof(got.record) == "table" then
+									macroRec = got.record
+									if tab == "macro" then
+										view.draw()
+									end
+								end
+							end)
+						end, { h = 22, font = "small", main = act[2] == "warn" or act[2] == "ban" }).frame.Name = "Do_macroAct" .. i
+						bx += bw + 4
+					end
+					y = by + 26
+				end
 				Ui.line(p, 0, y + 1, w)
 				y += 4
 				for i, d in r.days or {} do
@@ -439,8 +496,13 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 						break
 					end
 					local k = tostring(d.key)
-					line(("%s-%s · 사냥 %d분 · 행동 %d · 미끼 %d/%d · 확인 %d/%d/%d · 룬 %d분 · 점수 %d"):format(string.sub(k, 5, 6), string.sub(k, 7, 8), d.m or 0, d.ls or 0, d.bg or 0, (d.bg or 0) + (d.bm or 0), d.ci or 0, d.cp or 0, d.cf or 0, d.rc or 0, d.score or 0),
-						if (d.score or 0) >= MACRO.record.grade.problem then C.red else C.off)
+					-- 두 줄(2026-11-13): 둘째 줄 = 확인을 자리 비움으로 놓친 수(점수에 넣지 않는다) · 길 위 별똥별을 주운 수(사람의 증거가 아니다) · 키(한 프레임도 안 된 몫 · 누른 수) · 터치(같은 점의 몫 · 터치 수)
+					local function pc(a: number?, b: number?): string
+						return if (b or 0) > 0 then ("%d%%"):format(math.floor((a or 0) / (b :: number) * 100 + 0.5)) else "-"
+					end
+					line(("%s-%s · 사냥 %d분 · 행동 %d · 미끼 %d/%d · 확인 %d/%d/%d · 룬 %d분 · 재접속 %d · 점수 %d\n   자리 비움 %d · 길 위 미끼 %d · 키 %s(%d) · 터치 같은 점 %s(%d)"):format(string.sub(k, 5, 6), string.sub(k, 7, 8), d.m or 0, d.ls or 0, d.bg or 0, (d.bg or 0) + (d.bm or 0), d.ci or 0, d.cp or 0, d.cf or 0, d.rc or 0, d.rl or 0, d.score or 0,
+						d.ca or 0, d.br2 or 0, pc(d.kz, d.kt), d.kt or 0, pc(d.ts, d.tt), d.tt or 0), -- 재접속 = 사냥 중에 나갔다 15분 안에 다시 들어온 수(2026-11-13)
+						if (d.score or 0) >= MACRO.record.grade.problem then C.red else C.off, 2)
 				end
 				if #(r.days or {}) == 0 then
 					line("사냥한 기록이 없다", C.off)
@@ -483,31 +545,89 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 				if #(r.warns or {}) == 0 then
 					line("경고한 적이 없다", C.off)
 				end
-				if r.online then
-					Ui.button(p, "경고", w - 52, h - 52 - 24, 52, function()
-						ask("macroWarn", r.uid, nil, nil, function(got)
-							if alive and typeof(got) == "table" and got.ok and typeof(got.record) == "table" then
-								macroRec = got.record
-								if tab == "macro" then
-									view.draw()
-								end
-							end
-						end)
-					end, { h = 22, font = "small", main = true }).frame.Name = "Do_macroWarn"
+			elseif macroMode == "all" and macroAll then
+				-- 모든 서버의 접속자(점수 높은 차례 · 한 쪽에 PER명) — 줄을 누르면 그 계정의 기록(아래에 바로 하는 조치 단추)
+				local PER = 12
+				local pages = math.max(1, math.ceil(#macroAll / PER))
+				macroAllPage = math.clamp(macroAllPage, 1, pages)
+				line(("모든 서버의 접속자 %d명 · 종합 점수 높은 차례 · %d / %d쪽"):format(#macroAll, macroAllPage, pages), C.dim)
+				-- 판(2026-11-13 사용자 "라이브버전에서 사냥시간제한 있는버전인지 없는버전인지 어떻게알아?"): 이 서버의 판 · 사냥 시간 제한 · 가장 새 판보다 옛 판인 서버에 있는 사람 수
+				do
+					local top, old = macroAllInfo.pv or 0, 0
+					for _, r in macroAll do
+						top = math.max(top, r.pv or 0)
+					end
+					for _, r in macroAll do
+						if (r.pv or top) < top then
+							old += 1
+						end
+					end
+					line(("이 서버: 판 %d · 사냥 시간 제한 %s · 가장 새 판 %d%s"):format(macroAllInfo.pv or 0, if macroAllInfo.hc then "켜짐" else "꺼짐", top, if old > 0 then (" · 옛 판 서버에 %d명"):format(old) else ""), if old > 0 or macroAllInfo.hc then C.red else C.dim)
+					macroAllInfo.top = top
+				end
+				for i = (macroAllPage - 1) * PER + 1, math.min(#macroAll, macroAllPage * PER) do
+					local r = macroAll[i]
+					local name = tostring(r.n or r.uid)
+					local tags = {}
+					if (r.j or 0) > 0 then
+						table.insert(tags, ("감옥 %d분"):format(math.ceil(r.j / 60)))
+					end
+					if (r.rc or 0) > 0 then
+						table.insert(tags, ("저주 %d"):format(r.rc))
+					end
+					if r.hu then
+						table.insert(tags, "사람")
+					end
+					if r.here then
+						table.insert(tags, "이 서버")
+					end
+					if r.pv and macroAllInfo.top and r.pv < macroAllInfo.top then
+						table.insert(tags, ("옛 판 %d"):format(r.pv)) -- (그 서버는 다시 시작하기 전까지 옛 코드 — 2026-11-13)
+					end
+					local text = ("%d. %s Lv.%d · 종합 %d(%s) · %s · 채널 %d%s"):format(i, name, r.l or 0, r.s or 0, GR[r.g or "none"] or "", AdminWindow.mapName(r.m), r.ch or 1, if #tags > 0 then " · " .. table.concat(tags, " · ") else "")
+					Ui.button(p, text, 0, y, w, function() openRec(name) end, { h = 16, font = "small" }).frame.Name = "Do_macroAllRow" .. i
+					y += 18
+				end
+				if #macroAll == 0 then
+					line("아무도 없다", C.off)
+				end
+				if pages > 1 then
+					Ui.button(p, "이전", 0, y + 4, 52, function()
+						macroAllPage -= 1
+						view.draw()
+					end, { h = 22, font = "small" }).frame.Name = "Do_macroAllPrev"
+					Ui.button(p, "다음", 56, y + 4, 52, function()
+						macroAllPage += 1
+						view.draw()
+					end, { h = 22, font = "small" }).frame.Name = "Do_macroAllNext"
 				end
 			elseif macroMode == "top" and macroTop then
-				-- 모든 서버의 위험 순위(종합 점수 30 넘는 계정 · 높은 차례) — 줄을 누르면 그 계정의 기록
-				line("모든 서버 · 종합 점수가 높은 차례(30 넘는 계정)", C.dim)
-				for i, r in macroTop do
-					if i > 10 then
-						break
-					end
+				-- 「모든 계정」(2026-11-12 사용자: "접속자 뿐만아니라 비접속자도 내가 지표를 볼수있어야지"): 모든 계정(모든 서버 · 나간 사람도 마지막 점수) · 높은 차례 · 12명씩 쪽
+				--  2026-11-13 사용자 "모든계정 누르면 왜 모든계정이 안나오고 11명만나와?": 전에는 종합 30 넘는 50명만 — 이제 모든 계정 · 쪽마다 서버에 묻는다(macroTop = 그 쪽의 줄)
+				--  줄 = 순서 · 이름 · 종합(등급) · 마지막으로 적은 때 · 접속 중 · 사람으로 봄 — 누르면 그 계정의 기록(접속하지 않았어도 저장된 것 · 위에 바로 하는 조치 단추)
+				local pages = macroTopInfo.pages
+				line(("모든 계정 %d명%s · 접속하지 않은 사람도 · %d / %d쪽%s"):format(macroTopInfo.total, if macroTopInfo.more then " 넘게" else "", macroTopPage, pages, if macroTopInfo.more then "+" else ""), C.dim)
+				for k, r in macroTop do
+					local i = r.i or k
 					local name = tostring(r.name)
-					Ui.button(p, ("%d. %s · %d(%s)"):format(i, name, r.score or 0, GR[MACROGRADE(r.score or 0)] or ""), 0, y, w, function() openRec(name) end, { h = 16, font = "small" }).frame.Name = "Do_macroTopRow" .. i
+					local tags = {}
+					table.insert(tags, if r.on then "접속 중" else ("마지막 %s"):format(md(r.at)))
+					if r.hu then
+						table.insert(tags, "사람")
+					end
+					Ui.button(p, ("%d. %s · %d(%s) · %s"):format(i, name, r.score or 0, GR[MACROGRADE(r.score or 0)] or "", table.concat(tags, " · ")), 0, y, w, function() openRec(name) end, { h = 16, font = "small" }).frame.Name = "Do_macroTopRow" .. i
 					y += 18
 				end
 				if #macroTop == 0 then
 					line("아무도 없다", C.off)
+				end
+				if pages > 1 or macroTopInfo.more then
+					Ui.button(p, "이전", 0, y + 4, 52, function()
+						view.topPage(math.max(1, macroTopPage - 1))
+					end, { h = 22, font = "small" }).frame.Name = "Do_macroTopPrev"
+					Ui.button(p, "다음", 56, y + 4, 52, function()
+						view.topPage(macroTopPage + 1)
+					end, { h = 22, font = "small" }).frame.Name = "Do_macroTopNext"
 				end
 			else
 				if not macroGot then
@@ -519,9 +639,9 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 							break
 						end
 						shown += 1
-						local state = if r.pending then " · 문제 중" elseif r.stopped then " · 보상 멈춤" else ""
+						local state = (if (r.jail or 0) > 0 then (" · 감옥 %d분"):format(math.ceil(r.jail / 60)) else "") .. (if r.pending then " · 문제 중" elseif r.stopped then " · 보상 멈춤" else "") .. (if (r.jails or 0) > 0 then (" · 갇힘 %d번"):format(r.jails) else "") -- (감옥 — 2026-11-11: 남은 분 · 갇힌 횟수)
 						local text = ("%s Lv.%d · %s · 종합 %d · 사냥 %d분 · 놓침 %d%s"):format(tostring(r.name), r.level or 0, LV[r.suspect] or "", r.total or 0, r.huntMin or 0, r.fails or 0, state)
-						Ui.text(p, text, 0, y + 6, w - 148, { color = if r.suspect == "high" or r.stopped or r.grade == "severe" then C.red else C.text })
+						Ui.text(p, text, 0, y + 6, w - 148, { color = if r.suspect == "high" or r.stopped or r.grade == "severe" or (r.jail or 0) > 0 then C.red else C.text })
 						local name = tostring(r.name)
 						Ui.button(p, "기록", w - 146, y, 46, function() openRec(name) end, { h = 22, font = "small" }).frame.Name = "Do_macroRec" .. shown
 						Ui.button(p, "보내기", w - 96, y, 46, function() ask("macroSend", r.uid, nil, nil, function() refresh() end) end, { h = 22, font = "small" }).frame.Name = "Do_macroSend" .. shown
@@ -555,7 +675,7 @@ function AdminWindow.build(body: Frame, ctx, w: number, h: number)
 							break
 						end
 						local ago = math.max(0, math.floor((os.time() - (e.t or 0)) / 60))
-						Ui.text(p, ("%d분 전 · %s · %s%s"):format(ago, tostring(e.name), WHAT[e.what] or tostring(e.what), if e.n then (" (24시간 안 %d번째)"):format(e.n) else ""), 0, y, w, { color = C.off })
+						Ui.text(p, ("%d분 전 · %s · %s%s"):format(ago, tostring(e.name), WHAT[e.what] or tostring(e.what), if e.what == "jail" and e.n then (" (%d번째 · %d분)"):format(e.n, math.ceil((e.wait or 0) / 60)) elseif e.n then (" (24시간 안 %d번째)"):format(e.n) else ""), 0, y, w, { color = C.off })
 						y += 14
 					end
 				end

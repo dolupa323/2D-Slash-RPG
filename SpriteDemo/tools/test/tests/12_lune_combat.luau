@@ -168,7 +168,8 @@ eq(top.stats.str, N.apAt(N.MAX_LEVEL), "무니의 주 능력치는 힘")
 eq(Hero.gainXp(top, need150 * 0.5), 1, "남은 절반을 채우면 151")
 eq(top.level, N.MAX_LEVEL + 1, "Lv.151")
 -- Lv.150 → 200의 곡선(2026-11-11 사용자: "다시 정상궤도로 … 최대한의 효율로 24시간 사냥한다고 했을때 200달성이 3개월정도"): 공방 jobs.js XP_TOP과 같은 셈 · 커지기만 한다 · 합
-eq(N.xpNeed(N.MAX_LEVEL), 100000000, "Lv.150 한 레벨 = 1억(공방 jobs.js XP_TOP.first)")
+-- (2026-11-11 저녁 — 윤슬 호수가 Lv.150~160 사냥터가 되어 가장 높은 사냥터가 Lv.160: 3개월을 지키려고 first 1억 → 1억 5,500만)
+eq(N.xpNeed(N.MAX_LEVEL), 155000000, "Lv.150 한 레벨 = 1억 5,500만(공방 jobs.js XP_TOP.first)")
 expect(N.xpNeed(N.MAX_LEVEL) > N.xpNeed(N.MAX_LEVEL - 1), "Lv.150이 Lv.149보다 크다(곡선이 이어진다)")
 local sum, grows = 0, true
 for L = N.MAX_LEVEL, N.LEVEL_CAP - 1 do
@@ -178,8 +179,8 @@ for L = N.MAX_LEVEL, N.LEVEL_CAP - 1 do
 	end
 end
 expect(grows, "Lv.150 ~ 199의 한 레벨이 커지기만 한다")
-expect(sum > 2.4e11 and sum < 2.8e11, ("Lv.150 → 200의 합 약 2,580억(최대 효율 하루 약 28.7억 x 90일) — %d"):format(sum))
-eq(N.xpNeed(199), math.floor(1e8 * 1.122 ^ 49 + 0.5), "Lv.199 = first x ratio^49(공방 numbers.js xpTop과 같은 셈)")
+expect(sum > 3.8e11 and sum < 4.2e11, ("Lv.150 → 200의 합 약 4,000억(Lv.160 달그림자 심연에서 최대 효율 하루 약 44.9억 x 89일) — %d"):format(sum))
+eq(N.xpNeed(199), math.floor(1.55e8 * 1.122 ^ 49 + 0.5), "Lv.199 = first x ratio^49(공방 numbers.js xpTop과 같은 셈)")
 -- 레벨 차이: 내 레벨은 150까지만 센다(몬스터가 Lv.150에서 끝난다 — 그러지 않으면 Lv.171부터 어디서든 10%)
 eq(N.xpRate(199, 150), 100, "Lv.199가 Lv.150 몬스터를 잡아도 100%")
 eq(N.xpRate(199, 148), 100, "Lv.199가 Lv.148(틈새 회랑)을 잡아도 100%")

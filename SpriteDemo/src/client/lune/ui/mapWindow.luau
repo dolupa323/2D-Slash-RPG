@@ -89,6 +89,7 @@ function MapWindow.build(body: Frame, ctx, w: number, _h: number)
 	local myRegion = WM.nodeOf(ctx.scene())
 	local rid = if myRegion and WM.region(myRegion).art then myRegion else regions[1]
 	local picked: string? = nil -- 누른 장소(없으면 내가 있는 곳). 다른 지역의 표시는 "out:지역"
+	local hoverId: string? = nil -- 마우스를 올린 장소(2026-11-13 — 오른쪽 글 칸에 잠깐)
 	local layer: Frame? = nil
 	local top = if #regions > 1 then MapWindow.TAB_H else 0
 
@@ -288,20 +289,43 @@ function MapWindow.build(body: Frame, ctx, w: number, _h: number)
 					Ui.box(group, x - math.floor(wdt / 2), topY - 8 + i * 2, wdt, 1, C.accent).Name = "Arrow"
 				end
 			end
-			-- 누르면 고른다(표시와 이름표 어느 쪽을 눌러도)
+			-- 누르면 고른다(표시와 이름표 어느 쪽을 눌러도) · 마우스를 올리면 오른쪽 글 칸에 그곳을 잠깐 보여 준다(2026-11-13 — PC · 메이플 월드맵처럼: 누르지 않아도 레벨 · 몬스터 ·
+			--  벗어나면 고른 곳 · 내가 있는 곳으로 돌아온다 · 손가락은 아니다)
+			local function hover(h: TextButton)
+				local enter, leave = (h :: any).MouseEnter, (h :: any).MouseLeave
+				if not (enter and leave) then
+					return -- (시험의 가짜 화면)
+				end
+				enter:Connect(function()
+					if game:GetService("UserInputService"):GetLastInputType() ~= Enum.UserInputType.Touch then
+						hoverId = p.id
+						showSide(p.id)
+					end
+				end)
+				leave:Connect(function()
+					if hoverId == p.id then -- (맞닿은 옆 장소에 먼저 들어갔으면 그대로 — 2026-11-14)
+						hoverId = nil
+						showSide(picked or mine or region.nodes[1].id)
+					end
+				end)
+			end
 			local zone = Ui.group(group, x - 9, y - 9, 19, 19, "Hit_" .. p.id)
 			zone.ZIndex = 6
-			Ui.hit(zone).Activated:Connect(function()
+			local zh = Ui.hit(zone)
+			zh.Activated:Connect(function()
 				picked = p.id
 				view.refresh()
 			end)
+			hover(zh)
 			if rect then
 				local zone2 = Ui.group(group, rect.x, rect.y, rect.w, rect.h, "HitName_" .. p.id)
 				zone2.ZIndex = 6
-				Ui.hit(zone2).Activated:Connect(function()
+				local zh2 = Ui.hit(zone2)
+				zh2.Activated:Connect(function()
 					picked = p.id
 					view.refresh()
 				end)
+				hover(zh2)
 			end
 		end
 		-- 파티원(2026-10-18 — 메이플처럼): 이 지역에 있는 파티원마다 그 장소의 표시 왼쪽 아래에 작은 금빛 점(나란히 — 파티는 넷까지)

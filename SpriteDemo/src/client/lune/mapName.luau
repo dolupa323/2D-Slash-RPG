@@ -29,13 +29,20 @@ end
 
 -- 장면의 이름표 → (지역 이름, 맵 이름). 지역 이름이 맵 이름과 같으면(은달 항구) 지역 줄은 비운다
 function MapName.titleOf(key: string): (string, string)
-	local base = string.match(key, "^(.-)#w?[nh]?%d+$") or key
+	local base = string.match(key, "^(.-)#c?w?p?[nh]?%d+$") or key
 	local sc = SCENES.scenes[base]
 	local mapName = if sc then sc.name or "" else ""
 	local rid = WM.nodeOf(base)
 	local regionName = if rid and WMD.regions[rid] then WMD.regions[rid].name else ""
 	if regionName == mapName then
 		regionName = ""
+	end
+	-- 채널로 나뉘는 사냥 맵이면 지역 줄 끝에 「채널 n」(2026-11-12 — sim/channel.luau · 방 이름 <맵>#c<n> · 채널 1은 맵 이름 그대로)
+	local Channel = require(lune.sim.channel)
+	if Channel.COUNT > 1 and Channel.splits(base) then
+		local _, ch = Channel.split(key)
+		local tag = (require(lune.ui.format).fill(Channel.DATA.words.tag, { n = ch }))
+		regionName = if regionName ~= "" then regionName .. " · " .. tag else tag
 	end
 	return regionName, mapName
 end

@@ -390,6 +390,62 @@ function Store.rankTop(board: string, n: number)
 	return rows
 end
 
+-- 판 전체를 위에서부터 차례로(2026-11-13 사용자 "모든계정 누르면 왜 모든계정이 안나오고 11명만나와?" — 관리 창 「모든 계정」):
+--  100줄씩 읽어 두고(GetSortedAsync · AdvanceToNextPageAsync) need줄이 될 때까지만 더 읽는다 · 읽어 둔 것은 WALK_KEEP초 동안 쓴다(fresh = 처음부터 다시)
+--  → 줄들(높은 차례 { key, score }) · 끝까지 읽었나
+local WALK_KEEP = 120
+local walkers = {}
+function Store.rankWalk(board: string, need: number, fresh: boolean?)
+	local w = walkers[board]
+	if fresh or not w or os.clock() - w.at > WALK_KEEP then
+		w = { rows = {}, pages = nil, done = false, at = os.clock() }
+		walkers[board] = w
+	end
+	if not RANK[board] then
+		w.done = true
+		return w.rows, true
+	end
+	local ds = getRank(board)
+	if not ds or offline then
+		if not w.done then -- 메모리 모드(Studio · 저장소 없음): 이 서버의 메모리에 적힌 것만
+			for key, score in rankMemory[board] do
+				table.insert(w.rows, { key = key, score = score })
+			end
+			table.sort(w.rows, function(a, b)
+				if a.score ~= b.score then
+					return a.score > b.score
+				end
+				return a.key < b.key
+			end)
+			w.done = true
+		end
+		return w.rows, true
+	end
+	local guard = 0
+	while #w.rows < need and not w.done and guard < 20 do
+		guard += 1
+		local ok = try(function()
+			if not w.pages then
+				w.pages = ds:GetSortedAsync(false, 100)
+			else
+				w.pages:AdvanceToNextPageAsync()
+			end
+		end)
+		if not ok or not w.pages then
+			break -- (읽지 못했다 — 읽은 데까지. 다음에 다시 누르면 이어 읽는다)
+		end
+		local got = 0
+		for _, entry in w.pages:GetCurrentPage() do
+			table.insert(w.rows, { key = entry.key, score = entry.value })
+			got += 1
+		end
+		if w.pages.IsFinished or got == 0 then
+			w.done = true
+		end
+	end
+	return w.rows, w.done
+end
+
 -- 순위판에 적힌 열쇠의 이름 · 직업
 function Store.rankInfoSet(key: string, info, memoryOnly: boolean?)
 	infoMemory[key] = info
@@ -966,6 +1022,42 @@ function Store.giftTake(userId: number, name: string): (boolean?, { any })
 		end
 		return #mine > 0, mine
 	end)
+	return ok, got or {}
+end
+
+-- 관리자의 조치 상자(2026-11-12 — server/lune/modules/adminCmd.luau): 열쇠 admq_<계정 번호> = { { id, k = 할 일, a = 값, t = 적은 때, by = 관리자 } … } —
+--  그 사람이 있는 서버가 꺼내 바로 한다(모든 서버에 알린다) · 접속하지 않았으면 다음에 들어올 때. 30개까지(오래된 것부터 버린다)
+local ADMQ_KINDS = { warn = true, jail = true, unjail = true, fly = true, unfly = true, uncurse = true } -- (unfly = 날파리 거두기 — 2026-11-12)
+local function admqClean(old)
+	local list = {}
+	if typeof(old) == "table" then
+		for _, e in old do
+			if typeof(e) == "table" and typeof(e.k) == "string" and ADMQ_KINDS[e.k] and typeof(e.t) == "number" then
+				table.insert(list, { id = if typeof(e.id) == "string" then e.id else "", k = e.k, a = if typeof(e.a) == "number" then e.a else nil, t = e.t, by = if typeof(e.by) == "number" then e.by else 0 })
+			end
+		end
+	end
+	return list
+end
+function Store.adminQAdd(userId: number, e): boolean?
+	return (giftUpdate(userId, function(list)
+		table.insert(list, { id = e.id, k = e.k, a = e.a, t = e.t, by = e.by })
+		while #list > 30 do
+			table.remove(list, 1)
+		end
+		return true, true
+	end, "admq_", admqClean))
+end
+-- 모두 꺼낸다 → 해냈는가, { … }
+function Store.adminQTake(userId: number): (boolean?, { any })
+	local ok, got = giftUpdate(userId, function(list)
+		if #list == 0 then
+			return false, {}
+		end
+		local all = table.clone(list)
+		table.clear(list)
+		return true, all
+	end, "admq_", admqClean)
 	return ok, got or {}
 end
 

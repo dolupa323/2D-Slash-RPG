@@ -280,7 +280,7 @@ do
 		local b = Gacha.box(key)
 		expect(b ~= nil, key .. " 상자가 있다")
 		local o = Gacha.odds(key)
-		expect(#o == 8 and math.abs(sum(o) - 100) < 1e-6, key .. ": 여덟 · 합 100%")
+		expect(#o == (if key == "dmgskin" then 13 else 8) and math.abs(sum(o) - 100) < 1e-6, key .. ": 여덟(데미지 스킨은 열셋 — 2026-11-13 다섯을 더했다) · 합 100%")
 		local rareMax, commonMin = 0, 100
 		for _, e in o do
 			if e.rare then
@@ -292,7 +292,7 @@ do
 		expect(rareMax < commonMin, key .. ": 드문 것(더 예쁜 것)은 어느 보통 것보다 확률이 낮다")
 		expect(Cash.product(key).random == true and Cash.giftable(key) and Cash.boxGiftOf(Cash.boxGiftKey(key)) == key, key .. ": 확률형 · 선물(받으면 안 연 상자)")
 	end
-	eq(#BM.dskins.list, 8, "데미지 스킨 여덟")
+	eq(#BM.dskins.list, 13, "데미지 스킨 열셋(2026-11-13 새 디자인 다섯 — 오로라보다 낮은 확률)")
 	eq(#BM.nametags.list, 8, "이름표 테두리 여덟")
 	-- 데미지 스킨: 열면 계정에 · 바로 낀다 · 숫자판(UI 키트) · 할로윈의 것과 같은 목록
 	local KIT = req("ReplicatedStorage/shared/lune/data/kit.generated")

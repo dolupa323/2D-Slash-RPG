@@ -297,6 +297,25 @@ function Kit.charge(h, skillId: string, held: number, from: number?): (number, n
 	return level, Kit.chargeMul(h, level, firstTime(skillId), per), level * core.reach
 end
 
+-- 화면이 센 모은 단계(claim)와 서버가 흐른 시간으로 센 단계(lv)를 맞춘다(2026-11-11 밤 — 사용자: "엑시온 전투호흡 활성화하고 도끼 범위가 오락가락하는데? 위 아래, 범위가 계속 왔다갔다해
+--  전투호흡 안쓰면 그냥 원래 사거리 쭉 자연스럽게 이어지는데"): 서버는 두 구간의 알림이 닿은 때의 차이로 단계를 세어, 네트워크가 흔들린 만큼(수십 ms) 화면과 한 단계씩 어긋났다 —
+--  전투 호흡이면 한 단계가 0.2 → 0.15초로 짧아 더 자주 어긋났다. 화면은 제 단계로 커진 몸 · 휘두른 자국을 그리고 판정은 서버의 단계로 나가 보이는 범위와 맞는 범위가 매번 달랐다.
+--  · 화면이 더 낮게 셌다 → 화면의 단계(그린 대로 맞는다 — 이득이 없다) · 한 단계 더 높게 셌다 → 서버가 잰 시간 + CLAIM_TOL초로 그 단계에 닿을 때만 받는다 · 그 밖 = 서버의 단계
+--  held = 서버가 잰 모은 시간(초) · per = 한 단계의 시간(전투 호흡을 뺀 뒤) · from = 넘치는 힘으로 거저 얻은 단계 · levels = 끝 단계
+Kit.CLAIM_TOL = 0.12 -- (흔들림의 여유 — 제가 정한 것)
+function Kit.chargeClaim(lv: number, claim: any, held: number, per: number, from: number?, levels: number): number
+	if typeof(claim) ~= "number" or claim ~= math.floor(claim) then
+		return lv
+	end
+	claim = math.clamp(claim, 0, levels)
+	if claim <= lv then
+		return claim
+	elseif claim == lv + 1 and per > 0 and held + Kit.CLAIM_TOL >= (claim - (from or 0)) * per then
+		return claim
+	end
+	return lv
+end
+
 -- 그 기술을 가장 오래 모으는 시간(초 — 모을 수 없으면 0)
 function Kit.chargeTime(h, skillId: string): number
 	local core = KIT[h.class].core

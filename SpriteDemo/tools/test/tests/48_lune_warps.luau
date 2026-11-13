@@ -103,3 +103,17 @@ for _, key in { "r1a1", "r1c1" } do -- 가로 맵 · 층이 있는 맵
 	handlers.Hop(p, "없는 포탈")
 	eq(s.hero.x, w[1].x + 200, key .. ": 없는 포탈은 아무 일도 없다")
 end
+
+-- 높은 맵(망루 · 망대 · 종탑 · 달빛 버드나무 · 쓰러진 거목 · 등대 곶 …)의 간이 포탈은 위아래로(2026-11-13 사용자: "위아래 맵은 위 아래로 해야하는거야 … 망루형 맵은 위에서 아래인데 왼쪽 오른쪽으로 되어있는곳이있어")
+do
+	local SC = req("ReplicatedStorage/shared/lune/data/scenes.generated")
+	local n = 0
+	for key, sc in SC.scenes do
+		if sc.h > 14 and sc.warps and #sc.warps == 2 then
+			n += 1
+			local a, b = sc.warps[1], sc.warps[2]
+			expect(math.abs(a.y - b.y) > 6 * 16 and a.label == "맨 위로" and b.label == "맨 아래로", ("%s: 간이 포탈이 위아래로(%d점 — 6칸 넘게 · 「맨 위로 · 맨 아래로」)"):format(key, math.abs(a.y - b.y)))
+		end
+	end
+	expect(n >= 10, "높은 맵을 모두 봤다(" .. n .. ")")
+end

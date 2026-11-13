@@ -144,6 +144,9 @@ MOCK("Client/lune/stage", strict({
 	atPosition = function(_, x, y)
 		return UDim2.fromOffset(x, y)
 	end,
+	move = function(frame, _, x, y) -- (진짜 Stage.move — 옮긴 만큼 · 화면 안 · 2026-11-12)
+		frame.Position = UDim2.fromOffset(x, y)
+	end,
 	insetTop = 0,
 	place = function(_, name, at, x, y, w, h)
 		local f = frame(name)

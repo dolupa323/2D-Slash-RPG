@@ -3,6 +3,7 @@
 --   만약에 한서버에 100명 있으면 차례를 엄청나게 기다려야하는겁니다. 설계부터가 잘못됬어요 솔로게임처럼되어있습니다."
 --  보는 것: ① 자료 — 망루 꼭대기 · 사당 지하 · 꿈에 inst ② 파티가 아닌 사람은 저마다 다른 방 · 같은 파티는 같은 방 ③ 여럿이 같은 보스 퀘스트를 해도 방마다 보스가 서 있다(기다리지 않는다)
 --   ④ 문으로 들어가고 나오기(나오면 그 장면의 문 앞) ⑤ 빈 방은 닫힌다 ⑥ 방 이름으로도 퀘스트 · 길 · 장면을 그 장면으로 본다 ⑦ 새 캐릭터의 꿈도 사람마다 따로
+req("ReplicatedStorage/shared/lune/sim/channel").DATA.fill = 1e9 -- (이 시험은 채널을 보지 않는다 — 사람이 많아도 모두 채널 1: 채널은 시험 156 · 2026-11-12)
 local SCENES = req("ReplicatedStorage/shared/lune/data/scenes.generated")
 local Quests = req("ReplicatedStorage/shared/lune/sim/quests")
 local Tutorial = req("ReplicatedStorage/shared/lune/sim/tutorial")
